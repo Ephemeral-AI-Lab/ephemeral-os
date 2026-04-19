@@ -448,7 +448,8 @@ backend/src/tools/daytona_toolkit/hooks/
 
   posthook/
     __init__.py
-    codeact_audited_write_policy.py
+    audited_write_policy.py
+    ambient_change_warning.py
 ```
 
 The `prehook` and `posthook` package initializers may import and register every

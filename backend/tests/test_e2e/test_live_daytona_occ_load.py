@@ -267,7 +267,9 @@ def _install_overlay_phase_probe(
         "overlay_execute_total_s": [],
         "overlay_run_s": [],
         "download_tar_s": [],
+        "cleanup_remote_run_dir_s": [],
         "upperdir_walk_s": [],
+        "upperdir_change_to_operation_s": [],
         "commit_changes_s": [],
         "lowerdir_refresh_s": [],
         "ensure_lowerdir_s": [],
@@ -277,7 +279,9 @@ def _install_overlay_phase_probe(
 
     orig_execute = overlay_auditor_module.OverlayAuditor.execute
     orig_download = overlay_auditor_module.OverlayAuditor._download_remote_tar
+    orig_cleanup = overlay_auditor_module.OverlayAuditor._cleanup_remote_run_dir
     orig_commit = overlay_auditor_module.OverlayAuditor._commit_changes
+    orig_change_to_op = overlay_auditor_module.OverlayAuditor._upperdir_change_to_operation
     orig_walk = overlay_auditor_module.iter_upperdir_changes
     orig_ensure_lowerdir = ci_service_module.CodeIntelligenceService._ensure_overlay_lowerdir
     orig_refresh = ci_service_module.CodeIntelligenceService._refresh_overlay_lowerdir
@@ -299,6 +303,24 @@ def _install_overlay_phase_probe(
             return await orig_download(self, *args, **kwargs)
         finally:
             stats["download_tar_s"].append(round(time.perf_counter() - started, 6))
+
+    async def _timed_cleanup(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_cleanup(self, *args, **kwargs)
+        finally:
+            stats["cleanup_remote_run_dir_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_change_to_op(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_change_to_op(self, *args, **kwargs)
+        finally:
+            stats["upperdir_change_to_operation_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
 
     async def _timed_commit(self, *args, **kwargs):
         started = time.perf_counter()
@@ -362,6 +384,16 @@ def _install_overlay_phase_probe(
         _timed_download,
     )
     monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_cleanup_remote_run_dir",
+        _timed_cleanup,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_upperdir_change_to_operation",
+        _timed_change_to_op,
+    )
+    monkeypatch.setattr(
         overlay_auditor_module.OverlayAuditor, "_commit_changes", _timed_commit
     )
     monkeypatch.setattr(
@@ -403,6 +435,16 @@ async def _run_mixed_operations(
         asyncio.get_running_loop(),
         max_workers=max(200, concurrency * 8),
     )
+
+    # Replace the fixture's `asyncio.to_thread(sync_sdk.exec)` wrapper with the
+    # true AsyncDaytona sandbox (aiohttp). The wrapper's `ctx.run` propagation
+    # caps parallelism at ~6-7 under the sync Daytona SDK (see
+    # test_live_daytona_transport_parallelism_isolation Arm A vs D). Production
+    # uses AsyncDaytona (via `get_async_sandbox`), so the fixture must match for
+    # the benchmark to reflect real tool throughput.
+    from sandbox.async_client import get_async_sandbox
+
+    live_load_env.async_sandbox = await get_async_sandbox(live_load_env.sandbox_id)
 
     async def _invoke(
         sequence: int,
@@ -830,7 +872,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
             live_load_env,
             svc,
             operations,
-            concurrency=30,
+            concurrency=72,
             timeout_s=360,
             log_ops=True,
             log_label=log_label,
@@ -1601,6 +1643,8 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
             operations,
             concurrency=20,
             timeout_s=180,
+            log_ops=True,
+            log_label=log_label,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -1609,20 +1653,13 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
     for item in results:
         by_kind.setdefault(item["kind"], []).append(item)
 
-    def _avg_elapsed(items: list[dict[str, Any]]) -> float:
-        return round(sum(item["elapsed_s"] for item in items) / len(items), 6)
-
     summary = {
         "operation_counts": {
             kind: len(items)
             for kind, items in sorted(by_kind.items())
         },
-        "avg_elapsed_s": {
-            kind: _avg_elapsed(items)
-            for kind, items in sorted(by_kind.items())
-        },
-        "max_elapsed_s": {
-            kind: round(max(item["elapsed_s"] for item in items), 6)
+        "elapsed_profile_s": {
+            kind: _elapsed_profile(items)
             for kind, items in sorted(by_kind.items())
         },
         "timing": _operation_timing_summary(
@@ -1638,10 +1675,11 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
             for item in by_kind.get("edit-disjoint", [])
             if item["payload"].get("timings")
         ],
-        "codeact_worktree_s": codeact_stats,
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "arbiter": svc.status()["arbiter"],
     }
-    print("\n[occ-load-30-nonoverlap timings]")
+    print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
 
     assert len(operations) == 30
@@ -1654,8 +1692,14 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    log_label = "occ-load-50-nonoverlap"
+    _log_occ_event(
+        log_label,
+        {"event": "setup", "phase": "init_repo", "sandbox_id": live_load_env.sandbox_id},
+    )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     for group in range(5):
         live_load_env.write_text(
@@ -1745,6 +1789,8 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
             operations,
             concurrency=20,
             timeout_s=240,
+            log_ops=True,
+            log_label=log_label,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -1753,20 +1799,13 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     for item in results:
         by_kind.setdefault(item["kind"], []).append(item)
 
-    def _avg_elapsed(items: list[dict[str, Any]]) -> float:
-        return round(sum(item["elapsed_s"] for item in items) / len(items), 6)
-
     summary = {
         "operation_counts": {
             kind: len(items)
             for kind, items in sorted(by_kind.items())
         },
-        "avg_elapsed_s": {
-            kind: _avg_elapsed(items)
-            for kind, items in sorted(by_kind.items())
-        },
-        "max_elapsed_s": {
-            kind: round(max(item["elapsed_s"] for item in items), 6)
+        "elapsed_profile_s": {
+            kind: _elapsed_profile(items)
             for kind, items in sorted(by_kind.items())
         },
         "timing": _operation_timing_summary(
@@ -1782,10 +1821,11 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
             for item in by_kind.get("edit-disjoint", [])
             if item["payload"].get("timings")
         ],
-        "codeact_worktree_s": codeact_stats,
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "arbiter": svc.status()["arbiter"],
     }
-    print("\n[occ-load-50-nonoverlap timings]")
+    print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
 
     assert len(operations) == 50
@@ -1794,7 +1834,10 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     assert sum(not item["is_error"] for item in by_kind["edit-disjoint"]) >= 20
 
 
-def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv):
+def test_live_occ_load_svc_cmd_lowerdir_amortization(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+):
     """svc.cmd / codeact repeated calls must amortize the CoW lowerdir cost.
 
     This is the performance claim for the 2026-04-19 refresh-after-commit fix:
@@ -1810,7 +1853,14 @@ def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv)
     final file content must reflect the last write (proves the refresh
     callback mirrored each prior commit back into the lowerdir).
     """
+    log_label = "occ-load-amortization"
+    _log_occ_event(
+        log_label,
+        {"event": "setup", "phase": "init_repo", "sandbox_id": live_load_env.sandbox_id},
+    )
     live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     live_load_env.write_text("shared/counter.txt", "v0\n")
     live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
     live_load_env.exec_checked(
@@ -1836,9 +1886,33 @@ def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv)
             ),
             "timeout": 120,
         }
+        _log_occ_event(
+            log_label,
+            {"event": "codeact_start", "label": label, "target_value": target_value},
+        )
         started = time.perf_counter()
         result = await _invoke_tool(daytona_codeact, kwargs, ctx)
         elapsed_s = round(time.perf_counter() - started, 6)
+        _log_occ_event(
+            log_label,
+            {
+                "event": "codeact_finish",
+                "label": label,
+                "is_error": result.is_error,
+                "elapsed_s": elapsed_s,
+                "metadata": dict(result.metadata or {}),
+                "overlay_phase_snapshot_s": {
+                    phase: round(values[-1], 6)
+                    for phase, values in overlay_stats.items()
+                    if values
+                },
+                "codeact_phase_snapshot_s": {
+                    phase: round(values[-1], 6)
+                    for phase, values in codeact_stats.items()
+                    if values
+                },
+            },
+        )
         raw_output = result.output or ""
         output = raw_output.lstrip()
         payload: dict[str, Any] = {}
@@ -1879,7 +1953,7 @@ def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv)
     final_content = live_load_env.read_text("shared/counter.txt")
     arbiter_status = svc.status()["arbiter"]
 
-    print("\n[occ-load-svc-cmd-amortization]")
+    print(f"\n[{log_label}]")
     print(
         json.dumps(
             {
@@ -1888,8 +1962,18 @@ def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv)
                 "steady_elapsed_s": steady_elapsed,
                 "median_steady_s": median_steady_s,
                 "max_steady_s": max_steady_s,
+                "steady_profile_s": _value_profile(
+                    [item["elapsed_s"] for item in steady]
+                ),
+                "cold_vs_steady_ratio": (
+                    round(cold["elapsed_s"] / median_steady_s, 3)
+                    if median_steady_s > 0
+                    else 0.0
+                ),
                 "final_content": final_content,
                 "arbiter": arbiter_status,
+                "codeact_phase_s": _phase_summary(codeact_stats),
+                "overlay_phase_s": _phase_summary(overlay_stats),
                 "per_call": [
                     {
                         "label": item["label"],
@@ -1945,3 +2029,463 @@ def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv)
 
     # Arbiter ledger must reflect 6 codeact-side commits (one per svc.cmd).
     assert arbiter_status["total_edits"] >= 6, arbiter_status
+
+
+def test_live_occ_load_sequential_per_op_baseline(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Per-op 1-op latency baseline with zero concurrency.
+
+    Runs each mutator kind ``N`` times sequentially on one fresh sandbox.
+    Pair the resulting p50/min numbers with the 72-op concurrent test's
+    per-kind profile to reason about parallel efficiency.
+
+    The ops do real work on fresh paths per iteration so prior iterations
+    don't short-circuit (e.g. edit must find its sentinel, delete must
+    find its target). First iteration is treated as a cold-start sample;
+    steady-state should converge by iteration 2.
+    """
+    N = 5
+    log_label = "occ-load-sequential-baseline"
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo",
+            "sandbox_id": live_load_env.sandbox_id,
+            "iterations": N,
+        },
+    )
+    live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
+
+    # Seed files that each op iter will mutate.
+    for idx in range(N):
+        live_load_env.write_text(
+            f"edits/edit_{idx}.py",
+            f'"""Edit fixture {idx}."""\n\nMARKER_{idx} = "before"\n',
+        )
+        live_load_env.write_text(
+            f"rename/mod_{idx}.py",
+            (
+                f'"""Rename fixture {idx}."""\n\n'
+                f"def target_{idx}(x):\n"
+                f"    return x + {idx}\n\n"
+                f"def caller_{idx}(x):\n"
+                f"    return target_{idx}(x)\n"
+            ),
+        )
+        live_load_env.write_text(f"moves/src_{idx}.txt", f"src {idx}\n")
+        live_load_env.write_text(f"deletes/del_{idx}.txt", f"del {idx}\n")
+        live_load_env.write_text(f"codeact/ca_{idx}.txt", f"base {idx}\n")
+
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-sequential-baseline",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    timings_by_kind: dict[str, list[float]] = {}
+
+    async def _run_single(
+        kind: str,
+        name: str,
+        kwargs: dict[str, Any],
+        *,
+        coordinated: bool,
+    ) -> float:
+        agent_run_id = f"{name}-{uuid.uuid4().hex[:8]}"
+        ctx = live_load_env.make_ctx(
+            svc,
+            agent_run_id=agent_run_id,
+            coordinated=coordinated,
+        )
+        tool = _tool_for_operation_kind(kind)
+        _log_occ_event(
+            log_label,
+            {"event": "op_start", "kind": kind, "name": name},
+        )
+        started = time.perf_counter()
+        result = await _invoke_tool(tool, kwargs, ctx)
+        elapsed = round(time.perf_counter() - started, 6)
+        assert not result.is_error, (
+            f"{kind}/{name} failed: output={(result.output or '')[:300]!r} "
+            f"metadata={dict(result.metadata or {})}"
+        )
+        _log_occ_event(
+            log_label,
+            {
+                "event": "op_finish",
+                "kind": kind,
+                "name": name,
+                "elapsed_s": elapsed,
+                "metadata": dict(result.metadata or {}),
+            },
+        )
+        timings_by_kind.setdefault(kind, []).append(elapsed)
+        return elapsed
+
+    async def _scenario() -> None:
+        for idx in range(N):
+            await _run_single(
+                "write",
+                f"write-{idx}",
+                {
+                    "file_path": f"{live_load_env.repo_root}/writes/w_{idx}.txt",
+                    "content": f"write {idx}\n",
+                },
+                coordinated=False,
+            )
+            await _run_single(
+                "edit-disjoint",
+                f"edit-{idx}",
+                {
+                    "file_path": f"{live_load_env.repo_root}/edits/edit_{idx}.py",
+                    "old_text": f'MARKER_{idx} = "before"',
+                    "new_text": f'MARKER_{idx} = "after-{idx}"',
+                },
+                coordinated=False,
+            )
+            await _run_single(
+                "rename",
+                f"rename-{idx}",
+                {
+                    "symbol": f"target_{idx}",
+                    "new_name": f"renamed_{idx}",
+                    "file_hint": f"rename/mod_{idx}.py",
+                },
+                coordinated=False,
+            )
+            await _run_single(
+                "move",
+                f"move-{idx}",
+                {
+                    "src_path": f"{live_load_env.repo_root}/moves/src_{idx}.txt",
+                    "target_path": f"{live_load_env.repo_root}/moves/dst_{idx}.txt",
+                },
+                coordinated=False,
+            )
+            await _run_single(
+                "delete",
+                f"delete-{idx}",
+                {"path": f"{live_load_env.repo_root}/deletes/del_{idx}.txt"},
+                coordinated=False,
+            )
+            await _run_single(
+                "codeact",
+                f"codeact-{idx}",
+                {
+                    "mode": "shell",
+                    "command": (
+                        "python3 - <<'PY'\n"
+                        "from pathlib import Path\n"
+                        f"Path('codeact/ca_{idx}.txt').write_text('codeact {idx}\\n', encoding='utf-8')\n"
+                        "PY"
+                    ),
+                    "timeout": 120,
+                },
+                coordinated=True,
+            )
+
+    scenario_started = time.perf_counter()
+    asyncio.run(asyncio.wait_for(_scenario(), timeout=600))
+    wall_elapsed_s = round(time.perf_counter() - scenario_started, 6)
+
+    def _steady_profile(times: list[float]) -> dict[str, float]:
+        # First iteration is cold; summarize ops 2..N for steady-state view.
+        return _value_profile(times[1:]) if len(times) > 1 else _value_profile(times)
+
+    summary = {
+        "iterations_per_kind": N,
+        "wall_elapsed_s": wall_elapsed_s,
+        "per_op_elapsed_s": {
+            kind: _value_profile(times)
+            for kind, times in sorted(timings_by_kind.items())
+        },
+        "per_op_steady_s": {
+            kind: _steady_profile(times)
+            for kind, times in sorted(timings_by_kind.items())
+        },
+        "cold_s": {
+            kind: round(times[0], 6)
+            for kind, times in sorted(timings_by_kind.items())
+        },
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
+        "arbiter": svc.status()["arbiter"],
+    }
+
+    print(f"\n[{log_label}]")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+
+    expected_kinds = {"write", "edit-disjoint", "rename", "move", "delete", "codeact"}
+    assert set(timings_by_kind.keys()) == expected_kinds, timings_by_kind.keys()
+    for kind, times in timings_by_kind.items():
+        assert len(times) == N, (kind, times)
+        for t in times:
+            assert 0 < t < 60, (kind, t)
+
+    # Spot-check that the state actually landed — guards against a tool
+    # silently no-op'ing and inflating the baseline.
+    for idx in range(N):
+        assert live_load_env.read_text(f"writes/w_{idx}.txt") == f"write {idx}\n"
+        assert f'MARKER_{idx} = "after-{idx}"' in live_load_env.read_text(
+            f"edits/edit_{idx}.py"
+        )
+        renamed = live_load_env.read_text(f"rename/mod_{idx}.py")
+        assert f"def renamed_{idx}(x):" in renamed
+        assert f"target_{idx}(x)" not in renamed or f"renamed_{idx}(x)" in renamed
+        assert live_load_env.read_text(f"moves/dst_{idx}.txt") == f"src {idx}\n"
+        assert live_load_env.read_text(f"codeact/ca_{idx}.txt") == f"codeact {idx}\n"
+
+
+def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv) -> None:
+    """Isolate whether `process.exec` is the concurrency ceiling.
+
+    The OCC load test measures ~2.3x effective parallelism for 72 concurrent
+    ops, while single-op latencies are 0.58-1.57s. That gap could live in the
+    Python OCC pipeline or in the sandbox transport. This test removes the
+    entire OCC pipeline and measures parallelism of `process.exec` alone.
+
+    Target: wall time for 72 concurrent `sleep 0.5` execs should be ~0.5-1.0s
+    if transport parallelism is unbounded. Anything materially higher means
+    the transport itself is the ceiling and no amount of Python batching will
+    hit the 1-2s target.
+    """
+    N = 72
+    SLEEP_S = 0.5
+
+    import concurrent.futures as _cf
+
+    async def _run() -> dict[str, Any]:
+        # Arm A: asyncio.to_thread wrapping sync sandbox (what svc.cmd uses).
+        async def one_a(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await live_load_env.async_sandbox.process.exec(
+                f"sleep {SLEEP_S}",
+                timeout=30,
+            )
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        configure_default_executor(
+            asyncio.get_running_loop(),
+            max_workers=max(200, N * 8),
+        )
+        # Warm one exec so any one-time connection setup isn't measured.
+        await live_load_env.async_sandbox.process.exec("echo warm", timeout=10)
+
+        wall_t0 = time.perf_counter()
+        a_per_call = await asyncio.gather(*[one_a(i) for i in range(N)])
+        arm_a_wall = round(time.perf_counter() - wall_t0, 6)
+
+        # Arm C: explicit run_in_executor on a fresh ThreadPoolExecutor.
+        # If C matches Arm B, set_default_executor isn't being honored by
+        # asyncio.to_thread / run_in_executor(None, ...). If C still matches
+        # Arm A, bottleneck is in loop-driven dispatch itself (not executor).
+        loop = asyncio.get_running_loop()
+        explicit_pool = _cf.ThreadPoolExecutor(
+            max_workers=N, thread_name_prefix="arm-c",
+        )
+
+        import functools as _functools
+
+        def _run_one_sync() -> Any:
+            return live_load_env.raw_sandbox.process.exec(
+                f"sleep {SLEEP_S}", timeout=30,
+            )
+
+        async def one_c(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await loop.run_in_executor(
+                explicit_pool,
+                _functools.partial(_run_one_sync),
+            )
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        wall_t0 = time.perf_counter()
+        c_per_call = await asyncio.gather(*[one_c(i) for i in range(N)])
+        arm_c_wall = round(time.perf_counter() - wall_t0, 6)
+        explicit_pool.shutdown(wait=False)
+
+        # Arm D: true AsyncDaytona client (aiohttp). This is what production
+        # should use once the sync-wrap is removed.
+        from sandbox.async_client import get_async_sandbox
+
+        async_real = await get_async_sandbox(live_load_env.sandbox_id)
+        # Warm one real-async exec.
+        await async_real.process.exec("echo warm", timeout=10)
+
+        async def one_d(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await async_real.process.exec(
+                f"sleep {SLEEP_S}",
+                timeout=30,
+            )
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        wall_t0 = time.perf_counter()
+        d_per_call = await asyncio.gather(*[one_d(i) for i in range(N)])
+        arm_d_wall = round(time.perf_counter() - wall_t0, 6)
+
+        # Arm F: run_in_executor(None, ...) -- same default executor as
+        # asyncio.to_thread but WITHOUT the contextvars.copy_context().run
+        # wrapping. If F matches C (~48x), the to_thread ctx.run wrapping is
+        # what serializes the sync Daytona SDK. If F matches A (~6x), the
+        # default executor is blocked regardless of ctx.run.
+        def _run_one_sync_f() -> Any:
+            return live_load_env.raw_sandbox.process.exec(
+                f"sleep {SLEEP_S}", timeout=30,
+            )
+
+        async def one_f(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await loop.run_in_executor(None, _run_one_sync_f)
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        wall_t0 = time.perf_counter()
+        f_per_call = await asyncio.gather(*[one_f(i) for i in range(N)])
+        arm_f_wall = round(time.perf_counter() - wall_t0, 6)
+
+        # Arm G: AsyncDaytona + heavy python3 workload (what ContentManager
+        # actually does). Each call spawns a python interpreter on the sandbox
+        # to read a stub file and marshal JSON, mirroring the real hot path.
+        # If G is much slower than D (sleep 0.5), the sandbox's process.exec
+        # runner is capped for heavy concurrent work regardless of transport.
+        g_script = (
+            "import json, pathlib, sys; "
+            "p = pathlib.Path('/tmp/arm_g_stub.txt'); "
+            "print(json.dumps({'exists': p.exists(), "
+            "'content': p.read_text(encoding='utf-8') if p.exists() else ''}))"
+        )
+        g_command = f"python3 -c {shlex.quote(g_script)}"
+        # Seed the stub file so the python script does real work (read+json).
+        await async_real.process.exec(
+            "printf 'arm-g-stub\\n' > /tmp/arm_g_stub.txt", timeout=10,
+        )
+        # Warm one exec.
+        await async_real.process.exec(g_command, timeout=10)
+
+        async def one_g(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await async_real.process.exec(g_command, timeout=30)
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        wall_t0 = time.perf_counter()
+        g_per_call = await asyncio.gather(*[one_g(i) for i in range(N)])
+        arm_g_wall = round(time.perf_counter() - wall_t0, 6)
+
+        default_exec = loop._default_executor  # type: ignore[attr-defined]
+        default_max = (
+            getattr(default_exec, "_max_workers", "n/a") if default_exec else "none"
+        )
+
+        return {
+            "arm_a": {"wall_s": arm_a_wall, "per_call": a_per_call},
+            "arm_c": {"wall_s": arm_c_wall, "per_call": c_per_call},
+            "arm_d": {"wall_s": arm_d_wall, "per_call": d_per_call},
+            "arm_f": {"wall_s": arm_f_wall, "per_call": f_per_call},
+            "arm_g": {"wall_s": arm_g_wall, "per_call": g_per_call},
+            "default_executor_max_workers": default_max,
+        }
+
+    arms = asyncio.run(_run())
+    arm_async = arms["arm_a"]
+    arm_c = arms["arm_c"]
+    arm_d = arms["arm_d"]
+    arm_f = arms["arm_f"]
+    arm_g = arms["arm_g"]
+
+    # Arm B: raw sync sandbox via concurrent.futures (no Python async at all).
+    def one_sync(idx: int) -> dict[str, float]:
+        t0 = time.perf_counter()
+        resp = live_load_env.raw_sandbox.process.exec(
+            f"sleep {SLEEP_S}",
+            timeout=30,
+        )
+        return {
+            "idx": idx,
+            "elapsed_s": round(time.perf_counter() - t0, 6),
+            "exit_code": getattr(resp, "exit_code", None),
+        }
+
+    # Warm one sync exec too.
+    live_load_env.raw_sandbox.process.exec("echo warm", timeout=10)
+
+    wall_t0 = time.perf_counter()
+    with _cf.ThreadPoolExecutor(max_workers=N) as pool:
+        arm_sync_per_call = list(pool.map(one_sync, range(N)))
+    arm_sync_wall_s = round(time.perf_counter() - wall_t0, 6)
+
+    def _profile(per_call: list[dict[str, float]]) -> dict[str, float]:
+        values = sorted(float(item["elapsed_s"]) for item in per_call)
+        return {
+            "count": len(values),
+            "min": round(values[0], 4),
+            "p50": round(values[len(values) // 2], 4),
+            "p90": round(values[int(len(values) * 0.9)], 4),
+            "p99": round(values[int(len(values) * 0.99)], 4),
+            "max": round(values[-1], 4),
+            "sum": round(sum(values), 4),
+        }
+
+    def _arm(wall_s: float, per_call: list[dict[str, float]]) -> dict[str, Any]:
+        return {
+            "wall_s": wall_s,
+            "effective_parallelism": round(
+                (N * SLEEP_S) / max(wall_s, 1e-6), 2,
+            ),
+            "per_call_s": _profile(per_call),
+        }
+
+    summary = {
+        "N": N,
+        "sleep_s": SLEEP_S,
+        "single_op_floor_s": SLEEP_S,
+        "pure_sequential_wall_s": round(N * SLEEP_S, 4),
+        "arm_a_asyncio_to_thread": _arm(arm_async["wall_s"], arm_async["per_call"]),
+        "arm_b_sync_threadpool": _arm(arm_sync_wall_s, arm_sync_per_call),
+        "arm_c_explicit_run_in_executor": _arm(arm_c["wall_s"], arm_c["per_call"]),
+        "arm_d_true_async_daytona_aiohttp": _arm(arm_d["wall_s"], arm_d["per_call"]),
+        "arm_f_run_in_executor_None_no_ctxrun": _arm(
+            arm_f["wall_s"], arm_f["per_call"],
+        ),
+        "arm_g_async_daytona_python3_heavy": _arm(
+            arm_g["wall_s"], arm_g["per_call"],
+        ),
+        "default_executor_max_workers": arms["default_executor_max_workers"],
+    }
+
+    print("\n[transport-parallelism-isolation]")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+
+    # Diagnostic only — sanity-check completion and gross timeout.
+    for arm in (arm_async, arm_c, arm_d, arm_f, arm_g):
+        assert len(arm["per_call"]) == N
+        assert arm["wall_s"] < N * SLEEP_S + 20
+    assert len(arm_sync_per_call) == N
+    assert arm_sync_wall_s < N * SLEEP_S + 10

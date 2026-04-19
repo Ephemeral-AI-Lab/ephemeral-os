@@ -31,7 +31,6 @@ from tools.core.decorator import tool
 from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit._daytona_utils import (
     _exec_command,
-    _extend_write_scope,
     _extract_exit_code,
     _get_repo_root,
     _resolve_path,
@@ -39,7 +38,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _supports_exec_transport,
     _team_repo_scope_deny_errors,
     _wrap_bash_command,
-    _write_scope_covers,
 )
 
 
@@ -449,10 +447,6 @@ async def daytona_move_file(
     """Move a file or folder through the code-intelligence OCC commit path."""
     src_resolved = _normalized_path(_resolve_path(src_path, context))
     dst_resolved = _normalized_path(_resolve_path(target_path, context))
-
-    # src_in_scope controls post-success write_scope widening: a move
-    # whose src was owned stays owned at dst (see _extend_write_scope below).
-    src_in_scope = _write_scope_covers(context, src_resolved)
     warnings: list[str] = []
 
     svc = get_ci_service(context)
@@ -576,13 +570,9 @@ async def daytona_move_file(
         "changed_paths": paths,
         "ambient_changed_paths": list(change.ambient_changed_paths),
         "conflict_reason": change.conflict_reason,
-        "src_in_scope": src_in_scope,
-        "dst_resolved": dst_resolved,
     }
 
     if change.success:
-        if src_in_scope:
-            _extend_write_scope(context, dst_resolved)
         return ToolResult(
             output=_move_payload(
                 status="moved",

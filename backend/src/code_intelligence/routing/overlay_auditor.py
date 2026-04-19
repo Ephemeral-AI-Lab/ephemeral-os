@@ -40,7 +40,7 @@ from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
+from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from code_intelligence.hashing import content_hash
 from code_intelligence.routing.overlay_exec import (
     OverlayExec,
@@ -187,20 +187,28 @@ class OverlayAuditor:
         description: str,
         agent_id: str,
     ) -> Any:
-        operation_changes = []
-        for change in changes:
-            operation_changes.append(
-                await self._upperdir_change_to_operation(
-                    sandbox,
-                    change,
-                    lowerdir=lowerdir,
+        # Each `_upperdir_change_to_operation` does one `_read_lowerdir_entry`
+        # remote exec. The reads are independent, so let them overlap — for
+        # multi-file codeact commands this collapses N serial round-trips
+        # into one parallel batch against the sandbox. Single-change commits
+        # see no change (one awaited coroutine == one exec).
+        operation_changes = list(
+            await asyncio.gather(
+                *(
+                    self._upperdir_change_to_operation(
+                        sandbox,
+                        change,
+                        lowerdir=lowerdir,
+                    )
+                    for change in changes
                 )
             )
+        )
         if not operation_changes:
             return _audit_result(run, committed=[], ambient=[])
 
         with use_sandbox_io_loop():
-            result: OperationResult = await asyncio.to_thread(
+            result: OperationResult = await run_sync_in_executor(
                 self._write_coordinator.commit_operation_against_base,
                 operation_changes,
                 agent_id=agent_id,

@@ -6,9 +6,10 @@ from tools.core.hooks import ToolHookRegistry
 from tools.daytona_toolkit.hooks.posthook import (
     ambient_change_warning,
     audited_write_policy,
+    move_extend_scope,
 )
 
-_MODULES = (audited_write_policy, ambient_change_warning)
+_MODULES = (audited_write_policy, ambient_change_warning, move_extend_scope)
 
 
 def register_all(registry: ToolHookRegistry | None = None) -> None:

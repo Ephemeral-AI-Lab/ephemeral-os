@@ -21,12 +21,11 @@ before entering the façade — see ``ci_write_required_result`` in
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, Sequence, TypeVar
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
+from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from tools.core.ci_attribution import (
     agent_attribution_from_context,
     rebind_ci_service,
@@ -110,7 +109,7 @@ async def submit_commit(
 
     rebind_ci_service(context, svc)
     with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
+        result = await run_sync_in_executor(
             method,
             list(specs),
             agent_id=resolved_agent_id(context),

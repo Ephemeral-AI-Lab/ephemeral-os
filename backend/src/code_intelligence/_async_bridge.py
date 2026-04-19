@@ -170,6 +170,44 @@ def _running_loop_on_this_thread() -> asyncio.AbstractEventLoop | None:
         return None
 
 
+async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
+    """Run *func* in the default executor without full contextvars propagation.
+
+    Python 3.12's ``asyncio.to_thread`` wraps the call with
+    ``contextvars.copy_context().run(func, ...)``, activating the asyncio
+    task's contextvars inside the worker thread. That interacts badly
+    with the sync Daytona SDK (its ``@with_instrumentation`` OpenTelemetry
+    path serializes on shared state under propagated contextvars),
+    capping parallelism at ~6-7 concurrent regardless of executor size.
+
+    This helper dispatches via ``loop.run_in_executor(None, ...)`` — which
+    does NOT copy contextvars by default — but explicitly re-seeds the
+    one contextvar :mod:`code_intelligence._async_bridge` *does* need in
+    the worker thread: :data:`sandbox_io_loop`. Without that seed,
+    :func:`run_sync` (called transitively from ``ContentManager``) would
+    fall through to ``asyncio.run(coro)`` in the worker, creating a
+    fresh event loop disconnected from any AsyncDaytona aiohttp client
+    bound to the caller's loop — surfacing as "Future attached to a
+    different loop".
+
+    Verified at N=72 against live Daytona: ``asyncio.to_thread`` → 6.4x
+    parallelism; this helper → 45x.
+
+    Use everywhere a sandbox-bound sync call is dispatched from an async
+    caller (``submit_commit``, overlay auditor commit, rename).
+    """
+    loop = asyncio.get_running_loop()
+
+    def _call() -> Any:
+        token = sandbox_io_loop.set(loop)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            sandbox_io_loop.reset(token)
+
+    return await loop.run_in_executor(None, _call)
+
+
 def configure_default_executor(
     loop: asyncio.AbstractEventLoop | None = None,
     *,
@@ -215,6 +253,7 @@ __all__ = [
     "configure_default_executor",
     "current_sandbox_io_loop",
     "run_sync",
+    "run_sync_in_executor",
     "running_on_sandbox_io_loop",
     "sandbox_io_loop",
     "use_sandbox_io_loop",

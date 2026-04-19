@@ -10,7 +10,6 @@ dry-run, no audit-only side path.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import keyword
 import logging
@@ -19,7 +18,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
+from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from code_intelligence.types import SymbolKind
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
@@ -195,7 +194,7 @@ async def _perform_rename(
     """
     try:
         with use_sandbox_io_loop():
-            plan = await asyncio.to_thread(
+            plan = await run_sync_in_executor(
                 svc.rename_symbol_plan,
                 resolved_path,
                 int(line),
@@ -260,7 +259,7 @@ async def _perform_rename(
 
     rebind_ci_service(context, svc)
     with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
+        result = await run_sync_in_executor(
             svc.rename_symbol,
             resolved_path,
             int(line),
