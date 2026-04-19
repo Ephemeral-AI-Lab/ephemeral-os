@@ -29,18 +29,25 @@ class OverlayPolicyReject(OverlayError):
 
     ``reason`` is one of the plan-defined reasons, e.g.
     ``overlay_rejected_dotgit_writes``,
-    ``overlay_refused_gitignored_whiteout``,
+    ``overlay_refused_gitignore_whiteout``,
     ``overlay_unsupported_symlink``,
     ``overlay_unsupported_opaque_dir``,
-    ``overlay_non_utf8_tracked``,
+    ``overlay_non_utf8_gitinclude``,
     ``overlay_upper_full``.
     ``paths`` is the (optional) offending path list.
     """
 
-    def __init__(self, reason: str, paths: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        reason: str,
+        paths: tuple[str, ...] = (),
+        *,
+        snapshot_timings: dict[str, float] | None = None,
+    ) -> None:
         super().__init__(reason if not paths else f"{reason}: {','.join(paths)}")
         self.reason = reason
         self.paths = paths
+        self.snapshot_timings = dict(snapshot_timings or {})
 
 
 @dataclass(frozen=True)
@@ -59,16 +66,16 @@ class OverlayLease:
 
 @dataclass(frozen=True)
 class OverlayChange:
-    """One not-gitignored change emitted by ``overlay_run.py`` for OCC.
+    """One gitinclude-route change emitted by ``overlay_run.py`` for OCC.
 
     Routing is keyed by ``git check-ignore`` against the live workspace,
-    not by git index membership: brand-new untracked-but-not-gitignored
-    files appear here too. Concurrent writers to the same path are
-    resolved by strict-base OCC → first-writer-wins.
+    not by git index membership: brand-new files that are not matched by
+    any ``.gitignore`` rule appear here too. Concurrent writers to the
+    same path are resolved by strict-base OCC → first-writer-wins.
 
-    Gitignored changes are direct-merged inside the namespace and do not
-    appear here — they are summarized in
-    :class:`OverlayDiff.gitignored_paths` (per-file last-writer-wins, not
+    Gitignore-route changes are direct-merged inside the namespace and
+    do not appear here — they are summarized in
+    :class:`OverlayDiff.gitignore_paths` (per-file last-writer-wins, not
     per-tree atomic).
     """
 
@@ -95,13 +102,14 @@ class OverlayDiff:
     exit_code: int
     upper_bytes: int
     upper_files: int
-    tracked_changes: tuple[OverlayChange, ...]
-    gitignored_paths: tuple[str, ...]
-    gitignored_truncated: bool
+    gitinclude_changes: tuple[OverlayChange, ...]
+    gitignore_paths: tuple[str, ...]
+    gitignore_truncated: bool
     direct_merged_bytes: int
-    whiteouts_tracked: int
-    whiteouts_gitignored_refused: int
+    whiteouts_gitinclude: int
+    whiteouts_gitignore_refused: int
     dotgit_rejects: int
+    snapshot_timings: dict[str, float] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
 
 
@@ -116,10 +124,10 @@ class OverlayAuditResult:
     """
 
     command: OverlayCommandResult
-    tracked_committed: tuple[str, ...]
-    gitignored_merged: tuple[str, ...]
-    gitignored_merged_count: int
-    mixed_tracked_gitignored: bool
+    gitinclude_committed: tuple[str, ...]
+    gitignore_merged: tuple[str, ...]
+    gitignore_merged_count: int
+    mixed_gitinclude_gitignore: bool
     mixed_partial_apply: bool
     git_commit_status: str | None
     git_conflict_file: str | None

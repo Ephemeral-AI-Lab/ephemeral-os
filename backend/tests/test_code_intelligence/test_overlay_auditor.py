@@ -2,7 +2,7 @@
 
 End-to-end overlay execution is Linux-only; these tests focus on the
 deterministic orchestrator-side logic: NDJSON parsing, policy-reject
-surfacing on the ``SimpleNamespace`` result, mixed tracked + gitignored
+surfacing on the ``SimpleNamespace`` result, mixed gitinclude + gitignore
 partial-apply metadata, and the committer adapter.
 """
 
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -48,13 +49,14 @@ def _meta_line(**overrides) -> str:
         "exit_code": 0,
         "upper_bytes": 0,
         "upper_files": 0,
-        "tracked_changes": 0,
-        "gitignored_changes": 0,
-        "gitignored_paths": [],
-        "whiteouts_tracked": 0,
-        "whiteouts_gitignored_refused": 0,
+        "gitinclude_changes": 0,
+        "gitignore_changes": 0,
+        "gitignore_paths": [],
+        "whiteouts_gitinclude": 0,
+        "whiteouts_gitignore_refused": 0,
         "dotgit_rejects": 0,
         "direct_merged_bytes": 0,
+        "snapshot_timings": {},
         "warnings": [],
     }
     base.update(overrides)
@@ -73,6 +75,7 @@ def test_parse_ndjson_returns_policy_reject() -> None:
                 "snap": "abc",
                 "reason": "overlay_rejected_dotgit_writes",
                 "paths": [".git/config"],
+                "snapshot_timings": {"total": 0.4},
             }
         }
     )
@@ -80,15 +83,16 @@ def test_parse_ndjson_returns_policy_reject() -> None:
     assert isinstance(result, OverlayPolicyReject)
     assert result.reason == "overlay_rejected_dotgit_writes"
     assert result.paths == (".git/config",)
+    assert result.snapshot_timings == {"total": 0.4}
 
 
-def test_parse_ndjson_meta_and_one_tracked_entry() -> None:
+def test_parse_ndjson_meta_and_one_gitinclude_entry() -> None:
     raw = "\n".join(
         [
             _meta_line(
-                tracked_changes=1,
-                gitignored_changes=1,
-                gitignored_paths=[".venv/cfg"],
+                gitinclude_changes=1,
+                gitignore_changes=1,
+                gitignore_paths=[".venv/cfg"],
                 upper_bytes=42,
             ),
             json.dumps(
@@ -108,9 +112,9 @@ def test_parse_ndjson_meta_and_one_tracked_entry() -> None:
     assert isinstance(result, OverlayDiff)
     assert result.snap == "deadbeef"
     assert result.upper_bytes == 42
-    assert result.gitignored_paths == (".venv/cfg",)
-    assert len(result.tracked_changes) == 1
-    change = result.tracked_changes[0]
+    assert result.gitignore_paths == (".venv/cfg",)
+    assert len(result.gitinclude_changes) == 1
+    change = result.gitinclude_changes[0]
     assert change.path == "src/app.py"
     assert change.kind == "modify"
     assert change.base_content == "before\n"
@@ -121,7 +125,7 @@ def test_parse_ndjson_meta_and_one_tracked_entry() -> None:
 def test_parse_ndjson_delete_entry_has_none_final_content() -> None:
     raw = "\n".join(
         [
-            _meta_line(tracked_changes=1, whiteouts_tracked=1),
+            _meta_line(gitinclude_changes=1, whiteouts_gitinclude=1),
             json.dumps(
                 {
                     "path": "old.py",
@@ -137,8 +141,8 @@ def test_parse_ndjson_delete_entry_has_none_final_content() -> None:
     )
     result = parse_diff_ndjson(raw)
     assert isinstance(result, OverlayDiff)
-    assert result.tracked_changes[0].final_content is None
-    assert result.tracked_changes[0].kind == "delete"
+    assert result.gitinclude_changes[0].final_content is None
+    assert result.gitinclude_changes[0].kind == "delete"
 
 
 def test_parse_ndjson_invalid_meta_raises() -> None:
@@ -147,9 +151,37 @@ def test_parse_ndjson_invalid_meta_raises() -> None:
 
 
 def test_parse_ndjson_invalid_entry_raises() -> None:
-    raw = _meta_line(tracked_changes=1) + "\nnot-valid-json"
+    raw = _meta_line(gitinclude_changes=1) + "\nnot-valid-json"
     with pytest.raises(OverlayRunError):
         parse_diff_ndjson(raw)
+
+
+@pytest.mark.asyncio
+async def test_read_diff_error_includes_overlay_output() -> None:
+    async def _missing_diff_exec(_sandbox, _command, *, timeout=None):
+        return SimpleNamespace(
+            result="cat: /tmp/run/diff.ndjson: No such file or directory",
+            exit_code=1,
+        )
+
+    auditor = OverlayAuditor(
+        sandbox_id="overlay-missing-diff",
+        workspace_root="/workspace",
+        exec_process=_missing_diff_exec,
+        write_coordinator=object(),
+    )
+
+    with pytest.raises(OverlayRunError) as exc_info:
+        await auditor._read_diff(
+            object(),
+            SimpleNamespace(run_dir="/tmp/run"),
+            overlay_stdout="mount setup failed",
+            overlay_exit_code=255,
+        )
+
+    message = str(exc_info.value)
+    assert "overlay_exit_code=255" in message
+    assert "mount setup failed" in message
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +243,7 @@ async def test_committer_aborts_on_strict_base_mismatch(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_committer_creates_new_tracked_file(tmp_path: Path) -> None:
+async def test_committer_creates_new_gitinclude_file(tmp_path: Path) -> None:
     svc = CodeIntelligenceService(
         sandbox_id=f"overlay-committer-create-{tmp_path.name}",
         workspace_root=str(tmp_path),
@@ -232,7 +264,7 @@ async def test_committer_creates_new_tracked_file(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_committer_deletes_tracked_file(tmp_path: Path) -> None:
+async def test_committer_deletes_gitinclude_file(tmp_path: Path) -> None:
     target = tmp_path / "gone.py"
     target.write_text("bye\n", encoding="utf-8")
     svc = CodeIntelligenceService(
@@ -368,7 +400,7 @@ async def _noop_exec(sandbox, command, *, timeout=None):
 
 
 @pytest.mark.asyncio
-async def test_auditor_commits_tracked_changes_via_occ(tmp_path: Path) -> None:
+async def test_auditor_commits_gitinclude_changes_via_occ(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_fixture_repo(repo)
@@ -378,7 +410,7 @@ async def test_auditor_commits_tracked_changes_via_occ(tmp_path: Path) -> None:
 
     diff_payload = "\n".join(
         [
-            _meta_line(tracked_changes=1, upper_files=1, upper_bytes=4),
+            _meta_line(gitinclude_changes=1, upper_files=1, upper_bytes=4),
             json.dumps(
                 {
                     "path": "app.py",
@@ -411,7 +443,7 @@ async def test_auditor_commits_tracked_changes_via_occ(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert result.git_commit_status == "committed"
     assert result.changed_paths == [str(target)]
-    assert result.mixed_tracked_gitignored is False
+    assert result.mixed_gitinclude_gitignore is False
     assert result.mixed_partial_apply is False
     assert target.read_text(encoding="utf-8") == "new\n"
 
@@ -450,7 +482,7 @@ async def test_auditor_returns_user_command_stdout_from_overlay_run_dir(
 
 
 @pytest.mark.asyncio
-async def test_auditor_reports_noop_for_gitignored_only_changes(
+async def test_auditor_reports_noop_for_gitignore_only_changes(
     tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -466,18 +498,18 @@ async def test_auditor_reports_noop_for_gitignored_only_changes(
         repo_root=repo,
         diff_contents=_meta_line(
             exit_code=0,
-            gitignored_changes=1,
-            gitignored_paths=[".venv/cfg"],
+            gitignore_changes=1,
+            gitignore_paths=[".venv/cfg"],
             direct_merged_bytes=10,
         ),
         user_exit=0,
     )
     svc = CodeIntelligenceService(
-        sandbox_id=f"overlay-gitignored-only-{tmp_path.name}",
+        sandbox_id=f"overlay-gitignore-only-{tmp_path.name}",
         workspace_root=str(repo),
     )
     auditor = OverlayAuditor(
-        sandbox_id=f"overlay-gitignored-only-{tmp_path.name}",
+        sandbox_id=f"overlay-gitignore-only-{tmp_path.name}",
         workspace_root=str(repo),
         exec_process=_noop_exec,
         write_coordinator=svc._write_coordinator,
@@ -488,7 +520,7 @@ async def test_auditor_reports_noop_for_gitignored_only_changes(
 
     assert result.git_commit_status == "noop"
     assert result.changed_paths == []
-    assert result.gitignored_direct_merged_paths == [str(repo / ".venv" / "cfg")]
+    assert result.gitignore_direct_merged_paths == [str(repo / ".venv" / "cfg")]
 
 
 @pytest.mark.asyncio
@@ -503,21 +535,21 @@ async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
     _commit_all(repo)
 
     # The classifier inside the ns would already have direct-merged the
-    # gitignored file before OCC runs; we simulate that by writing the
+    # gitignore file before OCC runs; we simulate that by writing the
     # file directly to the live workspace and letting the NDJSON declare
     # it as merged.
     (repo / ".venv").mkdir()
     (repo / ".venv" / "bar.cfg").write_text("home=/usr\n", encoding="utf-8")
 
-    # Peer write to the tracked file so strict OCC aborts.
+    # Peer write to the gitinclude file so strict OCC aborts.
     target.write_text("peer-changed\n", encoding="utf-8")
 
     diff_payload = "\n".join(
         [
             _meta_line(
-                tracked_changes=1,
-                gitignored_changes=1,
-                gitignored_paths=[".venv/bar.cfg"],
+                gitinclude_changes=1,
+                gitignore_changes=1,
+                gitignore_paths=[".venv/bar.cfg"],
                 upper_files=2,
                 direct_merged_bytes=10,
             ),
@@ -550,7 +582,7 @@ async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
         max_concurrent=2,
     )
 
-    # Before building SNAP, reset tracked file to its committed content
+    # Before building SNAP, reset gitinclude file to its committed content
     # so SNAP captures "foo==0.1\n" as base, then apply the peer write
     # so OCC mismatches.
     target.write_text("foo==0.1\n", encoding="utf-8")
@@ -570,15 +602,15 @@ async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
 
     result = await auditor.execute(sandbox, "pip install foo && echo foo >> requirements.txt", timeout=60)
 
-    assert result.mixed_tracked_gitignored is True
+    assert result.mixed_gitinclude_gitignore is True
     assert result.mixed_partial_apply is True
     assert result.git_commit_status == "aborted_version"
     assert result.changed_paths == []
     # Tracked live path appears as ambient (the user tried to change it).
     assert str(target) in result.ambient_changed_paths
     # Gitignored direct-merged path surfaces in the additive metadata.
-    assert str(repo / ".venv" / "bar.cfg") in result.gitignored_direct_merged_paths
-    assert any("tracked changes aborted" in w for w in result.warnings)
+    assert str(repo / ".venv" / "bar.cfg") in result.gitignore_direct_merged_paths
+    assert any("gitinclude changes aborted" in w for w in result.warnings)
 
 
 @pytest.mark.asyncio

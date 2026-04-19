@@ -30,6 +30,7 @@ import json
 import logging
 import shlex
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
@@ -39,6 +40,16 @@ logger = logging.getLogger(__name__)
 
 class GitSnapshotError(RuntimeError):
     """Raised when the sandbox-side snapshot script fails."""
+
+
+@dataclass(frozen=True)
+class GitSnapshotDetails:
+    """Detailed result for a live git snapshot."""
+
+    snap: str
+    tree: str
+    parent: str | None
+    timings: dict[str, float]
 
 
 async def build_live_snapshot(
@@ -62,6 +73,24 @@ async def build_live_snapshot(
     * Hooks do not fire. ``git commit-tree`` is plumbing; hooks only bind
       to ``git commit``.
     """
+    return (
+        await build_live_snapshot_details(
+            sandbox,
+            exec_process,
+            repo_root,
+            timeout=timeout,
+        )
+    ).snap
+
+
+async def build_live_snapshot_details(
+    sandbox: Any,
+    exec_process: Callable[..., Awaitable[Any]],
+    repo_root: str,
+    *,
+    timeout: int = 120,
+) -> GitSnapshotDetails:
+    """Build a dangling commit and return snapshot metadata/timings."""
     workspace_root = repo_root.rstrip("/")
     if not workspace_root:
         raise GitSnapshotError("repo_root must be a non-empty path")
@@ -78,7 +107,17 @@ async def build_live_snapshot(
         raise GitSnapshotError(
             f"git_snapshot script returned invalid sha: {payload!r}"
         )
-    return snap
+    tree = str(payload.get("tree") or "").strip()
+    parent_raw = payload.get("parent")
+    parent = str(parent_raw).strip() if parent_raw else None
+    raw_timings = payload.get("timings") or {}
+    timings = {
+        str(key): round(float(value), 6)
+        for key, value in raw_timings.items()
+        if isinstance(value, (int, float))
+    } if isinstance(raw_timings, dict) else {}
+    return GitSnapshotDetails(snap=snap, tree=tree, parent=parent, timings=timings)
+
 
 
 async def _run_snapshot_script(
@@ -131,6 +170,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def reply(**payload):
@@ -162,8 +202,15 @@ def git(args, *, cwd, env=None, input_bytes=None, check=True):
     return proc
 
 
+def record_timing(timings, key, started_at):
+    timings[key] = round(time.perf_counter() - started_at, 6)
+
+
 def main():
+    total_started = time.perf_counter()
+    timings = {}
     repo_root = sys.argv[1]
+    validate_started = time.perf_counter()
     if not os.path.isdir(repo_root):
         fail(f"repo_root does not exist: {repo_root}")
     if not os.path.isdir(os.path.join(repo_root, ".git")):
@@ -173,12 +220,16 @@ def main():
             "repo_root must be a canonical git checkout with a .git directory "
             f"(linked worktrees are not supported): {repo_root}"
         )
+    record_timing(timings, "validate_repo", validate_started)
 
     # Redirect the index so "git add -A" does not touch the live index.
+    temp_index_started = time.perf_counter()
     tmp_index_fd, tmp_index_path = tempfile.mkstemp(prefix="git-snapshot-idx-")
     os.close(tmp_index_fd)
     os.unlink(tmp_index_path)  # git refuses to read a stub; let it create one.
+    record_timing(timings, "temp_index", temp_index_started)
 
+    env_started = time.perf_counter()
     env = dict(os.environ)
     env["GIT_INDEX_FILE"] = tmp_index_path
     # Suppress any user identity prompts. commit-tree still needs an
@@ -192,12 +243,14 @@ def main():
     # when running against fixture repos.
     env.setdefault("GIT_AUTHOR_DATE", "1700000000 +0000")
     env.setdefault("GIT_COMMITTER_DATE", "1700000000 +0000")
+    record_timing(timings, "prepare_env", env_started)
 
     try:
         # Seed the tempfile index from HEAD so commit-tree sees a coherent
         # starting point when HEAD exists. For empty repos (no commits yet)
         # skip read-tree — the index simply starts empty, which is what we
         # want.
+        head_started = time.perf_counter()
         head_proc = git(
             ["rev-parse", "--verify", "HEAD"],
             cwd=repo_root,
@@ -206,19 +259,28 @@ def main():
         )
         has_head = head_proc.returncode == 0
         head_sha = head_proc.stdout.decode("utf-8", "replace").strip() if has_head else ""
+        record_timing(timings, "rev_parse_head", head_started)
         if has_head:
+            read_tree_started = time.perf_counter()
             git(["read-tree", "HEAD"], cwd=repo_root, env=env)
+            record_timing(timings, "read_tree", read_tree_started)
+        else:
+            timings["read_tree"] = 0.0
 
         # "git add -A" in the tempfile index: honors .gitignore, captures
         # staged + unstaged + untracked content, resolves deletions as
         # removals from the tree. Never touches the live index.
+        add_started = time.perf_counter()
         git(["add", "-A"], cwd=repo_root, env=env)
+        record_timing(timings, "git_add", add_started)
 
         # Write the tree.
+        write_tree_started = time.perf_counter()
         tree_proc = git(["write-tree"], cwd=repo_root, env=env)
         tree_sha = tree_proc.stdout.decode("utf-8", "replace").strip()
         if not tree_sha:
             fail("git write-tree returned empty sha")
+        record_timing(timings, "write_tree", write_tree_started)
 
         commit_args = ["commit-tree", tree_sha, "-m", "overlay-snapshot"]
         if has_head:
@@ -226,19 +288,24 @@ def main():
             # via standard commit-range machinery (not required by the
             # overlay auditor, but cheap).
             commit_args.extend(["-p", head_sha])
+        commit_started = time.perf_counter()
         commit_proc = git(commit_args, cwd=repo_root, env=env)
         commit_sha = commit_proc.stdout.decode("utf-8", "replace").strip()
         if not commit_sha:
             fail("git commit-tree returned empty sha")
+        record_timing(timings, "commit_tree", commit_started)
 
-        reply(snap=commit_sha, tree=tree_sha, parent=head_sha or None)
+        timings["total"] = round(time.perf_counter() - total_started, 6)
+        reply(snap=commit_sha, tree=tree_sha, parent=head_sha or None, timings=timings)
     except Exception as exc:  # pragma: no cover - defensive
         fail(str(exc))
     finally:
+        cleanup_started = time.perf_counter()
         try:
             os.unlink(tmp_index_path)
         except OSError:
             pass
+        record_timing(timings, "cleanup", cleanup_started)
 
 
 if __name__ == "__main__":
@@ -252,6 +319,8 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "GitSnapshotDetails",
     "GitSnapshotError",
     "build_live_snapshot",
+    "build_live_snapshot_details",
 ]

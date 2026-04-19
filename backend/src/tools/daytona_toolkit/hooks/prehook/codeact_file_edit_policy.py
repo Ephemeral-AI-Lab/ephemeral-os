@@ -13,13 +13,14 @@ from tools.daytona_toolkit.hooks.prehook._codeact_common import python_code, she
 
 FILE_EDIT_POLICY_MESSAGE = (
     "BLOCKED: daytona_codeact is for runtime commands, tests, and inspection in "
-    "coordinated team lanes. File edits must use daytona_edit_file, "
+    "coordinated team lanes. Repo writes, explicit deletes, and moves must use daytona_edit_file, "
     "daytona_write_file, daytona_rename_symbol, daytona_delete_file, or "
     "daytona_move_file so write-scope, OCC, and invalid-edit guardrails run "
-    "before mutation. Use daytona_delete_file for removals and "
-    "daytona_move_file for path moves. Do not retry cleanup with rm, mv, "
-    "unlink, os.remove, Path.unlink, shutil.rmtree, shutil.move, git rm, or "
-    "git mv inside CodeAct."
+    "before mutation. Pure file removals may run through CodeAct because the "
+    "overlay audit path converts tracked whiteouts into OCC-gated deletes and "
+    "rejects unsupported removal shapes. Use daytona_move_file for path moves. "
+    "Do not retry cleanup with mv, shutil.move, os.rename, git rm, or git mv "
+    "inside CodeAct."
 )
 _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
@@ -45,7 +46,7 @@ _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(
-            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b"
+            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install)\b"
             r"|(?:^|[;&|]\s*)git\s+(?:rm|mv)\b",
             flags=re.IGNORECASE,
         ),
@@ -56,8 +57,9 @@ _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
             r"(?:^|[;&|]\s*)python(?:3(?:\.\d+)?)?\b.*"
             r"(?:write_text|write_bytes|"
             r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]|"
-            r"\bshutil\.|\bos\.(?:remove|unlink|rename|replace)|"
-            r"\bPath\s*\([^)]*\)\.(?:touch|unlink|rename|replace|mkdir))",
+            r"\bshutil\.(?:copy|copyfile|copytree|move)|"
+            r"\bos\.(?:rename|replace)|"
+            r"\bPath\s*\([^)]*\)\.(?:touch|rename|replace|mkdir))",
             flags=re.IGNORECASE | re.DOTALL,
         ),
         "inline Python file mutation",
@@ -80,12 +82,18 @@ _PYTHON_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(
-            r"\b(?:os|Path\s*\([^)]*\))\.(?:remove|unlink|rename|replace|touch|mkdir|rmdir)\b",
+            r"\b(?:os|Path\s*\([^)]*\))\.(?:rename|replace|touch|mkdir)\b",
             flags=re.IGNORECASE | re.DOTALL,
         ),
         "Python filesystem mutation",
     ),
-    (re.compile(r"\bshutil\.", flags=re.IGNORECASE), "shutil file mutation"),
+    (
+        re.compile(
+            r"\bshutil\.(?:copy|copyfile|copytree|move)\b",
+            flags=re.IGNORECASE,
+        ),
+        "shutil file mutation",
+    ),
 )
 
 

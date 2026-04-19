@@ -20,11 +20,11 @@ def _reset_counters() -> None:
 
 
 def test_record_overlay_op_is_additive() -> None:
-    telemetry.record_overlay_op(ops_total=1, tracked_changes=3)
-    telemetry.record_overlay_op(ops_total=1, tracked_changes=4, upper_bytes=1024)
+    telemetry.record_overlay_op(ops_total=1, gitinclude_changes=3)
+    telemetry.record_overlay_op(ops_total=1, gitinclude_changes=4, upper_bytes=1024)
     snap = telemetry.overlay_counters_snapshot()
     assert snap.ops_total == 2
-    assert snap.tracked_changes == 7
+    assert snap.gitinclude_changes == 7
     assert snap.upper_bytes == 1024
 
 

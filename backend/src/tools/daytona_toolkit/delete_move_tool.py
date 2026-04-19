@@ -6,9 +6,9 @@ passed as service-level intent; the code-intelligence mutation service expands
 folder members and applies the OCC gate to each member file. Overwrite
 semantics are enforced by the platform pre-hook, not by this tool.
 
-CodeAct's shell policy blocks ``rm`` / ``mv`` precisely so that deletions
-and moves flow through these OCC-gated tools instead of the unaudited
-shell path.
+CodeAct's shell policy blocks path moves; pure removals may also flow through
+the overlay-audited CodeAct path, which converts tracked whiteouts into
+OCC-gated deletes and rejects unsupported removal shapes.
 """
 
 from __future__ import annotations
@@ -152,8 +152,8 @@ class DaytonaDeleteFileOutput(BaseModel):
         "the OCC-gated code-intelligence commit path. Folder deletes "
         "enumerate every descendant file and submit them as one OCC batch; "
         "base-hash drift on any member aborts the whole batch with "
-        "`aborted_version`. Use this instead of `rm` in CodeAct; CodeAct "
-        "`rm` is blocked so deletes stay coordinated."
+        "`aborted_version`. Prefer this for explicit folder deletes; CodeAct "
+        "removals are also audited by the overlay path."
     ),
     short_description="Delete a file or folder through the OCC commit path.",
     input_model=DaytonaDeleteFileInput,

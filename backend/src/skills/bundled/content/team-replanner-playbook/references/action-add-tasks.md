@@ -28,7 +28,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 - Each new task must have: `id`, `description`, `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; every new task is inserted as a direct child of this replanner.
 - Keep each `description` as a planner-authored short label under about 10 words; put full instructions in `spec`.
 - Put all corrective work in `new_tasks`.
-- If a corrective task removes a repo file, its spec must name `daytona_delete_file`; if it relocates or renames a path, its spec must name `daytona_move_file`. Never tell a child to use CodeAct `rm`, `mv`, `unlink`, `shutil.rmtree`, or `shutil.move`.
+- If a corrective task relocates or renames a path, its spec must name `daytona_move_file`; never tell a child to use CodeAct `mv`, `shutil.move`, or git path commands. Pure removals may run through CodeAct because the overlay audit path converts tracked removals into OCC-gated deletes and rejects unsupported removal shapes; name `daytona_delete_file` when the task needs an explicit delete tool contract.
 - Do not include the original failed `request_replan` task in `cancel_ids`; this action normally uses `cancel_ids=[]`.
 - Parallel concrete tasks must not share any `scope_paths` file. If two corrective clusters touch the same file, either add a `deps` edge from the later task to the earlier task, or submit one focused repair task for that shared owner file.
 - If `new_tasks` contains 3 or more concrete non-planner tasks, add one terminal `validator` task in this same `submit_replan(...)` payload. Its `deps` must cover those concrete tasks, and its spec must run the relevant broad verification after diagnostics.

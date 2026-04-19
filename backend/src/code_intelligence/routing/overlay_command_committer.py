@@ -1,4 +1,4 @@
-"""Adapt overlay NDJSON not-gitignored changes to the OCC write coordinator.
+"""Adapt overlay NDJSON gitinclude changes to the OCC write coordinator.
 
 See ``docs/architecture/overlay-sandbox-plan.md`` §4.1. The committer is
 deliberately decoupled from the auditor / sandbox transport: given a
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class OverlayCommandCommitter:
-    """Commit the not-gitignored slice of one overlay op through OCC.
+    """Commit the gitinclude slice of one overlay op through OCC.
 
     Every change that ``git check-ignore`` did *not* flag is committed
     here; index membership is irrelevant to routing. The strict-base

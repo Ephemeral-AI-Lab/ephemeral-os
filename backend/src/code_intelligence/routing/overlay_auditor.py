@@ -3,24 +3,25 @@
 Coordinates one ``svc.cmd`` op per plan §1:
 
 1. Acquire per-sandbox semaphore.
-2. Build SNAP via ``git_snapshot.build_live_snapshot``.
-3. Ship ``overlay_run.py`` into the sandbox, invoke it under
-   ``unshare -Urm`` with the user command base64-encoded.
+2. Ship ``overlay_run.py`` into the sandbox, invoke it under
+   ``unshare -Urm`` with the user command base64-encoded. The sandbox-side
+   runner builds SNAP inside that same exec before mounting the overlay.
 4. Read ``$RUN_DIR/diff.ndjson`` from the sandbox.
 5. If the script emitted a ``_reject`` meta line → surface via
    ``git_commit_status`` + ``git_conflict_reason`` on the result.
-6. Otherwise parse the NDJSON, run OCC over the **not-gitignored**
+6. Otherwise parse the NDJSON, run OCC over the **gitinclude-route**
    changes via :class:`OverlayCommandCommitter` (first-writer-wins;
-   gitignored writes were already direct-merged inside the namespace
-   with per-file last-writer-wins), and assemble the downstream
-   ``SimpleNamespace`` result.
+   gitignore-route writes were already direct-merged inside the
+   namespace with per-file last-writer-wins), and assemble the
+   downstream ``SimpleNamespace`` result.
 7. Cleanup ``$RUN_DIR``; release semaphore.
 
-Routing terminology: the plan keys the route on ``git check-ignore``,
-not git index membership. Field names that say "tracked" — both on the
-NDJSON wire and on the result ``SimpleNamespace`` — are aliases for
-"not-gitignored" and include brand-new files that are not matched by
-any ``.gitignore`` rule. Index membership is never consulted.
+Routing terminology: "gitinclude" = every upperdir path ``git
+check-ignore`` did *not* flag (OCC route, first-writer-wins).
+"gitignore" = every path it did flag (direct-merge, per-file
+last-writer-wins, not per-tree atomic). Git index membership is never
+consulted; brand-new files absent from the index still go through the
+gitinclude route as long as no ``.gitignore`` rule matches them.
 
 Downstream callers (``codeact_tool``, ``_commit.submit_codeact_cmd``) read
 through a fixed ``SimpleNamespace`` shape:
@@ -28,11 +29,11 @@ through a fixed ``SimpleNamespace`` shape:
     result, exit_code, changed_paths, ambient_changed_paths,
     git_commit_status, git_conflict_reason, git_conflict_file
 
-Plus the additive overlay metadata from §4.5 (``tracked_changed_paths``,
-``gitignored_direct_merged_paths``, ``gitignored_direct_merged_count``,
-``mixed_tracked_gitignored``, ``mixed_partial_apply``, ``warnings``).
+Plus the additive overlay metadata from §4.5 (``gitinclude_changed_paths``,
+``gitignore_direct_merged_paths``, ``gitignore_direct_merged_count``,
+``mixed_gitinclude_gitignore``, ``mixed_partial_apply``, ``warnings``).
 ``git_commit_status`` values include ``"committed"`` (OCC succeeded),
-``"noop"`` (no not-gitignored changes), ``"aborted_version"`` (OCC
+``"noop"`` (no gitinclude changes), ``"aborted_version"`` (OCC
 strict-base mismatch — first-writer-wins lost the race), and
 ``"rejected"`` (policy reject from the sandbox-side script).
 """
@@ -53,7 +54,6 @@ from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
-from code_intelligence.routing.git_snapshot import build_live_snapshot
 from code_intelligence.routing.overlay_command_committer import OverlayCommandCommitter
 from code_intelligence.routing.overlay_config import (
     overlay_max_concurrent,
@@ -122,9 +122,6 @@ class OverlayAuditor:
             lease = self._new_lease()
             record_overlay_op(ops_total=1)
             try:
-                snap = await build_live_snapshot(
-                    sandbox, self._exec_process, self._workspace_root
-                )
                 await self._ensure_script_uploaded(sandbox)
                 user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
                 stdin_b64 = (
@@ -135,7 +132,6 @@ class OverlayAuditor:
                 stdout_text, script_exit = await self._run_overlay(
                     sandbox,
                     lease=lease,
-                    snap=snap,
                     user_cmd_b64=user_cmd_b64,
                     stdin_b64=stdin_b64,
                     timeout=timeout,
@@ -143,7 +139,12 @@ class OverlayAuditor:
                 stdout_text = await self._read_stdout(
                     sandbox, lease, fallback=stdout_text
                 )
-                diff_or_reject = await self._read_diff(sandbox, lease)
+                diff_or_reject = await self._read_diff(
+                    sandbox,
+                    lease,
+                    overlay_stdout=stdout_text,
+                    overlay_exit_code=script_exit,
+                )
                 if isinstance(diff_or_reject, OverlayPolicyReject):
                     record_overlay_op(
                         ops_rejected=1,
@@ -155,16 +156,17 @@ class OverlayAuditor:
                         stdout=stdout_text,
                         exit_code=script_exit,
                         reject=diff_or_reject,
+                        git_snapshot_timings=diff_or_reject.snapshot_timings,
                     )
                 diff = diff_or_reject
                 record_overlay_op(
                     upper_bytes=diff.upper_bytes,
                     upper_files=diff.upper_files,
-                    tracked_changes=len(diff.tracked_changes),
-                    gitignored_changes=len(diff.gitignored_paths),
+                    gitinclude_changes=len(diff.gitinclude_changes),
+                    gitignore_changes=len(diff.gitignore_paths),
                     direct_merged_bytes=diff.direct_merged_bytes,
-                    whiteouts_tracked=diff.whiteouts_tracked,
-                    whiteouts_gitignored_refused=diff.whiteouts_gitignored_refused,
+                    whiteouts_gitinclude=diff.whiteouts_gitinclude,
+                    whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
                 )
                 return await self._commit_and_assemble(
                     stdout=stdout_text,
@@ -172,6 +174,7 @@ class OverlayAuditor:
                     agent_id=agent_id,
                     description=description or "daytona_codeact overlay",
                     attribute_changes=attribute_changes,
+                    git_snapshot_timings=diff.snapshot_timings,
                 )
             finally:
                 try:
@@ -226,7 +229,6 @@ class OverlayAuditor:
         sandbox: Any,
         *,
         lease: OverlayLease,
-        snap: str,
         user_cmd_b64: str,
         stdin_b64: str,
         timeout: int | None,
@@ -235,7 +237,6 @@ class OverlayAuditor:
         args = [
             "--workspace-root", self._workspace_root,
             "--run-dir", lease.run_dir,
-            "--snap", snap,
             "--upper-size-mb", str(self._upper_size_mb),
             "--user-cmd-b64", user_cmd_b64,
         ]
@@ -285,7 +286,12 @@ class OverlayAuditor:
             return fallback
 
     async def _read_diff(
-        self, sandbox: Any, lease: OverlayLease
+        self,
+        sandbox: Any,
+        lease: OverlayLease,
+        *,
+        overlay_stdout: str = "",
+        overlay_exit_code: int | None = None,
     ) -> OverlayDiff | OverlayPolicyReject:
         diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
         cmd = f"cat {shlex.quote(diff_path)}"
@@ -298,7 +304,10 @@ class OverlayAuditor:
         )
         if exit_code != 0:
             raise OverlayRunError(
-                f"overlay diff.ndjson missing at {diff_path}: {stdout[-1000:]!r}"
+                "overlay diff.ndjson missing at "
+                f"{diff_path}: cat={stdout[-1000:]!r} "
+                f"overlay_exit_code={overlay_exit_code!r} "
+                f"overlay_output={overlay_stdout[-2000:]!r}"
             )
         return parse_diff_ndjson(stdout)
 
@@ -314,25 +323,26 @@ class OverlayAuditor:
         agent_id: str,
         description: str,
         attribute_changes: bool,
+        git_snapshot_timings: dict[str, float] | None = None,
     ) -> SimpleNamespace:
-        gitignored_paths = [
-            _live_path(self._workspace_root, p) for p in diff.gitignored_paths
+        gitignore_paths = [
+            _live_path(self._workspace_root, p) for p in diff.gitignore_paths
         ]
-        tracked_live_paths = [
-            _live_path(self._workspace_root, c.path) for c in diff.tracked_changes
+        gitinclude_live_paths = [
+            _live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
         ]
 
         if not attribute_changes:
             # Treat every change as ambient — do not commit through OCC.
-            combined = sorted(set(tracked_live_paths + gitignored_paths))
+            combined = sorted(set(gitinclude_live_paths + gitignore_paths))
             return _audit_result(
                 result_text=stdout,
                 exit_code=diff.exit_code,
-                tracked_committed=[],
-                gitignored_merged=gitignored_paths,
-                gitignored_merged_count=len(gitignored_paths),
-                mixed_tracked_gitignored=bool(diff.tracked_changes) and bool(
-                    diff.gitignored_paths
+                gitinclude_committed=[],
+                gitignore_merged=gitignore_paths,
+                gitignore_merged_count=len(gitignore_paths),
+                mixed_gitinclude_gitignore=bool(diff.gitinclude_changes) and bool(
+                    diff.gitignore_paths
                 ),
                 mixed_partial_apply=False,
                 ambient=combined,
@@ -340,27 +350,29 @@ class OverlayAuditor:
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
+                git_snapshot_timings=git_snapshot_timings,
             )
 
-        mixed = bool(diff.tracked_changes) and bool(diff.gitignored_paths)
-        if not diff.tracked_changes:
+        mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
+        if not diff.gitinclude_changes:
             return _audit_result(
                 result_text=stdout,
                 exit_code=diff.exit_code,
-                tracked_committed=[],
-                gitignored_merged=gitignored_paths,
-                gitignored_merged_count=len(gitignored_paths),
-                mixed_tracked_gitignored=mixed,
+                gitinclude_committed=[],
+                gitignore_merged=gitignore_paths,
+                gitignore_merged_count=len(gitignore_paths),
+                mixed_gitinclude_gitignore=mixed,
                 mixed_partial_apply=False,
                 ambient=[],
                 git_commit_status="noop",
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
+                git_snapshot_timings=git_snapshot_timings,
             )
 
         commit_result = await self._committer.commit(
-            diff.tracked_changes,
+            diff.gitinclude_changes,
             agent_id=agent_id,
             description=description,
         )
@@ -369,16 +381,17 @@ class OverlayAuditor:
             return _audit_result(
                 result_text=stdout,
                 exit_code=diff.exit_code,
-                tracked_committed=tracked_live_paths,
-                gitignored_merged=gitignored_paths,
-                gitignored_merged_count=len(gitignored_paths),
-                mixed_tracked_gitignored=mixed,
+                gitinclude_committed=gitinclude_live_paths,
+                gitignore_merged=gitignore_paths,
+                gitignore_merged_count=len(gitignore_paths),
+                mixed_gitinclude_gitignore=mixed,
                 mixed_partial_apply=False,
                 ambient=[],
                 git_commit_status=commit_result.status,
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=warnings,
+                git_snapshot_timings=git_snapshot_timings,
             )
 
         # Tracked OCC aborted. Gitignored writes were already direct-merged
@@ -386,29 +399,30 @@ class OverlayAuditor:
         partial = mixed
         if partial:
             warnings.append(
-                "tracked changes aborted by OCC; gitignored runtime changes "
+                "gitinclude changes aborted by OCC; gitignore runtime changes "
                 "were already applied"
             )
             record_overlay_op(
                 mixed_partial_apply_ops=1,
-                mixed_tracked_gitignored_ops=1,
-                gitignored_changes_after_aborted_tracked=len(gitignored_paths),
+                mixed_gitinclude_gitignore_ops=1,
+                gitignore_changes_after_aborted_gitinclude=len(gitignore_paths),
             )
         elif mixed:
-            record_overlay_op(mixed_tracked_gitignored_ops=1)
+            record_overlay_op(mixed_gitinclude_gitignore_ops=1)
         return _audit_result(
             result_text=stdout,
             exit_code=diff.exit_code,
-            tracked_committed=[],
-            gitignored_merged=gitignored_paths,
-            gitignored_merged_count=len(gitignored_paths),
-            mixed_tracked_gitignored=mixed,
+            gitinclude_committed=[],
+            gitignore_merged=gitignore_paths,
+            gitignore_merged_count=len(gitignore_paths),
+            mixed_gitinclude_gitignore=mixed,
             mixed_partial_apply=partial,
-            ambient=tracked_live_paths,
+            ambient=gitinclude_live_paths,
             git_commit_status=commit_result.status,
             git_conflict_reason=commit_result.conflict_reason or None,
             git_conflict_file=commit_result.conflict_file,
             warnings=warnings,
+            git_snapshot_timings=git_snapshot_timings,
         )
 
 
@@ -437,9 +451,19 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
         reject_meta = first["_reject"]
         if not isinstance(reject_meta, dict):
             raise OverlayRunError(f"_reject block must be a dict, got {reject_meta!r}")
+        raw_snapshot_timings = reject_meta.get("snapshot_timings") or {}
         return OverlayPolicyReject(
             reason=str(reject_meta.get("reason") or ""),
             paths=tuple(str(p) for p in reject_meta.get("paths") or ()),
+            snapshot_timings=(
+                {
+                    str(key): round(float(value), 6)
+                    for key, value in raw_snapshot_timings.items()
+                    if isinstance(value, (int, float))
+                }
+                if isinstance(raw_snapshot_timings, dict)
+                else {}
+            ),
         )
 
     if not (isinstance(first, dict) and "_meta" in first):
@@ -476,21 +500,31 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
             )
         )
 
-    gitignored_paths = tuple(str(p) for p in meta.get("gitignored_paths") or ())
+    gitignore_paths = tuple(str(p) for p in meta.get("gitignore_paths") or ())
+    raw_snapshot_timings = meta.get("snapshot_timings") or {}
     return OverlayDiff(
         snap=str(meta.get("snap") or ""),
         exit_code=int(meta.get("exit_code") or 0),
         upper_bytes=int(meta.get("upper_bytes") or 0),
         upper_files=int(meta.get("upper_files") or 0),
-        tracked_changes=tuple(changes),
-        gitignored_paths=gitignored_paths,
-        gitignored_truncated=bool(meta.get("gitignored_truncated")),
+        gitinclude_changes=tuple(changes),
+        gitignore_paths=gitignore_paths,
+        gitignore_truncated=bool(meta.get("gitignore_truncated")),
         direct_merged_bytes=int(meta.get("direct_merged_bytes") or 0),
-        whiteouts_tracked=int(meta.get("whiteouts_tracked") or 0),
-        whiteouts_gitignored_refused=int(
-            meta.get("whiteouts_gitignored_refused") or 0
+        whiteouts_gitinclude=int(meta.get("whiteouts_gitinclude") or 0),
+        whiteouts_gitignore_refused=int(
+            meta.get("whiteouts_gitignore_refused") or 0
         ),
         dotgit_rejects=int(meta.get("dotgit_rejects") or 0),
+        snapshot_timings=(
+            {
+                str(key): round(float(value), 6)
+                for key, value in raw_snapshot_timings.items()
+                if isinstance(value, (int, float))
+            }
+            if isinstance(raw_snapshot_timings, dict)
+            else {}
+        ),
         warnings=tuple(str(w) for w in meta.get("warnings") or ()),
     )
 
@@ -509,16 +543,17 @@ def _audit_result(
     *,
     result_text: str,
     exit_code: int,
-    tracked_committed: list[str],
-    gitignored_merged: list[str],
-    gitignored_merged_count: int,
-    mixed_tracked_gitignored: bool,
+    gitinclude_committed: list[str],
+    gitignore_merged: list[str],
+    gitignore_merged_count: int,
+    mixed_gitinclude_gitignore: bool,
     mixed_partial_apply: bool,
     ambient: list[str],
     git_commit_status: str | None,
     git_conflict_reason: str | None,
     git_conflict_file: str | None,
     warnings: list[str],
+    git_snapshot_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     # Preserve the downstream SimpleNamespace contract (changed_paths,
     # ambient_changed_paths, git_commit_status, git_conflict_reason,
@@ -526,18 +561,19 @@ def _audit_result(
     return SimpleNamespace(
         result=result_text,
         exit_code=exit_code,
-        changed_paths=sorted(tracked_committed),
+        changed_paths=sorted(gitinclude_committed),
         ambient_changed_paths=sorted(ambient),
-        files_written=len(tracked_committed),
+        files_written=len(gitinclude_committed),
         git_commit_status=git_commit_status,
         git_conflict_file=git_conflict_file,
         git_conflict_reason=git_conflict_reason,
-        tracked_changed_paths=sorted(tracked_committed),
-        gitignored_direct_merged_paths=sorted(gitignored_merged),
-        gitignored_direct_merged_count=gitignored_merged_count,
-        mixed_tracked_gitignored=mixed_tracked_gitignored,
+        gitinclude_changed_paths=sorted(gitinclude_committed),
+        gitignore_direct_merged_paths=sorted(gitignore_merged),
+        gitignore_direct_merged_count=gitignore_merged_count,
+        mixed_gitinclude_gitignore=mixed_gitinclude_gitignore,
         mixed_partial_apply=mixed_partial_apply,
         warnings=list(warnings),
+        git_snapshot_timings=dict(git_snapshot_timings or {}),
     )
 
 
@@ -546,6 +582,7 @@ def _reject_result(
     stdout: str,
     exit_code: int,
     reject: OverlayPolicyReject,
+    git_snapshot_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     detail = (
         f"{reject.reason}: {','.join(reject.paths)}"
@@ -561,12 +598,13 @@ def _reject_result(
         git_commit_status="rejected",
         git_conflict_file=reject.paths[0] if reject.paths else None,
         git_conflict_reason=detail,
-        tracked_changed_paths=[],
-        gitignored_direct_merged_paths=[],
-        gitignored_direct_merged_count=0,
-        mixed_tracked_gitignored=False,
+        gitinclude_changed_paths=[],
+        gitignore_direct_merged_paths=[],
+        gitignore_direct_merged_count=0,
+        mixed_gitinclude_gitignore=False,
         mixed_partial_apply=False,
         warnings=[detail],
+        git_snapshot_timings=dict(git_snapshot_timings or {}),
     )
 
 

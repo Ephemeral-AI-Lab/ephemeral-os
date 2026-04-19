@@ -158,7 +158,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "before any `daytona_read_file(...)`" in developer
     assert "Empty note reads are successful freshness checks." in developer
     assert "never rewrite benchmark tests" in developer.lower()
-    assert "must not use `daytona_codeact` for file edits" in developer.lower()
+    assert "must not use `daytona_codeact` for file writes or moves" in developer.lower()
+    assert "pure removals such as `rm`, `unlink`, `os.remove`" in developer.lower()
     assert "must not use `daytona_codeact` for file-content reads" in developer.lower()
     assert "writes to test files as off-policy" in developer.lower()
     assert "test files in `scope_paths` as read/verify-only" in developer.lower()
@@ -196,7 +197,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "before any `daytona_read_file(...)`" in validator
     assert "must not paraphrase failure evidence" in validator.lower()
     assert "small local corrective patch" in validator.lower()
-    assert "must not use `daytona_codeact` for corrective edits" in validator.lower()
+    assert "must not use `daytona_codeact` for corrective writes or moves" in validator.lower()
+    assert "pure removals such as `rm`, `unlink`, `os.remove`" in validator.lower()
     assert "must not use `daytona_codeact` for file-content reads" in validator.lower()
     assert "writes to test files as off-policy" in validator.lower()
     assert 'submit_task_summary(type="fail", content=...)' in validator
@@ -293,7 +295,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Never use scouts to locate or correct benchmark test path mismatches" in planner_ref
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "Must not append shell capture plumbing" in developer_runtime
-    assert "Must not edit files through CodeAct" in developer_runtime
+    assert "Must not write or move files through CodeAct" in developer_runtime
+    assert "Pure removals such as `rm`, `unlink`, `os.remove`" in developer_runtime
     assert "Must not inspect source through CodeAct" in developer_runtime
     assert "cd /testbed" in developer_playbook
     assert "cd /testbed" in developer_runtime
@@ -373,7 +376,8 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     )
     assert "Must keep commands repo-root-relative." in sweevo
     assert 'daytona_codeact(command="...", timeout=N)' in sweevo
-    assert "Must treat `daytona_codeact` as runtime-only" in sweevo
+    assert "Must treat `daytona_codeact` as runtime-first" in sweevo
+    assert "Pure removals such as `rm`, `unlink`, `os.remove`" in sweevo
     assert "Python process wrappers" in sweevo
     assert "cd /testbed" in sweevo
     assert "stdout/stderr capture plumbing" in sweevo

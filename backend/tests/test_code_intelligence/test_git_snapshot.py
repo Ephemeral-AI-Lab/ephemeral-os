@@ -25,6 +25,7 @@ import pytest
 from code_intelligence.routing.git_snapshot import (
     GitSnapshotError,
     build_live_snapshot,
+    build_live_snapshot_details,
 )
 
 
@@ -169,6 +170,37 @@ async def test_snapshot_captures_untracked_file(
 
     shown = _git("show", f"{snap}:new.txt", cwd=repo)
     assert shown == "brand new\n"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_details_include_git_phase_timings(
+    tmp_path: Path, sandbox: SimpleNamespace
+) -> None:
+    repo = tmp_path / "timed"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / "app.py").write_text("seed\n", encoding="utf-8")
+    _commit_all(repo)
+    (repo / "new.txt").write_text("brand new\n", encoding="utf-8")
+
+    details = await build_live_snapshot_details(sandbox, _exec_process, str(repo))
+
+    assert details.snap
+    assert details.tree
+    assert details.parent
+    for key in (
+        "validate_repo",
+        "temp_index",
+        "prepare_env",
+        "rev_parse_head",
+        "read_tree",
+        "git_add",
+        "write_tree",
+        "commit_tree",
+        "total",
+    ):
+        assert key in details.timings
+        assert details.timings[key] >= 0
 
 
 @pytest.mark.asyncio

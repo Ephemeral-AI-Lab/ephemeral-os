@@ -432,7 +432,6 @@ async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
         ),
         ("printf x > dask/core.py", "shell output redirection"),
         ("printf x | tee dask/core.py", "tee file write"),
-        ("rm dask/core.py", "filesystem mutation command"),
         ("mv dask/core.py dask/new_core.py", "filesystem mutation command"),
         ("git rm dask/core.py", "filesystem mutation command"),
         ("git mv dask/core.py dask/new_core.py", "filesystem mutation command"),
@@ -469,6 +468,37 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
     assert "daytona_move_file" in result.output
     svc.cmd.assert_not_awaited()
     sb.process.exec.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "rm dask/core.py",
+        "rmdir dask/empty",
+    ],
+)
+async def test_team_shell_mode_allows_removals_for_overlay_audit(command):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("removed", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await run_tool_safely(
+        daytona_codeact,
+        {"command": command},
+        ctx,
+    )
+
+    _assert_ok(result)
+    svc.cmd.assert_awaited_once()
 
 
 async def test_shell_mode_truncates_large_stdout_before_tool_result():
@@ -712,6 +742,15 @@ async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():
         ("write('dask/core.py', 'x')", "CodeAct write() helper"),
         ("open('dask/core.py', 'w').write('x')", "write-mode open()"),
         ("from pathlib import Path\nPath('dask/core.py').write_text('x')", "Path.write_text"),
+        ("import os\nos.rename('dask/core.py', 'dask/new_core.py')", "Python filesystem mutation"),
+        (
+            "from pathlib import Path\nPath('dask/core.py').rename('dask/new_core.py')",
+            "Python filesystem mutation",
+        ),
+        (
+            "import shutil\nshutil.move('dask/core.py', 'dask/new_core.py')",
+            "shutil file mutation",
+        ),
     ],
 )
 async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_fragment):
@@ -739,6 +778,38 @@ async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_f
     assert expected_fragment in result.output
     sb.process.exec.assert_not_awaited()
     svc.cmd.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import os\nos.remove('dask/core.py')",
+        "from pathlib import Path\nPath('dask/core.py').unlink()",
+        "import shutil\nshutil.rmtree('dask/__pycache__')",
+    ],
+)
+async def test_team_python_mode_allows_removals_for_overlay_audit(code):
+    sb = _make_sandbox()
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await run_tool_safely(
+        daytona_codeact,
+        {"code": code},
+        ctx,
+    )
+
+    _assert_ok(result)
+    svc.cmd.assert_awaited_once()
 
 
 async def test_python_mode_preserves_script_stdout_before_manifest_line():

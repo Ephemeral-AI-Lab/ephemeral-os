@@ -291,7 +291,9 @@ async def submit_codeact_cmd(
     the context via :func:`agent_attribution_from_context` — callers do not
     build it themselves.
 
-    Success is ``exit_code == 0 AND git_commit_status in (None, 'committed')``.
+    Success is ``exit_code == 0 AND git_commit_status in (None, 'committed',
+    'noop')``. Overlay gitignore-only runs report ``noop`` because ignored
+    files are direct-merged before the tracked-file OCC phase.
     """
     from tools.core.ci_runtime import get_ci_service
 
@@ -332,7 +334,7 @@ async def submit_codeact_cmd(
     commit_status = getattr(response, "git_commit_status", None)
     conflict_reason = getattr(response, "git_conflict_reason", None)
 
-    success = exit_code == 0 and (commit_status in (None, "committed"))
+    success = exit_code == 0 and (commit_status in (None, "committed", "noop"))
     return FileChangeResult(
         success=success,
         changed_paths=changed,

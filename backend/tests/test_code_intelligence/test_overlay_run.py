@@ -26,12 +26,13 @@ from code_intelligence.routing.overlay_run import (
     ClassifyOutcome,
     PolicyRejectOutcome,
     REJECT_DOTGIT,
-    REJECT_GITIGNORED_OPAQUE_DIR,
-    REJECT_GITIGNORED_WHITEOUT,
-    REJECT_NON_UTF8_TRACKED,
+    REJECT_GITIGNORE_OPAQUE_DIR,
+    REJECT_GITIGNORE_WHITEOUT,
+    REJECT_NON_UTF8_GITINCLUDE,
     REJECT_UNSUPPORTED_OPAQUE_DIR,
     REJECT_UNSUPPORTED_SYMLINK,
     UpperEntry,
+    build_live_snapshot_in_namespace,
     check_ignore_factory,
     direct_merge_factory,
     is_opaque_dir,
@@ -227,11 +228,11 @@ def test_classifier_rejects_dotgit_even_for_nested_paths() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Classifier.classify: tracked add / modify / delete
+# Classifier.classify: gitinclude add / modify / delete
 # ---------------------------------------------------------------------------
 
 
-def test_classifier_emits_tracked_create_for_new_file() -> None:
+def test_classifier_emits_gitinclude_create_for_new_file() -> None:
     env = _Classifier(
         upper_bytes={"src/new.py": b"print('new')\n"},
         base_bytes={},
@@ -239,16 +240,16 @@ def test_classifier_emits_tracked_create_for_new_file() -> None:
     )
     result = env.classifier().classify([_regular_entry("src/new.py")])
     assert isinstance(result, ClassifyOutcome)
-    assert len(result.tracked) == 1
-    change = result.tracked[0]
+    assert len(result.gitinclude) == 1
+    change = result.gitinclude[0]
     assert change.kind == "create"
     assert change.base_existed is False
     assert change.base_content == ""
     assert change.final_content == "print('new')\n"
-    assert result.gitignored_paths == ()
+    assert result.gitignore_paths == ()
 
 
-def test_classifier_emits_tracked_modify_for_existing_file() -> None:
+def test_classifier_emits_gitinclude_modify_for_existing_file() -> None:
     env = _Classifier(
         upper_bytes={"src/app.py": b"after\n"},
         base_bytes={"src/app.py": b"before\n"},
@@ -256,14 +257,14 @@ def test_classifier_emits_tracked_modify_for_existing_file() -> None:
     )
     result = env.classifier().classify([_regular_entry("src/app.py")])
     assert isinstance(result, ClassifyOutcome)
-    change = result.tracked[0]
+    change = result.gitinclude[0]
     assert change.kind == "modify"
     assert change.base_existed is True
     assert change.base_content == "before\n"
     assert change.final_content == "after\n"
 
 
-def test_classifier_emits_tracked_delete_for_whiteout() -> None:
+def test_classifier_emits_gitinclude_delete_for_whiteout() -> None:
     env = _Classifier(
         upper_bytes={},
         base_bytes={"src/gone.py": b"rip\n"},
@@ -271,15 +272,15 @@ def test_classifier_emits_tracked_delete_for_whiteout() -> None:
     )
     result = env.classifier().classify([_whiteout_char_entry("src/gone.py")])
     assert isinstance(result, ClassifyOutcome)
-    assert result.whiteouts_tracked == 1
-    change = result.tracked[0]
+    assert result.whiteouts_gitinclude == 1
+    change = result.gitinclude[0]
     assert change.kind == "delete"
     assert change.base_existed is True
     assert change.base_content == "rip\n"
     assert change.final_content is None
 
 
-def test_classifier_emits_tracked_delete_for_rootless_whiteout() -> None:
+def test_classifier_emits_gitinclude_delete_for_rootless_whiteout() -> None:
     env = _Classifier(
         upper_bytes={},
         base_bytes={"src/gone.py": b"rip\n"},
@@ -287,17 +288,17 @@ def test_classifier_emits_tracked_delete_for_rootless_whiteout() -> None:
     )
     result = env.classifier().classify([_whiteout_rootless_entry("src/gone.py")])
     assert isinstance(result, ClassifyOutcome)
-    change = result.tracked[0]
+    change = result.gitinclude[0]
     assert change.kind == "delete"
     assert change.base_existed is True
 
 
 # ---------------------------------------------------------------------------
-# Classifier.classify: gitignored route
+# Classifier.classify: gitignore route
 # ---------------------------------------------------------------------------
 
 
-def test_classifier_direct_merges_gitignored_create() -> None:
+def test_classifier_direct_merges_gitignore_create() -> None:
     env = _Classifier(
         upper_bytes={".venv/pyvenv.cfg": b"home=/usr\n"},
         base_bytes={},
@@ -305,13 +306,13 @@ def test_classifier_direct_merges_gitignored_create() -> None:
     )
     result = env.classifier().classify([_regular_entry(".venv/pyvenv.cfg")])
     assert isinstance(result, ClassifyOutcome)
-    assert result.tracked == ()
-    assert result.gitignored_paths == (".venv/pyvenv.cfg",)
+    assert result.gitinclude == ()
+    assert result.gitignore_paths == (".venv/pyvenv.cfg",)
     assert env.merged == [(".venv/pyvenv.cfg", len(b"home=/usr\n"))]
     assert result.direct_merged_bytes == len(b"home=/usr\n")
 
 
-def test_classifier_direct_merges_gitignored_binary_bytes() -> None:
+def test_classifier_direct_merges_gitignore_binary_bytes() -> None:
     payload = b"\xff\xfe\x00\x01not-utf-8"
     env = _Classifier(
         upper_bytes={"node_modules/pkg/a.so": payload},
@@ -319,13 +320,13 @@ def test_classifier_direct_merges_gitignored_binary_bytes() -> None:
         ignored={"node_modules/pkg/a.so"},
     )
     result = env.classifier().classify([_regular_entry("node_modules/pkg/a.so")])
-    # Non-UTF-8 content on gitignored route is fine; bytes pass through.
+    # Non-UTF-8 content on gitignore route is fine; bytes pass through.
     assert isinstance(result, ClassifyOutcome)
-    assert result.gitignored_paths == ("node_modules/pkg/a.so",)
+    assert result.gitignore_paths == ("node_modules/pkg/a.so",)
     assert env.merged == [("node_modules/pkg/a.so", len(payload))]
 
 
-def test_classifier_rejects_gitignored_whiteout() -> None:
+def test_classifier_rejects_gitignore_whiteout() -> None:
     env = _Classifier(
         upper_bytes={},
         base_bytes={},
@@ -333,31 +334,31 @@ def test_classifier_rejects_gitignored_whiteout() -> None:
     )
     result = env.classifier().classify([_whiteout_char_entry(".venv/pyvenv.cfg")])
     assert isinstance(result, PolicyRejectOutcome)
-    assert result.reason == REJECT_GITIGNORED_WHITEOUT
+    assert result.reason == REJECT_GITIGNORE_WHITEOUT
 
 
-def test_classifier_rejects_gitignored_opaque_dir() -> None:
+def test_classifier_rejects_gitignore_opaque_dir() -> None:
     env = _Classifier(upper_bytes={}, base_bytes={}, ignored={".venv"})
     result = env.classifier().classify(
         [_opaque_dir_entry(".venv", ns=b"trusted.overlay.opaque")]
     )
     assert isinstance(result, PolicyRejectOutcome)
-    assert result.reason == REJECT_GITIGNORED_OPAQUE_DIR
+    assert result.reason == REJECT_GITIGNORE_OPAQUE_DIR
 
 
 # ---------------------------------------------------------------------------
-# Classifier.classify: kind-gate rejects on tracked route
+# Classifier.classify: kind-gate rejects on gitinclude route
 # ---------------------------------------------------------------------------
 
 
-def test_classifier_rejects_tracked_symlink() -> None:
+def test_classifier_rejects_gitinclude_symlink() -> None:
     env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
     result = env.classifier().classify([_symlink_entry("src/link")])
     assert isinstance(result, PolicyRejectOutcome)
     assert result.reason == REJECT_UNSUPPORTED_SYMLINK
 
 
-def test_classifier_rejects_tracked_opaque_dir() -> None:
+def test_classifier_rejects_gitinclude_opaque_dir() -> None:
     env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
     result = env.classifier().classify([_opaque_dir_entry("src/pkg")])
     assert isinstance(result, PolicyRejectOutcome)
@@ -377,10 +378,10 @@ def test_classifier_skips_mode_only_change_when_content_equal_to_snap() -> None:
     )
     result = env.classifier().classify([_regular_entry("src/app.py")])
     assert isinstance(result, ClassifyOutcome)
-    assert result.tracked == ()
+    assert result.gitinclude == ()
 
 
-def test_classifier_rejects_non_utf8_on_tracked_route() -> None:
+def test_classifier_rejects_non_utf8_on_gitinclude_route() -> None:
     env = _Classifier(
         upper_bytes={"src/app.py": b"\xff\xfe\x00binary"},
         base_bytes={},
@@ -388,11 +389,11 @@ def test_classifier_rejects_non_utf8_on_tracked_route() -> None:
     )
     result = env.classifier().classify([_regular_entry("src/app.py")])
     assert isinstance(result, PolicyRejectOutcome)
-    assert result.reason == REJECT_NON_UTF8_TRACKED
+    assert result.reason == REJECT_NON_UTF8_GITINCLUDE
     assert result.paths == ("src/app.py",)
 
 
-def test_classifier_rejects_non_utf8_base_content_on_tracked_modify() -> None:
+def test_classifier_rejects_non_utf8_base_content_on_gitinclude_modify() -> None:
     env = _Classifier(
         upper_bytes={"src/app.py": b"ok\n"},
         base_bytes={"src/app.py": b"\xff\xfeold"},
@@ -400,15 +401,15 @@ def test_classifier_rejects_non_utf8_base_content_on_tracked_modify() -> None:
     )
     result = env.classifier().classify([_regular_entry("src/app.py")])
     assert isinstance(result, PolicyRejectOutcome)
-    assert result.reason == REJECT_NON_UTF8_TRACKED
+    assert result.reason == REJECT_NON_UTF8_GITINCLUDE
 
 
 # ---------------------------------------------------------------------------
-# Classifier.classify: mixed tracked + gitignored
+# Classifier.classify: mixed gitinclude + gitignore
 # ---------------------------------------------------------------------------
 
 
-def test_classifier_accepts_mixed_tracked_and_gitignored() -> None:
+def test_classifier_accepts_mixed_gitinclude_and_gitignore() -> None:
     env = _Classifier(
         upper_bytes={
             "src/app.py": b"new source\n",
@@ -424,8 +425,8 @@ def test_classifier_accepts_mixed_tracked_and_gitignored() -> None:
         ]
     )
     assert isinstance(result, ClassifyOutcome)
-    assert [c.path for c in result.tracked] == ["src/app.py"]
-    assert result.gitignored_paths == (".venv/x.cfg",)
+    assert [c.path for c in result.gitinclude] == ["src/app.py"]
+    assert result.gitignore_paths == (".venv/x.cfg",)
 
 
 # ---------------------------------------------------------------------------
@@ -436,11 +437,11 @@ def test_classifier_accepts_mixed_tracked_and_gitignored() -> None:
 def test_reject_exit_codes_are_distinct_sentinels() -> None:
     reasons = [
         REJECT_DOTGIT,
-        REJECT_GITIGNORED_WHITEOUT,
-        REJECT_GITIGNORED_OPAQUE_DIR,
+        REJECT_GITIGNORE_WHITEOUT,
+        REJECT_GITIGNORE_OPAQUE_DIR,
         REJECT_UNSUPPORTED_SYMLINK,
         REJECT_UNSUPPORTED_OPAQUE_DIR,
-        REJECT_NON_UTF8_TRACKED,
+        REJECT_NON_UTF8_GITINCLUDE,
     ]
     codes = {reject_exit_code(r) for r in reasons}
     assert len(codes) == len(reasons), "policy codes collide"
@@ -475,9 +476,9 @@ def test_walk_upperdir_handles_missing_root(tmp_path: Path) -> None:
 
 def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
     outcome = ClassifyOutcome(
-        tracked=(
-            __import__("code_intelligence.routing.overlay_run", fromlist=["TrackedChange"])
-            .TrackedChange(
+        gitinclude=(
+            __import__("code_intelligence.routing.overlay_run", fromlist=["GitincludeChange"])
+            .GitincludeChange(
                 path="a.py",
                 kind="modify",
                 base_content="old\n",
@@ -485,10 +486,10 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
                 final_content="new\n",
             ),
         ),
-        gitignored_paths=(".venv/cfg",),
+        gitignore_paths=(".venv/cfg",),
         direct_merged_bytes=12,
-        whiteouts_tracked=0,
-        whiteouts_gitignored_refused=0,
+        whiteouts_gitinclude=0,
+        whiteouts_gitignore_refused=0,
         dotgit_rejects=0,
     )
 
@@ -499,14 +500,16 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
         outcome=outcome,
         upper_bytes=99,
         upper_files=3,
+        snapshot_timings={"total": 0.123, "git_add": 0.045},
     )
 
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     meta = json.loads(lines[0])
     assert meta["_meta"]["snap"] == "deadbeef1234"
-    assert meta["_meta"]["tracked_changes"] == 1
-    assert meta["_meta"]["gitignored_changes"] == 1
-    assert meta["_meta"]["gitignored_paths"] == [".venv/cfg"]
+    assert meta["_meta"]["gitinclude_changes"] == 1
+    assert meta["_meta"]["gitignore_changes"] == 1
+    assert meta["_meta"]["gitignore_paths"] == [".venv/cfg"]
+    assert meta["_meta"]["snapshot_timings"] == {"total": 0.123, "git_add": 0.045}
     entry = json.loads(lines[1])
     assert entry["path"] == "a.py"
     assert entry["kind"] == "modify"
@@ -517,13 +520,19 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
 
 def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
     reject = PolicyRejectOutcome(reason=REJECT_DOTGIT, paths=(".git/config",))
-    path = write_reject_ndjson(run_dir=str(tmp_path), snap="snapX", reject=reject)
+    path = write_reject_ndjson(
+        run_dir=str(tmp_path),
+        snap="snapX",
+        reject=reject,
+        snapshot_timings={"total": 0.1},
+    )
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     assert payload == {
         "_reject": {
             "snap": "snapX",
             "reason": REJECT_DOTGIT,
             "paths": [".git/config"],
+            "snapshot_timings": {"total": 0.1},
         }
     }
 
@@ -544,7 +553,29 @@ def _init_repo(path: Path) -> None:
     )
 
 
-def test_check_ignore_factory_splits_tracked_and_ignored(tmp_path: Path) -> None:
+def test_build_live_snapshot_in_namespace_returns_snap_and_timings(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "snapshot-repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / "app.py").write_text("committed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True)
+    (repo / "app.py").write_text("dirty\n", encoding="utf-8")
+
+    snap, timings = build_live_snapshot_in_namespace(str(repo))
+
+    shown = subprocess.check_output(
+        ["git", "-C", str(repo), "show", f"{snap}:app.py"],
+        text=True,
+    )
+    assert shown == "dirty\n"
+    assert timings["total"] >= 0
+    assert timings["git_add"] >= 0
+
+
+def test_check_ignore_factory_splits_gitinclude_and_ignored(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
@@ -559,7 +590,7 @@ def test_check_ignore_factory_splits_tracked_and_ignored(tmp_path: Path) -> None
             "src/app.py",
             ".venv/pyvenv.cfg",
             "node_modules/pkg/index.js",
-            "README.md",  # untracked but not ignored
+            "README.md",  # not matched by any .gitignore rule
         ]
     )
     assert ignored == {".venv/pyvenv.cfg", "node_modules/pkg/index.js"}
@@ -616,7 +647,7 @@ def test_direct_merge_overwrites_existing_live_file_last_writer_wins(
 
 
 # ---------------------------------------------------------------------------
-# Edge case: mixed tracked + gitignored writes (plan §0 row)
+# Edge case: mixed gitinclude + gitignore writes (plan §0 row)
 # ---------------------------------------------------------------------------
 
 
@@ -681,6 +712,15 @@ def test_parse_args_rejects_missing_required_argument() -> None:
 
     with pytest.raises(SystemExit):
         _parse_args(["--workspace-root", "/ws"])
+
+
+def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
+    from code_intelligence.routing import overlay_run
+
+    assert overlay_run._NS_ROOT.startswith("/tmp/")
+    assert overlay_run._NS_TMP.startswith(overlay_run._NS_ROOT + "/")
+    assert overlay_run._NS_UPPER.startswith(overlay_run._NS_TMP + "/")
+    assert overlay_run._NS_WORK.startswith(overlay_run._NS_TMP + "/")
 
 
 # ---------------------------------------------------------------------------
@@ -768,27 +808,27 @@ def test_git_show_base_raises_on_bad_sha(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_ndjson_round_trip_preserves_tracked_and_gitignored(tmp_path: Path) -> None:
+def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) -> None:
     from code_intelligence.routing.overlay_auditor import parse_diff_ndjson
-    from code_intelligence.routing.overlay_run import TrackedChange
+    from code_intelligence.routing.overlay_run import GitincludeChange
 
     outcome = ClassifyOutcome(
-        tracked=(
-            TrackedChange(
+        gitinclude=(
+            GitincludeChange(
                 path="src/app.py",
                 kind="modify",
                 base_content="old\n",
                 base_existed=True,
                 final_content="new\n",
             ),
-            TrackedChange(
+            GitincludeChange(
                 path="src/gone.py",
                 kind="delete",
                 base_content="bye\n",
                 base_existed=True,
                 final_content=None,
             ),
-            TrackedChange(
+            GitincludeChange(
                 path="src/new.py",
                 kind="create",
                 base_content="",
@@ -796,10 +836,10 @@ def test_ndjson_round_trip_preserves_tracked_and_gitignored(tmp_path: Path) -> N
                 final_content="hi\n",
             ),
         ),
-        gitignored_paths=(".venv/cfg", "node_modules/pkg/index.js"),
+        gitignore_paths=(".venv/cfg", "node_modules/pkg/index.js"),
         direct_merged_bytes=123,
-        whiteouts_tracked=1,
-        whiteouts_gitignored_refused=0,
+        whiteouts_gitinclude=1,
+        whiteouts_gitignore_refused=0,
         dotgit_rejects=0,
     )
 
@@ -810,6 +850,7 @@ def test_ndjson_round_trip_preserves_tracked_and_gitignored(tmp_path: Path) -> N
         outcome=outcome,
         upper_bytes=999,
         upper_files=5,
+        snapshot_timings={"total": 0.2, "commit_tree": 0.03},
     )
     raw = Path(path).read_text(encoding="utf-8")
     parsed = parse_diff_ndjson(raw)
@@ -820,16 +861,17 @@ def test_ndjson_round_trip_preserves_tracked_and_gitignored(tmp_path: Path) -> N
     assert parsed.upper_bytes == 999
     assert parsed.upper_files == 5
     assert parsed.direct_merged_bytes == 123
-    assert parsed.whiteouts_tracked == 1
-    assert parsed.gitignored_paths == (".venv/cfg", "node_modules/pkg/index.js")
+    assert parsed.whiteouts_gitinclude == 1
+    assert parsed.gitignore_paths == (".venv/cfg", "node_modules/pkg/index.js")
+    assert parsed.snapshot_timings == {"total": 0.2, "commit_tree": 0.03}
 
-    kinds = [c.kind for c in parsed.tracked_changes]
+    kinds = [c.kind for c in parsed.gitinclude_changes]
     assert kinds == ["modify", "delete", "create"]
-    delete_change = [c for c in parsed.tracked_changes if c.kind == "delete"][0]
+    delete_change = [c for c in parsed.gitinclude_changes if c.kind == "delete"][0]
     assert delete_change.final_content is None
-    create_change = [c for c in parsed.tracked_changes if c.kind == "create"][0]
+    create_change = [c for c in parsed.gitinclude_changes if c.kind == "create"][0]
     assert create_change.base_existed is False
-    modify_change = [c for c in parsed.tracked_changes if c.kind == "modify"][0]
+    modify_change = [c for c in parsed.gitinclude_changes if c.kind == "modify"][0]
     assert modify_change.base_content == "old\n"
     assert modify_change.final_content == "new\n"
 
@@ -841,7 +883,12 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
         reason="overlay_rejected_dotgit_writes",
         paths=(".git/config", ".git/objects/a"),
     )
-    path = write_reject_ndjson(run_dir=str(tmp_path), snap="abc", reject=reject)
+    path = write_reject_ndjson(
+        run_dir=str(tmp_path),
+        snap="abc",
+        reject=reject,
+        snapshot_timings={"total": 0.3},
+    )
     raw = Path(path).read_text(encoding="utf-8")
     parsed = parse_diff_ndjson(raw)
 
@@ -849,18 +896,19 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
     # same schema).
     assert parsed.reason == "overlay_rejected_dotgit_writes"  # type: ignore[union-attr]
     assert parsed.paths == (".git/config", ".git/objects/a")  # type: ignore[union-attr]
+    assert parsed.snapshot_timings == {"total": 0.3}  # type: ignore[union-attr]
 
 
 # ---------------------------------------------------------------------------
-# Preserved: Edge case: mixed tracked + gitignored writes (plan §0 row)
+# Preserved: Edge case: mixed gitinclude + gitignore writes (plan §0 row)
 # ---------------------------------------------------------------------------
 
 
-def test_mixed_write_direct_merges_gitignored_even_when_tracked_path_is_present(
+def test_mixed_write_direct_merges_gitignore_even_when_gitinclude_path_is_present(
     tmp_path: Path,
 ) -> None:
     # The classifier is pure; the orchestrator is the one that decides
-    # whether to commit tracked via OCC after gitignored already landed.
+    # whether to commit gitinclude via OCC after gitignore already landed.
     # Here we just verify the classifier itself routes correctly.
     env = _Classifier(
         upper_bytes={
@@ -877,9 +925,9 @@ def test_mixed_write_direct_merges_gitignored_even_when_tracked_path_is_present(
         ]
     )
     assert isinstance(result, ClassifyOutcome)
-    assert [c.path for c in result.tracked] == ["requirements.txt"]
-    assert result.gitignored_paths == (".venv/lib/foo/__init__.py",)
+    assert [c.path for c in result.gitinclude] == ["requirements.txt"]
+    assert result.gitignore_paths == (".venv/lib/foo/__init__.py",)
     # Gitignored direct-merge runs inside the classifier (inside the ns
     # in production). That means it is already applied before the
-    # orchestrator runs tracked OCC — the partial-apply contract.
+    # orchestrator runs gitinclude OCC — the partial-apply contract.
     assert env.merged == [(".venv/lib/foo/__init__.py", len(b"# foo\n"))]

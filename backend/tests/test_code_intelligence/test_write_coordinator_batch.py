@@ -507,6 +507,38 @@ def test_strict_base_commits_when_hash_matches(tmp_path) -> None:
     assert a.read_text(encoding="utf-8") == "x = 2\n"
 
 
+def test_strict_base_single_commit_uses_checked_apply_without_second_read(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    a = tmp_path / "strict_fast.py"
+    a.write_text("x = 1\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    monkeypatch.setattr(
+        svc._write_coordinator._content,
+        "read",
+        lambda *args, **kwargs: pytest.fail("strict clean commit should not re-read"),
+    )
+
+    result = svc.commit_operation_against_base(
+        [
+            OperationChange(
+                file_path=str(a),
+                base_content="x = 1\n",
+                base_hash=content_hash("x = 1\n"),
+                final_content="x = 2\n",
+                strict_base=True,
+            ),
+        ],
+        edit_type="move_overwrite",
+    )
+
+    assert result.success is True
+    assert result.timings["resolve_read"] == 0.0
+    assert a.read_text(encoding="utf-8") == "x = 2\n"
+
+
 # ---------------------------------------------------------------------------
 # Service-level delete_file / move_file (OCC-gated facade)
 # ---------------------------------------------------------------------------

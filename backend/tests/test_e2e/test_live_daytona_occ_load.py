@@ -272,7 +272,6 @@ def _install_overlay_phase_probe(
     }
 
     orig_execute = overlay_auditor_module.OverlayAuditor.execute
-    orig_snapshot = overlay_auditor_module.build_live_snapshot
     orig_run = overlay_auditor_module.OverlayAuditor._run_overlay
     orig_collect = overlay_auditor_module.OverlayAuditor._read_diff
     orig_commit_diff = overlay_auditor_module.OverlayAuditor._commit_and_assemble
@@ -284,15 +283,6 @@ def _install_overlay_phase_probe(
             return await orig_execute(self, *args, **kwargs)
         finally:
             stats["overlay_audit_total_s"].append(
-                round(time.perf_counter() - started, 6)
-            )
-
-    async def _timed_snapshot(*args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await orig_snapshot(*args, **kwargs)
-        finally:
-            stats["overlay_snapshot_s"].append(
                 round(time.perf_counter() - started, 6)
             )
 
@@ -308,7 +298,18 @@ def _install_overlay_phase_probe(
     async def _timed_collect(self, *args, **kwargs):
         started = time.perf_counter()
         try:
-            return await orig_collect(self, *args, **kwargs)
+            diff = await orig_collect(self, *args, **kwargs)
+            timings = getattr(diff, "snapshot_timings", {}) or {}
+            for key, value in timings.items():
+                if isinstance(value, (int, float)):
+                    stats.setdefault(f"overlay_snapshot_{key}_s", []).append(
+                        round(float(value), 6)
+                    )
+            if timings:
+                total = timings.get("total")
+                if isinstance(total, (int, float)):
+                    stats["overlay_snapshot_s"].append(round(float(total), 6))
+            return diff
         finally:
             stats["overlay_read_diff_s"].append(
                 round(time.perf_counter() - started, 6)
@@ -334,11 +335,6 @@ def _install_overlay_phase_probe(
         overlay_auditor_module.OverlayAuditor,
         "execute",
         _timed_execute,
-    )
-    monkeypatch.setattr(
-        overlay_auditor_module,
-        "build_live_snapshot",
-        _timed_snapshot,
     )
     monkeypatch.setattr(
         overlay_auditor_module.OverlayAuditor,
@@ -1987,6 +1983,9 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
 
     for group in range(5):
         live_load_env.write_text(
@@ -2110,6 +2109,9 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
     }
     print(f"\n[{log_label} timings]")
@@ -2680,6 +2682,72 @@ def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv
         g_per_call = await asyncio.gather(*[one_g(i) for i in range(N)])
         arm_g_wall = round(time.perf_counter() - wall_t0, 6)
 
+        # Arm H: AsyncDaytona + snapshot-like git plumbing. This isolates the
+        # command shape used by overlay snapshots from the rest of CodeAct.
+        h_repo = "/tmp/arm_h_snapshot_repo"
+        await async_real.process.exec(
+            "rm -rf /tmp/arm_h_snapshot_repo && "
+            "mkdir -p /tmp/arm_h_snapshot_repo && "
+            "git -C /tmp/arm_h_snapshot_repo init -q && "
+            "git -C /tmp/arm_h_snapshot_repo config user.email test@example.invalid && "
+            "git -C /tmp/arm_h_snapshot_repo config user.name Tester && "
+            "for i in $(seq 1 10); do printf 'x=%s\\n' \"$i\" > /tmp/arm_h_snapshot_repo/f$i.py; done && "
+            "git -C /tmp/arm_h_snapshot_repo add -A && "
+            "git -C /tmp/arm_h_snapshot_repo commit -q -m seed && "
+            "printf 'dirty\\n' > /tmp/arm_h_snapshot_repo/dirty.txt",
+            timeout=30,
+        )
+        h_script = """
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+repo = sys.argv[1]
+fd, index = tempfile.mkstemp(prefix="arm-h-idx-")
+os.close(fd)
+os.unlink(index)
+env = dict(os.environ)
+env["GIT_INDEX_FILE"] = index
+env.setdefault("GIT_AUTHOR_NAME", "Bench")
+env.setdefault("GIT_AUTHOR_EMAIL", "bench@example.invalid")
+env.setdefault("GIT_COMMITTER_NAME", "Bench")
+env.setdefault("GIT_COMMITTER_EMAIL", "bench@example.invalid")
+env.setdefault("GIT_AUTHOR_DATE", "1700000000 +0000")
+env.setdefault("GIT_COMMITTER_DATE", "1700000000 +0000")
+try:
+    head = subprocess.check_output(["git", "-C", repo, "rev-parse", "HEAD"], env=env).decode().strip()
+    subprocess.run(["git", "-C", repo, "read-tree", "HEAD"], env=env, check=True)
+    subprocess.run(["git", "-C", repo, "add", "-A"], env=env, check=True)
+    tree = subprocess.check_output(["git", "-C", repo, "write-tree"], env=env).decode().strip()
+    snap = subprocess.check_output(
+        ["git", "-C", repo, "commit-tree", tree, "-m", "bench", "-p", head],
+        env=env,
+    ).decode().strip()
+    print(json.dumps({"ok": True, "snap": snap[:12]}))
+finally:
+    try:
+        os.unlink(index)
+    except OSError:
+        pass
+"""
+        h_command = f"python3 -c {shlex.quote(h_script)} {shlex.quote(h_repo)}"
+        await async_real.process.exec(h_command, timeout=30)
+
+        async def one_h(idx: int) -> dict[str, float]:
+            t0 = time.perf_counter()
+            resp = await async_real.process.exec(h_command, timeout=60)
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+                "exit_code": getattr(resp, "exit_code", None),
+            }
+
+        wall_t0 = time.perf_counter()
+        h_per_call = await asyncio.gather(*[one_h(i) for i in range(N)])
+        arm_h_wall = round(time.perf_counter() - wall_t0, 6)
+
         default_exec = loop._default_executor  # type: ignore[attr-defined]
         default_max = (
             getattr(default_exec, "_max_workers", "n/a") if default_exec else "none"
@@ -2691,6 +2759,7 @@ def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv
             "arm_d": {"wall_s": arm_d_wall, "per_call": d_per_call},
             "arm_f": {"wall_s": arm_f_wall, "per_call": f_per_call},
             "arm_g": {"wall_s": arm_g_wall, "per_call": g_per_call},
+            "arm_h": {"wall_s": arm_h_wall, "per_call": h_per_call},
             "default_executor_max_workers": default_max,
         }
 
@@ -2700,6 +2769,7 @@ def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv
     arm_d = arms["arm_d"]
     arm_f = arms["arm_f"]
     arm_g = arms["arm_g"]
+    arm_h = arms["arm_h"]
 
     # Arm B: raw sync sandbox via concurrent.futures (no Python async at all).
     def one_sync(idx: int) -> dict[str, float]:
@@ -2757,6 +2827,9 @@ def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv
         ),
         "arm_g_async_daytona_python3_heavy": _arm(
             arm_g["wall_s"], arm_g["per_call"],
+        ),
+        "arm_h_async_daytona_git_snapshot_like": _arm(
+            arm_h["wall_s"], arm_h["per_call"],
         ),
         "default_executor_max_workers": arms["default_executor_max_workers"],
     }
@@ -3278,3 +3351,114 @@ def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
         "arbiter": _arbiter_snapshot(svc),
     }
     print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)
+
+
+def test_live_codeact_gitignore_dependency_writes_persist(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodeAct writes under dependency gitignore prefixes persist on live disk.
+
+    Overlay routes ignored dependency trees outside tracked-file OCC. This
+    profile covers the production shape for commands that populate ``.venv/``
+    or ``node_modules/``: the tool should return success, the ignored files
+    should remain in the live workspace, and a later CodeAct invocation should
+    be able to read them through the live lowerdir.
+    """
+    log_label = "codeact-gitignore-dependency-persistence"
+    env = live_load_env
+    env.init_repo()
+    env.write_text(".gitignore", ".venv/\nnode_modules/\n")
+    env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
+    env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} commit -m seed-gitignore-persistence",
+        timeout=60,
+    )
+    svc = env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
+
+    token = uuid.uuid4().hex[:12]
+    create_command = (
+        "python3 - <<'PY'\n"
+        "from pathlib import Path\n"
+        "Path('.venv/lib/site-packages/live_pkg').mkdir(parents=True, exist_ok=True)\n"
+        "Path('node_modules/live_pkg').mkdir(parents=True, exist_ok=True)\n"
+        f"Path('.venv/lib/site-packages/live_pkg/METADATA').write_text('venv={token}\\n', encoding='utf-8')\n"
+        f"Path('node_modules/live_pkg/index.js').write_text('node={token}\\n', encoding='utf-8')\n"
+        "PY"
+    )
+    read_command = (
+        "python3 - <<'PY'\n"
+        "from pathlib import Path\n"
+        "print(Path('.venv/lib/site-packages/live_pkg/METADATA').read_text(encoding='utf-8').strip())\n"
+        "print(Path('node_modules/live_pkg/index.js').read_text(encoding='utf-8').strip())\n"
+        "PY"
+    )
+
+    create_ctx = env.make_ctx(
+        svc,
+        agent_run_id=f"gitignore-create-{uuid.uuid4().hex[:8]}",
+    )
+    read_ctx = env.make_ctx(
+        svc,
+        agent_run_id=f"gitignore-read-{uuid.uuid4().hex[:8]}",
+    )
+    create_result = asyncio.run(
+        _invoke_tool(
+            daytona_codeact,
+            {"mode": "shell", "command": create_command, "timeout": 180},
+            create_ctx,
+        )
+    )
+    read_result = asyncio.run(
+        _invoke_tool(
+            daytona_codeact,
+            {"mode": "shell", "command": read_command, "timeout": 180},
+            read_ctx,
+        )
+    )
+
+    create_payload = _json_output(create_result)
+    read_payload = _json_output(read_result)
+    venv_rel = ".venv/lib/site-packages/live_pkg/METADATA"
+    node_rel = "node_modules/live_pkg/index.js"
+    venv_content = env.read_text(venv_rel)
+    node_content = env.read_text(node_rel)
+    status_short = env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} status --short --untracked-files=all",
+        timeout=30,
+    )
+    ignored_status = env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} status --short --ignored",
+        timeout=30,
+    )
+    summary = {
+        "create_is_error": create_result.is_error,
+        "read_is_error": read_result.is_error,
+        "create_metadata": create_result.metadata,
+        "read_metadata": read_result.metadata,
+        "create_payload": create_payload,
+        "read_payload": read_payload,
+        "status_short": status_short.strip(),
+        "ignored_status": ignored_status.strip().splitlines()[:10],
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
+        "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
+    }
+    print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)
+
+    assert not create_result.is_error, create_result.output
+    assert not read_result.is_error, read_result.output
+    assert create_payload["status"] == "ok"
+    assert read_payload["status"] == "ok"
+    assert venv_content == f"venv={token}\n"
+    assert node_content == f"node={token}\n"
+    assert f"venv={token}" in read_payload["shell_outputs"][0]["stdout"]
+    assert f"node={token}" in read_payload["shell_outputs"][0]["stdout"]
+    assert status_short.strip() == ""
+    assert ".venv/" in ignored_status
+    assert "node_modules/" in ignored_status

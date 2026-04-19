@@ -180,6 +180,28 @@ async def test_submit_codeact_cmd_marks_nonzero_exit_as_failure() -> None:
     assert change.success is False
 
 
+async def test_submit_codeact_cmd_treats_noop_commit_status_as_success() -> None:
+    response = SimpleNamespace(
+        result="ok",
+        exit_code=0,
+        changed_paths=[],
+        ambient_changed_paths=[],
+        git_commit_status="noop",
+    )
+    svc = MagicMock()
+    svc.cmd = AsyncMock(return_value=response)
+    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
+
+    change = await submit_codeact_cmd(
+        ctx,
+        command="python3 -m venv .venv",
+        description="test",
+    )
+
+    assert change.success is True
+    assert change.changed_paths == ()
+
+
 async def test_submit_codeact_cmd_treats_sandbox_commit_abort_as_failure() -> None:
     response = SimpleNamespace(
         result="",

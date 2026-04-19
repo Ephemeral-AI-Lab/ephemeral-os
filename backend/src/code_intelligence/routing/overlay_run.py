@@ -15,20 +15,18 @@ order:
    detects whiteouts (privileged ``S_IFCHR`` + rootless
    ``user.overlay.whiteout`` xattr) and opaque dirs (both xattr
    namespaces), batches ``git check-ignore`` to split the
-   **not-gitignored route** (→ OCC) from the **gitignored route**
-   (→ direct-merge). The route key is ``git check-ignore`` only; git
-   index membership is not consulted, so brand-new files that are not
-   matched by any ``.gitignore`` rule go through the not-gitignored /
-   OCC route and inherit first-writer-wins semantics. The historical
-   variable name "tracked" in this module is an alias for
-   "not-gitignored," not a claim about git index state.
-4. Direct-merge gitignored writes into the live workspace via the
+   **gitinclude route** (→ OCC, first-writer-wins) from the
+   **gitignore route** (→ direct-merge, per-file last-writer-wins).
+   The route key is ``git check-ignore`` only; git index membership is
+   not consulted, so brand-new files that are not matched by any
+   ``.gitignore`` rule go through the gitinclude / OCC route.
+4. Direct-merge gitignore writes into the live workspace via the
    ``/ns/lower`` bind, using per-op unique tempfile + ``os.rename`` for
    per-file atomic last-writer-wins behavior. **Atomicity is per file,
    not per tree.** Concurrent multi-file installs of different versions
-   to the same gitignored prefix can interleave; no sandbox-side
+   to the same gitignore prefix can interleave; no sandbox-side
    coordination is provided (plan §5.1).
-5. Emit not-gitignored changes as NDJSON at ``$RUN_DIR/diff.ndjson``
+5. Emit gitinclude changes as NDJSON at ``$RUN_DIR/diff.ndjson``
    for the orchestrator's OCC pass.
 
 The classifier (:class:`Classifier`) is pure and dependency-injected:
@@ -54,6 +52,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Iterator
 
@@ -64,21 +63,21 @@ from typing import Any, Callable, Iterable, Iterator
 # ---------------------------------------------------------------------------
 
 REJECT_DOTGIT = "overlay_rejected_dotgit_writes"
-REJECT_GITIGNORED_WHITEOUT = "overlay_refused_gitignored_whiteout"
-REJECT_GITIGNORED_OPAQUE_DIR = "overlay_refused_opaque_dir"
+REJECT_GITIGNORE_WHITEOUT = "overlay_refused_gitignore_whiteout"
+REJECT_GITIGNORE_OPAQUE_DIR = "overlay_refused_opaque_dir"
 REJECT_UNSUPPORTED_SYMLINK = "overlay_unsupported_symlink"
 REJECT_UNSUPPORTED_OPAQUE_DIR = "overlay_unsupported_opaque_dir"
-REJECT_NON_UTF8_TRACKED = "overlay_non_utf8_tracked"
+REJECT_NON_UTF8_GITINCLUDE = "overlay_non_utf8_gitinclude"
 REJECT_UPPER_FULL = "overlay_upper_full"
 
 _REJECT_EXIT_BASE = 200
 _REJECT_EXIT_CODES: dict[str, int] = {
     REJECT_DOTGIT: _REJECT_EXIT_BASE + 1,
-    REJECT_GITIGNORED_WHITEOUT: _REJECT_EXIT_BASE + 2,
-    REJECT_GITIGNORED_OPAQUE_DIR: _REJECT_EXIT_BASE + 3,
+    REJECT_GITIGNORE_WHITEOUT: _REJECT_EXIT_BASE + 2,
+    REJECT_GITIGNORE_OPAQUE_DIR: _REJECT_EXIT_BASE + 3,
     REJECT_UNSUPPORTED_SYMLINK: _REJECT_EXIT_BASE + 4,
     REJECT_UNSUPPORTED_OPAQUE_DIR: _REJECT_EXIT_BASE + 5,
-    REJECT_NON_UTF8_TRACKED: _REJECT_EXIT_BASE + 6,
+    REJECT_NON_UTF8_GITINCLUDE: _REJECT_EXIT_BASE + 6,
     REJECT_UPPER_FULL: _REJECT_EXIT_BASE + 7,
 }
 
@@ -137,12 +136,13 @@ class UpperEntry:
 
 
 @dataclass(frozen=True)
-class TrackedChange:
-    """One not-gitignored change to emit to NDJSON for OCC.
+class GitincludeChange:
+    """One gitinclude-route change to emit to NDJSON for OCC.
 
-    The name "TrackedChange" is historical; the route is keyed on
-    ``git check-ignore``, not git-index membership, so this also covers
-    brand-new untracked-but-not-gitignored files.
+    "Gitinclude" means "everything ``git check-ignore`` did not flag" —
+    routing is keyed on ``.gitignore`` rules, not git-index membership,
+    so this also covers brand-new files that are not matched by any
+    ``.gitignore`` rule.
     """
 
     path: str
@@ -154,11 +154,11 @@ class TrackedChange:
 
 @dataclass(frozen=True)
 class ClassifyOutcome:
-    tracked: tuple[TrackedChange, ...]
-    gitignored_paths: tuple[str, ...]
+    gitinclude: tuple[GitincludeChange, ...]
+    gitignore_paths: tuple[str, ...]
     direct_merged_bytes: int
-    whiteouts_tracked: int
-    whiteouts_gitignored_refused: int
+    whiteouts_gitinclude: int
+    whiteouts_gitignore_refused: int
     dotgit_rejects: int
 
 
@@ -169,11 +169,11 @@ class PolicyRejectOutcome:
 
 
 class Classifier:
-    """Classify one upperdir walk into not-gitignored / gitignored / rejects.
+    """Classify one upperdir walk into gitinclude / gitignore / rejects.
 
     Routing is decided by ``git check-ignore`` against the live workspace.
-    Files flagged by check-ignore go to the gitignored route (direct-merge,
-    per-file last-writer-wins). Everything else goes to the not-gitignored
+    Files flagged by check-ignore go to the gitignore route (direct-merge,
+    per-file last-writer-wins). Everything else goes to the gitinclude
     route (OCC, first-writer-wins) — including new files that are not in
     the git index but also not matched by any ``.gitignore`` rule.
 
@@ -184,7 +184,7 @@ class Classifier:
     * ``git_show_base(rel) -> bytes | None`` — return ``git show <snap>:rel``
       bytes, or ``None`` when the path did not exist at SNAP time.
     * ``check_ignore(rels) -> set[str]`` — batch-check which *rels* are
-      gitignored relative to the live workspace (one batched git call).
+      gitignore relative to the live workspace (one batched git call).
     * ``direct_merge(rel, upper_path, upper_st)`` — copy bytes from the
       upper into the live workspace via an atomic ``tempfile + rename``.
       Returns the number of bytes written.
@@ -218,7 +218,7 @@ class Classifier:
                 paths=tuple(sorted(e.rel for e in dotgit)),
             )
 
-        # --- Pass 2: detect symlink / opaque-dir on tracked entries and
+        # --- Pass 2: detect symlink / opaque-dir on gitinclude entries and
         # split whiteouts.
         whiteouts: list[UpperEntry] = []
         regular: list[UpperEntry] = []
@@ -243,7 +243,7 @@ class Classifier:
         candidates = [e.rel for e in whiteouts + regular + opaque_dirs + symlinks]
         ignored = self._check_ignore(candidates) if candidates else set()
 
-        # --- Pass 4: kind-gate rejections on the tracked route.
+        # --- Pass 4: kind-gate rejections on the gitinclude route.
         bad_symlinks = [e.rel for e in symlinks if e.rel not in ignored]
         if bad_symlinks:
             return PolicyRejectOutcome(
@@ -256,40 +256,40 @@ class Classifier:
                 reason=REJECT_UNSUPPORTED_OPAQUE_DIR,
                 paths=tuple(sorted(bad_opaque)),
             )
-        bad_gitignored_whiteout = [e.rel for e in whiteouts if e.rel in ignored]
-        if bad_gitignored_whiteout:
+        bad_gitignore_whiteout = [e.rel for e in whiteouts if e.rel in ignored]
+        if bad_gitignore_whiteout:
             return PolicyRejectOutcome(
-                reason=REJECT_GITIGNORED_WHITEOUT,
-                paths=tuple(sorted(bad_gitignored_whiteout)),
+                reason=REJECT_GITIGNORE_WHITEOUT,
+                paths=tuple(sorted(bad_gitignore_whiteout)),
             )
-        bad_gitignored_opaque = [e.rel for e in opaque_dirs if e.rel in ignored]
-        if bad_gitignored_opaque:
+        bad_gitignore_opaque = [e.rel for e in opaque_dirs if e.rel in ignored]
+        if bad_gitignore_opaque:
             return PolicyRejectOutcome(
-                reason=REJECT_GITIGNORED_OPAQUE_DIR,
-                paths=tuple(sorted(bad_gitignored_opaque)),
+                reason=REJECT_GITIGNORE_OPAQUE_DIR,
+                paths=tuple(sorted(bad_gitignore_opaque)),
             )
 
-        # --- Pass 5: tracked-route emits + gitignored direct-merges.
-        tracked: list[TrackedChange] = []
-        gitignored_paths: list[str] = []
+        # --- Pass 5: gitinclude-route emits + gitignore direct-merges.
+        gitinclude: list[GitincludeChange] = []
+        gitignore_paths: list[str] = []
         direct_merged_bytes = 0
-        whiteouts_tracked = 0
+        whiteouts_gitinclude = 0
 
         # Tracked whiteouts (deletions against the SNAP base).
         for entry in whiteouts:
             if entry.rel in ignored:
                 continue  # already rejected above; defensive
-            whiteouts_tracked += 1
+            whiteouts_gitinclude += 1
             base_bytes = self._git_show_base(entry.rel)
             base_existed = base_bytes is not None
             try:
                 base_text = (base_bytes or b"").decode("utf-8")
             except UnicodeDecodeError:
                 return PolicyRejectOutcome(
-                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                    reason=REJECT_NON_UTF8_GITINCLUDE, paths=(entry.rel,)
                 )
-            tracked.append(
-                TrackedChange(
+            gitinclude.append(
+                GitincludeChange(
                     path=entry.rel,
                     kind="delete",
                     base_content=base_text,
@@ -301,7 +301,7 @@ class Classifier:
         # Regular-file upper entries: route, classify create/modify, gate on mode-only.
         for entry in regular:
             if entry.rel in ignored:
-                gitignored_paths.append(entry.rel)
+                gitignore_paths.append(entry.rel)
                 direct_merged_bytes += self._direct_merge(
                     entry.rel, entry.upper_path, entry.st
                 )
@@ -327,17 +327,17 @@ class Classifier:
                 final_text = upper_bytes.decode("utf-8")
             except UnicodeDecodeError:
                 return PolicyRejectOutcome(
-                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                    reason=REJECT_NON_UTF8_GITINCLUDE, paths=(entry.rel,)
                 )
             try:
                 base_text = (base_bytes or b"").decode("utf-8")
             except UnicodeDecodeError:
                 return PolicyRejectOutcome(
-                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                    reason=REJECT_NON_UTF8_GITINCLUDE, paths=(entry.rel,)
                 )
             kind = "modify" if base_existed else "create"
-            tracked.append(
-                TrackedChange(
+            gitinclude.append(
+                GitincludeChange(
                     path=entry.rel,
                     kind=kind,
                     base_content=base_text,
@@ -347,11 +347,11 @@ class Classifier:
             )
 
         return ClassifyOutcome(
-            tracked=tuple(tracked),
-            gitignored_paths=tuple(sorted(gitignored_paths)),
+            gitinclude=tuple(gitinclude),
+            gitignore_paths=tuple(sorted(gitignore_paths)),
             direct_merged_bytes=direct_merged_bytes,
-            whiteouts_tracked=whiteouts_tracked,
-            whiteouts_gitignored_refused=0,  # refused ones cause early return
+            whiteouts_gitinclude=whiteouts_gitinclude,
+            whiteouts_gitignore_refused=0,  # refused ones cause early return
             dotgit_rejects=0,
         )
 
@@ -549,7 +549,7 @@ def _chunk_paths(paths: list[str], *, byte_limit: int) -> Iterator[list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Direct-merge of gitignored writes into the live workspace.
+# Direct-merge of gitignore writes into the live workspace.
 # ---------------------------------------------------------------------------
 
 
@@ -559,13 +559,13 @@ def direct_merge_factory(
     """Return a callable that atomically merges one upperdir file into live.
 
     Uses ``tempfile.mkstemp`` in the target's parent so the final
-    ``os.rename`` is atomic; concurrent writers to the same gitignored
+    ``os.rename`` is atomic; concurrent writers to the same gitignore
     path produce per-file last-writer-wins semantics on the final
     rename.
 
     **Atomicity guarantee is per file, not per tree.** Each upperdir
     entry gets its own rename race. Concurrent multi-file installs of
-    different versions to the same gitignored prefix can interleave at
+    different versions to the same gitignore prefix can interleave at
     the file level — file ``A`` from op1, file ``B`` from op2. No
     sandbox-side coordination prevents this; callers that need
     coherent dep-tree swap must serialize at the agent layer (plan
@@ -615,6 +615,7 @@ def write_diff_ndjson(
     upper_bytes: int,
     upper_files: int,
     warnings: list[str] | None = None,
+    snapshot_timings: dict[str, float] | None = None,
 ) -> str:
     """Write ``$RUN_DIR/diff.ndjson`` and return its absolute path."""
     path = os.path.join(run_dir, "diff.ndjson")
@@ -626,18 +627,19 @@ def write_diff_ndjson(
             "exit_code": exit_code,
             "upper_bytes": upper_bytes,
             "upper_files": upper_files,
-            "tracked_changes": len(outcome.tracked),
-            "gitignored_changes": len(outcome.gitignored_paths),
-            "gitignored_paths": list(outcome.gitignored_paths),
-            "whiteouts_tracked": outcome.whiteouts_tracked,
-            "whiteouts_gitignored_refused": outcome.whiteouts_gitignored_refused,
+            "gitinclude_changes": len(outcome.gitinclude),
+            "gitignore_changes": len(outcome.gitignore_paths),
+            "gitignore_paths": list(outcome.gitignore_paths),
+            "whiteouts_gitinclude": outcome.whiteouts_gitinclude,
+            "whiteouts_gitignore_refused": outcome.whiteouts_gitignore_refused,
             "dotgit_rejects": outcome.dotgit_rejects,
             "direct_merged_bytes": outcome.direct_merged_bytes,
+            "snapshot_timings": dict(snapshot_timings or {}),
             "warnings": list(warnings or ()),
         }
     }
     lines.append(json.dumps(meta, separators=(",", ":")))
-    for change in outcome.tracked:
+    for change in outcome.gitinclude:
         lines.append(
             json.dumps(
                 {
@@ -658,7 +660,11 @@ def write_diff_ndjson(
 
 
 def write_reject_ndjson(
-    *, run_dir: str, snap: str, reject: PolicyRejectOutcome
+    *,
+    run_dir: str,
+    snap: str,
+    reject: PolicyRejectOutcome,
+    snapshot_timings: dict[str, float] | None = None,
 ) -> str:
     path = os.path.join(run_dir, "diff.ndjson")
     os.makedirs(run_dir, exist_ok=True)
@@ -667,6 +673,7 @@ def write_reject_ndjson(
             "snap": snap,
             "reason": reject.reason,
             "paths": list(reject.paths),
+            "snapshot_timings": dict(snapshot_timings or {}),
         }
     }
     with open(path, "w", encoding="utf-8") as fh:
@@ -685,18 +692,126 @@ def reject_exit_code(reason: str) -> int:
 # ---------------------------------------------------------------------------
 
 
-_NS_ROOT = "/ns"
-_NS_TMP = "/ns/tmp"
-_NS_UPPER = "/ns/tmp/upper"
-_NS_WORK = "/ns/tmp/work"
-_NS_LOWER = "/ns/lower"
-_NS_MERGED = "/ns/merged"
+_NS_ROOT = "/tmp/eos-codeact-ns"
+_NS_TMP = "/tmp/eos-codeact-ns/tmp"
+_NS_UPPER = "/tmp/eos-codeact-ns/tmp/upper"
+_NS_WORK = "/tmp/eos-codeact-ns/tmp/work"
+_NS_LOWER = "/tmp/eos-codeact-ns/lower"
+_NS_MERGED = "/tmp/eos-codeact-ns/merged"
 
 
 def _run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
     )
+
+
+def _record_timing(timings: dict[str, float], key: str, started_at: float) -> None:
+    timings[key] = round(time.perf_counter() - started_at, 6)
+
+
+def _git(
+    args: list[str],
+    *,
+    cwd: str,
+    env: dict[str, str],
+    check: bool = True,
+) -> subprocess.CompletedProcess[bytes]:
+    proc = _run(["git", "-C", cwd, *args], env=env)
+    if check and proc.returncode != 0:
+        raise RuntimeError(
+            "git "
+            + " ".join(args)
+            + f" failed: rc={proc.returncode} "
+            + f"stdout={proc.stdout.decode('utf-8', 'replace')} "
+            + f"stderr={proc.stderr.decode('utf-8', 'replace')}"
+        )
+    return proc
+
+
+def build_live_snapshot_in_namespace(repo_root: str) -> tuple[str, dict[str, float]]:
+    """Build the live git snapshot inside this overlay runner process."""
+    total_started = time.perf_counter()
+    timings: dict[str, float] = {}
+
+    validate_started = time.perf_counter()
+    if not os.path.isdir(repo_root):
+        raise RuntimeError(f"repo_root does not exist: {repo_root}")
+    if not os.path.isdir(os.path.join(repo_root, ".git")):
+        raise RuntimeError(
+            "repo_root must be a canonical git checkout with a .git directory "
+            f"(linked worktrees are not supported): {repo_root}"
+        )
+    _record_timing(timings, "validate_repo", validate_started)
+
+    temp_index_started = time.perf_counter()
+    tmp_index_fd, tmp_index_path = tempfile.mkstemp(prefix="git-snapshot-idx-")
+    os.close(tmp_index_fd)
+    os.unlink(tmp_index_path)
+    _record_timing(timings, "temp_index", temp_index_started)
+
+    env_started = time.perf_counter()
+    env = dict(os.environ)
+    env["GIT_INDEX_FILE"] = tmp_index_path
+    env.setdefault("GIT_AUTHOR_NAME", "EphemeralOS Snapshot")
+    env.setdefault("GIT_AUTHOR_EMAIL", "snapshot@ephemeralos.invalid")
+    env.setdefault("GIT_COMMITTER_NAME", "EphemeralOS Snapshot")
+    env.setdefault("GIT_COMMITTER_EMAIL", "snapshot@ephemeralos.invalid")
+    env.setdefault("GIT_AUTHOR_DATE", "1700000000 +0000")
+    env.setdefault("GIT_COMMITTER_DATE", "1700000000 +0000")
+    _record_timing(timings, "prepare_env", env_started)
+
+    try:
+        head_started = time.perf_counter()
+        head_proc = _git(
+            ["rev-parse", "--verify", "HEAD"],
+            cwd=repo_root,
+            env=env,
+            check=False,
+        )
+        has_head = head_proc.returncode == 0
+        head_sha = (
+            head_proc.stdout.decode("utf-8", "replace").strip()
+            if has_head
+            else ""
+        )
+        _record_timing(timings, "rev_parse_head", head_started)
+        if has_head:
+            read_tree_started = time.perf_counter()
+            _git(["read-tree", "HEAD"], cwd=repo_root, env=env)
+            _record_timing(timings, "read_tree", read_tree_started)
+        else:
+            timings["read_tree"] = 0.0
+
+        add_started = time.perf_counter()
+        _git(["add", "-A"], cwd=repo_root, env=env)
+        _record_timing(timings, "git_add", add_started)
+
+        write_tree_started = time.perf_counter()
+        tree_proc = _git(["write-tree"], cwd=repo_root, env=env)
+        tree_sha = tree_proc.stdout.decode("utf-8", "replace").strip()
+        if not tree_sha:
+            raise RuntimeError("git write-tree returned empty sha")
+        _record_timing(timings, "write_tree", write_tree_started)
+
+        commit_args = ["commit-tree", tree_sha, "-m", "overlay-snapshot"]
+        if has_head:
+            commit_args.extend(["-p", head_sha])
+        commit_started = time.perf_counter()
+        commit_proc = _git(commit_args, cwd=repo_root, env=env)
+        commit_sha = commit_proc.stdout.decode("utf-8", "replace").strip()
+        if not commit_sha:
+            raise RuntimeError("git commit-tree returned empty sha")
+        _record_timing(timings, "commit_tree", commit_started)
+        timings["total"] = round(time.perf_counter() - total_started, 6)
+        return commit_sha, timings
+    finally:
+        cleanup_started = time.perf_counter()
+        try:
+            os.unlink(tmp_index_path)
+        except OSError:
+            pass
+        _record_timing(timings, "cleanup", cleanup_started)
 
 
 def setup_mounts(*, live_root: str, upper_size_mb: int) -> None:
@@ -765,7 +880,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace-root", required=True)
     parser.add_argument("--run-dir", required=True)
-    parser.add_argument("--snap", required=True)
+    parser.add_argument("--snap", default="")
     parser.add_argument("--upper-size-mb", type=int, required=True)
     parser.add_argument(
         "--user-cmd-b64",
@@ -785,6 +900,15 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - exercised 
     workspace_root = args.workspace_root.rstrip("/")
     run_dir = args.run_dir.rstrip("/")
     os.makedirs(run_dir, exist_ok=True)
+
+    snap = str(args.snap or "").strip()
+    snapshot_timings: dict[str, float] = {}
+    if not snap:
+        try:
+            snap, snapshot_timings = build_live_snapshot_in_namespace(workspace_root)
+        except Exception as exc:
+            print(f"snapshot failed: {exc}", file=sys.stderr)
+            return 254
 
     try:
         setup_mounts(live_root=workspace_root, upper_size_mb=args.upper_size_mb)
@@ -811,23 +935,29 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - exercised 
 
     classifier = Classifier(
         read_upper_bytes=lambda rel: open(os.path.join(_NS_UPPER, rel), "rb").read(),
-        git_show_base=git_show_base_factory(repo_root=_NS_LOWER, snap=args.snap),
+        git_show_base=git_show_base_factory(repo_root=_NS_LOWER, snap=snap),
         check_ignore=check_ignore_factory(repo_root=_NS_LOWER),
         direct_merge=direct_merge_factory(live_root=_NS_LOWER),
     )
 
     result = classifier.classify(upper_entries)
     if isinstance(result, PolicyRejectOutcome):
-        write_reject_ndjson(run_dir=run_dir, snap=args.snap, reject=result)
+        write_reject_ndjson(
+            run_dir=run_dir,
+            snap=snap,
+            reject=result,
+            snapshot_timings=snapshot_timings,
+        )
         return reject_exit_code(result.reason)
 
     write_diff_ndjson(
         run_dir=run_dir,
-        snap=args.snap,
+        snap=snap,
         exit_code=exit_code,
         outcome=result,
         upper_bytes=upper_bytes,
         upper_files=upper_files,
+        snapshot_timings=snapshot_timings,
     )
     return exit_code
 
@@ -842,14 +972,15 @@ __all__ = [
     "OverlayMountError",
     "PolicyRejectOutcome",
     "REJECT_DOTGIT",
-    "REJECT_GITIGNORED_OPAQUE_DIR",
-    "REJECT_GITIGNORED_WHITEOUT",
-    "REJECT_NON_UTF8_TRACKED",
+    "REJECT_GITIGNORE_OPAQUE_DIR",
+    "REJECT_GITIGNORE_WHITEOUT",
+    "REJECT_NON_UTF8_GITINCLUDE",
     "REJECT_UNSUPPORTED_OPAQUE_DIR",
     "REJECT_UNSUPPORTED_SYMLINK",
     "REJECT_UPPER_FULL",
-    "TrackedChange",
+    "GitincludeChange",
     "UpperEntry",
+    "build_live_snapshot_in_namespace",
     "check_ignore_factory",
     "direct_merge_factory",
     "git_show_base_factory",
