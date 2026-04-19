@@ -370,6 +370,15 @@ the same execution primitive used by foreground and background tools.
 External triggers must not call tool bodies directly if the tool is covered by
 platform hook policy.
 
+When a caller cannot surface advisories (headless triggers, tests), it must
+still pass a valid `EmitStreamEvent`. The contract is:
+
+- A no-op async `emit` that drops events is legal. The pipeline never assumes
+  subscribers.
+- `emit` must still be awaitable; the pipeline awaits it for every advisory.
+- Callers that want to capture advisories for logs or telemetry can substitute
+  an async callable that records events instead of forwarding them.
+
 ## Runtime Boundary
 
 The existing plain `run_tool_safely()` shape is not sufficient as the top-level
@@ -450,6 +459,52 @@ Each hook module should expose a registration function and keep its policy
 implementation local. The package initializer should be the central place that
 invokes those registration functions.
 
+Underscore-prefixed modules (for example `_common.py`, `_codeact_common.py`) are
+package-internal helpers and must not be re-exported from the package
+`__init__`. The Daytona hooks package auto-registers its modules at import time;
+tests that need isolation must clear the process-global registry or pass a
+fresh `ToolHookRegistry` instance.
+
+### Hook Naming Convention
+
+- Module filename: `{policy_area}_{detail}.py`, snake_case, one policy per
+  file. Include a tool-family prefix only when it disambiguates otherwise
+  identical policy names across tools that share the package (for example
+  `move_src_hard_block.py` vs `write_scope_hard_block.py`).
+- Registration name: `{tool_name}:{policy_suffix}`. The suffix should drop
+  redundant tool-family prefixes already implied by the tool name (for example
+  `daytona_move_file:src_hard_block`, `daytona_codeact:shell_normalization`)
+  but keep policy-area prefixes that are not redundant (for example
+  `daytona_write_file:write_scope_hard_block` — `write_scope_` is the policy
+  area, not a rename of the tool).
+
+### Priority Convention
+
+The registry orders matching hooks by `(priority, name)` ascending, so lower
+numbers run first. Priority is the only lever for inter-hook ordering within a
+single tool, so the number ordering is a contract.
+
+Guidelines:
+
+- `0–9`: argument mutation / normalization. Must run before any policy that
+  reads the final args (example: `daytona_codeact:shell_normalization` at 5).
+- `10–19`: default-bucket blocks, denials, and write-scope policies keyed on a
+  single argument (examples: `daytona_write_file:write_scope_hard_block` at 10,
+  `daytona_delete_file:write_scope_deny` at 15).
+- `20+`: later blocks that depend on earlier blocks not having fired, or
+  advisories that should only emit when the call has already survived earlier
+  hard blocks. Do not assume "advisory only" at any range — check the policy,
+  not the priority.
+
+Two invariants the numbers must uphold:
+
+1. Mutation hooks run before any hook that reads their output.
+2. When two hooks can deny the same call, the one whose message is more
+   actionable for the caller runs first.
+
+Post-hook priority uses the same numeric space; 10 is the default for
+audit-style post-hooks that may deny.
+
 Example module shape:
 
 ```python
@@ -470,10 +525,12 @@ def register(registry: ToolHookRegistry | None = None) -> None:
     reg.register(TOOL_GLOB, "pre", PRIORITY, hook, name=NAME)
 ```
 
-The actual registry implementation should prevent duplicate `(tool_glob,
-phase, priority, name)` entries, or the package initializer should guard
-registration explicitly. Registry-level idempotence is preferred because it
-protects all hook packages consistently.
+The registry deduplicates on `(tool_glob, phase, priority, name)`: registering
+a second entry with the same four-tuple replaces the previous entry rather than
+appending a duplicate. Note that priority is part of the key, so re-registering
+the same hook at a different priority is treated as a new entry — use a stable
+priority per hook. Registry-level idempotence is preferred over per-package
+guards because it protects all hook packages consistently.
 
 The old `tools.daytona_toolkit.guards` module has been removed. Daytona policy
 registration now flows only through `tools.daytona_toolkit.hooks`.
@@ -506,10 +563,30 @@ Post-hooks should live in `tools.daytona_toolkit.hooks.posthook`.
 
 | Module | Phase | Tools | Purpose |
 | --- | --- | --- | --- |
-| `codeact_audited_write_policy.py` | post | `daytona_codeact` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
+| `audited_write_policy.py` | post | `daytona_codeact` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
+| `ambient_change_warning.py` | post | `daytona_codeact` | Emits a user-only advisory when the shell command touched paths outside its declared write set. |
 
-This policy is post-hook-only because it depends on the tool result and changed
-paths. It must not be forced into the pre-hook package.
+Both post-hooks read from ``result.metadata["changed_paths"]`` /
+``ambient_changed_paths``, which the ``tools.daytona_toolkit._commit`` façade
+writes uniformly for every OCC-gated tool. The shared audit primitive lives in
+``tools.daytona_toolkit._audit`` and accepts ``tool_name`` so the same helper
+can back multiple registrations.
+
+``audited_write_policy`` is registered only on ``daytona_codeact`` by design.
+Codeact commits paths its input does not name (shell side effects, ambient
+edits), so a post-commit audit is the only layer that can see the actual
+changed set. The pure OCC tools
+(``daytona_write_file``, ``daytona_edit_file``, ``daytona_delete_file``,
+``daytona_move_file``) preserve path identity between input and commit — see
+``code_intelligence/routing/service.py::_write_spec_to_change`` and
+``editing/write_coordinator.py`` — so the pre-hook ``write_scope_advisory``
+already surfaces the same paths a post-hook audit would, and adding the
+registration would duplicate the signal. The registration is deferred
+indefinitely unless a downstream tool grows path-rewrite behavior at commit
+time.
+
+These policies are post-hook-only because they depend on the tool result and
+committed path set. They must not be forced into the pre-hook package.
 
 ## Outcome Types
 
@@ -736,63 +813,52 @@ async def run_post_hooks(
 ## Streaming Tool-Call Primitive
 
 The hook-aware tool-call primitive emits stream events and returns exactly one
-`ToolResultBlock`. This becomes the orchestration boundary for foreground,
-streaming, background, and external-trigger paths.
+`ToolResult`. It becomes the orchestration boundary for foreground, streaming,
+background, and external-trigger paths. The caller is responsible for wrapping
+the final `ToolResult` in a `ToolResultBlock` keyed by `tool_use_id` and for
+emitting `ToolExecutionCompleted` with the final result; the primitive only
+owns pre-hook, tool body, and post-hook ordering plus `ToolExecutionStarted`.
+
+Current signature (see `backend/src/tools/core/hooks/execution.py`):
 
 ```python
-async def execute_tool_call_streaming(
+async def execute_tool_with_hooks(
+    tool: BaseTool,
+    raw_input: dict[str, Any],
+    context: ToolExecutionContext,
     *,
-    context: QueryContext,
-    tool_name: str,
-    tool_use_id: str,
-    raw_input: dict[str, object],
-    extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
     emit: EmitStreamEvent,
-) -> ToolResultBlock:
-    tool = context.tool_registry.get(tool_name)
-    if tool is None:
-        return ToolResultBlock(
-            tool_use_id=tool_use_id,
-            content=f"Unknown tool: {tool_name}",
-            is_error=True,
-        )
+    emit_started: bool = True,
+) -> ToolResult:
+    parsed = parse_tool_input(tool, raw_input)
+    if parsed.error is not None:
+        return parsed.error
+    assert parsed.args is not None
 
-    metadata = context.tool_metadata.copy() if context.tool_metadata else ExecutionMetadata()
-    metadata.tool_registry = context.tool_registry
-    metadata.tool_id = tool_use_id
-    if extra_metadata:
-        metadata.update(extra_metadata)
-
-    tool_context = ToolExecutionContext(cwd=context.cwd, metadata=metadata)
-    parsed = validate_tool_input(tool, raw_input)
-    if parsed.is_error:
-        return parsed.to_tool_result_block(tool_use_id)
-
-    pre = await run_pre_hooks(tool_name, parsed.args, tool_context, emit=emit)
+    pre = await run_pre_hooks(tool.name, parsed.args, context, emit=emit)
     if pre.has_error:
-        return ToolResultBlock(
-            tool_use_id=tool_use_id,
-            content=f"pre-hook blocked {tool_name}: {pre.error_message}",
+        return ToolResult(
+            output=f"pre-hook blocked {tool.name}: {pre.error_message}",
             is_error=True,
             metadata={"blocked_by": "pre_hook"},
         )
 
     effective_args = pre.tool_input
-    await emit(ToolExecutionStarted(tool_name=tool_name, tool_input=effective_args.model_dump()))
+    if emit_started:
+        await emit(
+            ToolExecutionStarted(
+                tool_name=tool.name,
+                tool_input=effective_args.model_dump(mode="json"),
+            )
+        )
 
-    tool_result = await execute_validated_tool(tool, effective_args, tool_context)
-    validated = validate_tool_output(tool, tool_result)
+    result = await execute_tool_body(tool, effective_args, context)
+    validated = validate_tool_output(tool, result)
 
-    post = await run_post_hooks(
-        tool_name,
-        effective_args,
-        tool_context,
-        validated,
-        emit=emit,
-    )
+    post = await run_post_hooks(tool.name, effective_args, context, validated, emit=emit)
     if post.has_error:
-        final = ToolResult(
-            output=f"post-hook failed {tool_name}: {post.error_message}",
+        return ToolResult(
+            output=f"post-hook failed {tool.name}: {post.error_message}",
             is_error=True,
             metadata={
                 **validated.metadata,
@@ -800,35 +866,12 @@ async def execute_tool_call_streaming(
                 "original_tool_is_error": validated.is_error,
             },
         )
-    else:
-        final = validated
-
-    merge_runtime_metadata(
-        original=context.tool_metadata,
-        updated=metadata,
-        result_metadata=final.metadata,
-    )
-
-    await emit(
-        ToolExecutionCompleted(
-            tool_name=tool_name,
-            output=final.output,
-            is_error=final.is_error,
-            tool_id=tool_use_id,
-            metadata=dict(final.metadata or {}),
-        )
-    )
-    return ToolResultBlock(
-        tool_use_id=tool_use_id,
-        content=final.output,
-        is_error=final.is_error,
-        metadata=final.metadata,
-    )
+    return validated
 ```
 
-The sketch names helper functions that should be extracted from the current
-`run_tool_safely()` path. The exact helper names can change during
-implementation.
+Helpers extracted from the legacy `run_tool_safely()` path — `parse_tool_input`,
+`execute_tool_body`, `validate_tool_output` — live in `tools.core.base` and are
+reused directly by the primitive.
 
 ## Concurrent Multiplexing Sketch
 
@@ -938,11 +981,15 @@ backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_git.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_shell.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
-backend/src/tools/daytona_toolkit/hooks/posthook/codeact_audited_write_policy.py
+backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py
+backend/src/tools/daytona_toolkit/hooks/posthook/ambient_change_warning.py
+backend/src/tools/daytona_toolkit/_commit.py
+backend/src/tools/daytona_toolkit/_audit.py
 backend/tests/test_tools/test_hooks/__init__.py
 backend/tests/test_tools/test_hooks/test_pipeline.py
 backend/tests/test_tools/test_hooks/test_execution.py
 backend/tests/test_tools/test_daytona_toolkit/conftest.py
+backend/tests/test_tools/test_daytona_toolkit/test_commit.py
 ```
 
 ## Files Removed
@@ -1268,11 +1315,16 @@ uv run mypy --config-file backend/mypy.ini backend/src/team backend/src/agents
 
 ## Open Decisions
 
-- Whether post-hook denial after an already failed tool should always override
-  the original failure, or whether some post-hooks should only annotate the
-  original failure.
 - Whether advisory notification categories should be standardized by phase,
-  policy area, or both.
+  policy area, or both. Today only the phase category (`pre_hook_advisory`,
+  `post_hook_advisory`) is contractually fixed; a policy-area subcategory is
+  still open.
 - Whether hook failures caused by unexpected exceptions should expose raw
   exception text to the model or use a sanitized message while preserving raw
   details in telemetry.
+
+Resolved (see §Result Selection Rules): post-hook denial always replaces the
+tool result, preserving the original `is_error` under
+`metadata.original_tool_is_error` and setting `metadata.blocked_by =
+"post_hook"`. Annotation-only post-hooks must emit an advisory and return a
+non-error `PostHookOutcome`; they must not use `has_error` to annotate.
