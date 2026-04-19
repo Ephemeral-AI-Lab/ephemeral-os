@@ -22,7 +22,10 @@ from code_intelligence.editing.merge import (
 )
 from code_intelligence.editing.patcher import Patcher
 from code_intelligence.editing.time_machine import TimeMachine
-from code_intelligence.routing.content_manager import ContentManager
+from code_intelligence.routing.content_manager import (
+    CheckedApplyChange,
+    ContentManager,
+)
 from code_intelligence.types import (
     EditResult,
     OperationChange,
@@ -436,6 +439,14 @@ class WriteCoordinator:
         timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
 
         try:
+            fast_results = self._try_commit_many_exact_base_fast(
+                ops,
+                timings=timings,
+                started=started,
+            )
+            if fast_results is not None:
+                return fast_results
+
             read_started = time.perf_counter()
             current_by_path = self._content.read_many(all_paths, allow_missing=True)
             timings["resolve_read"] = round(time.perf_counter() - read_started, 6)
@@ -615,6 +626,133 @@ class WriteCoordinator:
         finally:
             for fp in reversed(held):
                 self._arbiter.release_file_lock(fp)
+
+    def _try_commit_many_exact_base_fast(
+        self,
+        ops: Sequence[CommitOperation],
+        *,
+        timings: dict[str, float],
+        started: float,
+    ) -> list[OperationResult] | None:
+        """Commit a clean disjoint batch via checked apply, or fall back.
+
+        The normal path reads full current content after locks so it can merge
+        non-overlapping drift. Most tool batches are clean: the plan-time base
+        still matches current content. For those cases, a single sandbox call
+        can verify hashes and apply all changes; on base mismatch we return
+        ``None`` so the existing full read/merge path preserves behavior.
+        """
+        checked: list[CheckedApplyChange] = []
+        for op in ops:
+            for change in op.changes:
+                if change.final_content is None and not change.base_existed:
+                    return None
+                checked.append(
+                    CheckedApplyChange(
+                        file_path=change.file_path,
+                        base_hash=change.base_hash,
+                        base_existed=change.base_existed,
+                        final_content=change.final_content,
+                    )
+                )
+
+        if not checked:
+            return None
+
+        apply_started = time.perf_counter()
+        try:
+            apply_result = self._content.apply_many_with_base_check(checked)
+        except Exception as exc:  # pragma: no cover - defensive I/O
+            timings["apply"] = round(time.perf_counter() - apply_started, 6)
+            timings["total"] = round(time.perf_counter() - started, 6)
+            return [
+                OperationResult(
+                    success=False,
+                    status="failed",
+                    files=tuple(
+                        _result(c.file_path, f"checked batch operation failed: {exc}")
+                        for c in op.changes
+                    ),
+                    conflict_file=None,
+                    conflict_reason=f"write failed: {exc}",
+                    timings=dict(timings),
+                )
+                for op in ops
+            ]
+        timings["apply"] = round(time.perf_counter() - apply_started, 6)
+
+        if not apply_result.success:
+            if apply_result.conflict_reason in {"base_mismatch", "unsupported"}:
+                return None
+            timings["total"] = round(time.perf_counter() - started, 6)
+            return [
+                OperationResult(
+                    success=False,
+                    status="failed",
+                    files=tuple(
+                        _result(
+                            c.file_path,
+                            apply_result.message or "checked batch operation failed",
+                        )
+                        for c in op.changes
+                    ),
+                    conflict_file=apply_result.conflict_path,
+                    conflict_reason=apply_result.message or apply_result.conflict_reason,
+                    timings=dict(timings),
+                )
+                for op in ops
+            ]
+
+        timings["resolve_read"] = 0.0
+        timings["resolve"] = 0.0
+        record_started = time.perf_counter()
+        results: list[OperationResult] = []
+        for op in ops:
+            commit_results: list[EditResult] = []
+            for change in op.changes:
+                current_hash = change.base_hash if change.base_existed else ""
+                new_hash = (
+                    content_hash(change.final_content)
+                    if change.final_content is not None
+                    else ""
+                )
+                gen = self._arbiter.record_edit(
+                    file_path=change.file_path,
+                    actor_label=op.agent_id,
+                    edit_type=op.edit_type,
+                    old_hash=current_hash,
+                    new_hash=new_hash,
+                    description=op.description,
+                )
+                self._time_machine.save(
+                    change.file_path,
+                    change.base_content if change.base_existed else "",
+                )
+                self._symbol_index.refresh(change.file_path, change.final_content or "")
+                self._lsp_client.invalidate(change.file_path)
+                commit_results.append(
+                    _result(
+                        change.file_path,
+                        "Wrote file",
+                        success=True,
+                        snapshot_id=str(gen),
+                    ),
+                )
+            results.append(
+                OperationResult(
+                    success=True,
+                    status="committed",
+                    files=tuple(commit_results),
+                    conflict_file=None,
+                    conflict_reason="",
+                    timings=dict(timings),
+                )
+            )
+        timings["apply_record"] = round(time.perf_counter() - record_started, 6)
+        timings["total"] = round(time.perf_counter() - started, 6)
+        for result in results:
+            result.timings.update(timings)
+        return results
 
     @staticmethod
     def _merge_against_base(

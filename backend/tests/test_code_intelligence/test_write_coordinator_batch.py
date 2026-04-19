@@ -10,6 +10,7 @@ from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
+from code_intelligence.editing.write_coordinator import CommitOperation
 from code_intelligence.types import MoveSpec, OperationChange, SemanticFileChange
 
 
@@ -319,6 +320,100 @@ def test_base_mismatch_overlap_aborts_overlap(tmp_path) -> None:
     assert result.status == "aborted_overlap"
     # Concurrent edit preserved
     assert "foo_drift" in a.read_text(encoding="utf-8")
+
+
+def test_commit_many_clean_batch_uses_checked_apply_without_second_read(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    a = tmp_path / "a.py"
+    b = tmp_path / "b.py"
+    a.write_text("a = 1\n", encoding="utf-8")
+    b.write_text("b = 2\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    monkeypatch.setattr(
+        svc._write_coordinator._content,
+        "read_many",
+        lambda *args, **kwargs: pytest.fail("clean batch should not re-read content"),
+    )
+
+    results = svc._write_coordinator.commit_many_operations_against_base(
+        [
+            CommitOperation(
+                changes=(
+                    OperationChange(
+                        file_path=str(a),
+                        base_content="a = 1\n",
+                        base_hash=content_hash("a = 1\n"),
+                        final_content="a = 10\n",
+                    ),
+                ),
+                agent_id="agent-a",
+                edit_type="edit",
+            ),
+            CommitOperation(
+                changes=(
+                    OperationChange(
+                        file_path=str(b),
+                        base_content="b = 2\n",
+                        base_hash=content_hash("b = 2\n"),
+                        final_content="b = 20\n",
+                    ),
+                ),
+                agent_id="agent-b",
+                edit_type="edit",
+            ),
+        ]
+    )
+
+    assert [result.success for result in results] == [True, True]
+    assert a.read_text(encoding="utf-8") == "a = 10\n"
+    assert b.read_text(encoding="utf-8") == "b = 20\n"
+    assert results[0].timings["resolve_read"] == 0.0
+
+
+def test_commit_many_checked_apply_falls_back_to_merge_on_drift(tmp_path) -> None:
+    a = tmp_path / "a.py"
+    b = tmp_path / "b.py"
+    base_a = "def foo():\n    return 1\n\nZ = 0\n"
+    base_b = "b = 2\n"
+    a.write_text(base_a + "NEW = 1\n", encoding="utf-8")
+    b.write_text(base_b, encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    results = svc._write_coordinator.commit_many_operations_against_base(
+        [
+            CommitOperation(
+                changes=(
+                    OperationChange(
+                        file_path=str(a),
+                        base_content=base_a,
+                        base_hash=content_hash(base_a),
+                        final_content="def bar():\n    return 1\n\nZ = 0\n",
+                    ),
+                ),
+                edit_type="rename",
+            ),
+            CommitOperation(
+                changes=(
+                    OperationChange(
+                        file_path=str(b),
+                        base_content=base_b,
+                        base_hash=content_hash(base_b),
+                        final_content="b = 20\n",
+                    ),
+                ),
+                edit_type="edit",
+            ),
+        ]
+    )
+
+    assert [result.success for result in results] == [True, True]
+    text = a.read_text(encoding="utf-8")
+    assert "def bar()" in text
+    assert "NEW = 1" in text
+    assert b.read_text(encoding="utf-8") == "b = 20\n"
 
 
 def test_mid_operation_write_failure_rolls_back_prior_files(tmp_path) -> None:

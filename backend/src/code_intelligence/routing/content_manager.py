@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import dataclass
 import json
 import shlex
 from pathlib import Path
 from typing import Any
 
+from code_intelligence.hashing import content_hash
 from tools.daytona_toolkit._daytona_utils import (
     _build_read_text_file_command,
     _build_write_text_file_command,
@@ -21,6 +23,26 @@ from code_intelligence._async_bridge import run_sync
 
 FileReadResult = tuple[str, bool]
 FileReadResults = dict[str, FileReadResult]
+
+
+@dataclass(frozen=True)
+class CheckedApplyChange:
+    """One exact-base checked write/delete for a batch apply."""
+
+    file_path: str
+    base_hash: str
+    base_existed: bool
+    final_content: str | None
+
+
+@dataclass(frozen=True)
+class CheckedApplyResult:
+    """Outcome of an exact-base checked batch apply."""
+
+    success: bool
+    conflict_path: str | None = None
+    conflict_reason: str = ""
+    message: str = ""
 
 
 class ContentManager:
@@ -105,6 +127,28 @@ class ContentManager:
                 self.delete(file_path)
             else:
                 self.write(file_path, content)
+
+    def apply_many_with_base_check(
+        self,
+        changes: list[CheckedApplyChange],
+    ) -> CheckedApplyResult:
+        """Verify exact base hashes and apply all changes in one round trip.
+
+        This is an optimization for clean OCC batches. It intentionally does
+        not attempt merge fallback; callers should fall back to a full read path
+        when it returns ``conflict_reason == "base_mismatch"``.
+        """
+        if not changes:
+            return CheckedApplyResult(success=True)
+        if self._sandbox is None:
+            return self._apply_local_batch_checked(changes)
+        if _supports_exec_transport(self._sandbox):
+            return self._apply_remote_batch_checked(changes)
+        return CheckedApplyResult(
+            success=False,
+            conflict_reason="unsupported",
+            message="sandbox process.exec checked apply is unavailable",
+        )
 
     # -- Private --------------------------------------------------------------
 
@@ -274,6 +318,186 @@ for item in ops:
         )
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or "batch apply failed")
+
+    @staticmethod
+    def _apply_local_batch_checked(
+        changes: list[CheckedApplyChange],
+    ) -> CheckedApplyResult:
+        backups: list[tuple[Path, bool, str]] = []
+        for change in changes:
+            path = Path(change.file_path)
+            try:
+                current = path.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                existed = False
+                current = ""
+                current_hash = ""
+            else:
+                existed = True
+                current_hash = content_hash(current)
+            backups.append((path, existed, current))
+            if change.base_existed:
+                if not existed or current_hash != change.base_hash:
+                    return CheckedApplyResult(
+                        success=False,
+                        conflict_path=change.file_path,
+                        conflict_reason="base_mismatch",
+                        message="file content changed before checked apply",
+                    )
+            elif existed:
+                return CheckedApplyResult(
+                    success=False,
+                    conflict_path=change.file_path,
+                    conflict_reason="base_mismatch",
+                    message="file already exists; base said it did not",
+                )
+
+        try:
+            for change in changes:
+                path = Path(change.file_path)
+                if change.final_content is None:
+                    try:
+                        path.unlink()
+                    except FileNotFoundError:
+                        pass
+                    continue
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(change.final_content, encoding="utf-8")
+        except Exception as exc:
+            for path, existed, content in reversed(backups):
+                try:
+                    if existed:
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text(content, encoding="utf-8")
+                    else:
+                        path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            return CheckedApplyResult(
+                success=False,
+                conflict_reason="write_failed",
+                message=str(exc),
+            )
+        return CheckedApplyResult(success=True)
+
+    def _apply_remote_batch_checked(
+        self,
+        changes: list[CheckedApplyChange],
+    ) -> CheckedApplyResult:
+        process = getattr(self._sandbox, "process", None)
+        payload = [
+            {
+                "path": change.file_path,
+                "base_hash": change.base_hash,
+                "base_existed": change.base_existed,
+                "content_b64": (
+                    None
+                    if change.final_content is None
+                    else base64.b64encode(
+                        change.final_content.encode("utf-8"),
+                    ).decode("ascii")
+                ),
+            }
+            for change in changes
+        ]
+        encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+        script = f"""
+import base64
+import hashlib
+import json
+import pathlib
+
+ops = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
+backups = []
+for item in ops:
+    path = pathlib.Path(item["path"])
+    try:
+        current = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        existed = False
+        current = ""
+        current_hash = ""
+    else:
+        existed = True
+        current_hash = hashlib.sha256(current.encode("utf-8")).hexdigest()[:16]
+    backups.append({{
+        "path": item["path"],
+        "existed": existed,
+        "content_b64": base64.b64encode(current.encode("utf-8")).decode("ascii"),
+    }})
+    if item.get("base_existed"):
+        if (not existed) or current_hash != item.get("base_hash", ""):
+            print(json.dumps({{
+                "ok": False,
+                "reason": "base_mismatch",
+                "path": item["path"],
+                "message": "file content changed before checked apply",
+            }}))
+            raise SystemExit(0)
+    elif existed:
+        print(json.dumps({{
+            "ok": False,
+            "reason": "base_mismatch",
+            "path": item["path"],
+            "message": "file already exists; base said it did not",
+        }}))
+        raise SystemExit(0)
+
+try:
+    for item in ops:
+        path = pathlib.Path(item["path"])
+        content_b64 = item.get("content_b64")
+        if content_b64 is None:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(base64.b64decode(content_b64))
+except Exception as exc:
+    for backup in reversed(backups):
+        path = pathlib.Path(backup["path"])
+        try:
+            if backup.get("existed"):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(base64.b64decode(backup["content_b64"]))
+            else:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
+        except Exception:
+            pass
+    print(json.dumps({{
+        "ok": False,
+        "reason": "write_failed",
+        "path": "",
+        "message": str(exc),
+    }}))
+    raise SystemExit(0)
+
+print(json.dumps({{"ok": True}}))
+"""
+        command = f"python3 -c {shlex.quote(script)}"
+        response = run_sync(process.exec(_wrap_bash_command(command)))
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or "checked batch apply failed")
+        payload_out = json.loads(cleaned or "{}")
+        if not isinstance(payload_out, dict):
+            raise RuntimeError("checked batch apply returned invalid JSON")
+        if payload_out.get("ok"):
+            return CheckedApplyResult(success=True)
+        return CheckedApplyResult(
+            success=False,
+            conflict_path=str(payload_out.get("path") or "") or None,
+            conflict_reason=str(payload_out.get("reason") or "failed"),
+            message=str(payload_out.get("message") or ""),
+        )
 
     @staticmethod
     def _is_missing_error(exc: Exception) -> bool:

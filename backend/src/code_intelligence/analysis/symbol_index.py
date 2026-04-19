@@ -40,6 +40,7 @@ class _FileSymbols:
 
     file_path: str
     symbols: list[SymbolInfo] = field(default_factory=list)
+    content: str = ""
     generation: int = 0
     indexed_at: float = 0.0
 
@@ -97,6 +98,7 @@ class SymbolIndex:
             self._symbols[file_path] = _FileSymbols(
                 file_path=file_path,
                 symbols=symbols,
+                content=content,
                 generation=gen,
                 indexed_at=time.time(),
             )
@@ -147,6 +149,24 @@ class SymbolIndex:
                 for symbol in fs.symbols
                 if symbol.line > 0
             ]
+
+    def cached_content(self, file_path: str) -> str | None:
+        """Return indexed file content without sandbox I/O, if available."""
+        candidates = [str(file_path or "")]
+        root = str(self._workspace_root or "").rstrip("/\\")
+        normalized = candidates[0].replace("\\", "/")
+        if root:
+            root_prefix = root.replace("\\", "/").rstrip("/")
+            if normalized.startswith(root_prefix + "/"):
+                candidates.append(normalized[len(root_prefix) + 1 :])
+            elif normalized and not normalized.startswith("/"):
+                candidates.append(f"{root_prefix}/{normalized}")
+        with self._lock:
+            for candidate in candidates:
+                fs = self._symbols.get(candidate)
+                if fs is not None:
+                    return fs.content
+        return None
 
     @property
     def is_built(self) -> bool:
@@ -237,12 +257,16 @@ class SymbolIndex:
 
     def _build_sequential(self, files: list[str]) -> None:
         """Index files one at a time (local filesystem)."""
-        batch: list[tuple[str, list[SymbolInfo]]] = []
+        batch: list[tuple[str, list[SymbolInfo], str]] = []
         for file_path in files:
             content = read_file_content(file_path, self._sandbox)
             if content is None:
                 continue
-            batch.append((file_path, extract_symbols(file_path, content, self._tree_cache)))
+            batch.append((
+                file_path,
+                extract_symbols(file_path, content, self._tree_cache),
+                content,
+            ))
             if len(batch) >= SYMBOL_INDEX_BATCH_SIZE:
                 self._commit_batch(batch)
                 batch.clear()
@@ -258,7 +282,8 @@ class SymbolIndex:
                 self._build_remote_individual(chunk)
                 continue
             commit = [
-                (fp, extract_symbols(fp, content, self._tree_cache)) for fp, content in downloaded
+                (fp, extract_symbols(fp, content, self._tree_cache), content)
+                for fp, content in downloaded
             ]
             if commit:
                 self._commit_batch(commit)
@@ -266,12 +291,12 @@ class SymbolIndex:
     def _build_remote_individual(self, files: list[str]) -> None:
         """Fallback: download files individually using a thread pool."""
 
-        def _download_and_extract(fp: str) -> tuple[str, list[SymbolInfo]]:
+        def _download_and_extract(fp: str) -> tuple[str, list[SymbolInfo], str]:
             content = read_file_content(fp, self._sandbox)
             symbols = extract_symbols(fp, content, self._tree_cache) if content else []
-            return fp, symbols
+            return fp, symbols, content or ""
 
-        batch: list[tuple[str, list[SymbolInfo]]] = []
+        batch: list[tuple[str, list[SymbolInfo], str]] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=_REMOTE_THREAD_POOL) as pool:
             for result in pool.map(_download_and_extract, files):
                 batch.append(result)
@@ -281,15 +306,16 @@ class SymbolIndex:
         if batch:
             self._commit_batch(batch)
 
-    def _commit_batch(self, batch: list[tuple[str, list[SymbolInfo]]]) -> None:
+    def _commit_batch(self, batch: list[tuple[str, list[SymbolInfo], str]]) -> None:
         """Commit a batch of indexed files under a single generation bump."""
         with self._lock:
             self._generation += 1
             gen = self._generation
-            for fp, symbols in batch:
+            for fp, symbols, content in batch:
                 self._symbols[fp] = _FileSymbols(
                     file_path=fp,
                     symbols=symbols,
+                    content=content,
                     generation=gen,
                     indexed_at=time.time(),
                 )

@@ -2,21 +2,29 @@
 
 from __future__ import annotations
 
+import ast
 import base64
 import json
+import posixpath
 import re
 import shlex
 import uuid
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema
 
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
+from code_intelligence.types import WriteSpec
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
-from tools.daytona_toolkit._commit import FileChangeResult, submit_codeact_cmd
+from tools.daytona_toolkit._commit import (
+    FileChangeResult,
+    submit_codeact_cmd,
+    submit_commit,
+)
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _format_shell_stdout,
@@ -114,6 +122,17 @@ _PYTHON_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 _CODEACT_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_default_timeout
 _CODEACT_WRITE_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_write_timeout
+_SIMPLE_PYTHON_HEREDOC_RE = re.compile(
+    r"\A\s*python(?:3(?:\.\d+)?)?\s+-\s+<<(?P<quote>['\"]?)(?P<tag>[A-Za-z_][A-Za-z0-9_]*)"
+    r"(?P=quote)\n(?P<code>.*)\n(?P=tag)\s*\Z",
+    flags=re.DOTALL,
+)
+
+
+@dataclass(frozen=True)
+class _SimpleCodeActWrite:
+    file_path: str
+    content: str
 
 
 class DaytonaCodeActInput(BaseModel):
@@ -702,6 +721,122 @@ def _resolve_mode(
     return None, "Provide `code` for Python mode or `command` for shell mode."
 
 
+def _simple_codeact_write_from_shell(
+    command: str,
+    *,
+    cwd: str | None,
+) -> _SimpleCodeActWrite | None:
+    """Recognize pure `Path(...).write_text(...)` heredocs.
+
+    This is a correctness-preserving fast path for shell CodeAct calls that
+    contain no runtime behavior beyond a literal text write. The write is
+    committed through `submit_commit`, so OCC, attribution, and batching stay
+    identical to `daytona_write_file`; anything more complex falls back to the
+    full overlay auditor.
+    """
+    if not cwd:
+        return None
+    match = _SIMPLE_PYTHON_HEREDOC_RE.fullmatch(command or "")
+    if match is None:
+        return None
+    try:
+        tree = ast.parse(match.group("code"))
+    except SyntaxError:
+        return None
+    statements = [
+        stmt for stmt in tree.body
+        if not (
+            isinstance(stmt, ast.ImportFrom)
+            and stmt.module == "pathlib"
+            and any(alias.name == "Path" for alias in stmt.names)
+        )
+    ]
+    if len(statements) != 1 or not isinstance(statements[0], ast.Expr):
+        return None
+    call = statements[0].value
+    if not isinstance(call, ast.Call):
+        return None
+    func = call.func
+    if not (
+        isinstance(func, ast.Attribute)
+        and func.attr == "write_text"
+        and isinstance(func.value, ast.Call)
+        and isinstance(func.value.func, ast.Name)
+        and func.value.func.id == "Path"
+    ):
+        return None
+    path_args = func.value.args
+    if len(path_args) != 1 or not isinstance(path_args[0], ast.Constant):
+        return None
+    rel_or_abs = path_args[0].value
+    if not isinstance(rel_or_abs, str):
+        return None
+    if len(call.args) != 1 or not isinstance(call.args[0], ast.Constant):
+        return None
+    content = call.args[0].value
+    if not isinstance(content, str):
+        return None
+    allowed_keywords = {"encoding"}
+    for keyword_arg in call.keywords:
+        if keyword_arg.arg not in allowed_keywords:
+            return None
+        if keyword_arg.arg == "encoding":
+            if not isinstance(keyword_arg.value, ast.Constant):
+                return None
+            encoding = keyword_arg.value.value
+            if not isinstance(encoding, str) or encoding.lower().replace("_", "-") != "utf-8":
+                return None
+    root = posixpath.normpath(cwd)
+    target = rel_or_abs if posixpath.isabs(rel_or_abs) else posixpath.join(root, rel_or_abs)
+    target = posixpath.normpath(target)
+    if target != root and not target.startswith(root.rstrip("/") + "/"):
+        return None
+    return _SimpleCodeActWrite(file_path=target, content=content)
+
+
+async def _execute_simple_codeact_write(
+    context: ToolExecutionContext,
+    *,
+    command: str,
+    write: _SimpleCodeActWrite,
+) -> ToolResult:
+    change = await submit_commit(
+        context,
+        op="write",
+        specs=[
+            WriteSpec(
+                file_path=write.file_path,
+                content=write.content,
+                overwrite=True,
+            )
+        ],
+        fallback_paths=[write.file_path],
+        description="daytona_codeact simple write_text",
+    )
+    exit_code = 0 if change.success else 1
+    shell_result = {
+        "command": command,
+        "stdout": "",
+        "stderr": "" if change.success else (change.conflict_reason or "write failed"),
+        "exit_code": exit_code,
+        "changed_paths": list(change.changed_paths),
+        "ambient_changed_paths": [],
+        "overlay_success": bool(change.success),
+        "overlay_conflict_reason": change.conflict_reason,
+    }
+    return _build_tool_output(
+        context=context,
+        status="ok" if change.success else "error",
+        files_written=len(change.changed_paths) if change.success else 0,
+        shells=[shell_result],
+        script_stdout="",
+        warnings=[],
+        error="" if change.success else (change.conflict_reason or "write failed"),
+        changed_paths=list(change.changed_paths),
+        ambient_changed_paths=[],
+    )
+
+
 async def _exec_shell_command(
     context: ToolExecutionContext,
     sandbox: object,
@@ -1044,6 +1179,18 @@ async def daytona_codeact(
         return _ci_required_result()
 
     if resolved_mode == "shell":
+        simple_write = (
+            None
+            if disable_codeact_file_edits
+            else _simple_codeact_write_from_shell(direct_command, cwd=repo_cwd)
+        )
+        if simple_write is not None:
+            return await _execute_simple_codeact_write(
+                context,
+                command=direct_command,
+                write=simple_write,
+            )
+
         shell_result, sandbox, tool_error = await _run_shell_with_recovery(
             context,
             sandbox,

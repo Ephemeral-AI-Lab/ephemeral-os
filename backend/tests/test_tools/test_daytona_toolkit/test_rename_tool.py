@@ -1,9 +1,10 @@
 """Tests for tools.daytona_toolkit.rename_tool.
 
-The tool resolves the symbol through :class:`SymbolIndex`, then delegates
-the rewrite to ``svc.rename_symbol``. These tests mock the service and
-cover: identifier validation, ambiguity, empty-plan handling, OCC
-commit success / abort translation, and write-scope gating.
+The tool resolves the symbol through :class:`SymbolIndex`, builds a rename
+plan, then delegates the already-built plan to ``svc.commit_rename_plan``.
+These tests mock the service and cover: identifier validation, ambiguity,
+empty-plan handling, OCC commit success / abort translation, and write-scope
+gating.
 """
 
 from __future__ import annotations
@@ -107,7 +108,9 @@ def _make_svc(
     svc = SimpleNamespace(
         symbol_index=symbol_index,
         rename_symbol_plan=MagicMock(return_value=plan or _plan("/ws/a.py")),
-        rename_symbol=MagicMock(return_value=rename_result or _success_op(["/ws/a.py"])),
+        commit_rename_plan=MagicMock(
+            return_value=rename_result or _success_op(["/ws/a.py"])
+        ),
     )
     return svc
 
@@ -165,7 +168,7 @@ def test_no_match_returns_helpful_message() -> None:
     payload = json.loads(result.output)
     assert payload["status"] == "no_match"
     assert "ci_query_symbol" in payload["message"]
-    svc.rename_symbol.assert_not_called()
+    svc.commit_rename_plan.assert_not_called()
 
 
 def test_ambiguous_matches_return_candidates_without_renaming() -> None:
@@ -180,7 +183,7 @@ def test_ambiguous_matches_return_candidates_without_renaming() -> None:
     payload = json.loads(result.output)
     assert payload["status"] == "ambiguous"
     assert len(payload["candidates"]) == 2
-    svc.rename_symbol.assert_not_called()
+    svc.commit_rename_plan.assert_not_called()
 
 
 def test_dotted_name_filters_by_container() -> None:
@@ -204,7 +207,7 @@ def test_dotted_name_filters_by_container() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_single_match_delegates_to_svc_rename_symbol() -> None:
+def test_single_match_delegates_to_svc_commit_rename_plan() -> None:
     svc = _make_svc(
         matches=[_sym("foo", "/ws/a.py")],
         plan=_plan("/ws/a.py", "/ws/b.py"),
@@ -218,8 +221,8 @@ def test_single_match_delegates_to_svc_rename_symbol() -> None:
     payload = json.loads(result.output)
     assert payload["status"] == "renamed"
     assert {f["file_path"] for f in payload["files"]} == {"/ws/a.py", "/ws/b.py"}
-    svc.rename_symbol.assert_called_once()
-    assert svc.rename_symbol.call_args.kwargs["agent_id"] == "run-1"
+    svc.commit_rename_plan.assert_called_once()
+    assert svc.commit_rename_plan.call_args.kwargs["agent_id"] == "run-1"
 
 
 def test_empty_plan_returns_no_changes_without_calling_rename() -> None:
@@ -233,7 +236,7 @@ def test_empty_plan_returns_no_changes_without_calling_rename() -> None:
 
     payload = json.loads(result.output)
     assert payload["status"] == "no_changes"
-    svc.rename_symbol.assert_not_called()
+    svc.commit_rename_plan.assert_not_called()
 
 
 def test_aborted_version_is_surfaced() -> None:
@@ -283,7 +286,7 @@ def test_write_scope_hard_error_blocks_rename_before_commit(monkeypatch) -> None
 
     assert result.is_error
     assert "Rename blocked by write-scope policy" in result.output
-    svc.rename_symbol.assert_not_called()
+    svc.commit_rename_plan.assert_not_called()
 
 
 def test_rename_outside_scope_denies_with_offender_only_listing(monkeypatch) -> None:
@@ -306,4 +309,4 @@ def test_rename_outside_scope_denies_with_offender_only_listing(monkeypatch) -> 
     assert "/ws/other/b.py" in result.output
     assert "/ws/allowed/a.py" not in result.output
     assert "/ws/allowed/c.py" not in result.output
-    svc.rename_symbol.assert_not_called()
+    svc.commit_rename_plan.assert_not_called()

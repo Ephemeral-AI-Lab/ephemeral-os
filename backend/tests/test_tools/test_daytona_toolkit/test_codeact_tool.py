@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from code_intelligence.types import OperationResult
 from message.stream_events import StreamEvent, SystemNotification
 from tools.core.base import ToolExecutionContext, run_tool_safely
 from tools.core.hooks.execution import execute_tool_with_hooks
@@ -34,6 +35,17 @@ def _ci_service():
     return svc
 
 
+def _operation_result(*, path: str, success: bool = True) -> OperationResult:
+    return OperationResult(
+        success=success,
+        status="committed" if success else "aborted_version",
+        files=(SimpleNamespace(file_path=path),),
+        conflict_file=None if success else path,
+        conflict_reason="" if success else "version drift",
+        timings={},
+    )
+
+
 async def _svc_cmd_passthrough(
     sandbox,
     command,
@@ -53,7 +65,19 @@ async def _svc_cmd_passthrough(
     ``test_overlay_auditor.py``.
     """
     del description, agent_id, team_run_id, agent_run_id, task_id, attribute_changes
-    return await sandbox.process.exec(command, timeout=timeout)
+    response = await sandbox.process.exec(command, timeout=timeout)
+    stdout = getattr(response, "result", "") or ""
+    _, exit_code = codeact_tool_module._extract_exit_code(stdout, fallback_exit_code=0)
+    return SimpleNamespace(
+        result=stdout,
+        exit_code=exit_code,
+        changed_paths=[],
+        ambient_changed_paths=[],
+        files_written=0,
+        overlay_commit_status=None,
+        overlay_conflict_file=None,
+        overlay_conflict_reason=None,
+    )
 
 
 def _make_manifest(
@@ -528,6 +552,40 @@ async def test_team_shell_mode_still_allows_runtime_commands():
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["stdout"] == "ok"
     svc.cmd.assert_awaited_once()
+
+
+async def test_shell_write_text_heredoc_uses_occ_write_fast_path():
+    target = "/testbed/pkg/out.txt"
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("should-not-run", 0))
+    svc = MagicMock()
+    svc.rebind_sandbox = MagicMock()
+    svc.write_file = MagicMock(return_value=_operation_result(path=target))
+    command = (
+        "python3 - <<'PY'\n"
+        "from pathlib import Path\n"
+        "Path('pkg/out.txt').write_text('hello\\n', encoding='utf-8')\n"
+        "PY"
+    )
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "ci_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(mode="shell", command=command),
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["files_written"] == 1
+    assert result.metadata["changed_paths"] == [target]
+    svc.write_file.assert_called_once()
+    svc.cmd.assert_not_called()
+    sb.process.exec.assert_not_awaited()
 
 
 async def test_team_shell_mode_still_allows_pytest_file_arguments():

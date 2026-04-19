@@ -15,9 +15,10 @@ from code_intelligence.editing.patcher import SearchReplaceEdit
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     CommitSpecRequest,
+    RenamePlanRequest,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import EditSpec, MoveSpec, WriteSpec
+from code_intelligence.types import EditSpec, MoveSpec, ReferenceInfo, WriteSpec
 
 
 @pytest.fixture(autouse=True)
@@ -405,6 +406,106 @@ def test_commit_rename_plan_does_not_recompute_jedi_plan(tmp_path, monkeypatch) 
 
     assert result.success
     assert target.read_text(encoding="utf-8") == "def new(): pass\n"
+
+
+def test_rename_symbol_plans_many_uses_same_file_fast_path(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    one = tmp_path / "one.py"
+    two = tmp_path / "two.py"
+    one.write_text(
+        "def alpha(value):\n    return alpha(value - 1)\n",
+        encoding="utf-8",
+    )
+    two.write_text(
+        "def beta(value):\n    return beta(value - 1)\n",
+        encoding="utf-8",
+    )
+    svc = _svc(tmp_path)
+    assert svc.symbol_index.ensure_built(wait=True)
+    monkeypatch.setattr(
+        svc._content,
+        "read_many",
+        lambda *args, **kwargs: pytest.fail(
+            "same-file rename should use cached indexed content",
+        ),
+    )
+    monkeypatch.setattr(
+        svc.lsp_client,
+        "find_references_many",
+        lambda requests: pytest.fail("reference query should not run"),
+    )
+    monkeypatch.setattr(
+        svc.lsp_client,
+        "rename_symbols",
+        lambda requests: pytest.fail("full Jedi rename should not run"),
+    )
+
+    plans = svc.rename_symbol_plans_many(
+        [
+            RenamePlanRequest(str(one), 1, 4, "renamed_alpha"),
+            RenamePlanRequest(str(two), 1, 4, "renamed_beta"),
+        ]
+    )
+
+    assert len(plans) == 2
+    assert plans[0].changes[0].final_content == (
+        "def renamed_alpha(value):\n    return renamed_alpha(value - 1)\n"
+    )
+    assert plans[1].changes[0].final_content == (
+        "def renamed_beta(value):\n    return renamed_beta(value - 1)\n"
+    )
+
+
+def test_rename_symbol_plans_many_falls_back_when_reference_leaves_file(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = tmp_path / "core.py"
+    use = tmp_path / "use.py"
+    local = tmp_path / "local.py"
+    core.write_text("def alpha(value):\n    return value\n", encoding="utf-8")
+    use.write_text("from core import alpha\nresult = alpha(1)\n", encoding="utf-8")
+    local.write_text("def beta(value):\n    return beta(value - 1)\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+    monkeypatch.setattr(
+        svc.lsp_client,
+        "find_references_many",
+        lambda requests: [
+            [
+                ReferenceInfo(file_path=str(core), line=1, character=4),
+                ReferenceInfo(file_path=str(use), line=1, character=17),
+                ReferenceInfo(file_path=str(use), line=2, character=9),
+            ],
+            [
+                ReferenceInfo(file_path=str(local), line=1, character=4),
+                ReferenceInfo(file_path=str(local), line=2, character=11),
+            ],
+        ],
+    )
+    monkeypatch.setattr(
+        svc.lsp_client,
+        "rename_symbols",
+        lambda requests: pytest.fail("full Jedi rename should not run"),
+    )
+
+    plans = svc.rename_symbol_plans_many(
+        [
+            RenamePlanRequest(str(core), 1, 4, "renamed_alpha"),
+            RenamePlanRequest(str(local), 1, 4, "renamed_beta"),
+        ]
+    )
+
+    assert len(plans) == 2
+    final_by_path = {change.file_path: change.final_content for change in plans[0].changes}
+    assert final_by_path[str(core)] == "def renamed_alpha(value):\n    return value\n"
+    assert final_by_path[str(use)] == (
+        "from core import renamed_alpha\nresult = renamed_alpha(1)\n"
+    )
+    assert plans[1].changes[0].final_content == (
+        "def renamed_beta(value):\n    return renamed_beta(value - 1)\n"
+    )
 
 
 def test_commit_specs_many_batches_mixed_disjoint_ops(tmp_path) -> None:

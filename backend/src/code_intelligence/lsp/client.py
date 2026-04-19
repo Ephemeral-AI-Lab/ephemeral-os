@@ -147,6 +147,35 @@ class LspClient:
             lambda: self._query_references(file_path, line, character, language),
         )
 
+    def find_references_many(
+        self,
+        requests: Sequence[tuple[str, int, int]],
+    ) -> list[list[ReferenceInfo]]:
+        """Batch Python reference queries into one backend process."""
+        normalized: list[tuple[str, int, int]] = []
+        for file_path, line, character in requests:
+            if self._detect_language(file_path) != "python":
+                normalized.append((file_path, int(line), int(character)))
+                continue
+            normalized.append(
+                (
+                    self._resolve_path(file_path),
+                    int(line),
+                    int(self._resolve_column(file_path, int(line), int(character))),
+                )
+            )
+        if not normalized:
+            return []
+        if len(normalized) == 1:
+            file_path, line, character = normalized[0]
+            return [self.find_references(file_path, line, character)]
+        if self._worker_enabled():
+            return [
+                self.find_references(file_path, line, character)
+                for file_path, line, character in normalized
+            ]
+        return self._python_references_many(normalized)
+
     def rename_symbol(
         self, file_path: str, line: int, character: int, new_name: str,
     ) -> dict[str, str]:
@@ -583,6 +612,61 @@ class LspClient:
             for item in raw
             if isinstance(item, dict)
         ]
+
+    def _python_references_many(
+        self,
+        requests: Sequence[tuple[str, int, int]],
+    ) -> list[list[ReferenceInfo]]:
+        payload = [
+            {"path": path, "line": int(line), "column": int(character)}
+            for path, line, character in requests
+        ]
+        payload_literal = json.dumps(payload)
+        script = (
+            "import concurrent.futures, jedi, json\n"
+            f"requests = json.loads({payload_literal!r})\n"
+            "def one(req):\n"
+            "    try:\n"
+            "        s = jedi.Script(path=req['path'])\n"
+            "        refs = s.get_references(\n"
+            "            line=int(req['line']), column=int(req['column'])\n"
+            "        )\n"
+            "        return [\n"
+            "            {'path': str(r.module_path or ''), 'line': r.line or 0, 'col': r.column or 0}\n"
+            "            for r in refs\n"
+            "        ]\n"
+            "    except Exception as exc:\n"
+            "        return {'__error__': str(exc)}\n"
+            "workers = min(32, max(1, len(requests)))\n"
+            "with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:\n"
+            "    results = list(pool.map(one, requests))\n"
+            "print(json.dumps(results))\n"
+        )
+        output = self._run_python_script(script)
+        raw = self._decode_json(output)
+        if not isinstance(raw, list):
+            return [[] for _ in requests]
+        results: list[list[ReferenceInfo]] = []
+        for item in raw[: len(requests)]:
+            if not isinstance(item, list):
+                if isinstance(item, dict) and "__error__" in item:
+                    logger.debug("jedi batch references failed: %s", item.get("__error__"))
+                results.append([])
+                continue
+            results.append(
+                [
+                    ReferenceInfo(
+                        file_path=str(ref.get("path", "")),
+                        line=int(ref.get("line", 0) or 0),
+                        character=int(ref.get("col", 0) or 0),
+                    )
+                    for ref in item
+                    if isinstance(ref, dict)
+                ]
+            )
+        while len(results) < len(requests):
+            results.append([])
+        return results
 
     def _python_rename(
         self, file_path: str, line: int, character: int, new_name: str,

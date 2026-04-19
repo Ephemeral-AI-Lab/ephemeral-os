@@ -168,6 +168,25 @@ class TreeCache:
                 "stat_calls": self._stat_calls,
             }
 
+    def cached_content(self, file_path: str) -> str | None:
+        """Return cached file content without sandbox I/O, if present."""
+        candidates = [str(file_path or "")]
+        root = str(getattr(self, "_workspace_root", "") or "").rstrip("/\\")
+        normalized = candidates[0].replace("\\", "/")
+        if root:
+            root_prefix = root.replace("\\", "/").rstrip("/")
+            if normalized.startswith(root_prefix + "/"):
+                candidates.append(normalized[len(root_prefix) + 1 :])
+            elif normalized and not normalized.startswith("/"):
+                candidates.append(f"{root_prefix}/{normalized}")
+        with self._dict_lock:
+            for candidate in candidates:
+                entry = self._cache.get(candidate)
+                if entry is not None:
+                    self._cache.move_to_end(candidate)
+                    return entry.content
+        return None
+
     # -- Sandbox I/O ----------------------------------------------------------
 
     def _stat_mtime(self, file_path: str) -> str | None:
