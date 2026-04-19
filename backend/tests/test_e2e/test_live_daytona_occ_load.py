@@ -41,7 +41,6 @@ from dotenv import load_dotenv
 from code_intelligence._async_bridge import configure_default_executor
 from code_intelligence.analysis import symbol_index as symbol_index_module
 from code_intelligence.editing import write_coordinator as write_coordinator_module
-from code_intelligence.lsp import _jedi_worker_client as jedi_worker_module
 from code_intelligence.lsp import client as lsp_client_module
 from code_intelligence.routing import content_manager as content_manager_module
 from code_intelligence.routing.service import CodeIntelligenceService
@@ -370,25 +369,14 @@ def _install_git_workspace_phase_probe(
 
 
 def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
-    """Probe LSP/Jedi worker phases that can serialize otherwise disjoint writes."""
+    """Probe LSP phases that can serialize otherwise disjoint writes."""
     stats: dict[str, list[float]] = {
         "lsp_invalidate_s": [],
         "lsp_rename_symbol_s": [],
-        "worker_request_s": [],
-        "worker_request_local_s": [],
-        "worker_request_sandbox_s": [],
     }
 
     orig_invalidate = lsp_client_module.LspClient.invalidate
     orig_rename_symbol = lsp_client_module.LspClient.rename_symbol
-    orig_local_request = jedi_worker_module.JediWorkerClient.request
-    orig_sandbox_request = jedi_worker_module.SandboxJediWorkerClient.request
-
-    def _record_worker(transport: str, op: str, elapsed: float) -> None:
-        rounded = round(elapsed, 6)
-        stats["worker_request_s"].append(rounded)
-        stats[f"worker_request_{transport}_s"].append(rounded)
-        stats.setdefault(f"worker_request_op_{op}_s", []).append(rounded)
 
     def _timed_invalidate(self, *args, **kwargs):
         started = time.perf_counter()
@@ -404,28 +392,8 @@ def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[
         finally:
             stats["lsp_rename_symbol_s"].append(round(time.perf_counter() - started, 6))
 
-    def _timed_local_request(self, op: str, args: dict[str, Any] | None = None):
-        started = time.perf_counter()
-        try:
-            return orig_local_request(self, op, args)
-        finally:
-            _record_worker("local", op, time.perf_counter() - started)
-
-    def _timed_sandbox_request(self, op: str, args: dict[str, Any] | None = None):
-        started = time.perf_counter()
-        try:
-            return orig_sandbox_request(self, op, args)
-        finally:
-            _record_worker("sandbox", op, time.perf_counter() - started)
-
     monkeypatch.setattr(lsp_client_module.LspClient, "invalidate", _timed_invalidate)
     monkeypatch.setattr(lsp_client_module.LspClient, "rename_symbol", _timed_rename_symbol)
-    monkeypatch.setattr(jedi_worker_module.JediWorkerClient, "request", _timed_local_request)
-    monkeypatch.setattr(
-        jedi_worker_module.SandboxJediWorkerClient,
-        "request",
-        _timed_sandbox_request,
-    )
     return stats
 
 
@@ -2560,98 +2528,6 @@ def test_live_occ_load_sequential_per_op_baseline(
         assert f"target_{idx}(x)" not in renamed or f"renamed_{idx}(x)" in renamed
         assert live_load_env.read_text(f"moves/dst_{idx}.txt") == f"src {idx}\n"
         assert live_load_env.read_text(f"codeact/ca_{idx}.txt") == f"codeact {idx}\n"
-
-
-def test_live_lsp_worker_invalidation_parallelism_isolation(
-    live_load_env: LiveLoadEnv,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Isolate synchronous Jedi worker invalidation as a possible wall-clock ceiling."""
-    N = 72
-    log_label = "lsp-worker-invalidation-parallelism-isolation"
-    monkeypatch.setenv(jedi_worker_module.ENV_FLAG, "1")
-
-    live_load_env.init_repo()
-    live_load_env.write_text(
-        "pkg/mod.py",
-        "def alpha(value):\n"
-        "    return value + 1\n\n"
-        "def caller():\n"
-        "    return alpha(1)\n",
-    )
-    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
-    live_load_env.exec_checked(
-        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-worker-invalidation",
-        timeout=180,
-    )
-
-    svc = live_load_env.make_ci_service()
-    svc.ensure_initialized(wait=True)
-    ready = svc.lsp_client.ensure_ready(install_missing=True, languages=("python",))
-    if not ready.get("python"):
-        pytest.skip("Python LSP backend unavailable in live sandbox")
-    used, _ = svc.lsp_client._try_worker("ping", {})
-    if not used or not svc.lsp_client.worker_active:
-        pytest.skip("Jedi worker unavailable in live sandbox")
-
-    lsp_stats = _install_lsp_phase_probe(monkeypatch)
-
-    warm_path = f"{live_load_env.repo_root}/pkg/warm_invalidate.py"
-    started = time.perf_counter()
-    svc.lsp_client.invalidate(warm_path)
-    single_invalidate_s = round(time.perf_counter() - started, 6)
-    for values in lsp_stats.values():
-        values.clear()
-
-    async def _run() -> list[dict[str, Any]]:
-        configure_default_executor(
-            asyncio.get_running_loop(),
-            max_workers=max(200, N * 4),
-        )
-        loop = asyncio.get_running_loop()
-
-        def _one(idx: int) -> dict[str, Any]:
-            path = f"{live_load_env.repo_root}/pkg/invalidate_{idx}.py"
-            t0 = time.perf_counter()
-            svc.lsp_client.invalidate(path)
-            return {
-                "idx": idx,
-                "elapsed_s": round(time.perf_counter() - t0, 6),
-            }
-
-        return await asyncio.gather(
-            *[loop.run_in_executor(None, _one, idx) for idx in range(N)]
-        )
-
-    wall_started = time.perf_counter()
-    per_call = asyncio.run(asyncio.wait_for(_run(), timeout=240))
-    wall_s = round(time.perf_counter() - wall_started, 6)
-    worker_request_s = lsp_stats.get("worker_request_op_invalidate_s", [])
-    sum_worker_request_s = round(sum(worker_request_s), 6)
-    sum_per_call_s = round(sum(float(item["elapsed_s"]) for item in per_call), 6)
-
-    summary = {
-        "N": N,
-        "single_invalidate_s": single_invalidate_s,
-        "single_scaled_s": round(single_invalidate_s * N, 6),
-        "wall_s": wall_s,
-        "sum_per_call_s": sum_per_call_s,
-        "parallelism_ratio_includes_lock_wait": (
-            round(sum_per_call_s / wall_s, 3) if wall_s > 0 else 0.0
-        ),
-        "sum_worker_request_s": sum_worker_request_s,
-        "worker_request_sum_to_wall_ratio": (
-            round(sum_worker_request_s / wall_s, 3) if wall_s > 0 else 0.0
-        ),
-        "per_call_s": _value_profile([float(item["elapsed_s"]) for item in per_call]),
-        "lsp_phase_s": _phase_summary(lsp_stats),
-        "worker_status": svc.lsp_client.worker_status(),
-    }
-    print(f"\n[{log_label}]")
-    print(json.dumps(summary, indent=2, sort_keys=True))
-
-    assert len(per_call) == N
-    assert svc.lsp_client.worker_active
 
 
 def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv) -> None:

@@ -88,7 +88,7 @@ async def test_submit_commit_failure_surfaces_conflict_reason() -> None:
     assert change.changed_paths == ("/ws/x.py",)  # fallback when service reports no files
 
 
-async def test_submit_commit_uses_fallback_when_files_missing() -> None:
+async def test_submit_commit_preserves_successful_empty_file_set() -> None:
     svc = _svc_with_op("delete_file", _op_result(paths=[]))
     ctx = _ctx({"ci_service": svc})
 
@@ -100,7 +100,7 @@ async def test_submit_commit_uses_fallback_when_files_missing() -> None:
         description="delete",
     )
 
-    assert change.changed_paths == ("/ws/gone.py",)
+    assert change.changed_paths == ()
 
 
 async def test_submit_commit_rejects_when_ci_service_missing() -> None:
@@ -236,3 +236,22 @@ async def test_submit_codeact_cmd_uses_explicit_sandbox_override() -> None:
     assert change.success is True
     called_sandbox = svc.cmd.await_args.args[0]
     assert called_sandbox is recovered_sandbox
+
+
+async def test_submit_codeact_cmd_forwards_stdin() -> None:
+    response = SimpleNamespace(
+        result="ok", exit_code=0, changed_paths=[], ambient_changed_paths=[],
+    )
+    svc = MagicMock()
+    svc.cmd = AsyncMock(return_value=response)
+    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
+
+    change = await submit_codeact_cmd(
+        ctx,
+        command="python3 -",
+        description="test",
+        stdin="print('hi')",
+    )
+
+    assert change.success is True
+    assert svc.cmd.await_args.kwargs["stdin"] == "print('hi')"

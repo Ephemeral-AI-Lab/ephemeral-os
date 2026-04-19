@@ -607,7 +607,7 @@ def _scope_deny_message(
 
     ``role`` qualifies which side of a multi-path tool tripped the check
     (e.g. ``"src_path"`` for ``daytona_move_file``, ``"folder members"``
-    for folder-mode post-enumeration). Omit for single-path tools.
+    for folder-mode member checks). Omit for single-path tools.
     """
     header = f"{tool_name} blocked by write-scope policy"
     if role:

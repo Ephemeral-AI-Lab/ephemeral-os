@@ -59,7 +59,6 @@ def build_telemetry(*, symbol_index: Any, arbiter: Any, lsp_client: Any) -> CITe
 
 def lsp_telemetry_fields(lsp_client: Any) -> dict[str, Any]:
     tel = lsp_client.telemetry
-    worker_status = lsp_client.worker_status()
     return {
         "connected": lsp_client.connected,
         "queries": tel.queries,
@@ -69,15 +68,4 @@ def lsp_telemetry_fields(lsp_client: Any) -> dict[str, Any]:
         "script_runs": tel.script_runs,
         "script_successes": tel.script_successes,
         "script_errors": tel.script_errors,
-        "worker_successes": tel.worker_successes,
-        "worker_fallbacks": tel.worker_fallbacks,
-        "worker_errors": tel.worker_errors,
-        "worker_active": worker_status.get("active", False),
-        "worker_enabled": worker_status.get("enabled", False),
-        "worker_transport": worker_status.get("transport"),
-        "worker_pid": worker_status.get("pid"),
-        "worker_pid_path": worker_status.get("pid_path"),
-        "worker_socket_path": worker_status.get("socket_path"),
-        "worker_log_path": worker_status.get("log_path"),
-        "worker_stdio_fallback": worker_status.get("stdio_fallback", False),
     }

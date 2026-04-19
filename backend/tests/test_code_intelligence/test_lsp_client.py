@@ -9,10 +9,6 @@ import threading
 import time
 from types import SimpleNamespace
 
-from code_intelligence.lsp._jedi_worker_client import (
-    ENV_FLAG,
-    WorkerUnavailable,
-)
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.types import SymbolKind
 
@@ -113,8 +109,7 @@ def test_cached_query_singleflights_concurrent_misses() -> None:
     assert calls == 1
 
 
-def test_sandbox_read_line_caches_until_invalidate(monkeypatch) -> None:
-    monkeypatch.delenv(ENV_FLAG, raising=False)
+def test_sandbox_read_line_caches_until_invalidate() -> None:
     calls: list[str] = []
 
     class _SandboxProcess:
@@ -133,183 +128,6 @@ def test_sandbox_read_line_caches_until_invalidate(monkeypatch) -> None:
 
     assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
     assert len(calls) == 2
-
-
-def test_invalidate_does_not_start_worker(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-    calls: list[str] = []
-
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            calls.append(command)
-            return SimpleNamespace(exit_code=0, result="")
-
-    lsp = LspClient(
-        workspace_root="/workspace",
-        sandbox=SimpleNamespace(process=_SandboxProcess()),
-    )
-
-    lsp.invalidate("/workspace/pkg/core.py")
-
-    assert calls == []
-    assert lsp.worker_active is False
-
-
-def test_invalidate_skips_worker_for_non_python_paths(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-
-    class _Worker:
-        def __init__(self) -> None:
-            self.requests: list[tuple[str, dict[str, str] | None]] = []
-
-        def request(self, op, args=None):
-            self.requests.append((op, args))
-            return {"ok": True}
-
-        def shutdown(self):
-            pass
-
-    worker = _Worker()
-    lsp = LspClient(workspace_root="/workspace")
-    lsp._worker = worker  # type: ignore[assignment]
-
-    lsp.invalidate("/workspace/notes/readme.txt")
-
-    assert worker.requests == []
-    assert lsp.worker_active is True
-
-
-def test_invalidate_keeps_worker_invalidation_for_python_paths(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-
-    class _Worker:
-        def __init__(self) -> None:
-            self.requests: list[tuple[str, dict[str, str] | None]] = []
-
-        def request(self, op, args=None):
-            self.requests.append((op, args))
-            return {"ok": True}
-
-        def shutdown(self):
-            pass
-
-    worker = _Worker()
-    lsp = LspClient(workspace_root="/workspace")
-    lsp._worker = worker  # type: ignore[assignment]
-
-    lsp.invalidate("/workspace/pkg/core.py")
-
-    assert worker.requests == [
-        ("invalidate", {"path": "/workspace/pkg/core.py"}),
-    ]
-
-
-def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-
-    class _OkWorker:
-        def request(self, op, args=None):
-            return {"op": op, "args": args}
-
-        def shutdown(self):
-            pass
-
-        def worker_status(self):
-            return {
-                "transport": "sandbox_socket",
-                "pid": 4242,
-                "pid_path": "/tmp/eos_jedi/pid",
-            }
-
-    class _UnavailableWorker:
-        def request(self, op, args=None):
-            raise WorkerUnavailable("dead")
-
-        def shutdown(self):
-            pass
-
-    lsp = LspClient(workspace_root="/workspace")
-    lsp._worker = _OkWorker()  # type: ignore[assignment]
-    used, result = lsp._try_worker("ping", {"x": 1})
-    assert used is True
-    assert result == {"op": "ping", "args": {"x": 1}}
-    assert lsp.telemetry.worker_successes == 1
-    assert lsp.telemetry.successes == 1
-
-    lsp._worker = _UnavailableWorker()  # type: ignore[assignment]
-    used, result = lsp._try_worker("ping", {})
-    assert used is False
-    assert result is None
-    assert lsp.telemetry.worker_fallbacks == 1
-
-
-def test_worker_status_exposes_pid_without_starting_worker(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-
-    class _Worker:
-        def request(self, op, args=None):
-            return None
-
-        def shutdown(self):
-            pass
-
-        def worker_status(self):
-            return {
-                "transport": "sandbox_socket",
-                "pid": 4242,
-                "pid_path": "/tmp/eos_jedi/pid",
-            }
-
-    lsp = LspClient(workspace_root="/workspace")
-
-    assert lsp.worker_status()["active"] is False
-
-    lsp._worker = _Worker()  # type: ignore[assignment]
-    status = lsp.worker_status()
-
-    assert status["active"] is True
-    assert status["pid"] == 4242
-    assert status["pid_path"] == "/tmp/eos_jedi/pid"
-
-
-def test_sandbox_worker_disabled_by_default_when_env_unset(monkeypatch) -> None:
-    """The persistent Jedi worker is opt-in (``CI_JEDI_WORKER_ENABLED=1``).
-
-    Its `request()` path holds one global `threading.Lock` across every
-    stdin/stdout round-trip to a single subprocess, which serializes every
-    caller — under concurrent OCC commits that lock dominated commit_apply
-    time. Default is now "off"; Python queries fall back to subprocess-
-    per-call scripts which are slower per query but fully parallel.
-    """
-    monkeypatch.delenv(ENV_FLAG, raising=False)
-    sandbox = SimpleNamespace(process=SimpleNamespace(exec=lambda *args, **kwargs: None))
-    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
-
-    used, result = lsp._try_worker(
-        "definitions",
-        {"path": "/workspace/demo.py", "line": 1, "column": 4},
-    )
-
-    assert used is False
-    assert result is None
-    assert lsp.worker_status()["enabled"] is False
-    assert lsp.worker_active is False
-
-
-def test_sandbox_worker_env_kill_switch_overrides_default(monkeypatch) -> None:
-    monkeypatch.setenv(ENV_FLAG, "0")
-    sandbox = SimpleNamespace(process=SimpleNamespace(exec=lambda *args, **kwargs: None))
-    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
-
-    used, result = lsp._try_worker(
-        "definitions",
-        {"path": "/workspace/demo.py", "line": 1, "column": 4},
-    )
-
-    assert used is False
-    assert result is None
-    assert lsp.worker_status()["enabled"] is False
-    assert lsp.worker_active is False
 
 
 def test_resolve_path_prepends_workspace_root() -> None:

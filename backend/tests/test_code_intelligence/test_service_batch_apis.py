@@ -14,11 +14,9 @@ import pytest
 from code_intelligence.editing.patcher import SearchReplaceEdit
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
-    CommitSpecRequest,
-    RenamePlanRequest,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import EditSpec, MoveSpec, ReferenceInfo, WriteSpec
+from code_intelligence.types import DeleteSpec, EditSpec, MoveSpec, ReferenceInfo, WriteSpec
 
 
 @pytest.fixture(autouse=True)
@@ -242,6 +240,51 @@ def test_delete_file_batch_aborts_on_missing_sibling(tmp_path) -> None:
     assert present.exists(), "surviving path must not be deleted"
 
 
+def test_delete_file_folder_spec_expands_members_in_service(tmp_path) -> None:
+    pkg = tmp_path / "pkg"
+    nested = pkg / "sub"
+    nested.mkdir(parents=True)
+    a = pkg / "a.py"
+    b = nested / "b.py"
+    a.write_text("1", encoding="utf-8")
+    b.write_text("2", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.delete_file([DeleteSpec(path=str(pkg), is_folder=True)])
+
+    assert result.success
+    assert not a.exists()
+    assert not b.exists()
+
+
+def test_commit_specs_many_delete_folder_spec_expands_members(tmp_path) -> None:
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    target = pkg / "a.py"
+    target.write_text("1", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    results = svc.commit_specs_many(
+        [{"op": "delete", "specs": [DeleteSpec(path=str(pkg), is_folder=True)]}],
+    )
+
+    assert len(results) == 1
+    assert results[0].success
+    assert not target.exists()
+
+
+def test_delete_file_folder_spec_rejects_regular_file(tmp_path) -> None:
+    target = tmp_path / "not_a_dir.py"
+    target.write_text("x", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.delete_file([DeleteSpec(path=str(target), is_folder=True)])
+
+    assert not result.success
+    assert result.conflict_reason == "not_a_directory"
+    assert target.exists()
+
+
 # ---------------------------------------------------------------------------
 # move_file (batch + legacy shim)
 # ---------------------------------------------------------------------------
@@ -308,6 +351,65 @@ def test_move_file_batch_rejects_identical_paths(tmp_path) -> None:
     assert not result.success
     assert result.conflict_reason == "identical_paths"
     assert src.exists()
+
+
+def test_move_file_folder_spec_expands_members_in_service(tmp_path) -> None:
+    src = tmp_path / "src_pkg"
+    nested = src / "sub"
+    nested.mkdir(parents=True)
+    a = src / "a.py"
+    b = nested / "b.py"
+    a.write_text("A", encoding="utf-8")
+    b.write_text("B", encoding="utf-8")
+    dst = tmp_path / "dst_pkg"
+    svc = _svc(tmp_path)
+
+    result = svc.move_file(
+        MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True),
+    )
+
+    assert result.success
+    assert not a.exists()
+    assert not b.exists()
+    assert (dst / "a.py").read_text(encoding="utf-8") == "A"
+    assert (dst / "sub" / "b.py").read_text(encoding="utf-8") == "B"
+
+
+def test_commit_specs_many_move_folder_spec_expands_members(tmp_path) -> None:
+    src = tmp_path / "src_pkg"
+    src.mkdir()
+    target = src / "a.py"
+    target.write_text("A", encoding="utf-8")
+    dst = tmp_path / "dst_pkg"
+    svc = _svc(tmp_path)
+
+    results = svc.commit_specs_many(
+        [{
+            "op": "move",
+            "specs": [MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True)],
+        }],
+    )
+
+    assert len(results) == 1
+    assert results[0].success
+    assert not target.exists()
+    assert (dst / "a.py").read_text(encoding="utf-8") == "A"
+
+
+def test_move_file_folder_spec_rejects_regular_file(tmp_path) -> None:
+    src = tmp_path / "src.py"
+    dst = tmp_path / "dst.py"
+    src.write_text("x", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.move_file(
+        MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True),
+    )
+
+    assert not result.success
+    assert result.conflict_reason == "not_a_directory"
+    assert src.exists()
+    assert not dst.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -436,8 +538,18 @@ def test_rename_symbol_plans_many_uses_same_file_fast_path(
 
     plans = svc.rename_symbol_plans_many(
         [
-            RenamePlanRequest(str(one), 1, 4, "renamed_alpha"),
-            RenamePlanRequest(str(two), 1, 4, "renamed_beta"),
+            {
+                "file_path": str(one),
+                "line": 1,
+                "character": 4,
+                "new_name": "renamed_alpha",
+            },
+            {
+                "file_path": str(two),
+                "line": 1,
+                "character": 4,
+                "new_name": "renamed_beta",
+            },
         ]
     )
 
@@ -484,8 +596,18 @@ def test_rename_symbol_plans_many_falls_back_when_reference_leaves_file(
 
     plans = svc.rename_symbol_plans_many(
         [
-            RenamePlanRequest(str(core), 1, 4, "renamed_alpha"),
-            RenamePlanRequest(str(local), 1, 4, "renamed_beta"),
+            {
+                "file_path": str(core),
+                "line": 1,
+                "character": 4,
+                "new_name": "renamed_alpha",
+            },
+            {
+                "file_path": str(local),
+                "line": 1,
+                "character": 4,
+                "new_name": "renamed_beta",
+            },
         ]
     )
 
@@ -513,33 +635,33 @@ def test_commit_specs_many_batches_mixed_disjoint_ops(tmp_path) -> None:
 
     results = svc.commit_specs_many(
         [
-            CommitSpecRequest(
-                op="write",
-                specs=[
+            {
+                "op": "write",
+                "specs": [
                     WriteSpec(file_path=str(write_target), content="created\n"),
                 ],
-                agent_id="writer",
-            ),
-            CommitSpecRequest(
-                op="edit",
-                specs=[
+                "agent_id": "writer",
+            },
+            {
+                "op": "edit",
+                "specs": [
                     EditSpec(
                         file_path=str(edit_target),
                         edits=[SearchReplaceEdit(old_text="False", new_text="True")],
                     ),
                 ],
-                agent_id="editor",
-            ),
-            CommitSpecRequest(
-                op="delete",
-                specs=[str(delete_target)],
-                agent_id="deleter",
-            ),
-            CommitSpecRequest(
-                op="move",
-                specs=[MoveSpec(src_path=str(move_src), dst_path=str(move_dst))],
-                agent_id="mover",
-            ),
+                "agent_id": "editor",
+            },
+            {
+                "op": "delete",
+                "specs": [str(delete_target)],
+                "agent_id": "deleter",
+            },
+            {
+                "op": "move",
+                "specs": [MoveSpec(src_path=str(move_src), dst_path=str(move_dst))],
+                "agent_id": "mover",
+            },
         ]
     )
 

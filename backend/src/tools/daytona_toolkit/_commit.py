@@ -187,6 +187,8 @@ def _dedup_sorted(raw: Any) -> tuple[str, ...]:
 def _operation_paths(result: Any, fallback: Sequence[str]) -> tuple[str, ...]:
     files = getattr(result, "files", None)
     if isinstance(files, (list, tuple)):
+        if not files and bool(getattr(result, "success", False)):
+            return ()
         paths = tuple(
             str(getattr(item, "file_path", "") or "")
             for item in files
@@ -274,6 +276,7 @@ async def submit_codeact_cmd(
     description: str,
     timeout: int | None = None,
     sandbox: Any | None = None,
+    stdin: str | None = None,
     attribute_changes: bool = True,
 ) -> FileChangeResult[SimpleNamespace]:
     """Run a CodeAct shell/python command through ``svc.cmd`` and return the audit slice.
@@ -319,6 +322,7 @@ async def submit_codeact_cmd(
         team_run_id=attribution.team_run_id,
         agent_run_id=attribution.agent_run_id,
         task_id=attribution.task_id,
+        stdin=stdin,
         attribute_changes=attribute_changes,
     )
 

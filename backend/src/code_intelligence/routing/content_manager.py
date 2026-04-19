@@ -87,6 +87,17 @@ class ContentManager:
             }
         return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
 
+    def list_folder_files(self, folder: str) -> list[str]:
+        """Return every regular file under *folder* as absolute paths."""
+        if self._sandbox is None or getattr(self._sandbox, "process", None) is None:
+            root = Path(folder)
+            if not root.exists():
+                raise FileNotFoundError(folder)
+            if not root.is_dir():
+                raise NotADirectoryError(folder)
+            return sorted(str(path) for path in root.rglob("*") if path.is_file())
+        return self._list_remote_folder_files(folder)
+
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
         if self._sandbox is None:
@@ -256,6 +267,27 @@ print(json.dumps(files))
                 raise FileNotFoundError(path)
             results[path] = (str(item.get("content", "") or ""), True)
         return results
+
+    def _list_remote_folder_files(self, folder: str) -> list[str]:
+        process = getattr(self._sandbox, "process", None)
+        probe_cmd = (
+            f"if [ ! -e {shlex.quote(folder)} ]; then echo __MISSING__; "
+            f"elif [ ! -d {shlex.quote(folder)} ]; then echo __NOTDIR__; "
+            f"else find {shlex.quote(folder)} -type f -print; fi"
+        )
+        response = run_sync(process.exec(_wrap_bash_command(probe_cmd)))
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"enumerate failed for {folder}")
+        lines = [line for line in cleaned.splitlines() if line.strip()]
+        if lines and lines[0].strip() == "__MISSING__":
+            raise FileNotFoundError(folder)
+        if lines and lines[0].strip() == "__NOTDIR__":
+            raise NotADirectoryError(folder)
+        return lines
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         process = self._sandbox.process

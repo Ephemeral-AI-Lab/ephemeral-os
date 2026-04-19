@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import inspect
+import shlex
 from typing import Any, Callable
 
 from code_intelligence.routing.git_diff_committer import GitDiffCommitter
@@ -41,11 +43,13 @@ class AuditedCommandExecutor:
         team_run_id: str = "",
         agent_run_id: str = "",
         task_id: str = "",
+        stdin: str | None = None,
         attribute_changes: bool = True,
     ) -> Any:
         """Run one command through the fail-closed OCC audit path."""
         self._rebind_sandbox(sandbox)
         auditor = await self._ensure_git_workspace_auditor()
+        command = _adapt_stdin_for_exec_transport(command, stdin)
         return await auditor.execute(
             sandbox,
             command,
@@ -95,3 +99,24 @@ class AuditedCommandExecutor:
         if not inspect.iscoroutinefunction(exec_fn):
             raise RuntimeError("Sandbox process.exec must be async")
         return await exec_fn(command, timeout=timeout) if timeout is not None else await exec_fn(command)
+
+
+def _adapt_stdin_for_exec_transport(command: str, stdin: str | None) -> str:
+    """Adapt service-level stdin into a plain shell command.
+
+    The Git workspace auditor intentionally receives only a command string; it
+    should not know about higher-level CodeAct payload transport.
+    """
+    if stdin is None:
+        return command
+    payload = base64.b64encode(stdin.encode("utf-8")).decode("ascii")
+    stdin_command = (
+        "python3 -c "
+        + shlex.quote(
+            "import base64,sys; "
+            "sys.stdout.buffer.write(base64.b64decode(sys.argv[1]))"
+        )
+        + " "
+        + shlex.quote(payload)
+    )
+    return f"{stdin_command} | {command}"

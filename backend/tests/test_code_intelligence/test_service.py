@@ -10,7 +10,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from code_intelligence.analysis.symbol_index import SymbolIndex
-from code_intelligence.lsp._jedi_worker_client import ENV_FLAG
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
@@ -146,7 +145,7 @@ def test_ensure_initialized_bootstraps_missing_lsp_once(tmp_path) -> None:
     assert calls.count(True) == 1
 
 
-def test_preview_rename_symbol_plan_uses_reference_replacements(tmp_path) -> None:
+def test_rename_symbol_plan_uses_fast_reference_replacements(tmp_path) -> None:
     core = tmp_path / "core.py"
     use = tmp_path / "use.py"
     core.write_text("def beta(value):\n    return value\n", encoding="utf-8")
@@ -164,7 +163,7 @@ def test_preview_rename_symbol_plan_uses_reference_replacements(tmp_path) -> Non
     )
     svc.lsp_client.rename_symbol = MagicMock(return_value={})  # type: ignore[method-assign]
 
-    plan = svc.preview_rename_symbol_plan(str(core), 1, 0, "gamma")
+    plan = svc.rename_symbol_plan(str(core), 1, 0, "gamma")
 
     assert len(plan.changes) == 2
     final_by_path = {change.file_path: change.final_content for change in plan.changes}
@@ -173,7 +172,7 @@ def test_preview_rename_symbol_plan_uses_reference_replacements(tmp_path) -> Non
     svc.lsp_client.rename_symbol.assert_not_called()
 
 
-def test_preview_rename_symbol_plan_falls_back_when_reference_span_is_unverified(
+def test_rename_symbol_plan_falls_back_when_reference_span_is_unverified(
     tmp_path,
 ) -> None:
     core = tmp_path / "core.py"
@@ -189,14 +188,14 @@ def test_preview_rename_symbol_plan_falls_back_when_reference_span_is_unverified
         return_value={str(core): "def gamma(value):\n    return value\n"}
     )
 
-    plan = svc.preview_rename_symbol_plan(str(core), 1, 0, "gamma")
+    plan = svc.rename_symbol_plan(str(core), 1, 0, "gamma")
 
     assert len(plan.changes) == 1
     assert plan.changes[0].final_content == "def gamma(value):\n    return value\n"
     svc.lsp_client.rename_symbol.assert_called_once_with(str(core), 1, 0, "gamma")
 
 
-def test_preview_rename_symbol_plan_singleflights_snapshot_reads(tmp_path) -> None:
+def test_rename_symbol_plan_singleflights_snapshot_reads(tmp_path) -> None:
     core = tmp_path / "core.py"
     use = tmp_path / "use.py"
     core.write_text("def beta(value):\n    return value\n", encoding="utf-8")
@@ -223,7 +222,7 @@ def test_preview_rename_symbol_plan_singleflights_snapshot_reads(tmp_path) -> No
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         plans = list(
             executor.map(
-                lambda idx: svc.preview_rename_symbol_plan(
+                lambda idx: svc.rename_symbol_plan(
                     str(core),
                     1,
                     0,
@@ -265,43 +264,6 @@ def test_is_initialized_tracks_background_build_completion() -> None:
     assert svc.symbol_index.is_built is True
     assert svc.is_initialized is True
     assert svc.status()["initialized"] is True
-
-
-def test_status_exposes_jedi_worker_pid_metadata(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv(ENV_FLAG, "1")
-
-    class _Worker:
-        def request(self, op, args=None):
-            return None
-
-        def shutdown(self):
-            pass
-
-        def worker_status(self):
-            return {
-                "transport": "sandbox_socket",
-                "pid": 4242,
-                "pid_path": "/tmp/eos_jedi/pid",
-                "socket_path": "/tmp/eos_jedi/sock",
-                "log_path": "/tmp/eos_jedi/worker.log",
-                "stdio_fallback": False,
-            }
-
-    svc = CodeIntelligenceService(
-        sandbox_id="sandbox-worker-status",
-        workspace_root=str(tmp_path),
-    )
-    svc.lsp_client._py_available = True
-    svc.lsp_client._worker = _Worker()  # type: ignore[assignment]
-
-    lsp_status = svc.status()["lsp"]
-
-    assert lsp_status["worker_active"] is True
-    assert lsp_status["worker_enabled"] is True
-    assert lsp_status["worker_transport"] == "sandbox_socket"
-    assert lsp_status["worker_pid"] == 4242
-    assert lsp_status["worker_pid_path"] == "/tmp/eos_jedi/pid"
-    assert lsp_status["worker_socket_path"] == "/tmp/eos_jedi/sock"
 
 
 @pytest.mark.asyncio

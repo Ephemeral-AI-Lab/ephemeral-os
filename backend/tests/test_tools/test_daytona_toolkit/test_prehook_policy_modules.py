@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from code_intelligence.hashing import content_hash
 from code_intelligence.types import SemanticFileChange, SemanticRenamePlan, SymbolInfo, SymbolKind
@@ -101,47 +101,37 @@ def test_repo_guard_blocks_nested_move() -> None:
 
 
 def test_write_scope_deny_checks_folder_members_before_delete_body() -> None:
-    ctx = _coord_ctx(write_scope=["pkg/"])
+    svc = MagicMock()
+    svc.list_folder_files.return_value = ["/ws/pkg/a.py", "/ws/other/b.py"]
+    ctx = _coord_ctx(write_scope=["pkg/"], ci_service=svc)
     args = DaytonaDeleteFileInput(path="/ws/pkg", is_folder=True)
 
-    async def fake_list(_ctx, folder):
-        assert folder == "/ws/pkg"
-        return ["/ws/pkg/a.py", "/ws/other/b.py"]
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        outcome = _run(write_scope_deny.hook("daytona_delete_file", args, ctx))
+    outcome = _run(write_scope_deny.hook("daytona_delete_file", args, ctx))
 
     assert outcome.has_error is True
     assert "folder members" in (outcome.error_message or "")
     assert "/ws/other/b.py" in (outcome.error_message or "")
     assert "/ws/pkg/a.py" not in (outcome.error_message or "")
+    svc.list_folder_files.assert_called_once_with("/ws/pkg")
 
 
 def test_move_src_scope_deny_checks_folder_members_before_move_body() -> None:
-    ctx = _coord_ctx(write_scope=["pkg/"])
+    svc = MagicMock()
+    svc.list_folder_files.return_value = ["/ws/pkg/a.py", "/ws/other/b.py"]
+    ctx = _coord_ctx(write_scope=["pkg/"], ci_service=svc)
     args = DaytonaMoveFileInput(
         src_path="/ws/pkg",
         target_path="/ws/moved_pkg",
         is_folder=True,
     )
 
-    async def fake_list(_ctx, folder):
-        assert folder == "/ws/pkg"
-        return ["/ws/pkg/a.py", "/ws/other/b.py"]
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        outcome = _run(move_src_scope_deny.hook("daytona_move_file", args, ctx))
+    outcome = _run(move_src_scope_deny.hook("daytona_move_file", args, ctx))
 
     assert outcome.has_error is True
     assert "folder members" in (outcome.error_message or "")
     assert "/ws/other/b.py" in (outcome.error_message or "")
     assert "/ws/pkg/a.py" not in (outcome.error_message or "")
+    svc.list_folder_files.assert_called_once_with("/ws/pkg")
 
 
 def test_rename_scope_policy_caches_allowed_plan() -> None:

@@ -10,12 +10,18 @@ import pytest
 
 from code_intelligence.hashing import content_hash
 from code_intelligence.routing.git_diff_committer import GitDiffCommitter
+from code_intelligence.routing.command_executor import _adapt_stdin_for_exec_transport
 from code_intelligence.routing.git_workspace_auditor import GitWorkspaceAuditor
+from code_intelligence.routing.git_workspace_pool import GitWorkspacePool
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.routing.git_workspace_types import WorkspaceDiff, WorkspaceDiffFile
+from code_intelligence.routing.git_workspace_types import (
+    GitWorkspaceCommandResult,
+    WorkspaceDiff,
+    WorkspaceDiffFile,
+)
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _wrap_bash_command
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
@@ -71,7 +77,7 @@ def _workspace_diff(root: str, rel_path: str, base: str, final: str) -> Workspac
                 final_content=final,
             ),
         ),
-        baseline_commit="baseline",
+        baseline_ref="baseline",
         workspace_root=root,
         command_exit_code=0,
         stdout="",
@@ -95,6 +101,13 @@ def test_git_workspace_command_mapping_uses_daytona_compatible_env_prefix() -> N
     assert not mapped.startswith("EOS_CODEACT_WORKSPACE_ROOT=")
     assert "/tmp/eos-codeact-git/sandbox/slot-000" in mapped
     assert "cd /tmp/eos-codeact-git/sandbox/slot-000 && true" in mapped
+
+
+def test_command_executor_adapts_stdin_before_auditor() -> None:
+    command = _adapt_stdin_for_exec_transport("python3 -", "print('hi')\n")
+
+    assert "base64.b64decode" in command
+    assert command.endswith("| python3 -")
 
 
 @pytest.mark.asyncio
@@ -174,6 +187,154 @@ async def test_service_cmd_commits_git_workspace_diff_through_occ(
     assert target.read_text(encoding="utf-8") == "new\n"
     assert svc._git_workspace_pool is not None  # type: ignore[attr-defined]
     assert svc._git_workspace_pool.pool_size == 2  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_prepare_baseline_keeps_live_state_unstaged(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    target = repo / "app.py"
+    target.write_text("old\n", encoding="utf-8")
+    _commit_all(repo)
+    target.write_text("live dirty\n", encoding="utf-8")
+    (repo / "extra.txt").write_text("untracked\n", encoding="utf-8")
+
+    sandbox = SimpleNamespace(process=_AsyncLocalProcess())
+    pool = GitWorkspacePool(
+        sandbox_id=f"git-baseline-{tmp_path.name}",
+        workspace_root=str(repo),
+        exec_process=lambda sandbox, command, timeout=None: sandbox.process.exec(
+            command,
+            timeout=timeout,
+        ),
+        pool_size=0,
+    )
+    lease = await pool.lease(sandbox)
+    try:
+        baseline = await pool.prepare_baseline(sandbox, lease)
+        slot = lease.slot_path
+        live_head = subprocess.check_output(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        slot_head = subprocess.check_output(
+            ["git", "-C", slot, "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        cached = subprocess.run(["git", "-C", slot, "diff", "--cached", "--quiet"])
+        status = subprocess.check_output(
+            ["git", "-C", slot, "status", "--porcelain"],
+            text=True,
+        )
+
+        assert slot_head == live_head
+        assert cached.returncode == 0
+        assert " M app.py" in status
+        assert "?? extra.txt" in status
+        assert (tmp_path / "repo").joinpath("app.py").read_text(encoding="utf-8") == "live dirty\n"
+        assert (repo / "extra.txt").read_text(encoding="utf-8") == "untracked\n"
+        assert baseline.live_head == live_head
+    finally:
+        await pool.release(sandbox, lease)
+
+
+@pytest.mark.asyncio
+async def test_collect_diff_does_not_stage_workspace_changes(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    target = repo / "app.py"
+    target.write_text("old\n", encoding="utf-8")
+    _commit_all(repo)
+    target.write_text("live dirty\n", encoding="utf-8")
+
+    sandbox = SimpleNamespace(process=_AsyncLocalProcess())
+
+    async def exec_process(sandbox, command, *, timeout=None):
+        return await sandbox.process.exec(command, timeout=timeout)
+
+    pool = GitWorkspacePool(
+        sandbox_id=f"git-collect-{tmp_path.name}",
+        workspace_root=str(repo),
+        exec_process=exec_process,
+        pool_size=0,
+    )
+    lease = await pool.lease(sandbox)
+    try:
+        baseline = await pool.prepare_baseline(sandbox, lease)
+        slot_target = tmp_path / "unused"
+        del slot_target
+        subprocess.run(
+            [
+                "python3",
+                "-c",
+                (
+                    "from pathlib import Path; "
+                    f"Path({str(lease.slot_path + '/app.py')!r}).write_text('final\\n', encoding='utf-8')"
+                ),
+            ],
+            check=True,
+        )
+        auditor = GitWorkspaceAuditor(
+            workspace_root=str(repo),
+            exec_process=exec_process,
+            pool=pool,
+            committer=None,  # type: ignore[arg-type]
+        )
+
+        diff = await auditor._collect_diff(  # type: ignore[attr-defined]
+            sandbox,
+            lease,
+            baseline=baseline,
+            command_result=GitWorkspaceCommandResult(stdout="", exit_code=0),
+        )
+        cached = subprocess.run(
+            ["git", "-C", lease.slot_path, "diff", "--cached", "--quiet"]
+        )
+
+        assert cached.returncode == 0
+        assert len(diff.files) == 1
+        assert diff.files[0].path == "app.py"
+        assert diff.files[0].base_content == "live dirty\n"
+        assert diff.files[0].final_content == "final\n"
+    finally:
+        await pool.release(sandbox, lease)
+
+
+@pytest.mark.asyncio
+async def test_service_cmd_stdin_is_adapted_before_git_workspace_auditor(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CI_CODEACT_GIT_POOL_SIZE_PER_SANDBOX", "1")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    target = repo / "app.py"
+    target.write_text("old\n", encoding="utf-8")
+    _commit_all(repo)
+
+    sandbox = SimpleNamespace(process=_AsyncLocalProcess())
+    svc = CodeIntelligenceService(
+        sandbox_id=f"git-service-stdin-{tmp_path.name}",
+        workspace_root=str(repo),
+        sandbox=sandbox,
+    )
+
+    result = await svc.cmd(
+        sandbox,
+        _wrap_bash_command(f"cd {str(repo)!r} && python3 -"),
+        timeout=60,
+        stdin=(
+            "from pathlib import Path\n"
+            "Path('app.py').write_text('via stdin\\n', encoding='utf-8')\n"
+        ),
+    )
+
+    assert result.exit_code == 0
+    assert result.changed_paths == [str(target)]
+    assert target.read_text(encoding="utf-8") == "via stdin\n"
 
 
 @pytest.mark.asyncio

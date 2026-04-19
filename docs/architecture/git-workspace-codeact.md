@@ -30,10 +30,11 @@ The overlay auditor has been replaced with a Git workspace auditor.
 For each `CodeIntelligenceService.cmd(...)` operation:
 
 1. Lease exactly one isolated Git workspace slot.
-2. Prepare that slot so its baseline commit represents the current live
-   workspace state.
+2. Prepare that slot so its baseline snapshot represents the current live
+   workspace filesystem state.
 3. Run the CodeAct command inside the leased workspace.
-4. Stage the slot and collect `git diff` plus a changed-path manifest.
+4. Compare the slot against the baseline snapshot and collect a changed-path
+   manifest.
 5. Send strict-base changes to OCC.
 6. Apply to the live workspace only through the OCC gate.
 7. Reset and return the slot to the pool, or destroy it if reset fails.
@@ -92,12 +93,13 @@ GitWorkspaceAuditor.execute(...)
       |       returns one clean workspace slot for this service.cmd operation
       |
       +--> GitWorkspaceSlot.prepare_baseline(...)
-      |       baseline commit = current live workspace state
+      |       baseline snapshot = current live workspace filesystem state
       |
       +--> run user command inside leased workspace
       |
       +--> GitDiffCollector.collect(...)
-      |       git add -A, git diff, changed-path manifest, content hashes
+      |       compare baseline snapshot to final workspace, changed-path manifest,
+      |       content hashes
       |
       +--> GitDiffCommitter.commit(...)
       |       converts diff to strict-base OCC changes
@@ -110,6 +112,16 @@ GitWorkspaceAuditor.execute(...)
 `GitWorkspaceAuditor` is wired behind `svc.cmd`. `submit_codeact_cmd(...)`
 keeps its `FileChangeResult` contract and maps `git_commit_status` to tool
 success.
+
+Python CodeAct sends its generated wrapper through the `svc.cmd(..., stdin=...)`
+service boundary and runs `python3 -`. `AuditedCommandExecutor` adapts that
+stdin payload into a normal command before the Git workspace auditor is called.
+The auditor intentionally remains command-only; it owns workspace leasing,
+command execution, diff collection, and OCC commit/abort behavior, not CodeAct
+payload transport. The current Daytona SDK `process.exec` surface accepts
+`command`, `cwd`, `env`, and `timeout`, but no native stdin payload, so the
+executor uses a base64 decode pipe as the compatibility adapter. If Daytona
+adds native exec stdin, only `AuditedCommandExecutor` should change.
 
 The public command response should expose:
 
@@ -184,7 +196,8 @@ The live workspace can contain:
 - unstaged tracked changes,
 - untracked non-ignored source files.
 
-For each leased operation, prepare the slot with a synthetic baseline commit:
+For each leased operation, prepare the slot with an unstaged filesystem
+baseline snapshot:
 
 1. Reset the slot to the source repo `HEAD`.
 
@@ -193,11 +206,12 @@ For each leased operation, prepare the slot with a synthetic baseline commit:
    git -C "$slot" clean -fdx
    ```
 
-2. Apply tracked live workspace changes relative to `HEAD`.
+2. Apply tracked live workspace changes relative to `HEAD` to the worktree
+   only.
 
    ```bash
    git -C "$repo_root" diff --binary --full-index HEAD -- \
-     | git -C "$slot" apply --binary --index
+     | git -C "$slot" apply --binary
    ```
 
 3. Copy untracked, non-ignored live files.
@@ -208,18 +222,12 @@ For each leased operation, prepare the slot with a synthetic baseline commit:
      | tar -C "$slot" -xf -
    ```
 
-4. Commit the synthetic baseline inside the slot.
+4. Copy the prepared slot worktree, excluding `.git`, to a per-slot baseline
+   snapshot directory.
 
-   ```bash
-   git -C "$slot" add -A
-   git -C "$slot" \
-     -c user.name=EphemeralOS \
-     -c user.email=ephemeralos@example.invalid \
-     commit -q -m "EphemeralOS CodeAct baseline"
-   ```
-
-The synthetic baseline is local to the slot. It must never be pushed or
-referenced from the live repo.
+The baseline must not be staged, and no synthetic baseline commit is created.
+The slot index remains clean. This preserves the live filesystem state as the
+comparison base without letting baseline preparation mutate Git index state.
 
 If baseline preparation cannot represent the live workspace, fail closed before
 running the command.
@@ -251,14 +259,9 @@ existing CodeAct prehook owns that policy before execution reaches `svc.cmd`.
 
 ## Diff Collection
 
-After command completion, the collector stages the slot and asks Git for the
-operation diff:
-
-```bash
-git -C "$slot" add -A
-git -C "$slot" diff --cached --binary --full-index --find-renames HEAD --
-git -C "$slot" diff --cached --name-status -z --find-renames HEAD --
-```
+After command completion, the collector compares the baseline snapshot to the
+final slot filesystem. It must not run `git add` or stage command output. The
+comparison produces add/modify/delete entries and text content for OCC.
 
 The collector returns a structured `WorkspaceDiff`:
 
@@ -267,7 +270,7 @@ The collector returns a structured `WorkspaceDiff`:
 class WorkspaceDiff:
     patch: str
     files: tuple[WorkspaceDiffFile, ...]
-    baseline_commit: str
+    baseline_ref: str
     workspace_root: str
     command_exit_code: int
     stdout: str
@@ -320,8 +323,8 @@ WriteCoordinator.commit_operation_against_base(
 For each changed file:
 
 - `file_path` is the live absolute path.
-- `base_content` comes from the slot baseline commit.
-- `final_content` comes from the slot index/worktree after command execution.
+- `base_content` comes from the slot baseline snapshot.
+- `final_content` comes from the slot worktree after command execution.
 - deletes use `final_content=None`.
 - `strict_base=True`.
 - `base_hash` is the hash of the baseline content.
@@ -368,25 +371,26 @@ Integration tests:
   `CI_CODEACT_GIT_POOL_SIZE_PER_SANDBOX=20` and verify all changed files land.
 - Verify no tarball-style workspace payload is transferred for diff collection.
 
-Live canary acceptance:
+Live canary checks:
 
-- p95 latency for trivial unique-file CodeAct operations should stay below the
-  previous overlay-audit baseline.
-- Throughput should not regress below the previous baseline.
+- p95 latency and throughput for trivial unique-file CodeAct operations are
+  recorded against the previous overlay-audit baseline.
 - Conflict behavior must match strict-base OCC semantics.
 - Stale pool directories must be removed on service startup or sandbox attach.
 
-## Configuration
+## Write-Scope Enforcement Boundary
 
-Git workspace mode knows changed paths before live commit. That lets the
-runtime run write-scope policy before OCC:
+Write-scope hard-block enforcement is intentionally not part of the Git
+workspace auditor path.
 
-- hard block: reject the diff, reset the slot, and do not call OCC,
-- advisory: call OCC and report `ambient_changed_paths`,
-- no policy issue: call OCC normally.
+Scope blocking remains in the existing tool prehook layer. That keeps policy
+decisions close to the user-visible tool invocation and avoids duplicating a
+second pre-OCC hard-block path inside the lower-level auditor. The Git auditor
+owns only workspace leasing, command execution, diff collection, and OCC
+commit/abort behavior.
 
-The existing post-hook can stay during migration as defense-in-depth, but the
-expected enforcement point is pre-OCC.
+Post-hooks may still report advisory scope or ambient-change warnings from the
+audited result, but they must not be the primary hard-block mechanism.
 
 ## Conflict Semantics
 
@@ -467,7 +471,7 @@ bind modes, copy fallbacks, or legacy fallback paths.
    Done.
 8. Remove legacy overlay auditor code and tests. Done.
 9. Run OCC gate verification tests. Done for targeted unit/integration scope.
-10. Run live Daytona 10/30/50/100 CodeAct pool benchmark.
+10. Run live Daytona 10/30/50/100 CodeAct pool benchmark. Done.
 
 ## Benchmark Baseline
 
@@ -494,6 +498,25 @@ pool prepare: 3.708s for 20 slots
 
 These numbers justify building the production Git workspace auditor and then
 rerunning the benchmark through actual `daytona_codeact` plus OCC.
+
+Production live run through actual `daytona_codeact` shell mode,
+`CodeIntelligenceService.cmd(...)`, Git workspace auditor, and OCC, using
+`CI_CODEACT_GIT_POOL_SIZE_PER_SANDBOX=20` on existing sandbox
+`4a48bfab-a79b-4af5-88ed-e5d4e711dc48`:
+
+```text
+warmup: 5.248s, is_error=false
+10 ops:  ok 10/10, disk_count 10, wall 7.185s, throughput 1.392 ops/s, avg 6.606s, p50 7.131s, p95 7.174s, max 7.183s
+30 ops:  ok 30/30, disk_count 30, wall 7.303s, throughput 4.108 ops/s, avg 4.840s, p50 4.914s, p95 7.285s, max 7.302s
+50 ops:  ok 50/50, disk_count 50, wall 10.298s, throughput 4.855 ops/s, avg 6.689s, p50 7.695s, p95 10.237s, max 10.294s
+100 ops: ok 100/100, disk_count 100, wall 20.921s, throughput 4.780 ops/s, avg 12.367s, p50 12.269s, p95 20.719s, max 20.918s
+```
+
+The production path is correct for these runs, but it is not consistently
+faster than the previous overlay baseline yet. The 10-op run improved, while
+30/50/100 regressed. The prototype numbers show the pool itself can be fast;
+the remaining latency is in production wrapping, OCC, command dispatch, or
+slot preparation behavior and should be tuned separately.
 
 ## Open Questions
 

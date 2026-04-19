@@ -1,11 +1,10 @@
 """Daytona-backed file and folder delete/move tools.
 
 These tools validate requested paths under the repo root and submit the
-operation through the code-intelligence OCC commit path. ``is_folder=True``
-enumerates every descendant file client-side and submits the whole set as a
-single OCC batch (delete) or a remapped :class:`MoveSpec` batch (move); the
-service-level OCC gate applies to each member file. Overwrite semantics are
-enforced by the platform pre-hook, not by this tool.
+operation through the code-intelligence OCC commit path. ``is_folder=True`` is
+passed as service-level intent; the code-intelligence mutation service expands
+folder members and applies the OCC gate to each member file. Overwrite
+semantics are enforced by the platform pre-hook, not by this tool.
 
 CodeAct's shell policy blocks ``rm`` / ``mv`` precisely so that deletions
 and moves flow through these OCC-gated tools instead of the unaudited
@@ -15,13 +14,11 @@ shell path.
 from __future__ import annotations
 
 import json
-import shlex
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence.types import MoveSpec
+from code_intelligence.types import DeleteSpec, MoveSpec
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
     ci_write_required_result,
@@ -29,13 +26,7 @@ from tools.core.ci_runtime import (
 )
 from tools.core.decorator import tool
 from tools.daytona_toolkit._commit import submit_commit
-from tools.daytona_toolkit._daytona_utils import (
-    _exec_command,
-    _extract_exit_code,
-    _resolve_path,
-    _supports_exec_transport,
-    _wrap_bash_command,
-)
+from tools.daytona_toolkit._daytona_utils import _resolve_path
 
 
 # ---------------------------------------------------------------------------
@@ -105,47 +96,6 @@ def _failure_status(result: Any, *, move: bool) -> tuple[str, str]:
     if move and conflict_reason == "dst_exists":
         return "dst_exists", "dst_exists"
     return status, conflict_reason or status
-
-
-async def _list_folder_files(
-    context: ToolExecutionContext, folder: str,
-) -> list[str]:
-    """Enumerate every regular file under *folder* as absolute paths.
-
-    Mirrors ``ContentManager``'s sandbox/local split: if a Daytona sandbox
-    is bound on the context, enumerate via ``find -type f`` inside the
-    sandbox so paths align with ``ContentManager.read`` routing. Otherwise
-    fall back to local ``Path.rglob``.
-
-    Raises ``FileNotFoundError`` if the folder does not exist and
-    ``NotADirectoryError`` if the path is not a directory.
-    """
-    sandbox = context.metadata.get("daytona_sandbox")
-    if sandbox is not None and _supports_exec_transport(sandbox):
-        probe_cmd = (
-            f"if [ ! -e {shlex.quote(folder)} ]; then echo __MISSING__; "
-            f"elif [ ! -d {shlex.quote(folder)} ]; then echo __NOTDIR__; "
-            f"else find {shlex.quote(folder)} -type f -print; fi"
-        )
-        response = await _exec_command(sandbox, _wrap_bash_command(probe_cmd))
-        stdout = getattr(response, "result", "") or ""
-        cleaned, exit_code = _extract_exit_code(
-            stdout, fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or f"enumerate failed for {folder}")
-        lines = [line for line in cleaned.splitlines() if line.strip()]
-        if lines and lines[0].strip() == "__MISSING__":
-            raise FileNotFoundError(folder)
-        if lines and lines[0].strip() == "__NOTDIR__":
-            raise NotADirectoryError(folder)
-        return lines
-    root = Path(folder)
-    if not root.exists():
-        raise FileNotFoundError(folder)
-    if not root.is_dir():
-        raise NotADirectoryError(folder)
-    return sorted(str(p) for p in root.rglob("*") if p.is_file())
 
 
 # ---------------------------------------------------------------------------
@@ -223,51 +173,13 @@ async def daytona_delete_file(
     if svc is None:
         return ci_write_required_result("daytona_delete_file", resolved)
 
-    if is_folder:
-        try:
-            paths_to_delete = await _list_folder_files(context, resolved)
-        except FileNotFoundError:
-            return ToolResult(
-                output=_operation_payload(
-                    status="not_found",
-                    paths=[resolved],
-                    warnings=warnings,
-                    conflict_reason="not_found",
-                ),
-                is_error=True,
-                metadata={"file_count": 0, "success_count": 0},
-            )
-        except NotADirectoryError:
-            return ToolResult(
-                output=_operation_payload(
-                    status="failed",
-                    paths=[resolved],
-                    warnings=warnings,
-                    message=(
-                        "daytona_delete_file: is_folder=True but path is a "
-                        f"file: {resolved}"
-                    ),
-                ),
-                is_error=True,
-            )
-        if not paths_to_delete:
-            return ToolResult(
-                output=_operation_payload(
-                    status="deleted",
-                    paths=[],
-                    warnings=warnings,
-                ),
-                metadata={"file_count": 0, "success_count": 0},
-            )
-        paths_to_commit = paths_to_delete
-    else:
-        paths_to_commit = [resolved]
+    specs = [DeleteSpec(path=resolved, is_folder=is_folder)]
 
     change = await submit_commit(
         context,
         op="delete",
-        specs=paths_to_commit,
-        fallback_paths=paths_to_commit,
+        specs=specs,
+        fallback_paths=[resolved],
         description=f"delete {resolved}",
     )
     paths = list(change.changed_paths)
@@ -394,60 +306,14 @@ async def daytona_move_file(
     if svc is None:
         return ci_write_required_result("daytona_move_file", src_resolved)
 
-    if is_folder:
-        try:
-            members = await _list_folder_files(context, src_resolved)
-        except FileNotFoundError:
-            return ToolResult(
-                output=_move_payload(
-                    status="not_found",
-                    src=src_resolved,
-                    dst=dst_resolved,
-                    paths=[],
-                    warnings=warnings,
-                    conflict_reason="not_found",
-                ),
-                is_error=True,
-                metadata={"file_count": 0, "success_count": 0},
-            )
-        except NotADirectoryError:
-            return ToolResult(
-                output=_move_payload(
-                    status="failed",
-                    src=src_resolved,
-                    dst=dst_resolved,
-                    paths=[],
-                    warnings=warnings,
-                    message=(
-                        "daytona_move_file: is_folder=True but src_path is a "
-                        f"file: {src_resolved}"
-                    ),
-                ),
-                is_error=True,
-            )
-        if not members:
-            return ToolResult(
-                output=_move_payload(
-                    status="moved",
-                    src=src_resolved,
-                    dst=dst_resolved,
-                    paths=[],
-                    warnings=warnings,
-                ),
-                metadata={"file_count": 0, "success_count": 0},
-            )
-        src_prefix_len = len(src_resolved)
-        specs = [
-            MoveSpec(
-                src_path=member,
-                dst_path=dst_resolved + member[src_prefix_len:],
-            )
-            for member in members
-        ]
-    else:
-        specs = [
-            MoveSpec(src_path=src_resolved, dst_path=dst_resolved, overwrite=False),
-        ]
+    specs = [
+        MoveSpec(
+            src_path=src_resolved,
+            dst_path=dst_resolved,
+            overwrite=False,
+            is_folder=is_folder,
+        ),
+    ]
     fallback_paths = [s.src_path for s in specs] + [s.dst_path for s in specs]
 
     change = await submit_commit(

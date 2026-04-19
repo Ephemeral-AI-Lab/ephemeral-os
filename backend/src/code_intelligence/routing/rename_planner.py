@@ -14,7 +14,6 @@ import tokenize
 import re
 from collections import OrderedDict
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
@@ -29,30 +28,43 @@ _IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _DEF_CLASS_NAME_RE = re.compile(r"^\s*(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)")
 
 
-@dataclass(frozen=True)
 class _RenamePreviewSnapshot:
     """Reusable base data for dry-run rename previews."""
 
-    refs: tuple[ReferenceInfo, ...]
-    base_by_path: dict[str, tuple[str, bool]]
-    old_name: str
+    def __init__(
+        self,
+        *,
+        refs: tuple[ReferenceInfo, ...],
+        base_by_path: dict[str, tuple[str, bool]],
+        old_name: str,
+    ) -> None:
+        self.refs = refs
+        self.base_by_path = base_by_path
+        self.old_name = old_name
 
 
-@dataclass
 class _InflightRenamePreview:
     """One in-progress dry-run preview snapshot shared by callers."""
 
-    event: threading.Event
+    def __init__(self, *, event: threading.Event) -> None:
+        self.event = event
 
 
-@dataclass(frozen=True)
-class RenamePlanRequest:
-    """One semantic rename planning request inside a micro-batch."""
+class _RenamePlanRequest:
+    """Normalized internal semantic rename planning request."""
 
-    file_path: str
-    line: int
-    character: int
-    new_name: str
+    def __init__(
+        self,
+        *,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
+    ) -> None:
+        self.file_path = file_path
+        self.line = line
+        self.character = character
+        self.new_name = new_name
 
 
 class RenamePlanner:
@@ -146,13 +158,11 @@ class RenamePlanner:
 
     def rename_symbol_plans_many(
         self,
-        requests: Sequence[RenamePlanRequest | dict[str, Any]],
+        requests: Sequence[dict[str, Any]],
     ) -> list[SemanticRenamePlan]:
         """Build many rename plans with one LSP/Jedi backend call where possible."""
         normalized = [
-            req
-            if isinstance(req, RenamePlanRequest)
-            else RenamePlanRequest(
+            _RenamePlanRequest(
                 file_path=str(req.get("file_path") or ""),
                 line=int(req.get("line") or 0),
                 character=int(req.get("character") or 0),
@@ -228,7 +238,7 @@ class RenamePlanner:
 
     def _rename_symbol_plans_many_same_file_fast(
         self,
-        requests: Sequence[RenamePlanRequest],
+        requests: Sequence[_RenamePlanRequest],
     ) -> list[SemanticRenamePlan] | None:
         origin_paths = [req.file_path for req in requests]
         base_by_path = self._content.read_many(
@@ -236,7 +246,7 @@ class RenamePlanner:
             allow_missing=True,
         )
 
-        candidates: list[tuple[RenamePlanRequest, str, str, str]] = []
+        candidates: list[tuple[_RenamePlanRequest, str, str, str]] = []
         old_names: set[str] = set()
         for req in requests:
             base_content, existed = base_by_path.get(req.file_path, ("", False))
@@ -413,7 +423,7 @@ print(json.dumps({"ok": True, "results": results}))
 
     def _rename_symbol_plans_many_fast(
         self,
-        requests: Sequence[RenamePlanRequest],
+        requests: Sequence[_RenamePlanRequest],
     ) -> list[SemanticRenamePlan] | None:
         """Build rename plans from batched references and verified spans.
 
@@ -493,39 +503,6 @@ print(json.dumps({"ok": True, "results": results}))
                 )
             )
         return plans
-
-    def preview_rename_symbol_plan(
-        self, file_path: str, line: int, character: int, new_name: str,
-    ) -> SemanticRenamePlan:
-        """Build a dry-run rename plan without invoking Jedi refactoring.
-
-        Dry-run callers only need before/after file contents for a diff. A
-        full Jedi ``rename`` computes a write-ready refactor plan and is much
-        more expensive under concurrent sandbox load. For previews, use LSP
-        references and apply verified identifier replacements against a single
-        batched snapshot. If any reference cannot be verified locally, fall
-        back to the full semantic plan for correctness.
-        """
-        try:
-            plan = self._preview_rename_symbol_plan_fast(
-                file_path,
-                int(line),
-                int(character),
-                new_name,
-            )
-        except Exception:
-            logger.warning(
-                "fast rename preview failed for %s:%s",
-                file_path,
-                line,
-                exc_info=True,
-            )
-            plan = None
-        if plan is not None:
-            return plan
-        with self._rename_preview_cache_lock:
-            self._rename_preview_fast_fallbacks += 1
-        return self.rename_symbol_plan(file_path, int(line), int(character), new_name)
 
     def _preview_rename_symbol_plan_fast(
         self,

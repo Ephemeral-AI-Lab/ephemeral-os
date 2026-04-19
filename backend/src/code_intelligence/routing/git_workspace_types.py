@@ -26,6 +26,14 @@ class GitWorkspaceCommandError(GitWorkspaceError):
 
 
 @dataclass(frozen=True)
+class GitWorkspaceBaseline:
+    """Baseline snapshot for one leased workspace operation."""
+
+    snapshot_path: str
+    live_head: str
+
+
+@dataclass(frozen=True)
 class WorkspaceDiffFile:
     """One file entry in a Git workspace diff."""
 
@@ -45,7 +53,7 @@ class WorkspaceDiff:
     """The full diff produced by one leased Git workspace operation."""
 
     files: tuple[WorkspaceDiffFile, ...]
-    baseline_commit: str
+    baseline_ref: str
     workspace_root: str
     command_exit_code: int
     stdout: str
@@ -72,6 +80,7 @@ class GitWorkspaceLease:
 __all__ = [
     "GitWorkspaceCommandError",
     "GitWorkspaceCommandResult",
+    "GitWorkspaceBaseline",
     "GitWorkspaceError",
     "GitWorkspaceFileStatus",
     "GitWorkspaceLease",

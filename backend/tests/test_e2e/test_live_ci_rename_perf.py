@@ -31,9 +31,6 @@ import pytest
 from dotenv import load_dotenv
 
 from code_intelligence.routing.service import CodeIntelligenceService
-from code_intelligence.lsp._jedi_worker_client import (
-    ENV_FLAG as JEDI_WORKER_ENV_FLAG,
-)
 from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
@@ -406,12 +403,8 @@ def _write_perf_project(env: LiveRenameEnv, root_dir: str) -> tuple[str, str, st
     return core_path, uses_path, more_path
 
 
-def test_live_ci_lsp_jedi_tool_traces_and_perf(
-    live_rename_env: LiveRenameEnv,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -> None:
     """Trace direct LSP calls and rename tool calls inside a real Daytona sandbox."""
-    monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "0")
     all_stats: list[dict[str, Any]] = []
     env = live_rename_env
     core_path, uses_path, more_path = _write_perf_project(env, env.root_dir)
@@ -590,8 +583,6 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
                     "rename_preview_cache": final_status["rename_preview_cache"],
                     "arbiter": final_status["arbiter"],
                     "lsp": final_status["lsp"],
-                    "jedi_worker_env": os.environ.get("CI_JEDI_WORKER_ENABLED", ""),
-                    "jedi_worker_used": svc.lsp_client.worker_active,
                 },
                 sort_keys=True,
             ),
@@ -600,7 +591,6 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
 
         svc.dispose()
 
-        monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
         worker_root = f"{env.root_dir}/worker_compare"
         worker_core, worker_uses, _worker_more = _write_perf_project(env, worker_root)
         worker_svc = CodeIntelligenceService(
@@ -684,11 +674,6 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             )
             assert not worker_dry.is_error, worker_dry.output
             assert json.loads(worker_dry.output)["status"] == "dry_run"
-            worker_tel = worker_svc.lsp_client.telemetry
-            assert worker_tel.worker_successes >= 3
-            assert worker_tel.worker_fallbacks == 0
-            assert worker_tel.worker_errors == 0
-            assert worker_svc.lsp_client.worker_active is True
 
             _exercise_tree_cache(worker_svc, worker_core, env.read_file(worker_core))
 
@@ -751,13 +736,6 @@ def _measure(
             "jedi_script_errors_delta": (
                 telemetry_after.script_errors - telemetry_before.script_errors
             ),
-            "worker_successes_delta": (
-                telemetry_after.worker_successes - telemetry_before.worker_successes
-            ),
-            "worker_fallbacks_delta": (
-                telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
-            ),
-            "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
             "tree_cache_hits_delta": svc.tree_cache.stats["hits"] - tree_before["hits"],
             "tree_cache_misses_delta": svc.tree_cache.stats["misses"] - tree_before["misses"],
             "tree_cache_stat_calls_delta": (
@@ -1103,13 +1081,6 @@ def _run_concurrent_ci_load(
         "jedi_script_errors_delta": (
             telemetry_after.script_errors - telemetry_before.script_errors
         ),
-        "worker_successes_delta": (
-            telemetry_after.worker_successes - telemetry_before.worker_successes
-        ),
-        "worker_fallbacks_delta": (
-            telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
-        ),
-        "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
         "tree_cache_hits_delta": svc.tree_cache.stats["hits"] - tree_before["hits"],
         "tree_cache_misses_delta": svc.tree_cache.stats["misses"] - tree_before["misses"],
         "tree_cache_stat_calls_delta": (
@@ -1123,11 +1094,8 @@ def _run_concurrent_ci_load(
     stats.append(dict(payload))
     print("[ci-lsp-live-load] " + json.dumps(payload, sort_keys=True), flush=True)
     assert not failures, json.dumps(failures, sort_keys=True)
-    assert payload["worker_fallbacks_delta"] == 0
-    assert payload["worker_errors_delta"] == 0
     assert payload["lsp_cache_hits_delta"] >= 8
     assert payload["status"]["lsp"]["connected"] is True
-    assert payload["status"]["lsp"]["worker_active"] is True
     assert payload["arbiter_generation_delta"] == 0
     assert cache_loaded["tree_cache_size"] >= 1
     assert cache_loaded["tree_cache_hits_total"] >= 1

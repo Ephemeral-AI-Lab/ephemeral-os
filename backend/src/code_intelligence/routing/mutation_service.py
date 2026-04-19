@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any
 
 from code_intelligence.editing.write_coordinator import CommitOperation
 from code_intelligence.hashing import content_hash
 from code_intelligence.types import (
+    DeleteSpec,
     EditRequest,
     EditResult,
     EditSpec,
@@ -24,23 +24,36 @@ from code_intelligence.types import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class CommitSpecRequest:
-    """One high-level typed commit request inside a micro-batch."""
+class _CommitSpecRequest:
+    """Normalized internal high-level commit request."""
 
-    op: str
-    specs: Sequence[Any]
-    agent_id: str = ""
-    description: str = ""
+    def __init__(
+        self,
+        *,
+        op: str,
+        specs: Sequence[Any],
+        agent_id: str = "",
+        description: str = "",
+    ) -> None:
+        self.op = op
+        self.specs = specs
+        self.agent_id = agent_id
+        self.description = description
 
 
-@dataclass(frozen=True)
-class RenameCommitRequest:
-    """One attributed rename plan commit inside a micro-batch."""
+class _RenameCommitRequest:
+    """Normalized internal attributed rename plan commit."""
 
-    plan: SemanticRenamePlan
-    agent_id: str = ""
-    description: str = ""
+    def __init__(
+        self,
+        *,
+        plan: SemanticRenamePlan,
+        agent_id: str = "",
+        description: str = "",
+    ) -> None:
+        self.plan = plan
+        self.agent_id = agent_id
+        self.description = description
 
 
 class MutationService:
@@ -109,13 +122,11 @@ class MutationService:
 
     def commit_specs_many(
         self,
-        requests: Sequence[CommitSpecRequest | dict[str, Any]],
+        requests: Sequence[dict[str, Any]],
     ) -> list[OperationResult]:
         """Plan and commit many typed file mutations with batched sandbox I/O."""
         normalized = [
-            req
-            if isinstance(req, CommitSpecRequest)
-            else CommitSpecRequest(
+            _CommitSpecRequest(
                 op=str(req.get("op") or ""),
                 specs=tuple(req.get("specs") or ()),
                 agent_id=str(req.get("agent_id") or ""),
@@ -125,6 +136,8 @@ class MutationService:
         ]
         if not normalized:
             return []
+        if any(_request_has_folder_spec(req) for req in normalized):
+            return [self._commit_specs_direct(req) for req in normalized]
         if len(normalized) == 1:
             req = normalized[0]
             return [self._commit_specs_direct(req)]
@@ -274,13 +287,11 @@ class MutationService:
 
     def commit_rename_plans_many(
         self,
-        requests: Sequence[RenameCommitRequest | dict[str, Any]],
+        requests: Sequence[dict[str, Any]],
     ) -> list[OperationResult]:
         """Commit many already-computed rename plans with batched sandbox I/O."""
         normalized = [
-            req
-            if isinstance(req, RenameCommitRequest)
-            else RenameCommitRequest(
+            _RenameCommitRequest(
                 plan=req["plan"],
                 agent_id=str(req.get("agent_id") or ""),
                 description=str(req.get("description") or ""),
@@ -311,7 +322,7 @@ class MutationService:
 
     def delete_file(
         self,
-        paths: Sequence[str],
+        paths: Sequence[str | DeleteSpec],
         *,
         agent_id: str = "",
         description: str = "",
@@ -324,8 +335,23 @@ class MutationService:
         requires ``current_hash == base_hash`` exactly — any drift aborts
         with ``aborted_version`` (no merge fallback for deletes).
         """
+        resolved_paths: list[str] = []
+        for item in paths:
+            if isinstance(item, DeleteSpec):
+                if item.is_folder:
+                    try:
+                        resolved_paths.extend(self._content.list_folder_files(item.path))
+                    except FileNotFoundError:
+                        return _not_found_result(item.path)
+                    except NotADirectoryError:
+                        return _not_a_directory_result(item.path)
+                    continue
+                resolved_paths.append(item.path)
+            else:
+                resolved_paths.append(str(item))
+
         changes: list[OperationChange] = []
-        for path in paths:
+        for path in resolved_paths:
             current, existed = self._content.read(path, allow_missing=True)
             if not existed:
                 return _not_found_result(path)
@@ -360,7 +386,27 @@ class MutationService:
         and TimeMachine rollback make the moves atomic across every
         spec in the batch.
         """
-        normalized = [specs] if isinstance(specs, MoveSpec) else list(specs)
+        raw_specs = [specs] if isinstance(specs, MoveSpec) else list(specs)
+        normalized: list[MoveSpec] = []
+        for spec in raw_specs:
+            if not spec.is_folder:
+                normalized.append(spec)
+                continue
+            try:
+                members = self._content.list_folder_files(spec.src_path)
+            except FileNotFoundError:
+                return _not_found_result(spec.src_path)
+            except NotADirectoryError:
+                return _not_a_directory_result(spec.src_path)
+            src_prefix_len = len(spec.src_path)
+            normalized.extend(
+                MoveSpec(
+                    src_path=member,
+                    dst_path=spec.dst_path + member[src_prefix_len:],
+                    overwrite=spec.overwrite,
+                )
+                for member in members
+            )
         changes: list[OperationChange] = []
         for spec in normalized:
             if spec.src_path == spec.dst_path:
@@ -414,7 +460,7 @@ class MutationService:
 
     # -- Spec -> OperationChange adapters ------------------------------------
 
-    def _commit_specs_direct(self, req: CommitSpecRequest) -> OperationResult:
+    def _commit_specs_direct(self, req: _CommitSpecRequest) -> OperationResult:
         if req.op == "write":
             return self.write_file(
                 req.specs,  # type: ignore[arg-type]
@@ -429,7 +475,7 @@ class MutationService:
             )
         if req.op == "delete":
             return self.delete_file(
-                [str(path) for path in req.specs],
+                list(req.specs),  # type: ignore[arg-type]
                 agent_id=req.agent_id,
                 description=req.description,
             )
@@ -448,7 +494,7 @@ class MutationService:
             timings={},
         )
 
-    def _commit_spec_read_paths(self, requests: Sequence[CommitSpecRequest]) -> list[str]:
+    def _commit_spec_read_paths(self, requests: Sequence[_CommitSpecRequest]) -> list[str]:
         paths: list[str] = []
         for req in requests:
             if req.op == "write":
@@ -456,7 +502,7 @@ class MutationService:
             elif req.op == "edit":
                 paths.extend(str(spec.file_path) for spec in req.specs)
             elif req.op == "delete":
-                paths.extend(str(path) for path in req.specs)
+                paths.extend(_delete_spec_path(path) for path in req.specs)
             elif req.op == "move":
                 for spec in req.specs:
                     paths.append(str(spec.src_path))
@@ -465,7 +511,7 @@ class MutationService:
 
     def _commit_spec_changes_from_base(
         self,
-        req: CommitSpecRequest,
+        req: _CommitSpecRequest,
         base_by_path: dict[str, tuple[str, bool]],
     ) -> tuple[list[OperationChange], OperationResult | None]:
         if req.op == "write":
@@ -474,7 +520,7 @@ class MutationService:
             return self._edit_specs_to_changes_from_base(req.specs, base_by_path)
         if req.op == "delete":
             return self._delete_paths_to_changes_from_base(
-                [str(path) for path in req.specs],
+                [_delete_spec_path(path) for path in req.specs],
                 base_by_path,
             )
         if req.op == "move":
@@ -670,6 +716,41 @@ def _not_found_result(file_path: str) -> OperationResult:
         ),
         conflict_file=None,
         conflict_reason="not_found",
+        timings={},
+    )
+
+
+def _delete_spec_path(spec: Any) -> str:
+    return str(spec.path) if isinstance(spec, DeleteSpec) else str(spec)
+
+
+def _request_has_folder_spec(req: _CommitSpecRequest) -> bool:
+    if req.op == "delete":
+        return any(
+            isinstance(spec, DeleteSpec) and spec.is_folder
+            for spec in req.specs
+        )
+    if req.op == "move":
+        return any(
+            isinstance(spec, MoveSpec) and spec.is_folder
+            for spec in req.specs
+        )
+    return False
+
+
+def _not_a_directory_result(file_path: str) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(
+            EditResult(
+                success=False,
+                file_path=file_path,
+                message=f"Path is not a directory: {file_path}",
+            ),
+        ),
+        conflict_file=file_path,
+        conflict_reason="not_a_directory",
         timings={},
     )
 

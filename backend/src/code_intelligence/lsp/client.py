@@ -27,13 +27,6 @@ from code_intelligence.constants import (
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
-from code_intelligence.lsp._jedi_worker_client import (
-    BaseJediWorkerClient,
-    JediWorkerClient,
-    SandboxJediWorkerClient,
-    WorkerUnavailable,
-    is_enabled as jedi_worker_enabled,
-)
 from code_intelligence.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -81,9 +74,6 @@ class LspTelemetry:
     script_runs: int = 0
     script_successes: int = 0
     script_errors: int = 0
-    worker_successes: int = 0
-    worker_fallbacks: int = 0
-    worker_errors: int = 0
 
 
 class LspClient:
@@ -111,19 +101,6 @@ class LspClient:
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
         self._ts_available: bool | None = None
-        # The persistent Jedi worker is disabled by default. The worker
-        # holds one global `threading.Lock` across every stdin/stdout
-        # round-trip to its single subprocess (see
-        # `_jedi_worker_client.JediWorkerClient.request`), which serializes
-        # all concurrent callers. Under 72-way OCC load that lock dominated
-        # commit_apply time (invalidate alone took ~2.76s p50 per commit,
-        # 92% of the apply pass). Opt-in via `CI_JEDI_WORKER_ENABLED=1`;
-        # otherwise all Python queries take the subprocess-per-call jedi
-        # script fallback which is slower per query but fully parallel.
-        self._worker_enabled_default = False
-
-        self._worker: BaseJediWorkerClient | None = None
-        self._worker_lock = threading.Lock()
 
     # -- Public query methods -------------------------------------------------
 
@@ -169,11 +146,6 @@ class LspClient:
         if len(normalized) == 1:
             file_path, line, character = normalized[0]
             return [self.find_references(file_path, line, character)]
-        if self._worker_enabled():
-            return [
-                self.find_references(file_path, line, character)
-                for file_path, line, character in normalized
-            ]
         return self._python_references_many(normalized)
 
     def rename_symbol(
@@ -193,7 +165,7 @@ class LspClient:
         self,
         requests: Sequence[tuple[str, int, int, str]],
     ) -> list[dict[str, str]]:
-        """Batch Python renames into one backend process when the worker is disabled."""
+        """Batch Python renames into one backend process."""
         normalized: list[tuple[str, int, int, str]] = []
         for file_path, line, character, new_name in requests:
             if self._detect_language(file_path) != "python":
@@ -212,11 +184,6 @@ class LspClient:
         if len(normalized) == 1:
             file_path, line, character, new_name = normalized[0]
             return [self.rename_symbol(file_path, line, character, new_name)]
-        if self._worker_enabled():
-            return [
-                self.rename_symbol(file_path, line, character, new_name)
-                for file_path, line, character, new_name in normalized
-            ]
         return self._python_rename_many(normalized)
 
     def hover(
@@ -239,14 +206,7 @@ class LspClient:
         )
 
     def invalidate(self, file_path: str) -> None:
-        """Invalidate all cached results for a file.
-
-        Also forwards the invalidation to the persistent Jedi worker
-        (when enabled) so Jedi's internal module cache drops this path.
-        Worker failures are swallowed — a stale worker cache is a
-        performance concern, not a correctness concern; the next query
-        will miss the cache and re-resolve.
-        """
+        """Invalidate all cached results for a file."""
         with self._cache_lock:
             to_remove = [k for k in self._cache if file_path in k]
             for k in to_remove:
@@ -256,25 +216,10 @@ class LspClient:
             stale = [key for key in self._line_cache if key[0] == resolved_path]
             for key in stale:
                 del self._line_cache[key]
-        if self._detect_language(resolved_path) != "python":
-            return
-        client = self._existing_worker()
-        if client is None:
-            return
-        try:
-            client.request("invalidate", {"path": self._resolve_path(file_path)})
-        except WorkerUnavailable:
-            pass
-        except Exception:  # pragma: no cover - defensive
-            logger.debug("worker invalidate failed for %s", file_path, exc_info=True)
 
     def close(self) -> None:
-        """Shut down the persistent Jedi worker, if one is running."""
-        with self._worker_lock:
-            worker = self._worker
-            self._worker = None
-        if worker is not None:
-            worker.shutdown()
+        """Release LSP resources."""
+        return None
 
     def ensure_ready(
         self,
@@ -317,9 +262,6 @@ class LspClient:
                 script_runs=self._telemetry.script_runs,
                 script_successes=self._telemetry.script_successes,
                 script_errors=self._telemetry.script_errors,
-                worker_successes=self._telemetry.worker_successes,
-                worker_fallbacks=self._telemetry.worker_fallbacks,
-                worker_errors=self._telemetry.worker_errors,
             )
 
     @property
@@ -327,28 +269,6 @@ class LspClient:
         """Whether at least one language backend is available."""
         status = self.ensure_ready(languages=("python",))
         return bool(status.get("python")) or bool(self._ts_available)
-
-    @property
-    def worker_active(self) -> bool:
-        """Whether a persistent Jedi worker has been created for this client."""
-        with self._worker_lock:
-            return self._worker is not None
-
-    def worker_status(self) -> dict[str, Any]:
-        """Return worker metadata without creating a worker."""
-        with self._worker_lock:
-            worker = self._worker
-        status: dict[str, Any] = {
-            "enabled": self._worker_enabled(),
-            "active": worker is not None,
-        }
-        if worker is None:
-            return status
-        try:
-            status.update(worker.worker_status())
-        except Exception:  # pragma: no cover - defensive observability path
-            logger.debug("failed to read jedi worker status", exc_info=True)
-        return status
 
     # -- Language-specific queries --------------------------------------------
 
@@ -464,85 +384,11 @@ class LspClient:
         except Exception:
             return None
 
-    # -- Persistent worker dispatch ------------------------------------------
-    #
-    # The worker amortises Jedi's import/project cost across Python
-    # queries. Local mode uses stdio; sandbox mode runs a socket daemon
-    # inside the sandbox and reaches it through small process.exec RPCs.
-
-    def _get_worker(self) -> BaseJediWorkerClient | None:
-        if not self._worker_enabled():
-            return None
-        with self._worker_lock:
-            if self._worker is None:
-                if self._sandbox is None:
-                    self._worker = JediWorkerClient(
-                        self._workspace_root,
-                        enabled_default=self._worker_enabled_default,
-                    )
-                else:
-                    self._worker = SandboxJediWorkerClient(
-                        self._workspace_root,
-                        sandbox=self._sandbox,
-                        enabled_default=self._worker_enabled_default,
-                    )
-            return self._worker
-
-    def _existing_worker(self) -> BaseJediWorkerClient | None:
-        """Return the current worker without creating one."""
-        with self._worker_lock:
-            return self._worker
-
-    def _worker_enabled(self) -> bool:
-        return jedi_worker_enabled(default=self._worker_enabled_default)
-
-    def _try_worker(self, op: str, args: dict[str, Any]) -> tuple[bool, Any]:
-        """Attempt a worker request. Returns ``(ok, result_or_None)``.
-
-        On ``WorkerUnavailable`` the caller must fall back to the
-        subprocess-per-call path. Logical worker errors (``ok=False``
-        response) surface as ``(True, None)`` — the worker is healthy
-        but the query failed, matching the subprocess path's behaviour
-        of returning an empty result for bad positions.
-        """
-        client = self._get_worker()
-        if client is None:
-            return False, None
-        try:
-            result = client.request(op, args)
-            self._record_worker_success()
-            return True, result
-        except WorkerUnavailable:
-            self._record_worker_fallback()
-            return False, None
-        except Exception:  # pragma: no cover - defensive
-            self._record_worker_error()
-            logger.debug("jedi worker op %s failed", op, exc_info=True)
-            return True, None
-
     def _python_definitions(
         self, file_path: str, line: int, character: int,
     ) -> list[SymbolInfo]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
-
-        used, result = self._try_worker(
-            "definitions",
-            {"path": resolved_path, "line": int(line), "column": int(character)},
-        )
-        if used:
-            items = result if isinstance(result, list) else []
-            return [
-                SymbolInfo(
-                    name=str(item.get("name", "")),
-                    kind=_coerce_symbol_kind(item.get("type")),
-                    file_path=str(item.get("module_path", "")),
-                    line=int(item.get("line", 0) or 0),
-                    character=int(item.get("column", 0) or 0),
-                )
-                for item in items
-                if isinstance(item, dict) and item.get("name")
-            ]
 
         path_literal = json.dumps(resolved_path)
         script = (
@@ -574,22 +420,6 @@ class LspClient:
     ) -> list[ReferenceInfo]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
-
-        used, result = self._try_worker(
-            "references",
-            {"path": resolved_path, "line": int(line), "column": int(character)},
-        )
-        if used:
-            items = result if isinstance(result, list) else []
-            return [
-                ReferenceInfo(
-                    file_path=str(item.get("module_path", "")),
-                    line=int(item.get("line", 0) or 0),
-                    character=int(item.get("column", 0) or 0),
-                )
-                for item in items
-                if isinstance(item, dict)
-            ]
 
         path_literal = json.dumps(resolved_path)
         script = (
@@ -673,20 +503,6 @@ class LspClient:
     ) -> dict[str, str]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
-
-        used, result = self._try_worker(
-            "rename",
-            {
-                "path": resolved_path,
-                "line": int(line),
-                "column": int(character),
-                "new_name": str(new_name),
-            },
-        )
-        if used:
-            if isinstance(result, dict):
-                return {str(k): str(v) for k, v in result.items() if isinstance(v, str)}
-            return {}
 
         path_literal = json.dumps(resolved_path)
         new_name_literal = json.dumps(str(new_name))
@@ -773,18 +589,6 @@ class LspClient:
     ) -> HoverResult | None:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
-
-        used, result = self._try_worker(
-            "hover",
-            {"path": resolved_path, "line": int(line), "column": int(character)},
-        )
-        if used:
-            if not isinstance(result, dict):
-                return None
-            return HoverResult(
-                content=str(result.get("docstring", "")),
-                language="python",
-            )
 
         path_literal = json.dumps(resolved_path)
         script = (
@@ -1039,20 +843,6 @@ class LspClient:
     def _record_script_error(self) -> None:
         with self._counter_lock:
             self._telemetry.script_errors += 1
-
-    def _record_worker_success(self) -> None:
-        with self._counter_lock:
-            self._telemetry.successes += 1
-            self._telemetry.worker_successes += 1
-
-    def _record_worker_fallback(self) -> None:
-        with self._counter_lock:
-            self._telemetry.worker_fallbacks += 1
-
-    def _record_worker_error(self) -> None:
-        with self._counter_lock:
-            self._telemetry.errors += 1
-            self._telemetry.worker_errors += 1
 
     def _detect_language(self, file_path: str) -> str:
         ext = Path(file_path).suffix.lower()

@@ -20,6 +20,7 @@ from code_intelligence.routing.git_workspace_pool import GitWorkspacePool
 from code_intelligence.routing.git_workspace_types import (
     GitWorkspaceCommandError,
     GitWorkspaceCommandResult,
+    GitWorkspaceBaseline,
     GitWorkspaceError,
     GitWorkspaceLease,
     GitWorkspaceUnsupportedChangeError,
@@ -80,7 +81,7 @@ class GitWorkspaceAuditor:
             diff = await self._collect_diff(
                 sandbox,
                 lease,
-                baseline_commit=baseline,
+                baseline=baseline,
                 command_result=command_result,
             )
             if not attribute_changes:
@@ -168,7 +169,7 @@ class GitWorkspaceAuditor:
         sandbox: Any,
         lease: GitWorkspaceLease,
         *,
-        baseline_commit: str,
+        baseline: GitWorkspaceBaseline,
         command_result: GitWorkspaceCommandResult,
     ) -> WorkspaceDiff:
         payload = await self._run_json_script(
@@ -177,7 +178,7 @@ class GitWorkspaceAuditor:
             [
                 self._workspace_root,
                 lease.slot_path,
-                baseline_commit,
+                baseline.snapshot_path,
                 str(command_result.exit_code),
                 base64.b64encode(command_result.stdout.encode("utf-8")).decode("ascii"),
             ],
@@ -210,7 +211,7 @@ class GitWorkspaceAuditor:
             )
         return WorkspaceDiff(
             files=tuple(files),
-            baseline_commit=baseline_commit,
+            baseline_ref=baseline.snapshot_path,
             workspace_root=self._workspace_root,
             command_exit_code=command_result.exit_code,
             stdout=command_result.stdout,
@@ -337,90 +338,76 @@ def decode_utf8(raw, path):
         fail(f"non-UTF-8 content at {path!r}: {exc}", unsupported=True)
 
 
-def git_show(slot, rev_path, path):
-    proc = run(["git", "-C", slot, "show", rev_path], check=False)
-    if proc.returncode != 0:
-        return "", False
-    return decode_utf8(proc.stdout, path), True
+def iter_files(root):
+    root_path = pathlib.Path(root)
+    if not root_path.exists():
+        fail(f"baseline snapshot does not exist: {root}", unsupported=True)
+    for dirpath, dirnames, filenames in os.walk(root_path):
+        dirnames[:] = [name for name in dirnames if name != ".git"]
+        for filename in filenames:
+            path = pathlib.Path(dirpath, filename)
+            rel = validate_rel(path.relative_to(root_path).as_posix())
+            if path.is_symlink():
+                fail(f"unsupported symlink at {rel!r}", unsupported=True)
+            if not path.is_file():
+                fail(f"unsupported non-file entry at {rel!r}", unsupported=True)
+            yield rel
 
 
-def file_mode(slot, path):
-    proc = run(["git", "-C", slot, "ls-files", "-s", "--", path], check=False)
-    if proc.returncode != 0 or not proc.stdout.strip():
-        return ""
-    return proc.stdout.decode("utf-8", "replace").split(None, 1)[0]
+def read_bytes(root, rel_path):
+    return pathlib.Path(root, rel_path).read_bytes()
 
 
 def collect():
-    workspace_root, slot, baseline, exit_code_raw, stdout_b64 = sys.argv[1:6]
-    del workspace_root, baseline, exit_code_raw, stdout_b64
-    run(["git", "-C", slot, "add", "-A"])
-    patch = run([
-        "git", "-C", slot, "diff", "--cached", "--binary", "--full-index",
-        "--find-renames", "HEAD", "--",
-    ]).stdout.decode("utf-8", "replace")
-    raw_status = run([
-        "git", "-C", slot, "diff", "--cached", "--name-status", "-z",
-        "--find-renames", "HEAD", "--",
-    ]).stdout
-    tokens = [part.decode("utf-8") for part in raw_status.split(b"\0") if part]
+    workspace_root, slot, baseline_snapshot, exit_code_raw, stdout_b64 = sys.argv[1:6]
+    del workspace_root, exit_code_raw, stdout_b64
+    base_paths = set(iter_files(baseline_snapshot))
+    final_paths = set(iter_files(slot))
     files = []
-    idx = 0
-    while idx < len(tokens):
-        status_raw = tokens[idx]
-        idx += 1
-        code = status_raw[0]
+    for new_path in sorted(base_paths | final_paths):
         old_path = None
-        if code == "R":
-            if idx + 1 >= len(tokens):
-                fail("malformed rename status", unsupported=True)
-            old_path = validate_rel(tokens[idx])
-            new_path = validate_rel(tokens[idx + 1])
-            idx += 2
-            fail(f"rename changes are not supported in git workspace v1: {old_path} -> {new_path}", unsupported=True)
+        base_exists = new_path in base_paths
+        final_exists = new_path in final_paths
+        if base_exists:
+            base_raw = read_bytes(baseline_snapshot, new_path)
         else:
-            if idx >= len(tokens):
-                fail("malformed name-status output", unsupported=True)
-            new_path = validate_rel(tokens[idx])
-            idx += 1
+            base_raw = b""
+        if final_exists:
+            final_raw = read_bytes(slot, new_path)
+        else:
+            final_raw = b""
 
-        if code == "A":
+        if base_exists and final_exists and base_raw == final_raw:
+            continue
+
+        if final_exists and not base_exists:
             status = "add"
-            base_content, base_existed = "", False
-            final_path = pathlib.Path(slot, new_path)
-            final_content = decode_utf8(final_path.read_bytes(), new_path)
-            final_existed = True
-        elif code == "M":
+            base_content = ""
+            final_content = decode_utf8(final_raw, new_path)
+        elif base_exists and final_exists:
             status = "modify"
-            base_content, base_existed = git_show(slot, f"HEAD:{new_path}", new_path)
-            final_path = pathlib.Path(slot, new_path)
-            final_content = decode_utf8(final_path.read_bytes(), new_path)
-            final_existed = True
-        elif code == "D":
+            base_content = decode_utf8(base_raw, new_path)
+            final_content = decode_utf8(final_raw, new_path)
+        elif base_exists and not final_exists:
             status = "delete"
-            base_content, base_existed = git_show(slot, f"HEAD:{new_path}", new_path)
+            base_content = decode_utf8(base_raw, new_path)
             final_content = None
-            final_existed = False
         else:
-            fail(f"unsupported git status {status_raw!r} for {new_path!r}", unsupported=True)
-
-        mode = file_mode(slot, new_path)
-        if mode in {"120000", "160000"}:
-            fail(f"unsupported git mode {mode} at {new_path!r}", unsupported=True)
+            continue
 
         final_hash = content_hash(final_content) if final_content is not None else ""
         files.append({
             "path": new_path,
             "old_path": old_path,
             "status": status,
-            "base_existed": base_existed,
-            "base_hash": content_hash(base_content) if base_existed else "",
-            "final_existed": final_existed,
+            "base_existed": base_exists,
+            "base_hash": content_hash(base_content) if base_exists else "",
+            "final_existed": final_exists,
             "final_hash": final_hash,
             "base_content": base_content,
             "final_content": final_content,
         })
-    reply(files=files, patch=patch)
+    reply(files=files, patch="")
 
 
 if __name__ == "__main__":

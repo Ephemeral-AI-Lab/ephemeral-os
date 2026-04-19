@@ -70,7 +70,6 @@ async def test_cmd_uses_git_workspace_auditor(tmp_path) -> None:
     assert result.exit_code == 0
     assert result.changed_paths == []
     assert result.result
-    assert svc._git_workspace_auditor is not None  # type: ignore[attr-defined]
 
 
 class _AsyncLocalProcess:

@@ -19,6 +19,7 @@ from code_intelligence.routing.git_workspace_config import (
     git_workspace_pool_size_per_sandbox,
 )
 from code_intelligence.routing.git_workspace_types import (
+    GitWorkspaceBaseline,
     GitWorkspaceLease,
     GitWorkspacePrepareError,
 )
@@ -116,8 +117,12 @@ class GitWorkspacePool:
         if reusable:
             self._queue.put_nowait(lease)
 
-    async def prepare_baseline(self, sandbox: Any, lease: GitWorkspaceLease) -> str:
-        """Prepare *lease* so HEAD is a synthetic current-workspace baseline."""
+    async def prepare_baseline(
+        self,
+        sandbox: Any,
+        lease: GitWorkspaceLease,
+    ) -> GitWorkspaceBaseline:
+        """Prepare *lease* with a clean index and filesystem baseline snapshot."""
 
         payload = await self._run_json_script(
             sandbox,
@@ -128,12 +133,13 @@ class GitWorkspacePool:
             ],
             timeout=180,
         )
-        baseline = str(payload.get("baseline_commit") or "")
-        if not baseline:
+        snapshot_path = str(payload.get("snapshot_path") or "")
+        live_head = str(payload.get("live_head") or "")
+        if not snapshot_path or not live_head:
             raise GitWorkspacePrepareError(
-                f"git workspace baseline prepare returned no commit for {lease.slot_path}"
+                f"git workspace baseline prepare returned no snapshot for {lease.slot_path}"
             )
-        return baseline
+        return GitWorkspaceBaseline(snapshot_path=snapshot_path, live_head=live_head)
 
     async def _ensure_prewarmed(self, sandbox: Any) -> None:
         if self._initialized:
@@ -296,6 +302,11 @@ def reset_slot(slot_path):
     if pathlib.Path(slot_path, ".git").exists():
         run(["git", "-C", slot_path, "reset", "--hard", "-q", "HEAD"])
         run(["git", "-C", slot_path, "clean", "-fdx", "-q"])
+    shutil.rmtree(baseline_snapshot_path(slot_path), ignore_errors=True)
+
+
+def baseline_snapshot_path(slot_path):
+    return slot_path.rstrip("/") + ".baseline"
 
 
 def checkout_live_head(repo_root, slot_path):
@@ -313,7 +324,7 @@ def apply_live_state(repo_root, slot_path):
         "git", "-C", repo_root, "diff", "--binary", "--full-index", "HEAD", "--"
     ]).stdout
     if diff:
-        run(["git", "-C", slot_path, "apply", "--binary", "--index"], input_bytes=diff)
+        run(["git", "-C", slot_path, "apply", "--binary"], input_bytes=diff)
     raw = run([
         "git", "-C", repo_root, "ls-files", "--others", "--exclude-standard", "-z"
     ]).stdout
@@ -325,14 +336,18 @@ def apply_live_state(repo_root, slot_path):
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
-    run(["git", "-C", slot_path, "add", "-A"])
-    run([
-        "git", "-C", slot_path,
-        "-c", "user.name=EphemeralOS",
-        "-c", "user.email=ephemeralos@example.invalid",
-        "commit", "--allow-empty", "-q", "-m", "EphemeralOS CodeAct baseline",
-    ])
-    return run(["git", "-C", slot_path, "rev-parse", "HEAD"]).stdout.decode().strip()
+
+
+def copy_baseline_snapshot(slot_path):
+    snapshot = baseline_snapshot_path(slot_path)
+    shutil.rmtree(snapshot, ignore_errors=True)
+
+    def ignore_git(dirpath, names):
+        del dirpath
+        return {".git"} if ".git" in names else set()
+
+    shutil.copytree(slot_path, snapshot, ignore=ignore_git)
+    return snapshot
 '''
 
 
@@ -382,6 +397,7 @@ if __name__ == "__main__":
 _REMOVE_SLOT_SCRIPT = _COMMON_REMOTE + r'''
 def main():
     shutil.rmtree(sys.argv[1], ignore_errors=True)
+    shutil.rmtree(baseline_snapshot_path(sys.argv[1]), ignore_errors=True)
     reply(slot=sys.argv[1])
 
 
@@ -395,8 +411,10 @@ def main():
     repo_root, slot_path = sys.argv[1:3]
     ensure_slot(repo_root, slot_path)
     checkout_live_head(repo_root, slot_path)
-    baseline = apply_live_state(repo_root, slot_path)
-    reply(slot=slot_path, baseline_commit=baseline)
+    live_head = run(["git", "-C", repo_root, "rev-parse", "HEAD"]).stdout.decode().strip()
+    apply_live_state(repo_root, slot_path)
+    snapshot = copy_baseline_snapshot(slot_path)
+    reply(slot=slot_path, snapshot_path=snapshot, live_head=live_head)
 
 
 if __name__ == "__main__":

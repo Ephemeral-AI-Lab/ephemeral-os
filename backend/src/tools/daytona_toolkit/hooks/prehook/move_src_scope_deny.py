@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext
+from tools.core.ci_runtime import get_ci_service
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit.hooks._common import (
     _scope_deny_message,
@@ -17,10 +18,12 @@ async def _folder_members(
     context: ToolExecutionContext,
     folder: str,
 ) -> list[str] | None:
-    from tools.daytona_toolkit import delete_move_tool
-
+    svc = get_ci_service(context)
+    list_folder_files = getattr(svc, "list_folder_files", None) if svc is not None else None
+    if not callable(list_folder_files):
+        return None
     try:
-        return await delete_move_tool._list_folder_files(context, folder)
+        return list(list_folder_files(folder))
     except (FileNotFoundError, NotADirectoryError):
         return None
 

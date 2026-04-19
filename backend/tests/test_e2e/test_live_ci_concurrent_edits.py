@@ -2,7 +2,7 @@
 
 Complements ``test_live_ci_rename_perf.py`` and
 ``test_live_daytona_tool_occ_calls.py`` by stressing the audit arbiter and
-Jedi worker under true racing conditions:
+subprocess-backed Jedi/LSP paths under true racing conditions:
 
 * Non-overlapping concurrent edits across all 4 public write paths
   (``daytona_write_file``, ``daytona_edit_file``, ``daytona_rename_symbol``,
@@ -12,11 +12,6 @@ Jedi worker under true racing conditions:
   (edit×edit, edit×codeact, codeact×codeact) — final files must remain
   coherent, even though unconditional process writes are last-writer-wins
   rather than reservation conflicts.
-* Jedi worker script reuse — under ``CI_JEDI_WORKER_ENABLED=1`` every
-  LSP call hits the persistent worker (``worker_successes`` increments,
-  ``script_runs`` stays at zero since the subprocess fallback never
-  fires).
-
 All concurrency knobs come from environment variables; none are
 hardcoded inside assertions.
 
@@ -45,9 +40,6 @@ from typing import Any, Callable
 import pytest
 from dotenv import load_dotenv
 
-from code_intelligence.lsp._jedi_worker_client import (
-    ENV_FLAG as JEDI_WORKER_ENV_FLAG,
-)
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.core.base import ToolExecutionContext
@@ -231,10 +223,8 @@ def _barrier_run(
 
 def test_concurrent_nonoverlap_edits_across_tools(
     live_edits_env: LiveRenameEnv,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """All 4 write paths run concurrently on disjoint targets and audit cleanly."""
-    monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/nonoverlap_{uuid.uuid4().hex[:6]}"
     _write_perf_project(env, root)
@@ -425,17 +415,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
             ),
             "arbiter_conflicts_delta": conflicts_delta,
             "arbiter_total_edits": svc.arbiter.metrics.total_edits,
-            "lsp_worker_successes_delta": (
-                telemetry_after.worker_successes
-                - telemetry_before.worker_successes
-            ),
-            "lsp_worker_errors_delta": (
-                telemetry_after.worker_errors - telemetry_before.worker_errors
-            ),
-            "lsp_worker_fallbacks_delta": (
-                telemetry_after.worker_fallbacks
-                - telemetry_before.worker_fallbacks
-            ),
             "lsp_script_runs_delta": (
                 telemetry_after.script_runs - telemetry_before.script_runs
             ),
@@ -449,12 +428,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
             "trace_summary": env.trace.summary_since(trace_mark),
         }
         _print_block("ci-lsp-concurrent-nonoverlap", payload)
-        # Tree cache (in-process) stays empty under worker mode — Jedi state
-        # lives in the persistent sandbox daemon. Fallback / errors must stay
-        # at zero so every LSP call was served by the worker without falling
-        # back to subprocess-per-call.
-        assert payload["lsp_worker_fallbacks_delta"] == 0
-        assert payload["lsp_worker_errors_delta"] == 0
     finally:
         svc.dispose()
 
@@ -466,10 +439,8 @@ def test_concurrent_nonoverlap_edits_across_tools(
 
 def test_concurrent_overlap_edits_preserve_process_integrity(
     live_edits_env: LiveRenameEnv,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Racing process writes on one region leave one coherent final value."""
-    monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/overlap_{uuid.uuid4().hex[:6]}"
     env.exec_checked(f"mkdir -p {shlex.quote(root)}/pkg")
@@ -634,139 +605,6 @@ def test_concurrent_overlap_edits_preserve_process_integrity(
         svc.dispose()
 
 
-# ---------------------------------------------------------------------------
-# Test C: Jedi worker routes every call; fallback never fires
-# ---------------------------------------------------------------------------
-
-
-def test_jedi_worker_reuse_under_load(
-    live_edits_env: LiveRenameEnv,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Under ``CI_JEDI_WORKER_ENABLED=1`` every LSP call hits the worker."""
-    monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
-    env = live_edits_env
-    root = f"{env.root_dir}/worker_{uuid.uuid4().hex[:6]}"
-    core_path, uses_path, _more_path = _write_perf_project(env, root)
-    _init_git(env, root)
-    svc, ctx = _build_service(env, root, "worker")
-    telemetry_before = svc.lsp_client.telemetry
-    tree_before = svc.tree_cache.stats
-    trace_mark = env.trace.mark()
-
-    try:
-        # Pin each read-only LSP op to a position known to land on a Python
-        # symbol in the perf project (see `_write_perf_project`):
-        #   core.py (1, 0) → `def alpha(value):` — used for find_references / hover
-        #   uses.py (4, 11) → `alpha(1)` reference — used for goto_definition
-        # uses.py/more.py line 1 col 0 is the `from` keyword and has no
-        # references; probing those would be a test bug, not an LSP issue.
-
-        def _worker(index: int) -> dict[str, Any]:
-            started = time.perf_counter()
-            op_index = index % 4
-            if op_index == 0:
-                refs = svc.lsp_client.find_references(core_path, 1, 0)
-                ok = len(refs) >= 1
-                op = "find_references"
-            elif op_index == 1:
-                defs = svc.lsp_client.goto_definition(uses_path, 4, 11)
-                ok = len(defs) >= 1
-                op = "goto_definition"
-            elif op_index == 2:
-                hover = svc.lsp_client.hover(core_path, 1, 0)
-                ok = hover is not None
-                op = "hover"
-            else:
-                result = asyncio.run(
-                    daytona_rename_symbol.execute(
-                        daytona_rename_symbol.input_model(
-                            symbol="beta",
-                            new_name=f"beta_worker_{index}",
-                            dry_run=True,
-                        ),
-                        ctx,
-                    )
-                )
-                ok = not result.is_error
-                op = "rename_dry"
-            return {
-                "index": index,
-                "op": op,
-                "ok": ok,
-                "duration_ms": round(
-                    (time.perf_counter() - started) * 1000, 3
-                ),
-            }
-
-        barrier = threading.Barrier(CONCURRENCY)
-
-        def _synced(index: int) -> dict[str, Any]:
-            barrier.wait()
-            return _worker(index)
-
-        started_at = time.perf_counter()
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=CONCURRENCY
-        ) as pool:
-            results = list(pool.map(_synced, range(CONCURRENCY)))
-        duration_ms = round((time.perf_counter() - started_at) * 1000, 3)
-        telemetry_after = svc.lsp_client.telemetry
-        tree_after = svc.tree_cache.stats
-
-        worker_successes = (
-            telemetry_after.worker_successes
-            - telemetry_before.worker_successes
-        )
-        script_runs = (
-            telemetry_after.script_runs - telemetry_before.script_runs
-        )
-        worker_errors = (
-            telemetry_after.worker_errors - telemetry_before.worker_errors
-        )
-        worker_fallbacks = (
-            telemetry_after.worker_fallbacks
-            - telemetry_before.worker_fallbacks
-        )
-        cache_hits = (
-            telemetry_after.cache_hits - telemetry_before.cache_hits
-        )
-
-        payload = {
-            "label": "C.jedi_worker_reuse_under_load",
-            "concurrency": CONCURRENCY,
-            "duration_ms": duration_ms,
-            "ops": _summarize_ops(
-                [
-                    {**item, "outcome": "ok" if item["ok"] else "error"}
-                    for item in results
-                ]
-            ),
-            "lsp_worker_successes_delta": worker_successes,
-            "lsp_worker_errors_delta": worker_errors,
-            "lsp_worker_fallbacks_delta": worker_fallbacks,
-            "lsp_script_runs_delta": script_runs,
-            "lsp_cache_hits_delta": cache_hits,
-            "tree_cache_hits_delta": tree_after["hits"] - tree_before["hits"],
-            "tree_cache_size": tree_after["size"],
-            "worker_active": svc.lsp_client.worker_active,
-            "status": svc.status(),
-            "trace_summary": env.trace.summary_since(trace_mark),
-        }
-        _print_block("ci-lsp-concurrent-worker", payload)
-
-        failures = [item for item in results if not item["ok"]]
-        assert not failures, json.dumps(failures, sort_keys=True)
-        assert payload["worker_active"] is True
-        assert worker_successes >= 1
-        assert worker_errors == 0
-        assert worker_fallbacks == 0
-        assert script_runs == 0, (
-            f"Jedi subprocess-fallback fired {script_runs} time(s) under "
-            "worker mode — script instance was not reused."
-        )
-    finally:
-        svc.dispose()
 
 
 @pytest.fixture(autouse=True, scope="module")

@@ -7,9 +7,9 @@ import json
 import threading
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from code_intelligence.types import EditResult, MoveSpec, OperationResult
+from code_intelligence.types import DeleteSpec, EditResult, MoveSpec, OperationResult
 from tools.core.base import ToolExecutionContext, run_tool_safely
 from tools.daytona_toolkit.delete_move_tool import (
     daytona_delete_file,
@@ -66,6 +66,7 @@ def _svc(
         return_value=move_result
         or _operation_result(success=True, paths=["/ws/src.py", "/ws/dst.py"])
     )
+    svc.list_folder_files = MagicMock(return_value=[])
     svc.rebind_sandbox = MagicMock()
     return svc
 
@@ -86,7 +87,7 @@ def test_delete_file_success_routes_through_occ_service() -> None:
     assert payload["status"] == "deleted"
     assert payload["paths"] == ["/ws/gone.py"]
     svc.delete_file.assert_called_once_with(
-        ["/ws/gone.py"],
+        [DeleteSpec(path="/ws/gone.py")],
         agent_id="run-1",
         description="delete /ws/gone.py",
     )
@@ -111,7 +112,7 @@ def test_delete_file_occ_call_runs_off_active_event_loop_thread() -> None:
 
     assert result.is_error is False
     svc.delete_file.assert_called_once_with(
-        ["/ws/gone.py"],
+        [DeleteSpec(path="/ws/gone.py")],
         agent_id="run-1",
         description="delete /ws/gone.py",
     )
@@ -323,7 +324,7 @@ def test_move_file_rejects_destination_inside_source() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_delete_folder_enumerates_and_batches_through_service() -> None:
+def test_delete_folder_routes_folder_intent_to_service() -> None:
     svc = _svc(
         delete_result=_operation_result(
             success=True, paths=["/ws/pkg/a.py", "/ws/pkg/sub/b.py"],
@@ -331,103 +332,90 @@ def test_delete_folder_enumerates_and_batches_through_service() -> None:
     )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws", "agent_run_id": "run-1"})
 
-    async def fake_list(_ctx, folder):
-        assert folder == "/ws/pkg"
-        return ["/ws/pkg/a.py", "/ws/pkg/sub/b.py"]
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_delete_file,
-            {"path": "/ws/pkg", "is_folder": True},
-            ctx,
-        )
+    result = _run(
+        daytona_delete_file,
+        {"path": "/ws/pkg", "is_folder": True},
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is False
     assert payload["status"] == "deleted"
     assert payload["paths"] == ["/ws/pkg/a.py", "/ws/pkg/sub/b.py"]
     svc.delete_file.assert_called_once_with(
-        ["/ws/pkg/a.py", "/ws/pkg/sub/b.py"],
+        [DeleteSpec(path="/ws/pkg", is_folder=True)],
         agent_id="run-1",
         description="delete /ws/pkg",
     )
 
 
 def test_delete_folder_reports_not_found_when_missing() -> None:
-    svc = _svc()
+    svc = _svc(
+        delete_result=_operation_result(
+            success=False,
+            status="failed",
+            paths=["/ws/missing_dir"],
+            conflict_file="/ws/missing_dir",
+            conflict_reason="not_found",
+        )
+    )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        raise FileNotFoundError(folder)
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_delete_file,
-            {"path": "/ws/missing_dir", "is_folder": True},
-            ctx,
-        )
+    result = _run(
+        daytona_delete_file,
+        {"path": "/ws/missing_dir", "is_folder": True},
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is True
     assert payload["status"] == "not_found"
-    svc.delete_file.assert_not_called()
+    svc.delete_file.assert_called_once()
 
 
 def test_delete_folder_with_is_folder_on_regular_file_fails() -> None:
-    svc = _svc()
+    svc = _svc(
+        delete_result=_operation_result(
+            success=False,
+            status="failed",
+            paths=["/ws/not_a_dir.py"],
+            conflict_file="/ws/not_a_dir.py",
+            conflict_reason="not_a_directory",
+        )
+    )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        raise NotADirectoryError(folder)
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_delete_file,
-            {"path": "/ws/not_a_dir.py", "is_folder": True},
-            ctx,
-        )
+    result = _run(
+        daytona_delete_file,
+        {"path": "/ws/not_a_dir.py", "is_folder": True},
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is True
     assert payload["status"] == "failed"
-    assert "is_folder=True" in payload["message"]
-    svc.delete_file.assert_not_called()
+    assert payload["conflict_reason"] == "not_a_directory"
+    svc.delete_file.assert_called_once()
 
 
-def test_delete_folder_empty_short_circuits_to_deleted() -> None:
-    svc = _svc()
+def test_delete_folder_empty_result_reports_deleted() -> None:
+    svc = _svc(delete_result=_operation_result(success=True, paths=[]))
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        return []
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_delete_file,
-            {"path": "/ws/empty_dir", "is_folder": True},
-            ctx,
-        )
+    result = _run(
+        daytona_delete_file,
+        {"path": "/ws/empty_dir", "is_folder": True},
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is False
     assert payload["status"] == "deleted"
     assert payload["paths"] == []
-    svc.delete_file.assert_not_called()
+    svc.delete_file.assert_called_once()
 
 
-def test_move_folder_enumerates_and_remaps_prefix() -> None:
+def test_move_folder_routes_folder_intent_to_service() -> None:
     svc = _svc(
         move_result=_operation_result(
             success=True,
@@ -441,23 +429,15 @@ def test_move_folder_enumerates_and_remaps_prefix() -> None:
     )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws", "agent_run_id": "run-2"})
 
-    async def fake_list(_ctx, folder):
-        assert folder == "/ws/src_pkg"
-        return ["/ws/src_pkg/a.py", "/ws/src_pkg/sub/b.py"]
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_move_file,
-            {
-                "src_path": "/ws/src_pkg",
-                "target_path": "/ws/dst_pkg",
-                "is_folder": True,
-            },
-            ctx,
-        )
+    result = _run(
+        daytona_move_file,
+        {
+            "src_path": "/ws/src_pkg",
+            "target_path": "/ws/dst_pkg",
+            "is_folder": True,
+        },
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is False
@@ -465,99 +445,90 @@ def test_move_folder_enumerates_and_remaps_prefix() -> None:
     specs = svc.move_file.call_args.args[0]
     assert specs == [
         MoveSpec(
-            src_path="/ws/src_pkg/a.py",
-            dst_path="/ws/dst_pkg/a.py",
+            src_path="/ws/src_pkg",
+            dst_path="/ws/dst_pkg",
             overwrite=False,
-        ),
-        MoveSpec(
-            src_path="/ws/src_pkg/sub/b.py",
-            dst_path="/ws/dst_pkg/sub/b.py",
-            overwrite=False,
+            is_folder=True,
         ),
     ]
 
 
 def test_move_folder_not_found_returns_not_found() -> None:
-    svc = _svc()
+    svc = _svc(
+        move_result=_operation_result(
+            success=False,
+            status="failed",
+            paths=["/ws/missing"],
+            conflict_file="/ws/missing",
+            conflict_reason="not_found",
+        )
+    )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        raise FileNotFoundError(folder)
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_move_file,
-            {
-                "src_path": "/ws/missing",
-                "target_path": "/ws/dst",
-                "is_folder": True,
-            },
-            ctx,
-        )
+    result = _run(
+        daytona_move_file,
+        {
+            "src_path": "/ws/missing",
+            "target_path": "/ws/dst",
+            "is_folder": True,
+        },
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is True
     assert payload["status"] == "not_found"
-    svc.move_file.assert_not_called()
+    svc.move_file.assert_called_once()
 
 
 def test_move_folder_with_is_folder_on_regular_file_fails() -> None:
-    svc = _svc()
+    svc = _svc(
+        move_result=_operation_result(
+            success=False,
+            status="failed",
+            paths=["/ws/a.py"],
+            conflict_file="/ws/a.py",
+            conflict_reason="not_a_directory",
+        )
+    )
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        raise NotADirectoryError(folder)
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_move_file,
-            {
-                "src_path": "/ws/a.py",
-                "target_path": "/ws/b.py",
-                "is_folder": True,
-            },
-            ctx,
-        )
+    result = _run(
+        daytona_move_file,
+        {
+            "src_path": "/ws/a.py",
+            "target_path": "/ws/b.py",
+            "is_folder": True,
+        },
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is True
     assert payload["status"] == "failed"
-    assert "is_folder=True" in payload["message"]
-    svc.move_file.assert_not_called()
+    assert payload["conflict_reason"] == "not_a_directory"
+    svc.move_file.assert_called_once()
 
 
-def test_move_folder_empty_short_circuits_to_moved() -> None:
-    svc = _svc()
+def test_move_folder_empty_result_reports_moved() -> None:
+    svc = _svc(move_result=_operation_result(success=True, paths=[]))
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
-    async def fake_list(_ctx, folder):
-        return []
-
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_move_file,
-            {
-                "src_path": "/ws/empty_dir",
-                "target_path": "/ws/dst_dir",
-                "is_folder": True,
-            },
-            ctx,
-        )
+    result = _run(
+        daytona_move_file,
+        {
+            "src_path": "/ws/empty_dir",
+            "target_path": "/ws/dst_dir",
+            "is_folder": True,
+        },
+        ctx,
+    )
 
     payload = json.loads(result.output)
     assert result.is_error is False
     assert payload["status"] == "moved"
     assert payload["paths"] == []
-    svc.move_file.assert_not_called()
+    svc.move_file.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -606,26 +577,21 @@ def test_delete_file_hard_block_reads_path_not_file_path() -> None:
 
 
 def test_delete_folder_member_offender_listing() -> None:
-    """is_folder=True: tool body enumerates, denies listing only outside-scope members."""
+    """is_folder=True: pre-hook asks service for members and denies offenders."""
     svc = _svc()
     ctx = _coord_ctx(svc, write_scope=["pkg/"])
 
-    async def fake_list(_ctx, folder):
-        return [
-            "/ws/pkg/a.py",
-            "/ws/pkg/b.py",
-            "/ws/other/c.py",
-        ]
+    svc.list_folder_files.return_value = [
+        "/ws/pkg/a.py",
+        "/ws/pkg/b.py",
+        "/ws/other/c.py",
+    ]
 
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_delete_file,
-            {"path": "/ws/pkg", "is_folder": True},
-            ctx,
-        )
+    result = _run(
+        daytona_delete_file,
+        {"path": "/ws/pkg", "is_folder": True},
+        ctx,
+    )
 
     assert result.is_error is True
     assert result.metadata["blocked_by"] == "pre_hook"
@@ -634,6 +600,7 @@ def test_delete_folder_member_offender_listing() -> None:
     assert "/ws/pkg/a.py" not in result.output
     assert "/ws/pkg/b.py" not in result.output
     svc.delete_file.assert_not_called()
+    svc.list_folder_files.assert_called_once_with("/ws/pkg")
 
 
 def test_move_src_deny_blocks_out_of_scope_src_test_file() -> None:
@@ -671,30 +638,25 @@ def test_move_dst_advisory_suppressed_when_src_in_scope() -> None:
 
 
 def test_move_folder_member_offender_listing() -> None:
-    """is_folder=True move: member-level scope check denies listing only offenders."""
+    """is_folder=True move: pre-hook asks service for members and denies offenders."""
     svc = _svc()
     ctx = _coord_ctx(svc, write_scope=["pkg/"])
 
-    async def fake_list(_ctx, folder):
-        return [
-            "/ws/pkg/a.py",
-            "/ws/pkg/b.py",
-            "/ws/other/stowaway.py",
-        ]
+    svc.list_folder_files.return_value = [
+        "/ws/pkg/a.py",
+        "/ws/pkg/b.py",
+        "/ws/other/stowaway.py",
+    ]
 
-    with patch(
-        "tools.daytona_toolkit.delete_move_tool._list_folder_files",
-        new=fake_list,
-    ):
-        result = _run(
-            daytona_move_file,
-            {
-                "src_path": "/ws/pkg",
-                "target_path": "/ws/moved_pkg",
-                "is_folder": True,
-            },
-            ctx,
-        )
+    result = _run(
+        daytona_move_file,
+        {
+            "src_path": "/ws/pkg",
+            "target_path": "/ws/moved_pkg",
+            "is_folder": True,
+        },
+        ctx,
+    )
 
     assert result.is_error is True
     assert result.metadata["blocked_by"] == "pre_hook"
@@ -702,3 +664,4 @@ def test_move_folder_member_offender_listing() -> None:
     assert "/ws/other/stowaway.py" in result.output
     assert "/ws/pkg/a.py" not in result.output
     svc.move_file.assert_not_called()
+    svc.list_folder_files.assert_called_once_with("/ws/pkg")

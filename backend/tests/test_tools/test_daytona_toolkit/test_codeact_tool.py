@@ -46,6 +46,7 @@ async def _svc_cmd_passthrough(
     team_run_id="",
     agent_run_id="",
     task_id="",
+    stdin=None,
     attribute_changes=True,
 ):
     """Dispatch through the sandbox's process.exec so existing fakes still work.
@@ -54,7 +55,7 @@ async def _svc_cmd_passthrough(
     exec-through behavior; the audit layer is covered by
     ``test_git_workspace_auditor.py``.
     """
-    del description, agent_id, team_run_id, agent_run_id, task_id, attribute_changes
+    del description, agent_id, team_run_id, agent_run_id, task_id, stdin, attribute_changes
     response = await sandbox.process.exec(command, timeout=timeout)
     stdout = getattr(response, "result", "") or ""
     _, exit_code = codeact_tool_module._extract_exit_code(stdout, fallback_exit_code=0)
@@ -84,6 +85,12 @@ def _make_manifest(
         "reads": reads or [],
         "error": error,
     }
+
+
+def _inline_manifest_output(manifest=None, *, prefix: str = "") -> str:
+    payload = manifest or _make_manifest()
+    rendered = json.dumps({"manifest": payload, "status": payload.get("status", "ok")})
+    return f"{prefix}\n{rendered}" if prefix else rendered
 
 
 def _make_sandbox(
@@ -119,9 +126,7 @@ def _make_sandbox(
                 }
             )
             return MagicMock(result=payload, exit_code=0)
-        default_exec = exec_stdout or json.dumps(
-            {"manifest": "/tmp/codeact-xxx.json", "status": "ok"}
-        )
+        default_exec = exec_stdout or _inline_manifest_output(manifest)
         return MagicMock(result=default_exec, exit_code=0)
 
     sb.process.exec = AsyncMock(side_effect=_exec)
@@ -134,11 +139,10 @@ def _assert_ok(result) -> dict:
     return json.loads(result.output)
 
 
-def _written_wrapper(sb) -> str:
-    command = sb.process.exec.await_args_list[0].args[0]
-    match = re.search(r"/tmp/codeact-wrapper-[^\s]+\.py\s+([A-Za-z0-9+/=]+)", command)
-    assert match is not None
-    return base64.b64decode(match.group(1)).decode("utf-8")
+def _submitted_wrapper(svc) -> str:
+    wrapper = svc.cmd.await_args.kwargs.get("stdin")
+    assert isinstance(wrapper, str)
+    return wrapper
 
 
 async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
@@ -238,45 +242,43 @@ async def test_codeact_api_schema_requires_one_of_command_or_code():
     assert "anyOf" not in schema["properties"]["mode"]
 
 
-async def test_build_wrapper_uses_write_through_and_guarded_imports():
+async def test_build_wrapper_uses_write_through_without_inline_guardrails():
     wrapper = _build_wrapper(
         "write('file.txt', 'ok')",
         run_id="abcd1234",
         cwd="/repo",
-        disable_codeact_file_edits=False,
     )
     assert 'with open(resolved, "w", encoding="utf-8")' in wrapper
-    assert "_guarded_import" in wrapper
-    assert "_BLOCKED_MODULES" in wrapper
+    assert "_guarded_import" not in wrapper
+    assert "_BLOCKED_MODULES" not in wrapper
     assert "_ENFORCE_TEAM_SHELL_POLICY" not in wrapper
-    assert "_DISABLE_CODEACT_FILE_EDITS = False" in wrapper
+    assert "_DISABLE_CODEACT_FILE_EDITS" not in wrapper
 
 
-async def test_build_wrapper_can_disable_python_file_edits():
+async def test_build_wrapper_has_no_inline_file_edit_guards():
     wrapper = _build_wrapper(
         "write('file.txt', 'ok')",
         run_id="abcd1234",
         cwd="/repo",
-        disable_codeact_file_edits=True,
     )
-    assert "_DISABLE_CODEACT_FILE_EDITS = True" in wrapper
-    assert "raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)" in wrapper
-    assert '_sandbox_builtins["open"] = _guarded_open' in wrapper
-    assert "_codeact_shell_file_edit_error" in wrapper
-    assert "_CODEACT_SHELL_FILE_EDIT_PATTERNS" in wrapper
+    assert "_DISABLE_CODEACT_FILE_EDITS" not in wrapper
+    assert "raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)" not in wrapper
+    assert '_sandbox_builtins["open"] = _guarded_open' not in wrapper
+    assert "_codeact_shell_file_edit_error" not in wrapper
+    assert "_CODEACT_SHELL_FILE_EDIT_PATTERNS" not in wrapper
     assert "_codeact_shell_file_read_error" not in wrapper
     assert "CodeAct read() helper" not in wrapper
     assert "Python open() file inspection" not in wrapper
     assert "linecache.getlines" not in wrapper
     assert "inspect.getsource" not in wrapper
     assert "pathlib.Path.read_text" not in wrapper
-    assert "io.open = _guarded_io_open" in wrapper
+    assert "io.open = _guarded_io_open" not in wrapper
 
 
 async def test_build_exec_command_runs_wrapper_from_repo_cwd():
-    command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/repo")
+    command = _build_exec_command(cwd="/repo")
     assert "bash -o pipefail -lc" in command
-    assert 'cd "/repo" && python3 /tmp/codeact-wrapper-abcd1234.py' in command
+    assert 'cd "/repo" && python3 -' in command
 
 
 async def test_normalize_team_shell_command_strips_repo_cd_and_capture_plumbing():
@@ -356,7 +358,7 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
 
 async def test_python_mode_reports_git_workspace_abort_as_error():
     manifest = _make_manifest()
-    exec_stdout = json.dumps({"manifest": "/tmp/codeact-xxx.json", "status": "ok"})
+    exec_stdout = _inline_manifest_output(manifest)
     sb = _make_sandbox(exec_stdout=exec_stdout, manifest=manifest)
     svc = MagicMock()
     svc.cmd = AsyncMock(
@@ -560,7 +562,7 @@ async def test_team_python_mode_allows_file_read_side_channels(code):
     )
 
     _assert_ok(result)
-    assert sb.process.exec.await_count >= 3
+    assert sb.process.exec.await_count >= 1
     svc.cmd.assert_awaited_once()
 
 
@@ -627,10 +629,11 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
         team_run_id="",
         agent_run_id="",
         task_id="",
+        stdin=None,
         attribute_changes=True,
     ):
-        del sandbox, command, timeout, description, agent_id, team_run_id, agent_run_id, task_id
-        assert attribute_changes is False
+        del sandbox, command, timeout, description, agent_id, team_run_id, agent_run_id, task_id, stdin
+        assert attribute_changes is True
         return SimpleNamespace(
             result=_shell_exec_output("ujson ok", 0),
             exit_code=0,
@@ -740,7 +743,7 @@ async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_f
 
 async def test_python_mode_preserves_script_stdout_before_manifest_line():
     manifest = _make_manifest()
-    exec_stdout = 'hello from codeact\n{"manifest": "/tmp/codeact-xxx.json", "status": "ok"}'
+    exec_stdout = _inline_manifest_output(manifest, prefix="hello from codeact")
     sb = _make_sandbox(exec_stdout=exec_stdout, manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
 
@@ -771,16 +774,15 @@ async def test_python_mode_counts_manifest_writes():
 
     data = _assert_ok(result)
     assert data["files_written"] == 3
-    assert sb.process.exec.await_count >= 3
+    assert sb.process.exec.await_count >= 1
 
 
-async def test_python_mode_error_uses_updated_guidance():
-    error_result = json.dumps({"manifest": "/tmp/xxx.json", "status": "error"})
+async def test_python_mode_error_reports_wrapper_manifest_without_inline_guidance():
     manifest = _make_manifest(
         status="error",
         error="ImportError: import 'subprocess' is blocked in codeact.",
     )
-    sb = _make_sandbox(exec_stdout=error_result, manifest=manifest)
+    sb = _make_sandbox(exec_stdout=_inline_manifest_output(manifest), manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
 
     result = await daytona_codeact.execute(
@@ -790,7 +792,7 @@ async def test_python_mode_error_uses_updated_guidance():
 
     assert result.is_error
     assert "ImportError" in result.output
-    assert "daytona_codeact(command=" in result.output
+    assert "daytona_codeact(command=" not in result.output
 
 
 @pytest.mark.parametrize(
@@ -800,7 +802,7 @@ async def test_python_mode_error_uses_updated_guidance():
             "import subprocess\nsubprocess.run(['python', '-m', 'pytest'])",
             "ImportError: import 'subprocess' is blocked in codeact.",
             "ImportError",
-            True,
+            False,
         ),
         (
             "import os\nos.system('pwd')",
@@ -814,16 +816,16 @@ async def test_python_mode_error_uses_updated_guidance():
         ),
     ],
 )
-async def test_coordinated_python_mode_enforces_runtime_shell_policy(
+async def test_coordinated_python_mode_uses_hooks_not_runtime_shell_policy(
     code,
     manifest_error,
     expected_fragment,
     expect_guidance,
 ):
-    error_result = json.dumps({"manifest": "/tmp/codeact-xxx.json", "status": "error"})
+    manifest = _make_manifest(status="error", error=manifest_error)
     sb = _make_sandbox(
-        exec_stdout=error_result,
-        manifest=_make_manifest(status="error", error=manifest_error),
+        exec_stdout=_inline_manifest_output(manifest),
+        manifest=manifest,
     )
     ctx = _ctx(
         {
@@ -850,7 +852,7 @@ async def test_coordinated_python_mode_enforces_runtime_shell_policy(
         assert result.metadata["blocked_by"] == "pre_hook"
         sb.process.exec.assert_not_awaited()
     else:
-        assert sb.process.exec.await_count >= 3
+        assert sb.process.exec.await_count >= 1
 
 
 async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
@@ -890,12 +892,13 @@ async def test_python_mode_normalizes_literal_shell_calls_for_team_agents():
         ]
     )
     sb = _make_sandbox(manifest=manifest)
+    svc = _ci_service()
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "ci_service": _ci_service(),
+            "ci_service": svc,
         }
     )
 
@@ -910,7 +913,7 @@ async def test_python_mode_normalizes_literal_shell_calls_for_team_agents():
     texts = _notification_texts(events)
     assert any("2>&1" in text for text in texts)
     assert any("cd <repo-root>" in text for text in texts)
-    wrapper = _written_wrapper(sb)
+    wrapper = _submitted_wrapper(svc)
     match = re.search(r'_CODE = base64\.b64decode\("([^"]+)"\)', wrapper)
     assert match is not None
     normalized_code = base64.b64decode(match.group(1)).decode("utf-8")

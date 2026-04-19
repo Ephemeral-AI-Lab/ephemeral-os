@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Sequence
 from typing import Any
 
 from code_intelligence.analysis.symbol_index import SymbolIndex
@@ -25,11 +24,7 @@ from code_intelligence.routing.backend_protocol import (
 )
 from code_intelligence.routing.command_executor import AuditedCommandExecutor
 from code_intelligence.routing.content_manager import ContentManager
-from code_intelligence.routing.mutation_service import (
-    CommitSpecRequest,
-    MutationService,
-    RenameCommitRequest,
-)
+from code_intelligence.routing.mutation_service import MutationService
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
 from code_intelligence.routing.registry import (
     dispose_all_code_intelligence,
@@ -38,15 +33,12 @@ from code_intelligence.routing.registry import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
-from code_intelligence.routing.rename_planner import RenamePlanRequest, RenamePlanner
+from code_intelligence.routing.rename_planner import RenamePlanner
 from code_intelligence.routing.scope_status import build_scope_status
 from code_intelligence.routing.telemetry import build_status, build_telemetry
 
 __all__ = [
     "CodeIntelligenceService",
-    "CommitSpecRequest",
-    "RenameCommitRequest",
-    "RenamePlanRequest",
     "dispose_all_code_intelligence",
     "dispose_code_intelligence",
     "get_all_services_status",
@@ -156,7 +148,6 @@ class CodeIntelligenceService:
         old_sandbox = getattr(self.lsp_client, "_sandbox", None)
         self.lsp_client._sandbox = sandbox
         if old_sandbox is not sandbox:
-            self.lsp_client._worker_enabled_default = False
             self.lsp_client.reset_backend_availability()
             self._rename_planner.clear_cache()
         self._content.bind_sandbox(sandbox)
@@ -164,10 +155,6 @@ class CodeIntelligenceService:
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
-
-    @property
-    def _git_workspace_auditor(self) -> Any:
-        return self._command_executor._git_workspace_auditor
 
     @property
     def _git_workspace_pool(self) -> Any:
@@ -191,11 +178,8 @@ class CodeIntelligenceService:
     def rename_symbol_plan(self, file_path: str, line: int, character: int, new_name: str):
         return self._rename_planner.rename_symbol_plan(file_path, line, character, new_name)
 
-    def rename_symbol_plans_many(self, requests: Sequence[RenamePlanRequest | dict[str, Any]]):
+    def rename_symbol_plans_many(self, requests: Any):
         return self._rename_planner.rename_symbol_plans_many(requests)
-
-    def preview_rename_symbol_plan(self, file_path: str, line: int, character: int, new_name: str):
-        return self._rename_planner.preview_rename_symbol_plan(file_path, line, character, new_name)
 
     def apply_edit(self, request):
         return self._mutations.apply_edit(request)
@@ -205,8 +189,11 @@ class CodeIntelligenceService:
             changes, agent_id=agent_id, edit_type=edit_type, description=description,
         )
 
-    def commit_specs_many(self, requests: Sequence[CommitSpecRequest | dict[str, Any]]):
+    def commit_specs_many(self, requests: Any):
         return self._mutations.commit_specs_many(requests)
+
+    def list_folder_files(self, folder: str):
+        return self._content.list_folder_files(folder)
 
     def write_file(self, specs, *, agent_id: str = "", description: str = ""):
         return self._mutations.write_file(specs, agent_id=agent_id, description=description)
@@ -224,7 +211,7 @@ class CodeIntelligenceService:
     def commit_rename_plan(self, plan, *, agent_id: str = "", description: str = ""):
         return self._mutations.commit_rename_plan(plan, agent_id=agent_id, description=description)
 
-    def commit_rename_plans_many(self, requests: Sequence[RenameCommitRequest | dict[str, Any]]):
+    def commit_rename_plans_many(self, requests: Any):
         return self._mutations.commit_rename_plans_many(requests)
 
     def delete_file(self, paths, *, agent_id: str = "", description: str = ""):

@@ -70,7 +70,18 @@ The Code Intelligence subsystem orchestrates multi-backend semantic and structur
 
 ### RoutingService (CodeIntelligenceService)
 
-Singleton per sandbox. Orchestrates all code intelligence operations: symbol queries, references, diagnostics, edits, and telemetry.
+Singleton per sandbox. `CodeIntelligenceService` is intentionally a thin facade:
+it wires per-sandbox collaborators together, owns initialization and sandbox
+rebinding, and delegates domain behavior to focused modules. Keep new behavior in
+the owner module below rather than growing `routing/service.py`.
+
+**Responsibility Owners:**
+- `routing/query_router.py`: priority-based semantic query dispatch
+- `routing/rename_planner.py`: rename planning, dry-run preview, and rename fast paths
+- `routing/mutation_service.py`: typed write/edit/delete/move and rename-plan commits
+- `routing/command_executor.py`: `svc.cmd(...)` Git workspace audit execution
+- `routing/scope_status.py`: live scope coordination packet generation
+- `routing/telemetry.py`: status and telemetry response shaping
 
 **Key Methods:**
 - `find_definitions(file_path, symbol, line, character)` → `list[SymbolInfo]`
@@ -79,7 +90,7 @@ Singleton per sandbox. Orchestrates all code intelligence operations: symbol que
 - `diagnostics(file_path)` → `list[Diagnostic]`
 - `query_symbols(query)` → `list[SymbolInfo]` (symbol index only)
 - `apply_edit(request)` → `EditResult` (service-level edit helper)
-- `exec_process_operation(sandbox, command, ...)` → process result with audited workspace mutations
+- `cmd(sandbox, command, ...)` → process result with audited workspace mutations
 
 **Initialization:**
 - Symbol index builds asynchronously at first `ensure_initialized()` call
