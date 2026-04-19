@@ -152,7 +152,7 @@ class Executor:
         if summary_type == "success":
             return AgentResult(summary=summary)
 
-        if summary_type == "fail":
+        if summary_type == "request_replan":
             return ReplanRequest(reason=summary)
 
         # submit_plan or submit_replan was called.

@@ -683,6 +683,9 @@ async def test_failed_terminal_tool_call_does_not_stop_query_loop(tmp_path: Path
                 )
             ),
             _text_reply("I will repair the payload."),
+            _text_reply("still thinking"),
+            _text_reply("still thinking"),
+            _text_reply("still thinking"),
         ]
     )
     context = _make_context(
@@ -695,14 +698,96 @@ async def test_failed_terminal_tool_call_does_not_stop_query_loop(tmp_path: Path
     events = await _collect_events(context, "submit the plan")
 
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
-    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
 
     assert len(tool_completes) == 1
     assert tool_completes[0].tool_name == "submit_plan"
     assert tool_completes[0].is_error is True
-    assert len(turns) == 2
-    assert turns[-1].message.text == "I will repair the payload."
     assert context.exit_reason == QueryExitReason.TEXT_RESPONSE
+    assert context.terminal_nudge_retries_used == 3
+
+
+@pytest.mark.asyncio
+async def test_terminal_nudge_recovers_with_tool_call(tmp_path: Path):
+    submit_plan = SubmitPlanTool()
+    registry = _make_registry(submit_plan)
+    client = FakeApiClient(
+        [
+            _text_reply("Here is my plan in prose."),
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"new_tasks": []},
+                )
+            ),
+        ]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+    )
+
+    events = await _collect_events(context, "submit the plan")
+
+    assert context.exit_reason == QueryExitReason.TOOL_STOP
+    assert submit_plan.calls == 1
+    assert context.terminal_nudge_retries_used == 1
+    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
+    assert len(turns) == 2
+
+
+@pytest.mark.asyncio
+async def test_terminal_nudge_extends_tool_budget_once(tmp_path: Path):
+    submit_plan = SubmitPlanTool()
+    registry = _make_registry(submit_plan)
+    client = FakeApiClient(
+        [
+            _text_reply("narration 1"),
+            _text_reply("narration 2"),
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"new_tasks": []},
+                )
+            ),
+        ]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+        tool_call_limit=1,
+    )
+
+    await _collect_events(context, "submit the plan")
+
+    assert context.exit_reason == QueryExitReason.TOOL_STOP
+    assert context.terminal_nudge_retries_used == 2
+    assert context.terminal_nudge_budget_extended is True
+    assert context.tool_call_limit == 11
+
+
+@pytest.mark.asyncio
+async def test_terminal_nudge_capped_at_three_retries(tmp_path: Path):
+    registry = _make_registry(SubmitPlanTool())
+    client = FakeApiClient(
+        [_text_reply("text only") for _ in range(5)]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+    )
+
+    await _collect_events(context, "submit the plan")
+
+    assert context.exit_reason == QueryExitReason.TEXT_RESPONSE
+    assert context.terminal_nudge_retries_used == 3
 
 
 @pytest.mark.asyncio

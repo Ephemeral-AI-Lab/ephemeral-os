@@ -162,11 +162,11 @@ def _note_budget_issues(
 
 
 class SubmitTaskSummaryInput(BaseModel):
-    type: Literal["success", "fail"] = Field(
+    type: Literal["success", "request_replan"] = Field(
         ...,
         description=(
             "Outcome type. 'success' = task completed successfully. "
-            "'fail' = task cannot be completed (triggers replan)."
+            "'request_replan' = task cannot be completed and needs replanning."
         ),
     )
     content: str = Field(
@@ -174,8 +174,8 @@ class SubmitTaskSummaryInput(BaseModel):
         min_length=1,
         description=(
             "Summary of work done. For success: describe what was accomplished "
-            "and files changed. For fail: describe what went wrong and why "
-            "a replan is needed. Must contain non-whitespace text."
+            "and files changed. For request_replan: describe what went wrong "
+            "and why a replan is needed. Must contain non-whitespace text."
         ),
     )
 
@@ -190,7 +190,9 @@ class SubmitTaskSummaryInput(BaseModel):
 class SubmitTaskSummaryOutput(BaseModel):
     task_id: str = Field(..., description="Runtime-stamped task id.")
     agent_name: str = Field(..., description="Runtime-stamped submitting agent name.")
-    type: Literal["success", "fail"] = Field(..., description="Submitted outcome type.")
+    type: Literal["success", "request_replan"] = Field(
+        ..., description="Submitted outcome type."
+    )
     content: str = Field(..., description="Submitted task outcome content.")
 
 
@@ -198,8 +200,9 @@ class SubmitTaskSummaryTool(BaseTool):
     name = "submit_task_summary"
     description = (
         "Submit your task outcome. Call with type='success' when work is done, "
-        "or type='fail' when the task cannot be completed and needs replanning. "
-        "This is your terminal action — the agent loop ends after this call."
+        "or type='request_replan' when the task cannot be completed and needs "
+        "replanning. This is your terminal action — the agent loop ends after "
+        "this call."
     )
     short_description = "Submit task outcome."
     input_model = SubmitTaskSummaryInput

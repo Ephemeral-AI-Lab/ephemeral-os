@@ -90,7 +90,7 @@ def _assert_test_file_write_error(result: str | None, rel_path: str) -> None:
     assert rel_path in result
     assert "read/verify-only" in result
     assert "production owner" in result
-    assert "submit_task_summary(type='fail'" in result
+    assert "submit_task_summary(type='request_replan'" in result
     assert "explicitly authorize test-file edits" in result
 
 
@@ -197,9 +197,9 @@ def test_write_warning_emitted_for_developer_outside_scope():
     assert "advisory" in result
     assert "outside write_scope" in result
     assert "adjacent shim" not in result
-    assert "submit_task_summary(type='fail')" in result
+    assert "submit_task_summary(type='request_replan')" in result
     assert "compatibility shim" in result
-    assert "your next tool call must be submit_task_summary(type='fail')" in result
+    assert "your next tool call must be submit_task_summary(type='request_replan')" in result
     assert "Do not read, edit, inspect, run tests, or verify" in result
     assert "need to make tests collect is not an exception" in result
 
@@ -229,7 +229,7 @@ def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
 
     assert result is not None
     assert "3+ outside-scope warnings" in result
-    assert "your next tool call must be submit_task_summary(type='fail')" in result
+    assert "your next tool call must be submit_task_summary(type='request_replan')" in result
     assert "Do not read, edit, inspect, run tests, or verify" in result
     assert _team_repo_write_error(
         ctx,
@@ -254,7 +254,7 @@ def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gat
         assert "absent test-derived module path" in description
         assert "test files are read/verify-only" in description
         assert "explicit authorization" in description
-        assert "submit `submit_task_summary(type='fail')`" in description
+        assert "submit `submit_task_summary(type='request_replan')`" in description
         assert "outside-scope guidance is not a runtime hard gate" in description
 
 

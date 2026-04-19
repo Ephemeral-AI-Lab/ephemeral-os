@@ -9,7 +9,7 @@ Use this skill only after verification fails. Triage failures for replan. Never 
 
 ## Conditional references
 
-- Must load `triage-format` when you need to produce a manual FAIL summary because `submit_task_summary(type='fail')` is unavailable.
+- Must load `triage-format` when you need to produce a manual FAIL summary because `submit_task_summary(type='request_replan')` is unavailable.
 - Must load `triage-format` when multiple failing clusters need to be grouped into one structured report.
 
 ## Workflow
@@ -22,7 +22,7 @@ Use this skill only after verification fails. Triage failures for replan. Never 
 
 ## Action rules
 
-- If `submit_task_summary(type='fail')` is available, use it for any failure.
+- If `submit_task_summary(type='request_replan')` is available, use it for any failure.
 - If the needed tool is absent, emit the same triage in the final FAIL summary.
 - Must keep `REPLAN_REASON`, `FAIL_TO_PASS`, `ROOT_CAUSE_PACKET`, one `CLUSTER:` block per root cause, and `PASS_TO_PASS` results explicit.
 

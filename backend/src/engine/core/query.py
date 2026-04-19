@@ -90,6 +90,12 @@ class QueryContext:
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
+    terminal_nudge_retries_used: int = 0
+    terminal_nudge_budget_extended: bool = False
+
+
+MAX_TERMINAL_NUDGE_RETRIES = 3
+TERMINAL_NUDGE_BUDGET_BONUS = 10
 
 
 def _should_defer_stream_tool_dispatch(
@@ -494,6 +500,36 @@ async def _run_query_loop(
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
+            if (
+                context.terminal_tools
+                and context.terminal_nudge_retries_used < MAX_TERMINAL_NUDGE_RETRIES
+            ):
+                context.terminal_nudge_retries_used += 1
+                if (
+                    context.tool_call_limit is not None
+                    and not context.terminal_nudge_budget_extended
+                ):
+                    context.tool_call_limit += TERMINAL_NUDGE_BUDGET_BONUS
+                    context.terminal_nudge_budget_extended = True
+                tool_list = ", ".join(sorted(context.terminal_tools))
+                attempt = context.terminal_nudge_retries_used
+                nudge_text = (
+                    f"[terminal-tool reminder] Your previous turn ended with text and no tool_use. "
+                    f"You MUST end this run by calling one of the terminal submission tools: {tool_list}. "
+                    f"Do not reply with narration. Call the correct terminal tool now. "
+                    f"(nudge {attempt}/{MAX_TERMINAL_NUDGE_RETRIES})"
+                )
+                nudge_message = ConversationMessage.from_user_text(nudge_text)
+                display_messages.append(nudge_message)
+                prompt_report.record(
+                    {
+                        "event": "terminal_nudge",
+                        "seq": prompt_report.next_seq(),
+                        "attempt": attempt,
+                        "message": nudge_message.model_dump(mode="json"),
+                    }
+                )
+                continue
             if background_manager is None or not background_manager.has_pending():
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 return

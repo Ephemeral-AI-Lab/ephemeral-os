@@ -65,7 +65,12 @@ class TeamRunStatus(str, Enum):
 
 
 TERMINAL_STATUSES: frozenset[TaskStatus] = frozenset(
-    {TaskStatus.DONE, TaskStatus.FAILED, TaskStatus.CANCELLED}
+    {
+        TaskStatus.DONE,
+        TaskStatus.FAILED,
+        TaskStatus.CANCELLED,
+        TaskStatus.REQUEST_REPLAN,
+    }
 )
 
 
@@ -154,11 +159,16 @@ class Task:
         """True when this task no longer contributes to its parent's success.
 
         A task is detached once it has terminated without producing a `done`
-        outcome — i.e. `failed` or `cancelled`. Parents treat detached children
-        as resolved-but-skipped when deciding promotion (see
-        ``fetch_expanded_parent_candidate``).
+        outcome — i.e. `failed`, `cancelled`, or `request_replan` (A is
+        terminal at REQUEST_REPLAN; recovery lives on R under the parent).
+        Parents treat detached children as resolved-but-skipped when deciding
+        promotion (see ``fetch_expanded_parent_candidate``).
         """
-        return self.status in (TaskStatus.FAILED, TaskStatus.CANCELLED)
+        return self.status in (
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+            TaskStatus.REQUEST_REPLAN,
+        )
 
 
 # ---------------------------------------------------------------------------

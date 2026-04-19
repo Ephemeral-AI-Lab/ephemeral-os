@@ -113,7 +113,7 @@ def test_budget_warning_guides_validator_to_wrap_up():
     ctx.tool_metadata["role"] = "reviewer"
     _, event = build_budget_warning(ctx)
     assert "submit_task_summary(type='success')" in event.text
-    assert "submit_task_summary(type='fail')" in event.text
+    assert "submit_task_summary(type='request_replan')" in event.text
 
 
 def test_budget_warning_emits_once_per_remaining_count():

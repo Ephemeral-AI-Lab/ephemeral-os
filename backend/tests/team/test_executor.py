@@ -145,11 +145,11 @@ def test_read_result_success_summary():
 
 
 def test_read_result_fail_triggers_replan():
-    """When task_summary_type='fail', _read_result returns ReplanRequest."""
+    """When task_summary_type='request_replan', _read_result returns ReplanRequest."""
     executor, _ = _make_executor()
     ctx = TeamAgentContext(
         tool_metadata={
-            "task_summary_type": "fail",
+            "task_summary_type": "request_replan",
             "task_summary": "Auth spans 3 services, need separate tasks",
         }
     )
@@ -200,7 +200,7 @@ async def test_validator_fail_summary_dispatches_replan_request():
         return ctx
 
     async def _runner(_defn, run_ctx: TeamAgentContext) -> None:
-        run_ctx.tool_metadata["task_summary_type"] = "fail"
+        run_ctx.tool_metadata["task_summary_type"] = "request_replan"
         run_ctx.tool_metadata["task_summary"] = (
             "FAIL: pytest tests/test_auth.py::test_session still red. "
             "Owner spans auth/session.py and auth/cache.py; needs replanning."
@@ -689,12 +689,7 @@ def test_run_forever_fails_team_run_when_worker_error_cleanup_hits_graph_invaria
 def test_read_result_missing_submission_gets_fail():
     """When no terminal submission is present, _read_result returns a ReplanRequest."""
     executor, _ = _make_executor()
-    ctx = TeamAgentContext(
-        tool_metadata={
-            "task_summary_type": "fail",
-            "task_summary": "Agent did not call a terminal submission tool.",
-        }
-    )
+    ctx = TeamAgentContext(tool_metadata={})
     task = SimpleNamespace(id="task-1", agent_name="developer")
     result = executor._read_result(task, ctx)
     assert isinstance(result, ReplanRequest)

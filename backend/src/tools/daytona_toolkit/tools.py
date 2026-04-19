@@ -474,7 +474,7 @@ async def daytona_read_file(
         "attempt itself is a failed lane. "
         "In coordinated team lanes, if live evidence says the target is an outside-scope "
         "owner, missing module, compatibility shim, re-export, or import bridge, do not "
-        "call this tool; submit `submit_task_summary(type='fail')` so replanning can widen "
+        "call this tool; submit `submit_task_summary(type='request_replan')` so replanning can widen "
         "or resequence the task. Test imports, collection errors, and target counts naming "
         "the path are not exceptions, and `scope_paths` alone is not enough to create an "
         "absent test-derived module path. In coordinated team lanes, test files are read/verify-only "

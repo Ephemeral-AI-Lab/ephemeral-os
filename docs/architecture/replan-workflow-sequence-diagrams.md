@@ -18,10 +18,9 @@ all dependencies are `DONE`.
 
 An `EXPANDED` parent's children fall into two sets:
 
-- **Detached**: `FAILED`, `CANCELLED`. Ignored for promotion — treated as
-  resolved but not successful.
-- **Non-detached / live**: `PENDING`, `READY`, `RUNNING`, `EXPANDED`,
-  `REQUEST_REPLAN`, `DONE`.
+- **Detached**: `FAILED`, `CANCELLED`, `REQUEST_REPLAN`. All three are terminal
+  and are ignored for promotion — treated as resolved but not successful.
+- **Non-detached / live**: `PENDING`, `READY`, `RUNNING`, `EXPANDED`, `DONE`.
 
 Promotion rule: the parent transitions out of `EXPANDED` when every
 non-detached child is `DONE`.
@@ -125,7 +124,7 @@ sequenceDiagram
     TC->>TS: mark R DONE
     TS->>D: promote dependents whose pending deps reach 0
     TC->>TS: finalize_replanned_origin(R)
-    TS->>A: mark A FAILED without cascade
+    TS->>A: record replanned_by on A (A stays REQUEST_REPLAN; terminal)
 ```
 
 ## 3. Replanner Creates Direct Children
@@ -159,7 +158,7 @@ sequenceDiagram
         TS->>R: mark R DONE
         TS->>D: promote downstream dependents
         TC->>TS: finalize_replanned_origin(R)
-        TS->>A: mark A FAILED without cascade
+        TS->>A: record replanned_by on A (A stays REQUEST_REPLAN; terminal)
     else every child is detached (0 DONE, all FAILED/CANCELLED)
         TS->>R: mark R FAILED (all_children_detached)
         Note over D,A: R joins parent's detached set; propagates up.
@@ -271,8 +270,8 @@ sequenceDiagram
         Tool-->>TC: submitted_replan
         TC->>PE: apply_replan(...)
         PE-->>TC: InvalidPlan
-        TC->>A: fail original REQUEST_REPLAN task with replan_apply_failed
-        TC-->>R: error propagated
+        Note over A: A stays REQUEST_REPLAN (already terminal).
+        TC-->>R: error propagated (R fails via normal worker path)
     else task budget exhausted at runtime layer
         PE-->>Ex: BudgetExceeded
         Ex->>Run: fail_fast(tasks_budget_exhausted)
@@ -280,14 +279,11 @@ sequenceDiagram
 ```
 
 Tool-layer validation is recoverable inside the replanner turn. Runtime apply
-failure fails the original request_replan task so it cannot remain stuck.
-Task-budget exhaustion is handled like other run-level budget exhaustion: the
-executor terminates the team run via `fail_fast`.
-
-Note that `TaskCenter.apply_replan` only marks `A` failed on the InvalidPlan
-runtime branch. The exception still propagates to the executor; if the executor
-treats it as an unrecoverable worker error, `R` is failed through the normal
-replanner failure path.
+failure propagates the exception; A is already terminal at REQUEST_REPLAN so
+no origin-side transition is needed. The executor treats the exception as an
+unrecoverable worker error, and `R` is failed through the normal replanner
+failure path. Task-budget exhaustion is handled like other run-level budget
+exhaustion: the executor terminates the team run via `fail_fast`.
 
 ### Idempotency
 
@@ -319,15 +315,13 @@ sequenceDiagram
     TC->>TS: check R.fired_by_task_id
     TS-->>TC: A
 
-    alt A is still REQUEST_REPLAN
-        TC->>TS: fail_with_cascade(A, replanner_failed)
-        TS->>A: mark FAILED
-        TS->>D: cascade cancel active dependents still affected
-    end
-
+    Note over A: A stays REQUEST_REPLAN (terminal).
     TC->>TS: fail_task(R, reason)
     TS->>R: mark FAILED
+    TS->>D: cascade cancel dependents rewired onto R
 ```
 
-A successful replanner finalizes `A` without cascade. A failed replanner fails
-the recovery path.
+A is terminal at REQUEST_REPLAN from the moment recovery starts. A successful
+replanner records `replanned_by:R` on A without changing its status. A failed
+replanner transitions only R to FAILED; cascade from R handles dependents
+that were rewired onto R.

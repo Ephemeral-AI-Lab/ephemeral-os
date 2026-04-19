@@ -239,7 +239,9 @@ async def fetch_expanded_parent_candidate(
         .where(
             sibling.parent_id == TaskRecord.id,
             sibling.team_run_id == team_run_id,
-            sibling.status.notin_(("done", "failed", "cancelled")),
+            sibling.status.notin_(
+                ("done", "failed", "cancelled", "request_replan")
+            ),
         )
         .exists()
     )
@@ -694,6 +696,7 @@ async def set_status_request_replan(
         .where(TaskRecord.id == task_id, TaskRecord.team_run_id == team_run_id)
         .values(
             status="request_replan",
+            finished_at=func.now(),
             failure_reason=f"replan_requested: {reason}",
         )
     )
@@ -705,6 +708,9 @@ async def finalize_replanned_origin(
     origin_id: str,
     replanner_task_id: str,
 ) -> int:
+    # REQUEST_REPLAN is terminal; origin A stays at REQUEST_REPLAN after the
+    # replanner completes. Record the recovery linkage in failure_reason but
+    # do not transition A out of its terminal state.
     result = await db.execute(
         update(TaskRecord)
         .where(
@@ -713,8 +719,6 @@ async def finalize_replanned_origin(
             TaskRecord.status == "request_replan",
         )
         .values(
-            status="failed",
-            finished_at=func.now(),
             failure_reason=f"replanned_by:{replanner_task_id}",
         )
     )

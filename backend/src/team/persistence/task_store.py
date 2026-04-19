@@ -23,7 +23,6 @@ _STATUSES_REQUIRING_DONE_DEPS = frozenset(
         TaskStatus.READY,
         TaskStatus.RUNNING,
         TaskStatus.EXPANDED,
-        TaskStatus.REQUEST_REPLAN,
         TaskStatus.DONE,
     }
 )
@@ -269,25 +268,14 @@ class TaskStore:
         return cancelled
 
     async def fail_orphaned_replanning(self) -> int:
-        """Force-fail all REQUEST_REPLAN tasks whose replanner is terminal or missing.
+        """No-op: REQUEST_REPLAN is terminal, so A cannot be stuck.
 
-        Origin tasks (A) are leaves — no subtree to cascade.
+        Historically this swept REQUEST_REPLAN tasks whose replanner was
+        terminal or missing. Under the current model A is already terminal
+        at REQUEST_REPLAN, so there is nothing to force-fail. Kept as a
+        no-op for call-site compatibility.
         """
-        async with self._sf() as db:
-            task_ids = await q.fetch_request_replan_ids(db, self._team_run_id)
-            if not task_ids:
-                return 0
-            for task_id in task_ids:
-                await q.set_status_terminal(
-                    db,
-                    self._team_run_id,
-                    task_id,
-                    "failed",
-                    "orphaned_replanning_timeout",
-                )
-            await db.commit()
-        await self.refresh_graph()
-        return len(task_ids)
+        return 0
 
     async def finalize_replanned_origin(
         self, replanner_task_id: str

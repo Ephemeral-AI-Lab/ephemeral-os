@@ -60,7 +60,7 @@ def test_team_agent_runner_autofails_missing_terminal_submission(monkeypatch):
     )
 
     assert run_prompts == ["Do the task"]
-    assert ctx.tool_metadata["task_summary_type"] == "fail"
+    assert ctx.tool_metadata["task_summary_type"] == "request_replan"
     assert ctx.tool_metadata["task_summary"] == "Agent did not call a terminal submission tool."
     assert ctx.tool_metadata["work_result"] == "Still working"
     assert result["agent_run_id"] == "agent-run-1"

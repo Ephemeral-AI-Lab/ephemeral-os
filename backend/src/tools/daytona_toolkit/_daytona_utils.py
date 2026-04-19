@@ -10,6 +10,7 @@ import logging
 import re
 import shlex
 import time
+import uuid
 from typing import Any
 
 from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES
@@ -43,6 +44,7 @@ _TEST_FILE_SUFFIXES = (
     "-test.py",
     "-spec.py",
 )
+_REMOTE_WRITE_CHUNK_BYTES = 24 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +67,7 @@ def record_coordination_warning(
     """Persist a coordination warning on the live tool context.
 
     Warnings are advisory, but they taint the current task packet so the
-    agent can steer toward ``submit_task_summary(type='fail')`` instead of
+    agent can steer toward ``submit_task_summary(type='request_replan')`` instead of
     reporting success after a scope mismatch.
     """
     raw = context.metadata.get("coordination_warnings")
@@ -506,7 +508,7 @@ def _team_repo_write_error(
         f"BLOCKED_TEST_FILE_EDIT: {tool_name} cannot modify test file {rel_path} "
         "in coordinated team lanes. Test files are read/verify-only evidence; "
         "fix the production owner instead. If this task genuinely requires a "
-        "test-file change, stop and submit_task_summary(type='fail', "
+        "test-file change, stop and submit_task_summary(type='request_replan', "
         "content='test-file edit required: ...') so replanning can explicitly "
         "authorize test-file edits."
     )
@@ -545,11 +547,11 @@ def _team_repo_write_warning(
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
             "You have 3+ outside-scope warnings — your assigned scope likely does not match what this task requires. "
-            "Stop now: your next tool call must be submit_task_summary(type='fail'). Do not read, edit, inspect, run tests, or verify from this state."
+            "Stop now: your next tool call must be submit_task_summary(type='request_replan'). Do not read, edit, inspect, run tests, or verify from this state."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-        "Stop now: your next tool call must be submit_task_summary(type='fail'). "
+        "Stop now: your next tool call must be submit_task_summary(type='request_replan'). "
         "Do not read, edit, inspect, run tests, or verify from an outside-scope write. "
         "If this path is the real owner, a missing module, a compatibility shim, a re-export, or an import bridge, replanning must widen or resequence the task. "
         "A test import, collection error, target count, or need to make tests collect is not an exception."
@@ -616,7 +618,7 @@ def _scope_deny_message(
     return (
         f"{header}:\n  - {lines}\n"
         "Stop now: your next tool call must be "
-        "submit_task_summary(type='fail')."
+        "submit_task_summary(type='request_replan')."
     )
 
 
@@ -672,6 +674,81 @@ path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
     )
 
 
+def _build_truncate_text_file_command(file_path: str) -> str:
+    script = """
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_bytes(b"")
+"""
+    return f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+
+
+def _build_append_text_file_chunk_command(file_path: str, payload: str) -> str:
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+with path.open("ab") as handle:
+    handle.write(base64.b64decode(sys.argv[2]))
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
+    )
+
+
+def _build_replace_file_command(tmp_path: str, file_path: str) -> str:
+    script = """
+import os
+import pathlib
+import sys
+
+tmp = pathlib.Path(sys.argv[1])
+dst = pathlib.Path(sys.argv[2])
+os.replace(tmp, dst)
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(tmp_path)} {shlex.quote(file_path)}"
+    )
+
+
+def _build_remove_file_command(file_path: str) -> str:
+    return f"rm -f {shlex.quote(file_path)}"
+
+
+def _build_write_text_file_commands(
+    file_path: str,
+    content: str,
+    *,
+    chunk_bytes: int = _REMOTE_WRITE_CHUNK_BYTES,
+) -> tuple[list[str], str | None]:
+    """Build remote write commands without embedding large payloads in one argv.
+
+    Daytona's process transport can fail silently when a single command carries
+    a large base64 file payload. Small files keep the existing one-shot path,
+    while larger writes stage chunks into a same-directory temp file and atomically
+    replace the target at the end.
+    """
+    data = content.encode("utf-8")
+    if len(data) <= chunk_bytes:
+        return [_build_write_text_file_command(file_path, content)], None
+
+    tmp_path = f"{file_path}.codex-write-{uuid.uuid4().hex}.tmp"
+    commands = [_build_truncate_text_file_command(tmp_path)]
+    for index in range(0, len(data), chunk_bytes):
+        chunk = data[index : index + chunk_bytes]
+        payload = base64.b64encode(chunk).decode("ascii")
+        commands.append(_build_append_text_file_chunk_command(tmp_path, payload))
+    commands.append(_build_replace_file_command(tmp_path, file_path))
+    return commands, tmp_path
+
+
 async def _read_text_file_via_exec(
     sandbox: Any,
     file_path: str,
@@ -706,18 +783,32 @@ async def _write_text_file_via_exec(
 ) -> None:
     if not _supports_exec_transport(sandbox):
         raise RuntimeError("Sandbox process has no exec method")
-    response = await _exec_command(
-        sandbox,
-        _wrap_bash_command(_build_write_text_file_command(file_path, content)),
-        timeout=timeout,
-    )
-    stdout = getattr(response, "result", "") or ""
-    cleaned, exit_code = _extract_exit_code(
-        stdout,
-        fallback_exit_code=getattr(response, "exit_code", None),
-    )
-    if exit_code not in (0, None):
-        raise RuntimeError(cleaned or f"write failed for {file_path}")
+    commands, tmp_path = _build_write_text_file_commands(file_path, content)
+    try:
+        for command in commands:
+            response = await _exec_command(
+                sandbox,
+                _wrap_bash_command(command),
+                timeout=timeout,
+            )
+            stdout = getattr(response, "result", "") or ""
+            cleaned, exit_code = _extract_exit_code(
+                stdout,
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                raise RuntimeError(cleaned or f"write failed for {file_path}")
+    except Exception:
+        if tmp_path:
+            try:
+                await _exec_command(
+                    sandbox,
+                    _wrap_bash_command(_build_remove_file_command(tmp_path)),
+                    timeout=timeout,
+                )
+            except Exception:
+                logger.debug("remote temp cleanup failed for %s", tmp_path, exc_info=True)
+        raise
 
 
 async def _delete_file_via_exec(sandbox: Any, file_path: str) -> None:

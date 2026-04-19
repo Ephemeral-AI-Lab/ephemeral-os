@@ -201,7 +201,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "pure removals such as `rm`, `unlink`, `os.remove`" in validator.lower()
     assert "must not use `daytona_codeact` for file-content reads" in validator.lower()
     assert "writes to test files as off-policy" in validator.lower()
-    assert 'submit_task_summary(type="fail", content=...)' in validator
+    assert 'submit_task_summary(type="request_replan", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
 
     assert "must load `corrective-fast-path`" in replanner.lower()
@@ -222,6 +222,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "benchmark test import as non-production evidence" in replanner
     assert "submit_replan(new_tasks=[], cancel_ids=[])" in replanner
     assert "do not call CI, file, graph, note, or CodeAct tools afterward" in replanner
+    assert "Must not convert a coordinated write-tool failure into instructions to bypass coordination" in replanner
+    assert "standard Python file I/O" in replanner
     assert "Never submit a corrective task with `*/tests/*`" in replanner
 
     assert "must load `completion-contract`" in scout.lower()
@@ -356,6 +358,8 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
     assert "instead of a test-edit developer task" in cancel_redraft
     assert "no replacement scopes benchmark tests" in cancel_redraft
     assert "Never make a benchmark test file the corrective owner" in corrective_fast_path
+    assert "raw-write workaround" in add_tasks
+    assert "whole-file overwrite fallback instructions" in cancel_redraft
 
     for content in (add_tasks, cancel_redraft):
         assert "`1. Goal:`" in content

@@ -55,7 +55,7 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
 
     assert "Toolkit: submission" in summary
     assert "  submit_task_summary\n" in summary
-    assert "      - type: \"success\" | \"fail\" [required]" in summary
+    assert "      - type: \"success\" | \"request_replan\" [required]" in summary
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):

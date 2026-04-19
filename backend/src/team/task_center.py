@@ -330,15 +330,9 @@ class TaskCenter:
         await self._transitions.refresh_and_emit(before)
 
     async def fail_task(self, task_id: str, reason: str) -> None:
-        # If a replanner fails, also fail the original task it was fired for.
-        # A is a leaf worker (REQUEST_REPLAN), so plain fail_task suffices.
-        rec = await self._store.get_record(task_id)
-        if rec and rec.fired_by_task_id:
-            origin = await self._store.get_record(rec.fired_by_task_id)
-            if origin and origin.status == "request_replan":
-                await self._store.fail_task(
-                    rec.fired_by_task_id, f"replanner_failed: {reason}"
-                )
+        # A (REQUEST_REPLAN) is already terminal. When its replanner R fails,
+        # A stays at REQUEST_REPLAN; only R transitions to FAILED here, and
+        # its cascade handles dependents that were rewired onto R.
         before = self._transitions.snapshot()
         await self._store.fail_task(task_id, reason)
         # FAILED children are now detached; parent may become promotable.
@@ -405,15 +399,11 @@ class TaskCenter:
                 add_tasks=add_tasks,
                 cancel_ids=cancel_ids,
             )
-        except InvalidPlan as exc:
-            # Replan expansion failed — fail the origin (REQUEST_REPLAN leaf)
-            # so it doesn't stay stuck in a non-terminal state forever.
-            replanner_rec = await self._store.get_record(replan_task_id)
-            if replanner_rec and replanner_rec.fired_by_task_id:
-                await self._store.fail_task(
-                    replanner_rec.fired_by_task_id,
-                    f"replan_apply_failed: {exc}",
-                )
+        except InvalidPlan:
+            # Replan expansion failed. Origin A is already terminal at
+            # REQUEST_REPLAN, so no origin-side transition is needed. The
+            # replanner R itself is failed by the executor through the normal
+            # worker-failure path.
             await self._transitions.refresh_and_emit(before)
             raise
 

@@ -77,7 +77,7 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "scope_paths` names a new file that is absent" in rendered
     assert "confirm non-test production evidence" in rendered
     assert "the out-of-scope attempt itself is a failed lane" in rendered
-    assert 'submit_task_summary(type="fail", content=...)' in rendered
+    assert 'submit_task_summary(type="request_replan", content=...)' in rendered
     assert "## Context from dependencies" not in rendered
     assert "Tool-name contract" not in rendered
     assert "stdout and stderr are already captured separately" not in rendered

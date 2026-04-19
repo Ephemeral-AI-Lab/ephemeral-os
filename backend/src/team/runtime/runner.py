@@ -325,7 +325,7 @@ class TeamAgentRunner:
                 ctx.tool_metadata["task_summary"] = (
                     "Agent did not call a terminal submission tool."
                 )
-                ctx.tool_metadata["task_summary_type"] = "fail"
+                ctx.tool_metadata["task_summary_type"] = "request_replan"
         finally:
             if checkpoint_task is not None:
                 await asyncio.gather(checkpoint_task, return_exceptions=True)

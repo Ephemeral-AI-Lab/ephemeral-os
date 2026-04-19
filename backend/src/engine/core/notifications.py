@@ -41,12 +41,12 @@ def _budget_warning_steps(context: "QueryContext") -> str:
             "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"
             "2. Run one final exact verification command (daytona_codeact) only if you can still reserve the terminal summary call.\n"
             "3. Call task_center_changed_since() only if you can still reserve the terminal summary call.\n"
-            "4. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='fail') with exact evidence for FAILURE."
+            "4. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='request_replan') with exact evidence for FAILURE."
         )
     return (
         "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"
         "2. Run at most one final verification or diagnostics pass only if you can still reserve the terminal summary call.\n"
-        "3. If evidence is incomplete, verification still fails, or diagnostics cannot be finished within budget, call submit_task_summary(type='fail') with the exact evidence now.\n"
+        "3. If evidence is incomplete, verification still fails, or diagnostics cannot be finished within budget, call submit_task_summary(type='request_replan') with the exact evidence now.\n"
         "4. If verification passed and diagnostics are clean, call submit_task_summary(type='success') with a concise completion summary."
     )
 

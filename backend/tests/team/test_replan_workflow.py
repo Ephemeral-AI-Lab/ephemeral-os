@@ -75,7 +75,7 @@ async def test_replace_run_tasks_rejects_running_snapshot_with_pending_dependenc
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "status",
-    [TaskStatus.EXPANDED, TaskStatus.REQUEST_REPLAN, TaskStatus.DONE],
+    [TaskStatus.EXPANDED, TaskStatus.DONE],
 )
 async def test_replace_run_tasks_rejects_post_ready_snapshot_statuses_with_pending_dependency(
     status: TaskStatus,
@@ -379,7 +379,8 @@ class _FakeStore:
         origin_id = replanner.fired_by_task_id
         if not origin_id:
             return None
-        self.graph[origin_id].status = TaskStatus.FAILED
+        # REQUEST_REPLAN is terminal: record the recovery linkage without
+        # transitioning A's status.
         self.graph[origin_id].failure_reason = f"replanned_by:{replanner_task_id}"
         return origin_id
 
@@ -542,7 +543,7 @@ async def test_replanner_done_immediately_when_replan_has_no_children():
     await tc.complete_task("replanner", AgentResult(summary="", submitted_replan=ReplanPlan()))
 
     assert graph["replanner"].status == TaskStatus.DONE
-    assert graph["failed"].status == TaskStatus.FAILED
+    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
     assert graph["downstream"].status == TaskStatus.READY
     assert store.marked_expanded == []
 
@@ -569,7 +570,7 @@ async def test_replanner_expanded_when_replan_creates_direct_children():
     await tc.complete_task("replanner", AgentResult(summary="", submitted_replan=ReplanPlan()))
 
     assert graph["replanner"].status == TaskStatus.EXPANDED
-    assert graph["failed"].status == TaskStatus.FAILED
+    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
     assert store.marked_done == []
 
 
@@ -593,7 +594,7 @@ async def test_expanded_replanner_finalizes_origin_after_successful_child_comple
 
     assert graph["child"].status == TaskStatus.DONE
     assert graph["replanner"].status == TaskStatus.DONE
-    assert graph["failed"].status == TaskStatus.FAILED
+    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
 
 
 @pytest.mark.asyncio
@@ -624,7 +625,7 @@ async def test_finalized_replan_origin_can_promote_ancestor_parent():
 
     assert graph["child"].status == TaskStatus.DONE
     assert graph["replanner"].status == TaskStatus.DONE
-    assert graph["failed"].status == TaskStatus.FAILED
+    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
     assert graph["parent"].status == TaskStatus.DONE
 
 

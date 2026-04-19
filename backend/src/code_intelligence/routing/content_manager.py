@@ -13,7 +13,8 @@ from typing import Any
 from code_intelligence.hashing import content_hash
 from tools.daytona_toolkit._daytona_utils import (
     _build_read_text_file_command,
-    _build_write_text_file_command,
+    _build_remove_file_command,
+    _build_write_text_file_commands,
     _extract_exit_code,
     _wrap_bash_command,
 )
@@ -350,15 +351,25 @@ print(json.dumps(files))
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         process = self._sandbox.process
         text = payload.decode("utf-8")
-        response = run_sync(
-            process.exec(_wrap_bash_command(_build_write_text_file_command(file_path, text)))
-        )
-        cleaned, exit_code = _extract_exit_code(
-            getattr(response, "result", "") or "",
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or f"write failed for {file_path}")
+        commands, tmp_path = _build_write_text_file_commands(file_path, text)
+        try:
+            for command in commands:
+                response = run_sync(process.exec(_wrap_bash_command(command)))
+                cleaned, exit_code = _extract_exit_code(
+                    getattr(response, "result", "") or "",
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code not in (0, None):
+                    raise RuntimeError(cleaned or f"write failed for {file_path}")
+        except Exception:
+            if tmp_path:
+                try:
+                    run_sync(
+                        process.exec(_wrap_bash_command(_build_remove_file_command(tmp_path)))
+                    )
+                except Exception:
+                    logger.debug("remote temp cleanup failed for %s", tmp_path, exc_info=True)
+            raise
 
     def _delete_remote(self, file_path: str) -> None:
         process = self._sandbox.process

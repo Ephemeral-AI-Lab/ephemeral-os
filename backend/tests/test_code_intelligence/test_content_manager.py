@@ -117,3 +117,15 @@ def test_read_many_allows_missing_remote_files(tmp_path: Path) -> None:
     assert result[str(a)] == ("A = 1\n", True)
     assert result[str(missing)] == ("", False)
 
+
+def test_write_remote_chunks_large_file_payload(tmp_path: Path) -> None:
+    target = tmp_path / "large.py"
+    content = "".join(f"line_{index} = {index}\n" for index in range(5000))
+    process = _RecordingProcess()
+    sandbox = SimpleNamespace(process=process)
+    manager = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    manager.write(str(target), content)
+
+    assert target.read_text(encoding="utf-8") == content
+    assert len(process.commands) > 2
