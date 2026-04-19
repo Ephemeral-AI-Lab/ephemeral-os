@@ -2,9 +2,65 @@
 
 from __future__ import annotations
 
+import threading
+from dataclasses import dataclass
 from typing import Any
 
 from code_intelligence.types import CITelemetry
+
+
+@dataclass
+class OverlayCounters:
+    """Per-process counters for the overlay CodeAct backend.
+
+    See ``docs/architecture/overlay-sandbox-plan.md`` §6. Incremented by
+    :class:`OverlayAuditor` when it finishes one op; surfaced on the
+    service status for the operator dashboard.
+    """
+
+    snap_build_ms: int = 0
+    mount_setup_ms: int = 0
+    cmd_ms: int = 0
+    diff_ms: int = 0
+    merge_back_ms: int = 0
+    upper_bytes: int = 0
+    upper_files: int = 0
+    tracked_changes: int = 0
+    gitignored_changes: int = 0
+    direct_merged_bytes: int = 0
+    whiteouts_tracked: int = 0
+    whiteouts_gitignored_refused: int = 0
+    dotgit_rejects: int = 0
+    upper_full_failures: int = 0
+    gitignored_changes_after_aborted_tracked: int = 0
+    mixed_tracked_gitignored_ops: int = 0
+    mixed_partial_apply_ops: int = 0
+    ops_total: int = 0
+    ops_rejected: int = 0
+
+
+_OVERLAY_COUNTERS = OverlayCounters()
+_OVERLAY_LOCK = threading.Lock()
+
+
+def overlay_counters_snapshot() -> OverlayCounters:
+    """Return a consistent copy of the overlay counter state."""
+    with _OVERLAY_LOCK:
+        return OverlayCounters(**_OVERLAY_COUNTERS.__dict__)
+
+
+def record_overlay_op(**fields: int) -> None:
+    """Additive increment for one overlay op's counters.
+
+    Unknown keys are ignored so the auditor can evolve its metadata
+    without tripping the telemetry recorder.
+    """
+    with _OVERLAY_LOCK:
+        for key, value in fields.items():
+            if hasattr(_OVERLAY_COUNTERS, key):
+                setattr(
+                    _OVERLAY_COUNTERS, key, getattr(_OVERLAY_COUNTERS, key) + int(value)
+                )
 
 
 def build_status(
@@ -21,6 +77,7 @@ def build_status(
 ) -> dict[str, Any]:
     """Return service status summary."""
     lsp = lsp_telemetry_fields(lsp_client)
+    overlay = overlay_counters_snapshot()
     return {
         "sandbox_id": sandbox_id,
         "initialized": initialized,
@@ -40,6 +97,7 @@ def build_status(
         "rename_preview_cache": rename_cache_stats,
         "rename_preview_fast_fallbacks": rename_preview_fast_fallbacks,
         "lsp": lsp,
+        "overlay": overlay.__dict__,
     }
 
 

@@ -1,0 +1,885 @@
+"""Unit tests for ``overlay_run`` classifier and helpers.
+
+The mount + user-command portion of ``overlay_run.py`` can only be
+exercised on Linux with ``unshare`` / overlayfs / ``userxattr``. This
+module targets the pure classifier, whiteout/opaque detection, NDJSON
+emitter, and the ``git check-ignore`` batch helper — all of which run on
+darwin with a real host ``git`` binary and synthetic upperdir trees.
+
+Each test covers one branch called out in
+``docs/architecture/overlay-sandbox-plan.md`` §3 / §8 PR 2.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import stat
+import subprocess
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from code_intelligence.routing.overlay_run import (
+    Classifier,
+    ClassifyOutcome,
+    PolicyRejectOutcome,
+    REJECT_DOTGIT,
+    REJECT_GITIGNORED_OPAQUE_DIR,
+    REJECT_GITIGNORED_WHITEOUT,
+    REJECT_NON_UTF8_TRACKED,
+    REJECT_UNSUPPORTED_OPAQUE_DIR,
+    REJECT_UNSUPPORTED_SYMLINK,
+    UpperEntry,
+    check_ignore_factory,
+    direct_merge_factory,
+    is_opaque_dir,
+    is_symlink,
+    is_whiteout,
+    reject_exit_code,
+    walk_upperdir,
+    write_diff_ndjson,
+    write_reject_ndjson,
+)
+
+
+# ---------------------------------------------------------------------------
+# Entry builders: construct UpperEntry values without touching real xattrs.
+# ---------------------------------------------------------------------------
+
+
+def _fake_stat(
+    *,
+    mode: int = stat.S_IFREG | 0o644,
+    size: int = 0,
+    rdev: int = 0,
+) -> os.stat_result:
+    return SimpleNamespace(  # type: ignore[return-value]
+        st_mode=mode,
+        st_ino=1,
+        st_dev=1,
+        st_nlink=1,
+        st_uid=0,
+        st_gid=0,
+        st_size=size,
+        st_atime=0.0,
+        st_mtime=0.0,
+        st_ctime=0.0,
+        st_rdev=rdev,
+    )
+
+
+def _regular_entry(
+    rel: str, *, upper_path: str = "", xattrs: dict[bytes, bytes] | None = None, size: int = 1
+) -> UpperEntry:
+    return UpperEntry(
+        rel=rel,
+        st=_fake_stat(size=size),
+        xattrs=dict(xattrs or {}),
+        upper_path=upper_path or f"/synthetic/upper/{rel}",
+    )
+
+
+def _whiteout_char_entry(rel: str) -> UpperEntry:
+    return UpperEntry(
+        rel=rel,
+        st=_fake_stat(mode=stat.S_IFCHR, rdev=0),
+        xattrs={},
+        upper_path=f"/synthetic/upper/{rel}",
+    )
+
+
+def _whiteout_rootless_entry(rel: str) -> UpperEntry:
+    return UpperEntry(
+        rel=rel,
+        st=_fake_stat(size=0),
+        xattrs={b"user.overlay.whiteout": b""},
+        upper_path=f"/synthetic/upper/{rel}",
+    )
+
+
+def _opaque_dir_entry(rel: str, *, ns: bytes = b"user.overlay.opaque") -> UpperEntry:
+    return UpperEntry(
+        rel=rel,
+        st=_fake_stat(mode=stat.S_IFDIR | 0o755),
+        xattrs={ns: b"y"},
+        upper_path=f"/synthetic/upper/{rel}",
+    )
+
+
+def _symlink_entry(rel: str) -> UpperEntry:
+    return UpperEntry(
+        rel=rel,
+        st=_fake_stat(mode=stat.S_IFLNK | 0o777, size=7),
+        xattrs={},
+        upper_path=f"/synthetic/upper/{rel}",
+    )
+
+
+class _Classifier:
+    """Test harness that wires real-ish callbacks with in-memory state."""
+
+    def __init__(
+        self,
+        *,
+        upper_bytes: dict[str, bytes],
+        base_bytes: dict[str, bytes],
+        ignored: set[str],
+    ) -> None:
+        self.upper_bytes = upper_bytes
+        self.base_bytes = base_bytes
+        self.ignored = ignored
+        self.merged: list[tuple[str, int]] = []
+
+    def read_upper(self, rel: str) -> bytes:
+        return self.upper_bytes[rel]
+
+    def git_show_base(self, rel: str) -> bytes | None:
+        return self.base_bytes.get(rel)
+
+    def check_ignore(self, rels: list[str]) -> set[str]:
+        return {r for r in rels if r in self.ignored}
+
+    def direct_merge(self, rel: str, upper_path: str, upper_st: os.stat_result) -> int:
+        del upper_path, upper_st
+        size = len(self.upper_bytes.get(rel, b""))
+        self.merged.append((rel, size))
+        return size
+
+    def classifier(self) -> Classifier:
+        return Classifier(
+            read_upper_bytes=self.read_upper,
+            git_show_base=self.git_show_base,
+            check_ignore=self.check_ignore,
+            direct_merge=self.direct_merge,
+        )
+
+
+# ---------------------------------------------------------------------------
+# is_whiteout / is_opaque_dir / is_symlink
+# ---------------------------------------------------------------------------
+
+
+def test_is_whiteout_privileged_char_device() -> None:
+    st = _fake_stat(mode=stat.S_IFCHR, rdev=0)
+    assert is_whiteout(st, {}) is True
+
+
+def test_is_whiteout_rootless_userxattr_zero_size_regular() -> None:
+    st = _fake_stat(size=0)
+    assert is_whiteout(st, {b"user.overlay.whiteout": b""}) is True
+
+
+def test_is_whiteout_false_when_regular_non_zero_without_xattr() -> None:
+    st = _fake_stat(size=10)
+    assert is_whiteout(st, {}) is False
+
+
+def test_is_whiteout_false_when_rootless_but_no_xattr() -> None:
+    st = _fake_stat(size=0)
+    assert is_whiteout(st, {}) is False
+
+
+def test_is_opaque_dir_both_xattr_namespaces() -> None:
+    st = _fake_stat(mode=stat.S_IFDIR | 0o755)
+    assert is_opaque_dir(st, {b"trusted.overlay.opaque": b"y"}) is True
+    assert is_opaque_dir(st, {b"user.overlay.opaque": b"y"}) is True
+    assert is_opaque_dir(st, {}) is False
+
+
+def test_is_opaque_dir_false_on_non_dir() -> None:
+    st = _fake_stat(mode=stat.S_IFREG)
+    assert is_opaque_dir(st, {b"user.overlay.opaque": b"y"}) is False
+
+
+def test_is_symlink_positive() -> None:
+    assert is_symlink(_fake_stat(mode=stat.S_IFLNK | 0o777)) is True
+    assert is_symlink(_fake_stat(mode=stat.S_IFREG)) is False
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: .git/* reject
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_rejects_dotgit_writes_before_any_other_work() -> None:
+    env = _Classifier(
+        upper_bytes={".git/config": b"x"},
+        base_bytes={},
+        ignored=set(),
+    )
+    result = env.classifier().classify(
+        [_regular_entry(".git/config"), _regular_entry("src/app.py")]
+    )
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_DOTGIT
+    assert ".git/config" in result.paths
+
+
+def test_classifier_rejects_dotgit_even_for_nested_paths() -> None:
+    env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
+    result = env.classifier().classify(
+        [_regular_entry(".git/objects/pack/pack-xyz")]
+    )
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_DOTGIT
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: tracked add / modify / delete
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_emits_tracked_create_for_new_file() -> None:
+    env = _Classifier(
+        upper_bytes={"src/new.py": b"print('new')\n"},
+        base_bytes={},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_regular_entry("src/new.py")])
+    assert isinstance(result, ClassifyOutcome)
+    assert len(result.tracked) == 1
+    change = result.tracked[0]
+    assert change.kind == "create"
+    assert change.base_existed is False
+    assert change.base_content == ""
+    assert change.final_content == "print('new')\n"
+    assert result.gitignored_paths == ()
+
+
+def test_classifier_emits_tracked_modify_for_existing_file() -> None:
+    env = _Classifier(
+        upper_bytes={"src/app.py": b"after\n"},
+        base_bytes={"src/app.py": b"before\n"},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_regular_entry("src/app.py")])
+    assert isinstance(result, ClassifyOutcome)
+    change = result.tracked[0]
+    assert change.kind == "modify"
+    assert change.base_existed is True
+    assert change.base_content == "before\n"
+    assert change.final_content == "after\n"
+
+
+def test_classifier_emits_tracked_delete_for_whiteout() -> None:
+    env = _Classifier(
+        upper_bytes={},
+        base_bytes={"src/gone.py": b"rip\n"},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_whiteout_char_entry("src/gone.py")])
+    assert isinstance(result, ClassifyOutcome)
+    assert result.whiteouts_tracked == 1
+    change = result.tracked[0]
+    assert change.kind == "delete"
+    assert change.base_existed is True
+    assert change.base_content == "rip\n"
+    assert change.final_content is None
+
+
+def test_classifier_emits_tracked_delete_for_rootless_whiteout() -> None:
+    env = _Classifier(
+        upper_bytes={},
+        base_bytes={"src/gone.py": b"rip\n"},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_whiteout_rootless_entry("src/gone.py")])
+    assert isinstance(result, ClassifyOutcome)
+    change = result.tracked[0]
+    assert change.kind == "delete"
+    assert change.base_existed is True
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: gitignored route
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_direct_merges_gitignored_create() -> None:
+    env = _Classifier(
+        upper_bytes={".venv/pyvenv.cfg": b"home=/usr\n"},
+        base_bytes={},
+        ignored={".venv/pyvenv.cfg"},
+    )
+    result = env.classifier().classify([_regular_entry(".venv/pyvenv.cfg")])
+    assert isinstance(result, ClassifyOutcome)
+    assert result.tracked == ()
+    assert result.gitignored_paths == (".venv/pyvenv.cfg",)
+    assert env.merged == [(".venv/pyvenv.cfg", len(b"home=/usr\n"))]
+    assert result.direct_merged_bytes == len(b"home=/usr\n")
+
+
+def test_classifier_direct_merges_gitignored_binary_bytes() -> None:
+    payload = b"\xff\xfe\x00\x01not-utf-8"
+    env = _Classifier(
+        upper_bytes={"node_modules/pkg/a.so": payload},
+        base_bytes={},
+        ignored={"node_modules/pkg/a.so"},
+    )
+    result = env.classifier().classify([_regular_entry("node_modules/pkg/a.so")])
+    # Non-UTF-8 content on gitignored route is fine; bytes pass through.
+    assert isinstance(result, ClassifyOutcome)
+    assert result.gitignored_paths == ("node_modules/pkg/a.so",)
+    assert env.merged == [("node_modules/pkg/a.so", len(payload))]
+
+
+def test_classifier_rejects_gitignored_whiteout() -> None:
+    env = _Classifier(
+        upper_bytes={},
+        base_bytes={},
+        ignored={".venv/pyvenv.cfg"},
+    )
+    result = env.classifier().classify([_whiteout_char_entry(".venv/pyvenv.cfg")])
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_GITIGNORED_WHITEOUT
+
+
+def test_classifier_rejects_gitignored_opaque_dir() -> None:
+    env = _Classifier(upper_bytes={}, base_bytes={}, ignored={".venv"})
+    result = env.classifier().classify(
+        [_opaque_dir_entry(".venv", ns=b"trusted.overlay.opaque")]
+    )
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_GITIGNORED_OPAQUE_DIR
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: kind-gate rejects on tracked route
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_rejects_tracked_symlink() -> None:
+    env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
+    result = env.classifier().classify([_symlink_entry("src/link")])
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_UNSUPPORTED_SYMLINK
+
+
+def test_classifier_rejects_tracked_opaque_dir() -> None:
+    env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
+    result = env.classifier().classify([_opaque_dir_entry("src/pkg")])
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_UNSUPPORTED_OPAQUE_DIR
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: mode-only short-circuit + non-UTF-8 reject
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_skips_mode_only_change_when_content_equal_to_snap() -> None:
+    env = _Classifier(
+        upper_bytes={"src/app.py": b"same\n"},
+        base_bytes={"src/app.py": b"same\n"},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_regular_entry("src/app.py")])
+    assert isinstance(result, ClassifyOutcome)
+    assert result.tracked == ()
+
+
+def test_classifier_rejects_non_utf8_on_tracked_route() -> None:
+    env = _Classifier(
+        upper_bytes={"src/app.py": b"\xff\xfe\x00binary"},
+        base_bytes={},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_regular_entry("src/app.py")])
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_NON_UTF8_TRACKED
+    assert result.paths == ("src/app.py",)
+
+
+def test_classifier_rejects_non_utf8_base_content_on_tracked_modify() -> None:
+    env = _Classifier(
+        upper_bytes={"src/app.py": b"ok\n"},
+        base_bytes={"src/app.py": b"\xff\xfeold"},
+        ignored=set(),
+    )
+    result = env.classifier().classify([_regular_entry("src/app.py")])
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_NON_UTF8_TRACKED
+
+
+# ---------------------------------------------------------------------------
+# Classifier.classify: mixed tracked + gitignored
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_accepts_mixed_tracked_and_gitignored() -> None:
+    env = _Classifier(
+        upper_bytes={
+            "src/app.py": b"new source\n",
+            ".venv/x.cfg": b"dep=1\n",
+        },
+        base_bytes={"src/app.py": b"old source\n"},
+        ignored={".venv/x.cfg"},
+    )
+    result = env.classifier().classify(
+        [
+            _regular_entry("src/app.py"),
+            _regular_entry(".venv/x.cfg"),
+        ]
+    )
+    assert isinstance(result, ClassifyOutcome)
+    assert [c.path for c in result.tracked] == ["src/app.py"]
+    assert result.gitignored_paths == (".venv/x.cfg",)
+
+
+# ---------------------------------------------------------------------------
+# reject_exit_code covers every declared reason
+# ---------------------------------------------------------------------------
+
+
+def test_reject_exit_codes_are_distinct_sentinels() -> None:
+    reasons = [
+        REJECT_DOTGIT,
+        REJECT_GITIGNORED_WHITEOUT,
+        REJECT_GITIGNORED_OPAQUE_DIR,
+        REJECT_UNSUPPORTED_SYMLINK,
+        REJECT_UNSUPPORTED_OPAQUE_DIR,
+        REJECT_NON_UTF8_TRACKED,
+    ]
+    codes = {reject_exit_code(r) for r in reasons}
+    assert len(codes) == len(reasons), "policy codes collide"
+    for code in codes:
+        assert 200 < code < 256
+
+
+# ---------------------------------------------------------------------------
+# walk_upperdir — real filesystem walk
+# ---------------------------------------------------------------------------
+
+
+def test_walk_upperdir_yields_files_and_skips_plain_dirs(tmp_path: Path) -> None:
+    root = tmp_path / "upper"
+    root.mkdir()
+    (root / "a.py").write_text("a\n", encoding="utf-8")
+    (root / "pkg").mkdir()
+    (root / "pkg" / "b.py").write_text("b\n", encoding="utf-8")
+
+    rels = sorted(e.rel for e in walk_upperdir(str(root)))
+    assert rels == ["a.py", "pkg/b.py"]
+
+
+def test_walk_upperdir_handles_missing_root(tmp_path: Path) -> None:
+    assert list(walk_upperdir(str(tmp_path / "missing"))) == []
+
+
+# ---------------------------------------------------------------------------
+# NDJSON emitters
+# ---------------------------------------------------------------------------
+
+
+def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
+    outcome = ClassifyOutcome(
+        tracked=(
+            __import__("code_intelligence.routing.overlay_run", fromlist=["TrackedChange"])
+            .TrackedChange(
+                path="a.py",
+                kind="modify",
+                base_content="old\n",
+                base_existed=True,
+                final_content="new\n",
+            ),
+        ),
+        gitignored_paths=(".venv/cfg",),
+        direct_merged_bytes=12,
+        whiteouts_tracked=0,
+        whiteouts_gitignored_refused=0,
+        dotgit_rejects=0,
+    )
+
+    path = write_diff_ndjson(
+        run_dir=str(tmp_path),
+        snap="deadbeef1234",
+        exit_code=0,
+        outcome=outcome,
+        upper_bytes=99,
+        upper_files=3,
+    )
+
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    meta = json.loads(lines[0])
+    assert meta["_meta"]["snap"] == "deadbeef1234"
+    assert meta["_meta"]["tracked_changes"] == 1
+    assert meta["_meta"]["gitignored_changes"] == 1
+    assert meta["_meta"]["gitignored_paths"] == [".venv/cfg"]
+    entry = json.loads(lines[1])
+    assert entry["path"] == "a.py"
+    assert entry["kind"] == "modify"
+    assert entry["base_content"] == "old\n"
+    assert entry["final_content"] == "new\n"
+    assert entry["strict_base"] is True
+
+
+def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
+    reject = PolicyRejectOutcome(reason=REJECT_DOTGIT, paths=(".git/config",))
+    path = write_reject_ndjson(run_dir=str(tmp_path), snap="snapX", reject=reject)
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert payload == {
+        "_reject": {
+            "snap": "snapX",
+            "reason": REJECT_DOTGIT,
+            "paths": [".git/config"],
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
+# check_ignore_factory — real git check-ignore against a fixture repo.
+# ---------------------------------------------------------------------------
+
+
+def _init_repo(path: Path) -> None:
+    subprocess.run(["git", "-C", str(path), "init", "-q"], check=True)
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "t@example.invalid"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.name", "Tester"], check=True
+    )
+
+
+def test_check_ignore_factory_splits_tracked_and_ignored(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / ".gitignore").write_text(".venv/\nnode_modules/\n", encoding="utf-8")
+    (repo / "src").mkdir()
+    (repo / "src" / "app.py").write_text("hi\n", encoding="utf-8")
+
+    check = check_ignore_factory(repo_root=str(repo))
+
+    ignored = check(
+        [
+            "src/app.py",
+            ".venv/pyvenv.cfg",
+            "node_modules/pkg/index.js",
+            "README.md",  # untracked but not ignored
+        ]
+    )
+    assert ignored == {".venv/pyvenv.cfg", "node_modules/pkg/index.js"}
+
+
+def test_check_ignore_factory_empty_input_returns_empty_set(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    assert check_ignore_factory(repo_root=str(repo))([]) == set()
+
+
+# ---------------------------------------------------------------------------
+# direct_merge_factory — atomic rename into live
+# ---------------------------------------------------------------------------
+
+
+def test_direct_merge_writes_file_and_is_observably_atomic(tmp_path: Path) -> None:
+    upper = tmp_path / "upper"
+    upper.mkdir()
+    live = tmp_path / "live"
+    live.mkdir()
+    src = upper / ".venv" / "pyvenv.cfg"
+    src.parent.mkdir(parents=True)
+    src.write_text("home=/usr\n", encoding="utf-8")
+
+    merge = direct_merge_factory(live_root=str(live))
+    st = src.stat()
+    bytes_written = merge(".venv/pyvenv.cfg", str(src), st)
+
+    target = live / ".venv" / "pyvenv.cfg"
+    assert target.read_text(encoding="utf-8") == "home=/usr\n"
+    assert bytes_written == len("home=/usr\n")
+
+    # No .overlay-merge temp files left behind in the parent.
+    stray = [p.name for p in (live / ".venv").iterdir() if ".overlay-merge" in p.name]
+    assert stray == []
+
+
+def test_direct_merge_overwrites_existing_live_file_last_writer_wins(
+    tmp_path: Path,
+) -> None:
+    upper = tmp_path / "upper"
+    upper.mkdir()
+    live = tmp_path / "live"
+    live.mkdir()
+    (live / "dep.txt").write_text("old\n", encoding="utf-8")
+    (upper / "dep.txt").write_text("new\n", encoding="utf-8")
+
+    merge = direct_merge_factory(live_root=str(live))
+    merge("dep.txt", str(upper / "dep.txt"), (upper / "dep.txt").stat())
+
+    assert (live / "dep.txt").read_text(encoding="utf-8") == "new\n"
+
+
+# ---------------------------------------------------------------------------
+# Edge case: mixed tracked + gitignored writes (plan §0 row)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# run_user_command cwd invariant: relative paths must resolve against workspace
+# ---------------------------------------------------------------------------
+
+
+def test_run_user_command_runs_in_workspace_cwd(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import run_user_command
+
+    stdout, exit_code = run_user_command(
+        user_cmd="pwd",
+        stdin_bytes=None,
+        cwd=str(tmp_path),
+    )
+    assert exit_code == 0
+    assert Path(stdout.decode().strip()) == tmp_path.resolve()
+
+
+def test_run_user_command_resolves_relative_paths_against_cwd(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import run_user_command
+
+    (tmp_path / "marker.txt").write_text("hi\n", encoding="utf-8")
+    stdout, exit_code = run_user_command(
+        user_cmd="cat marker.txt",
+        stdin_bytes=None,
+        cwd=str(tmp_path),
+    )
+    assert exit_code == 0
+    assert stdout == b"hi\n"
+
+
+# ---------------------------------------------------------------------------
+# _parse_args smoke: catch typos in the CLI without needing Linux execution.
+# ---------------------------------------------------------------------------
+
+
+def test_parse_args_accepts_the_full_argument_surface() -> None:
+    from code_intelligence.routing.overlay_run import _parse_args
+
+    ns = _parse_args(
+        [
+            "--workspace-root", "/ws",
+            "--run-dir", "/run",
+            "--snap", "deadbeef",
+            "--upper-size-mb", "256",
+            "--user-cmd-b64", "ZWNobyBoaQ==",
+            "--stdin-b64", "c3RkaW4=",
+        ]
+    )
+    assert ns.workspace_root == "/ws"
+    assert ns.run_dir == "/run"
+    assert ns.snap == "deadbeef"
+    assert ns.upper_size_mb == 256
+    assert ns.user_cmd_b64 == "ZWNobyBoaQ=="
+    assert ns.stdin_b64 == "c3RkaW4="
+
+
+def test_parse_args_rejects_missing_required_argument() -> None:
+    from code_intelligence.routing.overlay_run import _parse_args
+
+    with pytest.raises(SystemExit):
+        _parse_args(["--workspace-root", "/ws"])
+
+
+# ---------------------------------------------------------------------------
+# git_show_base_factory real-git round-trip
+# ---------------------------------------------------------------------------
+
+
+def _make_snap(repo: Path) -> str:
+    """Create a dangling commit capturing the live tree; return its SHA."""
+    env = dict(os.environ)
+    env.setdefault("GIT_AUTHOR_NAME", "T")
+    env.setdefault("GIT_AUTHOR_EMAIL", "t@example.invalid")
+    env.setdefault("GIT_COMMITTER_NAME", "T")
+    env.setdefault("GIT_COMMITTER_EMAIL", "t@example.invalid")
+    tree = subprocess.check_output(
+        ["git", "-C", str(repo), "write-tree"], env=env, text=True
+    ).strip()
+    head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--verify", "HEAD"],
+        text=True,
+        capture_output=True,
+    )
+    args = ["git", "-C", str(repo), "commit-tree", tree, "-m", "snap"]
+    if head.returncode == 0:
+        args.extend(["-p", head.stdout.strip()])
+    return subprocess.check_output(args, env=env, text=True).strip()
+
+
+def test_git_show_base_returns_bytes_for_existing_path(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import git_show_base_factory
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / "app.py").write_text("hello\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
+    )
+    snap = _make_snap(repo)
+
+    show = git_show_base_factory(repo_root=str(repo), snap=snap)
+    assert show("app.py") == b"hello\n"
+
+
+def test_git_show_base_returns_none_for_missing_path(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import git_show_base_factory
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / "a.py").write_text("seed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
+    )
+    snap = _make_snap(repo)
+
+    show = git_show_base_factory(repo_root=str(repo), snap=snap)
+    assert show("not-in-snap.py") is None
+
+
+def test_git_show_base_raises_on_bad_sha(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import git_show_base_factory
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / "a.py").write_text("seed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
+    )
+
+    show = git_show_base_factory(repo_root=str(repo), snap="0" * 40)
+    # A sha that doesn't resolve to any commit: git returns 128 and stderr
+    # has "ambiguous argument" rather than "exists on disk". We treat this
+    # as a missing base.
+    assert show("a.py") is None
+
+
+# ---------------------------------------------------------------------------
+# NDJSON round-trip: write_diff_ndjson -> parse_diff_ndjson must be lossless
+# on the fields the schema promises.
+# ---------------------------------------------------------------------------
+
+
+def test_ndjson_round_trip_preserves_tracked_and_gitignored(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_auditor import parse_diff_ndjson
+    from code_intelligence.routing.overlay_run import TrackedChange
+
+    outcome = ClassifyOutcome(
+        tracked=(
+            TrackedChange(
+                path="src/app.py",
+                kind="modify",
+                base_content="old\n",
+                base_existed=True,
+                final_content="new\n",
+            ),
+            TrackedChange(
+                path="src/gone.py",
+                kind="delete",
+                base_content="bye\n",
+                base_existed=True,
+                final_content=None,
+            ),
+            TrackedChange(
+                path="src/new.py",
+                kind="create",
+                base_content="",
+                base_existed=False,
+                final_content="hi\n",
+            ),
+        ),
+        gitignored_paths=(".venv/cfg", "node_modules/pkg/index.js"),
+        direct_merged_bytes=123,
+        whiteouts_tracked=1,
+        whiteouts_gitignored_refused=0,
+        dotgit_rejects=0,
+    )
+
+    path = write_diff_ndjson(
+        run_dir=str(tmp_path),
+        snap="deadbeef",
+        exit_code=0,
+        outcome=outcome,
+        upper_bytes=999,
+        upper_files=5,
+    )
+    raw = Path(path).read_text(encoding="utf-8")
+    parsed = parse_diff_ndjson(raw)
+
+    assert not isinstance(parsed, PolicyRejectOutcome)
+    # No PolicyReject — parser returns OverlayDiff.
+    assert parsed.snap == "deadbeef"
+    assert parsed.upper_bytes == 999
+    assert parsed.upper_files == 5
+    assert parsed.direct_merged_bytes == 123
+    assert parsed.whiteouts_tracked == 1
+    assert parsed.gitignored_paths == (".venv/cfg", "node_modules/pkg/index.js")
+
+    kinds = [c.kind for c in parsed.tracked_changes]
+    assert kinds == ["modify", "delete", "create"]
+    delete_change = [c for c in parsed.tracked_changes if c.kind == "delete"][0]
+    assert delete_change.final_content is None
+    create_change = [c for c in parsed.tracked_changes if c.kind == "create"][0]
+    assert create_change.base_existed is False
+    modify_change = [c for c in parsed.tracked_changes if c.kind == "modify"][0]
+    assert modify_change.base_content == "old\n"
+    assert modify_change.final_content == "new\n"
+
+
+def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_auditor import parse_diff_ndjson
+
+    reject = PolicyRejectOutcome(
+        reason="overlay_rejected_dotgit_writes",
+        paths=(".git/config", ".git/objects/a"),
+    )
+    path = write_reject_ndjson(run_dir=str(tmp_path), snap="abc", reject=reject)
+    raw = Path(path).read_text(encoding="utf-8")
+    parsed = parse_diff_ndjson(raw)
+
+    # parse_diff_ndjson returns OverlayPolicyReject (different dataclass,
+    # same schema).
+    assert parsed.reason == "overlay_rejected_dotgit_writes"  # type: ignore[union-attr]
+    assert parsed.paths == (".git/config", ".git/objects/a")  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# Preserved: Edge case: mixed tracked + gitignored writes (plan §0 row)
+# ---------------------------------------------------------------------------
+
+
+def test_mixed_write_direct_merges_gitignored_even_when_tracked_path_is_present(
+    tmp_path: Path,
+) -> None:
+    # The classifier is pure; the orchestrator is the one that decides
+    # whether to commit tracked via OCC after gitignored already landed.
+    # Here we just verify the classifier itself routes correctly.
+    env = _Classifier(
+        upper_bytes={
+            "requirements.txt": b"foo==1.0\n",
+            ".venv/lib/foo/__init__.py": b"# foo\n",
+        },
+        base_bytes={"requirements.txt": b""},
+        ignored={".venv/lib/foo/__init__.py"},
+    )
+    result = env.classifier().classify(
+        [
+            _regular_entry("requirements.txt"),
+            _regular_entry(".venv/lib/foo/__init__.py"),
+        ]
+    )
+    assert isinstance(result, ClassifyOutcome)
+    assert [c.path for c in result.tracked] == ["requirements.txt"]
+    assert result.gitignored_paths == (".venv/lib/foo/__init__.py",)
+    # Gitignored direct-merge runs inside the classifier (inside the ns
+    # in production). That means it is already applied before the
+    # orchestrator runs tracked OCC — the partial-apply contract.
+    assert env.merged == [(".venv/lib/foo/__init__.py", len(b"# foo\n"))]

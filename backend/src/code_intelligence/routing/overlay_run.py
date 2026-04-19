@@ -1,0 +1,845 @@
+"""Sandbox-side overlay CodeAct runner.
+
+Runs inside ``unshare -Urm`` on the sandbox (see
+``docs/architecture/overlay-sandbox-plan.md`` §3). Responsibilities in
+order:
+
+1. Mount setup — one tmpfs at ``/ns/tmp`` with ``upper``/``work`` subdirs
+   (single superblock, as required by overlayfs), a bind of the live
+   workspace as ``lowerdir``, a rootless overlay with ``userxattr``, and
+   a final bind of ``/ns/merged`` over the workspace root so the user
+   command keeps its expected absolute path.
+2. User command — runs under the merged view. Writes land in tmpfs
+   upperdir; reads pass through to lower.
+3. Upperdir classifier — walks upper, gates on ``.git/*`` writes,
+   detects whiteouts (privileged ``S_IFCHR`` + rootless
+   ``user.overlay.whiteout`` xattr) and opaque dirs (both xattr
+   namespaces), batches ``git check-ignore`` to split tracked vs
+   gitignored routes.
+4. Direct-merge gitignored writes into the live workspace via the
+   ``/ns/lower`` bind, using per-op unique tempfile + ``os.rename`` for
+   atomic last-writer-wins behavior.
+5. Emit tracked changes as NDJSON at ``$RUN_DIR/diff.ndjson`` for the
+   orchestrator's OCC pass.
+
+The classifier (:class:`Classifier`) is pure and dependency-injected:
+xattr reads, ``git show <snap>:<path>`` lookups, and ``git check-ignore``
+batching all go through callables. That keeps it unit-testable on darwin
+where ``unshare`` / overlayfs / Linux xattrs do not exist.
+
+Exit status:
+* On success, the script exits with the user command's exit code.
+* On policy reject, the script writes a ``_reject`` metadata line to
+  ``diff.ndjson`` and exits with ``200 + policy_code`` so the orchestrator
+  can distinguish reject-sentinel from a user-command exit.
+"""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import errno
+import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, Iterator
+
+
+# ---------------------------------------------------------------------------
+# Policy reject codes. Orchestrator surfaces these via
+# ``overlay_types.OverlayPolicyReject.reason``.
+# ---------------------------------------------------------------------------
+
+REJECT_DOTGIT = "overlay_rejected_dotgit_writes"
+REJECT_GITIGNORED_WHITEOUT = "overlay_refused_gitignored_whiteout"
+REJECT_GITIGNORED_OPAQUE_DIR = "overlay_refused_opaque_dir"
+REJECT_UNSUPPORTED_SYMLINK = "overlay_unsupported_symlink"
+REJECT_UNSUPPORTED_OPAQUE_DIR = "overlay_unsupported_opaque_dir"
+REJECT_NON_UTF8_TRACKED = "overlay_non_utf8_tracked"
+REJECT_UPPER_FULL = "overlay_upper_full"
+
+_REJECT_EXIT_BASE = 200
+_REJECT_EXIT_CODES: dict[str, int] = {
+    REJECT_DOTGIT: _REJECT_EXIT_BASE + 1,
+    REJECT_GITIGNORED_WHITEOUT: _REJECT_EXIT_BASE + 2,
+    REJECT_GITIGNORED_OPAQUE_DIR: _REJECT_EXIT_BASE + 3,
+    REJECT_UNSUPPORTED_SYMLINK: _REJECT_EXIT_BASE + 4,
+    REJECT_UNSUPPORTED_OPAQUE_DIR: _REJECT_EXIT_BASE + 5,
+    REJECT_NON_UTF8_TRACKED: _REJECT_EXIT_BASE + 6,
+    REJECT_UPPER_FULL: _REJECT_EXIT_BASE + 7,
+}
+
+
+# ---------------------------------------------------------------------------
+# Overlay kind detection (both privileged and rootless representations).
+# ---------------------------------------------------------------------------
+
+
+def is_whiteout(st: os.stat_result, xattrs: dict[bytes, bytes]) -> bool:
+    """True when *st* is an overlay whiteout.
+
+    Privileged overlays emit a char-device with ``rdev == 0``. Rootless
+    overlays (``userxattr``) cannot call ``mknod`` and instead mark a
+    zero-size regular file with ``user.overlay.whiteout``.
+    """
+    if stat.S_ISCHR(st.st_mode) and st.st_rdev == 0:
+        return True
+    if stat.S_ISREG(st.st_mode) and st.st_size == 0:
+        if b"user.overlay.whiteout" in xattrs:
+            return True
+    return False
+
+
+def is_opaque_dir(st: os.stat_result, xattrs: dict[bytes, bytes]) -> bool:
+    """True when *st* marks an overlay opaque directory.
+
+    Privileged overlays use ``trusted.overlay.opaque="y"``. Rootless
+    overlays use ``user.overlay.opaque="y"``.
+    """
+    if not stat.S_ISDIR(st.st_mode):
+        return False
+    return (
+        xattrs.get(b"trusted.overlay.opaque") == b"y"
+        or xattrs.get(b"user.overlay.opaque") == b"y"
+    )
+
+
+def is_symlink(st: os.stat_result) -> bool:
+    return stat.S_ISLNK(st.st_mode)
+
+
+# ---------------------------------------------------------------------------
+# Classifier — pure-ish, dependency-injected for testability.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class UpperEntry:
+    """One upperdir entry handed to the classifier."""
+
+    rel: str
+    st: os.stat_result
+    xattrs: dict[bytes, bytes]
+    upper_path: str  # absolute path under /ns/tmp/upper (or synthetic root in tests)
+
+
+@dataclass(frozen=True)
+class TrackedChange:
+    """One tracked-route change to emit to NDJSON."""
+
+    path: str
+    kind: str  # "create" | "modify" | "delete"
+    base_content: str
+    base_existed: bool
+    final_content: str | None  # None for delete
+
+
+@dataclass(frozen=True)
+class ClassifyOutcome:
+    tracked: tuple[TrackedChange, ...]
+    gitignored_paths: tuple[str, ...]
+    direct_merged_bytes: int
+    whiteouts_tracked: int
+    whiteouts_gitignored_refused: int
+    dotgit_rejects: int
+
+
+@dataclass(frozen=True)
+class PolicyRejectOutcome:
+    reason: str
+    paths: tuple[str, ...]
+
+
+class Classifier:
+    """Classify one upperdir walk into tracked / gitignored / rejects.
+
+    Callables keep the implementation decoupled from live syscalls so it
+    can be exercised on darwin:
+
+    * ``read_upper_bytes(rel)`` — read bytes from the upper file at *rel*.
+    * ``git_show_base(rel) -> bytes | None`` — return ``git show <snap>:rel``
+      bytes, or ``None`` when the path did not exist at SNAP time.
+    * ``check_ignore(rels) -> set[str]`` — batch-check which *rels* are
+      gitignored relative to the live workspace (one batched git call).
+    * ``direct_merge(rel, upper_path, upper_st)`` — copy bytes from the
+      upper into the live workspace via an atomic ``tempfile + rename``.
+      Returns the number of bytes written.
+    """
+
+    def __init__(
+        self,
+        *,
+        read_upper_bytes: Callable[[str], bytes],
+        git_show_base: Callable[[str], bytes | None],
+        check_ignore: Callable[[list[str]], set[str]],
+        direct_merge: Callable[[str, str, os.stat_result], int],
+    ) -> None:
+        self._read_upper_bytes = read_upper_bytes
+        self._git_show_base = git_show_base
+        self._check_ignore = check_ignore
+        self._direct_merge = direct_merge
+
+    def classify(
+        self, entries: Iterable[UpperEntry]
+    ) -> ClassifyOutcome | PolicyRejectOutcome:
+        entries = list(entries)
+
+        # --- Pass 1: .git/* reject gate. Runs first so we never invoke
+        # git check-ignore against a workspace the user mutated under
+        # ``.git/``.
+        dotgit = [e for e in entries if e.rel == ".git" or e.rel.startswith(".git/")]
+        if dotgit:
+            return PolicyRejectOutcome(
+                reason=REJECT_DOTGIT,
+                paths=tuple(sorted(e.rel for e in dotgit)),
+            )
+
+        # --- Pass 2: detect symlink / opaque-dir on tracked entries and
+        # split whiteouts.
+        whiteouts: list[UpperEntry] = []
+        regular: list[UpperEntry] = []
+        opaque_dirs: list[UpperEntry] = []
+        symlinks: list[UpperEntry] = []
+
+        for entry in entries:
+            if is_whiteout(entry.st, entry.xattrs):
+                whiteouts.append(entry)
+            elif is_symlink(entry.st):
+                symlinks.append(entry)
+            elif is_opaque_dir(entry.st, entry.xattrs):
+                opaque_dirs.append(entry)
+            elif stat.S_ISREG(entry.st.st_mode):
+                regular.append(entry)
+            # Plain (non-opaque, non-whiteout) directories are ignored —
+            # they are just containers for their children, already walked.
+
+        # --- Pass 3: one batched git check-ignore call for the surviving
+        # candidate paths. Whiteouts, opaque-dirs, symlinks, and regular
+        # files all need route classification.
+        candidates = [e.rel for e in whiteouts + regular + opaque_dirs + symlinks]
+        ignored = self._check_ignore(candidates) if candidates else set()
+
+        # --- Pass 4: kind-gate rejections on the tracked route.
+        bad_symlinks = [e.rel for e in symlinks if e.rel not in ignored]
+        if bad_symlinks:
+            return PolicyRejectOutcome(
+                reason=REJECT_UNSUPPORTED_SYMLINK,
+                paths=tuple(sorted(bad_symlinks)),
+            )
+        bad_opaque = [e.rel for e in opaque_dirs if e.rel not in ignored]
+        if bad_opaque:
+            return PolicyRejectOutcome(
+                reason=REJECT_UNSUPPORTED_OPAQUE_DIR,
+                paths=tuple(sorted(bad_opaque)),
+            )
+        bad_gitignored_whiteout = [e.rel for e in whiteouts if e.rel in ignored]
+        if bad_gitignored_whiteout:
+            return PolicyRejectOutcome(
+                reason=REJECT_GITIGNORED_WHITEOUT,
+                paths=tuple(sorted(bad_gitignored_whiteout)),
+            )
+        bad_gitignored_opaque = [e.rel for e in opaque_dirs if e.rel in ignored]
+        if bad_gitignored_opaque:
+            return PolicyRejectOutcome(
+                reason=REJECT_GITIGNORED_OPAQUE_DIR,
+                paths=tuple(sorted(bad_gitignored_opaque)),
+            )
+
+        # --- Pass 5: tracked-route emits + gitignored direct-merges.
+        tracked: list[TrackedChange] = []
+        gitignored_paths: list[str] = []
+        direct_merged_bytes = 0
+        whiteouts_tracked = 0
+
+        # Tracked whiteouts (deletions against the SNAP base).
+        for entry in whiteouts:
+            if entry.rel in ignored:
+                continue  # already rejected above; defensive
+            whiteouts_tracked += 1
+            base_bytes = self._git_show_base(entry.rel)
+            base_existed = base_bytes is not None
+            try:
+                base_text = (base_bytes or b"").decode("utf-8")
+            except UnicodeDecodeError:
+                return PolicyRejectOutcome(
+                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                )
+            tracked.append(
+                TrackedChange(
+                    path=entry.rel,
+                    kind="delete",
+                    base_content=base_text,
+                    base_existed=base_existed,
+                    final_content=None,
+                )
+            )
+
+        # Regular-file upper entries: route, classify create/modify, gate on mode-only.
+        for entry in regular:
+            if entry.rel in ignored:
+                gitignored_paths.append(entry.rel)
+                direct_merged_bytes += self._direct_merge(
+                    entry.rel, entry.upper_path, entry.st
+                )
+                continue
+
+            # Tracked route.
+            try:
+                upper_bytes = self._read_upper_bytes(entry.rel)
+            except OSError as exc:
+                raise _ClassifierIOError(
+                    f"upperdir read failed for {entry.rel!r}: {exc}"
+                ) from exc
+            base_bytes = self._git_show_base(entry.rel)
+            base_existed = base_bytes is not None
+
+            # Mode-only short-circuit: if the upper content equals the SNAP
+            # base, overlay copied-up on mode change (or an agent wrote the
+            # same content). OCC does not track mode; skip.
+            if base_existed and upper_bytes == base_bytes:
+                continue
+
+            try:
+                final_text = upper_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                return PolicyRejectOutcome(
+                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                )
+            try:
+                base_text = (base_bytes or b"").decode("utf-8")
+            except UnicodeDecodeError:
+                return PolicyRejectOutcome(
+                    reason=REJECT_NON_UTF8_TRACKED, paths=(entry.rel,)
+                )
+            kind = "modify" if base_existed else "create"
+            tracked.append(
+                TrackedChange(
+                    path=entry.rel,
+                    kind=kind,
+                    base_content=base_text,
+                    base_existed=base_existed,
+                    final_content=final_text,
+                )
+            )
+
+        return ClassifyOutcome(
+            tracked=tuple(tracked),
+            gitignored_paths=tuple(sorted(gitignored_paths)),
+            direct_merged_bytes=direct_merged_bytes,
+            whiteouts_tracked=whiteouts_tracked,
+            whiteouts_gitignored_refused=0,  # refused ones cause early return
+            dotgit_rejects=0,
+        )
+
+
+class _ClassifierIOError(RuntimeError):
+    """Raised when the classifier can't read an upperdir file it expected."""
+
+
+# ---------------------------------------------------------------------------
+# Upperdir walker.
+# ---------------------------------------------------------------------------
+
+
+def walk_upperdir(upper_root: str) -> Iterator[UpperEntry]:
+    """Yield one :class:`UpperEntry` per non-directory upperdir entry.
+
+    Opaque directories themselves are yielded (so the classifier can
+    reject or route them); plain directories act as containers only.
+    Whiteouts (both privileged and rootless forms) surface here as
+    regular entries; :func:`is_whiteout` distinguishes them from true
+    files downstream.
+    """
+    upper_root = upper_root.rstrip("/")
+    if not os.path.isdir(upper_root):
+        return
+    for dirpath, dirnames, filenames in os.walk(
+        upper_root, topdown=True, followlinks=False
+    ):
+        rel_dir = os.path.relpath(dirpath, upper_root)
+        rel_dir = "" if rel_dir == "." else rel_dir
+
+        # Yield opaque directories so the classifier can reject them.
+        if rel_dir:
+            full = os.path.join(upper_root, rel_dir)
+            try:
+                st = os.lstat(full)
+            except FileNotFoundError:
+                pass
+            else:
+                xattrs = _read_xattrs(full)
+                if is_opaque_dir(st, xattrs):
+                    yield UpperEntry(
+                        rel=rel_dir, st=st, xattrs=xattrs, upper_path=full
+                    )
+
+        for name in filenames:
+            rel = os.path.join(rel_dir, name) if rel_dir else name
+            full = os.path.join(dirpath, name)
+            try:
+                st = os.lstat(full)
+            except FileNotFoundError:
+                continue
+            xattrs = _read_xattrs(full)
+            yield UpperEntry(rel=rel, st=st, xattrs=xattrs, upper_path=full)
+
+        # Sort dirnames for deterministic walk ordering in tests.
+        dirnames.sort()
+
+
+def _read_xattrs(path: str) -> dict[bytes, bytes]:
+    """Return all extended attributes on *path* as a byte-keyed dict.
+
+    Linux ``os.listxattr`` / ``os.getxattr`` are used when available. On
+    platforms without the syscalls (darwin), an empty dict is returned
+    — overlay is Linux-only in production; xattr-dependent classifier
+    paths are tested by direct-constructing :class:`UpperEntry` objects
+    with synthetic xattr dicts.
+    """
+    listxattr = getattr(os, "listxattr", None)
+    getxattr = getattr(os, "getxattr", None)
+    if listxattr is None or getxattr is None:
+        return {}
+    try:
+        names = listxattr(path, follow_symlinks=False)
+    except OSError:
+        return {}
+    out: dict[bytes, bytes] = {}
+    for name in names:
+        key = name.encode("utf-8") if isinstance(name, str) else name
+        try:
+            out[key] = getxattr(path, name, follow_symlinks=False)
+        except OSError:
+            continue
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Git helpers (run inside the ns; talk to the live repo via /ns/lower).
+# ---------------------------------------------------------------------------
+
+
+def git_show_base_factory(
+    *, repo_root: str, snap: str
+) -> Callable[[str], bytes | None]:
+    """Return a callable that reads ``git show <snap>:<rel>``.
+
+    Returns ``None`` when the path did not exist at SNAP time (missing
+    object). Raises :class:`RuntimeError` for anything else.
+    """
+
+    def _show(rel: str) -> bytes | None:
+        proc = subprocess.run(
+            ["git", "-C", repo_root, "show", f"{snap}:{rel}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if proc.returncode == 0:
+            return proc.stdout
+        stderr = proc.stderr.decode("utf-8", "replace")
+        if "exists on disk, but not in" in stderr or "does not exist" in stderr:
+            return None
+        # Git returns 128 for missing objects; also treat "Path ... does
+        # not exist" text as missing.
+        if proc.returncode == 128 and "exists on disk" not in stderr:
+            return None
+        raise RuntimeError(
+            f"git show {snap}:{rel} failed: rc={proc.returncode} stderr={stderr!r}"
+        )
+
+    return _show
+
+
+def check_ignore_factory(*, repo_root: str) -> Callable[[list[str]], set[str]]:
+    """Return a callable that batch-checks gitignore membership.
+
+    Uses ``git check-ignore -z --stdin --verbose --non-matching`` so both
+    matching and non-matching paths appear in the output. Chunks the
+    stdin at 1 MiB to stay under any reasonable kernel pipe limit (plan
+    §3.2 / §5.1).
+    """
+
+    def _check(paths: list[str]) -> set[str]:
+        if not paths:
+            return set()
+        ignored: set[str] = set()
+        for chunk in _chunk_paths(paths, byte_limit=1024 * 1024):
+            stdin_bytes = b"\0".join(p.encode("utf-8") for p in chunk) + b"\0"
+            proc = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    repo_root,
+                    "check-ignore",
+                    "-z",
+                    "--stdin",
+                    "--verbose",
+                    "--non-matching",
+                ],
+                input=stdin_bytes,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            # Exit codes from git check-ignore:
+            #   0: at least one path matched (ignored)
+            #   1: no path matched
+            # 128: fatal error
+            # Any other non-(0|1) is an error.
+            if proc.returncode not in (0, 1):
+                stderr = proc.stderr.decode("utf-8", "replace")
+                raise RuntimeError(
+                    f"git check-ignore failed: rc={proc.returncode} stderr={stderr!r}"
+                )
+            # Output format with -z -v --non-matching is a stream of
+            # records: source NUL linenum NUL pattern NUL path NUL
+            # Non-matching records have empty source/linenum/pattern.
+            fields = proc.stdout.split(b"\0")
+            # Drop trailing empty from final NUL.
+            if fields and fields[-1] == b"":
+                fields = fields[:-1]
+            for i in range(0, len(fields), 4):
+                record = fields[i : i + 4]
+                if len(record) < 4:
+                    break
+                source, _line, _pattern, path = record
+                if source:  # non-empty source → this path was ignored
+                    ignored.add(path.decode("utf-8"))
+        return ignored
+
+    return _check
+
+
+def _chunk_paths(paths: list[str], *, byte_limit: int) -> Iterator[list[str]]:
+    chunk: list[str] = []
+    size = 0
+    for p in paths:
+        plen = len(p.encode("utf-8")) + 1  # +1 for NUL
+        if chunk and size + plen > byte_limit:
+            yield chunk
+            chunk = []
+            size = 0
+        chunk.append(p)
+        size += plen
+    if chunk:
+        yield chunk
+
+
+# ---------------------------------------------------------------------------
+# Direct-merge of gitignored writes into the live workspace.
+# ---------------------------------------------------------------------------
+
+
+def direct_merge_factory(
+    *, live_root: str,
+) -> Callable[[str, str, os.stat_result], int]:
+    """Return a callable that atomically merges one upperdir file into live.
+
+    Uses ``tempfile.mkstemp`` in the target's parent so the final
+    ``os.rename`` is atomic; concurrent writers to the same gitignored
+    path produce clean last-writer-wins semantics on the final rename.
+    """
+
+    def _merge(rel: str, upper_path: str, upper_st: os.stat_result) -> int:
+        del upper_st  # size is read from the source file on copy
+        live_target = os.path.join(live_root, rel)
+        parent = os.path.dirname(live_target)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=parent or ".",
+            prefix=os.path.basename(live_target) + ".",
+            suffix=".overlay-merge",
+        )
+        os.close(fd)
+        try:
+            shutil.copyfile(upper_path, tmp_path)
+            os.rename(tmp_path, live_target)
+        except OSError:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+        try:
+            return os.path.getsize(live_target)
+        except OSError:
+            return 0
+
+    return _merge
+
+
+# ---------------------------------------------------------------------------
+# NDJSON emitters.
+# ---------------------------------------------------------------------------
+
+
+def write_diff_ndjson(
+    *,
+    run_dir: str,
+    snap: str,
+    exit_code: int,
+    outcome: ClassifyOutcome,
+    upper_bytes: int,
+    upper_files: int,
+    warnings: list[str] | None = None,
+) -> str:
+    """Write ``$RUN_DIR/diff.ndjson`` and return its absolute path."""
+    path = os.path.join(run_dir, "diff.ndjson")
+    os.makedirs(run_dir, exist_ok=True)
+    lines: list[str] = []
+    meta = {
+        "_meta": {
+            "snap": snap,
+            "exit_code": exit_code,
+            "upper_bytes": upper_bytes,
+            "upper_files": upper_files,
+            "tracked_changes": len(outcome.tracked),
+            "gitignored_changes": len(outcome.gitignored_paths),
+            "gitignored_paths": list(outcome.gitignored_paths),
+            "whiteouts_tracked": outcome.whiteouts_tracked,
+            "whiteouts_gitignored_refused": outcome.whiteouts_gitignored_refused,
+            "dotgit_rejects": outcome.dotgit_rejects,
+            "direct_merged_bytes": outcome.direct_merged_bytes,
+            "warnings": list(warnings or ()),
+        }
+    }
+    lines.append(json.dumps(meta, separators=(",", ":")))
+    for change in outcome.tracked:
+        lines.append(
+            json.dumps(
+                {
+                    "path": change.path,
+                    "kind": change.kind,
+                    "base_content": change.base_content,
+                    "base_existed": change.base_existed,
+                    "final_content": change.final_content,
+                    "strict_base": True,
+                },
+                separators=(",", ":"),
+            )
+        )
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines))
+        fh.write("\n")
+    return path
+
+
+def write_reject_ndjson(
+    *, run_dir: str, snap: str, reject: PolicyRejectOutcome
+) -> str:
+    path = os.path.join(run_dir, "diff.ndjson")
+    os.makedirs(run_dir, exist_ok=True)
+    payload = {
+        "_reject": {
+            "snap": snap,
+            "reason": reject.reason,
+            "paths": list(reject.paths),
+        }
+    }
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, separators=(",", ":")))
+        fh.write("\n")
+    return path
+
+
+def reject_exit_code(reason: str) -> int:
+    return _REJECT_EXIT_CODES.get(reason, _REJECT_EXIT_BASE)
+
+
+# ---------------------------------------------------------------------------
+# Mount + user-command orchestration. Only exercised on Linux; darwin
+# tests drive the classifier directly.
+# ---------------------------------------------------------------------------
+
+
+_NS_ROOT = "/ns"
+_NS_TMP = "/ns/tmp"
+_NS_UPPER = "/ns/tmp/upper"
+_NS_WORK = "/ns/tmp/work"
+_NS_LOWER = "/ns/lower"
+_NS_MERGED = "/ns/merged"
+
+
+def _run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+    )
+
+
+def setup_mounts(*, live_root: str, upper_size_mb: int) -> None:
+    """Mount the overlay stack inside the ns (see plan §3.1).
+
+    Raises :class:`OverlayMountError` with a descriptive message when a
+    step fails. ``upperdir`` and ``workdir`` share one tmpfs superblock
+    (kernel requires same-fs), so we mount one tmpfs and use subdirs.
+    """
+    for d in (_NS_ROOT, _NS_TMP, _NS_LOWER, _NS_MERGED):
+        os.makedirs(d, exist_ok=True)
+    _check(_run(["mount", "-t", "tmpfs", "-o", f"size={upper_size_mb}m", "tmpfs", _NS_TMP]), step="tmpfs /ns/tmp")
+    for d in (_NS_UPPER, _NS_WORK):
+        os.makedirs(d, exist_ok=True)
+    _check(_run(["mount", "--bind", live_root, _NS_LOWER]), step=f"bind {live_root} -> /ns/lower")
+    overlay_opts = f"lowerdir={_NS_LOWER},upperdir={_NS_UPPER},workdir={_NS_WORK},userxattr"
+    _check(
+        _run(["mount", "-t", "overlay", "overlay", "-o", overlay_opts, _NS_MERGED]),
+        step="mount overlay",
+    )
+    _check(_run(["mount", "--bind", _NS_MERGED, live_root]), step=f"bind /ns/merged -> {live_root}")
+
+
+def _check(proc: subprocess.CompletedProcess[bytes], *, step: str) -> None:
+    if proc.returncode == 0:
+        return
+    stderr = proc.stderr.decode("utf-8", "replace")
+    raise OverlayMountError(f"{step}: rc={proc.returncode} stderr={stderr!r}")
+
+
+class OverlayMountError(RuntimeError):
+    """Raised when the namespace mount setup fails."""
+
+
+def run_user_command(
+    *, user_cmd: str, stdin_bytes: bytes | None, cwd: str
+) -> tuple[bytes, int]:
+    """Run the user command under the merged overlay view.
+
+    The command runs via ``bash -o pipefail -lc`` with *cwd* as the
+    working directory. Without the explicit ``cwd``, relative-path
+    commands like ``pytest``, ``pip install -r requirements.txt``, and
+    ``npm run build`` would resolve against the namespace's initial
+    ``pwd`` (typically ``/``) instead of the live workspace.
+
+    stdout and stderr are merged (the orchestrator already expects one
+    combined stream via ``_extract_exit_code``).
+    """
+    proc = subprocess.run(
+        ["bash", "-o", "pipefail", "-lc", user_cmd],
+        input=stdin_bytes,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=cwd,
+    )
+    return proc.stdout, proc.returncode
+
+
+def detect_upper_full(proc_error: OSError | None) -> bool:
+    """Return True when *proc_error* indicates a full tmpfs upperdir."""
+    if proc_error is None:
+        return False
+    return getattr(proc_error, "errno", None) == errno.ENOSPC
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point. Invoked by the orchestrator as
+# ``unshare -Urm python3 /path/to/overlay_run.py --workspace-root <...>``.
+# ---------------------------------------------------------------------------
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workspace-root", required=True)
+    parser.add_argument("--run-dir", required=True)
+    parser.add_argument("--snap", required=True)
+    parser.add_argument("--upper-size-mb", type=int, required=True)
+    parser.add_argument(
+        "--user-cmd-b64",
+        required=True,
+        help="Base64-encoded bash command to run inside the overlay.",
+    )
+    parser.add_argument(
+        "--stdin-b64",
+        default="",
+        help="Optional base64-encoded stdin payload for the user command.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - exercised via e2e
+    args = _parse_args(argv if argv is not None else sys.argv[1:])
+    workspace_root = args.workspace_root.rstrip("/")
+    run_dir = args.run_dir.rstrip("/")
+    os.makedirs(run_dir, exist_ok=True)
+
+    try:
+        setup_mounts(live_root=workspace_root, upper_size_mb=args.upper_size_mb)
+    except OverlayMountError as exc:
+        # Fail hard — orchestrator raises; no reject ndjson emitted
+        # because we have no upperdir to audit.
+        print(str(exc), file=sys.stderr)
+        return 255
+
+    user_cmd = base64.b64decode(args.user_cmd_b64).decode("utf-8")
+    stdin_bytes = base64.b64decode(args.stdin_b64) if args.stdin_b64 else None
+
+    stdout_bytes, exit_code = run_user_command(
+        user_cmd=user_cmd, stdin_bytes=stdin_bytes, cwd=workspace_root
+    )
+    # Write the stdout stream to a sibling file for the orchestrator.
+    with open(os.path.join(run_dir, "stdout.bin"), "wb") as fh:
+        fh.write(stdout_bytes)
+
+    # Walk upperdir (always, regardless of user exit code — plan §1 step 4).
+    upper_entries = list(walk_upperdir(_NS_UPPER))
+    upper_files = len(upper_entries)
+    upper_bytes = sum(e.st.st_size for e in upper_entries if stat.S_ISREG(e.st.st_mode))
+
+    classifier = Classifier(
+        read_upper_bytes=lambda rel: open(os.path.join(_NS_UPPER, rel), "rb").read(),
+        git_show_base=git_show_base_factory(repo_root=_NS_LOWER, snap=args.snap),
+        check_ignore=check_ignore_factory(repo_root=_NS_LOWER),
+        direct_merge=direct_merge_factory(live_root=_NS_LOWER),
+    )
+
+    result = classifier.classify(upper_entries)
+    if isinstance(result, PolicyRejectOutcome):
+        write_reject_ndjson(run_dir=run_dir, snap=args.snap, reject=result)
+        return reject_exit_code(result.reason)
+
+    write_diff_ndjson(
+        run_dir=run_dir,
+        snap=args.snap,
+        exit_code=exit_code,
+        outcome=result,
+        upper_bytes=upper_bytes,
+        upper_files=upper_files,
+    )
+    return exit_code
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
+
+
+__all__ = [
+    "Classifier",
+    "ClassifyOutcome",
+    "OverlayMountError",
+    "PolicyRejectOutcome",
+    "REJECT_DOTGIT",
+    "REJECT_GITIGNORED_OPAQUE_DIR",
+    "REJECT_GITIGNORED_WHITEOUT",
+    "REJECT_NON_UTF8_TRACKED",
+    "REJECT_UNSUPPORTED_OPAQUE_DIR",
+    "REJECT_UNSUPPORTED_SYMLINK",
+    "REJECT_UPPER_FULL",
+    "TrackedChange",
+    "UpperEntry",
+    "check_ignore_factory",
+    "detect_upper_full",
+    "direct_merge_factory",
+    "git_show_base_factory",
+    "is_opaque_dir",
+    "is_symlink",
+    "is_whiteout",
+    "reject_exit_code",
+    "run_user_command",
+    "setup_mounts",
+    "walk_upperdir",
+    "write_diff_ndjson",
+    "write_reject_ndjson",
+]

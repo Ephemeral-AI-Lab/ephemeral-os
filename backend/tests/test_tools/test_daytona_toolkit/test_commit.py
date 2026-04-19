@@ -180,7 +180,7 @@ async def test_submit_codeact_cmd_marks_nonzero_exit_as_failure() -> None:
     assert change.success is False
 
 
-async def test_submit_codeact_cmd_treats_git_workspace_abort_as_failure() -> None:
+async def test_submit_codeact_cmd_treats_sandbox_commit_abort_as_failure() -> None:
     response = SimpleNamespace(
         result="",
         exit_code=0,

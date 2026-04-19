@@ -191,23 +191,25 @@ For each query (find_definitions, find_references, hover, diagnostics):
 - **LspBackendAdapter:** priority 100 (semantic queries preferred)
 - **SymbolIndexBackendAdapter:** priority 50 (structural fallback)
 
-### Audited Command Execution (`svc.cmd` + GitWorkspaceAuditor)
+### Audited Command Execution (`svc.cmd` + OverlayAuditor)
 
 Shell-style commands run through `CodeIntelligenceService.cmd(...)`:
 
-1. `svc.cmd(...)` leases one prewarmed Git workspace slot from the per-sandbox
-   pool. The pool size is controlled by `CI_CODEACT_GIT_POOL_SIZE_PER_SANDBOX`.
-2. The slot is prepared with a synthetic baseline commit that represents the
-   current live workspace state, including tracked, dirty, and untracked files.
-3. The user command runs inside the slot. The live workspace is not mutated by
-   the command itself.
-4. The auditor stages the slot, collects the Git diff and changed-path manifest,
-   builds one `OperationChange(strict_base=True)` per supported file change, and
-   submits the whole set as a single `commit_operation_against_base` batch.
+1. `svc.cmd(...)` builds a dangling Git snapshot of the live workspace. The
+   snapshot captures tracked, dirty, and untracked non-ignored files while
+   honoring `.gitignore`.
+2. The user command runs in a fresh rootless overlay mount whose lowerdir is the
+   live workspace and whose tmpfs upperdir captures command writes.
+3. The sandbox-side overlay classifier walks upperdir, rejects disallowed
+   `.git` and whiteout cases, direct-merges gitignored regular-file writes into
+   the live workspace, and emits tracked changes as NDJSON.
+4. The overlay committer builds one `OperationChange(strict_base=True)` per
+   tracked change using `git show SNAP:path` as the base and submits the set as
+   one `commit_operation_against_base` batch.
 5. On success the coordinator records per-path ledger entries, invalidates LSP
-   caches, refreshes the symbol index, and applies the changes to the live
-   workspace. On `aborted_version`, the slot is discarded or reset and the
-   caller sees the abort class without any partial writes.
+   caches, refreshes the symbol index, and applies tracked changes to the live
+   workspace. On `aborted_version`, tracked writes are skipped; gitignored
+   direct-merges may already be live and are surfaced in overlay metadata.
 
 CodeAct, the test/build runners, and other shell-executing tools all go through
 this one path. Repository diffs, transactions, and audit path hints no longer

@@ -150,6 +150,9 @@ Invariants:
 - `SNAP` is reachable via `git show $SNAP:path` for classifier base lookups.
 - `SNAP` is GC-eligible after `gc.pruneExpire` (default 2w) — never run
   `git gc` from inside CodeAct against live.
+- The snapshot source is the canonical repository checkout with a real `.git`
+  directory. Linked Git worktrees are rejected because this baseline is copied
+  from the repository workspace, not from an auxiliary worktree.
 
 ---
 

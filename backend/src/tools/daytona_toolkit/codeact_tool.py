@@ -323,7 +323,7 @@ async def _execute_python_wrapper(
             )
     changed_paths = list(change.changed_paths)
     if not change.success:
-        error_detail = f"git workspace commit aborted: {change.conflict_reason or 'unknown reason'}"
+        error_detail = f"sandbox commit aborted: {change.conflict_reason or 'unknown reason'}"
         return (
             None,
             sandbox,
@@ -717,7 +717,7 @@ async def daytona_codeact(
         is_error = exit_code != 0 or not audit_success
         if not audit_success and exit_code == 0:
             error_detail = (
-                f"git workspace commit aborted: {audit_conflict or 'unknown reason'}"
+                f"sandbox commit aborted: {audit_conflict or 'unknown reason'}"
             )
         elif exit_code != 0:
             error_detail = _shell_result_error_detail(shell_result)

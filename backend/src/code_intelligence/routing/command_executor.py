@@ -1,20 +1,24 @@
-"""Audited sandbox command execution for code intelligence services."""
+"""Audited sandbox command execution for code intelligence services.
+
+Commands run through the overlay auditor. Each command executes inside a fresh
+``unshare -Urm`` namespace with a tmpfs upperdir over the live workspace, then
+routes tracked writes through OCC and direct-merges gitignored runtime files.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import base64
 import inspect
-import shlex
 from typing import Any, Callable
 
-from code_intelligence.routing.git_diff_committer import GitDiffCommitter
-from code_intelligence.routing.git_workspace_auditor import GitWorkspaceAuditor
-from code_intelligence.routing.git_workspace_pool import GitWorkspacePool
+from code_intelligence.routing.overlay_auditor import OverlayAuditor
 
 
 class AuditedCommandExecutor:
-    """Runs sandbox commands through the OCC-gated Git workspace audit path."""
+    """Runs sandbox commands through the OCC-gated audit path.
+
+    The overlay auditor is initialized lazily on first use.
+    """
 
     def __init__(
         self,
@@ -28,9 +32,8 @@ class AuditedCommandExecutor:
         self.workspace_root = workspace_root
         self._write_coordinator = write_coordinator
         self._rebind_sandbox = rebind_sandbox
-        self._git_workspace_pool: GitWorkspacePool | None = None
-        self._git_workspace_auditor: GitWorkspaceAuditor | None = None
-        self._git_workspace_init_lock = asyncio.Lock()
+        self._overlay_auditor: OverlayAuditor | None = None
+        self._init_lock = asyncio.Lock()
 
     async def cmd(
         self,
@@ -48,9 +51,8 @@ class AuditedCommandExecutor:
     ) -> Any:
         """Run one command through the fail-closed OCC audit path."""
         self._rebind_sandbox(sandbox)
-        auditor = await self._ensure_git_workspace_auditor()
-        command = _adapt_stdin_for_exec_transport(command, stdin)
-        return await auditor.execute(
+        overlay = await self._ensure_overlay_auditor()
+        return await overlay.execute(
             sandbox,
             command,
             timeout=timeout,
@@ -59,31 +61,25 @@ class AuditedCommandExecutor:
             team_run_id=team_run_id,
             agent_run_id=agent_run_id,
             task_id=task_id,
+            stdin=stdin,
             attribute_changes=attribute_changes,
         )
 
-    async def _ensure_git_workspace_auditor(self) -> GitWorkspaceAuditor:
-        cached = self._git_workspace_auditor
+    async def _ensure_overlay_auditor(self) -> OverlayAuditor:
+        cached = self._overlay_auditor
         if cached is not None:
             return cached
-
-        async with self._git_workspace_init_lock:
-            cached = self._git_workspace_auditor
+        async with self._init_lock:
+            cached = self._overlay_auditor
             if cached is not None:
                 return cached
-            pool = GitWorkspacePool(
+            self._overlay_auditor = OverlayAuditor(
                 sandbox_id=self.sandbox_id,
                 workspace_root=self.workspace_root,
                 exec_process=self._exec_sandbox_process,
+                write_coordinator=self._write_coordinator,
             )
-            self._git_workspace_pool = pool
-            self._git_workspace_auditor = GitWorkspaceAuditor(
-                workspace_root=self.workspace_root,
-                exec_process=self._exec_sandbox_process,
-                pool=pool,
-                committer=GitDiffCommitter(self._write_coordinator),
-            )
-            return self._git_workspace_auditor
+            return self._overlay_auditor
 
     async def _exec_sandbox_process(
         self,
@@ -99,24 +95,3 @@ class AuditedCommandExecutor:
         if not inspect.iscoroutinefunction(exec_fn):
             raise RuntimeError("Sandbox process.exec must be async")
         return await exec_fn(command, timeout=timeout) if timeout is not None else await exec_fn(command)
-
-
-def _adapt_stdin_for_exec_transport(command: str, stdin: str | None) -> str:
-    """Adapt service-level stdin into a plain shell command.
-
-    The Git workspace auditor intentionally receives only a command string; it
-    should not know about higher-level CodeAct payload transport.
-    """
-    if stdin is None:
-        return command
-    payload = base64.b64encode(stdin.encode("utf-8")).decode("ascii")
-    stdin_command = (
-        "python3 -c "
-        + shlex.quote(
-            "import base64,sys; "
-            "sys.stdout.buffer.write(base64.b64decode(sys.argv[1]))"
-        )
-        + " "
-        + shlex.quote(payload)
-    )
-    return f"{stdin_command} | {command}"

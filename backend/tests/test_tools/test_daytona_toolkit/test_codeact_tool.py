@@ -356,7 +356,7 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
     assert data["shells_run"] == 1
 
 
-async def test_python_mode_reports_git_workspace_abort_as_error():
+async def test_python_mode_reports_sandbox_commit_abort_as_error():
     manifest = _make_manifest()
     exec_stdout = _inline_manifest_output(manifest)
     sb = _make_sandbox(exec_stdout=exec_stdout, manifest=manifest)
@@ -383,7 +383,7 @@ async def test_python_mode_reports_git_workspace_abort_as_error():
     data = json.loads(result.output)
     assert data["status"] == "error"
     assert data["files_written"] == 1
-    assert data["error"] == "git workspace commit aborted: version drift"
+    assert data["error"] == "sandbox commit aborted: version drift"
     assert result.metadata["changed_paths"] == ["/repo/a.py"]
 
 
