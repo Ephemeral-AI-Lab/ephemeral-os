@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from code_intelligence.types import OperationResult
 from message.stream_events import StreamEvent, SystemNotification
 from tools.core.base import ToolExecutionContext, run_tool_safely
 from tools.core.hooks.execution import execute_tool_with_hooks
@@ -35,17 +36,6 @@ def _ci_service():
     return svc
 
 
-def _operation_result(*, path: str, success: bool = True) -> OperationResult:
-    return OperationResult(
-        success=success,
-        status="committed" if success else "aborted_version",
-        files=(SimpleNamespace(file_path=path),),
-        conflict_file=None if success else path,
-        conflict_reason="" if success else "version drift",
-        timings={},
-    )
-
-
 async def _svc_cmd_passthrough(
     sandbox,
     command,
@@ -62,7 +52,7 @@ async def _svc_cmd_passthrough(
 
     Production :meth:`svc.cmd` adds OCC audit, but tests only need the
     exec-through behavior; the audit layer is covered by
-    ``test_overlay_auditor.py``.
+    ``test_git_workspace_auditor.py``.
     """
     del description, agent_id, team_run_id, agent_run_id, task_id, attribute_changes
     response = await sandbox.process.exec(command, timeout=timeout)
@@ -74,9 +64,9 @@ async def _svc_cmd_passthrough(
         changed_paths=[],
         ambient_changed_paths=[],
         files_written=0,
-        overlay_commit_status=None,
-        overlay_conflict_file=None,
-        overlay_conflict_reason=None,
+        git_commit_status=None,
+        git_conflict_file=None,
+        git_conflict_reason=None,
     )
 
 
@@ -107,24 +97,34 @@ def _make_sandbox(
 ):
     sb = MagicMock()
 
-    if upload_side_effect is not None:
-        sb.fs.upload_file = AsyncMock(side_effect=upload_side_effect)
-    elif upload_exc:
-        sb.fs.upload_file = AsyncMock(side_effect=upload_exc)
-    else:
-        sb.fs.upload_file = AsyncMock()
+    async def _exec(command, timeout=None):
+        del timeout
+        if exec_exc:
+            raise exec_exc
+        if "path.write_text" in command:
+            if upload_side_effect is not None:
+                result = upload_side_effect(command)
+                if result is not None:
+                    return result
+            if upload_exc:
+                raise upload_exc
+            return MagicMock(result="", exit_code=0)
+        if "path.read_text" in command:
+            if download_exc:
+                raise download_exc
+            payload = json.dumps(
+                {
+                    "exists": True,
+                    "content": json.dumps(manifest or _make_manifest()),
+                }
+            )
+            return MagicMock(result=payload, exit_code=0)
+        default_exec = exec_stdout or json.dumps(
+            {"manifest": "/tmp/codeact-xxx.json", "status": "ok"}
+        )
+        return MagicMock(result=default_exec, exit_code=0)
 
-    if exec_exc:
-        sb.process.exec = AsyncMock(side_effect=exec_exc)
-    else:
-        default_exec = exec_stdout or json.dumps({"manifest": "/tmp/codeact-xxx.json", "status": "ok"})
-        sb.process.exec = AsyncMock(return_value=MagicMock(result=default_exec))
-
-    if download_exc:
-        sb.fs.download_file = AsyncMock(side_effect=download_exc)
-    else:
-        payload = json.dumps(manifest or _make_manifest()).encode()
-        sb.fs.download_file = AsyncMock(return_value=payload)
+    sb.process.exec = AsyncMock(side_effect=_exec)
 
     return sb
 
@@ -132,6 +132,13 @@ def _make_sandbox(
 def _assert_ok(result) -> dict:
     assert not result.is_error, result.output
     return json.loads(result.output)
+
+
+def _written_wrapper(sb) -> str:
+    command = sb.process.exec.await_args_list[0].args[0]
+    match = re.search(r"/tmp/codeact-wrapper-[^\s]+\.py\s+([A-Za-z0-9+/=]+)", command)
+    assert match is not None
+    return base64.b64decode(match.group(1)).decode("utf-8")
 
 
 async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
@@ -236,14 +243,12 @@ async def test_build_wrapper_uses_write_through_and_guarded_imports():
         "write('file.txt', 'ok')",
         run_id="abcd1234",
         cwd="/repo",
-        repo_root="/repo",
-        enforce_team_shell_policy=True,
         disable_codeact_file_edits=False,
     )
     assert 'with open(resolved, "w", encoding="utf-8")' in wrapper
     assert "_guarded_import" in wrapper
     assert "_BLOCKED_MODULES" in wrapper
-    assert "_ENFORCE_TEAM_SHELL_POLICY = True" in wrapper
+    assert "_ENFORCE_TEAM_SHELL_POLICY" not in wrapper
     assert "_DISABLE_CODEACT_FILE_EDITS = False" in wrapper
 
 
@@ -252,12 +257,10 @@ async def test_build_wrapper_can_disable_python_file_edits():
         "write('file.txt', 'ok')",
         run_id="abcd1234",
         cwd="/repo",
-        repo_root="/repo",
-        enforce_team_shell_policy=True,
         disable_codeact_file_edits=True,
     )
     assert "_DISABLE_CODEACT_FILE_EDITS = True" in wrapper
-    assert "raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)" in wrapper
+    assert "raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)" in wrapper
     assert '_sandbox_builtins["open"] = _guarded_open' in wrapper
     assert "_codeact_shell_file_edit_error" in wrapper
     assert "_CODEACT_SHELL_FILE_EDIT_PATTERNS" in wrapper
@@ -349,6 +352,37 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
     data = json.loads(result.output)
     assert data["status"] == "error"
     assert data["shells_run"] == 1
+
+
+async def test_python_mode_reports_git_workspace_abort_as_error():
+    manifest = _make_manifest()
+    exec_stdout = json.dumps({"manifest": "/tmp/codeact-xxx.json", "status": "ok"})
+    sb = _make_sandbox(exec_stdout=exec_stdout, manifest=manifest)
+    svc = MagicMock()
+    svc.cmd = AsyncMock(
+        return_value=SimpleNamespace(
+            result=exec_stdout,
+            exit_code=0,
+            changed_paths=["/repo/a.py"],
+            ambient_changed_paths=[],
+            files_written=1,
+            git_commit_status="aborted_version",
+            git_conflict_reason="version drift",
+        )
+    )
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": svc})
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code="write('a.py', 'x')"),
+        ctx,
+    )
+
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["status"] == "error"
+    assert data["files_written"] == 1
+    assert data["error"] == "git workspace commit aborted: version drift"
+    assert result.metadata["changed_paths"] == ["/repo/a.py"]
 
 
 async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
@@ -526,7 +560,7 @@ async def test_team_python_mode_allows_file_read_side_channels(code):
     )
 
     _assert_ok(result)
-    sb.fs.upload_file.assert_awaited_once()
+    assert sb.process.exec.await_count >= 3
     svc.cmd.assert_awaited_once()
 
 
@@ -552,40 +586,6 @@ async def test_team_shell_mode_still_allows_runtime_commands():
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["stdout"] == "ok"
     svc.cmd.assert_awaited_once()
-
-
-async def test_shell_write_text_heredoc_uses_occ_write_fast_path():
-    target = "/testbed/pkg/out.txt"
-    sb = _make_sandbox(exec_stdout=_shell_exec_output("should-not-run", 0))
-    svc = MagicMock()
-    svc.rebind_sandbox = MagicMock()
-    svc.write_file = MagicMock(return_value=_operation_result(path=target))
-    command = (
-        "python3 - <<'PY'\n"
-        "from pathlib import Path\n"
-        "Path('pkg/out.txt').write_text('hello\\n', encoding='utf-8')\n"
-        "PY"
-    )
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "ci_sandbox": sb,
-            "daytona_cwd": "/testbed",
-            "ci_service": svc,
-        }
-    )
-
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(mode="shell", command=command),
-        ctx,
-    )
-
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
-    assert result.metadata["changed_paths"] == [target]
-    svc.write_file.assert_called_once()
-    svc.cmd.assert_not_called()
-    sb.process.exec.assert_not_awaited()
 
 
 async def test_team_shell_mode_still_allows_pytest_file_arguments():
@@ -734,7 +734,7 @@ async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_f
     assert result.is_error
     assert "BLOCKED: daytona_codeact is for runtime commands" in result.output
     assert expected_fragment in result.output
-    sb.fs.upload_file.assert_not_called()
+    sb.process.exec.assert_not_awaited()
     svc.cmd.assert_not_awaited()
 
 
@@ -771,7 +771,7 @@ async def test_python_mode_counts_manifest_writes():
 
     data = _assert_ok(result)
     assert data["files_written"] == 3
-    assert sb.fs.upload_file.call_count == 1
+    assert sb.process.exec.await_count >= 3
 
 
 async def test_python_mode_error_uses_updated_guidance():
@@ -834,16 +834,23 @@ async def test_coordinated_python_mode_enforces_runtime_shell_policy(
         }
     )
 
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code=code),
-        ctx,
-    )
+    if "os.system" in code:
+        result = await run_tool_safely(daytona_codeact, {"code": code}, ctx)
+    else:
+        result = await daytona_codeact.execute(
+            daytona_codeact.input_model(code=code),
+            ctx,
+        )
 
     assert result.is_error
     assert expected_fragment in result.output
     if expect_guidance:
         assert "daytona_codeact(command=" in result.output
-    sb.fs.upload_file.assert_awaited_once()
+    if "os.system" in code:
+        assert result.metadata["blocked_by"] == "pre_hook"
+        sb.process.exec.assert_not_awaited()
+    else:
+        assert sb.process.exec.await_count >= 3
 
 
 async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
@@ -869,3 +876,42 @@ async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
     texts = _notification_texts(events)
     assert any("2>&1" in text for text in texts)
     assert any("cd <repo-root>" in text for text in texts)
+
+
+async def test_python_mode_normalizes_literal_shell_calls_for_team_agents():
+    manifest = _make_manifest(
+        shells=[
+            {
+                "command": "pytest tests/unit/test_x.py -q",
+                "stdout": "ok",
+                "stderr": "",
+                "exit_code": 0,
+            }
+        ]
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "ci_service": _ci_service(),
+        }
+    )
+
+    result, events = await _run_with_events(
+        daytona_codeact,
+        {"code": 'shell("cd /testbed && pytest tests/unit/test_x.py -q 2>&1")'},
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    texts = _notification_texts(events)
+    assert any("2>&1" in text for text in texts)
+    assert any("cd <repo-root>" in text for text in texts)
+    wrapper = _written_wrapper(sb)
+    match = re.search(r'_CODE = base64\.b64decode\("([^"]+)"\)', wrapper)
+    assert match is not None
+    normalized_code = base64.b64decode(match.group(1)).decode("utf-8")
+    assert normalized_code == "shell('pytest tests/unit/test_x.py -q')"

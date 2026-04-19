@@ -14,7 +14,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence.editing.change_labels import change_actor_label
 from code_intelligence.editing.patcher import SearchReplaceEdit
 from code_intelligence.types import EditSpec
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -65,55 +64,6 @@ class DaytonaEditFileOutput(BaseModel):
     applied_edits: int = Field(
         default=0,
         description="Number of replacements applied.",
-    )
-
-
-def _scope_overlap_warning(
-    context: ToolExecutionContext,
-    file_path: str,
-) -> str:
-    """Warn when concurrent agents touched files inside this agent's write_scope.
-
-    Invoked after a successful edit. Detects only non-self edits that fall
-    within the caller's declared scope so agents see when a teammate wrote
-    underneath them during the tool call window.
-    """
-    arbiter = getattr(context, "metadata", {}).get("arbiter")
-    if arbiter is None or not getattr(arbiter, "initialized", False):
-        return ""
-
-    agent_run_id = getattr(context, "metadata", {}).get("agent_run_id", "")
-    write_scope: list[str] = getattr(context, "metadata", {}).get("write_scope", [])
-    if not write_scope:
-        return ""
-
-    task_started_at = getattr(context, "metadata", {}).get("work_item_started_at", 0.0)
-    if not task_started_at:
-        return ""
-
-    changes = arbiter.changes_since(
-        task_started_at,
-        team_run_id=str(getattr(context, "metadata", {}).get("team_run_id") or "") or None,
-    )
-    now = time.time()
-    overlap_lines: list[str] = []
-    for entry in changes:
-        if entry.agent_run_id == agent_run_id:
-            continue
-        if not any(entry.file_path.startswith(scope.rstrip("/")) for scope in write_scope):
-            continue
-        age_seconds = int(now - entry.created_at.timestamp())
-        overlap_lines.append(
-            f"  - {entry.file_path} ({entry.edit_type} by "
-            f"{change_actor_label(entry)}, {age_seconds}s ago)"
-        )
-
-    if not overlap_lines:
-        return ""
-
-    return (
-        f"\n[SCOPE OVERLAP WARNING] Other agents edited files in your scope "
-        f"while you were editing {file_path}:\n" + "\n".join(overlap_lines)
     )
 
 
@@ -247,10 +197,6 @@ async def daytona_edit_file(
             legacy_single_edit=legacy_single_edit,
             metadata_extra=metadata_extra,
         )
-
-    overlap_warning = _scope_overlap_warning(context, file_path)
-    if overlap_warning:
-        warnings.append(overlap_warning)
 
     tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
     return operation_result_to_tool_result(

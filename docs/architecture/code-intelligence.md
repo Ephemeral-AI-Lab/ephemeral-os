@@ -102,8 +102,9 @@ through `svc.write_file(specs)`, `svc.edit_file(specs)`, `svc.rename_symbol(...)
 `svc.delete_file(paths)`, and `svc.move_file(specs)` — each call is one
 `commit_operation_against_base` batch, so a single tool invocation is one OCC
 boundary. Shell-style commands (codeact, tests, builds) use `svc.cmd(sandbox,
-command, ...)`, which runs the command inside a per-run overlayfs namespace and
-commits the upperdir diff through the same coordinator with `strict_base=True`.
+command, ...)`, which runs the command inside a leased Git workspace slot and
+commits the resulting Git diff through the same coordinator with
+`strict_base=True`.
 Both paths share the per-sandbox `Arbiter` ledger. Tools require `ci_service`
 and pass typed specs; they do not carry concurrency state, base hashes,
 transactions, diffs, edit labels, or audit path hints.
@@ -179,28 +180,23 @@ For each query (find_definitions, find_references, hover, diagnostics):
 - **LspBackendAdapter:** priority 100 (semantic queries preferred)
 - **SymbolIndexBackendAdapter:** priority 50 (structural fallback)
 
-### Audited Command Execution (`svc.cmd` + OverlayAuditor)
+### Audited Command Execution (`svc.cmd` + GitWorkspaceAuditor)
 
 Shell-style commands run through `CodeIntelligenceService.cmd(...)`:
 
-1. `svc.cmd(...)` probes the sandbox for overlayfs and lowerdir snapshot
-   materialization. If either is missing, it raises
-   `OverlayCapabilityMissingError` (fail-closed; there is no fallback to an
-   unaudited process path). Reflink/clonefile snapshots are preferred, but a
-   plain byte copy is still a correct independent snapshot; hardlink snapshots
-   are not allowed because later writes can alias into the OCC base.
-2. The `OverlayAuditor` mounts a per-run overlay whose outer lowerdir is an
-   independent snapshot of the live workspace (tracked + untracked + dirty
-   files), runs the user command inside the overlay, and packages the upperdir
-   as a tar.
-3. The auditor walks the upperdir, builds one `OperationChange(strict_base=True)`
-   per MODIFY / DELETE entry, and submits the whole set as a single
-   `commit_operation_against_base` batch.
-4. `SYMLINK` and `OPAQUE_DIR` entries raise `OverlayUnsupportedChangeError`
-   (D3a) — the whole run aborts and disk is unchanged.
+1. `svc.cmd(...)` leases one prewarmed Git workspace slot from the per-sandbox
+   pool. The pool size is controlled by `CI_CODEACT_GIT_POOL_SIZE_PER_SANDBOX`.
+2. The slot is prepared with a synthetic baseline commit that represents the
+   current live workspace state, including tracked, dirty, and untracked files.
+3. The user command runs inside the slot. The live workspace is not mutated by
+   the command itself.
+4. The auditor stages the slot, collects the Git diff and changed-path manifest,
+   builds one `OperationChange(strict_base=True)` per supported file change, and
+   submits the whole set as a single `commit_operation_against_base` batch.
 5. On success the coordinator records per-path ledger entries, invalidates LSP
-   caches, and refreshes the symbol index. On `aborted_version`, the overlay is
-   discarded and the caller sees the abort class without any partial writes.
+   caches, refreshes the symbol index, and applies the changes to the live
+   workspace. On `aborted_version`, the slot is discarded or reset and the
+   caller sees the abort class without any partial writes.
 
 CodeAct, the test/build runners, and other shell-executing tools all go through
 this one path. Repository diffs, transactions, and audit path hints no longer
@@ -353,7 +349,7 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 │  svc.{write,edit,delete,move}_file  │    one call = one batch
 │  svc.rename_symbol(...)             │
 │  svc.cmd(sandbox, command, ...)     │    Shell-style:
-└──────────────────┬──────────────────┘    overlay upperdir -> batch
+└──────────────────┬──────────────────┘    Git workspace diff -> batch
                    │
                    ▼
 ┌─────────────────────────────────────┐

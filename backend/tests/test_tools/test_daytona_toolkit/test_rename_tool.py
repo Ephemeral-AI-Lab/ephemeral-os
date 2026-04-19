@@ -263,7 +263,7 @@ def test_aborted_version_is_surfaced() -> None:
 
 
 def test_write_scope_hard_error_blocks_rename_before_commit(monkeypatch) -> None:
-    """Test-file block remains inline and surfaces distinct 'write-scope policy' message."""
+    """Test-file block runs in the pre-hook and surfaces write-scope policy."""
     svc = _make_svc(
         matches=[_sym("foo", "/ws/a.py")],
         plan=_plan("/ws/a.py", "/ws/b.py"),
@@ -274,11 +274,11 @@ def test_write_scope_hard_error_blocks_rename_before_commit(monkeypatch) -> None
         return None if path == "/ws/a.py" else "blocked by policy"
 
     monkeypatch.setattr(
-        "tools.daytona_toolkit.rename_tool._team_repo_write_error",
+        "tools.daytona_toolkit.hooks.prehook.rename_scope_policy._team_repo_write_error",
         _fake_error,
     )
     monkeypatch.setattr(
-        "tools.daytona_toolkit.rename_tool._team_repo_scope_deny_errors",
+        "tools.daytona_toolkit.hooks.prehook.rename_scope_policy._team_repo_scope_deny_errors",
         lambda _ctx, _paths, tool_name: [],
     )
 

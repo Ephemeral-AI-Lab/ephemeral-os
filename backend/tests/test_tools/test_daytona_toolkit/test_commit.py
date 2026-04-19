@@ -180,14 +180,14 @@ async def test_submit_codeact_cmd_marks_nonzero_exit_as_failure() -> None:
     assert change.success is False
 
 
-async def test_submit_codeact_cmd_treats_overlay_abort_as_failure() -> None:
+async def test_submit_codeact_cmd_treats_git_workspace_abort_as_failure() -> None:
     response = SimpleNamespace(
         result="",
         exit_code=0,
         changed_paths=[],
         ambient_changed_paths=[],
-        overlay_commit_status="aborted_version",
-        overlay_conflict_reason="version_drift",
+        git_commit_status="aborted_version",
+        git_conflict_reason="version_drift",
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)

@@ -170,10 +170,10 @@ def test_delete_file_rejects_repo_root() -> None:
 
     result = _run(daytona_delete_file, {"path": "/ws"}, ctx)
 
-    payload = json.loads(result.output)
     assert result.is_error is True
-    assert payload["status"] == "failed"
-    assert "repo root" in payload["message"]
+    assert result.metadata["blocked_by"] == "pre_hook"
+    assert "pre-hook blocked daytona_delete_file" in result.output
+    assert "repo root" in result.output
     svc.delete_file.assert_not_called()
 
 
@@ -311,10 +311,10 @@ def test_move_file_rejects_destination_inside_source() -> None:
         ctx,
     )
 
-    payload = json.loads(result.output)
     assert result.is_error is True
-    assert payload["status"] == "failed"
-    assert "inside source" in payload["message"]
+    assert result.metadata["blocked_by"] == "pre_hook"
+    assert "pre-hook blocked daytona_move_file" in result.output
+    assert "inside source" in result.output
     svc.move_file.assert_not_called()
 
 
@@ -628,8 +628,8 @@ def test_delete_folder_member_offender_listing() -> None:
         )
 
     assert result.is_error is True
-    payload = json.loads(result.output)
-    assert payload["status"] == "failed"
+    assert result.metadata["blocked_by"] == "pre_hook"
+    assert "pre-hook blocked daytona_delete_file" in result.output
     assert "/ws/other/c.py" in result.output
     assert "/ws/pkg/a.py" not in result.output
     assert "/ws/pkg/b.py" not in result.output
@@ -697,8 +697,8 @@ def test_move_folder_member_offender_listing() -> None:
         )
 
     assert result.is_error is True
-    payload = json.loads(result.output)
-    assert payload["status"] == "failed"
+    assert result.metadata["blocked_by"] == "pre_hook"
+    assert "pre-hook blocked daytona_move_file" in result.output
     assert "/ws/other/stowaway.py" in result.output
     assert "/ws/pkg/a.py" not in result.output
     svc.move_file.assert_not_called()

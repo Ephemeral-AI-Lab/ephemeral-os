@@ -161,7 +161,15 @@ def _extract_exit_code(
         if cleaned.endswith("\n"):
             cleaned = cleaned[:-1]
         return cleaned, resolved
-    return sanitized, 0 if fallback_exit_code is None else int(fallback_exit_code)
+    if fallback_exit_code is None:
+        return sanitized, 0
+    if isinstance(fallback_exit_code, int):
+        return sanitized, fallback_exit_code
+    if isinstance(fallback_exit_code, str):
+        stripped = fallback_exit_code.strip()
+        if stripped.lstrip("-").isdigit():
+            return sanitized, int(stripped)
+    return sanitized, 0
 
 
 # ---------------------------------------------------------------------------
@@ -612,35 +620,10 @@ def _scope_deny_message(
     )
 
 
-# ---------------------------------------------------------------------------
-# Upload helper
-# ---------------------------------------------------------------------------
-
-
-async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> None:
-    """Upload using the SDK signature, with fallback for stale path-first mocks."""
-    async def _call_upload(*args: Any) -> None:
-        response = sandbox.fs.upload_file(*args)
-        if inspect.isawaitable(response):
-            await response
-
-    try:
-        await _call_upload(content, file_path)
-    except (AttributeError, TypeError) as exc:
-        if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-            raise
-        await _call_upload(file_path, content)
-
-
 def _supports_exec_transport(sandbox: Any) -> bool:
     process = getattr(sandbox, "process", None)
     exec_fn = getattr(process, "exec", None) if process is not None else None
-    if not callable(exec_fn):
-        return False
-    module_name = type(exec_fn).__module__
-    if module_name.startswith("unittest.mock"):
-        return False
-    return True
+    return callable(exec_fn)
 
 
 async def _exec_command(sandbox: Any, command: str, *, timeout: int | None = None) -> Any:
@@ -695,28 +678,23 @@ async def _read_text_file_via_exec(
     *,
     allow_missing: bool = False,
 ) -> tuple[str, bool]:
-    if _supports_exec_transport(sandbox):
-        response = await _exec_command(
-            sandbox,
-            _wrap_bash_command(_build_read_text_file_command(file_path)),
-        )
-        stdout = getattr(response, "result", "") or ""
-        cleaned, exit_code = _extract_exit_code(
-            stdout,
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or f"read failed for {file_path}")
-        payload = json.loads(cleaned or "{}")
-        if not payload.get("exists"):
-            if allow_missing:
-                return "", False
-            raise FileNotFoundError(file_path)
-        return str(payload.get("content", "") or ""), True
-    raw = await sandbox.fs.download_file(file_path)
-    if isinstance(raw, bytes):
-        return raw.decode("utf-8"), True
-    return str(raw), True
+    response = await _exec_command(
+        sandbox,
+        _wrap_bash_command(_build_read_text_file_command(file_path)),
+    )
+    stdout = getattr(response, "result", "") or ""
+    cleaned, exit_code = _extract_exit_code(
+        stdout,
+        fallback_exit_code=getattr(response, "exit_code", None),
+    )
+    if exit_code not in (0, None):
+        raise RuntimeError(cleaned or f"read failed for {file_path}")
+    payload = json.loads(cleaned or "{}")
+    if not payload.get("exists"):
+        if allow_missing:
+            return "", False
+        raise FileNotFoundError(file_path)
+    return str(payload.get("content", "") or ""), True
 
 
 async def _write_text_file_via_exec(
@@ -726,21 +704,20 @@ async def _write_text_file_via_exec(
     *,
     timeout: int | None = None,
 ) -> None:
-    if _supports_exec_transport(sandbox):
-        response = await _exec_command(
-            sandbox,
-            _wrap_bash_command(_build_write_text_file_command(file_path, content)),
-            timeout=timeout,
-        )
-        stdout = getattr(response, "result", "") or ""
-        cleaned, exit_code = _extract_exit_code(
-            stdout,
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or f"write failed for {file_path}")
-        return
-    await _upload_file_compat(sandbox, content.encode("utf-8"), file_path)
+    if not _supports_exec_transport(sandbox):
+        raise RuntimeError("Sandbox process has no exec method")
+    response = await _exec_command(
+        sandbox,
+        _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+        timeout=timeout,
+    )
+    stdout = getattr(response, "result", "") or ""
+    cleaned, exit_code = _extract_exit_code(
+        stdout,
+        fallback_exit_code=getattr(response, "exit_code", None),
+    )
+    if exit_code not in (0, None):
+        raise RuntimeError(cleaned or f"write failed for {file_path}")
 
 
 async def _delete_file_via_exec(sandbox: Any, file_path: str) -> None:

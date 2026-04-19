@@ -2,8 +2,8 @@
 
 The tool now delegates to ``svc.edit_file`` directly, so these tests
 mock the service instead of framing a shell payload. Behaviour checked:
-input normalization, scope-warning plumbing, OCC failure translation,
-and legacy "search text not found" error-text preservation.
+input normalization, OCC failure translation, and legacy "search text not
+found" error-text preservation.
 """
 
 from __future__ import annotations

@@ -32,11 +32,8 @@ from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit._daytona_utils import (
     _exec_command,
     _extract_exit_code,
-    _get_repo_root,
     _resolve_path,
-    _scope_deny_message,
     _supports_exec_transport,
-    _team_repo_scope_deny_errors,
     _wrap_bash_command,
 )
 
@@ -98,31 +95,6 @@ def _normalized_path(path: str) -> str:
     if path == "/":
         return path
     return path.rstrip("/") or path
-
-
-def _repo_guard_error(
-    context: ToolExecutionContext,
-    file_path: str,
-    *,
-    tool_name: str,
-) -> str | None:
-    """Reject mutations outside a concrete repo root."""
-    repo_root = _normalized_path(str(_get_repo_root(context) or ""))
-    if not repo_root or repo_root == "/":
-        return (
-            f"{tool_name}: operation requires a non-root "
-            "repo_root/daytona_cwd in context."
-        )
-
-    path = _normalized_path(file_path)
-    if path == repo_root:
-        return f"{tool_name}: refusing to operate on repo root: {repo_root}"
-    if not path.startswith(repo_root + "/"):
-        return (
-            f"{tool_name}: refusing operation outside repo root "
-            f"{repo_root}: {file_path}"
-        )
-    return None
 
 
 def _failure_status(result: Any, *, move: bool) -> tuple[str, str]:
@@ -251,20 +223,6 @@ async def daytona_delete_file(
     if svc is None:
         return ci_write_required_result("daytona_delete_file", resolved)
 
-    guard_error = _repo_guard_error(
-        context, resolved, tool_name="daytona_delete_file",
-    )
-    if guard_error is not None:
-        return ToolResult(
-            output=_operation_payload(
-                status="failed",
-                paths=[resolved],
-                warnings=warnings,
-                message=guard_error,
-            ),
-            is_error=True,
-        )
-
     if is_folder:
         try:
             paths_to_delete = await _list_folder_files(context, resolved)
@@ -300,23 +258,6 @@ async def daytona_delete_file(
                     warnings=warnings,
                 ),
                 metadata={"file_count": 0, "success_count": 0},
-            )
-        member_offenders = _team_repo_scope_deny_errors(
-            context, paths_to_delete, tool_name="daytona_delete_file",
-        )
-        if member_offenders:
-            return ToolResult(
-                output=_operation_payload(
-                    status="failed",
-                    paths=[path for path, _ in member_offenders],
-                    warnings=warnings,
-                    message=_scope_deny_message(
-                        member_offenders,
-                        tool_name="daytona_delete_file",
-                        role="folder members",
-                    ),
-                ),
-                is_error=True,
             )
         paths_to_commit = paths_to_delete
     else:
@@ -453,36 +394,6 @@ async def daytona_move_file(
     if svc is None:
         return ci_write_required_result("daytona_move_file", src_resolved)
 
-    guard_errors = [
-        _repo_guard_error(context, src_resolved, tool_name="daytona_move_file"),
-        _repo_guard_error(context, dst_resolved, tool_name="daytona_move_file"),
-    ]
-    guard_error = next((err for err in guard_errors if err is not None), None)
-    if guard_error is None and dst_resolved == src_resolved:
-        guard_error = "daytona_move_file: src_path and target_path are identical"
-    if guard_error is None and dst_resolved.startswith(src_resolved + "/"):
-        guard_error = (
-            "daytona_move_file: refusing to move a path to a destination "
-            f"inside source: {dst_resolved}"
-        )
-    if guard_error is None and src_resolved.startswith(dst_resolved + "/"):
-        guard_error = (
-            "daytona_move_file: refusing to replace a destination that "
-            f"contains source: {dst_resolved}"
-        )
-    if guard_error is not None:
-        return ToolResult(
-            output=_move_payload(
-                status="failed",
-                src=src_resolved,
-                dst=dst_resolved,
-                paths=[],
-                warnings=warnings,
-                message=guard_error,
-            ),
-            is_error=True,
-        )
-
     if is_folder:
         try:
             members = await _list_folder_files(context, src_resolved)
@@ -524,25 +435,6 @@ async def daytona_move_file(
                     warnings=warnings,
                 ),
                 metadata={"file_count": 0, "success_count": 0},
-            )
-        member_offenders = _team_repo_scope_deny_errors(
-            context, members, tool_name="daytona_move_file",
-        )
-        if member_offenders:
-            return ToolResult(
-                output=_move_payload(
-                    status="failed",
-                    src=src_resolved,
-                    dst=dst_resolved,
-                    paths=[path for path, _ in member_offenders],
-                    warnings=warnings,
-                    message=_scope_deny_message(
-                        member_offenders,
-                        tool_name="daytona_move_file",
-                        role="folder members",
-                    ),
-                ),
-                is_error=True,
             )
         src_prefix_len = len(src_resolved)
         specs = [

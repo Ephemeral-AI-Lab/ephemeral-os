@@ -542,12 +542,14 @@ The initial Daytona pre-hook set should be split into one module per policy:
 
 | Module | Phase | Tools | Purpose |
 | --- | --- | --- | --- |
+| `repo_operation_guard.py` | pre | `daytona_delete_file`, `daytona_move_file` | Blocks repo-root, outside-repo, and invalid self/nested move operations before destructive tool bodies run. |
 | `write_scope_hard_block.py` | pre | `daytona_write_file`, `daytona_edit_file`, `daytona_delete_file` | Blocks unauthorized test-file edits in coordinated team lanes. |
 | `write_scope_advisory.py` | pre | `daytona_write_file`, `daytona_edit_file` | Emits outside-scope write advisories without blocking. |
-| `write_scope_deny.py` | pre | `daytona_delete_file` | Blocks delete operations outside write scope. |
+| `write_scope_deny.py` | pre | `daytona_delete_file` | Blocks delete operations outside write scope, including enumerated folder members. |
 | `move_src_hard_block.py` | pre | `daytona_move_file` | Applies test-file hard-block policy to the move source. |
-| `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope. |
+| `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope, including enumerated folder members. |
 | `move_dst_scope_advisory.py` | pre | `daytona_move_file` | Emits advisory for destination outside write scope when policy allows the move. |
+| `rename_scope_policy.py` | pre | `daytona_rename_symbol` | Builds the rename plan once, applies test-file and write-scope policy to planned paths, and caches the approved plan for the tool body. |
 | `codeact_shell_normalization.py` | pre | `daytona_codeact` | Mutates shell commands for coordinated team agents before later CodeAct hooks run. |
 | `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands. |
 | `codeact_destructive_shell.py` | pre | `daytona_codeact` | Blocks destructive shell commands against workspace roots and dangerous devices. |

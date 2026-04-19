@@ -29,11 +29,6 @@ from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
 from tools.core.sandbox_runtime import resolve_daytona_path
-from tools.daytona_toolkit._daytona_utils import (
-    _scope_deny_message,
-    _team_repo_scope_deny_errors,
-    _team_repo_write_error,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +37,7 @@ _CANDIDATE_LIMIT = 10
 _RENAME_BATCH_WINDOW_SECONDS = (
     float(os.environ.get("CI_RENAME_BATCH_WINDOW_MS", "5")) / 1000.0
 )
+_RENAME_PREPLAN_CACHE_KEY = "_daytona_rename_preplan"
 
 
 @dataclass
@@ -397,23 +393,25 @@ async def _perform_rename(
     character: int,
     new_name: str,
     extra_warnings: list[str] | None = None,
+    plan: Any | None = None,
 ) -> ToolResult:
     """Run a rename through the OCC-gated service primitive.
 
-    Resolves the plan through :meth:`rename_symbol_plan` first so we can
-    apply write-scope policy per affected file before any commit, then
-    submits the whole rename as one OCC batch.
+    Uses a pre-hook cached plan when available, otherwise resolves the plan
+    through :meth:`rename_symbol_plan`, then submits the whole rename as one
+    OCC batch.
     """
-    try:
-        plan = await _rename_plan_batcher_for(svc).submit(
-            file_path=resolved_path,
-            line=int(line),
-            character=int(character),
-            new_name=new_name,
-        )
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
-        return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)
+    if plan is None:
+        try:
+            plan = await _rename_plan_batcher_for(svc).submit(
+                file_path=resolved_path,
+                line=int(line),
+                character=int(character),
+                new_name=new_name,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
+            return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)
 
     changes = getattr(plan, "changes", ()) or ()
     warnings = list(extra_warnings or [])
@@ -432,39 +430,6 @@ async def _perform_rename(
                     ),
                 }
             ),
-        )
-
-    # Scope policy is inline because plan paths surface only after
-    # rename_symbol_plan. Test-file block and outside-scope deny are
-    # independent checks — test files may land inside write_scope and
-    # must still fail that precedence-ordered check.
-    test_file_errors: list[str] = []
-    for change in changes:
-        err = _team_repo_write_error(
-            context, change.file_path, tool_name="daytona_rename_symbol",
-        )
-        if err is not None:
-            test_file_errors.append(err)
-    if test_file_errors:
-        return ToolResult(
-            output=(
-                "Rename blocked by write-scope policy:\n  - "
-                + "\n  - ".join(test_file_errors)
-            ),
-            is_error=True,
-        )
-
-    scope_offenders = _team_repo_scope_deny_errors(
-        context,
-        [change.file_path for change in changes],
-        tool_name="daytona_rename_symbol",
-    )
-    if scope_offenders:
-        return ToolResult(
-            output=_scope_deny_message(
-                scope_offenders, tool_name="daytona_rename_symbol",
-            ),
-            is_error=True,
         )
 
     rebind_ci_service(context, svc)
@@ -489,6 +454,39 @@ async def _perform_rename(
             ],
         },
     )
+
+
+def _preplanned_rename(
+    context: ToolExecutionContext,
+    *,
+    svc: Any,
+    symbol: str,
+    new_name: str,
+    kind: SymbolKind | None,
+    file_hint: str | None,
+    resolved_path: str,
+    line: int,
+    character: int,
+) -> Any | None:
+    cached = context.metadata.get(_RENAME_PREPLAN_CACHE_KEY)
+    if _RENAME_PREPLAN_CACHE_KEY in context.metadata:
+        del context.metadata.extras[_RENAME_PREPLAN_CACHE_KEY]
+    if not isinstance(cached, dict):
+        return None
+    expected = (
+        id(svc),
+        symbol,
+        new_name,
+        str(kind or ""),
+        str(file_hint or ""),
+    )
+    if cached.get("key") != expected:
+        return None
+    if cached.get("resolved_path") != resolved_path:
+        return None
+    if cached.get("line") != int(line) or cached.get("character") != int(character):
+        return None
+    return cached.get("plan")
 
 
 @tool(
@@ -574,6 +572,17 @@ async def daytona_rename_symbol(
     resolved_path = resolve_daytona_path(str(getattr(sym, "file_path", "")), context)
     pivot_line = int(getattr(sym, "line", 0) or 0)
     pivot_char = _symbol_name_column(sym)
+    plan = _preplanned_rename(
+        context,
+        svc=svc,
+        symbol=symbol,
+        new_name=new_name,
+        kind=kind,
+        file_hint=file_hint,
+        resolved_path=resolved_path,
+        line=pivot_line,
+        character=pivot_char,
+    )
     return await _perform_rename(
         svc=svc,
         context=context,
@@ -581,4 +590,5 @@ async def daytona_rename_symbol(
         line=pivot_line,
         character=pivot_char,
         new_name=new_name,
+        plan=plan,
     )

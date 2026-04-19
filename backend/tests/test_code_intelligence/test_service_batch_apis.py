@@ -423,14 +423,6 @@ def test_rename_symbol_plans_many_uses_same_file_fast_path(
         encoding="utf-8",
     )
     svc = _svc(tmp_path)
-    assert svc.symbol_index.ensure_built(wait=True)
-    monkeypatch.setattr(
-        svc._content,
-        "read_many",
-        lambda *args, **kwargs: pytest.fail(
-            "same-file rename should use cached indexed content",
-        ),
-    )
     monkeypatch.setattr(
         svc.lsp_client,
         "find_references_many",

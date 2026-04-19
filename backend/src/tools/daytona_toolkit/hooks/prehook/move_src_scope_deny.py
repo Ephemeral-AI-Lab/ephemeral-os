@@ -13,6 +13,18 @@ from tools.daytona_toolkit.hooks._common import (
 )
 
 
+async def _folder_members(
+    context: ToolExecutionContext,
+    folder: str,
+) -> list[str] | None:
+    from tools.daytona_toolkit import delete_move_tool
+
+    try:
+        return await delete_move_tool._list_folder_files(context, folder)
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+
+
 async def hook(
     tool_name: str,
     args: BaseModel,
@@ -22,6 +34,16 @@ async def hook(
     if path is None:
         return PreHookOutcome()
     offenders = _team_repo_scope_deny_errors(context, [path], tool_name=tool_name)
+    role = "src_path"
+    if not offenders and bool(getattr(args, "is_folder", False)):
+        members = await _folder_members(context, path)
+        if members:
+            offenders = _team_repo_scope_deny_errors(
+                context,
+                members,
+                tool_name=tool_name,
+            )
+            role = "folder members"
     if not offenders:
         return PreHookOutcome()
     return PreHookOutcome(
@@ -29,7 +51,7 @@ async def hook(
         error_message=_scope_deny_message(
             offenders,
             tool_name=tool_name,
-            role="src_path",
+            role=role,
         ),
     )
 

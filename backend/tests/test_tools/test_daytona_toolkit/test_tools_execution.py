@@ -48,6 +48,18 @@ def _write_exec_result(*, base_existed: bool = False):
     )
 
 
+def _read_exec_result(content: str = "", *, exists: bool = True):
+    return MagicMock(
+        result=json.dumps(
+            {
+                "exists": exists,
+                "content": content,
+            }
+        ),
+        exit_code=0,
+    )
+
+
 def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
     from code_intelligence.types import EditResult, OperationResult
 
@@ -92,7 +104,7 @@ def _notification_texts(events: list[StreamEvent]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 async def test_read_file_success():
-    sb = _sb(download=b"line one\nline two\nline three\n")
+    sb = _sb(exec_result=_read_exec_result("line one\nline two\nline three\n"))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="foo.txt"), ctx
@@ -106,7 +118,7 @@ async def test_read_file_success():
 
 async def test_read_file_with_line_range():
     lines = "\n".join(f"line{i}" for i in range(1, 11))
-    sb = _sb(download=lines.encode())
+    sb = _sb(exec_result=_read_exec_result(lines))
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="/abs/file.txt", start_line=3, end_line=5), ctx
@@ -118,17 +130,17 @@ async def test_read_file_with_line_range():
 
 
 async def test_read_file_resolves_relative_path():
-    sb = _sb(download=b"hello")
+    sb = _sb(exec_result=_read_exec_result("hello"))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
     await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="relative.txt"), ctx
     )
-    sb.fs.download_file.assert_called_once_with("/workspace/relative.txt")
+    command = sb.process.exec.await_args.args[0]
+    assert "/workspace/relative.txt" in command
 
 
 async def test_read_file_not_found():
-    sb = _sb()
-    sb.fs.download_file = AsyncMock(side_effect=FileNotFoundError("gone"))
+    sb = _sb(exec_result=_read_exec_result(exists=False))
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="/missing.txt"), ctx
@@ -139,7 +151,7 @@ async def test_read_file_not_found():
 
 async def test_read_file_generic_exception():
     sb = _sb()
-    sb.fs.download_file = AsyncMock(side_effect=RuntimeError("network error"))
+    sb.process.exec = AsyncMock(side_effect=RuntimeError("network error"))
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="/x.txt"), ctx
@@ -150,7 +162,7 @@ async def test_read_file_generic_exception():
 
 async def test_read_file_str_content():
     # SDK returns str instead of bytes
-    sb = _sb(download="plain string content")
+    sb = _sb(exec_result=_read_exec_result("plain string content"))
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_read_file.execute(
         daytona_read_file.input_model(file_path="/str.txt"), ctx
@@ -159,7 +171,7 @@ async def test_read_file_str_content():
 
 
 async def test_read_file_allows_benchmark_lane_before_first_repro():
-    sb = _sb(download=b"ok")
+    sb = _sb(exec_result=_read_exec_result("ok"))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -176,11 +188,11 @@ async def test_read_file_allows_benchmark_lane_before_first_repro():
     )
 
     assert not result.is_error
-    sb.fs.download_file.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
 
 
 async def test_read_file_allows_benchmark_test_files_after_repro():
-    sb = _sb(download=b"ok")
+    sb = _sb(exec_result=_read_exec_result("ok"))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -198,11 +210,11 @@ async def test_read_file_allows_benchmark_test_files_after_repro():
     )
 
     assert not result.is_error
-    sb.fs.download_file.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
 
 
 async def test_read_file_allows_team_lane_without_runtime_workflow_gate():
-    sb = _sb(download=b"ok")
+    sb = _sb(exec_result=_read_exec_result("ok"))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -219,11 +231,11 @@ async def test_read_file_allows_team_lane_without_runtime_workflow_gate():
     )
 
     assert not result.is_error
-    sb.fs.download_file.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
 
 
 async def test_read_file_allows_team_lane_after_notes_and_ci_context():
-    sb = _sb(download=b"ok")
+    sb = _sb(exec_result=_read_exec_result("ok"))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -245,7 +257,7 @@ async def test_read_file_allows_team_lane_after_notes_and_ci_context():
 
 
 async def test_read_file_allows_production_reads_after_repro():
-    sb = _sb(download=b"ok")
+    sb = _sb(exec_result=_read_exec_result("ok"))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,

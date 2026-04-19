@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import re
 import shlex
 
@@ -60,37 +59,9 @@ def _normalize_team_shell_command(
     return normalized.strip(), warnings
 
 
-def _pattern_source() -> str:
-    stderr_patterns = ",\n".join(
-        f"    (re.compile({pattern.pattern!r}, flags={pattern.flags}), {label!r})"
-        for pattern, label in _STDERR_CAPTURE_PATTERNS
-    )
-    return (
-        "_LEADING_CD_PATTERN = re.compile(\n"
-        f"    {_LEADING_CD_PATTERN.pattern!r},\n"
-        f"    flags={_LEADING_CD_PATTERN.flags},\n"
-        ")\n"
-        "_STDERR_CAPTURE_PATTERNS = (\n"
-        f"{stderr_patterns},\n"
-        ")"
-    )
-
-
-def shell_policy_source() -> str:
-    """Return source for injecting the normalization policy into CodeAct."""
-    return "\n\n".join(
-        (
-            _pattern_source(),
-            inspect.getsource(_strip_shell_quotes),
-            inspect.getsource(_normalize_team_shell_command),
-        )
-    )
-
-
 __all__ = [
     "_LEADING_CD_PATTERN",
     "_STDERR_CAPTURE_PATTERNS",
     "_normalize_team_shell_command",
     "_strip_shell_quotes",
-    "shell_policy_source",
 ]

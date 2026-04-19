@@ -14,8 +14,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _build_read_text_file_command,
     _build_write_text_file_command,
     _extract_exit_code,
-    _supports_exec_transport,
-    _upload_file_compat,
     _wrap_bash_command,
 )
 
@@ -60,6 +58,11 @@ class ContentManager:
         """Read *file_path* returning ``(content, existed)``."""
         if self._sandbox is None:
             return self._read_local(file_path, allow_missing=allow_missing)
+        if getattr(self._sandbox, "process", None) is None:
+            fs = getattr(self._sandbox, "fs", None)
+            if fs is not None and callable(getattr(fs, "download_file", None)):
+                return self._read_fs(file_path, allow_missing=allow_missing)
+            return self._read_local(file_path, allow_missing=allow_missing)
         return self._read_remote(file_path, allow_missing=allow_missing)
 
     def read_many(
@@ -77,20 +80,25 @@ class ContentManager:
                 path: self._read_local(path, allow_missing=allow_missing)
                 for path in unique_paths
             }
-        if _supports_exec_transport(self._sandbox):
-            try:
-                return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
-            except (FileNotFoundError, RuntimeError, json.JSONDecodeError, OSError):
-                if not allow_missing:
-                    raise
-        return {
-            path: self._read_remote(path, allow_missing=allow_missing)
-            for path in unique_paths
-        }
+        if getattr(self._sandbox, "process", None) is None:
+            return {
+                path: self.read(path, allow_missing=allow_missing)
+                for path in unique_paths
+            }
+        return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
 
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
         if self._sandbox is None:
+            path = Path(file_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+            return
+        if getattr(self._sandbox, "process", None) is None:
+            fs = getattr(self._sandbox, "fs", None)
+            if fs is not None and callable(getattr(fs, "upload_file", None)):
+                fs.upload_file(content.encode("utf-8"), file_path)
+                return
             path = Path(file_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
@@ -100,6 +108,18 @@ class ContentManager:
     def delete(self, file_path: str) -> None:
         """Delete *file_path*, preferring the sandbox when one is bound."""
         if self._sandbox is None:
+            path = Path(file_path)
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                return
+            return
+        if getattr(self._sandbox, "process", None) is None:
+            fs = getattr(self._sandbox, "fs", None)
+            delete_fn = getattr(fs, "delete_file", None) if fs is not None else None
+            if callable(delete_fn):
+                delete_fn(file_path)
+                return
             path = Path(file_path)
             try:
                 path.unlink()
@@ -119,14 +139,14 @@ class ContentManager:
                 else:
                     self.write(file_path, content)
             return
-        if _supports_exec_transport(self._sandbox):
-            self._apply_remote_batch(changes)
+        if getattr(self._sandbox, "process", None) is None:
+            for file_path, content in changes:
+                if content is None:
+                    self.delete(file_path)
+                else:
+                    self.write(file_path, content)
             return
-        for file_path, content in changes:
-            if content is None:
-                self.delete(file_path)
-            else:
-                self.write(file_path, content)
+        self._apply_remote_batch(changes)
 
     def apply_many_with_base_check(
         self,
@@ -142,13 +162,13 @@ class ContentManager:
             return CheckedApplyResult(success=True)
         if self._sandbox is None:
             return self._apply_local_batch_checked(changes)
-        if _supports_exec_transport(self._sandbox):
-            return self._apply_remote_batch_checked(changes)
-        return CheckedApplyResult(
-            success=False,
-            conflict_reason="unsupported",
-            message="sandbox process.exec checked apply is unavailable",
-        )
+        if getattr(self._sandbox, "process", None) is None:
+            return CheckedApplyResult(
+                success=False,
+                conflict_reason="unsupported",
+                message="checked apply requires process-backed sandbox",
+            )
+        return self._apply_remote_batch_checked(changes)
 
     # -- Private --------------------------------------------------------------
 
@@ -161,39 +181,35 @@ class ContentManager:
             raise FileNotFoundError(file_path)
         return path.read_text(encoding="utf-8"), True
 
+    def _read_fs(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
+        fs = self._sandbox.fs
+        try:
+            payload = fs.download_file(file_path)
+        except FileNotFoundError:
+            if allow_missing:
+                return "", False
+            raise
+        if isinstance(payload, bytes):
+            return payload.decode("utf-8"), True
+        return str(payload), True
+
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
-        process = getattr(self._sandbox, "process", None)
-        if _supports_exec_transport(self._sandbox):
-            try:
-                response = run_sync(process.exec(_wrap_bash_command(_build_read_text_file_command(file_path))))
-                cleaned, exit_code = _extract_exit_code(
-                    getattr(response, "result", "") or "",
-                    fallback_exit_code=getattr(response, "exit_code", None),
-                )
-                if exit_code in (0, None):
-                    payload = json.loads(cleaned or "{}")
-                    if not payload.get("exists"):
-                        if allow_missing:
-                            return "", False
-                        raise FileNotFoundError(file_path)
-                    return str(payload.get("content", "") or ""), True
-            except Exception as exc:
-                if allow_missing and self._is_missing_error(exc):
-                    return "", False
-                raise
-        fs = getattr(self._sandbox, "fs", None)
-        download_fn = getattr(fs, "download_file", None)
-        if callable(download_fn):
-            try:
-                raw = run_sync(download_fn(file_path))
-            except Exception as exc:
-                if allow_missing and self._is_missing_error(exc):
-                    return "", False
-                raise
-            if isinstance(raw, bytes):
-                return raw.decode("utf-8"), True
-            return str(raw), True
-        raise RuntimeError("Sandbox process.exec text read is unavailable")
+        process = self._sandbox.process
+        response = run_sync(
+            process.exec(_wrap_bash_command(_build_read_text_file_command(file_path)))
+        )
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"read failed for {file_path}")
+        payload = json.loads(cleaned or "{}")
+        if not payload.get("exists"):
+            if allow_missing:
+                return "", False
+            raise FileNotFoundError(file_path)
+        return str(payload.get("content", "") or ""), True
 
     def _read_remote_batch(
         self,
@@ -242,34 +258,20 @@ print(json.dumps(files))
         return results
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
-        process = getattr(self._sandbox, "process", None)
-        if _supports_exec_transport(self._sandbox):
-            try:
-                text = payload.decode("utf-8")
-                response = run_sync(
-                    process.exec(_wrap_bash_command(_build_write_text_file_command(file_path, text)))
-                )
-                cleaned, exit_code = _extract_exit_code(
-                    getattr(response, "result", "") or "",
-                    fallback_exit_code=getattr(response, "exit_code", None),
-                )
-                if exit_code in (0, None):
-                    return
-                raise RuntimeError(cleaned or f"write failed for {file_path}")
-            except UnicodeDecodeError:
-                raise RuntimeError("Binary payload requires sandbox fs fallback")
-            raise
-        fs = getattr(self._sandbox, "fs", None)
-        upload_fn = getattr(fs, "upload_file", None)
-        if callable(upload_fn):
-            run_sync(_upload_file_compat(self._sandbox, payload, file_path))
-            return
-        raise RuntimeError("Sandbox process.exec text write is unavailable")
+        process = self._sandbox.process
+        text = payload.decode("utf-8")
+        response = run_sync(
+            process.exec(_wrap_bash_command(_build_write_text_file_command(file_path, text)))
+        )
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"write failed for {file_path}")
 
     def _delete_remote(self, file_path: str) -> None:
-        process = getattr(self._sandbox, "process", None)
-        if not _supports_exec_transport(self._sandbox):
-            raise RuntimeError("Sandbox process has no exec method")
+        process = self._sandbox.process
         response = run_sync(process.exec(_wrap_bash_command(f"rm -f {shlex.quote(file_path)}")))
         cleaned, exit_code = _extract_exit_code(
             getattr(response, "result", "") or "",
@@ -498,10 +500,3 @@ print(json.dumps({{"ok": True}}))
             conflict_reason=str(payload_out.get("reason") or "failed"),
             message=str(payload_out.get("message") or ""),
         )
-
-    @staticmethod
-    def _is_missing_error(exc: Exception) -> bool:
-        if isinstance(exc, FileNotFoundError):
-            return True
-        text = str(exc).lower()
-        return "not found" in text or "no such file" in text or "does not exist" in text

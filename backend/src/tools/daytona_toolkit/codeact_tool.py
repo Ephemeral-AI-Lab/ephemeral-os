@@ -2,29 +2,20 @@
 
 from __future__ import annotations
 
-import ast
 import base64
 import json
-import posixpath
-import re
 import shlex
 import uuid
-from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema
 
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
-from code_intelligence.types import WriteSpec
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
-from tools.daytona_toolkit._commit import (
-    FileChangeResult,
-    submit_codeact_cmd,
-    submit_commit,
-)
+from tools.daytona_toolkit._commit import FileChangeResult, submit_codeact_cmd
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _format_shell_stdout,
@@ -32,108 +23,16 @@ from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
     _recover_sandbox,
     _require_sandbox,
-    _supports_exec_transport,
-    _upload_file_compat,
     _write_text_file_via_exec,
     _wrap_bash_command,
-    is_coordinated_team_agent,
 )
-from tools.daytona_toolkit._shell_policy import shell_policy_source
+from tools.daytona_toolkit.hooks.prehook.codeact_file_edit_policy import (
+    FILE_EDIT_POLICY_MESSAGE,
+    should_disable_codeact_file_edits,
+)
 
-_DESTRUCTIVE_GIT_PATTERN = re.compile(
-    r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$|clean\s+-[fd])",
-    flags=re.IGNORECASE,
-)
-_CODEACT_FILE_EDIT_POLICY_MESSAGE = (
-    "BLOCKED: daytona_codeact is for runtime commands, tests, and inspection in "
-    "coordinated team lanes. File edits must use daytona_edit_file, "
-    "daytona_write_file, daytona_rename_symbol, daytona_delete_file, or "
-    "daytona_move_file so write-scope, OCC, and invalid-edit guardrails run "
-    "before mutation. Use daytona_delete_file for removals and "
-    "daytona_move_file for path moves. Do not retry cleanup with rm, mv, "
-    "unlink, os.remove, Path.unlink, shutil.rmtree, shutil.move, git rm, or "
-    "git mv inside CodeAct."
-)
-_SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (
-        re.compile(
-            r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:g?sed|sed)\b(?:(?![;&|]).)*\s-[A-Za-z]*i(?:\b|[=.])",
-            flags=re.IGNORECASE | re.DOTALL,
-        ),
-        "in-place sed",
-    ),
-    (
-        re.compile(
-            r"(?:^|[;&|]\s*)perl\b(?:(?![;&|]).)*\s-\S*i\S*",
-            flags=re.IGNORECASE | re.DOTALL,
-        ),
-        "in-place perl",
-    ),
-    (
-        re.compile(
-            r"(?:^|[;&|]\s*)tee\b(?:\s+-[A-Za-z]+)*\s+(?!/dev/null(?:\s|$))\S+",
-            flags=re.IGNORECASE,
-        ),
-        "tee file write",
-    ),
-    (
-        re.compile(
-            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b"
-            r"|(?:^|[;&|]\s*)git\s+(?:rm|mv)\b",
-            flags=re.IGNORECASE,
-        ),
-        "filesystem mutation command",
-    ),
-    (
-        re.compile(
-            r"(?:^|[;&|]\s*)python(?:3(?:\.\d+)?)?\b.*"
-            r"(?:write_text|write_bytes|"
-            r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]|"
-            r"\bshutil\.|\bos\.(?:remove|unlink|rename|replace)|"
-            r"\bPath\s*\([^)]*\)\.(?:touch|unlink|rename|replace|mkdir))",
-            flags=re.IGNORECASE | re.DOTALL,
-        ),
-        "inline Python file mutation",
-    ),
-)
-_SHELL_OUTPUT_REDIRECTION_PATTERN = re.compile(
-    r"(?<![<>&])(?:\b\d*)?(?:>>?|&>)\s*(?!&\d\b)(?!/dev/null(?:\s|$))\S+",
-    flags=re.IGNORECASE,
-)
-_PYTHON_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"(?<![.\w])write\s*\(", flags=re.IGNORECASE), "CodeAct write() helper"),
-    (re.compile(r"\bwrite_text\s*\(", flags=re.IGNORECASE), "Path.write_text"),
-    (re.compile(r"\bwrite_bytes\s*\(", flags=re.IGNORECASE), "Path.write_bytes"),
-    (
-        re.compile(
-            r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]",
-            flags=re.IGNORECASE | re.DOTALL,
-        ),
-        "write-mode open()",
-    ),
-    (
-        re.compile(
-            r"\b(?:os|Path\s*\([^)]*\))\.(?:remove|unlink|rename|replace|touch|mkdir|rmdir)\b",
-            flags=re.IGNORECASE | re.DOTALL,
-        ),
-        "Python filesystem mutation",
-    ),
-    (re.compile(r"\bshutil\.", flags=re.IGNORECASE), "shutil file mutation"),
-)
 _CODEACT_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_default_timeout
 _CODEACT_WRITE_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_write_timeout
-_SIMPLE_PYTHON_HEREDOC_RE = re.compile(
-    r"\A\s*python(?:3(?:\.\d+)?)?\s+-\s+<<(?P<quote>['\"]?)(?P<tag>[A-Za-z_][A-Za-z0-9_]*)"
-    r"(?P=quote)\n(?P<code>.*)\n(?P=tag)\s*\Z",
-    flags=re.DOTALL,
-)
-
-
-@dataclass(frozen=True)
-class _SimpleCodeActWrite:
-    file_path: str
-    content: str
-
 
 class DaytonaCodeActInput(BaseModel):
     """Custom CodeAct input schema.
@@ -245,14 +144,8 @@ class DaytonaCodeActOutput(BaseModel):
     error: str = Field(default="", description="Error detail when status is error.")
 
 
-def _destructive_git_command_error(command: str) -> str | None:
-    if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
-        return (
-            "BLOCKED: destructive git commands (stash, reset --hard, checkout --, clean) "
-            "are forbidden. They destroy other agents' work and bypass process audit. "
-            "Use targeted edit tools instead."
-        )
-    return None
+
+BuildToolOutput = Callable[..., ToolResult]
 
 
 def _format_codeact_error(
@@ -278,67 +171,6 @@ def _format_codeact_error(
     return "\n".join(lines)
 
 
-def _has_team_task_context(context: ToolExecutionContext) -> bool:
-    return bool(
-        context.metadata.get("task_center")
-        or context.metadata.get("team_run_id")
-        or context.metadata.get("work_item_id")
-        or context.metadata.get("benchmark_test_ids")
-        or context.metadata.get("benchmark_test_files")
-    )
-
-
-def _enforce_codeact_file_edit_policy(context: ToolExecutionContext) -> bool:
-    return is_coordinated_team_agent(context) and _has_team_task_context(context)
-
-
-def _file_edit_policy_error(kind: str) -> str:
-    return f"{_CODEACT_FILE_EDIT_POLICY_MESSAGE} Detected {kind}."
-
-
-def _mask_shell_quoted_text(command: str) -> str:
-    """Mask shell-quoted text while keeping quote delimiters and rough token shape."""
-    out: list[str] = []
-    quote: str | None = None
-    escaped = False
-    for char in command:
-        if escaped:
-            out.append("x" if quote else char)
-            escaped = False
-            continue
-        if char == "\\":
-            out.append("x" if quote else char)
-            escaped = True
-            continue
-        if quote:
-            if char == quote:
-                quote = None
-                out.append(char)
-            else:
-                out.append("x" if not char.isspace() else char)
-            continue
-        if char in {"'", '"'}:
-            quote = char
-        out.append(char)
-    return "".join(out)
-
-
-def _shell_file_edit_policy_error(command: str) -> str | None:
-    if _SHELL_OUTPUT_REDIRECTION_PATTERN.search(_mask_shell_quoted_text(command or "")):
-        return _file_edit_policy_error("shell output redirection")
-    for pattern, kind in _SHELL_FILE_EDIT_PATTERNS:
-        if pattern.search(command or ""):
-            return _file_edit_policy_error(kind)
-    return None
-
-
-def _python_file_edit_policy_error(code: str) -> str | None:
-    for pattern, kind in _PYTHON_FILE_EDIT_PATTERNS:
-        if pattern.search(code or ""):
-            return _file_edit_policy_error(kind)
-    return None
-
-
 def _python_literal_or_none(value: str | None) -> str:
     if not value or str(value).strip().lower() == "none":
         return "None"
@@ -349,12 +181,11 @@ _WRAPPER_TEMPLATE = r'''
 import base64, hashlib, importlib, io, json, os, pathlib, re, shlex, subprocess, traceback
 
 _RUN_ID = "{run_id}"
+_CODE_PREVIEW = {code_preview}
 _MANIFEST = {{"reads": [], "writes": [], "shells": [], "status": "ok", "error": ""}}
 _CODEACT_CWD = {codeact_cwd}
-_CODEACT_REPO_ROOT = {codeact_repo_root}
-_ENFORCE_TEAM_SHELL_POLICY = {enforce_team_shell_policy}
 _DISABLE_CODEACT_FILE_EDITS = {disable_codeact_file_edits}
-_CODEACT_FILE_EDIT_POLICY_MESSAGE = {codeact_file_edit_policy_message}
+_FILE_EDIT_POLICY_MESSAGE = {codeact_file_edit_policy_message}
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
 _PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() {{ command python3 "$@"; }}; fi'
@@ -420,7 +251,6 @@ _CODEACT_SHELL_OUTPUT_REDIRECTION_PATTERN = re.compile(
     r"(?<![<>&])(?:\b\d*)?(?:>>?|&>)\s*(?!&\d\b)(?!/dev/null(?:\s|$))\S+",
     flags=re.IGNORECASE,
 )
-{shell_policy_source}
 
 def _mask_shell_quoted_text(command):
     out = []
@@ -470,7 +300,7 @@ def read(path):
 
 def write(path, content):
     if _DISABLE_CODEACT_FILE_EDITS:
-        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+        raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)
     resolved = _normalize_path(path)
     parent = os.path.dirname(resolved)
     if parent:
@@ -493,12 +323,6 @@ def _block_shell_command(command, message):
     raise RuntimeError(message)
 
 def shell(command, timeout={codeact_default_timeout}):
-    if _ENFORCE_TEAM_SHELL_POLICY:
-        command, policy_warnings = _normalize_team_shell_command(
-            command,
-            repo_root=_CODEACT_REPO_ROOT,
-        )
-        _MANIFEST.setdefault("warnings", []).extend(policy_warnings)
     if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
         _block_shell_command(
             command,
@@ -517,7 +341,7 @@ def shell(command, timeout={codeact_default_timeout}):
         if edit_kind:
             _block_shell_command(
                 command,
-                f"{{_CODEACT_FILE_EDIT_POLICY_MESSAGE}} Detected {{edit_kind}}.",
+                f"{{_FILE_EDIT_POLICY_MESSAGE}} Detected {{edit_kind}}.",
             )
     try:
         wrapped = f"{{_USER_LOCAL_BIN_EXPORT}} && {{_PROJECT_VENV_BIN_EXPORT}} && {{_PYTHON3_SHIM}} && {{command}}"
@@ -563,17 +387,17 @@ def _is_write_mode(mode):
 
 def _guarded_open(file, mode="r", *args, **kwargs):
     if _DISABLE_CODEACT_FILE_EDITS and _is_write_mode(mode):
-        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+        raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)
     return _real_open(file, mode, *args, **kwargs)
 
 def _guarded_io_open(file, mode="r", *args, **kwargs):
     if _DISABLE_CODEACT_FILE_EDITS and _is_write_mode(mode):
-        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+        raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)
     return _real_io_open(file, mode, *args, **kwargs)
 
 def _guarded_path_open(self, mode="r", *args, **kwargs):
     if _DISABLE_CODEACT_FILE_EDITS and _is_write_mode(mode):
-        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+        raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)
     return _real_path_open(self, mode, *args, **kwargs)
 
 def _guarded_import(name, *args, **kwargs):
@@ -605,7 +429,7 @@ def _guarded_import_module(name, package=None):
 importlib.import_module = _guarded_import_module
 
 def _blocked_file_edit_call(*args, **kwargs):
-    raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+    raise RuntimeError(_FILE_EDIT_POLICY_MESSAGE)
 
 if _DISABLE_CODEACT_FILE_EDITS:
     for _name in (
@@ -638,17 +462,6 @@ if _DISABLE_CODEACT_FILE_EDITS:
     pathlib.Path.open = _guarded_path_open
     io.open = _guarded_io_open
 
-if _ENFORCE_TEAM_SHELL_POLICY:
-    def _blocked_os_process(*args, **kwargs):
-        raise RuntimeError(
-            "CodeAct policy error: coordinated team lanes must use `daytona_codeact` shell mode "
-            "or `shell(\"...\")` inside Python mode for repo commands. Replace `os.system()`/"
-            "`os.popen()` wrappers."
-        )
-
-    os.system = _blocked_os_process
-    os.popen = _blocked_os_process
-
 try:
     _CODE = base64.b64decode("{code_b64}").decode("utf-8")
     exec(
@@ -669,22 +482,18 @@ print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST
 def _build_wrapper(
     code: str,
     *,
-    enforce_team_shell_policy: bool,
     disable_codeact_file_edits: bool,
     run_id: str,
     cwd: str | None,
-    repo_root: str | None,
 ) -> str:
     code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
     return _WRAPPER_TEMPLATE.format(
         run_id=run_id,
+        code_preview=json.dumps(code),
         code_b64=code_b64,
         codeact_cwd=_python_literal_or_none(cwd),
-        codeact_repo_root=_python_literal_or_none(repo_root),
-        enforce_team_shell_policy="True" if enforce_team_shell_policy else "False",
         disable_codeact_file_edits="True" if disable_codeact_file_edits else "False",
-        codeact_file_edit_policy_message=json.dumps(_CODEACT_FILE_EDIT_POLICY_MESSAGE),
-        shell_policy_source=shell_policy_source(),
+        codeact_file_edit_policy_message=json.dumps(FILE_EDIT_POLICY_MESSAGE),
         codeact_default_timeout=_CODEACT_DEFAULT_TIMEOUT,
     )
 
@@ -695,6 +504,223 @@ def _build_exec_command(script_path: str, *, cwd: str | None) -> str:
         command = f"cd {json.dumps(cwd)} && {command}"
     return _wrap_bash_command(command)
 
+
+async def _execute_python_wrapper(
+    context: ToolExecutionContext,
+    sandbox: object,
+    *,
+    code: str,
+    cwd: str | None,
+    disable_codeact_file_edits: bool,
+    build_tool_output: BuildToolOutput,
+) -> tuple[str | None, object, ToolResult | None, list[str]]:
+    run_id = uuid.uuid4().hex[:8]
+    wrapper = _build_wrapper(
+        code,
+        run_id=run_id,
+        cwd=cwd,
+        disable_codeact_file_edits=disable_codeact_file_edits,
+    )
+    script_path = f"/tmp/codeact-wrapper-{run_id}.py"
+    exec_command = _build_exec_command(script_path, cwd=cwd)
+    try:
+        await _write_text_file_via_exec(
+            sandbox,
+            script_path,
+            wrapper,
+            timeout=_CODEACT_WRITE_TIMEOUT,
+        )
+    except Exception as exc:
+        try:
+            sandbox = await _recover_sandbox(context, exc)
+            await _write_text_file_via_exec(
+                sandbox,
+                script_path,
+                wrapper,
+                timeout=_CODEACT_WRITE_TIMEOUT,
+            )
+        except Exception as recovery_exc:
+            return (
+                None,
+                sandbox,
+                ToolResult(
+                    output=f"Failed to upload script: {recovery_exc}",
+                    is_error=True,
+                ),
+                [],
+            )
+
+    if get_ci_service(context) is None:
+        return (
+            None,
+            sandbox,
+            ci_required_result(
+                "daytona_codeact",
+                "Python CodeAct requires svc.cmd (code intelligence service unavailable).",
+            ),
+            [],
+        )
+
+    async def _submit(active_sandbox: object) -> FileChangeResult[Any]:
+        return await submit_codeact_cmd(
+            context,
+            command=exec_command,
+            description="daytona_codeact python",
+            timeout=_CODEACT_DEFAULT_TIMEOUT,
+            sandbox=active_sandbox,
+        )
+
+    try:
+        change = await _submit(sandbox)
+    except Exception as exc:
+        try:
+            sandbox = await _recover_sandbox(context, exc)
+            change = await _submit(sandbox)
+        except Exception as recovery_exc:
+            return (
+                None,
+                sandbox,
+                ToolResult(
+                    output=f"Execution failed: {recovery_exc}",
+                    is_error=True,
+                ),
+                [],
+            )
+    changed_paths = list(change.changed_paths)
+    if not change.success:
+        error_detail = f"git workspace commit aborted: {change.conflict_reason or 'unknown reason'}"
+        return (
+            None,
+            sandbox,
+            build_tool_output(
+                context=context,
+                status="error",
+                files_written=len(changed_paths),
+                shells=[],
+                script_stdout="",
+                warnings=[],
+                error=error_detail,
+                changed_paths=changed_paths,
+                ambient_changed_paths=list(change.ambient_changed_paths),
+            ),
+            changed_paths,
+        )
+    return (
+        getattr(change.raw, "result", "") or "",
+        sandbox,
+        None,
+        changed_paths,
+    )
+
+
+
+async def _read_codeact_manifest(sandbox: object, manifest_path: str) -> str:
+    manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
+    return manifest_text
+
+
+async def _execute_python_codeact(
+    context: ToolExecutionContext,
+    sandbox: object,
+    *,
+    code: str,
+    cwd: str | None,
+    disable_codeact_file_edits: bool,
+    build_tool_output: BuildToolOutput,
+    format_codeact_error: Callable[..., str],
+    extract_exit_code: Callable[..., tuple[str, int]],
+    files_written_count: Callable[[list[object], list[str]], int],
+) -> ToolResult:
+    stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(
+        context,
+        sandbox,
+        code=code,
+        cwd=cwd,
+        disable_codeact_file_edits=disable_codeact_file_edits,
+        build_tool_output=build_tool_output,
+    )
+    if tool_error is not None:
+        return tool_error
+    assert stdout is not None
+
+    stdout, _ = extract_exit_code(stdout, fallback_exit_code=0)
+    stdout_lines = stdout.splitlines()
+    script_stdout = "\n".join(stdout_lines[:-1]).strip() if stdout_lines else ""
+    try:
+        result_line = stdout_lines[-1] if stdout_lines else "{}"
+        result = json.loads(result_line)
+    except (json.JSONDecodeError, IndexError):
+        return build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            warnings=["CodeAct result line was not valid JSON."],
+            changed_paths=changed_paths,
+        )
+
+    manifest_path = str(result.get("manifest", "") or "")
+    if not manifest_path:
+        if result.get("status") == "error":
+            return ToolResult(
+                output=f"CodeAct execution error:\n{stdout[:4000]}",
+                is_error=True,
+            )
+        return build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            warnings=["CodeAct wrapper did not return a manifest path."],
+            changed_paths=changed_paths,
+        )
+
+    try:
+        manifest_text = await _read_codeact_manifest(sandbox, manifest_path)
+        manifest = json.loads(manifest_text)
+    except Exception:
+        if result.get("status") == "error":
+            return ToolResult(
+                output=format_codeact_error(stdout=stdout),
+                is_error=True,
+            )
+        return build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            warnings=["CodeAct completed but its manifest could not be read."],
+            changed_paths=changed_paths,
+        )
+
+    shells = list(manifest.get("shells", []) or [])
+    if result.get("status") == "error":
+        manifest_error = str(manifest.get("error", "") or "")
+        return ToolResult(
+            output=format_codeact_error(stdout=stdout, manifest_error=manifest_error),
+            is_error=True,
+            metadata={
+                "status": manifest.get("status", "error"),
+                "shells_run": len(shells),
+                "changed_paths": changed_paths,
+            },
+        )
+
+    warnings = [str(w) for w in (manifest.get("warnings", []) or [])]
+    writes = list(manifest.get("writes", []) or [])
+    return build_tool_output(
+        context=context,
+        status="ok",
+        files_written=files_written_count(writes, changed_paths),
+        shells=shells,
+        script_stdout=script_stdout,
+        warnings=warnings,
+        error=str(manifest.get("error", "") or ""),
+        changed_paths=changed_paths,
+    )
 
 def _resolve_mode(
     *,
@@ -719,122 +745,6 @@ def _resolve_mode(
     if has_command:
         return "shell", None
     return None, "Provide `code` for Python mode or `command` for shell mode."
-
-
-def _simple_codeact_write_from_shell(
-    command: str,
-    *,
-    cwd: str | None,
-) -> _SimpleCodeActWrite | None:
-    """Recognize pure `Path(...).write_text(...)` heredocs.
-
-    This is a correctness-preserving fast path for shell CodeAct calls that
-    contain no runtime behavior beyond a literal text write. The write is
-    committed through `submit_commit`, so OCC, attribution, and batching stay
-    identical to `daytona_write_file`; anything more complex falls back to the
-    full overlay auditor.
-    """
-    if not cwd:
-        return None
-    match = _SIMPLE_PYTHON_HEREDOC_RE.fullmatch(command or "")
-    if match is None:
-        return None
-    try:
-        tree = ast.parse(match.group("code"))
-    except SyntaxError:
-        return None
-    statements = [
-        stmt for stmt in tree.body
-        if not (
-            isinstance(stmt, ast.ImportFrom)
-            and stmt.module == "pathlib"
-            and any(alias.name == "Path" for alias in stmt.names)
-        )
-    ]
-    if len(statements) != 1 or not isinstance(statements[0], ast.Expr):
-        return None
-    call = statements[0].value
-    if not isinstance(call, ast.Call):
-        return None
-    func = call.func
-    if not (
-        isinstance(func, ast.Attribute)
-        and func.attr == "write_text"
-        and isinstance(func.value, ast.Call)
-        and isinstance(func.value.func, ast.Name)
-        and func.value.func.id == "Path"
-    ):
-        return None
-    path_args = func.value.args
-    if len(path_args) != 1 or not isinstance(path_args[0], ast.Constant):
-        return None
-    rel_or_abs = path_args[0].value
-    if not isinstance(rel_or_abs, str):
-        return None
-    if len(call.args) != 1 or not isinstance(call.args[0], ast.Constant):
-        return None
-    content = call.args[0].value
-    if not isinstance(content, str):
-        return None
-    allowed_keywords = {"encoding"}
-    for keyword_arg in call.keywords:
-        if keyword_arg.arg not in allowed_keywords:
-            return None
-        if keyword_arg.arg == "encoding":
-            if not isinstance(keyword_arg.value, ast.Constant):
-                return None
-            encoding = keyword_arg.value.value
-            if not isinstance(encoding, str) or encoding.lower().replace("_", "-") != "utf-8":
-                return None
-    root = posixpath.normpath(cwd)
-    target = rel_or_abs if posixpath.isabs(rel_or_abs) else posixpath.join(root, rel_or_abs)
-    target = posixpath.normpath(target)
-    if target != root and not target.startswith(root.rstrip("/") + "/"):
-        return None
-    return _SimpleCodeActWrite(file_path=target, content=content)
-
-
-async def _execute_simple_codeact_write(
-    context: ToolExecutionContext,
-    *,
-    command: str,
-    write: _SimpleCodeActWrite,
-) -> ToolResult:
-    change = await submit_commit(
-        context,
-        op="write",
-        specs=[
-            WriteSpec(
-                file_path=write.file_path,
-                content=write.content,
-                overwrite=True,
-            )
-        ],
-        fallback_paths=[write.file_path],
-        description="daytona_codeact simple write_text",
-    )
-    exit_code = 0 if change.success else 1
-    shell_result = {
-        "command": command,
-        "stdout": "",
-        "stderr": "" if change.success else (change.conflict_reason or "write failed"),
-        "exit_code": exit_code,
-        "changed_paths": list(change.changed_paths),
-        "ambient_changed_paths": [],
-        "overlay_success": bool(change.success),
-        "overlay_conflict_reason": change.conflict_reason,
-    }
-    return _build_tool_output(
-        context=context,
-        status="ok" if change.success else "error",
-        files_written=len(change.changed_paths) if change.success else 0,
-        shells=[shell_result],
-        script_stdout="",
-        warnings=[],
-        error="" if change.success else (change.conflict_reason or "write failed"),
-        changed_paths=list(change.changed_paths),
-        ambient_changed_paths=[],
-    )
 
 
 async def _exec_shell_command(
@@ -873,8 +783,8 @@ async def _exec_shell_command(
         "exit_code": exit_code,
         "changed_paths": list(change.changed_paths),
         "ambient_changed_paths": list(change.ambient_changed_paths),
-        "overlay_success": bool(change.success),
-        "overlay_conflict_reason": change.conflict_reason,
+        "audit_success": bool(change.success),
+        "audit_conflict_reason": change.conflict_reason,
     }
 
 
@@ -985,102 +895,6 @@ def _build_tool_output(
     )
 
 
-async def _execute_python_wrapper(
-    context: ToolExecutionContext,
-    sandbox: object,
-    *,
-    code: str,
-    cwd: str | None,
-    repo_root: str | None,
-    enforce_team_shell_policy: bool,
-    disable_codeact_file_edits: bool,
-) -> tuple[str | None, object, ToolResult | None, list[str]]:
-    run_id = uuid.uuid4().hex[:8]
-    wrapper = _build_wrapper(
-        code,
-        run_id=run_id,
-        cwd=cwd,
-        repo_root=repo_root,
-        enforce_team_shell_policy=enforce_team_shell_policy,
-        disable_codeact_file_edits=disable_codeact_file_edits,
-    )
-    script_path = f"/tmp/codeact-wrapper-{run_id}.py"
-    exec_command = _build_exec_command(script_path, cwd=cwd)
-    try:
-        await _write_text_file_via_exec(
-            sandbox,
-            script_path,
-            wrapper,
-            timeout=_CODEACT_WRITE_TIMEOUT,
-        )
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            try:
-                await _write_text_file_via_exec(
-                    sandbox,
-                    script_path,
-                    wrapper,
-                    timeout=_CODEACT_WRITE_TIMEOUT,
-                )
-            except Exception:
-                if _supports_exec_transport(sandbox):
-                    raise
-                await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
-        except Exception as recovery_exc:
-            return (
-                None,
-                sandbox,
-                ToolResult(
-                    output=f"Failed to upload script: {recovery_exc}",
-                    is_error=True,
-                ),
-                [],
-            )
-
-    if get_ci_service(context) is None:
-        return (
-            None,
-            sandbox,
-            ci_required_result(
-                "daytona_codeact",
-                "Python CodeAct requires svc.cmd (code intelligence service unavailable).",
-            ),
-            [],
-        )
-
-    async def _submit(active_sandbox: object) -> FileChangeResult[Any]:
-        return await submit_codeact_cmd(
-            context,
-            command=exec_command,
-            description="daytona_codeact python",
-            timeout=_CODEACT_DEFAULT_TIMEOUT,
-            sandbox=active_sandbox,
-        )
-
-    try:
-        change = await _submit(sandbox)
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            change = await _submit(sandbox)
-        except Exception as recovery_exc:
-            return (
-                None,
-                sandbox,
-                ToolResult(
-                    output=f"Execution failed: {recovery_exc}",
-                    is_error=True,
-                ),
-                [],
-            )
-    return (
-        getattr(change.raw, "result", "") or "",
-        sandbox,
-        None,
-        list(change.changed_paths),
-    )
-
 
 def _ci_required_result() -> ToolResult:
     return ci_required_result(
@@ -1123,6 +937,8 @@ def _files_written_count(
     return len(manifest_writes) + len(audited_only)
 
 
+
+
 @tool(
     name="daytona_codeact",
     description=(
@@ -1161,7 +977,7 @@ async def daytona_codeact(
     assert resolved_mode is not None
 
     repo_cwd = _get_cwd(context)
-    disable_codeact_file_edits = _enforce_codeact_file_edit_policy(context)
+    disable_codeact_file_edits = should_disable_codeact_file_edits(context)
 
     # Pre-flight policy (shell normalization, destructive-git/shell blocks,
     # file-edit side-channel blocks) is enforced by pre-phase platform hooks.
@@ -1179,18 +995,6 @@ async def daytona_codeact(
         return _ci_required_result()
 
     if resolved_mode == "shell":
-        simple_write = (
-            None
-            if disable_codeact_file_edits
-            else _simple_codeact_write_from_shell(direct_command, cwd=repo_cwd)
-        )
-        if simple_write is not None:
-            return await _execute_simple_codeact_write(
-                context,
-                command=direct_command,
-                write=simple_write,
-            )
-
         shell_result, sandbox, tool_error = await _run_shell_with_recovery(
             context,
             sandbox,
@@ -1203,14 +1007,14 @@ async def daytona_codeact(
             return tool_error
         assert shell_result is not None
         exit_code = int(shell_result.get("exit_code", 1))
-        overlay_success = bool(shell_result.get("overlay_success", True))
-        overlay_conflict = shell_result.get("overlay_conflict_reason") or ""
+        audit_success = bool(shell_result.get("audit_success", True))
+        audit_conflict = shell_result.get("audit_conflict_reason") or ""
         changed_paths = _changed_paths_from_shell(shell_result)
         ambient_changed_paths = _ambient_changed_paths_from_shell(shell_result)
-        is_error = exit_code != 0 or not overlay_success
-        if not overlay_success and exit_code == 0:
+        is_error = exit_code != 0 or not audit_success
+        if not audit_success and exit_code == 0:
             error_detail = (
-                f"overlay commit aborted: {overlay_conflict or 'unknown reason'}"
+                f"git workspace commit aborted: {audit_conflict or 'unknown reason'}"
             )
         elif exit_code != 0:
             error_detail = _shell_result_error_detail(shell_result)
@@ -1228,94 +1032,14 @@ async def daytona_codeact(
             ambient_changed_paths=ambient_changed_paths,
         )
 
-    stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(
+    return await _execute_python_codeact(
         context,
         sandbox,
         code=code or "",
         cwd=repo_cwd,
-        repo_root=repo_cwd,
-        enforce_team_shell_policy=is_coordinated_team_agent(context),
         disable_codeact_file_edits=disable_codeact_file_edits,
-    )
-    if tool_error is not None:
-        return tool_error
-    assert stdout is not None
-
-    stdout, _ = _extract_exit_code(stdout, fallback_exit_code=0)
-    stdout_lines = stdout.splitlines()
-    script_stdout = "\n".join(stdout_lines[:-1]).strip() if stdout_lines else ""
-    try:
-        result_line = stdout_lines[-1] if stdout_lines else "{}"
-        result = json.loads(result_line)
-    except (json.JSONDecodeError, IndexError):
-        return _build_tool_output(
-            context=context,
-            status="unknown",
-            files_written=0,
-            shells=[],
-            script_stdout=stdout[:4000],
-            warnings=["CodeAct result line was not valid JSON."],
-            changed_paths=changed_paths,
-        )
-
-    manifest_path = str(result.get("manifest", "") or "")
-    if not manifest_path:
-        if result.get("status") == "error":
-            return ToolResult(
-                output=f"CodeAct execution error:\n{stdout[:4000]}",
-                is_error=True,
-            )
-        return _build_tool_output(
-            context=context,
-            status="unknown",
-            files_written=0,
-            shells=[],
-            script_stdout=stdout[:4000],
-            warnings=["CodeAct wrapper did not return a manifest path."],
-            changed_paths=changed_paths,
-        )
-
-    try:
-        manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
-        manifest = json.loads(manifest_text)
-    except Exception:
-        if result.get("status") == "error":
-            return ToolResult(
-                output=_format_codeact_error(stdout=stdout),
-                is_error=True,
-            )
-        return _build_tool_output(
-            context=context,
-            status="unknown",
-            files_written=0,
-            shells=[],
-            script_stdout=stdout[:4000],
-            warnings=["CodeAct completed but its manifest could not be read."],
-            changed_paths=changed_paths,
-        )
-
-    shells = list(manifest.get("shells", []) or [])
-    if result.get("status") == "error":
-        manifest_error = str(manifest.get("error", "") or "")
-        return ToolResult(
-            output=_format_codeact_error(stdout=stdout, manifest_error=manifest_error),
-            is_error=True,
-            metadata={
-                "status": manifest.get("status", "error"),
-                "shells_run": len(shells),
-                "changed_paths": changed_paths,
-            },
-        )
-
-    warnings = [str(w) for w in (manifest.get("warnings", []) or [])]
-    writes = list(manifest.get("writes", []) or [])
-    return _build_tool_output(
-        context=context,
-        status="ok",
-        files_written=_files_written_count(writes, changed_paths),
-        shells=shells,
-        script_stdout=script_stdout,
-        warnings=warnings,
-        error=str(manifest.get("error", "") or ""),
-        changed_paths=changed_paths,
+        build_tool_output=_build_tool_output,
+        format_codeact_error=_format_codeact_error,
+        extract_exit_code=_extract_exit_code,
+        files_written_count=_files_written_count,
     )

@@ -6,7 +6,7 @@ Every Daytona tool that commits file changes (``daytona_write_file``,
 
 * :func:`submit_commit` wraps the sync ``svc.{write,edit,delete,move}_file``
   path (``OperationResult``).
-* :func:`submit_codeact_cmd` wraps the async ``svc.cmd`` overlay-audit path
+* :func:`submit_codeact_cmd` wraps the async ``svc.cmd`` audit path
   (auditor ``SimpleNamespace``).
 
 Both return :class:`FileChangeResult` so downstream post-hooks can read one
@@ -288,7 +288,7 @@ async def submit_codeact_cmd(
     the context via :func:`agent_attribution_from_context` — callers do not
     build it themselves.
 
-    Success is ``exit_code == 0 AND overlay_commit_status in (None, 'committed')``.
+    Success is ``exit_code == 0 AND git_commit_status in (None, 'committed')``.
     """
     from tools.core.ci_runtime import get_ci_service
 
@@ -325,8 +325,8 @@ async def submit_codeact_cmd(
     changed = _dedup_sorted(getattr(response, "changed_paths", None))
     ambient = _dedup_sorted(getattr(response, "ambient_changed_paths", None))
     exit_code = int(getattr(response, "exit_code", 1) or 0)
-    commit_status = getattr(response, "overlay_commit_status", None)
-    conflict_reason = getattr(response, "overlay_conflict_reason", None)
+    commit_status = getattr(response, "git_commit_status", None)
+    conflict_reason = getattr(response, "git_conflict_reason", None)
 
     success = exit_code == 0 and (commit_status in (None, "committed"))
     return FileChangeResult(
