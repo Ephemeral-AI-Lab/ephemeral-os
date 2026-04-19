@@ -242,14 +242,14 @@ not append advisory messages to `display_messages`. It does not wrap advisories
 in `SystemReminderBlock`. It does not include advisory text in the API request
 history unless a separate product decision changes that behavior.
 
-The advisory text format should be explicit and compact:
+The advisory text format is contractually fixed so the UI and tests can rely on
+it:
 
-- Pre-hook advisory: phase label, tool name, message.
-- Post-hook advisory: phase label, tool name, message.
+- Pre-hook: `SystemNotification(text="[pre-hook advisory] {tool_name}: {message}", category="pre_hook_advisory")`.
+- Post-hook: `SystemNotification(text="[post-hook advisory] {tool_name}: {message}", category="post_hook_advisory")`.
 
-The tool name plus advisory message is sufficient. Advisory categories may still
-be carried in event metadata or notification category fields for UI filtering,
-but the message itself must stand alone.
+The tool name plus advisory message is sufficient. The `category` field exists
+for UI filtering; the message itself must stand alone.
 
 ## Notification Workflow
 

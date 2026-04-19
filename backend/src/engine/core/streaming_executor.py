@@ -8,13 +8,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from message.messages import ConversationMessage
 from message.stream_events import (
     StreamEvent,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionProgress,
-    ToolExecutionStarted,
 )
 from tools.core.base import (
     BaseTool,
@@ -36,7 +34,6 @@ class TrackedTool:
     id: str
     name: str
     input: dict[str, Any]
-    assistant_message: ConversationMessage
     status: str = "queued"
     task: asyncio.Task | None = None
     progress_lines: list[str] = field(default_factory=list)
@@ -104,9 +101,7 @@ class StreamingToolExecutor:
         """IDs of tool_uses the caller asked us to defer (not execute)."""
         return self._deferred
 
-    def add_tool(
-        self, event: ApiToolUseDeltaEvent, assistant_message: ConversationMessage
-    ) -> None:
+    def add_tool(self, event: ApiToolUseDeltaEvent) -> None:
         """Add a tool to execute as it arrives mid-stream.
 
         Hook-aware execution emits ``ToolExecutionStarted`` after pre-hooks
@@ -130,7 +125,6 @@ class StreamingToolExecutor:
             id=event.id,
             name=event.name,
             input=event.input,
-            assistant_message=assistant_message,
         )
         self._tools[event.id] = tracked
         logger.debug(
@@ -272,10 +266,6 @@ class StreamingToolExecutor:
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
         finally:
             tool.status = "completed"
-
-    def get_started_events(self) -> list[ToolExecutionStarted]:
-        """Get ToolExecutionStarted events for all queued tools."""
-        return []
 
     def cancel_all(self) -> None:
         """Cancel all running tasks to prevent orphaned execution."""

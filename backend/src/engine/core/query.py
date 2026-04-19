@@ -453,8 +453,7 @@ async def _run_query_loop(
                         None,
                     )
                     continue
-                assistant_msg = final_message or ConversationMessage(role="assistant", content=[])
-                executor.add_tool(event, assistant_msg)
+                executor.add_tool(event)
                 for emitted in executor.get_events():
                     yield emitted, None
                 for progress in executor.get_progress():
@@ -509,9 +508,6 @@ async def _run_query_loop(
                     yield reminder_event, None
             continue
 
-        for started in executor.get_started_events():
-            yield started, None
-
         tool_results: list[ToolResultBlock] = list(streamed_rejections)
         remaining_events = await executor.get_remaining()
         for emitted in executor.get_events():
@@ -523,6 +519,7 @@ async def _run_query_loop(
                         tool_use_id=completed.tool_id,
                         content=completed.output,
                         is_error=completed.is_error,
+                        metadata=dict(completed.metadata or {}),
                     )
                 )
                 yield completed, None

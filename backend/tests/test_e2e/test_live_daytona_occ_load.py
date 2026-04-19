@@ -45,6 +45,9 @@ from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _wrap_bash_command,
 )
+from code_intelligence.routing import overlay_auditor as overlay_auditor_module
+from code_intelligence.routing import overlay_exec as overlay_exec_module
+from code_intelligence.routing import service as ci_service_module
 import tools.daytona_toolkit.codeact_tool as codeact_tool_module
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 from tools.daytona_toolkit.delete_move_tool import (
@@ -246,6 +249,142 @@ def _install_codeact_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
 
     monkeypatch.setattr(codeact_tool_module, "_run_shell_with_recovery", _timed_shell)
     monkeypatch.setattr(codeact_tool_module, "_execute_python_wrapper", _timed_python)
+    return stats
+
+
+def _install_overlay_phase_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict[str, list[float]]:
+    """Probe OverlayAuditor + svc overlay lifecycle for per-phase timings.
+
+    The overlay path is the dominant cost in coordinated ``daytona_codeact``
+    calls. Breaking it into cold-start lowerdir materialization, overlay
+    mount + user exec + unmount, upperdir tar download, upperdir walk,
+    OCC commit, and lowerdir refresh lets the summary distinguish a slow
+    commit from a slow overlay mount from a slow refresh.
+    """
+    stats: dict[str, list[float]] = {
+        "overlay_execute_total_s": [],
+        "overlay_run_s": [],
+        "download_tar_s": [],
+        "upperdir_walk_s": [],
+        "commit_changes_s": [],
+        "lowerdir_refresh_s": [],
+        "ensure_lowerdir_s": [],
+        "ensure_lowerdir_cold_s": [],
+        "lowerdir_live_check_s": [],
+    }
+
+    orig_execute = overlay_auditor_module.OverlayAuditor.execute
+    orig_download = overlay_auditor_module.OverlayAuditor._download_remote_tar
+    orig_commit = overlay_auditor_module.OverlayAuditor._commit_changes
+    orig_walk = overlay_auditor_module.iter_upperdir_changes
+    orig_ensure_lowerdir = ci_service_module.CodeIntelligenceService._ensure_overlay_lowerdir
+    orig_refresh = ci_service_module.CodeIntelligenceService._refresh_overlay_lowerdir
+    orig_live_check = ci_service_module.CodeIntelligenceService._lowerdir_is_live
+    orig_overlay_run = overlay_exec_module.OverlayExec.execute
+
+    async def _timed_execute(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_execute(self, *args, **kwargs)
+        finally:
+            stats["overlay_execute_total_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_download(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_download(self, *args, **kwargs)
+        finally:
+            stats["download_tar_s"].append(round(time.perf_counter() - started, 6))
+
+    async def _timed_commit(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_commit(self, *args, **kwargs)
+        finally:
+            stats["commit_changes_s"].append(round(time.perf_counter() - started, 6))
+
+    def _timed_walk(*args, **kwargs):
+        started = time.perf_counter()
+        # The walker returns a generator; materialize here so the timing
+        # captures the actual tar parsing rather than just generator setup.
+        try:
+            result = list(orig_walk(*args, **kwargs))
+        finally:
+            stats["upperdir_walk_s"].append(round(time.perf_counter() - started, 6))
+        return iter(result)
+
+    async def _timed_ensure_lowerdir(self, sandbox):
+        cold = self._overlay_lowerdir is None
+        started = time.perf_counter()
+        try:
+            return await orig_ensure_lowerdir(self, sandbox)
+        finally:
+            elapsed = round(time.perf_counter() - started, 6)
+            stats["ensure_lowerdir_s"].append(elapsed)
+            if cold:
+                stats["ensure_lowerdir_cold_s"].append(elapsed)
+
+    async def _timed_refresh(self, committed_changes):
+        started = time.perf_counter()
+        try:
+            return await orig_refresh(self, committed_changes)
+        finally:
+            stats["lowerdir_refresh_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_live_check(self, sandbox, lowerdir):
+        started = time.perf_counter()
+        try:
+            return await orig_live_check(self, sandbox, lowerdir)
+        finally:
+            stats["lowerdir_live_check_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_overlay_run(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_overlay_run(self, *args, **kwargs)
+        finally:
+            stats["overlay_run_s"].append(round(time.perf_counter() - started, 6))
+
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor, "execute", _timed_execute
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_download_remote_tar",
+        _timed_download,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor, "_commit_changes", _timed_commit
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module, "iter_upperdir_changes", _timed_walk
+    )
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService,
+        "_ensure_overlay_lowerdir",
+        _timed_ensure_lowerdir,
+    )
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService,
+        "_refresh_overlay_lowerdir",
+        _timed_refresh,
+    )
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService,
+        "_lowerdir_is_live",
+        _timed_live_check,
+    )
+    monkeypatch.setattr(
+        overlay_exec_module.OverlayExec, "execute", _timed_overlay_run
+    )
     return stats
 
 
@@ -451,37 +590,73 @@ def _tool_for_operation_kind(kind: str) -> Any:
     raise AssertionError(f"Unsupported operation kind: {kind}")
 
 
+def _percentile(sorted_values: list[float], pct: float) -> float:
+    if not sorted_values:
+        return 0.0
+    idx = min(len(sorted_values) - 1, int(round((len(sorted_values) - 1) * pct)))
+    return sorted_values[idx]
+
+
+def _value_profile(values: list[float]) -> dict[str, float]:
+    ordered = sorted(values)
+    if not ordered:
+        return {
+            "count": 0,
+            "min": 0.0,
+            "avg": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "p95": 0.0,
+            "max": 0.0,
+            "total": 0.0,
+        }
+    total = sum(ordered)
+    return {
+        "count": len(ordered),
+        "min": round(ordered[0], 6),
+        "avg": round(total / len(ordered), 6),
+        "p50": round(_percentile(ordered, 0.50), 6),
+        "p90": round(_percentile(ordered, 0.90), 6),
+        "p95": round(_percentile(ordered, 0.95), 6),
+        "max": round(ordered[-1], 6),
+        "total": round(total, 6),
+    }
+
+
+def _phase_summary(stats: dict[str, list[float]]) -> dict[str, dict[str, float]]:
+    return {phase: _value_profile(list(values)) for phase, values in stats.items()}
+
+
 def _operation_timing_summary(
     results: list[dict[str, Any]],
     *,
     wall_elapsed_s: float,
-) -> dict[str, float]:
-    total_operation_s = round(sum(float(item["elapsed_s"]) for item in results), 6)
+) -> dict[str, Any]:
+    elapsed_values = [float(item["elapsed_s"]) for item in results]
+    wait_values = [float(item["wait_s"]) for item in results]
+    total_operation_s = round(sum(elapsed_values), 6)
     ratio = round(total_operation_s / wall_elapsed_s, 3) if wall_elapsed_s > 0 else 0.0
+    op_count = len(results)
+    throughput = round(op_count / wall_elapsed_s, 3) if wall_elapsed_s > 0 else 0.0
     return {
         "wall_elapsed_s": round(wall_elapsed_s, 6),
+        "op_count": op_count,
         "sum_operation_elapsed_s": total_operation_s,
         "parallelism_ratio": ratio,
-        "max_wait_s": round(max((float(item["wait_s"]) for item in results), default=0.0), 6),
+        "throughput_ops_per_s": throughput,
+        "elapsed_s_profile": _value_profile(elapsed_values),
+        "wait_s_profile": _value_profile(wait_values),
+        "max_wait_s": round(max(wait_values, default=0.0), 6),
     }
 
 
 def _elapsed_profile(items: list[dict[str, Any]]) -> dict[str, float]:
-    values = sorted(float(item["elapsed_s"]) for item in items)
-    if not values:
-        return {"avg": 0.0, "p50": 0.0, "p95": 0.0, "max": 0.0}
-    p50_index = len(values) // 2
-    p95_index = min(len(values) - 1, int(round((len(values) - 1) * 0.95)))
-    return {
-        "avg": round(sum(values) / len(values), 6),
-        "p50": round(values[p50_index], 6),
-        "p95": round(values[p95_index], 6),
-        "max": round(values[-1], 6),
-    }
+    return _value_profile([float(item["elapsed_s"]) for item in items])
 
 
 def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """High-concurrency mixed OCC load across every Daytona mutator.
 
@@ -502,6 +677,8 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         },
     )
     live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     seed_started = time.perf_counter()
     _log_occ_event(log_label, {"event": "setup", "phase": "seed_start"})
@@ -693,6 +870,8 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
             results,
             wall_elapsed_s=wall_elapsed_s,
         ),
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "arbiter": svc.status()["arbiter"],
         "held_locks": svc.arbiter.active_lock_count,
         "process_identity": {
@@ -766,8 +945,23 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     assert svc.status()["arbiter"]["total_edits"] >= len(operations)
 
 
-def test_live_occ_load_50_mixed_operations(live_load_env: LiveLoadEnv):
+def test_live_occ_load_50_mixed_operations(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    log_label = "occ-load-50-mixed"
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo",
+            "pid": os.getpid(),
+            "sandbox_id": live_load_env.sandbox_id,
+        },
+    )
     live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     # Seed disjoint edit targets: 3 files * 5 edits each = 15 disjoint edits.
     for group in range(3):
@@ -884,6 +1078,8 @@ def test_live_occ_load_50_mixed_operations(live_load_env: LiveLoadEnv):
             operations,
             concurrency=20,
             timeout_s=240,
+            log_ops=True,
+            log_label=log_label,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -915,7 +1111,11 @@ def test_live_occ_load_50_mixed_operations(live_load_env: LiveLoadEnv):
             winners_by_group[group].append(value)
     overlap_persisted_winners = sum(len(values) for values in winners_by_group.values())
 
-    print("\n[occ-load summary]")
+    by_kind: dict[str, list[dict[str, Any]]] = {}
+    for item in results:
+        by_kind.setdefault(item["kind"], []).append(item)
+
+    print(f"\n[{log_label} summary]")
     print(
         json.dumps(
             {
@@ -926,10 +1126,16 @@ def test_live_occ_load_50_mixed_operations(live_load_env: LiveLoadEnv):
                 "overlap_conflicts": overlap_conflicts,
                 "overlap_persisted_winners": overlap_persisted_winners,
                 "codeact_successes": codeact_successes,
+                "elapsed_profile_s": {
+                    kind: _elapsed_profile(items)
+                    for kind, items in sorted(by_kind.items())
+                },
                 "timing": _operation_timing_summary(
                     results,
                     wall_elapsed_s=wall_elapsed_s,
                 ),
+                "codeact_phase_s": _phase_summary(codeact_stats),
+                "overlay_phase_s": _phase_summary(overlay_stats),
                 "arbiter": arbiter_status,
                 "hotspots": hotspots[:5],
             },
@@ -972,8 +1178,14 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    log_label = "occ-load-20-nonoverlap"
+    _log_occ_event(
+        log_label,
+        {"event": "setup", "phase": "init_repo", "sandbox_id": live_load_env.sandbox_id},
+    )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     for group in range(2):
         live_load_env.write_text(
@@ -1242,6 +1454,8 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
             operations,
             concurrency=20,
             timeout_s=120,
+            log_ops=True,
+            log_label=log_label,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -1250,20 +1464,13 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
     for item in results:
         by_kind.setdefault(item["kind"], []).append(item)
 
-    def _avg_elapsed(items: list[dict[str, Any]]) -> float:
-        return round(sum(item["elapsed_s"] for item in items) / len(items), 6)
-
     summary = {
         "operation_counts": {
             kind: len(items)
             for kind, items in sorted(by_kind.items())
         },
-        "avg_elapsed_s": {
-            kind: _avg_elapsed(items)
-            for kind, items in sorted(by_kind.items())
-        },
-        "max_elapsed_s": {
-            kind: round(max(item["elapsed_s"] for item in items), 6)
+        "elapsed_profile_s": {
+            kind: _elapsed_profile(items)
             for kind, items in sorted(by_kind.items())
         },
         "timing": _operation_timing_summary(
@@ -1279,10 +1486,11 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
             for item in by_kind.get("edit-disjoint", [])
             if item["payload"].get("timings")
         ],
-        "codeact_worktree_s": codeact_stats,
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "arbiter": svc.status()["arbiter"],
     }
-    print("\n[occ-load-20-nonoverlap timings]")
+    print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
 
     assert len(operations) == 20
@@ -1296,8 +1504,14 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    log_label = "occ-load-30-nonoverlap"
+    _log_occ_event(
+        log_label,
+        {"event": "setup", "phase": "init_repo", "sandbox_id": live_load_env.sandbox_id},
+    )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     for group in range(3):
         live_load_env.write_text(

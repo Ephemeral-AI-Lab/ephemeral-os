@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
-from message import ConversationMessage, TextBlock, ToolUseBlock
+from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 from engine.core.query import QueryContext, QueryExitReason, _execute_tool_call, run_query
 from message.stream_events import (
     AssistantTurnComplete,
@@ -190,6 +190,20 @@ class FailingTool(BaseTool):
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output="something went wrong", is_error=True)
+
+
+class MetadataTool(BaseTool):
+    """A tool that returns metadata used by downstream display/API reducers."""
+
+    name = "metadata_tool"
+    description = "Returns metadata."
+    input_model = EchoInput
+
+    async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(
+            output=arguments.message,
+            metadata={"trace": {"message": arguments.message}},
+        )
 
 
 class InvalidJsonOutputTool(BaseTool):
@@ -863,6 +877,66 @@ async def test_streaming_tool_calls_respect_planner_soft_limit(tmp_path: Path):
     assert any(
         event.is_error and "tool_call_limit exceeded" in event.output for event in tool_completes
     )
+
+
+@pytest.mark.asyncio
+async def test_streamed_tool_result_preserves_metadata_in_message_history(tmp_path: Path):
+    registry = _make_registry(MetadataTool())
+    client = FakeStreamingApiClient(
+        [
+            [
+                ApiToolUseDeltaEvent(
+                    id="tc1",
+                    name="metadata_tool",
+                    input={"message": "kept"},
+                ),
+                ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="tc1",
+                                name="metadata_tool",
+                                input={"message": "kept"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(input_tokens=1, output_tokens=1),
+                    stop_reason=None,
+                ),
+            ],
+            [
+                ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[TextBlock(text="Done.")],
+                    ),
+                    usage=UsageSnapshot(input_tokens=1, output_tokens=1),
+                    stop_reason=None,
+                ),
+            ],
+        ]
+    )
+    context = _make_context(client, registry, tmp_path)
+    messages = [ConversationMessage.from_user_text("run metadata tool")]
+    _messages, event_stream = await run_query(context, messages)
+
+    events = []
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    assert len(tool_completes) == 1
+    assert tool_completes[0].metadata == {"trace": {"message": "kept"}}
+
+    tool_result_blocks = [
+        block
+        for message in messages
+        for block in message.content
+        if isinstance(block, ToolResultBlock)
+    ]
+    assert len(tool_result_blocks) == 1
+    assert tool_result_blocks[0].metadata == {"trace": {"message": "kept"}}
 
 
 @pytest.mark.asyncio

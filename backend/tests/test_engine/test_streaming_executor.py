@@ -8,7 +8,6 @@ import json
 import pytest
 from pydantic import BaseModel, Field
 
-from message import ConversationMessage
 from message.stream_events import (
     ToolExecutionCancelled,
     ToolExecutionCompleted,
@@ -120,10 +119,6 @@ def _make_context() -> ToolExecutionContext:
     return ToolExecutionContext(cwd="/tmp", metadata={})
 
 
-def _make_assistant_msg() -> ConversationMessage:
-    return ConversationMessage(role="assistant", content=[])
-
-
 # ---------------------------------------------------------------------------
 # Tests: TrackedTool dataclass
 # ---------------------------------------------------------------------------
@@ -135,7 +130,6 @@ def test_tracked_tool_defaults():
         id="tool_01",
         name="test",
         input={},
-        assistant_message=_make_assistant_msg(),
     )
     assert tracked.status == "queued"
     assert tracked.task is None
@@ -163,7 +157,7 @@ async def test_add_tool_starts_execution():
         input={"value": 21},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     # Tool should be executing
     assert "tool_01" in executor._tools
@@ -184,7 +178,7 @@ async def test_add_tool_unknown_tool():
         input={"any": "value"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     # Wait for execution to complete - unknown tools fail immediately
     await asyncio.sleep(0.1)
@@ -210,7 +204,7 @@ async def test_cancel_stops_running_tool():
         input={"message": "test"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     # Cancel immediately
     await asyncio.sleep(0.01)  # Let execution start
@@ -256,7 +250,7 @@ async def test_get_remaining_returns_completed_tools():
         input={"value": 10},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     # Wait for completion
     await asyncio.sleep(0.1)
@@ -280,7 +274,7 @@ async def test_get_remaining_preserves_tool_metadata() -> None:
         input={"subsystem": "pydantic/networks.py"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
     await asyncio.sleep(0.1)
 
     results = await executor.get_remaining()
@@ -303,7 +297,7 @@ async def test_get_remaining_returns_cancelled_tools():
         input={"message": "test"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
     await asyncio.sleep(0.01)
     executor.cancel("tool_01", "Aborted by LLM")
 
@@ -333,8 +327,8 @@ async def test_executor_tracks_multiple_tools():
     event1 = ApiToolUseDeltaEvent(id="tool_01", name="fast", input={"value": 1})
     event2 = ApiToolUseDeltaEvent(id="tool_02", name="fast", input={"value": 2})
 
-    executor.add_tool(event1, _make_assistant_msg())
-    executor.add_tool(event2, _make_assistant_msg())
+    executor.add_tool(event1)
+    executor.add_tool(event2)
 
     assert len(executor._tools) == 2
     assert "tool_01" in executor._tools
@@ -355,7 +349,7 @@ async def test_multiple_tools_run_concurrently():
             name="fast",
             input={"value": i},
         )
-        executor.add_tool(event, _make_assistant_msg())
+        executor.add_tool(event)
 
     # All should be tracked
     assert len(executor._tools) == 3
@@ -384,7 +378,7 @@ async def test_get_progress_returns_empty_initially():
         name="fast",
         input={"value": 10},
     )
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     progress = executor.get_progress()
     assert progress == []
@@ -486,7 +480,7 @@ async def test_add_tool_skips_background_tool():
         input={"command": "sleep 10", "background": True},
     )
 
-    started = executor.add_tool(event, _make_assistant_msg())
+    started = executor.add_tool(event)
 
     assert started is None, "Background tool should not produce a started event"
     assert "tool_bg" not in executor._tools, "Background tool should not be tracked"
@@ -506,7 +500,7 @@ async def test_add_tool_runs_foreground_when_background_false():
         input={"command": "echo hello", "background": False},
     )
 
-    started = executor.add_tool(event, _make_assistant_msg())
+    started = executor.add_tool(event)
 
     assert started is None
     assert "tool_fg" in executor._tools
@@ -529,7 +523,7 @@ async def test_add_tool_runs_non_bg_tool_with_background_flag():
         input={"value": 5, "background": True},
     )
 
-    started = executor.add_tool(event, _make_assistant_msg())
+    started = executor.add_tool(event)
 
     assert started is None
     assert "tool_01" in executor._tools
@@ -559,8 +553,8 @@ async def test_mixed_foreground_and_background_tools():
         input={"value": 42},
     )
 
-    bg_started = executor.add_tool(bg_event, _make_assistant_msg())
-    fg_started = executor.add_tool(fg_event, _make_assistant_msg())
+    bg_started = executor.add_tool(bg_event)
+    fg_started = executor.add_tool(fg_event)
 
     assert bg_started is None, "Background tool should be skipped"
     assert fg_started is None
@@ -593,7 +587,7 @@ async def test_submit_tool_propagates_submission_metadata_to_live_context():
         input={"items": [{"agent_name": "developer"}]},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     await asyncio.sleep(0.1)
     await executor.get_remaining()
@@ -615,7 +609,7 @@ async def test_submit_task_summary_metadata_propagates_to_live_context():
         input={"type": "success", "content": "Implemented the fix"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     await asyncio.sleep(0.1)
     await executor.get_remaining()
@@ -636,7 +630,7 @@ async def test_resolved_plan_metadata_propagates_to_live_context():
         input={"objective": "Fix the discriminator pipeline"},
     )
 
-    executor.add_tool(event, _make_assistant_msg())
+    executor.add_tool(event)
 
     await asyncio.sleep(0.1)
     await executor.get_remaining()
