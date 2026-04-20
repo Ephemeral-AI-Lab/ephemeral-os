@@ -148,12 +148,6 @@ class TaskStore:
         async with self._sf() as db:
             return await q.count_non_terminal(db, self._team_run_id) == 0
 
-    async def sibling_subtree_ids(self, parent_id: str | None) -> list[str]:
-        async with self._sf() as db:
-            return await q.fetch_sibling_subtree_ids(
-                db, self._team_run_id, parent_id
-            )
-
     async def get_siblings_and_descendants(
         self, initiating_task_id: str
     ) -> list[TaskRecord]:

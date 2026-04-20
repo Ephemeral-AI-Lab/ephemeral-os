@@ -134,7 +134,7 @@ async def _make_task_center(
     async def _get_task(task_id: str) -> Task | None:
         return tasks.get(task_id)
 
-    note_manager = NoteManager(team_run_id=team_run_id, get_task_fn=_get_task)
+    note_manager = NoteManager(team_run_id=team_run_id)
     if notes:
         note_manager.restore(notes)
     context = TaskContextBuilder(
@@ -246,8 +246,8 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "no indexed symbols for an exact file" in ctx.user_message
     assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
     assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
-    assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message
-    assert 'do not set `scope="sibling"` for those same-task scout notes' in ctx.user_message
+    assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
+    assert "sibling-scope reads are not appropriate for same-task scout notes" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
@@ -307,8 +307,8 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "no indexed symbols for an exact file" in ctx.user_message
     assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
     assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
-    assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message
-    assert 'do not set `scope="sibling"` for those same-task scout notes' in ctx.user_message
+    assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
+    assert "sibling-scope reads are not appropriate for same-task scout notes" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message

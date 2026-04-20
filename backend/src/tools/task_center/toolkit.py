@@ -4,7 +4,7 @@ Tools exposed in the main loop:
 - submit_file_note              — post a file-scoped note (scouts, file-surface notes)
 - submit_task_note              — post a task-scoped note (note_taker, task updates)
 - read_task_details             — task spec + recent notes by task id / scope
-- read_file_note                — search notes by file path and/or keyword
+- read_file_note                — search notes by file path
 - task_center_changed_since     — check if task-center state is stale
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
@@ -18,7 +18,7 @@ import re
 import time
 import uuid
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from tools.task_center.freshness import check_freshness
@@ -333,21 +333,22 @@ class TaskCenterChangedSinceTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# ReadFileNoteTool — path/keyword search across all notes
+# ReadFileNoteTool — path search across all notes
 # ---------------------------------------------------------------------------
 
 
 class ReadFileNoteInput(BaseModel):
-    file_path: str | None = Field(
-        default=None,
+    model_config = ConfigDict(extra="forbid")
+
+    file_path: str = Field(
+        ...,
+        min_length=1,
         description=(
-            "Path to a file or directory in the sandbox. Returns notes whose "
-            "attached paths overlap with this prefix. Omit to search by keyword only."
+            "REQUIRED. Path to a file or directory in the sandbox. Returns "
+            "notes whose attached paths overlap with this prefix. Put the "
+            "actual path here; `task_note` is only the reason for the call and "
+            "is not searched."
         ),
-    )
-    keyword: str | None = Field(
-        default=None,
-        description="Keyword filter (case-insensitive substring match). Use '|' for OR matching.",
     )
     tags: list[str] | None = Field(
         default=None,
@@ -365,12 +366,12 @@ class ReadFileNoteInput(BaseModel):
 class ReadFileNoteTool(BaseTool):
     name = "read_file_note"
     description = (
-        "Search Task Center notes by file path and/or keyword across all tasks. "
-        "Pass file_path=\"<path>\" to find notes attached to a specific file or "
-        "directory, and/or keyword=\"foo|bar\" for case-insensitive substring "
-        "search. Returns notes from any task that match the filter."
+        "Call this before reading or editing any file that may have notes attached. "
+        "Developers and validators: required. Search Task Center notes by file "
+        "path across all tasks. Pass file_path=\"<path>\"; never put the "
+        "searched path only in task_note."
     )
-    short_description = "Search notes by file path or keyword."
+    short_description = "Search notes by file path."
     input_model = ReadFileNoteInput
     output_model = TextToolOutput
 
@@ -391,29 +392,21 @@ class ReadFileNoteTool(BaseTool):
                     is_error=True,
                 )
 
-        if not arguments.file_path and not arguments.keyword:
+        paths = [arguments.file_path]
+
+        matched = await tc.notes.read(paths=paths)
+        if not matched:
+            known = tc.notes.known_paths()
             return ToolResult(
-                output="Error: provide at least one of `file_path` or `keyword`.",
-                is_error=True,
+                output=(
+                    f"No notes found for file_path: {arguments.file_path}. "
+                    f"Known note paths: {known}"
+                ),
             )
-
-        paths = [arguments.file_path] if arguments.file_path else None
-
-        if paths:
-            matched = await tc.notes.read(paths=paths)
-            if not matched:
-                known = tc.notes.known_paths()
-                return ToolResult(
-                    output=(
-                        f"No notes found for file_path: {arguments.file_path}. "
-                        f"Known note paths: {known}"
-                    ),
-                )
 
         notes = await tc.notes.read(
             paths=paths,
             tags=arguments.tags,
-            keyword=arguments.keyword,
             last_n=arguments.last_n,
         )
 
@@ -433,16 +426,18 @@ class ReadFileNoteTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# ReadTaskDetailsTool — full detail view for specific tasks
+# ReadTaskDetailsTool — full detail view for one task
 # ---------------------------------------------------------------------------
 
 
 class ReadTaskDetailsInput(BaseModel):
-    task_ids: list[str] = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str = Field(
         ...,
         min_length=1,
         description=(
-            "Task IDs to look up. Get IDs from read_task_graph or from your deps."
+            "Single task ID to look up. Get IDs from read_task_graph or from your deps."
         ),
     )
 
@@ -450,13 +445,14 @@ class ReadTaskDetailsInput(BaseModel):
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
-        "Get full details for specific tasks by ID: spec, deps, status, "
+        "Get full details for one task by ID: spec, deps, status, "
         "scope_paths, failure reason, the completion summary (when done), and "
-        "the 3 most recent notes on each task (full content). Use "
+        "the 3 most recent notes on that task (full content). Use "
         "read_task_graph first to discover task IDs; use read_file_note for "
-        "path- or keyword-based lookups across all notes."
+        "path-based lookups across all notes. Call once per task when you need "
+        "multiple task details."
     )
-    short_description = "Read task details + recent notes by ID."
+    short_description = "Read one task's details + recent notes by ID."
     input_model = ReadTaskDetailsInput
     output_model = TextToolOutput
 
@@ -471,62 +467,56 @@ class ReadTaskDetailsTool(BaseTool):
         if not isinstance(graph, dict):
             return ToolResult(output="Error: task graph not available", is_error=True)
 
-        sections: list[str] = []
-        for tid in arguments.task_ids:
-            task = graph.get(tid)
-            if task is None:
-                sections.append(f"## {tid}\nNot found in task graph.")
-                continue
+        tid = arguments.task_id
+        task = graph.get(tid)
+        if task is None:
+            return ToolResult(output=f"## {tid}\nNot found in task graph.")
 
-            header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
-            lines = [header]
+        header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
+        lines = [header]
 
-            if task.description:
-                lines.append(f"**Description:** {task.description}")
-            lines.append(f"**Objective:** {task.objective}")
-            if task.deps:
-                lines.append(f"**Deps:** {', '.join(task.deps)}")
-            if task.scope_paths:
-                lines.append(f"**Scope:** {', '.join(task.scope_paths)}")
-            if task.failure_reason:
-                lines.append(f"**Failure:** {task.failure_reason}")
+        if task.description:
+            lines.append(f"**Description:** {task.description}")
+        lines.append(f"**Objective:** {task.objective}")
+        if task.deps:
+            lines.append(f"**Deps:** {', '.join(task.deps)}")
+        if task.scope_paths:
+            lines.append(f"**Scope:** {', '.join(task.scope_paths)}")
+        if task.failure_reason:
+            lines.append(f"**Failure:** {task.failure_reason}")
 
-            # Notes for this task — full content, last 3, plus the latest
-            # completion summary if present (posted as an `implementation` note
-            # by the runtime when a task reports success).
-            try:
-                task_notes = await tc.notes.read(authors=[tid])
-                if task_notes:
-                    summary_note = next(
-                        (
-                            n
-                            for n in reversed(task_notes)
-                            if "implementation" in (n.tags or [])
-                        ),
-                        None,
-                    )
-                    if summary_note is not None:
-                        lines.append("**Summary:**")
-                        lines.append(summary_note.content)
+        # Notes for this task — full content, last 3, plus the latest
+        # completion summary if present (posted as an `implementation` note
+        # by the runtime when a task reports success).
+        try:
+            task_notes = await tc.notes.read(authors=[tid])
+            if task_notes:
+                summary_note = next(
+                    (
+                        n
+                        for n in reversed(task_notes)
+                        if "implementation" in (n.tags or [])
+                    ),
+                    None,
+                )
+                if summary_note is not None:
+                    lines.append("**Summary:**")
+                    lines.append(summary_note.content)
 
-                    recent = task_notes[-3:]
-                    if recent:
-                        lines.append("**Recent notes:**")
-                        for n in recent:
-                            tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
-                            path_str = (
-                                f" [paths: {', '.join(n.paths)}]" if n.paths else ""
-                            )
-                            lines.append(
-                                f"### {n.agent_name}{tag_str}{path_str}"
-                            )
-                            lines.append(n.content)
-            except Exception:
-                pass  # notes unavailable
+                recent = task_notes[-3:]
+                if recent:
+                    lines.append("**Recent notes:**")
+                    for n in recent:
+                        tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
+                        path_str = (
+                            f" [paths: {', '.join(n.paths)}]" if n.paths else ""
+                        )
+                        lines.append(f"### {n.agent_name}{tag_str}{path_str}")
+                        lines.append(n.content)
+        except Exception:
+            pass  # notes unavailable
 
-            sections.append("\n".join(lines))
-
-        return ToolResult(output="\n\n".join(sections))
+        return ToolResult(output="\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +543,7 @@ class ReadTaskGraphTool(BaseTool):
         "children. Default returns peers under your parent (with their subtrees). "
         "Set global_scope=true for the full tree. Tasks whose parent is missing "
         "from the returned subset appear under 'detached'. "
-        "Follow up with read_task_details(task_ids=[...]) for full info."
+        "Follow up with read_task_details(task_id=\"...\") for full info."
     )
     short_description = "Read the task graph as JSON."
     input_model = ReadTaskGraphInput

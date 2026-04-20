@@ -11,12 +11,13 @@ from pydantic import ValidationError
 
 from tools.task_center.toolkit import (
     ReadFileNoteTool,
+    ReadTaskDetailsTool,
     ReadTaskGraphTool,
     SubmitFileNoteTool,
     SubmitTaskNoteTool,
     TaskCenterChangedSinceTool,
 )
-from tools.core.base import ToolExecutionContext
+from tools.core.base import ToolExecutionContext, parse_tool_input
 from team.models import Task, TaskStatus
 
 
@@ -273,9 +274,6 @@ async def test_read_file_note_empty_path_read_reports_known_paths():
         async def read(self, **_kwargs):
             return []
 
-        async def read_notes(self, **_kwargs):
-            return []
-
         def known_paths(self):
             return ["src/other.py"]
 
@@ -289,6 +287,108 @@ async def test_read_file_note_empty_path_read_reports_known_paths():
     assert result.is_error is False
     assert "No notes found for file_path" in result.output
     assert "src/other.py" in result.output
+
+
+def test_read_file_note_schema_requires_file_path_only():
+    schema = ReadFileNoteTool().to_api_schema()["input_schema"]
+
+    assert schema["required"] == ["file_path"]
+    assert "keyword" not in schema["properties"]
+    assert schema["properties"]["file_path"]["type"] == "string"
+    assert schema["properties"]["file_path"]["minLength"] == 1
+    assert "anyOf" not in schema["properties"]["file_path"]
+    assert "default" not in schema["properties"]["file_path"]
+    assert "task_note" in schema["properties"]["file_path"]["description"]
+    assert schema["additionalProperties"] is False
+
+
+def test_read_file_note_parse_rejects_only_task_note():
+    tool = ReadFileNoteTool()
+
+    result = parse_tool_input(
+        tool,
+        {"task_note": "Reading notes for src/auth.py"},
+    )
+
+    assert result.is_error is True
+    assert result.error is not None
+    assert "file_path" in result.error.output
+
+
+def test_read_file_note_parse_rejects_keyword_even_with_file_path():
+    result = parse_tool_input(
+        ReadFileNoteTool(),
+        {"file_path": "src/auth.py", "keyword": "token"},
+    )
+
+    assert result.is_error is True
+    assert result.error is not None
+    assert "keyword" in result.error.output
+
+
+def test_read_task_details_schema_requires_single_task_id():
+    schema = ReadTaskDetailsTool().to_api_schema()["input_schema"]
+
+    assert schema["required"] == ["task_id"]
+    assert "task_ids" not in schema["properties"]
+    assert schema["properties"]["task_id"]["type"] == "string"
+    assert schema["properties"]["task_id"]["minLength"] == 1
+    assert schema["additionalProperties"] is False
+
+
+def test_read_task_details_parse_rejects_task_ids_list():
+    result = parse_tool_input(
+        ReadTaskDetailsTool(),
+        {"task_ids": ["task-1"]},
+    )
+
+    assert result.is_error is True
+    assert result.error is not None
+    assert "task_id" in result.error.output
+
+
+def test_read_task_details_parse_rejects_extra_task_ids_with_task_id():
+    result = parse_tool_input(
+        ReadTaskDetailsTool(),
+        {"task_id": "task-1", "task_ids": ["task-2"]},
+    )
+
+    assert result.is_error is True
+    assert result.error is not None
+    assert "task_ids" in result.error.output
+
+
+@pytest.mark.asyncio
+async def test_read_task_details_reads_single_task():
+    class _Notes:
+        async def read(self, **_kwargs):
+            return []
+
+    graph = {
+        "task-1": _task(
+            "task-1",
+            parent_id=None,
+            status=TaskStatus.RUNNING,
+            agent="developer",
+            description="Patch parser",
+            deps=["dep-1"],
+            scope_paths=["src/parser.py"],
+        ),
+        "task-2": _task("task-2", parent_id=None, description="Other task"),
+    }
+    ctx = _ctx({"task_center": SimpleNamespace(graph=graph, notes=_Notes())})
+
+    result = await ReadTaskDetailsTool().execute(
+        ReadTaskDetailsTool.input_model(task_id="task-1"),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert "## task-1 (developer) [running]" in result.output
+    assert "**Description:** Patch parser" in result.output
+    assert "**Deps:** dep-1" in result.output
+    assert "**Scope:** src/parser.py" in result.output
+    assert "task-2" not in result.output
 
 
 @pytest.mark.asyncio

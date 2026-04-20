@@ -104,27 +104,6 @@ async def count_non_terminal(db: AsyncSession, team_run_id: str) -> int:
     return int((await db.execute(stmt)).scalar() or 0)
 
 
-async def fetch_sibling_subtree_ids(
-    db: AsyncSession, team_run_id: str, parent_id: str | None
-) -> list[str]:
-    subtree = (
-        select(TaskRecord.id)
-        .where(
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.parent_id.is_not_distinct_from(parent_id),
-        )
-        .cte("subtree", recursive=True)
-    )
-    child = aliased(TaskRecord, name="child")
-    subtree = subtree.union_all(
-        select(child.id)
-        .join(subtree, child.parent_id == subtree.c.id)
-        .where(child.team_run_id == team_run_id)
-    )
-    rows = (await db.execute(select(subtree.c.id))).all()
-    return [str(r.id) for r in rows]
-
-
 async def fetch_siblings_and_descendants(
     db: AsyncSession, team_run_id: str, initiating_task_id: str
 ) -> list[TaskRecord]:

@@ -29,7 +29,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 ## Coordination redesign focus
 
 - Must treat `docs/architecture/team-coordination.md` as the design intent for this benchmark.
-- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_details(task_ids=[...])` (after `read_task_graph()` to enumerate your task and sibling ids) for scout findings, dependency context, sibling activity, and conflict checking, and `read_file_note(file_path="...")` for path-based lookups.
+- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_details(task_id="...")` (after `read_task_graph()` to enumerate ids) for scout findings, dependency context, sibling activity, and conflict checking; call it once per task when multiple task details are needed. Use `read_file_note(file_path="...")` for path-based lookups.
 - Must use `read_file_note(file_path="...")` before opening source files, before launching duplicate scouts, and after every surprising verification failure; an empty note read is useful evidence, not a blocker.
 - Must treat scope-change notifications and `task_center_changed_since()` as freshness signals. Refresh with `read_task_details(...)` or `read_file_note(...)` before committing, verifying, or replanning on a drifting surface.
 - These workflow rules are prompt/playbook obligations, not runtime guardrails. Do not wait for a tool error to enforce them; self-correct or submit failure evidence when a lane has gone off policy.

@@ -113,8 +113,6 @@ class TaskCenter:
             team_run_id=team_run_id,
             event_store_cb=self._emit,
             note_posted_cb=_on_note_posted,
-            get_task_fn=lambda tid: self.get_task(tid),
-            task_store=self._store,
         )
         self._context = TaskContextBuilder(
             team_run_id=team_run_id,

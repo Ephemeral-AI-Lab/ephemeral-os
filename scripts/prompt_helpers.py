@@ -351,7 +351,7 @@ def _make_task_context(
     async def _get_task(task_id: str) -> Task | None:
         return tasks.get(task_id)
 
-    note_manager = NoteManager(team_run_id=team_run_id, get_task_fn=_get_task)
+    note_manager = NoteManager(team_run_id=team_run_id)
     if notes:
         note_manager.restore(notes)
     task_store = SimpleNamespace(graph=tasks)

@@ -115,7 +115,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "child `team_planner` decomposition lanes" in planner
     assert "prose inside `spec` does not create task dependencies" in planner
     assert "run_subagent scout notes are current-task notes" in planner
-    assert "read them via `read_task_details(task_ids=[<your current task id>])`" in planner
+    assert 'read them via `read_task_details(task_id="<your current task id>")`' in planner
     assert "scrub each scout `target_paths` list before calling `run_subagent`" in planner
     assert "live production owner files/directories only" in planner
     assert "never launch `run_subagent` scouts on benchmark test paths" in planner.lower()
@@ -141,7 +141,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "Never call `check_background_progress(...)` or `wait_for_background_task(...)` again" in planner
     assert (
         "read them via "
-        "`read_task_details(task_ids=[<your current task id>])`"
+        '`read_task_details(task_id="<your current task id>")`'
     ) in planner
     assert "Never use background tools to recover content from a `Posted.` scout result" in planner
     assert "clear adjacent live owner" in planner
@@ -202,7 +202,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
-    assert "read_task_details(task_ids=[<failed_task>, <sibling_ids...>])" in replanner
+    assert 'read_task_details(task_id="<failed_task>")' in replanner
+    assert "once per relevant sibling or dependent task" in replanner
     assert "final-action ordering" in replanner.lower()
     assert "scope-quality evidence" in replanner
     assert "production ownership evidence or clear adjacent ownership" in replanner
@@ -266,7 +267,7 @@ def test_reference_files_hold_specialized_detail() -> None:
         _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
     )
     assert "scout notes live on the current task, not on siblings" in scout_launch
-    assert "read_task_details(task_ids=[<your current task id>])" in scout_launch
+    assert 'read_task_details(task_id="<your current task id>")' in scout_launch
     assert "Scrub `target_paths` first" in scout_launch
     assert "missing test-derived path in scout `target_paths`" in scout_launch
     assert "Never use a scout to locate or correct a benchmark test path mismatch" in scout_launch

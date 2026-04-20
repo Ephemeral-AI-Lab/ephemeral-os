@@ -8,15 +8,14 @@ store callback.
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from team._path_utils import ScopePath
-from team.models import Note, Task
+from team.models import Note
 
 if TYPE_CHECKING:
     from team.persistence.events import TeamRunEvent
-    from team.persistence.task_store import TaskStore
 
 logger = logging.getLogger("team.task_center")
 
@@ -40,27 +39,11 @@ class NoteManager:
         team_run_id: str,
         event_store_cb: Callable[[TeamRunEvent], None] | None = None,
         note_posted_cb: Callable[[Note], None] | None = None,
-        get_task_fn: Callable[[str], Awaitable[Task | None]] | None = None,
-        task_store: "TaskStore | None" = None,
     ) -> None:
         self._notes: list[Note] = []
         self._team_run_id = team_run_id
         self._event_store_cb = event_store_cb
         self._note_posted_cb = note_posted_cb
-        self._get_task_fn = get_task_fn
-        self._task_store = task_store
-
-    async def get_task(self, task_id: str) -> Task | None:
-        if self._get_task_fn is not None:
-            return await self._get_task_fn(task_id)
-        if self._task_store is None:
-            return None
-        rec = await self._task_store.get_record(task_id)
-        if rec is None:
-            return None
-        from team.persistence.task_store import record_to_task
-
-        return record_to_task(rec)
 
     def snapshot(self) -> list[Note]:
         """Return a copy of all notes (for checkpointing)."""
@@ -129,56 +112,6 @@ class NoteManager:
         if last_n is not None and last_n > 0:
             results = results[-last_n:]
         return results
-
-    async def read_notes(
-        self,
-        *,
-        paths: list[str] | None = None,
-        tags: list[str] | None = None,
-        keyword: str | None = None,
-        last_n: int | None = None,
-        parent_note_id: str | None = None,
-    ) -> list[Note]:
-        """Read notes filtered by paths, tags, keyword, and last_n."""
-        notes = await self.read(paths=paths, tags=tags, keyword=keyword, last_n=last_n)
-        if parent_note_id:
-            notes = [n for n in notes if n.parent_note_id == parent_note_id]
-        return notes
-
-    async def _sibling_subtree_ids(self, parent_id: str | None) -> list[str]:
-        """Get all task IDs in the sibling subtree under a parent."""
-        if self._task_store is None:
-            return []
-        return [str(task_id) for task_id in await self._task_store.sibling_subtree_ids(parent_id)]
-
-    async def read_sibling_notes(
-        self,
-        task_id: str,
-        *,
-        paths: list[str] | None = None,
-        tags: list[str] | None = None,
-        keyword: str | None = None,
-        last_n: int | None = None,
-    ) -> list[Note]:
-        """Read notes from sibling tasks and their descendants.
-
-        Resolves the calling task's parent, then finds all sibling subtree
-        task IDs (excluding the caller), and filters their notes.
-        """
-        task = await self.get_task(task_id)
-        if task is None or task.parent_id is None:
-            return []
-        sibling_ids = await self._sibling_subtree_ids(task.parent_id)
-        sibling_ids = [tid for tid in sibling_ids if tid != task_id]
-        if not sibling_ids:
-            return []
-        return await self.read(
-            authors=sibling_ids,
-            paths=paths,
-            tags=tags,
-            keyword=keyword,
-            last_n=last_n,
-        )
 
     def known_paths(self) -> list[str]:
         """Return sorted unique paths across all notes (for validation errors)."""
