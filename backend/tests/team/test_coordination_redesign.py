@@ -139,6 +139,12 @@ async def test_submit_plan_resolves_roster_role_hints():
     assert resolved_plan.tasks[1].agent == "validator"
     assert len(task_center.posted) == 1
     assert "Submitted plan with 2 task(s)." in task_center.posted[0].content
+    assert "Tasks:" in task_center.posted[0].content
+    assert "- impl (developer): Implement API; scope=src/api.py" in task_center.posted[0].content
+    assert (
+        "- review (validator): Validate API changes; deps=impl; scope=src/api.py"
+        in task_center.posted[0].content
+    )
 
 
 @pytest.mark.asyncio
@@ -197,11 +203,14 @@ def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
 
     assert "implementation owner paths" in schema["description"]
     assert "verification-only test targets in spec" in schema["description"]
+    assert "Task Center summary" in schema["description"]
     scope_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["scope_paths"][
         "description"
     ]
     assert "implementation owner paths" in scope_desc
     assert "verification-only test targets in spec" in scope_desc
+    output_desc = schema["input_schema"]["properties"]["output"]["description"]
+    assert "ownership evidence" in output_desc
 
     payload = tool.input_model(
         new_tasks=[
@@ -215,6 +224,20 @@ def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
         ]
     )
     assert payload.new_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
+
+
+def test_submit_replan_schema_requests_summary_without_reallowing_output():
+    tool = SubmitReplanTool()
+    schema = tool.to_api_schema()
+
+    assert "Include summary with the failure evidence" in schema["description"]
+    assert "summary" in schema["input_schema"]["properties"]
+    summary_desc = schema["input_schema"]["properties"]["summary"]["description"]
+    assert "failure evidence" in summary_desc
+    assert "remaining uncertainty" in summary_desc
+
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(output="legacy rationale")
 
 
 @pytest.mark.asyncio
@@ -376,6 +399,10 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     result = await tool.execute(
         tool.input_model(
             cancel_ids=["stale"],
+            summary=(
+                "The stale sibling is invalidated by the validator packet; add a focused "
+                "repair and preserve expanded validation."
+            ),
             new_tasks=[
                 {
                     "id": "repair",
@@ -403,11 +430,19 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     assert payload["agent_name"] == "team_replanner"
     assert len(payload["new_tasks"]) == 2
     assert payload["cancel_ids"] == ["stale"]
+    assert payload["summary"].startswith("The stale sibling is invalidated")
     replan = ctx.metadata["resolved_plan"]
     assert [task.parent_id for task in replan.add_tasks] == [
         "replanner-task",
         "replanner-task",
     ]
+    assert len(task_center.posted) == 1
+    assert "The stale sibling is invalidated" in task_center.posted[0].content
+    assert "Corrective tasks:" in task_center.posted[0].content
+    assert "- repair (developer): Repair implementation; scope=src/api.py" in (
+        task_center.posted[0].content
+    )
+    assert "Cancelled siblings: stale" in task_center.posted[0].content
 
 
 def test_submit_replan_rejects_removed_sibling_arguments():

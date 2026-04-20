@@ -1,6 +1,6 @@
 # Action Reference: submit_replan (add corrective tasks)
 
-Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[])` when existing siblings stay valid and only need corrective follow-up.
+Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[], summary="...")` when existing siblings stay valid and only need corrective follow-up.
 If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft` instead.
 
 ## Task/Goal
@@ -18,11 +18,12 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 
 - Put all corrective work in `new_tasks`; this action uses `cancel_ids=[]`. Do not include the original failed `request_replan` task in `cancel_ids`.
 - Each new task: `id`, `description` (short planner-authored label under about 10 words), `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
-- `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings. Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`.
+- `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings. Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks`, `cancel_ids`, and `summary`.
+- `summary` must preserve the failure evidence, why the added work is necessary, which siblings/downstream work stays valid, and any uncertainty.
 - Parallel concrete tasks must not share any `scope_paths` file; add a `deps` edge or use one focused repair task for the shared owner file.
 - If `new_tasks` has 3 or more concrete non-planner tasks, add one terminal `validator` in this payload whose `deps` cover those tasks; its spec must run the relevant broad verification after diagnostics.
 - Prefer `deps` ids local to this payload; validator deps must be local. Existing-task deps must be freshly proven schedulable and not downstream of this replanner or the original failed task.
-- If a failure names a missing import path, target an existing live production owner or the exact missing production path plus an adjacent live owner. If the only apparent edit would be a benchmark-test change or unjustified test-derived alias, submit `submit_replan(new_tasks=[], cancel_ids=[])` instead and do not add a test-edit developer task. If the only apparent edit is to a benchmark test file, target a production owner or a `team_planner` task scoped to the nearest live boundary.
+- If a failure names a missing import path, target an existing live production owner or the exact missing production path plus an adjacent live owner. If the only apparent edit would be a benchmark-test change or unjustified test-derived alias, submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")` instead and do not add a test-edit developer task. If the only apparent edit is to a benchmark test file, target a production owner or a `team_planner` task scoped to the nearest live boundary.
 - For corrective file moves, renames, shims, and re-export bridges, verify both source and destination ownership; an in-scope source file is not enough.
 - Corrective tasks that relocate or rename a path must name `daytona_move_file`. Pure removals may run through CodeAct or `daytona_delete_file`. Corrective specs must not turn a coordinated-tool failure into a raw-write workaround (standard Python file I/O, CodeAct writes, shell redirects, whole-file overwrite fallback).
 - Self-check `cancel_ids=[]` for this action and verify no task scopes benchmark tests unless the prompt explicitly owns a test-only bug.
@@ -47,6 +48,7 @@ Example terminal payload:
       "spec": "1. Goal: Repair the config regression named in the failure packet.\n2. Environment: Use the current repository and team runtime.\n3. Scope: Start in pkg/config.py; keep verification on named failing tests.\n4. Context: The failed sibling gathered evidence but did not complete the repair.\n5. Acceptance Criteria: Run diagnostics, run focused tests, submit a summary with evidence."
     }
   ],
-  "cancel_ids": []
+  "cancel_ids": [],
+  "summary": "The validator packet shows the config path still fails after the original repair. Existing siblings remain valid, so this adds one focused retry on pkg/config.py and preserves downstream validation."
 }
 ```

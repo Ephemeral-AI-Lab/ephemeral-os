@@ -32,7 +32,7 @@ sequenceDiagram
     TaskCenter->>TaskCenter: mark original REQUEST_REPLAN
     TaskCenter->>TaskCenter: rewire pending dependents from original to replanner
     TaskCenter->>Replanner: spawn replanner with failure context
-    Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...])
+    Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...], summary=...)
     TaskCenter->>TaskCenter: apply replan and complete or expand replanner
 ```
 
@@ -45,7 +45,7 @@ dependencies are `done`; failed or cancelled dependencies are not satisfied.
 For the broader run-failure taxonomy, see
 [`team-failure-conditions.md`](team-failure-conditions.md).
 
-The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, and every new task is inserted as a direct child of the replanner. `cancel_ids` may target only the replanner's direct siblings, and their subtrees cancel by cascade. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. If the replanner has no new child tasks after `submit_replan`, it becomes `DONE` immediately; otherwise it becomes `EXPANDED` and reaches `DONE` only after all direct children succeed.
+The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, every new task is inserted as a direct child of the replanner, and `summary` captures the failure evidence, corrective mapping, preserved work, cancellations, and uncertainty for downstream context. `cancel_ids` may target only the replanner's direct siblings, and their subtrees cancel by cascade. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. If the replanner has no new child tasks after `submit_replan`, it becomes `DONE` immediately; otherwise it becomes `EXPANDED` and reaches `DONE` only after all direct children succeed.
 
 ## Status Model
 

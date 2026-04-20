@@ -20,7 +20,8 @@ Build a schema-valid `submit_plan(new_tasks=[...])` payload, then call the tool.
 
 Tool input checklist:
 
-- Top-level keys: `new_tasks` and optional string `output` only.
+- Top-level keys: `new_tasks` and string `output` only.
+- `output` is the Task Center summary, not filler. It should name the owner evidence, task split, dependency shape, validator coverage, important scope boundaries, and remaining uncertainty.
 - `new_tasks` is a JSON array.
 - Each task has `id`, `description`, `name`, `spec`, `deps`, and non-empty `scope_paths`.
 - `name` is an exact registered agent name such as `developer`, `validator`, or `team_planner`.

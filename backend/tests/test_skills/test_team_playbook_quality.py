@@ -217,7 +217,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "inspect git history" in replanner
     assert "outside-scope missing-module request" in replanner
     assert "benchmark test import as evidence" in replanner
-    assert "submit_replan(new_tasks=[], cancel_ids=[])" in replanner
+    assert 'submit_replan(new_tasks=[], cancel_ids=[], summary="...")' in replanner
+    assert "`summary` preserves the failure evidence" in replanner
     assert "do not call CI, file, graph, note, or CodeAct tools afterward" in replanner
     assert "Must not convert a coordinated write-tool failure into instructions to bypass coordination" in replanner
     assert "standard Python file I/O" in replanner

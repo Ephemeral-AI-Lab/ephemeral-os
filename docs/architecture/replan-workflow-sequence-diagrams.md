@@ -5,6 +5,7 @@ The current `submit_replan` payload is:
 
 - `new_tasks`
 - `cancel_ids`
+- `summary`
 
 `team_replanner` is a normal expandable task. When original task `A` fails, `A`
 moves to `REQUEST_REPLAN`, replanner task `R` is created, and pending task
@@ -109,7 +110,7 @@ sequenceDiagram
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>Tool: submit_replan(new_tasks=[], cancel_ids=[...])
+    R->>Tool: submit_replan(new_tasks=[], cancel_ids=[...], summary=...)
     Tool->>Tool: validate cancel_ids (direct siblings of R only)
     Tool-->>Ex: AgentResult(submitted_replan)
 
@@ -233,7 +234,7 @@ sequenceDiagram
     participant TS as TaskStore
     participant X as Running Task X
 
-    R->>PE: submit_replan(cancel_ids=[X])
+    R->>PE: submit_replan(cancel_ids=[X], summary=...)
     PE->>PE: validate X is a non-terminal direct sibling
     PE->>PE: compute cascaded descendants and dependency dependents
 

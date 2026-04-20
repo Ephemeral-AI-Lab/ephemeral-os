@@ -362,7 +362,8 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
     assert "## Failure context" in ctx.user_message
     assert "Original task: failed-1" in ctx.user_message
     assert "Failed reason: unit test still fails" in ctx.user_message
-    assert "submit_replan(new_tasks=[...], cancel_ids=[...])" in ctx.user_message
+    assert 'submit_replan(new_tasks=[...], cancel_ids=[...], summary="...")' in ctx.user_message
+    assert "which sibling/downstream work is preserved" in ctx.user_message
     assert "No two parallel concrete tasks may share a `scope_paths` file" in ctx.user_message
     assert "file renames, or file moves" in ctx.user_message
     assert "include both the exact path and adjacent live owner" in ctx.user_message

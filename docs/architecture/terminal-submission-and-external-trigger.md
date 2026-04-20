@@ -11,6 +11,8 @@ Team-mode agents finish by calling a terminal submission tool. The query loop st
 
 `submit_plan` and `submit_replan` write `resolved_plan` and `plan_is_replan`. `submit_task_summary` writes `task_summary` and `task_summary_type`.
 For `submit_plan` and `submit_replan`, every `new_tasks` item includes a required short `description` label authored by the planner or replanner; the full task briefing stays in `spec`.
+Planners should include `submit_plan(output=...)` with the ownership evidence, dependency shape, validator coverage, scope boundaries, and uncertainty behind the plan. Replanners should include `submit_replan(summary=...)` with the failure evidence, corrective mapping, preserved work, cancellations, and uncertainty. The submission tools also post structured task/cancellation lists so Task Center notes do not collapse to generic counts.
+Developers and reviewers should use `submit_task_summary(content=...)` for evidence-rich terminal notes: changed or reviewed paths, verification commands and outcomes, verdict, blockers, and residual risk.
 
 ## Executor Dispatch
 

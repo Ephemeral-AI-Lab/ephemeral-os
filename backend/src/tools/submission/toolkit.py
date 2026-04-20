@@ -156,6 +156,54 @@ def _note_budget_issues(
     return issues
 
 
+def _format_task_summary_lines(tasks: list[dict[str, Any]], *, limit: int = 12) -> str:
+    lines: list[str] = []
+    for item in tasks[:limit]:
+        task_id = str(item.get("id") or "<unknown>")
+        agent = str(item.get("agent") or "<unknown>")
+        description = str(item.get("description") or "").strip()
+        deps = [str(dep) for dep in item.get("deps") or []]
+        scopes = [str(path) for path in item.get("scope_paths") or []]
+
+        details: list[str] = []
+        if description:
+            details.append(description)
+        if deps:
+            details.append("deps=" + ", ".join(deps))
+        if scopes:
+            shown_scopes = scopes[:3]
+            scope_text = ", ".join(shown_scopes)
+            if len(scopes) > len(shown_scopes):
+                scope_text += f", +{len(scopes) - len(shown_scopes)} more"
+            details.append("scope=" + scope_text)
+
+        suffix = "; ".join(details) if details else "no description"
+        lines.append(f"- {task_id} ({agent}): {suffix}")
+
+    if len(tasks) > limit:
+        lines.append(f"- ... {len(tasks) - limit} more task(s)")
+    return "\n".join(lines)
+
+
+def _format_plan_note(
+    *,
+    header: str,
+    author_summary: str | None = None,
+    tasks: list[dict[str, Any]] | None = None,
+    task_section_title: str = "Tasks",
+    cancel_ids: list[str] | None = None,
+) -> str:
+    sections = [header]
+    summary = str(author_summary or "").strip()
+    if summary:
+        sections.append(summary)
+    if tasks:
+        sections.append(f"{task_section_title}:\n{_format_task_summary_lines(tasks)}")
+    if cancel_ids:
+        sections.append("Cancelled siblings: " + ", ".join(str(item) for item in cancel_ids))
+    return "\n\n".join(sections)
+
+
 # ---------------------------------------------------------------------------
 # SubmitTaskSummaryTool — terminal for non-planner agents
 # ---------------------------------------------------------------------------
@@ -173,11 +221,13 @@ class SubmitTaskSummaryInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Summary of work done. For success: describe what was accomplished "
-            "and files changed. For request_replan: start with the blocking "
-            "evidence, failing command or tool result, and why a replan is "
-            "needed; do not title the summary as complete/success. Must contain "
-            "non-whitespace text."
+            "Evidence-rich terminal summary for Task Center notes. For success: "
+            "describe what changed, key paths touched, verification commands and "
+            "outcomes, and any residual risk or follow-up. For request_replan: "
+            "start with the blocking evidence, failing command or tool result, "
+            "affected paths or owners, and why a different owner, scope, sequence, "
+            "or budget is needed; do not title the summary as complete/success. "
+            "Must contain non-whitespace text."
         ),
     )
 
@@ -305,7 +355,12 @@ class SubmitPlanInput(BaseModel):
     )
     output: str | None = Field(
         default=None,
-        description="Optional concise rationale or plan summary.",
+        description=(
+            "Planner-authored Task Center summary. Include the ownership evidence "
+            "that justified the split, the dependency/validator shape, important "
+            "scope boundaries, and remaining uncertainty. Do not leave this empty "
+            "when the plan is non-trivial."
+        ),
     )
 
 
@@ -318,7 +373,7 @@ class SubmitPlanOutput(BaseModel):
     )
     output: str | None = Field(
         default=None,
-        description="Planner-provided optional rationale from the submit_plan input.",
+        description="Planner-provided Task Center summary from the submit_plan input.",
     )
 
 
@@ -348,6 +403,15 @@ class SubmitReplanInput(BaseModel):
             "the original failed request_replan task."
         ),
     )
+    summary: str | None = Field(
+        default=None,
+        description=(
+            "Replanner-authored Task Center summary. Include the failure evidence "
+            "that triggered this replan, why each added task or cancellation is "
+            "necessary, which sibling/downstream work is preserved, and any "
+            "remaining uncertainty."
+        ),
+    )
 
 
 class SubmitReplanOutput(BaseModel):
@@ -360,6 +424,10 @@ class SubmitReplanOutput(BaseModel):
     cancel_ids: list[str] = Field(
         default_factory=list,
         description="Accepted sibling task ids to cancel by cascade.",
+    )
+    summary: str | None = Field(
+        default=None,
+        description="Replanner-provided summary from the submit_replan input.",
     )
 
 
@@ -536,7 +604,9 @@ class SubmitPlanTool(BaseTool):
     name = "submit_plan"
     description = (
         "Submit a child plan. Provide new_tasks with id, description, name, spec, deps, and "
-        "scope_paths. Optional output may hold a concise rationale. Do not include "
+        "scope_paths. Include output with an evidence-rich Task Center summary of "
+        "the task split, owner evidence, dependency shape, validator coverage, "
+        "scope boundaries, and remaining uncertainty. Do not include "
         "task_note, background, parent_id, or other fields. Each spec must use "
         "numbered colon labels in order: 1. Goal, 2. Environment, 3. Scope, "
         "4. Context, 5. Acceptance Criteria. For developer and child-planner lanes, "
@@ -611,9 +681,11 @@ class SubmitPlanTool(BaseTool):
             message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
             return ToolResult(output=f"Error: {message}", is_error=True)
 
-        summary = f"Submitted plan with {len(plan.tasks)} task(s)."
-        if arguments.output:
-            summary += f"\n\n{arguments.output}"
+        summary = _format_plan_note(
+            header=f"Submitted plan with {len(plan.tasks)} task(s).",
+            author_summary=arguments.output,
+            tasks=resolved_tasks,
+        )
         await _post_submission_note(context, content=summary, tags=["architecture"])
 
         context.metadata["resolved_plan"] = plan
@@ -637,7 +709,9 @@ class SubmitReplanTool(BaseTool):
     description = (
         "Submit a corrective replan. Provide new_tasks for repair work owned by "
         "the replanner, and cancel_ids for stale direct siblings whose subtrees "
-        "should be cancelled by cascade. Never cancel the original failed "
+        "should be cancelled by cascade. Include summary with the failure evidence, "
+        "why each added task or cancellation is necessary, and what downstream "
+        "work is preserved. Never cancel the original failed "
         "request_replan task. Do not include task_note, output, background, "
         "parent_id, or other fields. Each new task must include a short "
         "planner-authored description. Each new task spec must use "
@@ -677,9 +751,15 @@ class SubmitReplanTool(BaseTool):
         except (TypeError, ValueError) as exc:
             return ToolResult(output=f"Error: invalid replan payload: {exc}", is_error=True)
 
-        note_content = (
-            f"Replanner submitted replan: {len(replan.add_tasks)} new task(s), "
-            f"{len(replan.cancel_ids)} cancelled."
+        note_content = _format_plan_note(
+            header=(
+                f"Replanner submitted replan: {len(replan.add_tasks)} new task(s), "
+                f"{len(replan.cancel_ids)} cancelled."
+            ),
+            author_summary=arguments.summary,
+            tasks=resolved_tasks,
+            task_section_title="Corrective tasks",
+            cancel_ids=list(arguments.cancel_ids),
         )
         await _post_submission_note(context, content=note_content, tags=["refactor"])
 
@@ -690,6 +770,7 @@ class SubmitReplanTool(BaseTool):
             agent_name=str(context.metadata.get("agent_name") or ""),
             new_tasks=[ResolvedTaskOutput.model_validate(item) for item in resolved_tasks],
             cancel_ids=list(arguments.cancel_ids),
+            summary=arguments.summary,
         )
         return ToolResult(output=payload.model_dump_json())
 

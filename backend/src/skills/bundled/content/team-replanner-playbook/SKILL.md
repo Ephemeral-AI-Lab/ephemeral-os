@@ -12,13 +12,14 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 
 ## Conditional references
 
-- Must load `action-add-tasks` before `submit_replan(new_tasks=[...], cancel_ids=[])` when the current siblings stay valid.
-- Must load `action-cancel-and-redraft` before `submit_replan(new_tasks=[...], cancel_ids=[...])` when stale non-terminal direct siblings must be cancelled and replaced with replanner-owned work.
-- Fast path: when the validator packet already names exact failing targets and exact live owner files, skip to action selection. Do not reopen benchmark bodies; if only test-derived missing paths remain with no production owner, submit `submit_replan(new_tasks=[], cancel_ids=[])`. There is no `default` reference; load this skill, then load one of the named actions above when applicable.
+- Must load `action-add-tasks` before `submit_replan(new_tasks=[...], cancel_ids=[], summary="...")` when the current siblings stay valid.
+- Must load `action-cancel-and-redraft` before `submit_replan(new_tasks=[...], cancel_ids=[...], summary="...")` when stale non-terminal direct siblings must be cancelled and replaced with replanner-owned work.
+- Fast path: when the validator packet already names exact failing targets and exact live owner files, skip to action selection. Do not reopen benchmark bodies; if only test-derived missing paths remain with no production owner, submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")`. There is no `default` reference; load this skill, then load one of the named actions above when applicable.
 
 ## Tool rules
 
 - If the failure packet lacks live owner paths, confirm the owner surface with one lightweight CI check before choosing an action. If the packet already names exact live owner files, trust it and proceed to action selection.
+- Must trust live Task Center state, terminal submissions, CI/tool output, and runtime evidence over stale task prose or inherited summaries.
 - MUST call `read_task_details(task_id="<failed_task>")` and `read_task_details(task_id="<dependent_task>")` for every dependent you may preserve, cancel, or rewire before proposing a replan; `read_task_graph()` alone is not enough. Use `read_file_note(file_path="...")` for path-based lookup across the notes stream.
 - Must refresh on freshness drift before submitting.
 - Must treat final-action ordering as your responsibility: after loading the chosen action reference and self-checking the payload, do not make unrelated tool calls before `submit_replan(...)`.
@@ -30,7 +31,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 - Must reject any failed agent request to modify benchmark or verification tests. Map the evidence back to production code with sibling notes, failure output, and CI owner checks; use a child `team_planner` for unclear ownership, or submit an empty replan when no production owner can be justified.
 - Must not read benchmark tests, query benchmark test symbols, inspect git history, or run archaeology to justify a benchmark-test edit. Use failure context, sibling notes, and targeted CI to assign production owner boundaries.
 - Must treat a benchmark test import as evidence, not sufficient ownership by itself, for absent modules. After an outside-scope missing-module request, include the missing path in corrective `scope_paths` only when adjacent production ownership is clear; otherwise use a child `team_planner` or an empty replan if no production owner exists.
-- Must submit `submit_replan(new_tasks=[], cancel_ids=[])` only when no production owner can be identified and the only possible corrective task would edit benchmark tests or create an unjustified test-derived alias.
+- Must submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")` only when no production owner can be identified and the only possible corrective task would edit benchmark tests or create an unjustified test-derived alias.
 - Must not turn a failed `submit_replan(...)` validation into a fresh discovery loop. If validation rejects the payload, use only the validation message and prior evidence for a mechanical correction; do not call CI, file, graph, note, or CodeAct tools afterward.
 - Must not convert a coordinated write-tool failure into instructions to bypass coordination. If `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` failed on an in-scope path, a corrective task may ask for one exact retry with the same coordinated tool family; it must not tell the child to use standard Python file I/O, CodeAct writes, shell redirects, or a whole-file rewrite as a fallback.
 - A corrective task cannot bypass a coordinated tool pre-hook by saying "explicit authorization" in the task spec. If a pre-hook blocks an in-scope path, create one exact retry only when a real runtime authorization mechanism is available; otherwise surface the tool-policy blocker instead of spawning another bypass task.
@@ -48,7 +49,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 8. Before submitting, pairwise-check `new_tasks`: if two concrete tasks share any `scope_paths` file, add a dependency edge between them or use one focused repair task for the shared file.
 9. Before submitting, validate every `deps` id. Prefer local ids from this same `new_tasks` payload, and make validator deps local to this payload. Use an existing task id only when fresh graph context proves the exact id is accepted by the current graph, schedulable, and not downstream of this replanner or the original failed task; otherwise omit that existing dep.
 10. Before submitting, count concrete non-planner tasks in `new_tasks`. If there are 3 or more, include one terminal `validator` task in the same `submit_replan(...)` call with `deps` covering those concrete tasks. Empty replans remain valid only under the no-production-owner rule below.
-11. If no production owner can be identified and the only remaining work is a test edit or unjustified test-derived alias, submit an empty replan payload instead of inventing a compatibility shim.
+11. If no production owner can be identified and the only remaining work is a test edit or unjustified test-derived alias, submit an empty replan payload with `summary` explaining that evidence instead of inventing a compatibility shim.
 
 ## Hard rules
 
@@ -57,7 +58,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 3. Never invent replacement files, nodes, or speculative owners.
 4. Keep distinct corrective clusters as distinct tasks only when their `scope_paths` are disjoint or explicitly sequenced with `deps`; shared-file clusters must be sequenced or combined into one focused repair task.
 5. Never create broad repair tasks when a narrower corrective task would preserve sibling work.
-6. End with exactly one `submit_replan(...)` call.
+6. End with exactly one `submit_replan(...)` call whose `summary` preserves the failure evidence, corrective mapping, preserved work, and uncertainty.
 7. All new tasks go in `new_tasks` and become direct children of this replanner. This replanner is the recovery gate; downstream work must not unlock before its repair children complete.
 8. `cancel_ids` may target only non-terminal direct siblings of this replanner with the same `parent_id`. Cascade takes their subtrees automatically. Never cancel completed, failed, cancelled, otherwise terminal tasks, or ids that appear only outside same-parent peer context.
 9. Never include `task_note`, `output`, `background`, `parent_id`, or fields outside the `submit_replan` schema.
