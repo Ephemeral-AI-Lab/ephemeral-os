@@ -231,7 +231,6 @@ def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
             )
         )
         return {
-            "test": {"exit_code": 0},
             "grading": {},
             "team": {},
             "team_status": "succeeded",
@@ -380,7 +379,6 @@ def test_cmd_run_forces_color_even_when_stdout_is_not_tty(monkeypatch):
     async def _fake_run_sweevo_with_agent(**kwargs):
         captured.update(kwargs)
         return {
-            "test": {"exit_code": 0},
             "grading": {},
             "team": {},
             "team_status": "succeeded",

@@ -17,14 +17,12 @@ from benchmarks.sweevo.dataset import select_sweevo_instance, summarize_sweevo_i
 from benchmarks.sweevo.evaluation import _extract_combined_patch, evaluate_sweevo_result
 from benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
-    _DEFAULT_SWEEVO_TEST_TIMEOUT,
     _DEFAULT_TARGET_BULLETS,
     _REPO_DIR,
     SWEEvoResult,
 )
 from benchmarks.sweevo.sandbox import (
     create_sweevo_test_sandbox,
-    run_sweevo_required_test,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,26 +51,21 @@ async def run_sweevo_with_agent(
     cpu: int = 2,
     disk: int = 10,
     repo_dir: str = _REPO_DIR,
-    test_command: str | None = None,
-    test_timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
     resume_team_run_id: str | None = None,
     resume_checkpoint_id: str | None = None,
     resume_latest_checkpoint: bool = False,
     team_run_id: str | None = None,
     structured_log_path: str | None = None,
-    on_line: "Any" = None,
 ) -> dict[str, Any]:
     """Drive a team against a SWE-EVO instance and grade it.
 
     Provisions the sandbox, or resumes a persisted team run in-place,
     then runs the builtin team (planner/developer/validator DAG)
     through :func:`run_sweevo_team`, then
-    executes the instance's required test command and explicit F2P/P2P
-    grader.
+    executes the explicit F2P/P2P grader.
 
     Returns a dict with ``instance``, ``sandbox``, ``team_status``,
-    ``agent_patch`` (combined git diff), ``test`` (required-test result),
-    and ``grading`` (F2P/P2P metrics).
+    ``agent_patch`` (combined git diff), and ``grading`` (F2P/P2P metrics).
     """
     from benchmarks.sweevo import team_runner as sweevo_team_runner
 
@@ -180,16 +173,6 @@ async def run_sweevo_with_agent(
         agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
 
         if printer is not None:
-            _emit_progress(printer, "[test] running required benchmark command")
-        test_result = await run_sweevo_required_test(
-            instance,
-            sandbox_id,
-            repo_dir=repo_dir,
-            test_command=test_command,
-            timeout=test_timeout,
-            on_line=on_line,
-        )
-        if printer is not None:
             _emit_progress(printer, "[grading] evaluating fail-to-pass and pass-to-pass results")
         grading_result = await evaluate_sweevo_result(
             instance,
@@ -219,7 +202,6 @@ async def run_sweevo_with_agent(
             "team_work_items": task_count,
             "team": team_details,
             "agent_events": task_count,
-            "test": test_result,
             "grading": {
                 "resolved": grading_result.resolved,
                 "fix_rate": grading_result.fix_rate,

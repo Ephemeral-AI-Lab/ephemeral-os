@@ -4,7 +4,7 @@ Examples:
     # List available instances
     python -m benchmarks.sweevo --list
 
-    # Run a specific instance end-to-end (provision sandbox + required test)
+    # Run a specific instance end-to-end (provision sandbox + F2P/P2P grading)
     python -m benchmarks.sweevo --instance-id iterative__dvc_1.0.0a1_1.0.0a2
 
     # Auto-pick a medium-sized instance near target bullet count
@@ -27,7 +27,6 @@ from typing import Any, Iterator
 from benchmarks.sweevo.dataset import load_sweevo_dataset, summarize_sweevo_instance
 from benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
-    _DEFAULT_SWEEVO_TEST_TIMEOUT,
     _DEFAULT_TARGET_BULLETS,
     _REPO_DIR,
 )
@@ -242,51 +241,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p.set_defaults(register_snapshot=True)
     p.add_argument("--cpu", type=int, default=2)
     p.add_argument("--disk", type=int, default=10)
-    p.add_argument("--test-command", default=None, help="Override instance.test_cmds")
-    p.add_argument("--test-timeout", type=int, default=_DEFAULT_SWEEVO_TEST_TIMEOUT)
     p.add_argument("--no-stream", action="store_true", help="Disable live line streaming")
     p.add_argument("--no-color", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
     return p
-
-
-_RED = "\033[31m"
-_GREEN = "\033[32m"
-_CYAN = "\033[36m"
-_MAGENTA = "\033[35m"
-_RESET = "\033[0m"
-
-
-def _make_pytest_line_forwarder(printer: "Any", *, color: bool) -> "callable":
-    """Return an ``on_line`` callback that forwards pytest stdout through the
-    shared :class:`MultiAgentEventPrinter` via ``raw_line`` under the agent
-    tag ``pytest``. Tracks pass/fail counters for the summary banner.
-    """
-    counts = {"passed": 0, "failed": 0, "errors": 0}
-
-    def _tag(label: str, code: str) -> str:
-        return f"{code}{label}{_RESET}" if color else label
-
-    def _p(line: str) -> None:
-        stripped = line.strip()
-        label = "[test]"
-        if stripped.startswith("PASSED") or " PASSED" in stripped:
-            counts["passed"] += 1
-            label = _tag("[pass]", _GREEN)
-        elif stripped.startswith("FAILED") or " FAILED" in stripped:
-            counts["failed"] += 1
-            label = _tag("[fail]", _RED)
-        elif stripped.startswith("ERROR") or " ERROR" in stripped:
-            counts["errors"] += 1
-            label = _tag("[error]", _RED)
-        elif stripped.startswith("===") or stripped.startswith("---"):
-            label = _tag("[info]", _CYAN)
-        elif stripped.startswith("collected") or "test session starts" in stripped:
-            label = _tag("[info]", _MAGENTA)
-        printer.raw_line("pytest", f"{label} {line}")
-
-    _p.counts = counts  # type: ignore[attr-defined]
-    return _p
 
 
 def _cmd_list(source: str) -> int:
@@ -346,7 +304,6 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
         timestamps=True,
         sink=(lambda _line: None) if quiet else None,
     )
-    on_line = _make_pytest_line_forwarder(printer, color=use_color and not quiet)
 
     if not quiet:
         header = "=" * 72
@@ -391,8 +348,6 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
             cpu=args.cpu,
             disk=args.disk,
             repo_dir=args.repo_dir,
-            test_command=args.test_command,
-            test_timeout=args.test_timeout,
             resume_team_run_id=args.resume_team_run_id,
             resume_checkpoint_id=args.resume_checkpoint_id,
             resume_latest_checkpoint=args.resume_latest_checkpoint,
@@ -400,7 +355,6 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
             structured_log_path=(
                 str(structured_log_path) if structured_log_path is not None else None
             ),
-            on_line=on_line,
         )
     except Exception as exc:
         _append_jsonl(
@@ -415,11 +369,8 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
         )
         raise
 
-    test = result.get("test", {})
     grading = result.get("grading", {})
     team = result.get("team", {})
-    exit_code = test.get("exit_code")
-    counts = on_line.counts  # type: ignore[attr-defined]
     team_status = str(result.get("team_status") or "unknown")
     health_issues = _collect_health_issues(result)
     stream_summary = printer.summary()
@@ -434,12 +385,8 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
             "instance_id": result.get("instance", {}).get("instance_id", args.instance_id),
             "team_run_id": result.get("team_run_id"),
             "team_status": team_status,
-            "test_exit_code": exit_code,
             "health_ok": not health_issues,
             "health_issues": health_issues,
-            "passed": counts["passed"],
-            "failed": counts["failed"],
-            "errors": counts["errors"],
             "grading": grading,
             "team": {
                 "work_items": team.get("work_items"),
@@ -458,10 +405,7 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
         print("=" * 72, flush=True)
         print(
             f"  agent_events={result.get('agent_events', 0)}  "
-            f"team_status={team_status}  "
-            f"exit_code={exit_code}  "
-            f"passed={counts['passed']}  failed={counts['failed']}  "
-            f"errors={counts['errors']}",
+            f"team_status={team_status}",
             flush=True,
         )
         if grading:
@@ -556,7 +500,7 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
         # sandbox objects may not be JSON-serializable; coerce via str fallback.
         print(json.dumps(result, indent=2, default=str))
 
-    return 0 if exit_code == 0 and not health_issues else 1
+    return 0 if not health_issues else 1
 
 
 def main(argv: list[str] | None = None) -> int:

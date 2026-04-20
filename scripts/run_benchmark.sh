@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run a SWE-EVO benchmark instance end-to-end (sandbox + required tests).
+# Run a SWE-EVO benchmark instance end-to-end (sandbox + F2P/P2P grading).
 # Defaults to snapshot-backed sandboxes. Pass --no-register-snapshot only when
 # you intentionally want to create directly from the SWE-EVO image.
 # Usage: ./scripts/run_benchmark.sh <instance-id>        # run a specific instance

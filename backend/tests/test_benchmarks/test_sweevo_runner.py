@@ -115,12 +115,6 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
         ),
     )
     monkeypatch.setattr(sweevo_runner, "_extract_combined_patch", AsyncMock(return_value="diff"))
-    monkeypatch.setattr(
-        sweevo_runner,
-        "run_sweevo_required_test",
-        AsyncMock(return_value={"command": "pytest", "exit_code": 1, "output": "failed"}),
-    )
-
     async def _fake_evaluate(instance_arg, result, sandbox_id, repo_dir="/testbed"):
         assert instance_arg is instance
         assert sandbox_id == "sbx-1"
@@ -146,7 +140,6 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
 
     assert captured["team_name"] == "sweevo-team-glm5.1"
     assert result["team_name"] == "sweevo-team-glm5.1"
-    assert result["test"]["exit_code"] == 1
     assert result["grading"] == {
         "resolved": False,
         "fix_rate": 0.0,
@@ -229,12 +222,6 @@ def test_run_sweevo_with_agent_resumes_existing_team_run(monkeypatch):
         AsyncMock(side_effect=AssertionError("resume path should not create a sandbox")),
     )
     monkeypatch.setattr(sweevo_runner, "_extract_combined_patch", AsyncMock(return_value="diff"))
-    monkeypatch.setattr(
-        sweevo_runner,
-        "run_sweevo_required_test",
-        AsyncMock(return_value={"command": "pytest", "exit_code": 0, "output": "ok"}),
-    )
-
     async def _fake_evaluate(instance_arg, result, sandbox_id, repo_dir="/testbed"):
         assert instance_arg is instance
         assert sandbox_id == "sbx-resume"
