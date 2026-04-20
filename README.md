@@ -352,7 +352,6 @@ Bundled packaged skills:
 - verification-replan
 - task-decompose
 - changelog-decompose
-- sweevo-project-context
 ```
 
 User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the lazy `skills` toolkit loads them only when an agent asks for them.

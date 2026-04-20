@@ -18,7 +18,12 @@ from typing import Any
 
 from agents.run_tracker import AgentRunTracker
 from code_intelligence._async_bridge import configure_default_executor
-from engine.core.query import QueryExitReason
+from engine.core.query import (
+    MAX_TERMINAL_NUDGE_RETRIES,
+    TERMINAL_NUDGE_BUDGET_BONUS,
+    QueryExitReason,
+    build_terminal_nudge_text,
+)
 from engine.runtime.agent import spawn_agent
 from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
 from team.runtime.context_builder import TeamAgentContext
@@ -59,6 +64,45 @@ SUBMISSION_TOOL_NAMES = frozenset({
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
+
+
+def _coerce_terminal_tools(value: Any) -> set[str]:
+    if isinstance(value, (set, frozenset)):
+        return set(value)
+    if isinstance(value, list):
+        return set(value)
+    return set()
+
+
+def _copy_terminal_nudge_state(source: Any, target: Any) -> None:
+    target.tool_calls_used = getattr(source, "tool_calls_used", 0)
+    target.last_budget_warning_remaining = getattr(
+        source,
+        "last_budget_warning_remaining",
+        None,
+    )
+    target.terminal_nudge_retries_used = getattr(
+        source,
+        "terminal_nudge_retries_used",
+        0,
+    )
+    target.terminal_nudge_budget_extended = getattr(
+        source,
+        "terminal_nudge_budget_extended",
+        False,
+    )
+    if getattr(source, "tool_call_limit", None) is not None:
+        target.tool_call_limit = source.tool_call_limit
+
+
+def _carry_forward_usage(source: Any, target: Any) -> None:
+    source_usage = getattr(source, "total_usage", None)
+    target_usage = getattr(target, "total_usage", None)
+    if source_usage is None or target_usage is None:
+        return
+    target_usage.input_tokens += int(getattr(source_usage, "input_tokens", 0) or 0)
+    target_usage.output_tokens += int(getattr(source_usage, "output_tokens", 0) or 0)
+
 
 @dataclass
 class AgentRunState:
@@ -145,38 +189,43 @@ class TeamAgentRunner:
         if tracker.run_id is not None:
             ctx.tool_metadata.agent_run_id = tracker.run_id
 
+        terminal_tools_raw = ctx.tool_metadata.get("terminal_tools")
+        terminal_tools = _coerce_terminal_tools(terminal_tools_raw)
+
+        def _wire_agent(next_agent: Any, previous_qc: Any | None = None) -> None:
+            # Merge spawn_agent's tool_metadata into ctx and redirect agent to ctx's metadata
+            # so team tools (submit_plan / submit_replan / submit_task_summary / …)
+            # write into the correct slot.
+            spawned_meta = next_agent.query_context.tool_metadata
+            if (
+                spawned_meta is not None
+                and getattr(spawned_meta, "session_config", None) is not None
+            ):
+                ctx.tool_metadata.session_config = spawned_meta.session_config
+            sb = getattr(spawned_meta, "sandbox_id", None) if spawned_meta is not None else ""
+            if sb:
+                ctx.tool_metadata["sandbox_id"] = sb
+            ctx.tool_metadata.agent_name = effective_defn.name
+            next_agent.query_context.tool_metadata = ctx.tool_metadata
+            next_agent.query_context.run_id = tracker.run_id or ""
+            next_agent.query_context.terminal_tools = set(terminal_tools)
+
+            if previous_qc is not None:
+                _copy_terminal_nudge_state(previous_qc, next_agent.query_context)
+
         agent = spawn_agent(
             self.session_config,
             messages=list(ctx.initial_messages),
             agent_def=effective_defn,
             latest_user_prompt=prompt,
             sandbox_id=self.sandbox_id,
-            terminal_tools=ctx.tool_metadata.get("terminal_tools"),
+            terminal_tools=terminal_tools_raw,
         )
+        _wire_agent(agent)
 
         compacted_before: int | None = None
         if getattr(agent.query_context, "session_state", None) is not None:
             compacted_before = int(agent.query_context.session_state.compacted)
-
-        # Merge spawn_agent's tool_metadata into ctx and redirect agent to ctx's metadata
-        # so team tools (submit_plan / submit_replan / submit_task_summary / …)
-        # write into the correct slot.
-        spawned_meta = agent.query_context.tool_metadata
-        if spawned_meta is not None and getattr(spawned_meta, "session_config", None) is not None:
-            ctx.tool_metadata.session_config = spawned_meta.session_config
-        sb = getattr(spawned_meta, "sandbox_id", None) if spawned_meta is not None else ""
-        if sb:
-            ctx.tool_metadata["sandbox_id"] = sb
-        ctx.tool_metadata.agent_name = effective_defn.name
-        agent.query_context.tool_metadata = ctx.tool_metadata
-        agent.query_context.run_id = tracker.run_id or ""
-
-        # Wire terminal_tools from metadata (set by context_builder) to QueryContext
-        terminal_tools = ctx.tool_metadata.get("terminal_tools")
-        if isinstance(terminal_tools, (set, frozenset)):
-            agent.query_context.terminal_tools = set(terminal_tools)
-        elif isinstance(terminal_tools, list):
-            agent.query_context.terminal_tools = set(terminal_tools)
 
         team_run_id = str(ctx.tool_metadata.get("team_run_id") or "")
         work_item_id = str(ctx.tool_metadata.get("work_item_id") or "")
@@ -213,6 +262,8 @@ class TeamAgentRunner:
                     return
                 if checkpoint_task is not None and not checkpoint_task.done():
                     return
+                checkpoint_api_client = agent.query_context.api_client
+                checkpoint_model = agent.model
 
                 async def _run_checkpoint() -> None:
                     event_base = {
@@ -229,8 +280,8 @@ class TeamAgentRunner:
                         posted = await team_run.task_center.activity.check(
                             work_item_id,
                             snapshot=frozen,
-                            api_client=agent.query_context.api_client,
-                            model=agent.model,
+                            api_client=checkpoint_api_client,
+                            model=checkpoint_model,
                         )
                     except Exception as exc:
                         if self.on_checkpoint_event is not None:
@@ -267,47 +318,87 @@ class TeamAgentRunner:
 
         agent.query_context.on_turn = _on_turn
 
+        async def _run_agent_once(run_prompt: str) -> None:
+            async for event in agent.run(run_prompt):
+                if isinstance(event, ToolExecutionStarted):
+                    state.pending_tool_inputs.setdefault(event.tool_name, []).append(
+                        event.tool_input
+                    )
+                elif (
+                    isinstance(event, ToolExecutionCompleted)
+                    and team_run_id
+                    and work_item_id
+                ):
+                    try:
+                        from team.runtime.registry import get as get_team_run
+
+                        team_run = get_team_run(team_run_id)
+                        inputs = state.pending_tool_inputs.get(event.tool_name) or []
+                        tool_input = inputs.pop(0) if inputs else {}
+                        if team_run is not None and not event.is_error:
+                            if event.tool_name in EDIT_TOOL_NAMES:
+                                file_path = str(
+                                    tool_input.get("file_path")
+                                    or tool_input.get("path")
+                                    or ""
+                                ).strip()
+                                if file_path:
+                                    team_run.task_center.activity.on_edit(work_item_id, file_path)
+                            if event.tool_name in SUBMISSION_TOOL_NAMES:
+                                team_run.task_center.activity.on_submission(work_item_id)
+                            _schedule_checkpoint()
+                    except Exception:
+                        logger.debug(
+                            "Failed to observe tool completion for %s",
+                            work_item_id,
+                            exc_info=True,
+                        )
+                if self.on_event is not None:
+                    self.on_event(event, state)
+
         if self.on_spawned is not None:
             self.on_spawned(state)
 
         try:
             try:
-                async for event in agent.run(prompt):
-                    if isinstance(event, ToolExecutionStarted):
-                        state.pending_tool_inputs.setdefault(event.tool_name, []).append(
-                            event.tool_input
-                        )
-                    elif (
-                        isinstance(event, ToolExecutionCompleted)
-                        and team_run_id
-                        and work_item_id
-                    ):
-                        try:
-                            from team.runtime.registry import get as get_team_run
+                await _run_agent_once(prompt)
 
-                            team_run = get_team_run(team_run_id)
-                            inputs = state.pending_tool_inputs.get(event.tool_name) or []
-                            tool_input = inputs.pop(0) if inputs else {}
-                            if team_run is not None and not event.is_error:
-                                if event.tool_name in EDIT_TOOL_NAMES:
-                                    file_path = str(
-                                        tool_input.get("file_path")
-                                        or tool_input.get("path")
-                                        or ""
-                                    ).strip()
-                                    if file_path:
-                                        team_run.task_center.activity.on_edit(work_item_id, file_path)
-                                if event.tool_name in SUBMISSION_TOOL_NAMES:
-                                    team_run.task_center.activity.on_submission(work_item_id)
-                                _schedule_checkpoint()
-                        except Exception:
-                            logger.debug(
-                                "Failed to observe tool completion for %s",
-                                work_item_id,
-                                exc_info=True,
-                            )
-                    if self.on_event is not None:
-                        self.on_event(event, state)
+                terminal_tools = set(agent.query_context.terminal_tools or set())
+                while (
+                    terminal_tools
+                    and agent.query_context.exit_reason == QueryExitReason.RESOURCE_LIMIT
+                    and agent.query_context.terminal_nudge_retries_used
+                    < MAX_TERMINAL_NUDGE_RETRIES
+                ):
+                    qc = agent.query_context
+                    qc.terminal_nudge_retries_used += 1
+                    if (
+                        qc.tool_call_limit is not None
+                        and not qc.terminal_nudge_budget_extended
+                    ):
+                        qc.tool_call_limit += TERMINAL_NUDGE_BUDGET_BONUS
+                        qc.terminal_nudge_budget_extended = True
+
+                    nudge_prompt = build_terminal_nudge_text(
+                        terminal_tools,
+                        qc.terminal_nudge_retries_used,
+                    )
+                    previous_agent = agent
+                    previous_qc = qc
+                    agent = spawn_agent(
+                        self.session_config,
+                        messages=list(previous_agent.display_messages),
+                        agent_def=effective_defn,
+                        latest_user_prompt=nudge_prompt,
+                        session_state=getattr(previous_qc, "session_state", None),
+                        sandbox_id=self.sandbox_id,
+                        terminal_tools=terminal_tools_raw,
+                    )
+                    _wire_agent(agent, previous_qc)
+                    agent.query_context.on_turn = _on_turn
+                    state.agent = agent
+                    await _run_agent_once(nudge_prompt)
+                    _carry_forward_usage(previous_agent, agent)
             except asyncio.CancelledError:
                 state.cancelled = True
                 state.error = "cancelled"

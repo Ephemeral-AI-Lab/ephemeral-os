@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -96,6 +96,18 @@ class QueryContext:
 
 MAX_TERMINAL_NUDGE_RETRIES = 3
 TERMINAL_NUDGE_BUDGET_BONUS = 10
+
+
+def build_terminal_nudge_text(terminal_tools: Iterable[str], attempt: int) -> str:
+    tool_list = ", ".join(sorted(terminal_tools))
+    return (
+        "[terminal-tool reminder] Your previous turn ended without a terminal tool. "
+        "Your next assistant message must contain exactly one terminal submission "
+        f"tool call: {tool_list}. Do not call non-terminal tools or add narration. "
+        "If a terminal payload was rejected, fix only the reported schema issue "
+        "and resubmit. "
+        f"(nudge {attempt}/{MAX_TERMINAL_NUDGE_RETRIES})"
+    )
 
 
 def _should_defer_stream_tool_dispatch(
@@ -511,16 +523,8 @@ async def _run_query_loop(
                 ):
                     context.tool_call_limit += TERMINAL_NUDGE_BUDGET_BONUS
                     context.terminal_nudge_budget_extended = True
-                tool_list = ", ".join(sorted(context.terminal_tools))
                 attempt = context.terminal_nudge_retries_used
-                nudge_text = (
-                    f"[terminal-tool reminder] Your previous turn ended without a terminal tool. "
-                    f"Your next assistant message must contain exactly one terminal submission "
-                    f"tool call: {tool_list}. Do not call non-terminal tools or add narration. "
-                    f"If a terminal payload was rejected, fix only the reported schema issue "
-                    f"and resubmit. "
-                    f"(nudge {attempt}/{MAX_TERMINAL_NUDGE_RETRIES})"
-                )
+                nudge_text = build_terminal_nudge_text(context.terminal_tools, attempt)
                 nudge_message = ConversationMessage.from_user_text(nudge_text)
                 display_messages.append(nudge_message)
                 prompt_report.record(

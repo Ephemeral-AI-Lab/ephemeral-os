@@ -48,7 +48,7 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
     assert lines == ["[team_planner  ] [b88848c71234425a] [thinking] working"]
 
 
-def test_printer_suppresses_structured_codeact_error_payload() -> None:
+def test_printer_renders_structured_codeact_error_detail() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
@@ -67,7 +67,34 @@ def test_printer_suppresses_structured_codeact_error_payload() -> None:
     )
 
     assert lines == [
-        "[developer     ] [1234567890abcdef1234] <- tool_done:  daytona_codeact [ERROR]"
+        "[developer     ] [1234567890abcdef1234] <- tool_done:  daytona_codeact [ERROR] failed"
+    ]
+
+
+def test_printer_renders_structured_codeact_shell_error_detail() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        ToolExecutionCompleted(
+            tool_name="daytona_codeact",
+            output=(
+                '{"cwd": "/testbed", "status": "error", "files_written": 0, '
+                '"shells_run": 1, "shell_summaries": ["$ pytest -q -> exit 2"], '
+                '"shell_outputs": [{"command": "pytest -q", "exit_code": 2, '
+                '"stdout": "", "stderr": "failed to collect tests"}], '
+                '"script_stdout": "", "warnings": [], "error": "failed to collect tests"}'
+            ),
+            is_error=True,
+            agent_name="developer",
+            work_id="1234567890abcdef1234",
+        )
+    )
+
+    assert lines == [
+        "[developer     ] [1234567890abcdef1234] "
+        "<- tool_done:  daytona_codeact [ERROR] $ pytest -q -> exit 2",
+        "[developer     ] [1234567890abcdef1234] │ failed to collect tests",
     ]
 
 
@@ -91,7 +118,7 @@ def test_printer_keeps_plain_codeact_error_payload() -> None:
     ]
 
 
-def test_printer_suppresses_background_codeact_error_payload() -> None:
+def test_printer_renders_background_codeact_error_fallback() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
@@ -107,7 +134,8 @@ def test_printer_suppresses_background_codeact_error_payload() -> None:
     )
 
     assert lines == [
-        "[developer     ] [1234567890abcdef1234] << bg_done:    daytona_codeact [ERROR]"
+        "[developer     ] [1234567890abcdef1234] "
+        "<< bg_done:    daytona_codeact [ERROR] status=error shells_run=1"
     ]
 
 

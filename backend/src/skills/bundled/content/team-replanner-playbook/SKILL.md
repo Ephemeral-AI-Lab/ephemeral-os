@@ -18,8 +18,8 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 
 ## Tool rules
 
-- Must confirm owner paths live with CI tools before choosing an action.
-- Must call `read_task_graph()` then `read_task_details(task_id="<failed_task>")` before deciding whether the failure is isolated or layered; call `read_task_details(task_id="...")` once per relevant sibling or dependent task you need. Use `read_file_note(file_path="...")` for path-based lookup across the notes stream.
+- If the failure packet lacks live owner paths, confirm the owner surface with one lightweight CI check before choosing an action. If the packet already names exact live owner files, trust it and proceed to action selection.
+- MUST call `read_task_details(task_id="<failed_task>")` and `read_task_details(task_id="<dependent_task>")` for every dependent you may preserve, cancel, or rewire before proposing a replan; `read_task_graph()` alone is not enough. Use `read_file_note(file_path="...")` for path-based lookup across the notes stream.
 - Must refresh on freshness drift before submitting.
 - Must treat final-action ordering as your responsibility: after loading the chosen action reference and self-checking the payload, do not make unrelated tool calls before `submit_replan(...)`.
 - If a terminal-tool reminder appears, your next assistant message must be exactly one terminal tool call. If the previous terminal call failed schema validation, fix only the reported schema issue and resubmit.
@@ -27,6 +27,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 - Must treat missing modules, compatibility shims, re-export modules, import bridges, file renames, and file moves named by failures as scope-quality evidence. Add a new-file, rename, move, shim, or re-export task when production ownership evidence or clear adjacent ownership shows the absent path is the intended repository surface.
 - Must check both source and destination for any corrective move, rename, shim, or re-export task. An in-scope source compatibility file is not permission by itself; the destination must be justified as a production owner.
 - Must keep benchmark and verification tests out of corrective `scope_paths` unless the user prompt explicitly owns a test-only bug. A test import, decorator, parametrization, assertion, or collection failure that looks wrong is evidence, not permission to create a test-edit task.
+- Must reject any failed agent request to modify benchmark or verification tests. Map the evidence back to production code with sibling notes, failure output, and CI owner checks; use a child `team_planner` for unclear ownership, or submit an empty replan when no production owner can be justified.
 - Must not read benchmark tests, query benchmark test symbols, inspect git history, or run archaeology to justify a benchmark-test edit. Use failure context, sibling notes, and targeted CI to assign production owner boundaries.
 - Must treat a benchmark test import as evidence, not sufficient ownership by itself, for absent modules. After an outside-scope missing-module request, include the missing path in corrective `scope_paths` only when adjacent production ownership is clear; otherwise use a child `team_planner` or an empty replan if no production owner exists.
 - Must submit `submit_replan(new_tasks=[], cancel_ids=[])` only when no production owner can be identified and the only possible corrective task would edit benchmark tests or create an unjustified test-derived alias.
@@ -46,7 +47,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 7. Write every new task `spec` with numbered colon labels in exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`.
 8. Before submitting, pairwise-check `new_tasks`: if two concrete tasks share any `scope_paths` file, add a dependency edge between them or use one focused repair task for the shared file.
 9. Before submitting, validate every `deps` id. Prefer local ids from this same `new_tasks` payload, and make validator deps local to this payload. Use an existing task id only when fresh graph context proves the exact id is accepted by the current graph, schedulable, and not downstream of this replanner or the original failed task; otherwise omit that existing dep.
-10. Before submitting, count concrete non-planner tasks in `new_tasks`. If there are 3 or more, include one terminal `validator` task in the same `submit_replan(...)` call with `deps` covering those concrete tasks.
+10. Before submitting, count concrete non-planner tasks in `new_tasks`. If there are 3 or more, include one terminal `validator` task in the same `submit_replan(...)` call with `deps` covering those concrete tasks. Empty replans remain valid only under the no-production-owner rule below.
 11. If no production owner can be identified and the only remaining work is a test edit or unjustified test-derived alias, submit an empty replan payload instead of inventing a compatibility shim.
 
 ## Hard rules
@@ -62,7 +63,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 9. Never include `task_note`, `output`, `background`, `parent_id`, or fields outside the `submit_replan` schema.
 10. Never include the original failed `request_replan` task in `cancel_ids`; leave it as immutable evidence for the runtime to finalize after the replan succeeds.
 11. Only this replanner calls `submit_replan`. If a new task is assigned to `team_planner`, its own terminal tool is `submit_plan`.
-12. Do not call `submit_replan(...)` once to discover schema or validator errors and then repair the payload. Validate descriptions, spec labels, non-overlap, and terminal-validator coverage before the single terminal call.
+12. Do not call `submit_replan(...)` once to discover schema or validator errors and then repair the payload. Validate descriptions, spec labels, non-overlap, and any needed validator deps before the single terminal call.
 13. Never put `request_replan`, `running`, `expanded`, `failed`, `cancelled`, or downstream-blocked task ids in `new_tasks[*].deps`.
 14. Never use existing graph ids in a validator's `deps`; validators created by a replan validate the local corrective tasks from the same `new_tasks` payload.
 15. Never turn a test-derived missing module, compatibility shim, re-export module, import bridge, file move, or file rename into a corrective task without production ownership evidence or a clear adjacent live owner.

@@ -445,6 +445,8 @@ class ReadTaskDetailsInput(BaseModel):
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
+        "Call this before planning, replanning, or validating any task. "
+        "Returns acceptance criteria, notes, and parent/child context. "
         "Get full details for one task by ID: spec, deps, status, "
         "scope_paths, failure reason, the completion summary (when done), and "
         "the 3 most recent notes on that task (full content). Use "

@@ -13,6 +13,7 @@ Please read the following sections and call the listed terminal tool when your w
 7. Make `scope_paths` broad enough for the likely production edit set. If a missing module, compatibility shim, re-export module, or import bridge is part of the legitimate production surface, include the exact new path plus its adjacent live owner, or use the nearest package boundary when ownership is uncertain. Keep benchmark-test paths as evidence, not implementation scope.
 8. If `ci_query_symbol(...)` reports no indexed symbols for an exact file and `ci_workspace_structure(...)` shows a directory or nested files for that owner family, treat the exact file as disproved. Do not pass that exact file to scouts, developers, validators, or child planners; use the live directory boundary or confirmed nested production files instead.
 9. Pairwise-check every concrete non-planner task in `new_tasks`: if two parallel tasks share any exact `scope_paths` file and neither depends on the other, merge them, sequence them with `deps`, or replace the shared surface with one child `team_planner`. Do this before the single terminal call; never discover it from a failed `submit_plan(...)`.
+10. Always include at least one terminal `validator` task when the plan has non-validator tasks. Use one validator by default; never include more than 2 terminal validators, and make their top-level `deps` cover every same-layer non-validator task.
 
 ## User request
 

@@ -17,7 +17,6 @@ _PLAYBOOKS = [
 ]
 _PLAYBOOKS = [path for path in _PLAYBOOKS if path.exists()]
 _ALL_SKILLS = _PLAYBOOKS + [
-    _CONTENT / "sweevo-project-context/SKILL.md",
     _CONTENT / "verification-replan/SKILL.md",
 ]
 _ALL_SKILLS = [path for path in _ALL_SKILLS if path.exists()]
@@ -110,6 +109,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
     assert "must load `scout-launch-contract`" in planner.lower()
     assert "must load `plan-json-contract`" in planner.lower()
+    assert "Do not pre-load it during setup" in planner
     assert "submit_plan` tool schema is enough" in planner
     assert "top-level `deps` field lists every same-layer non-validator sibling id" in planner
     assert "child `team_planner` decomposition lanes" in planner
@@ -203,7 +203,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
     assert 'read_task_details(task_id="<failed_task>")' in replanner
-    assert "once per relevant sibling or dependent task" in replanner
+    assert 'read_task_details(task_id="<dependent_task>")' in replanner
+    assert "for every dependent you may preserve, cancel, or rewire" in replanner
+    assert "`read_task_graph()` alone is not enough" in replanner
     assert "final-action ordering" in replanner.lower()
     assert "scope-quality evidence" in replanner
     assert "production ownership evidence or clear adjacent ownership" in replanner
@@ -252,6 +254,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     )
 
     assert "optional final helper" in planner_json
+    assert "do not load it until exploration and DAG shaping are complete" in planner_json
     assert "submit_plan(new_tasks=[...])" in planner_json
     assert "Do not include `task_note`" in planner_json
     assert "`1. Goal:`" in planner_json
@@ -262,7 +265,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "workspace structure shows a directory or nested files" in planner_json
     assert "child planners like `plan-parquet` or `plan-groupby`" in planner_json
     assert "Pairwise overlap check" in planner_json
-    assert "Never submit it with `deps: []`" in planner_json
+    assert "Never submit a validator with `deps: []`" in planner_json
     scout_launch = _read(
         _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
     )
@@ -338,59 +341,10 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
         assert "Do not include `task_note`" in content
 
 
-def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
-    sweevo = _read(_CONTENT / "sweevo-project-context/SKILL.md")
-    assert "Must report a missing named test or node as `benchmark_surface_mismatch`." in sweevo
-    assert (
-        "Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`"
-        in sweevo
-    )
-    assert "Must keep commands repo-root-relative." in sweevo
-    assert 'daytona_codeact(command="...", timeout=N)' in sweevo
-    assert "Must treat `daytona_codeact` as runtime-first" in sweevo
-    assert "Pure removals such as `rm`, `unlink`, `os.remove`" in sweevo
-    assert "Python process wrappers" in sweevo
-    assert "cd /testbed" in sweevo
-    assert "stdout/stderr capture plumbing" in sweevo
-    assert "`2>/dev/null`" in sweevo
-    assert "Must keep roles separate" in sweevo
-    assert "Must treat `docs/architecture/team-coordination.md` as the design intent" in sweevo
-    assert "Must keep shared context in the Task Center" in sweevo
-    assert "Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes." in sweevo
-    assert "Must not spend a ready leaf's opening moves reading benchmark tests" in sweevo
-    assert (
-        "must not create planner/scout ownership tasks whose scope is benchmark-test archaeology"
-        in sweevo.lower()
-    )
-    assert "Must never launch scouts on benchmark test paths" in sweevo
-    assert "use scouts to locate or correct benchmark test paths" in sweevo
-    assert "scout the production owner path instead" in sweevo
-    assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
-    assert "no-symbol exact file plus a live directory/nested-file structure result" in sweevo
-    assert 'Must use `read_file_note(file_path="...")` before opening source files' in sweevo
-    assert "Must not use `daytona_codeact` for source inspection" in sweevo
-    assert "Must treat scope-change notifications and `task_center_changed_since()` as freshness signals." in sweevo
-    assert "workflow rules are prompt/playbook obligations" in sweevo
-    assert "Must keep `scope_paths` as soft coordination hints" in sweevo
-    assert "Must treat test-file writes as off-policy" in sweevo
-    assert "Must treat any advisory outside-scope write as coordination evidence" in sweevo
-    assert "The exact missing import path from tests does not grant permission by itself" in sweevo
-    assert "a coordinated widened write may proceed" in sweevo
-    assert "An in-scope source file does not authorize an outside-scope destination path" in sweevo
-    assert "retrying the same delete/move tool" in sweevo
-    assert "clear objective ownership" in sweevo
-    assert "production evidence" in sweevo
-    assert "clear objective ownership" in sweevo
-    assert "materially wrong owner brief" in sweevo
-    assert "replanners must not convert that blocker into a benchmark-test edit task" in sweevo
-    assert "Use `daytona_read_file(...)` only after notes plus CI identify a narrow line range" in sweevo
-
-
 def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:
     for path in (
         _CONTENT / "team-developer-playbook/SKILL.md",
         _CONTENT / "team-validator-playbook/SKILL.md",
-        _CONTENT / "sweevo-project-context/SKILL.md",
     ):
         content = _read(path)
         assert "submit_summary" not in content

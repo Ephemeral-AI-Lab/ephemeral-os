@@ -1,5 +1,5 @@
 # Plan JSON Contract
-Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide.
+Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide; do not load it until exploration and DAG shaping are complete.
 
 Use this only as the final schema checklist. After this reference loads, stop exploration and make the next tool call `submit_plan(...)`. Avoid recap prose when possible, but the hard requirement is: no non-terminal tool calls before `submit_plan(...)`.
 
@@ -30,7 +30,7 @@ Tool input checklist:
 - Missing modules, compatibility shims, re-export modules, and import bridges named by tests need production ownership evidence before entering `scope_paths`.
 - An exact file with no indexed symbols is not a live-confirmed owner when workspace structure shows a directory or nested files for that owner family; use that directory or the confirmed nested files instead.
 - Pairwise overlap check: no two parallel concrete non-planner tasks may share an exact `scope_paths` file. If they do, merge them, add a `deps` edge, or make the shared file one child `team_planner` surface before this terminal call.
-- Exactly one terminal `validator`. Never submit it with `deps: []` when the plan has non-validator siblings. The validator's `deps` must contain every same-layer non-validator sibling id, including child planners like `plan-parquet` or `plan-groupby`. Mentioning dependencies inside `spec` does not set task deps.
+- At least one terminal `validator`, and no more than 2 terminal validators at the same layer. Never submit a validator with `deps: []` when the plan has non-validator siblings. Each validator's `deps` must contain the same-layer non-validator sibling ids it validates; together, terminal validator deps must cover every same-layer non-validator sibling, including child planners like `plan-parquet` or `plan-groupby`. Mentioning dependencies inside `spec` does not set task deps.
 - Validator `spec` must include: (a) the full-suite test command covering all targets from the original benchmark/request, (b) the scoped re-check list of failing test ids from developer lanes, and (c) a `ci_diagnostics(file_path)` pre-check instruction for every `scope_paths` file.
 
 ## Expected Outcome

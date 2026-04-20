@@ -390,15 +390,15 @@ def _make_executor_factory(
 
 
 def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]]:
-    """Attach sweevo skills and runtime limits to each builtin agent."""
+    """Attach SWE-EVO runtime limits and validator skills to each builtin agent."""
     exec_limits = _derive_execution_runtime_limits(instance)
     # (agent_name, extra_skills, limits, include_toolkits)
     spec: list[tuple[str, tuple[str, ...], dict[str, int], bool]] = [
-        (TEAM_PLANNER,     ("sweevo-project-context",),                       _derive_planner_runtime_limits(instance), True),
-        (DEVELOPER,        ("sweevo-project-context",),                       exec_limits, False),
-        (SCOUT,            ("sweevo-project-context",),                       exec_limits, False),
-        (VALIDATOR,        ("sweevo-project-context", "verification-replan"), exec_limits, False),
-        (TEAM_REPLANNER,   ("sweevo-project-context",),                       exec_limits, False),
+        (TEAM_PLANNER, (), _derive_planner_runtime_limits(instance), True),
+        (DEVELOPER, (), exec_limits, False),
+        (SCOUT, (), exec_limits, False),
+        (VALIDATOR, ("verification-replan",), exec_limits, False),
+        (TEAM_REPLANNER, (), exec_limits, False),
     ]
     overrides: dict[str, dict[str, Any]] = {}
     for name, extra_skills, limits, include_toolkits in spec:

@@ -240,28 +240,23 @@ def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
     ]
 
 
-def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
+def test_agent_overrides_attach_validator_skill_without_prompt_duplication():
     sweevo_team_runner._register_team_builtins()
     instance = _pydantic_instance()
 
     overrides = _build_agent_overrides(instance)
 
     assert "system_prompt" not in overrides[TEAM_PLANNER]
-    assert "sweevo-project-context" in overrides[TEAM_PLANNER]["skills"]
     assert "task_center" in overrides[TEAM_PLANNER]["toolkits"]
     assert overrides[TEAM_PLANNER]["tool_call_limit"] == 100
     assert "system_prompt" not in overrides[DEVELOPER]
-    assert "sweevo-project-context" in overrides[DEVELOPER]["skills"]
     assert overrides[DEVELOPER]["tool_call_limit"] == 50
     assert "system_prompt" not in overrides[SCOUT]
-    assert "sweevo-project-context" in overrides[SCOUT]["skills"]
     assert overrides[SCOUT]["tool_call_limit"] == 50
     assert "system_prompt" not in overrides[VALIDATOR]
-    assert "sweevo-project-context" in overrides[VALIDATOR]["skills"]
     assert "verification-replan" in overrides[VALIDATOR]["skills"]
     assert overrides[VALIDATOR]["tool_call_limit"] == 50
     assert "system_prompt" not in overrides[TEAM_REPLANNER]
-    assert "sweevo-project-context" in overrides[TEAM_REPLANNER]["skills"]
     assert overrides[TEAM_REPLANNER]["tool_call_limit"] == 50
 
 
@@ -840,7 +835,7 @@ def test_make_runner_writes_agent_run_log_artifact(monkeypatch, tmp_path: Path):
                 system_prompt="Definition prompt",
                 model="test-model",
                 role="developer",
-                skills=["sweevo-project-context"],
+                skills=[],
                 tool_call_limit=10,
             ),
             ctx,
@@ -935,7 +930,7 @@ def test_make_runner_marks_cancelled_agent_run_log(monkeypatch, tmp_path: Path):
                     system_prompt="Definition prompt",
                     model="test-model",
                     role="developer",
-                    skills=["sweevo-project-context"],
+                    skills=[],
                     tool_call_limit=10,
                 ),
                 ctx,

@@ -28,7 +28,7 @@ You are `validator`. Verify the developer outcome and return a truthful verdict 
 
 ## Workflow
 
-1. Read the payload and current notes with `read_file_note(file_path="...")`.
+1. Call `read_task_details(task_id="<task under validation>")` to confirm acceptance criteria, then call `read_file_note(file_path="...")` for every file touched by the task before diagnostics or tests.
 2. Run diagnostics on owned files and treat error-severity diagnostics as immediate failure evidence.
 3. Run the exact payload command first.
 4. For broad or slow suites, use background execution, keep doing useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.

@@ -75,19 +75,63 @@ def _subagent_completion_detail_lines(output: str) -> list[str]:
     return []
 
 
-def _is_codeact_structured_error(tool_name: str, output: str, is_error: bool) -> bool:
+def _parse_codeact_structured_error(
+    tool_name: str,
+    output: str,
+    is_error: bool,
+) -> dict[str, Any] | None:
     if tool_name != "daytona_codeact" or not is_error:
-        return False
+        return None
     try:
         payload = json.loads(output)
     except json.JSONDecodeError:
-        return False
-    return (
+        return None
+    if (
         isinstance(payload, dict)
         and payload.get("status") == "error"
         and "cwd" in payload
         and "shells_run" in payload
-    )
+    ):
+        return payload
+    return None
+
+
+def _append_detail(lines: list[str], value: object) -> None:
+    text = str(value or "").strip()
+    if text and text not in lines:
+        lines.append(text)
+
+
+def _format_codeact_structured_error(payload: dict[str, Any]) -> str:
+    lines: list[str] = []
+    shell_outputs = payload.get("shell_outputs")
+    if isinstance(shell_outputs, list):
+        for shell_output in shell_outputs[:3]:
+            if not isinstance(shell_output, dict):
+                continue
+            command = str(shell_output.get("command") or "").strip()
+            exit_code = shell_output.get("exit_code", "?")
+            if command:
+                _append_detail(lines, f"$ {command} -> exit {exit_code}")
+            stderr = str(shell_output.get("stderr") or "").strip()
+            stdout = str(shell_output.get("stdout") or "").strip()
+            if stderr and stderr != stdout:
+                _append_detail(lines, stderr)
+            elif stdout:
+                _append_detail(lines, stdout)
+
+    _append_detail(lines, payload.get("error"))
+    _append_detail(lines, payload.get("script_stdout"))
+
+    warnings = payload.get("warnings")
+    if isinstance(warnings, list):
+        for warning in warnings:
+            _append_detail(lines, f"warning: {warning}")
+
+    if lines:
+        return "\n".join(lines)
+    shells_run = payload.get("shells_run", "?")
+    return f"status=error shells_run={shells_run}"
 
 
 def _format_tool_completion_output(
@@ -97,8 +141,9 @@ def _format_tool_completion_output(
     is_error: bool,
     limit: int | None,
 ) -> str:
-    if _is_codeact_structured_error(tool_name, output, is_error):
-        return ""
+    payload = _parse_codeact_structured_error(tool_name, output, is_error)
+    if payload is not None:
+        output = _format_codeact_structured_error(payload)
     rendered = _truncate(output, limit)
     return f" {rendered}" if rendered else ""
 

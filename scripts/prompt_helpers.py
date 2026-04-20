@@ -369,11 +369,7 @@ def _sweevo_extra_skills(agent_name: str, team_def: TeamDefinition) -> list[str]
     if team_def.name != "sweevo_benchmark":
         return []
     extras_by_agent = {
-        "team_planner": ["sweevo-project-context"],
-        "developer": ["sweevo-project-context"],
-        "scout": ["sweevo-project-context"],
-        "validator": ["sweevo-project-context", "verification-replan"],
-        "team_replanner": ["sweevo-project-context"],
+        "validator": ["verification-replan"],
     }
     return extras_by_agent.get(agent_name, [])
 

@@ -1,6 +1,7 @@
 # Action Reference: submit_replan (add corrective tasks)
 
 Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[])` when existing siblings stay valid and only need corrective follow-up.
+If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft` instead.
 
 ## Task/Goal
 
