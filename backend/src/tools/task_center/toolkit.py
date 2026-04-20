@@ -17,7 +17,6 @@ import json
 import re
 import time
 import uuid
-from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -439,34 +438,11 @@ class ReadFileNoteTool(BaseTool):
 
 
 class ReadTaskDetailsInput(BaseModel):
-    task_ids: list[str] | None = Field(
-        default=None,
+    task_ids: list[str] = Field(
+        ...,
+        min_length=1,
         description=(
-            "Task IDs to look up. Get IDs from read_task_graph or from your deps. "
-            "Mutually optional with `scope` — provide one. `task_ids` overrides `scope`."
-        ),
-    )
-    scope: Literal["own", "sibling"] | None = Field(
-        default=None,
-        description=(
-            "When `task_ids` is omitted: 'own' resolves to the caller's current task "
-            "(includes notes posted by run_subagent scouts on your current task). "
-            "'sibling' resolves to the caller's sibling team tasks and descendants."
-        ),
-    )
-    tags: list[str] | None = Field(
-        default=None,
-        description=(
-            "Filter returned notes by tag (OR semantics). Valid tags: discovery, "
-            "implementation, bug_fix, blocker, proposal, verification, architecture, "
-            "dependency, warning, refactor."
-        ),
-    )
-    last_n: int | None = Field(
-        default=None,
-        description=(
-            "Override the default last-3 notes window per task. "
-            "Applies to the recent-notes block only."
+            "Task IDs to look up. Get IDs from read_task_graph or from your deps."
         ),
     )
 
@@ -474,21 +450,18 @@ class ReadTaskDetailsInput(BaseModel):
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
-        "Get full details for specific tasks: spec, deps, status, scope_paths, "
-        "failure reason, the completion summary (when done), and the most recent "
-        "notes on each task (full content, last 3 by default). Pass explicit "
-        "`task_ids=[...]`, or use `scope='own'` for the caller's current task, or "
-        "`scope='sibling'` for true sibling team tasks and descendants. Use "
-        "read_task_graph first to discover IDs; use read_file_note for path- or "
-        "keyword-based lookups across all notes."
+        "Get full details for specific tasks by ID: spec, deps, status, "
+        "scope_paths, failure reason, the completion summary (when done), and "
+        "the 3 most recent notes on each task (full content). Use "
+        "read_task_graph first to discover task IDs; use read_file_note for "
+        "path- or keyword-based lookups across all notes."
     )
-    short_description = "Read task details + recent notes."
+    short_description = "Read task details + recent notes by ID."
     input_model = ReadTaskDetailsInput
     output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskDetailsInput)
-        from team.models import NoteTag
 
         tc = context.metadata.get("task_center")
         if tc is None:
@@ -498,45 +471,8 @@ class ReadTaskDetailsTool(BaseTool):
         if not isinstance(graph, dict):
             return ToolResult(output="Error: task graph not available", is_error=True)
 
-        if arguments.tags:
-            valid_tags = {t.value for t in NoteTag}
-            invalid = [t for t in arguments.tags if t not in valid_tags]
-            if invalid:
-                return ToolResult(
-                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                    is_error=True,
-                )
-
-        # Resolve target task IDs.
-        target_ids: list[str] = []
-        if arguments.task_ids:
-            target_ids = list(arguments.task_ids)
-        elif arguments.scope is not None:
-            self_id = str(context.metadata.get("work_item_id") or "")
-            if not self_id:
-                return ToolResult(output="Error: no task context available", is_error=True)
-            if arguments.scope == "own":
-                target_ids = [self_id]
-            else:  # "sibling"
-                own_task = graph.get(self_id)
-                parent_id = getattr(own_task, "parent_id", None) if own_task else None
-                sibling_ids: list[str] = []
-                if hasattr(tc.notes, "_sibling_subtree_ids"):
-                    sibling_ids = await tc.notes._sibling_subtree_ids(parent_id)
-                target_ids = [sid for sid in sibling_ids if sid in graph and sid != self_id]
-        else:
-            return ToolResult(
-                output="Error: provide either `task_ids` or `scope` ('own' | 'sibling').",
-                is_error=True,
-            )
-
-        if not target_ids:
-            return ToolResult(output="No tasks resolved for the requested scope.")
-
-        window = arguments.last_n if arguments.last_n and arguments.last_n > 0 else 3
-
         sections: list[str] = []
-        for tid in target_ids:
+        for tid in arguments.task_ids:
             task = graph.get(tid)
             if task is None:
                 sections.append(f"## {tid}\nNot found in task graph.")
@@ -555,14 +491,11 @@ class ReadTaskDetailsTool(BaseTool):
             if task.failure_reason:
                 lines.append(f"**Failure:** {task.failure_reason}")
 
-            # Notes for this task — full content, last `window`, plus the latest
+            # Notes for this task — full content, last 3, plus the latest
             # completion summary if present (posted as an `implementation` note
             # by the runtime when a task reports success).
             try:
-                task_notes = await tc.notes.read(
-                    authors=[tid],
-                    tags=arguments.tags,
-                )
+                task_notes = await tc.notes.read(authors=[tid])
                 if task_notes:
                     summary_note = next(
                         (
@@ -576,7 +509,7 @@ class ReadTaskDetailsTool(BaseTool):
                         lines.append("**Summary:**")
                         lines.append(summary_note.content)
 
-                    recent = task_notes[-window:]
+                    recent = task_notes[-3:]
                     if recent:
                         lines.append("**Recent notes:**")
                         for n in recent:

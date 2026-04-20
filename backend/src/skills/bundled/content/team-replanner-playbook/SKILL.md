@@ -19,7 +19,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 ## Tool rules
 
 - Must confirm owner paths live with CI tools before choosing an action.
-- Must read sibling notes with `read_task_note(paths=[...], scope="sibling")` before parent graph details and before deciding whether the failure is isolated or layered.
+- Must call `read_task_graph()` then `read_task_details(task_ids=[<failed_task>, <sibling_ids...>])` before deciding whether the failure is isolated or layered; use `read_file_note(file_path="...")` for path- or keyword-based lookup across the notes stream.
 - Must refresh on freshness drift before submitting.
 - Must treat final-action ordering as your responsibility: after loading the chosen action reference and self-checking the payload, do not make unrelated tool calls before `submit_replan(...)`.
 - If a terminal-tool reminder appears, your next assistant message must be exactly one terminal tool call. If the previous terminal call failed schema validation, fix only the reported schema issue and resubmit.

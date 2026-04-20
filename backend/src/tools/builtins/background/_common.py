@@ -32,7 +32,7 @@ POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "background status snapshot. Do not call `wait_for_background_task` or "
     "`check_background_progress` again for this delivered scout wave. In "
     "team-planner contexts, the next tool call should be "
-    '`read_task_details(scope="own")` when you need all current-task '
+    '`read_task_details(task_ids=[<your current task id>])` when you need all current-task '
     'scout notes, or `read_file_note(file_path="...")` for known scout scopes.'
 )
 

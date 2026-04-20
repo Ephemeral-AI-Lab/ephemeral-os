@@ -115,7 +115,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "child `team_planner` decomposition lanes" in planner
     assert "prose inside `spec` does not create task dependencies" in planner
     assert "run_subagent scout notes are current-task notes" in planner
-    assert 'do not use `scope="sibling"` for them' in planner
+    assert "read them via `read_task_details(task_ids=[<your current task id>])`" in planner
     assert "scrub each scout `target_paths` list before calling `run_subagent`" in planner
     assert "live production owner files/directories only" in planner
     assert "never launch `run_subagent` scouts on benchmark test paths" in planner.lower()
@@ -140,8 +140,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "read the posted Task Center notes instead of checking or waiting on that id again" in planner
     assert "Never call `check_background_progress(...)` or `wait_for_background_task(...)` again" in planner
     assert (
-        "the next non-submission tool for that wave is "
-        '`read_task_note(scope="own", paths=None, task_note="Read posted scout notes")`'
+        "read them via "
+        "`read_task_details(task_ids=[<your current task id>])`"
     ) in planner
     assert "Never use background tools to recover content from a `Posted.` scout result" in planner
     assert "clear adjacent live owner" in planner
@@ -202,7 +202,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
-    assert 'read_task_note(paths=[...], scope="sibling")' in replanner
+    assert "read_task_details(task_ids=[<failed_task>, <sibling_ids...>])" in replanner
     assert "final-action ordering" in replanner.lower()
     assert "scope-quality evidence" in replanner
     assert "production ownership evidence or clear adjacent ownership" in replanner
@@ -265,8 +265,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     scout_launch = _read(
         _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
     )
-    assert "Notes from `run_subagent` scouts live on the current planner task" in scout_launch
-    assert 'do not use `scope="sibling"` for them' in scout_launch
+    assert "scout notes live on the current task, not on siblings" in scout_launch
+    assert "read_task_details(task_ids=[<your current task id>])" in scout_launch
     assert "Scrub `target_paths` first" in scout_launch
     assert "missing test-derived path in scout `target_paths`" in scout_launch
     assert "Never use a scout to locate or correct a benchmark test path mismatch" in scout_launch
@@ -366,7 +366,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "scout the production owner path instead" in sweevo
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
     assert "no-symbol exact file plus a live directory/nested-file structure result" in sweevo
-    assert "Must use `read_task_note(paths=[...])` before opening source files" in sweevo
+    assert 'Must use `read_file_note(file_path="...")` before opening source files' in sweevo
     assert "Must not use `daytona_codeact` for source inspection" in sweevo
     assert "Must treat scope-change notifications and `task_center_changed_since()` as freshness signals." in sweevo
     assert "workflow rules are prompt/playbook obligations" in sweevo

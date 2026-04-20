@@ -88,7 +88,7 @@ def test_background_toolkit_says_progress_checks_are_decision_driven():
         "as terminal signals"
     ) in toolkit.instructions
     assert "background tools will only repeat the delivery envelope" in toolkit.instructions
-    assert 'read_task_note(scope="own", paths=None, task_note="Read posted scout notes")' in toolkit.instructions
+    assert 'read_file_note(file_path="...")' in toolkit.instructions
     assert "Use `wait_for_background_task` when you are otherwise idle or blocked on the result" in toolkit.instructions
 
 
@@ -109,7 +109,7 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
         "are terminal signals"
     ) in prompt
     assert "background tools will only repeat the delivery envelope" in prompt
-    assert 'read_task_note(scope="own", paths=None, task_note="Read posted scout notes")' in prompt
+    assert 'read_file_note(file_path="...")' in prompt
     assert "1. check_background_progress - Inspect background task status." in prompt
     assert "</Background Tasks>" in prompt
     assert "<Termination Condition>" in prompt

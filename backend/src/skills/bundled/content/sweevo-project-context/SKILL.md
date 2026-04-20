@@ -29,9 +29,9 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 ## Coordination redesign focus
 
 - Must treat `docs/architecture/team-coordination.md` as the design intent for this benchmark.
-- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_note(...)` for scout findings and dependency context, `read_task_note(scope="sibling", ...)` for sibling activity and conflict checking.
-- Must use `read_task_note(paths=[...])` before opening source files, before launching duplicate scouts, and after every surprising verification failure; an empty note read is useful evidence, not a blocker.
-- Must treat scope-change notifications and `task_center_changed_since()` as freshness signals. Refresh with `read_task_note(...)` before committing, verifying, or replanning on a drifting surface.
+- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_details(task_ids=[...])` (after `read_task_graph()` to enumerate your task and sibling ids) for scout findings, dependency context, sibling activity, and conflict checking, and `read_file_note(file_path="...")` for path-based lookups.
+- Must use `read_file_note(file_path="...")` before opening source files, before launching duplicate scouts, and after every surprising verification failure; an empty note read is useful evidence, not a blocker.
+- Must treat scope-change notifications and `task_center_changed_since()` as freshness signals. Refresh with `read_task_details(...)` or `read_file_note(...)` before committing, verifying, or replanning on a drifting surface.
 - These workflow rules are prompt/playbook obligations, not runtime guardrails. Do not wait for a tool error to enforce them; self-correct or submit failure evidence when a lane has gone off policy.
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as coordination evidence, not a hard failure. Agents may continue when the widened path is one adjacent production owner for the same bug, and must name the widened path, rationale, and verification in the terminal summary.
@@ -44,7 +44,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 - Must keep fresh roots live-first: one narrow production anchor, then at least one scout wave before root plan JSON.
 - Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
-- Must start developer and validator execution lanes with `read_task_note(paths=[...])` before opening files or reproducing, even when the note set may be empty.
+- Must start developer and validator execution lanes with `read_file_note(file_path="...")` before opening files or reproducing, even when the note set may be empty.
 - Must start developer and validator runtime work from the exact failing command or exact named failure target.
 - Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes. Use `daytona_read_file(...)` only after notes plus CI identify a narrow line range or a CI result needs local confirmation.
 - Must not spend a ready leaf's opening moves reading benchmark tests when scout notes and exact runtime already name the owned seam.
