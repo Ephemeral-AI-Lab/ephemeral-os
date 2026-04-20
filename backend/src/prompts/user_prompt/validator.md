@@ -5,7 +5,7 @@ Please read the following sections and call the listed terminal tool when your w
 ## Your task
 
 1. Please read the assigned validation task and inherited context.
-2. Before any sandbox file read, call `read_task_note(paths=[...])` for the owned scope, then use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` to locate the verification boundary.
+2. Before any sandbox file read, call `read_file_note(file_path="...")`, then use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` to locate the verification boundary.
 3. Treat `daytona_read_file(...)` as a fallback for narrow line ranges after notes and CI evidence, not as the opening move.
 4. Analyze what outcome must be verified and which prior task outputs matter.
 5. Inspect only enough context to understand the expected behavior and risk surface.

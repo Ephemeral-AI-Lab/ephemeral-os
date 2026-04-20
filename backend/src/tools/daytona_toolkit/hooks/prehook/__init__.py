@@ -8,6 +8,7 @@ from tools.daytona_toolkit.hooks.prehook import (
     codeact_destructive_shell,
     codeact_file_edit_policy,
     codeact_python_process_policy,
+    codeact_stderr_suppression_policy,
     move_dst_scope_advisory,
     move_src_hard_block,
     move_src_scope_deny,
@@ -29,6 +30,7 @@ _MODULES = (
     codeact_destructive_git,
     codeact_destructive_shell,
     codeact_python_process_policy,
+    codeact_stderr_suppression_policy,
     codeact_file_edit_policy,
     rename_scope_policy,
 )

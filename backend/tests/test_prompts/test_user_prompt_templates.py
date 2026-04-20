@@ -116,10 +116,10 @@ def test_scout_prompt_overrides_final_response_fallback() -> None:
     )
 
     assert "## Scout note override" in rendered
-    assert "your required post action is one `submit_task_note(...)` tool call" in rendered
+    assert "your required post action is one `submit_file_note(...)` tool call" in rendered
     assert "Do not put findings only in assistant text." in rendered
     assert "say only `Posted.`" in rendered
-    assert "Finish by calling `submit_task_note(...)`" in rendered
+    assert "Finish by calling `submit_file_note(...)`" in rendered
     assert "benchmark test path" in rendered
     assert "target path as off-policy" in rendered
     assert "scout the production owner path instead" in rendered
@@ -411,7 +411,7 @@ async def test_build_query_context_uses_scout_markdown_template() -> None:
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- final_response:" in ctx.user_message
     assert "## Scout note override" in ctx.user_message
-    assert "your required post action is one `submit_task_note(...)` tool call" in ctx.user_message
+    assert "your required post action is one `submit_file_note(...)` tool call" in ctx.user_message
     assert "Do not put findings only in assistant text." in ctx.user_message
     assert "## Assigned exploration task" in ctx.user_message
     assert "Do not edit files" in ctx.user_message

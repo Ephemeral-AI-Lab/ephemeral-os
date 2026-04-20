@@ -130,7 +130,7 @@ def test_planner_and_replanner_do_not_expose_sandbox_tools(tmp_path: Path) -> No
 def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> None:
     tool_names = _final_tool_names(SCOUT, tmp_path)
 
-    assert "submit_task_note" in tool_names
+    assert "submit_file_note" in tool_names
     assert "task_center_changed_since" not in tool_names
     for name in (
         "daytona_grep",
@@ -140,6 +140,7 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "daytona_edit_file",
         "daytona_rename_symbol",
         "daytona_codeact",
+        "submit_task_note",
         "submit_task_summary",
         "submit_plan",
         "submit_replan",
@@ -157,6 +158,6 @@ def test_task_center_toolkit_survives_restriction() -> None:
     registry.restrict_to_toolkits(["task_center"])
 
     assert registry.get_toolkit("task_center") is not None
-    assert registry.get("read_task_note") is not None
+    assert registry.get("read_file_note") is not None
     # post_note moved to submission toolkit (terminal tools only)
     assert registry.get("task_center_changed_since") is not None

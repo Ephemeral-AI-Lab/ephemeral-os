@@ -10,8 +10,9 @@ import pytest
 from pydantic import ValidationError
 
 from tools.task_center.toolkit import (
+    ReadFileNoteTool,
     ReadTaskGraphTool,
-    ReadTaskNoteTool,
+    SubmitFileNoteTool,
     SubmitTaskNoteTool,
     TaskCenterChangedSinceTool,
 )
@@ -49,7 +50,7 @@ def _task(
 
 
 @pytest.mark.asyncio
-async def test_submit_task_note_returns_structured_note_output():
+async def test_submit_file_note_stores_without_task_id():
     class _Notes:
         def __init__(self) -> None:
             self.posted = []
@@ -63,20 +64,23 @@ async def test_submit_task_note_returns_structured_note_output():
             "task_center": SimpleNamespace(notes=notes),
             "work_item_id": "task-1",
             "agent_name": "scout",
-            "write_scope": ["src/auth.py"],
         }
     )
 
-    tool = SubmitTaskNoteTool()
+    tool = SubmitFileNoteTool()
     result = await tool.execute(
-        tool.input_model(content="Mapped auth surface.", tags=["discovery"]),
+        tool.input_model(
+            content="Mapped auth surface.",
+            paths=["src/auth.py"],
+            tags=["discovery"],
+        ),
         ctx,
     )
 
     assert result.is_error is False
     payload = json.loads(result.output)
     assert payload["note_id"]
-    assert payload["task_id"] == "task-1"
+    assert payload["task_id"] == ""
     assert payload["agent_name"] == "scout"
     assert payload["content"] == "Mapped auth surface."
     assert payload["paths"] == ["src/auth.py"]
@@ -85,7 +89,7 @@ async def test_submit_task_note_returns_structured_note_output():
 
 
 @pytest.mark.asyncio
-async def test_submit_task_note_allows_scout_correct_path_content():
+async def test_submit_file_note_allows_scout_correct_path_content():
     class _Notes:
         def __init__(self) -> None:
             self.posted = []
@@ -97,12 +101,11 @@ async def test_submit_task_note_allows_scout_correct_path_content():
     ctx = _ctx(
         {
             "task_center": SimpleNamespace(notes=notes),
-            "work_item_id": "task-1",
             "agent_name": "scout",
         }
     )
 
-    tool = SubmitTaskNoteTool()
+    tool = SubmitFileNoteTool()
     result = await tool.execute(
         tool.input_model(
             content="Missing target; correct path appears to be src/session.py.",
@@ -116,39 +119,68 @@ async def test_submit_task_note_allows_scout_correct_path_content():
     assert notes.posted[0].content == "Missing target; correct path appears to be src/session.py."
 
 
+@pytest.mark.asyncio
+async def test_submit_task_note_requires_task_id_and_paths():
+    class _Notes:
+        def __init__(self) -> None:
+            self.posted = []
+
+        async def post(self, note) -> None:
+            self.posted.append(note)
+
+    notes = _Notes()
+    ctx = _ctx(
+        {
+            "task_center": SimpleNamespace(notes=notes),
+            "agent_name": "note_taker",
+        }
+    )
+
+    tool = SubmitTaskNoteTool()
+    result = await tool.execute(
+        tool.input_model(
+            content="Blocker on dep migration.",
+            task_id="task-42",
+            paths=["src/auth.py"],
+            tags=["blocker"],
+        ),
+        ctx,
+    )
+
+    assert result.is_error is False
+    payload = json.loads(result.output)
+    assert payload["task_id"] == "task-42"
+    assert payload["paths"] == ["src/auth.py"]
+
+
 def test_submit_task_note_rejects_whitespace_only_content():
     with pytest.raises(ValidationError, match="content must contain non-whitespace text"):
-        SubmitTaskNoteTool.input_model(content=" \n\t")
+        SubmitTaskNoteTool.input_model(content=" \n\t", task_id="task-1", paths=["src/a.py"])
 
 
-def test_submit_task_note_schema_is_pydantic_native():
-    schema = SubmitTaskNoteTool().to_api_schema()
-
-    content_description = schema["input_schema"]["properties"]["content"]["description"]
-    assert "REQUIRED" in content_description
-    assert "non-whitespace" in content_description
-    assert "Always send this field in the tool input object" in content_description
-    assert '{"content":"<concise Task Center note>"' in content_description
-    assert "The input object must include non-empty, non-whitespace `content`" in schema[
-        "description"
-    ]
-    assert "put the note in the `content` field" in schema["description"]
-    assert "{}" not in schema["description"]
-    assert schema["output_schema"]["properties"]["task_id"]["description"]
+def test_submit_file_note_rejects_missing_paths():
+    with pytest.raises(ValidationError):
+        SubmitFileNoteTool.input_model(content="note")
 
 
-def test_read_task_note_schema_explains_background_scout_scope():
-    schema = ReadTaskNoteTool().to_api_schema()
+def test_submit_task_note_rejects_missing_task_id():
+    with pytest.raises(ValidationError):
+        SubmitTaskNoteTool.input_model(content="note", paths=["src/a.py"])
 
-    assert "notes posted by run_subagent scouts" in schema["description"]
-    assert "omit scope or keep scope='own' after a background scout wave" in schema[
-        "description"
-    ]
-    scope_description = schema["input_schema"]["properties"]["scope"]["description"]
-    assert "Background scout/subagent notes created by run_subagent are own-scope notes" in (
-        scope_description
-    )
-    assert "true sibling team tasks" in scope_description
+
+def test_submit_note_schemas_are_pydantic_native():
+    file_schema = SubmitFileNoteTool().to_api_schema()
+    task_schema = SubmitTaskNoteTool().to_api_schema()
+
+    assert "REQUIRED" in file_schema["input_schema"]["properties"]["content"]["description"]
+    assert "paths" in file_schema["input_schema"]["properties"]
+    assert "task_id" not in file_schema["input_schema"]["properties"]
+    assert "file-scoped note" in file_schema["description"]
+
+    assert "task_id" in task_schema["input_schema"]["properties"]
+    assert "paths" in task_schema["input_schema"]["properties"]
+    assert "task-scoped note" in task_schema["description"]
+    assert task_schema["output_schema"]["properties"]["task_id"]["description"]
 
 
 @pytest.mark.asyncio
@@ -236,7 +268,7 @@ async def test_read_task_graph_global_scope_includes_roots_and_detached_nodes():
 
 
 @pytest.mark.asyncio
-async def test_read_task_note_empty_path_read_is_successful_freshness_check():
+async def test_read_file_note_empty_path_read_reports_known_paths():
     class _Notes:
         async def read(self, **_kwargs):
             return []
@@ -249,13 +281,13 @@ async def test_read_task_note_empty_path_read_is_successful_freshness_check():
 
     ctx = _ctx({"task_center": SimpleNamespace(notes=_Notes())})
 
-    result = await ReadTaskNoteTool().execute(
-        ReadTaskNoteTool.input_model(paths=["src/auth.py"]),
+    result = await ReadFileNoteTool().execute(
+        ReadFileNoteTool.input_model(file_path="src/auth.py"),
         ctx,
     )
 
     assert result.is_error is False
-    assert "No notes found for paths" in result.output
+    assert "No notes found for file_path" in result.output
     assert "src/other.py" in result.output
 
 

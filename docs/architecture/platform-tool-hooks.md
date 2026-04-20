@@ -444,6 +444,7 @@ backend/src/tools/daytona_toolkit/hooks/
     codeact_destructive_git.py
     codeact_destructive_shell.py
     codeact_python_process_policy.py
+    codeact_stderr_suppression_policy.py
     codeact_file_edit_policy.py
 
   posthook/
@@ -553,6 +554,7 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands. |
 | `codeact_destructive_shell.py` | pre | `daytona_codeact` | Blocks destructive shell commands against workspace roots and dangerous devices. |
 | `codeact_python_process_policy.py` | pre | `daytona_codeact` | Blocks `os.system()` and `os.popen()` wrappers in coordinated CodeAct Python mode. |
+| `codeact_stderr_suppression_policy.py` | pre | `daytona_codeact` | Blocks shell commands and literal Python `shell(...)` calls that suppress stderr with `/dev/null`. |
 | `codeact_file_edit_policy.py` | pre | `daytona_codeact` | Blocks shell and Python file-edit side channels when CodeAct edit policy is active. |
 
 The move hooks are intentionally split by source and destination behavior. The
@@ -985,6 +987,7 @@ backend/src/tools/daytona_toolkit/hooks/prehook/move_dst_scope_advisory.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_git.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_shell.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_python_process_policy.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_stderr_suppression_policy.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py

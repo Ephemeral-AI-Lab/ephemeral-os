@@ -24,6 +24,7 @@ Key ideas:
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -72,6 +73,34 @@ def _truncate(text: str, limit: int | None) -> str:
 
 def _subagent_completion_detail_lines(output: str) -> list[str]:
     return []
+
+
+def _is_codeact_structured_error(tool_name: str, output: str, is_error: bool) -> bool:
+    if tool_name != "daytona_codeact" or not is_error:
+        return False
+    try:
+        payload = json.loads(output)
+    except json.JSONDecodeError:
+        return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("status") == "error"
+        and "cwd" in payload
+        and "shells_run" in payload
+    )
+
+
+def _format_tool_completion_output(
+    *,
+    tool_name: str,
+    output: str,
+    is_error: bool,
+    limit: int | None,
+) -> str:
+    if _is_codeact_structured_error(tool_name, output, is_error):
+        return ""
+    rendered = _truncate(output, limit)
+    return f" {rendered}" if rendered else ""
 
 
 @dataclass
@@ -150,11 +179,17 @@ class MultiAgentEventPrinter:
                 limit = None
             else:
                 limit = 500 if event.is_error else 120
+            output = _format_tool_completion_output(
+                tool_name=event.tool_name,
+                output=event.output,
+                is_error=event.is_error,
+                limit=limit,
+            )
             self._line(
                 agent,
                 work_id,
-                f"{self._c('green' if not event.is_error else 'red', '<- tool_done:')}  {event.tool_name} [{status}] "
-                f"{_truncate(event.output, limit)}",
+                f"{self._c('green' if not event.is_error else 'red', '<- tool_done:')}  {event.tool_name} [{status}]"
+                f"{output}",
             )
         elif isinstance(event, ToolExecutionProgress):
             self._line(
@@ -211,11 +246,17 @@ class MultiAgentEventPrinter:
                 for extra in _subagent_completion_detail_lines(event.output):
                     self._line(agent, work_id, extra)
             else:
+                output = _format_tool_completion_output(
+                    tool_name=event.tool_name,
+                    output=event.output,
+                    is_error=event.is_error,
+                    limit=limit,
+                )
                 self._line(
                     agent,
                     work_id,
-                    f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}] "
-                    f"{_truncate(event.output, limit)}",
+                    f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}]"
+                    f"{output}",
                 )
         elif isinstance(event, AssistantTurnComplete):
             # Print full thinking/text blocks once per completed turn.

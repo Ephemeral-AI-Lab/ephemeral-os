@@ -228,8 +228,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "planner should scout the production owner path instead" in scout
     assert "no-symbol exact file should not be used as `scope_paths`" in scout
     assert "unconfirmed adjacent evidence" in scout.lower()
-    assert "must call exactly one `submit_task_note(...)`" in scout.lower()
-    assert "never use final prose instead of `submit_task_note(...)`" in scout.lower()
+    assert "must call exactly one `submit_file_note(...)`" in scout.lower()
+    assert "never use final prose instead of `submit_file_note(...)`" in scout.lower()
     assert "must not end with only visible findings" in scout.lower()
 
 
@@ -294,8 +294,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "not a runtime hard gate" in developer_widening.lower()
     assert "a real production surface" in developer_widening
     assert "The Task Center note is the durable handoff." in scout_ref
-    assert "Make exactly one `submit_task_note(...)` call" in scout_ref
-    assert "assistant text with no `submit_task_note(...)` call" in scout_ref
+    assert "Make exactly one `submit_file_note(...)` call" in scout_ref
+    assert "assistant text with no `submit_file_note(...)` call" in scout_ref
     assert "the exact file should not be used as `scope_paths`" in scout_ref
     assert "target path is off-policy" in scout_ref
     assert "check_background_progress" in validator_ref

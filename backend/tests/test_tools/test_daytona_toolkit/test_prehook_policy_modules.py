@@ -17,11 +17,13 @@ from tools.daytona_toolkit.delete_move_tool import (
 )
 from tools.daytona_toolkit.hooks.prehook import (
     codeact_python_process_policy,
+    codeact_stderr_suppression_policy,
     move_src_scope_deny,
     rename_scope_policy,
     repo_operation_guard,
     write_scope_deny,
 )
+from tools.daytona_toolkit.codeact_tool import DaytonaCodeActInput
 from tools.daytona_toolkit.rename_tool import DaytonaRenameSymbolsInput
 
 
@@ -164,6 +166,54 @@ def test_rename_scope_policy_blocks_planned_out_of_scope_file() -> None:
     assert "_daytona_rename_preplan" not in ctx.metadata
 
 
+def test_codeact_stderr_suppression_policy_blocks_dev_null_stderr() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(command="find . -name '*.py' 2>/dev/null|head -1")
+
+    outcome = _run(
+        codeact_stderr_suppression_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is True
+    assert "CodeAct commands must preserve stderr" in (outcome.error_message or "")
+    assert "2>/dev/null" in (outcome.error_message or "")
+
+
+def test_codeact_stderr_suppression_policy_blocks_equivalent_forms() -> None:
+    ctx = _coord_ctx(team_run_id="run-1", work_item_id="task-1")
+    args_list = [
+        DaytonaCodeActInput(command="find . -name '*.py' 2> /dev/null"),
+        DaytonaCodeActInput(command="pytest 2>>/dev/null"),
+        DaytonaCodeActInput(command="command -v rg >/dev/null 2>&1"),
+        DaytonaCodeActInput(command="optional-probe &>/dev/null"),
+        DaytonaCodeActInput(command="pytest 2>&-"),
+        DaytonaCodeActInput(code='shell("find . -name *.py 2>/dev/null")'),
+    ]
+
+    for args in args_list:
+        outcome = _run(
+            codeact_stderr_suppression_policy.hook("daytona_codeact", args, ctx)
+        )
+        assert outcome.has_error is True, args
+
+
+def test_codeact_stderr_suppression_policy_ignores_quoted_text_and_plain_merge() -> None:
+    ctx = _coord_ctx(team_run_id="run-1", work_item_id="task-1")
+    args_list = [
+        DaytonaCodeActInput(command="python -c \"print('2>/dev/null')\""),
+        DaytonaCodeActInput(command="printf '%s\\n' '2>/dev/null'"),
+        DaytonaCodeActInput(command="pytest 2>&1"),
+        DaytonaCodeActInput(command="pytest 2>/tmp/errors.log"),
+        DaytonaCodeActInput(code='shell("pytest 2>&1")'),
+    ]
+
+    for args in args_list:
+        outcome = _run(
+            codeact_stderr_suppression_policy.hook("daytona_codeact", args, ctx)
+        )
+        assert outcome.has_error is False, args
+
+
 def test_new_pre_hooks_register_once() -> None:
     registry = ToolHookRegistry()
 
@@ -173,8 +223,10 @@ def test_new_pre_hooks_register_once() -> None:
     rename_scope_policy.register(registry)
     codeact_python_process_policy.register(registry)
     codeact_python_process_policy.register(registry)
+    codeact_stderr_suppression_policy.register(registry)
+    codeact_stderr_suppression_policy.register(registry)
 
     assert len(registry.matching("daytona_delete_file", "pre")) == 1
     assert len(registry.matching("daytona_move_file", "pre")) == 1
     assert len(registry.matching("daytona_rename_symbol", "pre")) == 1
-    assert len(registry.matching("daytona_codeact", "pre")) == 1
+    assert len(registry.matching("daytona_codeact", "pre")) == 2

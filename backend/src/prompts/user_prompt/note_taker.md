@@ -21,13 +21,14 @@ Do not write the note in assistant text; the note text belongs in the tool's `co
 If the transcript is long, ambiguous, or incomplete, write the best compact uncertainty note in `content`; do not spend a turn analyzing and do not make a second note.
 Call submit_task_note with JSON input:
 - content: name specific files, errors, and changes (under 300 words)
+- task_id: the task id this note is about (see the injected final reminder below)
 - paths: list every file/dir path edited or investigated
 - tags: one or more of implementation, bug_fix, refactor, blocker, warning (use 'blocker' if stuck)
 
-The tool input must include `content` as a non-empty string.
+The tool input must include `content` as a non-empty string, and `task_id` + `paths` as required fields.
 If you drafted text while reading the transcript, put that text inside `content`.
-Valid input JSON: `{"content":"Edited parser.py to fix an import error; tests are still red.","paths":["parser.py"],"tags":["implementation","blocker"]}`
-Incorrect behavior: assistant text summary followed by a tool input that omits `content`.
+Valid input JSON: `{"content":"Edited parser.py to fix an import error; tests are still red.","task_id":"<task id>","paths":["parser.py"],"tags":["implementation","blocker"]}`
+Incorrect behavior: assistant text summary followed by a tool input that omits `content`, `task_id`, or `paths`.
 ```
 
 ## Turn trigger
@@ -51,11 +52,12 @@ Do not write the note in assistant text; the note text belongs in the tool's `co
 The 'content' field is REQUIRED.
 If the transcript is long, ambiguous, or incomplete, write the best compact uncertainty note in `content`; do not spend a turn analyzing and do not make a second note.
 - content: what this agent accomplished and current status (working/stuck/done). Name specific files and errors. Under 300 words.
+- task_id: the task id this note is about (see the injected final reminder below)
 - paths: list every file/dir path relevant to the work
 - tags: one or more of implementation, bug_fix, blocker, warning, discovery (use 'blocker' if stuck or blocked by another task)
 
-The tool input must include `content` as a non-empty string.
+The tool input must include `content` as a non-empty string, and `task_id` + `paths` as required fields.
 If you drafted text while reading the transcript, put that text inside `content`.
-Valid input JSON: `{"content":"Investigated groupby.py and found a dtype mismatch; no fix yet.","paths":["dask/dataframe/groupby.py"],"tags":["discovery","blocker"]}`
-Incorrect behavior: assistant text summary followed by a tool input that omits `content`.
+Valid input JSON: `{"content":"Investigated groupby.py and found a dtype mismatch; no fix yet.","task_id":"<task id>","paths":["dask/dataframe/groupby.py"],"tags":["discovery","blocker"]}`
+Incorrect behavior: assistant text summary followed by a tool input that omits `content`, `task_id`, or `paths`.
 ```

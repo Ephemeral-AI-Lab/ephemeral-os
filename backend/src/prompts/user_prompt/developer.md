@@ -5,7 +5,7 @@ Please read the following sections and call the listed terminal tool when your w
 ## Your task
 
 1. Please read the assigned coding task and inherited context.
-2. Before any sandbox file read, call `read_task_note(paths=[...])` for the owned scope, then use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` to locate the owner boundary.
+2. Before any sandbox file read, call `read_file_note(file_path="...")`, then use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` to locate the owner boundary.
 3. Treat `daytona_read_file(...)` as a fallback for narrow line ranges after notes and CI evidence, not as the opening move.
 4. Analyze the implementation objective, expected behavior, and owned scope.
 5. Explore only enough to locate the relevant code and understand the issue or gap.

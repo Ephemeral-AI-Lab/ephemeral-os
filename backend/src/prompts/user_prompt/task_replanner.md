@@ -5,7 +5,7 @@ Please read the following sections and call the listed terminal tool when your w
 ## Your task
 
 1. Please read the assigned replanning task and failure context.
-2. Read sibling notes with `read_task_note(paths=[...], scope="sibling")`, then use CI tools such as `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` before opening broader graph details.
+2. Call `read_task_graph()` to locate the failed task and its siblings, then **always** call `read_task_details(task_ids=[<failed_task_id>, <relevant_sibling_ids...>])` to pull each task's spec, status, scope_paths, failure reason, completion summary, and recent notes in one shot. Prefer this over `read_task_note` for per-task lookups — only fall back to `read_task_note(paths=[...], scope="sibling")` or `read_file_note(...)` when you need path/keyword search across the notes stream. After that, use CI tools such as `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` as needed.
 3. Analyze what failed and which sibling work is affected.
 4. Explore only enough to justify the smallest corrective plan.
 5. Draft corrective child tasks with dependencies, short descriptions, scope paths, and structured specs. All new tasks are owned by this replanner; there is no free-form `parent_id`, and new tasks must not depend on downstream work that is already blocked on this replanner. Prefer `deps` ids from this same `new_tasks` payload, and make validator deps local to this payload. Use an existing task id only when fresh graph context proves that exact id is schedulable, accepted by the current task graph, and not downstream of this replanner or the original failed task; when unsure, omit the existing dep.

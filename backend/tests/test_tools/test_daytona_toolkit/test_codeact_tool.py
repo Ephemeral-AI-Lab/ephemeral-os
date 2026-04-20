@@ -419,6 +419,8 @@ async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
             "inline Python file mutation",
         ),
         ("printf x > dask/core.py", "shell output redirection"),
+        ("pytest 2>/tmp/errors.log", "shell output redirection"),
+        ("printf x >/dev/null.log", "shell output redirection"),
         ("printf x | tee dask/core.py", "tee file write"),
         ("mv dask/core.py dask/new_core.py", "filesystem mutation command"),
         ("git rm dask/core.py", "filesystem mutation command"),
@@ -454,6 +456,67 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
     assert "daytona_edit_file" in result.output
     assert "daytona_delete_file" in result.output
     assert "daytona_move_file" in result.output
+    svc.cmd.assert_not_awaited()
+    sb.process.exec.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "find . -maxdepth 1 -type f 2>/dev/null|head -n 1",
+        "files=$(find . -name '*.py' 2>/dev/null); printf '%s\\n' \"$files\"",
+        "command -v rg >/dev/null 2>&1; echo ok",
+        "optional-probe &>/dev/null",
+    ],
+)
+async def test_team_shell_mode_blocks_stderr_suppression_before_exec(command):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await run_tool_safely(
+        daytona_codeact,
+        {"command": command},
+        ctx,
+    )
+
+    assert result.is_error
+    assert "CodeAct policy error: CodeAct commands must preserve stderr" in result.output
+    svc.cmd.assert_not_awaited()
+    sb.process.exec.assert_not_awaited()
+
+
+async def test_team_python_mode_blocks_shell_helper_stderr_suppression_before_exec():
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await run_tool_safely(
+        daytona_codeact,
+        {"code": 'shell("find . -name *.py 2>/dev/null")'},
+        ctx,
+    )
+
+    assert result.is_error
+    assert "CodeAct policy error: CodeAct commands must preserve stderr" in result.output
     svc.cmd.assert_not_awaited()
     sb.process.exec.assert_not_awaited()
 

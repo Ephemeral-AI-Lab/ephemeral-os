@@ -1,0 +1,204 @@
+"""Block CodeAct commands that hide stderr from runtime evidence."""
+
+from __future__ import annotations
+
+import ast
+
+from pydantic import BaseModel
+
+from tools.core.base import ToolExecutionContext
+from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
+from tools.daytona_toolkit.hooks.prehook._codeact_common import python_code, shell_command
+
+STDERR_SUPPRESSION_POLICY_MESSAGE = (
+    "CodeAct policy error: CodeAct commands must preserve stderr. "
+    "Do not suppress stderr with `2>/dev/null`, `&>/dev/null`, or "
+    "`>/dev/null 2>&1`; `daytona_codeact` already captures stdout and stderr."
+)
+
+
+def _is_word_char(char: str) -> bool:
+    return char.isalnum() or char == "_"
+
+
+def _previous_allows_redirection(command: str, index: int) -> bool:
+    return index == 0 or not _is_word_char(command[index - 1])
+
+
+def _read_shell_word(command: str, index: int) -> tuple[str, int]:
+    out: list[str] = []
+    quote: str | None = None
+    escaped = False
+    while index < len(command):
+        char = command[index]
+        if escaped:
+            out.append(char)
+            escaped = False
+            index += 1
+            continue
+        if char == "\\":
+            escaped = True
+            index += 1
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            else:
+                out.append(char)
+            index += 1
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            index += 1
+            continue
+        if char.isspace() or char in {";", "|", "&", ")"}:
+            break
+        out.append(char)
+        index += 1
+    return "".join(out), index
+
+
+def _skip_redirect_operator(command: str, index: int) -> int:
+    if index < len(command) and command[index] == ">":
+        index += 1
+    return index
+
+
+def _read_redirect_target(command: str, index: int) -> tuple[str, int]:
+    while index < len(command) and command[index].isspace():
+        index += 1
+    return _read_shell_word(command, index)
+
+
+def _has_stderr_suppression(command: str) -> bool:
+    quote: str | None = None
+    escaped = False
+    stdout_to_dev_null = False
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if escaped:
+            escaped = False
+            index += 1
+            continue
+        if char == "\\":
+            escaped = True
+            index += 1
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            index += 1
+            continue
+        if char in {";", "|", ")"} or (
+            char == "&" and command[index : index + 2] != "&>"
+        ):
+            stdout_to_dev_null = False
+            index += 1
+            continue
+        if (
+            char == "&"
+            and index + 1 < len(command)
+            and command[index + 1] == ">"
+        ):
+            target, next_index = _read_redirect_target(
+                command, _skip_redirect_operator(command, index + 2)
+            )
+            if target == "/dev/null":
+                return True
+            index = max(next_index, index + 2)
+            continue
+
+        start = index
+        fd: int | None = None
+        if char.isdigit() and _previous_allows_redirection(command, index):
+            while index < len(command) and command[index].isdigit():
+                index += 1
+            if index < len(command) and command[index] == ">":
+                fd = int(command[start:index])
+            else:
+                index = start + 1
+                continue
+        elif char == ">":
+            fd = 1
+        else:
+            index += 1
+            continue
+
+        if index >= len(command) or command[index] != ">":
+            index += 1
+            continue
+        index += 1
+        index = _skip_redirect_operator(command, index)
+        if index < len(command) and command[index] == "&":
+            target, next_index = _read_shell_word(command, index + 1)
+            if fd == 2 and target == "-":
+                return True
+            if fd == 2 and target == "1" and stdout_to_dev_null:
+                return True
+            index = max(next_index, index + 1)
+            continue
+
+        target, next_index = _read_redirect_target(command, index)
+        if fd == 2 and target == "/dev/null":
+            return True
+        if fd == 1 and target == "/dev/null":
+            stdout_to_dev_null = True
+        index = max(next_index, index + 1)
+    return False
+
+
+def shell_stderr_suppression_policy_error(command: str) -> str | None:
+    if _has_stderr_suppression(command or ""):
+        return STDERR_SUPPRESSION_POLICY_MESSAGE
+    return None
+
+
+def python_stderr_suppression_policy_error(code: str) -> str | None:
+    try:
+        tree = ast.parse(code or "")
+    except SyntaxError:
+        return None
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "shell":
+            continue
+        if not node.args or not isinstance(node.args[0], ast.Constant):
+            continue
+        command = node.args[0].value
+        if isinstance(command, str) and _has_stderr_suppression(command):
+            return STDERR_SUPPRESSION_POLICY_MESSAGE
+    return None
+
+
+async def hook(
+    tool_name: str,
+    args: BaseModel,
+    context: ToolExecutionContext,
+) -> PreHookOutcome:
+    del context
+    command = shell_command(args)
+    if command is not None:
+        err = shell_stderr_suppression_policy_error(command)
+    else:
+        code = python_code(args)
+        err = None if code is None else python_stderr_suppression_policy_error(code)
+    if err is not None:
+        return PreHookOutcome(has_error=True, error_message=err)
+    return PreHookOutcome()
+
+
+def register(registry: ToolHookRegistry | None = None) -> None:
+    reg = registry or default_registry()
+    reg.register(
+        "daytona_codeact",
+        "pre",
+        28,
+        hook,
+        name="daytona_codeact:stderr_suppression_policy",
+    )

@@ -1,8 +1,10 @@
 from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
     AssistantTurnComplete,
+    BackgroundTaskCompleted,
     SystemNotification,
     ThinkingDelta,
+    ToolExecutionCompleted,
     ToolExecutionStarted,
 )
 from providers.types import UsageSnapshot
@@ -44,6 +46,69 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
     )
 
     assert lines == ["[team_planner  ] [b88848c71234425a] [thinking] working"]
+
+
+def test_printer_suppresses_structured_codeact_error_payload() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        ToolExecutionCompleted(
+            tool_name="daytona_codeact",
+            output=(
+                '{"cwd": "/testbed", "status": "error", "files_written": 0, '
+                '"shells_run": 1, "shell_summaries": [], "shell_outputs": [], '
+                '"script_stdout": "", "warnings": [], "error": "failed"}'
+            ),
+            is_error=True,
+            agent_name="developer",
+            work_id="1234567890abcdef1234",
+        )
+    )
+
+    assert lines == [
+        "[developer     ] [1234567890abcdef1234] <- tool_done:  daytona_codeact [ERROR]"
+    ]
+
+
+def test_printer_keeps_plain_codeact_error_payload() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        ToolExecutionCompleted(
+            tool_name="daytona_codeact",
+            output="Execution failed: sandbox unavailable",
+            is_error=True,
+            agent_name="developer",
+            work_id="1234567890abcdef1234",
+        )
+    )
+
+    assert lines == [
+        "[developer     ] [1234567890abcdef1234] "
+        "<- tool_done:  daytona_codeact [ERROR] Execution failed: sandbox unavailable"
+    ]
+
+
+def test_printer_suppresses_background_codeact_error_payload() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        BackgroundTaskCompleted(
+            task_id="bg_1",
+            tool_name="daytona_codeact",
+            output='{"cwd": "/testbed", "status": "error", "shells_run": 1}',
+            is_error=True,
+            agent_name="developer",
+            work_id="1234567890abcdef1234",
+        )
+    )
+
+    assert lines == [
+        "[developer     ] [1234567890abcdef1234] << bg_done:    daytona_codeact [ERROR]"
+    ]
 
 
 def test_printer_keeps_full_background_progress_notification_text() -> None:

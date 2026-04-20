@@ -103,7 +103,8 @@ def test_team_system_prompts_hide_role_forbidden_tools(tmp_path: Path) -> None:
     assert "submit_plan" not in replanner
     assert "submit_task_note" not in replanner
 
-    assert "submit_task_note" in scout
+    assert "submit_file_note" in scout
+    assert "submit_task_note" not in scout
     assert "submit_task_summary" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout
@@ -158,12 +159,12 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
         AgentDefinition(
             name="db_scout",
             description="DB scout",
-            system_prompt="Explore without editing and post `submit_task_note(...)`.",
+            system_prompt="Explore without editing and post `submit_file_note(...)`.",
             role="explorer",
             model="inherit",
             agent_type="subagent",
             toolkits=["code_intelligence", "task_center"],
-            blocked_tools=["task_center_changed_since"],
+            blocked_tools=["task_center_changed_since", "submit_task_note"],
             include_skills=False,
         ),
         AgentDefinition(
@@ -221,7 +222,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
     assert "submit_plan" not in replanner
     assert "submit_task_note" not in replanner
 
-    assert "submit_task_note" in scout
+    assert "submit_file_note" in scout
     assert "submit_task_summary" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout

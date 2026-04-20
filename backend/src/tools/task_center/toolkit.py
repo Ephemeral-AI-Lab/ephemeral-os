@@ -1,7 +1,10 @@
 """Task Center tools — notes + staleness.
 
 Tools exposed in the main loop:
-- read_task_note                — read/search notes with optional keyword filter
+- submit_file_note              — post a file-scoped note (scouts, file-surface notes)
+- submit_task_note              — post a task-scoped note (note_taker, task updates)
+- read_task_details             — task spec + recent notes by task id / scope
+- read_file_note                — search notes by file path and/or keyword
 - task_center_changed_since     — check if task-center state is stale
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
@@ -58,29 +61,31 @@ def _sanitize_scout_gap_paths(content: str, note_paths: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# SubmitTaskNoteTool
+# SubmitFileNoteTool / SubmitTaskNoteTool
 # ---------------------------------------------------------------------------
 
 
-class PostNoteInput(BaseModel):
+def _non_blank_content(value: str) -> str:
+    if not value.strip():
+        raise ValueError("content must contain non-whitespace text")
+    return value
+
+
+class SubmitFileNoteInput(BaseModel):
     content: str = Field(
         ...,
         description=(
-            "REQUIRED. Put the entire Task Center note here as a non-empty, "
-            "non-whitespace string. "
-            "Always send this field in the tool input object, and never put the "
-            "note only in assistant text. The tool input JSON must look like "
-            '{"content":"<concise Task Center note>","paths":["<path>"],'
-            '"tags":["discovery"]}.'
+            "REQUIRED. The note body as a non-empty, non-whitespace string. "
+            "Put the entire note here rather than in assistant text."
         ),
         min_length=1,
     )
-    paths: list[str] | None = Field(
-        default=None,
+    paths: list[str] = Field(
+        ...,
+        min_length=1,
         description=(
-            "File/dir paths this note relates to. Can be existing or planned paths. "
-            "If omitted, defaults to the task's write_scope. Other agents can find "
-            "this note via read_task_note(paths=[...])."
+            "REQUIRED. File/dir paths this note relates to. Can be existing or "
+            "planned paths. Other agents find the note via read_file_note."
         ),
     )
     tags: list[str] | None = Field(
@@ -99,14 +104,56 @@ class PostNoteInput(BaseModel):
     @field_validator("content")
     @classmethod
     def _content_must_not_be_blank(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("content must contain non-whitespace text")
-        return value
+        return _non_blank_content(value)
+
+
+class SubmitTaskNoteInput(BaseModel):
+    content: str = Field(
+        ...,
+        description=(
+            "REQUIRED. The note body as a non-empty, non-whitespace string. "
+            "Put the entire note here rather than in assistant text."
+        ),
+        min_length=1,
+    )
+    task_id: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "REQUIRED. ID of the task this note is about. "
+            "Get IDs from read_task_graph or your deps."
+        ),
+    )
+    paths: list[str] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "REQUIRED. File/dir paths this note relates to. "
+            "Other agents find the note via read_file_note."
+        ),
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        description=(
+            "Classify the note with one or more tags: discovery, implementation, "
+            "bug_fix, blocker, proposal, verification, architecture, dependency, "
+            "warning, refactor."
+        ),
+    )
+    parent_note_id: str | None = Field(
+        default=None,
+        description="ID of a prior note this is a follow-up to (threading).",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def _content_must_not_be_blank(cls, value: str) -> str:
+        return _non_blank_content(value)
 
 
 class TaskNoteOutput(BaseModel):
     note_id: str = Field(..., description="Created Task Center note id.")
-    task_id: str = Field(..., description="Runtime-stamped task id that owns the note.")
+    task_id: str = Field(..., description="Task id attached to the note (empty for file notes).")
     agent_name: str = Field(..., description="Runtime-stamped agent name that posted the note.")
     content: str = Field(..., description="Stored note content.")
     timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
@@ -118,70 +165,106 @@ class TaskNoteOutput(BaseModel):
     )
 
 
-class SubmitTaskNoteTool(BaseTool):
-    name = "submit_task_note"
-    description = (
-        "Post a note to the Task Center for other agents to read. "
-        "The input object must include non-empty, non-whitespace `content`. "
-        'Use JSON like {"content":"<concise Task Center note>","paths":["<path>"],'
-        '"tags":["discovery"]}; put the note in the `content` field rather than '
-        "assistant text. "
-        "Use for: blockers that siblings should know about, partial progress "
-        "updates on long tasks, discoveries about the codebase that downstream "
-        "tasks need, and exploration findings (scouts). Notes are append-only "
-        "and immutable — post a new note to update, don't try to edit."
+async def _post_note(
+    *,
+    content: str,
+    paths: list[str],
+    tags: list[str] | None,
+    parent_note_id: str | None,
+    task_id: str,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    from team.models import Note, NoteTag
+
+    tc = context.metadata.get("task_center")
+    if tc is None:
+        return ToolResult(output="Error: Task Center not available", is_error=True)
+
+    if tags:
+        valid_tags = {t.value for t in NoteTag}
+        invalid = [t for t in tags if t not in valid_tags]
+        if invalid:
+            return ToolResult(
+                output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
+                is_error=True,
+            )
+
+    note_paths = normalize_scope_paths(paths)
+    if str(context.metadata.get("agent_name") or "").strip() == "scout" and note_paths:
+        if "intended path" not in content.lower() and "correct path" not in content.lower():
+            content = _sanitize_scout_gap_paths(content, note_paths)
+
+    note = Note(
+        id=str(uuid.uuid4()),
+        task_id=task_id,
+        agent_name=context.metadata.get("agent_name", ""),
+        content=content,
+        timestamp=time.time(),
+        paths=note_paths,
+        tags=list(tags or []),
+        parent_note_id=parent_note_id,
     )
-    short_description = "Post a Task Center note."
-    input_model = PostNoteInput
+    await tc.notes.post(note)
+    payload = TaskNoteOutput(
+        note_id=note.id,
+        task_id=note.task_id,
+        agent_name=note.agent_name,
+        content=note.content,
+        timestamp=note.timestamp,
+        paths=note.paths,
+        tags=note.tags,
+        parent_note_id=note.parent_note_id,
+    )
+    return ToolResult(output=payload.model_dump_json())
+
+
+class SubmitFileNoteTool(BaseTool):
+    name = "submit_file_note"
+    description = (
+        "Post a file-scoped note to the Task Center. Use for scout discoveries "
+        "and any note about file surfaces that is not tied to a specific task. "
+        "Requires non-empty `content` and at least one file/dir path in `paths`. "
+        "The note is stored without a task_id so it surfaces on file-based "
+        "lookups via read_file_note. Notes are append-only and immutable."
+    )
+    short_description = "Post a file-scoped note."
+    input_model = SubmitFileNoteInput
     output_model = TaskNoteOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, PostNoteInput)
-        from team.models import Note, NoteTag
-
-        tc = context.metadata.get("task_center")
-        if tc is None:
-            return ToolResult(output="Error: Task Center not available", is_error=True)
-
-        # Validate tags
-        if arguments.tags:
-            valid_tags = {t.value for t in NoteTag}
-            invalid = [t for t in arguments.tags if t not in valid_tags]
-            if invalid:
-                return ToolResult(
-                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                    is_error=True,
-                )
-
-        content = arguments.content
-        note_paths = normalize_scope_paths(
-            arguments.paths or list(context.metadata.get("write_scope") or [])
-        )
-        if str(context.metadata.get("agent_name") or "").strip() == "scout" and note_paths:
-            if "intended path" not in content.lower() and "correct path" not in content.lower():
-                content = _sanitize_scout_gap_paths(content, note_paths)
-        note = Note(
-            id=str(uuid.uuid4()),
-            task_id=context.metadata.get("work_item_id", ""),
-            agent_name=context.metadata.get("agent_name", ""),
-            content=content,
-            timestamp=time.time(),
-            paths=note_paths,
-            tags=list(arguments.tags or []),
+        assert isinstance(arguments, SubmitFileNoteInput)
+        return await _post_note(
+            content=arguments.content,
+            paths=arguments.paths,
+            tags=arguments.tags,
             parent_note_id=arguments.parent_note_id,
+            task_id="",
+            context=context,
         )
-        await tc.notes.post(note)
-        payload = TaskNoteOutput(
-            note_id=note.id,
-            task_id=note.task_id,
-            agent_name=note.agent_name,
-            content=note.content,
-            timestamp=note.timestamp,
-            paths=note.paths,
-            tags=note.tags,
-            parent_note_id=note.parent_note_id,
+
+
+class SubmitTaskNoteTool(BaseTool):
+    name = "submit_task_note"
+    description = (
+        "Post a task-scoped note to the Task Center. Use for note_taker lanes "
+        "and any update tied to a specific task. Requires non-empty `content`, "
+        "a `task_id` (get it from read_task_graph or your deps), and at least "
+        "one file/dir path in `paths`. Notes are append-only and immutable."
+    )
+    short_description = "Post a task-scoped note."
+    input_model = SubmitTaskNoteInput
+    output_model = TaskNoteOutput
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        assert isinstance(arguments, SubmitTaskNoteInput)
+        return await _post_note(
+            content=arguments.content,
+            paths=arguments.paths,
+            tags=arguments.tags,
+            parent_note_id=arguments.parent_note_id,
+            task_id=arguments.task_id,
+            context=context,
         )
-        return ToolResult(output=payload.model_dump_json())
 
 
 # ---------------------------------------------------------------------------
@@ -251,26 +334,21 @@ class TaskCenterChangedSinceTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# ReadTaskNoteTool — unified read with scope parameter
+# ReadFileNoteTool — path/keyword search across all notes
 # ---------------------------------------------------------------------------
 
 
-class ReadTaskNoteInput(BaseModel):
-    scope: Literal["own", "sibling"] = Field(
-        default="own",
+class ReadFileNoteInput(BaseModel):
+    file_path: str | None = Field(
+        default=None,
         description=(
-            "'own' reads notes from your own task. Background scout/subagent notes "
-            "created by run_subagent are own-scope notes. 'sibling' reads from true "
-            "sibling team tasks and descendants."
+            "Path to a file or directory in the sandbox. Returns notes whose "
+            "attached paths overlap with this prefix. Omit to search by keyword only."
         ),
     )
-    task_ids: list[str] | None = Field(
+    keyword: str | None = Field(
         default=None,
-        description="Filter by specific task IDs. Overrides scope — returns notes only from these tasks.",
-    )
-    paths: list[str] | None = Field(
-        default=None,
-        description="Filter by path prefix — returns notes whose paths overlap with these prefixes.",
+        description="Keyword filter (case-insensitive substring match). Use '|' for OR matching.",
     )
     tags: list[str] | None = Field(
         default=None,
@@ -280,30 +358,25 @@ class ReadTaskNoteInput(BaseModel):
             "warning, refactor."
         ),
     )
-    keyword: str | None = Field(
-        default=None,
-        description="Keyword filter (case-insensitive substring match). Use '|' for OR matching.",
+    last_n: int | None = Field(
+        default=None, description="Return only the N most recent matching notes."
     )
-    last_n: int | None = Field(default=None, description="Return only the N most recent matching notes.")
 
 
-class ReadTaskNoteTool(BaseTool):
-    name = "read_task_note"
+class ReadFileNoteTool(BaseTool):
+    name = "read_file_note"
     description = (
-        "Read notes from the Task Center. Use scope='own' for your task's notes, "
-        "including notes posted by run_subagent scouts; omit scope or keep scope='own' "
-        "after a background scout wave. Use scope='sibling' only for true sibling "
-        "team tasks. Pass paths=<scope_paths> when your task has non-empty scope. "
-        "Omit paths only for root planner aggregation or when intentionally reading "
-        "all posted scout notes. "
-        "Also use tags= and keyword= for filtering."
+        "Search Task Center notes by file path and/or keyword across all tasks. "
+        "Pass file_path=\"<path>\" to find notes attached to a specific file or "
+        "directory, and/or keyword=\"foo|bar\" for case-insensitive substring "
+        "search. Returns notes from any task that match the filter."
     )
-    short_description = "Read Task Center notes."
-    input_model = ReadTaskNoteInput
+    short_description = "Search notes by file path or keyword."
+    input_model = ReadFileNoteInput
     output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, ReadTaskNoteInput)
+        assert isinstance(arguments, ReadFileNoteInput)
         from team.models import NoteTag
 
         tc = context.metadata.get("task_center")
@@ -319,43 +392,31 @@ class ReadTaskNoteTool(BaseTool):
                     is_error=True,
                 )
 
-        if arguments.task_ids:
-            # Direct task_id filter — bypasses scope logic
-            notes = await tc.notes.read(
-                authors=arguments.task_ids,
-                paths=arguments.paths,
-                tags=arguments.tags,
-                keyword=arguments.keyword,
-                last_n=arguments.last_n,
+        if not arguments.file_path and not arguments.keyword:
+            return ToolResult(
+                output="Error: provide at least one of `file_path` or `keyword`.",
+                is_error=True,
             )
-        elif arguments.scope == "sibling":
-            task_id = str(context.metadata.get("work_item_id") or "")
-            if not task_id:
-                return ToolResult(output="Error: no task context available", is_error=True)
-            notes = await tc.notes.read_sibling_notes(
-                task_id=task_id,
-                paths=arguments.paths,
-                tags=arguments.tags,
-                keyword=arguments.keyword,
-                last_n=arguments.last_n,
-            )
-        else:
-            if arguments.paths:
-                matched = await tc.notes.read(paths=arguments.paths)
-                if not matched:
-                    known = tc.notes.known_paths()
-                    return ToolResult(
-                        output=(
-                            f"No notes found for paths: {arguments.paths}. "
-                            f"Known note paths: {known}"
-                        ),
-                    )
-            notes = await tc.notes.read_notes(
-                paths=arguments.paths,
-                tags=arguments.tags,
-                keyword=arguments.keyword,
-                last_n=arguments.last_n,
-            )
+
+        paths = [arguments.file_path] if arguments.file_path else None
+
+        if paths:
+            matched = await tc.notes.read(paths=paths)
+            if not matched:
+                known = tc.notes.known_paths()
+                return ToolResult(
+                    output=(
+                        f"No notes found for file_path: {arguments.file_path}. "
+                        f"Known note paths: {known}"
+                    ),
+                )
+
+        notes = await tc.notes.read(
+            paths=paths,
+            tags=arguments.tags,
+            keyword=arguments.keyword,
+            last_n=arguments.last_n,
+        )
 
         if not notes:
             return ToolResult(output="No notes found.")
@@ -378,26 +439,57 @@ class ReadTaskNoteTool(BaseTool):
 
 
 class ReadTaskDetailsInput(BaseModel):
-    task_ids: list[str] = Field(
-        ...,
-        min_length=1,
-        description="Task IDs to look up. Get IDs from read_task_graph or from your deps.",
+    task_ids: list[str] | None = Field(
+        default=None,
+        description=(
+            "Task IDs to look up. Get IDs from read_task_graph or from your deps. "
+            "Mutually optional with `scope` — provide one. `task_ids` overrides `scope`."
+        ),
+    )
+    scope: Literal["own", "sibling"] | None = Field(
+        default=None,
+        description=(
+            "When `task_ids` is omitted: 'own' resolves to the caller's current task "
+            "(includes notes posted by run_subagent scouts on your current task). "
+            "'sibling' resolves to the caller's sibling team tasks and descendants."
+        ),
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        description=(
+            "Filter returned notes by tag (OR semantics). Valid tags: discovery, "
+            "implementation, bug_fix, blocker, proposal, verification, architecture, "
+            "dependency, warning, refactor."
+        ),
+    )
+    last_n: int | None = Field(
+        default=None,
+        description=(
+            "Override the default last-3 notes window per task. "
+            "Applies to the recent-notes block only."
+        ),
     )
 
 
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
-        "Get full details for specific tasks by ID: spec, deps, status, "
-        "scope_paths, summary, and recent notes. Use read_task_graph first "
-        "to discover task IDs."
+        "Get full details for specific tasks: spec, deps, status, scope_paths, "
+        "failure reason, the completion summary (when done), and the most recent "
+        "notes on each task (full content, last 3 by default). Pass explicit "
+        "`task_ids=[...]`, or use `scope='own'` for the caller's current task, or "
+        "`scope='sibling'` for true sibling team tasks and descendants. Use "
+        "read_task_graph first to discover IDs; use read_file_note for path- or "
+        "keyword-based lookups across all notes."
     )
-    short_description = "Read task details by ID."
+    short_description = "Read task details + recent notes."
     input_model = ReadTaskDetailsInput
     output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskDetailsInput)
+        from team.models import NoteTag
+
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="Error: Task Center not available", is_error=True)
@@ -406,8 +498,45 @@ class ReadTaskDetailsTool(BaseTool):
         if not isinstance(graph, dict):
             return ToolResult(output="Error: task graph not available", is_error=True)
 
+        if arguments.tags:
+            valid_tags = {t.value for t in NoteTag}
+            invalid = [t for t in arguments.tags if t not in valid_tags]
+            if invalid:
+                return ToolResult(
+                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
+                    is_error=True,
+                )
+
+        # Resolve target task IDs.
+        target_ids: list[str] = []
+        if arguments.task_ids:
+            target_ids = list(arguments.task_ids)
+        elif arguments.scope is not None:
+            self_id = str(context.metadata.get("work_item_id") or "")
+            if not self_id:
+                return ToolResult(output="Error: no task context available", is_error=True)
+            if arguments.scope == "own":
+                target_ids = [self_id]
+            else:  # "sibling"
+                own_task = graph.get(self_id)
+                parent_id = getattr(own_task, "parent_id", None) if own_task else None
+                sibling_ids: list[str] = []
+                if hasattr(tc.notes, "_sibling_subtree_ids"):
+                    sibling_ids = await tc.notes._sibling_subtree_ids(parent_id)
+                target_ids = [sid for sid in sibling_ids if sid in graph and sid != self_id]
+        else:
+            return ToolResult(
+                output="Error: provide either `task_ids` or `scope` ('own' | 'sibling').",
+                is_error=True,
+            )
+
+        if not target_ids:
+            return ToolResult(output="No tasks resolved for the requested scope.")
+
+        window = arguments.last_n if arguments.last_n and arguments.last_n > 0 else 3
+
         sections: list[str] = []
-        for tid in arguments.task_ids:
+        for tid in target_ids:
             task = graph.get(tid)
             if task is None:
                 sections.append(f"## {tid}\nNot found in task graph.")
@@ -416,34 +545,49 @@ class ReadTaskDetailsTool(BaseTool):
             header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
             lines = [header]
 
-            # Title
             if task.description:
                 lines.append(f"**Description:** {task.description}")
-
-            # Spec
             lines.append(f"**Objective:** {task.objective}")
-
-            # Deps
             if task.deps:
                 lines.append(f"**Deps:** {', '.join(task.deps)}")
-
-            # Scope
             if task.scope_paths:
                 lines.append(f"**Scope:** {', '.join(task.scope_paths)}")
-
-            # Failure reason
             if task.failure_reason:
                 lines.append(f"**Failure:** {task.failure_reason}")
 
-            # Notes for this task
+            # Notes for this task — full content, last `window`, plus the latest
+            # completion summary if present (posted as an `implementation` note
+            # by the runtime when a task reports success).
             try:
-                notes = await tc.notes.read_notes(last_n=5)
-                task_notes = [n for n in notes if n.task_id == tid]
+                task_notes = await tc.notes.read(
+                    authors=[tid],
+                    tags=arguments.tags,
+                )
                 if task_notes:
-                    lines.append("**Notes:**")
-                    for n in task_notes[-3:]:
-                        tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
-                        lines.append(f"  - {n.agent_name}{tag_str}: {n.content[:200]}")
+                    summary_note = next(
+                        (
+                            n
+                            for n in reversed(task_notes)
+                            if "implementation" in (n.tags or [])
+                        ),
+                        None,
+                    )
+                    if summary_note is not None:
+                        lines.append("**Summary:**")
+                        lines.append(summary_note.content)
+
+                    recent = task_notes[-window:]
+                    if recent:
+                        lines.append("**Recent notes:**")
+                        for n in recent:
+                            tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
+                            path_str = (
+                                f" [paths: {', '.join(n.paths)}]" if n.paths else ""
+                            )
+                            lines.append(
+                                f"### {n.agent_name}{tag_str}{path_str}"
+                            )
+                            lines.append(n.content)
             except Exception:
                 pass  # notes unavailable
 
@@ -556,8 +700,9 @@ class ReadTaskGraphTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 _ALL_TOOLS = [
+    SubmitFileNoteTool(),
     SubmitTaskNoteTool(),
-    ReadTaskNoteTool(),
+    ReadFileNoteTool(),
     ReadTaskDetailsTool(),
     ReadTaskGraphTool(),
     TaskCenterChangedSinceTool(),

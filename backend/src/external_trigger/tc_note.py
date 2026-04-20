@@ -9,20 +9,22 @@ from agents.registry import get_definition
 from external_trigger.runner import run
 from external_trigger.snapshot_history import format_snapshot_history
 from prompts.user_prompt_templates import load_note_taker_prompt
-from tools.task_center.toolkit import SubmitTaskNoteTool, PostNoteInput
+from tools.task_center.toolkit import SubmitTaskNoteTool, SubmitTaskNoteInput
 
 
 TC_NOTE_EDIT_PROMPT = load_note_taker_prompt("edit")
 TC_NOTE_TURN_PROMPT = load_note_taker_prompt("turn")
-TC_NOTE_FINAL_TOOL_CALL_REMINDER = """\
+TC_NOTE_FINAL_TOOL_CALL_REMINDER_TEMPLATE = """\
 ## Final note-taker tool-call instruction
 
 Your assistant message must contain no text block.
 Make exactly one tool call named `submit_task_note`.
-The tool input JSON must include `content` as a non-empty string.
+The tool input JSON must include `content` as a non-empty string,
+`task_id` set to `{task_id}` (the task you are reporting on), and
+`paths` as one or more file/dir paths this note relates to.
 
 Required shape:
-`{"content":"<concise Task Center note>","paths":["<path>"],"tags":["discovery"]}`
+`{{"content":"<concise Task Center note>","task_id":"{task_id}","paths":["<path>"],"tags":["discovery"]}}`
 
 There is no valid no-argument form of this tool.
 
@@ -30,6 +32,11 @@ Incorrect behavior: writing the note as visible assistant text and then sending
 a tool input that omits `content`. If you drafted note text while reading the
 transcript, put that text inside the JSON `content` field.
 """
+
+
+TC_NOTE_FINAL_TOOL_CALL_REMINDER = TC_NOTE_FINAL_TOOL_CALL_REMINDER_TEMPLATE.format(
+    task_id="<task id>"
+)
 
 _DEFAULT_TC_NOTE_SYSTEM_PROMPT = (
     "You are a progress reporter. Read the frozen worker transcript as "
@@ -39,12 +46,19 @@ _DEFAULT_TC_NOTE_SYSTEM_PROMPT = (
 )
 
 
-def build_tc_note_user_prompt(prompt: str, messages: list[dict[str, Any]]) -> str:
+def build_tc_note_user_prompt(
+    prompt: str,
+    messages: list[dict[str, Any]],
+    task_id: str | None = None,
+) -> str:
     """Append structured snapshot history to a tc_note trigger prompt."""
+    reminder = TC_NOTE_FINAL_TOOL_CALL_REMINDER_TEMPLATE.format(
+        task_id=task_id or "<task id>",
+    )
     return (
         f"{prompt.strip()}\n\n"
         f"{format_snapshot_history(messages)}\n\n"
-        f"{TC_NOTE_FINAL_TOOL_CALL_REMINDER.strip()}"
+        f"{reminder.strip()}"
     ).strip()
 
 
@@ -127,7 +141,7 @@ async def run_tc_note(
 ) -> NoteSummary:
     """Spawn an ephemeral agent to generate a task-center progress note."""
     system_prompt, default_model, note_taker_name = _resolve_note_taker_definition(team_run_id)
-    user_prompt = build_tc_note_user_prompt(prompt, messages)
+    user_prompt = build_tc_note_user_prompt(prompt, messages, task_id=task_id)
     result = await run(
         agent_name=f"{note_taker_name}:{task_id}",
         messages=[],
@@ -144,8 +158,8 @@ async def run_tc_note(
     )
 
     validated = result.validated
-    if not isinstance(validated, PostNoteInput):
-        raise RuntimeError(f"run_tc_note ({task_id}): expected PostNoteInput, got {type(validated).__name__}")
+    if not isinstance(validated, SubmitTaskNoteInput):
+        raise RuntimeError(f"run_tc_note ({task_id}): expected SubmitTaskNoteInput, got {type(validated).__name__}")
 
     return NoteSummary(
         task_id=task_id,

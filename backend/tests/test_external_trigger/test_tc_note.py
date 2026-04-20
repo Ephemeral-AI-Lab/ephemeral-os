@@ -16,7 +16,7 @@ from external_trigger.tc_note import (
 )
 from external_trigger.snapshot_history import format_snapshot_history
 from team.builtins import register_all
-from tools.task_center.toolkit import PostNoteInput
+from tools.task_center.toolkit import SubmitTaskNoteInput
 
 
 def test_tc_note_prompts_reference_submit_task_note() -> None:
@@ -225,8 +225,8 @@ async def test_run_tc_note_sends_structured_snapshot_as_prompt(monkeypatch) -> N
         captured.update(kwargs)
         return RunResult(
             tool_name="submit_task_note",
-            tool_input={"content": "Noted", "paths": ["parser.py"]},
-            validated=PostNoteInput(content="Noted", paths=["parser.py"]),
+            tool_input={"content": "Noted", "task_id": "t1", "paths": ["parser.py"]},
+            validated=SubmitTaskNoteInput(content="Noted", task_id="t1", paths=["parser.py"]),
             turns_used=1,
         )
 
