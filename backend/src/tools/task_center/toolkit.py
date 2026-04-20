@@ -456,27 +456,43 @@ class ReadTaskDetailsTool(BaseTool):
 
 
 class ReadTaskGraphInput(BaseModel):
-    scope: Literal["parent", "global"] = Field(
-        default="parent",
+    global_scope: bool = Field(
+        default=False,
         description=(
-            "'parent' shows tasks under the same parent (your peers). "
-            "'global' shows the full task tree."
+            "If true, return the full task tree. If false (default), return peer "
+            "tasks under the same parent (your siblings) with their children "
+            "nested recursively."
         ),
     )
-    include_status: bool = Field(default=True, description="Include task status in output.")
-    include_deps: bool = Field(default=True, description="Include dependency edges in output.")
 
 
 class ReadTaskGraphTool(BaseTool):
     name = "read_task_graph"
     description = (
-        "View the task DAG structure: IDs, agents, status, and dependency edges. "
-        "Use scope='parent' to see your peer tasks, scope='global' for the full tree. "
-        "Follow up with read_task_details(task_ids=[...]) for full info on specific tasks."
+        "View the task DAG as a JSON tree: nodes include id, agent, status, "
+        "description, deps, scope_paths, failure_reason, is_you, and nested "
+        "children. Default returns peers under your parent (with their subtrees). "
+        "Set global_scope=true for the full tree. Tasks whose parent is missing "
+        "from the returned subset appear under 'detached'. "
+        "Follow up with read_task_details(task_ids=[...]) for full info."
     )
-    short_description = "Read the task graph."
+    short_description = "Read the task graph as JSON."
     input_model = ReadTaskGraphInput
     output_model = TextToolOutput
+
+    @staticmethod
+    def _node(t: object, self_id: str, children: list[dict]) -> dict:
+        return {
+            "id": t.id,
+            "agent": t.agent_name,
+            "status": t.status.value,
+            "description": t.description or "",
+            "deps": list(t.deps),
+            "scope_paths": list(t.scope_paths),
+            "failure_reason": t.failure_reason,
+            "is_you": t.id == self_id,
+            "children": children,
+        }
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskGraphInput)
@@ -488,37 +504,49 @@ class ReadTaskGraphTool(BaseTool):
         if not isinstance(graph, dict):
             return ToolResult(output="Error: task graph not available", is_error=True)
 
-        task_id = str(context.metadata.get("work_item_id") or "")
+        self_id = str(context.metadata.get("work_item_id") or "")
 
-        if arguments.scope == "parent":
-            own_task = graph.get(task_id)
+        # Build child adjacency over the full graph.
+        children_by_parent: dict[str | None, list[object]] = {}
+        for t in graph.values():
+            children_by_parent.setdefault(getattr(t, "parent_id", None), []).append(t)
+
+        def build_subtree(task: object) -> dict:
+            kids = [build_subtree(c) for c in children_by_parent.get(task.id, [])]
+            return self._node(task, self_id, kids)
+
+        if arguments.global_scope:
+            included_ids = set(graph.keys())
+            roots = children_by_parent.get(None, [])
+            tasks_json = [build_subtree(r) for r in roots]
+            detached = [
+                build_subtree(t)
+                for t in graph.values()
+                if getattr(t, "parent_id", None) is not None
+                and t.parent_id not in included_ids
+            ]
+            payload = {"tasks": tasks_json, "detached": detached}
+        else:
+            own_task = graph.get(self_id)
             if own_task is None:
                 return ToolResult(output="Error: own task not found in graph", is_error=True)
             parent_id = own_task.parent_id
-            tasks = [
-                t for t in graph.values()
-                if getattr(t, "parent_id", None) == parent_id
-            ]
-        else:
-            tasks = list(graph.values())
-
-        if not tasks:
-            return ToolResult(output="No tasks found.")
-
-        lines: list[str] = []
-        for t in tasks:
-            marker = " **(you)**" if t.id == task_id else ""
-            title_str = f" \"{t.description}\"" if t.description else ""
-            status_str = f" [{t.status.value}]" if arguments.include_status else ""
-            dep_str = f" deps=[{', '.join(t.deps)}]" if arguments.include_deps and t.deps else ""
-            scope_str = f" scope=[{', '.join(t.scope_paths[:2])}]" if t.scope_paths else ""
-            failure = f" FAIL: {t.failure_reason[:80]}" if t.failure_reason else ""
-            lines.append(
-                f"- **{t.id}** {t.agent_name}{status_str}{title_str}{marker}"
-                f"{dep_str}{scope_str}{failure}"
+            parent_task = graph.get(parent_id) if parent_id else None
+            parent_json = (
+                {
+                    "id": parent_task.id,
+                    "agent": parent_task.agent_name,
+                    "status": parent_task.status.value,
+                    "description": parent_task.description or "",
+                }
+                if parent_task is not None
+                else None
             )
+            peers = children_by_parent.get(parent_id, [])
+            tasks_json = [build_subtree(p) for p in peers]
+            payload = {"parent": parent_json, "tasks": tasks_json}
 
-        return ToolResult(output="\n".join(lines))
+        return ToolResult(output=json.dumps(payload, indent=2))
 
 
 # ---------------------------------------------------------------------------

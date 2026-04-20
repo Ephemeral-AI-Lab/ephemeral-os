@@ -188,6 +188,11 @@ class Classifier:
     * ``direct_merge(rel, upper_path, upper_st)`` — copy bytes from the
       upper into the live workspace via an atomic ``tempfile + rename``.
       Returns the number of bytes written.
+    * ``prune_opaque_narrow(rel, upper_dir_path) -> int`` — narrow-prune
+      a gitignored opaque directory: delete live children under *rel*
+      that are not present in the upperdir copy. Returns the count of
+      entries pruned. Defaults to a no-op when omitted (for tests that
+      exercise non-opaque paths).
     """
 
     def __init__(
@@ -197,11 +202,13 @@ class Classifier:
         git_show_base: Callable[[str], bytes | None],
         check_ignore: Callable[[list[str]], set[str]],
         direct_merge: Callable[[str, str, os.stat_result], int],
+        prune_opaque_narrow: Callable[[str, str], int] | None = None,
     ) -> None:
         self._read_upper_bytes = read_upper_bytes
         self._git_show_base = git_show_base
         self._check_ignore = check_ignore
         self._direct_merge = direct_merge
+        self._prune_opaque_narrow = prune_opaque_narrow or (lambda _rel, _up: 0)
 
     def classify(
         self, entries: Iterable[UpperEntry]
@@ -240,8 +247,23 @@ class Classifier:
         # --- Pass 3: one batched git check-ignore call for the surviving
         # candidate paths. Whiteouts, opaque-dirs, symlinks, and regular
         # files all need route classification.
-        candidates = [e.rel for e in whiteouts + regular + opaque_dirs + symlinks]
-        ignored = self._check_ignore(candidates) if candidates else set()
+        #
+        # Dir candidates (opaque-dirs, and dir-ish symlinks in principle)
+        # are wired with a trailing "/" so dir-only .gitignore patterns
+        # like ".pytest_cache/" match. Without the slash, git falls back
+        # to lstat on the live workspace, which lies on the lower side
+        # and may not contain the entry (sandbox-only creation); that
+        # misses the match and wrongly routes us to the tracked route.
+        # The returned set is normalized back to bare rels.
+        candidate_entries = whiteouts + regular + opaque_dirs + symlinks
+        candidates_wire = [
+            (e.rel + "/") if stat.S_ISDIR(e.st.st_mode) else e.rel
+            for e in candidate_entries
+        ]
+        ignored_wire = (
+            self._check_ignore(candidates_wire) if candidates_wire else set()
+        )
+        ignored = {p.rstrip("/") for p in ignored_wire}
 
         # --- Pass 4: kind-gate rejections on the gitinclude route.
         bad_symlinks = [e.rel for e in symlinks if e.rel not in ignored]
@@ -262,18 +284,27 @@ class Classifier:
                 reason=REJECT_GITIGNORE_WHITEOUT,
                 paths=tuple(sorted(bad_gitignore_whiteout)),
             )
-        bad_gitignore_opaque = [e.rel for e in opaque_dirs if e.rel in ignored]
-        if bad_gitignore_opaque:
-            return PolicyRejectOutcome(
-                reason=REJECT_GITIGNORE_OPAQUE_DIR,
-                paths=tuple(sorted(bad_gitignore_opaque)),
-            )
+        # Gitignored opaque dirs used to reject (REJECT_GITIGNORE_OPAQUE_DIR).
+        # They now narrow-prune: delete live children not present in upper,
+        # then let children direct-merge normally. See Pass 5 below.
 
         # --- Pass 5: gitinclude-route emits + gitignore direct-merges.
         gitinclude: list[GitincludeChange] = []
         gitignore_paths: list[str] = []
         direct_merged_bytes = 0
         whiteouts_gitinclude = 0
+
+        # Narrow-prune gitignored opaque dirs before children direct-merge.
+        # Contract: remove lower children whose name is not also present
+        # in the upper opaque-dir copy. Files the sandbox wrote land via
+        # the regular-file direct-merge loop below, so they are not
+        # touched here. Bounds blast radius for spuriously-opaqued dirs
+        # (fuse-overlayfs housekeeping, copy-up races).
+        for entry in opaque_dirs:
+            if entry.rel not in ignored:
+                continue  # already rejected in Pass 4
+            self._prune_opaque_narrow(entry.rel, entry.upper_path)
+            gitignore_paths.append(entry.rel)
 
         # Tracked whiteouts (deletions against the SNAP base).
         for entry in whiteouts:
@@ -599,6 +630,72 @@ def direct_merge_factory(
             return 0
 
     return _merge
+
+
+def narrow_prune_opaque_factory(
+    *, live_root: str
+) -> Callable[[str, str], int]:
+    """Return a callable that narrow-prunes a gitignored opaque directory.
+
+    For each child name under ``live_root/<rel>`` that is **not** also a
+    child of ``<upper_dir>`` (the opaque dir's upperdir copy), remove
+    the live child — file/symlink via :func:`os.unlink` (never follows
+    symlinks), directory via :func:`shutil.rmtree`. Children whose name
+    is also present in upper are left in place; the regular-file direct
+    merge pass later overwrites them via atomic rename.
+
+    This is the "narrow" opaque semantics (plan §3.4 addendum). Raw
+    overlay semantics would ``rmtree`` the whole live dir; narrow bounds
+    damage from spurious opaque markers to only the files the sandbox
+    did not explicitly write.
+
+    Any per-child error raises :class:`_ClassifierIOError` so the commit
+    fails cleanly instead of half-pruning the live tree.
+    """
+
+    def _prune(rel: str, upper_dir: str) -> int:
+        live_path = os.path.join(live_root, rel)
+        # If the live dir is absent (or is a file, pathologically), there
+        # is nothing to prune. The caller's direct-merge pass will
+        # mkdir-p parents for any upper children as needed.
+        try:
+            live_st = os.lstat(live_path)
+        except FileNotFoundError:
+            return 0
+        if not stat.S_ISDIR(live_st.st_mode) or stat.S_ISLNK(live_st.st_mode):
+            return 0
+        try:
+            upper_children = set(os.listdir(upper_dir))
+        except FileNotFoundError:
+            upper_children = set()
+        try:
+            live_children = os.listdir(live_path)
+        except FileNotFoundError:
+            return 0
+        pruned = 0
+        for name in live_children:
+            if name in upper_children:
+                continue
+            child = os.path.join(live_path, name)
+            try:
+                child_st = os.lstat(child)
+            except FileNotFoundError:
+                continue
+            try:
+                if stat.S_ISLNK(child_st.st_mode) or not stat.S_ISDIR(
+                    child_st.st_mode
+                ):
+                    os.unlink(child)
+                else:
+                    shutil.rmtree(child)
+            except OSError as exc:
+                raise _ClassifierIOError(
+                    f"narrow-prune failed for {child!r}: {exc}"
+                ) from exc
+            pruned += 1
+        return pruned
+
+    return _prune
 
 
 # ---------------------------------------------------------------------------
@@ -955,6 +1052,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - exercised 
         git_show_base=git_show_base_factory(repo_root=_NS_LOWER, snap=snap),
         check_ignore=check_ignore_factory(repo_root=_NS_LOWER),
         direct_merge=direct_merge_factory(live_root=_NS_LOWER),
+        prune_opaque_narrow=narrow_prune_opaque_factory(live_root=_NS_LOWER),
     )
     _record_timing(run_timings, "build_classifier", classifier_started)
 
@@ -1007,6 +1105,7 @@ __all__ = [
     "check_ignore_factory",
     "direct_merge_factory",
     "git_show_base_factory",
+    "narrow_prune_opaque_factory",
     "is_opaque_dir",
     "is_symlink",
     "is_whiteout",

@@ -77,14 +77,14 @@ _SWEEVO_TEAM_NAME = "sweevo_benchmark"
 
 
 def _prompt_report_messages_path(team_run_id: str) -> Path:
-    path = _PROJECT_ROOT / ".ephemeralos" / "prompt-reports" / f"team-run-{team_run_id}-messages.jsonl"
+    path = _benchmark_team_run_dir() / team_run_id / f"{team_run_id}.messages.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=True)
     return path
 
 
 def _agent_run_log_dir(team_run_id: str) -> Path:
-    path = _benchmark_team_run_dir() / team_run_id / "agent_run_logs"
+    path = _benchmark_team_run_dir() / team_run_id / "agent-runs"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -460,6 +460,7 @@ async def run_sweevo_team(
     instance: SWEEvoInstance,
     sandbox_id: str,
     *,
+    team_run_id: str | None = None,
     repo_dir: str = _REPO_DIR,
     printer: MultiAgentEventPrinter | None = None,
     num_executors: int = _DEFAULT_NUM_EXECUTORS,
@@ -481,6 +482,7 @@ async def run_sweevo_team(
     _emit_team_runtime_banner(printer, budgets=budgets)
 
     tr = TeamRun(
+        team_run_id=team_run_id,
         session_id=getattr(session_config, "session_id", "sweevo"),
         user_request=root_prompt, budgets=budgets,
         sandbox_id=sandbox_id, repo_root=repo_dir, event_store=event_store,

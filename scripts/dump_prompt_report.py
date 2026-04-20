@@ -2,7 +2,7 @@
 """Convenience script for dumping team user-prompt reports.
 
 Defaults to the built-in Sweevo team and writes reports under
-``.ephemeralos/prompt-reports``.
+``.ephemeralos/team-runs``.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from prompt_helpers import (
 
 
 def _default_output_dir() -> Path:
-    return _ROOT / ".ephemeralos" / "prompt-reports"
+    return _ROOT / ".ephemeralos" / "team-runs"
 
 
 def main() -> int:
@@ -82,7 +82,7 @@ def main() -> int:
     parser.add_argument(
         "--output",
         default="",
-        help="Output markdown path. Defaults under .ephemeralos/prompt-reports.",
+        help="Output markdown path. Defaults under .ephemeralos/team-runs.",
     )
     args = parser.parse_args()
 

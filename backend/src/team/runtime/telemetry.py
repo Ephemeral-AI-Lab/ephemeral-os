@@ -234,10 +234,11 @@ def write_agent_run_log(
         work_item_id = str(
             ctx.tool_metadata.get("work_item_id") or state.work_item_id or "work-item"
         )
+        time_prefix = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M")
         path = log_dir / (
-            f"{_safe_agent_log_part(work_item_id)}_"
+            f"{time_prefix}_"
             f"{_safe_agent_log_part(agent_name, 'agent')}_"
-            f"{_safe_agent_log_part(agent_run_id)}.json"
+            f"{_safe_agent_log_part(work_item_id)}.json"
         )
         prompt_usage = {
             "prompt_tokens": prompt_tokens,

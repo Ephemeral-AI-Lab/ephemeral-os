@@ -38,6 +38,7 @@ from code_intelligence.routing.overlay_run import (
     is_opaque_dir,
     is_symlink,
     is_whiteout,
+    narrow_prune_opaque_factory,
     reject_exit_code,
     walk_upperdir,
     write_diff_ndjson,
@@ -130,8 +131,14 @@ class _Classifier:
     ) -> None:
         self.upper_bytes = upper_bytes
         self.base_bytes = base_bytes
-        self.ignored = ignored
+        # ``ignored`` is matched against the *wire* rels the classifier
+        # sends to check_ignore. Dir entries arrive with a trailing "/".
+        # Tests that want to ignore a bare dir rel can pass either
+        # ".venv" or ".venv/"; the harness tolerates both.
+        self.ignored = {r.rstrip("/") for r in ignored}
         self.merged: list[tuple[str, int]] = []
+        self.check_ignore_calls: list[list[str]] = []
+        self.pruned: list[tuple[str, str]] = []
 
     def read_upper(self, rel: str) -> bytes:
         return self.upper_bytes[rel]
@@ -140,7 +147,8 @@ class _Classifier:
         return self.base_bytes.get(rel)
 
     def check_ignore(self, rels: list[str]) -> set[str]:
-        return {r for r in rels if r in self.ignored}
+        self.check_ignore_calls.append(list(rels))
+        return {r for r in rels if r.rstrip("/") in self.ignored}
 
     def direct_merge(self, rel: str, upper_path: str, upper_st: os.stat_result) -> int:
         del upper_path, upper_st
@@ -148,12 +156,17 @@ class _Classifier:
         self.merged.append((rel, size))
         return size
 
+    def prune_opaque_narrow(self, rel: str, upper_dir: str) -> int:
+        self.pruned.append((rel, upper_dir))
+        return 0
+
     def classifier(self) -> Classifier:
         return Classifier(
             read_upper_bytes=self.read_upper,
             git_show_base=self.git_show_base,
             check_ignore=self.check_ignore,
             direct_merge=self.direct_merge,
+            prune_opaque_narrow=self.prune_opaque_narrow,
         )
 
 
@@ -337,13 +350,41 @@ def test_classifier_rejects_gitignore_whiteout() -> None:
     assert result.reason == REJECT_GITIGNORE_WHITEOUT
 
 
-def test_classifier_rejects_gitignore_opaque_dir() -> None:
-    env = _Classifier(upper_bytes={}, base_bytes={}, ignored={".venv"})
+def test_classifier_accepts_gitignore_opaque_dir_via_narrow_prune() -> None:
+    # Opaque dir on a gitignored path now narrow-prunes instead of rejecting.
+    # Classifier should invoke prune_opaque_narrow(rel, upper_path) once
+    # and include the rel in the gitignore_paths tally.
+    env = _Classifier(upper_bytes={}, base_bytes={}, ignored={".pytest_cache"})
     result = env.classifier().classify(
-        [_opaque_dir_entry(".venv", ns=b"trusted.overlay.opaque")]
+        [_opaque_dir_entry(".pytest_cache", ns=b"user.overlay.opaque")]
     )
-    assert isinstance(result, PolicyRejectOutcome)
-    assert result.reason == REJECT_GITIGNORE_OPAQUE_DIR
+    assert isinstance(result, ClassifyOutcome)
+    assert ".pytest_cache" in result.gitignore_paths
+    assert env.pruned == [(".pytest_cache", "/synthetic/upper/.pytest_cache")]
+
+
+def test_classifier_sends_trailing_slash_for_dir_rels_to_check_ignore() -> None:
+    # Dir-only .gitignore patterns (".pytest_cache/") only match when the
+    # path passed to `git check-ignore` has a trailing slash or the path
+    # exists as a directory on the live side. Sandbox-created dirs often
+    # don't exist on lower at check time, so the classifier must pass
+    # the slash explicitly. Verifies the wire format.
+    env = _Classifier(
+        upper_bytes={"src/app.py": b"x\n"},
+        base_bytes={},
+        ignored={".pytest_cache"},
+    )
+    env.classifier().classify(
+        [
+            _regular_entry("src/app.py"),
+            _opaque_dir_entry(".pytest_cache"),
+        ]
+    )
+    assert len(env.check_ignore_calls) == 1
+    wire = env.check_ignore_calls[0]
+    assert "src/app.py" in wire  # files stay bare
+    assert ".pytest_cache/" in wire  # dirs get trailing "/"
+    assert ".pytest_cache" not in wire
 
 
 # ---------------------------------------------------------------------------
@@ -605,6 +646,106 @@ def test_check_ignore_factory_empty_input_returns_empty_set(tmp_path: Path) -> N
     repo.mkdir()
     _init_repo(repo)
     assert check_ignore_factory(repo_root=str(repo))([]) == set()
+
+
+def test_check_ignore_factory_matches_dir_only_pattern_with_trailing_slash(
+    tmp_path: Path,
+) -> None:
+    # Regression for opaque-dir routing bug: a dir-only gitignore pattern
+    # like ".pytest_cache/" does NOT match bare ".pytest_cache" when the
+    # path is absent on the live side (sandbox created it in upper only).
+    # Passing the rel with a trailing slash matches correctly. The
+    # classifier relies on this behavior.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / ".gitignore").write_text(".pytest_cache/\n", encoding="utf-8")
+
+    check = check_ignore_factory(repo_root=str(repo))
+    assert ".pytest_cache" not in check([".pytest_cache"])  # bare, absent
+    assert ".pytest_cache/" in check([".pytest_cache/"])  # with slash
+
+
+# ---------------------------------------------------------------------------
+# narrow_prune_opaque_factory — on-disk behavior.
+# ---------------------------------------------------------------------------
+
+
+def test_narrow_prune_opaque_deletes_only_lower_only_children(
+    tmp_path: Path,
+) -> None:
+    live_root = tmp_path / "live"
+    upper_root = tmp_path / "upper"
+    live_dir = live_root / ".pytest_cache"
+    upper_dir = upper_root / ".pytest_cache"
+    live_dir.mkdir(parents=True)
+    upper_dir.mkdir(parents=True)
+
+    # Both sides have "shared.txt"; only live has "stale.txt"; only
+    # upper has "new.txt" (no-op for prune — merge will write it later).
+    (live_dir / "shared.txt").write_text("old", encoding="utf-8")
+    (live_dir / "stale.txt").write_text("stale", encoding="utf-8")
+    (upper_dir / "shared.txt").write_text("new", encoding="utf-8")
+    (upper_dir / "new.txt").write_text("new", encoding="utf-8")
+
+    prune = narrow_prune_opaque_factory(live_root=str(live_root))
+    count = prune(".pytest_cache", str(upper_dir))
+
+    assert count == 1
+    assert (live_dir / "shared.txt").exists()  # preserved for rename-over
+    assert not (live_dir / "stale.txt").exists()  # pruned
+
+
+def test_narrow_prune_opaque_recurses_into_lower_only_subdirs(
+    tmp_path: Path,
+) -> None:
+    live_root = tmp_path / "live"
+    upper_root = tmp_path / "upper"
+    live_dir = live_root / ".cache"
+    upper_dir = upper_root / ".cache"
+    (live_dir / "__pycache__").mkdir(parents=True)
+    (live_dir / "__pycache__" / "a.pyc").write_bytes(b"pyc")
+    upper_dir.mkdir(parents=True)
+
+    prune = narrow_prune_opaque_factory(live_root=str(live_root))
+    count = prune(".cache", str(upper_dir))
+
+    assert count == 1
+    assert not (live_dir / "__pycache__").exists()
+
+
+def test_narrow_prune_opaque_unlinks_symlink_children_without_following(
+    tmp_path: Path,
+) -> None:
+    # Critical safety property: if the live dir contains a symlink to an
+    # *outside* directory, prune must unlink the symlink itself and not
+    # descend into the target.
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("keep", encoding="utf-8")
+
+    live_root = tmp_path / "live"
+    upper_root = tmp_path / "upper"
+    live_dir = live_root / ".cache"
+    upper_dir = upper_root / ".cache"
+    live_dir.mkdir(parents=True)
+    upper_dir.mkdir(parents=True)
+    os.symlink(str(outside), str(live_dir / "linked"))
+
+    prune = narrow_prune_opaque_factory(live_root=str(live_root))
+    count = prune(".cache", str(upper_dir))
+
+    assert count == 1
+    assert not (live_dir / "linked").exists()
+    assert (outside / "keep.txt").exists()  # NOT followed into
+
+
+def test_narrow_prune_opaque_returns_zero_when_live_dir_absent(
+    tmp_path: Path,
+) -> None:
+    prune = narrow_prune_opaque_factory(live_root=str(tmp_path))
+    # Nothing exists at this rel — should be a no-op, not an error.
+    assert prune("missing/dir", str(tmp_path / "upper_missing")) == 0
 
 
 # ---------------------------------------------------------------------------

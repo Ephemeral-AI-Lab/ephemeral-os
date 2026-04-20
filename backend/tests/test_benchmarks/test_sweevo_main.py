@@ -9,29 +9,35 @@ from message.stream_events import (
 from providers.types import UsageSnapshot
 import logging
 import sys
+from pathlib import Path
 
 from benchmarks.sweevo import __main__ as sweevo_main
 import asyncio
 
 
-def test_build_run_log_path_uses_instance_id(tmp_path):
-    args = sweevo_main._build_parser().parse_args(
-        [
-            "--instance-id",
-            "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
-        ]
-    )
+def test_build_run_log_path_uses_time_and_team_run_id(tmp_path, monkeypatch):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    log_path = sweevo_main._build_run_log_path("2026-04-20-10-30_sweevo_benchmark", "2026-04-20-10-30")
+    assert log_path == tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark" / "2026-04-20-10-30_run.log"
 
-    log_path = sweevo_main._build_run_log_path(args, timestamp="20260409T110608Z")
 
-    assert log_path == tmp_path / "20260409T110608Z_pydantic__pydantic_v2.7.0_v2.7.1.log"
+def test_build_structured_log_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    path = sweevo_main._build_structured_log_path("2026-04-20-10-30_sweevo_benchmark", "2026-04-20-10-30")
+    assert path == tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark" / "2026-04-20-10-30_run.events.jsonl"
+
+
+def test_build_code_intelligence_log_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    path = sweevo_main._build_code_intelligence_log_path("2026-04-20-10-30_sweevo_benchmark", "2026-04-20-10-30")
+    assert path == tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark" / "2026-04-20-10-30_run.code-intelligence.log"
 
 
 def test_main_writes_plaintext_run_log(monkeypatch, tmp_path):
-    async def _fake_cmd_run(args):
-        assert args.log_dir == str(tmp_path)
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
+
+    async def _fake_cmd_run(args, *, team_run_id):
         print("=" * 72, flush=True)
         print("  SWE-EVO run  instance=pydantic__pydantic_v2.7.0_v2.7.1", flush=True)
         print("\033[32m[pass]\033[0m recorded", flush=True)
@@ -45,19 +51,18 @@ def test_main_writes_plaintext_run_log(monkeypatch, tmp_path):
         [
             "--instance-id",
             "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
 
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark"
     run_logs = sorted(
-        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+        path for path in benchmark_dir.glob("*.log") if ".code-intelligence." not in path.name
     )
     assert len(run_logs) == 1
 
-    ci_logs = sorted(tmp_path.glob("*.code-intelligence.log"))
+    ci_logs = sorted(benchmark_dir.glob("*.code-intelligence.log"))
     assert len(ci_logs) == 1
 
     contents = run_logs[0].read_text(encoding="utf-8")
@@ -68,7 +73,10 @@ def test_main_writes_plaintext_run_log(monkeypatch, tmp_path):
 
 
 def test_main_writes_code_intelligence_log_in_parallel(monkeypatch, tmp_path):
-    async def _fake_cmd_run(_args):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
+
+    async def _fake_cmd_run(_args, *, team_run_id):
         logging.getLogger("code_intelligence.routing.service").info("indexed workspace")
         logging.getLogger("server.routers.code_intelligence").info("router request")
         logging.getLogger("benchmarks.sweevo.runner").warning("benchmark warning")
@@ -80,14 +88,13 @@ def test_main_writes_code_intelligence_log_in_parallel(monkeypatch, tmp_path):
         [
             "--instance-id",
             "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
 
-    ci_logs = sorted(tmp_path.glob("*.code-intelligence.log"))
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark"
+    ci_logs = sorted(benchmark_dir.glob("*.code-intelligence.log"))
     assert len(ci_logs) == 1
 
     contents = ci_logs[0].read_text(encoding="utf-8")
@@ -97,7 +104,10 @@ def test_main_writes_code_intelligence_log_in_parallel(monkeypatch, tmp_path):
 
 
 def test_main_run_log_records_info_level_python_logs(monkeypatch, tmp_path):
-    async def _fake_cmd_run(_args):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
+
+    async def _fake_cmd_run(_args, *, team_run_id):
         logging.getLogger("benchmarks.sweevo.runner").info("benchmark info message")
         return 0
 
@@ -107,15 +117,14 @@ def test_main_run_log_records_info_level_python_logs(monkeypatch, tmp_path):
         [
             "--instance-id",
             "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
 
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark"
     run_logs = sorted(
-        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+        path for path in benchmark_dir.glob("*.log") if ".code-intelligence." not in path.name
     )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
@@ -123,7 +132,10 @@ def test_main_run_log_records_info_level_python_logs(monkeypatch, tmp_path):
 
 
 def test_main_does_not_print_log_paths_into_run_log(monkeypatch, tmp_path):
-    async def _fake_cmd_run(_args):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
+
+    async def _fake_cmd_run(_args, *, team_run_id):
         print("benchmark body", flush=True)
         return 0
 
@@ -133,15 +145,14 @@ def test_main_does_not_print_log_paths_into_run_log(monkeypatch, tmp_path):
         [
             "--instance-id",
             "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
 
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark"
     run_logs = sorted(
-        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+        path for path in benchmark_dir.glob("*.log") if ".code-intelligence." not in path.name
     )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
@@ -151,9 +162,10 @@ def test_main_does_not_print_log_paths_into_run_log(monkeypatch, tmp_path):
 
 
 def test_main_list_does_not_write_run_log(monkeypatch, tmp_path):
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(sweevo_main, "_cmd_list", lambda _source: 0)
 
-    exit_code = sweevo_main.main(["--list", "--log-dir", str(tmp_path)])
+    exit_code = sweevo_main.main(["--list"])
 
     assert exit_code == 0
     assert list(tmp_path.iterdir()) == []
@@ -161,6 +173,9 @@ def test_main_list_does_not_write_run_log(monkeypatch, tmp_path):
 
 def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
     from benchmarks.sweevo import runner as sweevo_runner
+
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
 
     long_text = "conversation-" * 60
     long_system = "system-note-" * 50
@@ -206,20 +221,47 @@ def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
         [
             "--instance-id",
             "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
 
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-20-10-30_sweevo_benchmark" / "benchmark"
     run_logs = sorted(
-        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+        path for path in benchmark_dir.glob("*.log") if ".code-intelligence." not in path.name
     )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
     assert f"[text] {long_text}" in contents
     assert f"[system:runtime_note] {long_system}" in contents
+
+
+def test_main_uses_resume_team_run_id_as_folder(monkeypatch, tmp_path):
+    """When --resume-team-run-id is given, benchmark files land in that folder."""
+    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
+
+    captured: dict[str, object] = {}
+
+    async def _fake_cmd_run(_args, *, team_run_id):
+        captured["team_run_id"] = team_run_id
+        return 0
+
+    monkeypatch.setattr(sweevo_main, "_cmd_run", _fake_cmd_run)
+
+    exit_code = sweevo_main.main(
+        [
+            "--instance-id",
+            "pydantic__pydantic_v2.7.0_v2.7.1",
+            "--resume-team-run-id",
+            "2026-04-19-08-00_sweevo_benchmark",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["team_run_id"] == "2026-04-19-08-00_sweevo_benchmark"
+    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-19-08-00_sweevo_benchmark" / "benchmark"
+    assert benchmark_dir.exists()
 
 
 def test_ansi_stripping_tee_flush_tolerates_closed_mirror(tmp_path):
@@ -303,7 +345,7 @@ def test_cmd_run_forces_color_even_when_stdout_is_not_tty(monkeypatch):
     args = sweevo_main._build_parser().parse_args(
         ["--instance-id", "pydantic__pydantic_v2.7.0_v2.7.1"]
     )
-    exit_code = asyncio.run(sweevo_main._cmd_run(args))
+    exit_code = asyncio.run(sweevo_main._cmd_run(args, team_run_id="2026-04-20-10-30_sweevo_benchmark"))
 
     assert exit_code == 0
     assert created["color"] is True

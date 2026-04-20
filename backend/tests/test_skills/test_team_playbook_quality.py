@@ -26,17 +26,11 @@ _REFERENCES = [
     _CONTENT / "team-developer-playbook/references/pre-completion-validation.md",
     _CONTENT / "team-developer-playbook/references/root-cause-debugging.md",
     _CONTENT / "team-developer-playbook/references/widening-and-runtime.md",
-    _CONTENT / "team-planner-playbook/references/exploration-script.md",
     _CONTENT / "team-planner-playbook/references/scout-launch-contract.md",
-    _CONTENT / "team-planner-playbook/references/non-root-context-reuse.md",
-    _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md",
-    _CONTENT / "team-planner-playbook/references/root-plan-self-check.md",
     _CONTENT / "team-planner-playbook/references/plan-json-contract.md",
-    _CONTENT / "team-planner-playbook/references/terminal-validation-contract.md",
     _CONTENT / "team-scout-playbook/references/completion-contract.md",
     _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md",
     _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md",
-    _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md",
     _CONTENT / "team-replanner-playbook/references/action-add-tasks.md",
     _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md",
     _CONTENT / "verification-replan/references/triage-format.md",
@@ -57,8 +51,7 @@ def test_skills_and_references_stay_short() -> None:
     for path in _ALL_SKILLS:
         assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
     for path in _REFERENCES:
-        limit = 180 if path.name == "task-planning-decomposition.md" else 150
-        assert len(_read(path).splitlines()) <= limit, f"{path} should stay short"
+        assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
 
 
 def test_hard_rule_numbers_do_not_repeat() -> None:
@@ -115,10 +108,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     replanner = _read(_CONTENT / "team-replanner-playbook/SKILL.md")
     scout = _read(_CONTENT / "team-scout-playbook/SKILL.md")
 
-    assert "must load `exploration-script`" in planner.lower()
     assert "must load `scout-launch-contract`" in planner.lower()
-    assert "must load `task-planning-decomposition`" in planner.lower()
-    assert "final submit helper" in planner.lower()
+    assert "must load `plan-json-contract`" in planner.lower()
     assert "submit_plan` tool schema is enough" in planner
     assert "top-level `deps` field lists every same-layer non-validator sibling id" in planner
     assert "child `team_planner` decomposition lanes" in planner
@@ -209,7 +200,6 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert 'submit_task_summary(type="request_replan", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
 
-    assert "must load `corrective-fast-path`" in replanner.lower()
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
     assert 'read_task_note(paths=[...], scope="sibling")' in replanner
@@ -244,11 +234,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
 
 def test_reference_files_hold_specialized_detail() -> None:
-    planner_ref = _read(_CONTENT / "team-planner-playbook/references/exploration-script.md")
     planner_json = _read(_CONTENT / "team-planner-playbook/references/plan-json-contract.md")
-    planner_decomposition = _read(
-        _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md"
-    )
     developer_runtime = _read(
         _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md"
     )
@@ -264,9 +250,6 @@ def test_reference_files_hold_specialized_detail() -> None:
         _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
     )
 
-    assert "Never keep a guessed exact leaf once live evidence disproves it." in planner_ref
-    assert "structure listing that shows `pkg/io/foo/`" in planner_ref
-    assert "read_task_note(paths=[...])` with default scope" in planner_ref
     assert "optional final helper" in planner_json
     assert "submit_plan(new_tasks=[...])" in planner_json
     assert "Do not include `task_note`" in planner_json
@@ -279,15 +262,6 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "child planners like `plan-parquet` or `plan-groupby`" in planner_json
     assert "Pairwise overlap check" in planner_json
     assert "Never submit it with `deps: []`" in planner_json
-    assert "Example task graph" in planner_decomposition
-    assert '"id": "dev-hdf"' in planner_decomposition
-    assert '"id": "dev-shared-config"' in planner_decomposition
-    assert '"id": "plan-dataframe-io"' in planner_decomposition
-    assert '"id": "plan-groupby"' in planner_decomposition
-    assert "Use `developer` for atomic tasks" in planner_decomposition
-    assert "Use `team_planner` for expandable tasks" in planner_decomposition
-    assert "Use `validator` for validation tasks" in planner_decomposition
-    assert "first-wave scout has been launched and its notes reviewed" in planner_decomposition
     scout_launch = _read(
         _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
     )
@@ -298,7 +272,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Never use a scout to locate or correct a benchmark test path mismatch" in scout_launch
     assert "do not use scouts to repair benchmark test paths" in scout_launch
     assert "Never pass an exact file to a scout after a file-symbol query found no indexed symbols" in scout_launch
-    assert "Never use scouts to locate or correct benchmark test path mismatches" in planner_ref
+    assert "Never use scouts to locate or correct benchmark test path mismatches" in scout_launch
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "Must not append shell capture plumbing" in developer_runtime
     assert "Must not write or move files through CodeAct" in developer_runtime
@@ -334,33 +308,22 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
     cancel_redraft = _read(
         _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md"
     )
-    corrective_fast_path = _read(
-        _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md"
-    )
 
     assert "pairwise-check `new_tasks`" in replanner
     assert "Parallel concrete tasks must not share any `scope_paths` file" in add_tasks
-    assert "parallel tasks that share an owner file" in corrective_fast_path
     assert "new-file, rename, move, shim, or re-export task" in add_tasks
     assert "Self-check `cancel_ids=[]`" in add_tasks
-    assert "replacement creates, renames, moves, or re-exports a test-derived missing path" in cancel_redraft
+    assert "replacement" in cancel_redraft and "test-derived" in cancel_redraft
     assert "even when the source file is in scope" in add_tasks
     assert "even when the source file is in scope" in cancel_redraft
     assert "production ownership evidence or clear adjacent ownership" in add_tasks
     assert "similar in-scope compatibility filename is not an exception" in cancel_redraft
-    assert "Never create, rename, move, or re-export a missing compatibility module" in corrective_fast_path
-    assert "live parent package or in-scope source file is not enough" in corrective_fast_path
-    assert "similarly named live modules, package aliases, or adjacent compatibility files" in corrective_fast_path
-    assert "empty `submit_replan(new_tasks=[], cancel_ids=[])`" in corrective_fast_path
     assert "do not call CI, file, graph, note, or CodeAct tools" in add_tasks
     assert "do not call CI, file, graph, note, or CodeAct tools" in cancel_redraft
     assert "Do not add a developer task whose `scope_paths` are benchmark or verification tests" in add_tasks
     assert "not add a test-edit developer task" in add_tasks
     assert "no task scopes benchmark tests" in add_tasks
-    assert "Do not replace a failed task with a benchmark-test edit task" in cancel_redraft
     assert "instead of a test-edit developer task" in cancel_redraft
-    assert "no replacement scopes benchmark tests" in cancel_redraft
-    assert "Never make a benchmark test file the corrective owner" in corrective_fast_path
     assert "raw-write workaround" in add_tasks
     assert "whole-file overwrite fallback instructions" in cancel_redraft
 

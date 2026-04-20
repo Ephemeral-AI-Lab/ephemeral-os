@@ -31,15 +31,14 @@ from benchmarks.sweevo.models import (
     _DEFAULT_TARGET_BULLETS,
     _REPO_DIR,
 )
+from benchmarks.sweevo.team_runner import _SWEEVO_TEAM_NAME
 
 # MultiAgentEventPrinter and run_sweevo_with_agent are imported lazily inside
 # _cmd_run so that ``--help`` / ``--list`` still work in minimal envs without
 # the full providers dependency tree.
 
-
-_DEFAULT_LOG_DIR = Path(".ephemeralos/benchmark-logs")
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-_SAFE_LOG_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 class _AnsiStrippingTee:
@@ -91,30 +90,24 @@ class _AnsiStrippingTee:
         return getattr(self._primary, name)
 
 
-def _utc_log_timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+def _utc_run_time() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M")
 
 
-def _sanitize_log_name(value: str) -> str:
-    sanitized = _SAFE_LOG_NAME_RE.sub("_", value).strip("._")
-    return sanitized or "run"
+def _benchmark_dir(team_run_id: str) -> Path:
+    return _PROJECT_ROOT / ".ephemeralos" / "team-runs" / team_run_id / "benchmark"
 
 
-def _build_run_log_path(args: argparse.Namespace, *, timestamp: str) -> Path:
-    log_dir = Path(args.log_dir).expanduser()
-    if args.instance_id:
-        stem = args.instance_id
-    else:
-        stem = f"auto_{args.size}_{args.target_bullets}"
-    return log_dir / f"{timestamp}_{_sanitize_log_name(stem)}.log"
+def _build_run_log_path(team_run_id: str, time: str) -> Path:
+    return _benchmark_dir(team_run_id) / f"{time}_run.log"
 
 
-def _build_code_intelligence_log_path(run_log_path: Path) -> Path:
-    return run_log_path.with_name(f"{run_log_path.stem}.code-intelligence{run_log_path.suffix}")
+def _build_code_intelligence_log_path(team_run_id: str, time: str) -> Path:
+    return _benchmark_dir(team_run_id) / f"{time}_run.code-intelligence.log"
 
 
-def _build_structured_log_path(run_log_path: Path) -> Path:
-    return run_log_path.with_name(f"{run_log_path.stem}.events.jsonl")
+def _build_structured_log_path(team_run_id: str, time: str) -> Path:
+    return _benchmark_dir(team_run_id) / f"{time}_run.events.jsonl"
 
 
 def _append_jsonl(path: Path | None, event: dict[str, Any]) -> None:
@@ -133,8 +126,8 @@ def _build_file_handler(path: Path, *, level: int) -> logging.FileHandler:
 
 
 @contextmanager
-def _capture_run_output(args: argparse.Namespace) -> Iterator[Path]:
-    log_path = _build_run_log_path(args, timestamp=_utc_log_timestamp())
+def _capture_run_output(team_run_id: str, time: str) -> Iterator[Path]:
+    log_path = _build_run_log_path(team_run_id, time)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     original_stdout = sys.stdout
@@ -156,11 +149,12 @@ def _capture_run_output(args: argparse.Namespace) -> Iterator[Path]:
 
 @contextmanager
 def _capture_code_intelligence_logs(
-    run_log_path: Path,
+    team_run_id: str,
+    time: str,
     *,
     verbose: bool,
 ) -> Iterator[Path]:
-    log_path = _build_code_intelligence_log_path(run_log_path)
+    log_path = _build_code_intelligence_log_path(team_run_id, time)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_level = logging.DEBUG if verbose else logging.INFO
     handler = _build_file_handler(log_path, level=log_level)
@@ -234,11 +228,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--disk", type=int, default=10)
     p.add_argument("--test-command", default=None, help="Override instance.test_cmds")
     p.add_argument("--test-timeout", type=int, default=_DEFAULT_SWEEVO_TEST_TIMEOUT)
-    p.add_argument(
-        "--log-dir",
-        default=str(_DEFAULT_LOG_DIR),
-        help="Directory where SWE-EVO run logs are written.",
-    )
     p.add_argument("--no-stream", action="store_true", help="Disable live line streaming")
     p.add_argument("--no-color", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -318,7 +307,7 @@ def _collect_health_issues(result: dict[str, Any]) -> list[str]:
     return health_issues
 
 
-async def _cmd_run(args: argparse.Namespace) -> int:
+async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
     from message.event_printer import MultiAgentEventPrinter
     from benchmarks.sweevo.runner import run_sweevo_with_agent
 
@@ -385,6 +374,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
             resume_team_run_id=args.resume_team_run_id,
             resume_checkpoint_id=args.resume_checkpoint_id,
             resume_latest_checkpoint=args.resume_latest_checkpoint,
+            team_run_id=team_run_id,
             structured_log_path=(
                 str(structured_log_path) if structured_log_path is not None else None
             ),
@@ -556,8 +546,10 @@ def main(argv: list[str] | None = None) -> int:
             force=True,
         )
         return _cmd_list(args.source)
-    with _capture_run_output(args) as log_path:
-        with _capture_code_intelligence_logs(log_path, verbose=args.verbose) as ci_log_path:
+    time = _utc_run_time()
+    team_run_id = args.resume_team_run_id or f"{time}_{_SWEEVO_TEAM_NAME}"
+    with _capture_run_output(team_run_id, time) as log_path:
+        with _capture_code_intelligence_logs(team_run_id, time, verbose=args.verbose) as ci_log_path:
             root_handler = _build_file_handler(log_path, level=logging.DEBUG if args.verbose else logging.INFO)
             logging.basicConfig(
                 level=root_handler.level,
@@ -565,10 +557,10 @@ def main(argv: list[str] | None = None) -> int:
                 force=True,
             )
             args.run_log_path = str(log_path)
-            args.structured_log_path = str(_build_structured_log_path(log_path))
+            args.structured_log_path = str(_build_structured_log_path(team_run_id, time))
             args.code_intelligence_log_path = str(ci_log_path)
             try:
-                return asyncio.run(_cmd_run(args))
+                return asyncio.run(_cmd_run(args, team_run_id=team_run_id))
             except KeyboardInterrupt:
                 try:
                     from sandbox.lifecycle import shutdown_cached_client

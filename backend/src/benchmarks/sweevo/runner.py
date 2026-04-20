@@ -57,6 +57,7 @@ async def run_sweevo_with_agent(
     resume_team_run_id: str | None = None,
     resume_checkpoint_id: str | None = None,
     resume_latest_checkpoint: bool = False,
+    team_run_id: str | None = None,
     structured_log_path: str | None = None,
     on_line: "Any" = None,
 ) -> dict[str, Any]:
@@ -159,6 +160,7 @@ async def run_sweevo_with_agent(
                 team_result = await sweevo_team_runner.run_sweevo_team(
                     instance,
                     sandbox_id,
+                    team_run_id=team_run_id,
                     repo_dir=repo_dir,
                     printer=printer,
                     structured_log_path=structured_log_path,
