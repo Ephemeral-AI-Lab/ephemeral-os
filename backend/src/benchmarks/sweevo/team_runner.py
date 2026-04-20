@@ -89,21 +89,25 @@ def _agent_run_log_dir(team_run_id: str) -> Path:
     return path
 
 
-def _load_or_create_team_definition(session_factory: object) -> TeamDefinition:
+def _load_or_create_team_definition(
+    session_factory: object,
+    *,
+    team_name: str = _SWEEVO_TEAM_NAME,
+) -> TeamDefinition:
     """Load the sweevo team definition from the DB, seeding from the file
     registry on first run. Raises if neither source provides the definition."""
     from team.registry import get_team_definition
 
     store = TeamDefinitionStore()
     store.initialize(session_factory)  # type: ignore[arg-type]
-    file_defn = get_team_definition(_SWEEVO_TEAM_NAME)
+    file_defn = get_team_definition(team_name)
     if file_defn is not None:
         return store.seed_builtin(file_defn)  # dual-write, idempotent
-    existing = store.get_by_name(_SWEEVO_TEAM_NAME)
+    existing = store.get_by_name(team_name)
     if existing is not None:
         return existing
     raise RuntimeError(
-        f"Team definition {_SWEEVO_TEAM_NAME!r} not found — "
+        f"Team definition {team_name!r} not found — "
         "ensure backend/config/teams/sweevo_benchmark.md exists "
         "or seed the database via the CRUD API."
     )
@@ -460,6 +464,7 @@ async def run_sweevo_team(
     instance: SWEEvoInstance,
     sandbox_id: str,
     *,
+    team_name: str = _SWEEVO_TEAM_NAME,
     team_run_id: str | None = None,
     repo_dir: str = _REPO_DIR,
     printer: MultiAgentEventPrinter | None = None,
@@ -474,11 +479,12 @@ async def run_sweevo_team(
     _ensure_team_builtins()
     session_config, session_factory = _prepare_benchmark_session(repo_dir=repo_dir)
     event_store = _build_benchmark_event_store()
-    team_def = _load_or_create_team_definition(session_factory)
+    team_def = _load_or_create_team_definition(session_factory, team_name=team_name)
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
     team_metrics = _build_team_metrics()
     team_metrics["structured_log_path"] = structured_log_path
+    team_metrics["team_name"] = team_def.name
     _emit_team_runtime_banner(printer, budgets=budgets)
 
     tr = TeamRun(
@@ -505,10 +511,12 @@ async def run_sweevo_team(
             f"session_id={getattr(session_config, 'session_id', 'sweevo')} "
             f"sandbox_id={sandbox_id}",
         )
+        printer.raw_line("team", f"[team_definition] name={team_def.name}")
         printer.raw_line("team", f"[prompt_report] messages={prompt_messages_path}")
         printer.raw_line("team", f"[agent_run_logs] dir={agent_run_log_dir}")
     append_event(team_metrics, {
         "event": "team_start", "team_run_id": tr.id,
+        "team_name": team_def.name,
         "session_id": getattr(session_config, "session_id", "sweevo"),
         "sandbox_id": sandbox_id, "instance_id": instance.instance_id,
         "repo": instance.repo, "repo_dir": repo_dir,

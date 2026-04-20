@@ -514,9 +514,11 @@ async def _run_query_loop(
                 tool_list = ", ".join(sorted(context.terminal_tools))
                 attempt = context.terminal_nudge_retries_used
                 nudge_text = (
-                    f"[terminal-tool reminder] Your previous turn ended with text and no tool_use. "
-                    f"You MUST end this run by calling one of the terminal submission tools: {tool_list}. "
-                    f"Do not reply with narration. Call the correct terminal tool now. "
+                    f"[terminal-tool reminder] Your previous turn ended without a terminal tool. "
+                    f"Your next assistant message must contain exactly one terminal submission "
+                    f"tool call: {tool_list}. Do not call non-terminal tools or add narration. "
+                    f"If a terminal payload was rejected, fix only the reported schema issue "
+                    f"and resubmit. "
                     f"(nudge {attempt}/{MAX_TERMINAL_NUDGE_RETRIES})"
                 )
                 nudge_message = ConversationMessage.from_user_text(nudge_text)

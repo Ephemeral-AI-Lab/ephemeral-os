@@ -73,6 +73,7 @@ class AgentRunState:
     compacted_before: int | None = None
     final_text: str = ""
     error: str | None = None
+    cancelled: bool = False
     pending_tool_inputs: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
@@ -308,6 +309,8 @@ class TeamAgentRunner:
                     if self.on_event is not None:
                         self.on_event(event, state)
             except asyncio.CancelledError:
+                state.cancelled = True
+                state.error = "cancelled"
                 raise
             except Exception as exc:
                 state.error = str(exc)

@@ -104,6 +104,37 @@ def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpo
     )
 
 
+def test_load_or_create_team_definition_uses_requested_db_name(monkeypatch):
+    target = SimpleNamespace(name="sweevo-team-glm5.1")
+    captured: dict[str, object] = {}
+
+    class _Store:
+        def initialize(self, session_factory):
+            captured["session_factory"] = session_factory
+
+        def seed_builtin(self, _defn):
+            raise AssertionError("custom DB team should not seed builtin definition")
+
+        def get_by_name(self, name):
+            captured["team_name"] = name
+            return target
+
+    monkeypatch.setattr(sweevo_team_runner, "TeamDefinitionStore", _Store)
+    monkeypatch.setattr("team.registry.get_team_definition", lambda _name: None)
+
+    session_factory = object()
+    result = sweevo_team_runner._load_or_create_team_definition(
+        session_factory,
+        team_name="sweevo-team-glm5.1",
+    )
+
+    assert result is target
+    assert captured == {
+        "session_factory": session_factory,
+        "team_name": "sweevo-team-glm5.1",
+    }
+
+
 
 
 @pytest.mark.asyncio
@@ -837,6 +868,86 @@ def test_make_runner_writes_agent_run_log_artifact(monkeypatch, tmp_path: Path):
     assert payload["display_messages"][-1]["content"][0]["text"] == "Implemented the requested fix."
     assert payload["api_messages"][-1]["role"] == "user"
     assert payload["api_messages"][-1]["content"][0]["text"] == "Compacted API prompt"
+
+
+def test_make_runner_marks_cancelled_agent_run_log(monkeypatch, tmp_path: Path):
+    finished_statuses: list[str] = []
+
+    class _Tracker:
+        run_id = "run-cancelled"
+
+        def finish(self, **kwargs: object) -> None:
+            finished_statuses.append(str(kwargs.get("status")))
+
+    async def _fake_run(_prompt: str):
+        agent.display_messages = [
+            ConversationMessage(
+                role="assistant",
+                content=[TextBlock(text="Still working when run cancelled.")],
+            )
+        ]
+        raise asyncio.CancelledError()
+        if False:
+            yield None
+
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=2,
+        session_state=None,
+        api_messages_snapshot=[],
+        exit_reason=None,
+        terminal_tools={"submit_task_summary"},
+        system_prompt="Runtime system prompt",
+    )
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=7, output_tokens=3),
+        model="test-model",
+        run=_fake_run,
+    )
+
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: None)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=None,
+        team_metrics={"agent_run_log_dir": str(tmp_path)},
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Fix it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(
+            runner(
+                AgentDefinition(
+                    name="developer",
+                    description="Developer",
+                    system_prompt="Definition prompt",
+                    model="test-model",
+                    role="developer",
+                    skills=["sweevo-project-context"],
+                    tool_call_limit=10,
+                ),
+                ctx,
+            )
+        )
+
+    assert finished_statuses == ["cancelled"]
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == 1
+    payload = json.loads(files[0].read_text(encoding="utf-8"))
+    assert payload["status"] == "cancelled"
+    assert payload["assistant_response"] == "Still working when run cancelled."
 
 
 def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):

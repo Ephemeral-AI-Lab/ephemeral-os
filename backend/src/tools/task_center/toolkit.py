@@ -293,7 +293,9 @@ class ReadTaskNoteTool(BaseTool):
         "Read notes from the Task Center. Use scope='own' for your task's notes, "
         "including notes posted by run_subagent scouts; omit scope or keep scope='own' "
         "after a background scout wave. Use scope='sibling' only for true sibling "
-        "team tasks. ALWAYS include paths=[<your_scope_paths>] to scope reads. "
+        "team tasks. Pass paths=<scope_paths> when your task has non-empty scope. "
+        "Omit paths only for root planner aggregation or when intentionally reading "
+        "all posted scout notes. "
         "Also use tags= and keyword= for filtering."
     )
     short_description = "Read Task Center notes."

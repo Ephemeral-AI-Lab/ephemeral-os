@@ -63,12 +63,15 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
 
     instance = _instance()
     printer = SimpleNamespace(flush=lambda: None)
+    captured: dict[str, object] = {}
 
     fake_team_runner = ModuleType("benchmarks.sweevo.team_runner")
 
     async def _fake_run_team(*args, **kwargs):
+        captured["team_name"] = kwargs.get("team_name")
         return {
             "status": "succeeded",
+            "team_name": kwargs.get("team_name"),
             "work_items": 2,
             "team_run_id": "TR-test",
             "sandbox_id": "sbx-1",
@@ -95,7 +98,7 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
 
     fake_sandbox_pkg = ModuleType("sandbox")
     fake_lifecycle = ModuleType("sandbox.lifecycle")
-    fake_lifecycle.shutdown_cached_client = lambda: None
+    fake_lifecycle.shutdown_cached_client_async = AsyncMock()
     monkeypatch.setitem(sys.modules, "sandbox", fake_sandbox_pkg)
     monkeypatch.setitem(sys.modules, "sandbox.lifecycle", fake_lifecycle)
 
@@ -136,10 +139,13 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
         run_sweevo_with_agent(
             printer=printer,
             instance_id=instance.instance_id,
+            team_name="sweevo-team-glm5.1",
             register_snapshot=False,
         )
     )
 
+    assert captured["team_name"] == "sweevo-team-glm5.1"
+    assert result["team_name"] == "sweevo-team-glm5.1"
     assert result["test"]["exit_code"] == 1
     assert result["grading"] == {
         "resolved": False,
@@ -212,7 +218,7 @@ def test_run_sweevo_with_agent_resumes_existing_team_run(monkeypatch):
 
     fake_sandbox_pkg = ModuleType("sandbox")
     fake_lifecycle = ModuleType("sandbox.lifecycle")
-    fake_lifecycle.shutdown_cached_client = lambda: None
+    fake_lifecycle.shutdown_cached_client_async = AsyncMock()
     monkeypatch.setitem(sys.modules, "sandbox", fake_sandbox_pkg)
     monkeypatch.setitem(sys.modules, "sandbox.lifecycle", fake_lifecycle)
 

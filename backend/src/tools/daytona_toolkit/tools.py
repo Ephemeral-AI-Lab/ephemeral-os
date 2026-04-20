@@ -420,10 +420,10 @@ print(json.dumps({
 @tool(
     name="daytona_read_file",
     description=(
-        "File-content read with optional line range. On coordinated team lanes, "
-        "prompts and playbooks should guide agents to read Task Center notes and "
-        "use CI navigation before opening files; this tool does not enforce that "
-        "workflow ordering."
+        "Read a sandbox file or bounded line range. In coordinated team lanes, "
+        "use this as a narrow fallback after Task Center notes and CI/navigation "
+        "tools identify the target. Prefer bounded start_line/end_line on large "
+        "files; avoid EOF reads for broad source browsing."
     ),
     short_description="Read a file from the sandbox.",
     input_model=DaytonaReadFileInput,
@@ -471,14 +471,16 @@ async def daytona_read_file(
         "Use the exact tool name `daytona_write_file`; there is no `write_file` tool. "
         "Before calling, compare `file_path` to your `scope_paths`; if it is outside "
         "scope, make an explicit widened-edit decision. "
-        "In coordinated team lanes, outside-scope writes are advisory, not a hard gate. "
+        "In coordinated team lanes, outside-scope writes are allowed when justified, "
+        "and a successful write extends the lane's in-memory write scope to the target. "
         "Proceed only when the target is a justified adjacent production owner for the same bug, "
         "including a missing module, compatibility shim, re-export, or import bridge when production ownership is clear; "
         "otherwise submit `submit_task_summary(type='request_replan')` so replanning can widen "
         "or resequence the task. Test imports, collection errors, and target counts naming "
         "the path are evidence, not sufficient ownership by themselves. In coordinated team lanes, test files are read/verify-only "
-        "and this tool blocks test-file writes unless explicit authorization is present. "
-        "If you continue after an outside-scope warning, include the widened path, rationale, and verification in the terminal summary."
+        "and this tool blocks test-file writes unless runtime metadata explicitly enables "
+        "test-file edits. Task prose alone cannot bypass this block. "
+        "If you continue outside scope, include the widened path, rationale, and verification in the terminal summary."
     ),
     short_description="Create or overwrite a file.",
     input_model=DaytonaWriteFileInput,

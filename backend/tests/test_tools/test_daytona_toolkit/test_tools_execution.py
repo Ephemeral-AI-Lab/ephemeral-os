@@ -325,8 +325,8 @@ async def test_write_file_resolves_relative_path():
     assert specs[0].file_path == "/workspace/subdir/file.txt"
 
 
-async def test_write_file_emits_advisory_for_outside_write_scope():
-    """Write-scope advisories stream as notifications, not tool output."""
+async def test_write_file_extends_scope_without_advisory_for_outside_write_scope():
+    """Successful write-file calls widen scope without pre-hook notifications."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
@@ -349,7 +349,8 @@ async def test_write_file_emits_advisory_for_outside_write_scope():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["warnings"] == []
-    assert any("outside write_scope" in text for text in _notification_texts(events))
+    assert not any("outside write_scope" in text for text in _notification_texts(events))
+    assert ctx.metadata["write_scope"] == ["dask/config.py", "dask/_compatibility.py"]
 
 
 async def test_write_file_allows_write_inside_write_scope():
@@ -404,8 +405,8 @@ async def test_write_file_blocks_test_file_with_policy_message():
     sb.process.exec.assert_not_awaited()
 
 
-async def test_write_file_emits_advisory_for_non_verify_surface_write_in_warn_mode():
-    """Non-verify-surface advisories stream as notifications, not tool output."""
+async def test_write_file_extends_scope_for_non_verify_surface_write_in_warn_mode():
+    """Write-file no longer emits write-scope advisories in warn mode."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
@@ -431,7 +432,11 @@ async def test_write_file_emits_advisory_for_non_verify_surface_write_in_warn_mo
     assert not result.is_error
     data = json.loads(result.output)
     assert data["warnings"] == []
-    assert any("outside write_scope" in text for text in _notification_texts(events))
+    assert not any("outside write_scope" in text for text in _notification_texts(events))
+    assert ctx.metadata["write_scope"] == [
+        "dask/compatibility.py",
+        "dask/_compatibility.py",
+    ]
 
 
 async def test_write_file_allows_repo_write_from_validator():

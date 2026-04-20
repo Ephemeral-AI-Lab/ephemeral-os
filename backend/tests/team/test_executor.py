@@ -255,6 +255,48 @@ async def test_replan_budget_exhaustion_fails_fast():
 
 
 @pytest.mark.asyncio
+async def test_replan_budget_exhaustion_cancels_active_sibling_runners():
+    """Budget exhaustion uses fail-fast semantics, not graceful draining."""
+    sibling_runner = asyncio.create_task(asyncio.sleep(60))
+    task = _make_task(status="running")
+    tc = FakeTaskCenter()
+    tc.request_replan = AsyncMock(side_effect=BudgetExceeded("max_replans_per_run reached"))
+    tc.fail_task = AsyncMock()
+    tc.cancel_all_pending = AsyncMock()
+    tc.cancel_all_running = AsyncMock()
+
+    team_run = FakeTeamRun(task_center=tc)
+    team_run.cancel_event = asyncio.Event()
+    team_run.event_store = []
+    team_run.status = None
+    team_run._fatal_failure_reason = None
+    team_run._active_agent_runs = {"sibling-task": sibling_runner}
+    team_run.fail_fast = TeamRun.fail_fast.__get__(team_run, FakeTeamRun)
+    team_run.fail_after_active_work = AsyncMock()
+
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+
+    try:
+        await executor._dispatch(task, ReplanRequest(reason="needs corrective work"))
+        await asyncio.sleep(0)
+
+        assert team_run.cancel_event.is_set()
+        assert sibling_runner.cancelled()
+        tc.cancel_all_pending.assert_awaited_once()
+        tc.cancel_all_running.assert_awaited_once_with(
+            "replan_budget_exhausted: max_replans_per_run reached"
+        )
+        team_run.fail_after_active_work.assert_not_awaited()
+    finally:
+        sibling_runner.cancel()
+        await asyncio.gather(sibling_runner, return_exceptions=True)
+
+
+@pytest.mark.asyncio
 async def test_fail_after_active_work_does_not_cancel_active_runners():
     """Graceful run failure stops new work while preserving active submissions."""
     sleeper = asyncio.create_task(asyncio.sleep(60))

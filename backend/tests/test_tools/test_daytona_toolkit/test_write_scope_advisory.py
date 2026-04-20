@@ -91,7 +91,7 @@ def _assert_test_file_write_error(result: str | None, rel_path: str) -> None:
     assert "read/verify-only" in result
     assert "production owner" in result
     assert "submit_task_summary(type='request_replan'" in result
-    assert "explicitly authorize test-file edits" in result
+    assert "runtime-authorized test-edit lane" in result
 
 
 def test_write_error_blocks_test_file_even_inside_scope():
@@ -241,8 +241,19 @@ def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gat
     write_schema = daytona_write_file.to_api_schema()
     edit_schema = daytona_edit_file.to_api_schema()
 
-    for schema in (write_schema, edit_schema):
-        description = schema["description"]
+    write_description = write_schema["description"]
+    assert "outside-scope writes are allowed when justified" in write_description
+    assert "successful write extends the lane's in-memory write scope" in write_description
+    assert "make an explicit widened-edit decision" in write_description
+    assert "Test imports, collection errors, and target counts" in write_description
+    assert "evidence, not sufficient ownership by themselves" in write_description
+    assert "test files are read/verify-only" in write_description
+    assert "explicitly enables test-file edits" in write_description
+    assert "submit `submit_task_summary(type='request_replan')`" in write_description
+    assert "widened path, rationale, and verification" in write_description
+
+    edit_description = edit_schema["description"]
+    for description in (edit_description,):
         assert "outside-scope writes are advisory" in description
         assert (
             "missing module, compatibility shim, re-export, or import bridge" in description
@@ -252,7 +263,7 @@ def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gat
         assert "Test imports, collection errors, and target counts" in description
         assert "evidence, not sufficient ownership by themselves" in description
         assert "test files are read/verify-only" in description
-        assert "explicit authorization" in description
+        assert "explicitly enables test-file edits" in description
         assert "submit `submit_task_summary(type='request_replan')`" in description
         assert "widened path, rationale, and verification" in description
 

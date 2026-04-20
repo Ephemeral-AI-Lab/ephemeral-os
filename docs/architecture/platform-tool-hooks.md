@@ -544,7 +544,7 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | --- | --- | --- | --- |
 | `repo_operation_guard.py` | pre | `daytona_delete_file`, `daytona_move_file` | Blocks repo-root, outside-repo, and invalid self/nested move operations before destructive tool bodies run. |
 | `write_scope_hard_block.py` | pre | `daytona_write_file`, `daytona_edit_file`, `daytona_delete_file` | Blocks unauthorized test-file edits in coordinated team lanes. |
-| `write_scope_advisory.py` | pre | `daytona_write_file`, `daytona_edit_file` | Emits outside-scope write advisories without blocking. |
+| `write_scope_advisory.py` | pre | `daytona_edit_file` | Emits outside-scope edit advisories without blocking. |
 | `write_scope_deny.py` | pre | `daytona_delete_file` | Blocks delete operations outside write scope, including enumerated folder members. |
 | `move_src_hard_block.py` | pre | `daytona_move_file` | Applies test-file hard-block policy to the move source. |
 | `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope, including enumerated folder members. |
@@ -568,8 +568,10 @@ Post-hooks should live in `tools.daytona_toolkit.hooks.posthook`.
 | --- | --- | --- | --- |
 | `audited_write_policy.py` | post | `daytona_codeact` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
 | `ambient_change_warning.py` | post | `daytona_codeact` | Emits a user-only advisory when the shell command touched paths outside its declared write set. |
+| `move_extend_scope.py` | post | `daytona_move_file` | Extends in-memory write scope to the move destination after a successful owned-source move. |
+| `write_extend_scope.py` | post | `daytona_write_file` | Extends in-memory write scope to a successful write target. |
 
-Both post-hooks read from ``result.metadata["changed_paths"]`` /
+These post-hooks read from ``result.metadata["changed_paths"]`` /
 ``ambient_changed_paths``, which the ``tools.daytona_toolkit._commit`` façade
 writes uniformly for every OCC-gated tool. The shared audit primitive lives in
 ``tools.daytona_toolkit._audit`` and accepts ``tool_name`` so the same helper
@@ -583,10 +585,11 @@ changed set. The pure OCC tools
 ``daytona_move_file``) preserve path identity between input and commit — see
 ``code_intelligence/routing/service.py::_write_spec_to_change`` and
 ``editing/write_coordinator.py`` — so the pre-hook ``write_scope_advisory``
-already surfaces the same paths a post-hook audit would, and adding the
-registration would duplicate the signal. The registration is deferred
-indefinitely unless a downstream tool grows path-rewrite behavior at commit
-time.
+already surfaces the same paths a post-hook audit would for edit operations,
+and adding a post-hook audit registration would duplicate the signal. For
+``daytona_write_file``, outside-scope advisory registration is intentionally
+omitted; a successful committed write instead widens the lane's in-memory
+``write_scope`` through ``write_extend_scope``.
 
 These policies are post-hook-only because they depend on the tool result and
 committed path set. They must not be forced into the pre-hook package.
@@ -986,6 +989,8 @@ backend/src/tools/daytona_toolkit/hooks/prehook/codeact_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/ambient_change_warning.py
+backend/src/tools/daytona_toolkit/hooks/posthook/move_extend_scope.py
+backend/src/tools/daytona_toolkit/hooks/posthook/write_extend_scope.py
 backend/src/tools/daytona_toolkit/_commit.py
 backend/src/tools/daytona_toolkit/_audit.py
 backend/tests/test_tools/test_hooks/__init__.py

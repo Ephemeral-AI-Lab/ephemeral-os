@@ -174,8 +174,10 @@ class SubmitTaskSummaryInput(BaseModel):
         min_length=1,
         description=(
             "Summary of work done. For success: describe what was accomplished "
-            "and files changed. For request_replan: describe what went wrong "
-            "and why a replan is needed. Must contain non-whitespace text."
+            "and files changed. For request_replan: start with the blocking "
+            "evidence, failing command or tool result, and why a replan is "
+            "needed; do not title the summary as complete/success. Must contain "
+            "non-whitespace text."
         ),
     )
 

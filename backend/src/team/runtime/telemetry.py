@@ -451,7 +451,7 @@ class BenchmarkTelemetry:
             "compactions_added": new_compactions,
             "compacted": compacted_total,
         }
-        status = "failed" if state.error else "completed"
+        status = "cancelled" if state.cancelled else "failed" if state.error else "completed"
 
         state.tracker.finish(
             status=status,
@@ -623,6 +623,7 @@ def finalize_team_run(
         )
 
     common = {
+        "team_name": team_metrics.get("team_name"),
         "team_run_id": tr.id,
         "sandbox_id": tr.sandbox_id,
         "session_id": session_config.session_id,

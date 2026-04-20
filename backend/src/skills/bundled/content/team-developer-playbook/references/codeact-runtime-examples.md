@@ -8,12 +8,14 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 
 ## Avoid
 
-- Must not start pip-install loops or ad hoc environment mutation unless repo bootstrap evidence proves the lane owns that setup.
+- Must not start pip-install loops or ad hoc environment mutation. Missing packages are evidence; edit dependency metadata only when that file is in scope, otherwise request replanning with the missing package and command output.
 - Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `daytona_codeact(command="...", timeout=N)` repro; use the named node, scout note, and runtime traceback first.
 
 ## Workflow
 
 - The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
+- Good: `daytona_codeact(command="python -m pytest dask/tests/test_config.py::test_update_defaults -q")`
+- Bad: `daytona_codeact(command="cd /testbed && python -m pytest ... 2>&1 | head -100")`
 - Must not append shell capture plumbing such as `2>&1`, `2>/dev/null`, or `1>/tmp/out`; `daytona_codeact` already captures stdout and stderr.
 - Must not write or move files through CodeAct. Avoid `sed -i`, `tee file`, output redirects, `touch`/`cp`/`mv`, inline Python writes, `shutil.move`, `os.rename`, `git rm`, or `git mv`. Pure removals such as `rm`, `unlink`, `os.remove`, `os.unlink`, `Path.unlink`, and `shutil.rmtree` are allowed through CodeAct because the overlay audit path converts tracked removals into OCC-gated deletes and rejects unsupported removal shapes. Use `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` for explicit repo file operations.
 - Must not inspect source through CodeAct. Avoid `cat`, `sed -n`, `grep`/`rg`, `head`/`tail`/`nl`, Python file reads, and `inspect.getsource`; use notes and CI first, then `daytona_read_file` or `daytona_grep`.

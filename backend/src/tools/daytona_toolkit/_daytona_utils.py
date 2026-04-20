@@ -509,8 +509,8 @@ def _team_repo_write_error(
         "in coordinated team lanes. Test files are read/verify-only evidence; "
         "fix the production owner instead. If this task genuinely requires a "
         "test-file change, stop and submit_task_summary(type='request_replan', "
-        "content='test-file edit required: ...') so replanning can explicitly "
-        "authorize test-file edits."
+        "content='test-file edit required: ...') so replanning can choose a production "
+        "owner, surface a tool-policy issue, or route to a runtime-authorized test-edit lane."
     )
 
 

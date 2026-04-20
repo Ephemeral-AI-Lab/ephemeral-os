@@ -650,6 +650,9 @@ def _files_written_count(
     name="daytona_codeact",
     description=(
         "Execute either Python code or a direct shell command in the Daytona sandbox. "
+        "Use repo-root-relative commands such as `python -m pytest ...`; do not prefix "
+        "`cd /testbed &&`, and do not add `2>&1`, `2>/dev/null`, `| head`, `| tail`, "
+        "or output redirects because stdout and stderr are already captured. "
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
         "Python with read()/shell() helpers. Do not use CodeAct for file writes or moves; "
         "use daytona_edit_file, daytona_write_file, daytona_rename_symbol, "
@@ -659,10 +662,6 @@ def _files_written_count(
         "and rejects unsupported removal shapes. Never include move or git-index mutation "
         "tokens such as `mv`, `shutil.move`, `os.rename`, `git rm`, or `git mv`; path "
         "moves must use daytona_move_file. "
-        "stdout and stderr are already "
-        "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
-        "Coordinated team commands already run from the repo root, so do not "
-        "prefix them with `cd /testbed &&` or another repo-root cd."
     ),
     short_description="Run shell commands or Python in the sandbox.",
     input_model=DaytonaCodeActInput,

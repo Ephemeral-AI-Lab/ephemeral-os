@@ -1,7 +1,7 @@
 # Plan JSON Contract
 Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide.
 
-STOP READING AFTER THE CHECKLIST AND CALL THE TOOL. After this reference loads, your next assistant turn must contain one `submit_plan(...)` tool call and no text block. Do not write a recap, checklist, JSON preview, or "let me call submit_plan now" sentence.
+Use this only as the final schema checklist. After this reference loads, stop exploration and make the next tool call `submit_plan(...)`. Avoid recap prose when possible, but the hard requirement is: no non-terminal tool calls before `submit_plan(...)`.
 
 ## Task/Goal
 
@@ -9,19 +9,22 @@ STOP READING AFTER THE CHECKLIST AND CALL THE TOOL. After this reference loads, 
 
 ## Avoid
 
-- Do not summarize what you will submit or say "the plan is ready" / "let me submit".
+- Avoid summarizing what you will submit or saying "the plan is ready" / "let me submit".
 - Do not make another tool call except `submit_plan(...)`.
 - Do not include `task_note`, `background`, `parent_id`, `rationale`, or `output: null`.
 - Do not use a failed `submit_plan(...)` result as your schema checker.
 
 ## Workflow
 
-Call `submit_plan(new_tasks=[...])` now.
+Build a schema-valid `submit_plan(new_tasks=[...])` payload, then call the tool.
 
 Tool input checklist:
 
 - Top-level keys: `new_tasks` and optional string `output` only.
-- Each task keys: `id`, `description`, `name`, `spec`, `deps`, `scope_paths`. `name` is an exact registered agent name such as `developer`, `validator`, or `team_planner`. `deps` is a top-level task field and every `id` is unique.
+- `new_tasks` is a JSON array.
+- Each task has `id`, `description`, `name`, `spec`, `deps`, and non-empty `scope_paths`.
+- `name` is an exact registered agent name such as `developer`, `validator`, or `team_planner`.
+- `deps` is a top-level task field and every `id` is unique.
 - `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings.
 - `scope_paths` uses live-confirmed production owner paths, adjacent supporting owners for the same likely fix, or a broader production boundary on `team_planner` when exact ownership is still uncertain. Keep verification-only test targets in `spec` context or acceptance criteria unless the task explicitly owns a test-only bug.
 - Missing modules, compatibility shims, re-export modules, and import bridges named by tests need production ownership evidence before entering `scope_paths`.
@@ -32,4 +35,4 @@ Tool input checklist:
 
 ## Expected Outcome
 
-- The next assistant response is the terminal `submit_plan(...)` tool call, not prose.
+- The next tool call is the terminal `submit_plan(...)` call.

@@ -4,7 +4,7 @@ Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[])` when exis
 
 ## Task/Goal
 
-- An isolated task failed and needs corrective follow-up, a transient error needs a narrower retry, or follow-up validation is needed after a fix lands.
+- Use this only when the failure shows scope expansion, wrong owner/role assignment, or a blocker that needs a different investigation path. Do not replan merely because a developer stopped before making a small in-scope edit; that belongs in the developer's terminal summary as incomplete work unless ownership changed.
 
 ## Avoid
 

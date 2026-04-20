@@ -42,6 +42,7 @@ def _emit_progress(printer: Any, line: str) -> None:
 async def run_sweevo_with_agent(
     *,
     printer: "Any",
+    team_name: str = "sweevo_benchmark",
     source: str = _DEFAULT_DATASET_SOURCE,
     instance_id: str | None = None,
     size: str = "medium",
@@ -76,7 +77,7 @@ async def run_sweevo_with_agent(
     from benchmarks.sweevo import team_runner as sweevo_team_runner
 
     try:
-        from sandbox.lifecycle import shutdown_cached_client
+        from sandbox.lifecycle import shutdown_cached_client_async
 
         instance = select_sweevo_instance(
             source=source,
@@ -160,6 +161,7 @@ async def run_sweevo_with_agent(
                 team_result = await sweevo_team_runner.run_sweevo_team(
                     instance,
                     sandbox_id,
+                    team_name=team_name,
                     team_run_id=team_run_id,
                     repo_dir=repo_dir,
                     printer=printer,
@@ -209,6 +211,7 @@ async def run_sweevo_with_agent(
             "repo_dir": repo_dir,
             "structured_log_path": structured_log_path,
             "agent_patch": agent_patch,
+            "team_name": team_details.get("team_name") or team_name,
             "team_run_id": team_details.get("team_run_id"),
             "team_status": (
                 team_status.value if hasattr(team_status, "value") else team_status
@@ -229,6 +232,6 @@ async def run_sweevo_with_agent(
         }
     finally:
         try:
-            shutdown_cached_client()
+            await shutdown_cached_client_async()
         except Exception:
             logger.debug("Failed to close cached AsyncDaytona client", exc_info=True)

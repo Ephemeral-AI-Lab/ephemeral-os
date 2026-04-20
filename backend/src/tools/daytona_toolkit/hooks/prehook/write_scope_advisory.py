@@ -9,7 +9,6 @@ from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit.hooks._common import _team_repo_write_warning, resolved_arg
 
 _PATH_FIELDS = {
-    "daytona_write_file": "file_path",
     "daytona_edit_file": "file_path",
 }
 

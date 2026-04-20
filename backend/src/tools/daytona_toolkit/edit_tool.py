@@ -134,8 +134,8 @@ def _normalize_edits(
         "otherwise submit `submit_task_summary(type='request_replan')` so replanning can widen "
         "or resequence the task. Test imports, collection errors, and target counts naming "
         "the path are evidence, not sufficient ownership by themselves. In coordinated team lanes, test files are "
-        "read/verify-only and this tool blocks test-file writes unless explicit "
-        "authorization is present. "
+        "read/verify-only and this tool blocks test-file writes unless runtime metadata "
+        "explicitly enables test-file edits. Task prose alone cannot bypass this block. "
         "If you continue after an outside-scope warning, include the widened path, rationale, and verification in the terminal summary."
     ),
     short_description="Apply atomic file edits.",

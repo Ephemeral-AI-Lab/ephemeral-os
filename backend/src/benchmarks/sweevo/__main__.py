@@ -39,6 +39,7 @@ from benchmarks.sweevo.team_runner import _SWEEVO_TEAM_NAME
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+_TEAM_RUN_SUFFIX_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 class _AnsiStrippingTee:
@@ -108,6 +109,11 @@ def _build_code_intelligence_log_path(team_run_id: str, time: str) -> Path:
 
 def _build_structured_log_path(team_run_id: str, time: str) -> Path:
     return _benchmark_dir(team_run_id) / f"{time}_run.events.jsonl"
+
+
+def _team_run_suffix(team_name: str) -> str:
+    raw = str(team_name or "").strip() or _SWEEVO_TEAM_NAME
+    return _TEAM_RUN_SUFFIX_RE.sub("_", raw).strip("._-") or _SWEEVO_TEAM_NAME
 
 
 def _append_jsonl(path: Path | None, event: dict[str, Any]) -> None:
@@ -194,6 +200,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--repo-dir", default=_REPO_DIR)
     p.add_argument("--snapshot-name", default="")
     p.add_argument("--sandbox-name", default="")
+    p.add_argument(
+        "--team",
+        "--team-name",
+        dest="team_name",
+        default=_SWEEVO_TEAM_NAME,
+        help=(
+            "Team definition name to run for fresh benchmark runs "
+            f"(default: {_SWEEVO_TEAM_NAME})"
+        ),
+    )
     p.add_argument(
         "--resume-team-run-id",
         default=None,
@@ -335,7 +351,11 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
     if not quiet:
         header = "=" * 72
         print(header, flush=True)
-        print(f"  SWE-EVO run  instance={args.instance_id or f'<auto size={args.size}>'}", flush=True)
+        print(
+            f"  SWE-EVO run  instance={args.instance_id or f'<auto size={args.size}>'} "
+            f"team={args.team_name}",
+            flush=True,
+        )
         print(header, flush=True)
 
     _append_jsonl(
@@ -346,6 +366,7 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
             "instance_id": args.instance_id,
             "size": args.size,
             "target_bullets": args.target_bullets,
+            "team_name": args.team_name,
             "resume_team_run_id": args.resume_team_run_id,
             "resume_checkpoint_id": args.resume_checkpoint_id,
             "resume_latest_checkpoint": bool(args.resume_latest_checkpoint),
@@ -359,6 +380,7 @@ async def _cmd_run(args: argparse.Namespace, *, team_run_id: str) -> int:
     try:
         result = await run_sweevo_with_agent(
             printer=printer,
+            team_name=args.team_name,
             source=args.source,
             instance_id=args.instance_id,
             size=args.size,
@@ -547,7 +569,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return _cmd_list(args.source)
     time = _utc_run_time()
-    team_run_id = args.resume_team_run_id or f"{time}_{_SWEEVO_TEAM_NAME}"
+    team_run_id = args.resume_team_run_id or f"{time}_{_team_run_suffix(args.team_name)}"
     with _capture_run_output(team_run_id, time) as log_path:
         with _capture_code_intelligence_logs(team_run_id, time, verbose=args.verbose) as ci_log_path:
             root_handler = _build_file_handler(log_path, level=logging.DEBUG if args.verbose else logging.INFO)
