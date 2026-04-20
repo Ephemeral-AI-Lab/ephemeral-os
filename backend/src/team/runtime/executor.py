@@ -212,7 +212,7 @@ class Executor:
             except BudgetExceeded as exc:
                 reason = f"replan_budget_exhausted: {exc}"
                 await tc.fail_task(task.id, reason)
-                await self.team_run.fail_after_active_work(reason)
+                await self.team_run.fail_fast(reason)
                 await self._checkpoint_after_transition(
                     task,
                     outcome="replan_budget_exhausted",

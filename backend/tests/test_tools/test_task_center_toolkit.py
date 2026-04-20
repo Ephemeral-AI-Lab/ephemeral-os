@@ -10,15 +10,42 @@ import pytest
 from pydantic import ValidationError
 
 from tools.task_center.toolkit import (
+    ReadTaskGraphTool,
     ReadTaskNoteTool,
     SubmitTaskNoteTool,
     TaskCenterChangedSinceTool,
 )
 from tools.core.base import ToolExecutionContext
+from team.models import Task, TaskStatus
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
+
+
+def _task(
+    task_id: str,
+    *,
+    parent_id: str | None,
+    status: TaskStatus = TaskStatus.READY,
+    agent: str = "developer",
+    description: str = "",
+    deps: list[str] | None = None,
+    scope_paths: list[str] | None = None,
+    failure_reason: str | None = None,
+) -> Task:
+    return Task(
+        id=task_id,
+        team_run_id="run-1",
+        agent_name=agent,
+        status=status,
+        objective=f"Objective for {task_id}",
+        description=description,
+        deps=list(deps or []),
+        scope_paths=list(scope_paths or []),
+        parent_id=parent_id,
+        failure_reason=failure_reason,
+    )
 
 
 @pytest.mark.asyncio
@@ -122,6 +149,90 @@ def test_read_task_note_schema_explains_background_scout_scope():
         scope_description
     )
     assert "true sibling team tasks" in scope_description
+
+
+@pytest.mark.asyncio
+async def test_read_task_graph_defaults_to_peer_tree_json():
+    graph = {
+        "root": _task("root", parent_id=None, agent="planner", description="Root"),
+        "parent": _task("parent", parent_id="root", agent="planner", description="Parent"),
+        "self": _task(
+            "self",
+            parent_id="parent",
+            status=TaskStatus.RUNNING,
+            description="Current task",
+            deps=["peer"],
+            scope_paths=["src/self.py"],
+        ),
+        "peer": _task("peer", parent_id="parent", description="Peer task"),
+        "peer-child": _task(
+            "peer-child",
+            parent_id="peer",
+            status=TaskStatus.PENDING,
+            description="Nested child",
+        ),
+        "other-branch": _task("other-branch", parent_id="root"),
+    }
+    ctx = _ctx(
+        {
+            "task_center": SimpleNamespace(graph=graph),
+            "work_item_id": "self",
+        }
+    )
+
+    result = await ReadTaskGraphTool().execute(
+        ReadTaskGraphTool.input_model(),
+        ctx,
+    )
+
+    assert result.is_error is False
+    payload = json.loads(result.output)
+    assert payload["parent"] == {
+        "id": "parent",
+        "agent": "planner",
+        "status": "ready",
+        "description": "Parent",
+    }
+    assert [task["id"] for task in payload["tasks"]] == ["self", "peer"]
+    self_node = payload["tasks"][0]
+    assert self_node["is_you"] is True
+    assert self_node["deps"] == ["peer"]
+    assert self_node["scope_paths"] == ["src/self.py"]
+    assert payload["tasks"][1]["children"][0]["id"] == "peer-child"
+    assert "other-branch" not in json.dumps(payload)
+
+
+@pytest.mark.asyncio
+async def test_read_task_graph_global_scope_includes_roots_and_detached_nodes():
+    graph = {
+        "root": _task("root", parent_id=None, agent="planner"),
+        "child": _task("child", parent_id="root", description="Child"),
+        "orphan": _task(
+            "orphan",
+            parent_id="missing-parent",
+            status=TaskStatus.FAILED,
+            failure_reason="parent was pruned",
+        ),
+    }
+    ctx = _ctx(
+        {
+            "task_center": SimpleNamespace(graph=graph),
+            "work_item_id": "child",
+        }
+    )
+
+    result = await ReadTaskGraphTool().execute(
+        ReadTaskGraphTool.input_model(global_scope=True),
+        ctx,
+    )
+
+    assert result.is_error is False
+    payload = json.loads(result.output)
+    assert [task["id"] for task in payload["tasks"]] == ["root"]
+    assert payload["tasks"][0]["children"][0]["id"] == "child"
+    assert payload["tasks"][0]["children"][0]["is_you"] is True
+    assert [task["id"] for task in payload["detached"]] == ["orphan"]
+    assert payload["detached"][0]["failure_reason"] == "parent was pruned"
 
 
 @pytest.mark.asyncio

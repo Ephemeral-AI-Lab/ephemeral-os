@@ -15,7 +15,6 @@ from message.stream_events import StreamEvent, SystemNotification
 from tools.core.base import ToolExecutionContext, run_tool_safely
 from tools.core.hooks.execution import execute_tool_with_hooks
 from tools.daytona_toolkit import codeact_tool as codeact_tool_module
-from tools.daytona_toolkit._shell_policy import _normalize_team_shell_command
 from tools.daytona_toolkit.codeact_tool import (
     _build_exec_command,
     _build_wrapper,
@@ -279,17 +278,6 @@ async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     command = _build_exec_command(cwd="/repo")
     assert "bash -o pipefail -lc" in command
     assert 'cd "/repo" && python3 -' in command
-
-
-async def test_normalize_team_shell_command_strips_repo_cd_and_capture_plumbing():
-    command, warnings = _normalize_team_shell_command(
-        "cd /testbed && pytest dask/tests/test_cli.py -q 2>&1 | head -100",
-        repo_root="/testbed",
-    )
-
-    assert command == "pytest dask/tests/test_cli.py -q | head -100"
-    assert any("cd <repo-root>" in warning for warning in warnings)
-    assert any("2>&1" in warning for warning in warnings)
 
 
 async def test_shell_mode_requires_ci_service():
@@ -887,7 +875,7 @@ async def test_python_mode_error_reports_wrapper_manifest_without_inline_guidanc
         ),
     ],
 )
-async def test_coordinated_python_mode_uses_hooks_not_runtime_shell_policy(
+async def test_coordinated_python_mode_blocks_os_process_wrappers_before_runtime(
     code,
     manifest_error,
     expected_fragment,
@@ -926,7 +914,7 @@ async def test_coordinated_python_mode_uses_hooks_not_runtime_shell_policy(
         assert sb.process.exec.await_count >= 1
 
 
-async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
+async def test_shell_mode_preserves_command_for_team_agents():
     sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     ctx = _ctx(
         {
@@ -944,18 +932,21 @@ async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
     )
 
     data = _assert_ok(result)
-    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    assert (
+        data["shell_outputs"][0]["command"]
+        == "cd /testbed && pytest tests/unit/test_x.py -q 2>&1"
+    )
     assert data["warnings"] == []
     texts = _notification_texts(events)
-    assert any("2>&1" in text for text in texts)
-    assert any("cd <repo-root>" in text for text in texts)
+    assert not any("pre-hook advisory" in text for text in texts)
 
 
-async def test_python_mode_normalizes_literal_shell_calls_for_team_agents():
+async def test_python_mode_preserves_literal_shell_calls_for_team_agents():
+    original_code = 'shell("cd /testbed && pytest tests/unit/test_x.py -q 2>&1")'
     manifest = _make_manifest(
         shells=[
             {
-                "command": "pytest tests/unit/test_x.py -q",
+                "command": "cd /testbed && pytest tests/unit/test_x.py -q 2>&1",
                 "stdout": "ok",
                 "stderr": "",
                 "exit_code": 0,
@@ -975,17 +966,19 @@ async def test_python_mode_normalizes_literal_shell_calls_for_team_agents():
 
     result, events = await _run_with_events(
         daytona_codeact,
-        {"code": 'shell("cd /testbed && pytest tests/unit/test_x.py -q 2>&1")'},
+        {"code": original_code},
         ctx,
     )
 
     data = _assert_ok(result)
-    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    assert (
+        data["shell_outputs"][0]["command"]
+        == "cd /testbed && pytest tests/unit/test_x.py -q 2>&1"
+    )
     texts = _notification_texts(events)
-    assert any("2>&1" in text for text in texts)
-    assert any("cd <repo-root>" in text for text in texts)
+    assert not any("pre-hook advisory" in text for text in texts)
     wrapper = _submitted_wrapper(svc)
     match = re.search(r'_CODE = base64\.b64decode\("([^"]+)"\)', wrapper)
     assert match is not None
-    normalized_code = base64.b64decode(match.group(1)).decode("utf-8")
-    assert normalized_code == "shell('pytest tests/unit/test_x.py -q')"
+    submitted_code = base64.b64decode(match.group(1)).decode("utf-8")
+    assert submitted_code == original_code

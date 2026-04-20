@@ -685,8 +685,8 @@ async def daytona_codeact(
     assert resolved_mode is not None
 
     repo_cwd = _get_cwd(context)
-    # Pre-flight policy (shell normalization, destructive-git/shell blocks,
-    # file-edit side-channel blocks) is enforced by pre-phase platform hooks.
+    # Pre-flight policy (destructive-git/shell blocks and file-edit
+    # side-channel blocks) is enforced by pre-phase platform hooks.
     if resolved_mode == "shell":
         direct_command = command or ""
 

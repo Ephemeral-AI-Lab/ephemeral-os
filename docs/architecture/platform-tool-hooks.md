@@ -441,9 +441,9 @@ backend/src/tools/daytona_toolkit/hooks/
     move_src_hard_block.py
     move_src_scope_deny.py
     move_dst_scope_advisory.py
-    codeact_shell_normalization.py
     codeact_destructive_git.py
     codeact_destructive_shell.py
+    codeact_python_process_policy.py
     codeact_file_edit_policy.py
 
   posthook/
@@ -474,7 +474,7 @@ fresh `ToolHookRegistry` instance.
   `move_src_hard_block.py` vs `write_scope_hard_block.py`).
 - Registration name: `{tool_name}:{policy_suffix}`. The suffix should drop
   redundant tool-family prefixes already implied by the tool name (for example
-  `daytona_move_file:src_hard_block`, `daytona_codeact:shell_normalization`)
+  `daytona_move_file:src_hard_block`, `daytona_codeact:destructive_shell`)
   but keep policy-area prefixes that are not redundant (for example
   `daytona_write_file:write_scope_hard_block` — `write_scope_` is the policy
   area, not a rename of the tool).
@@ -488,7 +488,7 @@ single tool, so the number ordering is a contract.
 Guidelines:
 
 - `0–9`: argument mutation / normalization. Must run before any policy that
-  reads the final args (example: `daytona_codeact:shell_normalization` at 5).
+  reads the final args.
 - `10–19`: default-bucket blocks, denials, and write-scope policies keyed on a
   single argument (examples: `daytona_write_file:write_scope_hard_block` at 10,
   `daytona_delete_file:write_scope_deny` at 15).
@@ -550,9 +550,9 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope, including enumerated folder members. |
 | `move_dst_scope_advisory.py` | pre | `daytona_move_file` | Emits advisory for destination outside write scope when policy allows the move. |
 | `rename_scope_policy.py` | pre | `daytona_rename_symbol` | Builds the rename plan once, applies test-file and write-scope policy to planned paths, and caches the approved plan for the tool body. |
-| `codeact_shell_normalization.py` | pre | `daytona_codeact` | Mutates shell commands for coordinated team agents before later CodeAct hooks run. |
 | `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands. |
 | `codeact_destructive_shell.py` | pre | `daytona_codeact` | Blocks destructive shell commands against workspace roots and dangerous devices. |
+| `codeact_python_process_policy.py` | pre | `daytona_codeact` | Blocks `os.system()` and `os.popen()` wrappers in coordinated CodeAct Python mode. |
 | `codeact_file_edit_policy.py` | pre | `daytona_codeact` | Blocks shell and Python file-edit side channels when CodeAct edit policy is active. |
 
 The move hooks are intentionally split by source and destination behavior. The
@@ -979,9 +979,9 @@ backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_deny.py
 backend/src/tools/daytona_toolkit/hooks/prehook/move_src_hard_block.py
 backend/src/tools/daytona_toolkit/hooks/prehook/move_src_scope_deny.py
 backend/src/tools/daytona_toolkit/hooks/prehook/move_dst_scope_advisory.py
-backend/src/tools/daytona_toolkit/hooks/prehook/codeact_shell_normalization.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_git.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_shell.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_python_process_policy.py
 backend/src/tools/daytona_toolkit/hooks/prehook/codeact_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py
@@ -1255,8 +1255,7 @@ Deliverables:
 Exit criteria:
 
 - Existing Daytona write-scope behavior is unchanged.
-- CodeAct shell normalization still mutates arguments before destructive
-  command policy hooks run.
+- CodeAct destructive command and file-edit side-channel policy hooks still run.
 - Re-importing Daytona hook packages does not duplicate registry entries.
 - Existing coordination-warning side effects remain correct where they are still
   part of product behavior.

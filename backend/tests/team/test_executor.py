@@ -224,8 +224,8 @@ async def test_validator_fail_summary_dispatches_replan_request():
 
 
 @pytest.mark.asyncio
-async def test_replan_budget_exhaustion_fails_task_without_fail_fast():
-    """Replan budget exhaustion must not cancel unrelated active agent turns."""
+async def test_replan_budget_exhaustion_fails_fast():
+    """Replan budget exhaustion terminates the team run immediately."""
     task = _make_task(status="running")
     tc = FakeTaskCenter()
     tc.request_replan = AsyncMock(side_effect=BudgetExceeded("max_replans_per_run reached"))
@@ -248,10 +248,10 @@ async def test_replan_budget_exhaustion_fails_task_without_fail_fast():
         task.id,
         "replan_budget_exhausted: max_replans_per_run reached",
     )
-    team_run.fail_after_active_work.assert_awaited_once_with(
+    team_run.fail_fast.assert_awaited_once_with(
         "replan_budget_exhausted: max_replans_per_run reached"
     )
-    team_run.fail_fast.assert_not_awaited()
+    team_run.fail_after_active_work.assert_not_awaited()
 
 
 @pytest.mark.asyncio

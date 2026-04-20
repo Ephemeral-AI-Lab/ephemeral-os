@@ -16,6 +16,7 @@ from tools.daytona_toolkit.delete_move_tool import (
     DaytonaMoveFileInput,
 )
 from tools.daytona_toolkit.hooks.prehook import (
+    codeact_python_process_policy,
     move_src_scope_deny,
     rename_scope_policy,
     repo_operation_guard,
@@ -170,7 +171,10 @@ def test_new_pre_hooks_register_once() -> None:
     repo_operation_guard.register(registry)
     rename_scope_policy.register(registry)
     rename_scope_policy.register(registry)
+    codeact_python_process_policy.register(registry)
+    codeact_python_process_policy.register(registry)
 
     assert len(registry.matching("daytona_delete_file", "pre")) == 1
     assert len(registry.matching("daytona_move_file", "pre")) == 1
     assert len(registry.matching("daytona_rename_symbol", "pre")) == 1
+    assert len(registry.matching("daytona_codeact", "pre")) == 1
