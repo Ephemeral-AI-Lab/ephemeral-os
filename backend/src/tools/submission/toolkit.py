@@ -303,10 +303,12 @@ class NewTaskSpec(BaseModel):
         ...,
         description=(
             "Structured task spec — the agent's sole briefing. Must include sections "
-            "in order using numbered colon labels, e.g. '1. Goal: ...', "
-            "'2. Environment: ...', '3. Scope: ...', '4. Context: ...', "
-            "'5. Acceptance Criteria: ...'. Markdown headings like '## Goal' "
-            "are not accepted."
+            "in order using numbered colon labels. Each label must start its own "
+            "line and have body text after the colon on that same line, e.g. "
+            "'1. Goal: ...\\n2. Environment: ...\\n3. Scope: ...\\n"
+            "4. Context: ...\\n5. Acceptance Criteria: ...'. Markdown headings "
+            "like '## Goal', one-line specs with every label, and labels whose "
+            "body starts on the next line are not accepted."
         ),
     )
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
@@ -591,9 +593,10 @@ class SubmitPlanTool(BaseTool):
         "scope_paths. A system-generated summary of what actually happened "
         "is produced after children complete — do NOT write prose. Do not "
         "include task_note, output, background, summary, parent_id, or "
-        "other fields. Each spec must use numbered colon labels in order: "
-        "1. Goal, 2. Environment, 3. Scope, 4. Context, 5. Acceptance "
-        "Criteria. For developer and child-planner lanes, scope_paths "
+        "other fields. Each spec must use numbered colon labels in order, "
+        "each at the start of its own line with body text after the colon "
+        "on the same line: 1. Goal, 2. Environment, 3. Scope, 4. Context, "
+        "5. Acceptance Criteria. For developer and child-planner lanes, scope_paths "
         "should name implementation owner paths; put verification-only "
         "test targets in spec unless tests are explicitly the owned bug "
         "surface."
@@ -721,8 +724,9 @@ class SubmitReplanTool(BaseTool):
         "task. Do not include task_note, output, summary, background, "
         "parent_id, or other fields. Each new task must include a short "
         "planner-authored description. Each new task spec must use "
-        "numbered colon labels in order: 1. Goal, 2. Environment, 3. "
-        "Scope, 4. Context, 5. Acceptance Criteria."
+        "numbered colon labels in order, each at the start of its own line "
+        "with body text after the colon on the same line: 1. Goal, "
+        "2. Environment, 3. Scope, 4. Context, 5. Acceptance Criteria."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput

@@ -84,6 +84,14 @@ def _build_parent_summary_prompt(
     agent_name = getattr(parent, "agent_name", "") or "<unknown>"
     objective = getattr(parent, "objective", "") or ""
     lines.append(f"Agent: {agent_name}")
+    parent_status = getattr(parent, "status", None)
+    lines.append(f"Status: {getattr(parent_status, 'value', str(parent_status))}")
+    parent_deps = list(getattr(parent, "deps", []) or [])
+    parent_scope = list(getattr(parent, "scope_paths", []) or [])
+    if parent_deps:
+        lines.append(f"Deps: {parent_deps}")
+    if parent_scope:
+        lines.append(f"Scope paths: {parent_scope}")
     lines.append("Objective:")
     lines.append(objective)
     lines.append("")
@@ -97,9 +105,20 @@ def _build_parent_summary_prompt(
             status = getattr(child, "status", None)
             status_text = getattr(status, "value", str(status))
             failure = getattr(child, "failure_reason", "") or ""
+            child_deps = list(getattr(child, "deps", []) or [])
+            child_scope = list(getattr(child, "scope_paths", []) or [])
+            child_objective = getattr(child, "objective", "") or ""
             lines.append(f"- id={child_id} agent={child_agent} status={status_text}")
+            if child_deps:
+                lines.append(f"  deps: {child_deps}")
+            if child_scope:
+                lines.append(f"  scope_paths: {child_scope}")
             if failure:
                 lines.append(f"  failure_reason: {failure}")
+            if child_objective:
+                lines.append("  objective:")
+                for line in child_objective.splitlines():
+                    lines.append(f"    {line}")
     lines.append("")
     lines.append("## Child notes")
     for note in child_notes:
@@ -113,10 +132,12 @@ def _build_parent_summary_prompt(
     lines.append("")
     lines.append(
         "Produce exactly one `submit_task_summary` call with type=\"success\". "
-        "The `content` must be a concise Task Center summary that reports "
-        "what the parent planned, which children landed, which children "
-        "diverged (failed/cancelled/request_replan), and any residual "
-        "uncertainty. Do not invent next steps."
+        "The `content` must report what the parent planned, one direct child "
+        "line per child with status plus delivered/replanned/dropped/open-risk "
+        "classification, and an overall roll-up. Cite child final summaries, "
+        "commands, failing ids, exit codes, blockers, missing summaries, and "
+        "trivial summaries when present. Do not collapse the result into "
+        "\"all children done\" and do not invent next steps."
     )
     return "\n".join(lines)
 

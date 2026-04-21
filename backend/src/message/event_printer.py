@@ -216,7 +216,7 @@ class MultiAgentEventPrinter:
                 agent,
                 work_id,
                 f"{self._c('cyan', '-> tool_start:')} {event.tool_name}"
-                f"({_truncate(str(event.tool_input), 120)})",
+                f"({event.tool_input})",
             )
         elif isinstance(event, ToolExecutionCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
@@ -265,7 +265,7 @@ class MultiAgentEventPrinter:
                     agent,
                     work_id,
                     f"{self._c('magenta', '~> spawn:')}      {self._c('bold', child)} "
-                    f"task_id={event.task_id} task={_truncate(task_text, 120)}",
+                    f"task_id={event.task_id} task={task_text}",
                 )
             else:
                 self._line(

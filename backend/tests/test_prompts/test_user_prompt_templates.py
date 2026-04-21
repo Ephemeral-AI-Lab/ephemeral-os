@@ -239,12 +239,21 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_plan:" in ctx.user_message
-    assert "Your task id: `root`" in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "Your parent task id:" not in ctx.user_message
+    assert "Your dependency task ids:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
     assert "## User request" in ctx.user_message
     assert "Fix retry handling." in ctx.user_message
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
+    assert "You are the entry/root planner" in ctx.user_message
+    assert "Do not start with graph-context reads" in ctx.user_message
+    assert "no `read_task_graph()`" in ctx.user_message
+    assert "no `read_task_details(...)` before exploration" in ctx.user_message
+    assert "After scouts return or post notes" in ctx.user_message
+    assert 'read_file_note(file_path="...")' in ctx.user_message
+    assert "load `scout-launch-contract` as the exploration reference" in ctx.user_message
     assert "Keep benchmark or verification test targets in task prose" in ctx.user_message
     assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
     assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
@@ -257,8 +266,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "no indexed symbols for an exact file" in ctx.user_message
     assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
     assert "Do not add dependencies merely because tasks belong to the same benchmark" in ctx.user_message
-    assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
-    assert "do not pass `bg_*` background ids to `read_task_details`" in ctx.user_message
+    assert 'read_task_details(task_id="<your current task id>")' in ctx.user_message
     assert "submit with uncertainty instead of launching another scout wave" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message

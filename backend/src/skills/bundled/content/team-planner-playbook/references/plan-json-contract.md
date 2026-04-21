@@ -1,7 +1,7 @@
 # Plan JSON Contract
 Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide; do not load it until exploration and DAG shaping are complete.
 
-Use this only as the final schema checklist. After this reference loads, stop exploration and make the next tool call `submit_plan(...)`. Avoid recap prose when possible, but the hard requirement is: no non-terminal tool calls before `submit_plan(...)`.
+Use this only as the final schema checklist. After this reference loads, stop exploration and make the next assistant action the `submit_plan(...)` tool call. Do not emit recap prose, visible planning text, or another non-terminal tool call.
 
 ## Task/Goal
 
@@ -16,7 +16,7 @@ Use this only as the final schema checklist. After this reference loads, stop ex
 
 ## Workflow
 
-Build a schema-valid `submit_plan(new_tasks=[...])` payload, then call the tool.
+Build the schema-valid payload inside the `submit_plan(new_tasks=[...])` tool input. The response after this reference should contain the terminal tool call only.
 
 Tool input checklist:
 
@@ -25,7 +25,13 @@ Tool input checklist:
 - Each task has `id`, `description`, `name`, `spec`, `deps`, and non-empty `scope_paths`.
 - `name` is an exact registered agent name such as `developer`, `validator`, or `team_planner`.
 - `deps` is a top-level task field and every `id` is unique. Keep independent benchmark families parallel; do not add deps unless a task needs another task's concrete output or same-file edit ordering.
-- `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings.
+- `spec` uses numbered colon labels in this exact order, each at the start of its own line with content on the same line after the colon:
+  `1. Goal:` <text>
+  `2. Environment:` <text>
+  `3. Scope:` <text>
+  `4. Context:` <text>
+  `5. Acceptance Criteria:` <text>
+  Do not put all labels on one line. Do not put the section body on the next line after the colon. Do not use Markdown headings.
 - `scope_paths` uses live-confirmed production owner paths, adjacent supporting owners for the same likely fix, or a broader production boundary on `team_planner` when exact ownership is still uncertain. Keep verification-only test targets in `spec` context or acceptance criteria unless the task explicitly owns a test-only bug.
 - Missing modules, compatibility shims, re-export modules, and import bridges named by tests need production ownership evidence before entering `scope_paths`.
 - An exact file with no indexed symbols is not a live-confirmed owner when workspace structure shows a directory or nested files for that owner family; use that directory or the confirmed nested files instead.

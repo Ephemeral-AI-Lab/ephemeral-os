@@ -190,8 +190,6 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"Make the grading command pass by fixing the repository so the fail-to-pass "
         f"tests turn green without regressing the pass-to-pass coverage.\n\n"
         f"## Fail-To-Pass Targets\n{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
-        f"## Pass-To-Pass count: {len(instance.pass_to_pass)}\n\n"
-        f"## Grading command\n```\n{instance.test_cmds}\n```\n\n"
         f"Stay inside {repo_dir}."
     )
 

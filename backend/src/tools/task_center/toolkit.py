@@ -366,10 +366,12 @@ class ReadFileNoteInput(BaseModel):
 class ReadFileNoteTool(BaseTool):
     name = "read_file_note"
     description = (
-        "Call this before reading or editing any file that may have notes attached. "
-        "Developers and validators: required. Search Task Center notes by file "
-        "path across all tasks. Pass file_path=\"<path>\"; never put the "
-        "searched path only in task_note."
+        "Search Task Center notes by file path. Developers and validators must "
+        "call this before reading or editing files that may have notes. "
+        "Entry/root planners should not use it during initial setup; read file "
+        "notes after scouts post findings or when the prompt names a known note "
+        "path. Pass file_path=\"<path>\"; never put the searched path only in "
+        "task_note."
     )
     short_description = "Search notes by file path."
     input_model = ReadFileNoteInput
@@ -437,7 +439,9 @@ class ReadTaskDetailsInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Single task ID to look up. Get IDs from read_task_graph or from your deps."
+            "Single task ID to look up. Use the exact id from the prompt header, "
+            "a dependency id, or read_task_graph sibling discovery. Never pass "
+            "display slugs or shortened ids."
         ),
     )
 
@@ -445,14 +449,14 @@ class ReadTaskDetailsInput(BaseModel):
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
-        "Call this before planning, replanning, or validating any task. "
-        "Returns acceptance criteria, notes, and parent/child context. "
-        "Get full details for one task by ID: spec, deps, status, "
-        "scope_paths, failure reason, the completion summary (when done), and "
-        "the 3 most recent notes on that task (full content). Use "
-        "read_task_graph first to discover task IDs; use read_file_note for "
-        "path-based lookups across all notes. Call once per task when you need "
-        "multiple task details."
+        "Read full details for one known task id: spec, deps, status, "
+        "scope_paths, failure reason, completion summary, and recent notes. "
+        "Non-root developers, validators, child planners, and replanners use "
+        "this for the ids exposed in their prompt headers and dependencies. "
+        "The entry/root planner is exempt during initial setup and should read "
+        "task details only after scouts or other evidence have posted useful "
+        "current-task notes. Child planners and replanners may use "
+        "read_task_graph first to enumerate siblings."
     )
     short_description = "Read one task's details + recent notes by ID."
     input_model = ReadTaskDetailsInput
@@ -540,12 +544,13 @@ class ReadTaskGraphInput(BaseModel):
 class ReadTaskGraphTool(BaseTool):
     name = "read_task_graph"
     description = (
-        "View the task DAG as a JSON tree: nodes include id, agent, status, "
-        "description, deps, scope_paths, failure_reason, is_you, and nested "
-        "children. Default returns peers under your parent (with their subtrees). "
-        "Set global_scope=true for the full tree. Tasks whose parent is missing "
-        "from the returned subset appear under 'detached'. "
-        "Follow up with read_task_details(task_id=\"...\") for full info."
+        "View the task DAG as a JSON tree for sibling/dependent enumeration. "
+        "Use this for child planners and replanners that need same-parent peer "
+        "context. Entry/root planners have no parent, deps, or siblings and "
+        "should not call this as initial setup. Nodes include id, agent, status, "
+        "description, deps, scope_paths, failure_reason, is_you, and children. "
+        "Default returns peers under your parent; set global_scope=true only "
+        "when local peer context is insufficient."
     )
     short_description = "Read the task graph as JSON."
     input_model = ReadTaskGraphInput

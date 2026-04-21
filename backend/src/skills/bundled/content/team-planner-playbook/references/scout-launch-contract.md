@@ -1,5 +1,5 @@
 # Scout Launch Contract
-Use this reference immediately before the first scout wave.
+Use this reference immediately before the first scout wave. For the entry/root planner, this is the first exploration reference after the main playbook; do not do Task Center graph/detail/note setup before it.
 
 ## Task/Goal
 
@@ -21,7 +21,7 @@ Use this reference immediately before the first scout wave.
 1. Scrub `target_paths` first: every entry should be a live production owner file/directory unless tests are explicitly the owner surface; do not use scouts to repair benchmark test paths.
 2. Call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` with one unresolved owner slice per scout.
 3. Queue the whole useful wave before any progress check or wait.
-4. After the wave, read notes from the current planner task via `read_task_details(task_id="<your current task id>")`; scout notes live on the current task, not on siblings. Do not pass `bg_*` background ids to `read_task_details`. Use `read_file_note(file_path="...")` when you already know the scout's target paths.
+4. After the wave, read notes from the current planner task via `read_task_details(task_id="<your current task id>")`; scout notes live on the current task, not on siblings. Do not pass `bg_*` background ids to `read_task_details`. Use `read_file_note(file_path="...")` when you already know the scout's target paths. For the entry/root planner, this is the first time Task Center note reads are useful.
 5. On cold CI or a disproved exact file, fall back to the nearest stable production boundary instead of preserving a guessed exact path.
 
 ## Expected Outcome

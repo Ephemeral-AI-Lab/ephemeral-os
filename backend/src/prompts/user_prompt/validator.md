@@ -12,7 +12,8 @@ Your parent task id: `{{your_parent_task_id}}` — call `read_task_details(task_
 
 ## Your task
 
-1. Please read the assigned validation task and inherited context. Enumerate the declared dependencies and call `read_task_details(task_id=<dep>)` on each one before any probe — the appended `Initial Plan` / `Initial Replan` JSON and each dep's developer / child-planner summary are your hand-off. If a dep summary is missing or boilerplate, surface that gap in your terminal summary rather than guessing.
+0. Before any probe, diagnostics, verification command, or sandbox file read, consume the ids above exactly as rendered: call `read_task_details(task_id=<your task id>)`, call `read_task_details(task_id=<your parent task id>)` when a parent id is shown, then enumerate every declared dependency id and call `read_task_details(task_id=<dep>)` on each one. Do not call `read_task_graph()` for this validator pre-step, and never substitute planner slugs, short prefixes, or fabricated ids.
+1. Please read the assigned validation task and inherited context from those task-detail reads. The appended `Initial Plan` / `Initial Replan` JSON and each dep's developer / child-planner summary are your hand-off. If a dep summary is missing or boilerplate, surface that gap in your terminal summary rather than guessing.
 2. Before any sandbox file read, call `read_file_note(file_path="...")`, then use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or `ci_diagnostics(...)` to locate the verification boundary.
 3. Treat `daytona_read_file(...)` as a fallback for narrow line ranges after notes and CI evidence, not as the opening move.
 4. Analyze what outcome must be verified and which prior task outputs matter.
