@@ -106,7 +106,7 @@ async def test_submit_plan_resolves_roster_role_hints():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "impl",
                     "description": "Implement API",
@@ -131,20 +131,23 @@ async def test_submit_plan_resolves_roster_role_hints():
     payload = json.loads(result.output)
     assert payload["task_id"] == "planner-task"
     assert payload["agent_name"] == "team_planner"
-    assert len(payload["initial_planned_tasks"]) == 2
-    assert payload["initial_planned_tasks"][1]["agent"] == "validator"
-    assert payload["initial_planned_tasks"][0]["description"] == "Implement API"
+    assert len(payload["new_tasks"]) == 2
+    assert payload["new_tasks"][1]["agent"] == "validator"
+    assert payload["new_tasks"][0]["description"] == "Implement API"
     resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
     assert resolved_plan.tasks[0].description == "Implement API"
     assert resolved_plan.tasks[1].agent == "validator"
-    assert len(task_center.posted) == 1
-    assert "Submitted plan with 2 task(s)." in task_center.posted[0].content
-    assert "Tasks:" in task_center.posted[0].content
-    assert "- impl (developer): Implement API; scope=src/api.py" in task_center.posted[0].content
+    audit_notes = [
+        n for n in task_center.posted if "architecture" in (n.tags or [])
+    ]
+    assert len(audit_notes) == 1
+    assert "Submitted plan with 2 task(s)." in audit_notes[0].content
+    assert "Tasks:" in audit_notes[0].content
+    assert "- impl (developer): Implement API; scope=src/api.py" in audit_notes[0].content
     assert (
         "- review (validator): Validate API changes; deps=impl; scope=src/api.py"
-        in task_center.posted[0].content
+        in audit_notes[0].content
     )
 
 
@@ -175,7 +178,7 @@ async def test_submit_plan_allows_stale_freshness_context():
 
     result = await SubmitPlanTool().execute(
         SubmitPlanTool.input_model(
-            initial_planned_tasks=[],
+            new_tasks=[],
         ),
         ctx,
     )
@@ -183,13 +186,13 @@ async def test_submit_plan_allows_stale_freshness_context():
     assert result.is_error is False, result.output
     payload = json.loads(result.output)
     assert payload["task_id"] == "planner-task"
-    assert payload["initial_planned_tasks"] == []
+    assert payload["new_tasks"] == []
 
 
 def test_submit_plan_requires_planner_authored_description():
     with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "missing-description",
                     "spec": _spec("Implement the API."),
@@ -203,21 +206,15 @@ def test_submit_plan_requires_planner_authored_description():
 def test_submit_plan_rejects_legacy_output_field():
     """The legacy `output` prose field is gone; extra='forbid' must reject it."""
     with pytest.raises(ValidationError):
-        SubmitPlanTool.input_model(initial_planned_tasks=[], output="legacy prose")
+        SubmitPlanTool.input_model(new_tasks=[], output="legacy prose")
 
 
-def test_submit_plan_rejects_legacy_new_tasks_field():
-    """The legacy `new_tasks` field was renamed to `initial_planned_tasks`."""
-    with pytest.raises(ValidationError):
-        SubmitPlanTool.input_model(new_tasks=[])
-
-
-def test_submit_plan_schema_removes_output_and_renames_tasks():
+def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     tool = SubmitPlanTool()
     schema = tool.to_api_schema()
 
     assert "implementation owner paths" in schema["description"]
-    assert "initial_planned_tasks" in schema["input_schema"]["properties"]
+    assert "new_tasks" in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
     scope_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["scope_paths"][
@@ -226,7 +223,7 @@ def test_submit_plan_schema_removes_output_and_renames_tasks():
     assert "implementation owner paths" in scope_desc
 
     payload = tool.input_model(
-        initial_planned_tasks=[
+        new_tasks=[
             {
                 "id": "dev-owner",
                 "description": "Repair owner",
@@ -236,14 +233,14 @@ def test_submit_plan_schema_removes_output_and_renames_tasks():
             }
         ],
     )
-    assert payload.initial_planned_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
+    assert payload.new_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
 
 
-def test_submit_replan_schema_removes_summary_and_renames_tasks():
+def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     tool = SubmitReplanTool()
     schema = tool.to_api_schema()
 
-    assert "initial_replanned_tasks" in schema["input_schema"]["properties"]
+    assert "new_tasks" in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
 
@@ -251,8 +248,117 @@ def test_submit_replan_schema_removes_summary_and_renames_tasks():
         SubmitReplanTool.input_model(output="legacy rationale")
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(summary="legacy summary")
-    with pytest.raises(ValidationError):
-        SubmitReplanTool.input_model(new_tasks=[])
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_posts_structured_initial_planned_tasks_note():
+    """After validation, submit_plan attaches the structured JSON payload as a
+    note tagged `initial_planned_tasks` on the parent task so downstream
+    readers can retrieve it via read_task_details."""
+    task_center = _AsyncTaskCenterStub()
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "planner-task",
+            "agent_name": "team_planner",
+            "allow_empty_plan": False,
+            "max_plan_size": 8,
+            "max_note_bytes": 10_000,
+        },
+    )
+
+    tool = SubmitPlanTool()
+    result = await tool.execute(
+        tool.input_model(
+            new_tasks=[
+                {
+                    "id": "impl",
+                    "description": "Implement API",
+                    "spec": _spec("Implement the API."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                },
+            ],
+        ),
+        ctx,
+    )
+    assert result.is_error is False, result.output
+
+    tagged = [
+        n for n in task_center.posted if "initial_planned_tasks" in (n.tags or [])
+    ]
+    assert len(tagged) == 1
+    note = tagged[0]
+    assert note.task_id == "planner-task"
+    payload = json.loads(note.content)
+    assert isinstance(payload, list)
+    assert payload[0]["id"] == "impl"
+    assert payload[0]["agent"] == "developer"
+    assert payload[0]["scope_paths"] == ["src/api.py"]
+    assert "src/api.py" in (note.paths or [])
+
+
+@pytest.mark.asyncio
+async def test_submit_replan_posts_structured_initial_replanned_tasks_note():
+    task_center = _AsyncTaskCenterStub()
+    parent = Task(
+        id="replan-1",
+        team_run_id="run-1",
+        agent_name="replanner",
+        status=TaskStatus.RUNNING,
+        objective="replan",
+        scope_paths=[],
+        parent_id="root",
+    )
+    task_center.graph["replan-1"] = parent
+    task_center.graph["root"] = Task(
+        id="root",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED,
+        objective="root",
+    )
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replan-1",
+            "agent_name": "replanner",
+            "allow_empty_plan": True,
+            "max_plan_size": 8,
+            "max_note_bytes": 10_000,
+        },
+    )
+
+    tool = SubmitReplanTool()
+    result = await tool.execute(
+        tool.input_model(
+            new_tasks=[
+                {
+                    "id": "fix-api",
+                    "description": "Fix broken API",
+                    "spec": _spec("Repair the API."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                },
+            ],
+            cancel_ids=[],
+        ),
+        ctx,
+    )
+    assert result.is_error is False, result.output
+
+    tagged = [
+        n for n in task_center.posted if "initial_replanned_tasks" in (n.tags or [])
+    ]
+    assert len(tagged) == 1
+    note = tagged[0]
+    assert note.task_id == "replan-1"
+    payload = json.loads(note.content)
+    assert isinstance(payload, list)
+    assert payload[0]["id"] == "fix-api"
+    assert payload[0]["parent_id"] == "replan-1"
 
 
 @pytest.mark.asyncio
@@ -270,7 +376,7 @@ async def test_submit_plan_rejects_description_over_20_words_without_truncating(
 
     result = await SubmitPlanTool().execute(
         SubmitPlanTool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "long-description",
                     "description": (
@@ -315,7 +421,7 @@ async def test_submit_plan_rejects_oversize_task_notes():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "oversize",
                     "description": "Oversize API note",
@@ -353,7 +459,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "bad-spec",
                     "description": "Malformed API spec",
@@ -415,7 +521,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     result = await tool.execute(
         tool.input_model(
             cancel_ids=["stale"],
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "repair",
                     "description": "Repair implementation",
@@ -440,19 +546,22 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     payload = json.loads(result.output)
     assert payload["task_id"] == "replanner-task"
     assert payload["agent_name"] == "team_replanner"
-    assert len(payload["initial_replanned_tasks"]) == 2
+    assert len(payload["new_tasks"]) == 2
     assert payload["cancel_ids"] == ["stale"]
     replan = ctx.metadata["resolved_plan"]
     assert [task.parent_id for task in replan.add_tasks] == [
         "replanner-task",
         "replanner-task",
     ]
-    assert len(task_center.posted) == 1
-    assert "Corrective tasks:" in task_center.posted[0].content
+    audit_notes = [
+        n for n in task_center.posted if "refactor" in (n.tags or [])
+    ]
+    assert len(audit_notes) == 1
+    assert "Corrective tasks:" in audit_notes[0].content
     assert "- repair (developer): Repair implementation; scope=src/api.py" in (
-        task_center.posted[0].content
+        audit_notes[0].content
     )
-    assert "Cancelled siblings: stale" in task_center.posted[0].content
+    assert "Cancelled siblings: stale" in audit_notes[0].content
 
 
 def test_submit_replan_rejects_removed_sibling_arguments():
@@ -464,7 +573,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
 
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "legacy-parent",
                     "description": "Legacy parent placement",
@@ -479,7 +588,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
 def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
     with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(
-            initial_planned_tasks=[
+            new_tasks=[
                 {
                     "id": "legacy-parent",
                     "description": "Legacy parent placement",
@@ -517,7 +626,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "bad-replanner",
                     "description": "Spawn replanner",
@@ -560,7 +669,7 @@ async def test_submit_replan_rejects_subagent_targets():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "bad-subagent",
                     "description": "Target subagent",
@@ -605,7 +714,7 @@ async def test_submit_replan_rejects_depth_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "too-deep",
                     "description": "Repair below limit",
@@ -648,7 +757,7 @@ async def test_submit_replan_rejects_plan_size_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "repair-a",
                     "description": "Repair first path",
@@ -699,7 +808,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "repair",
                     "description": "Repair over budget",

@@ -14,7 +14,7 @@ Please read the following sections and call the listed terminal tool when your w
 8. If `ci_query_symbol(...)` reports no indexed symbols for an exact file and `ci_workspace_structure(...)` shows a directory or nested files for that owner family, treat the exact file as disproved. Do not pass that exact file to scouts, developers, validators, or child planners; use the live directory boundary or confirmed nested production files instead.
 9. Do not add dependencies merely because tasks belong to the same benchmark, mention adjacent files, or have overlapping `scope_paths`. Use `deps` only when one task genuinely needs another task's output, when the same exact file has a known edit-order dependency, or when unresolved ownership should be delegated to one child `team_planner`.
 10. Always include at least one terminal `validator` task when the plan has non-validator tasks. Use one validator by default; never include more than 2 terminal validators, and make their top-level `deps` cover every same-layer non-validator task.
-11. The terminal `submit_plan(...)` call takes only `initial_planned_tasks`. Do not author a prose summary — the system generates the outcome summary automatically once your children complete. Focus your energy on structuring the task split, owner evidence, dependency shape, validator coverage, and scope boundaries inside each task's `description` and `spec`.
+11. The terminal `submit_plan(...)` call takes only `new_tasks`. Do not author a prose summary — the system generates the outcome summary automatically once your children complete. Focus your energy on structuring the task split, owner evidence, dependency shape, validator coverage, and scope boundaries inside each task's `description` and `spec`.
 
 ## User request
 

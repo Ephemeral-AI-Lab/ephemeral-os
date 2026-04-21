@@ -153,6 +153,18 @@ class Executor:
         tc = self.team_run.task_center
         dq = self.team_run.dispatch_queue
         pop_ready = dq.pop_ready
+        # Restart-recovery: re-fire the parent-summary external trigger for
+        # any parents the previous team_run lifetime left mid-flight in
+        # EXPANDED_AWAITING_SUMMARY. Fire-and-forget so boot is not blocked
+        # on the external LLM call.
+        try:
+            store = getattr(tc, "store", None)
+            if store is not None and hasattr(store, "fetch_parents_awaiting_summary"):
+                stuck_parents = await store.fetch_parents_awaiting_summary()
+                for parent_id in stuck_parents:
+                    asyncio.create_task(self._run_parent_summary_trigger(parent_id))
+        except Exception:
+            logger.exception("Restart recovery for awaiting-summary parents failed")
         while not self.team_run.cancel_event.is_set():
             try:
                 rec = await pop_ready(self.team_run.id)

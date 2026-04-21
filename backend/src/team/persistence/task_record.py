@@ -29,7 +29,7 @@ class TaskRecord(Base):
     team_run_id: Mapped[str] = mapped_column(Text, primary_key=True)
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="pending"
+        String(32), nullable=False, default="pending"
     )
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")

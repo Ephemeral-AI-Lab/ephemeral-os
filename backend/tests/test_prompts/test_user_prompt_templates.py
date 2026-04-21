@@ -16,7 +16,7 @@ from team.task_context_builder import TaskContextBuilder
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompts" / "user_prompt"
 _SUBMIT_PLAN_SCHEMA_SNIPPET = (
-    "Provide initial_planned_tasks with id, description, name, spec, deps, and scope_paths"
+    "Provide new_tasks with id, description, name, spec, deps, and scope_paths"
 )
 _SUBMIT_PLAN_SPEC_SNIPPET = "Each spec must use numbered colon labels in order"
 
@@ -366,8 +366,8 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
     assert "## Failure context" in ctx.user_message
     assert "Original task: failed-1" in ctx.user_message
     assert "Failed reason: unit test still fails" in ctx.user_message
-    assert 'submit_replan(initial_replanned_tasks=[...], cancel_ids=[...])' in ctx.user_message
-    assert "Put replacement work in `initial_replanned_tasks`" in ctx.user_message
+    assert 'submit_replan(new_tasks=[...], cancel_ids=[...])' in ctx.user_message
+    assert "Put replacement work in `new_tasks`" in ctx.user_message
     assert "Do not add dependencies merely because `scope_paths` overlap" in ctx.user_message
     assert "file renames, or file moves" in ctx.user_message
     assert "include both the exact path and adjacent live owner" in ctx.user_message

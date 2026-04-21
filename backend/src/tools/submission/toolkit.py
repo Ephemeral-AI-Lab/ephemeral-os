@@ -11,6 +11,7 @@ Tool surface:
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -350,7 +351,7 @@ class SubmitPlanInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    initial_planned_tasks: list[NewTaskSpec] = Field(
+    new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
         description=(
             "Structured JSON array of initial child tasks. Each entry is a "
@@ -364,7 +365,7 @@ class SubmitPlanInput(BaseModel):
 class SubmitPlanOutput(BaseModel):
     task_id: str = Field(..., description="Runtime-stamped planner task id.")
     agent_name: str = Field(..., description="Runtime-stamped planner agent name.")
-    initial_planned_tasks: list[ResolvedTaskOutput] = Field(
+    new_tasks: list[ResolvedTaskOutput] = Field(
         default_factory=list,
         description="Accepted child tasks with resolved exact agent names.",
     )
@@ -382,7 +383,7 @@ class SubmitReplanInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    initial_replanned_tasks: list[NewTaskSpec] = Field(
+    new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
         description=(
             "Structured JSON array of corrective tasks to create as direct "
@@ -403,7 +404,7 @@ class SubmitReplanInput(BaseModel):
 class SubmitReplanOutput(BaseModel):
     task_id: str = Field(..., description="Runtime-stamped replanner task id.")
     agent_name: str = Field(..., description="Runtime-stamped replanner agent name.")
-    initial_replanned_tasks: list[ResolvedTaskOutput] = Field(
+    new_tasks: list[ResolvedTaskOutput] = Field(
         default_factory=list,
         description="Accepted corrective child tasks with resolved exact agent names.",
     )
@@ -461,9 +462,9 @@ def _validate_submit_plan_input(
 ) -> list[str]:
     graph = _get_graph(context)
     graph_ids = set(graph.keys()) if graph is not None else set()
-    new_ids = {spec.id for spec in arguments.initial_planned_tasks}
+    new_ids = {spec.id for spec in arguments.new_tasks}
     return _validate_task_specs(
-        arguments.initial_planned_tasks,
+        arguments.new_tasks,
         graph_ids=graph_ids,
         valid_dep_ids=graph_ids | new_ids,
         roster=_roster_from_context(context),
@@ -489,11 +490,11 @@ def _validate_submit_replan_input(
     if graph is None:
         return errors
 
-    new_ids = {spec.id for spec in arguments.initial_replanned_tasks}
+    new_ids = {spec.id for spec in arguments.new_tasks}
     valid_dep_ids = result.allowed_existing_dep_ids | new_ids
     errors.extend(
         _validate_task_specs(
-            arguments.initial_replanned_tasks,
+            arguments.new_tasks,
             graph_ids=set(graph.keys()),
             valid_dep_ids=valid_dep_ids,
             roster=_roster_from_context(context),
@@ -503,7 +504,7 @@ def _validate_submit_replan_input(
         return errors
 
     resolved_tasks = _resolved_task_payloads(
-        arguments.initial_replanned_tasks,
+        arguments.new_tasks,
         roster=_roster_from_context(context),
         parent_id=current_task_id,
         include_parent_id=True,
@@ -586,7 +587,7 @@ class SubmitPlanTool(BaseTool):
     name = "submit_plan"
     description = (
         "Submit the initial planned tasks as structured JSON. Provide "
-        "initial_planned_tasks with id, description, name, spec, deps, and "
+        "new_tasks with id, description, name, spec, deps, and "
         "scope_paths. A system-generated summary of what actually happened "
         "is produced after children complete — do NOT write prose. Do not "
         "include task_note, output, background, summary, parent_id, or "
@@ -613,7 +614,7 @@ class SubmitPlanTool(BaseTool):
             )
 
         resolved_tasks = _resolved_task_payloads(
-            arguments.initial_planned_tasks,
+            arguments.new_tasks,
             roster=_roster_from_context(context),
         )
         try:
@@ -671,12 +672,32 @@ class SubmitPlanTool(BaseTool):
         )
         await _post_submission_note(context, content=note_content, tags=["architecture"])
 
+        # Persist the structured task JSON on the parent so
+        # `read_task_details(<parent_id>)` surfaces the authoritative
+        # initial planning payload (id, description, name, spec, deps,
+        # scope_paths) to downstream readers.
+        scope_union: list[str] = []
+        seen_paths: set[str] = set()
+        for item in resolved_tasks:
+            for path in item.get("scope_paths") or []:
+                path_str = str(path)
+                if path_str in seen_paths:
+                    continue
+                seen_paths.add(path_str)
+                scope_union.append(path_str)
+        await _post_submission_note(
+            context,
+            content=json.dumps(resolved_tasks, indent=2),
+            scope_paths=scope_union,
+            tags=["initial_planned_tasks"],
+        )
+
         context.metadata["resolved_plan"] = plan
         context.metadata["plan_is_replan"] = False
         payload = SubmitPlanOutput(
             task_id=str(context.metadata.get("work_item_id") or ""),
             agent_name=str(context.metadata.get("agent_name") or ""),
-            initial_planned_tasks=[
+            new_tasks=[
                 ResolvedTaskOutput.model_validate(item) for item in resolved_tasks
             ],
         )
@@ -692,7 +713,7 @@ class SubmitReplanTool(BaseTool):
     name = "submit_replan"
     description = (
         "Submit the initial replanned tasks as structured JSON. Provide "
-        "initial_replanned_tasks for corrective repair work owned by the "
+        "new_tasks for corrective repair work owned by the "
         "replanner, and cancel_ids for stale direct siblings whose subtrees "
         "should be cancelled by cascade. A system-generated summary of what "
         "actually happened is produced after children complete — do NOT "
@@ -721,7 +742,7 @@ class SubmitReplanTool(BaseTool):
         current_task_id = str(context.metadata.get("work_item_id") or "")
         roster = _roster_from_context(context)
         resolved_tasks = _resolved_task_payloads(
-            arguments.initial_replanned_tasks,
+            arguments.new_tasks,
             roster=roster,
             parent_id=current_task_id,
             include_parent_id=True,
@@ -747,12 +768,32 @@ class SubmitReplanTool(BaseTool):
         )
         await _post_submission_note(context, content=note_content, tags=["refactor"])
 
+        # Persist the structured corrective-task JSON on the parent so
+        # `read_task_details(<parent_id>)` surfaces the authoritative
+        # initial replanning payload (id, description, name, spec, deps,
+        # scope_paths, parent_id) to downstream readers.
+        scope_union: list[str] = []
+        seen_paths: set[str] = set()
+        for item in resolved_tasks:
+            for path in item.get("scope_paths") or []:
+                path_str = str(path)
+                if path_str in seen_paths:
+                    continue
+                seen_paths.add(path_str)
+                scope_union.append(path_str)
+        await _post_submission_note(
+            context,
+            content=json.dumps(resolved_tasks, indent=2),
+            scope_paths=scope_union,
+            tags=["initial_replanned_tasks"],
+        )
+
         context.metadata["resolved_plan"] = replan
         context.metadata["plan_is_replan"] = True
         payload = SubmitReplanOutput(
             task_id=current_task_id,
             agent_name=str(context.metadata.get("agent_name") or ""),
-            initial_replanned_tasks=[
+            new_tasks=[
                 ResolvedTaskOutput.model_validate(item) for item in resolved_tasks
             ],
             cancel_ids=list(arguments.cancel_ids),

@@ -224,7 +224,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "inspect git history" in replanner
     assert "outside-scope missing-module request" in replanner
     assert "benchmark test import as evidence" in replanner
-    assert 'submit_replan(initial_replanned_tasks=[], cancel_ids=[])' in replanner
+    assert 'submit_replan(new_tasks=[], cancel_ids=[])' in replanner
     assert "The system generates the outcome summary automatically" in replanner
     assert "do not call CI, file, graph, note, or CodeAct tools afterward" in replanner
     assert "Must not convert a coordinated write-tool failure into instructions to bypass coordination" in replanner
@@ -263,7 +263,7 @@ def test_reference_files_hold_specialized_detail() -> None:
 
     assert "optional final helper" in planner_json
     assert "do not load it until exploration and DAG shaping are complete" in planner_json
-    assert "submit_plan(initial_planned_tasks=[...])" in planner_json
+    assert "submit_plan(new_tasks=[...])" in planner_json
     assert "Do not include `task_note`" in planner_json
     assert "`1. Goal:`" in planner_json
     assert "Do not use Markdown headings" in planner_json
@@ -324,7 +324,7 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
         _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md"
     )
 
-    assert "check `initial_replanned_tasks` for real sequencing needs" in replanner
+    assert "check `new_tasks` for real sequencing needs" in replanner
     assert "Scope overlap is allowed" in add_tasks
     assert "new-file, rename, move, shim, or re-export task" in add_tasks
     assert "Self-check `cancel_ids=[]`" in add_tasks

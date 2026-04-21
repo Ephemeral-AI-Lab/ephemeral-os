@@ -122,7 +122,7 @@ async def test_submit_replan_inserts_new_tasks_as_replanner_children():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "repair",
                     "name": "developer",
@@ -286,7 +286,7 @@ async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            initial_replanned_tasks=[
+            new_tasks=[
                 {
                     "id": "repair",
                     "name": "developer",

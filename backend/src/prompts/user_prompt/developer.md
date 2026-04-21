@@ -37,9 +37,6 @@ If a Daytona tool emits an `outside write_scope` warning, treat the packet as ob
 
 {{#if context_from_dependencies}}
 ## Context from dependencies
-
-Truncated teasers from upstream deps; each `### <agent> (<task_id>)` heading is a dep id. Per the tool rule, call `read_task_details(task_id="<dep_id>")` on every dep your task references before editing.
-
 {{context_from_dependencies}}
 
 {{/if}}
