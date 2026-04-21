@@ -23,6 +23,7 @@ _STATUSES_REQUIRING_DONE_DEPS = frozenset(
         TaskStatus.READY,
         TaskStatus.RUNNING,
         TaskStatus.EXPANDED,
+        TaskStatus.EXPANDED_AWAITING_SUMMARY,
         TaskStatus.DONE,
     }
 )
@@ -187,8 +188,42 @@ class TaskStore:
             await db.commit()
         self._tg.mark_expanded(task_id)
 
-    async def maybe_promote_expanded_parent(self, child_id: str) -> list[str]:
+    async def mark_expanded_awaiting_summary(self, task_id: str) -> None:
+        async with self._sf() as db:
+            await q.set_status_expanded_awaiting_summary(
+                db, self._team_run_id, task_id
+            )
+            await db.commit()
+        self._tg.mark_expanded_awaiting_summary(task_id)
+
+    @staticmethod
+    def _is_expandable_parent_agent(agent_name: str) -> bool:
+        """Return True if ``agent_name`` plays the planner or replanner role.
+
+        Expandable parents (planners/replanners) receive an external summary
+        trigger before promotion. Defensive lookups — agents missing from the
+        registry default to False so the caller falls through to direct DONE.
+        """
+        from agents.registry import get_role
+
+        role = get_role(agent_name)
+        return role in {"planner", "replanner"}
+
+    async def maybe_promote_expanded_parent(
+        self, child_id: str
+    ) -> tuple[list[str], list[str]]:
+        """Resolve the chain of EXPANDED parents rooted at ``child_id``.
+
+        Returns ``(promoted_ids, awaiting_summary_ids)``:
+
+        - ``promoted_ids``: parents transitioned directly to DONE (non-expandable
+          agent) or READY dependents promoted as a side effect of mark_done.
+        - ``awaiting_summary_ids``: parents of planner/replanner role whose
+          children all terminated; these transitioned to
+          EXPANDED_AWAITING_SUMMARY and await the external-trigger summary.
+        """
         promoted_all: list[str] = []
+        awaiting_all: list[str] = []
         current = child_id
         while True:
             async with self._sf() as db:
@@ -198,18 +233,56 @@ class TaskStore:
             if row is None:
                 break
             pid = str(row.id)
+            parent = self._tg.tasks.get(pid)
+            parent_agent = parent.agent_name if parent is not None else ""
             if row.all_detached:
                 await self.mark_terminal(pid, "failed", "all_children_detached")
-            else:
-                promoted = await self.mark_done(pid)
-                promoted_all.extend(promoted)
+                promoted_all.append(pid)
+                # Failed parent: grandparent check continues via the failure
+                # path (ancestor chain above also expanded).
+                current = pid
+                continue
+            if self._is_expandable_parent_agent(parent_agent):
+                # Don't mark DONE yet — external summary trigger must run.
+                await self.mark_expanded_awaiting_summary(pid)
+                awaiting_all.append(pid)
+                # Stop the chain walk; grandparents must wait until this
+                # parent actually transitions to DONE.
+                break
+            promoted = await self.mark_done(pid)
+            promoted_all.extend(promoted)
             promoted_all.append(pid)
             current = pid
-        return promoted_all
+        return promoted_all, awaiting_all
 
-    async def sweep_expanded_promotions(self) -> list[str]:
-        """Resolve EXPANDED parents after bulk graph changes detach children."""
+    async def finalize_parent_summary(self, parent_id: str) -> list[str]:
+        """Transition an awaiting-summary parent to DONE and promote dependents.
+
+        Mirrors the tail of ``mark_done`` for the parent (sets DONE + promotes
+        pending dependents whose deps are all satisfied). Returns newly-READY
+        dependent ids.
+        """
+        return await self.mark_done(parent_id)
+
+    async def fetch_parents_awaiting_summary(self) -> list[str]:
+        """Return task ids currently stuck in expanded_awaiting_summary.
+
+        Used on team-run restart to re-fire the external-trigger summary for
+        parents the previous lifetime left mid-flight.
+        """
+        async with self._sf() as db:
+            return await q.fetch_awaiting_summary_ids(db, self._team_run_id)
+
+    async def sweep_expanded_promotions(
+        self,
+    ) -> tuple[list[str], list[str]]:
+        """Resolve EXPANDED parents after bulk graph changes detach children.
+
+        Returns ``(promoted_ids, awaiting_summary_ids)`` mirroring
+        :meth:`maybe_promote_expanded_parent`.
+        """
         promoted_all: list[str] = []
+        awaiting_all: list[str] = []
         seen: set[str] = set()
         candidate_child_ids = [
             task.id
@@ -217,12 +290,18 @@ class TaskStore:
             if task.parent_id is not None and task.status in TERMINAL_STATUSES
         ]
         for child_id in candidate_child_ids:
-            for promoted_id in await self.maybe_promote_expanded_parent(child_id):
+            promoted, awaiting = await self.maybe_promote_expanded_parent(child_id)
+            for promoted_id in promoted:
                 if promoted_id in seen:
                     continue
                 seen.add(promoted_id)
                 promoted_all.append(promoted_id)
-        return promoted_all
+            for awaiting_id in awaiting:
+                if awaiting_id in seen:
+                    continue
+                seen.add(awaiting_id)
+                awaiting_all.append(awaiting_id)
+        return promoted_all, awaiting_all
 
     async def mark_terminal(self, task_id: str, status: str, reason: str) -> None:
         async with self._sf() as db:
@@ -303,9 +382,9 @@ class TaskStore:
             if status is None or status in ("done", "failed", "cancelled"):
                 await db.commit()
                 return
-            if status == "expanded":
+            if status in ("expanded", "expanded_awaiting_summary"):
                 raise GraphInvariantViolation(
-                    f"fail_task: task {task_id} is EXPANDED; only leaf tasks may fail"
+                    f"fail_task: task {task_id} is {status.upper()}; only leaf tasks may fail"
                 )
             await q.set_status_failed_if_active(
                 db, self._team_run_id, task_id, reason
@@ -318,7 +397,7 @@ class TaskStore:
             count = await q.cancel_statuses(
                 db,
                 self._team_run_id,
-                ("pending", "ready", "expanded"),
+                ("pending", "ready", "expanded", "expanded_awaiting_summary"),
                 "team_run cancelled",
             )
             await db.commit()

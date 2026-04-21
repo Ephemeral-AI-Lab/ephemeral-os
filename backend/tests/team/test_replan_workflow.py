@@ -122,7 +122,7 @@ async def test_submit_replan_inserts_new_tasks_as_replanner_children():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "repair",
                     "name": "developer",
@@ -286,7 +286,7 @@ async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "repair",
                     "name": "developer",
@@ -369,10 +369,10 @@ class _FakeStore:
         promoted = self.expanded_promotions.get(child_id, [])
         for task_id in promoted:
             self.graph[task_id].status = TaskStatus.DONE
-        return promoted
+        return promoted, []
 
     async def sweep_expanded_promotions(self):
-        return []
+        return [], []
 
     async def finalize_replanned_origin(self, replanner_task_id: str):
         replanner = self.graph[replanner_task_id]

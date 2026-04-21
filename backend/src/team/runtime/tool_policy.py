@@ -26,6 +26,10 @@ _ROLE_TOOL_POLICIES: dict[str, RoleToolPolicy] = {
         allowed_submission_tools=frozenset({"submit_task_summary"}),
         terminal_tools=frozenset({"submit_task_summary"}),
     ),
+    "parent_summarizer": RoleToolPolicy(
+        allowed_submission_tools=frozenset({"submit_task_summary"}),
+        terminal_tools=frozenset({"submit_task_summary"}),
+    ),
     "reviewer": RoleToolPolicy(
         allowed_submission_tools=frozenset({"submit_task_summary"}),
         terminal_tools=frozenset({"submit_task_summary"}),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
@@ -105,7 +106,7 @@ async def test_submit_plan_resolves_roster_role_hints():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "impl",
                     "description": "Implement API",
@@ -122,10 +123,6 @@ async def test_submit_plan_resolves_roster_role_hints():
                     "scope_paths": ["src/api.py"],
                 },
             ],
-            output=(
-                "Planner split API implementation and validation by owner. "
-                "Developer owns src/api.py; validator depends on impl and checks the same scope."
-            ),
         ),
         ctx,
     )
@@ -134,9 +131,9 @@ async def test_submit_plan_resolves_roster_role_hints():
     payload = json.loads(result.output)
     assert payload["task_id"] == "planner-task"
     assert payload["agent_name"] == "team_planner"
-    assert len(payload["new_tasks"]) == 2
-    assert payload["new_tasks"][1]["agent"] == "validator"
-    assert payload["new_tasks"][0]["description"] == "Implement API"
+    assert len(payload["initial_planned_tasks"]) == 2
+    assert payload["initial_planned_tasks"][1]["agent"] == "validator"
+    assert payload["initial_planned_tasks"][0]["description"] == "Implement API"
     resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
     assert resolved_plan.tasks[0].description == "Implement API"
@@ -178,8 +175,7 @@ async def test_submit_plan_allows_stale_freshness_context():
 
     result = await SubmitPlanTool().execute(
         SubmitPlanTool.input_model(
-            new_tasks=[],
-            output="No child tasks are required; planner is intentionally submitting an empty plan.",
+            initial_planned_tasks=[],
         ),
         ctx,
     )
@@ -187,13 +183,13 @@ async def test_submit_plan_allows_stale_freshness_context():
     assert result.is_error is False, result.output
     payload = json.loads(result.output)
     assert payload["task_id"] == "planner-task"
-    assert payload["new_tasks"] == []
+    assert payload["initial_planned_tasks"] == []
 
 
 def test_submit_plan_requires_planner_authored_description():
     with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "missing-description",
                     "spec": _spec("Implement the API."),
@@ -201,34 +197,36 @@ def test_submit_plan_requires_planner_authored_description():
                     "scope_paths": ["src/api.py"],
                 }
             ],
-            output="Planner summary present so this test isolates missing description.",
         )
 
 
-def test_submit_plan_requires_output_summary():
+def test_submit_plan_rejects_legacy_output_field():
+    """The legacy `output` prose field is gone; extra='forbid' must reject it."""
+    with pytest.raises(ValidationError):
+        SubmitPlanTool.input_model(initial_planned_tasks=[], output="legacy prose")
+
+
+def test_submit_plan_rejects_legacy_new_tasks_field():
+    """The legacy `new_tasks` field was renamed to `initial_planned_tasks`."""
     with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(new_tasks=[])
 
 
-def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
+def test_submit_plan_schema_removes_output_and_renames_tasks():
     tool = SubmitPlanTool()
     schema = tool.to_api_schema()
 
     assert "implementation owner paths" in schema["description"]
-    assert "verification-only test targets in spec" in schema["description"]
-    assert "Task Center summary" in schema["description"]
+    assert "initial_planned_tasks" in schema["input_schema"]["properties"]
+    assert "output" not in schema["input_schema"]["properties"]
+    assert "summary" not in schema["input_schema"]["properties"]
     scope_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["scope_paths"][
         "description"
     ]
     assert "implementation owner paths" in scope_desc
-    assert "verification-only test targets in spec" in scope_desc
-    output_desc = schema["input_schema"]["properties"]["output"]["description"]
-    assert "output" in schema["input_schema"]["required"]
-    assert schema["input_schema"]["properties"]["output"]["minLength"] == 1
-    assert "ownership evidence" in output_desc
 
     payload = tool.input_model(
-        new_tasks=[
+        initial_planned_tasks=[
             {
                 "id": "dev-owner",
                 "description": "Repair owner",
@@ -237,23 +235,24 @@ def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
                 "scope_paths": ["pkg/tests/test_owner.py"],
             }
         ],
-        output="Owner evidence keeps the test path as submitted scope for schema coverage.",
     )
-    assert payload.new_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
+    assert payload.initial_planned_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
 
 
-def test_submit_replan_schema_requests_summary_without_reallowing_output():
+def test_submit_replan_schema_removes_summary_and_renames_tasks():
     tool = SubmitReplanTool()
     schema = tool.to_api_schema()
 
-    assert "Include summary with the failure evidence" in schema["description"]
-    assert "summary" in schema["input_schema"]["properties"]
-    summary_desc = schema["input_schema"]["properties"]["summary"]["description"]
-    assert "failure evidence" in summary_desc
-    assert "remaining uncertainty" in summary_desc
+    assert "initial_replanned_tasks" in schema["input_schema"]["properties"]
+    assert "summary" not in schema["input_schema"]["properties"]
+    assert "output" not in schema["input_schema"]["properties"]
 
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(output="legacy rationale")
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(summary="legacy summary")
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(new_tasks=[])
 
 
 @pytest.mark.asyncio
@@ -271,7 +270,7 @@ async def test_submit_plan_rejects_description_over_20_words_without_truncating(
 
     result = await SubmitPlanTool().execute(
         SubmitPlanTool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "long-description",
                     "description": (
@@ -283,7 +282,6 @@ async def test_submit_plan_rejects_description_over_20_words_without_truncating(
                     "scope_paths": ["src/api.py"],
                 }
             ],
-            output="Planner summary for the long-description validation case.",
         ),
         ctx,
     )
@@ -317,7 +315,7 @@ async def test_submit_plan_rejects_oversize_task_notes():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "oversize",
                     "description": "Oversize API note",
@@ -329,14 +327,12 @@ async def test_submit_plan_rejects_oversize_task_notes():
                     "scope_paths": ["src/api.py"],
                 }
             ],
-            output="Planner summary for oversized task note validation.",
         ),
         ctx,
     )
 
     assert result.is_error is True
     assert "max_note_bytes" in result.output
-    assert ctx.metadata.get("submitted_output") is None
     assert task_center.posted == []
 
 
@@ -357,7 +353,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
     tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "bad-spec",
                     "description": "Malformed API spec",
@@ -366,7 +362,6 @@ async def test_submit_plan_rejects_malformed_spec_sections():
                     "scope_paths": ["src/api.py"],
                 }
             ],
-            output="Planner summary present so this test isolates malformed spec sections.",
         ),
         ctx,
     )
@@ -420,11 +415,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     result = await tool.execute(
         tool.input_model(
             cancel_ids=["stale"],
-            summary=(
-                "The stale sibling is invalidated by the validator packet; add a focused "
-                "repair and preserve expanded validation."
-            ),
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "repair",
                     "description": "Repair implementation",
@@ -449,16 +440,14 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     payload = json.loads(result.output)
     assert payload["task_id"] == "replanner-task"
     assert payload["agent_name"] == "team_replanner"
-    assert len(payload["new_tasks"]) == 2
+    assert len(payload["initial_replanned_tasks"]) == 2
     assert payload["cancel_ids"] == ["stale"]
-    assert payload["summary"].startswith("The stale sibling is invalidated")
     replan = ctx.metadata["resolved_plan"]
     assert [task.parent_id for task in replan.add_tasks] == [
         "replanner-task",
         "replanner-task",
     ]
     assert len(task_center.posted) == 1
-    assert "The stale sibling is invalidated" in task_center.posted[0].content
     assert "Corrective tasks:" in task_center.posted[0].content
     assert "- repair (developer): Repair implementation; scope=src/api.py" in (
         task_center.posted[0].content
@@ -475,7 +464,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
 
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "legacy-parent",
                     "description": "Legacy parent placement",
@@ -490,7 +479,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
 def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
     with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(
-            new_tasks=[
+            initial_planned_tasks=[
                 {
                     "id": "legacy-parent",
                     "description": "Legacy parent placement",
@@ -499,7 +488,6 @@ def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
                     "parent_id": "parent",
                 }
             ],
-            output="Planner summary present so this test isolates legacy parent_id.",
         )
 
 
@@ -529,7 +517,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "bad-replanner",
                     "description": "Spawn replanner",
@@ -572,7 +560,7 @@ async def test_submit_replan_rejects_subagent_targets():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "bad-subagent",
                     "description": "Target subagent",
@@ -617,7 +605,7 @@ async def test_submit_replan_rejects_depth_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "too-deep",
                     "description": "Repair below limit",
@@ -660,7 +648,7 @@ async def test_submit_replan_rejects_plan_size_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "repair-a",
                     "description": "Repair first path",
@@ -711,7 +699,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
 
     result = await SubmitReplanTool().execute(
         SubmitReplanTool.input_model(
-            new_tasks=[
+            initial_replanned_tasks=[
                 {
                     "id": "repair",
                     "description": "Repair over budget",
@@ -733,9 +721,123 @@ def test_submit_replan_rejects_removed_expected_projection_argument():
         SubmitReplanTool.input_model(expected_projection={"root_parent_id": "parent"})
 
 
-def test_submit_replan_rejects_removed_output_argument():
-    with pytest.raises(ValidationError):
-        SubmitReplanTool.input_model(output="replan rationale")
+@pytest.mark.asyncio
+async def test_parent_summary_dispatcher_callback_fires_on_awaiting_summary():
+    """Planner with leaf children that terminate → dispatcher sees the parent id.
+
+    Uses the real TaskCenter + in-memory TaskStore variants so the callback
+    hook is exercised end-to-end inside the runtime path.
+    """
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+
+    fired: list[str] = []
+
+    async def _cb(parent_id: str) -> None:
+        fired.append(parent_id)
+
+    tc.set_parent_summary_callback(_cb)
+
+    # Wire a planner parent with 2 leaf children directly into the in-memory
+    # graph via the TaskGraph. We skip the DB by intercepting store methods.
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+
+    async def _fake_maybe_promote(child_id: str):
+        # Simulate the store awaiting-summary transition for the planner parent.
+        parent.status = TaskStatus.EXPANDED_AWAITING_SUMMARY
+        return [], ["planner-parent"]
+
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+    tc.store.mark_done = AsyncMock(return_value=[])  # type: ignore[assignment]
+
+    await tc._mark_done_emit_promotions("child-id")
+
+    assert fired == ["planner-parent"], (
+        f"parent-summary callback should have fired once; fired={fired}"
+    )
+    assert parent.status == TaskStatus.EXPANDED_AWAITING_SUMMARY
+
+
+@pytest.mark.asyncio
+async def test_finalize_parent_awaiting_summary_transitions_to_done():
+    """finalize_parent_awaiting_summary should transition EXPANDED_AWAITING_SUMMARY → DONE."""
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+
+    async def _fake_get_record(task_id):
+        return SimpleNamespace(id=task_id, status="expanded_awaiting_summary")
+
+    async def _fake_finalize(parent_id):
+        parent.status = TaskStatus.DONE
+        return []
+
+    async def _fake_maybe_promote(child_id: str):
+        return [], []
+
+    tc.store.get_record = _fake_get_record  # type: ignore[assignment]
+    tc.store.finalize_parent_summary = _fake_finalize  # type: ignore[assignment]
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+
+    async def _noop_refresh():
+        return tc.store._tg.tasks
+
+    tc.store.refresh_graph = _noop_refresh  # type: ignore[assignment]
+
+    await tc.finalize_parent_awaiting_summary("planner-parent")
+    assert parent.status == TaskStatus.DONE
 
 
 @pytest.mark.asyncio

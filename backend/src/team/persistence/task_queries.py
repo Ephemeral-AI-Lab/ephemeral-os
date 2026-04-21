@@ -381,6 +381,33 @@ async def set_status_expanded(
     )
 
 
+async def set_status_expanded_awaiting_summary(
+    db: AsyncSession, team_run_id: str, task_id: str
+) -> None:
+    await db.execute(
+        update(TaskRecord)
+        .where(
+            TaskRecord.id == task_id,
+            TaskRecord.team_run_id == team_run_id,
+        )
+        .values(status="expanded_awaiting_summary")
+    )
+
+
+async def fetch_awaiting_summary_ids(
+    db: AsyncSession, team_run_id: str
+) -> list[str]:
+    rows = (
+        await db.execute(
+            select(TaskRecord.id).where(
+                TaskRecord.team_run_id == team_run_id,
+                TaskRecord.status == "expanded_awaiting_summary",
+            )
+        )
+    ).scalars().all()
+    return [str(r) for r in rows]
+
+
 async def set_status_terminal(
     db: AsyncSession, team_run_id: str, task_id: str, status: str, reason: str
 ) -> None:

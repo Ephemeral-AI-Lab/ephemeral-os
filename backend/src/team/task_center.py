@@ -97,6 +97,7 @@ class TaskCenter:
             cancel_running_task_cb=self._cancel_running_task,
         )
         self._cancel_running_task_cb: Callable[[str], None] | None = None
+        self._parent_summary_cb: Callable[[str], Awaitable[None]] | None = None
         self._activity: ActivityTracker
         self._notes: NoteManager
 
@@ -211,6 +212,29 @@ class TaskCenter:
         if self._cancel_running_task_cb is not None:
             self._cancel_running_task_cb(task_id)
 
+    def set_parent_summary_callback(
+        self, callback: Callable[[str], Awaitable[None]] | None
+    ) -> None:
+        """Register the dispatcher hook that fires the parent-summary trigger.
+
+        Optional. When unset (e.g. unit tests without a real executor), the
+        awaiting-summary parents still transition into the new status but do
+        not progress to DONE until something finalizes them.
+        """
+        self._parent_summary_cb = callback
+
+    async def _fire_parent_summary(self, parent_id: str) -> None:
+        if self._parent_summary_cb is None:
+            return
+        await self._parent_summary_cb(parent_id)
+
+    async def _handle_awaiting_summary_ids(self, awaiting: list[str]) -> None:
+        for parent_id in awaiting:
+            parent = self.graph.get(parent_id)
+            if parent is not None:
+                self._transitions.emit_full_status(parent)
+            await self._fire_parent_summary(parent_id)
+
     async def _emit_replanned_origin_if_finalized(self, replanner_task_id: str) -> None:
         origin_id = await self._store.finalize_replanned_origin(replanner_task_id)
         if origin_id is None:
@@ -218,13 +242,15 @@ class TaskCenter:
         origin = self.graph.get(origin_id)
         if origin is not None:
             self._transitions.emit_full_status(origin)
-        for promoted_id in await self._store.maybe_promote_expanded_parent(origin_id):
+        promoted, awaiting = await self._store.maybe_promote_expanded_parent(origin_id)
+        for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
             self._transitions.emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
 
     async def _mark_done_emit_promotions(self, task_id: str) -> None:
         promoted_ready = await self._store.mark_done(task_id)
@@ -234,13 +260,15 @@ class TaskCenter:
             if dep_task is None:
                 continue
             self._transitions.emit_full_status(dep_task)
-        for promoted_id in await self._store.maybe_promote_expanded_parent(task_id):
+        promoted, awaiting = await self._store.maybe_promote_expanded_parent(task_id)
+        for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
             self._transitions.emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
 
     async def _with_transitions(
         self,
@@ -334,12 +362,14 @@ class TaskCenter:
         before = self._transitions.snapshot()
         await self._store.fail_task(task_id, reason)
         # FAILED children are now detached; parent may become promotable.
-        for promoted_id in await self._store.maybe_promote_expanded_parent(task_id):
+        promoted, awaiting = await self._store.maybe_promote_expanded_parent(task_id)
+        for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is not None:
                 self._transitions.emit_full_status(promoted_task)
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
         await self._transitions.refresh_and_emit(before)
 
     async def fail(self, task_id: str, reason: str) -> None:
@@ -407,14 +437,54 @@ class TaskCenter:
 
         # Cancellations during replan may have detached every remaining child
         # of an EXPANDED parent — sweep to resolve promotions.
-        for promoted_id in await self._store.sweep_expanded_promotions():
+        promoted, awaiting = await self._store.sweep_expanded_promotions()
+        for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is not None:
                 self._transitions.emit_full_status(promoted_task)
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
         await self._transitions.refresh_and_emit(before)
         return outcome
+
+    async def finalize_parent_awaiting_summary(self, parent_id: str) -> None:
+        """Transition an EXPANDED_AWAITING_SUMMARY parent to DONE.
+
+        Called by the dispatcher after the external summary trigger posts
+        its note (or fails and falls back). Runs the same dependent /
+        origin / grandparent promotion cascade as a normal DONE transition.
+        """
+        rec = await self._store.get_record(parent_id)
+        if rec is None:
+            return
+        if rec.status != "expanded_awaiting_summary":
+            # Already finalized (idempotent) — nothing to do.
+            return
+        promoted_ready = await self._store.finalize_parent_summary(parent_id)
+        self._transitions.emit_status(
+            parent_id, "done", finished_at=_utcnow().isoformat()
+        )
+        for dep_id in promoted_ready:
+            dep_task = self.graph.get(dep_id)
+            if dep_task is not None:
+                self._transitions.emit_full_status(dep_task)
+        # Grandparent cascade: the now-DONE parent may satisfy its own
+        # parent's promotion condition.
+        promoted, awaiting = await self._store.maybe_promote_expanded_parent(parent_id)
+        for promoted_id in promoted:
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is None:
+                continue
+            self._transitions.emit_full_status(promoted_task)
+            if promoted_task.fired_by_task_id:
+                await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
+        # If the finalized parent is itself a replanner, resolve the origin.
+        parent_task = self.graph.get(parent_id)
+        if parent_task is not None and parent_task.fired_by_task_id:
+            await self._emit_replanned_origin_if_finalized(parent_id)
+        await self._store.refresh_graph()
 
     async def fail_orphaned_replanning(self) -> int:
         """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""

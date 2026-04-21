@@ -139,7 +139,7 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         "medium": {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40},
         "large":  {"max_depth": 6, "max_plan_size": 16, "max_tasks": 64},
     }.get(size, {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40})
-    max_depth = min(int(base["max_depth"]), 4)
+    max_depth = min(int(base["max_depth"]), 6)
 
     # Keep each planner level inside the benchmark-size ceiling. When the
     # natural task set is wider than that, compress adjacent work into

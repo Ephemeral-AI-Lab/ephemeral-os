@@ -273,7 +273,9 @@ def build_agent_capabilities_prompt(
         skill_lines: list[str] = []
         if "load_skill" in skill_tool_names:
             skill_lines.append(
-                "Use `load_skill(skill_name)` when the task matches one of these skills."
+                "On your first turn, call `load_skill(...)` on the role playbook listed first below; it "
+                "contains the tool rules, workflow, and hard rules you must follow. Call `load_skill(...)` "
+                "for any other listed skill when the task matches it."
             )
         if "load_skill_reference" in skill_tool_names:
             skill_lines.append(

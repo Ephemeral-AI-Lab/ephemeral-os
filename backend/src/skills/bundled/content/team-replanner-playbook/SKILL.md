@@ -12,9 +12,9 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 
 ## Conditional references
 
-- Must load `action-add-tasks` before `submit_replan(new_tasks=[...], cancel_ids=[], summary="...")` when the current siblings stay valid.
-- Must load `action-cancel-and-redraft` before `submit_replan(new_tasks=[...], cancel_ids=[...], summary="...")` when stale non-terminal direct siblings must be cancelled and replaced with replanner-owned work.
-- Fast path: when the validator packet already names exact failing targets and exact live owner files, skip to action selection. Reopen benchmark bodies only for bounded read-only clarification of failure semantics; if only test-derived missing paths remain with no production owner, submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")`. There is no `default` reference; load this skill, then load one of the named actions above when applicable.
+- Must load `action-add-tasks` before `submit_replan(initial_replanned_tasks=[...], cancel_ids=[])` when the current siblings stay valid.
+- Must load `action-cancel-and-redraft` before `submit_replan(initial_replanned_tasks=[...], cancel_ids=[...])` when stale non-terminal direct siblings must be cancelled and replaced with replanner-owned work.
+- Fast path: when the validator packet already names exact failing targets and exact live owner files, skip to action selection. Reopen benchmark bodies only for bounded read-only clarification of failure semantics; if only test-derived missing paths remain with no production owner, submit `submit_replan(initial_replanned_tasks=[], cancel_ids=[])`. There is no `default` reference; load this skill, then load one of the named actions above when applicable.
 
 ## Tool rules
 
@@ -31,7 +31,7 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 - Must reject any failed agent request to modify benchmark or verification tests. Map the evidence back to production code with sibling notes, failure output, and CI owner checks; use a child `team_planner` for unclear ownership, or submit an empty replan when no production owner can be justified.
 - May read bounded benchmark test snippets to understand expected behavior, imports, fixtures, or parametrization. Do not query benchmark test symbols, inspect git history, or run archaeology to justify a benchmark-test edit; tests remain read-only evidence.
 - Must treat a benchmark test import as evidence, not sufficient ownership by itself, for absent modules. After an outside-scope missing-module request, include the missing path in corrective `scope_paths` only when adjacent production ownership is clear; otherwise use a child `team_planner` or an empty replan if no production owner exists.
-- Must submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")` only when no production owner can be identified and the only possible corrective task would edit benchmark tests or create an unjustified test-derived alias.
+- Must submit `submit_replan(initial_replanned_tasks=[], cancel_ids=[])` only when no production owner can be identified and the only possible corrective task would edit benchmark tests or create an unjustified test-derived alias.
 - Must not turn a failed `submit_replan(...)` validation into a fresh discovery loop. If validation rejects the payload, use only the validation message and prior evidence for a mechanical correction; do not call CI, file, graph, note, or CodeAct tools afterward.
 - Must not convert a coordinated write-tool failure into instructions to bypass coordination. If `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` failed on an in-scope path, a corrective task may ask for one exact retry with the same coordinated tool family; it must not tell the child to use standard Python file I/O, CodeAct writes, shell redirects, or a whole-file rewrite as a fallback.
 - A corrective task cannot bypass a coordinated tool pre-hook by saying "explicit authorization" in the task spec. If a pre-hook blocks an in-scope path, create one exact retry only when a real runtime authorization mechanism is available; otherwise surface the tool-policy blocker instead of spawning another bypass task.
@@ -46,10 +46,10 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 5. For layered failures, keep the visible repair and the carry-forward verification as separate phases.
 6. Stop after one clear corrective mapping.
 7. Write every new task `spec` with numbered colon labels in exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`.
-8. Before submitting, check `new_tasks` for real sequencing needs. Do not add dependencies merely because `scope_paths` overlap; use `deps` only when one corrective task needs another task's output or the same exact file has a known edit-order dependency.
-9. Before submitting, validate every `deps` id. Prefer local ids from this same `new_tasks` payload, and make validator deps local to this payload. Use an existing task id only when fresh graph context proves the exact id is accepted by the current graph, schedulable, and not downstream of this replanner or the original failed task; otherwise omit that existing dep.
-10. Before submitting, count concrete non-planner tasks in `new_tasks`. If there are 3 or more, include one terminal `validator` task in the same `submit_replan(...)` call with `deps` covering those concrete tasks. Empty replans remain valid only under the no-production-owner rule below.
-11. If no production owner can be identified and the only remaining work is a test edit or unjustified test-derived alias, submit an empty replan payload with `summary` explaining that evidence instead of inventing a compatibility shim.
+8. Before submitting, check `initial_replanned_tasks` for real sequencing needs. Do not add dependencies merely because `scope_paths` overlap; use `deps` only when one corrective task needs another task's output or the same exact file has a known edit-order dependency.
+9. Before submitting, validate every `deps` id. Prefer local ids from this same `initial_replanned_tasks` payload, and make validator deps local to this payload. Use an existing task id only when fresh graph context proves the exact id is accepted by the current graph, schedulable, and not downstream of this replanner or the original failed task; otherwise omit that existing dep.
+10. Before submitting, count concrete non-planner tasks in `initial_replanned_tasks`. If there are 3 or more, include one terminal `validator` task in the same `submit_replan(...)` call with `deps` covering those concrete tasks. Empty replans remain valid only under the no-production-owner rule below.
+11. If no production owner can be identified and the only remaining work is a test edit or unjustified test-derived alias, submit an empty replan payload instead of inventing a compatibility shim. The system generates the outcome summary automatically after children complete; for an empty replan the outcome is that no corrective work was scheduled.
 
 ## Hard rules
 
@@ -58,19 +58,17 @@ If the failed lane already identified a small in-scope edit and no owner or poli
 3. Never invent replacement files, nodes, or speculative owners.
 4. Keep distinct corrective clusters as distinct tasks when their goals are independent, even if `scope_paths` overlap. Add `deps` only for real output ordering or known same-file edit ordering.
 5. Never create broad repair tasks when a narrower corrective task would preserve sibling work.
-6. End with exactly one `submit_replan(...)` call whose `summary` preserves the failure evidence, corrective mapping, preserved work, and uncertainty.
-7. All new tasks go in `new_tasks` and become direct children of this replanner. This replanner is the recovery gate; downstream work must not unlock before its repair children complete.
+6. End with exactly one `submit_replan(...)` call that commits the structured corrective tasks. Do not author a prose summary — the outcome summary is generated by the system once the corrective children complete.
+7. All new tasks go in `initial_replanned_tasks` and become direct children of this replanner. This replanner is the recovery gate; downstream work must not unlock before its repair children complete.
 8. `cancel_ids` may target only non-terminal direct siblings of this replanner with the same `parent_id`. Cascade takes their subtrees automatically. Never cancel completed, failed, cancelled, otherwise terminal tasks, or ids that appear only outside same-parent peer context.
-9. Never include `task_note`, `output`, `background`, `parent_id`, or fields outside the `submit_replan` schema.
+9. Never include `task_note`, `output`, `summary`, `background`, `parent_id`, or fields outside the `submit_replan` schema.
 10. Never include the original failed `request_replan` task in `cancel_ids`; leave it as immutable evidence for the runtime to finalize after the replan succeeds.
 11. Only this replanner calls `submit_replan`. If a new task is assigned to `team_planner`, its own terminal tool is `submit_plan`.
 12. Do not call `submit_replan(...)` once to discover schema or validator errors and then repair the payload. Validate descriptions, spec labels, real dependency edges, and any needed validator deps before the single terminal call.
-13. Never put `request_replan`, `running`, `expanded`, `failed`, `cancelled`, or downstream-blocked task ids in `new_tasks[*].deps`.
-14. Never use existing graph ids in a validator's `deps`; validators created by a replan validate the local corrective tasks from the same `new_tasks` payload.
-15. Never turn a test-derived missing module, compatibility shim, re-export module, import bridge, file move, or file rename into a corrective task without production ownership evidence or a clear adjacent live owner.
-16. Never treat a similar in-scope compatibility module as permission to create, rename, move, or re-export an absent private shim named only by tests.
-17. Never treat an in-scope source file as permission to move, rename, shim, or re-export to an absent outside-scope destination named only by tests.
-18. Never submit a corrective task with `*/tests/*`, `test_*.py`, or verification-target files in `scope_paths` unless the user prompt explicitly owns a test-only bug.
-19. Never inspect benchmark tests or git history to justify a benchmark-test edit or speculative alias; bounded read-only test inspection is allowed only to clarify failure semantics.
-20. Never call CI, file, graph, note, or CodeAct tools after a rejected `submit_replan(...)`; only submit a mechanical correction based on the validation text and evidence you already had.
-21. Never tell a child task to bypass a failed coordinated file tool with standard Python file I/O, CodeAct writes, shell redirects, or whole-file overwrite fallback instructions.
+13. Never put `request_replan`, `running`, `expanded`, `failed`, `cancelled`, or downstream-blocked task ids in `initial_replanned_tasks[*].deps`.
+14. Never use existing graph ids in a validator's `deps`; validators created by a replan validate the local corrective tasks from the same `initial_replanned_tasks` payload.
+15. Never turn a test-derived missing module, compatibility shim, re-export, import bridge, file move, or file rename into a corrective task without adjacent live production ownership evidence for the destination. In-scope presence of a similar compatibility module or source file is not ownership by itself; the destination must be a justified production owner.
+16. Never submit a corrective task with `*/tests/*`, `test_*.py`, or verification-target files in `scope_paths` unless the user prompt explicitly owns a test-only bug.
+17. Never inspect benchmark tests or git history to justify a benchmark-test edit or speculative alias; bounded read-only test inspection is allowed only to clarify failure semantics.
+18. Never call CI, file, graph, note, or CodeAct tools after a rejected `submit_replan(...)`; only submit a mechanical correction based on the validation text and evidence you already had.
+19. Never tell a child task to bypass a failed coordinated file tool with standard Python file I/O, CodeAct writes, shell redirects, or whole-file overwrite fallback instructions.

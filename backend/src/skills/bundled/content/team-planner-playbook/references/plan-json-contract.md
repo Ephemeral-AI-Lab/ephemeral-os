@@ -11,18 +11,17 @@ Use this only as the final schema checklist. After this reference loads, stop ex
 
 - Avoid summarizing what you will submit or saying "the plan is ready" / "let me submit".
 - Do not make another tool call except `submit_plan(...)`.
-- Do not include `task_note`, `background`, `parent_id`, `rationale`, or `output: null`.
+- Do not include `task_note`, `background`, `parent_id`, `rationale`, `output`, or `summary`.
 - Do not use a failed `submit_plan(...)` result as your schema checker.
 
 ## Workflow
 
-Build a schema-valid `submit_plan(new_tasks=[...])` payload, then call the tool.
+Build a schema-valid `submit_plan(initial_planned_tasks=[...])` payload, then call the tool.
 
 Tool input checklist:
 
-- Top-level keys: `new_tasks` and string `output` only.
-- `output` is the Task Center summary, not filler. It should name the owner evidence, task split, dependency shape, validator coverage, important scope boundaries, and remaining uncertainty.
-- `new_tasks` is a JSON array.
+- Top-level key: `initial_planned_tasks` only. Do not include `output` or `summary` — the system generates the outcome summary automatically once your children complete.
+- `initial_planned_tasks` is a JSON array.
 - Each task has `id`, `description`, `name`, `spec`, `deps`, and non-empty `scope_paths`.
 - `name` is an exact registered agent name such as `developer`, `validator`, or `team_planner`.
 - `deps` is a top-level task field and every `id` is unique. Keep independent benchmark families parallel; do not add deps unless a task needs another task's concrete output or same-file edit ordering.

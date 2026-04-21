@@ -164,7 +164,7 @@ def test_agent_capabilities_prompt_includes_available_skills_section():
     prompt = build_agent_capabilities_prompt([toolkit])
 
     assert "<Available Skills>" in prompt
-    assert "Use `load_skill(skill_name)` when the task matches one of these skills." in prompt
+    assert "call `load_skill(...)` on the role playbook listed first below" in prompt
     assert "there is no `default` reference" in prompt
     assert "- team-planner-playbook: Planning workflow for team planners." in prompt
     assert "References: `plan-json-contract`, `terminal-validation-contract`." in prompt

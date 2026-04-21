@@ -1,6 +1,6 @@
 # Action Reference: submit_replan (cancel and redraft)
 
-Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[...], summary="...")` when one or more non-terminal direct siblings are stale and must be replaced. Cancelling a sibling cascades to its subtree automatically; replacements go in `new_tasks` as direct children of this replanner.
+Use this reference for `submit_replan(initial_replanned_tasks=[...], cancel_ids=[...])` when one or more non-terminal direct siblings are stale and must be replaced. Cancelling a sibling cascades to its subtree automatically; replacements go in `initial_replanned_tasks` as direct children of this replanner.
 
 ## Task/Goal
 
@@ -18,15 +18,14 @@ Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[...], summary
 ## Workflow
 
 - `cancel_ids` accepts only non-terminal direct siblings of this replanner (same `parent_id`). Use same-parent peer context for cancel candidates; do not promote ids from global or nested graph rows.
-- Replacement work belongs in `new_tasks`. If the replacement needs a hierarchy, make it a `team_planner` task (its terminal is `submit_plan`, not `submit_replan`).
-- If the missing import path is named only by tests and no non-test production owner was proven, do not replace with a missing-path task; use `submit_replan(new_tasks=[], cancel_ids=[], summary="...")` unless a stale sibling must still be cancelled for another reason.
+- Replacement work belongs in `initial_replanned_tasks`. If the replacement needs a hierarchy, make it a `team_planner` task (its terminal is `submit_plan`, not `submit_replan`).
+- If the missing import path is named only by tests and no non-test production owner was proven, do not replace with a missing-path task; use `submit_replan(initial_replanned_tasks=[], cancel_ids=[])` unless a stale sibling must still be cancelled for another reason.
 - For replacement file moves, renames, shims, and re-export bridges, verify both source and destination ownership; do not write an absent outside-scope destination named only by tests, even when the source file is in scope.
 - Replacement specs relocating or renaming a path must name `daytona_move_file`. Pure removals may run through CodeAct or `daytona_delete_file`. Do not tell children to bypass coordinated tools with standard Python file I/O, CodeAct writes, shell redirects, or whole-file overwrite fallback instructions.
 - Replacement tasks must not depend on downstream tasks already blocked on this replanner (cycle).
 - Prefer `deps` ids local to this payload; validator deps must be local. Existing-task deps must be freshly proven schedulable and not downstream of this replanner or the original failed task.
-- If `new_tasks` has 3+ concrete non-planner replacements, add one terminal `validator` whose `deps` cover them.
-- Each replacement `spec` uses numbered colon labels in exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings. Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks`, `cancel_ids`, and `summary`.
-- `summary` must preserve why each cancelled sibling is stale, why each replacement task is needed, what work remains valid, and any uncertainty.
+- If `initial_replanned_tasks` has 3+ concrete non-planner replacements, add one terminal `validator` whose `deps` cover them.
+- Each replacement `spec` uses numbered colon labels in exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings. Do not include `task_note`, `output`, `summary`, `background`, `parent_id`, or any top-level field besides `initial_replanned_tasks` and `cancel_ids`. The system generates the outcome summary automatically once the corrective children complete.
 - Self-check that `cancel_ids` excludes the original failed task and terminal siblings, and that no replacement scopes benchmark tests unless the prompt explicitly owns a test-only bug.
 - Self-check the final payload before the single terminal call. If `submit_replan(...)` is rejected, do not call CI, file, graph, note, or CodeAct tools; retry only a mechanical correction from the validation message.
 

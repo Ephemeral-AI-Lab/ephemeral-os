@@ -39,6 +39,10 @@ def _record_to_task(rec: Any) -> "Task":
 class Executor:
     """Pops ready tasks, runs agent, reads task state, dispatches."""
 
+    # Max retries on the parent-summary external trigger before falling back
+    # to a system note + direct DONE.
+    PARENT_SUMMARY_MAX_RETRIES = 2
+
     def __init__(
         self,
         team_run: "TeamRun",
@@ -46,13 +50,92 @@ class Executor:
         agent_lookup: Callable[[str], "AgentDefinition | None"],
         build_query_context: QueryContextBuilder | None = None,
         after_dispatch: Callable[["Task", AgentResult, list["Task"]], Any] | None = None,
+        api_client: Any = None,
     ) -> None:
         self.team_run = team_run
         self.runner = runner
         self.agent_lookup = agent_lookup
         self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
+        self.api_client = api_client
         self.scope_notifier = ScopeChangeNotifier(team_run)
+        # Wire dispatcher callback so TaskCenter can fire the parent-summary
+        # external trigger when an expandable parent transitions to
+        # EXPANDED_AWAITING_SUMMARY.
+        try:
+            team_run.task_center.set_parent_summary_callback(
+                self._run_parent_summary_trigger
+            )
+        except AttributeError:
+            # TaskCenter without the hook — older tests or stubs.
+            pass
+
+    async def _run_parent_summary_trigger(self, parent_id: str) -> None:
+        """Drive the parent-summary external trigger with bounded retries.
+
+        On terminal failure, post a system note and finalize DONE anyway so
+        the parent never wedges in EXPANDED_AWAITING_SUMMARY.
+        """
+        tc = self.team_run.task_center
+        last_error: str | None = None
+        for attempt in range(self.PARENT_SUMMARY_MAX_RETRIES + 1):
+            try:
+                if self.api_client is None:
+                    raise RuntimeError(
+                        "parent_summary trigger unavailable: api_client not wired"
+                    )
+                from external_trigger.parent_summary import run_parent_summary
+
+                await run_parent_summary(
+                    parent_task_id=parent_id,
+                    team_run_id=self.team_run.id,
+                    api_client=self.api_client,
+                )
+                last_error = None
+                break
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                last_error = str(exc)
+                logger.warning(
+                    "parent_summary trigger failed for %s (attempt %d/%d): %s",
+                    parent_id,
+                    attempt + 1,
+                    self.PARENT_SUMMARY_MAX_RETRIES + 1,
+                    exc,
+                )
+
+        if last_error is not None:
+            # Fallback: post a system note so downstream readers see the
+            # failure, then finalize DONE to avoid wedging.
+            try:
+                from team.models import Note
+
+                parent = tc.graph.get(parent_id)
+                scope_paths = list(getattr(parent, "scope_paths", []) or [])
+                await tc.notes.post(
+                    Note(
+                        id=str(uuid.uuid4()),
+                        task_id=parent_id,
+                        agent_name="system",
+                        content=f"[system] external summary trigger failed: {last_error}",
+                        timestamp=time.time(),
+                        paths=scope_paths,
+                        tags=["implementation", "parent_summary", "warning"],
+                    )
+                )
+            except Exception:
+                logger.debug(
+                    "parent_summary fallback note post failed for %s",
+                    parent_id,
+                    exc_info=True,
+                )
+        try:
+            await tc.finalize_parent_awaiting_summary(parent_id)
+        except Exception:
+            logger.exception(
+                "finalize_parent_awaiting_summary failed for %s", parent_id
+            )
 
     async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
         try:
