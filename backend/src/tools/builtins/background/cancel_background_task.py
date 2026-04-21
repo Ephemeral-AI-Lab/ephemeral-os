@@ -80,7 +80,7 @@ class CancelBackgroundTaskTool(BaseTool):
                 task_id = running[0]["task_id"]
             else:
                 listing = "\n".join(
-                    f"  - task_id=\"{s['task_id']}\"  ({s.get('task_note') or s.get('tool_name')})"
+                    f"  - task_id=\"{s['task_id']}\"  ({s.get('tool_name')})"
                     for s in running
                 )
                 return ToolResult(

@@ -31,7 +31,7 @@ __all__ = [
 
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
-_RUNTIME_CONTROL_FIELDS = frozenset({"background", "task_note"})
+_RUNTIME_CONTROL_FIELDS = frozenset({"background"})
 
 
 @dataclass
@@ -102,9 +102,6 @@ class BaseTool(ABC):
     #   "optional"  — LLM may opt in by passing background=true
     #   "always"    — engine ALWAYS dispatches as background, regardless of input
     background: BackgroundMode = "forbidden"
-    # Most non-terminal tools ask the model for a brief intent note on every
-    # call. Context-read tools can opt out when their schema must stay exact.
-    requires_task_note: bool = True
     # Discriminator for monitoring/UI/audit so the engine never sniffs tool names.
     # "agent" is the default for ordinary background tools; tools that spawn a
     # nested agent (e.g. run_subagent) override it to "subagent".
@@ -260,10 +257,9 @@ class ToolRegistry:
     def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format.
 
-        Cross-cutting decorations like the required ``task_note`` field
-        and the optional ``background`` flag are applied separately by
-        :func:`decorate_schemas_for_background` so the registry stays
-        a dumb collection.
+        Cross-cutting decorations like the optional ``background`` flag are
+        applied separately by :func:`decorate_schemas_for_background` so the
+        registry stays a dumb collection.
         """
         return [tool.to_api_schema() for tool in self._tools.values()]
 
@@ -409,15 +405,13 @@ def decorate_schemas_for_background(
     *,
     terminal_tools: Iterable[str] = (),
 ) -> list[dict[str, Any]]:
-    """Inject ``task_note`` (required) and ``background`` (optional) fields.
+    """Inject optional ``background`` fields for eligible non-terminal tools.
 
-    Mutates each schema in-place and returns the list. ``task_note`` is
-    added to non-terminal tools so the LLM must explain what and why on
-    each call. Terminal tools are one-way submissions and must expose only
-    their true payload schema. ``background`` is added only to non-terminal
-    tools whose ``background`` policy is ``"optional"`` (LLM may choose).
-    Tools marked ``"always"`` are dispatched in the background
-    unconditionally and need no LLM-facing flag.
+    Mutates each schema in-place and returns the list. Terminal tools are
+    one-way submissions and must expose only their true payload schema.
+    ``background`` is added only to non-terminal tools whose ``background``
+    policy is ``"optional"`` (LLM may choose). Tools marked ``"always"`` are
+    dispatched in the background unconditionally and need no LLM-facing flag.
     """
     terminal_tool_names = set(terminal_tools)
     for schema in schemas:
@@ -426,15 +420,6 @@ def decorate_schemas_for_background(
         inp = schema.setdefault("input_schema", {})
         props = inp.setdefault("properties", {})
         is_terminal = tool_name in terminal_tool_names
-        requires_task_note = tool is None or getattr(tool, "requires_task_note", True)
-        if not is_terminal and requires_task_note:
-            props["task_note"] = {
-                "type": "string",
-                "description": "Brief note: what and why",
-            }
-            req = inp.setdefault("required", [])
-            if "task_note" not in req:
-                req.append("task_note")
         if (
             not is_terminal
             and tool is not None

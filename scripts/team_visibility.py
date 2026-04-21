@@ -49,9 +49,7 @@ def _format_effective_provider_schema_controls(
         input_schema = schema.get("input_schema") or {}
         properties = input_schema.get("properties") or {}
         required = input_schema.get("required") or []
-        control_fields = [
-            field for field in ("task_note", "background") if field in properties
-        ]
+        control_fields = [field for field in ("background",) if field in properties]
         if name in terminal_tools or control_fields:
             lines.append(
                 "    - "

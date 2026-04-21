@@ -54,7 +54,6 @@ class TrackedBackgroundTask:
     tool_name: str
     tool_input: dict[str, Any]
     asyncio_task: asyncio.Task[ToolResult]
-    task_note: str = ""  # LLM-generated brief description of what the task does
     # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
     # "agent" for ordinary background tools, "subagent" for run_subagent.
     task_type: str = "agent"
@@ -112,7 +111,6 @@ class BackgroundTaskManager:
         tool_name: str,
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
-        task_note: str = "",
         kill_callback: KillCallback | None = None,
         task_type: str = "agent",
         run_id: str | None = None,
@@ -124,14 +122,11 @@ class BackgroundTaskManager:
             tool_name=tool_name,
             tool_input=tool_input,
             asyncio_task=asyncio_task,
-            task_note=task_note,
             task_type=task_type,
             run_id=run_id,
             kill_callback=kill_callback,
         )
         start_line = f"[started: {tool_name}]"
-        if task_note:
-            start_line += f" {task_note}"
         tracked.progress_lines.append(start_line)
         self._tasks[task_id] = tracked
 
@@ -315,7 +310,6 @@ class BackgroundTaskManager:
         for tracked in tasks:
             entry: dict[str, Any] = {
                 "task_id": tracked.task_id,
-                "task_note": tracked.task_note,
                 "tool_name": tracked.tool_name,
                 "task_type": tracked.task_type,
                 "run_id": tracked.run_id,
@@ -516,7 +510,6 @@ def deliver_completed_background_task(
                     status=terminal_status,
                     source="engine_terminal",
                     text=output,
-                    task_note=task.task_note,
                     run_id=task.run_id,
                     cancel_reason=task.cancel_reason,
                     completion_mode=getattr(task, "completion_mode", None),
@@ -553,7 +546,6 @@ def build_background_reminder(
     content: list[BackgroundTaskStateBlock] = []
     for t in pending:
         elapsed = time.monotonic() - t.started_at
-        label = t.task_note or t.tool_name
         new_lines, since = background_manager.get_reminder_diff(t.task_id)
         if new_lines:
             text = f"Running for {elapsed:.0f}s\nNew output (last {len(new_lines)} lines):\n"
@@ -575,7 +567,6 @@ def build_background_reminder(
                 status="running",
                 source="engine_progress",
                 text=text,
-                task_note=label,
                 run_id=t.run_id,
             )
         )

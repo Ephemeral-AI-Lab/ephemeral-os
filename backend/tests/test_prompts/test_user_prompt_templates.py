@@ -64,7 +64,7 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
         in rendered
     )
     assert "call `read_task_details` with only one input key, `task_id`" in rendered
-    assert "Do not pass `skill_name`, `task_note`, planner slugs" in rendered
+    assert "Do not pass `skill_name`, planner slugs" in rendered
     assert "if it contains `|` or `>`, it is invalid" in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
@@ -183,7 +183,7 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
         in ctx.user_message
     )
     assert "call `read_task_details` with only one input key, `task_id`" in ctx.user_message
-    assert "Do not pass `skill_name`, `task_note`, planner slugs" in ctx.user_message
+    assert "Do not pass `skill_name`, planner slugs" in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message

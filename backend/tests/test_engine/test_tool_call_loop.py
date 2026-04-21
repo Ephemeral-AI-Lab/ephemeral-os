@@ -65,6 +65,10 @@ class EchoTool(BaseTool):
         return ToolResult(output=json.dumps({"echoed": arguments.message}))
 
 
+class BackgroundEchoTool(EchoTool):
+    background = "optional"
+
+
 class StrictEchoTool(BaseTool):
     name = "strict_echo"
     description = "Echo a message with strict input validation."
@@ -364,7 +368,7 @@ async def test_execute_tool_call_does_not_require_expected_next_tool(tmp_path: P
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_strips_runtime_control_fields_for_foreground_tools(
+async def test_execute_tool_call_strips_background_control_field_for_foreground_tools(
     tmp_path: Path,
 ):
     registry = _make_registry(StrictEchoTool())
@@ -377,7 +381,6 @@ async def test_execute_tool_call_strips_runtime_control_fields_for_foreground_to
         "tool-1",
         {
             "message": "hi",
-            "task_note": "model-facing background note",
             "background": False,
         },
     )
@@ -387,7 +390,7 @@ async def test_execute_tool_call_strips_runtime_control_fields_for_foreground_to
 
 
 def test_background_schema_decorator_skips_terminal_tools():
-    registry = _make_registry(EchoTool(), SubmitPlanTool())
+    registry = _make_registry(BackgroundEchoTool(), SubmitPlanTool())
     schemas = decorate_schemas_for_background(
         registry,
         registry.to_api_schema(),
@@ -398,15 +401,14 @@ def test_background_schema_decorator_skips_terminal_tools():
     echo_schema = by_name["echo"]["input_schema"]
     submit_schema = by_name["submit_plan"]["input_schema"]
 
-    assert "task_note" in echo_schema["properties"]
-    assert "task_note" in echo_schema["required"]
-    assert "task_note" not in submit_schema["properties"]
-    assert "task_note" not in submit_schema.get("required", [])
+    assert "background" in echo_schema["properties"]
+    assert "background" not in echo_schema.get("required", [])
     assert "background" not in submit_schema["properties"]
 
 
-def test_background_schema_decorator_honors_task_note_opt_out():
-    registry = _make_registry(EchoTool(), ReadTaskDetailsTool())
+def test_background_schema_decorator_does_not_add_task_notes():
+    removed_field = "task" + "_note"
+    registry = _make_registry(BackgroundEchoTool(), ReadTaskDetailsTool())
     schemas = decorate_schemas_for_background(
         registry,
         registry.to_api_schema(),
@@ -416,10 +418,10 @@ def test_background_schema_decorator_honors_task_note_opt_out():
     echo_schema = by_name["echo"]["input_schema"]
     read_task_details_schema = by_name["read_task_details"]["input_schema"]
 
-    assert "task_note" in echo_schema["properties"]
-    assert "task_note" in echo_schema["required"]
+    assert removed_field not in echo_schema["properties"]
+    assert "background" in echo_schema["properties"]
     assert read_task_details_schema["required"] == ["task_id"]
-    assert "task_note" not in read_task_details_schema["properties"]
+    assert removed_field not in read_task_details_schema["properties"]
 
 
 # ---------------------------------------------------------------------------

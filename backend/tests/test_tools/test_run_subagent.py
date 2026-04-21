@@ -279,7 +279,6 @@ def _make_bg_manager(task_id: str, prompt: str = "task") -> BackgroundTaskManage
         tool_name="run_subagent",
         tool_input={"prompt": prompt},
         coro=_noop_coro(),
-        task_note="test",
     )
     return bg
 
@@ -424,13 +423,13 @@ def test_run_subagent_schema_guides_scout_targets_without_runtime_gate():
     assert "scrub ``target_paths`` to live production owner files/directories" in (
         schema["description"]
     )
-    assert "missing test-derived paths belong in task prose or task_note" in (
+    assert "missing test-derived paths belong in the structured ``context`` text" in (
         schema["description"]
     )
     assert "Never pair a production owner and its benchmark test" in schema["description"]
     input_description = schema["input_schema"]["properties"]["input"]["description"]
     assert "with live production owner paths only" in input_description
-    assert "keep benchmark tests and missing test-derived paths in task prose" in (
+    assert "keep benchmark tests and missing test-derived paths in the context text" in (
         input_description
     )
     assert "Invalid: mixing `pkg/mod.py` with `pkg/tests/test_mod.py`" in input_description
@@ -594,7 +593,6 @@ async def test_run_subagent_provider_error_is_caught():
         tool_name="x",
         tool_input={},
         coro=_noop_coro(),
-        task_note="test",
     )
 
     def _bad_provider(last_n: int) -> str:

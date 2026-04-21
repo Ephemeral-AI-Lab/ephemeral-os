@@ -139,7 +139,6 @@ async def test_subagent_peek_returns_live_snapshot(monkeypatch) -> None:
             tool_name="run_subagent",
             tool_input={"agent_name": "scout", "prompt": "task"},
             coro=_subagent_coro(),
-            task_note="test peek",
         )
 
         # Give the subagent time to register its provider and emit at least one

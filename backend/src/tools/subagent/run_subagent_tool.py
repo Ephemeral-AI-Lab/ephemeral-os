@@ -118,11 +118,12 @@ class RunSubagentInput(BaseModel):
         default=None,
         description=(
             "Structured subagent payload. For scout, use "
-            "{\"target_paths\": [...]} with live production owner paths only; "
-            "keep benchmark tests and missing test-derived paths in task prose "
-            "or task_note unless tests are explicitly the owned surface. "
+            "{\"target_paths\": [...], \"context\": \"...\"} with live "
+            "production owner paths only; keep benchmark tests and missing "
+            "test-derived paths in the context text unless tests are "
+            "explicitly the owned surface. "
             "Invalid: mixing `pkg/mod.py` with `pkg/tests/test_mod.py` in "
-            "`target_paths`; put the test in task_note instead. "
+            "`target_paths`; put the test in `context` instead. "
             "Mutually exclusive with prompt."
         ),
     )
@@ -499,8 +500,8 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
         "still admits parallel fan-out. For ``scout`` structured input, "
         "scrub ``target_paths`` to live production owner files/directories; "
         "benchmark tests, ``*/tests/*``, ``test_*.py``, and missing "
-        "test-derived paths belong in task prose or task_note unless tests "
-        "are explicitly the owned surface. Never pair a production owner and "
+        "test-derived paths belong in the structured ``context`` text unless "
+        "tests are explicitly the owned surface. Never pair a production owner and "
         "its benchmark test in one scout ``target_paths`` list. If a "
         "completed scout result says "
         "``Posted.``, read file notes for the scout target paths next. Scouts "

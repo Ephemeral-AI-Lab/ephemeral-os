@@ -298,16 +298,18 @@ def test_read_file_note_schema_requires_file_path_only():
     assert schema["properties"]["file_path"]["minLength"] == 1
     assert "anyOf" not in schema["properties"]["file_path"]
     assert "default" not in schema["properties"]["file_path"]
-    assert "task_note" in schema["properties"]["file_path"]["description"]
+    assert "free-form call context is not searched" in (
+        schema["properties"]["file_path"]["description"]
+    )
     assert schema["additionalProperties"] is False
 
 
-def test_read_file_note_parse_rejects_only_task_note():
+def test_read_file_note_parse_rejects_missing_file_path():
     tool = ReadFileNoteTool()
 
     result = parse_tool_input(
         tool,
-        {"task_note": "Reading notes for src/auth.py"},
+        {"context": "Reading notes for src/auth.py"},
     )
 
     assert result.is_error is True

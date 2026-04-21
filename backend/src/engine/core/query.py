@@ -583,9 +583,8 @@ async def _run_query_loop(
                 tool_def_for_check = context.tool_registry.get(tc.name)
                 if not defer_background_dispatch(tool_def_for_check, tc.input):
                     continue
-                task_note = str(tc.input.get("task_note", ""))
                 for ev in launch_and_collect_bg_events(
-                    context, background_manager, tc, task_note, tool_results
+                    context, background_manager, tc, tool_results
                 ):
                     yield ev
 
@@ -610,7 +609,6 @@ async def _run_query_loop(
                 foreground_calls = []
 
                 for tc in tool_calls:
-                    task_note = str(tc.input.get("task_note", ""))
                     tool_def_for_check = context.tool_registry.get(tc.name)
                     force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
                     is_background = (
@@ -622,7 +620,7 @@ async def _run_query_loop(
                     if is_background:
                         assert background_manager is not None
                         for ev in launch_and_collect_bg_events(
-                            context, background_manager, tc, task_note, tool_results
+                            context, background_manager, tc, tool_results
                         ):
                             yield ev
                     else:

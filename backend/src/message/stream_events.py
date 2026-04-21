@@ -52,7 +52,6 @@ class ToolExecutionStarted:
 
     tool_name: str
     tool_input: dict[str, Any]
-    task_note: str = ""
     agent_name: str = ""
     work_id: str = ""
 

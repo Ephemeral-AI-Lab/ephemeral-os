@@ -346,8 +346,7 @@ class ReadFileNoteInput(BaseModel):
         description=(
             "REQUIRED. Path to a file or directory in the sandbox. Returns "
             "notes whose attached paths overlap with this prefix. Put the "
-            "actual path here; `task_note` is only the reason for the call and "
-            "is not searched."
+            "actual path here; free-form call context is not searched."
         ),
     )
     tags: list[str] | None = Field(
@@ -371,7 +370,7 @@ class ReadFileNoteTool(BaseTool):
         "Entry/root planners should not use it during initial setup; read file "
         "notes after scouts post findings or when the prompt names a known note "
         "path. Pass file_path=\"<path>\"; never put the searched path only in "
-        "task_note."
+        "free-form context."
     )
     short_description = "Search notes by file path."
     input_model = ReadFileNoteInput
@@ -462,7 +461,6 @@ class ReadTaskDetailsTool(BaseTool):
     short_description = "Read one task's details + recent notes by ID."
     input_model = ReadTaskDetailsInput
     output_model = TextToolOutput
-    requires_task_note = False
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskDetailsInput)

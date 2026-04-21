@@ -255,7 +255,11 @@ class MultiAgentEventPrinter:
             if event.tool_name == "run_subagent":
                 totals.subagents_spawned += 1
                 child = str(event.tool_input.get("agent_name") or "subagent")
-                task_text = str(event.tool_input.get("prompt") or event.tool_input.get("task_note") or "")
+                raw_task = event.tool_input.get("prompt") or event.tool_input.get("input") or ""
+                if isinstance(raw_task, str):
+                    task_text = raw_task
+                else:
+                    task_text = json.dumps(raw_task, separators=(",", ":"), default=str)
                 # Record lineage so the child's own events indent one level
                 # deeper when they arrive (keyed on bg task_id = child work_id).
                 parent_depth = self._depth.get(work_id, 0) if work_id else 0

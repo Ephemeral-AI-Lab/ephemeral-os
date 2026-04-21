@@ -382,7 +382,6 @@ class TestTokenEstimation:
                             status="running",
                             source="engine_progress",
                             text="Running for 12s\nNew output:\nhello",
-                            task_note="research wave",
                         )
                     ],
                 )

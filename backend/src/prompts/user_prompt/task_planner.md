@@ -16,7 +16,7 @@ Your parent task id: `{{your_parent_task_id}}`
 Your dependency task ids: {{your_deps_ids}}
 {{/if}}
 
-Context-read pre-step: this applies to child planners only. After loading the team-planner playbook, use the UUIDs above exactly with `read_task_details(...)` for your task, parent, and each dependency, then call `read_task_graph()` to enumerate siblings before scouts, CI, notes, or `submit_plan(...)`. Each `read_task_details` input must contain only `task_id`; do not pass `skill_name`, `task_note`, planner slugs, short prefixes, or fabricated ids. Do not batch those required context reads with scout, CI, note, file, edit, diagnostics, reference, or submission tools.
+Context-read pre-step: this applies to child planners only. After loading the team-planner playbook, use the UUIDs above exactly with `read_task_details(...)` for your task, parent, and each dependency, then call `read_task_graph()` to enumerate siblings before scouts, CI, notes, or `submit_plan(...)`. Each `read_task_details` input must contain only `task_id`; do not pass `skill_name`, planner slugs, short prefixes, or fabricated ids. Do not batch those required context reads with scout, CI, note, file, edit, diagnostics, reference, or submission tools.
 
 ```markdown
 {{task_spec}}

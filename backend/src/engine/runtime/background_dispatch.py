@@ -95,11 +95,10 @@ def launch_background_tool(
     cwd: Path,
     background_manager: BackgroundTaskManager,
     tool_use: ToolUseBlock,
-    task_note: str,
     execute_tool_call: ToolCallExecutor,
 ) -> tuple[ToolResultBlock, BackgroundTaskStarted | None, ToolExecutionCompleted | None]:
     """Dispatch a single tool use through the background path."""
-    clean_input = {k: v for k, v in tool_use.input.items() if k not in ("background", "task_note")}
+    clean_input = {k: v for k, v in tool_use.input.items() if k != "background"}
 
     tool_def = tool_registry.get(tool_use.name)
     if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
@@ -166,7 +165,6 @@ def launch_background_tool(
         tool_use.name,
         clean_input,
         _bg_wrapper(),
-        task_note=task_note,
         kill_callback=kill_callback,
         task_type=getattr(tool_def, "task_type", "agent"),
     )
@@ -192,7 +190,6 @@ def launch_and_collect_bg_events(
     context: QueryContext,
     background_manager: BackgroundTaskManager,
     tc: ToolUseBlock,
-    task_note: str,
     tool_results: list[ToolResultBlock],
 ) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
     async def _execute_in_context(
@@ -230,7 +227,6 @@ def launch_and_collect_bg_events(
         cwd=context.cwd,
         background_manager=background_manager,
         tool_use=tc,
-        task_note=task_note,
         execute_tool_call=_execute_in_context,
     )
     tool_results.append(tool_result)

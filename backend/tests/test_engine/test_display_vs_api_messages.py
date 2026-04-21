@@ -371,14 +371,13 @@ class TestBuildBackgroundReminder:
         assert _build_background_reminder(mgr) is None
 
     @pytest.mark.asyncio
-    async def test_includes_task_id_and_label(self) -> None:
+    async def test_includes_task_id_and_progress(self) -> None:
         mgr = BackgroundTaskManager()
         mgr.launch(
             "bg_1",
             "daytona_codeact",
             {"command": "sleep 10"},
             _slow_coro(),
-            task_note="long sleep",
         )
         # Append a progress line so get_reminder_diff returns something.
         mgr.append_progress("bg_1", "halfway there")
@@ -389,7 +388,6 @@ class TestBuildBackgroundReminder:
         assert msg.text == ""
         reminder_text = msg.background_task_state_text
         assert "bg_1" in reminder_text
-        assert "long sleep" in reminder_text
         assert "halfway there" in reminder_text
         assert "Keep working on any other ready analysis or tool tasks first" in reminder_text
         assert "Only wait when this background task is the remaining blocker" in reminder_text
@@ -778,16 +776,16 @@ class TestBuildReminderEdgeCases:
     @pytest.mark.asyncio
     async def test_multiple_pending_tasks_all_appear(self) -> None:
         mgr = BackgroundTaskManager()
-        mgr.launch("bg_1", "tool_a", {}, _slow_coro(), task_note="first task")
-        mgr.launch("bg_2", "tool_b", {}, _slow_coro(), task_note="second task")
+        mgr.launch("bg_1", "tool_a", {}, _slow_coro())
+        mgr.launch("bg_2", "tool_b", {}, _slow_coro())
         mgr.append_progress("bg_1", "alpha")
         mgr.append_progress("bg_2", "beta")
 
         msg = _build_background_reminder(mgr)
         assert msg is not None
         text = msg.background_task_state_text
-        assert "bg_1" in text and "first task" in text and "alpha" in text
-        assert "bg_2" in text and "second task" in text and "beta" in text
+        assert "bg_1" in text and "tool_a" in text and "alpha" in text
+        assert "bg_2" in text and "tool_b" in text and "beta" in text
 
         await mgr.cancel_all()
 
@@ -799,8 +797,8 @@ class TestBuildReminderEdgeCases:
         async def _quick() -> ToolResult:
             return ToolResult(output="finished")
 
-        mgr.launch("bg_done", "tool_quick", {}, _quick(), task_note="quick")
-        mgr.launch("bg_running", "tool_slow", {}, _slow_coro(), task_note="slow")
+        mgr.launch("bg_done", "tool_quick", {}, _quick())
+        mgr.launch("bg_running", "tool_slow", {}, _slow_coro())
         # Let the quick task finish.
         await asyncio.sleep(0.05)
 

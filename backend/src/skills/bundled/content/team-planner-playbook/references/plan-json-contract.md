@@ -14,7 +14,7 @@ After this reference loads, emit no assistant prose, recap, "let me submit", or 
 - Avoid summarizing what you will submit or saying "the plan is ready" / "let me submit".
 - Do not make another tool call except `submit_plan(...)`.
 - Do not call `wait_for_background_task(...)`, `check_background_progress(...)`, `cancel_background_task(...)`, CI, notes, or scout tools after this reference loads.
-- Do not include `task_note`, `background`, `parent_id`, `rationale`, `output`, or `summary`.
+- Do not include `background`, `parent_id`, `rationale`, `output`, or `summary`.
 - Do not use a failed `submit_plan(...)` result as your schema checker.
 
 ## Workflow
@@ -23,7 +23,7 @@ Build the schema-valid payload inside the `submit_plan(new_tasks=[...])` tool in
 
 Tool input checklist:
 
-1. **Payload shape:** Top-level key is `new_tasks` only. `new_tasks` is a JSON array; every task has unique `id`, `description`, exact registered `name`, `spec`, top-level `deps`, and non-empty `scope_paths`, including validators. Do not include `output`, `summary`, `task_note`, `background`, `parent_id`, or rationale fields.
+1. **Payload shape:** Top-level key is `new_tasks` only. `new_tasks` is a JSON array; every task has unique `id`, `description`, exact registered `name`, `spec`, top-level `deps`, and non-empty `scope_paths`, including validators. Do not include `output`, `summary`, `background`, `parent_id`, or rationale fields.
 2. **Spec format:** `spec` uses numbered colon labels in exact order, each at the start of its own line with body text on that same line: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not combine labels on one line, put body text on the next line, or use Markdown headings.
 3. **Scope paths:** Use repo-relative live-confirmed production owner paths, adjacent supporting owners for the same likely fix, or a broader production boundary on `team_planner` when exact ownership is still uncertain. Validator scopes are production files/directories being verified. Keep benchmark and verification tests in `spec` unless tests are explicitly owned.
 4. **Dependencies and validators:** `deps` values must name ids in this same payload or existing Task Center ids explicitly read in this agent run; entry/root planners have no existing deps. Use deps only for real output ordering, known same-file edit ordering, or unresolved ownership delegated to one child `team_planner`. When the layer has non-validator tasks, include exactly one terminal validator whose deps cover every same-layer non-validator sibling, including child planners.
