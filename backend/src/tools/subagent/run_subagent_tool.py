@@ -121,6 +121,8 @@ class RunSubagentInput(BaseModel):
             "{\"target_paths\": [...]} with live production owner paths only; "
             "keep benchmark tests and missing test-derived paths in task prose "
             "or task_note unless tests are explicitly the owned surface. "
+            "Invalid: mixing `pkg/mod.py` with `pkg/tests/test_mod.py` in "
+            "`target_paths`; put the test in task_note instead. "
             "Mutually exclusive with prompt."
         ),
     )
@@ -498,7 +500,9 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
         "scrub ``target_paths`` to live production owner files/directories; "
         "benchmark tests, ``*/tests/*``, ``test_*.py``, and missing "
         "test-derived paths belong in task prose or task_note unless tests "
-        "are explicitly the owned surface. If a completed scout result says "
+        "are explicitly the owned surface. Never pair a production owner and "
+        "its benchmark test in one scout ``target_paths`` list. If a "
+        "completed scout result says "
         "``Posted.``, read file notes for the scout target paths next. Scouts "
         "and subagents are not Task Center tasks; do not use task graph/detail "
         "tools or ``bg_*`` ids to retrieve scout results. Later background "

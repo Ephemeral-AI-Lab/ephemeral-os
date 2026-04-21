@@ -427,11 +427,13 @@ def test_run_subagent_schema_guides_scout_targets_without_runtime_gate():
     assert "missing test-derived paths belong in task prose or task_note" in (
         schema["description"]
     )
+    assert "Never pair a production owner and its benchmark test" in schema["description"]
     input_description = schema["input_schema"]["properties"]["input"]["description"]
     assert "with live production owner paths only" in input_description
     assert "keep benchmark tests and missing test-derived paths in task prose" in (
         input_description
     )
+    assert "Invalid: mixing `pkg/mod.py` with `pkg/tests/test_mod.py`" in input_description
 
     ctx = ToolExecutionContext(
         cwd=Path("/tmp"),

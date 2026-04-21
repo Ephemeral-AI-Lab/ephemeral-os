@@ -58,6 +58,27 @@ def test_get_sandbox_retries_transient_async_client_error(monkeypatch):
     assert get_mock.await_count == 2
 
 
+def test_wait_for_sandbox_exec_ready_retries_transient_reset(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    exec_mock = AsyncMock(
+        side_effect=[
+            RuntimeError("Failed to execute command: [Errno 54] Connection reset by peer"),
+            SimpleNamespace(exit_code=0, result="/workspace\n"),
+        ]
+    )
+    fake_sandbox = SimpleNamespace(process=SimpleNamespace(exec=exec_mock))
+    sleep_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_get_sandbox", AsyncMock(return_value=fake_sandbox))
+    monkeypatch.setattr("asyncio.sleep", sleep_mock)
+
+    asyncio.run(sweevo_sandbox._wait_for_sandbox_exec_ready("sbx-1"))
+
+    assert exec_mock.await_count == 2
+    sleep_mock.assert_awaited_once_with(1.0)
+
+
 def test_normalize_sweevo_image_ref_preserves_repo_only_refs():
     assert _normalize_sweevo_image_ref("example/image") == "example/image"
     assert _normalize_sweevo_image_ref("ghcr.io/org/repo") == "ghcr.io/org/repo"
@@ -411,6 +432,7 @@ def test_setup_sweevo_sandbox_preserves_existing_labels(monkeypatch):
     service = SimpleNamespace(get_sandbox_object=lambda sandbox_id: FakeSandbox())
 
     monkeypatch.setattr(sweevo_sandbox, "_exec", exec_mock)
+    monkeypatch.setattr(sweevo_sandbox, "_wait_for_sandbox_exec_ready", AsyncMock())
     monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
 
     asyncio.run(sweevo_sandbox.setup_sweevo_sandbox(_instance(), "sbx-1"))

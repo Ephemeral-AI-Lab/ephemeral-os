@@ -21,4 +21,6 @@ Follow the bundled team-planner playbook for workflow and rules; this message su
 ```markdown
 {{benchmark_targets}}
 ```
+
+Benchmark targets are verification evidence only. Do not put `*/tests/*`, `test_*.py`, or benchmark test paths in scout `target_paths`; scout live production owners and mention tests in `task_note` or child specs.
 {{/if}}

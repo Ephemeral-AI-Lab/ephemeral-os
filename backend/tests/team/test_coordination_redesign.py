@@ -374,7 +374,7 @@ async def test_submit_replan_posts_structured_initial_replanned_tasks_note():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_description_over_20_words_without_truncating():
+async def test_submit_plan_accepts_long_description_without_truncating():
     ctx = ToolExecutionContext(
         cwd="/tmp",
         metadata={
@@ -404,9 +404,9 @@ async def test_submit_plan_rejects_description_over_20_words_without_truncating(
         ctx,
     )
 
-    assert result.is_error is True
-    assert "description has 21 words" in result.output
-    assert "20 words or fewer" in result.output
+    assert result.is_error is False, result.output
+    assert "one two three four five six seven eight nine ten eleven twelve thirteen" in result.output
+    assert "twenty twentyone" in result.output
 
 
 @pytest.mark.asyncio
@@ -935,6 +935,7 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
     assert 'read_task_details(task_id="planner-parent")' in prompt
     assert "read_task_details(task_id=...)" in prompt
     assert "Only after every listed child has been read" in prompt
+    assert "This terminal submission is the completion signal for the parent task" in prompt
     assert "## Direct child task details" not in prompt
     assert "## Child terminal notes" not in prompt
 

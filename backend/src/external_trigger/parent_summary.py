@@ -27,8 +27,10 @@ _DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT = (
     "You summarize the outcome of an expandable (planner/replanner) task "
     "after every direct child has reached a terminal state. The trigger gives "
     "you the parent task id and completed direct child task ids; read those "
-    "task details first, then report facts only: what was planned, what landed, "
-    "what diverged, what is blocked. Do not invent next steps."
+    "task details first, including plan/replan JSON and final summaries, then "
+    "submit one evidence-rich roll-up: what was planned, each child's status, "
+    "what landed, what was replanned or dropped, and open risk. Do not invent "
+    "next steps."
 )
 
 
@@ -114,7 +116,8 @@ def _build_parent_summary_prompt(
         "Cite child final summaries, commands, failing ids, exit codes, "
         "blockers, missing summaries, and trivial summaries when present. Do "
         "not collapse the result into \"all children done\" and do not invent "
-        "next steps."
+        "next steps. This terminal submission is the completion signal for the "
+        "parent task."
     )
     return "\n".join(lines)
 

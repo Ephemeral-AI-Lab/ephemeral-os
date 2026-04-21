@@ -14,15 +14,17 @@ Use this reference immediately before the first scout wave. For the entry/root p
 - Never bundle unrelated exact files or the whole first-wave ledger into one explorer.
 - Never check or wait on a scout id after it reports `delivered`, `Posted.`, `[COMPLETED]`, `[ALREADY_COMPLETED]`, or `[NO TASKS RUNNING]`. `Posted.` means findings were posted to Task Center notes, not in the envelope.
 - Do not launch a second scout wave just to repair weak or contradictory scout notes when CI/file notes already identify usable production owner boundaries; put the uncertainty in task specs.
+- Do not launch a second scout just to verify a cold exact file. If workspace structure shows a live package directory or symbol queries reveal nested owners such as `pkg/mod/core.py`, use that boundary in `scope_paths` or delegate the unresolved boundary to a child planner.
 - Do not launch scouts when the assigned task already names concrete owner files and the child lane split; read inherited task/file notes and submit the DAG with remaining uncertainty in task specs.
 
 ## Workflow
 
 1. Scrub `target_paths` first: every entry should be a live production owner file/directory unless tests are explicitly the owner surface; do not use scouts to repair benchmark test paths.
+   Bad: `target_paths=["pkg/mod.py", "pkg/tests/test_mod.py"]`. Good: `target_paths=["pkg/mod.py"]` with `task_note` naming the test as verification evidence.
 2. Call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` with one unresolved owner slice per scout.
 3. Queue the whole useful wave before any progress check or wait.
 4. After the wave, read scout findings with `read_file_note(file_path="...")` for each exact scout `target_paths` entry you launched. Do not drop file extensions, reuse an unrelated prior path, or skip a scout path. Scouts/subagents are not Task Center tasks. Do not call `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and do not pass `bg_*` background ids, planner slugs, short prefixes, or fabricated ids as task ids.
-5. On cold CI or a disproved exact file, fall back to the nearest stable production boundary instead of preserving a guessed exact path.
+5. On cold CI or a disproved exact file, fall back to the nearest stable production boundary instead of preserving a guessed exact path. Use one structure/symbol check if needed, then stop scouting and carry the uncertainty into task specs.
 
 ## Expected Outcome
 

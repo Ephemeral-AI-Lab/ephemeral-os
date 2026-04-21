@@ -17,6 +17,8 @@ Failed task id: `{{your_failed_task_id}}`
 Your dependency task ids: {{your_deps_ids}}
 {{/if}}
 
+Context-read pre-step: after loading the replanner playbook, use the UUIDs above exactly with `read_task_details(...)` for your task, parent, failed task, and each dependency, then call `read_task_graph()` to enumerate siblings before CI, notes, diagnosis, corrective planning, or `submit_replan(...)`.
+
 ```markdown
 {{task_spec}}
 ```

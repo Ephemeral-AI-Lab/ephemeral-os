@@ -1,6 +1,6 @@
 # Runtime Verification Examples
 
-Use this reference before the first `daytona_codeact` verification command on a benchmark lane.
+Use this reference as a required benchmark-lane preflight. Load it with `load_skill_reference(skill_name="team-validator-playbook", reference_name="runtime-verification-examples")` before the first `daytona_codeact` verification command.
 
 ## Task/Goal
 
@@ -18,10 +18,16 @@ Use this reference before the first `daytona_codeact` verification command on a 
 ## Workflow
 
 - Must run the exact payload command through `daytona_codeact(command="...", timeout=N)`, use that same run's exit code and returned output, and return PASS immediately when it exits `0`.
+- Must run the repo command itself, not a shell-output wrapper. Use pytest flags, narrower nodes, background execution, or tool truncation for volume control; do not pipe to `head` or `tail`, even to keep output short.
+- Bad: `daytona_codeact(command="python -m pytest dask/tests/test_config.py -v 2>&1 | tail -60")`
+- Before every benchmark CodeAct call, inspect the exact `command` string. If it contains the literal character `|` or `>`, do not call CodeAct; rewrite it to a direct repo-root command first.
+- Rewrite any planned command containing `2>&1`, `2>/dev/null`, `>`, `>>`, `| head`, or `| tail` before you call CodeAct.
+- Must not launch duplicate equivalent verification commands in parallel; one exact command per suite is enough unless sharding after a transient no-output failure.
 - Must treat wrapper success, manifest output, and `__CODEX_EXIT_CODE__` as wrapper health only; the verdict comes from the returned exit code.
 - Must turn the first red run into a root-cause packet with `phase`, `boundary`, and `next_question`. Never replace that packet with vibes.
 - For large suites, use `background=true` on `daytona_codeact`, keep doing useful foreground review, and call `wait_for_background_task(timeout=120)` when blocked on the result. Avoid `check_background_progress(...)` unless live output changes whether you keep waiting, cancel, or report.
 - If a progress check already shows a deterministic failure id, `FAILED`, `ERROR`, `ImportError`, or traceback, cancel the task and use that partial output as the runtime evidence.
+- A success verdict may cite only commands actually run after the final validator edit, with their observed exit code or key assertion.
 
 ## Expected Outcome
 

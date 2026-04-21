@@ -59,6 +59,10 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Your task id: `dev-uuid-1234`" in rendered
     assert "Your dependency task ids: `dep-a`, `dep-b`" in rendered
     assert "Your parent task id: `parent-uuid`" in rendered
+    assert "The developer playbook owns the context-read pre-step" in rendered
+    assert "Use the UUID headers above as that playbook's task, parent, and dependency inputs" in rendered
+    assert "If that reference has not loaded in this agent run, do not call CodeAct" not in rendered
+    assert "any literal `|` or `>` character means the command is invalid" not in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
@@ -171,6 +175,8 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "Your task id: `dev-1`" in ctx.user_message
     assert "Your dependency task ids: `dep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
+    assert "The developer playbook owns the context-read pre-step" in ctx.user_message
+    assert "Use the UUID headers above as that playbook's task, parent, and dependency inputs" in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
@@ -235,6 +241,15 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
     assert "Your task id: `validator-1`" in ctx.user_message
     assert "Your dependency task ids: `dev-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
+    assert "Context-read pre-step: after loading the validator playbook" in ctx.user_message
+    assert (
+        'load_skill_reference(skill_name="team-validator-playbook", '
+        'reference_name="runtime-verification-examples")'
+    ) in ctx.user_message
+    assert "If that reference has not loaded in this agent run, do not call CodeAct" in ctx.user_message
+    assert "any literal `|` or `>` character means the command is invalid" in ctx.user_message
+    assert "Do not run duplicate equivalent verification commands in parallel" in ctx.user_message
+    assert "A success verdict may cite only commands actually run after the final validator edit" in ctx.user_message
     assert "Task id: `validator-1`" not in ctx.user_message
     assert "Dependency task ids: `dev-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
@@ -281,6 +296,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Your task id:" not in ctx.user_message
     assert "Your parent task id:" not in ctx.user_message
     assert "Your dependency task ids:" not in ctx.user_message
+    assert "Context-read pre-step:" not in ctx.user_message
     assert "Task id:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
     assert "Follow the bundled team-planner playbook for workflow and rules" in ctx.user_message
@@ -289,6 +305,8 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Fix retry handling." in ctx.user_message
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
+    assert "Benchmark targets are verification evidence only" in ctx.user_message
+    assert "not put `*/tests/*`, `test_*.py`, or benchmark test paths in scout `target_paths`" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
@@ -351,6 +369,8 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "Your task id: `planner-1`" in ctx.user_message
     assert "Your dependency task ids: `prep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
+    assert "Context-read pre-step: this applies to child planners only" in ctx.user_message
+    assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
     assert "Task id: `planner-1`" not in ctx.user_message
     assert "Dependency task ids: `prep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
@@ -433,6 +453,8 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     assert "Your task id: `replanner-1`" in ctx.user_message
     assert "Your dependency task ids: `prep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
+    assert "Context-read pre-step: after loading the replanner playbook" in ctx.user_message
+    assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
     assert "Task id: `replanner-1`" not in ctx.user_message
     assert "Failed task id: `failed-1`" in ctx.user_message
     assert "Dependency task ids: `prep-1`" not in ctx.user_message

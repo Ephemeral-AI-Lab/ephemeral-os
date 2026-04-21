@@ -222,7 +222,8 @@ class SubmitTaskSummaryInput(BaseModel):
         description=(
             "Evidence-rich terminal summary for Task Center notes. Developers: "
             "state the concrete API or behavior delta, verification commands "
-            "and outcomes, and known gaps or deferred items. Validators: list "
+            "run after the final edit with observed outcomes, and known gaps "
+            "or deferred items. Validators: list "
             "each acceptance criterion with pass/fail plus the command, probe, "
             "exit code, or key assertion used; on failure include the minimal "
             "repro and hypothesized root cause. For request_replan: start with "
@@ -298,7 +299,7 @@ class NewTaskSpec(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Planner-authored short task label, kept to 20 words or fewer. "
+            "Concise planner-authored task label. "
             "This is persisted as the task description; put full instructions in spec."
         ),
     )

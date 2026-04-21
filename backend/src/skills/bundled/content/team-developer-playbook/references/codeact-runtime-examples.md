@@ -1,6 +1,6 @@
 # CodeAct Runtime Examples
 
-Use this reference before the first `daytona_codeact` verification or reproduction command on a benchmark lane.
+Use this reference as a required benchmark-lane preflight. Load it with `load_skill_reference(skill_name="team-developer-playbook", reference_name="codeact-runtime-examples")` before the first `daytona_codeact` verification or reproduction command.
 
 ## Task/Goal
 
@@ -16,6 +16,10 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
 - Good: `daytona_codeact(command="python -m pytest dask/tests/test_config.py::test_update_defaults -q")`
 - Bad: `daytona_codeact(command="cd /testbed && python -m pytest ... 2>&1 | head -100")`
+- Bad: `daytona_codeact(command="python -m pytest dask/tests/test_cli.py -v 2>&1 | tail -60")`
+- Before every benchmark CodeAct call, inspect the exact `command` string. If it contains the literal character `|` or `>`, do not call CodeAct; rewrite it to a direct repo-root command first.
+- Rewrite any planned command containing `2>&1`, `2>/dev/null`, `>`, `>>`, `| head`, or `| tail` before you call CodeAct.
+- Must run the repo command itself, not a shell-output wrapper. Use pytest flags, narrower nodes, background execution, or tool truncation for volume control; do not pipe to `head` or `tail`, even to keep output short.
 - Must not append shell capture plumbing such as `2>&1`, `2>/dev/null`, or `1>/tmp/out`; `daytona_codeact` already captures stdout and stderr.
 - Must not write or move files through CodeAct. Avoid `sed -i`, `tee file`, output redirects, `touch`/`cp`/`mv`, inline Python writes, `shutil.move`, `os.rename`, `git rm`, or `git mv`. Pure removals such as `rm`, `unlink`, `os.remove`, `os.unlink`, `Path.unlink`, and `shutil.rmtree` are allowed through CodeAct because the overlay audit path converts tracked removals into OCC-gated deletes and rejects unsupported removal shapes. Use `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` for explicit repo file operations.
 - Must not inspect source through CodeAct. Avoid `cat`, `sed -n`, `grep`/`rg`, `head`/`tail`/`nl`, Python file reads, and `inspect.getsource`; use notes and CI first, then `daytona_read_file` or `daytona_grep`.
@@ -24,6 +28,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Must not call unprefixed tools like `write_file`, `edit_file`, `read_file`, `bash`, or `grep`; the valid tools are the exact names in the tool list, such as `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, and `daytona_move_file`.
 - If `Unknown tool` appears, treat it as your own Daytona tool-name defect and retry once with the exact tool name before continuing.
 - Must judge pass/fail from `shell(...)["exit_code"]`, not wrapper metadata.
+- A success summary may cite only commands actually run after the final edit, with their observed exit code or failing ids.
 - If a probe returns manifest `status: error`, traceback text, or no trustworthy exit code, simplify the next probe instead of broadening.
 - If pytest says a named node is missing, exits `4`, or collects `0` items, report that exact control failure or hand the file surface back to replanning.
 

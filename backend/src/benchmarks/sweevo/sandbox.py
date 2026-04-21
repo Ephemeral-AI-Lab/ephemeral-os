@@ -252,6 +252,58 @@ def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
         )
 
 
+def _is_transient_sandbox_exec_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return (
+        "connection reset" in text
+        or "connection refused" in text
+        or "server disconnected" in text
+        or "failed to execute command" in text
+        or "clientoserror" in text
+        or "temporarily unavailable" in text
+    )
+
+
+async def _wait_for_sandbox_exec_ready(
+    sandbox_id: str,
+    *,
+    attempts: int = 6,
+    delay_s: float = 1.0,
+) -> None:
+    """Wait until a started sandbox accepts toolbox exec requests."""
+    import asyncio
+
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            sandbox = await _get_sandbox(sandbox_id)
+            response = await sandbox.process.exec("pwd", cwd="/", timeout=10)
+            exit_code = getattr(response, "exit_code", None)
+            if exit_code in (None, 0):
+                return
+            last_exc = RuntimeError(
+                f"Sandbox readiness probe exited with code {exit_code}: "
+                f"{getattr(response, 'result', '')}"
+            )
+        except Exception as exc:
+            last_exc = exc
+            if not _is_transient_sandbox_exec_error(exc):
+                raise
+
+        if attempt < attempts:
+            logger.warning(
+                "SWE-EVO sandbox %s exec readiness probe failed (attempt %s/%s): %s",
+                sandbox_id,
+                attempt,
+                attempts,
+                last_exc,
+            )
+            await asyncio.sleep(delay_s)
+
+    assert last_exc is not None
+    raise RuntimeError(f"SWE-EVO sandbox {sandbox_id} did not become exec-ready") from last_exc
+
+
 async def _write_file_via_chunked_base64_exec(
     sandbox_id: str,
     path: str,
@@ -422,6 +474,7 @@ async def setup_sweevo_sandbox(
     repo_dir: str = _REPO_DIR,
 ) -> str:
     """Prepare the sandbox by checking out the repo at the base commit."""
+    await _wait_for_sandbox_exec_ready(sandbox_id)
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
     # Retry runs may reuse the same named sandbox. Always restore the repo to

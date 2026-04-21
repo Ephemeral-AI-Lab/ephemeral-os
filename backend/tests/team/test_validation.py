@@ -152,29 +152,11 @@ def test_known_agent_passes_agent_check():
 
 
 # ---------------------------------------------------------------------------
-# Description length
+# Description
 # ---------------------------------------------------------------------------
 
 
-def test_description_allows_20_words():
-    spec = _spec(
-        "t1",
-        description=(
-            "one two three four five six seven eight nine ten eleven twelve "
-            "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty"
-        ),
-        scope_paths=["src/api.py"],
-    )
-    plan = _plan(spec)
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, return_value=False), \
-         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
-        issues = validate_plan(plan)
-
-    assert not any("description has" in i["msg"] for i in issues)
-
-
-def test_description_rejects_more_than_20_words():
+def test_description_allows_long_labels():
     spec = _spec(
         "t1",
         description=(
@@ -189,7 +171,7 @@ def test_description_rejects_more_than_20_words():
          patch(_GET_DEFN_PATH, return_value=_mock_agent()):
         issues = validate_plan(plan)
 
-    assert any("description has 21 words" in i["msg"] for i in issues)
+    assert not any("description has" in i["msg"] for i in issues)
 
 
 # ---------------------------------------------------------------------------

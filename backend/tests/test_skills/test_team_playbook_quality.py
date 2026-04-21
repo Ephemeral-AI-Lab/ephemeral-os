@@ -127,6 +127,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "never use `read_task_graph()` or `read_task_details(...)`" in planner
     assert "submit with uncertainty in task specs instead of relaunching explorers" in planner
     assert "scrub each scout `target_paths` list before calling `run_subagent`" in planner
+    assert "A benchmark target is evidence, not scout ownership" in planner
     assert "live production owner files/directories only" in planner
     assert "never launch `run_subagent` scouts on benchmark test paths" in planner.lower()
     assert "use scouts to locate or correct benchmark test paths" in planner.lower()
@@ -141,7 +142,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "Do not seed child specs with `cd /testbed`" in planner
     assert "CodeAct starts at repo root and captures output automatically" in planner
     assert "never put verification-only benchmark tests in developer, validator, or child-planner `scope_paths`" in planner.lower()
-    assert "never pass `*/tests/*`, `test_*.py`, or unconfirmed test-derived paths in scout `target_paths`" in planner.lower()
+    assert "never pass `*/tests/*`, `test_*.py`, benchmark test paths, or unconfirmed test-derived paths in scout `target_paths`" in planner.lower()
     assert "locate/correct benchmark test paths" in planner
     assert "never guess an exact owner" in planner.lower()
     assert "never make non-submission tool calls after loading `plan-json-contract`" in planner.lower()
@@ -157,6 +158,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "Never call `check_background_progress(...)` or `wait_for_background_task(...)` again" in planner
     assert "never pass `bg_*`, planner slugs, short prefixes, or fabricated ids" in planner
     assert "Never use background tools to recover content from a `Posted.` scout result" in planner
+    assert "while any background scout/subagent is still running" in planner
+    assert "the only allowed next tool is `submit_plan(...)`" in planner
+    assert "do not launch another scout just to prove the missing exact path" in planner
     assert "clear adjacent live owner" in planner
     assert "split unrelated scout targets" in planner.lower()
     assert "compat/re-export" not in planner
@@ -165,9 +169,20 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `root-cause-debugging`" in developer.lower()
     assert "must load `widening-and-runtime`" in developer.lower()
     assert "must load `codeact-runtime-examples`" in developer.lower()
+    assert (
+        'load_skill_reference(skill_name="team-developer-playbook", '
+        'reference_name="codeact-runtime-examples")'
+    ) in developer
+    assert "Context-read pre-step: after loading the developer playbook" in developer
+    assert "If no dependency task ids are listed, read only your task and parent" in developer
+    assert "Benchmark CodeAct preflight: before any `daytona_codeact(...)` call" in developer
+    assert "If that reference has not loaded in this agent run, do not call CodeAct" in developer
+    assert "A success summary may cite only commands actually run after the final edit" in developer
     assert "must load `pre-completion-validation`" in developer.lower()
     assert "before any `daytona_read_file(...)`" in developer
     assert "After the assigned-task-id detail pre-step" in developer
+    assert "Only `load_skill(team-developer-playbook)` may precede" in developer
+    assert "do not call CodeAct, CI, note, file, edit, diagnostics, or reference tools until those reads complete" in developer
     assert "complete the assigned-task-id detail reads for your own task, parent" in developer
     assert "Empty note reads are successful freshness checks." in developer
     assert "never rewrite benchmark tests" in developer.lower()
@@ -189,7 +204,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "ci_query_symbol" in developer
     assert "widened-edit decision" in developer
     assert 'daytona_codeact(command="python -m pytest ...")' in developer
-    assert "do not wrap with `cd /testbed &&`, `2>&1`, output redirects" in developer
+    assert "contains the literal character `|` or `>`" in developer
+    assert "the command is invalid input" in developer
+    assert "do not call CodeAct; remove shell pipes/redirections" in developer
     assert "check both source and destination" in developer.lower()
     assert "in-scope source path is not permission" in developer.lower()
     assert "Never keep widening after repeated outside-scope warnings" in developer
@@ -202,6 +219,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "current lane collect" in developer.lower()
     assert "production ownership evidence" in developer.lower()
     assert "widened path, rationale, and verification" in developer.lower()
+    assert "exact commands run after the final edit" in developer
+    assert "latest required post-edit command exited `0`" in developer
     assert "submit_task_summary(type=\"request_replan\", content=...)" in developer
     assert "never treat test paths in `scope_paths` as edit permission" in developer.lower()
     assert "never create an outside-scope compatibility shim" in developer.lower()
@@ -210,8 +229,15 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
     assert "must load `cross-surface-guardrails`" in validator.lower()
     assert "must load `runtime-verification-examples`" in validator.lower()
+    assert (
+        'load_skill_reference(skill_name="team-validator-playbook", '
+        'reference_name="runtime-verification-examples")'
+    ) in validator
+    assert "CodeAct preflight is mandatory" in validator
     assert "before any `daytona_read_file(...)`" in validator
     assert "After the assigned-task-id detail pre-step" in validator
+    assert "Only `load_skill(team-validator-playbook)` may precede" in validator
+    assert "do not call CodeAct, CI, note, file, edit, diagnostics, or reference tools until those reads complete" in validator
     assert "must not paraphrase failure evidence" in validator.lower()
     assert "small local corrective patch" in validator.lower()
     assert "must not use `daytona_codeact` for corrective writes or moves" in validator.lower()
@@ -222,7 +248,11 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert 'submit_task_summary(type="request_replan", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
     assert 'daytona_codeact(command="python -m pytest ...")' in validator
-    assert "do not wrap with `cd /testbed &&`, `2>&1`, output redirects" in validator
+    assert "contains the literal character `|` or `>`" in validator
+    assert "the command is invalid input" in validator
+    assert "do not call CodeAct; remove shell pipes/redirections" in validator
+    assert "Do not launch duplicate equivalent verification commands in parallel" in validator
+    assert "latest required command after any validator fix" in validator
 
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
@@ -285,7 +315,10 @@ def test_reference_files_hold_specialized_detail() -> None:
     )
 
     assert "optional final helper" in planner_json
-    assert "do not load it until exploration and DAG shaping are complete" in planner_json
+    assert "do not load it until exploration, DAG shaping" in planner_json
+    assert "terminal background scouts" in planner_json
+    assert "If any background scout/subagent is still running" in planner_json
+    assert "Do not call `wait_for_background_task(...)`" in planner_json
     assert "submit_plan(new_tasks=[...])" in planner_json
     assert "Do not include `task_note`" in planner_json
     assert "`1. Goal:`" in planner_json
@@ -305,19 +338,30 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Do not call `read_task_graph()` or `read_task_details(...)`" in scout_launch
     assert "Do not launch a second scout wave" in scout_launch
     assert "Scrub `target_paths` first" in scout_launch
+    assert 'Bad: `target_paths=["pkg/mod.py", "pkg/tests/test_mod.py"]`' in scout_launch
     assert "missing test-derived path in scout `target_paths`" in scout_launch
     assert "Never use a scout to locate or correct a benchmark test path mismatch" in scout_launch
     assert "do not use scouts to repair benchmark test paths" in scout_launch
     assert "Never pass an exact file to a scout after a file-symbol query found no indexed symbols" in scout_launch
     assert "Never use scouts to locate or correct benchmark test path mismatches" in scout_launch
+    assert "Do not launch a second scout just to verify a cold exact file" in scout_launch
+    assert "use that boundary in `scope_paths`" in scout_launch
+    assert "Use one structure/symbol check if needed" in scout_launch
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
+    assert "required benchmark-lane preflight" in developer_runtime
+    assert 'reference_name="codeact-runtime-examples"' in developer_runtime
+    assert "not a shell-output wrapper" in developer_runtime
+    assert 'daytona_codeact(command="python -m pytest dask/tests/test_cli.py -v 2>&1 | tail -60")' in developer_runtime
+    assert "If it contains the literal character `|` or `>`" in developer_runtime
+    assert "Rewrite any planned command containing `2>&1`" in developer_runtime
+    assert "commands actually run after the final edit" in developer_runtime
     assert "Must not append shell capture plumbing" in developer_runtime
     assert "Must not write or move files through CodeAct" in developer_runtime
     assert "Pure removals such as `rm`, `unlink`, `os.remove`" in developer_runtime
     assert "Must not inspect source through CodeAct" in developer_runtime
     assert "cd /testbed" in developer_playbook
     assert "cd /testbed" in developer_runtime
-    assert "`| head`, or `| tail`" in developer_playbook
+    assert "If the command contains `|` or `>`" in developer_playbook
     assert "pkg._compat" in developer_root_cause
     assert "missing module, compatibility shim, re-export module, or import bridge" in developer_widening
     assert "required for the same bug" in developer_widening
@@ -338,6 +382,14 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "the exact file should not be used as `scope_paths`" in scout_ref
     assert "target path is off-policy" in scout_ref
     assert "check_background_progress" in validator_ref
+    assert "required benchmark-lane preflight" in validator_ref
+    assert 'reference_name="runtime-verification-examples"' in validator_ref
+    assert "not a shell-output wrapper" in validator_ref
+    assert 'daytona_codeact(command="python -m pytest dask/tests/test_config.py -v 2>&1 | tail -60")' in validator_ref
+    assert "If it contains the literal character `|` or `>`" in validator_ref
+    assert "Rewrite any planned command containing `2>&1`" in validator_ref
+    assert "duplicate equivalent verification commands" in validator_ref
+    assert "commands actually run after the final validator edit" in validator_ref
     assert "Must not inspect source through CodeAct" in validator_ref
 
 

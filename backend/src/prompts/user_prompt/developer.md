@@ -14,6 +14,8 @@ Your parent task id: `{{your_parent_task_id}}`
 Your dependency task ids: {{your_deps_ids}}
 {{/if}}
 
+The developer playbook owns the context-read pre-step and benchmark CodeAct preflight. Use the UUID headers above as that playbook's task, parent, and dependency inputs.
+
 ```markdown
 {{task_spec}}
 ```

@@ -247,20 +247,11 @@ def validate_plan(
                     }
                 )
 
-        # Planner-authored short label, max 20 words.
+        # Planner-authored short label.
         if not item.description:
             issues.append(
-                {"field": f"tasks[{idx}].description", "msg": "description is required (short 20-word label)"}
+                {"field": f"tasks[{idx}].description", "msg": "description is required"}
             )
-        else:
-            word_count = len(item.description.split())
-            if word_count > 20:
-                issues.append(
-                    {
-                        "field": f"tasks[{idx}].description",
-                        "msg": f"description has {word_count} words; keep it to 20 words or fewer",
-                    }
-                )
         # scope_paths is required
         if not item.scope_paths:
             issues.append(

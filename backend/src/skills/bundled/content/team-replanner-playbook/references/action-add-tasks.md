@@ -17,7 +17,7 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 ## Workflow
 
 - Put all corrective work in `new_tasks`; this action uses `cancel_ids=[]`. Do not include the original failed `request_replan` task in `cancel_ids`.
-- Each new task: `id`, `description` (short planner-authored label of 20 words or fewer), `name` (agent), `spec`, `deps`, repo-relative `scope_paths` with no `/testbed/...` prefixes. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
+- Each new task: `id`, `description`, `name` (agent), `spec`, `deps`, repo-relative `scope_paths` with no `/testbed/...` prefixes. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
 - `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Each label starts its own line and has body text on that same line. Do not put all labels on one line. Do not put the body on the next line after the colon. Do not use Markdown headings. Do not include `task_note`, `output`, `summary`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`. The system generates the outcome summary automatically once your corrective children complete.
 - Scope overlap is allowed. Do not add dependencies merely because `scope_paths` overlap; use `deps` only for real output ordering or known same-file edit ordering.
 - If `new_tasks` has 3 or more concrete non-planner tasks, add one terminal `validator` in this payload whose `deps` cover those tasks; its spec must run the relevant broad verification after diagnostics.

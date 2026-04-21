@@ -1,7 +1,7 @@
 # Plan JSON Contract
-Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide; do not load it until exploration and DAG shaping are complete.
+Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide; do not load it until exploration, DAG shaping, terminal background scouts, and required note reads are complete.
 
-Use this only as the final schema checklist. After this reference loads, stop exploration and make the next assistant action the `submit_plan(...)` tool call. Do not emit recap prose, visible planning text, or another non-terminal tool call.
+Use this only as the final schema checklist. After this reference loads, stop exploration and make the next assistant action the `submit_plan(...)` tool call. Do not emit recap prose, visible planning text, or another non-terminal tool call. If any background scout/subagent is still running, do not load this reference yet.
 
 ## Task/Goal
 
@@ -11,6 +11,7 @@ Use this only as the final schema checklist. After this reference loads, stop ex
 
 - Avoid summarizing what you will submit or saying "the plan is ready" / "let me submit".
 - Do not make another tool call except `submit_plan(...)`.
+- Do not call `wait_for_background_task(...)`, `check_background_progress(...)`, `cancel_background_task(...)`, CI, notes, or scout tools after this reference loads.
 - Do not include `task_note`, `background`, `parent_id`, `rationale`, `output`, or `summary`.
 - Do not use a failed `submit_plan(...)` result as your schema checker.
 
