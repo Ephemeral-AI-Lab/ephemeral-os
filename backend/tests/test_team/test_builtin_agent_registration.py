@@ -142,6 +142,8 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "submit_task_summary",
         "submit_plan",
         "submit_replan",
+        "read_task_details",
+        "read_task_graph",
     ):
         assert name not in tool_names
 

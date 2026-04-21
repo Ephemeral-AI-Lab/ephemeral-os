@@ -207,7 +207,7 @@ def build_agent_capabilities_prompt(
                 "`delivered`, `[COMPLETED]`, `[ALREADY_COMPLETED]`, and `[NO TASKS RUNNING]` are terminal signals; retire those task ids and act on the result instead of polling or waiting again."
             )
             background_lines.append(
-                "For `run_subagent` results that say `Posted.`, background tools will only repeat the delivery envelope; use the relevant note/artifact reader next. In team-planner contexts, read current-task notes with `read_task_details(task_id=\"<your current task id>\")` when exact scout paths are unclear; do not pass `bg_*` background ids to `read_task_details`. Use `read_file_note(file_path=\"...\")` for known scout scopes."
+                "For `run_subagent` results that say `Posted.`, background tools will only repeat the delivery envelope; use the relevant note/artifact reader next. In team-planner contexts, read scout findings with `read_file_note(file_path=\"...\")` for the scout target paths. Scouts and subagents are not Task Center tasks; do not use `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and never pass `bg_*` background ids as task ids."
             )
             background_lines.append(
                 "Cancel stale or low-value work promptly."

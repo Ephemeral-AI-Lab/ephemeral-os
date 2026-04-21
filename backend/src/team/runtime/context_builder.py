@@ -143,8 +143,6 @@ def _template_name_for_task(
         return "developer"
     if role == "reviewer" or agent_name == "validator":
         return "validator"
-    if role in {"explorer", "scout"} or agent_name == "scout":
-        return "scout"
     return None
 
 

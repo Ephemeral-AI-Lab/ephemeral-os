@@ -558,8 +558,12 @@ async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypa
     )
 
     assert result.is_error is False
-    assert "exactly one `submit_task_note(...)` call with non-empty `content`" in captured["prompt"]
-    assert "stay read-free and post `submit_task_note(...)` from CI evidence" in captured["prompt"]
+    assert (
+        "exactly one `submit_file_note(...)` call with non-empty `content` "
+        "and at least one `paths` entry"
+    ) in captured["prompt"]
+    assert "stay read-free and post `submit_file_note(...)` from CI evidence" in captured["prompt"]
+    assert "submit_task_note" not in captured["prompt"]
     assert "exact-file and short fixed-file scouts stay read-free" in captured["prompt"]
     assert "say only `Posted.`" in captured["prompt"]
 

@@ -92,7 +92,7 @@ class SubagentToolkit(BaseToolkit):
             tools=[RestrictedRunSubagentTool(allowed_agent_names=allowed)],
             instructions=(
                 "Use `run_subagent` to delegate bounded work to a subagent.\n"
-                "- Each call returns a `task_id` immediately; workers always run in the background.\n"
+                "- Each call returns a background `task_id` immediately; workers always run in the background.\n"
                 "- Emit multiple `run_subagent` calls in one turn only for disjoint work and only when live scope status still admits parallel fan-out.\n"
                 "- After spawning a worker, keep doing disjoint foreground work or launch other independent workers. Do not immediately block on the new task unless its result is the only remaining blocker.\n"
                 f"- Valid `agent_name` values for this caller: {allowed_text}.\n"

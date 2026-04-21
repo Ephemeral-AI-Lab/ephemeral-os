@@ -485,7 +485,7 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
     name="run_subagent",
     description=(
         "Spawn a named subagent (e.g. ``scout``) as a background task. "
-        "Returns a task_id immediately. Continue foreground work when useful; "
+        "Returns a background task_id immediately. Continue foreground work when useful; "
         "join with wait_for_background_task(task_id=...) when blocked on the "
         "result. Call check_background_progress(task_id=...) only when live "
         "status changes the next action; stop stale work with "
@@ -499,9 +499,10 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
         "benchmark tests, ``*/tests/*``, ``test_*.py``, and missing "
         "test-derived paths belong in task prose or task_note unless tests "
         "are explicitly the owned surface. If a completed scout result says "
-        "``Posted.``, read current-task notes next; omit note paths if exact "
-        "scout paths are unclear. Later background status calls only repeat "
-        "that delivery envelope."
+        "``Posted.``, read file notes for the scout target paths next. Scouts "
+        "and subagents are not Task Center tasks; do not use task graph/detail "
+        "tools or ``bg_*`` ids to retrieve scout results. Later background "
+        "status calls only repeat that delivery envelope."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
@@ -549,8 +550,8 @@ async def run_subagent(
             "- Do not suggest an 'intended' or 'correct' nearby path when the assigned target is missing.",
             "- Do not inspect already-named benchmark test files or guessed owner files unless they are inside `target_paths`.",
             "- Start source-code scouting with `ci_query_symbol(...)`.",
-            "- The durable handoff must be exactly one `submit_task_note(...)` call with non-empty `content`; never put findings only in final text.",
-            "- If `ci_query_symbol(...)` already returned definitions for an exact file target, stay read-free and post `submit_task_note(...)` from CI evidence.",
+            "- The durable handoff must be exactly one `submit_file_note(...)` call with non-empty `content` and at least one `paths` entry; never put findings only in final text.",
+            "- If `ci_query_symbol(...)` already returned definitions for an exact file target, stay read-free and post `submit_file_note(...)` from CI evidence.",
             "- On coordinated benchmark lanes, exact-file and short fixed-file scouts stay read-free; if CI stays cold, report the gap instead.",
             "- If the note tool returns and the loop asks for final text, say only `Posted.`",
         ]

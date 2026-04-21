@@ -453,10 +453,10 @@ class ReadTaskDetailsTool(BaseTool):
         "scope_paths, failure reason, completion summary, and recent notes. "
         "Non-root developers, validators, child planners, and replanners use "
         "this for the ids exposed in their prompt headers and dependencies. "
-        "The entry/root planner is exempt during initial setup and should read "
-        "task details only after scouts or other evidence have posted useful "
-        "current-task notes. Child planners and replanners may use "
-        "read_task_graph first to enumerate siblings."
+        "Do not use this for scout/subagent results: they are background work, "
+        "not Task Center tasks, and their handoff is retrieved with "
+        "read_file_note. Child planners and replanners may use read_task_graph "
+        "first to enumerate siblings."
     )
     short_description = "Read one task's details + recent notes by ID."
     input_model = ReadTaskDetailsInput

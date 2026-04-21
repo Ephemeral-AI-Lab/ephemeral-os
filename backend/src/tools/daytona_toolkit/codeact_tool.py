@@ -52,8 +52,11 @@ class DaytonaCodeActInput(BaseModel):
     command: str | None = Field(
         default=None,
         description=(
-            "Shell command to execute directly. Preferred for tests, builds, "
-            "and verification; do not set alongside `code`."
+            "Shell command to execute directly from repo root. Preferred for "
+            "tests, builds, and verification; do not set alongside `code`. "
+            "Do not prefix `cd /testbed &&` or `cd /workspace &&`. Do not add "
+            "`2>&1`, `2>/dev/null`, `| head`, `| tail`, or output redirects; "
+            "output is captured and truncated automatically."
         ),
     )
     timeout: int = Field(
@@ -718,7 +721,7 @@ def _files_written_count(
         "tokens such as `mv`, `shutil.move`, `os.rename`, `git rm`, or `git mv`; path "
         "moves must use daytona_move_file. "
     ),
-    short_description="Run shell commands or Python in the sandbox.",
+    short_description="Run repo-root shell/Python; no cd, redirects, head, or tail.",
     input_model=DaytonaCodeActInput,
     output_model=DaytonaCodeActOutput,
     background="optional",

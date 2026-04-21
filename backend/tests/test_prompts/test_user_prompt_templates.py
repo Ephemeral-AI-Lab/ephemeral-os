@@ -16,9 +16,11 @@ from team.task_context_builder import TaskContextBuilder
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompts" / "user_prompt"
 _SUBMIT_PLAN_SCHEMA_SNIPPET = (
-    "Provide new_tasks with id, description, name, spec, deps, and scope_paths"
+    "Provide new_tasks with id, description, name, spec, deps, and "
+    "non-empty repo-relative scope_paths"
 )
 _SUBMIT_PLAN_SPEC_SNIPPET = "Each spec must use numbered colon labels in order"
+_SUBMIT_PLAN_VALIDATOR_SNIPPET = "exactly one terminal `validator` end-of-chain guard"
 
 
 def test_user_prompt_markdown_files_start_at_runtime_template() -> None:
@@ -28,7 +30,6 @@ def test_user_prompt_markdown_files_start_at_runtime_template() -> None:
         "task_planner",
         "task_replanner",
         "validator",
-        "scout",
     ):
         assert (_PROMPT_DIR / f"{name}.md").read_text(encoding="utf-8").startswith(
             "Please read the following sections"
@@ -55,34 +56,27 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
 
     assert rendered.startswith("Please read the following sections")
     assert "- submit_task_summary: Submit task outcome." in rendered
-    assert "Your task id: `dev-uuid-1234`" in rendered
-    assert "Your dependency task ids: `dep-a`, `dep-b`" in rendered
-    assert "Your parent task id: `parent-uuid`" in rendered
-    assert "Please read the assigned coding task" in rendered
+    assert "Your task id:" not in rendered
+    assert "Your dependency task ids:" not in rendered
+    assert "Your parent task id:" not in rendered
+    assert "Task id: `dev-uuid-1234`" in rendered
+    assert "Dependency task ids: `dep-a`, `dep-b`" in rendered
+    assert "Parent task id: `parent-uuid`" in rendered
+    assert "Follow the bundled developer playbook for workflow and rules" in rendered
+    assert "## Rule to Follow" not in rendered
     assert "## Assigned coding task" in rendered
     assert "Goal\nImplement retry handling." in rendered
     assert "## scope_paths\n- backend/src/retry.py" in rendered
-    assert "Benchmark and verification test files in this list are read/verify-only" in rendered
-    assert "patch the production owner or submit a failure for replanning" in rendered
-    assert "If live evidence identifies a missing module, compatibility shim" in rendered
-    assert "treat it as a widened edit decision" in rendered
-    assert "justified production owner for the same objective" in rendered
-    assert "scope-added notification as the current scope" in rendered
-    assert "ModuleNotFoundError" in rendered
-    assert "use live production evidence or the assigned objective" in rendered
     assert "scope_paths" in rendered
-    assert "do not retry the same delete/move tool" in rendered
-    assert "create or edit the missing production path" in rendered
-    assert "check both endpoints" in rendered
-    assert "source path inside `scope_paths` does not by itself authorize" in rendered
-    assert "destination needs live production evidence" in rendered
-    assert "make the widened-edit decision explicitly" in rendered
-    assert "observability evidence" in rendered
-    assert 'submit_task_summary(type="request_replan", content=...)' in rendered
+    assert "Benchmark and verification test files in this list are read/verify-only" not in rendered
+    assert "If live evidence identifies a missing module, compatibility shim" not in rendered
+    assert "source path inside `scope_paths` does not by itself authorize" not in rendered
+    assert 'submit_task_summary(type="request_replan", content=...)' not in rendered
     assert "## Context from dependencies" not in rendered
+    assert "## Recent changes in your scope" not in rendered
+    assert "## Parent context" not in rendered
     assert "Tool-name contract" not in rendered
-    assert "stdout and stderr are already captured separately" not in rendered
-    assert "cd /testbed" not in rendered
+    assert "Run CodeAct commands directly from repo root" not in rendered
 
 
 def test_note_taker_prompts_load_from_markdown_file() -> None:
@@ -109,29 +103,6 @@ def test_note_taker_prompts_load_from_markdown_file() -> None:
     assert "post_note" not in turn_prompt
 
 
-def test_scout_prompt_overrides_final_response_fallback() -> None:
-    rendered = render_user_prompt_template(
-        "scout",
-        {
-            "task_spec": "Map retry ownership.",
-            "scope_paths": "- backend/src/retry.py",
-            "context_from_dependencies": "",
-            "recent_scope_changes": "",
-            "parent_context": "",
-            "terminal_tools": "- final_response: No terminal tool is configured for this role.",
-        },
-    )
-
-    assert "## Scout note override" in rendered
-    assert "your required post action is one `submit_file_note(...)` tool call" in rendered
-    assert "Do not put findings only in assistant text." in rendered
-    assert "say only `Posted.`" in rendered
-    assert "Finish by calling `submit_file_note(...)`" in rendered
-    assert "benchmark test path" in rendered
-    assert "target path as off-policy" in rendered
-    assert "scout the production owner path instead" in rendered
-
-
 async def _make_task_center(
     team_run_id: str,
     tasks: dict[str, Task],
@@ -156,12 +127,23 @@ async def _make_task_center(
 @pytest.mark.asyncio
 async def test_build_query_context_uses_developer_markdown_template() -> None:
     register_all()
+    dep = Task(
+        id="dep-1",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.DONE,
+        objective="Prepare retry helper.",
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
     task = Task(
         id="dev-1",
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.READY,
         objective="Goal\nImplement retry handling.",
+        deps=["dep-1"],
         scope_paths=["backend/src/retry.py"],
         parent_id="root",
         root_id="root",
@@ -171,7 +153,7 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
         id="run-1",
         user_request="Fix retry handling.",
         root_task_id="root",
-        task_center=await _make_task_center("run-1", {"dev-1": task}),
+        task_center=await _make_task_center("run-1", {"dep-1": dep, "dev-1": task}),
         roster={"developer": ["developer"]},
         team_definition=None,
         project_context=SimpleNamespace(repo_root="/repo"),
@@ -186,26 +168,83 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_task_summary:" in ctx.user_message
-    assert "Your task id: `dev-1`" in ctx.user_message
-    assert "Your parent task id: `root`" in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "Your dependency task ids:" not in ctx.user_message
+    assert "Your parent task id:" not in ctx.user_message
+    assert "Task id: `dev-1`" in ctx.user_message
+    assert "Dependency task ids: `dep-1`" in ctx.user_message
+    assert "Parent task id: `root`" in ctx.user_message
+    assert "Follow the bundled developer playbook for workflow and rules" in ctx.user_message
+    assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned coding task" in ctx.user_message
-    assert "Please read the assigned coding task" in ctx.user_message
     assert "Goal\nImplement retry handling." in ctx.user_message
     assert "## scope_paths\n- backend/src/retry.py" in ctx.user_message
-    assert "Benchmark and verification test files in this list are read/verify-only" in ctx.user_message
-    assert "missing module, compatibility shim, re-export, import bridge" in ctx.user_message
-    assert "widened edit decision" in ctx.user_message
-    assert "justified production owner" in ctx.user_message
-    assert "scope-added notification as the current scope" in ctx.user_message
-    assert "ModuleNotFoundError" in ctx.user_message
-    assert "use live production evidence or the assigned objective" in ctx.user_message
-    assert "daytona_write_file" in ctx.user_message
-    assert "daytona_move_file" in ctx.user_message
-    assert "create or edit the missing production path" in ctx.user_message
-    assert "check both endpoints" in ctx.user_message
-    assert "source path inside `scope_paths` does not by itself authorize" in ctx.user_message
-    assert "make the widened-edit decision explicitly" in ctx.user_message
-    assert "observability evidence" in ctx.user_message
+    assert "Benchmark and verification test files in this list are read/verify-only" not in ctx.user_message
+    assert "missing module, compatibility shim, re-export, import bridge" not in ctx.user_message
+    assert "source path inside `scope_paths` does not by itself authorize" not in ctx.user_message
+    assert "observability evidence" not in ctx.user_message
+    assert "## Context from dependencies" not in ctx.user_message
+    assert "## Recent changes in your scope" not in ctx.user_message
+    assert "## Parent context" not in ctx.user_message
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_uses_validator_markdown_template_with_task_ids() -> None:
+    register_all()
+    dep = Task(
+        id="dev-1",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.DONE,
+        objective="Implement retry handling.",
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
+    task = Task(
+        id="validator-1",
+        team_run_id="run-1",
+        agent_name="validator",
+        status=TaskStatus.READY,
+        objective="Validate retry handling.",
+        deps=["dev-1"],
+        scope_paths=["backend/src/retry.py"],
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
+    team_run = SimpleNamespace(
+        id="run-1",
+        user_request="Fix retry handling.",
+        root_task_id="root",
+        task_center=await _make_task_center("run-1", {"dev-1": dep, "validator-1": task}),
+        roster={"validator": ["validator"], "developer": ["developer"]},
+        team_definition=None,
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        budgets=None,
+        budget_state=None,
+        sandbox_id="",
+        arbiter=None,
+    )
+
+    ctx = await build_query_context(get_definition("validator"), team_run, task)
+
+    assert ctx.user_message.startswith("Please read the following sections")
+    assert "- submit_task_summary:" in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "Your dependency task ids:" not in ctx.user_message
+    assert "Your parent task id:" not in ctx.user_message
+    assert "Task id: `validator-1`" in ctx.user_message
+    assert "Dependency task ids: `dev-1`" in ctx.user_message
+    assert "Parent task id: `root`" in ctx.user_message
+    assert "Follow the bundled validator playbook for workflow and rules" in ctx.user_message
+    assert "## Rule to Follow" not in ctx.user_message
+    assert "## Assigned validation task" in ctx.user_message
+    assert "Validate retry handling." in ctx.user_message
+    assert "## Context from dependencies" not in ctx.user_message
+    assert "## Recent changes in your scope" not in ctx.user_message
+    assert "## Parent context" not in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -242,35 +281,18 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Your task id:" not in ctx.user_message
     assert "Your parent task id:" not in ctx.user_message
     assert "Your dependency task ids:" not in ctx.user_message
+    assert "Task id:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
+    assert "Follow the bundled team-planner playbook for workflow and rules" in ctx.user_message
+    assert "## Rule to Follow" not in ctx.user_message
     assert "## User request" in ctx.user_message
     assert "Fix retry handling." in ctx.user_message
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
-    assert "You are the entry/root planner" in ctx.user_message
-    assert "Do not start with graph-context reads" in ctx.user_message
-    assert "no `read_task_graph()`" in ctx.user_message
-    assert "no `read_task_details(...)` before exploration" in ctx.user_message
-    assert "After scouts return or post notes" in ctx.user_message
-    assert 'read_file_note(file_path="...")' in ctx.user_message
-    assert "load `scout-launch-contract` as the exploration reference" in ctx.user_message
-    assert "Keep benchmark or verification test targets in task prose" in ctx.user_message
-    assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
-    assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
-    assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
-    assert "Never launch `run_subagent` scouts on benchmark test paths" in ctx.user_message
-    assert "use scouts to locate or correct benchmark test paths" in ctx.user_message
-    assert "scout the production owner path instead" in ctx.user_message
-    assert "Make `scope_paths` broad enough for the likely production edit set" in ctx.user_message
-    assert "include the exact new path plus its adjacent live owner" in ctx.user_message
-    assert "no indexed symbols for an exact file" in ctx.user_message
-    assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
-    assert "Do not add dependencies merely because tasks belong to the same benchmark" in ctx.user_message
-    assert 'read_task_details(task_id="<your current task id>")' in ctx.user_message
-    assert "submit with uncertainty instead of launching another scout wave" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
+    assert "## Parent context" not in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -285,17 +307,28 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
         root_id="root",
         depth=0,
     )
+    dep = Task(
+        id="prep-1",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.DONE,
+        objective="Prepare retry owner evidence.",
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
     child_planner = Task(
         id="planner-1",
         team_run_id="run-1",
         agent_name="team_planner",
         status=TaskStatus.READY,
         objective="Decompose retry handling.",
+        deps=["prep-1"],
         parent_id="root",
         root_id="root",
         depth=1,
     )
-    tasks = {"root": root, "planner-1": child_planner}
+    tasks = {"root": root, "prep-1": dep, "planner-1": child_planner}
     team_run = SimpleNamespace(
         id="run-1",
         user_request="Fix retry handling.",
@@ -315,30 +348,46 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_plan:" in ctx.user_message
-    assert "Your task id: `planner-1`" in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "Your dependency task ids:" not in ctx.user_message
+    assert "Your parent task id:" not in ctx.user_message
+    assert "Task id: `planner-1`" in ctx.user_message
+    assert "Dependency task ids: `prep-1`" in ctx.user_message
+    assert "Parent task id: `root`" in ctx.user_message
+    assert "Follow the bundled team-planner playbook for workflow and rules" in ctx.user_message
+    assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned planner task" in ctx.user_message
     assert "Decompose retry handling." in ctx.user_message
-    assert "Keep benchmark or verification test targets in task prose" in ctx.user_message
-    assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
-    assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
-    assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
-    assert "Never launch `run_subagent` scouts on benchmark test paths" in ctx.user_message
-    assert "use scouts to locate or correct benchmark test paths" in ctx.user_message
-    assert "scout the production owner path instead" in ctx.user_message
-    assert "no indexed symbols for an exact file" in ctx.user_message
-    assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
-    assert "Do not add dependencies merely because tasks belong to the same benchmark" in ctx.user_message
-    assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
-    assert "do not pass `bg_*` background ids to `read_task_details`" in ctx.user_message
-    assert "submit with uncertainty instead of launching another scout wave" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
+    assert "## Context from dependencies" not in ctx.user_message
+    assert "## Recent changes in your scope" not in ctx.user_message
+    assert "## Parent context" not in ctx.user_message
 
 
 @pytest.mark.asyncio
-async def test_build_query_context_uses_replanner_template_with_failure_context() -> None:
+async def test_build_query_context_uses_replanner_template_with_task_ids() -> None:
     register_all()
+    root = Task(
+        id="root",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED,
+        objective="Root task.",
+        root_id="root",
+        depth=0,
+    )
+    dep = Task(
+        id="prep-1",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.DONE,
+        objective="Prepare retry owner evidence.",
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
     failed = Task(
         id="failed-1",
         team_run_id="run-1",
@@ -356,11 +405,12 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
         status=TaskStatus.READY,
         objective="Recover from failed-1.",
         fired_by_task_id="failed-1",
+        deps=["prep-1"],
         parent_id="root",
         root_id="root",
         depth=1,
     )
-    tasks = {"failed-1": failed, "replanner-1": replanner}
+    tasks = {"root": root, "prep-1": dep, "failed-1": failed, "replanner-1": replanner}
     team_run = SimpleNamespace(
         id="run-1",
         user_request="Fix retry handling.",
@@ -380,29 +430,26 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_replan:" in ctx.user_message
-    assert "Your task id: `replanner-1`" in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "Your dependency task ids:" not in ctx.user_message
+    assert "Your parent task id:" not in ctx.user_message
+    assert "Task id: `replanner-1`" in ctx.user_message
+    assert "Failed task id: `failed-1`" in ctx.user_message
+    assert "Dependency task ids: `prep-1`" in ctx.user_message
+    assert "Parent task id: `root`" in ctx.user_message
+    assert "Follow the bundled team-replanner playbook for workflow and rules" in ctx.user_message
+    assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned replanning task" in ctx.user_message
-    assert "## Failure context" in ctx.user_message
-    assert "Original task: failed-1" in ctx.user_message
-    assert "Failed reason: unit test still fails" in ctx.user_message
-    assert 'submit_replan(new_tasks=[...], cancel_ids=[...])' in ctx.user_message
-    assert "Put replacement work in `new_tasks`" in ctx.user_message
-    assert "Do not add dependencies merely because `scope_paths` overlap" in ctx.user_message
-    assert "file renames, or file moves" in ctx.user_message
-    assert "include both the exact path and adjacent live owner" in ctx.user_message
-    assert "outside-scope warning or missing-module request for replan" in ctx.user_message
-    assert "empty replan is appropriate only" in ctx.user_message
-    assert "Never turn a benchmark or verification test file into `scope_paths`" in ctx.user_message
-    assert "appears broken, keep the test path as evidence" in ctx.user_message
-    assert "not a test-edit developer task" in ctx.user_message
-    assert "targeted CI only enough to assign the correct owner boundary" in ctx.user_message
-    assert "no new task has benchmark or verification test files in `scope_paths`" in ctx.user_message
-    assert "If `submit_replan(...)` returns a validation error anyway" in ctx.user_message
-    assert "never switch strategy to a test-derived shim" in ctx.user_message
+    assert "## Failure context" not in ctx.user_message
+    assert "Original task: failed-1" not in ctx.user_message
+    assert "Failed reason: unit test still fails" not in ctx.user_message
+    assert "## Context from dependencies" not in ctx.user_message
+    assert "## Recent changes in your scope" not in ctx.user_message
+    assert "## Parent context" not in ctx.user_message
 
 
 @pytest.mark.asyncio
-async def test_build_query_context_uses_scout_markdown_template() -> None:
+async def test_build_query_context_does_not_use_removed_scout_task_template() -> None:
     register_all()
     task = Task(
         id="scout-1",
@@ -432,13 +479,11 @@ async def test_build_query_context_uses_scout_markdown_template() -> None:
 
     ctx = await build_query_context(get_definition("scout"), team_run, task)
 
-    assert ctx.user_message.startswith("Please read the following sections")
-    assert "- final_response:" in ctx.user_message
-    assert "## Scout note override" in ctx.user_message
-    assert "your required post action is one `submit_file_note(...)` tool call" in ctx.user_message
-    assert "Do not put findings only in assistant text." in ctx.user_message
-    assert "## Assigned exploration task" in ctx.user_message
-    assert "Do not edit files" in ctx.user_message
-    assert "the exact file should not be used as `scope_paths`" in ctx.user_message
+    assert "## Scout note override" not in ctx.user_message
+    assert "your required post action is one `submit_file_note(...)` tool call" not in ctx.user_message
+    assert "Your task id:" not in ctx.user_message
+    assert "read_task_details" not in ctx.user_message
+    assert "read_task_graph" not in ctx.user_message
+    assert "Follow the bundled scout playbook for workflow and rules" not in ctx.user_message
+    assert "## Assigned exploration task" not in ctx.user_message
     assert "Map retry module ownership." in ctx.user_message
-    assert "## scope_paths\n- backend/src/retry.py" in ctx.user_message

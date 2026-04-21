@@ -12,19 +12,23 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from agents.registry import get_definition
 from external_trigger.runner import run
 from team.models import Note
+from tools.core.base import ToolExecutionContext
 from tools.submission.toolkit import SubmitTaskSummaryInput, SubmitTaskSummaryTool
+from tools.task_center.toolkit import ReadTaskDetailsTool
 
 
 _DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT = (
     "You summarize the outcome of an expandable (planner/replanner) task "
-    "based on its children's Task Center notes and final statuses. Report "
-    "facts only: what was planned, what landed, what diverged, what is "
-    "blocked. Do not invent next steps."
+    "after every direct child has reached a terminal state. The trigger gives "
+    "you the parent task id and completed direct child task ids; read those "
+    "task details first, then report facts only: what was planned, what landed, "
+    "what diverged, what is blocked. Do not invent next steps."
 )
 
 
@@ -76,107 +80,43 @@ def _resolve_parent_summarizer_definition(
 def _build_parent_summary_prompt(
     parent: Any,
     children: list[Any],
-    child_notes: list[Any],
 ) -> str:
     """Build the user prompt text fed to the summarizer agent."""
     lines: list[str] = []
-    lines.append(f"# Parent task: {parent.id}")
-    agent_name = getattr(parent, "agent_name", "") or "<unknown>"
-    objective = getattr(parent, "objective", "") or ""
-    lines.append(f"Agent: {agent_name}")
-    parent_status = getattr(parent, "status", None)
-    lines.append(f"Status: {getattr(parent_status, 'value', str(parent_status))}")
-    parent_deps = list(getattr(parent, "deps", []) or [])
-    parent_scope = list(getattr(parent, "scope_paths", []) or [])
-    if parent_deps:
-        lines.append(f"Deps: {parent_deps}")
-    if parent_scope:
-        lines.append(f"Scope paths: {parent_scope}")
-    lines.append("Objective:")
-    lines.append(objective)
+    completed_child_ids = [str(getattr(child, "id", "")) for child in children]
+    completed_child_ids = [child_id for child_id in completed_child_ids if child_id]
+    lines.append("# Parent summarizer trigger")
+    lines.append(
+        "All direct children of the parent task are terminal. Read the parent "
+        "task detail and each completed direct child task detail before you "
+        "submit the parent roll-up."
+    )
     lines.append("")
-    lines.append("## Children")
-    if not children:
-        lines.append("(no children were spawned)")
+    lines.append("## Parent task id")
+    lines.append(str(parent.id))
+    lines.append("")
+    lines.append("## Completed direct child task ids to read")
+    if completed_child_ids:
+        for child_id in completed_child_ids:
+            lines.append(f"- {child_id}")
     else:
-        for child in children:
-            child_id = getattr(child, "id", "<unknown>")
-            child_agent = getattr(child, "agent_name", "") or "<unknown>"
-            status = getattr(child, "status", None)
-            status_text = getattr(status, "value", str(status))
-            failure = getattr(child, "failure_reason", "") or ""
-            child_deps = list(getattr(child, "deps", []) or [])
-            child_scope = list(getattr(child, "scope_paths", []) or [])
-            child_objective = getattr(child, "objective", "") or ""
-            lines.append(f"- id={child_id} agent={child_agent} status={status_text}")
-            if child_deps:
-                lines.append(f"  deps: {child_deps}")
-            if child_scope:
-                lines.append(f"  scope_paths: {child_scope}")
-            if failure:
-                lines.append(f"  failure_reason: {failure}")
-            if child_objective:
-                lines.append("  objective:")
-                for line in child_objective.splitlines():
-                    lines.append(f"    {line}")
-    lines.append("")
-    lines.append("## Child notes")
-    for note in child_notes:
-        if note is None:
-            continue
-        note_task = getattr(note, "task_id", "<unknown>")
-        note_content = getattr(note, "content", "") or ""
-        lines.append(f"### {note_task}")
-        lines.append(note_content)
-        lines.append("")
+        lines.append("(none)")
     lines.append("")
     lines.append(
-        "Produce exactly one `submit_task_summary` call with type=\"success\". "
-        "The `content` must report what the parent planned, one direct child "
-        "line per child with status plus delivered/replanned/dropped/open-risk "
-        "classification, and an overall roll-up. Cite child final summaries, "
-        "commands, failing ids, exit codes, blockers, missing summaries, and "
-        "trivial summaries when present. Do not collapse the result into "
-        "\"all children done\" and do not invent next steps."
+        "Workflow: first call `read_task_details(task_id=\""
+        f"{parent.id}"
+        "\")` for the parent. Then call `read_task_details(task_id=...)` once "
+        "for every completed direct child id listed above. Only after every "
+        "listed child has been read, produce exactly one `submit_task_summary` "
+        "call with type=\"success\". The `content` must report what the parent "
+        "planned, one direct child line per child with status plus delivered/"
+        "replanned/dropped/open-risk classification, and an overall roll-up. "
+        "Cite child final summaries, commands, failing ids, exit codes, "
+        "blockers, missing summaries, and trivial summaries when present. Do "
+        "not collapse the result into \"all children done\" and do not invent "
+        "next steps."
     )
     return "\n".join(lines)
-
-
-def _collect_child_notes(task_center: Any, children: list[Any]) -> list[Any]:
-    """Best-effort collection of the latest note per child.
-
-    Uses :meth:`NoteManager.notes_for_task` when available, falling back to
-    the full ``snapshot`` filtered by task id. Returns a flat list of
-    :class:`Note` objects (may be empty).
-    """
-    notes_mgr = getattr(task_center, "notes", None)
-    if notes_mgr is None:
-        return []
-    collected: list[Any] = []
-    for child in children:
-        cid = getattr(child, "id", None)
-        if not cid:
-            continue
-        fetch = getattr(notes_mgr, "notes_for_task", None)
-        if callable(fetch):
-            try:
-                rows = fetch(cid)
-            except Exception:
-                rows = []
-            if rows:
-                collected.append(rows[-1])
-                continue
-        snapshot = getattr(notes_mgr, "snapshot", None)
-        if callable(snapshot):
-            try:
-                all_notes = snapshot()
-            except Exception:
-                all_notes = []
-            matching = [n for n in all_notes if getattr(n, "task_id", None) == cid]
-            if matching:
-                collected.append(matching[-1])
-    return collected
-
 
 async def run_parent_summary(
     *,
@@ -208,20 +148,32 @@ async def run_parent_summary(
         task for task in graph.values()
         if getattr(task, "parent_id", None) == parent_task_id
     ]
-    child_notes = _collect_child_notes(task_center, children)
-
     system_prompt, model, agent_name = _resolve_parent_summarizer_definition(team_run_id)
-    user_prompt = _build_parent_summary_prompt(parent, children, child_notes)
+    user_prompt = _build_parent_summary_prompt(parent, children)
+    repo_root = getattr(getattr(team_run, "project_context", None), "repo_root", None)
+    cwd = Path(str(repo_root)) if repo_root else Path(".")
+    execution_context = ToolExecutionContext(
+        cwd=cwd,
+        metadata={
+            "task_center": task_center,
+            "agent_name": agent_name,
+            "work_item_id": parent_task_id,
+        },
+    )
 
     result = await run(
         agent_name=f"{agent_name}:{parent_task_id}",
         messages=[],
         system_prompt=system_prompt,
         prompt=user_prompt,
-        tools=[SubmitTaskSummaryTool()],
+        tools=[ReadTaskDetailsTool(), SubmitTaskSummaryTool()],
         api_client=api_client,
         max_tokens_per_turn=max_tokens,
         model=model,
+        execution_context=execution_context,
+        execute_tools=True,
+        terminal_tool_names={"submit_task_summary"},
+        execute_terminal_tools=False,
         team_run_id=team_run_id,
         work_item_id=parent_task_id,
         agent_run_id=str(uuid.uuid4()),

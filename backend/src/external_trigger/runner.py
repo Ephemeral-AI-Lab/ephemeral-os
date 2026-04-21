@@ -99,6 +99,8 @@ async def run(
     max_turns: int = 10,
     execution_context: ToolExecutionContext | None = None,
     execute_tools: bool = False,
+    terminal_tool_names: set[str] | None = None,
+    execute_terminal_tools: bool = True,
     prompt_report_messages_path: str | None = None,
     team_run_id: str | None = None,
     work_item_id: str | None = None,
@@ -130,6 +132,13 @@ async def run(
         When ``True``, validated tool calls are executed immediately. Tool
         errors are fed back into the frozen conversation as ``tool_result``
         blocks so the LLM can retry with corrected input.
+    terminal_tool_names:
+        Tool names that end the loop after validation. Defaults to all tools,
+        which preserves the historical single-tool external-trigger behavior.
+    execute_terminal_tools:
+        When ``False``, terminal tools are validated and returned without
+        executing. This lets an external trigger execute read/probe tools while
+        keeping the terminal submission as data for the caller to persist.
     """
     run_id = uuid.uuid4().hex[:8]
     tool_names = [t.name for t in tools]
@@ -137,6 +146,7 @@ async def run(
 
     api_tools = [tool.to_api_schema() for tool in tools]
     tool_map = {tool.name: tool for tool in tools}
+    terminal_names = set(terminal_tool_names) if terminal_tool_names is not None else set(tool_map)
     if len(api_tools) == 1:
         tool_choice: dict[str, Any] = {
             "type": "tool",
@@ -291,8 +301,10 @@ async def run(
             )
             continue
 
+        is_terminal_tool = tool_name in terminal_names
         tool_result: ToolResult | None = None
-        if execute_tools:
+        should_execute = execute_tools and (execute_terminal_tools or not is_terminal_tool)
+        if should_execute:
             if execution_context is None:
                 raise RuntimeError("external_trigger runner: execute_tools=True requires execution_context")
             # Route through the platform hook-aware execution helper so
@@ -333,6 +345,35 @@ async def run(
             if tool_result.is_error:
                 _emit(f"{agent_name} (run={run_id}) turn {turn}: tool {tool_name} returned error: {tool_result.output}")
                 continue
+            if not is_terminal_tool:
+                _emit(f"{agent_name} (run={run_id}) turn {turn}: tool={tool_name} executed; continuing")
+                continue
+
+        if not is_terminal_tool:
+            if not execute_tools:
+                _emit(
+                    f"{agent_name} (run={run_id}) turn {turn}: non-terminal tool "
+                    f"'{tool_name}' cannot run because execute_tools=False"
+                )
+                tool_result_message = {
+                    "role": "user",
+                    "content": [{"type": "tool_result", "tool_use_id": tool_id,
+                                 "content": f"Error: `{tool_name}` is not terminal. "
+                                            "Use the terminal submission tool.",
+                                 "is_error": True}],
+                }
+                conversation.append(tool_result_message)
+                _emit_report(
+                    {
+                        "event": "tool_result",
+                        "seq": turn,
+                        "message": tool_result_message,
+                    },
+                    request_model=request.model,
+                )
+                continue
+            # Defensive: should_execute=True should already have continued.
+            continue
 
         # Success
         _emit(f"{agent_name} (run={run_id}) completed: tool={tool_name} turns={turn}")

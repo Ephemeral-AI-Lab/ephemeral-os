@@ -38,9 +38,10 @@ class CheckBackgroundProgressTool(BaseTool):
         "\"bg_1\" or \"all\". Do not use this to recover final content from delivered "
         "`run_subagent` tasks; if the result says `Posted.`, read the posted note or artifact "
         "next because background status calls only repeat the delivery envelope. In "
-        "team-planner contexts, read current-task notes with paths omitted if exact "
-        "scout paths are unclear; do not pass `bg_*` background ids to "
-        "`read_task_details`."
+        "team-planner contexts, read scout findings with `read_file_note` for "
+        "the scout target paths. Scouts and subagents are not Task Center tasks; "
+        "do not use `read_task_graph()` or `read_task_details(...)` to retrieve "
+        "scout results, and never pass `bg_*` background ids as task ids."
     )
     short_description: str = "Inspect background task status."
     input_model: type[BaseModel] = CheckBackgroundProgressInput

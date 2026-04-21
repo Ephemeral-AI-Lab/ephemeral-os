@@ -135,6 +135,23 @@ def test_toolkit_get_tool():
     assert tool.name == "daytona_codeact"
 
 
+def test_codeact_schema_describes_direct_repo_root_commands():
+    tk = DaytonaToolkit()
+    tool = tk.get("daytona_codeact")
+    assert tool is not None
+
+    schema = tool.to_api_schema()["input_schema"]
+    command_description = schema["properties"]["command"]["description"]
+    assert "execute directly from repo root" in command_description
+    assert "Do not prefix `cd /testbed &&`" in command_description
+    assert "`2>&1`, `2>/dev/null`, `| head`, `| tail`" in command_description
+    assert "captured and truncated automatically" in command_description
+
+    assert "Run repo-root shell/Python; no cd, redirects, head, or tail." in (
+        tool.short_description
+    )
+
+
 def test_toolkit_get_missing_tool():
     tk = DaytonaToolkit()
     assert tk.get("nonexistent_tool") is None

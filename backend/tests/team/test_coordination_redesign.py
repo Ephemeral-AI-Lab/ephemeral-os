@@ -14,6 +14,7 @@ from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
 from tools.submission.toolkit import SubmitPlanTool, SubmitReplanTool
+from external_trigger.parent_summary import _build_parent_summary_prompt
 
 
 if get_definition("developer") is None:
@@ -214,6 +215,11 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     schema = tool.to_api_schema()
 
     assert "implementation owner paths" in schema["description"]
+    assert "including validators" in schema["description"]
+    assert "exactly one terminal validator guard" in schema["description"]
+    assert "non-empty repo-relative scope_paths" in schema["description"]
+    assert "Do not tell children to `cd /testbed`" in schema["description"]
+    assert "not `/testbed/...` prefixes" in schema["description"]
     assert "new_tasks" in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
@@ -221,6 +227,9 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
         "description"
     ]
     assert "implementation owner paths" in scope_desc
+    assert "repo-relative implementation owner paths" in scope_desc
+    assert "not `/testbed/...` prefixes" in scope_desc
+    assert "For validators, use the production paths being verified" in scope_desc
 
     payload = tool.input_model(
         new_tasks=[
@@ -241,6 +250,9 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     schema = tool.to_api_schema()
 
     assert "new_tasks" in schema["input_schema"]["properties"]
+    assert "repo-relative production scope_paths" in schema["description"]
+    assert "Do not tell children to `cd /testbed`" in schema["description"]
+    assert "wrap CodeAct commands" in schema["description"]
     assert "summary" not in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
 
@@ -891,6 +903,40 @@ async def test_parent_summary_dispatcher_callback_fires_on_awaiting_summary():
         f"parent-summary callback should have fired once; fired={fired}"
     )
     assert parent.status == TaskStatus.EXPANDED_AWAITING_SUMMARY
+
+
+def test_parent_summary_prompt_lists_completed_children_to_read_first():
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="Plan retry work.",
+        depth=0,
+        root_id="planner-parent",
+    )
+    child = Task(
+        id="dev-child",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.DONE,
+        objective=_spec("Repair retry owner."),
+        parent_id="planner-parent",
+        root_id="planner-parent",
+        depth=1,
+        scope_paths=["src/retry.py"],
+    )
+    prompt = _build_parent_summary_prompt(parent, [child])
+
+    assert "# Parent summarizer trigger" in prompt
+    assert "All direct children of the parent task are terminal" in prompt
+    assert "## Parent task id\nplanner-parent" in prompt
+    assert "## Completed direct child task ids to read\n- dev-child" in prompt
+    assert 'read_task_details(task_id="planner-parent")' in prompt
+    assert "read_task_details(task_id=...)" in prompt
+    assert "Only after every listed child has been read" in prompt
+    assert "## Direct child task details" not in prompt
+    assert "## Child terminal notes" not in prompt
 
 
 @pytest.mark.asyncio
