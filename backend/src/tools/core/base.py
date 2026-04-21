@@ -102,6 +102,9 @@ class BaseTool(ABC):
     #   "optional"  — LLM may opt in by passing background=true
     #   "always"    — engine ALWAYS dispatches as background, regardless of input
     background: BackgroundMode = "forbidden"
+    # Most non-terminal tools ask the model for a brief intent note on every
+    # call. Context-read tools can opt out when their schema must stay exact.
+    requires_task_note: bool = True
     # Discriminator for monitoring/UI/audit so the engine never sniffs tool names.
     # "agent" is the default for ordinary background tools; tools that spawn a
     # nested agent (e.g. run_subagent) override it to "subagent".
@@ -423,7 +426,8 @@ def decorate_schemas_for_background(
         inp = schema.setdefault("input_schema", {})
         props = inp.setdefault("properties", {})
         is_terminal = tool_name in terminal_tool_names
-        if not is_terminal:
+        requires_task_note = tool is None or getattr(tool, "requires_task_note", True)
+        if not is_terminal and requires_task_note:
             props["task_note"] = {
                 "type": "string",
                 "description": "Brief note: what and why",

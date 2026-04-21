@@ -33,6 +33,7 @@ from tools.core.base import (
     run_tool_safely,
 )
 from tools.core.decorator import tool
+from tools.task_center.toolkit import ReadTaskDetailsTool
 
 
 # ---------------------------------------------------------------------------
@@ -402,6 +403,23 @@ def test_background_schema_decorator_skips_terminal_tools():
     assert "task_note" not in submit_schema["properties"]
     assert "task_note" not in submit_schema.get("required", [])
     assert "background" not in submit_schema["properties"]
+
+
+def test_background_schema_decorator_honors_task_note_opt_out():
+    registry = _make_registry(EchoTool(), ReadTaskDetailsTool())
+    schemas = decorate_schemas_for_background(
+        registry,
+        registry.to_api_schema(),
+    )
+
+    by_name = {schema["name"]: schema for schema in schemas}
+    echo_schema = by_name["echo"]["input_schema"]
+    read_task_details_schema = by_name["read_task_details"]["input_schema"]
+
+    assert "task_note" in echo_schema["properties"]
+    assert "task_note" in echo_schema["required"]
+    assert read_task_details_schema["required"] == ["task_id"]
+    assert "task_note" not in read_task_details_schema["properties"]
 
 
 # ---------------------------------------------------------------------------
