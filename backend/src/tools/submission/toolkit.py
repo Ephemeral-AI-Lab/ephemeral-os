@@ -229,7 +229,9 @@ class SubmitTaskSummaryInput(BaseModel):
             "repro and hypothesized root cause. For request_replan: start with "
             "blocking evidence, failing command or tool result, affected paths "
             "or owners, and why a different owner, scope, sequence, or budget "
-            "is needed. Do not submit placeholders such as 'task completed', "
+            "is needed. Do not cite benchmark CodeAct commands containing '|' "
+            "or '>' as success evidence; rerun directly or name the gap. "
+            "Do not submit placeholders such as 'task completed', "
             "'all checks passed', or a filename-only list."
         ),
     )
@@ -409,8 +411,9 @@ class SubmitReplanInput(BaseModel):
         default_factory=list,
         description=(
             "Direct siblings of the replanner to cancel (cascade "
-            "propagates to their subtrees and dependents). Never include "
-            "the original failed request_replan task."
+            "propagates to their subtrees and dependents). Exclude the "
+            "Failed task id; the original failed request_replan task is "
+            "immutable evidence and is finalized by the runtime."
         ),
     )
 
@@ -737,10 +740,10 @@ class SubmitReplanTool(BaseTool):
         "replanner, and cancel_ids for stale direct siblings whose subtrees "
         "should be cancelled by cascade. A system-generated summary of what "
         "actually happened is produced after children complete — do NOT "
-        "write prose. Never cancel the original failed request_replan "
-        "task. Do not include task_note, output, summary, background, "
-        "parent_id, or other fields. Each new task must include a short "
-        "planner-authored description. Each new task spec must use "
+        "write prose. Never put the Failed task id or original failed "
+        "request_replan task in cancel_ids. Do not include task_note, output, "
+        "summary, background, parent_id, or other fields. Each new task must "
+        "include a short planner-authored description. Each new task spec must use "
         "numbered colon labels in order, each at the start of its own line "
         "with body text after the colon on the same line: 1. Goal, "
         "2. Environment, 3. Scope, 4. Context, 5. Acceptance Criteria. "

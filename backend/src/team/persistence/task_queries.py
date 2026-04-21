@@ -99,7 +99,7 @@ async def fetch_done_sibling_ids(
 async def count_non_terminal(db: AsyncSession, team_run_id: str) -> int:
     stmt = select(func.count()).where(
         TaskRecord.team_run_id == team_run_id,
-        TaskRecord.status.notin_(("done", "failed", "cancelled")),
+        TaskRecord.status.notin_([status.value for status in TERMINAL_STATUSES]),
     )
     return int((await db.execute(stmt)).scalar() or 0)
 

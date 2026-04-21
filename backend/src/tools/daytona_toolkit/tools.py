@@ -33,7 +33,13 @@ logger = logging.getLogger(__name__)
 _GREP_MATCH_CAP = CODE_INTELLIGENCE_TUNING.grep_match_cap
 
 class DaytonaReadFileInput(BaseModel):
-    file_path: str = Field(..., description="Path to the file in the sandbox.")
+    file_path: str = Field(
+        ...,
+        description=(
+            "Repo-relative path or /testbed path to the file in the sandbox. "
+            "Do not pass host workspace paths such as /Users/..."
+        ),
+    )
     start_line: int = Field(
         default=1,
         ge=1,
@@ -428,9 +434,13 @@ print(json.dumps({
     name="daytona_read_file",
     description=(
         "Read a sandbox file or bounded line range. In coordinated team lanes, "
-        "use this as a narrow fallback after Task Center notes and CI/navigation "
-        "tools identify the target. Prefer bounded start_line/end_line on large "
-        "files; avoid EOF reads for broad source browsing."
+        "never call this in the same assistant action as `load_skill`, and do "
+        "not call it until the required `read_task_details` calls for own task, "
+        "parent, and dependencies have completed. Use this as a narrow fallback "
+        "after Task Center notes and CI/navigation tools identify the target. "
+        "Use repo-relative or /testbed paths only, never host /Users/... paths. "
+        "Prefer bounded start_line/end_line on large files; avoid EOF reads for "
+        "broad source browsing."
     ),
     short_description="Read a file from the sandbox.",
     input_model=DaytonaReadFileInput,

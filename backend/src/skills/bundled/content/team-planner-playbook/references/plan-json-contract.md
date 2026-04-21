@@ -1,11 +1,13 @@
 # Plan JSON Contract
-Use this reference as an optional final helper immediately before calling `submit_plan(...)`. It is not a planning guide; do not load it until exploration, DAG shaping, terminal background scouts, and required note reads are complete.
+Use this reference only when the plan is fully decided and your next action is the terminal `submit_plan(...)` call.
 
-Use this only as the final schema checklist. After this reference loads, stop exploration and make the next assistant action the `submit_plan(...)` tool call. Do not emit recap prose, visible planning text, or another non-terminal tool call. If any background scout/subagent is still running, do not load this reference yet.
+After this reference loads, emit no assistant prose, recap, "let me submit", or visible task list. The next assistant message must be exactly one `submit_plan(new_tasks=[...])` tool call. If any background scout/subagent is still running, or if you still need notes, CI, file reads, or schema thinking outside the tool input, do not load this reference yet.
 
 ## Task/Goal
 
 - You already have the owner ledger, deps, and task prose. Your only remaining work is putting the decided tasks into the tool input.
+- This is an optional final helper for schema-valid terminal submission, not a planning or discovery reference.
+- Must do not load it until exploration, DAG shaping, terminal background scouts, scout synthesis, and dependency checks are complete.
 
 ## Avoid
 

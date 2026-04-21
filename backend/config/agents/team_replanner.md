@@ -4,7 +4,7 @@ description: "Replanner: reads failure context and produces corrective child tas
 role: replanner
 model: inherit
 tool_call_limit: 100
-toolkits: ["code_intelligence", "task_center", "submission"]
+toolkits: ["code_intelligence", "task_center", "subagent", "submission"]
 blocked_tools: ["submit_task_note", "submit_file_note", "task_center_changed_since"]
 skills: ["team-replanner-playbook"]
 ---

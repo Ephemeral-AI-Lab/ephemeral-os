@@ -99,6 +99,96 @@ def test_reject_unsupported_legacy_columns_skips_missing_column(monkeypatch):
     assert engine.conn.statements == []
 
 
+def test_ensure_supported_column_types_removes_legacy_status_length(monkeypatch):
+    engine = _FakeEngine()
+    legacy_types = {
+        ("tasks", "status"): "character varying(16)",
+    }
+    monkeypatch.setattr(
+        team_engine,
+        "_legacy_column_type",
+        lambda _engine, table_name, column_name: legacy_types.get((table_name, column_name)),
+    )
+
+    team_engine._ensure_supported_column_types(engine)
+
+    assert len(engine.conn.statements) == 1
+    assert (
+        str(engine.conn.statements[0])
+        == 'ALTER TABLE "tasks" ALTER COLUMN "status" TYPE TEXT'
+    )
+
+
+def test_ensure_supported_column_types_removes_wide_status_length(monkeypatch):
+    engine = _FakeEngine()
+    monkeypatch.setattr(
+        team_engine,
+        "_legacy_column_type",
+        lambda _engine, table_name, column_name: "character varying(32)",
+    )
+
+    team_engine._ensure_supported_column_types(engine)
+
+    assert len(engine.conn.statements) == 1
+    assert (
+        str(engine.conn.statements[0])
+        == 'ALTER TABLE "tasks" ALTER COLUMN "status" TYPE TEXT'
+    )
+
+
+def test_ensure_supported_column_types_leaves_text_status(monkeypatch):
+    engine = _FakeEngine()
+    monkeypatch.setattr(
+        team_engine,
+        "_legacy_column_type",
+        lambda _engine, table_name, column_name: "text",
+    )
+
+    team_engine._ensure_supported_column_types(engine)
+
+    assert engine.conn.statements == []
+
+
+def test_ensure_team_schema_repairs_supported_column_type_drift(monkeypatch):
+    engine = _FakeEngine()
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        team_engine,
+        "_ensure_team_models_registered",
+        lambda: calls.append("models"),
+    )
+    monkeypatch.setattr(
+        team_engine.Base.metadata,
+        "create_all",
+        lambda _engine: calls.append("create_all"),
+    )
+    monkeypatch.setattr(
+        team_engine,
+        "_reject_unsupported_legacy_columns",
+        lambda _engine: calls.append("reject"),
+    )
+    monkeypatch.setattr(
+        team_engine,
+        "_ensure_supported_column_types",
+        lambda _engine: calls.append("types"),
+    )
+    monkeypatch.setattr(
+        team_engine,
+        "_add_missing_columns",
+        lambda _engine: calls.append("columns"),
+    )
+    monkeypatch.setattr(
+        team_engine,
+        "_ensure_indexes",
+        lambda _engine: calls.append("indexes"),
+    )
+
+    team_engine._ensure_team_schema(engine)
+
+    assert calls == ["models", "create_all", "reject", "types", "columns", "indexes"]
+
+
 def test_create_team_engine_refreshes_sync_engine_after_initialize(monkeypatch):
     initialized = False
     sync_engine = _FakeEngine(dialect_name="sqlite")

@@ -8,10 +8,12 @@ ORM models, creating team tables, and rejecting unsupported legacy schemas.
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING
 
 from sqlalchemy import bindparam, column, func, select, table
 from sqlalchemy.engine import Engine
+from sqlalchemy.sql import text
 
 from db.base import Base
 from db.engine import (
@@ -29,6 +31,8 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
+
+_VARCHAR_TYPE_RE = re.compile(r"^(?:character varying|varchar)\((\d+)\)$")
 
 _UNSUPPORTED_LEGACY_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
     (
@@ -91,11 +95,45 @@ def _reject_unsupported_legacy_columns(engine: Engine) -> None:
         )
 
 
+def _bounded_varchar_length(column_type: str | None) -> int | None:
+    """Return the current varchar length for bounded VARCHAR columns."""
+    if column_type is None:
+        return None
+    match = _VARCHAR_TYPE_RE.match(column_type.strip().lower())
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def _ensure_supported_column_types(engine: Engine) -> None:
+    """Repair supported team-column type drift from older schemas."""
+    if engine.dialect.name != "postgresql":
+        return
+
+    current_type = _legacy_column_type(engine, "tasks", "status")
+    current_length = _bounded_varchar_length(current_type)
+    if current_length is None:
+        return
+
+    logger.info(
+        "Removing tasks.status VARCHAR(%s) length constraint",
+        current_length,
+    )
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                'ALTER TABLE "tasks" ALTER COLUMN "status" '
+                "TYPE TEXT"
+            )
+        )
+
+
 def _ensure_team_schema(engine: Engine) -> None:
     """Register team models and backfill any missing team columns/indexes."""
     _ensure_team_models_registered()
     Base.metadata.create_all(engine)
     _reject_unsupported_legacy_columns(engine)
+    _ensure_supported_column_types(engine)
     _add_missing_columns(engine)
     _ensure_indexes(engine)
 

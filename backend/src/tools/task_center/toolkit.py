@@ -439,9 +439,10 @@ class ReadTaskDetailsInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Single task ID to look up. Use the exact id from the prompt header, "
-            "a dependency id, or read_task_graph sibling discovery. Never pass "
-            "display slugs or shortened ids."
+            "The only input key for this tool. Pass exactly the UUID task id "
+            "from the prompt header, a dependency id, or read_task_graph sibling "
+            "discovery. Do not pass skill_name, task_note, parent_id, display "
+            "slugs, short prefixes, or fabricated ids."
         ),
     )
 
@@ -451,6 +452,8 @@ class ReadTaskDetailsTool(BaseTool):
     description = (
         "Read full details for one known task id: spec, deps, status, "
         "scope_paths, failure reason, completion summary, and recent notes. "
+        "Input must be exactly {'task_id': '<uuid>'}; no skill_name, task_note, "
+        "parent_id, deps, slugs, or short ids. "
         "Non-root developers, validators, child planners, and replanners use "
         "this for the ids exposed in their prompt headers and dependencies. "
         "Do not use this for scout/subagent results: they are background work, "

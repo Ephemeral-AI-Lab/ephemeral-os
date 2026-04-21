@@ -53,14 +53,13 @@ class DaytonaCodeActInput(BaseModel):
         default=None,
         description=(
             "Shell command to execute directly from repo root for tests, builds, "
-            "or verification; do not set alongside `code`. For benchmark/test "
-            "commands, literal `|` or `>` characters mean the command is invalid "
-            "input; rewrite to a direct command before calling this tool. Do not prefix "
-            "`cd /testbed &&` or `cd /workspace &&`. Do not add `2>&1`, "
-            "`2>/dev/null`, `| head`, `| tail`, or output redirects; output "
-            "is captured and truncated automatically. Invalid: "
-            "`python -m pytest ... 2>&1 | head -80` or "
-            "`python -m pytest ... | tail -60`."
+            "or verification; do not set alongside `code`. Benchmark/test commands "
+            "must contain no `|` and no `>` anywhere; using either is a workflow "
+            "failure even if the shell succeeds. Rewrite pipes, redirects, `2>&1`, "
+            "`2>/dev/null`, `| head`, and `| tail` before calling this "
+            "tool; stdout and stderr are captured and truncated automatically. Do "
+            "not prefix `cd /testbed &&` or `cd /workspace &&`. Invalid: "
+            "`python -m pytest ... 2>&1 | head -80`."
         ),
     )
     timeout: int = Field(
@@ -713,10 +712,11 @@ def _files_written_count(
     description=(
         "Execute either Python code or a direct shell command in the Daytona sandbox. "
         "Use repo-root-relative commands such as `python -m pytest ...`; do not prefix "
-        "benchmark/test commands with shell pipes or redirects (`|` or `>`), do not prefix "
-        "`cd /testbed &&`, and do not add `2>&1`, `2>/dev/null`, `| head`, `| tail`, "
-        "or output redirects because stdout and stderr are already captured. Invalid: "
-        "`python -m pytest ... 2>&1 | head -80` or `python -m pytest ... | tail -60`. "
+        "commands with `cd /testbed &&` or `cd /workspace &&`. Benchmark/test command strings "
+        "must contain no `|` and no `>` anywhere; using either is a workflow "
+        "failure even if the shell succeeds. Rewrite pipes, redirects, `2>&1`, "
+        "`2>/dev/null`, `| head`, and `| tail` before calling because stdout and stderr "
+        "are already captured. Invalid: `python -m pytest ... 2>&1 | head -80`. "
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
         "Python with read()/shell() helpers. Do not use CodeAct for file writes or moves; "
         "use daytona_edit_file, daytona_write_file, daytona_rename_symbol, "
@@ -725,7 +725,9 @@ def _files_written_count(
         "because the overlay audit path converts tracked removals into OCC-gated deletes "
         "and rejects unsupported removal shapes. Never include move or git-index mutation "
         "tokens such as `mv`, `shutil.move`, `os.rename`, `git rm`, or `git mv`; path "
-        "moves must use daytona_move_file. "
+        "moves must use daytona_move_file. Do not use CodeAct for file-content reads "
+        "such as `cat`, `sed -n`, `grep`, `head`, `tail`, `nl`, or `git diff`; use "
+        "CI/search/read-file tools instead. "
     ),
     short_description="Run repo-root shell/Python; no pipes, redirects, cd, head, or tail.",
     input_model=DaytonaCodeActInput,

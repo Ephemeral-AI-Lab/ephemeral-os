@@ -1,10 +1,11 @@
 # CodeAct Runtime Examples
 
-Use this reference as a required benchmark-lane preflight. Load it with `load_skill_reference(skill_name="team-developer-playbook", reference_name="codeact-runtime-examples")` before the first `daytona_codeact` verification or reproduction command.
+Use this reference as a required benchmark-lane preflight. Load it with `load_skill_reference(skill_name="team-developer-playbook", reference_name="codeact-runtime-examples")` before the first `daytona_codeact` reproduction or verification command.
 
 ## Task/Goal
 
 - You are about to run the first benchmark-lane reproduction or verification command.
+- CodeAct is a runtime tool, not a shell-output wrapper.
 
 ## Avoid
 
@@ -13,16 +14,15 @@ Use this reference as a required benchmark-lane preflight. Load it with `load_sk
 
 ## Workflow
 
-- The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
+- Gate: before every benchmark CodeAct call, inspect the exact `command` string. If it contains the literal character `|` or `>` anywhere, the tool call is a workflow failure even if the shell command would succeed; rewrite to a direct repo-root command first.
+- The benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
 - Good: `daytona_codeact(command="python -m pytest dask/tests/test_config.py::test_update_defaults -q")`
 - Bad: `daytona_codeact(command="cd /testbed && python -m pytest ... 2>&1 | head -100")`
 - Bad: `daytona_codeact(command="python -m pytest dask/tests/test_cli.py -v 2>&1 | tail -60")`
-- Before every benchmark CodeAct call, inspect the exact `command` string. If it contains the literal character `|` or `>`, do not call CodeAct; rewrite it to a direct repo-root command first.
-- Rewrite any planned command containing `2>&1`, `2>/dev/null`, `>`, `>>`, `| head`, or `| tail` before you call CodeAct.
-- Must run the repo command itself, not a shell-output wrapper. Use pytest flags, narrower nodes, background execution, or tool truncation for volume control; do not pipe to `head` or `tail`, even to keep output short.
-- Must not append shell capture plumbing such as `2>&1`, `2>/dev/null`, or `1>/tmp/out`; `daytona_codeact` already captures stdout and stderr.
+- Rewrite any planned command containing `2>&1`, `2>/dev/null`, `>`, `>>`, `| head`, or `| tail` before the tool call. CodeAct already captures stdout and stderr; use pytest flags such as `--tb=short -q`, narrower nodes, background execution, or tool truncation for volume control.
+- Must not append shell capture plumbing to CodeAct commands.
 - Must not write or move files through CodeAct. Avoid `sed -i`, `tee file`, output redirects, `touch`/`cp`/`mv`, inline Python writes, `shutil.move`, `os.rename`, `git rm`, or `git mv`. Pure removals such as `rm`, `unlink`, `os.remove`, `os.unlink`, `Path.unlink`, and `shutil.rmtree` are allowed through CodeAct because the overlay audit path converts tracked removals into OCC-gated deletes and rejects unsupported removal shapes. Use `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` for explicit repo file operations.
-- Must not inspect source through CodeAct. Avoid `cat`, `sed -n`, `grep`/`rg`, `head`/`tail`/`nl`, Python file reads, and `inspect.getsource`; use notes and CI first, then `daytona_read_file` or `daytona_grep`.
+- Must not inspect source through CodeAct. Avoid `cat`, `sed -n`, `grep`/`rg`, `head`/`tail`/`nl`, `git diff`, Python file reads, and `inspect.getsource`; use notes and CI first, then `daytona_read_file` or `daytona_grep`.
 - If you truly need multi-step Python mode, keep repo commands inside `shell("...")` and still avoid `subprocess`.
 - Must keep repo commands repo-root-relative; do not prefix commands with `cd /testbed &&`, `cd /workspace &&`, or another repo-root `cd`.
 - Must not call unprefixed tools like `write_file`, `edit_file`, `read_file`, `bash`, or `grep`; the valid tools are the exact names in the tool list, such as `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, and `daytona_move_file`.

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Integer, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,9 +28,7 @@ class TaskRecord(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     team_run_id: Mapped[str] = mapped_column(Text, primary_key=True)
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="pending"
-    )
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     deps: Mapped[list[str]] = mapped_column(

@@ -10,8 +10,11 @@ from __future__ import annotations
 import asyncio
 import re
 
-from team.models import BudgetConfig, BudgetState
+from sqlalchemy import Text
+
+from team.models import BudgetConfig, BudgetState, TERMINAL_STATUSES, TaskStatus
 from team.persistence.ltree_utils import _escape_char, path_to_ltree
+from team.persistence import task_queries
 from team.persistence.task_record import TaskRecord
 from team.runtime.dispatch_queue import DispatchQueue
 from team.task_center import TaskCenter
@@ -97,6 +100,11 @@ class TestTaskRecord:
         r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="x", deps=["a"])
         assert r.deps == ["a"]
 
+    def test_status_column_is_unbounded_text(self):
+        assert isinstance(TaskRecord.status.type, Text)
+        assert TaskRecord.status.type.length is None
+        assert max(len(status.value) for status in TaskStatus) > 16
+
 # ---------------------------------------------------------------------------
 # TaskCenter — structure check (no DB)
 # ---------------------------------------------------------------------------
@@ -168,6 +176,30 @@ class _FakeSessionFactory:
                 return False
 
         return _Ctx()
+
+
+class _FakeCountResult:
+    def scalar(self):
+        return 0
+
+
+class _FakeCountSession:
+    def __init__(self) -> None:
+        self.statement = None
+
+    async def execute(self, statement, *args, **kwargs):
+        del args, kwargs
+        self.statement = statement
+        return _FakeCountResult()
+
+
+def test_count_non_terminal_excludes_all_terminal_statuses():
+    session = _FakeCountSession()
+
+    asyncio.run(task_queries.count_non_terminal(session, "run-1"))
+
+    params = session.statement.compile().params
+    assert set(params["status_1"]) == {status.value for status in TERMINAL_STATUSES}
 
 
 def test_cascade_cancel_recursive_loads_non_terminal_task_graph():

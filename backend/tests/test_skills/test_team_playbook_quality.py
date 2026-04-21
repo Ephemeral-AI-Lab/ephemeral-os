@@ -32,6 +32,7 @@ _REFERENCES = [
     _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md",
     _CONTENT / "team-replanner-playbook/references/action-add-tasks.md",
     _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md",
+    _CONTENT / "team-replanner-playbook/references/scout-launch-contract.md",
     _CONTENT / "verification-replan/references/triage-format.md",
 ]
 _REFERENCES = [path for path in _REFERENCES if path.exists()]

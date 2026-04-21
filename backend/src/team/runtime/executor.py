@@ -14,6 +14,8 @@ import uuid
 from collections.abc import Awaitable, Coroutine
 from typing import TYPE_CHECKING, Any, Callable
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from team.errors import BudgetExceeded, GraphInvariantViolation
 from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest
 from team.runtime.context_builder import TeamAgentContext
@@ -146,8 +148,20 @@ class Executor:
                 "Failed to checkpoint after %s transition for %s", outcome, task.id, exc_info=True
             )
 
-    async def _handle_worker_exception(self, task: "Task", reason: str) -> None:
-        await self.team_run.task_center.fail_task(task.id, reason)
+    async def _handle_worker_exception(
+        self,
+        task: "Task",
+        reason: str,
+        *,
+        fatal: bool = False,
+    ) -> None:
+        tc = self.team_run.task_center
+        if fatal and hasattr(tc, "force_fail_task"):
+            await tc.force_fail_task(task.id, reason)
+        else:
+            await tc.fail_task(task.id, reason)
+        if fatal:
+            await self.team_run.fail_fast(reason)
 
     async def run_forever(self) -> None:
         tc = self.team_run.task_center
@@ -190,10 +204,27 @@ class Executor:
                 break
             except Exception as exc:
                 logger.exception("Worker error on %s: %s", task.id, exc)
+                fatal = isinstance(exc, SQLAlchemyError)
                 try:
-                    await self._handle_worker_exception(task, f"worker_exception: {exc}")
+                    await self._handle_worker_exception(
+                        task,
+                        f"worker_exception: {exc}",
+                        fatal=fatal,
+                    )
                 except GraphInvariantViolation as invariant:
                     await self.team_run.fail_fast(f"graph_invariant_violation: {invariant}")
+                    break
+                except Exception as cleanup_exc:
+                    logger.exception(
+                        "Worker error cleanup failed for %s: %s",
+                        task.id,
+                        cleanup_exc,
+                    )
+                    await self.team_run.fail_fast(
+                        f"worker_exception_cleanup_failed: {cleanup_exc}"
+                    )
+                    break
+                if fatal:
                     break
 
     async def _run_one(self, task: "Task") -> None:

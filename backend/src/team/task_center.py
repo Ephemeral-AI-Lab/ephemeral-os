@@ -375,6 +375,17 @@ class TaskCenter:
     async def fail(self, task_id: str, reason: str) -> None:
         await self.fail_task(task_id, reason)
 
+    async def force_fail_task(self, task_id: str, reason: str) -> None:
+        """Mark a task FAILED for fatal runtime failures.
+
+        This bypasses leaf-only failure rules used for normal agent outcomes.
+        It is reserved for persistence/runtime exceptions where continuing the
+        graph would leave tasks wedged in non-dispatchable states.
+        """
+        before = self._transitions.snapshot()
+        await self._store.mark_terminal(task_id, "failed", reason)
+        await self._transitions.refresh_and_emit(before)
+
     async def request_replan(self, task_id: str, request: ReplanRequest) -> Task:
         self._budget.require_replan_capacity()
         from agents.registry import find_by_role

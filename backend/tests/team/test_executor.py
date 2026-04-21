@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from team.errors import BudgetExceeded, GraphInvariantViolation
 from team.models import (
@@ -721,6 +722,52 @@ def test_run_forever_fails_team_run_when_worker_error_cleanup_hits_graph_invaria
     tc.fail_task.assert_awaited_once()
     team_run.fail_fast.assert_awaited_once()
     assert "failure cleanup saw unsatisfied deps" in team_run.fail_fast.await_args.args[0]
+
+
+def test_run_forever_force_fails_task_on_persistence_error():
+    import asyncio
+    from types import SimpleNamespace
+
+    class FakeQueue:
+        async def pop_ready(self, run_id: str) -> Any:
+            return SimpleNamespace(
+                id="task-1",
+                team_run_id=run_id,
+                agent_name="dev",
+                status="running",
+                objective="t",
+                description="",
+                deps=[],
+                scope_paths=[],
+                scope_ltree=[],
+                parent_id=None,
+                root_id="",
+                depth=0,
+                agent_run_id=None,
+                created_at=None,
+                started_at=None,
+                finished_at=None,
+                failure_reason=None,
+            )
+
+    tc = FakeTaskCenter()
+    tc.graph = {}
+    tc.force_fail_task = AsyncMock()
+    team_run = FakeTeamRun(task_center=tc, dispatch_queue=FakeQueue())
+    team_run.cancel_event = asyncio.Event()
+    team_run.fail_fast = AsyncMock()
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+    executor._run_one = AsyncMock(side_effect=SQLAlchemyError("status column too narrow"))
+
+    asyncio.run(executor.run_forever())
+
+    tc.force_fail_task.assert_awaited_once()
+    team_run.fail_fast.assert_awaited_once()
+    assert "status column too narrow" in team_run.fail_fast.await_args.args[0]
 
 
 # ---------------------------------------------------------------------------
