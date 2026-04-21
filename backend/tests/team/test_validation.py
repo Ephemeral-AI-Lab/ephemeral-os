@@ -295,13 +295,6 @@ def _mock_validator_agent():
     return _Defn()
 
 
-def _mock_planner_agent():
-    """Return a namespace that looks like an expandable planner AgentDefinition."""
-    class _Defn:
-        role = "planner"
-        agent_type = "agent"
-    return _Defn()
-
 def test_validator_plan_passes_without_policy_field():
     """Validators no longer need a separate failure-policy field in the plan."""
     dev = _spec("dev-1")
@@ -351,67 +344,6 @@ def test_extra_validators_are_called():
         issues = validate_plan(plan, extra_validators=[extra])
     assert called
     assert any("custom error" in i["msg"] for i in issues)
-
-
-def test_crowded_plan_without_expandable_lane_fails():
-    specs = [_spec(f"dev-{idx}") for idx in range(7)]
-    validator = TaskDefinition(
-        id="val-root",
-        objective="validate",
-        agent="validator",
-        deps=[spec.id for spec in specs],
-    )
-    plan = _plan(*specs, validator)
-
-    def side_effect_role(name, role):
-        return name == "validator" and role == "reviewer"
-
-    def side_effect_defn(name):
-        if name == "validator":
-            return _mock_validator_agent()
-        return _mock_agent()
-
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
-         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
-        issues = validate_plan(plan)
-
-    assert any("expandable planner lane" in i["msg"] for i in issues)
-
-
-def test_crowded_plan_with_expandable_lane_passes_expandability_check():
-    specs = [_spec(f"dev-{idx}") for idx in range(6)]
-    planner = TaskDefinition(
-        id="plan-residual",
-        objective="split the residual branch",
-        agent="team_planner",
-        deps=[],
-        scope_paths=["pkg/residual/"],
-    )
-    validator = TaskDefinition(
-        id="val-root",
-        objective="validate",
-        agent="validator",
-        deps=[spec.id for spec in specs] + [planner.id],
-    )
-    plan = _plan(*specs, planner, validator)
-
-    def side_effect_role(name, role):
-        return name == "validator" and role == "reviewer"
-
-    def side_effect_defn(name):
-        if name == "validator":
-            return _mock_validator_agent()
-        if name == "team_planner":
-            return _mock_planner_agent()
-        return _mock_agent()
-
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
-         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
-        issues = validate_plan(plan)
-
-    assert not any("expandable planner lane" in i["msg"] for i in issues)
 
 
 def test_parallel_tasks_with_shared_scope_paths_pass_without_sequencing():

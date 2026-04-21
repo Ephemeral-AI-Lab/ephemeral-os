@@ -116,24 +116,6 @@ def _terminal_non_validator_leaf_ids(items: list[TaskDefinition]) -> set[str]:
     }
 
 
-def _crowded_layer_expandability_issues(items: list[TaskDefinition]) -> list[Issue]:
-    issues: list[Issue] = []
-    expandable_count = sum(1 for item in items if _is_expandable(item.agent))
-    concrete_count = _concrete_execution_count(items)
-    if concrete_count > 6 and expandable_count == 0:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    "crowded plans with more than 6 concrete non-validator execution lanes "
-                    f"must keep at least one expandable planner lane instead of flattening "
-                    f"the whole layer (found {concrete_count})"
-                ),
-            }
-        )
-    return issues
-
-
 def _validator_dependency_issues(items: list[TaskDefinition]) -> list[Issue]:
     issues: list[Issue] = []
     terminal_leaf_ids = _terminal_non_validator_leaf_ids(items)
@@ -201,7 +183,6 @@ def validate_plan(
             require_reviewer_for_plan_size=require_reviewer_for_plan_size,
         )
     )
-    issues.extend(_crowded_layer_expandability_issues(plan.tasks))
     issues.extend(_validator_dependency_issues(plan.tasks))
 
     task_ids: set[str] = set()
