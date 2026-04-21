@@ -9,7 +9,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 ## Avoid
 
 - Must not start pip-install loops or ad hoc environment mutation. Missing packages are evidence; edit dependency metadata only when that file is in scope, otherwise request replanning with the missing package and command output.
-- Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `daytona_codeact(command="...", timeout=N)` repro; use the named node, scout note, and runtime traceback first.
+- Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `daytona_codeact(command="...", timeout=N)` repro; use the named node, scout note, and runtime traceback first. After repro, bounded read-only test snippets are allowed when they explain expected behavior, imports, fixtures, or parametrization.
 
 ## Workflow
 

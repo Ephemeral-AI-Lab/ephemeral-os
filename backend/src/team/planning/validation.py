@@ -6,7 +6,6 @@ from typing import Callable, Iterator
 
 from agents.registry import get_definition as _get_definition, has_role as _has_role
 
-from team._path_utils import ScopePath
 from team.models import Plan, TaskDefinition
 
 Issue = dict[str, str]
@@ -117,31 +116,6 @@ def _terminal_non_validator_leaf_ids(items: list[TaskDefinition]) -> set[str]:
     }
 
 
-def _sequenced_pair(adj: dict[str, list[str]], left: str, right: str) -> bool:
-    """Return True when *left* and *right* are ordered by any dependency path."""
-    stack = [left]
-    seen: set[str] = set()
-    while stack:
-        node = stack.pop()
-        if node == right:
-            return True
-        if node in seen:
-            continue
-        seen.add(node)
-        stack.extend(adj.get(node, []))
-    stack = [right]
-    seen.clear()
-    while stack:
-        node = stack.pop()
-        if node == left:
-            return True
-        if node in seen:
-            continue
-        seen.add(node)
-        stack.extend(adj.get(node, []))
-    return False
-
-
 def _crowded_layer_expandability_issues(items: list[TaskDefinition]) -> list[Issue]:
     issues: list[Issue] = []
     expandable_count = sum(1 for item in items if _is_expandable(item.agent))
@@ -157,47 +131,6 @@ def _crowded_layer_expandability_issues(items: list[TaskDefinition]) -> list[Iss
                 ),
             }
         )
-    return issues
-
-
-def _shared_scope_conflict_issues(
-    items: list[TaskDefinition],
-    adj: dict[str, list[str]],
-) -> list[Issue]:
-    issues: list[Issue] = []
-    actionable = [
-        item
-        for item in items
-        if item.id and not _is_validator(item.agent) and not _is_expandable(item.agent)
-    ]
-    for idx, left in enumerate(actionable):
-        if not left.scope_paths:
-            continue
-        for right in actionable[idx + 1 :]:
-            if not right.scope_paths:
-                continue
-            if _sequenced_pair(adj, left.id, right.id):
-                continue
-            overlaps = [
-                (l_scope, r_scope)
-                for l_scope in left.scope_paths
-                for r_scope in right.scope_paths
-                if ScopePath.overlaps(l_scope, r_scope)
-            ]
-            if not overlaps:
-                continue
-            overlap_preview = ", ".join(
-                f"{l_scope} <-> {r_scope}" for l_scope, r_scope in overlaps[:3]
-            )
-            issues.append(
-                {
-                    "field": "tasks",
-                    "msg": (
-                        f"parallel concrete tasks '{left.id}' and '{right.id}' share overlapping "
-                        f"scope_paths ({overlap_preview}) but have no sequencing dependency"
-                    ),
-                }
-            )
     return issues
 
 
@@ -314,18 +247,18 @@ def validate_plan(
                     }
                 )
 
-        # Planner-authored short label, max ~10 words.
+        # Planner-authored short label, max 20 words.
         if not item.description:
             issues.append(
-                {"field": f"tasks[{idx}].description", "msg": "description is required (short ~10-word label)"}
+                {"field": f"tasks[{idx}].description", "msg": "description is required (short 20-word label)"}
             )
         else:
             word_count = len(item.description.split())
-            if word_count > 12:
+            if word_count > 20:
                 issues.append(
                     {
                         "field": f"tasks[{idx}].description",
-                        "msg": f"description has {word_count} words; keep it under 10 words",
+                        "msg": f"description has {word_count} words; keep it to 20 words or fewer",
                     }
                 )
         # scope_paths is required
@@ -356,8 +289,6 @@ def validate_plan(
                             "msg": f"unknown dep reference '{dep}'",
                         }
                     )
-
-    issues.extend(_shared_scope_conflict_issues(plan.tasks, adj))
 
     if _has_cycle(adj):
         issues.append({"field": "tasks", "msg": "cycle detected in submitted Plan"})

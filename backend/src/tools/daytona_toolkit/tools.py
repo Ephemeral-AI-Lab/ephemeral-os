@@ -56,7 +56,14 @@ class DaytonaReadFileOutput(BaseModel):
 
 
 class DaytonaWriteFileInput(BaseModel):
-    file_path: str = Field(..., description="Path to create or overwrite in the sandbox.")
+    file_path: str = Field(
+        ...,
+        description=(
+            "Path to create or overwrite in the sandbox. In team mode, a successful "
+            "outside-scope write is added to current scope_paths and a system "
+            "notification lists the updated scope."
+        ),
+    )
     content: str = Field(..., description="UTF-8 text content to write.")
 
 
@@ -469,11 +476,11 @@ async def daytona_read_file(
     description=(
         "Create a new file or overwrite an existing file with the given content. "
         "Use the exact tool name `daytona_write_file`; there is no `write_file` tool. "
-        "Before calling, compare `file_path` to your `scope_paths`; if it is outside "
-        "scope, make an explicit widened-edit decision. "
+        "`scope_paths` are the default ownership context, not a hard limit for this tool. "
         "In coordinated team lanes, outside-scope writes are allowed when justified, "
-        "and a successful write extends the lane's in-memory write scope to the target. "
-        "Proceed only when the target is a justified adjacent production owner for the same bug, "
+        "and a successful write extends the lane's in-memory write scope to the target; "
+        "a system notification will list the updated scope_paths. "
+        "Proceed when the target is a justified production owner for the same bug, "
         "including a missing module, compatibility shim, re-export, or import bridge when production ownership is clear; "
         "otherwise submit `submit_task_summary(type='request_replan')` so replanning can widen "
         "or resequence the task. Test imports, collection errors, and target counts naming "

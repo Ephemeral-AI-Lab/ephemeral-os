@@ -6,7 +6,8 @@ migration the tool body captured ``src_in_scope`` before commit and applied
 the extension on success. Now that OCC commit results surface
 ``changed_paths`` in the tool result metadata, the policy fits naturally as
 a post-hook on ``daytona_move_file``: observe success, re-check ``src`` is in
-scope, extend ``write_scope`` to the resolved destination.
+scope, extend ``write_scope`` to the resolved destination, and emit an advisory
+so the agent sees the updated scope in a system notification.
 """
 
 from __future__ import annotations
@@ -20,6 +21,19 @@ from tools.daytona_toolkit._daytona_utils import (
     _resolve_path,
     _write_scope_covers,
 )
+
+
+def _scope_added_advisory(context: ToolExecutionContext, added_path: str) -> str:
+    current = context.metadata.get("write_scope")
+    if isinstance(current, list):
+        scope_paths = [str(path) for path in current]
+    else:
+        scope_paths = []
+    rendered_scope = ", ".join(scope_paths) if scope_paths else "<none>"
+    return (
+        f"Scope path added: {added_path}. "
+        f"Current scope_paths: {rendered_scope}."
+    )
 
 
 async def hook(
@@ -43,8 +57,10 @@ async def hook(
     if not _write_scope_covers(context, _resolve_path(src_path, context)):
         return PostHookOutcome()
 
-    _extend_write_scope(context, _resolve_path(target_path, context))
-    return PostHookOutcome()
+    added_path = _extend_write_scope(context, _resolve_path(target_path, context))
+    if added_path is None:
+        return PostHookOutcome()
+    return PostHookOutcome(advisories=(_scope_added_advisory(context, added_path),))
 
 
 def register(registry: ToolHookRegistry | None = None) -> None:

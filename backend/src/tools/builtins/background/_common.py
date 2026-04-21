@@ -33,7 +33,8 @@ POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "`check_background_progress` again for this delivered scout wave. In "
     "team-planner contexts, the next tool call should be "
     '`read_task_details(task_id="<your current task id>")` when you need all current-task '
-    'scout notes, or `read_file_note(file_path="...")` for known scout scopes.'
+    "scout notes; do not pass `bg_*` background ids to `read_task_details`. "
+    'Use `read_file_note(file_path="...")` for known scout scopes.'
 )
 
 

@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.hooks import ToolHookRegistry
+from tools.core.hooks import PostHookOutcome, ToolHookRegistry
 from tools.daytona_toolkit.hooks.posthook import write_extend_scope
 from tools.daytona_toolkit.tools import DaytonaWriteFileInput
 
@@ -37,18 +37,21 @@ def _run_hook(
     ctx: ToolExecutionContext,
     args: DaytonaWriteFileInput,
     result: ToolResult,
-) -> None:
-    asyncio.run(write_extend_scope.hook("daytona_write_file", args, ctx, result))
+) -> PostHookOutcome:
+    return asyncio.run(write_extend_scope.hook("daytona_write_file", args, ctx, result))
 
 
 def test_extends_scope_when_write_succeeds_outside_scope() -> None:
     ctx = _ctx(["src/"])
-    _run_hook(
+    outcome = _run_hook(
         ctx,
         _args("/ws/other/new.py"),
         _result(changed_paths=["/ws/other/new.py"]),
     )
     assert ctx.metadata["write_scope"] == ["src/", "other/new.py"]
+    assert outcome.advisories == (
+        "Scope path added: other/new.py. Current scope_paths: src/, other/new.py.",
+    )
 
 
 def test_noop_when_result_is_error() -> None:
@@ -85,12 +88,13 @@ def test_noop_when_write_scope_absent() -> None:
 
 def test_noop_when_target_already_under_existing_scope() -> None:
     ctx = _ctx(["src/"])
-    _run_hook(
+    outcome = _run_hook(
         ctx,
         _args("/ws/src/new.py"),
         _result(changed_paths=["/ws/src/new.py"]),
     )
     assert ctx.metadata["write_scope"] == ["src/"]
+    assert outcome.advisories == ()
 
 
 def test_register_wires_hook_onto_daytona_write_file_post_bucket() -> None:

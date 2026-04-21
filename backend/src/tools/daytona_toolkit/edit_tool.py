@@ -129,7 +129,7 @@ def _normalize_edits(
         "Before calling, compare `file_path` to your `scope_paths`; if it is outside "
         "scope, make an explicit widened-edit decision. "
         "In coordinated team lanes, outside-scope writes are advisory, not a hard gate. "
-        "Proceed only when the target is a justified adjacent production owner for the same bug, "
+        "Proceed when the target is a justified production owner for the same bug, "
         "including a missing module, compatibility shim, re-export, or import bridge when production ownership is clear; "
         "otherwise submit `submit_task_summary(type='request_replan')` so replanning can widen "
         "or resequence the task. Test imports, collection errors, and target counts naming "

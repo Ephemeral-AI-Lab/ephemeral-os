@@ -13,8 +13,8 @@ import asyncio
 from pathlib import Path
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.hooks import ToolHookRegistry
-from tools.daytona_toolkit.delete_move_tool import DaytonaMoveFileInput
+from tools.core.hooks import PostHookOutcome, ToolHookRegistry
+from tools.daytona_toolkit.delete_move_tool import DaytonaMoveFileInput, daytona_move_file
 from tools.daytona_toolkit.hooks.posthook import move_extend_scope
 
 
@@ -44,8 +44,8 @@ def _run_hook(
     ctx: ToolExecutionContext,
     args: DaytonaMoveFileInput,
     result: ToolResult,
-) -> None:
-    asyncio.run(move_extend_scope.hook("daytona_move_file", args, ctx, result))
+) -> PostHookOutcome:
+    return asyncio.run(move_extend_scope.hook("daytona_move_file", args, ctx, result))
 
 
 # ---------------------------------------------------------------------------
@@ -55,23 +55,29 @@ def _run_hook(
 
 def test_extends_scope_when_src_in_scope_and_move_succeeded() -> None:
     ctx = _ctx(["src/"])
-    _run_hook(
+    outcome = _run_hook(
         ctx,
         _args("/ws/src/a.py", "/ws/other/b.py"),
         _result(changed_paths=["/ws/other/b.py"]),
     )
     assert "other/b.py" in ctx.metadata["write_scope"]
+    assert outcome.advisories == (
+        "Scope path added: other/b.py. Current scope_paths: src/, other/b.py.",
+    )
 
 
 def test_extends_scope_for_folder_move_to_dst_root() -> None:
     """Folder move: dst root is appended; members fall under the prefix."""
     ctx = _ctx(["pkg/"])
-    _run_hook(
+    outcome = _run_hook(
         ctx,
         _args("/ws/pkg", "/ws/moved_pkg"),
         _result(changed_paths=["/ws/moved_pkg/a.py", "/ws/moved_pkg/sub/b.py"]),
     )
     assert "moved_pkg" in ctx.metadata["write_scope"]
+    assert outcome.advisories == (
+        "Scope path added: moved_pkg. Current scope_paths: pkg/, moved_pkg.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -134,12 +140,13 @@ def test_noop_when_write_scope_absent() -> None:
 def test_noop_when_dst_already_under_existing_scope() -> None:
     """Rename within an already-owned prefix is a no-op for scope."""
     ctx = _ctx(["src/"])
-    _run_hook(
+    outcome = _run_hook(
         ctx,
         _args("/ws/src/a.py", "/ws/src/b.py"),
         _result(changed_paths=["/ws/src/b.py"]),
     )
     assert ctx.metadata["write_scope"] == ["src/"]
+    assert outcome.advisories == ()
 
 
 # ---------------------------------------------------------------------------
@@ -171,3 +178,9 @@ def test_register_is_idempotent() -> None:
     move_extend_scope.register(registry)
     move_extend_scope.register(registry)
     assert len(registry.matching("daytona_move_file", "post")) == 1
+
+
+def test_move_schema_mentions_scope_added_notification() -> None:
+    description = daytona_move_file.to_api_schema()["description"]
+    assert "successful move extends the lane's in-memory write scope" in description
+    assert "system notification listing the updated scope_paths" in description

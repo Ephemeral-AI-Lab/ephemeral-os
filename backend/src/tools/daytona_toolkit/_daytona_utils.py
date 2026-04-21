@@ -551,7 +551,7 @@ def _team_repo_write_warning(
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-        "This is not a hard failure. Continue only if this is a justified adjacent production owner for the same bug; "
+        "This is not a hard failure. Continue if this is a justified production owner for the same bug; "
         "otherwise submit_task_summary(type='request_replan') so replanning can widen or resequence the task. "
         "If you continue, include the widened path, rationale, and verification in the terminal summary."
     )

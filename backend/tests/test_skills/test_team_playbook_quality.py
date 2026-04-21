@@ -116,6 +116,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "prose inside `spec` does not create task dependencies" in planner
     assert "run_subagent scout notes are current-task notes" in planner
     assert 'read them via `read_task_details(task_id="<your current task id>")`' in planner
+    assert "Never pass `bg_*` background ids to `read_task_details`" in planner
+    assert "submit with uncertainty instead of relaunching explorers" in planner
     assert "scrub each scout `target_paths` list before calling `run_subagent`" in planner
     assert "live production owner files/directories only" in planner
     assert "never launch `run_subagent` scouts on benchmark test paths" in planner.lower()
@@ -123,8 +125,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "scout the production owner path instead" in planner
     assert "never submit a `validator` task with `deps: []`" in planner.lower()
     assert "never omit same-layer `team_planner` siblings from validator `deps`" in planner.lower()
-    assert "must pairwise-check concrete non-planner tasks before `submit_plan(...)`" in planner.lower()
-    assert "never use a failed `submit_plan(...)` result to learn that parallel concrete tasks overlap" in planner.lower()
+    assert "must not add dependencies merely because `scope_paths` overlap" in planner.lower()
+    assert "known edit-order dependency" in planner
     assert "do not put those paths in `scope_paths` for developer, validator, or child-planner lanes" in planner
     assert "scope_paths` to production owner paths" in planner
     assert "never put verification-only benchmark tests in developer, validator, or child-planner `scope_paths`" in planner.lower()
@@ -161,9 +163,11 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must not use `daytona_codeact` for file-content reads" in developer.lower()
     assert "writes to test files as off-policy" in developer.lower()
     assert "test files in `scope_paths` as read/verify-only" in developer.lower()
-    assert "may edit one adjacent production path outside `scope_paths`" in developer.lower()
+    assert "may create or edit an outside-`scope_paths` production path" in developer.lower()
+    assert "adds the target to the lane's current scope" in developer
+    assert "system notification listing the updated `scope_paths`" in developer
     assert "must not create a new file from test-import evidence alone" in developer.lower()
-    assert "scope_paths` names an absent module" in developer
+    assert "absent module, shim, re-export module, or import bridge" in developer
     assert "compatibility shim, or re-export bridge" in developer.lower()
     assert "coordination decision point" in developer
     assert "ModuleNotFoundError" in developer
@@ -178,7 +182,8 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must not retry the same delete/move tool" in developer.lower()
     assert "test-source archaeology" in developer
     assert "Never retry a failed `daytona_delete_file` or `daytona_move_file` call" in developer
-    assert "Never use git history, test-source archaeology, or another search" in developer
+    assert "May read bounded benchmark or verification test snippets" in developer
+    assert "Never use git history, speculative test-source archaeology, or another search" in developer
     assert "current lane collect" in developer.lower()
     assert "production ownership evidence" in developer.lower()
     assert "widened path, rationale, and verification" in developer.lower()
@@ -196,6 +201,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must not use `daytona_codeact` for corrective writes or moves" in validator.lower()
     assert "pure removals such as `rm`, `unlink`, `os.remove`" in validator.lower()
     assert "must not use `daytona_codeact` for file-content reads" in validator.lower()
+    assert "May read bounded benchmark or verification test snippets" in validator
     assert "writes to test files as off-policy" in validator.lower()
     assert 'submit_task_summary(type="request_replan", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
@@ -214,6 +220,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "destination must be justified as a production owner" in replanner
     assert "tests out of corrective `scope_paths`" in replanner
     assert "looks wrong is evidence, not permission" in replanner
+    assert "May read bounded benchmark test snippets" in replanner
     assert "inspect git history" in replanner
     assert "outside-scope missing-module request" in replanner
     assert "benchmark test import as evidence" in replanner
@@ -227,9 +234,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `completion-contract`" in scout.lower()
     assert "must not edit files" in scout.lower()
     assert "must keep missing targets missing" in scout.lower()
-    assert "benchmark test target path as off-policy" in scout
-    assert "do not locate or correct the test path" in scout
-    assert "planner should scout the production owner path instead" in scout
+    assert "benchmark tests read-only evidence" in scout
+    assert "May inspect bounded benchmark test snippets" in scout
+    assert "do not locate, correct, or modify the test path" in scout
     assert "no-symbol exact file should not be used as `scope_paths`" in scout
     assert "unconfirmed adjacent evidence" in scout.lower()
     assert "must call exactly one `submit_file_note(...)`" in scout.lower()
@@ -265,13 +272,15 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Missing modules, compatibility shims, re-export modules, and import bridges named by tests" in planner_json
     assert "workspace structure shows a directory or nested files" in planner_json
     assert "child planners like `plan-parquet` or `plan-groupby`" in planner_json
-    assert "Pairwise overlap check" in planner_json
+    assert "Scope overlap is allowed" in planner_json
     assert "Never submit a validator with `deps: []`" in planner_json
     scout_launch = _read(
         _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
     )
     assert "scout notes live on the current task, not on siblings" in scout_launch
     assert 'read_task_details(task_id="<your current task id>")' in scout_launch
+    assert "Do not pass `bg_*` background ids to `read_task_details`" in scout_launch
+    assert "Do not launch a second scout wave" in scout_launch
     assert "Scrub `target_paths` first" in scout_launch
     assert "missing test-derived path in scout `target_paths`" in scout_launch
     assert "Never use a scout to locate or correct a benchmark test path mismatch" in scout_launch
@@ -287,7 +296,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "cd /testbed" in developer_runtime
     assert "pkg._compat" in developer_root_cause
     assert "missing module, compatibility shim, re-export module, or import bridge" in developer_widening
-    assert "one adjacent production owner for the same bug" in developer_widening
+    assert "required for the same bug" in developer_widening
+    assert "adds the target to current `scope_paths`" in developer_widening
     assert "scope_paths` itself names an absent module" in developer_widening
     assert "source and destination are separate ownership checks" in developer_widening
     assert "in-scope source file does not authorize an absent outside-scope destination path" in developer_widening
@@ -296,7 +306,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "similar in-scope compatibility module is not provenance" in developer_widening
     assert "intended repository surface" in developer_widening.lower()
     assert "explicit widened-edit decision" in developer_widening.lower()
-    assert "not a runtime hard gate" in developer_widening.lower()
+    assert "scope-added system notification" in developer_widening.lower()
     assert "a real production surface" in developer_widening
     assert "The Task Center note is the durable handoff." in scout_ref
     assert "Make exactly one `submit_file_note(...)` call" in scout_ref
@@ -314,8 +324,8 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
         _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md"
     )
 
-    assert "pairwise-check `new_tasks`" in replanner
-    assert "Parallel concrete tasks must not share any `scope_paths` file" in add_tasks
+    assert "check `new_tasks` for real sequencing needs" in replanner
+    assert "Scope overlap is allowed" in add_tasks
     assert "new-file, rename, move, shim, or re-export task" in add_tasks
     assert "Self-check `cancel_ids=[]`" in add_tasks
     assert "replacement" in cancel_redraft and "test-derived" in cancel_redraft

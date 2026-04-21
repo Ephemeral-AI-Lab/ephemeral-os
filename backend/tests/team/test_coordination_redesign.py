@@ -122,6 +122,10 @@ async def test_submit_plan_resolves_roster_role_hints():
                     "scope_paths": ["src/api.py"],
                 },
             ],
+            output=(
+                "Planner split API implementation and validation by owner. "
+                "Developer owns src/api.py; validator depends on impl and checks the same scope."
+            ),
         ),
         ctx,
     )
@@ -173,7 +177,10 @@ async def test_submit_plan_allows_stale_freshness_context():
     )
 
     result = await SubmitPlanTool().execute(
-        SubmitPlanTool.input_model(new_tasks=[]),
+        SubmitPlanTool.input_model(
+            new_tasks=[],
+            output="No child tasks are required; planner is intentionally submitting an empty plan.",
+        ),
         ctx,
     )
 
@@ -193,8 +200,14 @@ def test_submit_plan_requires_planner_authored_description():
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            output="Planner summary present so this test isolates missing description.",
         )
+
+
+def test_submit_plan_requires_output_summary():
+    with pytest.raises(ValidationError):
+        SubmitPlanTool.input_model(new_tasks=[])
 
 
 def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
@@ -210,6 +223,8 @@ def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
     assert "implementation owner paths" in scope_desc
     assert "verification-only test targets in spec" in scope_desc
     output_desc = schema["input_schema"]["properties"]["output"]["description"]
+    assert "output" in schema["input_schema"]["required"]
+    assert schema["input_schema"]["properties"]["output"]["minLength"] == 1
     assert "ownership evidence" in output_desc
 
     payload = tool.input_model(
@@ -221,7 +236,8 @@ def test_submit_plan_schema_guides_test_targets_without_runtime_gate():
                 "spec": _spec("Repair the production owner."),
                 "scope_paths": ["pkg/tests/test_owner.py"],
             }
-        ]
+        ],
+        output="Owner evidence keeps the test path as submitted scope for schema coverage.",
     )
     assert payload.new_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
 
@@ -241,7 +257,7 @@ def test_submit_replan_schema_requests_summary_without_reallowing_output():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_overlong_description_without_truncating():
+async def test_submit_plan_rejects_description_over_20_words_without_truncating():
     ctx = ToolExecutionContext(
         cwd="/tmp",
         metadata={
@@ -259,19 +275,22 @@ async def test_submit_plan_rejects_overlong_description_without_truncating():
                 {
                     "id": "long-description",
                     "description": (
-                        "one two three four five six seven eight nine ten eleven twelve thirteen"
+                        "one two three four five six seven eight nine ten eleven twelve thirteen "
+                        "fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone"
                     ),
                     "spec": _spec("Implement the API."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            output="Planner summary for the long-description validation case.",
         ),
         ctx,
     )
 
     assert result.is_error is True
-    assert "description has 13 words" in result.output
+    assert "description has 21 words" in result.output
+    assert "20 words or fewer" in result.output
 
 
 @pytest.mark.asyncio
@@ -309,7 +328,8 @@ async def test_submit_plan_rejects_oversize_task_notes():
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            output="Planner summary for oversized task note validation.",
         ),
         ctx,
     )
@@ -345,7 +365,8 @@ async def test_submit_plan_rejects_malformed_spec_sections():
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            output="Planner summary present so this test isolates malformed spec sections.",
         ),
         ctx,
     )
@@ -477,7 +498,8 @@ def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
                     "name": "developer",
                     "parent_id": "parent",
                 }
-            ]
+            ],
+            output="Planner summary present so this test isolates legacy parent_id.",
         )
 
 

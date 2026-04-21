@@ -3,7 +3,9 @@
 Outside-scope ``daytona_write_file`` calls are allowed when justified. Once a
 call succeeds and the OCC commit reports changed paths, the widened edit should
 become part of the lane's in-memory write scope so follow-up writes to the same
-new file do not trip downstream scope checks.
+new file do not trip downstream scope checks. When a path is added, the hook
+also emits an advisory so the agent sees the updated scope in a system
+notification.
 """
 
 from __future__ import annotations
@@ -13,6 +15,19 @@ from pydantic import BaseModel
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.hooks import PostHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit._daytona_utils import _extend_write_scope, _resolve_path
+
+
+def _scope_added_advisory(context: ToolExecutionContext, added_path: str) -> str:
+    current = context.metadata.get("write_scope")
+    if isinstance(current, list):
+        scope_paths = [str(path) for path in current]
+    else:
+        scope_paths = []
+    rendered_scope = ", ".join(scope_paths) if scope_paths else "<none>"
+    return (
+        f"Scope path added: {added_path}. "
+        f"Current scope_paths: {rendered_scope}."
+    )
 
 
 async def hook(
@@ -32,8 +47,10 @@ async def hook(
     if not isinstance(file_path, str):
         return PostHookOutcome()
 
-    _extend_write_scope(context, _resolve_path(file_path, context))
-    return PostHookOutcome()
+    added_path = _extend_write_scope(context, _resolve_path(file_path, context))
+    if added_path is None:
+        return PostHookOutcome()
+    return PostHookOutcome(advisories=(_scope_added_advisory(context, added_path),))
 
 
 def register(registry: ToolHookRegistry | None = None) -> None:

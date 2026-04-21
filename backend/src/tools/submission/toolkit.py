@@ -294,7 +294,7 @@ class NewTaskSpec(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Planner-authored short task label, kept under about 10 words. "
+            "Planner-authored short task label, kept to 20 words or fewer. "
             "This is persisted as the task description; put full instructions in spec."
         ),
     )
@@ -353,13 +353,14 @@ class SubmitPlanInput(BaseModel):
         default_factory=list,
         description="New child tasks to create",
     )
-    output: str | None = Field(
-        default=None,
+    output: str = Field(
+        ...,
+        min_length=1,
         description=(
-            "Planner-authored Task Center summary. Include the ownership evidence "
+            "Required planner-authored Task Center summary. Include the ownership evidence "
             "that justified the split, the dependency/validator shape, important "
-            "scope boundaries, and remaining uncertainty. Do not leave this empty "
-            "when the plan is non-trivial."
+            "scope boundaries, and remaining uncertainty. Do not restate the task "
+            "title or leave downstream agents with only a task count."
         ),
     )
 
@@ -371,8 +372,8 @@ class SubmitPlanOutput(BaseModel):
         default_factory=list,
         description="Accepted child tasks with resolved exact agent names.",
     )
-    output: str | None = Field(
-        default=None,
+    output: str = Field(
+        ...,
         description="Planner-provided Task Center summary from the submit_plan input.",
     )
 

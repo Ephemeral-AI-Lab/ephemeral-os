@@ -234,7 +234,11 @@ class DaytonaMoveFileInput(BaseModel):
     target_path: str = Field(
         ...,
         min_length=1,
-        description="Destination path.",
+        description=(
+            "Destination path. When the source is already in scope, a successful "
+            "move adds this destination to current scope_paths and a system "
+            "notification lists the updated scope."
+        ),
     )
     is_folder: bool = Field(
         default=False,
@@ -284,7 +288,10 @@ class DaytonaMoveFileOutput(BaseModel):
         "target prefix, and submit the whole batch atomically. Base-hash "
         "drift on any member aborts with `aborted_version`. Overwrite "
         "semantics are enforced by the platform pre-hook. Use this "
-        "instead of `mv` in CodeAct; CodeAct `mv` is blocked."
+        "instead of `mv` in CodeAct; CodeAct `mv` is blocked. When the "
+        "source is already in scope, a successful move extends the lane's "
+        "in-memory write scope to the destination and emits a system "
+        "notification listing the updated scope_paths."
     ),
     short_description="Move a file or folder through the OCC commit path.",
     input_model=DaytonaMoveFileInput,

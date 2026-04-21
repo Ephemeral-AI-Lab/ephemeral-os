@@ -198,7 +198,7 @@ def test_write_warning_emitted_for_developer_outside_scope():
     assert "outside write_scope" in result
     assert "adjacent shim" not in result
     assert "not a hard failure" in result
-    assert "justified adjacent production owner" in result
+    assert "justified production owner" in result
     assert "submit_task_summary(type='request_replan')" in result
     assert "widened path, rationale, and verification" in result
 
@@ -242,9 +242,10 @@ def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gat
     edit_schema = daytona_edit_file.to_api_schema()
 
     write_description = write_schema["description"]
+    assert "`scope_paths` are the default ownership context, not a hard limit" in write_description
     assert "outside-scope writes are allowed when justified" in write_description
     assert "successful write extends the lane's in-memory write scope" in write_description
-    assert "make an explicit widened-edit decision" in write_description
+    assert "system notification will list the updated scope_paths" in write_description
     assert "Test imports, collection errors, and target counts" in write_description
     assert "evidence, not sufficient ownership by themselves" in write_description
     assert "test files are read/verify-only" in write_description

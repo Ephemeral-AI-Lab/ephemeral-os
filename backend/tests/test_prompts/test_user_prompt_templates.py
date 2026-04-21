@@ -60,9 +60,10 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "patch the production owner or submit a failure for replanning" in rendered
     assert "If live evidence identifies a missing module, compatibility shim" in rendered
     assert "treat it as a widened edit decision" in rendered
-    assert "adjacent production owner for the same objective" in rendered
+    assert "justified production owner for the same objective" in rendered
+    assert "scope-added notification as the current scope" in rendered
     assert "ModuleNotFoundError" in rendered
-    assert "use live production evidence to decide" in rendered
+    assert "use live production evidence or the assigned objective" in rendered
     assert "scope_paths" in rendered
     assert "do not retry the same delete/move tool" in rendered
     assert "create or edit the missing production path" in rendered
@@ -186,9 +187,10 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "Benchmark and verification test files in this list are read/verify-only" in ctx.user_message
     assert "missing module, compatibility shim, re-export, import bridge" in ctx.user_message
     assert "widened edit decision" in ctx.user_message
-    assert "adjacent production owner" in ctx.user_message
+    assert "justified production owner" in ctx.user_message
+    assert "scope-added notification as the current scope" in ctx.user_message
     assert "ModuleNotFoundError" in ctx.user_message
-    assert "use live production evidence to decide" in ctx.user_message
+    assert "use live production evidence or the assigned objective" in ctx.user_message
     assert "daytona_write_file" in ctx.user_message
     assert "daytona_move_file" in ctx.user_message
     assert "create or edit the missing production path" in ctx.user_message
@@ -245,9 +247,10 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "include the exact new path plus its adjacent live owner" in ctx.user_message
     assert "no indexed symbols for an exact file" in ctx.user_message
     assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
-    assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
+    assert "Do not add dependencies merely because `scope_paths` overlap" in ctx.user_message
     assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
-    assert "sibling-scope reads are not appropriate for same-task scout notes" in ctx.user_message
+    assert "do not pass `bg_*` background ids to `read_task_details`" in ctx.user_message
+    assert "submit with uncertainty instead of launching another scout wave" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
@@ -306,9 +309,10 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "scout the production owner path instead" in ctx.user_message
     assert "no indexed symbols for an exact file" in ctx.user_message
     assert "use the live directory boundary or confirmed nested production files" in ctx.user_message
-    assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
+    assert "Do not add dependencies merely because `scope_paths` overlap" in ctx.user_message
     assert 'After `run_subagent` scouts, read their notes on the current task with `read_task_details(task_id="<your current task id>")`' in ctx.user_message
-    assert "sibling-scope reads are not appropriate for same-task scout notes" in ctx.user_message
+    assert "do not pass `bg_*` background ids to `read_task_details`" in ctx.user_message
+    assert "submit with uncertainty instead of launching another scout wave" in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
@@ -364,7 +368,7 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
     assert "Failed reason: unit test still fails" in ctx.user_message
     assert 'submit_replan(new_tasks=[...], cancel_ids=[...], summary="...")' in ctx.user_message
     assert "which sibling/downstream work is preserved" in ctx.user_message
-    assert "No two parallel concrete tasks may share a `scope_paths` file" in ctx.user_message
+    assert "Do not add dependencies merely because `scope_paths` overlap" in ctx.user_message
     assert "file renames, or file moves" in ctx.user_message
     assert "include both the exact path and adjacent live owner" in ctx.user_message
     assert "outside-scope warning or missing-module request for replan" in ctx.user_message

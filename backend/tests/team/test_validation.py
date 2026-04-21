@@ -152,6 +152,47 @@ def test_known_agent_passes_agent_check():
 
 
 # ---------------------------------------------------------------------------
+# Description length
+# ---------------------------------------------------------------------------
+
+
+def test_description_allows_20_words():
+    spec = _spec(
+        "t1",
+        description=(
+            "one two three four five six seven eight nine ten eleven twelve "
+            "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty"
+        ),
+        scope_paths=["src/api.py"],
+    )
+    plan = _plan(spec)
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert not any("description has" in i["msg"] for i in issues)
+
+
+def test_description_rejects_more_than_20_words():
+    spec = _spec(
+        "t1",
+        description=(
+            "one two three four five six seven eight nine ten eleven twelve "
+            "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone"
+        ),
+        scope_paths=["src/api.py"],
+    )
+    plan = _plan(spec)
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert any("description has 21 words" in i["msg"] for i in issues)
+
+
+# ---------------------------------------------------------------------------
 # Cycle detection
 # ---------------------------------------------------------------------------
 
@@ -391,7 +432,7 @@ def test_crowded_plan_with_expandable_lane_passes_expandability_check():
     assert not any("expandable planner lane" in i["msg"] for i in issues)
 
 
-def test_parallel_tasks_with_shared_scope_paths_require_sequencing():
+def test_parallel_tasks_with_shared_scope_paths_pass_without_sequencing():
     left = _spec("dev-plot", scope_paths=["dvc/command/plot.py", "dvc/repo/plot/data.py"])
     right = _spec("dev-cli", scope_paths=["dvc/command/plot.py", "dvc/command/update.py"])
     plan = _plan(left, right)
@@ -401,7 +442,20 @@ def test_parallel_tasks_with_shared_scope_paths_require_sequencing():
          patch(_GET_DEFN_PATH, return_value=_mock_agent()):
         issues = validate_plan(plan)
 
-    assert any("share overlapping scope_paths" in i["msg"] for i in issues)
+    assert not any("share overlapping scope_paths" in i["msg"] for i in issues)
+
+
+def test_parallel_tasks_with_parent_child_scope_paths_pass_without_sequencing():
+    left = _spec("dev-hdf", scope_paths=["dask/dataframe/io/hdf.py"])
+    right = _spec("dev-cli-config-compat", scope_paths=["dask"])
+    plan = _plan(left, right)
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert not any("share overlapping scope_paths" in i["msg"] for i in issues)
 
 
 def test_sequenced_tasks_with_shared_scope_paths_pass():

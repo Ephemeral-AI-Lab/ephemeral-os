@@ -50,7 +50,8 @@ class WaitForBackgroundTaskTool(BaseTool):
         "shows the task is healthy enough to join. After a task is delivered, do not "
         "wait on it again; for `run_subagent` results that say `Posted.`, read the "
         "posted note or artifact next. In team-planner contexts, read current-task "
-        "notes with paths omitted if exact scout paths are unclear."
+        "notes with paths omitted if exact scout paths are unclear; do not pass "
+        "`bg_*` background ids to `read_task_details`."
     )
     short_description: str = "Wait for background tasks."
     input_model: type[BaseModel] = WaitForBackgroundTaskInput

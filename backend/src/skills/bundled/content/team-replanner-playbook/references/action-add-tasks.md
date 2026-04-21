@@ -12,15 +12,15 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 - Do not add tasks that duplicate work already covered by existing siblings.
 - Do not add a developer task whose `scope_paths` are benchmark or verification tests because the failure packet suggests the test is wrong. Tests stay evidence unless the prompt explicitly owns a test-only bug.
 - Do not add a new-file, rename, move, shim, or re-export task for a missing module or import bridge without production ownership evidence or clear adjacent ownership, even when the source file is in scope.
-- Do not read benchmark test files, query benchmark test symbols, inspect git history, or run archaeology to justify a benchmark-test edit.
+- You may read bounded benchmark test snippets to clarify expected behavior, imports, fixtures, or parametrization. Do not query benchmark test symbols, inspect git history, or run archaeology to justify a benchmark-test edit.
 
 ## Workflow
 
 - Put all corrective work in `new_tasks`; this action uses `cancel_ids=[]`. Do not include the original failed `request_replan` task in `cancel_ids`.
-- Each new task: `id`, `description` (short planner-authored label under about 10 words), `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
+- Each new task: `id`, `description` (short planner-authored label of 20 words or fewer), `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
 - `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings. Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks`, `cancel_ids`, and `summary`.
 - `summary` must preserve the failure evidence, why the added work is necessary, which siblings/downstream work stays valid, and any uncertainty.
-- Parallel concrete tasks must not share any `scope_paths` file; add a `deps` edge or use one focused repair task for the shared owner file.
+- Scope overlap is allowed. Do not add dependencies merely because `scope_paths` overlap; use `deps` only for real output ordering or known same-file edit ordering.
 - If `new_tasks` has 3 or more concrete non-planner tasks, add one terminal `validator` in this payload whose `deps` cover those tasks; its spec must run the relevant broad verification after diagnostics.
 - Prefer `deps` ids local to this payload; validator deps must be local. Existing-task deps must be freshly proven schedulable and not downstream of this replanner or the original failed task.
 - If a failure names a missing import path, target an existing live production owner or the exact missing production path plus an adjacent live owner. If the only apparent edit would be a benchmark-test change or unjustified test-derived alias, submit `submit_replan(new_tasks=[], cancel_ids=[], summary="...")` instead and do not add a test-edit developer task. If the only apparent edit is to a benchmark test file, target a production owner or a `team_planner` task scoped to the nearest live boundary.
