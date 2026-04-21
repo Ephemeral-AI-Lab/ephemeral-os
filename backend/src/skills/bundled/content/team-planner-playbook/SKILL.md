@@ -29,37 +29,24 @@ Child planner pre-step: consume the ids printed in the assigned planner task sec
 
 ## Scout rules
 
-- Must scrub each scout `target_paths` list before calling `run_subagent`: include live production owner files/directories only, and keep test paths or missing test-derived paths in task prose.
-- A benchmark target is evidence, not scout ownership: never pair a production owner and its benchmark test in one scout `target_paths` list.
-- Must split unrelated scout targets into separate scouts. Never launch `run_subagent` scouts on benchmark test paths or use scouts to locate or correct benchmark test paths; scout the production owner path instead.
-- Entry/root planner note reads happen after the first scout wave, not before it.
-- run_subagent scouts/subagents are not Task Center tasks. Their durable handoff is a file note, so read scout results with `read_file_note(file_path="...")` for each exact scout target path you launched. Never use `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and never pass `bg_*`, planner slugs, short prefixes, or fabricated ids as task ids.
-- Must retire a scout task id after a terminal envelope (`delivered`, `Posted.`, `[COMPLETED]`, `[ALREADY_COMPLETED]`, `[NO TASKS RUNNING]`); read the posted Task Center notes instead of checking or waiting on that id again. Never call `check_background_progress(...)` or `wait_for_background_task(...)` again on a terminal id. Never use background tools to recover content from a `Posted.` scout result.
-- Must not load `plan-json-contract` while any scout task is still running. Finish waiting, cancel stale scouts, or decide the result is not needed before the final schema check; after `plan-json-contract` loads, the only allowed next tool is `submit_plan(...)`.
+1. **Production targets only:** Scrub every scout `target_paths` list before `run_subagent`; include live production owner files/directories only. Keep benchmark tests, missing test-derived paths, and verification targets in task prose unless tests are explicitly the owned bug surface.
+2. **One owner slice per scout:** Split unrelated owner targets into separate scouts, and never pair a production owner with its benchmark test. Scouts investigate production ownership, not benchmark path correction.
+3. **Entry planner ordering:** Entry/root planners launch the first scout wave before Task Center graph/detail/note setup; child planners consume header ids and graph context first as described in Workflow.
+4. **Scout results are file notes:** Scouts are not Task Center tasks. After terminal envelopes, retire scout ids and read results with `read_file_note(file_path="...")` for each exact target path; never use `read_task_graph()`, `read_task_details(...)`, `bg_*`, slugs, prefixes, or fabricated ids to recover scout content.
+5. **Final schema boundary:** Do not load `plan-json-contract` while scouts are running or scout notes are unread. After it loads, the next and only allowed tool call is `submit_plan(...)`.
 
 ## Planning rules
 
-- Must trust live Task Center state, CI/tool output, scout notes, and runtime evidence over stale task prose or inherited summaries.
-- Must set `scope_paths` to repo-relative production owner paths for developer, validator, and planning lanes; never use `/testbed/...` prefixes in submitted task JSON. Must make `scope_paths` broad enough for the likely production edit set: when a missing module, compatibility shim, re-export module, or import bridge is a legitimate production surface, include the exact new path plus its adjacent live owner, or use the nearest package boundary when uncertainty remains (a clear adjacent live owner).
-- Must give every submitted task non-empty `scope_paths`, including validators. A validator's `scope_paths` are the production owner files/directories it verifies; benchmark tests remain in `spec`.
-- Must treat an exact file as disproved when `ci_query_symbol(...)` reports no indexed symbols for that file and structure shows a directory or nested production files at that owner family. Do not keep the exact file in scout `target_paths` or any `scope_paths`.
-- Must not add dependencies merely because tasks belong to the same benchmark, mention adjacent files, or have overlapping `scope_paths`. Use `deps` only when one task genuinely needs another task's output, when the same exact file has a known edit-order dependency, or when unresolved ownership should be delegated to one child `team_planner`.
-- Do not hide unresolved multi-owner work inside one catch-all developer lane; split exact owners, sequence shared files, or delegate the unresolved boundary to a child `team_planner`.
-- Do not submit a child `team_planner` lane and the would-be children of that planner in the same payload. Either delegate the unresolved branch to the child planner, or split exact owners directly at the current layer.
-- Do not seed child specs with `cd /testbed`, "run from /testbed", `2>&1`, output redirects, `| head`, or `| tail`; CodeAct starts at repo root and captures output automatically.
-- Never put verification-only benchmark tests in developer, validator, or child-planner `scope_paths`; do not put those paths in `scope_paths` for developer, validator, or child-planner lanes.
-- If inherited evidence or an agent request asks for a benchmark or verification test edit, reject that scope and plan production-code investigation or repair instead; use a child `team_planner` on the nearest live production boundary when the owner is still unclear.
-- Never pass `*/tests/*`, `test_*.py`, benchmark test paths, or unconfirmed test-derived paths in scout `target_paths`, or use scouts to locate/correct benchmark test paths, unless tests are explicitly the owned bug surface.
+1. **Evidence and owner paths:** Trust live Task Center state, CI/tool output, scout notes, and runtime evidence over stale prose. Use repo-relative live production owner paths in every `scope_paths`; never submit `/testbed/...` paths.
+2. **Scope completeness:** Every submitted task, including validators, needs non-empty `scope_paths`. Validator scopes are production files/directories being verified; benchmark tests and verification targets stay in `spec` unless tests are explicitly the owned bug surface.
+3. **Disproved and uncertain owners:** Drop exact files disproved by symbol/structure evidence. For legitimate missing modules, shims, bridges, or re-exports, include the exact new path plus adjacent live owner, or use the nearest package boundary when uncertainty remains.
+4. **Task splitting:** Split exact owners into developer lanes, sequence true shared-file dependencies, and delegate unresolved multi-owner boundaries to one child `team_planner`. Do not hide multi-owner work in a catch-all developer or submit a child planner with its would-be children in the same payload.
+5. **Dependency and command hygiene:** Add `deps` only for real output ordering, known same-file edit ordering, or one unresolved owner delegated to a child planner. Do not add deps for benchmark family, adjacent prose, or overlapping scopes, and do not seed child specs with repo-root `cd` wrappers, shell pipes, redirects, or stderr capture.
 
 ## Hard rules
 
-1. Never patch, validate, or read files directly as planner.
-2. Never guess an exact owner from filename resemblance, benchmark imports, or structure-only listings.
-3. Never submit a plan with non-validator siblings and no terminal `validator`, and never submit a `validator` task with `deps: []` in that case. Keep exactly one terminal validator end-of-chain guard. A validator's top-level `deps` field lists every same-layer non-validator sibling id, including child `team_planner` decomposition lanes.
-4. Never omit same-layer `team_planner` siblings from validator `deps`.
-5. Future child ids are not dependencies. Every `deps` id must be present in this `new_tasks` payload or be an existing Task Center id you read in this agent run; the entry/root planner has no existing task deps.
-6. Never carry a disproved exact file into `scope_paths`.
-7. Never make non-submission tool calls after loading `plan-json-contract`, including `wait_for_background_task(...)`, `check_background_progress(...)`, `cancel_background_task(...)`, CI, notes, file reads, or scout calls.
-8. Entry/root planner must not call `read_task_graph()`, `read_task_details(...)`, or `read_file_note(...)` before the first scout wave.
-9. Never omit `scope_paths` on validator tasks.
-10. Never submit `/testbed/...` scope paths or command-wrapper instructions.
+1. **Planner boundary:** Never patch, validate, or read files directly as planner; use scouts, inherited evidence, Task Center reads, and child tasks.
+2. **Owner evidence:** Never guess exact owners from filename resemblance, benchmark imports, or structure-only listings, and never carry a disproved exact file into scout targets or `scope_paths`.
+3. **Validator guard:** When a plan has non-validator siblings, submit exactly one terminal validator whose `deps` cover every same-layer non-validator sibling, including child `team_planner` lanes; never use `deps: []` in that case.
+4. **Dependency validity:** Future child ids are not dependencies. Every `deps` id must be in this `new_tasks` payload or be an existing Task Center id read in this agent run; entry/root planners have no existing task deps.
+5. **Final submission boundary:** After loading `plan-json-contract`, make no non-submission tool calls. Never submit missing validator scopes, `/testbed/...` paths, command wrappers, or benchmark tests in `scope_paths`.

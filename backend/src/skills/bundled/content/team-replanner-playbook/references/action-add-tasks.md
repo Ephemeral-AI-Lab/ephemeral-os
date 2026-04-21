@@ -1,17 +1,19 @@
 # Action Reference: submit_replan (add corrective tasks)
 
-Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[])` when existing siblings stay valid and only need corrective follow-up.
+Use this reference for `submit_replan(new_tasks=[...], cancel_ids=[])` only after the replanner playbook's trigger gate classified the failure as `scope_expansion`, `wrong_owner_or_role`, or `investigation_blocker`.
 If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft` instead.
 
 ## Task/Goal
 
-- Use this only when the failure shows scope expansion, wrong owner/role assignment, or a blocker that needs a different investigation path. Do not replan merely because a developer stopped before making a small in-scope edit, ran out of budget, or could not finish verification because another sibling caused ambient drift.
+- Add corrective tasks only for scope expansion, wrong owner/role assignment, or a blocker that needs a different investigation path.
+- If the remaining work is same-scope unfinished work, budget exhaustion, failed attempts, incomplete verification, or ambient drift from another sibling, stop: submit `submit_replan(new_tasks=[], cancel_ids=[])` instead of using this action.
 
 ## Avoid
 
 - Do not add tasks that duplicate work already covered by existing siblings.
 - Do not bundle independent same-parent sibling failures into this failed task's replan. If a non-terminal sibling already owns a path and you are not cancelling it, that path must stay out of `new_tasks[*].scope_paths`.
-- Do not add a same-scope continuation developer whose only purpose is to finish unfinished work in the failed task's original owner file. Each new task must map to scope expansion, wrong owner/role assignment, or the proven blocker path.
+- Do not add a same-scope continuation developer, validator, planner, or replanner whose only purpose is to finish unfinished work in the failed task's original owner file. Each new task must map to the trigger named above.
+- Do not treat a new symbol, line range, failing test id, or checklist item inside the same owner file as scope expansion.
 - Do not recreate a pending validator or dependent just because Task Center rewired it to depend on this replanner. That dependency is expected recovery gating, not a broken edge.
 - Do not add a developer task whose `scope_paths` are benchmark or verification tests because the failure packet suggests the test is wrong. Tests stay evidence unless the prompt explicitly owns a test-only bug.
 - Do not add a production helper/API task whose only consumer would be a modified benchmark or verification test. That is still a test-derived workaround.
@@ -23,7 +25,7 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 - Put all corrective work in `new_tasks`; this action uses `cancel_ids=[]`. Do not include the original failed `request_replan` task in `cancel_ids`.
 - Keep `new_tasks` anchored to the failed task's blocker and preserved dependents. Do not add a multi-owner developer that also repairs a live sibling's unrelated failure.
 - Preserve pending same-parent dependents whose only suspicious edge is a dependency on this replanner; they will run after your corrective children make this replanner done. Do not add a duplicate local dev->validator chain for the same verification surface.
-- Before drafting `new_tasks`, write down the trigger each task addresses. If a candidate task only continues unfinished same-owner work, drop it and submit an empty replan when no valid corrective task remains.
+- Before drafting `new_tasks`, write down the trigger each task addresses. If a candidate task only continues unfinished same-owner work, drop it. If no candidate remains, submit `submit_replan(new_tasks=[], cancel_ids=[])`.
 - If the task text would say "add helper/function so the test can call it", drop that candidate unless the existing production API already promises that helper.
 - Each new task: `id`, `description`, `name` (agent), `spec`, `deps`, repo-relative `scope_paths` with no `/testbed/...` prefixes. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
 - `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Each label starts its own line and has body text on that same line. Do not put all labels on one line. Do not put the body on the next line after the colon. Do not use Markdown headings. Do not include `task_note`, `output`, `summary`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`. The system generates the outcome summary automatically once your corrective children complete.
@@ -31,7 +33,7 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 - Do not split one exact owner file into parallel developer microtasks unless the packet proves disjoint edit regions. When multiple remaining seams all point to the same file and nearby symbols, submit one corrective developer task with a checklist of those seams, then one validator.
 - If `new_tasks` has 3 or more concrete non-planner tasks and no preserved downstream validator already covers the surface, add one terminal `validator` in this payload whose `deps` cover those tasks; its spec must run the relevant broad verification after diagnostics.
 - Prefer `deps` ids local to this payload; validator deps must be local. Existing-task deps must be freshly proven schedulable and not downstream of this replanner or the original failed task.
-- If a failure names a missing import path, target an existing live production owner or the exact missing production path plus an adjacent live owner. If the only apparent edit would be a benchmark-test change or unjustified test-derived alias, submit `submit_replan(new_tasks=[], cancel_ids=[])` instead and do not add a test-edit developer task. If the only apparent edit is to a benchmark test file, target a production owner or a `team_planner` task scoped to the nearest live boundary.
+- If a failure names a missing import path, target an existing live production owner or the exact missing production path plus an adjacent live owner. If the only apparent edit would be a benchmark-test change or unjustified test-derived alias, submit `submit_replan(new_tasks=[], cancel_ids=[])` instead and do not add a test-edit developer task. If the owner is unresolved, use scouts only when you can state a narrow hypothesis triplet; otherwise submit an empty replan.
 - For corrective file moves, renames, shims, and re-export bridges, verify both source and destination ownership; an in-scope source file is not enough.
 - Corrective tasks that relocate or rename a path must name `daytona_move_file`. Pure removals may run through CodeAct or `daytona_delete_file`. Corrective specs must not turn a coordinated-tool failure into a raw-write workaround (standard Python file I/O, CodeAct writes, shell redirects, whole-file overwrite fallback).
 - Self-check `cancel_ids=[]` for this action and verify no task scopes benchmark tests unless the prompt explicitly owns a test-only bug.

@@ -7,20 +7,15 @@ Use this reference immediately before the first scout wave. For the entry/root p
 
 ## Avoid
 
-- Never launch explorers for benchmark tests when a plausible production owner already exists.
-- Never use a scout to locate or correct a benchmark test path mismatch; put the literal test path in task prose and scout the production owner path instead. Never use scouts to locate or correct benchmark test path mismatches; do not use scouts to repair benchmark test paths.
-- Never pass `*/tests/*`, `test_*.py`, an unconfirmed test-derived path, or a missing test-derived path in scout `target_paths` when production owners exist.
-- Never pass an exact file to a scout after a file-symbol query found no indexed symbols and workspace structure shows a live directory or nested files for that same owner family.
-- Never bundle unrelated exact files or the whole first-wave ledger into one explorer.
-- Never check or wait on a scout id after it reports `delivered`, `Posted.`, `[COMPLETED]`, `[ALREADY_COMPLETED]`, or `[NO TASKS RUNNING]`. `Posted.` means findings were posted to Task Center notes, not in the envelope.
-- Do not launch a second scout wave just to repair weak or contradictory scout notes when CI/file notes already identify usable production owner boundaries; put the uncertainty in task specs.
-- Do not launch a second scout just to verify a cold exact file. If workspace structure shows a live package directory or symbol queries reveal nested owners such as `pkg/mod/core.py`, use that boundary in `scope_paths` or delegate the unresolved boundary to a child planner.
-- Do not launch scouts when the assigned task already names concrete owner files and the child lane split; read inherited task/file notes and submit the DAG with remaining uncertainty in task specs.
+1. **No test-path scouting:** Do not scout benchmark tests, verification targets, `*/tests/*`, `test_*.py`, unconfirmed test-derived paths, or missing test-derived paths when production owners exist. Put literal test paths in task prose and scout production owners instead.
+2. **No disproved exact files:** Do not scout an exact file after symbol/structure evidence disproves it and shows a live directory or nested owner for the same family.
+3. **No broad bundles:** Do not bundle unrelated exact files or the whole first-wave ledger into one scout; one unresolved production owner slice per scout.
+4. **No repeated scout loops:** Do not launch second waves to repair weak notes, prove cold files, or re-check ownership when CI/file notes already provide usable boundaries. Carry uncertainty into task specs.
+5. **No redundant scouts:** Do not launch scouts when the assigned task already names concrete owner files and the child lane split; read inherited task/file notes and submit the DAG.
 
 ## Workflow
 
-1. Scrub `target_paths` first: every entry should be a live production owner file/directory unless tests are explicitly the owner surface; do not use scouts to repair benchmark test paths.
-   Bad: `target_paths=["pkg/mod.py", "pkg/tests/test_mod.py"]`. Good: `target_paths=["pkg/mod.py"]` with `task_note` naming the test as verification evidence.
+1. Scrub `target_paths` first: every entry should be a live production owner file/directory unless tests are explicitly the owner surface. Put test paths in `task_note` as verification evidence, not in `target_paths`.
 2. Call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` with one unresolved owner slice per scout.
 3. Queue the whole useful wave before any progress check or wait.
 4. After the wave, read scout findings with `read_file_note(file_path="...")` for each exact scout `target_paths` entry you launched. Do not drop file extensions, reuse an unrelated prior path, or skip a scout path. Scouts/subagents are not Task Center tasks. Do not call `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and do not pass `bg_*` background ids, planner slugs, short prefixes, or fabricated ids as task ids.
