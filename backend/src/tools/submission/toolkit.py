@@ -221,9 +221,8 @@ class SubmitTaskSummaryInput(BaseModel):
         min_length=1,
         description=(
             "Evidence-rich terminal summary for Task Center notes. Developers: "
-            "state the concrete API or behavior delta, verification commands "
-            "run after the final edit with observed outcomes, and known gaps "
-            "or deferred items. Validators: list "
+            "state the concrete API or behavior delta, verification commands and outcomes "
+            "observed after the final edit, and known gaps or deferred items. Validators: list "
             "each acceptance criterion with pass/fail plus the command, probe, "
             "exit code, or key assertion used; on failure include the minimal "
             "repro and hypothesized root cause. For request_replan: start with "

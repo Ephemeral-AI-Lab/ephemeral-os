@@ -499,39 +499,6 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_run_subagent_does_not_inject_scope_packets_into_prompt(monkeypatch):
-    scripted = [
-        ConversationMessage(role="assistant", content=[TextBlock(text="DONE: scoped read complete")]),
-    ]
-    stub_agent = _StubAgent(scripted)
-    captured: dict[str, str] = {}
-
-    def _fake_spawn_agent(*args, **kwargs):
-        captured["prompt"] = kwargs["latest_user_prompt"]
-        return stub_agent
-
-    monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent", _fake_spawn_agent, raising=True
-    )
-
-    bg = _make_bg_manager("bg_scope_prompt", prompt="inspect auth")
-    ctx = _make_ctx(
-        bg=bg,
-        task_id="bg_scope_prompt",
-        extra_meta={"scope_packet": {"scope_paths": ["src/auth"], "coherence_token": "abc123"}},
-    )
-
-    result = await run_subagent.execute(
-        run_subagent.input_model(agent_name="scout", prompt="inspect auth"),
-        ctx,
-    )
-
-    assert result.is_error is False
-    assert captured["prompt"] == "inspect auth"
-    assert "coherence_token" not in captured["prompt"]
-
-
-@pytest.mark.asyncio
 async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypatch):
     scripted = [
         ConversationMessage(role="assistant", content=[TextBlock(text="DONE: scoped read complete")]),

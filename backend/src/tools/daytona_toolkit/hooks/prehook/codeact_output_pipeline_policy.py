@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-import ast
 import re
 
 from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
-from tools.daytona_toolkit.hooks.prehook._codeact_common import python_code, shell_command
+from tools.daytona_toolkit.hooks.prehook._codeact_common import (
+    python_code,
+    python_shell_commands,
+    shell_command,
+)
 
 PIPELINE_POLICY_MESSAGE = (
     "CodeAct policy error: commands must not contain `|`, `>`, `2>&1`, "
@@ -64,22 +67,10 @@ def shell_pipeline_policy_error(command: str) -> str | None:
 
 
 def python_pipeline_policy_error(code: str) -> str | None:
-    try:
-        tree = ast.parse(code or "")
-    except SyntaxError:
-        return None
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if not isinstance(node.func, ast.Name) or node.func.id != "shell":
-            continue
-        if not node.args or not isinstance(node.args[0], ast.Constant):
-            continue
-        command = node.args[0].value
-        if isinstance(command, str):
-            err = _first_offense(command)
-            if err is not None:
-                return err
+    for command in python_shell_commands(code):
+        err = _first_offense(command)
+        if err is not None:
+            return err
     return None
 
 

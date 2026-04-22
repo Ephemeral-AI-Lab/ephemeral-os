@@ -18,8 +18,6 @@ from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
 MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
-    "scope_packet",
-    "coherence_token",
     "_loaded_skill_references_by_skill_this_turn",
     "task_summary",
     "task_summary_type",

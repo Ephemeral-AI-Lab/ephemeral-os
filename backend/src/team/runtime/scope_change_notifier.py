@@ -12,6 +12,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from code_intelligence.editing.change_labels import change_actor_label
+from team._path_utils import ScopePath
 
 if TYPE_CHECKING:
     from team.models import Task
@@ -39,7 +40,7 @@ class ScopeChangeNotifier:
             e
             for e in changes
             if e.agent_run_id != own_run
-            and any(e.file_path.startswith(p.rstrip("/")) for p in task.scope_paths)
+            and ScopePath.matches_scopes([str(e.file_path)], task.scope_paths)
         ]
         if not external:
             return

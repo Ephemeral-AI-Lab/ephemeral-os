@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import posixpath
+
 from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext
@@ -11,9 +13,11 @@ from tools.daytona_toolkit.hooks._common import resolved_arg
 
 
 def _normalized_path(path: str) -> str:
-    if path == "/":
-        return path
-    return path.rstrip("/") or path
+    cleaned = path.strip().replace("\\", "/")
+    if not cleaned:
+        return ""
+    normalized = posixpath.normpath(cleaned)
+    return "" if normalized == "." else normalized
 
 
 def _repo_guard_error(

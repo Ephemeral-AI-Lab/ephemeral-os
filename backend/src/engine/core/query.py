@@ -43,6 +43,7 @@ from engine.runtime.background_tasks import (
     deliver_completed_background_task,
 )
 from prompt.prompt_report_recorder import PromptReportRecorder
+from team._path_utils import scope_paths_overlap
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,
@@ -142,7 +143,7 @@ _build_background_reminder = build_background_reminder
 
 
 # ---------------------------------------------------------------------------
-# Scope-change auto-check (replaces ScopeChangeBuffer push system)
+# Scope-change auto-check
 # ---------------------------------------------------------------------------
 
 SCOPE_CHANGE_CATEGORY = "scope_change"
@@ -159,8 +160,7 @@ def _scope_change_auto_check(
 
     Called at the top of each query loop turn. Returns notification text
     when changes are found (and the turn-gate allows), otherwise None.
-    Replaces the old ScopeChangeBuffer push system with a pull from the
-    current arbiter history.
+    Uses a pull from current arbiter history.
     """
     arbiter = metadata.get("arbiter")
     if arbiter is None or not getattr(arbiter, "initialized", False):
@@ -184,7 +184,7 @@ def _scope_change_auto_check(
 
     # Use the most recent baseline: auto-check or task start
     since = max(
-        float(metadata.get("_auto_freshness_checked_at") or 0),
+        float(metadata.get("_scope_change_checked_at") or 0),
         float(metadata.get("work_item_started_at") or 0),
     )
 
@@ -196,7 +196,7 @@ def _scope_change_auto_check(
     relevant = [
         c for c in changes
         if c.agent_run_id != agent_run_id
-        and any(c.file_path.startswith(p.rstrip("/")) for p in scope_paths)
+        and any(scope_paths_overlap(c.file_path, p) for p in scope_paths)
     ]
 
     if not relevant:
@@ -236,7 +236,7 @@ def _scope_change_auto_check(
 
     # Update baseline and reset turn counter
     import time
-    metadata["_auto_freshness_checked_at"] = time.time()
+    metadata["_scope_change_checked_at"] = time.time()
     turn_state["turns_since_last_notification"] = 0
 
     logger.info(

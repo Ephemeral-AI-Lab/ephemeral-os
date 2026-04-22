@@ -832,6 +832,74 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
     # advisory is expected and not a negative-signal regression.
 
 
+async def test_python_mode_treats_audited_changes_as_ambient():
+    manifest = _make_manifest()
+    sb = _make_sandbox(manifest=manifest)
+    stdout = _inline_manifest_output(manifest, prefix="ok")
+
+    async def _svc_cmd_with_ambient_changes(
+        sandbox,
+        command,
+        *,
+        timeout=None,
+        description="",
+        agent_id="",
+        team_run_id="",
+        agent_run_id="",
+        task_id="",
+        stdin=None,
+        attribute_changes=True,
+        on_progress_line=None,
+    ):
+        del (
+            sandbox,
+            command,
+            timeout,
+            description,
+            agent_id,
+            team_run_id,
+            agent_run_id,
+            task_id,
+            stdin,
+            on_progress_line,
+        )
+        assert attribute_changes is True
+        return SimpleNamespace(
+            result=stdout,
+            exit_code=0,
+            changed_paths=[],
+            ambient_changed_paths=["/testbed/dask/_compatibility.py"],
+            files_written=0,
+            git_commit_status=None,
+            git_conflict_reason=None,
+        )
+
+    svc = MagicMock()
+    svc.cmd = AsyncMock(side_effect=_svc_cmd_with_ambient_changes)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "write_scope": ["dask/dataframe/io/json.py"],
+            "ci_service": svc,
+        }
+    )
+
+    result, events = await _run_with_events(
+        daytona_codeact,
+        {"code": "print('ok')"},
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["files_written"] == 0
+    assert result.metadata.get("ambient_changed_paths") == ["/testbed/dask/_compatibility.py"]
+    assert any("ambient concurrent edits" in text for text in _notification_texts(events))
+
+
 async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():
     sb = _make_sandbox()
     svc = MagicMock()

@@ -28,7 +28,7 @@ Reduce duplicate exploration during high-parallelism team runs by making direct 
 
 ### 5. Worker awareness still has two maturity levels
 - Implemented now: same-run structural reuse via stable scout refs and shared briefings.
-- Implemented now: coherent live scope packets that merge briefing versions, ledger churn, hotspots, active reservations, and symbol state for prompt-time and write-time checks.
+- Implemented now: CI-backed live scope-change awareness that uses briefing versions, ledger churn, hotspots, active reservations, and symbol state for prompt-time and write-time checks.
 
 ## Design Principles
 - Same-run reuse comes from stable scout artifacts plus `shared_briefings`.
@@ -166,7 +166,7 @@ Give every developer and validator lane just-in-time awareness of current repo s
 Changes:
 - add coherent snapshot tokens across shared briefings, ledger, arbiter, and symbol index
 - expose active per-file reservations
-- add startup scope packets plus pre-write and commit/apply rechecks
+- add startup scope-change checks plus pre-write and commit/apply rechecks
 
 Acceptance criteria:
 - workers can distinguish fresh, locally touched, and structurally stale scope context
@@ -184,9 +184,9 @@ Status:
 - scout reuse is artifact-backed instead of text-only
 - machine-checkable freshness grades
 - reservation-backed active editor visibility
-- coherent scope packet injection for developer and validator startup
-- startup and pre-write metadata carry coherence tokens across shared briefings, ledger, arbiter, and symbol index
-- production and benchmark workers both receive live scope packets when CI is available
+- coherent CI-backed scope-change awareness for developer and validator startup
+- startup and pre-write checks consult shared briefings, ledger, arbiter, and symbol index without prompt-injected metadata bundles
+- production and benchmark workers both receive live scope-change warnings when CI is available
 - overlapping edits invalidate scout-backed shared context and force fresh CI truth on subsequent turns
 - write-time coordination uses authoritative pre-write and commit-time rechecks, not only startup prompt text
 

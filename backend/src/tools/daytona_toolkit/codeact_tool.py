@@ -301,7 +301,7 @@ async def _execute_python_wrapper(
     code: str,
     cwd: str | None,
     build_tool_output: BuildToolOutput,
-) -> tuple[str | None, object, ToolResult | None, list[str]]:
+) -> tuple[str | None, object, ToolResult | None, list[str], list[str]]:
     run_id = uuid.uuid4().hex[:8]
     wrapper = _build_wrapper(
         code,
@@ -318,6 +318,7 @@ async def _execute_python_wrapper(
                 "daytona_codeact",
                 "Python CodeAct requires svc.cmd (code intelligence service unavailable).",
             ),
+            [],
             [],
         )
 
@@ -352,8 +353,10 @@ async def _execute_python_wrapper(
                     is_error=True,
                 ),
                 [],
+                [],
             )
     changed_paths = list(change.changed_paths)
+    ambient_changed_paths = list(change.ambient_changed_paths)
     if not change.success:
         error_detail = f"sandbox commit aborted: {change.conflict_reason or 'unknown reason'}"
         return (
@@ -368,15 +371,17 @@ async def _execute_python_wrapper(
                 warnings=[],
                 error=error_detail,
                 changed_paths=changed_paths,
-                ambient_changed_paths=list(change.ambient_changed_paths),
+                ambient_changed_paths=ambient_changed_paths,
             ),
             changed_paths,
+            ambient_changed_paths,
         )
     return (
         getattr(change.raw, "result", "") or "",
         sandbox,
         None,
         changed_paths,
+        ambient_changed_paths,
     )
 
 async def _execute_python_codeact(
@@ -390,7 +395,7 @@ async def _execute_python_codeact(
     extract_exit_code: Callable[..., tuple[str, int]],
     files_written_count: Callable[[list[object], list[str]], int],
 ) -> ToolResult:
-    stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(
+    stdout, sandbox, tool_error, changed_paths, ambient_changed_paths = await _execute_python_wrapper(
         context,
         sandbox,
         code=code,
@@ -416,6 +421,7 @@ async def _execute_python_codeact(
             script_stdout=stdout[:4000],
             warnings=["CodeAct result line was not valid JSON."],
             changed_paths=changed_paths,
+            ambient_changed_paths=ambient_changed_paths,
         )
 
     manifest = result.get("manifest")
@@ -433,6 +439,7 @@ async def _execute_python_codeact(
             script_stdout=stdout[:4000],
             warnings=["CodeAct wrapper did not return an inline manifest."],
             changed_paths=changed_paths,
+            ambient_changed_paths=ambient_changed_paths,
         )
 
     shells = list(manifest.get("shells", []) or [])
@@ -445,6 +452,7 @@ async def _execute_python_codeact(
                 "status": manifest.get("status", "error"),
                 "shells_run": len(shells),
                 "changed_paths": changed_paths,
+                "ambient_changed_paths": ambient_changed_paths,
             },
         )
 
@@ -459,6 +467,7 @@ async def _execute_python_codeact(
         warnings=warnings,
         error=str(manifest.get("error", "") or ""),
         changed_paths=changed_paths,
+        ambient_changed_paths=ambient_changed_paths,
     )
 
 def _resolve_mode(

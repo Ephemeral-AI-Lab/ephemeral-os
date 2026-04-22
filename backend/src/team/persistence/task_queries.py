@@ -676,6 +676,7 @@ async def insert_snapshot_tasks(
                 agent_name=t.agent_name,
                 status=t.status.value,
                 objective=t.objective,
+                description=t.description or "",
                 deps=list(t.deps),
                 scope_paths=list(t.scope_paths),
                 scope_ltree=[path_to_ltree(p) for p in t.scope_paths],

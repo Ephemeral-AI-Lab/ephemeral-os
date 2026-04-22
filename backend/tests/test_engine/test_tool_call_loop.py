@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-from engine.core.query import QueryContext, QueryExitReason, _execute_tool_call, run_query
+from engine.core.query import (
+    QueryContext,
+    QueryExitReason,
+    _execute_tool_call,
+    _scope_change_auto_check,
+    run_query,
+)
 from message.stream_events import (
     AssistantTurnComplete,
     ToolExecutionCompleted,
@@ -118,6 +125,40 @@ class LoadSkillReferenceTool(BaseTool):
     ) -> ToolResult:
         self.calls += 1
         return ToolResult(output="loaded")
+
+
+def test_scope_change_auto_check_respects_path_boundaries():
+    """A scope of src/auth must not match sibling paths like src/authz.py."""
+    in_scope_change = SimpleNamespace(
+        file_path="src/auth/session.py",
+        edit_type="edit",
+        agent_run_id="other-run",
+        task_id="task-other",
+    )
+    prefix_only_change = SimpleNamespace(
+        file_path="src/authz.py",
+        edit_type="edit",
+        agent_run_id="other-run",
+        task_id="task-prefix",
+    )
+    metadata = ExecutionMetadata(agent_run_id="self-run", team_run_id="team-1")
+    metadata["write_scope"] = ["src/auth"]
+    metadata["work_item_started_at"] = 1.0
+    metadata["arbiter"] = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since, team_run_id=None: [
+            in_scope_change,
+            prefix_only_change,
+        ],
+    )
+    display_messages: list[ConversationMessage] = []
+
+    text = _scope_change_auto_check(metadata, display_messages)
+
+    assert text is not None
+    assert "src/auth/session.py" in text
+    assert "src/authz.py" not in text
+    assert len(display_messages) == 1
 
 
 class ExplicitDecoratorInput(BaseModel):

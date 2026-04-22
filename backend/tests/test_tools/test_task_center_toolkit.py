@@ -1,4 +1,4 @@
-"""Tests for tools.task_center.toolkit and freshness helpers."""
+"""Tests for tools.task_center.toolkit."""
 
 from __future__ import annotations
 
@@ -442,5 +442,4 @@ async def test_read_task_details_labels_initial_plan_and_replan_json():
     assert "**Summary:**\ndev-1 delivered parser retry behavior." in result.output
     assert "### team_planner [initial_planned_tasks]" not in result.output
     assert "### team_replanner [initial_replanned_tasks]" not in result.output
-
 

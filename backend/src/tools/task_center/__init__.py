@@ -1,4 +1,4 @@
-"""Task Center toolkit — notes + scope change awareness."""
+"""Task Center toolkit - notes and task graph reads."""
 
 from __future__ import annotations
 

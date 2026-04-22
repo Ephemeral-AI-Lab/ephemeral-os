@@ -45,6 +45,7 @@ async def hook(
                 context,
                 members,
                 tool_name=tool_name,
+                include_test_file_blocks=True,
             )
             role = "folder members"
     if not offenders:

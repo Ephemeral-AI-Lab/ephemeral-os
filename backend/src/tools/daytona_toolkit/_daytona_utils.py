@@ -533,6 +533,7 @@ def _team_repo_scope_deny_errors(
     paths: list[str] | tuple[str, ...],
     *,
     tool_name: str,
+    include_test_file_blocks: bool = False,
 ) -> list[tuple[str, str]]:
     """Return one error for each path outside write_scope."""
     if not is_coordinated_team_agent(context):
@@ -546,6 +547,15 @@ def _team_repo_scope_deny_errors(
         rel_path = _normalize_repo_relative_path(path, repo_root)
         if not rel_path:
             continue
+        if include_test_file_blocks:
+            test_file_error = _team_repo_write_error(
+                context,
+                path,
+                tool_name=tool_name,
+            )
+            if test_file_error is not None:
+                offenders.append((path, test_file_error))
+                continue
         if _is_test_file_path(rel_path) and not _test_file_edits_allowed(context):
             continue
         if _path_under_write_scope(rel_path, write_scope):

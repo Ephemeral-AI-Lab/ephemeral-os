@@ -76,6 +76,7 @@ def task_from_dict(data: dict[str, Any]) -> Task:
         agent_name=data["agent_name"],
         status=TaskStatus.of(data.get("status") or TaskStatus.PENDING.value),
         objective=objective,
+        description=str(data.get("description") or ""),
         deps=list(data.get("deps") or []),
         scope_paths=list(data.get("scope_paths") or []),
         parent_id=data.get("parent_id"),
@@ -122,6 +123,16 @@ def apply_replayed_event(
                 existing.failure_reason = event.data["failure_reason"]
             if "fired_by_task_id" in event.data:
                 existing.fired_by_task_id = event.data["fired_by_task_id"]
+    elif event.kind == "replace_dependency":
+        old_dep_id = str(event.data.get("old_dep_id") or "")
+        new_dep_ids = [str(dep_id) for dep_id in event.data.get("new_dep_ids") or []]
+        for task_id in event.data.get("task_ids") or []:
+            existing = graph.get(str(task_id))
+            if existing is None or not old_dep_id:
+                continue
+            existing.deps = [
+                dep_id for dep_id in existing.deps if dep_id != old_dep_id
+            ] + new_dep_ids
     elif event.kind == "budget_update":
         last_budget = (
             int(event.data.get("tasks_used") or 0),

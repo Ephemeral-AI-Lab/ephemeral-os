@@ -400,6 +400,13 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
         task_id="task-other",
         created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
     )
+    path_prefix_only_change = SimpleNamespace(
+        file_path="src/authz.py",
+        edit_type="edit",
+        agent_run_id="other-run",
+        task_id="task-other",
+        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+    )
     own_change = SimpleNamespace(
         file_path="src/auth/local.py",
         edit_type="edit",
@@ -416,7 +423,12 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
     )
     arbiter = SimpleNamespace(
         initialized=True,
-        changes_since=lambda since, team_run_id=None: [external_change, own_change, out_of_scope_change],
+        changes_since=lambda since, team_run_id=None: [
+            external_change,
+            path_prefix_only_change,
+            own_change,
+            out_of_scope_change,
+        ],
     )
 
     executor, tc = _make_executor(arbiter=arbiter)
@@ -429,6 +441,7 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
     assert tc.notes[0].task_id == task.id
     assert "Warning: scope changes detected since plan creation" in tc.notes[0].content
     assert "src/auth/session.py" in tc.notes[0].content
+    assert "src/authz.py" not in tc.notes[0].content
     assert "src/auth/local.py" not in tc.notes[0].content
     assert "src/billing/invoice.py" not in tc.notes[0].content
     assert "system will handle replanning" in tc.notes[0].content
@@ -470,8 +483,8 @@ def test_build_context_uses_override_when_provided():
     build_query_context.assert_awaited_once_with(defn, team_run, task)
 
 
-def test_run_one_does_not_set_up_scope_buffer():
-    """After Option B unification, executor no longer creates ScopeChangeBuffer."""
+def test_run_one_leaves_scope_change_tracking_to_query_loop():
+    """Executor does not allocate per-task scope-change tracking state."""
     import asyncio
 
     task = _make_task(status="pending")
@@ -565,6 +578,65 @@ def test_run_forever_fails_team_run_on_queue_graph_invariant_violation():
 
     team_run.fail_fast.assert_awaited_once()
     assert "ready task has unfinished deps" in team_run.fail_fast.await_args.args[0]
+
+
+def test_run_forever_survives_replan_cancelled_runner():
+    import asyncio
+    from types import SimpleNamespace
+
+    task = _make_task(status="running", parent_id=None, agent_run_id="")
+
+    class FakeQueue:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def pop_ready(self, run_id: str) -> Any:
+            self.calls += 1
+            if self.calls > 1:
+                team_run.cancel_event.set()
+                return None
+            return SimpleNamespace(
+                id=task.id,
+                team_run_id=run_id,
+                agent_name=task.agent_name,
+                status="running",
+                objective=task.objective,
+                description=task.description,
+                deps=[],
+                scope_paths=[],
+                scope_ltree=[],
+                parent_id=None,
+                root_id="",
+                depth=0,
+                agent_run_id=None,
+                created_at=task.created_at,
+                started_at=None,
+                finished_at=None,
+                failure_reason=None,
+            )
+
+    tc = FakeTaskCenter()
+    tc.graph = {task.id: task}
+    tc.mark_running = AsyncMock(return_value=task)
+    team_run = FakeTeamRun(task_center=tc, dispatch_queue=FakeQueue())
+    team_run.cancel_event = asyncio.Event()
+    team_run.fail_fast = AsyncMock()
+
+    async def runner(_defn, _ctx) -> None:
+        tc.graph[task.id].status = TaskStatus.CANCELLED
+        raise asyncio.CancelledError
+
+    executor = Executor(
+        team_run=team_run,
+        runner=runner,
+        agent_lookup=lambda name: FakeDefn(),
+        build_query_context=AsyncMock(return_value=TeamAgentContext(user_message="ctx")),
+    )
+
+    asyncio.run(executor.run_forever())
+
+    assert team_run.dispatch_queue.calls == 2
+    team_run.fail_fast.assert_not_awaited()
 
 
 def test_run_forever_fails_team_run_on_worker_graph_invariant_violation():

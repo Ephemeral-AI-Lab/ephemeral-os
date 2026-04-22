@@ -16,6 +16,8 @@ from tools.daytona_toolkit.delete_move_tool import (
     DaytonaMoveFileInput,
 )
 from tools.daytona_toolkit.hooks.prehook import (
+    codeact_destructive_git,
+    codeact_output_pipeline_policy,
     codeact_python_process_policy,
     codeact_stderr_suppression_policy,
     move_src_scope_deny,
@@ -103,6 +105,26 @@ def test_repo_guard_blocks_nested_move() -> None:
     assert "inside source" in (outcome.error_message or "")
 
 
+def test_repo_guard_blocks_parent_escape_delete() -> None:
+    ctx = _coord_ctx()
+    args = DaytonaDeleteFileInput(path="../outside.py")
+
+    outcome = _run(repo_operation_guard.hook("daytona_delete_file", args, ctx))
+
+    assert outcome.has_error is True
+    assert "outside repo root" in (outcome.error_message or "")
+
+
+def test_repo_guard_blocks_parent_escape_move_destination() -> None:
+    ctx = _coord_ctx()
+    args = DaytonaMoveFileInput(src_path="/ws/pkg/a.py", target_path="../outside.py")
+
+    outcome = _run(repo_operation_guard.hook("daytona_move_file", args, ctx))
+
+    assert outcome.has_error is True
+    assert "outside repo root" in (outcome.error_message or "")
+
+
 def test_write_scope_deny_checks_folder_members_before_delete_body() -> None:
     svc = MagicMock()
     svc.list_folder_files.return_value = ["/ws/pkg/a.py", "/ws/other/b.py"]
@@ -116,6 +138,19 @@ def test_write_scope_deny_checks_folder_members_before_delete_body() -> None:
     assert "/ws/other/b.py" in (outcome.error_message or "")
     assert "/ws/pkg/a.py" not in (outcome.error_message or "")
     svc.list_folder_files.assert_called_once_with("/ws/pkg")
+
+
+def test_write_scope_deny_blocks_test_file_folder_members() -> None:
+    svc = MagicMock()
+    svc.list_folder_files.return_value = ["/ws/pkg/tests/test_a.py"]
+    ctx = _coord_ctx(write_scope=["pkg/"], ci_service=svc)
+    args = DaytonaDeleteFileInput(path="/ws/pkg", is_folder=True)
+
+    outcome = _run(write_scope_deny.hook("daytona_delete_file", args, ctx))
+
+    assert outcome.has_error is True
+    assert "BLOCKED_TEST_FILE_EDIT" in (outcome.error_message or "")
+    assert "/ws/pkg/tests/test_a.py" in (outcome.error_message or "")
 
 
 def test_move_src_scope_deny_checks_folder_members_before_move_body() -> None:
@@ -135,6 +170,23 @@ def test_move_src_scope_deny_checks_folder_members_before_move_body() -> None:
     assert "/ws/other/b.py" in (outcome.error_message or "")
     assert "/ws/pkg/a.py" not in (outcome.error_message or "")
     svc.list_folder_files.assert_called_once_with("/ws/pkg")
+
+
+def test_move_src_scope_deny_blocks_test_file_folder_members() -> None:
+    svc = MagicMock()
+    svc.list_folder_files.return_value = ["/ws/pkg/tests/test_a.py"]
+    ctx = _coord_ctx(write_scope=["pkg/"], ci_service=svc)
+    args = DaytonaMoveFileInput(
+        src_path="/ws/pkg",
+        target_path="/ws/moved_pkg",
+        is_folder=True,
+    )
+
+    outcome = _run(move_src_scope_deny.hook("daytona_move_file", args, ctx))
+
+    assert outcome.has_error is True
+    assert "BLOCKED_TEST_FILE_EDIT" in (outcome.error_message or "")
+    assert "/ws/pkg/tests/test_a.py" in (outcome.error_message or "")
 
 
 def test_rename_scope_policy_caches_allowed_plan() -> None:
@@ -179,6 +231,28 @@ def test_codeact_stderr_suppression_policy_blocks_dev_null_stderr() -> None:
     assert "2>/dev/null" in (outcome.error_message or "")
 
 
+def test_codeact_output_pipeline_policy_blocks_constant_shell_variable() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(code='cmd = "cat a.py | head"\nshell(cmd)')
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is True
+    assert "commands must not contain" in (outcome.error_message or "")
+
+
+def test_codeact_destructive_git_blocks_common_clean_forms() -> None:
+    for command in ("git clean -xdf", "git clean -x -d -f"):
+        assert codeact_destructive_git.destructive_git_command_error(command) is not None
+
+
+def test_codeact_destructive_git_allows_clean_dry_run() -> None:
+    for command in ("git clean -ndf", "git clean --dry-run -xdf"):
+        assert codeact_destructive_git.destructive_git_command_error(command) is None
+
+
 def test_codeact_stderr_suppression_policy_blocks_equivalent_forms() -> None:
     ctx = _coord_ctx(team_run_id="run-1", work_item_id="task-1")
     args_list = [
@@ -188,6 +262,7 @@ def test_codeact_stderr_suppression_policy_blocks_equivalent_forms() -> None:
         DaytonaCodeActInput(command="optional-probe &>/dev/null"),
         DaytonaCodeActInput(command="pytest 2>&-"),
         DaytonaCodeActInput(code='shell("find . -name *.py 2>/dev/null")'),
+        DaytonaCodeActInput(code='cmd = "pytest 2>/dev/null"\nshell(cmd)'),
     ]
 
     for args in args_list:

@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import ast
-
 from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
-from tools.daytona_toolkit.hooks.prehook._codeact_common import python_code, shell_command
+from tools.daytona_toolkit.hooks.prehook._codeact_common import (
+    python_code,
+    python_shell_commands,
+    shell_command,
+)
 
 STDERR_SUPPRESSION_POLICY_MESSAGE = (
     "CodeAct policy error: CodeAct commands must preserve stderr. "
@@ -159,19 +161,8 @@ def shell_stderr_suppression_policy_error(command: str) -> str | None:
 
 
 def python_stderr_suppression_policy_error(code: str) -> str | None:
-    try:
-        tree = ast.parse(code or "")
-    except SyntaxError:
-        return None
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if not isinstance(node.func, ast.Name) or node.func.id != "shell":
-            continue
-        if not node.args or not isinstance(node.args[0], ast.Constant):
-            continue
-        command = node.args[0].value
-        if isinstance(command, str) and _has_stderr_suppression(command):
+    for command in python_shell_commands(code):
+        if _has_stderr_suppression(command):
             return STDERR_SUPPRESSION_POLICY_MESSAGE
     return None
 

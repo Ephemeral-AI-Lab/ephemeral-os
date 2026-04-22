@@ -34,7 +34,8 @@ def test_team_planner_prompt_loads_playbook_before_planning_tools() -> None:
     defn = get_definition(TEAM_PLANNER)
     assert defn is not None
     assert defn.system_prompt is not None
-    assert "load `team-planner-playbook` before code-intelligence" in defn.system_prompt
+    assert 'load_skill(skill_name="team-planner-playbook")' in defn.system_prompt
+    assert "before your first code-intelligence" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
 
 
@@ -211,3 +212,4 @@ def test_task_center_toolkit_survives_restriction() -> None:
 
     assert registry.get_toolkit("task_center") is not None
     assert registry.get("read_file_note") is not None
+    assert registry.get("task_center_changed_since") is None

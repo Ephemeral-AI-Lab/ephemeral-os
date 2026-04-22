@@ -218,6 +218,7 @@ def task_to_dict(task: Any) -> dict[str, Any]:
         "agent_name": task.agent_name,
         "status": task.status.value,
         "objective": task.objective,
+        "description": task.description,
         "deps": list(task.deps),
         "scope_paths": list(task.scope_paths),
         "parent_id": task.parent_id,

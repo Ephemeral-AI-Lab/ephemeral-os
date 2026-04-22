@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from team.models import Task, TaskStatus
-from team.persistence.events import make_task_status, task_to_dict
+from team.persistence.events import make_replace_dependency, make_task_status, task_to_dict
 from team.runtime.rehydration import apply_replayed_event, task_from_dict
 
 
@@ -26,10 +26,12 @@ def _task() -> Task:
 
 def test_task_serialization_round_trip_preserves_task_fields():
     original = _task()
+    original.description = "Repair shared import label"
 
     payload = task_to_dict(original)
     restored = task_from_dict(payload)
 
+    assert restored.description == "Repair shared import label"
     assert restored.deps == ["dep-1"]
     assert restored.scope_paths == ["pkg/_compat.py"]
     assert restored.agent_run_id == "agent-run-1"
@@ -89,3 +91,45 @@ def test_apply_replayed_event_keeps_existing_status_when_event_status_is_unknown
     assert budget is None
     assert final_status is None
     assert graph[task.id].status == TaskStatus.RUNNING
+
+
+def test_apply_replayed_event_replays_replace_dependency():
+    failed = _task()
+    failed.id = "failed-task"
+    failed.deps = []
+    failed.status = TaskStatus.REQUEST_REPLAN
+    replanner = _task()
+    replanner.id = "replanner-task"
+    replanner.deps = []
+    downstream = _task()
+    downstream.id = "downstream-task"
+    downstream.deps = ["setup-task", "failed-task"]
+    untouched = _task()
+    untouched.id = "untouched-task"
+    untouched.deps = ["failed-task"]
+    graph = {
+        failed.id: failed,
+        replanner.id: replanner,
+        downstream.id: downstream,
+        untouched.id: untouched,
+    }
+
+    event = make_replace_dependency(
+        "run-1",
+        old_dep_id="failed-task",
+        new_dep_ids=["replanner-task"],
+        task_ids=["downstream-task"],
+    )
+
+    root_id, budget, final_status = apply_replayed_event(
+        event=event,
+        graph=graph,
+        services=SimpleNamespace(),
+        root_id=None,
+    )
+
+    assert root_id is None
+    assert budget is None
+    assert final_status is None
+    assert graph["downstream-task"].deps == ["setup-task", "replanner-task"]
+    assert graph["untouched-task"].deps == ["failed-task"]

@@ -72,6 +72,23 @@ class Executor:
             # TaskCenter without the hook — older tests or stubs.
             pass
 
+    async def _task_status_value(self, task_id: str) -> str | None:
+        tc = self.team_run.task_center
+        task = None
+        get_task = getattr(tc, "get_task", None)
+        if get_task is not None:
+            try:
+                maybe_task = get_task(task_id)
+                task = await maybe_task if isinstance(maybe_task, Awaitable) else maybe_task
+            except Exception:
+                logger.debug("failed to read task status for %s", task_id, exc_info=True)
+        if task is None:
+            graph = getattr(tc, "graph", None)
+            if isinstance(graph, dict):
+                task = graph.get(task_id)
+        status = getattr(task, "status", None)
+        return getattr(status, "value", status)
+
     async def _run_parent_summary_trigger(self, parent_id: str) -> None:
         """Drive the parent-summary external trigger with bounded retries.
 
@@ -252,6 +269,11 @@ class Executor:
         try:
             await runner_task
         except asyncio.CancelledError:
+            if not self.team_run.cancel_event.is_set():
+                status = await self._task_status_value(task.id)
+                if status == "cancelled":
+                    logger.info("Worker task %s was cancelled by graph transition", task.id)
+                    return
             raise
         except GraphInvariantViolation:
             raise

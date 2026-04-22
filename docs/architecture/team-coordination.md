@@ -72,7 +72,7 @@ Terminal statuses are `done`, `failed`, `cancelled`, and `request_replan`.
 - Planner and replanner `new_tasks` items carry `description` as a required short, planner-authored label; full instructions belong in `spec`.
 - Planner and replanner submissions carry structured task JSON only. They do not author free-text outcome summaries; their `Initial Plan` / `Initial Replan` JSON is stored on the parent detail, and `parent_summarizer` later writes the outcome roll-up.
 - Ready tasks dispatch as soon as dependencies are satisfied.
-- Scope freshness checks protect terminal submissions from stale context.
+- Scope change auto-checks warn workers when another agent edits overlapping paths.
 - Developer and validator lanes read Task Center notes and use CI ownership/diagnostic tools before falling back to raw sandbox file reads.
 - `daytona_codeact` is runtime-only on coordinated lanes. File edits go through `daytona_edit_file`, `daytona_write_file`, or `daytona_rename_symbol`; shell/Python edit side channels such as `sed -i`, `tee`, output redirects, and inline Python writes are rejected before sandbox execution. The global CodeAct prehook also rejects stderr suppression such as `2>/dev/null`, `&>/dev/null`, and `>/dev/null 2>&1` so runtime errors remain visible.
 - Every team task exits through a terminal submission tool: `submit_plan`, `submit_replan`, or `submit_task_summary`.

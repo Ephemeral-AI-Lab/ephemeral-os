@@ -153,7 +153,7 @@ async def test_submit_plan_resolves_roster_role_hints():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_allows_stale_freshness_context():
+async def test_submit_plan_allows_arbiter_scope_change_context():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
