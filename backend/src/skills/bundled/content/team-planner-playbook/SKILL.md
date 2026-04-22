@@ -13,6 +13,8 @@ Team plans are hierarchical: each planner submits a local child DAG, and another
 
 Prefer another child `team_planner` when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration beyond your assigned layer. Your job is top-down routing for this layer, not exhaustive single-layer discovery.
 
+Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, prefer routing broad families to another child `team_planner` when depth allows. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface.
+
 Depth rules:
 
 - Read the Planning depth section in your user prompt before deciding whether to create child planners.
@@ -108,7 +110,7 @@ Steps:
 1. Merge own task detail, parent plan, dependency summaries, CI/symbol checks, and scout notes into one owner ledger.
 2. Drop exact files disproved by live evidence; use the nearest stable production boundary when needed.
 3. Split exact owners into `developer` lanes.
-4. Use another child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive current-layer exploration.
+4. Use another child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration.
 5. Add `validator` lanes only when a distinct verification owner is useful.
 6. When a validator is terminal, make it depend on every same-payload terminal non-validator id it validates, including child planner ids.
 7. Add other `deps` only for real output ordering, known same-file edit ordering, or child `team_planner` sequencing when the id is in this same payload.
@@ -138,7 +140,7 @@ Steps:
 3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
 4. Put owner evidence, dependency context, and uncertainty in `2. Task Details:`.
 5. Put concrete test-suite expectations in `3. Acceptance Criteria:`.
-6. Use `deps` only for valid same-payload ids.
+6. Use `deps` only for valid same-payload ids. Overlapping `scope_paths` between sibling tasks are allowed — the runtime uses OCC to resolve concurrent edits to the same file, so do not invent dependencies, narrow scopes, or merge developer lanes just to keep `scope_paths` disjoint.
 7. For each terminal validator, compute the full set of same-payload non-validator ids it validates, including every `team_planner` id, and put that complete set in `deps`.
 8. Check the Terminal Tool Contract below.
 9. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.

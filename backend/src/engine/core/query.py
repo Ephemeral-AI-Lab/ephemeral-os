@@ -39,7 +39,6 @@ from engine.runtime.background_dispatch import launch_and_collect_bg_events
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.background_tasks import (
     append_and_emit_reminder,
-    build_background_reminder,
     deliver_completed_background_task,
 )
 from prompt.prompt_report_recorder import PromptReportRecorder
@@ -133,14 +132,6 @@ def _should_defer_stream_tool_dispatch(
         return False
 
     return _defer
-
-# Backward-compatibility aliases for internal test imports
-async def _execute_tool_call(*args: Any, **kwargs: Any) -> ToolResultBlock:
-    from tools.core.tool_execution import execute_tool_call
-
-    return await execute_tool_call(*args, **kwargs)
-_build_background_reminder = build_background_reminder
-
 
 # ---------------------------------------------------------------------------
 # Scope-change auto-check

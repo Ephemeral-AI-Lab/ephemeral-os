@@ -218,11 +218,25 @@ class LspClient:
 
     def invalidate(self, file_path: str) -> None:
         """Invalidate all cached results for a file."""
+        resolved_path = self._resolve_path(file_path)
+        candidates = {str(file_path), resolved_path}
+        if self._workspace_root:
+            try:
+                relative_path = Path(resolved_path).relative_to(self._workspace_root)
+            except ValueError:
+                pass
+            else:
+                candidates.add(str(relative_path))
+                candidates.add(relative_path.as_posix())
+
         with self._cache_lock:
-            to_remove = [k for k in self._cache if file_path in k]
+            to_remove = [
+                k
+                for k in self._cache
+                if any(candidate and candidate in k for candidate in candidates)
+            ]
             for k in to_remove:
                 del self._cache[k]
-        resolved_path = self._resolve_path(file_path)
         with self._line_cache_lock:
             stale = [key for key in self._line_cache if key[0] == resolved_path]
             for key in stale:
@@ -628,9 +642,45 @@ class LspClient:
 
     def _python_diagnostics(self, file_path: str) -> list[Diagnostic]:
         """Check Python syntax."""
+        resolved_path = self._resolve_path(file_path)
+        if self._sandbox:
+            path_literal = json.dumps(resolved_path)
+            script = (
+                "import json\n"
+                "from pathlib import Path\n"
+                f"path = {path_literal}\n"
+                "try:\n"
+                "    content = Path(path).read_text(encoding='utf-8')\n"
+                "    compile(content, path, 'exec')\n"
+                "except FileNotFoundError:\n"
+                "    print(json.dumps({'type': 'missing'}))\n"
+                "except SyntaxError as exc:\n"
+                "    print(json.dumps({\n"
+                "        'type': 'syntax_error',\n"
+                "        'line': exc.lineno or 0,\n"
+                "        'character': (exc.offset or 1) - 1,\n"
+                "        'message': str(exc.msg),\n"
+                "    }))\n"
+                "else:\n"
+                "    print(json.dumps({'type': 'clean'}))\n"
+            )
+            raw = self._decode_json(self._run_python_script(script))
+            if not isinstance(raw, dict) or raw.get("type") != "syntax_error":
+                return []
+            return [
+                Diagnostic(
+                    file_path=file_path,
+                    line=int(raw.get("line", 0) or 0),
+                    character=int(raw.get("character", 0) or 0),
+                    severity=DiagnosticSeverity.ERROR,
+                    message=str(raw.get("message", "")),
+                    source="python",
+                )
+            ]
+
         try:
-            content = Path(file_path).read_text(encoding="utf-8")
-            compile(content, file_path, "exec")
+            content = Path(resolved_path).read_text(encoding="utf-8")
+            compile(content, resolved_path, "exec")
             return []
         except FileNotFoundError:
             return []

@@ -85,6 +85,7 @@ Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_block
 
 - Preserve downstream validators/dependents already rewired to this replanner.
 - Leave live sibling scopes alone unless you cancel a stale direct sibling.
+- The failed/original `request_replan` task can appear as a same-parent sibling in `read_task_graph()`; it is never stale sibling work and must stay out of `cancel_ids`.
 - Do not create a verification-only child for red acceptance evidence when the owning repair belongs to a preserved live sibling or downstream validator.
 - Drop same-scope continuation candidates only when they lack a root-cause trace. For `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, same-scope corrective tasks are valid when each task is tied to a named production mechanism and repair location.
 - Drop candidates whose only evidence is a benchmark test path, test import, or test-derived helper.

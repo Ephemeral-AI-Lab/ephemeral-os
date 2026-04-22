@@ -130,6 +130,8 @@ Prove the latest edit. Do not claim success from stale or partial evidence.
 6. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
 7. Record command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 
+Clean diagnostics are not acceptance verification. If the required runtime command was not run after the final edit, including because the budget is nearly exhausted, the evidence is absent and the terminal summary must be `type="request_replan"`, not `type="success"`.
+
 Exit with: green evidence → Stage 6 (`type="success"`); any red, stale, or absent evidence → Stage 5.
 
 ## 5. Root cause analysis
@@ -213,4 +215,4 @@ For `type="request_replan"`, `content` must include:
 
 Use `scope_expansion` only when the required production repair is clearly a different owner or too broad/ambiguous for this lane, not merely because a developer write/copy was outside `scope_paths` or received a system notification. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before this task can succeed. Use `unresolved_blocker` when verification, diagnostics, tooling, budget, or root-cause tracing is still blocked but no different owner/scope is proven.
 
-Use `type="success"` only when the latest required verification passed. Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/code-path, broader-scope, or too-complex verification.
+Use `type="success"` only when the latest required verification passed. A summary that says verification was not run, was skipped due to budget, or is supported only by diagnostics is not a success summary. Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/code-path, broader-scope, or too-complex verification.

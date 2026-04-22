@@ -15,7 +15,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 
 ## Never Cancel
 
-- The failed task or original `request_replan` task.
+- The failed task or original `request_replan` task, even when `read_task_graph()` shows it as a same-parent sibling.
 - This replanner.
 - `done`, `failed`, or `cancelled` tasks.
 - Nested descendants or dependents directly; cancel the stale sibling root and let cascade handle them.

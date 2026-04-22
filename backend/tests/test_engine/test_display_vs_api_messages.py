@@ -4,7 +4,7 @@ Two invariants are verified:
 
 1. ``compact_for_api`` is a pure function — it never mutates its input
    ``display_messages`` list, even when compaction kicks in.
-2. The query loop's ``_build_background_reminder`` produces a regular
+2. ``build_background_reminder`` produces a regular
    ``ConversationMessage`` that can be appended to the durable history.
 
 The compaction-path tests use a stub API client so no network calls are
@@ -28,8 +28,7 @@ from compaction.compactor import (
     reduce_for_api,
     _sanitize_tool_sequence,
 )
-from engine.core.query import _build_background_reminder
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.runtime.background_tasks import BackgroundTaskManager, build_background_reminder
 from message.messages import (
     BackgroundTaskStateBlock,
     ConversationMessage,
@@ -368,7 +367,7 @@ class TestBuildBackgroundReminder:
 
     def test_returns_none_when_no_pending_tasks(self) -> None:
         mgr = BackgroundTaskManager()
-        assert _build_background_reminder(mgr) is None
+        assert build_background_reminder(mgr) is None
 
     @pytest.mark.asyncio
     async def test_includes_task_id_and_progress(self) -> None:
@@ -382,7 +381,7 @@ class TestBuildBackgroundReminder:
         # Append a progress line so get_reminder_diff returns something.
         mgr.append_progress("bg_1", "halfway there")
 
-        msg = _build_background_reminder(mgr)
+        msg = build_background_reminder(mgr)
         assert msg is not None
         # Reminder is carried as a BackgroundTaskStateBlock, not user text.
         assert msg.text == ""
@@ -398,7 +397,7 @@ class TestBuildBackgroundReminder:
         assert "<background-task" in api_param["content"][0]["text"]
 
         # Cursor advanced — second call has no new lines.
-        msg2 = _build_background_reminder(mgr)
+        msg2 = build_background_reminder(mgr)
         assert msg2 is not None
         assert "halfway there" not in msg2.background_task_state_text
         assert "No new output" in msg2.background_task_state_text
@@ -416,7 +415,7 @@ class TestBuildBackgroundReminder:
         mgr.launch("bg_1", "tool", {}, _slow_coro())
         display: list[ConversationMessage] = [_user("hi")]
 
-        reminder = _build_background_reminder(mgr)
+        reminder = build_background_reminder(mgr)
         assert reminder is not None
         display.append(reminder)
 
@@ -765,7 +764,7 @@ class TestCompactForApiState:
 
 
 # ---------------------------------------------------------------------------
-# _build_background_reminder — multi-task and lifecycle behaviour
+# build_background_reminder — multi-task and lifecycle behaviour
 # ---------------------------------------------------------------------------
 
 
@@ -781,7 +780,7 @@ class TestBuildReminderEdgeCases:
         mgr.append_progress("bg_1", "alpha")
         mgr.append_progress("bg_2", "beta")
 
-        msg = _build_background_reminder(mgr)
+        msg = build_background_reminder(mgr)
         assert msg is not None
         text = msg.background_task_state_text
         assert "bg_1" in text and "tool_a" in text and "alpha" in text
@@ -802,7 +801,7 @@ class TestBuildReminderEdgeCases:
         # Let the quick task finish.
         await asyncio.sleep(0.05)
 
-        msg = _build_background_reminder(mgr)
+        msg = build_background_reminder(mgr)
         assert msg is not None
         text = msg.background_task_state_text
         assert "bg_running" in text
@@ -817,10 +816,10 @@ class TestBuildReminderEdgeCases:
         mgr.launch("bg_x", "tool", {}, _slow_coro())
         # Don't append any progress lines. The startup-stamp line counts as
         # initial progress, so the FIRST reminder will include it.
-        first = _build_background_reminder(mgr)
+        first = build_background_reminder(mgr)
         assert first is not None
         # Cursor advanced — second call has nothing new.
-        second = _build_background_reminder(mgr)
+        second = build_background_reminder(mgr)
         assert second is not None
         assert "No new output" in second.background_task_state_text
 

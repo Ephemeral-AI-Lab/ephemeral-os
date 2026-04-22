@@ -79,6 +79,9 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "outside-scope system notification" in rendered
     assert "that notification is not a stop condition" in rendered
     assert "clearly a different owner or too broad/ambiguous for this lane" in rendered
+    assert "latest required runtime verification command was run after the final edit and passed" in rendered
+    assert "not run due to budget" in rendered
+    assert "means `type=\"request_replan\"`, not success" in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
@@ -211,6 +214,12 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "outside-scope system notification" in ctx.user_message
     assert "that notification is not a stop condition" in ctx.user_message
     assert "clearly a different owner or too broad/ambiguous for this lane" in ctx.user_message
+    assert (
+        "latest required runtime verification command was run after the final edit and passed"
+        in ctx.user_message
+    )
+    assert "not run due to budget" in ctx.user_message
+    assert "means `type=\"request_replan\"`, not success" in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message

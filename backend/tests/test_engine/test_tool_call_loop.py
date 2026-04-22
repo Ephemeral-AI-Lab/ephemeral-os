@@ -13,7 +13,6 @@ from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBloc
 from engine.core.query import (
     QueryContext,
     QueryExitReason,
-    _execute_tool_call,
     _scope_change_auto_check,
     run_query,
 )
@@ -40,6 +39,7 @@ from tools.core.base import (
     run_tool_safely,
 )
 from tools.core.decorator import tool
+from tools.core.tool_execution import execute_tool_call
 from tools.task_center.toolkit import ReadTaskDetailsTool
 
 
@@ -365,7 +365,7 @@ async def test_execute_tool_call_ignores_stale_next_tool_guard_metadata(tmp_path
         terminal_tools={"submit_plan"},
     )
 
-    result = await _execute_tool_call(
+    result = await execute_tool_call(
         context,
         "echo",
         "tool-1",
@@ -395,7 +395,7 @@ async def test_execute_tool_call_does_not_require_expected_next_tool(tmp_path: P
         terminal_tools={"submit_plan"},
     )
 
-    result = await _execute_tool_call(
+    result = await execute_tool_call(
         context,
         "echo",
         "tool-1",
@@ -416,7 +416,7 @@ async def test_execute_tool_call_strips_background_control_field_for_foreground_
     client = FakeApiClient([_text_reply()])
     context = _make_context(client, registry, tmp_path)
 
-    result = await _execute_tool_call(
+    result = await execute_tool_call(
         context,
         "strict_echo",
         "tool-1",

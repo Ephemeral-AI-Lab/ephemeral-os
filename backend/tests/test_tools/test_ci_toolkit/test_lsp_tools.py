@@ -85,6 +85,25 @@ def test_diagnostics_severity_without_value_attr():
     assert data["diagnostics"][0]["severity"] == "warning"
 
 
+def test_lsp_diagnostics_cache_invalidates_relative_query_with_absolute_path(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "pkg" / "mod.py"
+    source.parent.mkdir()
+    source.write_text("value = 1\n", encoding="utf-8")
+    client = LspClient(workspace_root=str(tmp_path))
+
+    assert client.diagnostics("pkg/mod.py") == []
+
+    source.write_text("def broken(:\n", encoding="utf-8")
+    client.invalidate(str(source))
+
+    diagnostics = client.diagnostics("pkg/mod.py")
+    assert len(diagnostics) == 1
+    assert diagnostics[0].source == "python"
+    assert diagnostics[0].message == "invalid syntax"
+
+
 # ---------------------------------------------------------------------------
 # _resolve_column tests
 # ---------------------------------------------------------------------------

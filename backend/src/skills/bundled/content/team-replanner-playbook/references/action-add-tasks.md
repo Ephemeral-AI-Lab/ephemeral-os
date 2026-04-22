@@ -30,8 +30,8 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
 
 1. For each candidate task, name the failure mode and root-cause trace entry it addresses.
 2. Keep `cancel_ids=[]`.
-3. Use local deps only for real output ordering; do not add deps for mere scope overlap.
-4. Prefer one developer per exact production file unless disjoint edit regions are proven.
+3. Use local deps only for real output ordering; do not add deps for mere scope overlap. Overlapping `scope_paths` between sibling developers are allowed — the runtime uses OCC to resolve concurrent edits to the same file, so do not invent dependencies, narrow scopes, or merge tasks just to avoid file overlap.
+4. It is fine for two developers to own the same production file when their work is logically distinct; OCC will reconcile concurrent edits. Only merge into one developer task when the seams are tightly coupled enough that splitting them would force one author to reason about the other's in-flight changes.
 5. Tell corrective developers to run `ci_diagnostics(file_path=...)` first.
 6. For moves/renames, name `daytona_move_file`; for pure removals, `daytona_delete_file` or CodeAct is acceptable.
 7. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local repair ids it verifies.

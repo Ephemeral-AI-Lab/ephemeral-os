@@ -2,11 +2,11 @@
 (Phase 1 Step 3).
 
 The engine loop is integration-heavy, so these tests target the small,
-pure helpers in :mod:`engine.core.query`:
+pure helpers around query budgeting and tool execution:
 
 - :func:`_budget_warning_text` — fires only at the threshold and only
   while budget remains.
-- ``_execute_tool_call`` — counts every dispatch attempt and rejects
+- ``execute_tool_call`` — counts every dispatch attempt and rejects
   with a structured error once the cap is reached.
 """
 
@@ -18,7 +18,8 @@ import pytest
 
 from agents.types import AgentDefinition
 from engine.core.notifications import build_budget_warning
-from engine.core.query import QueryContext, _execute_tool_call
+from engine.core.query import QueryContext
+from tools.core.tool_execution import execute_tool_call
 from tools.core.runtime import ExecutionMetadata
 
 
@@ -120,6 +121,9 @@ def test_budget_warning_guides_validator_to_wrap_up():
 def test_budget_warning_default_success_summary_requires_evidence_and_risk():
     ctx = _ctx(100, 75)
     _, event = build_budget_warning(ctx)
+    assert "diagnostics-only" in event.text
+    assert "verification was not run due to budget" in event.text
+    assert "latest required verification passed after the final edit" in event.text
     assert "behavior/API delta" in event.text
     assert "exact commands and exit codes" in event.text
     assert "Residual Risk line" in event.text
@@ -136,13 +140,13 @@ def test_budget_warning_silent_when_exhausted():
     assert build_budget_warning(_ctx(5, 5)) is None
 
 
-# ---------- _execute_tool_call budget enforcement ----------------------------
+# ---------- execute_tool_call budget enforcement -----------------------------
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_rejects_when_over_budget():
     ctx = _ctx(limit=2, used=2)
-    result = await _execute_tool_call(ctx, "any_tool", "id1", {})
+    result = await execute_tool_call(ctx, "any_tool", "id1", {})
     assert result.is_error
     assert "tool_call_limit exceeded" in result.content
     # Counter is NOT advanced past the cap on rejection.
@@ -156,7 +160,7 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
     # The mock tool registry returns None → "Unknown tool" path. The
     # counter should still have incremented because dispatch was attempted.
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    result = await _execute_tool_call(ctx, "ghost", "id1", {})
+    result = await execute_tool_call(ctx, "ghost", "id1", {})
     assert result.is_error
     assert "Unknown tool" in result.content
     assert ctx.tool_calls_used == 1
@@ -166,7 +170,7 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
 async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
     ctx = _ctx(limit=2, used=2, terminal_tools={"submit_plan"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    result = await _execute_tool_call(ctx, "submit_plan", "id1", {})
+    result = await execute_tool_call(ctx, "submit_plan", "id1", {})
 
     assert result.is_error
     assert "Unknown tool" in result.content
@@ -179,7 +183,7 @@ async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
     ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_summary"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
 
-    result = await _execute_tool_call(ctx, "daytona_read_file", "id1", {})
+    result = await execute_tool_call(ctx, "daytona_read_file", "id1", {})
 
     assert result.is_error
     assert "terminal call reserved" in result.content
@@ -191,6 +195,6 @@ async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
 async def test_execute_tool_call_unlimited_budget_does_not_count():
     ctx = _ctx(limit=None, used=0)
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    await _execute_tool_call(ctx, "ghost", "id1", {})
+    await execute_tool_call(ctx, "ghost", "id1", {})
     # ``None`` limit short-circuits the budget gate; counter stays put.
     assert ctx.tool_calls_used == 0

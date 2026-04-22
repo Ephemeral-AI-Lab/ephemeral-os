@@ -26,6 +26,8 @@ Scope guard: `scope_paths` are the primary ownership surface, not a hard mutatio
 
 For any `type="request_replan"` terminal summary, make the first non-blank content line exactly `replan_trigger: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`, then include the root-cause JSON trace and the exact failing command or diagnostic.
 
+Use `type="success"` only when the latest required runtime verification command was run after the final edit and passed. Diagnostics-only evidence, stale evidence, skipped commands, or “not run due to budget” means `type="request_replan"`, not success.
+
 ```markdown
 {{task_spec}}
 ```

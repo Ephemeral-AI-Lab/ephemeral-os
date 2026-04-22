@@ -11,7 +11,7 @@ import time
 from types import SimpleNamespace
 
 from code_intelligence.lsp.client import LspClient
-from code_intelligence.types import SymbolKind
+from code_intelligence.types import DiagnosticSeverity, SymbolKind
 
 
 def _decode_sandbox_python_payload(command: str) -> str:
@@ -144,6 +144,68 @@ def test_resolve_path_leaves_absolute_unchanged() -> None:
 def test_resolve_path_no_workspace_root_keeps_relative() -> None:
     lsp = LspClient(workspace_root="")
     assert lsp._resolve_path("dask/core.py") == "dask/core.py"
+
+
+def test_python_diagnostics_resolves_relative_paths(tmp_path) -> None:
+    package = tmp_path / "dask"
+    package.mkdir()
+    target = package / "config.py"
+    target.write_text("def broken(:\n    pass\n", encoding="utf-8")
+
+    lsp = LspClient(workspace_root=str(tmp_path))
+
+    diagnostics = lsp.diagnostics("dask/config.py")
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].file_path == "dask/config.py"
+    assert diagnostics[0].line == 1
+    assert diagnostics[0].severity is DiagnosticSeverity.ERROR
+    assert "invalid syntax" in diagnostics[0].message
+
+
+def test_diagnostics_invalidation_matches_relative_and_absolute_paths(tmp_path) -> None:
+    package = tmp_path / "dask"
+    package.mkdir()
+    target = package / "config.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    lsp = LspClient(workspace_root=str(tmp_path))
+
+    assert lsp.diagnostics("dask/config.py") == []
+
+    target.write_text("def broken(:\n    pass\n", encoding="utf-8")
+    lsp.invalidate(str(target))
+    diagnostics = lsp.diagnostics("dask/config.py")
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].line == 1
+    assert "invalid syntax" in diagnostics[0].message
+
+
+def test_sandbox_python_diagnostics_runs_inside_sandbox(monkeypatch) -> None:
+    captured_scripts: list[str] = []
+    lsp = LspClient(
+        workspace_root="/workspace",
+        sandbox=SimpleNamespace(process=SimpleNamespace(exec=lambda *_args, **_kwargs: None)),
+    )
+
+    def _capture(script: str) -> str:
+        captured_scripts.append(script)
+        return (
+            '{"type":"syntax_error","line":1,"character":11,'
+            '"message":"invalid syntax"}'
+        )
+
+    monkeypatch.setattr(lsp, "_run_python_script", _capture)
+
+    diagnostics = lsp.diagnostics("dask/config.py")
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].file_path == "dask/config.py"
+    assert diagnostics[0].line == 1
+    assert diagnostics[0].character == 11
+    assert diagnostics[0].source == "python"
+    assert captured_scripts
+    assert "/workspace/dask/config.py" in captured_scripts[0]
 
 
 def test_sandbox_exec_runs_script_with_base64_pipe() -> None:

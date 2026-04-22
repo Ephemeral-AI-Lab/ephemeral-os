@@ -13,6 +13,8 @@ Team plans are hierarchical: each planner submits a local child DAG, and child `
 
 Prefer a child `team_planner` over more root scouting when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration. The root planner's job is top-down routing, not exhaustive single-layer discovery.
 
+Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, prefer routing broad families to child `team_planner` lanes when depth allows. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface.
+
 Depth rules:
 
 - Read the Planning depth section in your user prompt before deciding whether to create child planners.
@@ -105,7 +107,7 @@ Steps:
 1. Merge user evidence, CI/symbol checks, and scout notes into one owner ledger.
 2. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
 3. Split exact owners into `developer` lanes.
-4. Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive root-layer exploration.
+4. Use a child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration.
 5. Add `validator` lanes only when a distinct verification owner is useful.
 6. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
 7. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before root routing; otherwise route the uncertainty to a child `team_planner`.
@@ -131,7 +133,7 @@ Steps:
 1. Build one `new_tasks` JSON list from the decided DAG.
 2. Use repo-relative production `scope_paths` for every task, including validators.
 3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface. Put owner evidence and sequencing in `2. Task Details:`; put concrete test-suite expectations in `3. Acceptance Criteria:`.
-4. Use `deps` only for real output ordering, known same-file edit ordering, or a child `team_planner` id in this payload. Every `deps` entry must resolve to another id in this `new_tasks` list — root/entry planners have no pre-existing Task Center ids to reference.
+4. Use `deps` only for real output ordering or a child `team_planner` id in this payload. Every `deps` entry must resolve to another id in this `new_tasks` list — root/entry planners have no pre-existing Task Center ids to reference. Overlapping `scope_paths` between sibling developers are allowed — the runtime uses OCC to resolve concurrent edits to the same file, so do not invent serial deps, narrow scopes, or merge lanes just to keep `scope_paths` disjoint.
 5. For each terminal validator, compute the full set of same-payload non-validator ids it validates, including every `team_planner` id, and put that complete set in `deps`.
 6. Check the Terminal Tool Contract below.
 7. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.

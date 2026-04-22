@@ -85,6 +85,7 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>" in skill
     assert "Diagnostics decision: trivial_direct_replan" in skill
     assert "Diagnostics decision: deep_diagnostics" in skill
+    assert "it is never stale sibling work and must stay out of `cancel_ids`" in skill
     assert "Enumerate distinct trace-gap triplets in visible reasoning before any scout call" in skill
     assert '"target_paths": ["<one production path>"]' in skill
     assert "Keep failing tests in scout `context`, not `target_paths`" in skill
@@ -101,6 +102,7 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Final payload shape lives in `terminal-contract`" in action_cancel
     assert "separate verification lane" in action_cancel
     assert "local replacement ids it verifies" in action_cancel
+    assert "even when `read_task_graph()` shows it as a same-parent sibling" in action_cancel
     assert "Example terminal payload" not in action_add
     assert "Example terminal payload" not in action_cancel
     assert "numbered colon labels" not in action_add
@@ -157,12 +159,14 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
     assert "At the root level, explore only enough to identify defensible owner families" in skill
     assert "Do not try to fully decompose every region in one root payload" in skill
     assert "The root planner's job is top-down routing, not exhaustive single-layer discovery" in skill
+    assert "Clear owner names do not automatically mean direct developer lanes are best" in skill
+    assert "large benchmark/test-matrix work" in skill
     assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
     assert "When `current_depth + 2 <= max_depth`" in skill
     assert "When `current_depth + 2 > max_depth`" in skill
     assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
     assert (
-        "Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive root-layer exploration"
+        "Use a child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration"
         in skill
     )
     assert "route the uncertainty to a child `team_planner`" in skill
@@ -178,12 +182,14 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
     assert "Explore only enough at your current layer to separate exact owner work" in skill
     assert "Do not try to fully decompose every descendant task in one payload" in skill
     assert "Your job is top-down routing for this layer, not exhaustive single-layer discovery" in skill
+    assert "Clear owner names do not automatically mean direct developer lanes are best" in skill
+    assert "large benchmark/test-matrix work" in skill
     assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
     assert "When `current_depth + 2 <= max_depth`" in skill
     assert "When `current_depth + 2 > max_depth`" in skill
     assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
     assert (
-        "Use another child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive current-layer exploration"
+        "Use another child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration"
         in skill
     )
     assert "route the uncertainty to another child `team_planner`" in skill
@@ -218,6 +224,17 @@ def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
 
         assert "Do not omit a line because the answer is \"none\"" in skill
         assert '`Residual Risk:` with remaining risk, unverified surface, or "none"' in skill
+
+
+def test_developer_playbook_rejects_success_without_runtime_verification() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Clean diagnostics are not acceptance verification" in skill
+    assert "the required runtime command was not run after the final edit" in skill
+    assert "verification was not run, was skipped due to budget" in skill
+    assert "supported only by diagnostics is not a success summary" in skill
 
 
 def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
