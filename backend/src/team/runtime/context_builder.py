@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Iterable
 from message import ConversationMessage
 from prompt.user_prompt_templates import render_user_prompt_template
 from team.models import Task
-from team.runtime.tool_policy import default_terminal_tools_for_role
+from team.runtime.tool_policy import default_terminal_tools_by_role
 from tools.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -24,9 +24,10 @@ if TYPE_CHECKING:
 # Which tools are terminal is a team-level policy: the team decides when an agent's
 # job is done. The query loop exits when any of these tools are called.
 DEFAULT_TERMINAL_TOOLS: dict[str, set[str]] = {
-    role: default_terminal_tools_for_role(role)
-    for role in ("planner", "replanner", "developer", "reviewer", "explorer", "scout")
+    role: set(tools)
+    for role, tools in default_terminal_tools_by_role().items()
 }
+
 
 @dataclass
 class TeamAgentContext:

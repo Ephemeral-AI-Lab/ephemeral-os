@@ -69,6 +69,7 @@ class TeamRun:
         self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self.task_center = runtime_services.task_center
         self.task_center.set_cancel_running_task_callback(self.cancel_running_task)
+        self.task_center.set_fail_fast_callback(self.fail_fast)
         self.dispatch_queue = runtime_services.dispatch_queue
         self.budgets = self.task_center.budgets
         self.budget_state = self.task_center.budget_state

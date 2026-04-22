@@ -155,10 +155,10 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
 
     base = {
         "small":  {"max_depth": 4, "max_plan_size": 8,  "max_tasks": 24},
-        "medium": {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40},
-        "large":  {"max_depth": 6, "max_plan_size": 16, "max_tasks": 64},
-    }.get(size, {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40})
-    max_depth = min(int(base["max_depth"]), 6)
+        "medium": {"max_depth": 4, "max_plan_size": 12, "max_tasks": 40},
+        "large":  {"max_depth": 4, "max_plan_size": 16, "max_tasks": 64},
+    }.get(size, {"max_depth": 4, "max_plan_size": 12, "max_tasks": 40})
+    max_depth = int(base["max_depth"])
 
     # Keep each planner level inside the benchmark-size ceiling. When the
     # natural task set is wider than that, compress adjacent work into
@@ -205,6 +205,8 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"Repository: {instance.repo}\n"
         f"Working directory inside the sandbox: {repo_dir}\n"
         f"Base commit (already checked out): {instance.base_commit}\n\n"
+        f"Test command: {instance.test_cmds}\n"
+        f"Pass-To-Pass count: {len(instance.pass_to_pass)}\n\n"
         f"## Objective\n"
         f"Make the grading command pass by fixing the repository so the fail-to-pass "
         f"tests turn green without regressing the pass-to-pass coverage.\n\n"

@@ -298,6 +298,47 @@ async def test_replan_budget_exhaustion_cancels_active_sibling_runners():
 
 
 @pytest.mark.asyncio
+async def test_parent_summarizer_no_terminal_call_routes_to_fail_task(monkeypatch):
+    """A parent_summarizer with no terminal call must not spawn a replanner;
+    it must fail the summary task so the EAS parent can be failed and
+    fail-fast can terminate the run."""
+    task = Task(
+        id="summary-1",
+        team_run_id="test-run-001",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        scope_paths=[],
+        parent_id="planner-parent",
+        root_id="planner-parent",
+        agent_run_id="agent-run-1",
+        created_at=datetime.now(timezone.utc),
+        fired_by_task_id="planner-parent",
+    )
+    tc = FakeTaskCenter()
+    tc.request_replan = AsyncMock()
+    tc.fail_task = AsyncMock()
+
+    import agents.registry as registry
+    monkeypatch.setattr(
+        registry, "get_role",
+        lambda name: "parent_summarizer" if name == "parent_summarizer" else None,
+    )
+
+    team_run = FakeTeamRun(task_center=tc)
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+
+    await executor._dispatch(task, ReplanRequest(reason="Agent did not call a terminal submission tool."))
+
+    tc.fail_task.assert_awaited_once_with(task.id, "parent_summary_no_terminal_call")
+    tc.request_replan.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_fail_after_active_work_does_not_cancel_active_runners():
     """Graceful run failure stops new work while preserving active submissions."""
     sleeper = asyncio.create_task(asyncio.sleep(60))

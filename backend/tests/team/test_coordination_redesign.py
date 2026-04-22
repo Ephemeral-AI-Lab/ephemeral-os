@@ -14,7 +14,7 @@ from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
 from tools.submission.toolkit import SubmitPlanTool, SubmitReplanTool
-from external_trigger.parent_summary import _build_parent_summary_prompt
+from prompt.external_trigger_prompts import build_parent_summary_prompt as _build_parent_summary_prompt
 
 
 if get_definition("developer") is None:
@@ -843,11 +843,13 @@ def test_submit_replan_rejects_removed_expected_projection_argument():
 
 
 @pytest.mark.asyncio
-async def test_parent_summary_dispatcher_callback_fires_on_awaiting_summary():
-    """Planner with leaf children that terminate → dispatcher sees the parent id.
+async def test_parent_summary_task_is_injected_on_awaiting_summary():
+    """When a planner parent transitions to EAS, a dispatchable summary task
+    is injected instead of firing an external callback.
 
-    Uses the real TaskCenter + in-memory TaskStore variants so the callback
-    hook is exercised end-to-end inside the runtime path.
+    The injected task carries ``fired_by_task_id = parent.id`` and the
+    ``parent_summarizer`` agent role, so the normal Executor picks it up and
+    runs the summarizer through the standard team-agent path.
     """
     from team.task_center import TaskCenter
 
@@ -869,15 +871,6 @@ async def test_parent_summary_dispatcher_callback_fires_on_awaiting_summary():
         budget_state=BudgetState(),
     )
 
-    fired: list[str] = []
-
-    async def _cb(parent_id: str) -> None:
-        fired.append(parent_id)
-
-    tc.set_parent_summary_callback(_cb)
-
-    # Wire a planner parent with 2 leaf children directly into the in-memory
-    # graph via the TaskGraph. We skip the DB by intercepting store methods.
     parent = Task(
         id="planner-parent",
         team_run_id="run-1",
@@ -890,19 +883,554 @@ async def test_parent_summary_dispatcher_callback_fires_on_awaiting_summary():
     tc.store._tg.tasks[parent.id] = parent
 
     async def _fake_maybe_promote(child_id: str):
-        # Simulate the store awaiting-summary transition for the planner parent.
         parent.status = TaskStatus.EXPANDED_AWAITING_SUMMARY
         return [], ["planner-parent"]
 
+    inserted: list[Task] = []
+
+    async def _fake_insert_parent_summary_task(
+        *, parent_task: Task, summarizer_agent: str, objective: str
+    ) -> tuple[Task, bool]:
+        summary_task = Task(
+            id="summary-1",
+            team_run_id="run-1",
+            agent_name=summarizer_agent,
+            status=TaskStatus.READY,
+            objective=objective,
+            parent_id=parent_task.id,
+            depth=parent_task.depth + 1,
+            root_id=parent_task.root_id,
+            fired_by_task_id=parent_task.id,
+        )
+        tc.store._tg.tasks[summary_task.id] = summary_task
+        inserted.append(summary_task)
+        return summary_task, True
+
     tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
     tc.store.mark_done = AsyncMock(return_value=[])  # type: ignore[assignment]
+    tc.store.insert_parent_summary_task = _fake_insert_parent_summary_task  # type: ignore[assignment]
 
     await tc._mark_done_emit_promotions("child-id")
 
-    assert fired == ["planner-parent"], (
-        f"parent-summary callback should have fired once; fired={fired}"
-    )
+    assert len(inserted) == 1, f"expected one injected summary task, got {inserted!r}"
+    summary = inserted[0]
+    assert summary.agent_name == "parent_summarizer"
+    assert summary.fired_by_task_id == "planner-parent"
+    assert summary.parent_id == "planner-parent"
+    assert summary.status == TaskStatus.READY
+    assert "planner-parent" in summary.objective
     assert parent.status == TaskStatus.EXPANDED_AWAITING_SUMMARY
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_task_recovery_reuses_live_sidecar_without_budget():
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    budget_state = BudgetState(tasks_used=0)
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(max_tasks=0),
+        budget_state=budget_state,
+    )
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    existing_summary = Task(
+        id="summary-existing",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.READY,
+        objective="Summarize planner-parent",
+        parent_id="planner-parent",
+        depth=1,
+        root_id="planner-parent",
+        fired_by_task_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    tc.store._tg.tasks[existing_summary.id] = existing_summary
+
+    async def _unexpected_insert(*_args, **_kwargs):
+        raise AssertionError("existing parent-summary sidecar should be reused")
+
+    tc.store.insert_parent_summary_task = _unexpected_insert  # type: ignore[assignment]
+
+    await tc._ensure_parent_summary_task(parent.id)
+
+    assert budget_state.tasks_used == 0
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_task_creation_does_not_consume_user_task_budget():
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    budget_state = BudgetState(tasks_used=0)
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(max_tasks=0),
+        budget_state=budget_state,
+    )
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    inserted: list[Task] = []
+
+    async def _fake_insert_parent_summary_task(
+        *, parent_task: Task, summarizer_agent: str, objective: str
+    ) -> tuple[Task, bool]:
+        summary_task = Task(
+            id="summary-created",
+            team_run_id="run-1",
+            agent_name=summarizer_agent,
+            status=TaskStatus.READY,
+            objective=objective,
+            parent_id=parent_task.id,
+            depth=parent_task.depth + 1,
+            root_id=parent_task.root_id,
+            fired_by_task_id=parent_task.id,
+        )
+        tc.store._tg.tasks[summary_task.id] = summary_task
+        inserted.append(summary_task)
+        return summary_task, True
+
+    tc.store.insert_parent_summary_task = _fake_insert_parent_summary_task  # type: ignore[assignment]
+
+    await tc._ensure_parent_summary_task(parent.id)
+
+    assert [task.id for task in inserted] == ["summary-created"]
+    assert budget_state.tasks_used == 0
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_task_completion_finalizes_parent_and_posts_note():
+    """Completing a parent_summarizer summary task should post an
+    implementation/parent_summary note against the parent id and transition
+    the EAS parent to DONE.
+    """
+    from team.models import AgentResult
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+        scope_paths=["src/foo.py"],
+    )
+    summary_task = Task(
+        id="summary-1",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        parent_id="planner-parent",
+        depth=1,
+        root_id="planner-parent",
+        fired_by_task_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    tc.store._tg.tasks[summary_task.id] = summary_task
+
+    async def _fake_get_record(task_id: str):
+        if task_id == summary_task.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="running",
+                agent_name="parent_summarizer",
+            )
+        if task_id == parent.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="expanded_awaiting_summary",
+                agent_name="team_planner",
+            )
+        return None
+
+    async def _fake_mark_done(task_id: str):
+        if task_id == parent.id:
+            parent.status = TaskStatus.DONE
+        elif task_id == summary_task.id:
+            summary_task.status = TaskStatus.DONE
+        return []
+
+    async def _fake_maybe_promote(child_id: str):
+        return [], []
+
+    async def _noop_refresh():
+        return tc.store._tg.tasks
+
+    tc.store.get_record = _fake_get_record  # type: ignore[assignment]
+    tc.store.mark_done = _fake_mark_done  # type: ignore[assignment]
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+    tc.store.finalize_parent_summary = _fake_mark_done  # type: ignore[assignment]
+    tc.store.refresh_graph = _noop_refresh  # type: ignore[assignment]
+
+    result = AgentResult(summary="header\n- child-1 (dev, done): landed X")
+    await tc.complete_task(summary_task.id, result)
+
+    assert parent.status == TaskStatus.DONE
+    parent_summary_notes = [
+        n for n in tc.notes.snapshot()
+        if n.task_id == parent.id and "parent_summary" in (n.tags or [])
+    ]
+    assert len(parent_summary_notes) == 1
+    assert parent_summary_notes[0].agent_name == "parent_summarizer"
+    assert parent_summary_notes[0].content == result.summary
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_note_post_failure_fails_parent_and_fires_fail_fast():
+    from team.models import AgentResult
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    fail_fast_reasons: list[str] = []
+
+    async def _fake_fail_fast(reason: str) -> None:
+        fail_fast_reasons.append(reason)
+
+    tc.set_fail_fast_callback(_fake_fail_fast)
+
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    summary_task = Task(
+        id="summary-1",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        parent_id="planner-parent",
+        depth=1,
+        root_id="planner-parent",
+        fired_by_task_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    tc.store._tg.tasks[summary_task.id] = summary_task
+
+    async def _fake_get_record(task_id: str):
+        if task_id == summary_task.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="running",
+                agent_name="parent_summarizer",
+            )
+        if task_id == parent.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="expanded_awaiting_summary",
+                agent_name="team_planner",
+            )
+        return None
+
+    async def _fake_mark_done(task_id: str):
+        if task_id == parent.id:
+            parent.status = TaskStatus.DONE
+        elif task_id == summary_task.id:
+            summary_task.status = TaskStatus.DONE
+        return []
+
+    async def _fake_maybe_promote(child_id: str):
+        return [], []
+
+    async def _unexpected_finalize(task_id: str):
+        raise AssertionError(f"parent finalized without durable summary: {task_id}")
+
+    async def _fake_mark_terminal(task_id: str, status: str, reason: str):
+        if task_id == parent.id and status == "failed":
+            parent.status = TaskStatus.FAILED
+            parent.failure_reason = reason
+
+    async def _noop_refresh():
+        return tc.store._tg.tasks
+
+    async def _failing_note_post(_note):
+        raise RuntimeError("note store unavailable")
+
+    tc.store.get_record = _fake_get_record  # type: ignore[assignment]
+    tc.store.mark_done = _fake_mark_done  # type: ignore[assignment]
+    tc.store.mark_terminal = _fake_mark_terminal  # type: ignore[assignment]
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+    tc.store.finalize_parent_summary = _unexpected_finalize  # type: ignore[assignment]
+    tc.store.refresh_graph = _noop_refresh  # type: ignore[assignment]
+    tc.notes.post = _failing_note_post  # type: ignore[assignment]
+
+    await tc.complete_task(summary_task.id, AgentResult(summary="child roll-up"))
+
+    assert summary_task.status == TaskStatus.DONE
+    assert parent.status == TaskStatus.FAILED
+    assert parent.failure_reason == "parent_summary_note_post_failed"
+    assert fail_fast_reasons == ["parent_summary_note_post_failed"]
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_empty_fails_parent_and_fires_fail_fast():
+    """Empty summary content → EAS parent → failed + fail_fast invoked."""
+    from team.models import AgentResult
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    fail_fast_reasons: list[str] = []
+
+    async def _fake_fail_fast(reason: str) -> None:
+        fail_fast_reasons.append(reason)
+
+    tc.set_fail_fast_callback(_fake_fail_fast)
+
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    summary_task = Task(
+        id="summary-1",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        parent_id="planner-parent",
+        depth=1,
+        root_id="planner-parent",
+        fired_by_task_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    tc.store._tg.tasks[summary_task.id] = summary_task
+
+    async def _fake_get_record(task_id: str):
+        if task_id == summary_task.id:
+            return SimpleNamespace(
+                id=task_id, status="running", agent_name="parent_summarizer"
+            )
+        if task_id == parent.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="expanded_awaiting_summary",
+                agent_name="team_planner",
+            )
+        return None
+
+    async def _fake_mark_done(task_id: str):
+        if task_id == summary_task.id:
+            summary_task.status = TaskStatus.DONE
+        return []
+
+    async def _fake_mark_terminal(task_id: str, status: str, reason: str):
+        if task_id == parent.id and status == "failed":
+            parent.status = TaskStatus.FAILED
+            parent.failure_reason = reason
+
+    async def _fake_maybe_promote(child_id: str):
+        return [], []
+
+    async def _noop_refresh():
+        return tc.store._tg.tasks
+
+    tc.store.get_record = _fake_get_record  # type: ignore[assignment]
+    tc.store.mark_done = _fake_mark_done  # type: ignore[assignment]
+    tc.store.mark_terminal = _fake_mark_terminal  # type: ignore[assignment]
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+    tc.store.refresh_graph = _noop_refresh  # type: ignore[assignment]
+
+    await tc.complete_task(summary_task.id, AgentResult(summary=""))
+
+    assert parent.status == TaskStatus.FAILED
+    assert parent.failure_reason == "parent_summary_empty"
+    assert fail_fast_reasons == ["parent_summary_empty"]
+    # No parent_summary note should be posted for an empty summary.
+    assert not any(
+        "parent_summary" in (n.tags or []) for n in tc.notes.snapshot()
+    )
+
+
+@pytest.mark.asyncio
+async def test_parent_summary_leaf_failure_fails_parent_and_fires_fail_fast():
+    """Summary task leaf failure → EAS parent → failed + fail_fast invoked."""
+    from team.task_center import TaskCenter
+
+    class _FakeSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return None
+
+                async def __aexit__(self_inner, *a):
+                    return False
+
+            return _Ctx()
+
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    fail_fast_reasons: list[str] = []
+
+    async def _fake_fail_fast(reason: str) -> None:
+        fail_fast_reasons.append(reason)
+
+    tc.set_fail_fast_callback(_fake_fail_fast)
+
+    parent = Task(
+        id="planner-parent",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
+        objective="plan",
+        depth=0,
+        root_id="planner-parent",
+    )
+    summary_task = Task(
+        id="summary-1",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        parent_id="planner-parent",
+        depth=1,
+        root_id="planner-parent",
+        fired_by_task_id="planner-parent",
+    )
+    tc.store._tg.tasks[parent.id] = parent
+    tc.store._tg.tasks[summary_task.id] = summary_task
+
+    async def _fake_store_fail_task(task_id: str, reason: str):
+        if task_id == summary_task.id:
+            summary_task.status = TaskStatus.FAILED
+            summary_task.failure_reason = reason
+
+    async def _fake_get_record(task_id: str):
+        if task_id == parent.id:
+            return SimpleNamespace(
+                id=task_id,
+                status="expanded_awaiting_summary",
+                agent_name="team_planner",
+            )
+        return None
+
+    async def _fake_mark_terminal(task_id: str, status: str, reason: str):
+        if task_id == parent.id and status == "failed":
+            parent.status = TaskStatus.FAILED
+            parent.failure_reason = reason
+
+    async def _fake_maybe_promote(child_id: str):
+        return [], []
+
+    async def _noop_refresh():
+        return tc.store._tg.tasks
+
+    tc.store.fail_task = _fake_store_fail_task  # type: ignore[assignment]
+    tc.store.get_record = _fake_get_record  # type: ignore[assignment]
+    tc.store.mark_terminal = _fake_mark_terminal  # type: ignore[assignment]
+    tc.store.maybe_promote_expanded_parent = _fake_maybe_promote  # type: ignore[assignment]
+    tc.store.refresh_graph = _noop_refresh  # type: ignore[assignment]
+    tc._transitions._refresh_graph_fn = _noop_refresh  # type: ignore[attr-defined]
+
+    await tc.fail_task(summary_task.id, "worker_crash")
+
+    assert summary_task.status == TaskStatus.FAILED
+    assert parent.status == TaskStatus.FAILED
+    assert parent.failure_reason == "parent_summary_task_failed"
+    assert fail_fast_reasons == ["parent_summary_task_failed"]
 
 
 def test_parent_summary_prompt_lists_completed_children_to_read_first():
@@ -928,10 +1456,10 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
     )
     prompt = _build_parent_summary_prompt(parent, [child])
 
-    assert "# Parent summarizer trigger" in prompt
+    assert "# Parent summarizer task" in prompt
     assert "All direct children of the parent task are terminal" in prompt
     assert "## Parent task id\nplanner-parent" in prompt
-    assert "## Completed direct child task ids to read\n- dev-child" in prompt
+    assert "## Terminal direct child task ids to read\n- dev-child" in prompt
     assert 'read_task_details(task_id="planner-parent")' in prompt
     assert "read_task_details(task_id=...)" in prompt
     assert "Only after every listed child has been read" in prompt
@@ -1027,6 +1555,40 @@ async def test_build_query_context_planner_terminal_tools():
     )
 
     assert ctx.tool_metadata["terminal_tools"] == {"submit_plan"}
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_parent_summarizer_terminal_tools():
+    task = Task(
+        id="summary-task",
+        team_run_id="run-1",
+        agent_name="parent_summarizer",
+        status=TaskStatus.READY,
+        objective="summarize parent task",
+        fired_by_task_id="planner-parent",
+    )
+    task_center = _AsyncTaskCenterStub()
+    team_run = SimpleNamespace(
+        id="run-1",
+        sandbox_id="sbx-1",
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        task_center=task_center,
+        arbiter=None,
+        budgets=None,
+        budget_state=None,
+        root_task_id="planner-task",
+        roster={"parent_summarizer": ["parent_summarizer"]},
+        team_definition=None,
+    )
+
+    ctx = await build_query_context(
+        SimpleNamespace(role="parent_summarizer"),
+        team_run,
+        task,
+    )
+
+    assert ctx.tool_metadata["terminal_tools"] == {"submit_task_summary"}
 
 
 @pytest.mark.asyncio

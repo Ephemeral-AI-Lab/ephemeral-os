@@ -34,9 +34,13 @@ class _FakeTaskCenter:
         self._notes = []
         self._events = NullTeamRunStore()
         self._cancel_running_task_callback = None
+        self._fail_fast_callback = None
 
     def set_cancel_running_task_callback(self, callback) -> None:
         self._cancel_running_task_callback = callback
+
+    def set_fail_fast_callback(self, callback) -> None:
+        self._fail_fast_callback = callback
 
 
 class _FakeDispatchQueue:

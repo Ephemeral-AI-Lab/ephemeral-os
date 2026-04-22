@@ -1,4 +1,4 @@
-"""Prompt templates for external-trigger helper agents."""
+"""Prompt templates for constrained Task Center helper agents."""
 
 from __future__ import annotations
 
@@ -38,33 +38,22 @@ DEFAULT_TC_NOTE_SYSTEM_PROMPT = (
 )
 
 
-DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT = (
-    "You summarize the outcome of an expandable (planner/replanner) task "
-    "after every direct child has reached a terminal state. The trigger gives "
-    "you the parent task id and completed direct child task ids; read those "
-    "task details first, including plan/replan JSON and final summaries, then "
-    "submit one evidence-rich roll-up: what was planned, each child's status, "
-    "what landed, what was replanned or dropped, and open risk. Do not invent "
-    "next steps."
-)
-
-
 def build_parent_summary_prompt(parent: Any, children: list[Any]) -> str:
     """Build the user prompt text fed to the parent summarizer agent."""
     lines: list[str] = []
     completed_child_ids = [str(getattr(child, "id", "")) for child in children]
     completed_child_ids = [child_id for child_id in completed_child_ids if child_id]
-    lines.append("# Parent summarizer trigger")
+    lines.append("# Parent summarizer task")
     lines.append(
         "All direct children of the parent task are terminal. Read the parent "
-        "task detail and each completed direct child task detail before you "
+        "task detail and each terminal direct child task detail before you "
         "submit the parent roll-up."
     )
     lines.append("")
     lines.append("## Parent task id")
     lines.append(str(parent.id))
     lines.append("")
-    lines.append("## Completed direct child task ids to read")
+    lines.append("## Terminal direct child task ids to read")
     if completed_child_ids:
         for child_id in completed_child_ids:
             lines.append(f"- {child_id}")
@@ -75,15 +64,19 @@ def build_parent_summary_prompt(parent: Any, children: list[Any]) -> str:
         "Workflow: first call `read_task_details(task_id=\""
         f"{parent.id}"
         "\")` for the parent. Then call `read_task_details(task_id=...)` once "
-        "for every completed direct child id listed above. Only after every "
+        "for every terminal direct child id listed above. Only after every "
         "listed child has been read, produce exactly one `submit_task_summary` "
         "call with type=\"success\". The `content` must report what the parent "
         "planned, one direct child line per child with status plus delivered/"
         "replanned/dropped/open-risk classification, and an overall roll-up. "
         "Cite child final summaries, commands, failing ids, exit codes, "
-        "blockers, missing summaries, and trivial summaries when present. Do "
-        "not collapse the result into \"all children done\" and do not invent "
-        "next steps. This terminal submission is the completion signal for the "
-        "parent task."
+        "blockers, missing summaries, and trivial summaries when present. If "
+        "`read_task_details` for a listed child returns \"Not found in task "
+        "graph\" or the detail lacks a summary, record that child's line as "
+        "`<id> (<agent>, <status>): missing detail` or `missing summary` — do "
+        "not guess at what the child did and do not drop the child from the "
+        "list. Do not collapse the result into \"all children done\" and do "
+        "not invent next steps. This terminal submission is the completion "
+        "signal for the parent task."
     )
     return "\n".join(lines)

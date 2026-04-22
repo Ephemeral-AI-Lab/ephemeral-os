@@ -15,6 +15,8 @@ roster:
     - team_replanner
   explorer:
     - scout
+  parent_summarizer:
+    - parent_summarizer
 terminal_tools:
   note_taker:
     - submit_task_note

@@ -7,6 +7,7 @@ from agents.registry import get_definition
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from team.builtins import (
     DEVELOPER,
+    PARENT_SUMMARIZER,
     ROOT_PLANNER,
     SCOUT,
     TEAM_PLANNER,
@@ -184,6 +185,21 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "submit_replan",
         "read_task_details",
         "read_task_graph",
+    ):
+        assert name not in tool_names
+
+
+def test_parent_summarizer_tool_surface_is_read_only_except_terminal_summary(
+    tmp_path: Path,
+) -> None:
+    tool_names = _final_tool_names(PARENT_SUMMARIZER, tmp_path)
+
+    assert {"read_task_details", "read_task_graph", "submit_task_summary"} <= tool_names
+    for name in (
+        "submit_task_note",
+        "submit_file_note",
+        "submit_plan",
+        "submit_replan",
     ):
         assert name not in tool_names
 

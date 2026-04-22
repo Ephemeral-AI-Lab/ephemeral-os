@@ -232,9 +232,13 @@ class _FakeTaskCenter:
         self._notes = []
         self.store = self  # production reads all_terminal/get_statuses via tc.store
         self._cancel_running_task_callback = None
+        self._fail_fast_callback = None
 
     def set_cancel_running_task_callback(self, callback) -> None:
         self._cancel_running_task_callback = callback
+
+    def set_fail_fast_callback(self, callback) -> None:
+        self._fail_fast_callback = callback
 
     async def add_task(self, task) -> None:
         self.budget_state.tasks_used += 1

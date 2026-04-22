@@ -430,10 +430,19 @@ class ReadTaskDetailsTool(BaseTool):
                     (
                         n
                         for n in reversed(task_notes)
-                        if "implementation" in (n.tags or [])
+                        if "parent_summary" in (n.tags or [])
                     ),
                     None,
                 )
+                if summary_note is None:
+                    summary_note = next(
+                        (
+                            n
+                            for n in reversed(task_notes)
+                            if "implementation" in (n.tags or [])
+                        ),
+                        None,
+                    )
                 initial_plan_note = next(
                     (
                         n

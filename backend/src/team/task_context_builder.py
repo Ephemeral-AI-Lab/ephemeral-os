@@ -102,6 +102,30 @@ class TaskContextBuilder:
         return TaskContextBuilder._preferred_notes_per_task(scoped or notes)
 
     @staticmethod
+    def _is_replanner_task(task: Task) -> bool:
+        agent_name = str(task.agent_name or "").strip()
+        if agent_name == "team_replanner":
+            return True
+        try:
+            from agents.registry import get_role
+
+            return get_role(agent_name) == "replanner"
+        except Exception:
+            logger.debug(
+                "Failed to resolve agent role for replanner context: %s",
+                agent_name,
+                exc_info=True,
+            )
+            return False
+
+    @staticmethod
+    def _should_include_replanner_failure_context(task: Task) -> bool:
+        return bool(
+            task.fired_by_task_id
+            and TaskContextBuilder._is_replanner_task(task)
+        )
+
+    @staticmethod
     def _truncate_section(header: str, notes: list[Note], budget: int) -> str:
         sep = "\n"
         header_line = f"## {header}"
@@ -196,6 +220,8 @@ class TaskContextBuilder:
         original_id = task.fired_by_task_id
         if not original_id:
             return None
+        if not self._should_include_replanner_failure_context(task):
+            return None
 
         original = await self.get_task(original_id)
         lines = ["## Replan root cause trace", f"Original task: {original_id}"]
@@ -270,7 +296,7 @@ class TaskContextBuilder:
         sections.append(task_section)
         budget -= len(task_section.encode())
 
-        if task.fired_by_task_id and budget > 0:
+        if self._should_include_replanner_failure_context(task) and budget > 0:
             sec = await self._replanner_failure_context(task)
             if sec:
                 b = len(sec.encode())
@@ -360,7 +386,7 @@ class TaskContextBuilder:
         budget -= len(scope_paths.encode())
 
         failure_context = ""
-        if task.fired_by_task_id and budget > 0:
+        if self._should_include_replanner_failure_context(task) and budget > 0:
             sec = await self._replanner_failure_context(task)
             if sec:
                 failure_context = self._truncate_text(sec, budget)

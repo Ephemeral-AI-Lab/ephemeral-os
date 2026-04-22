@@ -660,7 +660,7 @@ async def test_request_replan_is_idempotent_when_live_replanner_exists(monkeypat
         return source_row
 
     async def _fake_find(db, team_run_id, origin_task_id):
-        return existing_replanner
+        return [existing_replanner]
 
     async def _fake_insert(db, record):
         inserts.append(record)
@@ -673,9 +673,9 @@ async def test_request_replan_is_idempotent_when_live_replanner_exists(monkeypat
 
     monkeypatch.setattr(task_store_module.q, "fetch_replan_source", _fake_fetch)
     monkeypatch.setattr(
-        task_store_module.q, "find_live_replanner_for_origin", _fake_find
+        task_store_module.q, "find_live_tasks_by_fired_origin", _fake_find
     )
-    monkeypatch.setattr(task_store_module.q, "insert_replanner_record", _fake_insert)
+    monkeypatch.setattr(task_store_module.q, "insert_task_record", _fake_insert)
     monkeypatch.setattr(task_store_module.q, "replace_dependency", _fake_replace)
     monkeypatch.setattr(
         task_store_module.q, "set_status_request_replan", _fake_set_status
@@ -732,7 +732,7 @@ async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch
         return source_row
 
     async def _fake_find(db, team_run_id, origin_task_id):
-        return None
+        return []
 
     async def _fake_insert(db, record):
         inserts.append(record)
@@ -748,9 +748,9 @@ async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch
 
     monkeypatch.setattr(task_store_module.q, "fetch_replan_source", _fake_fetch)
     monkeypatch.setattr(
-        task_store_module.q, "find_live_replanner_for_origin", _fake_find
+        task_store_module.q, "find_live_tasks_by_fired_origin", _fake_find
     )
-    monkeypatch.setattr(task_store_module.q, "insert_replanner_record", _fake_insert)
+    monkeypatch.setattr(task_store_module.q, "insert_task_record", _fake_insert)
     monkeypatch.setattr(task_store_module.q, "replace_dependency", _fake_replace)
     monkeypatch.setattr(
         task_store_module.q, "set_status_request_replan", _fake_set_status
@@ -853,3 +853,47 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
     assert "Parser failed because the grammar changed." in context
     assert "downstream (pending); deps: replanner" in context
     assert "Parent split parser work from lexer work." in context
+
+
+@pytest.mark.asyncio
+async def test_parent_summarizer_context_skips_replanner_failure_trace():
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    tc.graph.update(
+        {
+            "parent": _task("parent", agent_name="team_planner", status=TaskStatus.EXPANDED),
+            "summary": Task(
+                id="summary",
+                team_run_id="run-1",
+                agent_name="parent_summarizer",
+                status=TaskStatus.READY,
+                objective="Summarize parent task after children finish.",
+                parent_id="parent",
+                root_id="root",
+                depth=1,
+                fired_by_task_id="parent",
+            ),
+        }
+    )
+    await tc.notes.post(
+        Note(
+            id="n-parent",
+            task_id="parent",
+            agent_name="team_planner",
+            content="Parent split parser work from lexer work.",
+        )
+    )
+
+    context = await tc.context.context_for(tc.graph["summary"])
+    parts = await tc.context.template_context_for(tc.graph["summary"])
+
+    assert "Summarize parent task after children finish." in context
+    assert "Parent split parser work from lexer work." in context
+    assert "## Replan root cause trace" not in context
+    assert "Failed reason:" not in context
+    assert "Downstream dependents rewired to this replanner" not in context
+    assert parts.failure_context == ""

@@ -61,6 +61,14 @@ def default_terminal_tools_for_role(role: str | None) -> set[str]:
     return set(policy.terminal_tools)
 
 
+def default_terminal_tools_by_role() -> dict[str, set[str]]:
+    """Return default terminal tools for every known team role."""
+    return {
+        role: set(policy.terminal_tools)
+        for role, policy in _ROLE_TOOL_POLICIES.items()
+    }
+
+
 def blocked_submission_tools_for_role(
     role: str | None,
     available_submission_tools: list[str] | set[str] | tuple[str, ...],

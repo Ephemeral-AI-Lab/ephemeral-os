@@ -29,6 +29,18 @@ _STATUSES_REQUIRING_DONE_DEPS = frozenset(
 )
 
 
+def _has_replanner_role(agent_name: str) -> bool:
+    from agents.registry import get_role
+
+    return get_role(agent_name) == "replanner"
+
+
+def _has_parent_summarizer_role(agent_name: str) -> bool:
+    from agents.registry import get_role
+
+    return get_role(agent_name) == "parent_summarizer"
+
+
 def record_to_task(rec: TaskRecord) -> Task:
     """Convert a TaskRecord ORM row to a domain Task."""
     return Task(
@@ -198,16 +210,22 @@ class TaskStore:
 
     @staticmethod
     def _is_expandable_parent_agent(agent_name: str) -> bool:
-        """Return True if ``agent_name`` plays the planner or replanner role.
+        """Return True if ``agent_name`` triggers the parent-summary handoff.
 
-        Expandable parents (planners/replanners) receive an external summary
-        trigger before promotion. Defensive lookups — agents missing from the
-        registry default to False so the caller falls through to direct DONE.
+        Matches by agent *role* so a team roster can rename the canonical
+        planners/replanners without silently disabling the summary handoff.
+        Canonical agent names (``root_planner``, ``team_planner``,
+        ``team_replanner``) are accepted as a defensive fallback when the
+        registry is not yet populated (e.g. some unit tests).
         """
-        from agents.registry import get_role
+        if agent_name in {"root_planner", "team_planner", "team_replanner"}:
+            return True
+        try:
+            from agents.registry import get_role
 
-        role = get_role(agent_name)
-        return role in {"planner", "replanner"}
+            return get_role(agent_name) in {"planner", "replanner"}
+        except Exception:
+            return False
 
     async def maybe_promote_expanded_parent(
         self, child_id: str
@@ -220,7 +238,7 @@ class TaskStore:
           agent) or READY dependents promoted as a side effect of mark_done.
         - ``awaiting_summary_ids``: parents of planner/replanner role whose
           children all terminated; these transitioned to
-          EXPANDED_AWAITING_SUMMARY and await the external-trigger summary.
+          EXPANDED_AWAITING_SUMMARY and await a parent-summary sidecar.
         """
         promoted_all: list[str] = []
         awaiting_all: list[str] = []
@@ -243,7 +261,7 @@ class TaskStore:
                 current = pid
                 continue
             if self._is_expandable_parent_agent(parent_agent):
-                # Don't mark DONE yet — external summary trigger must run.
+                # Don't mark DONE yet — a parent-summary sidecar must run.
                 await self.mark_expanded_awaiting_summary(pid)
                 awaiting_all.append(pid)
                 # Stop the chain walk; grandparents must wait until this
@@ -264,11 +282,70 @@ class TaskStore:
         """
         return await self.mark_done(parent_id)
 
+    async def insert_parent_summary_task(
+        self,
+        *,
+        parent_task: Task,
+        summarizer_agent: str,
+        objective: str,
+    ) -> tuple[Task, bool]:
+        """Insert a READY parent-summary task as a child of the EAS parent.
+
+        Uses ``fired_by_task_id = parent_task.id`` as the linkage and the
+        ``parent_summarizer`` agent role as the discriminator. The summary task
+        is a direct child of the awaiting-summary parent (depth = parent+1),
+        which keeps it off the grandparent's promotion check because
+        ``fetch_expanded_parent_candidate`` matches only ``status='expanded'``
+        (not ``expanded_awaiting_summary``).
+
+        Returns ``(task, created)``. Idempotent: if a live summary task already
+        exists for the parent, the existing task is returned with
+        ``created=False``.
+        """
+        async with self._sf() as db:
+            candidates = await q.find_live_tasks_by_fired_origin(
+                db, self._team_run_id, parent_task.id
+            )
+            existing = next(
+                (
+                    cand for cand in candidates
+                    if _has_parent_summarizer_role(cand.agent_name)
+                ),
+                None,
+            )
+            if existing is not None:
+                await db.commit()
+                task = record_to_task(existing)
+                self._tg.upsert(task)
+                return task, False
+
+            summary_id = str(uuid.uuid4())
+            scope_paths = list(parent_task.scope_paths or [])
+            record = TaskRecord(
+                id=summary_id,
+                team_run_id=self._team_run_id,
+                agent_name=summarizer_agent,
+                objective=objective,
+                status="ready",
+                deps=[],
+                scope_paths=scope_paths,
+                scope_ltree=[path_to_ltree(p) for p in scope_paths],
+                parent_id=parent_task.id,
+                root_id=parent_task.root_id or "",
+                depth=(parent_task.depth or 0) + 1,
+                fired_by_task_id=parent_task.id,
+            )
+            await q.insert_task_record(db, record)
+            await db.commit()
+        task = record_to_task(record)
+        self._tg.upsert(task)
+        return task, True
+
     async def fetch_parents_awaiting_summary(self) -> list[str]:
         """Return task ids currently stuck in expanded_awaiting_summary.
 
-        Used on team-run restart to re-fire the external-trigger summary for
-        parents the previous lifetime left mid-flight.
+        Used on team-run restart to make sure parents the previous lifetime
+        left mid-flight have a live parent-summary sidecar.
         """
         async with self._sf() as db:
             return await q.fetch_awaiting_summary_ids(db, self._team_run_id)
@@ -543,11 +620,19 @@ class TaskStore:
             root_origin = getattr(rec, "fired_by_task_id", None) or task_id
             # Idempotent per origin: if a live replanner already exists for this
             # failed origin, reuse it instead of spawning a parallel recovery branch.
-            existing = await q.find_live_replanner_for_origin(
+            # fired_by_task_id is shared with parent-summary tasks, so filter by role.
+            candidates = await q.find_live_tasks_by_fired_origin(
                 db, self._team_run_id, root_origin
             )
-            if existing is not None:
-                return existing, False
+            existing_replanner = next(
+                (
+                    cand for cand in candidates
+                    if _has_replanner_role(cand.agent_name)
+                ),
+                None,
+            )
+            if existing_replanner is not None:
+                return existing_replanner, False
             replanner_id = str(uuid.uuid4())
             if rec.status != "request_replan":
                 await q.set_status_request_replan(
@@ -571,7 +656,7 @@ class TaskStore:
                 depth=rec.depth or 0,
                 fired_by_task_id=root_origin,
             )
-            await q.insert_replanner_record(db, replanner)
+            await q.insert_task_record(db, replanner)
             await q.replace_dependency(
                 db,
                 self._team_run_id,

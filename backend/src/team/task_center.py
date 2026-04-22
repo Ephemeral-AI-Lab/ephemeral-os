@@ -31,6 +31,7 @@ from team.models import (
     BudgetState,
     Note,
     ReplanRequest,
+    TERMINAL_STATUSES,
     Task,
     TaskDefinition,
     _utcnow,
@@ -44,7 +45,7 @@ from team.persistence.events import (
     task_to_dict,
 )
 from team.persistence.run_store import NullTeamRunStore, TeamRunStore
-from team.persistence.task_store import TaskStore
+from team.persistence.task_store import TaskStore, _has_parent_summarizer_role
 from team.planning.expander import PlanExpander, ReplanApplyOutcome
 from team.runtime.checkpoint import TeamRunCheckpoint
 from team.runtime.transitions import TransitionTracker
@@ -97,7 +98,7 @@ class TaskCenter:
             cancel_running_task_cb=self._cancel_running_task,
         )
         self._cancel_running_task_cb: Callable[[str], None] | None = None
-        self._parent_summary_cb: Callable[[str], Awaitable[None]] | None = None
+        self._fail_fast_cb: Callable[[str], Awaitable[None]] | None = None
         self._activity: ActivityTracker
         self._notes: NoteManager
 
@@ -208,32 +209,187 @@ class TaskCenter:
     def set_cancel_running_task_callback(self, callback: Callable[[str], None] | None) -> None:
         self._cancel_running_task_cb = callback
 
+    def set_fail_fast_callback(
+        self, callback: Callable[[str], Awaitable[None]] | None
+    ) -> None:
+        self._fail_fast_cb = callback
+
     def _cancel_running_task(self, task_id: str) -> None:
         if self._cancel_running_task_cb is not None:
             self._cancel_running_task_cb(task_id)
-
-    def set_parent_summary_callback(
-        self, callback: Callable[[str], Awaitable[None]] | None
-    ) -> None:
-        """Register the dispatcher hook that fires the parent-summary trigger.
-
-        Optional. When unset (e.g. unit tests without a real executor), the
-        awaiting-summary parents still transition into the new status but do
-        not progress to DONE until something finalizes them.
-        """
-        self._parent_summary_cb = callback
-
-    async def _fire_parent_summary(self, parent_id: str) -> None:
-        if self._parent_summary_cb is None:
-            return
-        await self._parent_summary_cb(parent_id)
 
     async def _handle_awaiting_summary_ids(self, awaiting: list[str]) -> None:
         for parent_id in awaiting:
             parent = self.graph.get(parent_id)
             if parent is not None:
                 self._transitions.emit_full_status(parent)
-            await self._fire_parent_summary(parent_id)
+            await self._ensure_parent_summary_task(parent_id)
+
+    def _resolve_parent_summarizer_agent_name(self) -> str:
+        """Resolve the parent-summarizer agent name from team roster, then registry.
+
+        Only accepts roster entries whose registered definition carries
+        ``role == "parent_summarizer"``. A roster entry pointing at a
+        non-summarizer definition is ignored so the completion-side role guard
+        (``_has_parent_summarizer_role``) cannot silently fail and wedge the
+        parent in EAS.
+        """
+        default = "parent_summarizer"
+        try:
+            from team.runtime.registry import get as get_team_run
+
+            team_run = get_team_run(self._team_run_id)
+        except Exception:
+            team_run = None
+        if team_run is not None:
+            roster = getattr(team_run, "roster", None)
+            if isinstance(roster, dict):
+                candidates = roster.get("parent_summarizer")
+                if isinstance(candidates, list):
+                    from agents.registry import get_definition
+
+                    for candidate in candidates:
+                        name = str(candidate).strip()
+                        if not name:
+                            continue
+                        defn = get_definition(name)
+                        if defn is None:
+                            continue
+                        if getattr(defn, "role", None) != "parent_summarizer":
+                            logger.warning(
+                                "roster entry %r for parent_summarizer has "
+                                "role=%r; ignoring",
+                                name,
+                                getattr(defn, "role", None),
+                            )
+                            continue
+                        return name
+        return default
+
+    def _live_parent_summary_task_from_graph(self, parent_id: str) -> Task | None:
+        for task in self.graph.values():
+            if task.fired_by_task_id != parent_id:
+                continue
+            if task.status in TERMINAL_STATUSES:
+                continue
+            if _has_parent_summarizer_role(task.agent_name):
+                return task
+        return None
+
+    async def _ensure_parent_summary_task(self, parent_id: str) -> None:
+        """Inject a dispatchable parent-summary task for an EAS parent.
+
+        The task is a direct child of the EAS parent with
+        ``fired_by_task_id = parent_id``. The normal Executor path then runs
+        the summarizer as a first-class team task; when it completes,
+        ``complete_task`` posts the authoritative parent-summary note and
+        finalizes the EAS parent to DONE.
+
+        Idempotent against restart-recovery: if a ``parent_summary``-tagged
+        note already exists for ``parent_id`` (from a previous lifetime that
+        posted the note but crashed before ``finalize_parent_awaiting_summary``
+        committed), skip spawning a new summarizer and finalize directly.
+        """
+        try:
+            existing_notes = await self._notes.read(
+                authors=[parent_id], tags=["parent_summary"]
+            )
+        except Exception:
+            existing_notes = []
+        if existing_notes:
+            logger.info(
+                "ensure_parent_summary_task: parent=%s already has a "
+                "parent_summary note; finalizing without re-spawning",
+                parent_id,
+            )
+            try:
+                await self.finalize_parent_awaiting_summary(parent_id)
+            except Exception:
+                logger.exception(
+                    "finalize_parent_awaiting_summary failed during recovery "
+                    "for parent=%s",
+                    parent_id,
+                )
+            return
+
+        parent = self.graph.get(parent_id)
+        if parent is None:
+            await self._store.refresh_graph()
+            parent = self.graph.get(parent_id)
+            if parent is None:
+                logger.warning(
+                    "ensure_parent_summary_task: parent %s missing from graph",
+                    parent_id,
+                )
+                return
+        existing_summary_task = self._live_parent_summary_task_from_graph(parent_id)
+        if existing_summary_task is not None:
+            self._transitions.emit_full_status(existing_summary_task)
+            return
+        children = [
+            task for task in self.graph.values()
+            if getattr(task, "parent_id", None) == parent_id
+        ]
+        from prompt.external_trigger_prompts import build_parent_summary_prompt
+
+        objective = build_parent_summary_prompt(parent, children)
+        summarizer_agent = self._resolve_parent_summarizer_agent_name()
+        summary_task, created = await self._store.insert_parent_summary_task(
+            parent_task=parent,
+            summarizer_agent=summarizer_agent,
+            objective=objective,
+        )
+        if created:
+            self._emit(make_task_added(self._team_run_id, task_to_dict(summary_task)))
+        self._transitions.emit_full_status(summary_task)
+
+    async def _post_parent_summary_note(
+        self, summary_task: Task, summary_content: str
+    ) -> bool:
+        """Post the authoritative parent-summary note against the EAS parent.
+
+        Tagged ``["implementation", "parent_summary"]`` so downstream readers
+        (grandparent summarizer, dependents, humans) find it under the parent
+        task's id, not the ephemeral summarizer's id.
+        """
+        parent_id = summary_task.fired_by_task_id
+        if not parent_id:
+            return False
+        try:
+            existing = await self._notes.read(
+                authors=[parent_id], tags=["parent_summary"]
+            )
+        except Exception:
+            existing = []
+        if existing:
+            logger.info(
+                "parent_summary note already present for parent=%s; skipping "
+                "duplicate post (summary_task=%s)",
+                parent_id,
+                summary_task.id,
+            )
+            return True
+        parent = self.graph.get(parent_id)
+        scope_paths = list(getattr(parent, "scope_paths", []) or [])
+        try:
+            await self._notes.post(
+                Note(
+                    id=self._new_id(),
+                    task_id=parent_id,
+                    agent_name=summary_task.agent_name,
+                    content=summary_content,
+                    paths=scope_paths,
+                    tags=["implementation", "parent_summary"],
+                )
+            )
+        except Exception:
+            logger.exception(
+                "parent_summary note post failed for parent=%s summary_task=%s",
+                parent_id,
+                summary_task.id,
+            )
+            return False
+        return True
 
     async def _emit_replanned_origin_if_finalized(self, replanner_task_id: str) -> None:
         origin_id = await self._store.finalize_replanned_origin(replanner_task_id)
@@ -343,8 +499,40 @@ class TaskCenter:
             self._transitions.emit_status(task_id, "expanded", finished_at=_utcnow().isoformat())
         else:
             await self._mark_done_emit_promotions(task_id)
+            await self._maybe_finalize_parent_via_summary_task(task_id, result)
         await self._store.refresh_graph()
         return new_items
+
+    async def _maybe_finalize_parent_via_summary_task(
+        self, summary_task_id: str, result: AgentResult
+    ) -> None:
+        """If ``summary_task_id`` is a parent_summarizer sidecar, finalize its parent.
+
+        Parent-summary tasks carry ``fired_by_task_id = parent_id`` and run the
+        ``parent_summarizer`` role. When they complete with a success summary,
+        post the authoritative ``parent_summary`` note against the parent id
+        and transition the EAS parent to DONE via the normal finalize cascade.
+        """
+        summary_task = self.graph.get(summary_task_id)
+        if summary_task is None:
+            return
+        if not summary_task.fired_by_task_id:
+            return
+        if not _has_parent_summarizer_role(summary_task.agent_name):
+            return
+        summary_content = (result.summary or "").strip()
+        if summary_content:
+            posted = await self._post_parent_summary_note(summary_task, summary_content)
+            if posted:
+                await self.finalize_parent_awaiting_summary(summary_task.fired_by_task_id)
+            else:
+                await self.fail_parent_awaiting_summary(
+                    summary_task.fired_by_task_id, "parent_summary_note_post_failed"
+                )
+        else:
+            await self.fail_parent_awaiting_summary(
+                summary_task.fired_by_task_id, "parent_summary_empty"
+            )
 
     async def _fail_leaf(self, task_id: str, reason: str) -> None:
         """Mark a leaf task FAILED and emit transitions.
@@ -359,6 +547,7 @@ class TaskCenter:
         # A (REQUEST_REPLAN) is already terminal. When its replanner R fails,
         # A stays at REQUEST_REPLAN; only R transitions to FAILED here, and
         # its cascade handles dependents that were rewired onto R.
+        failing_task = self.graph.get(task_id)
         before = self._transitions.snapshot()
         await self._store.fail_task(task_id, reason)
         # FAILED children are now detached; parent may become promotable.
@@ -371,6 +560,17 @@ class TaskCenter:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
         await self._transitions.refresh_and_emit(before)
+        # Parent-summary sidecar failure must fail its EAS parent and
+        # fail-fast the whole run — the parent cannot reach DONE without an
+        # authoritative summary.
+        if (
+            failing_task is not None
+            and failing_task.fired_by_task_id
+            and _has_parent_summarizer_role(failing_task.agent_name)
+        ):
+            await self.fail_parent_awaiting_summary(
+                failing_task.fired_by_task_id, "parent_summary_task_failed"
+            )
 
     async def fail(self, task_id: str, reason: str) -> None:
         await self.fail_task(task_id, reason)
@@ -462,9 +662,9 @@ class TaskCenter:
     async def finalize_parent_awaiting_summary(self, parent_id: str) -> None:
         """Transition an EXPANDED_AWAITING_SUMMARY parent to DONE.
 
-        Called by the dispatcher after the external summary trigger posts
-        its note (or fails and falls back). Runs the same dependent /
-        origin / grandparent promotion cascade as a normal DONE transition.
+        Called after the parent-summary sidecar posts its roll-up. Runs the
+        same dependent / origin / grandparent promotion cascade as a normal
+        DONE transition.
         """
         rec = await self._store.get_record(parent_id)
         if rec is None:
@@ -496,6 +696,40 @@ class TaskCenter:
         if parent_task is not None and parent_task.fired_by_task_id:
             await self._emit_replanned_origin_if_finalized(parent_id)
         await self._store.refresh_graph()
+
+    async def fail_parent_awaiting_summary(
+        self, parent_id: str, reason: str
+    ) -> None:
+        """Transition an EXPANDED_AWAITING_SUMMARY parent to FAILED and fail-fast.
+
+        Used when the parent-summary sidecar cannot produce an authoritative
+        roll-up: empty summary, no terminal tool after retries, or leaf
+        failure of the summarizer task itself. Mirrors the tail of
+        ``finalize_parent_awaiting_summary`` but writes ``failed`` instead of
+        ``done``, and escalates to the team-run ``fail_fast`` callback so the
+        whole run terminates rather than leaving the parent wedged.
+        """
+        rec = await self._store.get_record(parent_id)
+        if rec is None:
+            return
+        if rec.status != "expanded_awaiting_summary":
+            return
+        await self._store.mark_terminal(parent_id, "failed", reason)
+        self._transitions.emit_status(
+            parent_id, "failed", finished_at=_utcnow().isoformat()
+        )
+        promoted, awaiting = await self._store.maybe_promote_expanded_parent(parent_id)
+        for promoted_id in promoted:
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is None:
+                continue
+            self._transitions.emit_full_status(promoted_task)
+            if promoted_task.fired_by_task_id:
+                await self._emit_replanned_origin_if_finalized(promoted_id)
+        await self._handle_awaiting_summary_ids(awaiting)
+        await self._store.refresh_graph()
+        if self._fail_fast_cb is not None:
+            await self._fail_fast_cb(reason)
 
     async def fail_orphaned_replanning(self) -> int:
         """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""

@@ -41,10 +41,6 @@ def _record_to_task(rec: Any) -> "Task":
 class Executor:
     """Pops ready tasks, runs agent, reads task state, dispatches."""
 
-    # Max retries on the parent-summary external trigger before falling back
-    # to a system note + direct DONE.
-    PARENT_SUMMARY_MAX_RETRIES = 2
-
     def __init__(
         self,
         team_run: "TeamRun",
@@ -52,25 +48,13 @@ class Executor:
         agent_lookup: Callable[[str], "AgentDefinition | None"],
         build_query_context: QueryContextBuilder | None = None,
         after_dispatch: Callable[["Task", AgentResult, list["Task"]], Any] | None = None,
-        api_client: Any = None,
     ) -> None:
         self.team_run = team_run
         self.runner = runner
         self.agent_lookup = agent_lookup
         self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
-        self.api_client = api_client
         self.scope_notifier = ScopeChangeNotifier(team_run)
-        # Wire dispatcher callback so TaskCenter can fire the parent-summary
-        # external trigger when an expandable parent transitions to
-        # EXPANDED_AWAITING_SUMMARY.
-        try:
-            team_run.task_center.set_parent_summary_callback(
-                self._run_parent_summary_trigger
-            )
-        except AttributeError:
-            # TaskCenter without the hook — older tests or stubs.
-            pass
 
     async def _task_status_value(self, task_id: str) -> str | None:
         tc = self.team_run.task_center
@@ -88,73 +72,6 @@ class Executor:
                 task = graph.get(task_id)
         status = getattr(task, "status", None)
         return getattr(status, "value", status)
-
-    async def _run_parent_summary_trigger(self, parent_id: str) -> None:
-        """Drive the parent-summary external trigger with bounded retries.
-
-        On terminal failure, post a system note and finalize DONE anyway so
-        the parent never wedges in EXPANDED_AWAITING_SUMMARY.
-        """
-        tc = self.team_run.task_center
-        last_error: str | None = None
-        for attempt in range(self.PARENT_SUMMARY_MAX_RETRIES + 1):
-            try:
-                if self.api_client is None:
-                    raise RuntimeError(
-                        "parent_summary trigger unavailable: api_client not wired"
-                    )
-                from external_trigger.parent_summary import run_parent_summary
-
-                await run_parent_summary(
-                    parent_task_id=parent_id,
-                    team_run_id=self.team_run.id,
-                    api_client=self.api_client,
-                )
-                last_error = None
-                break
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                last_error = str(exc)
-                logger.warning(
-                    "parent_summary trigger failed for %s (attempt %d/%d): %s",
-                    parent_id,
-                    attempt + 1,
-                    self.PARENT_SUMMARY_MAX_RETRIES + 1,
-                    exc,
-                )
-
-        if last_error is not None:
-            # Fallback: post a system note so downstream readers see the
-            # failure, then finalize DONE to avoid wedging.
-            try:
-                from team.models import Note
-
-                parent = tc.graph.get(parent_id)
-                scope_paths = list(getattr(parent, "scope_paths", []) or [])
-                await tc.notes.post(
-                    Note(
-                        id=str(uuid.uuid4()),
-                        task_id=parent_id,
-                        agent_name="system",
-                        content=f"[system] external summary trigger failed: {last_error}",
-                        timestamp=time.time(),
-                        paths=scope_paths,
-                        tags=["implementation", "parent_summary", "warning"],
-                    )
-                )
-            except Exception:
-                logger.debug(
-                    "parent_summary fallback note post failed for %s",
-                    parent_id,
-                    exc_info=True,
-                )
-        try:
-            await tc.finalize_parent_awaiting_summary(parent_id)
-        except Exception:
-            logger.exception(
-                "finalize_parent_awaiting_summary failed for %s", parent_id
-            )
 
     async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
         try:
@@ -184,16 +101,28 @@ class Executor:
         tc = self.team_run.task_center
         dq = self.team_run.dispatch_queue
         pop_ready = dq.pop_ready
-        # Restart-recovery: re-fire the parent-summary external trigger for
-        # any parents the previous team_run lifetime left mid-flight in
-        # EXPANDED_AWAITING_SUMMARY. Fire-and-forget so boot is not blocked
-        # on the external LLM call.
+        # Restart-recovery: any parent left in EXPANDED_AWAITING_SUMMARY with
+        # no live parent-summary sidecar gets one re-injected. Summary tasks
+        # already READY in the DB are picked up by the normal dispatch loop.
         try:
             store = getattr(tc, "store", None)
             if store is not None and hasattr(store, "fetch_parents_awaiting_summary"):
                 stuck_parents = await store.fetch_parents_awaiting_summary()
-                for parent_id in stuck_parents:
-                    asyncio.create_task(self._run_parent_summary_trigger(parent_id))
+                if stuck_parents:
+                    results = await asyncio.gather(
+                        *(
+                            tc._ensure_parent_summary_task(pid)
+                            for pid in stuck_parents
+                        ),
+                        return_exceptions=True,
+                    )
+                    for pid, outcome in zip(stuck_parents, results):
+                        if isinstance(outcome, Exception):
+                            logger.exception(
+                                "Failed to re-inject parent-summary task for %s",
+                                pid,
+                                exc_info=outcome,
+                            )
         except Exception:
             logger.exception("Restart recovery for awaiting-summary parents failed")
         while not self.team_run.cancel_event.is_set():
@@ -355,6 +284,21 @@ class Executor:
         tc = self.team_run.task_center
 
         if isinstance(result, ReplanRequest):
+            # Parent-summary sidecars must not be rescued by a replanner.
+            # A no-terminal-call outcome after retries is a hard failure of
+            # the summary task; its EAS parent cannot reach DONE without an
+            # authoritative roll-up, so fail the summary leaf and let
+            # TaskCenter.fail_task propagate to the parent + fail-fast.
+            from agents.registry import get_role
+
+            if get_role(task.agent_name) == "parent_summarizer":
+                await tc.fail_task(
+                    task.id, "parent_summary_no_terminal_call"
+                )
+                await self._checkpoint_after_transition(
+                    task, outcome="parent_summary_no_terminal_call"
+                )
+                return
             try:
                 await tc.request_replan(task.id, result)
             except BudgetExceeded as exc:

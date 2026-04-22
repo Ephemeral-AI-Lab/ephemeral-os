@@ -52,6 +52,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
             "- Use `command=\"pytest ...\"` for shell commands.\n"
             "- Use `code=\"...\"` only for multi-step Python.\n"
             "- Commands already start at the sandbox repo root, usually `/testbed`, and output is captured automatically.\n"
+            "- Do not suppress stderr with `2>/dev/null`, `&>/dev/null`, or `>/dev/null 2>&1`.\n"
             "- Never prefix commands with host paths like `/Users/...`; use repo-relative paths or repo subdirectories.\n"
             "- In coordinated team lanes, do not run package or environment mutation commands such as `pip install`, `uv sync`, `npm install`, or equivalent install/add/sync/update operations.\n"
             "- Do not use CodeAct for file writes, moves, deletes, or file-content reads.\n"

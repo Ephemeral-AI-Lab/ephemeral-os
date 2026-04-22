@@ -3,9 +3,9 @@
 Coordinates one ``svc.cmd`` op per plan §1:
 
 1. Acquire per-sandbox semaphore.
-2. Ship ``overlay_run.py`` into the sandbox, invoke it under
-   ``unshare -Urm`` with the user command base64-encoded. The sandbox-side
-   runner builds SNAP inside that same exec before mounting the overlay.
+2. Build the live Git snapshot used as the strict-base for tracked writes.
+3. Ship ``overlay_run.py`` into the sandbox, invoke it under
+   ``unshare -Urm`` with the user command and snapshot SHA.
 4. Read ``$RUN_DIR/diff.ndjson`` from the sandbox.
 5. If the script emitted a ``_reject`` meta line → surface via
    ``git_commit_status`` + ``git_conflict_reason`` on the result.
@@ -54,6 +54,7 @@ from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
+from code_intelligence.routing.git_snapshot import build_live_snapshot_details
 from code_intelligence.routing.overlay_command_committer import OverlayCommandCommitter
 from code_intelligence.routing.overlay_config import (
     overlay_max_concurrent,
@@ -125,6 +126,11 @@ class OverlayAuditor:
             lease = self._new_lease()
             record_overlay_op(ops_total=1)
             try:
+                snapshot = await build_live_snapshot_details(
+                    sandbox,
+                    self._exec_process,
+                    self._workspace_root,
+                )
                 await self._ensure_script_uploaded(sandbox)
                 user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
                 stdin_b64 = (
@@ -136,6 +142,7 @@ class OverlayAuditor:
                     stdout_text, script_exit = await self._run_overlay(
                         sandbox,
                         lease=lease,
+                        snap=snapshot.snap,
                         user_cmd_b64=user_cmd_b64,
                         stdin_b64=stdin_b64,
                         timeout=timeout,
@@ -144,6 +151,7 @@ class OverlayAuditor:
                     stdout_text, script_exit = await self._run_overlay_with_progress(
                         sandbox,
                         lease=lease,
+                        snap=snapshot.snap,
                         user_cmd_b64=user_cmd_b64,
                         stdin_b64=stdin_b64,
                         timeout=timeout,
@@ -169,7 +177,9 @@ class OverlayAuditor:
                         stdout=stdout_text,
                         exit_code=script_exit,
                         reject=diff_or_reject,
-                        git_snapshot_timings=diff_or_reject.snapshot_timings,
+                        git_snapshot_timings=(
+                            diff_or_reject.snapshot_timings or snapshot.timings
+                        ),
                     )
                 diff = diff_or_reject
                 record_overlay_op(
@@ -187,7 +197,7 @@ class OverlayAuditor:
                     agent_id=agent_id,
                     description=description or "daytona_codeact overlay",
                     attribute_changes=attribute_changes,
-                    git_snapshot_timings=diff.snapshot_timings,
+                    git_snapshot_timings=diff.snapshot_timings or snapshot.timings,
                 )
             finally:
                 try:
@@ -242,6 +252,7 @@ class OverlayAuditor:
         sandbox: Any,
         *,
         lease: OverlayLease,
+        snap: str,
         user_cmd_b64: str,
         stdin_b64: str,
         timeout: int | None,
@@ -250,6 +261,7 @@ class OverlayAuditor:
         args = [
             "--workspace-root", self._workspace_root,
             "--run-dir", lease.run_dir,
+            "--snap", snap,
             "--upper-size-mb", str(self._upper_size_mb),
             "--user-cmd-b64", user_cmd_b64,
         ]
@@ -277,6 +289,7 @@ class OverlayAuditor:
         sandbox: Any,
         *,
         lease: OverlayLease,
+        snap: str,
         user_cmd_b64: str,
         stdin_b64: str,
         timeout: int | None,
@@ -286,6 +299,7 @@ class OverlayAuditor:
             self._run_overlay(
                 sandbox,
                 lease=lease,
+                snap=snap,
                 user_cmd_b64=user_cmd_b64,
                 stdin_b64=stdin_b64,
                 timeout=timeout,

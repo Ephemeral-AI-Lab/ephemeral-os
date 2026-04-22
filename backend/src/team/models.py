@@ -32,8 +32,8 @@ class TaskStatus(str, Enum):
     READY = "ready"
     RUNNING = "running"
     EXPANDED = "expanded"  # planner submitted children, waiting for them to finish
-    # All children terminal; waiting for the external parent-summary trigger
-    # to finalize the task. This is NOT a terminal status.
+    # All children terminal; waiting for a parent-summary sidecar to finalize
+    # the task. This is NOT a terminal status.
     EXPANDED_AWAITING_SUMMARY = "expanded_awaiting_summary"
     REQUEST_REPLAN = "request_replan"
     DONE = "done"

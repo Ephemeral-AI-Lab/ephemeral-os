@@ -276,14 +276,13 @@ async def fetch_replan_source(
     return (await db.execute(stmt)).first()
 
 
-async def find_live_replanner_for_origin(
+async def find_live_tasks_by_fired_origin(
     db: AsyncSession, team_run_id: str, origin_task_id: str
-) -> TaskRecord | None:
-    """Return a non-terminal replanner whose fired_by_task_id matches the origin.
+) -> list[TaskRecord]:
+    """Return non-terminal tasks whose fired_by_task_id matches the origin.
 
-    Used by request_replan to stay idempotent — if a live recovery replanner
-    already exists for the failed origin, callers reuse it instead of inserting
-    a duplicate branch.
+    ``fired_by_task_id`` links both recovery replanners and parent-summary
+    sidecars back to their trigger task, so callers must filter by role.
     """
     terminal = {s.value for s in TERMINAL_STATUSES}
     stmt = select(TaskRecord).where(
@@ -291,7 +290,7 @@ async def find_live_replanner_for_origin(
         TaskRecord.fired_by_task_id == origin_task_id,
         TaskRecord.status.notin_(terminal),
     )
-    return (await db.execute(stmt)).scalar_one_or_none()
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def fetch_task_status(
@@ -732,7 +731,7 @@ async def finalize_replanned_origin(
     return _rowcount(result)
 
 
-async def insert_replanner_record(
+async def insert_task_record(
     db: AsyncSession, record: TaskRecord
 ) -> None:
     db.add(record)

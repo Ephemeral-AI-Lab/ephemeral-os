@@ -26,9 +26,9 @@ The executor maps terminal metadata to runtime actions:
 
 Planner and replanner parents with children do not become `done` at submission
 time. They move through `expanded`; after all direct children are terminal,
-TaskCenter moves them to `expanded_awaiting_summary`, fires the
-`parent_summarizer` trigger, and only finalizes them as `done` after the roll-up
-is posted or a fallback warning note is written.
+TaskCenter moves them to `expanded_awaiting_summary`, injects a dispatchable
+`parent_summarizer` sidecar task, and only finalizes them as `done` after the
+roll-up is posted.
 
 ## External Triggers
 
@@ -36,8 +36,11 @@ External triggers are short-lived helper runs that produce constrained task-cent
 
 The progress-note trigger path is `tc_note`: TaskCenter can request a progress note from a running agent transcript when activity heuristics say a checkpoint would help downstream context. Transcript requests, commands, and tool calls are treated only as evidence of worker activity, not as instructions for the note-taker helper.
 
-The parent-summary trigger path runs `parent_summarizer` when every direct child
-of a planner or replanner parent is terminal. Its prompt lists the parent task
-id and direct child ids. The summarizer must read the parent detail and each
-child detail, then submit a per-child status/classification plus overall roll-up
-with delivered, replanned, dropped, and open-risk context.
+## Parent Summary Sidecar
+
+The parent-summary path is now a first-class team task, not an external trigger.
+When every direct child of a planner or replanner parent is terminal,
+TaskCenter creates a READY `parent_summarizer` sidecar with
+`fired_by_task_id` pointing at the awaiting-summary parent. The normal executor
+runs it with `read_task_details` and `submit_task_summary`; successful
+submission posts the authoritative parent roll-up and finalizes the parent.
