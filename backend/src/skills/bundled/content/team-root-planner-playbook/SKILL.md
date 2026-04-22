@@ -7,6 +7,19 @@ description: Playbook for the root_planner agent. Analyze the user request, scou
 
 Read the following sections to produce the root task DAG from the user request, then finish with exactly one `submit_plan(...)` call.
 
+## Hierarchical Planning Principle
+
+Team plans are hierarchical: each planner submits a local child DAG, and child `team_planner` tasks may continue exploration and decomposition below it. At the root level, explore only enough to identify defensible owner families, direct exact-owner work, and broad unresolved regions. Do not try to fully decompose every region in one root payload.
+
+Prefer a child `team_planner` over more root scouting when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration. The root planner's job is top-down routing, not exhaustive single-layer discovery.
+
+Depth rules:
+
+- Read the Planning depth section in your user prompt before deciding whether to create child planners.
+- Tasks submitted in your plan run at `current_depth + 1`; a child `team_planner` needs another level below that to submit useful children.
+- When `current_depth + 2 <= max_depth`, broad or unresolved regions may be routed to child `team_planner` lanes.
+- When `current_depth + 2 > max_depth`, do not create child `team_planner` lanes; emit direct `developer` and `validator` tasks with broader scopes instead.
+
 ## Workflow
 
 ```mermaid
@@ -92,15 +105,16 @@ Steps:
 1. Merge user evidence, CI/symbol checks, and scout notes into one owner ledger.
 2. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
 3. Split exact owners into `developer` lanes.
-4. Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work.
+4. Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive root-layer exploration.
 5. Add `validator` lanes only when a distinct verification owner is useful.
 6. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
-7. Launch another scout wave only for a newly revealed, distinct production owner slice.
+7. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before root routing; otherwise route the uncertainty to a child `team_planner`.
 
 Never:
 
 - Relaunch scouts just to improve weak notes or prove a cold exact path.
 - Hide multi-owner work in a catch-all developer.
+- Fully decompose a broad region at the root when a child `team_planner` can own top-down exploration below that region.
 
 Exit when: either a new distinct production owner slice requires another scout wave, or the DAG is ready for submission.
 

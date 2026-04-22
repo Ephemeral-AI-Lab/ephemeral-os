@@ -8,7 +8,7 @@ import pytest
 from agents.registry import get_definition
 from prompt.user_prompt_templates import load_note_taker_prompt, render_user_prompt_template
 from team.builtins import register_all
-from team.models import Note, Task, TaskStatus
+from team.models import BudgetConfig, Note, Task, TaskStatus
 from team.note_manager import NoteManager
 from team.runtime.context_builder import build_query_context
 from team.task_context_builder import TaskContextBuilder
@@ -69,12 +69,14 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "CodeAct commands already start at the sandbox repo root" in rendered
     assert "never prefix them with a host/local workspace path" in rendered
     assert "Use repo-relative paths" in rendered
+    assert "Package/environment mutation is forbidden" in rendered
+    assert "Do not run `pip install`, `uv add`, `uv sync`" in rendered
     assert "Mandatory CodeAct preflight" not in rendered
     assert "Remove shell redirects and output filters entirely" not in rendered
     assert "Do not rely on sanitizer behavior as your normal workflow" not in rendered
     assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in rendered
-    assert "Creating a new production file with `daytona_write_file` may extend scope" in rendered
-    assert "rely on the write-scope posthook to approve and record the expansion" in rendered
+    assert "Create a new production file only when the task, parent details, or dependency handoff" in rendered
+    assert "otherwise submit `type=\"request_replan\"` with trigger `scope_expansion`" in rendered
     assert "An existing out-of-scope production file may be edited only for a minor support edit" in rendered
     assert "one-line import, alias, re-export, compatibility reference" in rendered
     assert "is not owned by a sibling in the parent task details" in rendered
@@ -202,10 +204,12 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "CodeAct commands already start at the sandbox repo root" in ctx.user_message
     assert "never prefix them with a host/local workspace path" in ctx.user_message
     assert "Use repo-relative paths" in ctx.user_message
+    assert "Package/environment mutation is forbidden" in ctx.user_message
+    assert "Do not run `pip install`, `uv add`, `uv sync`" in ctx.user_message
     assert "treat the advisory as workflow guidance" not in ctx.user_message
     assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in ctx.user_message
-    assert "Creating a new production file with `daytona_write_file` may extend scope" in ctx.user_message
-    assert "rely on the write-scope posthook to approve and record the expansion" in ctx.user_message
+    assert "Create a new production file only when the task, parent details, or dependency handoff" in ctx.user_message
+    assert "otherwise submit `type=\"request_replan\"` with trigger `scope_expansion`" in ctx.user_message
     assert "An existing out-of-scope production file may be edited only for a minor support edit" in ctx.user_message
     assert "one-line import, alias, re-export, compatibility reference" in ctx.user_message
     assert "is not owned by a sibling in the parent task details" in ctx.user_message
@@ -320,7 +324,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
         team_definition=None,
         project_context=SimpleNamespace(repo_root="/repo"),
         coordination_metadata={"benchmark_test_ids": ["tests/test_retry.py::test_retry"]},
-        budgets=None,
+        budgets=BudgetConfig(max_depth=4),
         budget_state=None,
         sandbox_id="",
         arbiter=None,
@@ -337,6 +341,11 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Task id:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
     assert 'load_skill(skill_name="team-root-planner-playbook")' in ctx.user_message
+    assert "## Planning depth" in ctx.user_message
+    assert "Current depth: `0`" in ctx.user_message
+    assert "Max depth: `4`" in ctx.user_message
+    assert "Tasks submitted in this plan will run at depth `1`" in ctx.user_message
+    assert "would need room to submit its own children at depth `2`" in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## User request" in ctx.user_message
     assert "Fix retry handling." in ctx.user_message
@@ -350,6 +359,40 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
     assert "## Parent context" not in ctx.user_message
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_omits_planning_depth_without_budget() -> None:
+    register_all()
+    task = Task(
+        id="root",
+        team_run_id="run-1",
+        agent_name="root_planner",
+        status=TaskStatus.READY,
+        objective="Root planner task objective.",
+        root_id="root",
+        depth=0,
+    )
+    team_run = SimpleNamespace(
+        id="run-1",
+        user_request="Fix retry handling.",
+        root_task_id="root",
+        task_center=await _make_task_center("run-1", {"root": task}),
+        roster={"planner": ["root_planner", "team_planner"], "developer": ["developer"]},
+        team_definition=None,
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        budgets=None,
+        budget_state=None,
+        sandbox_id="",
+        arbiter=None,
+    )
+
+    ctx = await build_query_context(get_definition("root_planner"), team_run, task)
+
+    assert "## Planning depth" not in ctx.user_message
+    assert "{{current_depth}}" not in ctx.user_message
+    assert "{{max_depth}}" not in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -395,7 +438,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
         team_definition=None,
         project_context=SimpleNamespace(repo_root="/repo"),
         coordination_metadata={},
-        budgets=None,
+        budgets=BudgetConfig(max_depth=4),
         budget_state=None,
         sandbox_id="",
         arbiter=None,
@@ -408,6 +451,11 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "Your task id: `planner-1`" in ctx.user_message
     assert "Your dependency task ids: `prep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
+    assert "## Planning depth" in ctx.user_message
+    assert "Current depth: `1`" in ctx.user_message
+    assert "Max depth: `4`" in ctx.user_message
+    assert "Tasks submitted in this plan will run at depth `2`" in ctx.user_message
+    assert "would need room to submit its own children at depth `3`" in ctx.user_message
     assert "Context-read pre-step: this applies to child planners only" in ctx.user_message
     assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
     assert "Task id: `planner-1`" not in ctx.user_message

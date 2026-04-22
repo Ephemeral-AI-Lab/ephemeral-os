@@ -47,6 +47,15 @@ def test_team_replanner_prompt_loads_playbook_before_planning_tools() -> None:
     assert "Use that playbook to choose and order references" in defn.system_prompt
 
 
+def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
+    defn = get_definition(ROOT_PLANNER)
+    assert defn is not None
+    assert defn.system_prompt is not None
+    assert "Use top-down decomposition" in defn.system_prompt
+    assert "route broad or unresolved regions to child `team_planner` tasks" in defn.system_prompt
+    assert "instead of exhaustively exploring every implementation detail at the root layer" in defn.system_prompt
+
+
 def test_builtin_team_agents_use_default_tool_call_limits() -> None:
     for name in (TEAM_PLANNER, TEAM_REPLANNER, DEVELOPER, VALIDATOR, SCOUT):
         defn = get_definition(name)

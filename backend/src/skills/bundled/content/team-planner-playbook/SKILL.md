@@ -7,6 +7,19 @@ description: Playbook for the team_planner agent. Load inherited Task Center con
 
 Read the following sections to produce a child task DAG from inherited Task Center context, then finish with exactly one `submit_plan(...)` call.
 
+## Hierarchical Planning Principle
+
+Team plans are hierarchical: each planner submits a local child DAG, and another child `team_planner` can continue exploration and decomposition below it. Explore only enough at your current layer to separate exact owner work from broad or unresolved regions. Do not try to fully decompose every descendant task in one payload.
+
+Prefer another child `team_planner` when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration beyond your assigned layer. Your job is top-down routing for this layer, not exhaustive single-layer discovery.
+
+Depth rules:
+
+- Read the Planning depth section in your user prompt before deciding whether to create child planners.
+- Tasks submitted in your plan run at `current_depth + 1`; a child `team_planner` needs another level below that to submit useful children.
+- When `current_depth + 2 <= max_depth`, broad or unresolved regions may be routed to child `team_planner` lanes.
+- When `current_depth + 2 > max_depth`, do not create child `team_planner` lanes; emit direct `developer` and `validator` tasks with broader scopes instead.
+
 ## Workflow
 
 ```mermaid
@@ -95,16 +108,17 @@ Steps:
 1. Merge own task detail, parent plan, dependency summaries, CI/symbol checks, and scout notes into one owner ledger.
 2. Drop exact files disproved by live evidence; use the nearest stable production boundary when needed.
 3. Split exact owners into `developer` lanes.
-4. Use another child `team_planner` lane for broad, shared, unresolved, or multi-family work.
+4. Use another child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive current-layer exploration.
 5. Add `validator` lanes only when a distinct verification owner is useful.
 6. When a validator is terminal, make it depend on every same-payload terminal non-validator id it validates, including child planner ids.
 7. Add other `deps` only for real output ordering, known same-file edit ordering, or child `team_planner` sequencing when the id is in this same payload.
-8. Launch another scout wave only for a newly revealed, distinct production owner slice that cannot be represented cleanly in the plan.
+8. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before this layer can route work; otherwise route the uncertainty to another child `team_planner`.
 
 Never:
 
 - Hide multi-owner work in a catch-all developer.
 - Submit a child `team_planner` together with its imagined child tasks.
+- Fully decompose a broad region in this layer when another child `team_planner` can own top-down exploration below that region.
 
 Exit when: either a new distinct production owner slice requires another scout wave, or the DAG is ready for submission.
 

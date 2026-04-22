@@ -143,6 +143,48 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
     assert "CodeAct-safe" not in skill
 
 
+def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "## Hierarchical Planning Principle" in skill
+    assert "Team plans are hierarchical" in skill
+    assert "At the root level, explore only enough to identify defensible owner families" in skill
+    assert "Do not try to fully decompose every region in one root payload" in skill
+    assert "The root planner's job is top-down routing, not exhaustive single-layer discovery" in skill
+    assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
+    assert "When `current_depth + 2 <= max_depth`" in skill
+    assert "When `current_depth + 2 > max_depth`" in skill
+    assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
+    assert (
+        "Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive root-layer exploration"
+        in skill
+    )
+    assert "route the uncertainty to a child `team_planner`" in skill
+
+
+def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "## Hierarchical Planning Principle" in skill
+    assert "Team plans are hierarchical" in skill
+    assert "Explore only enough at your current layer to separate exact owner work" in skill
+    assert "Do not try to fully decompose every descendant task in one payload" in skill
+    assert "Your job is top-down routing for this layer, not exhaustive single-layer discovery" in skill
+    assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
+    assert "When `current_depth + 2 <= max_depth`" in skill
+    assert "When `current_depth + 2 > max_depth`" in skill
+    assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
+    assert (
+        "Use another child `team_planner` lane for broad, shared, unresolved, or multi-family work instead of forcing exhaustive current-layer exploration"
+        in skill
+    )
+    assert "route the uncertainty to another child `team_planner`" in skill
+
+
 def test_team_validator_playbook_uses_developer_style_contract() -> None:
     validator_dir = _BUNDLED_SKILLS_DIR / "team-validator-playbook"
     skill = (validator_dir / "SKILL.md").read_text(encoding="utf-8")
@@ -206,9 +248,11 @@ def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() 
 
     assert "`scope_paths` are the assigned edit surface for existing files" in skill
     assert "You may widen reads, diagnostics, and test commands" in skill
-    assert "Acceptance criteria and test outcomes never expand `scope_paths` by themselves" in skill
-    assert "A new production file may extend scope only through `daytona_write_file`" in skill
-    assert "no other worker owns that exact path" in skill
+    assert (
+        "Acceptance criteria, import errors, and test outcomes never expand `scope_paths` by themselves"
+        in skill
+    )
+    assert "Create a new production file only when the task, parent details, or dependency handoff names that exact path" in skill
     assert "A minor support edit to an existing out-of-scope production file is allowed" in skill
     assert "one-line import, alias, re-export, compatibility reference" in skill
     assert "parent task details show no sibling owns that path" in skill
@@ -217,14 +261,14 @@ def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() 
         in skill
     )
     assert (
-        "new production file whose `daytona_write_file` scope expansion was blocked or conflicted."
+        "unassigned missing compatibility module, or a new production file outside the exact paths assigned to this lane."
         in skill
     )
     assert (
         "Before every mutation, verify the target file path, source path, destination path, or rename file hint"
         in skill
     )
-    assert "For a new production file required by live evidence, use `daytona_write_file`" in skill
+    assert "For a new production file, proceed only when the exact path was assigned" in skill
     assert "explicitly qualifies as a minor support edit" in skill
     assert "If an existing-file mutation is outside scope and does not qualify as a minor support edit" in skill
     assert "continue only if the edit meets every minor support edit criterion above" in skill

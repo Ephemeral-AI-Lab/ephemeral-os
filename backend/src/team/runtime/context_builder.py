@@ -195,6 +195,21 @@ def _format_terminal_tools(terminal_tools: Iterable[str]) -> str:
     )
 
 
+def _planning_depth_variables(team_run: "TeamRun", task: Task) -> dict[str, object]:
+    budgets = getattr(team_run, "budgets", None)
+    max_depth = getattr(budgets, "max_depth", None)
+    if max_depth is None:
+        return {}
+
+    current_depth = int(task.depth or 0)
+    return {
+        "current_depth": current_depth,
+        "max_depth": int(max_depth),
+        "child_depth": current_depth + 1,
+        "grandchild_depth": current_depth + 2,
+    }
+
+
 async def _render_template_user_message(
     team_run: "TeamRun",
     task: Task,
@@ -229,6 +244,7 @@ async def _render_template_user_message(
         "your_parent_task_id": parent_id,
         "your_failed_task_id": failed_id,
     }
+    variables.update(_planning_depth_variables(team_run, task))
     return render_user_prompt_template(template_name, variables)
 
 

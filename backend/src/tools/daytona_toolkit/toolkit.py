@@ -53,6 +53,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
             "- Use `code=\"...\"` only for multi-step Python.\n"
             "- Commands already start at the sandbox repo root, usually `/testbed`, and output is captured automatically.\n"
             "- Never prefix commands with host paths like `/Users/...`; use repo-relative paths or repo subdirectories.\n"
+            "- In coordinated team lanes, do not run package or environment mutation commands such as `pip install`, `uv sync`, `npm install`, or equivalent install/add/sync/update operations.\n"
             "- Do not use CodeAct for file writes, moves, deletes, or file-content reads.\n"
             "- Use the edit, write, rename, delete, move, read, grep, or glob tools for file work.\n"
             "- Background Python should use `python -u` or `print(..., flush=True)`.\n"

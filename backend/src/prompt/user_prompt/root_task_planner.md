@@ -6,6 +6,15 @@ Please read the following sections and call the listed terminal tool when your w
 
 For your first tool call please call `load_skill(skill_name="team-root-planner-playbook")` to understand the workflow how to achieve the goal
 
+{{#if max_depth}}
+## Planning depth
+
+Current depth: `{{current_depth}}`
+Max depth: `{{max_depth}}`
+Tasks submitted in this plan will run at depth `{{child_depth}}`.
+A child `team_planner` submitted now would need room to submit its own children at depth `{{grandchild_depth}}`.
+{{/if}}
+
 ## User request
 
 ```markdown

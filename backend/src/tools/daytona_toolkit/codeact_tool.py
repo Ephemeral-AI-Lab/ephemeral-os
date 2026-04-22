@@ -1,4 +1,8 @@
-"""Run shell commands or Python in the Daytona repo root."""
+"""Run shell commands or Python in the Daytona repo root.
+
+Coordinated team lanes must not use CodeAct to mutate package or environment
+state; missing dependencies are workflow evidence for replanning.
+"""
 
 from __future__ import annotations
 
@@ -48,7 +52,10 @@ class DaytonaCodeActInput(BaseModel):
             "Shell command to run from the repo root. Use for tests, builds, "
             "and verification. Do not prefix with host paths like /Users/...; "
             "the sandbox repo root is usually /testbed. Do not also set code. "
-            "Output is captured automatically."
+            "Output is captured automatically. In coordinated team lanes, do "
+            "not run package or environment mutation commands such as pip "
+            "install, uv sync, npm install, or equivalent install/add/sync/"
+            "update operations."
         ),
     )
     timeout: int = Field(
@@ -720,6 +727,9 @@ def _files_written_count(
         "never shell commands such as `python -m pytest ...`. Commands "
         "start at the sandbox repo root, usually `/testbed`; never prefix with "
         "host paths like `/Users/...`. Output is captured automatically. "
+        "In coordinated team lanes, do not use this for package or environment "
+        "mutation commands such as `pip install`, `uv sync`, `npm install`, "
+        "or equivalent install/add/sync/update operations. "
         "Do not use this for file writes, moves, deletes, or file-content reads; "
         "use the file, search, rename, delete, or move tools instead."
     ),

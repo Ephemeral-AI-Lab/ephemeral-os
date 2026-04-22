@@ -19,6 +19,7 @@ from tools.daytona_toolkit.hooks.prehook import (
     codeact_destructive_git,
     codeact_destructive_shell,
     codeact_output_pipeline_policy,
+    codeact_package_mutation_policy,
     codeact_python_process_policy,
     codeact_stderr_suppression_policy,
     move_src_scope_deny,
@@ -372,6 +373,71 @@ def test_codeact_destructive_shell_blocks_python_shell_command() -> None:
     assert "destructive shell command" in (outcome.error_message or "")
 
 
+def test_codeact_package_mutation_policy_blocks_package_manager_mutations() -> None:
+    ctx = _ctx()
+    commands = [
+        "pip install ujson -q",
+        "pip3 install ujson -q",
+        "python -m pip install pandas",
+        "python3.11 -u -m pip install pandas",
+        "uv add pandas",
+        "uv sync --extra dev",
+        "uv run pip install ujson",
+        "conda install pandas -y",
+        "sudo apt install libhdf5-dev",
+        "env -u PIP_INDEX_URL pip install ujson",
+        "npm install",
+        "pnpm add vite",
+        "yarn add react",
+        "poetry add pytest",
+        "(pip install ujson)",
+        "version=$(pip install ujson)",
+    ]
+
+    for command in commands:
+        args = DaytonaCodeActInput(command=command)
+        outcome = _run(
+            codeact_package_mutation_policy.hook("daytona_codeact", args, ctx)
+        )
+        assert outcome.has_error is True, command
+        assert "package and environment mutation commands are forbidden" in (
+            outcome.error_message or ""
+        )
+
+
+def test_codeact_package_mutation_policy_blocks_python_shell_command() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(code='cmd = "pip install ujson"\nshell(cmd)')
+
+    outcome = _run(
+        codeact_package_mutation_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is True
+    assert "Blocked `pip install`" in (outcome.error_message or "")
+
+
+def test_codeact_package_mutation_policy_allows_read_only_or_quoted_mentions() -> None:
+    ctx = _ctx()
+    commands = [
+        "pip list",
+        "uv run pytest -q",
+        "npm run build",
+        "pnpm test",
+        "yarn test",
+        "poetry run pytest",
+        "python -c \"print('pip install ujson')\"",
+        "printf '%s\\n' 'npm install'",
+    ]
+
+    for command in commands:
+        args = DaytonaCodeActInput(command=command)
+        outcome = _run(
+            codeact_package_mutation_policy.hook("daytona_codeact", args, ctx)
+        )
+        assert outcome.has_error is False, command
+
+
 def test_codeact_destructive_git_allows_clean_dry_run() -> None:
     for command in ("git clean -ndf", "git clean --dry-run -xdf"):
         assert codeact_destructive_git.destructive_git_command_error(command) is None
@@ -437,10 +503,12 @@ def test_new_pre_hooks_register_once() -> None:
     rename_scope_policy.register(registry)
     codeact_python_process_policy.register(registry)
     codeact_python_process_policy.register(registry)
+    codeact_package_mutation_policy.register(registry)
+    codeact_package_mutation_policy.register(registry)
     codeact_stderr_suppression_policy.register(registry)
     codeact_stderr_suppression_policy.register(registry)
 
     assert len(registry.matching("daytona_delete_file", "pre")) == 1
     assert len(registry.matching("daytona_move_file", "pre")) == 1
     assert len(registry.matching("daytona_rename_symbol", "pre")) == 1
-    assert len(registry.matching("daytona_codeact", "pre")) == 2
+    assert len(registry.matching("daytona_codeact", "pre")) == 3
