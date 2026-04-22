@@ -10,7 +10,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
   - it is working from invalidated assumptions
   - a shared dependency changed
   - leaving it running would duplicate or conflict with replanner-owned repair
-- Put replacement work in `new_tasks` as direct children of this replanner.
+- Put replacement work in `new_tasks` as direct `developer` children of this replanner, with optional `validator` verification.
 - Include a cancelled sibling's scope in replacement tasks only when that sibling id is in `cancel_ids`.
 
 ## Never Cancel
@@ -27,6 +27,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 - Benchmark-test edits or missing paths proven only by tests.
 - Skip, xfail, test rewrite, pytest configuration, or benchmark harness changes intended to make verification green.
 - Replacement work for an uncancelled sibling's scope.
+- Child `team_planner`, `root_planner`, `team_replanner`, or `scout` tasks.
 - Replacement moves, shims, bridges, or re-exports without production evidence for both source and destination.
 - Dependencies on downstream tasks already blocked on this replanner.
 
@@ -34,7 +35,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 
 1. Confirm each `cancel_ids` item is a non-terminal direct sibling with the same `parent_id` as this replanner.
 2. Exclude the failed task id, this replanner id, terminal tasks, and nested graph ids.
-3. Keep replacement work under this replanner; do not create a child `team_planner` or `team_replanner` to decide the repair.
+3. Keep replacement work under this replanner; do not create a child planner, replanner, or scout to decide the repair.
 4. Prefer local deps; existing deps require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task.
 5. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local replacement ids it verifies.
 6. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.

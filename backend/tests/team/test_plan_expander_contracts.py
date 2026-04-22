@@ -347,6 +347,50 @@ async def test_replan_expander_rejects_original_task_cancellation():
 
 
 @pytest.mark.asyncio
+async def test_replan_expander_allows_children_at_replanner_depth_limit():
+    graph = {
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN, parent_id="parent"),
+        "replanner": _task(
+            "replanner",
+            agent_name="team_replanner",
+            status=TaskStatus.RUNNING,
+            parent_id="parent",
+            fired_by_task_id="failed",
+        ),
+    }
+    store = _ExpanderStore(graph)
+    budget = _Budget()
+    budget.budgets = BudgetConfig(max_depth=1)
+    expander = PlanExpander(
+        team_run_id="run-1",
+        store=store,
+        budget=budget,
+        graph_getter=lambda: graph,
+        emit_cb=_ignore_event,
+        fail_cb=_ignore_fail,
+    )
+
+    outcome = await expander.apply_replan(
+        replan_task_id="replanner",
+        add_tasks=[
+            TaskDefinition(
+                id="same-depth-repair",
+                objective=_spec("Repair at the replanner depth limit."),
+                agent="developer",
+                description="repair at depth limit",
+                scope_paths=["src/a.py"],
+                parent_id="replanner",
+            )
+        ],
+        cancel_ids=[],
+    )
+
+    assert outcome.added == 1
+    assert budget.charged == 1
+    assert store.calls == ["apply_replan_atomic"]
+
+
+@pytest.mark.asyncio
 async def test_replan_expander_rejects_insertion_under_original_task():
     graph = {
         "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),

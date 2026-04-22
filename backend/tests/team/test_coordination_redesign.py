@@ -258,6 +258,9 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "validator tasks are present" in schema["description"]
     assert "numbered colon labels" in schema["description"]
     assert "Test files and test directories are rejected as scope_paths" in schema["description"]
+    name_schema = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["name"]
+    assert name_schema["enum"] == ["developer", "validator"]
+    assert "team_planner" not in name_schema["enum"]
     assert "summary" not in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
 
@@ -656,6 +659,50 @@ async def test_submit_replan_rejects_replanner_agent_targets():
 
 
 @pytest.mark.asyncio
+async def test_submit_replan_rejects_planner_agent_targets():
+    task_center = _AsyncTaskCenterStub()
+    task_center.graph = {
+        "replanner-task": Task(
+            id="replanner-task",
+            team_run_id="run-1",
+            agent_name="team_replanner",
+            status=TaskStatus.READY,
+            objective="recover",
+            parent_id="parent",
+        ),
+    }
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+            "max_plan_size": 8,
+        },
+    )
+
+    result = await SubmitReplanTool().execute(
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "bad-planner",
+                    "description": "Spawn planner",
+                    "spec": _spec("Try to delegate replanning to a planner."),
+                    "name": "team_planner",
+                    "scope_paths": ["src/api.py"],
+                }
+            ]
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "submit_replan can only create developer or validator tasks" in result.output
+    assert "agent 'team_planner'" in result.output
+
+
+@pytest.mark.asyncio
 async def test_submit_replan_rejects_subagent_targets():
     task_center = _AsyncTaskCenterStub()
     task_center.graph = {
@@ -699,7 +746,7 @@ async def test_submit_replan_rejects_subagent_targets():
 
 
 @pytest.mark.asyncio
-async def test_submit_replan_rejects_depth_overflow():
+async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
     task_center = _AsyncTaskCenterStub()
     task_center.graph = {
         "replanner-task": Task(
@@ -728,9 +775,9 @@ async def test_submit_replan_rejects_depth_overflow():
         SubmitReplanTool.input_model(
             new_tasks=[
                 {
-                    "id": "too-deep",
-                    "description": "Repair below limit",
-                    "spec": _spec("Repair below the depth limit."),
+                    "id": "same-depth-repair",
+                    "description": "Repair at limit",
+                    "spec": _spec("Repair at the replanner depth limit."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
@@ -739,8 +786,10 @@ async def test_submit_replan_rejects_depth_overflow():
         ctx,
     )
 
-    assert result.is_error is True
-    assert "replan would exceed max_depth=1 from current depth=1" in result.output
+    assert result.is_error is False, result.output
+    replan = ctx.metadata["resolved_plan"]
+    assert [task.id for task in replan.add_tasks] == ["same-depth-repair"]
+    assert [task.parent_id for task in replan.add_tasks] == ["replanner-task"]
 
 
 @pytest.mark.asyncio

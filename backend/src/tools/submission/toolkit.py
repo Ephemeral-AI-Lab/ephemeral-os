@@ -144,6 +144,27 @@ def _note_budget_issues(
     return issues
 
 
+def _replan_agent_target_issues(tasks: list[Any]) -> list[dict[str, str]]:
+    """Restrict replanner-authored corrective children to terminal work lanes."""
+    issues: list[dict[str, str]] = []
+    allowed_roles = {"developer", "reviewer"}
+    for idx, item in enumerate(tasks):
+        agent = str(getattr(item, "agent", "") or "")
+        agent_def = get_definition(agent)
+        if agent_def is None or agent_def.role in allowed_roles:
+            continue
+        issues.append(
+            {
+                "field": f"tasks[{idx}].agent",
+                "msg": (
+                    "submit_replan can only create developer or validator tasks; "
+                    f"task '{item.id}' resolved to {agent_def.role!r} agent '{agent}'"
+                ),
+            }
+        )
+    return issues
+
+
 def _format_task_summary_lines(tasks: list[dict[str, Any]], *, limit: int = 12) -> str:
     lines: list[str] = []
     for item in tasks[:limit]:
@@ -534,7 +555,15 @@ def _validate_submit_replan_input(
         return [f"invalid replan payload: {exc}"]
 
     max_plan_size = _metadata_int(context, "max_plan_size", 50)
-    issues = validate_plan(plan, max_plan_size=max_plan_size) if plan.tasks else []
+    issues = (
+        validate_plan(
+            plan,
+            max_plan_size=max_plan_size,
+            extra_validators=[_replan_agent_target_issues],
+        )
+        if plan.tasks
+        else []
+    )
 
     max_tasks = _metadata_int(context, "max_tasks")
     tasks_used = _metadata_int(context, "tasks_used")
@@ -550,7 +579,7 @@ def _validate_submit_replan_input(
         )
     max_depth = _metadata_int(context, "max_depth")
     task_depth = _metadata_int(context, "task_depth")
-    if max_depth and plan.tasks and (task_depth + 1) > max_depth:
+    if max_depth and plan.tasks and task_depth > max_depth:
         issues.append(
             {
                 "field": "tasks",
@@ -733,7 +762,8 @@ class SubmitReplanTool(BaseTool):
         "replanner, and cancel_ids for stale direct siblings whose subtrees "
         "should be cancelled by cascade. A system-generated summary of what "
         "actually happened is produced after children complete — do NOT "
-        "write prose. Never put the Failed task id or original failed "
+        "write prose. New tasks may target only developer repair lanes or "
+        "validator verification lanes. Never put the Failed task id or original failed "
         "request_replan task in cancel_ids. Do not include output, "
         "summary, background, parent_id, or other fields. Each new task must "
         "include a short planner-authored description. Each new task spec must use "
@@ -747,6 +777,23 @@ class SubmitReplanTool(BaseTool):
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput
     output_model = SubmitReplanOutput
+
+    def to_api_schema(self) -> dict[str, Any]:
+        schema = super().to_api_schema()
+        task_spec = (
+            schema.get("input_schema", {})
+            .get("$defs", {})
+            .get("NewTaskSpec", {})
+            .get("properties", {})
+            .get("name")
+        )
+        if isinstance(task_spec, dict):
+            task_spec["enum"] = ["developer", "validator"]
+            task_spec["description"] = (
+                "Replan task agent. Replanners may create only developer "
+                "repair tasks or validator verification tasks."
+            )
+        return schema
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitReplanInput)

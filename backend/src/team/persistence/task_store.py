@@ -536,6 +536,7 @@ class TaskStore:
                         parent_id,
                         parent_depth,
                         parent_root_id,
+                        child_depth=parent_depth if parent_id is not None else 0,
                     )
                 )
             await db.commit()

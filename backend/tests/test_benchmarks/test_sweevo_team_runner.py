@@ -435,7 +435,7 @@ def test_sweevo_budgets_follow_instance_size_ceiling():
     budgets = _derive_sweevo_budgets(instance)
 
     assert budgets.max_plan_size == 16
-    assert budgets.max_depth == 4
+    assert budgets.max_depth == 6
 
 
 def test_checkpoint_repo_patch_from_store_returns_latest_matching_patch():

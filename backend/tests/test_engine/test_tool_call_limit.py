@@ -175,6 +175,19 @@ async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
 
 
 @pytest.mark.asyncio
+async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
+    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_summary"})
+    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
+
+    result = await _execute_tool_call(ctx, "daytona_read_file", "id1", {})
+
+    assert result.is_error
+    assert "terminal call reserved" in result.content
+    assert "submit_task_summary" in result.content
+    assert ctx.tool_calls_used == 1
+
+
+@pytest.mark.asyncio
 async def test_execute_tool_call_unlimited_budget_does_not_count():
     ctx = _ctx(limit=None, used=0)
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]

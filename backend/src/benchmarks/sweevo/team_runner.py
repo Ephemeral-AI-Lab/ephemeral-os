@@ -154,10 +154,10 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     f2p_targets = max(1, len(instance.fail_to_pass))
 
     base = {
-        "small":  {"max_depth": 4, "max_plan_size": 8,  "max_tasks": 24},
-        "medium": {"max_depth": 4, "max_plan_size": 12, "max_tasks": 40},
-        "large":  {"max_depth": 4, "max_plan_size": 16, "max_tasks": 64},
-    }.get(size, {"max_depth": 4, "max_plan_size": 12, "max_tasks": 40})
+        "small":  {"max_depth": 6, "max_plan_size": 8,  "max_tasks": 24},
+        "medium": {"max_depth": 6, "max_plan_size": 12, "max_tasks": 40},
+        "large":  {"max_depth": 6, "max_plan_size": 16, "max_tasks": 64},
+    }.get(size, {"max_depth": 6, "max_plan_size": 12, "max_tasks": 40})
     max_depth = int(base["max_depth"])
 
     # Keep each planner level inside the benchmark-size ceiling. When the

@@ -339,6 +339,50 @@ async def test_parent_summarizer_no_terminal_call_routes_to_fail_task(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_parent_summarizer_explicit_replan_targets_summarized_parent(monkeypatch):
+    task = Task(
+        id="summary-1",
+        team_run_id="test-run-001",
+        agent_name="parent_summarizer",
+        status=TaskStatus.RUNNING,
+        objective="Summarize planner-parent",
+        scope_paths=[],
+        parent_id="planner-parent",
+        root_id="planner-parent",
+        agent_run_id="agent-run-1",
+        created_at=datetime.now(timezone.utc),
+        fired_by_task_id="planner-parent",
+    )
+    tc = FakeTaskCenter()
+    tc.request_replan = AsyncMock()
+    tc.fail_task = AsyncMock()
+    tc.complete_task = AsyncMock(return_value=[])
+
+    import agents.registry as registry
+    monkeypatch.setattr(
+        registry, "get_role",
+        lambda name: "parent_summarizer" if name == "parent_summarizer" else None,
+    )
+
+    team_run = FakeTeamRun(task_center=tc)
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+    request = ReplanRequest(reason="replan_trigger: unresolved_blocker", explicit=True)
+
+    await executor._dispatch(task, request)
+
+    tc.request_replan.assert_awaited_once_with("planner-parent", request)
+    tc.complete_task.assert_awaited_once()
+    completed_result = tc.complete_task.await_args.args[1]
+    assert isinstance(completed_result, AgentResult)
+    assert completed_result.summary == request.reason
+    tc.fail_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_fail_after_active_work_does_not_cancel_active_runners():
     """Graceful run failure stops new work while preserving active submissions."""
     sleeper = asyncio.create_task(asyncio.sleep(60))
@@ -418,6 +462,7 @@ def test_read_result_no_submission_fails():
     assert isinstance(result, ReplanRequest)
     assert "terminal submission tool" in result.reason
     assert "I was still working" in result.reason
+    assert result.explicit is False
 
 
 def test_read_result_empty_metadata():
@@ -428,6 +473,23 @@ def test_read_result_empty_metadata():
     result = executor._read_result(task, ctx)
     assert isinstance(result, ReplanRequest)
     assert "terminal submission tool" in result.reason
+
+
+def test_read_result_explicit_request_replan_is_marked_explicit():
+    executor, _ = _make_executor()
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "task_summary_type": "request_replan",
+            "task_summary": "replan_trigger: unresolved_blocker",
+        }
+    )
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+
+    result = executor._read_result(task, ctx)
+
+    assert isinstance(result, ReplanRequest)
+    assert result.explicit is True
+    assert result.reason == "replan_trigger: unresolved_blocker"
 
 
 def test_inject_scope_warnings_posts_note_for_external_scoped_changes():

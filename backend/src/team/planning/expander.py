@@ -219,11 +219,11 @@ class PlanExpander:
         allowed_existing_dep_ids = result.allowed_existing_dep_ids
 
         if add_tasks:
-            new_depth = (getattr(replanner, "depth", 0) or 0) + 1
-            if not self._budget.within_depth_limit(new_depth):
+            replan_depth = getattr(replanner, "depth", 0) or 0
+            if not self._budget.within_depth_limit(replan_depth):
                 raise InvalidPlan(
                     f"replan would exceed max_depth={self._budget.budgets.max_depth} "
-                    f"from current depth={getattr(replanner, 'depth', 0) or 0}"
+                    f"from current depth={replan_depth}"
                 )
 
         plan_issues: list[dict[str, str]] = []

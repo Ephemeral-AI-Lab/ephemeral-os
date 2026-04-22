@@ -263,6 +263,7 @@ class SubmittedSummary:
 class ReplanRequest:
     reason: str
     suggestion: str | None = None
+    explicit: bool = False
     submission_kind: str = field(default="replan", init=False, repr=False)
 
 

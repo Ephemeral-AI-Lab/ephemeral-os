@@ -13,6 +13,9 @@ equivalently, a *tree of DAGs*:
 - **Tree backbone** via `Task.parent_id`: every planner expansion creates
   children that reference the planner as their parent. `max_depth` bounds
   recursion.
+- **Depth-neutral replan children**: replan-created tasks reference the
+  replanner as their parent for lifecycle gating, but keep the replanner's
+  depth instead of consuming another `max_depth` level.
 - **Per-level sibling DAG** via `Task.deps`: children of the same parent
   form a local directed acyclic graph that controls `READY` / `PENDING`
   scheduling.

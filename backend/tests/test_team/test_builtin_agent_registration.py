@@ -48,6 +48,15 @@ def test_team_replanner_prompt_loads_playbook_before_planning_tools() -> None:
     assert "Use that playbook to choose and order references" in defn.system_prompt
 
 
+def test_parent_summarizer_prompt_requests_replan_for_unresolved_rollups() -> None:
+    defn = get_definition(PARENT_SUMMARIZER)
+    assert defn is not None
+    assert defn.system_prompt is not None
+    assert 'Use `type="request_replan"`' in defn.system_prompt
+    assert "replan_trigger: unresolved_blocker" in defn.system_prompt
+    assert "open risk`, not `delivered`" in defn.system_prompt
+
+
 def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     defn = get_definition(ROOT_PLANNER)
     assert defn is not None

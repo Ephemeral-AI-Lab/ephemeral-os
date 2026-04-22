@@ -44,3 +44,6 @@ TaskCenter creates a READY `parent_summarizer` sidecar with
 `fired_by_task_id` pointing at the awaiting-summary parent. The normal executor
 runs it with `read_task_details` and `submit_task_summary`; successful
 submission posts the authoritative parent roll-up and finalizes the parent.
+If the summarizer finds unresolved child evidence, it submits
+`type="request_replan"` instead; the executor replans the summarized parent
+rather than marking it `done`.

@@ -15,6 +15,7 @@ from team.models import (
     ReplanPlan,
     ReplanRequest,
     Task,
+    TaskDefinition,
     TaskStatus,
 )
 from .helpers import make_task as _task
@@ -769,6 +770,100 @@ async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch
     assert replanner.fired_by_task_id == "failed-task"
     assert replaces == [
         {"old": "failed-task", "new": [replanner.id]}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_apply_replan_atomic_inserts_children_at_replanner_depth(monkeypatch):
+    from team.persistence import task_store as task_store_module
+
+    class _FakeDb:
+        async def commit(self) -> None:
+            return None
+
+    class _CommittableSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return _FakeDb()
+
+                async def __aexit__(self_inner, *args):
+                    return False
+
+            return _Ctx()
+
+    store = TaskStore(_CommittableSessionFactory(), "run-1")
+    inserted_calls: list[dict[str, object]] = []
+
+    async def _fake_cancel_by_ids(db, team_run_id, task_ids, reason):
+        return 0
+
+    async def _fake_cascade_cancel_recursive(db, team_run_id, task_id):
+        return []
+
+    async def _fake_fetch_parent_depth_and_root(db, team_run_id, parent_id):
+        assert parent_id == "replanner"
+        return 2, "root"
+
+    async def _fake_insert_plan_records(
+        db,
+        team_run_id,
+        specs,
+        parent_id,
+        parent_depth,
+        parent_root_id,
+        *,
+        child_depth=None,
+    ):
+        inserted_calls.append(
+            {
+                "parent_id": parent_id,
+                "parent_depth": parent_depth,
+                "parent_root_id": parent_root_id,
+                "child_depth": child_depth,
+                "spec_ids": [spec.id for spec in specs],
+            }
+        )
+        return []
+
+    async def _fake_refresh(self):
+        return None
+
+    monkeypatch.setattr(task_store_module.q, "cancel_by_ids", _fake_cancel_by_ids)
+    monkeypatch.setattr(
+        task_store_module.q, "cascade_cancel_recursive", _fake_cascade_cancel_recursive
+    )
+    monkeypatch.setattr(
+        task_store_module.q,
+        "fetch_parent_depth_and_root",
+        _fake_fetch_parent_depth_and_root,
+    )
+    monkeypatch.setattr(task_store_module.q, "insert_plan_records", _fake_insert_plan_records)
+    monkeypatch.setattr(TaskStore, "refresh_graph", _fake_refresh)
+
+    await store.apply_replan_atomic(
+        cancel_ids=[],
+        cancel_reason="cancelled_by_replan_replanner",
+        specs=[
+            TaskDefinition(
+                id="same-depth-repair",
+                objective=_spec("Repair at replanner depth."),
+                agent="developer",
+                description="repair",
+                scope_paths=["src/parser.py"],
+                parent_id="replanner",
+            )
+        ],
+    )
+
+    assert inserted_calls == [
+        {
+            "parent_id": "replanner",
+            "parent_depth": 2,
+            "parent_root_id": "root",
+            "child_depth": 2,
+            "spec_ids": ["same-depth-repair"],
+        }
     ]
 
 

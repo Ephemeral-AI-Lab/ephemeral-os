@@ -230,7 +230,7 @@ class Executor:
             return AgentResult(summary=summary)
 
         if summary_type == "request_replan":
-            return ReplanRequest(reason=summary)
+            return ReplanRequest(reason=summary, explicit=True)
 
         # submit_plan or submit_replan was called.
         resolved_plan = meta.get("resolved_plan")
@@ -285,13 +285,30 @@ class Executor:
 
         if isinstance(result, ReplanRequest):
             # Parent-summary sidecars must not be rescued by a replanner.
-            # A no-terminal-call outcome after retries is a hard failure of
-            # the summary task; its EAS parent cannot reach DONE without an
-            # authoritative roll-up, so fail the summary leaf and let
-            # TaskCenter.fail_task propagate to the parent + fail-fast.
+            # A no-terminal-call outcome after retries is a hard failure. An
+            # explicit request_replan from the summarizer is different: the
+            # roll-up found unresolved parent work, so replan the summarized
+            # parent instead of incorrectly finalizing it as DONE.
             from agents.registry import get_role
 
             if get_role(task.agent_name) == "parent_summarizer":
+                if result.explicit and task.fired_by_task_id:
+                    try:
+                        await tc.request_replan(task.fired_by_task_id, result)
+                    except BudgetExceeded as exc:
+                        reason = f"replan_budget_exhausted: {exc}"
+                        await tc.fail_task(task.id, reason)
+                        await self.team_run.fail_fast(reason)
+                        await self._checkpoint_after_transition(
+                            task,
+                            outcome="replan_budget_exhausted",
+                        )
+                        return
+                    await tc.complete_task(task.id, AgentResult(summary=result.reason))
+                    await self._checkpoint_after_transition(
+                        task, outcome="parent_summary_request_replan"
+                    )
+                    return
                 await tc.fail_task(
                     task.id, "parent_summary_no_terminal_call"
                 )

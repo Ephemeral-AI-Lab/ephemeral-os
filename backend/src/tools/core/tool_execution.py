@@ -31,6 +31,23 @@ def _build_budget_exceeded_error(
     )
 
 
+def _build_terminal_budget_reserved_error(
+    tool_use_id: str,
+    tool_call_limit: int,
+    terminal_tools: set[str],
+) -> ToolResultBlock:
+    tool_list = ", ".join(sorted(terminal_tools))
+    return ToolResultBlock(
+        tool_use_id=tool_use_id,
+        content=(
+            f"tool_call_limit terminal call reserved: {tool_call_limit - 1} "
+            f"of {tool_call_limit} tool calls already used. The last call is "
+            f"reserved for terminal submission via {tool_list}."
+        ),
+        is_error=True,
+    )
+
+
 def _consume_tool_budget_or_reject(
     context: QueryContext,
     tool_name: str,
@@ -42,6 +59,16 @@ def _consume_tool_budget_or_reject(
         if tool_name in context.terminal_tools:
             return None
         return _build_budget_exceeded_error(tool_use_id, context.tool_call_limit)
+    if (
+        context.terminal_tools
+        and context.tool_calls_used == context.tool_call_limit - 1
+        and tool_name not in context.terminal_tools
+    ):
+        return _build_terminal_budget_reserved_error(
+            tool_use_id,
+            context.tool_call_limit,
+            context.terminal_tools,
+        )
     context.tool_calls_used += 1
     return None
 

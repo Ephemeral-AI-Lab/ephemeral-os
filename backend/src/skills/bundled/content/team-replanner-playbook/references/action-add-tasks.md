@@ -10,6 +10,7 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
   - `scope_expansion`
   - `wrong_owner_or_role`
   - `unresolved_blocker` after diagnostics identify a production repair surface
+- Create only `developer` repair tasks and optional `validator` verification tasks.
 - Keep repair work anchored to the failed task and preserved dependents.
 - Merge nearby same-file seams into one developer task.
 - Add a validator only when a distinct verification lane is useful and no preserved downstream validator covers the repair.
@@ -22,6 +23,7 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
 - Skip, xfail, test rewrite, pytest configuration, or benchmark harness changes intended to make verification green.
 - Work already owned by an uncancelled live sibling.
 - Duplicate validators/dependents already rewired to this replanner.
+- Child `team_planner`, `root_planner`, `team_replanner`, or `scout` tasks.
 - New-file, move, shim, bridge, or re-export work without production evidence for the destination.
 
 ## Build

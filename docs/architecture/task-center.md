@@ -43,13 +43,14 @@ The replanner submits `submit_replan(new_tasks=[...], cancel_ids=[...])`.
 
 After the replan:
 
-- `new_tasks` are inserted as direct children of the replanner. The replanner never sets `parent_id` per task.
+- `new_tasks` are inserted as direct children of the replanner at the replanner's depth. The replanner never sets `parent_id` per task.
 - Each `new_tasks` item carries a required short `description` label; the full task briefing remains in `spec`.
 - The full corrective task JSON is appended to the replanner detail as `Initial Replan`; the replanner does not submit a free-text summary.
 - `cancel_ids` may target only direct siblings of the replanner. Cancelled tasks are marked `cancelled`, including cascaded descendants and dependents.
 - New replan tasks may depend on local new-task IDs or schedulable existing tasks (`done`, `ready`, `pending`) that do not already depend on the replanner or the original failed task.
 - The replanner is marked `done` immediately when it has no new child tasks, or `expanded` when it created direct child tasks.
-- Expanded replanners transition to `expanded_awaiting_summary` after all direct children are terminal; `parent_summarizer` then reads every child detail, posts the roll-up, and finalizes the replanner as `done`.
+- Expanded replanners transition to `expanded_awaiting_summary` after all direct children are terminal; `parent_summarizer` then reads every child detail, posts the roll-up, and finalizes the replanner as `done` only when the roll-up has no unresolved child evidence.
+- A `parent_summarizer` may submit `type="request_replan"` for unresolved roll-ups; the executor targets that replan at the summarized parent.
 - The original failed task stays `request_replan` after the replanner succeeds. The origin is terminal from recovery start; success records `replanned_by:<replanner_id>` on its failure reason while pending dependents remain rewired to the replanner.
 
 ## Notes

@@ -212,9 +212,9 @@ sequenceDiagram
     Note over D,A: Downstream remains blocked on R until child repairs finish.
 ```
 
-All replan-added tasks are direct children of `R`. This keeps the original
-rewire invariant simple: downstream tasks wait on `R`, and `R` waits on the
-repair work it owns.
+All replan-added tasks are direct children of `R` and keep `R`'s depth. This
+keeps the original rewire invariant simple: downstream tasks wait on `R`, and
+`R` waits on the repair work it owns without spending another `max_depth` level.
 
 ### Authoring Boundary
 

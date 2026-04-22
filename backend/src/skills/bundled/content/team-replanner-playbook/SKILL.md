@@ -7,6 +7,8 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 Read the following sections to produce a corrective task DAG from the failed task's evidence, then finish with exactly one `submit_replan(...)` call.
 
+Replanner-created tasks are limited to `developer` repair lanes and `validator` verification lanes. Do not create `team_planner`, `root_planner`, `team_replanner`, `scout`, or other agent roles in `new_tasks`; the replanner owns recovery synthesis itself.
+
 ## Workflow
 
 ```mermaid
@@ -83,6 +85,7 @@ Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_block
 
 - Preserve downstream validators/dependents already rewired to this replanner.
 - Leave live sibling scopes alone unless you cancel a stale direct sibling.
+- Do not create a verification-only child for red acceptance evidence when the owning repair belongs to a preserved live sibling or downstream validator.
 - Drop same-scope continuation candidates only when they lack a root-cause trace. For `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, same-scope corrective tasks are valid when each task is tied to a named production mechanism and repair location.
 - Drop candidates whose only evidence is a benchmark test path, test import, or test-derived helper.
 - Drop candidates that edit, skip, xfail, rewrite, or reconfigure tests to make verification green.
@@ -140,6 +143,7 @@ Then self-check:
 - `cancel_ids` contains only stale non-terminal direct siblings.
 - The failed task id, this replanner id, terminal tasks, and descendants are never cancelled.
 - Specs use `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:` with body text on the same line.
+- Every new task `name` is exactly `developer` or `validator`.
 - `scope_paths` are repo-relative production paths, not `/testbed/...` paths or verification-only tests.
 - No `new_tasks[*].scope_paths` entry may match `*/tests/*`, `test_*.py`, benchmark harness files, or pytest/config verification files unless the original user request explicitly asked to repair tests rather than production behavior.
 - The final assistant action is exactly one `submit_replan(...)` call.

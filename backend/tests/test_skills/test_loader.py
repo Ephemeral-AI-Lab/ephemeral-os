@@ -88,9 +88,13 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Enumerate distinct trace-gap triplets in visible reasoning before any scout call" in skill
     assert '"target_paths": ["<one production path>"]' in skill
     assert "Keep failing tests in scout `context`, not `target_paths`" in skill
+    assert "Replanner-created tasks are limited to `developer` repair lanes and `validator` verification lanes" in skill
 
     assert "## Call Shape" in contract
     assert "submit_replan({ new_tasks: NewTaskSpec[], cancel_ids: string[] })" in contract
+    assert 'name: "developer" | "validator";' in contract
+    assert "Every `name` is exactly `developer` or `validator`" in contract
+    assert "team_planner is accepted" not in contract
     assert "## Examples" in contract
     assert "## Final Checklist" in contract
     assert "Final payload shape lives in `terminal-contract`" in action_add

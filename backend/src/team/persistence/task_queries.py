@@ -480,12 +480,19 @@ async def insert_plan_records(
     parent_id: str | None,
     parent_depth: int,
     parent_root_id: str | None,
+    *,
+    child_depth: int | None = None,
 ) -> list[TaskRecord]:
     if not specs:
         return []
     all_dep_ids = {dep_id for spec in specs for dep_id in spec.deps}
     done_ids = await fetch_done_dep_ids(db, team_run_id, all_dep_ids)
     records: list[TaskRecord] = []
+    record_depth = (
+        child_depth
+        if child_depth is not None
+        else ((parent_depth + 1) if parent_id else 0)
+    )
     for spec in specs:
         status = "ready" if all(dep_id in done_ids for dep_id in spec.deps) else "pending"
         root_id = parent_root_id if parent_id else spec.id
@@ -502,7 +509,7 @@ async def insert_plan_records(
                 scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],
                 parent_id=parent_id,
                 root_id=root_id or "",
-                depth=(parent_depth + 1) if parent_id else 0,
+                depth=record_depth,
             )
         )
     db.add_all(records)
