@@ -74,12 +74,11 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Mandatory CodeAct preflight" not in rendered
     assert "Remove shell redirects and output filters entirely" not in rendered
     assert "Do not rely on sanitizer behavior as your normal workflow" not in rendered
-    assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in rendered
-    assert "Create a new production file only when the task, parent details, or dependency handoff" in rendered
-    assert "otherwise submit `type=\"request_replan\"` with trigger `scope_expansion`" in rendered
-    assert "An existing out-of-scope production file may be edited only for a minor support edit" in rendered
-    assert "one-line import, alias, re-export, compatibility reference" in rendered
-    assert "is not owned by a sibling in the parent task details" in rendered
+    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in rendered
+    assert "Developers may write, copy, or create production files outside `scope_paths`" in rendered
+    assert "outside-scope system notification" in rendered
+    assert "that notification is not a stop condition" in rendered
+    assert "clearly a different owner or too broad/ambiguous for this lane" in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
@@ -207,12 +206,11 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "Package/environment mutation is forbidden" in ctx.user_message
     assert "Do not run `pip install`, `uv add`, `uv sync`" in ctx.user_message
     assert "treat the advisory as workflow guidance" not in ctx.user_message
-    assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in ctx.user_message
-    assert "Create a new production file only when the task, parent details, or dependency handoff" in ctx.user_message
-    assert "otherwise submit `type=\"request_replan\"` with trigger `scope_expansion`" in ctx.user_message
-    assert "An existing out-of-scope production file may be edited only for a minor support edit" in ctx.user_message
-    assert "one-line import, alias, re-export, compatibility reference" in ctx.user_message
-    assert "is not owned by a sibling in the parent task details" in ctx.user_message
+    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in ctx.user_message
+    assert "Developers may write, copy, or create production files outside `scope_paths`" in ctx.user_message
+    assert "outside-scope system notification" in ctx.user_message
+    assert "that notification is not a stop condition" in ctx.user_message
+    assert "clearly a different owner or too broad/ambiguous for this lane" in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message

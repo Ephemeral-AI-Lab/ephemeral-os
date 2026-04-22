@@ -241,40 +241,34 @@ def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
             assert trigger not in skill
 
 
-def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() -> None:
+def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> None:
     skill = (
         _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
-    assert "`scope_paths` are the assigned edit surface for existing files" in skill
+    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in skill
     assert "You may widen reads, diagnostics, and test commands" in skill
+    assert "Developers may write, copy, or create production files outside `scope_paths`" in skill
+    assert "outside-scope system notification" in skill
+    assert "coordination guidance, not a stop condition" in skill
     assert (
-        "Acceptance criteria, import errors, and test outcomes never expand `scope_paths` by themselves"
-        in skill
-    )
-    assert "Create a new production file only when the task, parent details, or dependency handoff names that exact path" in skill
-    assert "A minor support edit to an existing out-of-scope production file is allowed" in skill
-    assert "one-line import, alias, re-export, compatibility reference" in skill
-    assert "parent task details show no sibling owns that path" in skill
-    assert (
-        "The next required change is an existing out-of-scope edit, move, rename, or delete that does not meet the minor support edit criteria above."
+        "The next required change would be a broad or ambiguous production change that this lane cannot responsibly finish."
         in skill
     )
     assert (
-        "unassigned missing compatibility module, or a new production file outside the exact paths assigned to this lane."
+        "ambiguous new production file whose missing path and mechanism are not proven by live production evidence."
         in skill
     )
     assert (
         "Before every mutation, verify the target file path, source path, destination path, or rename file hint"
         in skill
     )
-    assert "For a new production file, proceed only when the exact path was assigned" in skill
-    assert "explicitly qualifies as a minor support edit" in skill
-    assert "If an existing-file mutation is outside scope and does not qualify as a minor support edit" in skill
-    assert "continue only if the edit meets every minor support edit criterion above" in skill
+    assert "Out-of-scope production writes, copies, and new files are allowed for developers" in skill
+    assert "write-scope notifications are recorded" in skill
+    assert "treat it as coordination context and keep working" in skill
     assert "with trigger `scope_expansion`" in skill
     assert (
-        "Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them"
+        "Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism"
         in skill
     )
     assert (
@@ -295,7 +289,8 @@ def test_developer_and_validator_playbooks_keep_codeact_api_boundary() -> None:
         assert "A pre-hook block after sanitization or another policy denial is terminal tooling evidence" not in skill
         assert "never pass a shell command string in `code`" in skill
         assert "commands already start at the sandbox repo root" in skill
-        assert "Never `cd` to the host/local workspace path" in skill
+        assert "never `cd` to a host/local workspace path" in skill
+        assert "Never prefix commands with `cd /testbed &&`" in skill
 
 
 def test_validator_playbook_routes_out_of_scope_corrections_to_replan() -> None:

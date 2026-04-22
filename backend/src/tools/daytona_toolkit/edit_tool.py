@@ -115,11 +115,10 @@ def _normalize_edits(
         "Edit a sandbox file with exact search/replace. Use exactly one mode: "
         "`old_text` + `new_text` for one replacement, or `edits=[...]` for many. "
         "Do not send `new_text` with `edits`. In team lanes, test-file writes are "
-        "blocked unless runtime metadata allows them. Outside-scope production edits "
-        "to existing files are allowed only for developer minor support edits like one-line "
-        "imports, aliases, re-exports, or typo-level references; otherwise request replanning "
-        "with trigger scope_expansion. New production files must be created with daytona_write_file "
-        "so the scope posthook can approve or reject them."
+        "blocked unless runtime metadata allows them. Developer out-of-scope "
+        "production edits are allowed when tied to the assigned task. "
+        "Write-scope advisories are notifications to summarize, not automatic "
+        "replan conditions. New production files must be created with daytona_write_file."
     ),
     short_description="Apply atomic file edits.",
     input_model=DaytonaEditFileInput,

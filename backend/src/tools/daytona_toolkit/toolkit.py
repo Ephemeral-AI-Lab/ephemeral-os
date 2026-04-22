@@ -75,9 +75,8 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "- `daytona_delete_file`: delete a file. Set `is_folder=true` to delete a folder tree.\n"
         "- `daytona_move_file`: move a file. Set `is_folder=true` to move a folder tree. Use this instead of `mv`.\n"
         "- Team lanes block test-file writes unless runtime metadata allows them.\n"
-        "- Existing outside-scope production edits are allowed only for developer minor support edits like one-line imports, aliases, re-exports, or typo-level references.\n"
-        "- Otherwise request replanning with trigger scope_expansion.\n"
-        "- New production files must be created with daytona_write_file so the scope posthook can approve or reject them.\n"
+        "- Developer out-of-scope production writes/copies are allowed when tied to the assigned task; write-scope advisories are notifications to summarize, not automatic replan conditions.\n"
+        "- New production files must be created with daytona_write_file.\n"
         f"{codeact_section}"
     )
 

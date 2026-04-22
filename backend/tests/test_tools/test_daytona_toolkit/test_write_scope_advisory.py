@@ -197,13 +197,10 @@ def test_write_warning_emitted_for_developer_outside_scope():
     assert "advisory" in result
     assert "outside write_scope" in result
     assert "adjacent shim" not in result
-    assert "not a hard failure" not in result
-    assert "justified production owner" not in result
-    assert "submit_task_summary(type='request_replan')" in result
-    assert "minor support edit" in result
-    assert "one-line import" in result
-    assert "no sibling owns this path" in result
-    assert "Small out-of-scope edit" in result
+    assert "notification" in result
+    assert "Developers may write or copy out-of-scope production files" in result
+    assert "tied to the assigned task" in result
+    assert "Out-of-scope mutation" in result
 
 
 def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
@@ -231,7 +228,8 @@ def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
 
     assert result is not None
     assert "3+ outside-scope warnings" in result
-    assert "Stop editing and submit_task_summary(type='request_replan')" in result
+    assert "continue if they are still the right repair" in result
+    assert "final summary" in result
     assert "one coherent production owner" not in result
     assert _team_repo_write_error(
         ctx,
@@ -247,15 +245,15 @@ def test_write_and_edit_schema_keeps_scope_rules_simple():
     write_description = write_schema["description"]
     assert "there is no `write_file` tool" in write_description
     assert "test-file writes are blocked unless runtime metadata allows them" in write_description
-    assert "Use this for in-scope overwrites or live-evidence new production files" in write_description
-    assert "Overwrite existing outside-scope files only for developer minor support edits" in write_description
+    assert "Use this for in-scope writes and developer out-of-scope production" in write_description
+    assert "Write-scope advisories are notifications, not automatic replan conditions" in write_description
 
     edit_description = edit_schema["description"]
     assert "Use exactly one mode" in edit_description
     assert "Do not send `new_text` with `edits`" in edit_description
     assert "test-file writes are blocked unless runtime metadata allows them" in edit_description
-    assert "Outside-scope production edits to existing files are allowed only for developer minor support edits" in edit_description
-    assert "request replanning with trigger scope_expansion" in edit_description
+    assert "Developer out-of-scope production edits are allowed when tied to the assigned task" in edit_description
+    assert "Write-scope advisories are notifications to summarize, not automatic" in edit_description
 
 
 def test_write_warning_none_for_in_scope_write():

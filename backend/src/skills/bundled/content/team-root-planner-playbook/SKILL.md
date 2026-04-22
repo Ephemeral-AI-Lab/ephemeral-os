@@ -132,8 +132,9 @@ Steps:
 2. Use repo-relative production `scope_paths` for every task, including validators.
 3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface. Put owner evidence and sequencing in `2. Task Details:`; put concrete test-suite expectations in `3. Acceptance Criteria:`.
 4. Use `deps` only for real output ordering, known same-file edit ordering, or a child `team_planner` id in this payload. Every `deps` entry must resolve to another id in this `new_tasks` list — root/entry planners have no pre-existing Task Center ids to reference.
-5. Check the Terminal Tool Contract below.
-6. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.
+5. For each terminal validator, compute the full set of same-payload non-validator ids it validates, including every `team_planner` id, and put that complete set in `deps`.
+6. Check the Terminal Tool Contract below.
+7. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.
 
 
 ## Terminal Tool Contract
@@ -165,7 +166,7 @@ type NewTaskSpec = {
 | `description` | Short non-blank label naming the owner and outcome. Blank strings are rejected. |
 | `name` | Use only `developer`, `team_planner`, or `validator`: `developer` for exact owner work, `team_planner` for decomposition, `validator` for a distinct verification lane. Never put `scout` or `team_replanner` in `new_tasks`; scouts run via `run_subagent(...)`, replanners are spawned reactively by the runtime. |
 | `spec` | One string with three numbered colon labels in order, each on its own line with body continuing after the colon: `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`. `Task Details` must describe owner evidence, exact production scope, important constraints, and dependency context. `Acceptance Criteria` must be test-suite focused with concrete commands, focused pytest ids, broadened suites, and evidence expected in the final summary. Markdown headings, one-liners that cram every label together, and labels whose body starts on the next line are rejected. |
-| `deps` | JSON list of task ids that must finish first. Each id must name another task in this same `new_tasks` payload. Independent work uses `[]`. Validators must depend on at least one upstream same-payload task; terminal validators list every same-payload terminal non-validator id they validate. |
+| `deps` | JSON list of task ids that must finish first. Each id must name another task in this same `new_tasks` payload. Independent work uses `[]`. Validators must depend on at least one upstream same-payload task. A terminal validator must list every same-payload non-validator id it validates, including `team_planner` ids whose descendants will run later. |
 | `scope_paths` | Non-empty JSON list of repo-relative production paths the task owns or verifies. Use directories for broad planner/validator scopes. |
 
 ### Examples

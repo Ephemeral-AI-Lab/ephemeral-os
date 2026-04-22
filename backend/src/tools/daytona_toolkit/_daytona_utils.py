@@ -517,19 +517,17 @@ def _team_repo_write_warning(
     if scope_warnings >= 3:
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-            "You have 3+ outside-scope warnings; the assigned scope does not match the required repair. "
-            "Stop editing and submit_task_summary(type='request_replan') with trigger scope_expansion, "
-            "including each out-of-scope path and the command or diagnostic that proved it was needed."
+            "You have 3+ outside-scope warnings. Re-check that these production writes are tied to "
+            "the assigned task, then continue if they are still the right repair. Include each "
+            "out-of-scope path and verification evidence in the final summary."
         )
     agent_name = str(context.metadata.get("agent_name") or "").strip()
     if agent_name == "developer":
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-            "Existing files outside scope are allowed only for a minor support edit, such as a one-line "
-            "import, alias, re-export, or typo-level reference that directly unblocks the assigned scoped fix. "
-            "Before continuing, confirm from the parent task details that no sibling owns this path; otherwise "
-            "submit_task_summary(type='request_replan') with trigger scope_expansion. If you continue, include "
-            "a Small out-of-scope edit line with the path, exact change, owner check, verification, and residual risk."
+            "Developers may write or copy out-of-scope production files when the change is tied to "
+            "the assigned task. Treat this as a notification, verify the change, and include an "
+            "Out-of-scope mutation line with the path, rationale, verification, and residual risk."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "

@@ -15,6 +15,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 
 - Must inspect only and use CI/Task Center tools only.
 - First tool phase after reading the assigned payload: call `read_file_note(file_path="...")` for each assigned target path, even when the result is empty. Do not call `ci_workspace_structure(...)`, `ci_query_symbol(...)`, `ci_diagnostics(...)`, or any source-read tool until every assigned target note has been read.
+- The first assistant message that calls tools may contain only the required `read_file_note(...)` calls. Do not batch a CI/query/source tool in the same first tool message as those note reads.
 - After the required file-note reads, prefer `ci_workspace_structure(...)`, `ci_query_symbol(...)`, and `ci_diagnostics(...)` before any raw source read.
 - Must call exactly one `submit_file_note(...)` after evidence collection and before any final response. The tool input must include non-empty `content`.
 - If a prompt lists `final_response` because scout notes are prompt-mandated instead of runtime-terminal, treat it only as an optional post-note acknowledgment. Never use final prose instead of `submit_file_note(...)`.

@@ -28,7 +28,7 @@ Read the following sections to verify the assigned developer or child-planner ou
 5. Do not edit test files unless the task explicitly owns a test-only bug.
 6. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
 7. Do not claim success from stale, partial, indirect, or wrapper evidence.
-8. Do not prefix CodeAct commands with host paths like `/Users/...`; commands already start at the sandbox repo root, usually `/testbed`.
+8. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`.
 
 ## Route
 
@@ -54,7 +54,7 @@ Do this before CodeAct, CI, notes, file reads, edits, diagnostics, references, o
 1. Call `read_task_details(task_id="<uuid>")` for your task, parent task, and every dependency id from the prompt header.
 2. Use exact UUIDs only. Do not use planner slugs, short prefixes, fabricated ids, or scout ids.
 3. Treat your task spec as the validation contract. Treat dependency final summaries, appended `Initial Plan` / `Initial Replan` JSON, and parent details as the implementation handoff.
-4. After those required UUID reads, call `read_file_note(file_path="...")` for each touched or owned production file before file reads, diagnostics, tests, or corrective edits. Empty notes are valid freshness checks. Do not batch file-note reads with source file reads.
+4. After those required UUID reads, call `read_file_note(file_path="...")` for each touched or owned production file before file reads, diagnostics, tests, or corrective edits. For multi-file handoffs, compare against the touched or owned production files and read each distinct path once; do not duplicate one path while omitting another. Empty notes are valid freshness checks. Do not batch file-note reads with source file reads, diagnostics, CodeAct commands, or edits.
 5. If a dependency summary is missing, boilerplate, stale, or does not name verification evidence, preserve that as a validation gap instead of guessing what landed.
 
 Exit with: objective, acceptance criteria, parent guidance, dependency handoff status, touched files, scope paths, and file-note freshness.
@@ -89,7 +89,7 @@ Prove the current repo state.
 1. Run `ci_diagnostics(file_path="...")` on every owned or touched production file before terminal completion.
 2. Treat error-severity diagnostics on owned files as red evidence unless the task explicitly says they are pre-existing and irrelevant.
 3. Run the exact required runtime command first. For `daytona_codeact(...)`, use `command` for every shell, build, or test command; never pass a shell command string in `code`.
-4. Run CodeAct commands from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never `cd` to the host/local workspace path from AGENTS or environment context.
+4. Run CodeAct commands from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path from AGENTS or environment context.
 5. Use CodeAct only for runtime commands.
 6. For broad or slow suites, use background execution, continue useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.
 7. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
