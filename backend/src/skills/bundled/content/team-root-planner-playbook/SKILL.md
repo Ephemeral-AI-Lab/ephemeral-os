@@ -93,8 +93,8 @@ Steps:
 2. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
 3. Split exact owners into `developer` lanes.
 4. Use a child `team_planner` lane for broad, shared, unresolved, or multi-family work.
-5. Add exactly one terminal `validator` when any non-validator same-layer task exists.
-6. Make the validator depend on every same-layer non-validator id, including child planner ids.
+5. Add `validator` lanes only when a distinct verification owner is useful.
+6. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
 7. Launch another scout wave only for a newly revealed, distinct production owner slice.
 
 Never:
@@ -149,9 +149,9 @@ type NewTaskSpec = {
 | --- | --- |
 | `id` | Unique lower-kebab id in this payload (e.g. `dev-runtime-policy`). Other tasks reference this exact string in `deps`. |
 | `description` | Short non-blank label naming the owner and outcome. Blank strings are rejected. |
-| `name` | Use only `developer`, `team_planner`, or `validator`: `developer` for exact owner work, `team_planner` for decomposition, `validator` for the terminal guard. Never put `scout` or `team_replanner` in `new_tasks`; scouts run via `run_subagent(...)`, replanners are spawned reactively by the runtime. |
+| `name` | Use only `developer`, `team_planner`, or `validator`: `developer` for exact owner work, `team_planner` for decomposition, `validator` for a distinct verification lane. Never put `scout` or `team_replanner` in `new_tasks`; scouts run via `run_subagent(...)`, replanners are spawned reactively by the runtime. |
 | `spec` | One string with three numbered colon labels in order, each on its own line with body continuing after the colon: `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`. `Task Details` must describe owner evidence, exact production scope, important constraints, and dependency context. `Acceptance Criteria` must be test-suite focused (named commands, focused pytest ids, broadened suites, and evidence expected in the final summary). Markdown headings, one-liners that cram every label together, and labels whose body starts on the next line are rejected. |
-| `deps` | JSON list of task ids that must finish first. Each id must name another task in this same `new_tasks` payload. Independent work uses `[]`. The terminal validator lists every same-payload non-validator id, including every `developer` and child `team_planner` lane. |
+| `deps` | JSON list of task ids that must finish first. Each id must name another task in this same `new_tasks` payload. Independent work uses `[]`. Validators must depend on at least one upstream same-payload task; terminal validators list every same-payload terminal non-validator id they validate. |
 | `scope_paths` | Non-empty JSON list of repo-relative production paths the task owns or verifies. Use directories for broad planner/validator scopes. |
 
 ### Examples
@@ -243,7 +243,7 @@ type NewTaskSpec = {
 - Top-level input has only `new_tasks`; any extra key is rejected.
 - Every task has only the six allowed fields (`id`, `description`, `name`, `spec`, `deps`, `scope_paths`).
 - Every id is unique; every `deps` string names another id in this same `new_tasks` payload.
-- If any non-validator task exists, the plan has exactly one terminal validator whose `deps` include every other same-payload id, including every `developer` and child `team_planner` lane.
+- Validator tasks are optional; when present, each validator has upstream deps, and terminal validators cover the terminal non-validator leaves they validate.
 - Every `name` is `developer`, `team_planner`, or `validator` — never `scout` or `team_replanner`.
 - Every task has a non-blank `description` and non-empty production `scope_paths`.
 - Every `spec` contains the three numbered colon labels in order (`1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`), each on its own line with body after the colon on the same line.

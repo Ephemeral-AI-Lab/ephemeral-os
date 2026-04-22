@@ -93,7 +93,6 @@ async def test_submit_plan_resolves_roster_role_hints():
             "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": False,
             "roster": {"reviewer": ["validator"]},
             "max_plan_size": 8,
             "max_tasks": 20,
@@ -153,7 +152,7 @@ async def test_submit_plan_resolves_roster_role_hints():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_allows_arbiter_scope_change_context():
+async def test_submit_plan_rejects_empty_plan_with_arbiter_scope_change_context():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -161,7 +160,6 @@ async def test_submit_plan_allows_arbiter_scope_change_context():
             "task_center": task_center,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": True,
             "work_item_started_at": 1.0,
             "agent_run_id": "run-1",
             "write_scope": ["src/auth/"],
@@ -184,10 +182,8 @@ async def test_submit_plan_allows_arbiter_scope_change_context():
         ctx,
     )
 
-    assert result.is_error is False, result.output
-    payload = json.loads(result.output)
-    assert payload["task_id"] == "planner-task"
-    assert payload["new_tasks"] == []
+    assert result.is_error is True
+    assert "plan has no tasks" in result.output
 
 
 def test_submit_plan_requires_planner_authored_description():
@@ -216,7 +212,7 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
 
     assert "implementation owner paths" in schema["description"]
     assert "including validators" in schema["description"]
-    assert "exactly one terminal validator guard" in schema["description"]
+    assert "distinct verification lane" in schema["description"]
     assert "non-empty repo-relative scope_paths" in schema["description"]
     assert "Do not tell children to `cd /testbed`" in schema["description"]
     assert "not `/testbed/...` prefixes" in schema["description"]
@@ -281,7 +277,6 @@ async def test_submit_plan_posts_structured_initial_planned_tasks_note():
             "task_center": task_center,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": False,
             "max_plan_size": 8,
             "max_note_bytes": 10_000,
         },
@@ -344,7 +339,6 @@ async def test_submit_replan_posts_structured_initial_replanned_tasks_note():
             "task_center": task_center,
             "work_item_id": "replan-1",
             "agent_name": "replanner",
-            "allow_empty_plan": True,
             "max_plan_size": 8,
             "max_note_bytes": 10_000,
         },
@@ -388,7 +382,6 @@ async def test_submit_plan_accepts_long_description_without_truncating():
             "task_center": _AsyncTaskCenterStub(),
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": False,
             "max_plan_size": 8,
         },
     )
@@ -427,7 +420,6 @@ async def test_submit_plan_rejects_oversize_task_notes():
             "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": False,
             "max_plan_size": 8,
             "max_tasks": 20,
             "tasks_used": 1,
@@ -470,7 +462,6 @@ async def test_submit_plan_rejects_malformed_spec_sections():
             "task_center": task_center,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "allow_empty_plan": False,
             "max_plan_size": 8,
         },
     )

@@ -7,9 +7,7 @@ from pydantic import BaseModel
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit.hooks.prehook._codeact_common import (
-    python_code,
-    python_shell_commands,
-    shell_command,
+    codeact_shell_commands,
 )
 
 STDERR_SUPPRESSION_POLICY_MESSAGE = (
@@ -154,14 +152,8 @@ def _has_stderr_suppression(command: str) -> bool:
     return False
 
 
-def shell_stderr_suppression_policy_error(command: str) -> str | None:
-    if _has_stderr_suppression(command or ""):
-        return STDERR_SUPPRESSION_POLICY_MESSAGE
-    return None
-
-
-def python_stderr_suppression_policy_error(code: str) -> str | None:
-    for command in python_shell_commands(code):
+def codeact_stderr_suppression_policy_error(args: BaseModel) -> str | None:
+    for command in codeact_shell_commands(args):
         if _has_stderr_suppression(command):
             return STDERR_SUPPRESSION_POLICY_MESSAGE
     return None
@@ -173,12 +165,7 @@ async def hook(
     context: ToolExecutionContext,
 ) -> PreHookOutcome:
     del context
-    command = shell_command(args)
-    if command is not None:
-        err = shell_stderr_suppression_policy_error(command)
-    else:
-        code = python_code(args)
-        err = None if code is None else python_stderr_suppression_policy_error(code)
+    err = codeact_stderr_suppression_policy_error(args)
     if err is not None:
         return PreHookOutcome(has_error=True, error_message=err)
     return PreHookOutcome()

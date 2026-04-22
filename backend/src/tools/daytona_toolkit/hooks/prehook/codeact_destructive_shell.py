@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
-from tools.daytona_toolkit.hooks.prehook._codeact_common import shell_command
+from tools.daytona_toolkit.hooks.prehook._codeact_common import codeact_shell_commands
 
 
 async def hook(
@@ -16,12 +16,10 @@ async def hook(
     context: ToolExecutionContext,
 ) -> PreHookOutcome:
     del context
-    command = shell_command(args)
-    if command is None:
-        return PreHookOutcome()
-    err = destructive_shell_command_error(command)
-    if err is not None:
-        return PreHookOutcome(has_error=True, error_message=err)
+    for command in codeact_shell_commands(args):
+        err = destructive_shell_command_error(command)
+        if err is not None:
+            return PreHookOutcome(has_error=True, error_message=err)
     return PreHookOutcome()
 
 

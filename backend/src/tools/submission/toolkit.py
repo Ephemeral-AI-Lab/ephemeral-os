@@ -97,19 +97,6 @@ def _metadata_int(context: ToolExecutionContext, key: str, default: int = 0) -> 
         return default
 
 
-async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | None:
-    known = context.metadata.get("known_external_dep_ids")
-    if isinstance(known, set):
-        return {str(item) for item in known}
-    if isinstance(known, list):
-        return {str(item) for item in known}
-    tc = context.metadata.get("task_center")
-    store = getattr(tc, "store", None) if tc is not None else None
-    if store is None or not hasattr(store, "get_task_ids"):
-        return None
-    return {str(item) for item in await store.get_task_ids()}
-
-
 _SPEC_SECTIONS = ("Goal", "Task Details", "Acceptance Criteria")
 _SPEC_SECTION_RE = re.compile(
     r"(?im)^\s*(?:\d+[.)]\s*)?"
@@ -482,7 +469,7 @@ def _validate_submit_plan_input(
     return _validate_task_specs(
         arguments.new_tasks,
         graph_ids=graph_ids,
-        valid_dep_ids=graph_ids | new_ids,
+        valid_dep_ids=new_ids,
         roster=_roster_from_context(context),
     )
 
@@ -525,18 +512,25 @@ def _validate_submit_replan_input(
         parent_id=current_task_id,
         include_parent_id=True,
     )
+    local_ids = {str(task.get("id")) for task in resolved_tasks}
+    local_validation_tasks = [
+        {
+            **task,
+            "deps": [
+                dep_id
+                for dep_id in task.get("deps", [])
+                if str(dep_id) in local_ids
+            ],
+        }
+        for task in resolved_tasks
+    ]
     try:
-        plan = Plan.from_dict({"tasks": resolved_tasks})
+        plan = Plan.from_dict({"tasks": local_validation_tasks})
     except (TypeError, ValueError) as exc:
         return [f"invalid replan payload: {exc}"]
 
     max_plan_size = _metadata_int(context, "max_plan_size", 50)
-    issues = validate_plan(
-        plan,
-        max_plan_size=max_plan_size,
-        allow_empty=True,
-        known_external_deps=result.allowed_existing_dep_ids,
-    )
+    issues = validate_plan(plan, max_plan_size=max_plan_size) if plan.tasks else []
 
     max_tasks = _metadata_int(context, "max_tasks")
     tasks_used = _metadata_int(context, "tasks_used")
@@ -613,8 +607,8 @@ class SubmitPlanTool(BaseTool):
         "on the same line: 1. Goal, 2. Task Details, "
         "3. Acceptance Criteria. Do not tell children to `cd /testbed`, run from "
         "`/testbed`, or wrap CodeAct commands with `2>&1`, redirects, `| head`, "
-        "or `| tail`. Use exactly one terminal validator guard when "
-        "there are non-validator tasks. Scope paths name implementation owner paths "
+        "or `| tail`. Use validator tasks when a distinct verification lane is useful. "
+        "Scope paths name implementation owner paths "
         "for developer/planner lanes and production paths being verified for "
         "validator lanes; use repo-relative paths, not `/testbed/...` prefixes; "
         "put verification-only test targets in spec unless tests are explicitly "
@@ -644,14 +638,10 @@ class SubmitPlanTool(BaseTool):
         except (TypeError, ValueError) as exc:
             return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
 
-        allow_empty = bool(context.metadata.get("allow_empty_plan"))
         max_plan_size = _metadata_int(context, "max_plan_size", 50)
-        known_ext_deps = await _known_external_dep_ids(context)
         issues = validate_plan(
             plan,
             max_plan_size=max_plan_size,
-            allow_empty=allow_empty,
-            known_external_deps=known_ext_deps,
         )
 
         max_tasks = _metadata_int(context, "max_tasks")
@@ -748,8 +738,8 @@ class SubmitReplanTool(BaseTool):
         "2. Task Details, 3. Acceptance Criteria. "
         "Do not tell children to `cd /testbed`, run from `/testbed`, or wrap "
         "CodeAct commands with `2>&1`, redirects, `| head`, or `| tail`. If "
-        "validator tasks are present, keep exactly one terminal validator guard "
-        "with non-empty repo-relative production scope_paths."
+        "validator tasks are present, give them non-empty repo-relative "
+        "production scope_paths."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput

@@ -35,7 +35,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 2. Exclude the failed task id, this replanner id, terminal tasks, and nested graph ids.
 3. Keep replacement work under this replanner; do not create a child `team_planner` or `team_replanner` to decide the repair.
 4. Prefer local deps; existing deps require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task.
-5. If `new_tasks` has 3 or more concrete non-planner replacements and no preserved downstream validator covers the surface, add one terminal validator whose `deps` cover them. This matches the shared Terminal Validator Rule in `terminal-contract`.
+5. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local replacement ids it verifies.
 6. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
 
 ## Expected Outcome

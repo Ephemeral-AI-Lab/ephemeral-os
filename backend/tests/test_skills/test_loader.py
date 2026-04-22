@@ -77,7 +77,7 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Classify Failure Mode" in skill
     assert "Direct replan" in skill
     assert "Diagnostics" in skill
-    assert "No production repair surface" in skill
+    assert "Synthesize repair mapping" in skill
     assert "trace-gap triplets" in skill
     assert "Launch one scout per remaining triplet" in skill
     assert "Keep failing tests in scout `context`, not `target_paths`" in skill
@@ -88,8 +88,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "## Final Checklist" in contract
     assert "Final payload shape lives in `terminal-contract`" in action_add
     assert "Final payload shape lives in `terminal-contract`" in action_cancel
-    assert "3 or more concrete non-planner replacements" in action_cancel
-    assert "terminal validator" in action_cancel
+    assert "separate verification lane" in action_cancel
+    assert "local replacement ids it verifies" in action_cancel
     assert "Example terminal payload" not in action_add
     assert "Example terminal payload" not in action_cancel
     assert "numbered colon labels" not in action_add

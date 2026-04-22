@@ -121,13 +121,9 @@ class PlanExpander:
             )
             return PlanExpansionOutcome.rejected()
 
-        adj = await self._store.get_adjacency()
-        allow_empty = bool(rec.root_id) and task_id != (rec.root_id or task_id)
         issues = validate_plan(
             result.submitted_plan,
             max_plan_size=self._budget.budgets.max_plan_size,
-            allow_empty=allow_empty,
-            known_external_deps=set(adj.keys()),
         )
         if issues:
             await self._fail(task_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues))
@@ -230,12 +226,25 @@ class PlanExpander:
                     f"from current depth={getattr(replanner, 'depth', 0) or 0}"
                 )
 
-        plan_issues = validate_plan(
-            Plan(tasks=add_tasks),
-            max_plan_size=self._budget.budgets.max_plan_size,
-            allow_empty=True,
-            known_external_deps=allowed_existing_dep_ids,
-        )
+        plan_issues: list[dict[str, str]] = []
+        if add_tasks:
+            local_ids = {spec.id for spec in add_tasks if spec.id}
+            local_only_tasks = [
+                TaskDefinition(
+                    id=spec.id,
+                    objective=spec.objective,
+                    agent=spec.agent,
+                    description=spec.description,
+                    deps=[dep_id for dep_id in spec.deps if dep_id in local_ids],
+                    scope_paths=list(spec.scope_paths),
+                    parent_id=spec.parent_id,
+                )
+                for spec in add_tasks
+            ]
+            plan_issues = validate_plan(
+                Plan(tasks=local_only_tasks),
+                max_plan_size=self._budget.budgets.max_plan_size,
+            )
         if plan_issues:
             raise InvalidPlan("; ".join(issue["msg"] for issue in plan_issues))
 

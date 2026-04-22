@@ -23,84 +23,22 @@ def _is_validator(agent_name: str) -> bool:
     return _has_role(agent_name, "reviewer")
 
 
-def _is_expandable(agent_name: str) -> bool:
-    defn = _get_definition(agent_name)
-    return defn is not None and defn.role == "planner"
-
-
 def _validator_count(items: list[TaskDefinition]) -> int:
     return sum(1 for item in items if _is_validator(item.agent))
 
 
-def _concrete_execution_count(items: list[TaskDefinition]) -> int:
-    return sum(
-        1
-        for item in items
-        if not _is_validator(item.agent) and not _is_expandable(item.agent)
-    )
-
-
-def _terminal_validator_count(items: list[TaskDefinition]) -> int:
-    downstream_ids = {dep for item in items for dep in item.deps if dep}
-    return sum(
-        1
-        for item in items
-        if _is_validator(item.agent) and item.id not in downstream_ids
-    )
-
-
 def _validator_policy_issues(
     items: list[TaskDefinition],
-    *,
-    max_reviewers_per_plan: int | None = None,
-    require_reviewer_for_plan_size: int | None = None,
 ) -> list[Issue]:
     issues: list[Issue] = []
     validator_count = _validator_count(items)
-    effective_max = 2 if max_reviewers_per_plan is None else min(max_reviewers_per_plan, 2)
-    require_threshold = (
-        3 if require_reviewer_for_plan_size is None else min(require_reviewer_for_plan_size, 3)
-    )
-    if validator_count > effective_max:
+    if validator_count > 2:
         issues.append(
             {
                 "field": "tasks",
                 "msg": (
                     f"plan has {validator_count} validator tasks; submitted plans may have at most "
-                    f"{effective_max}"
-                ),
-            }
-        )
-    if _concrete_execution_count(items) >= require_threshold and validator_count == 0:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    f"plans with {require_threshold} or more concrete non-planner tasks "
-                    "must include at least one terminal validator"
-                ),
-            }
-        )
-    if validator_count == 0:
-        return issues
-    terminal_count = _terminal_validator_count(items)
-    if terminal_count == 0:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    "plans with validator tasks must leave at least one validator as a "
-                    "terminal end-of-chain guard"
-                ),
-            }
-        )
-    elif terminal_count > 1:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    "plans with validator tasks must keep exactly one validator as the "
-                    "terminal end-of-chain guard"
+                    "2"
                 ),
             }
         )
@@ -152,18 +90,12 @@ def validate_plan(
     plan: Plan,
     max_plan_size: int = 50,
     *,
-    allow_empty: bool = False,
-    known_external_deps: set[str] | None = None,
-    max_reviewers_per_plan: int | None = None,
-    require_reviewer_for_plan_size: int | None = None,
     extra_validators: list[PlanItemValidator] | None = None,
 ) -> list[Issue]:
     """Single-pass structural validation: structural checks, agent resolution, cycle detection."""
     issues: list[Issue] = []
 
     if len(plan.tasks) == 0:
-        if allow_empty:
-            return issues
         issues.append({"field": "tasks", "msg": "plan has no tasks"})
         return issues
 
@@ -176,13 +108,7 @@ def validate_plan(
         )
         return issues
 
-    issues.extend(
-        _validator_policy_issues(
-            plan.tasks,
-            max_reviewers_per_plan=max_reviewers_per_plan,
-            require_reviewer_for_plan_size=require_reviewer_for_plan_size,
-        )
-    )
+    issues.extend(_validator_policy_issues(plan.tasks))
     issues.extend(_validator_dependency_issues(plan.tasks))
 
     task_ids: set[str] = set()
@@ -246,21 +172,19 @@ def validate_plan(
     for idx, item in enumerate(plan.tasks):
         node = item.id if item.id else f"__idx_{idx}__"
         for dep in item.deps:
-            if dep in task_ids:
-                adj[node].append(dep)
-            elif not isinstance(dep, str) or not dep:
+            if not isinstance(dep, str) or not dep:
                 issues.append(
                     {"field": f"tasks[{idx}].deps", "msg": f"invalid dep reference: {dep!r}"}
                 )
+            elif dep in task_ids:
+                adj[node].append(dep)
             else:
-                # dep is a non-empty string not in task_ids
-                if known_external_deps is None or dep not in known_external_deps:
-                    issues.append(
-                        {
-                            "field": f"tasks[{idx}].deps",
-                            "msg": f"unknown dep reference '{dep}'",
-                        }
-                    )
+                issues.append(
+                    {
+                        "field": f"tasks[{idx}].deps",
+                        "msg": f"unknown dep reference '{dep}'",
+                    }
+                )
 
     if _has_cycle(adj):
         issues.append({"field": "tasks", "msg": "cycle detected in submitted Plan"})

@@ -20,7 +20,6 @@ _SUBMIT_PLAN_SCHEMA_SNIPPET = (
     "non-empty repo-relative scope_paths"
 )
 _SUBMIT_PLAN_SPEC_SNIPPET = "Each spec must use numbered colon labels in order"
-_SUBMIT_PLAN_VALIDATOR_SNIPPET = "exactly one terminal `validator` end-of-chain guard"
 
 
 def test_user_prompt_markdown_files_start_at_runtime_template() -> None:

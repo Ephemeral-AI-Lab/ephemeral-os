@@ -66,15 +66,6 @@ def test_empty_plan_fails_by_default():
     assert any("no tasks" in i["msg"] for i in issues)
 
 
-def test_empty_plan_allowed_with_allow_empty_flag():
-    plan = _plan()
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, return_value=False), \
-         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
-        issues = validate_plan(plan, allow_empty=True)
-    assert issues == []
-
-
 # ---------------------------------------------------------------------------
 # Max plan size
 # ---------------------------------------------------------------------------
@@ -251,35 +242,14 @@ def test_valid_simple_plan_returns_no_issues():
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_dep_without_known_external_deps_still_reported():
-    # Unknown deps are reported even when known_external_deps is None
+def test_unknown_dep_reference_fails():
     spec = _spec("t1", deps=["external-ghost"])
     plan = _plan(spec)
     with patch(_AGENT_EXISTS_PATH, return_value=True), \
          patch(_HAS_ROLE_PATH, return_value=False), \
          patch(_GET_DEFN_PATH, return_value=_mock_agent()):
-        issues = validate_plan(plan, known_external_deps=None)
+        issues = validate_plan(plan)
     assert any("unknown dep" in i["msg"] for i in issues)
-
-
-def test_unknown_dep_not_in_known_external_deps_fails():
-    spec = _spec("t1", deps=["ghost-id"])
-    plan = _plan(spec)
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, return_value=False), \
-         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
-        issues = validate_plan(plan, known_external_deps={"other-id"})
-    assert any("unknown dep" in i["msg"] for i in issues)
-
-
-def test_dep_in_known_external_deps_passes():
-    spec = _spec("t1", deps=["real-external"])
-    plan = _plan(spec)
-    with patch(_AGENT_EXISTS_PATH, return_value=True), \
-         patch(_HAS_ROLE_PATH, return_value=False), \
-         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
-        issues = validate_plan(plan, known_external_deps={"real-external"})
-    assert not any("unknown dep" in i["msg"] for i in issues)
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +292,39 @@ def test_validator_plan_passes_without_policy_field():
          patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
         issues = validate_plan(plan)
     assert not any("validator task" in i["msg"] and "continue" in i["msg"] for i in issues)
+
+
+def test_three_concrete_tasks_do_not_require_validator():
+    plan = _plan(_spec("a"), _spec("b"), _spec("c"))
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert not any("must include at least one terminal validator" in i["msg"] for i in issues)
+
+
+def test_multiple_terminal_validators_are_allowed():
+    dev = _spec("dev")
+    val_a = _spec("val-a", agent="validator", deps=["dev"])
+    val_b = _spec("val-b", agent="validator", deps=["dev"])
+    plan = _plan(dev, val_a, val_b)
+
+    def side_effect_role(name, role):
+        return name == "validator" and role == "reviewer"
+
+    def side_effect_defn(name):
+        if name == "validator":
+            return _mock_validator_agent()
+        return _mock_agent()
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
+         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
+        issues = validate_plan(plan)
+
+    assert not any("exactly one validator" in i["msg"] for i in issues)
 
 
 # ---------------------------------------------------------------------------

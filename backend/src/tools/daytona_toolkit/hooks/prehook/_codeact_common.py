@@ -73,3 +73,11 @@ def python_shell_commands(code: str) -> list[str]:
             if command is not None:
                 commands.append(command)
     return commands
+
+
+def codeact_shell_commands(args: BaseModel) -> list[str]:
+    command = shell_command(args)
+    if command is not None:
+        return [command]
+    code = python_code(args)
+    return [] if code is None else python_shell_commands(code)

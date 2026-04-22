@@ -16,6 +16,9 @@ equivalently, a *tree of DAGs*:
 - **Per-level sibling DAG** via `Task.deps`: children of the same parent
   form a local directed acyclic graph that controls `READY` / `PENDING`
   scheduling.
+- **Submitted plans are local**: each `submit_plan` dependency must name
+  another task in the same payload. Existing task IDs are not valid
+  `submit_plan` deps.
 - **AND-decomposition**: a planner in status `EXPANDED` is gated on its
   subtree. It can only promote to `DONE` once its children have resolved.
 - **No cross-subtree deps by construction**: replan dep resolution only

@@ -38,9 +38,9 @@ Never include `output`, `summary`, `background`, `parent_id`, `new_sibling_tasks
 
 Replacement tasks may include a sibling's scope only when that sibling id appears in `cancel_ids`.
 
-## Terminal Validator Rule
+## Validator Guidance
 
-If `new_tasks` has 3 or more concrete non-planner tasks and no preserved downstream validator already covers the repair surface, add exactly one terminal validator whose `deps` cover every concrete repair id in this payload. This rule applies to both the add-only and the cancel-and-redraft paths. Skip the validator only when a downstream validator already rewired to this replanner covers the surface, or when fewer than 3 concrete tasks are being added.
+Validator tasks are optional. Add one only when a distinct verification lane is useful and no preserved downstream validator already covers the repair surface. A validator must depend on at least one upstream local repair id; a terminal validator should cover the terminal repair leaves it verifies.
 
 ## Spec Contents
 

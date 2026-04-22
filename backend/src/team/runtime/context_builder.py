@@ -93,16 +93,6 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
 def _populate_plan_submission_context(
     meta: ExecutionMetadata, team_run: "TeamRun", task: Task,
 ) -> None:
-    root_id = str(getattr(team_run, "root_task_id", "") or "")
-    is_sub_planner = (
-        bool(root_id) and task.id != root_id and task.agent_name == "team_planner"
-    )
-    meta["allow_empty_plan"] = is_sub_planner
-
-    graph = getattr(team_run.task_center, "graph", None)
-    if isinstance(graph, dict):
-        meta["known_external_dep_ids"] = {str(tid) for tid in graph}
-
     roster = getattr(team_run, "roster", None)
     if isinstance(roster, dict):
         meta["roster"] = {str(role): list(names) for role, names in roster.items()}

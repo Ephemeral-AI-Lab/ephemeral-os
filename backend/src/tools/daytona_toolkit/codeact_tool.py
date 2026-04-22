@@ -6,6 +6,7 @@ import base64
 import json
 import shlex
 import uuid
+from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field
@@ -128,6 +129,14 @@ class DaytonaCodeActOutput(BaseModel):
 
 
 BuildToolOutput = Callable[..., ToolResult]
+
+
+@dataclass(frozen=True, kw_only=True)
+class _PythonWrapperResult:
+    stdout: str | None
+    tool_error: ToolResult | None
+    changed_paths: list[str]
+    ambient_changed_paths: list[str]
 
 
 def _format_transport_exception(exc: Exception) -> str:
@@ -301,7 +310,7 @@ async def _execute_python_wrapper(
     code: str,
     cwd: str | None,
     build_tool_output: BuildToolOutput,
-) -> tuple[str | None, object, ToolResult | None, list[str], list[str]]:
+) -> _PythonWrapperResult:
     run_id = uuid.uuid4().hex[:8]
     wrapper = _build_wrapper(
         code,
@@ -311,15 +320,14 @@ async def _execute_python_wrapper(
     exec_command = _build_exec_command(cwd=cwd)
 
     if get_ci_service(context) is None:
-        return (
-            None,
-            sandbox,
-            ci_required_result(
+        return _PythonWrapperResult(
+            stdout=None,
+            tool_error=ci_required_result(
                 "daytona_codeact",
                 "Python CodeAct requires svc.cmd (code intelligence service unavailable).",
             ),
-            [],
-            [],
+            changed_paths=[],
+            ambient_changed_paths=[],
         )
 
     async def _submit(active_sandbox: object) -> FileChangeResult[Any]:
@@ -340,10 +348,9 @@ async def _execute_python_wrapper(
             sandbox = await _recover_sandbox(context, exc)
             change = await _submit(sandbox)
         except Exception as recovery_exc:
-            return (
-                None,
-                sandbox,
-                ToolResult(
+            return _PythonWrapperResult(
+                stdout=None,
+                tool_error=ToolResult(
                     output=_format_execution_failure(
                         recovery_exc,
                         operation="daytona_codeact python",
@@ -352,17 +359,16 @@ async def _execute_python_wrapper(
                     ),
                     is_error=True,
                 ),
-                [],
-                [],
+                changed_paths=[],
+                ambient_changed_paths=[],
             )
     changed_paths = list(change.changed_paths)
     ambient_changed_paths = list(change.ambient_changed_paths)
     if not change.success:
         error_detail = f"sandbox commit aborted: {change.conflict_reason or 'unknown reason'}"
-        return (
-            None,
-            sandbox,
-            build_tool_output(
+        return _PythonWrapperResult(
+            stdout=None,
+            tool_error=build_tool_output(
                 context=context,
                 status="error",
                 files_written=len(changed_paths),
@@ -373,15 +379,14 @@ async def _execute_python_wrapper(
                 changed_paths=changed_paths,
                 ambient_changed_paths=ambient_changed_paths,
             ),
-            changed_paths,
-            ambient_changed_paths,
+            changed_paths=changed_paths,
+            ambient_changed_paths=ambient_changed_paths,
         )
-    return (
-        getattr(change.raw, "result", "") or "",
-        sandbox,
-        None,
-        changed_paths,
-        ambient_changed_paths,
+    return _PythonWrapperResult(
+        stdout=getattr(change.raw, "result", "") or "",
+        tool_error=None,
+        changed_paths=changed_paths,
+        ambient_changed_paths=ambient_changed_paths,
     )
 
 async def _execute_python_codeact(
@@ -395,16 +400,19 @@ async def _execute_python_codeact(
     extract_exit_code: Callable[..., tuple[str, int]],
     files_written_count: Callable[[list[object], list[str]], int],
 ) -> ToolResult:
-    stdout, sandbox, tool_error, changed_paths, ambient_changed_paths = await _execute_python_wrapper(
+    wrapper_result = await _execute_python_wrapper(
         context,
         sandbox,
         code=code,
         cwd=cwd,
         build_tool_output=build_tool_output,
     )
-    if tool_error is not None:
-        return tool_error
-    assert stdout is not None
+    if wrapper_result.tool_error is not None:
+        return wrapper_result.tool_error
+    assert wrapper_result.stdout is not None
+    stdout = wrapper_result.stdout
+    changed_paths = wrapper_result.changed_paths
+    ambient_changed_paths = wrapper_result.ambient_changed_paths
 
     stdout, _ = extract_exit_code(stdout, fallback_exit_code=0)
     stdout_lines = stdout.splitlines()

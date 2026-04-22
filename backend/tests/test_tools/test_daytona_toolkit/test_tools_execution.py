@@ -7,10 +7,20 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import BaseModel
 
+from engine.core.query import QueryContext
 from message.stream_events import StreamEvent, SystemNotification
-from tools.core.base import ToolExecutionContext, run_tool_safely
+from tools.core.base import (
+    BaseTool,
+    ToolExecutionContext,
+    ToolRegistry,
+    ToolResult,
+    run_tool_safely,
+)
 from tools.core.hooks.execution import execute_tool_with_hooks
+from tools.core.runtime import ExecutionMetadata
+from tools.core.tool_execution import execute_tool_call_streaming
 from tools.daytona_toolkit.tools import (
     daytona_read_file,
     daytona_write_file,
@@ -77,6 +87,24 @@ def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
         )
     )
     return svc
+
+
+class _FakeEditInput(BaseModel):
+    file_path: str
+
+
+class _FakeEditTool(BaseTool):
+    name = "daytona_edit_file"
+    description = "Fake edit tool for hook pipeline tests."
+    input_model = _FakeEditInput
+
+    async def execute(
+        self,
+        arguments: BaseModel,
+        context: ToolExecutionContext,
+    ) -> ToolResult:
+        del arguments, context
+        return ToolResult(output="ok")
 
 
 async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
@@ -351,6 +379,77 @@ async def test_write_file_extends_scope_without_advisory_for_outside_write_scope
     assert data["warnings"] == []
     assert not any("outside write_scope" in text for text in _notification_texts(events))
     assert ctx.metadata["write_scope"] == ["dask/config.py", "dask/_compatibility.py"]
+
+
+async def test_query_dispatch_persists_write_file_scope_extension():
+    """The agent query path must keep post-hook write_scope expansions."""
+    registry = ToolRegistry()
+    registry.register(daytona_write_file)
+    metadata = ExecutionMetadata(
+        ci_service=_ci_service_mock(file_path="/testbed/dask/_compatibility.py"),
+        daytona_cwd="/testbed",
+        repo_root="/testbed",
+        agent_name="developer",
+    )
+    metadata["write_scope"] = ["dask/config.py"]
+    ctx = QueryContext(
+        api_client=MagicMock(),
+        tool_registry=registry,
+        cwd=Path("/testbed"),
+        model="m",
+        system_prompt="p",
+        max_tokens=1,
+        tool_metadata=metadata,
+    )
+
+    result = await execute_tool_call_streaming(
+        ctx,
+        "daytona_write_file",
+        "tool-1",
+        {"file_path": "/testbed/dask/_compatibility.py", "content": "patched"},
+        emit=lambda event: _capture_emit([], event),
+        emit_started=False,
+    )
+
+    assert not result.is_error
+    assert metadata["write_scope"] == ["dask/config.py", "dask/_compatibility.py"]
+
+
+async def test_query_dispatch_persists_coordination_warnings_from_hooks():
+    """Hook-recorded coordination warnings must survive per-call metadata copies."""
+    registry = ToolRegistry()
+    registry.register(_FakeEditTool())
+    metadata = ExecutionMetadata(
+        repo_root="/testbed",
+        agent_name="developer",
+    )
+    metadata["write_scope"] = ["dask/config.py"]
+    ctx = QueryContext(
+        api_client=MagicMock(),
+        tool_registry=registry,
+        cwd=Path("/testbed"),
+        model="m",
+        system_prompt="p",
+        max_tokens=1,
+        tool_metadata=metadata,
+    )
+    events: list[StreamEvent] = []
+
+    result = await execute_tool_call_streaming(
+        ctx,
+        "daytona_edit_file",
+        "tool-1",
+        {"file_path": "/testbed/dask/_compatibility.py"},
+        emit=lambda event: _capture_emit(events, event),
+        emit_started=False,
+    )
+
+    assert not result.is_error
+    assert metadata["coordination_warning_present"] is True
+    warnings = metadata["coordination_warnings"]
+    assert len(warnings) == 1
+    assert warnings[0]["category"] == "outside_write_scope"
+    assert "dask/_compatibility.py" in warnings[0]["message"]
 
 
 async def test_write_file_allows_write_inside_write_scope():

@@ -19,10 +19,13 @@ from typing import Any, ClassVar
 
 MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "_loaded_skill_references_by_skill_this_turn",
+    "coordination_warning_present",
+    "coordination_warnings",
     "task_summary",
     "task_summary_type",
     "resolved_plan",
     "plan_is_replan",
+    "write_scope",
 )
 
 

@@ -535,13 +535,16 @@ def _team_repo_scope_deny_errors(
     tool_name: str,
     include_test_file_blocks: bool = False,
 ) -> list[tuple[str, str]]:
-    """Return one error for each path outside write_scope."""
+    """Return policy errors for path lists before bulk delete/move operations.
+
+    Most callers need only write-scope denials. Folder operations can also ask
+    this helper to apply the coordinated test-file write block to expanded
+    member paths before the tool mutates the tree.
+    """
     if not is_coordinated_team_agent(context):
         return []
     repo_root = str(_get_repo_root(context) or "")
     write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
-    if not write_scope:
-        return []
     offenders: list[tuple[str, str]] = []
     for path in paths:
         rel_path = _normalize_repo_relative_path(path, repo_root)
@@ -556,6 +559,8 @@ def _team_repo_scope_deny_errors(
             if test_file_error is not None:
                 offenders.append((path, test_file_error))
                 continue
+        if not write_scope:
+            continue
         if _is_test_file_path(rel_path) and not _test_file_edits_allowed(context):
             continue
         if _path_under_write_scope(rel_path, write_scope):

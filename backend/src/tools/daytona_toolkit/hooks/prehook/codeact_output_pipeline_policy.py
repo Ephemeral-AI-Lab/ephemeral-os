@@ -9,9 +9,7 @@ from pydantic import BaseModel
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 from tools.daytona_toolkit.hooks.prehook._codeact_common import (
-    python_code,
-    python_shell_commands,
-    shell_command,
+    codeact_shell_commands,
 )
 
 PIPELINE_POLICY_MESSAGE = (
@@ -62,12 +60,8 @@ def _first_offense(command: str) -> str | None:
     return None
 
 
-def shell_pipeline_policy_error(command: str) -> str | None:
-    return _first_offense(command or "")
-
-
-def python_pipeline_policy_error(code: str) -> str | None:
-    for command in python_shell_commands(code):
+def codeact_pipeline_policy_error(args: BaseModel) -> str | None:
+    for command in codeact_shell_commands(args):
         err = _first_offense(command)
         if err is not None:
             return err
@@ -80,12 +74,7 @@ async def hook(
     context: ToolExecutionContext,
 ) -> PreHookOutcome:
     del context
-    command = shell_command(args)
-    if command is not None:
-        err = shell_pipeline_policy_error(command)
-    else:
-        code = python_code(args)
-        err = None if code is None else python_pipeline_policy_error(code)
+    err = codeact_pipeline_policy_error(args)
     if err is not None:
         return PreHookOutcome(has_error=True, error_message=err)
     return PreHookOutcome()

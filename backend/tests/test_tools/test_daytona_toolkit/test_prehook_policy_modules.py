@@ -17,6 +17,7 @@ from tools.daytona_toolkit.delete_move_tool import (
 )
 from tools.daytona_toolkit.hooks.prehook import (
     codeact_destructive_git,
+    codeact_destructive_shell,
     codeact_output_pipeline_policy,
     codeact_python_process_policy,
     codeact_stderr_suppression_policy,
@@ -268,6 +269,16 @@ def test_codeact_destructive_git_blocks_python_shell_clean() -> None:
 
     assert outcome.has_error is True
     assert "destructive git commands" in (outcome.error_message or "")
+
+
+def test_codeact_destructive_shell_blocks_python_shell_command() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(code='cmd = "rm -rf /testbed/tmp"\nshell(cmd)')
+
+    outcome = _run(codeact_destructive_shell.hook("daytona_codeact", args, ctx))
+
+    assert outcome.has_error is True
+    assert "destructive shell command" in (outcome.error_message or "")
 
 
 def test_codeact_destructive_git_allows_clean_dry_run() -> None:

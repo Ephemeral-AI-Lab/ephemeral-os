@@ -12,7 +12,7 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
   - `unresolved_blocker` after diagnostics identify a production repair surface
 - Keep repair work anchored to the failed task and preserved dependents.
 - Merge nearby same-file seams into one developer task.
-- Add a terminal validator only when policy/size requires it or no preserved downstream validator covers the repair.
+- Add a validator only when a distinct verification lane is useful and no preserved downstream validator covers the repair.
 
 ## Drop
 
@@ -31,7 +31,7 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
 4. Prefer one developer per exact production file unless disjoint edit regions are proven.
 5. Tell corrective developers to run `ci_diagnostics(file_path=...)` first.
 6. For moves/renames, name `daytona_move_file`; for pure removals, `daytona_delete_file` or CodeAct is acceptable.
-7. If `new_tasks` has 3 or more concrete non-planner children and no preserved downstream validator covers the surface, add one terminal validator whose `deps` cover them. This matches the shared Terminal Validator Rule in `terminal-contract`.
+7. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local repair ids it verifies.
 8. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
 
 ## Expected Outcome

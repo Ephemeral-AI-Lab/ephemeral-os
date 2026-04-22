@@ -119,7 +119,7 @@ async def test_expander_submitted_root_empty_plan_fails_via_outcome_not_raise():
 
 
 @pytest.mark.asyncio
-async def test_expander_submitted_nested_empty_plan_is_accepted_as_typed_outcome():
+async def test_expander_submitted_nested_empty_plan_is_rejected_as_typed_outcome():
     failures: list[tuple[str, str]] = []
     graph = {"child": _task("child", agent_name="team_planner", status=TaskStatus.RUNNING)}
     store = _ExpanderStore(graph)
@@ -142,9 +142,9 @@ async def test_expander_submitted_nested_empty_plan_is_accepted_as_typed_outcome
     )
 
     assert isinstance(outcome, PlanExpansionOutcome)
-    assert outcome.accepted is True
+    assert outcome.accepted is False
     assert outcome.new_items == ()
-    assert failures == []
+    assert failures == [("child", "InvalidPlan: plan has no tasks")]
 
 
 @pytest.mark.asyncio
@@ -443,7 +443,7 @@ async def test_replan_expander_rejects_dep_on_rewired_downstream_task():
         fail_cb=_ignore_fail,
     )
 
-    with pytest.raises(InvalidPlan, match="unknown dep reference 'downstream'"):
+    with pytest.raises(InvalidPlan, match="replan dep 'downstream'"):
         await expander.apply_replan(
             replan_task_id="replanner",
             add_tasks=[
