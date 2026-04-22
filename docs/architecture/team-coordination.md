@@ -33,12 +33,12 @@ sequenceDiagram
     Worker->>TaskCenter: submit_task_summary(type="request_replan")
     TaskCenter->>TaskCenter: mark original REQUEST_REPLAN
     TaskCenter->>TaskCenter: rewire pending dependents from original to replanner
-    TaskCenter->>Replanner: spawn replanner with failure context
+    TaskCenter->>Replanner: spawn replanner with root cause trace and failure context
     Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...])
     TaskCenter->>TaskCenter: apply replan and complete or expand replanner
 ```
 
-When a task enters `request_replan`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, `request_replan`, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction.
+When a task enters `request_replan`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, `request_replan`, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction. The failed task summary should carry the developer's root cause trace when verification failed, including the failing command, expected-vs-actual behavior, traced production path, root-cause mechanism, and fix location.
 
 Graph invariant violations fail the team run immediately. Across dispatch,
 recovery, and checkpoint restore, scheduler-owned work states (`ready`,
@@ -67,7 +67,7 @@ Terminal statuses are `done`, `failed`, `cancelled`, and `request_replan`.
 
 ## Design Principles
 
-- Worker agents do not change the graph directly; they submit success summaries or request replanning with evidence.
+- Worker agents do not change the graph directly; they submit success summaries or request replanning with evidence. Verification failures should include a root cause trace deep enough to name the first production mechanism that created the wrong result.
 - Replanners are the only agents that mutate the recovery graph through `submit_replan`.
 - Planner and replanner `new_tasks` items carry `description` as a required short, planner-authored label; full instructions belong in `spec`.
 - Planner and replanner submissions carry structured task JSON only. They do not author free-text outcome summaries; their `Initial Plan` / `Initial Replan` JSON is stored on the parent detail, and `parent_summarizer` later writes the outcome roll-up.

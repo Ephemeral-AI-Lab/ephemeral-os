@@ -198,7 +198,7 @@ class TaskContextBuilder:
             return None
 
         original = await self.get_task(original_id)
-        lines = ["## Replan failure packet", f"Original task: {original_id}"]
+        lines = ["## Replan root cause trace", f"Original task: {original_id}"]
         if original is not None:
             lines.extend(
                 [

@@ -479,7 +479,7 @@ async def build_team_user_prompt_report_text(
     """Build representative team user prompts using the production context path.
 
     Team-task user prompts depend on the current task graph, notes, dependency
-    outputs, failure packets, and scope-change history. This report therefore
+    outputs, replanner root cause traces, and scope-change history. This report therefore
     uses a minimal synthetic graph to show the current prompt shape without
     claiming to reproduce a particular live task.
     """
@@ -521,7 +521,7 @@ async def build_team_user_prompt_report_text(
         "- User prompt templates: `backend/src/prompt/user_prompt/*.md`.",
         "",
         "Team task prompts vary at runtime with task specs, dependency notes, "
-        "replan failure packets, scope paths, and recent edits. This report shows "
+        "replan root cause traces, scope paths, and recent edits. This report shows "
         "the current assembly path and prompt shape.",
         "",
         "## Roster",

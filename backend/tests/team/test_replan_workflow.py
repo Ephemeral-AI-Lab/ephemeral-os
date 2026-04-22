@@ -773,7 +773,7 @@ async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_replanner_context_includes_failure_packet_and_rewired_dependents():
+async def test_replanner_context_includes_root_cause_trace_and_rewired_dependents():
     tc = TaskCenter(
         session_factory=_FakeSessionFactory(),
         team_run_id="run-1",
@@ -844,7 +844,7 @@ async def test_replanner_context_includes_failure_packet_and_rewired_dependents(
 
     context = await tc.context.context_for(tc.graph["replanner"])
 
-    assert "## Replan failure packet" in context
+    assert "## Replan root cause trace" in context
     assert "Original task: failed" in context
     assert "1. Goal: Fix the parser." in context
     assert "Original detailed task description." in context

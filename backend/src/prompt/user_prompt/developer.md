@@ -18,7 +18,7 @@ Your dependency task ids: {{your_deps_ids}}
 
 After the playbook loads, run the context-read pre-step before any probe, edit, note, diagnostics, or CodeAct call. Use the UUID headers above exactly: call `read_task_details` with only one input key, `task_id`, for your task id, parent task id, and each dependency task id. Do not pass `skill_name`, planner slugs, short prefixes, or fabricated ids. Do not batch those required context reads with CodeAct, CI, note, file, edit, diagnostics, or reference tools.
 
-Before every benchmark `daytona_codeact` call, load the playbook's `codeact-runtime-examples` reference if it has not loaded in this agent run. Inspect the exact command string; if it contains `|` or `>`, it is invalid and must be rewritten before the tool call.
+Before every `daytona_codeact` call, follow the CodeAct command rules inside the developer playbook. Inspect the exact command string; if it contains `|` or `>`, rewrite it before the tool call.
 
 ```markdown
 {{task_spec}}

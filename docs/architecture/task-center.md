@@ -6,7 +6,7 @@ TaskCenter owns the team task graph, notes, status transitions, budget counters,
 
 - Insert validated plans into the task DAG.
 - Track task status and dependency readiness.
-- Build injected task context through `TaskContextBuilder` from dependency notes, parent context, replanner failure packets, and recent scope changes.
+- Build injected task context through `TaskContextBuilder` from dependency notes, parent context, replanner root cause traces, and recent scope changes.
 - Mark work complete or failed.
 - Spawn replanner tasks when a worker submits failure.
 - Apply replanner output by inserting new tasks, cancelling stale tasks, and completing or expanding the replanner.
@@ -54,7 +54,7 @@ After the replan:
 
 ## Notes
 
-Notes are scoped by task and path. `NoteManager` owns note state, posting, reads, and scope filtering. `TaskContextBuilder` owns agent-facing context injection: the assigned task, dependency notes, parent context, replanner failure packets, and recent overlapping scope changes.
+Notes are scoped by task and path. `NoteManager` owns note state, posting, reads, and scope filtering. `TaskContextBuilder` owns agent-facing context injection: the assigned task, dependency notes, parent context, replanner root cause traces, and recent overlapping scope changes.
 
 When multiple notes exist for the same upstream task, prompt context prefers the
 most useful note over the merely latest note. For dependency context,

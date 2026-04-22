@@ -65,7 +65,7 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     )
     assert "call `read_task_details` with only one input key, `task_id`" in rendered
     assert "Do not pass `skill_name`, planner slugs" in rendered
-    assert "if it contains `|` or `>`, it is invalid" in rendered
+    assert "if it contains `|` or `>`, rewrite it before the tool call" in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
@@ -249,14 +249,12 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
     assert "Your dependency task ids: `dev-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
     assert "Context-read pre-step: after loading the validator playbook" in ctx.user_message
-    assert (
-        'load_skill_reference(skill_name="team-validator-playbook", '
-        'reference_name="runtime-verification-examples")'
-    ) in ctx.user_message
-    assert "If that reference has not loaded in this agent run, do not call CodeAct" in ctx.user_message
-    assert "any literal `|` or `>` character means the command is invalid" in ctx.user_message
+    assert "Before every `daytona_codeact` call, follow the CodeAct command rules" in ctx.user_message
+    assert "if it contains `|` or `>`, rewrite it before the tool call" in ctx.user_message
     assert "Do not run duplicate equivalent verification commands in parallel" in ctx.user_message
     assert "A success verdict may cite only commands actually run after the final validator edit" in ctx.user_message
+    assert "load_skill_reference" not in ctx.user_message
+    assert "runtime-" "verification-examples" not in ctx.user_message
     assert "Task id: `validator-1`" not in ctx.user_message
     assert "Dependency task ids: `dev-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
