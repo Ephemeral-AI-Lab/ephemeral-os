@@ -30,6 +30,8 @@ Forbidden commands include `pip install`, `uv add`, `uv sync`, `conda install`, 
 
 If a missing dependency, missing optional extra, or different dependency version appears necessary, do not install it. Capture the exact command, exit code, import error or version evidence, and submit `type="request_replan"` with trigger `unresolved_blocker` unless the trace proves the required production repair is outside `scope_paths`, in which case use `scope_expansion`.
 
+Generated interpreter caches are not repair scope. Do not delete or mutate `__pycache__`, `.pyc`, build caches, or ignored transient artifacts to make verification pass. If runtime output appears to contradict edited source, prove the import path and loaded source path with one bounded probe or rerun the command with a non-mutating cache control such as `PYTHONDONTWRITEBYTECODE=1`. Treat refused cache cleanup as tooling noise to report, not as the root cause or a blocker by itself.
+
 ## Never
 
 1. Do not edit test files unless the original user request explicitly asks to repair tests rather than production behavior. In benchmark/fail-to-pass work, tests are evidence only even if a child task mistakenly assigns a test file.
@@ -115,6 +117,7 @@ Make one minimal production change that matches the plan.
 5. If a delete, move, or rename tool fails, do not retry or bypass it. Preserve the tool error for the terminal summary.
 6. Never create or edit test files
 7. If an outside-scope notification appears, treat it as coordination context and keep working when the production change is still tied to this task. If the required change becomes broad or ambiguous, submit `type="request_replan"` with trigger `scope_expansion`. If a mutation reports a verification-surface warning, pause and re-check the scope and code path before continuing.
+8. Never use shell deletion or cleanup commands to remove generated caches. A cache-cleanup failure is not evidence that the production fix is impossible; continue root-cause tracing from the failing command, import path, and production mechanism.
 
 Exit with: the smallest justified edit ready for verification.
 

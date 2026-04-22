@@ -71,6 +71,8 @@ Direct replan evidence must name both:
 
 Benchmark tests are evidence, not repair scope. Never create a corrective task that owns `*/tests/*`, `test_*.py`, benchmark harness files, pytest configuration, or a skip/xfail/rewrite of verification. A root/OS/environment mismatch in a benchmark test must be reported as `unresolved_blocker` evidence or mapped to a production behavior seam; it is never a license to edit or skip the test.
 
+Generated interpreter caches are not corrective work. Do not accept "stale `__pycache__`/`.pyc` cannot be deleted" as the production root cause unless the failed task proved a fresh process is loading stale bytecode from a named import path. Otherwise treat refused cache cleanup as tooling noise, preserve it as residual risk if useful, and replan around the remaining production mechanism or trace gap.
+
 Diagnostics require a trace-gap triplet: one failing test id or cluster, one suspected production path, and one named symbol or seam. Vague difficulty is not enough.
 
 Do not classify a failure as "no production fix" just because one attempted mechanism cannot satisfy the expected behavior. First check adjacent production extension points on the same path, such as sibling hooks, fallback lookups, adapter boundaries, wrapper objects, dispatch registrations, compatibility shims, or API options. If they are ruled out, preserve those ruled-out mechanisms in the evidence and create the narrowest corrective or diagnostic task that can test the remaining production seam.
