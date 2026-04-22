@@ -19,6 +19,7 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
 - Same-scope continuation of unfinished failed-task work.
 - Budget exhaustion, failed attempts, incomplete verification, or ambient sibling drift.
 - Benchmark-test edits, test-derived helpers, and missing paths proven only by tests.
+- Skip, xfail, test rewrite, pytest configuration, or benchmark harness changes intended to make verification green.
 - Work already owned by an uncancelled live sibling.
 - Duplicate validators/dependents already rewired to this replanner.
 - New-file, move, shim, bridge, or re-export work without production evidence for the destination.
@@ -32,7 +33,8 @@ If the payload needs any `cancel_ids`, stop and load `action-cancel-and-redraft`
 5. Tell corrective developers to run `ci_diagnostics(file_path=...)` first.
 6. For moves/renames, name `daytona_move_file`; for pure removals, `daytona_delete_file` or CodeAct is acceptable.
 7. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local repair ids it verifies.
-8. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
+8. Reject any candidate whose `scope_paths` include tests, benchmark harness files, or pytest/config verification files unless the original user request explicitly asked to repair tests rather than production behavior.
+9. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
 
 ## Expected Outcome
 

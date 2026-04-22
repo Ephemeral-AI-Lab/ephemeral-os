@@ -233,6 +233,7 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "repo-relative implementation owner paths" in scope_desc
     assert "not `/testbed/...` prefixes" in scope_desc
     assert "For validators, use the production paths being verified" in scope_desc
+    assert "test files and test directories are rejected as scope_paths" in scope_desc
 
     payload = tool.input_model(
         new_tasks=[
@@ -241,11 +242,11 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
                 "description": "Repair owner",
                 "name": "developer",
                 "spec": _spec("Repair the production owner."),
-                "scope_paths": ["pkg/tests/test_owner.py"],
+                "scope_paths": ["pkg/owner.py"],
             }
         ],
     )
-    assert payload.new_tasks[0].scope_paths == ["pkg/tests/test_owner.py"]
+    assert payload.new_tasks[0].scope_paths == ["pkg/owner.py"]
 
 
 def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
@@ -256,6 +257,7 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "repo-relative production scope_paths" in schema["description"]
     assert "validator tasks are present" in schema["description"]
     assert "numbered colon labels" in schema["description"]
+    assert "Test files and test directories are rejected as scope_paths" in schema["description"]
     assert "summary" not in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
 

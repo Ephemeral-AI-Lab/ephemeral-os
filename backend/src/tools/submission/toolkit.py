@@ -318,7 +318,8 @@ class NewTaskSpec(BaseModel):
             "use repo-relative implementation owner paths, not `/testbed/...` "
             "prefixes. For validators, use the production paths being verified. "
             "Every task should provide at least one path. Keep verification-only "
-            "test targets in spec unless the task explicitly owns a test-only bug."
+            "test targets in spec; test files and test directories are rejected "
+            "as scope_paths."
         ),
     )
 
@@ -612,9 +613,10 @@ class SubmitPlanTool(BaseTool):
         "Use validator tasks when a distinct verification lane is useful. "
         "Scope paths name implementation owner paths "
         "for developer/planner lanes and production paths being verified for "
-        "validator lanes; use repo-relative paths, not `/testbed/...` prefixes; "
-        "put verification-only test targets in spec unless tests are explicitly "
-        "the owned bug surface."
+        "validator lanes. Do not tell children to `cd /testbed`; use "
+        "repo-relative paths, not `/testbed/...` prefixes. Put all test "
+        "targets in spec because test files and test directories are rejected "
+        "as scope_paths."
     )
     short_description = "Submit a child plan."
     input_model = SubmitPlanInput
@@ -739,7 +741,8 @@ class SubmitReplanTool(BaseTool):
         "with body text after the colon on the same line: 1. Goal, "
         "2. Task Details, 3. Acceptance Criteria. "
         "When validator tasks are present, give them non-empty repo-relative "
-        "production scope_paths."
+        "production scope_paths. Test files and test directories are rejected "
+        "as scope_paths."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput

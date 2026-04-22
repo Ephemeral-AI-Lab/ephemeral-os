@@ -25,6 +25,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 
 - Same-scope continuation of the failed task.
 - Benchmark-test edits or missing paths proven only by tests.
+- Skip, xfail, test rewrite, pytest configuration, or benchmark harness changes intended to make verification green.
 - Replacement work for an uncancelled sibling's scope.
 - Replacement moves, shims, bridges, or re-exports without production evidence for both source and destination.
 - Dependencies on downstream tasks already blocked on this replanner.

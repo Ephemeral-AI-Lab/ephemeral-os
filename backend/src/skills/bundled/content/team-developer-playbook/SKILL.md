@@ -32,7 +32,7 @@ If a missing dependency, missing optional extra, or different dependency version
 
 ## Never
 
-1. Do not edit test files unless this task explicitly owns a test-only bug.
+1. Do not edit test files unless the original user request explicitly asks to repair tests rather than production behavior. In benchmark/fail-to-pass work, tests are evidence only even if a child task mistakenly assigns a test file.
 2. Do not use `daytona_codeact` for file-content reads, writes, moves, or deletes. Use the Daytona read, search, or mutation tools above.
 3. Do not skip, xfail, rewrite verification, change pytest config, install packages, alter dependency versions, or patch around root/OS permission behavior to turn a command green.
 4. Do not call `read_task_graph()`; developers address tasks only via UUIDs from the prompt header.
@@ -82,22 +82,23 @@ Write a code-focused plan before the first edit:
 
 Planning checks:
 
-1. Use failing tests as evidence, not permission to edit tests.
-2. Test files are read-only unless the task explicitly owns a test-only bug.
+1. Use failing tests as evidence, not permission to edit tests. A test import or collection blocker is still evidence; fix production only if the exact production path is assigned, otherwise request replanning.
+2. Test files are read-only unless the original user request explicitly asks to repair tests rather than production behavior. A child task that assigns test skip/xfail/rewrite work in a benchmark is invalid; request replanning instead.
 3. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need production evidence or an explicit assignment. Test spelling alone is not enough.
-4. `scope_paths` are the assigned edit surface for existing files, moves, renames, deletes, and new production files. Acceptance criteria, import errors, and test outcomes never expand `scope_paths` by themselves. You may widen reads, diagnostics, and test commands to prove ownership. Create a new production file only when the task, parent details, or dependency handoff names that exact path as this lane's deliverable; otherwise submit `type="request_replan"` with trigger `scope_expansion` so a replanner can assign the missing module, shim, re-export, or bridge.
-5. A minor support edit to an existing out-of-scope production file is allowed only when all of these are true: it is a one-line import, alias, re-export, compatibility reference, or typo-level symbol correction; it directly unblocks the assigned scoped fix; parent task details show no sibling owns that path; it is not a test, config, generated, or broad behavior file; and you can verify it immediately with the same failing command or a narrower import/probe.
-6. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
-7. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
+4. `scope_paths` are the assigned edit surface for existing files, moves, renames, deletes, and new production files. Acceptance criteria, import errors, and test outcomes never expand `scope_paths` by themselves. Collection failures also do not expand `scope_paths` by themselves. You may widen reads, diagnostics, and test commands to prove ownership. Create a new production file only when the task, parent details, or dependency handoff names that exact path as this lane's deliverable; otherwise submit `type="request_replan"` with trigger `scope_expansion` so a replanner can assign the missing module, shim, re-export, or bridge.
+5. A similarly named sibling path is not implicitly owned. For example, ownership of `pkg/compatibility.py` does not cover creating `pkg/_compatibility.py` unless that exact new path is assigned.
+6. A minor support edit to an existing out-of-scope production file is allowed only when all of these are true: it is a one-line import, alias, re-export, compatibility reference, or typo-level symbol correction; it directly unblocks the assigned scoped fix; parent task details show no sibling owns that path; it is not a test, config, generated, or broad behavior file; and you can verify it immediately with the same failing command or a narrower import/probe.
+7. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
+8. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
 
 Submit `type="request_replan"` now if any of these hold:
 
 1. A dependency read in Stage 1 is not `done` or its summary does not hand off the code artifacts this task needs.
 2. The next required edit belongs to another role or code path.
 3. The next required change is an existing out-of-scope edit, move, rename, or delete that does not meet the minor support edit criteria above.
-4. The next required edit is test-only and this task does not explicitly own a test-only bug.
+4. The next required edit is test-only, skip/xfail, pytest configuration, or verification rewrite in benchmark/fail-to-pass work.
 5. The plan requires an unproven missing module, shim, re-export, helper, dependency install, or dependency version change.
-6. The required fix is an out-of-scope test edit, an unassigned missing compatibility module, or a new production file outside the exact paths assigned to this lane.
+6. The required fix is a benchmark test edit/skip/xfail/rewrite, an unassigned missing compatibility module, or a new production file outside the exact paths assigned to this lane.
 7. The required change is too complex or ambiguous for one bounded pass.
 
 Exit with: a concrete in-scope plan, or a terminal replan summary.
@@ -111,7 +112,7 @@ Make one minimal production change that matches the plan.
 3. Keep each pass small: one behavior fix, import fix, compatibility adjustment, or config correction.
 4. Refresh file notes after edits or surprising tool/runtime results.
 5. If a delete, move, or rename tool fails, do not retry or bypass it. Preserve the tool error for the terminal summary.
-6. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the exact path was assigned to this lane; never create or edit test files outside an explicit test-only task.
+6. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the exact path was assigned to this lane; never create or edit benchmark test files to turn verification green.
 7. If a mutation reports an outside-scope warning for an existing file, continue only if the edit meets every minor support edit criterion above. Otherwise stop immediately and submit `type="request_replan"` with trigger `scope_expansion`. If a mutation reports a verification-surface warning, pause and re-check the scope and code path before continuing.
 
 Exit with: the smallest scoped edit ready for verification.
@@ -204,11 +205,11 @@ For `type="success"`, `content` must include these labeled facts. Do not omit a 
 
 For `type="request_replan"`, `content` must include:
 
-1. replan trigger, exactly one of: `scope_expansion` | `wrong_owner_or_role` | `unresolved_blocker`;
+1. first non-blank line exactly `replan_trigger: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`;
 2. the Stage 5 root-cause JSON trace, embedded verbatim inside `content`;
 3. last command or diagnostic and failing ids;
 4. what decision or code path the replanner must resolve.
 
-Use `scope_expansion` when the required production repair is outside the assigned `scope_paths`. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before this task can succeed. Use `unresolved_blocker` when verification, diagnostics, tooling, or root-cause tracing is still blocked but no different owner/scope is proven.
+Use `scope_expansion` only when the required production repair is outside the assigned `scope_paths`. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before this task can succeed. Use `unresolved_blocker` when verification, diagnostics, tooling, budget, or root-cause tracing is still blocked but no different owner/scope is proven. If the remaining work is still inside this task's assigned `scope_paths`, do not classify it as `scope_expansion`.
 
 Use `type="success"` only when the latest required verification passed. Use `type="request_replan"` for red, absent, invalid, stale, incomplete, outside-scope, blocked, another-role/code-path, or too-complex verification.

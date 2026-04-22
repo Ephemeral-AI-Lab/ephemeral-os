@@ -60,10 +60,14 @@ Choose one:
 | `wrong_owner_or_role` | The failed task proved a different production owner or agent role owns the repair. | Direct replan |
 | `unresolved_blocker` | A concrete blocker remains and can be stated as a production trace gap. | Diagnostics |
 
+Budget exhaustion, tool-call exhaustion, or unfinished implementation inside the failed task's assigned scope is not `scope_expansion`. If the existing evidence already names the in-scope production mechanisms and repair locations, classify it as `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan` and split corrective work by concrete production mechanism.
+
 Direct replan evidence must name both:
 
 - the live production fix location
 - the production mechanism that first caused the wrong behavior, such as a branch condition, transform, config lookup, import target, state mutation, persistence write/read, or API contract mismatch
+
+Benchmark tests are evidence, not repair scope. Never create a corrective task that owns `*/tests/*`, `test_*.py`, benchmark harness files, pytest configuration, or a skip/xfail/rewrite of verification. A root/OS/environment mismatch in a benchmark test must be reported as `unresolved_blocker` evidence or mapped to a production behavior seam; it is never a license to edit or skip the test.
 
 Diagnostics require a trace-gap triplet: one failing test id or cluster, one suspected production path, and one named symbol or seam. Vague difficulty is not enough.
 
@@ -79,8 +83,9 @@ Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_block
 
 - Preserve downstream validators/dependents already rewired to this replanner.
 - Leave live sibling scopes alone unless you cancel a stale direct sibling.
-- Drop candidates that only continue unfinished same-scope work.
+- Drop same-scope continuation candidates only when they lack a root-cause trace. For `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, same-scope corrective tasks are valid when each task is tied to a named production mechanism and repair location.
 - Drop candidates whose only evidence is a benchmark test path, test import, or test-derived helper.
+- Drop candidates that edit, skip, xfail, rewrite, or reconfigure tests to make verification green.
 - If `cancel_ids=[]`, load `action-add-tasks` before drafting:
 
   ```text
@@ -136,4 +141,5 @@ Then self-check:
 - The failed task id, this replanner id, terminal tasks, and descendants are never cancelled.
 - Specs use `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:` with body text on the same line.
 - `scope_paths` are repo-relative production paths, not `/testbed/...` paths or verification-only tests.
+- No `new_tasks[*].scope_paths` entry may match `*/tests/*`, `test_*.py`, benchmark harness files, or pytest/config verification files unless the original user request explicitly asked to repair tests rather than production behavior.
 - The final assistant action is exactly one `submit_replan(...)` call.

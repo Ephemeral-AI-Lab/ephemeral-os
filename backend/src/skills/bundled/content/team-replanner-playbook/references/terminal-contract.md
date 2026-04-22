@@ -32,7 +32,7 @@ Never include `output`, `summary`, `background`, `parent_id`, `new_sibling_tasks
 | `name` | Use `developer` or terminal `validator`. Never use `scout` or `team_replanner`. `team_planner` is accepted by the schema but the replanner owns synthesis — do not spawn one. |
 | `spec` | Must contain `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:` in order, each on its own line with body text after the colon. |
 | `deps` | Prefer local payload ids. Existing ids require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task. Validators depend on local payload ids. |
-| `scope_paths` | Non-empty repo-relative production paths. Verification-only tests stay in `spec` unless tests are explicitly the owned bug surface. |
+| `scope_paths` | Non-empty repo-relative production paths. Verification-only tests stay in `spec`; a replanner must not invent test ownership from failing benchmark evidence. |
 
 `cancel_ids` may include only stale non-terminal direct siblings of this replanner. Never include the failed task id, the original `request_replan` task, this replanner id, terminal tasks, or nested descendants. Cancel the stale sibling root only; cascade handles descendants and dependents.
 
@@ -138,5 +138,5 @@ Validator tasks are optional. Add one only when a distinct verification lane is 
 - Every task has non-empty repo-relative production `scope_paths`.
 - Every spec uses `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`.
 - `cancel_ids` contains only stale non-terminal direct siblings.
-- No benchmark tests are scoped unless the prompt explicitly owns a test-only bug.
+- No benchmark tests, `*/tests/*`, `test_*.py`, benchmark harness files, pytest configuration, skip/xfail work, or verification rewrites are scoped unless the original user request explicitly asked to repair tests rather than production behavior.
 - The final assistant action is the `submit_replan(...)` tool call, not prose.

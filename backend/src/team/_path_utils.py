@@ -128,3 +128,31 @@ def scope_paths_from_payload(payload: Any) -> list[str]:
 
 
 _PY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
+_TEST_PATH_COMPONENTS = {"test", "tests", "__tests__"}
+_TEST_FILE_SUFFIXES = (
+    "_test.py",
+    "_spec.py",
+    "-test.py",
+    "-spec.py",
+    "_test.go",
+    "_test.rs",
+)
+
+
+def is_test_scope_path(path: str) -> bool:
+    """Return True when *path* names a test file or test directory scope."""
+    parts = [part for part in str(path or "").replace("\\", "/").split("/") if part]
+    if not parts:
+        return False
+    lowered_parts = [part.lower() for part in parts]
+    if any(part in _TEST_PATH_COMPONENTS for part in lowered_parts):
+        return True
+    basename = lowered_parts[-1]
+    return (
+        basename == "conftest.py"
+        or basename.startswith("test_")
+        or basename.startswith("test-")
+        or basename.endswith(_TEST_FILE_SUFFIXES)
+        or ".test." in basename
+        or ".spec." in basename
+    )
