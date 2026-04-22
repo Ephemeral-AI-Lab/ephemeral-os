@@ -88,7 +88,8 @@ def _format_environment_context(env: EnvironmentInfo) -> str:
         f"- OS: {env.os_name} {env.os_version}",
         f"- Architecture: {env.platform_machine}",
         f"- Shell: {env.shell}",
-        f"- Working directory: {env.cwd}",
+        f"- Local host working directory: {env.cwd}",
+        "- Sandbox tools may use a different working directory; use the tool-reported cwd for sandbox commands.",
         f"- Date: {env.date}",
         f"- Python: {env.python_version}",
     ]

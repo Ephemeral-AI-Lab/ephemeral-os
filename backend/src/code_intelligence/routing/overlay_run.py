@@ -69,6 +69,7 @@ REJECT_UNSUPPORTED_SYMLINK = "overlay_unsupported_symlink"
 REJECT_UNSUPPORTED_OPAQUE_DIR = "overlay_unsupported_opaque_dir"
 REJECT_NON_UTF8_GITINCLUDE = "overlay_non_utf8_gitinclude"
 REJECT_UPPER_FULL = "overlay_upper_full"
+_IGNORABLE_DOTGIT_WRITES = frozenset({".git/index", ".git/index.lock"})
 
 _REJECT_EXIT_BASE = 200
 _REJECT_EXIT_CODES: dict[str, int] = {
@@ -217,13 +218,19 @@ class Classifier:
 
         # --- Pass 1: .git/* reject gate. Runs first so we never invoke
         # git check-ignore against a workspace the user mutated under
-        # ``.git/``.
+        # ``.git/``. Index refresh artifacts are ignored because benign git
+        # probes run by test suites may copy up .git/index without changing
+        # repository content. The copied-up index is discarded with the
+        # overlay upperdir, not written to the live repository.
         dotgit = [e for e in entries if e.rel == ".git" or e.rel.startswith(".git/")]
+        dotgit = [e for e in dotgit if e.rel not in _IGNORABLE_DOTGIT_WRITES]
         if dotgit:
             return PolicyRejectOutcome(
                 reason=REJECT_DOTGIT,
                 paths=tuple(sorted(e.rel for e in dotgit)),
             )
+        if entries:
+            entries = [e for e in entries if e.rel not in _IGNORABLE_DOTGIT_WRITES]
 
         # --- Pass 2: detect symlink / opaque-dir on gitinclude entries and
         # split whiteouts.
@@ -967,6 +974,7 @@ def run_user_command(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,
+        env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
     )
     if stdin_bytes is not None:
         assert proc.stdin is not None

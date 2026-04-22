@@ -335,6 +335,23 @@ def test_codeact_destructive_git_blocks_common_clean_forms() -> None:
         assert codeact_destructive_git.destructive_git_command_error(command) is not None
 
 
+def test_codeact_destructive_git_blocks_metadata_mutation_commands() -> None:
+    commands = [
+        "git add dask/core.py",
+        "git -C /testbed update-index --refresh",
+        "git read-tree HEAD",
+        "git apply --cached /tmp/patch.diff",
+        "git apply /tmp/patch.diff",
+        "git restore --staged dask/core.py",
+        "command git commit -m repair",
+    ]
+
+    for command in commands:
+        err = codeact_destructive_git.destructive_git_command_error(command)
+        assert err is not None, command
+        assert "git mutation commands" in err
+
+
 def test_codeact_destructive_git_blocks_python_shell_clean() -> None:
     ctx = _ctx()
     args = DaytonaCodeActInput(code='cmd = "git clean -xdf"\nshell(cmd)')
@@ -358,6 +375,21 @@ def test_codeact_destructive_shell_blocks_python_shell_command() -> None:
 def test_codeact_destructive_git_allows_clean_dry_run() -> None:
     for command in ("git clean -ndf", "git clean --dry-run -xdf"):
         assert codeact_destructive_git.destructive_git_command_error(command) is None
+
+
+def test_codeact_destructive_git_allows_read_only_git_commands() -> None:
+    commands = [
+        "git status --short",
+        "git diff --cached",
+        "git show HEAD:README.md",
+        "git ls-files",
+        "git merge-base HEAD origin/main",
+        "git apply --check /tmp/patch.diff",
+        "git -C /testbed status --short",
+    ]
+
+    for command in commands:
+        assert codeact_destructive_git.destructive_git_command_error(command) is None, command
 
 
 def test_codeact_stderr_suppression_policy_blocks_equivalent_forms() -> None:

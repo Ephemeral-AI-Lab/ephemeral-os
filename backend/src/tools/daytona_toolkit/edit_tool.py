@@ -116,7 +116,10 @@ def _normalize_edits(
         "`old_text` + `new_text` for one replacement, or `edits=[...]` for many. "
         "Do not send `new_text` with `edits`. In team lanes, test-file writes are "
         "blocked unless runtime metadata allows them. Outside-scope production edits "
-        "need a clear ownership reason and verification. If scope is unclear, request replanning."
+        "to existing files are allowed only for developer minor support edits like one-line "
+        "imports, aliases, re-exports, or typo-level references; otherwise request replanning "
+        "with trigger scope_expansion. New production files must be created with daytona_write_file "
+        "so the scope posthook can approve or reject them."
     ),
     short_description="Apply atomic file edits.",
     input_model=DaytonaEditFileInput,

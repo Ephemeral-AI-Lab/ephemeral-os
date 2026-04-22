@@ -114,6 +114,15 @@ def test_budget_warning_guides_validator_to_wrap_up():
     _, event = build_budget_warning(ctx)
     assert "submit_task_summary(type='success')" in event.text
     assert "submit_task_summary(type='request_replan')" in event.text
+    assert "Residual Risk line" in event.text
+
+
+def test_budget_warning_default_success_summary_requires_evidence_and_risk():
+    ctx = _ctx(100, 75)
+    _, event = build_budget_warning(ctx)
+    assert "behavior/API delta" in event.text
+    assert "exact commands and exit codes" in event.text
+    assert "Residual Risk line" in event.text
 
 
 def test_budget_warning_emits_once_per_remaining_count():

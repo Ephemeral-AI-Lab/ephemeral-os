@@ -231,6 +231,43 @@ def test_classifier_rejects_dotgit_writes_before_any_other_work() -> None:
     assert ".git/config" in result.paths
 
 
+def test_classifier_ignores_benign_dotgit_index_refresh() -> None:
+    env = _Classifier(
+        upper_bytes={
+            ".git/index": b"refreshed-index",
+            ".git/index.lock": b"transient-lock",
+            "src/app.py": b"new",
+        },
+        base_bytes={"src/app.py": b"old"},
+        ignored=set(),
+    )
+    result = env.classifier().classify(
+        [
+            _regular_entry(".git/index"),
+            _regular_entry(".git/index.lock"),
+            _regular_entry("src/app.py"),
+        ]
+    )
+    assert isinstance(result, ClassifyOutcome)
+    assert [change.path for change in result.gitinclude] == ["src/app.py"]
+    assert env.check_ignore_calls == [["src/app.py"]]
+
+
+def test_classifier_still_rejects_dotgit_mutation_with_index_refresh() -> None:
+    env = _Classifier(
+        upper_bytes={".git/index": b"refreshed-index", ".git/config": b"x"},
+        base_bytes={},
+        ignored=set(),
+    )
+    result = env.classifier().classify(
+        [_regular_entry(".git/index"), _regular_entry(".git/config")]
+    )
+
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_DOTGIT
+    assert result.paths == (".git/config",)
+
+
 def test_classifier_rejects_dotgit_even_for_nested_paths() -> None:
     env = _Classifier(upper_bytes={}, base_bytes={}, ignored=set())
     result = env.classifier().classify(
@@ -808,6 +845,7 @@ def test_run_user_command_runs_in_workspace_cwd(tmp_path: Path) -> None:
         user_cmd="pwd",
         stdin_bytes=None,
         cwd=str(tmp_path),
+        stdout_path=str(tmp_path / "stdout.bin"),
     )
     assert exit_code == 0
     assert Path(stdout.decode().strip()) == tmp_path.resolve()
@@ -821,9 +859,23 @@ def test_run_user_command_resolves_relative_paths_against_cwd(tmp_path: Path) ->
         user_cmd="cat marker.txt",
         stdin_bytes=None,
         cwd=str(tmp_path),
+        stdout_path=str(tmp_path / "stdout.bin"),
     )
     assert exit_code == 0
     assert stdout == b"hi\n"
+
+
+def test_run_user_command_disables_optional_git_locks(tmp_path: Path) -> None:
+    from code_intelligence.routing.overlay_run import run_user_command
+
+    stdout, exit_code = run_user_command(
+        user_cmd='printf "%s" "$GIT_OPTIONAL_LOCKS"',
+        stdin_bytes=None,
+        cwd=str(tmp_path),
+        stdout_path=str(tmp_path / "stdout.bin"),
+    )
+    assert exit_code == 0
+    assert stdout == b"0"
 
 
 # ---------------------------------------------------------------------------

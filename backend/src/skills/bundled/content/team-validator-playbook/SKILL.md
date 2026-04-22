@@ -28,6 +28,7 @@ Read the following sections to verify the assigned developer or child-planner ou
 5. Do not edit test files unless the task explicitly owns a test-only bug.
 6. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
 7. Do not claim success from stale, partial, indirect, or wrapper evidence.
+8. Do not prefix CodeAct commands with host paths like `/Users/...`; commands already start at the sandbox repo root, usually `/testbed`.
 
 ## Route
 
@@ -88,10 +89,11 @@ Prove the current repo state.
 1. Run `ci_diagnostics(file_path="...")` on every owned or touched production file before terminal completion.
 2. Treat error-severity diagnostics on owned files as red evidence unless the task explicitly says they are pre-existing and irrelevant.
 3. Run the exact required runtime command first. For `daytona_codeact(...)`, use `command` for every shell, build, or test command; never pass a shell command string in `code`.
-4. Use CodeAct only for runtime commands.
-5. For broad or slow suites, use background execution, continue useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.
-6. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
-7. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
+4. Run CodeAct commands from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never `cd` to the host/local workspace path from AGENTS or environment context.
+5. Use CodeAct only for runtime commands.
+6. For broad or slow suites, use background execution, continue useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.
+7. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
+8. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 
 Exit with: command/probe results mapped to criteria, diagnostics status, guardrail result when applicable, and red evidence when present. Green evidence for every acceptance criterion → Stage 6 (`type="success"`). Any red, invalid, partial, unmet, or absent evidence → Stage 4.
 
@@ -149,14 +151,15 @@ Use:
 3. Exactly one mutation tool per change.
 4. Refresh file notes after edits or surprising tool/runtime results.
 5. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the file is created through `daytona_write_file`; never create or edit test files outside an explicit test-only task.
-6. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).
+6. If a mutation reports an outside-scope warning for an existing file, stop immediately and submit `type="request_replan"` with trigger `scope_expansion`; an advisory warning is workflow evidence, not permission to continue editing.
+7. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).
 
 Do not:
 
 1. Perform broad refactors, multi-cluster fixes, speculative owner changes, or repeated repair attempts.
 2. Rewrite tests, add xfails, change pytest config, or apply environment workarounds.
 3. Edit through CodeAct, shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
-4. Retry or bypass a mutation tool that reports an outside-scope or verification-surface warning; pause and re-check scope first.
+4. Retry or bypass a mutation tool that reports an outside-scope or verification-surface warning; request replanning for existing-file scope violations.
 
 Exit with: one scoped correction and fresh verification evidence, or a terminal replan summary if the correction is not allowed.
 
@@ -173,14 +176,15 @@ submit_task_summary({
 
 The `content` field is the entire terminal payload; there is no separate `summary` key.
 
-For `type="success"`, `content` must include:
+For `type="success"`, `content` must include these labeled facts. Do not omit a line because the answer is "none":
 
 1. each acceptance criterion with pass evidence;
 2. exact commands or probes run after the final validator edit and observed outcomes;
 3. exit codes or key assertions for every cited command/probe;
 4. diagnostics status for owned files;
 5. public-surface guardrail result (if the plan added one);
-6. investigation or guardrail widening rationale and residual risk (if any).
+6. investigation or guardrail widening rationale, or "none" when no widening occurred;
+7. `Residual Risk:` with remaining risk, unverified surface, or "none" when no known risk remains.
 
 For `type="request_replan"`, `content` must include:
 

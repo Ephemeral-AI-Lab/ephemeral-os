@@ -147,6 +147,9 @@ def test_runtime_context_message_contains_environment(monkeypatch):
 
     assert "# Environment" in prompt
     assert "Linux 6.8.0" in prompt
+    assert "- Local host working directory: /tmp/project" in prompt
+    assert "use the tool-reported cwd for sandbox commands" in prompt
+    assert "- Working directory: /tmp/project" not in prompt
     assert "branch: main" in prompt
 
 

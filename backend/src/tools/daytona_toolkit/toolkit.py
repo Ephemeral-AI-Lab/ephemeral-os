@@ -51,7 +51,8 @@ def _build_instructions(*, include_codeact: bool) -> str:
             "- `daytona_codeact`: run tests, builds, and other runtime commands.\n"
             "- Use `command=\"pytest ...\"` for shell commands.\n"
             "- Use `code=\"...\"` only for multi-step Python.\n"
-            "- Commands already start at the repo root and output is captured automatically.\n"
+            "- Commands already start at the sandbox repo root, usually `/testbed`, and output is captured automatically.\n"
+            "- Never prefix commands with host paths like `/Users/...`; use repo-relative paths or repo subdirectories.\n"
             "- Do not use CodeAct for file writes, moves, deletes, or file-content reads.\n"
             "- Use the edit, write, rename, delete, move, read, grep, or glob tools for file work.\n"
             "- Background Python should use `python -u` or `print(..., flush=True)`.\n"
@@ -73,8 +74,9 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "- `daytona_delete_file`: delete a file. Set `is_folder=true` to delete a folder tree.\n"
         "- `daytona_move_file`: move a file. Set `is_folder=true` to move a folder tree. Use this instead of `mv`.\n"
         "- Team lanes block test-file writes unless runtime metadata allows them.\n"
-        "- Outside-scope production edits need a clear ownership reason and verification.\n"
-        "- If scope is unclear, request replanning instead of guessing.\n"
+        "- Existing outside-scope production edits are allowed only for developer minor support edits like one-line imports, aliases, re-exports, or typo-level references.\n"
+        "- Otherwise request replanning with trigger scope_expansion.\n"
+        "- New production files must be created with daytona_write_file so the scope posthook can approve or reject them.\n"
         f"{codeact_section}"
     )
 

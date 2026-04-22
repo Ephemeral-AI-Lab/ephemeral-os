@@ -143,6 +143,7 @@ def test_codeact_schema_describes_command_mode():
     schema = tool.to_api_schema()["input_schema"]
     command_description = schema["properties"]["command"]["description"]
     assert "run from the repo root" in command_description
+    assert "Do not prefix with host paths like /Users/..." in command_description
     assert "Output is captured automatically" in command_description
 
     assert tool.short_description == "Run shell or Python from the repo root."
@@ -165,6 +166,7 @@ def test_toolkit_instructions_prioritize_ci_before_raw_file_reads():
     assert "after you know the target path or line range" in tk.instructions
     assert "Use exactly one mode" in tk.instructions
     assert "output is captured automatically" in tk.instructions
+    assert "Never prefix commands with host paths like `/Users/...`" in tk.instructions
     assert "python -u" in tk.instructions
     assert "daytona_rename_symbol" in tk.instructions
 

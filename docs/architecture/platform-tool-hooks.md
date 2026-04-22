@@ -551,7 +551,7 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope, including enumerated folder members. |
 | `move_dst_scope_advisory.py` | pre | `daytona_move_file` | Emits advisory for destination outside write scope when policy allows the move. |
 | `rename_scope_policy.py` | pre | `daytona_rename_symbol` | Builds the rename plan once, applies test-file and write-scope policy to planned paths, and caches the approved plan for the tool body. |
-| `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands. |
+| `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands and other git metadata/worktree mutation commands that bypass OCC/write-scope audit. |
 | `codeact_destructive_shell.py` | pre | `daytona_codeact` | Blocks destructive shell commands against workspace roots and dangerous devices. |
 | `codeact_python_process_policy.py` | pre | `daytona_codeact` | Blocks `os.system()` and `os.popen()` wrappers in coordinated CodeAct Python mode. |
 | `codeact_stderr_suppression_policy.py` | pre | `daytona_codeact` | Blocks shell commands and literal Python `shell(...)` calls that suppress stderr with `/dev/null`. |

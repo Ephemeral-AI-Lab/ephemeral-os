@@ -480,8 +480,10 @@ async def daytona_read_file(
         "`daytona_write_file`; there is no `write_file` tool, so do not call "
         "`write_file`. Use repo-relative or /testbed paths. In team lanes, "
         "test-file writes are blocked unless runtime metadata allows them. "
-        "Outside-scope production writes need a clear ownership reason and "
-        "verification. If scope is unclear, request replanning."
+        "Use this for in-scope overwrites or live-evidence new production files. "
+        "Overwrite existing outside-scope files only for developer minor support edits "
+        "like one-line imports, aliases, re-exports, or typo-level references; otherwise "
+        "request replanning with trigger scope_expansion."
     ),
     short_description="Create or overwrite a file.",
     input_model=DaytonaWriteFileInput,

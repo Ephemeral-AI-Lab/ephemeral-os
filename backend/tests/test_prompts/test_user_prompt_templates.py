@@ -66,12 +66,18 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Do not pass `skill_name`, planner slugs" in rendered
     assert "Use `daytona_codeact(command=\"...\")` for shell, build, and test commands" in rendered
     assert "Use `code` only for Python source snippets" in rendered
+    assert "CodeAct commands already start at the sandbox repo root" in rendered
+    assert "never prefix them with a host/local workspace path" in rendered
+    assert "Use repo-relative paths" in rendered
     assert "Mandatory CodeAct preflight" not in rendered
     assert "Remove shell redirects and output filters entirely" not in rendered
     assert "Do not rely on sanitizer behavior as your normal workflow" not in rendered
     assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in rendered
     assert "Creating a new production file with `daytona_write_file` may extend scope" in rendered
     assert "rely on the write-scope posthook to approve and record the expansion" in rendered
+    assert "An existing out-of-scope production file may be edited only for a minor support edit" in rendered
+    assert "one-line import, alias, re-export, compatibility reference" in rendered
+    assert "is not owned by a sibling in the parent task details" in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
@@ -193,10 +199,16 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "Do not pass `skill_name`, planner slugs" in ctx.user_message
     assert "Use `daytona_codeact(command=\"...\")` for shell, build, and test commands" in ctx.user_message
     assert "Use `code` only for Python source snippets" in ctx.user_message
+    assert "CodeAct commands already start at the sandbox repo root" in ctx.user_message
+    assert "never prefix them with a host/local workspace path" in ctx.user_message
+    assert "Use repo-relative paths" in ctx.user_message
     assert "treat the advisory as workflow guidance" not in ctx.user_message
     assert "Acceptance criteria, benchmark/test outcomes, and import errors do not by themselves expand them" in ctx.user_message
     assert "Creating a new production file with `daytona_write_file` may extend scope" in ctx.user_message
     assert "rely on the write-scope posthook to approve and record the expansion" in ctx.user_message
+    assert "An existing out-of-scope production file may be edited only for a minor support edit" in ctx.user_message
+    assert "one-line import, alias, re-export, compatibility reference" in ctx.user_message
+    assert "is not owned by a sibling in the parent task details" in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message

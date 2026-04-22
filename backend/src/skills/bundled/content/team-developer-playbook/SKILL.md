@@ -29,6 +29,7 @@ Read the following sections to complete one bounded coding task, then finish wit
 3. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
 4. Do not call `read_task_graph()`; developers address tasks only via UUIDs from the prompt header.
 5. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
+6. Do not prefix CodeAct commands with host paths like `/Users/...`; commands already start at the sandbox repo root, usually `/testbed`.
 
 ## Route
 
@@ -77,14 +78,15 @@ Planning checks:
 2. Test files are read-only unless the task explicitly owns a test-only bug.
 3. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need production evidence or an explicit assignment. Test spelling alone is not enough.
 4. `scope_paths` are the assigned edit surface for existing files, moves, renames, and deletes. Acceptance criteria and test outcomes never expand `scope_paths` by themselves. You may widen reads, diagnostics, and test commands to prove ownership. A new production file may extend scope only through `daytona_write_file` when live evidence proves a missing module, shim, re-export, or bridge and no other worker owns that exact path.
-5. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
-6. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
+5. A minor support edit to an existing out-of-scope production file is allowed only when all of these are true: it is a one-line import, alias, re-export, compatibility reference, or typo-level symbol correction; it directly unblocks the assigned scoped fix; parent task details show no sibling owns that path; it is not a test, config, generated, or broad behavior file; and you can verify it immediately with the same failing command or a narrower import/probe.
+6. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
+7. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
 
 Submit `type="request_replan"` now if any of these hold:
 
 1. A dependency read in Stage 1 is not `done` or its summary does not hand off the code artifacts this task needs.
 2. The next required edit belongs to another role or code path.
-3. The next required change is an existing out-of-scope edit, move, rename, or delete.
+3. The next required change is an existing out-of-scope edit, move, rename, or delete that does not meet the minor support edit criteria above.
 4. The next required edit is test-only and this task does not explicitly own a test-only bug.
 5. The plan requires an unproven missing module, shim, re-export, or helper.
 6. The required fix is an out-of-scope test edit, an unproven missing compatibility module, or a new production file whose `daytona_write_file` scope expansion was blocked or conflicted.
@@ -96,13 +98,13 @@ Exit with: a concrete in-scope plan, or a terminal replan summary.
 
 Make one minimal production change that matches the plan.
 
-1. Before every mutation, verify the target file path, source path, destination path, or rename file hint is inside one assigned `scope_paths` entry. For a new production file required by live evidence, use `daytona_write_file` and let the write-scope posthook approve and record expansion. If an existing-file mutation is outside scope or the posthook blocks expansion, submit `type="request_replan"` with trigger `scope_expansion`.
+1. Before every mutation, verify the target file path, source path, destination path, or rename file hint is inside one assigned `scope_paths` entry, or explicitly qualifies as a minor support edit. For a new production file required by live evidence, use `daytona_write_file` and let the write-scope posthook approve and record expansion. If an existing-file mutation is outside scope and does not qualify as a minor support edit, or if the posthook blocks expansion, submit `type="request_replan"` with trigger `scope_expansion`.
 2. Use exactly one Daytona mutation tool per change (see Tools).
 3. Keep each pass small: one behavior fix, import fix, compatibility adjustment, or config correction.
 4. Refresh file notes after edits or surprising tool/runtime results.
 5. If a delete, move, or rename tool fails, do not retry or bypass it. Preserve the tool error for the terminal summary.
 6. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the file is created through `daytona_write_file`; never create or edit test files outside an explicit test-only task.
-7. If a mutation reports an outside-scope or verification-surface warning, pause and re-check the scope and code path before continuing.
+7. If a mutation reports an outside-scope warning for an existing file, continue only if the edit meets every minor support edit criterion above. Otherwise stop immediately and submit `type="request_replan"` with trigger `scope_expansion`. If a mutation reports a verification-surface warning, pause and re-check the scope and code path before continuing.
 
 Exit with: the smallest scoped edit ready for verification.
 
@@ -113,8 +115,9 @@ Prove the latest edit. Do not claim success from stale or partial evidence.
 1. Run `ci_diagnostics(file_path="...")` on every edited file before terminal completion.
 2. Run the narrowest relevant runtime command after each edit. Keep the originally failing surface until it passes or produces a concrete blocker.
 3. For `daytona_codeact(...)`, use `command` for every shell, build, or test command; never pass a shell command string in `code`.
-4. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
-5. Record command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
+4. Run CodeAct commands from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never `cd` to the host/local workspace path from AGENTS or environment context.
+5. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
+6. Record command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 
 Exit with: green evidence → Stage 6 (`type="success"`); any red, stale, or absent evidence → Stage 5.
 
@@ -181,13 +184,14 @@ submit_task_summary({
 
 The `content` field is the entire terminal payload; there is no separate `summary` key.
 
-For `type="success"`, `content` must include:
+For `type="success"`, `content` must include these labeled facts. Do not omit a line because the answer is "none":
 
 1. behavior/API change, not just filenames;
 2. exact commands run after the final edit and observed outcomes;
 3. diagnostics status for edited files;
 4. investigation-scope rationale, if reads/probes/tests went outside `scope_paths`;
-5. residual risk, if any.
+5. `Small out-of-scope edit:` with path, exact change, owner check, verification, and residual risk if you made one, otherwise "none";
+6. `Residual Risk:` with remaining risk, unverified surface, or "none" when no known risk remains.
 
 For `type="request_replan"`, `content` must include:
 

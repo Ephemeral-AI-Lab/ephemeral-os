@@ -45,7 +45,7 @@ first-writer-wins via OCC." Routing decisions are made entirely from
 | Mount model | **Rootless, per-op `unshare -Urm`** with `userxattr` overlay. No pool, no persistent bind mount. | Chosen for namespace-scoped cleanup (kernel releases every mount when the ns exits — no stale-mount sweep, no leak on crash), no sudo in the user-command path, and per-op tmpfs that dies with the op. `sudo mount -t overlay` with a cross-fs live lower **also** works on Daytona (§9 probe A), so Design A from the prior implementation plan is technically viable; rejected on *operational* grounds above, not capability grounds. |
 | Baseline | **`SNAP = git commit-tree`** over live tracked + staged + unstaged + untracked via a redirected `GIT_INDEX_FILE`. | Only primitive that captures the full dirty tree without moving a ref or firing hooks. `git rev-parse HEAD` is **not** sufficient — dirty/staged/untracked files would be invisible. |
 | Diff + merge location | **Inside the unshare namespace, before exit.** One sandbox-side Python script walks `upperdir`, classifies, direct-merges gitignore paths into the live workspace via the lower bind, and emits an NDJSON payload of gitinclude changes for the orchestrator. | Upperdir is tmpfs inside the ns; it is gone the moment the ns exits. An orchestrator-side walker would see nothing. |
-| `.git/**` writes | **REJECT whole run** with `git_conflict_reason = "overlay_rejected_dotgit_writes: <paths>"`. `success=False`, exit code preserved. | Agents should not mutate `.git` from inside CodeAct. Failing loud surfaces misbehavior; silent-skip hides it. |
+| `.git/**` writes | **REJECT whole run** with `git_conflict_reason = "overlay_rejected_dotgit_writes: <paths>"`. `success=False`, exit code preserved. Exception: `.git/index` / `.git/index.lock` refresh artifacts are ignored. | Agents should not mutate `.git` from inside CodeAct. Failing loud surfaces misbehavior; silent-skip hides it. The index exception covers benign Git read probes whose copied-up index is discarded with the overlay upperdir and never reaches the live repository. |
 | Whiteouts on gitignore paths | **Refuse by default.** Surface as `git_conflict_reason = "overlay_refused_gitignore_whiteout: <paths>"`. Agents that legitimately want to rebuild deps use `daytona_delete_file` (OCC-aware) or a future explicit rebuild tool. | Ecosystem-specific allowlists (`.venv/`, `node_modules/`, `target/`, `.next/`, `.gradle/`, `dist/`, …) rot. Refuse-all is the only policy that does not drift. |
 | Whiteouts on gitinclude paths | **Emit as DELETE to OCC** (normal path). | OCC already handles this correctly via strict-base. |
 | Mode-only changes on gitinclude paths | **Ignore.** Overlay copies up on mode change with identical content; classifier short-circuits on content equality with the SNAP base. | OCC does not track mode. Avoids spurious no-op changes. |
@@ -221,6 +221,9 @@ Walk `/ns/tmp/upper` recursively. For each entry:
      `overlay_rejected_dotgit_writes`. Run this gate **before** invoking
      `git check-ignore`, since the ignore matcher itself reads `.git`
      state and we don't want to consult a `.git` the user just mutated.
+     Ignore `.git/index` and `.git/index.lock` refresh artifacts, and run
+     user commands with `GIT_OPTIONAL_LOCKS=0`, so read-only Git probes do
+     not become false protected-write failures.
 2. **Overlay-kind** (from upperdir metadata; **must handle both
    privileged and rootless representations** — the `userxattr` mount
    option changes how overlayfs encodes whiteouts and opaque markers):

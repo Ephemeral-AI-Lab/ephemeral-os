@@ -517,14 +517,26 @@ def _team_repo_write_warning(
     if scope_warnings >= 3:
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-            "You have 3+ outside-scope warnings — your assigned scope likely does not match what this task requires. "
-            "Request replanning unless these paths are one coherent production owner for the same bug and you can verify the widened change."
+            "You have 3+ outside-scope warnings; the assigned scope does not match the required repair. "
+            "Stop editing and submit_task_summary(type='request_replan') with trigger scope_expansion, "
+            "including each out-of-scope path and the command or diagnostic that proved it was needed."
+        )
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name == "developer":
+        return (
+            f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
+            "Existing files outside scope are allowed only for a minor support edit, such as a one-line "
+            "import, alias, re-export, or typo-level reference that directly unblocks the assigned scoped fix. "
+            "Before continuing, confirm from the parent task details that no sibling owns this path; otherwise "
+            "submit_task_summary(type='request_replan') with trigger scope_expansion. If you continue, include "
+            "a Small out-of-scope edit line with the path, exact change, owner check, verification, and residual risk."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-        "This is not a hard failure. Continue if this is a justified production owner for the same bug; "
-        "otherwise submit_task_summary(type='request_replan') so replanning can widen or resequence the task. "
-        "If you continue, include the widened path, rationale, and verification in the terminal summary."
+        "Existing files outside scope are not an authorized edit surface for this task. "
+        "Stop editing and submit_task_summary(type='request_replan') with trigger scope_expansion, "
+        "including this path and the command or diagnostic that proved it was needed. "
+        "Only a new production file created through daytona_write_file may extend scope, and only when the posthook approves it."
     )
 
 

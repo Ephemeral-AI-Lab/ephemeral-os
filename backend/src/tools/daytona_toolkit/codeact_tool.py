@@ -46,8 +46,9 @@ class DaytonaCodeActInput(BaseModel):
         default=None,
         description=(
             "Shell command to run from the repo root. Use for tests, builds, "
-            "and verification. Do not also set code. Output is captured "
-            "automatically."
+            "and verification. Do not prefix with host paths like /Users/...; "
+            "the sandbox repo root is usually /testbed. Do not also set code. "
+            "Output is captured automatically."
         ),
     )
     timeout: int = Field(
@@ -717,7 +718,8 @@ def _files_written_count(
         "Run a shell command or Python source in Daytona. Use `command` for tests, "
         "builds, and verification. Use `code` only for Python source snippets, "
         "never shell commands such as `python -m pytest ...`. Commands "
-        "start at the repo root. Output is captured automatically. "
+        "start at the sandbox repo root, usually `/testbed`; never prefix with "
+        "host paths like `/Users/...`. Output is captured automatically. "
         "Do not use this for file writes, moves, deletes, or file-content reads; "
         "use the file, search, rename, delete, or move tools instead."
     ),

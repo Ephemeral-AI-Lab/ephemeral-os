@@ -135,10 +135,13 @@ async def test_codeact_schema_describes_command_and_code_modes():
     command_desc = schema["input_schema"]["properties"]["command"]["description"]
 
     assert "never shell commands such as `python -m pytest ...`" in description
+    assert "sandbox repo root" in description
+    assert "host paths like `/Users/...`" in description
     assert "Output is captured automatically" in description
     assert "Python source only" in code_desc
     assert "Do not pass shell commands such as `python -m pytest tests -q`" in code_desc
     assert "Shell command to run from the repo root" in command_desc
+    assert "Do not prefix with host paths like /Users/..." in command_desc
     assert "Output is captured automatically" in command_desc
 
 

@@ -46,7 +46,7 @@ Read live Task Center evidence before diagnosis or planning:
 5. `read_task_graph()` to inspect same-parent siblings and rewired dependents
 6. `read_task_details(task_id=<sibling id>)` only for siblings you may preserve, cancel, depend on, or avoid
 
-Skip any read whose id equals one you already fetched (common case: the replanner's parent is the failed task). Use only exact UUIDs from the assigned replanning header. Do not substitute planner slugs, short ids, background ids, or graph-only guesses.
+Wait for all required `read_task_details` results before calling `read_task_graph()`. Do not batch `read_task_graph()` with any required task-detail read. Skip any read whose id equals one you already fetched (common case: the replanner's parent is the failed task). Use only exact UUIDs from the assigned replanning header. Do not substitute planner slugs, short ids, background ids, or graph-only guesses.
 
 Extract from the failed task: final summary, failure reason, root cause trace, failing command, exit code, snippet, trace path, production mechanism, and candidate fix location. Keep verified facts separate from unresolved gaps.
 
@@ -69,11 +69,13 @@ Diagnostics require a trace-gap triplet: one failing test id or cluster, one sus
 
 Never treat another function, line range, test id, or checklist item inside the same owner file as scope expansion.
 
+State one exact line before acting: `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`. For `unresolved_blocker`, also state `Diagnostics decision: trivial_direct_replan` when file notes and CI already name every failing seam, or `Diagnostics decision: deep_diagnostics` when any seam is still unresolved.
+
 ## 3. Act
 
 ### Direct replan
 
-Use this path for `scope_expansion` or `wrong_owner_or_role` when evidence already names the production mechanism and repair location.
+Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, when evidence already names every production mechanism and repair location.
 
 - Preserve downstream validators/dependents already rewired to this replanner.
 - Leave live sibling scopes alone unless you cancel a stale direct sibling.
@@ -93,11 +95,11 @@ Use this path for `scope_expansion` or `wrong_owner_or_role` when evidence alrea
 
 ### Diagnostics
 
-Use this path for `unresolved_blocker` only.
+Use this path for `unresolved_blocker` with `Diagnostics decision: deep_diagnostics`.
 
 1. Read file notes for production paths already named by the trace. If a note already contains root-cause-grade evidence, skip scouting that path.
-2. Enumerate distinct trace-gap triplets: one failing test id or cluster, one suspected production path, and one named symbol or seam. Drop gaps that cannot be stated this way.
-3. Launch one scout per remaining triplet: `run_subagent(agent_name="scout", input={"target_paths": ["<production path>"], "context": "Diagnostic for <triplet>; confirm or rule out <seam>; post evidence via submit_file_note."})`.
+2. Enumerate distinct trace-gap triplets in visible reasoning before any scout call: one failing test id or cluster, one suspected production path, and one named symbol or seam. Drop gaps that cannot be stated this way.
+3. Launch one scout per remaining triplet: `run_subagent(agent_name="scout", input={"target_paths": ["<one production path>"], "context": "Diagnostic for <triplet>; confirm or rule out <seam>; post evidence via submit_file_note."})`.
 4. Queue the whole scout wave before checking progress or waiting.
 5. Wait for terminal envelopes, then read `read_file_note(...)` for every exact scout target path.
 6. Synthesize the repair mapping yourself, including partial findings and disproved hypotheses.

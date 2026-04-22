@@ -80,6 +80,13 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Synthesize repair mapping" in skill
     assert "trace-gap triplets" in skill
     assert "Launch one scout per remaining triplet" in skill
+    assert "Wait for all required `read_task_details` results before calling `read_task_graph()`" in skill
+    assert "Do not batch `read_task_graph()` with any required task-detail read" in skill
+    assert "Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>" in skill
+    assert "Diagnostics decision: trivial_direct_replan" in skill
+    assert "Diagnostics decision: deep_diagnostics" in skill
+    assert "Enumerate distinct trace-gap triplets in visible reasoning before any scout call" in skill
+    assert '"target_paths": ["<one production path>"]' in skill
     assert "Keep failing tests in scout `context`, not `target_paths`" in skill
 
     assert "## Call Shape" in contract
@@ -157,6 +164,16 @@ def test_team_validator_playbook_uses_developer_style_contract() -> None:
     assert "## Conditional references" not in skill
 
 
+def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
+    for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
+        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        assert "Do not omit a line because the answer is \"none\"" in skill
+        assert '`Residual Risk:` with remaining risk, unverified surface, or "none"' in skill
+
+
 def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
     allowed = {"scope_expansion", "wrong_owner_or_role", "unresolved_blocker"}
     banned = {
@@ -192,8 +209,11 @@ def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() 
     assert "Acceptance criteria and test outcomes never expand `scope_paths` by themselves" in skill
     assert "A new production file may extend scope only through `daytona_write_file`" in skill
     assert "no other worker owns that exact path" in skill
+    assert "A minor support edit to an existing out-of-scope production file is allowed" in skill
+    assert "one-line import, alias, re-export, compatibility reference" in skill
+    assert "parent task details show no sibling owns that path" in skill
     assert (
-        "The next required change is an existing out-of-scope edit, move, rename, or delete."
+        "The next required change is an existing out-of-scope edit, move, rename, or delete that does not meet the minor support edit criteria above."
         in skill
     )
     assert (
@@ -205,7 +225,9 @@ def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() 
         in skill
     )
     assert "For a new production file required by live evidence, use `daytona_write_file`" in skill
-    assert "If an existing-file mutation is outside scope or the posthook blocks expansion" in skill
+    assert "explicitly qualifies as a minor support edit" in skill
+    assert "If an existing-file mutation is outside scope and does not qualify as a minor support edit" in skill
+    assert "continue only if the edit meets every minor support edit criterion above" in skill
     assert "with trigger `scope_expansion`" in skill
     assert (
         "Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them"
@@ -228,6 +250,8 @@ def test_developer_and_validator_playbooks_keep_codeact_api_boundary() -> None:
         assert "only when no valid equivalent can preserve the needed evidence" in skill
         assert "A pre-hook block after sanitization or another policy denial is terminal tooling evidence" not in skill
         assert "never pass a shell command string in `code`" in skill
+        assert "commands already start at the sandbox repo root" in skill
+        assert "Never `cd` to the host/local workspace path" in skill
 
 
 def test_validator_playbook_routes_out_of_scope_corrections_to_replan() -> None:
@@ -249,4 +273,5 @@ def test_validator_playbook_routes_out_of_scope_corrections_to_replan() -> None:
     )
     assert "For a new production file required by live evidence, use `daytona_write_file`" in skill
     assert "If an existing-file mutation is outside scope or the posthook blocks expansion" in skill
+    assert "an advisory warning is workflow evidence, not permission to continue editing" in skill
     assert "with trigger `scope_expansion`" in skill
