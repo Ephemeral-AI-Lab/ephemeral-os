@@ -90,9 +90,13 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert '"target_paths": ["<one production path>"]' in skill
     assert "Keep failing tests in scout `context`, not `target_paths`" in skill
     assert "Replanner-created tasks are limited to `developer` repair lanes and `validator` verification lanes" in skill
+    assert "Do not submit an empty or no-op replan" in skill
 
     assert "## Call Shape" in contract
     assert "submit_replan({ new_tasks: NewTaskSpec[], cancel_ids: string[] })" in contract
+    assert "`new_tasks` contains at least one corrective task" in contract
+    assert "Empty Replan" not in contract
+    assert '"new_tasks": []' not in contract
     assert 'name: "developer" | "validator";' in contract
     assert "Every `name` is exactly `developer` or `validator`" in contract
     assert "team_planner is accepted" not in contract

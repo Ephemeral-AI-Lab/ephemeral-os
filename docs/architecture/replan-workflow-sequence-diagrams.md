@@ -101,36 +101,21 @@ per-branch one — once it's gone, no further recovery is possible anywhere in
 the tree, so localizing the failure to `A` would just defer the inevitable
 while letting unrelated work keep burning resources.
 
-## 2. Replanner Submits No Direct Children
+## 2. Replanner Submits Empty Replan
 
 ```mermaid
 sequenceDiagram
     participant R as Replanner Task R
     participant Tool as submit_replan
-    participant Ex as Executor
-    participant TC as TaskCenter
-    participant PE as PlanExpander
-    participant TS as TaskStore
-    participant D as Downstream Tasks
-    participant A as Original Task A
 
     R->>Tool: submit_replan(new_tasks=[], cancel_ids=[...])
-    Tool->>Tool: validate cancel_ids (direct siblings of R only)
-    Tool-->>Ex: AgentResult(submitted_replan)
-
-    Ex->>TC: complete_task(R, submitted_replan)
-    TC->>PE: apply_replan(R, add_tasks, cancel_ids)
-    PE->>TS: apply_replan_atomic(cancel_ids, specs=[])
-
-    TS->>TS: cancel requested non-terminal tasks with cascade
-    TS-->>PE: inserted=[]
-    PE-->>TC: replanner_child_count=0
-
-    TC->>TS: mark R DONE
-    TS->>D: promote dependents whose pending deps reach 0
-    TC->>TS: finalize_replanned_origin(R)
-    TS->>A: record replanned_by on A (A stays REQUEST_REPLAN; terminal)
+    Tool->>Tool: validate new_tasks is non-empty
+    Tool-->>R: Validation failed: look deeper and return with a concrete corrective task
 ```
+
+The tool-level contract rejects empty or cancel-only replans. A replanner that
+cannot justify at least one corrective child must keep diagnosing the failed
+work instead of closing recovery with no new tasks.
 
 ## 3. Replanner Creates Direct Children
 

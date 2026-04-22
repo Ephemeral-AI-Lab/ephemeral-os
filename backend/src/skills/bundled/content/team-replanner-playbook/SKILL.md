@@ -92,7 +92,7 @@ Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_block
 - Drop same-scope continuation candidates only when they lack a root-cause trace. For `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, same-scope corrective tasks are valid when each task is tied to a named production mechanism and repair location.
 - Drop candidates whose only evidence is a benchmark test path, test import, or test-derived helper.
 - Drop candidates that edit, skip, xfail, rewrite, or reconfigure tests to make verification green.
-- Do not submit an empty or no-op replan for an unresolved blocker while a production seam remains untested. Empty replans are only for already-delivered or obsolete work described in `terminal-contract`.
+- Do not submit an empty or no-op replan. If no corrective child is justified yet, look deeper into the issues and come back with a concrete corrective task.
 - If `cancel_ids=[]`, load `action-add-tasks` before drafting:
 
   ```text

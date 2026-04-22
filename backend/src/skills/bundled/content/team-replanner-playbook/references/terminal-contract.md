@@ -1,6 +1,6 @@
 # Replanner Terminal Contract
 
-Load this reference before drafting any non-empty `submit_replan(...)` payload or any payload with `cancel_ids`.
+Load this reference before drafting any `submit_replan(...)` payload.
 
 ## Call Shape
 
@@ -19,7 +19,7 @@ type NewTaskSpec = {
 };
 ```
 
-Top-level input has only `new_tasks` and `cancel_ids`. New task objects have only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`.
+Top-level input has only `new_tasks` and `cancel_ids`. `new_tasks` must contain at least one corrective task; empty or cancel-only replans are rejected. New task objects have only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`.
 
 Never include `output`, `summary`, `background`, `parent_id`, `new_sibling_tasks`, `new_children_tasks`, `expected_projection`, or prose outside the terminal call.
 
@@ -56,17 +56,6 @@ Validator tasks are optional. Add one only when a distinct verification lane is 
 `3. Acceptance Criteria:` should name concrete verification commands or pytest ids and require reporting command output, exit codes, changed behavior, and residual risk.
 
 ## Examples
-
-### Empty Replan
-
-Use this only when no corrective child is required: existing terminal sibling evidence already delivered the repair, or the failed work is obsolete and no validator/dependent lane must be replaced. Do not use an empty or cancel-only replan to close an unresolved blocker or red acceptance command.
-
-```json
-{
-  "new_tasks": [],
-  "cancel_ids": []
-}
-```
 
 ### Direct Scope Expansion
 
@@ -133,6 +122,7 @@ Use this only when no corrective child is required: existing terminal sibling ev
 ## Final Checklist
 
 - Top-level input has only `new_tasks` and `cancel_ids`.
+- `new_tasks` contains at least one corrective task; if no task is justified yet, look deeper into the issues and come back with a concrete corrective task.
 - Every task has only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`.
 - Every `name` is exactly `developer` or `validator`.
 - Every id is unique.

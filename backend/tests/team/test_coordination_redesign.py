@@ -254,6 +254,7 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     schema = tool.to_api_schema()
 
     assert "new_tasks" in schema["input_schema"]["properties"]
+    assert "non-empty new_tasks" in schema["description"]
     assert "repo-relative production scope_paths" in schema["description"]
     assert "validator tasks are present" in schema["description"]
     assert "numbered colon labels" in schema["description"]
@@ -268,6 +269,39 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
         SubmitReplanTool.input_model(output="legacy rationale")
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(summary="legacy summary")
+
+
+@pytest.mark.asyncio
+async def test_submit_replan_rejects_empty_new_tasks_with_deeper_diagnosis_prompt():
+    task_center = _AsyncTaskCenterStub()
+    task_center.graph["replanner-task"] = Task(
+        id="replanner-task",
+        team_run_id="run-1",
+        agent_name="team_replanner",
+        status=TaskStatus.RUNNING,
+        objective="recover failed work",
+        parent_id="root",
+    )
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    result = await SubmitReplanTool().execute(
+        SubmitReplanTool.input_model(new_tasks=[], cancel_ids=[]),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "submit_replan requires at least one corrective new_task" in result.output
+    assert "look deeper into the issues and come back" in result.output
+    assert ctx.metadata.get("resolved_plan") is None
+    assert task_center.posted == []
 
 
 @pytest.mark.asyncio

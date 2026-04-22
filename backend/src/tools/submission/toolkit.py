@@ -411,7 +411,7 @@ class SubmitReplanInput(BaseModel):
     new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
         description=(
-            "Structured JSON array of corrective tasks to create as direct "
+            "Non-empty structured JSON array of corrective tasks to create as direct "
             "children of this replanner. The outcome summary is generated "
             "by the system after children complete; do not author prose. "
             "Each new task should include non-empty repo-relative scope_paths, "
@@ -440,6 +440,12 @@ class SubmitReplanOutput(BaseModel):
         default_factory=list,
         description="Accepted sibling task ids to cancel by cascade.",
     )
+
+
+_EMPTY_REPLAN_ERROR = (
+    "submit_replan requires at least one corrective new_task; "
+    "look deeper into the issues and come back with a concrete corrective task."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +521,8 @@ def _validate_submit_replan_input(
         cancel_ids=arguments.cancel_ids,
     )
     errors = list(result.errors)
+    if not arguments.new_tasks:
+        errors.append(_EMPTY_REPLAN_ERROR)
     if graph is None:
         return errors
 
@@ -758,7 +766,7 @@ class SubmitReplanTool(BaseTool):
     name = "submit_replan"
     description = (
         "Submit the initial replanned tasks as structured JSON. Provide "
-        "new_tasks for corrective repair work owned by the "
+        "non-empty new_tasks for corrective repair work owned by the "
         "replanner, and cancel_ids for stale direct siblings whose subtrees "
         "should be cancelled by cascade. A system-generated summary of what "
         "actually happened is produced after children complete — do NOT "
