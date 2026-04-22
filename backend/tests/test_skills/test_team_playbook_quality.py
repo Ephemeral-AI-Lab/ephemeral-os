@@ -25,8 +25,6 @@ _REFERENCES = [
     _CONTENT / "team-developer-playbook/references/pre-completion-validation.md",
     _CONTENT / "team-developer-playbook/references/root-cause-debugging.md",
     _CONTENT / "team-developer-playbook/references/widening-and-runtime.md",
-    _CONTENT / "team-planner-playbook/references/scout-launch-contract.md",
-    _CONTENT / "team-planner-playbook/references/plan-json-contract.md",
     _CONTENT / "team-scout-playbook/references/completion-contract.md",
     _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md",
     _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md",
@@ -48,14 +46,22 @@ def _hard_rules_section(content: str) -> str:
 
 
 def test_skills_and_references_stay_short() -> None:
+    skill_line_limits = {
+        "team-developer-playbook": 180,
+        "team-planner-playbook": 380,
+        "team-root-planner-playbook": 380,
+    }
     for path in _ALL_SKILLS:
-        assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
+        limit = skill_line_limits.get(path.parent.name, 150)
+        assert len(_read(path).splitlines()) <= limit, f"{path} should stay short"
     for path in _REFERENCES:
         assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
 
 
 def test_hard_rule_numbers_do_not_repeat() -> None:
     for path in _PLAYBOOKS:
+        if path.parent.name == "team-planner-playbook":
+            continue
         section = _hard_rules_section(_read(path))
         labels = re.findall(r"^(\d+)\.\s", section, flags=re.MULTILINE)
         assert labels, f"expected numbered hard rules in {path}"
@@ -137,6 +143,15 @@ def test_root_planner_playbook_is_self_contained() -> None:
     assert "load_skill_reference" not in root
 
 
+def test_team_planner_uses_root_terminal_contract_without_hard_rules() -> None:
+    root = _read(_CONTENT / "team-root-planner-playbook/SKILL.md")
+    planner = _read(_CONTENT / "team-planner-playbook/SKILL.md")
+
+    marker = "## Terminal Tool Contract"
+    assert planner.split(marker, 1)[1] == root.split(marker, 1)[1]
+    assert "## Hard rules" not in planner
+
+
 def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() -> None:
     planner = _read(_CONTENT / "team-planner-playbook/SKILL.md")
     developer = _read(_CONTENT / "team-developer-playbook/SKILL.md")
@@ -144,98 +159,105 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     replanner = _read(_CONTENT / "team-replanner-playbook/SKILL.md")
     scout = _read(_CONTENT / "team-scout-playbook/SKILL.md")
 
-    assert "must load `scout-launch-contract`" in planner.lower()
-    assert "must load `plan-json-contract`" in planner.lower()
-    assert "Do not pre-load it during setup" in planner
-    assert "submit_plan` tool schema is enough" in planner
-    assert "Entry/root planner pre-step: skip task graph context" in planner
-    assert "Child planner pre-step: consume the ids printed in the assigned planner task section exactly as rendered" in planner
-    assert "read_task_details(task_id=<dep id>)` for each declared dependency" in planner
-    assert "Then call `read_task_graph()` to enumerate same-parent sibling tasks" in planner
-    assert "Never substitute planner slugs, short prefixes, or fabricated ids" in planner
-    assert "top-level `deps` field lists every same-layer non-validator sibling id" in planner
-    assert "Future child ids are not dependencies" in planner
-    assert "entry/root planners have no existing task deps" in planner
-    assert "child `team_planner` decomposition lanes" in planner
-    assert "exactly one terminal `validator` end-of-chain guard" in planner
-    assert "Every submitted task, including validators, needs non-empty `scope_paths`" in planner
-    assert "submit a child planner with its would-be children in the same payload" in planner
-    assert "Mentioning dependencies in prose inside `spec` does not create task dependencies" in planner
-    assert "Scouts/subagents are not Task Center tasks" in planner
-    assert 'read scout results with `read_file_note(file_path="...")`' in planner
-    assert "never use `read_task_graph()` or `read_task_details(...)`" in planner
-    assert "submit with uncertainty in task specs instead of relaunching explorers" in planner
-    assert "Scrub every scout `target_paths` list before `run_subagent`" in planner
-    assert "benchmark tests, missing test-derived paths, and verification targets in task prose" in planner
-    assert "live production owner files/directories only" in planner
-    assert "Scouts investigate production ownership, not benchmark path correction" in planner
-    assert "never use `deps: []` in that case" in planner
-    assert "including child `team_planner` lanes" in planner
-    assert "Do not add deps for benchmark family, adjacent prose, or overlapping scopes" in planner
+    assert "load_skill_reference" not in planner
+    assert "1. Load task context" in planner
+    assert "2. Launch scouts" in planner
+    assert "3. Synthesize results" in planner
+    assert "4. Draft plan and submit" in planner
+    assert "read_task_details(task_id=<task id>)" in planner
+    assert "read_task_details(task_id=<parent task id>)" in planner
+    assert "read_task_details(task_id=<dep id>)" in planner
+    assert "Call `read_task_graph()` to inspect dependency topology" in planner
+    assert "do not read sibling details from graph output" in planner
+    assert "read_task_details(task_id=<sibling id>)" not in planner
+    assert "check_background_progress -> wait_for_background_task -> read_file_note" in planner
+    assert "Make the validator depend on every same-payload non-validator id" in planner
+    assert "avoid future child ids in this root payload" in planner
+    assert "Use `deps` only for valid same-payload ids" in planner
+    assert "child `team_planner` lane" in planner
+    assert "exactly one terminal `validator`" in planner
+    assert "non-empty production `scope_paths`" in planner
+    assert "Submit a child `team_planner` together with its imagined child tasks" in planner
+    assert 'read_file_note(file_path="...")` for every exact launched target path' in planner
+    assert "Relaunch scouts to repair weak notes" in planner
+    assert "Scrub `target_paths`" in planner
+    assert "benchmark tests, failing ids, missing test-derived paths" in planner
+    assert "live production file/directory" in planner
+    assert "not `target_paths`" in planner
+    assert "terminal validator whose `deps` include every other same-payload id" in planner
+    assert "including child planner ids" in planner
     assert "known same-file edit ordering" in planner
-    assert "Use repo-relative live production owner paths in every `scope_paths`" in planner
+    assert "Use repo-relative production `scope_paths`" in planner
     assert "never submit `/testbed/...` paths" in planner
-    assert "do not seed child specs with repo-root `cd` wrappers" in planner
-    assert "benchmark tests and verification targets stay in `spec`" in planner
-    assert "include live production owner files/directories only" in planner
+    assert "verification commands in `spec`, not `scope_paths`" in planner
     assert "missing test-derived paths" in planner
-    assert "never guess exact owners" in planner.lower()
-    assert "After loading `plan-json-contract`, make no non-submission tool calls" in planner
-    assert "submit exactly one terminal validator" in planner
-    assert "Every submitted task, including validators, needs non-empty `scope_paths`" in planner
-    assert "include the exact new path plus adjacent live owner" in planner
-    assert "never carry a disproved exact file into scout targets or `scope_paths`" in planner
-    assert "Never submit missing validator scopes, `/testbed/...` paths, command wrappers" in planner
-    assert "After terminal/canceled envelopes, retire scout ids" in planner
-    assert "never pass `bg_*`, `agent`, planner slugs, or short prefixes" in planner
-    assert "while any background scout/subagent is still running" in planner
-    assert "the next and only allowed tool call is `submit_plan(...)`" in planner
-    assert "do not launch another scout just to prove the missing exact path" in planner
-    assert "nearest package boundary when uncertainty remains" in planner
-    assert "Split unrelated owner targets into separate scouts" in planner
+    assert "disproved by live evidence" in planner
+    assert "Every task has only the six allowed fields" in planner
+    assert "Every id is unique" in planner
+    assert "the final assistant action is the `submit_plan(...)` tool call" in planner.lower()
+    assert "nearest stable production boundary" in planner
+    assert "Bundle unrelated exact files" in planner
     assert "cancel_background_task" in planner
-    assert "halted, blocked, or no longer useful" in planner
-    assert "carry the missing note as uncertainty" in planner
+    assert "halted, blocked, or not producing useful output" in planner
+    assert "carry the missing evidence as uncertainty" in planner
     assert "compat/re-export" not in planner
     assert "utils_dataframe.py" not in planner
 
-    assert "must load `root-cause-debugging`" in developer.lower()
-    assert "must load `widening-and-runtime`" in developer.lower()
-    assert "must load `codeact-runtime-examples`" in developer.lower()
-    assert "must load `pre-completion-validation`" in developer.lower()
+    assert "## Workflow" in developer
+    assert "flowchart TD" in developer
+    assert "1. Read task details" in developer
+    assert "2. Analyze" in developer
+    assert "3. Start implementation" in developer
+    assert "4. Verify" in developer
+    assert "5. Submit terminal summary" in developer
+    assert "Root cause analysis" in developer
+    assert "submit_task_summary(type='success')" in developer
+    assert "submit_task_summary(type='request_replan')" in developer
+    assert "Tools:" in developer
+    assert "Steps:" in developer
+    assert "Never:" in developer
+    assert "Exit when:" in developer
+    assert "submit_task_summary({" in developer
+    assert 'type: "success" | "request_replan"' in developer
+    assert 'reference_name="root-cause-debugging"' in developer
+    assert 'reference_name="widening-and-runtime"' in developer
+    assert 'reference_name="codeact-runtime-examples"' in developer
+    assert 'reference_name="pre-completion-validation"' in developer
     assert (
         'load_skill_reference(skill_name="team-developer-playbook", '
         'reference_name="codeact-runtime-examples")'
     ) in developer
     assert "Context-read pre-step: after loading the developer playbook" in developer
-    assert "If no dependency task ids are listed, read only your task and parent" in developer
+    assert "if no dependency task ids are listed, read only your task and parent" in developer
     assert "Benchmark CodeAct preflight: before any `daytona_codeact(...)` call" in developer
     assert "If that reference has not loaded in this agent run, do not call CodeAct" in developer
     assert "A success summary may cite only commands actually run after the final edit" in developer
     assert "treat `daytona_read_file(...)` as a narrow fallback" in developer
     assert "first assistant action must be exactly one `load_skill(skill_name=\"team-developer-playbook\")` call" in developer
     assert "The next Task Center calls must be `read_task_details(task_id=\"<header uuid>\")`" in developer
-    assert "no CodeAct, CI, note, file, edit, diagnostic, reference, slug, prefix, or fabricated id" in developer
+    assert "No CodeAct, CI, note, file, edit, diagnostic, reference, slug, prefix, or fabricated id" in developer
     assert "Empty note reads are successful freshness checks" in developer
     assert "Use only prefixed Daytona mutation tools" in developer
     assert "Do not use generic file tools or bypass failed coordinated tools" in developer
     assert "Test files are read-only unless explicitly owned" in developer
     assert "Benchmark and verification tests are read-only evidence unless the task explicitly owns a test-only bug" in developer
-    assert "Do not rewrite tests, add production helpers solely for tests" in developer
+    assert "Add production helpers solely for tests" in developer
     assert "Audit the task objective for test-derived production surface requests" in developer
     assert "only benchmark/verification tests are named as consumers" in developer
     assert "submit `type=\"request_replan\"` immediately" in developer
-    assert "live production ownership evidence, not task prose or benchmark imports alone" in developer
-    assert "Widen only with live production ownership evidence" in developer
+    assert "infer live production ownership evidence from task prose or benchmark imports alone" in developer
+    assert "widen only with live production ownership evidence" in developer
     assert 'daytona_codeact(command="python -m pytest ...")' in developer
     assert "leading repo-root `cd`, pipes, redirects, `2>&1`, or stderr suppression" in developer
-    assert "never destructive git cleanup" in developer
-    assert "never retry a failed `daytona_delete_file` or `daytona_move_file`" in developer
-    assert "Must treat failing tests and pytest nodes as verification evidence first" in developer
-    assert "Must stop after repeated scope-mismatch warnings" in developer
+    assert "never destructive git cleanup" in developer.lower()
+    assert "never retry a failed `daytona_delete_file` or `daytona_move_file`" in developer.lower()
+    assert "Treat failing tests and pytest nodes as verification evidence first" in developer
+    assert "Stop after repeated scope-mismatch warnings" in developer
     assert "scope_expansion" in developer
     assert "wrong_owner_or_role" in developer
     assert "investigation_blocker" in developer
+    assert "verification_failure" in developer
+    assert "too_complex_or_out_of_scope" in developer
     assert "budget exhaustion" in developer
     assert "latest required post-edit command exited `0`" in developer
     assert "End the lane with exactly one `submit_task_summary(...)`" in developer
@@ -312,7 +334,6 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 
 
 def test_reference_files_hold_specialized_detail() -> None:
-    planner_json = _read(_CONTENT / "team-planner-playbook/references/plan-json-contract.md")
     developer_runtime = _read(
         _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md"
     )
@@ -328,44 +349,6 @@ def test_reference_files_hold_specialized_detail() -> None:
         _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
     )
 
-    assert "optional final helper" in planner_json
-    assert "Do not load it until exploration, DAG shaping" in planner_json
-    assert "terminal background scouts" in planner_json
-    assert "If any background scout/subagent is still running" in planner_json
-    assert "Do not call `wait_for_background_task(...)`" in planner_json
-    assert "submit_plan(new_tasks=[...])" in planner_json
-    removed_field = "task" + "_note"
-    assert f"`{removed_field}`" not in planner_json
-    assert "`1. Goal:`" in planner_json
-    assert "`2. Task Details:`" in planner_json
-    assert "`3. Acceptance Criteria:`" in planner_json
-    assert "or use Markdown headings" in planner_json
-    assert "`deps` values must name ids in this same payload or existing Task Center ids" in planner_json
-    assert "entry/root planners have no existing deps" in planner_json
-    assert "Keep benchmark and verification tests in `spec`" in planner_json
-    assert "broader production boundary on `team_planner`" in planner_json
-    assert "include exactly one terminal validator whose deps cover every same-layer non-validator sibling" in planner_json
-    assert "Do not include a child `team_planner` and its would-be children in the same payload" in planner_json
-    scout_launch = _read(
-        _CONTENT / "team-planner-playbook/references/scout-launch-contract.md"
-    )
-    assert 'read scout findings with `read_file_note(file_path="...")`' in scout_launch
-    assert "Scouts/subagents are not Task Center tasks" in scout_launch
-    assert "Do not call `read_task_graph()` or `read_task_details(...)`" in scout_launch
-    assert "Do not launch second waves to repair weak notes" in scout_launch
-    assert "Scrub `target_paths` first" in scout_launch
-    assert "one unresolved production owner slice per scout" in scout_launch
-    assert "missing test-derived paths when production owners exist" in scout_launch
-    assert "Put literal test paths in task prose and scout production owners instead" in scout_launch
-    assert "Do not scout an exact file after symbol/structure evidence disproves it" in scout_launch
-    assert "Do not launch second waves to repair weak notes" in scout_launch
-    assert "fall back to the nearest stable production boundary" in scout_launch
-    assert "Use one structure/symbol check if needed" in scout_launch
-    assert "check_background_progress(task_id=\"all\")" in scout_launch
-    assert "wait_for_background_task(task_id=\"all\")" in scout_launch
-    assert "cancel_background_task" in scout_launch
-    assert "Never cancel a healthy scout just to save time" in scout_launch
-    assert "carry the missing note as uncertainty" in scout_launch
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "required benchmark-lane preflight" in developer_runtime
     assert 'reference_name="codeact-runtime-examples"' in developer_runtime
