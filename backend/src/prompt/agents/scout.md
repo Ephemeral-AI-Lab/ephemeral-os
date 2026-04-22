@@ -6,7 +6,7 @@ model: inherit
 agent_type: subagent
 tool_call_limit: 100
 toolkits: ["code_intelligence", "task_center"]
-blocked_tools: ["task_center_changed_since", "submit_task_note", "read_task_details", "read_task_graph"]
+blocked_tools: ["submit_task_note", "read_task_details", "read_task_graph"]
 skills: ["team-scout-playbook"]
 ---
 <Role>

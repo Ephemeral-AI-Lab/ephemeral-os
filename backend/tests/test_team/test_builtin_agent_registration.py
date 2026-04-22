@@ -160,7 +160,6 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
     tool_names = _final_tool_names(SCOUT, tmp_path)
 
     assert "submit_file_note" in tool_names
-    assert "task_center_changed_since" not in tool_names
     for name in (
         "daytona_grep",
         "daytona_glob",
@@ -212,5 +211,3 @@ def test_task_center_toolkit_survives_restriction() -> None:
 
     assert registry.get_toolkit("task_center") is not None
     assert registry.get("read_file_note") is not None
-    # post_note moved to submission toolkit (terminal tools only)
-    assert registry.get("task_center_changed_since") is not None

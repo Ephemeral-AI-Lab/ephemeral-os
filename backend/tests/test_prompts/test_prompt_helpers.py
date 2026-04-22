@@ -209,7 +209,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
             model="inherit",
             agent_type="subagent",
             toolkits=["code_intelligence", "task_center"],
-            blocked_tools=["task_center_changed_since", "submit_task_note"],
+            blocked_tools=["submit_task_note"],
             include_skills=False,
         ),
         AgentDefinition(

@@ -1,11 +1,10 @@
-"""Task Center tools — notes + staleness.
+"""Task Center tools — notes + task graph reads.
 
 Tools exposed in the main loop:
 - submit_file_note              — post a file-scoped note (scouts, file-surface notes)
 - submit_task_note              — post a task-scoped note (note_taker, task updates)
 - read_task_details             — task spec + recent notes by task id / scope
 - read_file_note                — search notes by file path
-- task_center_changed_since     — check if task-center state is stale
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
 rather than separate read/write toolkit variants.
@@ -21,7 +20,6 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
-from tools.task_center.freshness import check_freshness
 from tools.core.base import (
     BaseTool,
     BaseToolkit,
@@ -263,72 +261,6 @@ class SubmitTaskNoteTool(BaseTool):
             parent_note_id=arguments.parent_note_id,
             task_id=arguments.task_id,
             context=context,
-        )
-
-
-# ---------------------------------------------------------------------------
-# TaskCenterChangedSinceTool
-# ---------------------------------------------------------------------------
-
-
-class TaskCenterChangedSinceInput(BaseModel):
-    pass  # No arguments needed — uses task start time
-
-
-class TaskCenterChangedSinceOutput(BaseModel):
-    stale: bool = Field(..., description="Whether relevant Task Center state changed.")
-    scope_changes_by_others: list[dict[str, object]] = Field(
-        default_factory=list,
-        description="Changes made by other agents in overlapping scope.",
-    )
-    new_dep_notes: list[dict[str, object]] = Field(
-        default_factory=list,
-        description="New notes from dependency tasks since the freshness baseline.",
-    )
-    new_sibling_completions: list[dict[str, object]] = Field(
-        default_factory=list,
-        description="Sibling task completions since the freshness baseline.",
-    )
-    suggestion: str | None = Field(
-        default=None,
-        description="Suggested next action when the task context is stale.",
-    )
-
-
-class TaskCenterChangedSinceTool(BaseTool):
-    name = "task_center_changed_since"
-    description = (
-        "Check if Task Center state has changed since task start. "
-        "Call before committing multi-file changes."
-    )
-    short_description = "Check whether Task Center state is stale."
-    input_model = TaskCenterChangedSinceInput
-    output_model = TaskCenterChangedSinceOutput
-
-    async def execute(
-        self, arguments: TaskCenterChangedSinceInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        context.metadata["checked_context_freshness"] = True
-        report = await check_freshness(context)
-        # Update the freshness baseline so subsequent checks (e.g. in
-        # submit_task_note) only report changes since THIS check,
-        # not since work_item_started_at.  Fixes the monotonic-count bug
-        # where sibling completions accumulate across the entire run.
-        import time as _time
-        context.metadata["freshness_checked_at"] = _time.time()
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "stale": report.stale,
-                    "scope_changes_by_others": report.scope_changes_by_others,
-                    "new_dep_notes": report.new_dep_notes,
-                    "new_sibling_completions": report.new_sibling_completions,
-                    "suggestion": "Re-read affected files and check Task Center "
-                    "for new state before committing."
-                    if report.stale
-                    else None,
-                }
-            )
         )
 
 
@@ -672,12 +604,11 @@ _ALL_TOOLS = [
     ReadFileNoteTool(),
     ReadTaskDetailsTool(),
     ReadTaskGraphTool(),
-    TaskCenterChangedSinceTool(),
 ]
 
 
 class TaskCenterToolkit(BaseToolkit):
-    """Task Center tools: notes, task graph, task details, and freshness checks.
+    """Task Center tools: notes, task graph, and task details.
 
     All tools are registered; role-based restrictions (e.g. blocking
     ``submit_task_note`` for planners) are handled via ``blocked_tools`` in
@@ -688,6 +619,6 @@ class TaskCenterToolkit(BaseToolkit):
     def from_context(cls, ctx: object) -> TaskCenterToolkit:
         return cls(
             name="task_center",
-            description="Task Center tools: notes, task graph, details, and freshness checks.",
+            description="Task Center tools: notes, task graph, and task details.",
             tools=list(_ALL_TOOLS),
         )

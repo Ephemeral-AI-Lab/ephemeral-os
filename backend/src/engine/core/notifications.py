@@ -27,21 +27,18 @@ def _budget_warning_steps(context: "QueryContext") -> str:
     if role == "planner":
         return (
             "1. Stop exploring and shaping new lanes immediately.\n"
-            "2. Call task_center_changed_since() only if you can still reserve one call for submit_plan().\n"
-            "3. Call submit_plan() with the strongest plan you can defend right now. If the budget is nearly gone, submit_plan() is your next call."
+            "2. Call submit_plan() with the strongest plan you can defend right now. If the budget is nearly gone, submit_plan() is your next call."
         )
     if role == "replanner":
         return (
             "1. Stop reopening ownership questions immediately.\n"
-            "2. Call task_center_changed_since() only if you can still reserve one call for submit_replan().\n"
-            "3. Call submit_replan() with the corrective action you can already justify. If the budget is nearly gone, submit_replan() is your next call."
+            "2. Call submit_replan() with the corrective action you can already justify. If the budget is nearly gone, submit_replan() is your next call."
         )
     if role == "reviewer":
         return (
             "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"
             "2. Run one final exact verification command (daytona_codeact) only if you can still reserve the terminal summary call.\n"
-            "3. Call task_center_changed_since() only if you can still reserve the terminal summary call.\n"
-            "4. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='request_replan') with exact evidence for FAILURE."
+            "3. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='request_replan') with exact evidence for FAILURE."
         )
     return (
         "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"

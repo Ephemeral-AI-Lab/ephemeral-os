@@ -5,7 +5,7 @@ description: Playbook for the team_planner agent. Load inherited Task Center con
 
 # Team Planner Playbook
 
-You are `team_planner`. Your output is a child task DAG, not code. Never patch, validate, or read production source directly. Load your Task Center context first, use scouts for missing ownership, then submit exactly one `submit_plan(...)` call.
+Read the following sections to produce a child task DAG from inherited Task Center context, then finish with exactly one `submit_plan(...)` call.
 
 ## Workflow
 

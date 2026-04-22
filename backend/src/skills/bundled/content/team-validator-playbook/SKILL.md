@@ -5,7 +5,7 @@ description: Authoritative playbook for the validator agent. Read task context, 
 
 # Team Validator Playbook
 
-You are `validator`. Verify the assigned developer or child-planner outcome from live repo evidence. Return a truthful verdict, and apply a small corrective fix only when the failing boundary is obvious, local, and owned. Finish with exactly one `submit_task_summary(...)`.
+Read the following sections to verify the assigned developer or child-planner outcome from live repo evidence, then finish with exactly one `submit_task_summary(...)` call.
 
 ## Tools
 
@@ -17,20 +17,18 @@ You are `validator`. Verify the assigned developer or child-planner outcome from
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
 | Run tests or shell | `daytona_codeact(command="...")` |
 | Edit by exact text | `daytona_edit_file(file_path=..., old_text=..., new_text=...)` or `(file_path, edits=[...])` |
-| Rename a Python symbol | `daytona_rename_symbol(old_name=..., new_name=..., kind?=..., file_hint?=...)` |
 | Terminal submission | `submit_task_summary({ type: "success" \| "request_replan", content: string })` |
 
 ## Never
 
 1. Do not batch `load_skill` with any other tool call.
-2. Do not call `read_task_graph()`; validators address tasks only via UUIDs from the prompt header.
-3. Do not use `daytona_codeact` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use the Daytona read, search, or mutation tools above.
-4. Do not put `|`, `>`, `>>`, `2>&1`, `2>/dev/null`, `head`, `tail`, shell-output wrappers, verdict-shaping helper scripts, or a leading repo-root `cd` in CodeAct commands.
-5. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
-6. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
-7. Do not edit test files unless the task explicitly owns a test-only bug.
-8. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
-9. Do not claim success from stale, partial, indirect, or wrapper evidence.
+2. Do not use `daytona_codeact` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use the Daytona read, search, or mutation tools above.
+3. Do not put `|`, `>`, `>>`, `2>&1`, `2>/dev/null`, `head`, `tail`, shell-output wrappers, verdict-shaping helper scripts, or a leading repo-root `cd` in CodeAct commands.
+4. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
+5. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
+6. Do not edit test files unless the task explicitly owns a test-only bug.
+7. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
+8. Do not claim success from stale, partial, indirect, or wrapper evidence.
 
 ## Route
 
@@ -144,7 +142,7 @@ Patch only when the correction is obvious, small, local, and directly supported 
 
 Use:
 
-1. Coordinated Daytona mutation tools only: `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file`.
+1. Coordinated Daytona mutation tools only: `daytona_edit_file` or `daytona_write_file`.
 2. Exactly one mutation tool per change.
 3. Refresh file notes after edits or surprising tool/runtime results.
 4. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).

@@ -5,7 +5,7 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 # Team Replanner Playbook
 
-You are `team_replanner`. Your output is a corrective task DAG, not code. Load recovery context first, decide whether evidence already supports a direct replan or needs diagnostics, then submit exactly one `submit_replan(...)` call.
+Read the following sections to produce a corrective task DAG from the failed task's evidence, then finish with exactly one `submit_replan(...)` call.
 
 ## Workflow
 
@@ -26,6 +26,14 @@ flowchart TD
 ```
 
 Every branch must load `terminal-contract` before drafting the payload.
+
+## Reference Map
+
+Loadable references used at specific stages below via `load_skill_reference(skill_name="team-replanner-playbook", reference_name="...")`:
+
+- `terminal-contract`: schema, payload examples, and final checklist. Load in Stage 4 before drafting the payload.
+- `action-add-tasks`: add corrective children with `cancel_ids=[]`. Load in Stage 3 when no sibling needs cancellation.
+- `action-cancel-and-redraft`: cancel stale direct siblings and add replacements. Load in Stage 3 when a stale non-terminal direct sibling must be cancelled.
 
 ## 1. Load Recovery Context
 
@@ -127,9 +135,3 @@ Then self-check:
 - Specs use `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:` with body text on the same line.
 - `scope_paths` are repo-relative production paths, not `/testbed/...` paths or verification-only tests.
 - The final assistant action is exactly one `submit_replan(...)` call.
-
-## Reference Map
-
-- `terminal-contract`: schema, payload examples, and final checklist. Load before drafting the payload.
-- `action-add-tasks`: add corrective children with `cancel_ids=[]`.
-- `action-cancel-and-redraft`: cancel stale direct siblings and add replacements.

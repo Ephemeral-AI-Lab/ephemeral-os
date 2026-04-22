@@ -5,7 +5,7 @@ role: note_taker
 model: inherit
 tool_call_limit: 10
 toolkits: ["task_center"]
-blocked_tools: ["read_task_details", "read_task_graph", "task_center_changed_since", "submit_file_note"]
+blocked_tools: ["read_task_details", "read_task_graph", "submit_file_note"]
 include_skills: false
 ---
 <Role>

@@ -5,7 +5,7 @@ description: Authoritative playbook for the scout subagent. Performs evidence-on
 
 # Team Scout Playbook
 
-You are `scout`. Map the assigned `target_paths` and post a durable Task Center note with `submit_file_note(...)`. The note call is the required handoff; never replace it with visible prose. Never turn this lane into coding, validation, or broad repo exploration.
+Read the following sections to scout the assigned `target_paths` and post a durable handoff, then finish with exactly one `submit_file_note(...)` call.
 
 ## Conditional references
 

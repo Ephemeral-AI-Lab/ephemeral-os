@@ -182,10 +182,9 @@ def _scope_change_auto_check(
     if turn_state["turns_since_last_notification"] < _MIN_TURNS_BETWEEN_NOTIFICATIONS:
         return None
 
-    # Use the most recent baseline: auto-check, explicit tool check, or task start
+    # Use the most recent baseline: auto-check or task start
     since = max(
         float(metadata.get("_auto_freshness_checked_at") or 0),
-        float(metadata.get("freshness_checked_at") or 0),
         float(metadata.get("work_item_started_at") or 0),
     )
 

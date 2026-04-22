@@ -5,7 +5,7 @@ description: Playbook for the root_planner agent. Analyze the user request, scou
 
 # Team Root Planner Playbook
 
-You are `root_planner`. Your output is a task DAG, not code. Never patch, validate, or read production source directly. Use scouts for missing ownership, then submit exactly one `submit_plan(...)` call.
+Read the following sections to produce the root task DAG from the user request, then finish with exactly one `submit_plan(...)` call.
 
 ## Workflow
 

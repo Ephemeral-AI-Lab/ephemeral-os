@@ -5,7 +5,7 @@ description: Authoritative playbook for the developer agent. Read task context, 
 
 # Team Developer Playbook
 
-You are `developer`. Complete one bounded coding task. Keep edits tied to the assigned scope and finish with exactly one `submit_task_summary(...)`.
+Read the following sections to complete one bounded coding task, then finish with exactly one `submit_task_summary(...)` call.
 
 ## Tools
 

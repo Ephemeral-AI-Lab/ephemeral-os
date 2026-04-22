@@ -5,7 +5,7 @@ role: reviewer
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence", "task_center", "submission"]
-blocked_tools: ["ci_status", "submit_task_note", "submit_file_note"]
+blocked_tools: ["ci_status", "submit_task_note", "submit_file_note", "read_task_graph", "daytona_rename_symbol", "daytona_delete_file", "daytona_move_file", "ci_workspace_structure"]
 allowed_triggers: ["tc_note"]
 skills: ["team-validator-playbook"]
 ---
