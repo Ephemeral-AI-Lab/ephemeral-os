@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -32,6 +34,45 @@ from prompt.helpers import (  # noqa: E402
     register_builtins,
 )
 from prompt.prompt_cli import _render_team_prompt_report  # noqa: E402
+
+
+def test_legacy_prompt_cli_shim_reexports_prompt_package_entrypoints() -> None:
+    shim_path = _ROOT / "backend" / "prompt_cli.py"
+    code = f"""
+import importlib.util
+import json
+from pathlib import Path
+
+spec = importlib.util.spec_from_file_location("legacy_prompt_cli", Path({str(shim_path)!r}))
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+print(json.dumps({{
+    "all": module.__all__,
+    "build_system_prompt_main": module.build_system_prompt_main.__module__,
+    "dump_team_system_prompts_main": module.dump_team_system_prompts_main.__module__,
+    "dump_team_user_prompts_main": module.dump_team_user_prompts_main.__module__,
+}}))
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(completed.stdout)
+
+    assert payload == {
+        "all": [
+            "build_system_prompt_main",
+            "dump_team_system_prompts_main",
+            "dump_team_user_prompts_main",
+        ],
+        "build_system_prompt_main": "prompt.prompt_cli",
+        "dump_team_system_prompts_main": "prompt.prompt_cli",
+        "dump_team_user_prompts_main": "prompt.prompt_cli",
+    }
 
 
 def test_build_team_user_prompt_report_uses_runtime_context_path(tmp_path: Path) -> None:
@@ -81,7 +122,7 @@ def _team_system_prompt_for(agent_name: str, tmp_path: Path) -> str:
     )
 
 
-def test_team_system_prompts_hide_role_forbidden_tools(tmp_path: Path) -> None:
+def test_team_system_prompts_include_only_terminal_guidance(tmp_path: Path) -> None:
     register_builtins()
 
     planner = _team_system_prompt_for("team_planner", tmp_path)
@@ -89,7 +130,10 @@ def test_team_system_prompts_hide_role_forbidden_tools(tmp_path: Path) -> None:
     scout = _team_system_prompt_for("scout", tmp_path)
     validator = _team_system_prompt_for("validator", tmp_path)
 
-    for prompt in (planner, replanner, scout):
+    for prompt in (planner, replanner, scout, validator):
+        assert "<Toolkit Instructions>" not in prompt
+        assert "<Available Skills>" not in prompt
+        assert "<Background Tasks>" not in prompt
         assert "sandbox_operations" not in prompt
         assert "daytona_" not in prompt
 
@@ -103,15 +147,16 @@ def test_team_system_prompts_hide_role_forbidden_tools(tmp_path: Path) -> None:
     assert "submit_plan" not in replanner
     assert "submit_task_note" not in replanner
 
-    assert "submit_file_note" in scout
+    assert "<Termination Condition>" not in scout
+    assert "submit_file_note" not in scout
     assert "submit_task_note" not in scout
     assert "submit_task_summary" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout
 
-    assert "sandbox_operations" in validator
-    assert "daytona_edit_file" in validator
-    assert "daytona_codeact" in validator
+    assert "sandbox_operations" not in validator
+    assert "daytona_edit_file" not in validator
+    assert "daytona_codeact" not in validator
     assert "submit_task_summary" in validator
 
 
@@ -198,7 +243,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
         team_def=loaded_team,
         cwd=str(tmp_path),
         sandbox_id="sb-test",
-        include_capabilities=True,
+        include_runtime_sections=True,
         settings=Settings(),
     )
 
@@ -208,7 +253,10 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
     scout = _agent_section(report, "db_scout")
     validator = _agent_section(report, "db_validator")
 
-    for section in (planner, replanner, scout):
+    for section in (planner, replanner, scout, validator):
+        assert "<Toolkit Instructions>" not in section
+        assert "<Available Skills>" not in section
+        assert "<Background Tasks>" not in section
         assert "sandbox_operations" not in section
         assert "daytona_" not in section
 
@@ -227,9 +275,9 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout
 
-    assert "sandbox_operations" in validator
-    assert "daytona_edit_file" in validator
-    assert "daytona_codeact" in validator
+    assert "sandbox_operations" not in validator
+    assert "daytona_edit_file" not in validator
+    assert "daytona_codeact" not in validator
     assert "submit_task_summary" in validator
 
 

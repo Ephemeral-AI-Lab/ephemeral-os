@@ -96,6 +96,47 @@ def test_team_references_follow_scan_friendly_structure() -> None:
         assert "## Expected Outcome" in content, f"missing Expected Outcome section in {path}"
 
 
+def test_root_planner_playbook_is_self_contained() -> None:
+    root_dir = _CONTENT / "team-root-planner-playbook"
+    root = _read(root_dir / "SKILL.md")
+
+    assert not list((root_dir / "references").glob("*.md"))
+    workflow = root.index("## Workflow")
+    terminal_contract = root.index("## Terminal Tool Contract")
+    assert workflow < terminal_contract
+    assert "flowchart TD" in root
+    assert "1. Analyze the task" in root
+    assert "2. Launch scouts" in root
+    assert "3. Synthesize results" in root
+    assert "4. Draft plan and submit" in root
+    assert "| Stage | Goal | Tools | Exit condition |" not in root
+    assert "Goal: classify intent and produce an owner ledger." in root
+    assert "Tools:" in root
+    assert "Steps:" in root
+    assert "Never:" in root
+    assert "check_background_progress" in root
+    assert "wait_for_background_task" in root
+    assert "cancel_background_task" in root
+    assert "halted, blocked, or clearly not producing useful output" in root
+    assert "carry any canceled/missing note into synthesis as uncertainty" in root
+    assert "Do:" not in root
+    assert "Do not:" not in root
+    assert "Relaunch scouts just to improve weak notes" in root
+    assert "Root planner entry has no parent" not in root
+    assert "`new_tasks` is a JSON list" in root
+    assert "JSON list of task ids that must finish first" in root
+    assert "Non-empty JSON list of repo-relative production paths" in root
+    assert "submit_plan({ new_tasks: NewTaskSpec[] })" in root
+    task_object_contract = root.split("Task object:", 1)[1].split("`new_tasks`", 1)[0]
+    assert 'name: "developer" | "validator" | "team_planner";' in task_object_contract
+    assert '"scout"' not in task_object_contract
+    assert '"team_replanner"' not in task_object_contract
+    assert "Never put `scout` or `team_replanner` in `new_tasks`" in root
+    assert '"deps": [' in root
+    assert '"scope_paths": [' in root
+    assert "load_skill_reference" not in root
+
+
 def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() -> None:
     planner = _read(_CONTENT / "team-planner-playbook/SKILL.md")
     developer = _read(_CONTENT / "team-developer-playbook/SKILL.md")
@@ -145,13 +186,16 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "include the exact new path plus adjacent live owner" in planner
     assert "never carry a disproved exact file into scout targets or `scope_paths`" in planner
     assert "Never submit missing validator scopes, `/testbed/...` paths, command wrappers" in planner
-    assert "After terminal envelopes, retire scout ids" in planner
+    assert "After terminal/canceled envelopes, retire scout ids" in planner
     assert "never pass `bg_*`, `agent`, planner slugs, or short prefixes" in planner
     assert "while any background scout/subagent is still running" in planner
     assert "the next and only allowed tool call is `submit_plan(...)`" in planner
     assert "do not launch another scout just to prove the missing exact path" in planner
     assert "nearest package boundary when uncertainty remains" in planner
     assert "Split unrelated owner targets into separate scouts" in planner
+    assert "cancel_background_task" in planner
+    assert "halted, blocked, or no longer useful" in planner
+    assert "carry the missing note as uncertainty" in planner
     assert "compat/re-export" not in planner
     assert "utils_dataframe.py" not in planner
 
@@ -293,6 +337,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     removed_field = "task" + "_note"
     assert f"`{removed_field}`" not in planner_json
     assert "`1. Goal:`" in planner_json
+    assert "`2. Task Details:`" in planner_json
+    assert "`3. Acceptance Criteria:`" in planner_json
     assert "or use Markdown headings" in planner_json
     assert "`deps` values must name ids in this same payload or existing Task Center ids" in planner_json
     assert "entry/root planners have no existing deps" in planner_json
@@ -315,6 +361,11 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Do not launch second waves to repair weak notes" in scout_launch
     assert "fall back to the nearest stable production boundary" in scout_launch
     assert "Use one structure/symbol check if needed" in scout_launch
+    assert "check_background_progress(task_id=\"all\")" in scout_launch
+    assert "wait_for_background_task(task_id=\"all\")" in scout_launch
+    assert "cancel_background_task" in scout_launch
+    assert "Never cancel a healthy scout just to save time" in scout_launch
+    assert "carry the missing note as uncertainty" in scout_launch
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "required benchmark-lane preflight" in developer_runtime
     assert 'reference_name="codeact-runtime-examples"' in developer_runtime
@@ -412,10 +463,12 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
 
     for content in (add_tasks, cancel_redraft):
         assert "`1. Goal:`" in content
-        assert "`2. Environment:`" in content
-        assert "`3. Scope:`" in content
-        assert "`4. Context:`" in content
-        assert "`5. Acceptance Criteria:`" in content
+        assert "`2. Task Details:`" in content
+        assert "`3. Acceptance Criteria:`" in content
+        assert "`2. Environment:`" not in content
+        assert "`3. Scope:`" not in content
+        assert "`4. Context:`" not in content
+        assert "`5. Acceptance Criteria:`" not in content
         assert "Do not use Markdown headings" in content
         removed_field = "task" + "_note"
         assert f"`{removed_field}`" not in content

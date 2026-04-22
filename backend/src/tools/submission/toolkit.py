@@ -110,10 +110,10 @@ async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | N
     return {str(item) for item in await store.get_task_ids()}
 
 
-_SPEC_SECTIONS = ("Goal", "Environment", "Scope", "Context", "Acceptance Criteria")
+_SPEC_SECTIONS = ("Goal", "Task Details", "Acceptance Criteria")
 _SPEC_SECTION_RE = re.compile(
     r"(?im)^\s*(?:\d+[.)]\s*)?"
-    r"(Goal|Environment|Scope|Context|Acceptance Criteria)\s*:\s*\S"
+    r"(Goal|Task Details|Acceptance Criteria)\s*:\s*\S"
 )
 
 
@@ -315,8 +315,8 @@ class NewTaskSpec(BaseModel):
             "Structured task spec — the agent's sole briefing. Must include sections "
             "in order using numbered colon labels. Each label must start its own "
             "line and have body text after the colon on that same line, e.g. "
-            "'1. Goal: ...\\n2. Environment: ...\\n3. Scope: ...\\n"
-            "4. Context: ...\\n5. Acceptance Criteria: ...'. Markdown headings "
+            "'1. Goal: ...\\n2. Task Details: ...\\n"
+            "3. Acceptance Criteria: ...'. Markdown headings "
             "like '## Goal', one-line specs with every label, and labels whose "
             "body starts on the next line are not accepted."
         ),
@@ -611,8 +611,8 @@ class SubmitPlanTool(BaseTool):
         "include output, background, summary, parent_id, or "
         "other fields. Each spec must use numbered colon labels in order, "
         "each at the start of its own line with body text after the colon "
-        "on the same line: 1. Goal, 2. Environment, 3. Scope, 4. Context, "
-        "5. Acceptance Criteria. Do not tell children to `cd /testbed`, run from "
+        "on the same line: 1. Goal, 2. Task Details, "
+        "3. Acceptance Criteria. Do not tell children to `cd /testbed`, run from "
         "`/testbed`, or wrap CodeAct commands with `2>&1`, redirects, `| head`, "
         "or `| tail`. Use exactly one terminal validator guard when "
         "there are non-validator tasks. Scope paths name implementation owner paths "
@@ -746,7 +746,7 @@ class SubmitReplanTool(BaseTool):
         "include a short planner-authored description. Each new task spec must use "
         "numbered colon labels in order, each at the start of its own line "
         "with body text after the colon on the same line: 1. Goal, "
-        "2. Environment, 3. Scope, 4. Context, 5. Acceptance Criteria. "
+        "2. Task Details, 3. Acceptance Criteria. "
         "Do not tell children to `cd /testbed`, run from `/testbed`, or wrap "
         "CodeAct commands with `2>&1`, redirects, `| head`, or `| tail`. If "
         "validator tasks are present, keep exactly one terminal validator guard "

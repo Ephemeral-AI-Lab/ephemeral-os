@@ -102,7 +102,7 @@ def build_agent_system_prompt_text(
     cwd: str,
     settings,
     sandbox_id: str = "",
-    include_capabilities: bool = True,
+    include_runtime_sections: bool = True,
     terminal_tools: set[str] | list[str] | None = None,
 ) -> str:
     """Build the assembled system prompt exactly as spawn_agent would."""
@@ -114,7 +114,7 @@ def build_agent_system_prompt_text(
         latest_user_prompt=None,
     )
 
-    if include_capabilities:
+    if include_runtime_sections:
         tool_registry = _build_agent_tool_registry(
             config,
             agent_def,
@@ -676,7 +676,7 @@ async def build_team_role_prompt_report_text(
             cwd=cwd,
             settings=settings,
             sandbox_id=sandbox_id,
-            include_capabilities=True,
+            include_runtime_sections=True,
             terminal_tools=terminal_tools,
         )
         _append_text_block(lines, system_prompt)

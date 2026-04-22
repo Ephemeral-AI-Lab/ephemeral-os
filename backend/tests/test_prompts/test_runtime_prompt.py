@@ -8,12 +8,12 @@ from pydantic import BaseModel
 
 from prompt.environment import EnvironmentInfo
 from prompt.runtime_prompt import (
-    build_agent_capabilities_prompt,
     build_runtime_context_message,
     build_runtime_system_prompt,
+    build_termination_condition_prompt,
 )
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.builtins.background import make_background_toolkit
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.subagent import SubagentToolkit
 
 
@@ -35,34 +35,13 @@ class _DemoTool(BaseTool):
         return ToolResult(output="ok")
 
 
-class _LoadSkillTool(_DemoTool):
-    name = "load_skill"
+def test_termination_condition_prompt_returns_empty_without_terminal_tools():
+    prompt = build_termination_condition_prompt()
 
-
-class _LoadSkillReferenceTool(_DemoTool):
-    name = "load_skill_reference"
-
-
-def test_agent_capabilities_prompt_uses_compact_toolkit_format():
-    prompt = build_agent_capabilities_prompt(
-        [
-            BaseToolkit(
-                name="demo",
-                description="Demo toolkit for bounded inspection and repair work.",
-                tools=[_DemoTool()],
-                instructions="This verbose guidance should not be rendered.",
-            )
-        ]
-    )
-
-    assert prompt.startswith("<Toolkit Instructions>")
-    assert "Use the following toolkits and tools that are available in this run." in prompt
-    assert "Treat this as the effective allowed tool surface for this run." in prompt
-    assert "Do not assume access to tools that are not listed here." in prompt
-    assert "</Toolkit Instructions>" in prompt
-    assert "- demo: Demo toolkit for bounded inspection and repair work." in prompt
-    assert "1. demo_tool - Inspect the current target." in prompt
-    assert "This verbose guidance should not be rendered." not in prompt
+    assert prompt == ""
+    assert "<Toolkit Instructions>" not in prompt
+    assert "<Available Skills>" not in prompt
+    assert "<Background Tasks>" not in prompt
 
 
 def test_subagent_toolkit_treats_spawned_workers_as_background():
@@ -92,26 +71,13 @@ def test_background_toolkit_says_progress_checks_are_decision_driven():
     assert "Use `wait_for_background_task` when you are otherwise idle or blocked on the result" in toolkit.instructions
 
 
-def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
-    prompt = build_agent_capabilities_prompt(
-        [SubagentToolkit(), make_background_toolkit(["run_subagent"])],
-        has_background_tools=True,
-        bg_tool_names=["run_subagent"],
-        terminal_tools=["submit_plan"],
-    )
+def test_termination_condition_prompt_omits_tool_call_notes_and_background_section():
+    prompt = build_termination_condition_prompt(terminal_tools=["submit_plan"])
 
     assert "Tool Call Notes" not in prompt
-    assert "<Background Tasks>" in prompt
-    assert "Background-capable tools: `run_subagent`." in prompt
-    assert "call `check_background_progress` only when live status will change your next action" in prompt
-    assert (
-        "`delivered`, `[COMPLETED]`, `[ALREADY_COMPLETED]`, and `[NO TASKS RUNNING]` "
-        "are terminal signals"
-    ) in prompt
-    assert "background tools will only repeat the delivery envelope" in prompt
-    assert 'read_file_note(file_path="...")' in prompt
-    assert "1. check_background_progress - Inspect background task status." in prompt
-    assert "</Background Tasks>" in prompt
+    assert "<Background Tasks>" not in prompt
+    assert "Background-capable tools: `run_subagent`." not in prompt
+    assert "check_background_progress" not in prompt
     assert "<Termination Condition>" in prompt
     assert "- `submit_plan`" in prompt
     assert "WARNING: These are one-way exit tools." in prompt
@@ -119,91 +85,14 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
     assert "</Termination Condition>" in prompt
 
 
-def test_agent_capabilities_prompt_prefers_short_description_over_description():
-    class _LongTool(BaseTool):
-        name = "long_tool"
-        description = (
-            "This tool has a single sentence description that keeps going past the preferred "
-            "display width so the prompt builder should trim it to a shorter summary for the "
-            "toolkit instructions block without copying the whole annotation verbatim"
-        )
-        short_description = "Use the concise summary instead."
-        input_model = _EmptyInput
+def test_termination_condition_prompt_only_renders_termination_condition():
+    prompt = build_termination_condition_prompt(terminal_tools=["submit_plan"])
 
-        async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-            del arguments, context
-            return ToolResult(output="ok")
-
-    prompt = build_agent_capabilities_prompt(
-        [BaseToolkit(name="demo", description="Demo toolkit", tools=[_LongTool()])]
-    )
-
-    assert "1. long_tool - Use the concise summary instead." in prompt
-    assert "display width" not in prompt
-
-
-def test_agent_capabilities_prompt_includes_available_skills_section():
-    toolkit = BaseToolkit(
-        name="skills",
-        description="Lazy-loaded skill instructions and reference documents",
-        tools=[_LoadSkillTool(), _LoadSkillReferenceTool()],
-    )
-    toolkit.available_skills = [
-        {
-            "name": "team-planner-playbook",
-            "description": "Planning workflow for team planners.",
-            "references": ["plan-json-contract", "terminal-validation-contract"],
-        },
-        {
-            "name": "scout-playbook",
-            "description": "Read-only exploration workflow for scouts.",
-            "references": [],
-        },
-    ]
-
-    prompt = build_agent_capabilities_prompt([toolkit])
-
-    assert "<Available Skills>" in prompt
-    assert "Use `load_skill(skill_name)` when the task matches one of these skills." in prompt
-    assert "there is no `default` reference" in prompt
-    assert "- team-planner-playbook: Planning workflow for team planners." in prompt
-    assert "References: `plan-json-contract`, `terminal-validation-contract`." in prompt
-    assert "- scout-playbook: Read-only exploration workflow for scouts." in prompt
-    assert "No references; use `load_skill(...)` only." in prompt
-    assert "</Available Skills>" in prompt
-
-
-def test_agent_capabilities_prompt_orders_sections_toolkits_skills_background():
-    skills_toolkit = BaseToolkit(
-        name="skills",
-        description="Lazy-loaded skill instructions and reference documents",
-        tools=[_LoadSkillTool(), _LoadSkillReferenceTool()],
-    )
-    skills_toolkit.available_skills = [
-        {"name": "team-planner-playbook", "description": "Planning workflow for team planners."},
-    ]
-
-    prompt = build_agent_capabilities_prompt(
-        [
-            BaseToolkit(
-                name="demo",
-                description="Demo toolkit for bounded inspection and repair work.",
-                tools=[_DemoTool()],
-            ),
-            skills_toolkit,
-            make_background_toolkit(["run_subagent"]),
-        ],
-        has_background_tools=True,
-        bg_tool_names=["run_subagent"],
-        terminal_tools=["submit_plan"],
-    )
-
-    toolkit_idx = prompt.index("<Toolkit Instructions>")
-    skills_idx = prompt.index("<Available Skills>")
-    background_idx = prompt.index("<Background Tasks>")
-    terminal_idx = prompt.index("<Termination Condition>")
-
-    assert toolkit_idx < skills_idx < background_idx < terminal_idx
+    assert "<Toolkit Instructions>" not in prompt
+    assert "<Available Skills>" not in prompt
+    assert "<Background Tasks>" not in prompt
+    assert prompt.startswith("<Termination Condition>")
+    assert "- `submit_plan`" in prompt
 
 
 def test_tool_registry_remove_tools_filters_toolkits_too():

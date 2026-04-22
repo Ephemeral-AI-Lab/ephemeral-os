@@ -29,15 +29,22 @@ def make_task(
 def structured_spec(
     goal: str = "Complete the assigned task.",
     *,
-    environment: str = "Use the current repository workspace and configured team runtime.",
-    scope: str = "Stay within the listed scope_paths.",
-    context: str = "Created by the team runtime.",
+    task_details: str | None = None,
+    environment: str | None = None,
+    scope: str | None = None,
+    context: str | None = None,
     acceptance: str = "Submit the appropriate terminal outcome.",
 ) -> str:
+    if task_details is None:
+        detail_parts = [
+            environment or "Use the current repository workspace and configured team runtime.",
+            scope or "Stay within the listed scope_paths.",
+        ]
+        if context:
+            detail_parts.append(context)
+        task_details = " ".join(detail_parts)
     return (
         f"1. Goal: {goal}\n"
-        f"2. Environment: {environment}\n"
-        f"3. Scope: {scope}\n"
-        f"4. Context: {context}\n"
-        f"5. Acceptance Criteria: {acceptance}"
+        f"2. Task Details: {task_details}\n"
+        f"3. Acceptance Criteria: {acceptance}"
     )

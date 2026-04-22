@@ -1,9 +1,9 @@
-"""Tests for spawn_agent toolkit instantiation and skill/toolkit awareness.
+"""Tests for spawn_agent toolkit instantiation and runtime tool policy.
 
 These tests verify that:
 1. Toolkits listed in agent_def.toolkits are instantiated via the toolkit registry
 2. restrict_to_toolkits is applied correctly after instantiation
-3. Skills and toolkit awareness sections are injected into the system prompt
+3. Role and blocked-tool policies filter submission tools correctly
 4. Toolkit context propagates agent metadata correctly
 """
 
@@ -392,7 +392,8 @@ class TestToolkitInstantiation:
         assert registry.get("draft_task_plan") is None
         assert registry.get("submit_plan") is None
         assert registry.get("submit_replan") is None
-        assert "1. submit_task_summary - Submit task outcome." in prompt
+        assert "- `submit_task_summary`" in prompt
+        assert "<Toolkit Instructions>" not in prompt
         assert "1. submit_plan - Submit a child plan." not in prompt
         assert "1. draft_task_plan - Validate a draft task plan." not in prompt
 
@@ -411,7 +412,8 @@ class TestToolkitInstantiation:
         assert registry.get("submit_task_summary") is None
         assert registry.get("submit_replan") is None
         assert registry.get("draft_task_plan") is None
-        assert "1. submit_plan - Submit a child plan." in prompt
+        assert "- `submit_plan`" in prompt
+        assert "<Toolkit Instructions>" not in prompt
         assert "draft_task_plan" not in prompt
         assert "1. submit_task_summary - Submit task outcome." not in prompt
 
@@ -430,7 +432,8 @@ class TestToolkitInstantiation:
         assert registry.get("submit_plan") is not None
         assert registry.get("draft_task_plan") is None
         assert registry.get("submit_task_summary") is None
-        assert "1. submit_plan - Submit a child plan." in prompt
+        assert "- `submit_plan`" in prompt
+        assert "<Toolkit Instructions>" not in prompt
         assert "1. draft_task_plan - Validate a draft task plan." not in prompt
 
 
@@ -470,160 +473,6 @@ class TestToolkitContext:
         assert captured_ctx.metadata["sandbox_id"] == "sb-123"
 
 
-# ---------------------------------------------------------------------------
-# Tests — System prompt awareness injection
-# ---------------------------------------------------------------------------
-
-
-class TestSystemPromptAwareness:
-    """Test that awareness sections are correctly built and appended."""
-
-    def _build_awareness(
-        self,
-        tool_registry: ToolRegistry,
-        agent_def: AgentDefinition | None = None,
-        base_prompt: str = "Base system prompt.",
-    ) -> str:
-        """Replicate the awareness injection logic from spawn_agent."""
-        system_prompt = base_prompt
-
-        awareness_sections: list[str] = []
-
-        # Skills awareness
-        if agent_def and agent_def.skills:
-            from skills.core.registry import SkillRegistry
-            from skills.core.types import SkillDefinition
-
-            registry = SkillRegistry()
-            registry.register(
-                SkillDefinition(
-                    name="code-review",
-                    description="Review code for quality",
-                    content="...",
-                    source="test",
-                )
-            )
-            registry.register(
-                SkillDefinition(
-                    name="test-gen",
-                    description="Generate tests",
-                    content="...",
-                    source="test",
-                )
-            )
-
-            skill_lines = []
-            for slug in agent_def.skills:
-                skill = registry.get(slug)
-                if skill:
-                    skill_lines.append(f"- **{skill.name}**: {skill.description}")
-            if skill_lines:
-                awareness_sections.append(
-                    "# Available Skills\n\n"
-                    "The following skills are available via the `skill` tool. "
-                    "When a task matches a skill, invoke it to load detailed instructions.\n\n"
-                    + "\n".join(skill_lines)
-                )
-
-        # Toolkit awareness
-        registered_toolkits = tool_registry.list_toolkits()
-        if registered_toolkits:
-            tk_lines = []
-            for tk in registered_toolkits:
-                tool_names = ", ".join(tk.tool_names())
-                tk_lines.append(f"- **{tk.name}**: {tool_names}")
-            awareness_sections.append(
-                "# Available Toolkits\n\n"
-                "You have the following toolkits and tools available:\n\n" + "\n".join(tk_lines)
-            )
-
-        if awareness_sections:
-            system_prompt = system_prompt + "\n\n" + "\n\n".join(awareness_sections)
-
-        return system_prompt
-
-    def test_toolkit_awareness_lists_tools(self):
-        registry = ToolRegistry()
-        registry.register_toolkit(_DummyToolkit(name="sandbox_operations"))
-
-        prompt = self._build_awareness(registry)
-
-        assert "# Available Toolkits" in prompt
-        assert "sandbox_operations" in prompt
-        assert "dummy_tool" in prompt
-
-    def test_no_toolkits_no_section(self):
-        registry = ToolRegistry()
-
-        prompt = self._build_awareness(registry)
-
-        assert "# Available Toolkits" not in prompt
-        assert prompt == "Base system prompt."
-
-    def test_skills_awareness_lists_matching_skills(self):
-        registry = ToolRegistry()
-        agent_def = _make_agent_def(skills=["code-review"])
-
-        prompt = self._build_awareness(registry, agent_def=agent_def)
-
-        assert "# Available Skills" in prompt
-        assert "code-review" in prompt
-        assert "Review code for quality" in prompt
-
-    def test_unknown_skill_silently_skipped(self):
-        registry = ToolRegistry()
-        agent_def = _make_agent_def(skills=["nonexistent-skill"])
-
-        prompt = self._build_awareness(registry, agent_def=agent_def)
-
-        # No skills section since none were found in the registry
-        assert "# Available Skills" not in prompt
-
-    def test_no_skills_no_section(self):
-        registry = ToolRegistry()
-        agent_def = _make_agent_def(skills=[])
-
-        prompt = self._build_awareness(registry, agent_def=agent_def)
-
-        assert "# Available Skills" not in prompt
-
-    def test_custom_system_prompt_gets_awareness_appended(self):
-        registry = ToolRegistry()
-        registry.register_toolkit(_DummyToolkit(name="my_tools"))
-
-        prompt = self._build_awareness(
-            registry,
-            base_prompt="You are a custom agent.",
-        )
-
-        assert prompt.startswith("You are a custom agent.")
-        assert "# Available Toolkits" in prompt
-        assert "my_tools" in prompt
-
-    def test_both_skills_and_toolkits(self):
-        registry = ToolRegistry()
-        registry.register_toolkit(_DummyToolkit(name="my_tools"))
-        agent_def = _make_agent_def(skills=["code-review", "test-gen"])
-
-        prompt = self._build_awareness(registry, agent_def=agent_def)
-
-        assert "# Available Skills" in prompt
-        assert "# Available Toolkits" in prompt
-        assert "code-review" in prompt
-        assert "test-gen" in prompt
-        assert "my_tools" in prompt
-
-    def test_multiple_toolkits_all_listed(self):
-        registry = ToolRegistry()
-        registry.register_toolkit(_DummyToolkit(name="alpha"))
-        registry.register_toolkit(_DummyToolkit(name="beta", tools=[_DummyTool2()]))
-
-        prompt = self._build_awareness(registry)
-
-        assert "alpha" in prompt
-        assert "beta" in prompt
-        assert "dummy_tool" in prompt
-        assert "dummy_tool_2" in prompt
 
 
 # ---------------------------------------------------------------------------

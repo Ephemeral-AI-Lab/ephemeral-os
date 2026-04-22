@@ -3,7 +3,7 @@
 Tests the full flow:
 - Create agents with toolkits and skills via API
 - Chat with agents and verify tools are passed to the LLM
-- Verify skill/toolkit awareness in system prompt
+- Verify skill/toolkit sections stay out of the system prompt
 - Verify model key resolution (minimax, anthropic-compatible)
 """
 
@@ -301,12 +301,12 @@ class TestChatToolkitIntegration:
 
 
 # ---------------------------------------------------------------------------
-# US-004: Chat verifies skill awareness in system prompt
+# US-004: Chat omits skill/toolkit sections from system prompt
 # ---------------------------------------------------------------------------
 
 
-class TestChatSkillAwareness:
-    """Verify skills and toolkit awareness are injected into the system prompt."""
+class TestChatPromptSections:
+    """Verify skills and toolkit metadata do not inflate the system prompt."""
 
     def _chat_and_get_system_prompt(self, client, mock_client, agent_name=None):
         """Send a chat request and return the system_prompt from the last API call."""
@@ -323,7 +323,7 @@ class TestChatSkillAwareness:
             return mock_client.last_request.system_prompt or ""
         return ""
 
-    def test_agent_with_toolkits_has_toolkit_awareness(self, app_client):
+    def test_agent_with_toolkits_omits_toolkit_sections(self, app_client):
         client, mock_client = app_client
         client.post(
             "/api/agents/",
@@ -339,10 +339,10 @@ class TestChatSkillAwareness:
             client, mock_client, agent_name="aware-agent"
         )
 
-        assert "<Toolkit Instructions>" in system_prompt
-        assert "sandbox_operations" in system_prompt
+        assert "<Toolkit Instructions>" not in system_prompt
+        assert "sandbox_operations" not in system_prompt
 
-    def test_agent_with_custom_system_prompt_gets_awareness(self, app_client):
+    def test_agent_with_custom_system_prompt_omits_toolkit_sections(self, app_client):
         client, mock_client = app_client
         client.post(
             "/api/agents/",
@@ -360,7 +360,7 @@ class TestChatSkillAwareness:
         )
 
         assert system_prompt.startswith("You are a specialized coding assistant.")
-        assert "<Toolkit Instructions>" in system_prompt
+        assert "<Toolkit Instructions>" not in system_prompt
 
     def test_default_agent_omits_available_skills_section(self, app_client):
         client, mock_client = app_client
@@ -368,7 +368,7 @@ class TestChatSkillAwareness:
 
         assert "<Available Skills>" not in system_prompt
 
-    def test_agent_with_declared_skills_has_available_skills_section(self, app_client):
+    def test_agent_with_declared_skills_omits_available_skills_section(self, app_client):
         client, mock_client = app_client
         client.post(
             "/api/agents/",
@@ -384,9 +384,9 @@ class TestChatSkillAwareness:
             client, mock_client, agent_name="skills-agent"
         )
 
-        assert "<Available Skills>" in system_prompt
-        assert "team-planner-playbook" in system_prompt
-        assert "plan-json-contract" in system_prompt
+        assert "<Available Skills>" not in system_prompt
+        assert "team-planner-playbook" not in system_prompt
+        assert "plan-json-contract" not in system_prompt
 
     def test_agent_without_skills_no_skills_section(self, app_client):
         client, mock_client = app_client

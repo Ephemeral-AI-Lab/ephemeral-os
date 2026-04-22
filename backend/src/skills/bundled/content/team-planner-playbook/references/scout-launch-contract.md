@@ -18,9 +18,11 @@ Use this reference immediately before the first scout wave. For the entry/root p
 1. Scrub `target_paths` first: every entry should be a live production owner file/directory unless tests are explicitly the owner surface. Put test paths in the scout input `context` as verification evidence, not in `target_paths`.
 2. Call `run_subagent(agent_name="scout", input={"target_paths": [...], "context": "..."})` with one unresolved owner slice per scout.
 3. Queue the whole useful wave before any progress check or wait.
-4. After the wave, read scout findings with `read_file_note(file_path="...")` for each exact scout `target_paths` entry you launched. Do not drop file extensions, reuse an unrelated prior path, or skip a scout path. Scouts/subagents are not Task Center tasks. Do not call `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and do not pass `bg_*` background ids, planner slugs, short prefixes, or fabricated ids as task ids.
-5. On cold CI or a disproved exact file, fall back to the nearest stable production boundary instead of preserving a guessed exact path. Use one structure/symbol check if needed, then stop scouting and carry the uncertainty into task specs.
+4. Call `check_background_progress(task_id="all")`, then `wait_for_background_task(task_id="all")` when no foreground planning work remains; repeat progress/wait until every scout is terminal.
+5. If progress shows a scout is halted, blocked, or no longer useful, call `cancel_background_task(task_id="<that bg id>")` and carry the missing note as uncertainty. Never cancel a healthy scout just to save time when its output may affect owner boundaries.
+6. After the wave is terminal/canceled, read scout findings with `read_file_note(file_path="...")` for each exact scout `target_paths` entry that produced a note. Do not drop file extensions, reuse an unrelated prior path, or skip available scout paths. Scouts/subagents are not Task Center tasks. Do not call `read_task_graph()` or `read_task_details(...)` to retrieve scout results, and do not pass `bg_*` background ids, planner slugs, short prefixes, or fabricated ids as task ids.
+7. On cold CI, a canceled scout, or a disproved exact file, fall back to the nearest stable production boundary instead of preserving a guessed exact path. Use one structure/symbol check if needed, then stop scouting and carry the uncertainty into task specs.
 
 ## Expected Outcome
 
-- The full useful scout wave is queued once, terminal scout ids are retired, note review happens before DAG shaping, and residual uncertainty moves into task specs instead of another scout wave.
+- The full useful scout wave is queued once, terminal/canceled scout ids are retired, available note review happens before DAG shaping, and residual uncertainty moves into task specs instead of another scout wave.

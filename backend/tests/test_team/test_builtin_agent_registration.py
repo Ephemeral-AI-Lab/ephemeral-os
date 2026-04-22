@@ -111,6 +111,26 @@ def _final_tool_names(name: str, tmp_path: Path) -> set[str]:
     return {tool.name for tool in registry.list_tools()}
 
 
+def _final_prompt(name: str, tmp_path: Path) -> str:
+    defn = get_definition(name)
+    assert defn is not None
+    registry = _build_agent_tool_registry(
+        SimpleNamespace(cwd=str(tmp_path)),
+        defn,
+        "sb-test",
+        defn.name,
+    )
+    prompt, _ = finalize_tool_registry_and_prompt(
+        registry,
+        defn.system_prompt or "",
+        can_spawn_subagents=defn.can_spawn_subagents,
+        role=defn.role,
+        blocked_tools=defn.blocked_tools,
+        terminal_tools={"submit_plan"},
+    )
+    return prompt
+
+
 def test_planner_and_replanner_do_not_expose_sandbox_tools(tmp_path: Path) -> None:
     for name in (TEAM_PLANNER, TEAM_REPLANNER):
         tool_names = _final_tool_names(name, tmp_path)
@@ -159,6 +179,16 @@ def test_root_planner_tool_surface_blocks_direct_context_and_diagnostics(tmp_pat
         "read_task_details",
     ):
         assert name not in tool_names
+
+
+def test_root_planner_prompt_omits_awareness_sections(tmp_path: Path) -> None:
+    prompt = _final_prompt(ROOT_PLANNER, tmp_path)
+
+    assert "<Toolkit Instructions>" not in prompt
+    assert "<Available Skills>" not in prompt
+    assert "<Background Tasks>" not in prompt
+    assert "<Termination Condition>" in prompt
+    assert "- `submit_plan`" in prompt
 
 
 def test_task_center_toolkit_survives_restriction() -> None:

@@ -28,7 +28,7 @@ If your final payload needs any `cancel_ids`, stop and load `action-cancel-and-r
 - Before drafting `new_tasks`, write down the trigger each task addresses. If a candidate task only continues unfinished same-owner work, drop it. If no candidate remains, submit `submit_replan(new_tasks=[], cancel_ids=[])`.
 - If the task text would say "add helper/function so the test can call it", drop that candidate unless the existing production API already promises that helper.
 - Each new task: `id`, `description`, `name` (agent), `spec`, `deps`, repo-relative `scope_paths` with no `/testbed/...` prefixes. Do not set `parent_id`; tasks are inserted as direct children of this replanner.
-- `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Each label starts its own line and has body text on that same line. Do not put all labels on one line. Do not put the body on the next line after the colon. Do not use Markdown headings. Do not include `output`, `summary`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`. The system generates the outcome summary automatically once your corrective children complete.
+- `spec` uses numbered colon labels in this exact order: `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`. Each label starts its own line and has body text on that same line. Do not put all labels on one line. Do not put the body on the next line after the colon. Do not use Markdown headings. Do not include `output`, `summary`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`. The system generates the outcome summary automatically once your corrective children complete.
 - Scope overlap is allowed. Do not add dependencies merely because `scope_paths` overlap; use `deps` only for real output ordering or known same-file edit ordering.
 - Do not split one exact owner file into parallel developer microtasks unless the packet proves disjoint edit regions. When multiple remaining seams all point to the same file and nearby symbols, submit one corrective developer task with a checklist of those seams, then one validator.
 - If `new_tasks` has 3 or more concrete non-planner tasks and no preserved downstream validator already covers the surface, add one terminal `validator` in this payload whose `deps` cover those tasks; its spec must run the relevant broad verification after diagnostics.
@@ -56,7 +56,7 @@ Example terminal payload:
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/config.py"],
-      "spec": "1. Goal: Repair the config regression after the failed task proved the original owner path was wrong.\n2. Environment: Use the current repository and team runtime.\n3. Scope: Start in pkg/config.py; keep verification on named failing tests.\n4. Context: The failure packet shows the live stack and symbols point to pkg/config.py, not the prior assigned file.\n5. Acceptance Criteria: Run diagnostics, run focused tests, submit a summary with evidence."
+      "spec": "1. Goal: Repair the config regression after the failed task proved the original owner path was wrong.\n2. Task Details: Use the current repository and team runtime. Start in pkg/config.py; keep verification on named failing tests. The failure packet shows the live stack and symbols point to pkg/config.py, not the prior assigned file.\n3. Acceptance Criteria: Run diagnostics, run focused tests, submit a summary with evidence."
     }
   ],
   "cancel_ids": []

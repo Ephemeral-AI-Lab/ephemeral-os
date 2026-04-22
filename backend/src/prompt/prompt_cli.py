@@ -31,9 +31,9 @@ def build_system_prompt_main() -> int:
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory (default: cwd)")
     parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to toolkit setup")
     parser.add_argument(
-        "--no-capabilities",
+        "--no-runtime-sections",
         action="store_true",
-        help="Skip toolkit/capability awareness section",
+        help="Skip runtime-added sections such as termination conditions",
     )
     args = parser.parse_args()
 
@@ -50,7 +50,7 @@ def build_system_prompt_main() -> int:
         cwd=args.cwd,
         settings=settings,
         sandbox_id=args.sandbox_id,
-        include_capabilities=not args.no_capabilities,
+        include_runtime_sections=not args.no_runtime_sections,
     )
 
     print(system_prompt)
@@ -75,7 +75,7 @@ def _render_team_prompt_report(
     team_def,
     cwd: str,
     sandbox_id: str,
-    include_capabilities: bool,
+    include_runtime_sections: bool,
     settings,
 ) -> tuple[str, list[str]]:
     """Build the markdown report and return any unresolved agent names."""
@@ -86,7 +86,7 @@ def _render_team_prompt_report(
         f"- Entry planner: `{team_def.entry_planner}`",
         f"- Working directory: `{cwd}`",
         f"- Sandbox id: `{sandbox_id or '(none)'}`",
-        f"- Include capabilities: `{include_capabilities}`",
+        f"- Include runtime sections: `{include_runtime_sections}`",
         "",
         "## Roster",
         "",
@@ -123,7 +123,7 @@ def _render_team_prompt_report(
             cwd=cwd,
             settings=settings,
             sandbox_id=sandbox_id,
-            include_capabilities=include_capabilities,
+            include_runtime_sections=include_runtime_sections,
             terminal_tools=resolve_terminal_tools_for_role(team_def, getattr(agent_def, "role", None)),
         )
         lines.extend(
@@ -155,9 +155,9 @@ def dump_team_system_prompts_main() -> int:
         help="Output markdown file path. Defaults to ./team-system-prompts-<name>-<id>.md",
     )
     parser.add_argument(
-        "--no-capabilities",
+        "--no-runtime-sections",
         action="store_true",
-        help="Skip toolkit/capability awareness sections",
+        help="Skip runtime-added sections such as termination conditions",
     )
     args = parser.parse_args()
 
@@ -173,7 +173,7 @@ def dump_team_system_prompts_main() -> int:
         team_def=team_def,
         cwd=args.cwd,
         sandbox_id=args.sandbox_id,
-        include_capabilities=not args.no_capabilities,
+        include_runtime_sections=not args.no_runtime_sections,
         settings=settings,
     )
     output_path = Path(args.output) if args.output else default_team_prompt_report_path(team_def)

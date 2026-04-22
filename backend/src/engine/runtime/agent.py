@@ -88,7 +88,7 @@ def finalize_tool_registry_and_prompt(
     blocked_tools: list[str] | None = None,
     terminal_tools: set[str] | list[str] | None = None,
 ) -> tuple[str, bool]:
-    """Register background toolkit and inject capability awareness into the system prompt.
+    """Finalize runtime tool registry and append terminal-tool guidance.
 
     This is the shared setup logic used by both spawn_agent() and EvalAgent.
 
@@ -108,7 +108,7 @@ def finalize_tool_registry_and_prompt(
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
     """
-    from prompt.runtime_prompt import build_agent_capabilities_prompt
+    from prompt.runtime_prompt import build_termination_condition_prompt
     from tools.builtins.background import make_background_toolkit
 
     bg_tool_names = [
@@ -129,14 +129,11 @@ def finalize_tool_registry_and_prompt(
     if blocked_tools:
         tool_registry.remove_tools(blocked_tools)
 
-    awareness = build_agent_capabilities_prompt(
-        toolkits=tool_registry.list_toolkits(),
-        has_background_tools=has_background_tools,
-        bg_tool_names=bg_tool_names,
+    termination_prompt = build_termination_condition_prompt(
         terminal_tools=terminal_tools,
     )
-    if awareness:
-        system_prompt = system_prompt + "\n\n" + awareness
+    if termination_prompt:
+        system_prompt = system_prompt + "\n\n" + termination_prompt
 
     return system_prompt, has_background_tools
 

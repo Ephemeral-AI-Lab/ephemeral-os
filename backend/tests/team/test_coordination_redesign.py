@@ -223,6 +223,13 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "new_tasks" in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
+    spec_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["spec"][
+        "description"
+    ]
+    assert "1. Goal" in spec_desc
+    assert "2. Task Details" in spec_desc
+    assert "3. Acceptance Criteria" in spec_desc
+    assert "2. Environment" not in spec_desc
     scope_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["scope_paths"][
         "description"
     ]
@@ -485,7 +492,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
     )
 
     assert result.is_error is True
-    assert "missing spec section(s): Environment, Context, Acceptance Criteria" in result.output
+    assert "missing spec section(s): Task Details, Acceptance Criteria" in result.output
     assert ctx.metadata.get("resolved_plan") is None
 
 
