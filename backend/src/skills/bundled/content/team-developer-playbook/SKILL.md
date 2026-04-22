@@ -134,6 +134,12 @@ Clean diagnostics are not acceptance verification. If the required runtime comma
 
 Exit with: green evidence → Stage 6 (`type="success"`); any red, stale, or absent evidence → Stage 5.
 
+## Budget warnings
+
+If a system budget warning tells you to reserve a terminal call and submit now, treat it as a hard stop. Do not run more reads, searches, probes, diagnostics, edits, or variant test commands after that warning unless it explicitly permits one final verification or diagnostics pass and you already have a post-edit candidate that can become `type="success"`.
+
+When the latest required verification is red, absent, invalid, stale, or the root cause is still unresolved at the warning, submit `type="request_replan"` immediately with the current Stage 5 JSON trace, last command or diagnostic, and the exact decision the replanner must resolve. Do not spend post-warning budget to improve the fix, recover from a failed edit, inspect more files, or rerun alternate commands.
+
 ## 5. Root cause analysis
 
 Use this section every time verification stays red. The goal is to find the actual code defect, not just the failing symptom. Once the actual root cause is confirmed and in scope, go back to Stage 3 and implement the fix.
@@ -174,13 +180,15 @@ Root-cause checklist — all must hold before you re-enter Stage 3:
 4. Name the first production mechanism that creates the wrong result — exact statement, branch condition, transform, config key lookup, import target, state mutation, persistence write/read, or API contract mismatch. Symptoms ("test failed", "assertion mismatch"), broad areas ("config bug", "bad state"), and guesses ("probably race", "likely missing helper") do not satisfy this step.
 5. Confirm the root cause with one bounded datum: traceback frame, diagnostic, focused runtime probe, local source proof, or a before/after value on the traced path.
 6. Answer three questions: what value/state/import/branch first became wrong, which code made it wrong, and why that code is incorrect for the expected behavior.
-7. Fill the JSON above. If any field is "unknown" or a guess, keep tracing or request replanning — do not re-enter Stage 3 from a shallow trace.
+7. If one attempted production mechanism cannot satisfy the expected behavior, do not conclude the fix is impossible or test-only from that failure alone. Check the adjacent production extension points for the same path (for example a sibling hook, fallback lookup, adapter boundary, wrapper object, dispatch registration, compatibility shim, or API option) and record the mechanism you ruled in or out.
+8. Fill the JSON above. If any field is "unknown" or a guess, keep tracing or request replanning — do not re-enter Stage 3 from a shallow trace.
 
 Decision:
 
 1. If the trace identifies one assigned-scope, actionable code defect, return to Stage 3 and implement the smallest fix at `fix_location`.
 2. Request replanning when the trace points to another role or code path, scope expansion, tests not assigned to this task, unproven missing modules, missing dependencies, dependency-version mismatch, environment/runtime mismatch, ambiguous root cause, or tool failure.
-3. Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new code defect.
+3. A replan summary may say "no production fix" only after naming the attempted mechanism, the adjacent production mechanisms checked, and the evidence that each cannot affect the failing path. Otherwise report the narrower trace gap instead of declaring the test impossible.
+4. Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new code defect.
 
 Exit with: actual root cause found and implementation started, or a terminal replan summary with the trace gap.
 

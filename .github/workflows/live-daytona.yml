@@ -12,7 +12,7 @@ jobs:
   ci-diagnostics:
     name: ci_diagnostics live sandbox
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     env:
       DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
       DAYTONA_API_URL: ${{ secrets.DAYTONA_API_URL }}

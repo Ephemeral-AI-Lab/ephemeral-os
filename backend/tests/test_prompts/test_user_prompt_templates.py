@@ -353,6 +353,8 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Max depth: `4`" in ctx.user_message
     assert "Tasks submitted in this plan will run at depth `1`" in ctx.user_message
     assert "would need room to submit its own children at depth `2`" in ctx.user_message
+    assert "For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs" in ctx.user_message
+    assert "Do not flatten multi-cluster benchmark repair into only root-level developer tasks" in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## User request" in ctx.user_message
     assert "Fix retry handling." in ctx.user_message
@@ -463,6 +465,8 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "Max depth: `4`" in ctx.user_message
     assert "Tasks submitted in this plan will run at depth `2`" in ctx.user_message
     assert "would need room to submit its own children at depth `3`" in ctx.user_message
+    assert "For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs" in ctx.user_message
+    assert "Do not flatten multi-cluster benchmark repair into only current-layer developer tasks" in ctx.user_message
     assert "Context-read pre-step: this applies to child planners only" in ctx.user_message
     assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
     assert "Task id: `planner-1`" not in ctx.user_message

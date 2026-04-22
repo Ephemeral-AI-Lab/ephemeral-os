@@ -24,6 +24,9 @@ from tools.daytona_toolkit.tools import daytona_write_file
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
+_DASK_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
+_DASK_SWEEVO_REPO_DIR = "/testbed"
+
 
 @dataclass
 class LiveCiDiagnosticsEnv:
@@ -86,6 +89,52 @@ def live_ci_diagnostics_env() -> LiveCiDiagnosticsEnv:
         )
     finally:
         delete_test_sandbox(sandbox_id)
+
+
+@pytest.fixture(scope="module")
+def live_dask_sweevo_env() -> LiveCiDiagnosticsEnv:
+    if not EvalAgent.has_daytona():
+        pytest.skip("Daytona credentials not configured")
+
+    from benchmarks.sweevo.dataset import select_sweevo_instance
+    from benchmarks.sweevo.models import _CONDA_ACTIVATE
+    from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
+    from sandbox.testing import delete_test_sandbox, get_sandbox_service
+
+    instance = select_sweevo_instance(instance_id=_DASK_SWEEVO_INSTANCE_ID)
+    sandbox_name = f"ci-diag-dask-10042-{uuid.uuid4().hex[:8]}"
+    result = asyncio_run(
+        create_sweevo_test_sandbox(
+            instance,
+            sandbox_name=sandbox_name,
+            repo_dir=_DASK_SWEEVO_REPO_DIR,
+        )
+    )
+    sandbox_id = str(result["sandbox_id"])
+    try:
+        raw_sandbox = get_sandbox_service().get_sandbox_object(sandbox_id)
+        home_resp = raw_sandbox.process.exec("pwd", timeout=10)
+        home = (getattr(home_resp, "result", "") or "").strip() or "/home/daytona"
+        env = LiveCiDiagnosticsEnv(
+            sandbox_id=sandbox_id,
+            raw_sandbox=raw_sandbox,
+            home=home,
+            root_dir=_DASK_SWEEVO_REPO_DIR,
+        )
+        exit_code, output = env.exec(
+            f"{_CONDA_ACTIVATE} && cd {_DASK_SWEEVO_REPO_DIR} && python --version",
+            timeout=60,
+        )
+        assert exit_code == 0, output
+        yield env
+    finally:
+        delete_test_sandbox(sandbox_id)
+
+
+def asyncio_run(coro: Any) -> Any:
+    import asyncio
+
+    return asyncio.run(coro)
 
 
 def _json_output(result: ToolResult) -> dict[str, Any]:
@@ -152,6 +201,126 @@ async def test_live_ci_diagnostics_healthy_module_imports_and_reports_clean(
     assert diagnostics_payload["file_path"] == "healthy/checks.py"
     assert diagnostics_payload["clean"] is True
     assert diagnostics_payload["diagnostics"] == []
+
+
+@pytest.mark.asyncio
+async def test_live_dask_sweevo_config_imports_and_reports_clean(
+    live_dask_sweevo_env: LiveCiDiagnosticsEnv,
+) -> None:
+    from benchmarks.sweevo.models import _CONDA_ACTIVATE
+
+    svc = live_dask_sweevo_env.make_ci_service()
+    ctx = live_dask_sweevo_env.make_ctx(svc)
+
+    import_script = (
+        "from dask import config; "
+        "assert isinstance(config.config, dict); "
+        "assert callable(config.get); "
+        "print('dask-config-ok')"
+    )
+    exit_code, import_output = live_dask_sweevo_env.exec(
+        f"{_CONDA_ACTIVATE} && cd {_DASK_SWEEVO_REPO_DIR} "
+        f"&& python -c {shlex.quote(import_script)}",
+        timeout=120,
+    )
+    assert exit_code == 0, import_output
+    assert "dask-config-ok" in import_output
+
+    diagnostics_result = await ci_diagnostics.execute(
+        ci_diagnostics.input_model(file_path="dask/config.py"),
+        ctx,
+    )
+    diagnostics_payload = _json_output(diagnostics_result)
+
+    assert diagnostics_payload["cwd"] == _DASK_SWEEVO_REPO_DIR
+    assert diagnostics_payload["file_path"] == "dask/config.py"
+    assert diagnostics_payload["clean"] is True
+    assert diagnostics_payload["diagnostics"] == []
+
+
+@pytest.mark.asyncio
+async def test_live_dask_sweevo_complex_module_clean_then_broken(
+    live_dask_sweevo_env: LiveCiDiagnosticsEnv,
+) -> None:
+    from benchmarks.sweevo.models import _CONDA_ACTIVATE
+
+    svc = live_dask_sweevo_env.make_ci_service()
+    ctx = live_dask_sweevo_env.make_ctx(svc)
+    file_path = "dask/_ci_diagnostics_complex.py"
+
+    clean_content = (
+        "from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from typing import Callable, Iterable\n\n"
+        "def normalize(items: Iterable[int], transform: Callable[[int], int]) -> list[int]:\n"
+        "    return [transform(item) for item in items if item >= 0]\n\n"
+        "@dataclass\n"
+        "class DiagnosticProbe:\n"
+        "    values: tuple[int, ...]\n\n"
+        "    @property\n"
+        "    def total(self) -> int:\n"
+        "        return sum(normalize(self.values, lambda value: value * 2))\n\n"
+        "def build_probe() -> DiagnosticProbe:\n"
+        "    return DiagnosticProbe(values=(1, -1, 3))\n"
+    )
+    await _write_file(ctx, file_path=file_path, content=clean_content)
+
+    clean_import_script = (
+        "from dask._ci_diagnostics_complex import build_probe; "
+        "assert build_probe().total == 8; "
+        "print('dask-complex-ok')"
+    )
+    exit_code, import_output = live_dask_sweevo_env.exec(
+        f"{_CONDA_ACTIVATE} && cd {_DASK_SWEEVO_REPO_DIR} "
+        f"&& python -c {shlex.quote(clean_import_script)}",
+        timeout=120,
+    )
+    assert exit_code == 0, import_output
+    assert "dask-complex-ok" in import_output
+
+    clean_result = await ci_diagnostics.execute(
+        ci_diagnostics.input_model(file_path=file_path),
+        ctx,
+    )
+    clean_payload = _json_output(clean_result)
+    assert clean_payload["clean"] is True
+    assert clean_payload["diagnostics"] == []
+
+    broken_content = (
+        "from __future__ import annotations\n\n"
+        "def broken_scheduler_options():\n"
+        "    return {\n"
+        "        'scheduler': ('threads', 'processes'],\n"
+        "        'optimizations': ['fuse', 'inline'],\n"
+        "    }\n"
+    )
+    await _write_file(ctx, file_path=file_path, content=broken_content)
+
+    broken_import_script = "import dask._ci_diagnostics_complex"
+    exit_code, import_output = live_dask_sweevo_env.exec(
+        f"{_CONDA_ACTIVATE} && cd {_DASK_SWEEVO_REPO_DIR} "
+        f"&& python -c {shlex.quote(broken_import_script)}",
+        timeout=120,
+    )
+    assert exit_code != 0
+    assert "SyntaxError" in import_output
+    assert "_ci_diagnostics_complex.py" in import_output
+
+    broken_result = await ci_diagnostics.execute(
+        ci_diagnostics.input_model(file_path=file_path),
+        ctx,
+    )
+    broken_payload = _json_output(broken_result)
+
+    assert broken_payload["cwd"] == _DASK_SWEEVO_REPO_DIR
+    assert broken_payload["file_path"] == file_path
+    assert broken_payload["clean"] is False
+    assert len(broken_payload["diagnostics"]) == 1
+    diagnostic = broken_payload["diagnostics"][0]
+    assert diagnostic["line"] >= 1
+    assert diagnostic["source"] == "python"
+    assert diagnostic["severity"] == "error"
+    assert diagnostic["message"]
 
 
 @pytest.mark.asyncio

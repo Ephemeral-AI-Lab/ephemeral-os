@@ -13,14 +13,21 @@ Team plans are hierarchical: each planner submits a local child DAG, and child `
 
 Prefer a child `team_planner` over more root scouting when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration. The root planner's job is top-down routing, not exhaustive single-layer discovery.
 
-Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, prefer routing broad families to child `team_planner` lanes when depth allows. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface.
+Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, route broad families to child `team_planner` lanes when depth allows. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface.
 
 Depth rules:
 
 - Read the Planning depth section in your user prompt before deciding whether to create child planners.
 - Tasks submitted in your plan run at `current_depth + 1`; a child `team_planner` needs another level below that to submit useful children.
-- When `current_depth + 2 <= max_depth`, broad or unresolved regions may be routed to child `team_planner` lanes.
+- When `current_depth + 2 <= max_depth`, broad, clustered, or unresolved regions must be routed to child `team_planner` lanes.
 - When `current_depth + 2 > max_depth`, do not create child `team_planner` lanes; emit direct `developer` and `validator` tasks with broader scopes instead.
+
+Clustering-job checkpoint:
+
+- Treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade requests as clustering jobs when they contain many failing tests, several production families, or multiple failure clusters under one broad subsystem.
+- When the checkpoint triggers and depth allows, include at least one child `team_planner` in the root payload. The child planner owns cluster-level decomposition and may create developer leaves below it.
+- A root payload with four or more independent developer lanes and no child `team_planner` is a flat fan-out. For clustering jobs, stop and replace broad developer groups with child `team_planner` lanes before submitting.
+- Keep root `developer` lanes only for small leaf fixes with a single narrow production surface and a coherent verification command.
 
 ## Workflow
 
@@ -107,7 +114,7 @@ Steps:
 1. Merge user evidence, CI/symbol checks, and scout notes into one owner ledger.
 2. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
 3. Split exact owners into `developer` lanes.
-4. Use a child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration.
+4. Use a child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration.
 5. Add `validator` lanes only when a distinct verification owner is useful.
 6. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
 7. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before root routing; otherwise route the uncertainty to a child `team_planner`.
@@ -265,4 +272,5 @@ type NewTaskSpec = {
 - Every task has a non-blank `description` and non-empty production `scope_paths`.
 - Every `spec` contains the three numbered colon labels in order (`1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`), each on its own line with body after the colon on the same line.
 - Every `Acceptance Criteria` is test-suite focused, with concrete commands or pytest ids and expected evidence.
+- Any clustering job with available depth includes at least one child `team_planner`; do not submit a flat all-developer root fan-out for multi-cluster benchmark repair.
 - The final assistant action is the `submit_plan(...)` tool call, not prose.

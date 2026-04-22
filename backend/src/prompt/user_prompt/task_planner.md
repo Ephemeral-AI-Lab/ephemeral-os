@@ -23,6 +23,7 @@ Current depth: `{{current_depth}}`
 Max depth: `{{max_depth}}`
 Tasks submitted in this plan will run at depth `{{child_depth}}`.
 A child `team_planner` submitted now would need room to submit its own children at depth `{{grandchild_depth}}`.
+For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs, include child `team_planner` lanes when `{{grandchild_depth}}` is within max depth. Do not flatten multi-cluster benchmark repair into only current-layer developer tasks.
 {{/if}}
 
 Context-read pre-step: this applies to child planners only. After loading the team-planner playbook, use the UUIDs above exactly with `read_task_details(...)` for your task, parent, and each dependency, then call `read_task_graph()` to enumerate siblings before scouts, CI, notes, or `submit_plan(...)`. Each `read_task_details` input must contain only `task_id`; do not pass `skill_name`, planner slugs, short prefixes, or fabricated ids. Do not batch those required context reads with scout, CI, note, file, edit, diagnostics, reference, or submission tools.

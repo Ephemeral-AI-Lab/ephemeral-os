@@ -73,6 +73,8 @@ Benchmark tests are evidence, not repair scope. Never create a corrective task t
 
 Diagnostics require a trace-gap triplet: one failing test id or cluster, one suspected production path, and one named symbol or seam. Vague difficulty is not enough.
 
+Do not classify a failure as "no production fix" just because one attempted mechanism cannot satisfy the expected behavior. First check adjacent production extension points on the same path, such as sibling hooks, fallback lookups, adapter boundaries, wrapper objects, dispatch registrations, compatibility shims, or API options. If they are ruled out, preserve those ruled-out mechanisms in the evidence and create the narrowest corrective or diagnostic task that can test the remaining production seam.
+
 Never treat another function, line range, test id, or checklist item inside the same owner file as scope expansion.
 
 State one exact line before acting: `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`. For `unresolved_blocker`, also state `Diagnostics decision: trivial_direct_replan` when file notes and CI already name every failing seam, or `Diagnostics decision: deep_diagnostics` when any seam is still unresolved.
@@ -90,6 +92,7 @@ Use this path for `scope_expansion`, `wrong_owner_or_role`, or `unresolved_block
 - Drop same-scope continuation candidates only when they lack a root-cause trace. For `unresolved_blocker` with `Diagnostics decision: trivial_direct_replan`, same-scope corrective tasks are valid when each task is tied to a named production mechanism and repair location.
 - Drop candidates whose only evidence is a benchmark test path, test import, or test-derived helper.
 - Drop candidates that edit, skip, xfail, rewrite, or reconfigure tests to make verification green.
+- Do not submit an empty or no-op replan for an unresolved blocker while a production seam remains untested. Empty replans are only for already-delivered or obsolete work described in `terminal-contract`.
 - If `cancel_ids=[]`, load `action-add-tasks` before drafting:
 
   ```text

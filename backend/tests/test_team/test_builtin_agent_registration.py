@@ -65,6 +65,8 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "route broad or unresolved regions to child `team_planner` tasks" in defn.system_prompt
     assert "instead of exhaustively exploring every implementation detail at the root layer" in defn.system_prompt
     assert "prefer child planners even when the first-pass owner labels are clear" in defn.system_prompt
+    assert "For clustering jobs, include at least one child `team_planner`" in defn.system_prompt
+    assert "not multi-cluster benchmark repair" in defn.system_prompt
 
 
 def test_builtin_team_agents_use_default_tool_call_limits() -> None:

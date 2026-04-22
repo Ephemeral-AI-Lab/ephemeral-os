@@ -161,12 +161,15 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
     assert "The root planner's job is top-down routing, not exhaustive single-layer discovery" in skill
     assert "Clear owner names do not automatically mean direct developer lanes are best" in skill
     assert "large benchmark/test-matrix work" in skill
+    assert "Clustering-job checkpoint" in skill
+    assert "include at least one child `team_planner` in the root payload" in skill
+    assert "flat all-developer root fan-out" in skill
     assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
     assert "When `current_depth + 2 <= max_depth`" in skill
     assert "When `current_depth + 2 > max_depth`" in skill
     assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
     assert (
-        "Use a child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration"
+        "Use a child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration"
         in skill
     )
     assert "route the uncertainty to a child `team_planner`" in skill
@@ -184,12 +187,15 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
     assert "Your job is top-down routing for this layer, not exhaustive single-layer discovery" in skill
     assert "Clear owner names do not automatically mean direct developer lanes are best" in skill
     assert "large benchmark/test-matrix work" in skill
+    assert "Clustering-job checkpoint" in skill
+    assert "include at least one child `team_planner` in this payload" in skill
+    assert "flat all-developer fan-out" in skill
     assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
     assert "When `current_depth + 2 <= max_depth`" in skill
     assert "When `current_depth + 2 > max_depth`" in skill
     assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
     assert (
-        "Use another child `team_planner` lane for broad, shared, unresolved, multi-family, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration"
+        "Use another child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration"
         in skill
     )
     assert "route the uncertainty to another child `team_planner`" in skill

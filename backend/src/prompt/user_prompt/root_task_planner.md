@@ -13,6 +13,7 @@ Current depth: `{{current_depth}}`
 Max depth: `{{max_depth}}`
 Tasks submitted in this plan will run at depth `{{child_depth}}`.
 A child `team_planner` submitted now would need room to submit its own children at depth `{{grandchild_depth}}`.
+For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs, include child `team_planner` lanes when `{{grandchild_depth}}` is within max depth. Do not flatten multi-cluster benchmark repair into only root-level developer tasks.
 {{/if}}
 
 ## User request
