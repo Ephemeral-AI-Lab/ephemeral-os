@@ -69,7 +69,8 @@ Write a validation-focused plan before the first diagnostic, runtime command, or
 4. Decide whether the touched change affects public serialization, schema shape, API-visible output, CLI-visible output, docs-visible output, or prompts. If yes, add one nearby guardrail in the same behavior family.
 5. Keep guardrails bounded. Do not widen to the full test suite only because the changed surface is public.
 6. Keep verification commands tied to the acceptance criteria and dependency handoff.
-7. Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths` or touched production files by themselves. A new production file may extend scope only through `daytona_write_file` when live evidence proves a missing module, shim, re-export, or bridge and no other worker owns that exact path.
+7. Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths` or touched production files by themselves. A new production file may extend scope only through `daytona_write_file` when live evidence proves a missing module, serialization lane, engine bridge, shim, re-export, or bridge and no other worker owns that exact path.
+8. When live production evidence proves that kind of missing path, prefer creating or editing the production file over updating tests. Do not turn a proven production gap into a test-file rewrite.
 
 Submit `type="request_replan"` now if any of these hold:
 
@@ -150,7 +151,7 @@ Use:
 2. Coordinated Daytona mutation tools only: `daytona_edit_file` or `daytona_write_file`.
 3. Exactly one mutation tool per change.
 4. Refresh file notes after edits or surprising tool/runtime results.
-5. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the file is created through `daytona_write_file`; never create or edit test files outside an explicit test-only task.
+5. Never create or edit test files
 6. If a mutation reports an outside-scope warning for an existing file, stop immediately and submit `type="request_replan"` with trigger `scope_expansion`; an advisory warning is workflow evidence, not permission to continue editing.
 7. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).
 

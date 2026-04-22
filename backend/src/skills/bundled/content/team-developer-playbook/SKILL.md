@@ -85,11 +85,12 @@ Planning checks:
 1. Use failing tests as evidence, not permission to edit tests. A test import or collection blocker is still evidence; fix production when the traced root cause points to a production path this lane can responsibly repair.
 2. Test files are read-only unless the original user request explicitly asks to repair tests rather than production behavior. A child task that assigns test skip/xfail/rewrite work in a benchmark is invalid; request replanning instead.
 3. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need live production evidence or an explicit assignment. Test spelling alone is not enough.
-4. `scope_paths` are the primary ownership surface, not a hard mutation sandbox for developers. You may widen reads, diagnostics, and test commands to prove ownership. Developers may write, copy, or create production files outside `scope_paths` when that is needed for the assigned task. The tooling may emit an outside-scope system notification; treat it as coordination guidance, not a stop condition, and include the path, notification, rationale, verification, and residual risk in the final summary.
-5. A similarly named sibling path is not implicitly owned. For example, ownership of `pkg/compatibility.py` does not by itself prove `pkg/_compatibility.py` is the right repair path; inspect enough production evidence to justify the path before editing or copying it.
-6. Prefer replanning instead of editing when the change would touch tests, dependency/environment files, require a broad behavior rewrite, or remain ambiguous after one bounded investigation pass.
-7. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
-8. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
+4. When live production evidence proves a missing compatibility module, serialization lane, engine bridge, shim, or re-export path, prefer creating or editing the production file over updating tests. Do not turn a proven production gap into a test-file rewrite.
+5. `scope_paths` are the primary ownership surface, not a hard mutation sandbox for developers. You may widen reads, diagnostics, and test commands to prove ownership. Developers may write, copy, or create production files outside `scope_paths` when that is needed for the assigned task. The tooling may emit an outside-scope system notification; treat it as coordination guidance, not a stop condition, and include the path, notification, rationale, verification, and residual risk in the final summary.
+6. A similarly named sibling path is not implicitly owned. For example, ownership of `pkg/compatibility.py` does not by itself prove `pkg/_compatibility.py` is the right repair path; inspect enough production evidence to justify the path before editing or copying it.
+7. Prefer replanning instead of editing when the change would touch tests, dependency/environment files, require a broad behavior rewrite, or remain ambiguous after one bounded investigation pass.
+8. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
+9. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
 
 Submit `type="request_replan"` now if any of these hold:
 
@@ -112,7 +113,7 @@ Make one minimal production change that matches the plan.
 3. Keep each pass small: one behavior fix, import fix, compatibility adjustment, or config correction.
 4. Refresh file notes after edits or surprising tool/runtime results.
 5. If a delete, move, or rename tool fails, do not retry or bypass it. Preserve the tool error for the terminal summary.
-6. Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism; never create or edit benchmark test files to turn verification green.
+6. Never create or edit test files
 7. If an outside-scope notification appears, treat it as coordination context and keep working when the production change is still tied to this task. If the required change becomes broad or ambiguous, submit `type="request_replan"` with trigger `scope_expansion`. If a mutation reports a verification-surface warning, pause and re-check the scope and code path before continuing.
 
 Exit with: the smallest justified edit ready for verification.
