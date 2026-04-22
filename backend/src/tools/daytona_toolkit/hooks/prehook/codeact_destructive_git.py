@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
-from tools.daytona_toolkit.hooks.prehook._codeact_common import shell_command
+from tools.daytona_toolkit.hooks.prehook._codeact_common import codeact_shell_commands
 
 _DESTRUCTIVE_GIT_PATTERN = re.compile(
     r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$)",
@@ -52,7 +52,9 @@ def _has_destructive_git_clean(command: str) -> bool:
 
 
 def destructive_git_command_error(command: str) -> str | None:
-    if _DESTRUCTIVE_GIT_PATTERN.search(command or "") or _has_destructive_git_clean(command):
+    if _DESTRUCTIVE_GIT_PATTERN.search(command or "") or _has_destructive_git_clean(
+        command
+    ):
         return _DESTRUCTIVE_GIT_MESSAGE
     return None
 
@@ -63,12 +65,10 @@ async def hook(
     context: ToolExecutionContext,
 ) -> PreHookOutcome:
     del context
-    command = shell_command(args)
-    if command is None:
-        return PreHookOutcome()
-    err = destructive_git_command_error(command)
-    if err is not None:
-        return PreHookOutcome(has_error=True, error_message=err)
+    for command in codeact_shell_commands(args):
+        err = destructive_git_command_error(command)
+        if err is not None:
+            return PreHookOutcome(has_error=True, error_message=err)
     return PreHookOutcome()
 
 

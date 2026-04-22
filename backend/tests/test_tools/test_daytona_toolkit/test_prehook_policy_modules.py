@@ -153,6 +153,18 @@ def test_write_scope_deny_blocks_test_file_folder_members() -> None:
     assert "/ws/pkg/tests/test_a.py" in (outcome.error_message or "")
 
 
+def test_write_scope_deny_blocks_test_file_folder_members_without_scope() -> None:
+    svc = MagicMock()
+    svc.list_folder_files.return_value = ["/ws/pkg/tests/test_a.py"]
+    ctx = _coord_ctx(ci_service=svc)
+    args = DaytonaDeleteFileInput(path="/ws/pkg", is_folder=True)
+
+    outcome = _run(write_scope_deny.hook("daytona_delete_file", args, ctx))
+
+    assert outcome.has_error is True
+    assert "BLOCKED_TEST_FILE_EDIT" in (outcome.error_message or "")
+
+
 def test_move_src_scope_deny_checks_folder_members_before_move_body() -> None:
     svc = MagicMock()
     svc.list_folder_files.return_value = ["/ws/pkg/a.py", "/ws/other/b.py"]
@@ -246,6 +258,16 @@ def test_codeact_output_pipeline_policy_blocks_constant_shell_variable() -> None
 def test_codeact_destructive_git_blocks_common_clean_forms() -> None:
     for command in ("git clean -xdf", "git clean -x -d -f"):
         assert codeact_destructive_git.destructive_git_command_error(command) is not None
+
+
+def test_codeact_destructive_git_blocks_python_shell_clean() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(code='cmd = "git clean -xdf"\nshell(cmd)')
+
+    outcome = _run(codeact_destructive_git.hook("daytona_codeact", args, ctx))
+
+    assert outcome.has_error is True
+    assert "destructive git commands" in (outcome.error_message or "")
 
 
 def test_codeact_destructive_git_allows_clean_dry_run() -> None:
