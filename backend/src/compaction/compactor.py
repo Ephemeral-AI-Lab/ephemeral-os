@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from providers.types import SupportsStreamingMessages
 
-from compaction.prompts import (
+from prompt.compaction_prompts import (
     NO_TOOLS_PREAMBLE,
     BASE_COMPACT_PROMPT,
     NO_TOOLS_TRAILER,

@@ -7,6 +7,7 @@ from agents.registry import get_definition
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from team.builtins import (
     DEVELOPER,
+    ROOT_PLANNER,
     SCOUT,
     TEAM_PLANNER,
     TEAM_REPLANNER,
@@ -144,6 +145,18 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "submit_replan",
         "read_task_details",
         "read_task_graph",
+    ):
+        assert name not in tool_names
+
+
+def test_root_planner_tool_surface_blocks_direct_context_and_diagnostics(tmp_path: Path) -> None:
+    tool_names = _final_tool_names(ROOT_PLANNER, tmp_path)
+
+    for name in (
+        "read_task_graph",
+        "ci_status",
+        "ci_diagnostics",
+        "read_task_details",
     ):
         assert name not in tool_names
 

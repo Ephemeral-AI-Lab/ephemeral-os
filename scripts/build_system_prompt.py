@@ -22,7 +22,7 @@ _BACKEND_SRC = _ROOT / "backend" / "src"
 def main() -> int:
     if str(_BACKEND_SRC) not in sys.path:
         sys.path.insert(0, str(_BACKEND_SRC))
-    from prompts.prompt_cli import build_system_prompt_main
+    from prompt.prompt_cli import build_system_prompt_main
 
     return build_system_prompt_main()
 

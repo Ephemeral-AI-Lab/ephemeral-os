@@ -16,12 +16,10 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
 _BACKEND_SRC = _ROOT / "backend" / "src"
-_SCRIPTS_DIR = _ROOT / "scripts"
-for path in (_BACKEND_SRC, _SCRIPTS_DIR):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+if str(_BACKEND_SRC) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_SRC))
 
-from prompt_helpers import (
+from prompt.helpers import (
     build_team_role_prompt_report_text_sync,
     build_team_run_user_prompt_report_text_sync,
     build_team_user_prompt_report_text_sync,

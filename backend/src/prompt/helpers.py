@@ -1,52 +1,42 @@
-#!/usr/bin/env python3
 """Helpers for assembling agent and team prompt reports."""
 
 from __future__ import annotations
 
-# ruff: noqa: E402
-
 import asyncio
 import os
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-
-_ROOT = Path(__file__).resolve().parent.parent
-_BACKEND_SRC = _ROOT / "backend" / "src"
-if str(_BACKEND_SRC) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_SRC))
-
-from agents import get_definition  # type: ignore[attr-defined]
-from agents.types import AgentDefinition  # type: ignore[attr-defined]
-from config.settings import load_settings  # type: ignore[attr-defined]
-from engine.runtime.agent import (  # type: ignore[attr-defined]
+from agents import get_definition
+from agents.types import AgentDefinition
+from config.settings import load_settings
+from engine.runtime.agent import (
     _build_agent_system_prompt,
     _build_agent_tool_registry,
     finalize_tool_registry_and_prompt,
 )
-from external_trigger.tc_note import (  # type: ignore[attr-defined]
+from external_trigger.tc_note import (
     TC_NOTE_EDIT_PROMPT,
     TC_NOTE_TURN_PROMPT,
 )
-from skills.core.loader import load_skill_registry  # type: ignore[attr-defined]
-from team.models import (  # type: ignore[attr-defined]
+from skills.core.loader import load_skill_registry
+from team.models import (
     BudgetConfig,
     BudgetState,
     Note,
     Task,
     TaskStatus,
 )
-from team.note_manager import NoteManager  # type: ignore[attr-defined]
-from team.persistence.events import TeamRunEvent  # type: ignore[attr-defined]
-from team.persistence.run_store import JsonlTeamRunStore  # type: ignore[attr-defined]
-from team.runtime.rehydration import budget_config_from_event, task_from_dict  # type: ignore[attr-defined]
-from team.task_context_builder import TaskContextBuilder  # type: ignore[attr-defined]
-from team.builtins import register_all as register_team_builtins  # type: ignore[attr-defined]
-from team.models import TeamDefinition  # type: ignore[attr-defined]
-from team.registry import get_team_definition, list_team_definitions  # type: ignore[attr-defined]
-from team.runtime.context_builder import build_query_context  # type: ignore[attr-defined]
-from team.runtime.context_builder import DEFAULT_TERMINAL_TOOLS  # type: ignore[attr-defined]
+from team.note_manager import NoteManager
+from team.persistence.events import TeamRunEvent
+from team.persistence.run_store import JsonlTeamRunStore
+from team.runtime.rehydration import budget_config_from_event, task_from_dict
+from team.task_context_builder import TaskContextBuilder
+from team.builtins import register_all as register_team_builtins
+from team.models import TeamDefinition
+from team.registry import get_team_definition, list_team_definitions
+from team.runtime.context_builder import build_query_context
+from team.runtime.context_builder import DEFAULT_TERMINAL_TOOLS
 
 
 def register_builtins() -> None:
@@ -528,7 +518,7 @@ async def build_team_user_prompt_report_text(
         f"- Entry planner: `{team_def.entry_planner}`",
         f"- Working directory: `{cwd}`",
         "- Source: representative synthetic task graph rendered through `build_query_context`.",
-        "- User prompt templates: `backend/src/prompts/user_prompt/*.md`.",
+        "- User prompt templates: `backend/src/prompt/user_prompt/*.md`.",
         "",
         "Team task prompts vary at runtime with task specs, dependency notes, "
         "replan failure packets, scope paths, and recent edits. This report shows "
@@ -822,7 +812,7 @@ async def build_team_run_user_prompt_report_text(
         "This report replays the persisted TeamRun event log and renders each task "
         "through `build_query_context`. Persisted note events contain previews, "
         "so dependency context may be shorter than it was in the live run. "
-        "User prompt templates come from `backend/src/prompts/user_prompt/*.md`.",
+        "User prompt templates come from `backend/src/prompt/user_prompt/*.md`.",
         "",
     ]
     if team_run.user_request:

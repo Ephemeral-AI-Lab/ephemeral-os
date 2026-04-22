@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from agents.registry import get_definition
-from prompts.user_prompt_templates import load_note_taker_prompt, render_user_prompt_template
+from prompt.user_prompt_templates import load_note_taker_prompt, render_user_prompt_template
 from team.builtins import register_all
 from team.models import Note, Task, TaskStatus
 from team.note_manager import NoteManager
@@ -14,7 +14,7 @@ from team.runtime.context_builder import build_query_context
 from team.task_context_builder import TaskContextBuilder
 
 
-_PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompts" / "user_prompt"
+_PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompt" / "user_prompt"
 _SUBMIT_PLAN_SCHEMA_SNIPPET = (
     "Provide new_tasks with id, description, name, spec, deps, and "
     "non-empty repo-relative scope_paths"
@@ -26,7 +26,7 @@ _SUBMIT_PLAN_VALIDATOR_SNIPPET = "exactly one terminal `validator` end-of-chain 
 def test_user_prompt_markdown_files_start_at_runtime_template() -> None:
     for name in (
         "developer",
-        "initial_task_planner",
+        "root_task_planner",
         "task_planner",
         "task_replanner",
         "validator",
@@ -275,9 +275,9 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     task = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent_name="root_planner",
         status=TaskStatus.READY,
-        objective="Fallback root task objective.",
+        objective="Root planner task objective.",
         root_id="root",
         depth=0,
     )
@@ -286,7 +286,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
         user_request="Fix retry handling.",
         root_task_id="root",
         task_center=await _make_task_center("run-1", {"root": task}),
-        roster={"planner": ["team_planner"], "developer": ["developer"]},
+        roster={"planner": ["root_planner", "team_planner"], "developer": ["developer"]},
         team_definition=None,
         project_context=SimpleNamespace(repo_root="/repo"),
         coordination_metadata={"benchmark_test_ids": ["tests/test_retry.py::test_retry"]},
@@ -296,7 +296,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
         arbiter=None,
     )
 
-    ctx = await build_query_context(get_definition("team_planner"), team_run, task)
+    ctx = await build_query_context(get_definition("root_planner"), team_run, task)
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_plan:" in ctx.user_message
@@ -306,7 +306,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Context-read pre-step:" not in ctx.user_message
     assert "Task id:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
-    assert "Follow the bundled team-planner playbook for workflow and rules" in ctx.user_message
+    assert 'load_skill(skill_name="team-root-planner-playbook")' in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## User request" in ctx.user_message
     assert "Fix retry handling." in ctx.user_message

@@ -1,11 +1,11 @@
-"""Tests for prompts.environment."""
+"""Tests for prompt.environment."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-from prompts.environment import (
+from prompt.environment import (
     EnvironmentInfo,
     detect_git_info,
     detect_os,

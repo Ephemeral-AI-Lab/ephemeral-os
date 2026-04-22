@@ -1,8 +1,8 @@
-"""Tests for prompts.system_prompt."""
+"""Tests for prompt.system_prompt."""
 
 from __future__ import annotations
 
-from prompts.system_prompt import build_system_prompt
+from prompt.system_prompt import build_system_prompt
 
 
 def test_build_system_prompt_returns_instruction_text_only():

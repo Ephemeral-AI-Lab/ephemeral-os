@@ -2,20 +2,12 @@
 
 from __future__ import annotations
 
-# ruff: noqa: E402
-
 import argparse
 import os
 import sys
 from pathlib import Path
 
-
-_ROOT = Path(__file__).resolve().parents[3]
-_SCRIPTS_DIR = _ROOT / "scripts"
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
-
-from prompt_helpers import (
+from prompt.helpers import (
     build_agent_system_prompt_text,
     build_team_run_user_prompt_report_text_sync,
     build_team_user_prompt_report_text_sync,

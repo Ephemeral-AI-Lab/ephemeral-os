@@ -987,7 +987,7 @@ async def ci_query_symbol(
         return ToolResult(output=json.dumps(payload, indent=2))
 
     agent_name = str((context.metadata or {}).get("agent_name") or "").strip()
-    drop_text_matches = agent_name == "team_planner"
+    drop_text_matches = agent_name in {"root_planner", "team_planner"}
     _record_symbol_navigation(context)
 
     results = svc.query_symbols(query)

@@ -75,7 +75,7 @@ from providers import (
     ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
-from prompts import build_runtime_system_prompt
+from prompt import build_runtime_system_prompt
 from token_tracker.runtime import persist_run_usage
 
 logger = logging.getLogger(__name__)
@@ -907,7 +907,7 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
     _patch_server_database(monkeypatch, db_session_factory)
     monkeypatch.setattr("providers.provider.make_api_client", lambda *a, **kw: mock_api_client)
     monkeypatch.setattr(
-        "prompts.build_runtime_system_prompt",
+        "prompt.build_runtime_system_prompt",
         lambda *a, **kw: "You are a test assistant.",
     )
 

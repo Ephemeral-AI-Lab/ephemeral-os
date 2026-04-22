@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterable
 
 from message import ConversationMessage
-from prompts.user_prompt_templates import render_user_prompt_template
+from prompt.user_prompt_templates import render_user_prompt_template
 from team.models import Task
 from team.runtime.tool_policy import default_terminal_tools_for_role
 from tools.core.runtime import ExecutionMetadata
@@ -133,10 +133,11 @@ def _template_name_for_task(
 ) -> str | None:
     role = str(getattr(defn, "role", "") or "").strip()
     agent_name = str(getattr(task, "agent_name", "") or "").strip()
-    root_id = str(getattr(team_run, "root_task_id", "") or "")
 
+    if agent_name == "root_planner":
+        return "root_task_planner"
     if role == "planner" or agent_name == "team_planner":
-        return "initial_task_planner" if root_id and task.id == root_id else "task_planner"
+        return "task_planner"
     if role == "replanner" or agent_name == "team_replanner":
         return "task_replanner"
     if role == "developer" or agent_name == "developer":

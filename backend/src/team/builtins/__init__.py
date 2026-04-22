@@ -1,7 +1,7 @@
 """Builtin team-mode agent and team definitions.
 
 Definitions live as Markdown+YAML-frontmatter files in
-``backend/config/agents/`` and ``backend/config/teams/``.
+``backend/src/prompt/agents/`` and ``backend/config/teams/``.
 ``register_all()`` loads them at boot, optionally seeds the database,
 and populates the in-memory registries.
 """
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Canonical name constants — imported across the codebase for dispatch logic.
 # ---------------------------------------------------------------------------
+ROOT_PLANNER = "root_planner"
 TEAM_PLANNER = "team_planner"
 DEVELOPER = "developer"
 VALIDATOR = "validator"
@@ -34,14 +35,15 @@ TEAM_REPLANNER = "team_replanner"
 NOTE_TAKER = "note_taker"
 PARENT_SUMMARIZER = "parent_summarizer"
 
+_BACKEND_SRC = Path(__file__).resolve().parents[2]
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
-_BUILTINS_DIR = _CONFIG_ROOT / "agents"
+_BUILTINS_DIR = _BACKEND_SRC / "prompt" / "agents"
 _TEAMS_BUILTIN_DIR = _CONFIG_ROOT / "teams"
 
 # Expected number of builtin agents.  If a seed file fails to parse,
 # ``load_agents_dir`` silently skips it — this constant lets us detect
 # that early rather than discovering a missing agent at dispatch time.
-_EXPECTED_BUILTIN_COUNT = 7
+_EXPECTED_BUILTIN_COUNT = 8
 _EXPECTED_BUILTIN_TEAM_COUNT = 1
 
 

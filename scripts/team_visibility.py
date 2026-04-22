@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+# ruff: noqa: E402
+
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+_ROOT = Path(__file__).resolve().parent.parent
+_BACKEND_SRC = _ROOT / "backend" / "src"
+if str(_BACKEND_SRC) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_SRC))
+
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
-from prompt_helpers import (
+from prompt.helpers import (
     current_settings,
     effective_agent_definition_for_team_report,
     load_agent_definition,

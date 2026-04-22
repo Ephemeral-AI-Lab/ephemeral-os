@@ -267,7 +267,7 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
         return_value=UserPromptContextParts(task_spec="Root planning task")
     )
     ctx = await build_query_ctx(
-        SimpleNamespace(name="team_planner", role="planner"),
+        SimpleNamespace(name="root_planner", role="planner"),
             SimpleNamespace(
                 id="TR1",
                 sandbox_id="sbx-1",
@@ -290,7 +290,7 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
         Task(
             id="W1",
             team_run_id="T1",
-            agent_name="team_planner",
+            agent_name="root_planner",
             status=TaskStatus.PENDING,
             objective="Root planning task",
             depth=0,

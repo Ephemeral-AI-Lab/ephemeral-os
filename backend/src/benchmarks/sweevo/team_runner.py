@@ -22,6 +22,7 @@ from message.event_printer import MultiAgentEventPrinter
 from code_intelligence.routing.service import get_code_intelligence
 from team.builtins import (
     DEVELOPER,
+    ROOT_PLANNER,
     SCOUT,
     TEAM_PLANNER,
     TEAM_REPLANNER,
@@ -226,7 +227,7 @@ def _make_runner(
         printer=printer,
         team_metrics=team_metrics,
         session_config=session_config,
-        banner_agent=TEAM_PLANNER,
+        banner_agent=ROOT_PLANNER,
         success_hook=_enforce_validation_evidence,
     )
     core_runner = TeamAgentRunner(
@@ -267,7 +268,7 @@ async def _capture_post_run_repo_checkpoint(
 ) -> str | None:
     """Capture a sweevo repo patch after planner/developer/validator runs so
     resume_sweevo_team can rehydrate the working tree."""
-    if agent_name not in {TEAM_PLANNER, "developer", "validator"}:
+    if agent_name not in {ROOT_PLANNER, TEAM_PLANNER, "developer", "validator"}:
         return None
     try:
         from team.runtime.registry import get as get_team_run
@@ -372,7 +373,7 @@ def _make_executor_factory(
 
     def factory(team_run):
         def after_dispatch(wi, result, _new_items):
-            if result.submitted_plan is None or wi.agent_name != TEAM_PLANNER:
+            if result.submitted_plan is None or wi.agent_name not in {ROOT_PLANNER, TEAM_PLANNER}:
                 return
             _emit_dispatcher_dag(printer, team_run, trigger_agent=wi.agent_name)
 
@@ -392,6 +393,7 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
     exec_limits = _derive_execution_runtime_limits(instance)
     # (agent_name, extra_skills, limits, include_toolkits)
     spec: list[tuple[str, tuple[str, ...], dict[str, int], bool]] = [
+        (ROOT_PLANNER, (), _derive_planner_runtime_limits(instance), True),
         (TEAM_PLANNER, (), _derive_planner_runtime_limits(instance), True),
         (DEVELOPER, (), exec_limits, False),
         (SCOUT, (), exec_limits, False),

@@ -17,21 +17,14 @@ from typing import Any
 
 from agents.registry import get_definition
 from external_trigger.runner import run
+from prompt.external_trigger_prompts import (
+    DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT,
+    build_parent_summary_prompt,
+)
 from team.models import Note
 from tools.core.base import ToolExecutionContext
 from tools.submission.toolkit import SubmitTaskSummaryInput, SubmitTaskSummaryTool
 from tools.task_center.toolkit import ReadTaskDetailsTool
-
-
-_DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT = (
-    "You summarize the outcome of an expandable (planner/replanner) task "
-    "after every direct child has reached a terminal state. The trigger gives "
-    "you the parent task id and completed direct child task ids; read those "
-    "task details first, including plan/replan JSON and final summaries, then "
-    "submit one evidence-rich roll-up: what was planned, each child's status, "
-    "what landed, what was replanned or dropped, and open risk. Do not invent "
-    "next steps."
-)
 
 
 @dataclass
@@ -72,9 +65,9 @@ def _resolve_parent_summarizer_definition(
 
     defn = get_definition(agent_name)
     if defn is None:
-        return _DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT, None, agent_name
+        return DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT, None, agent_name
 
-    prompt = (defn.system_prompt or "").strip() or _DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT
+    prompt = (defn.system_prompt or "").strip() or DEFAULT_PARENT_SUMMARIZER_SYSTEM_PROMPT
     model = str(defn.model).strip() if defn.model else ""
     return prompt, (model if model and model != "inherit" else None), agent_name
 
@@ -84,42 +77,7 @@ def _build_parent_summary_prompt(
     children: list[Any],
 ) -> str:
     """Build the user prompt text fed to the summarizer agent."""
-    lines: list[str] = []
-    completed_child_ids = [str(getattr(child, "id", "")) for child in children]
-    completed_child_ids = [child_id for child_id in completed_child_ids if child_id]
-    lines.append("# Parent summarizer trigger")
-    lines.append(
-        "All direct children of the parent task are terminal. Read the parent "
-        "task detail and each completed direct child task detail before you "
-        "submit the parent roll-up."
-    )
-    lines.append("")
-    lines.append("## Parent task id")
-    lines.append(str(parent.id))
-    lines.append("")
-    lines.append("## Completed direct child task ids to read")
-    if completed_child_ids:
-        for child_id in completed_child_ids:
-            lines.append(f"- {child_id}")
-    else:
-        lines.append("(none)")
-    lines.append("")
-    lines.append(
-        "Workflow: first call `read_task_details(task_id=\""
-        f"{parent.id}"
-        "\")` for the parent. Then call `read_task_details(task_id=...)` once "
-        "for every completed direct child id listed above. Only after every "
-        "listed child has been read, produce exactly one `submit_task_summary` "
-        "call with type=\"success\". The `content` must report what the parent "
-        "planned, one direct child line per child with status plus delivered/"
-        "replanned/dropped/open-risk classification, and an overall roll-up. "
-        "Cite child final summaries, commands, failing ids, exit codes, "
-        "blockers, missing summaries, and trivial summaries when present. Do "
-        "not collapse the result into \"all children done\" and do not invent "
-        "next steps. This terminal submission is the completion signal for the "
-        "parent task."
-    )
-    return "\n".join(lines)
+    return build_parent_summary_prompt(parent, children)
 
 async def run_parent_summary(
     *,

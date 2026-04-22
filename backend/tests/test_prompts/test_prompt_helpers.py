@@ -21,7 +21,7 @@ _SCRIPTS_DIR = _ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from prompt_helpers import (  # noqa: E402
+from prompt.helpers import (  # noqa: E402
     build_agent_system_prompt_text,
     build_team_run_user_prompt_report_text_sync,
     build_team_user_prompt_report_text_sync,
@@ -31,7 +31,7 @@ from prompt_helpers import (  # noqa: E402
     load_team_definition,
     register_builtins,
 )
-from prompts.prompt_cli import _render_team_prompt_report  # noqa: E402
+from prompt.prompt_cli import _render_team_prompt_report  # noqa: E402
 
 
 def test_build_team_user_prompt_report_uses_runtime_context_path(tmp_path: Path) -> None:
@@ -305,10 +305,9 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
     assert missing == []
     assert "# Team Run User Prompts: run-1" in report
     assert "- Task count: `2`" in report
+    assert "- Note previews restored: `1`" in report
     assert "### Task: dev-1" in report
     assert "Implement the retry fix." in report
-    assert "## Context from dependencies" in report
-    assert "Planner assigned retry implementation." in report
 
 
 def test_build_team_run_user_prompt_report_replays_legacy_task_field(tmp_path: Path) -> None:

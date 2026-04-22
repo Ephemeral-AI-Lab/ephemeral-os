@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from message.stream_events import StreamEvent, SystemNotification
-from prompts.message_recorder import append_prompt_report_event
+from prompt.message_recorder import append_prompt_report_event
 from providers.types import ApiMessageRequest, ApiToolUseDeltaEvent, ApiMessageCompleteEvent
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 from tools.core.hooks.execution import execute_tool_with_hooks

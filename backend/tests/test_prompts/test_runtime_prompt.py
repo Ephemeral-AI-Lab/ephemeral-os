@@ -1,4 +1,4 @@
-"""Tests for prompts.runtime_prompt and background-related toolkit guidance."""
+"""Tests for prompt.runtime_prompt and background-related toolkit guidance."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 from pydantic import BaseModel
 
-from prompts.environment import EnvironmentInfo
-from prompts.runtime_prompt import (
+from prompt.environment import EnvironmentInfo
+from prompt.runtime_prompt import (
     build_agent_capabilities_prompt,
     build_runtime_context_message,
     build_runtime_system_prompt,
@@ -238,7 +238,7 @@ def test_tool_registry_restrict_to_tools_filters_toolkits_too():
 
 def test_runtime_context_message_contains_environment(monkeypatch):
     monkeypatch.setattr(
-        "prompts.runtime_prompt.get_environment_info",
+        "prompt.runtime_prompt.get_environment_info",
         lambda cwd=None: EnvironmentInfo(
             os_name="Linux",
             os_version="6.8.0",

@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any, Mapping
 
-from prompts.message_recorder import append_prompt_report_event
+from prompt.message_recorder import append_prompt_report_event
 
 logger = logging.getLogger(__name__)
 

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # authoritative seed path.
 RESERVED_BUILTIN_AGENT_NAMES = frozenset(
     {
+        "root_planner",
         "team_planner",
         "developer",
         "validator",

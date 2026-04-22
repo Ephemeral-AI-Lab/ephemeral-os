@@ -24,7 +24,7 @@ from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
-from prompts import build_runtime_context_message, build_runtime_system_prompt
+from prompt import build_runtime_context_message, build_runtime_system_prompt
 from tools import create_default_tool_registry
 from tools.core.base import BaseToolkit
 from tools.core.factory import create_toolkit, has_toolkit, list_toolkits, ToolkitContext
@@ -108,7 +108,7 @@ def finalize_tool_registry_and_prompt(
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
     """
-    from prompts.runtime_prompt import build_agent_capabilities_prompt
+    from prompt.runtime_prompt import build_agent_capabilities_prompt
     from tools.builtins.background import make_background_toolkit
 
     bg_tool_names = [

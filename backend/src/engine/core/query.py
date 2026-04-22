@@ -42,7 +42,7 @@ from engine.runtime.background_tasks import (
     build_background_reminder,
     deliver_completed_background_task,
 )
-from prompts.prompt_report_recorder import PromptReportRecorder
+from prompt.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,

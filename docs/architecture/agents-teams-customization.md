@@ -13,7 +13,7 @@ Agents are customized via two complementary paths: **Markdown frontmatter** (for
 ```
 ┌─────────────────────────────────┐        ┌─────────────────────────┐
 │  Markdown Agent Definitions     │        │  REST API               │
-│  backend/config/agents/*.md     │        │  POST /api/agents       │
+│  backend/src/prompt/agents/*.md     │        │  POST /api/agents       │
 └────────────────┬────────────────┘        └───────────┬─────────────┘
                  │ YAML frontmatter + body              │ JSON payload
                  ▼                                      ▼
@@ -463,7 +463,7 @@ This team coordinates...
 Builtin agent and team definitions live in:
 
 ```
-backend/config/agents/
+backend/src/prompt/agents/
   ├── developer.md
   ├── validator.md
   ├── team_planner.md

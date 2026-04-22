@@ -1,8 +1,9 @@
 ---
 name: sweevo_benchmark
-entry_planner: team_planner
+entry_planner: root_planner
 roster:
   planner:
+    - root_planner
     - team_planner
   developer:
     - developer
@@ -18,4 +19,4 @@ terminal_tools:
   note_taker:
     - submit_task_note
 ---
-Default SWE-EVO benchmark team using the builtin planner/developer/validator/note_taker/replanner/scout agents.
+Default SWE-EVO benchmark team using the builtin root_planner/team_planner/developer/validator/note_taker/replanner/scout agents.

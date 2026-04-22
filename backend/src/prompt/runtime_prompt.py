@@ -8,8 +8,8 @@ from typing import Any
 
 from config.paths import get_project_issue_file, get_project_pr_comments_file
 from config.settings import Settings
-from prompts.environment import EnvironmentInfo, get_environment_info
-from prompts.system_prompt import build_system_prompt
+from prompt.environment import EnvironmentInfo, get_environment_info
+from prompt.system_prompt import build_system_prompt
 from tools.core.base import BaseToolkit
 
 __all__ = [
