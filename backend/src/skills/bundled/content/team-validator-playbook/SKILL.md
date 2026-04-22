@@ -15,7 +15,7 @@ Read the following sections to verify the assigned developer or child-planner ou
 | Read a known task by UUID | `read_task_details(task_id="<uuid>")` |
 | Read notes for a path | `read_file_note(file_path="...")` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
-| Run tests or shell | `daytona_codeact(command="...")` |
+| Run tests or shell | `daytona_codeact(command="...")`; use `code` only for Python source snippets |
 | Edit by exact text | `daytona_edit_file(file_path=..., old_text=..., new_text=...)` or `(file_path, edits=[...])` |
 | Terminal submission | `submit_task_summary({ type: "success" \| "request_replan", content: string })` |
 
@@ -23,12 +23,13 @@ Read the following sections to verify the assigned developer or child-planner ou
 
 1. Do not batch `load_skill` with any other tool call.
 2. Do not use `daytona_codeact` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use the Daytona read, search, or mutation tools above.
-3. Do not put `|`, `>`, `>>`, `2>&1`, `2>/dev/null`, `head`, `tail`, shell-output wrappers, verdict-shaping helper scripts, or a leading repo-root `cd` in CodeAct commands.
+3. Do not put `|`, `>`, `>>`, `2>&1`, `2>/dev/null`, `head`, `tail`, shell-output wrappers, verdict-shaping helper scripts, or a leading repo-root `cd` in CodeAct commands. Do not put shell, build, or test commands in `code`; `code` is Python source only. If you want the first error only, use `-x`, a focused node id, or `-q --tb=short`; never add shell output filters.
 4. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
 5. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
 6. Do not edit test files unless the task explicitly owns a test-only bug.
 7. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
 8. Do not claim success from stale, partial, indirect, or wrapper evidence.
+9. If a CodeAct pre-hook sanitizes a non-destructive command anyway, record the sanitized command that actually ran and cite the advisory as workflow guidance. If a command is blocked as destructive or unsanitizable, rewrite it to a workflow-valid equivalent before retrying; request replanning only when no valid equivalent can preserve the needed evidence.
 
 ## Route
 
@@ -68,7 +69,8 @@ Write a validation-focused plan before the first diagnostic, runtime command, or
 3. Name the owned files that need `ci_diagnostics(file_path="...")`.
 4. Decide whether the touched change affects public serialization, schema shape, API-visible output, CLI-visible output, docs-visible output, or prompts. If yes, add one nearby guardrail in the same behavior family.
 5. Keep guardrails bounded. Do not widen to the full test suite only because the changed surface is public.
-6. Reject invalid verification commands before running them (see Never rule 4). A CodeAct command that violates those rules is not evidence.
+6. Reject invalid verification commands before running them (see Never rule 3). A CodeAct command that violates those rules is not evidence.
+7. Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths` or touched production files by themselves. A new production file may extend scope only through `daytona_write_file` when live evidence proves a missing module, shim, re-export, or bridge and no other worker owns that exact path.
 
 Submit `type="request_replan"` now if any of these hold:
 
@@ -76,6 +78,8 @@ Submit `type="request_replan"` now if any of these hold:
 2. The required verification belongs to another owner.
 3. The task asks for broad redesign instead of validation.
 4. No workflow-valid command or probe can verify the acceptance criteria.
+5. The only apparent correction would edit, move, rename, or delete an existing file outside the assigned `scope_paths` or outside files handed off by dependencies.
+6. The required correction is an out-of-scope test edit, an unproven missing compatibility module, or a new production file whose `daytona_write_file` scope expansion was blocked or conflicted.
 
 Exit with: acceptance-criterion map, exact command order, diagnostics list, guardrail decision, and any handoff gaps.
 
@@ -85,11 +89,11 @@ Prove the current repo state.
 
 1. Run `ci_diagnostics(file_path="...")` on every owned or touched production file before terminal completion.
 2. Treat error-severity diagnostics on owned files as red evidence unless the task explicitly says they are pre-existing and irrelevant.
-3. Run the exact required runtime command first. For `daytona_codeact(...)`, use direct repo-root commands such as `python -m pytest path/to/test.py::test_name -q --tb=short`.
+3. Run the exact required runtime command first after rewriting any workflow-invalid or overly verbose command to a CodeAct-safe equivalent. For `daytona_codeact(...)`, use `command` for every shell, build, or test command; never pass a shell command string in `code`. Use direct repo-root commands such as `python -m pytest path/to/test.py::test_name -q --tb=short`; before the tool call, remove `2>&1`, `>`, pipes, `head`, `tail`, and leading `cd`; split chained suites; prefer `-q --tb=short` over `-v`. For first-failure capture, use `-x`, a focused node id, `-k`, or split suites rather than shell filters.
 4. Use CodeAct only for runtime commands (see Never rules 3 and 4).
 5. For broad or slow suites, use background execution, continue useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.
 6. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
-7. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet.
+7. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. A sanitizer advisory is not a failure; cite the sanitized command that actually ran. If a command is blocked as destructive or unsanitizable, rewrite it to a workflow-valid equivalent before retrying; submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 
 Exit with: command/probe results mapped to criteria, diagnostics status, guardrail result when applicable, and red evidence when present. Green evidence for every acceptance criterion → Stage 6 (`type="success"`). Any red, invalid, partial, unmet, or absent evidence → Stage 4.
 
@@ -142,10 +146,12 @@ Patch only when the correction is obvious, small, local, and directly supported 
 
 Use:
 
-1. Coordinated Daytona mutation tools only: `daytona_edit_file` or `daytona_write_file`.
-2. Exactly one mutation tool per change.
-3. Refresh file notes after edits or surprising tool/runtime results.
-4. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).
+1. Before every mutation, verify the target file is inside an assigned `scope_paths` entry or a touched production file handed off by a dependency. For a new production file required by live evidence, use `daytona_write_file` and let the write-scope posthook approve and record expansion. If an existing-file mutation is outside scope or the posthook blocks expansion, submit `type="request_replan"` with trigger `scope_expansion`.
+2. Coordinated Daytona mutation tools only: `daytona_edit_file` or `daytona_write_file`.
+3. Exactly one mutation tool per change.
+4. Refresh file notes after edits or surprising tool/runtime results.
+5. Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them and the file is created through `daytona_write_file`; never create or edit test files outside an explicit test-only task.
+6. Re-run `ci_diagnostics` and the same owned verification surface after the correction (→ Stage 3).
 
 Do not:
 
@@ -176,15 +182,17 @@ For `type="success"`, `content` must include:
 3. exit codes or key assertions for every cited command/probe;
 4. diagnostics status for owned files;
 5. public-surface guardrail result (if the plan added one);
-6. widened-scope rationale or residual risk (if any).
+6. investigation or guardrail widening rationale and residual risk (if any).
 
 For `type="request_replan"`, `content` must include:
 
-1. replan trigger, exactly one of: `dependency_handoff_gap` | `diagnostic_failure` | `verification_failure` | `invalid_command` | `unmet_acceptance` | `outside_scope` | `repair_not_local` | `none`;
+1. replan trigger, exactly one of: `scope_expansion` | `wrong_owner_or_role` | `unresolved_blocker`;
 2. the Stage 4 root-cause packet, embedded verbatim inside `content`;
 3. exact failing command, diagnostic, or probe and its exit code;
 4. failing ids when available;
 5. shortest useful output snippet and minimal reproduction;
 6. the owner, scope, sequence, or design decision the replanner must resolve.
+
+Use `scope_expansion` when the verified repair is outside the assigned `scope_paths`. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before validation can pass. Use `unresolved_blocker` when verification, diagnostics, tooling, or root-cause tracing is still blocked but no different owner/scope is proven.
 
 Use `type="success"` only when the latest required verification passed and every acceptance criterion is satisfied by workflow-valid evidence. Use `type="request_replan"` for any nonzero command, error diagnostic, invalid command, missing command, collection failure, partial pass, unmet criterion, ambiguous root cause, outside-scope fix, non-local repair, stale evidence, or summary that would otherwise say "partial".

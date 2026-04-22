@@ -26,8 +26,15 @@ from agents.types import AgentDefinition
 from engine.core.query import QueryExitReason
 from team.persistence.events import TeamRunEvent
 from message import ConversationMessage, TextBlock, ToolUseBlock
-from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
-from team.models import Task, TaskStatus, TeamRunStatus
+from team.builtins import (
+    DEVELOPER,
+    ROOT_PLANNER,
+    SCOUT,
+    TEAM_PLANNER,
+    TEAM_REPLANNER,
+    VALIDATOR,
+)
+from team.models import Task, TaskStatus, TeamDefinition, TeamRunStatus
 from team.task_context_builder import UserPromptContextParts
 from tools.core.runtime import ExecutionMetadata
 
@@ -132,6 +139,62 @@ def test_load_or_create_team_definition_uses_requested_db_name(monkeypatch):
     assert captured == {
         "session_factory": session_factory,
         "team_name": "sweevo-team-glm5.1",
+    }
+
+
+def test_load_or_create_team_definition_uses_current_builtin_over_stale_db(monkeypatch):
+    builtin = TeamDefinition(
+        id="builtin-sweevo",
+        name="sweevo_benchmark",
+        description="current builtin team",
+        entry_planner=ROOT_PLANNER,
+        roster={
+            "planner": [ROOT_PLANNER, TEAM_PLANNER],
+            "developer": [DEVELOPER],
+            "reviewer": [VALIDATOR],
+            "explorer": [SCOUT],
+        },
+        terminal_tools={"note_taker": {"submit_task_note"}},
+    )
+    stale_db = TeamDefinition(
+        id="stale-sweevo",
+        name="sweevo_benchmark",
+        description="old builtin team",
+        entry_planner=TEAM_PLANNER,
+        roster={
+            "planner": [TEAM_PLANNER],
+            "developer": [DEVELOPER],
+            "reviewer": [VALIDATOR],
+            "explorer": [SCOUT],
+        },
+        terminal_tools={"note_taker": {"submit_task_note"}},
+    )
+    captured: dict[str, object] = {}
+
+    class _Store:
+        def initialize(self, session_factory):
+            captured["session_factory"] = session_factory
+
+        def seed_builtin(self, defn):
+            captured["seeded"] = defn
+            return stale_db
+
+        def get_by_name(self, name):
+            raise AssertionError(f"built-in registry should handle {name}")
+
+    monkeypatch.setattr(sweevo_team_runner, "TeamDefinitionStore", _Store)
+    monkeypatch.setattr("team.registry.get_team_definition", lambda _name: builtin)
+
+    session_factory = object()
+    result = sweevo_team_runner._load_or_create_team_definition(
+        session_factory,
+        team_name="sweevo_benchmark",
+    )
+
+    assert result is builtin
+    assert captured == {
+        "session_factory": session_factory,
+        "seeded": builtin,
     }
 
 

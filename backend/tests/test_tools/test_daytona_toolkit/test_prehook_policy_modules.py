@@ -244,7 +244,80 @@ def test_codeact_stderr_suppression_policy_blocks_dev_null_stderr() -> None:
     assert "2>/dev/null" in (outcome.error_message or "")
 
 
-def test_codeact_output_pipeline_policy_blocks_constant_shell_variable() -> None:
+def test_codeact_output_pipeline_policy_sanitizes_shell_command() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(
+        command="cd /testbed && pytest tests/unit/test_x.py -q 2>&1 | head -200"
+    )
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is not None
+    assert outcome.tool_input.command == "pytest tests/unit/test_x.py -q"
+    assert "sanitized CodeAct command" in outcome.advisories[0]
+
+
+def test_codeact_output_pipeline_policy_sanitizes_head_tail_command() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(command="tail -n 40 logs/test.log > /tmp/out")
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is not None
+    assert outcome.tool_input.command == "cat logs/test.log"
+
+
+def test_codeact_output_pipeline_policy_sanitizes_command_substitution_pipeline() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(
+        command="files=$(find . -name '*.py' 2>/dev/null | head -1); printf '%s\\n' \"$files\""
+    )
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is not None
+    assert (
+        outcome.tool_input.command
+        == "files=$(find . -name '*.py'); printf '%s\\n' \"$files\""
+    )
+
+
+def test_codeact_output_pipeline_policy_ignores_arithmetic_expansion() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(command='count=$((1 + 2)); echo "$count"')
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is None
+    assert outcome.advisories == ()
+
+
+def test_codeact_output_pipeline_policy_keeps_arithmetic_inside_substitution() -> None:
+    ctx = _ctx()
+    args = DaytonaCodeActInput(command='value=$(echo $((1 + 2)) | tail -1); echo "$value"')
+
+    outcome = _run(
+        codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is not None
+    assert outcome.tool_input.command == 'value=$(echo $((1 + 2))); echo "$value"'
+
+
+def test_codeact_output_pipeline_policy_sanitizes_constant_shell_variable() -> None:
     ctx = _ctx()
     args = DaytonaCodeActInput(code='cmd = "cat a.py | head"\nshell(cmd)')
 
@@ -252,8 +325,9 @@ def test_codeact_output_pipeline_policy_blocks_constant_shell_variable() -> None
         codeact_output_pipeline_policy.hook("daytona_codeact", args, ctx)
     )
 
-    assert outcome.has_error is True
-    assert "commands must not contain" in (outcome.error_message or "")
+    assert outcome.has_error is False
+    assert outcome.tool_input is not None
+    assert outcome.tool_input.code == "cmd = 'cat a.py'\nshell(cmd)"
 
 
 def test_codeact_destructive_git_blocks_common_clean_forms() -> None:

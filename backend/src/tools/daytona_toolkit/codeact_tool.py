@@ -28,7 +28,7 @@ from tools.daytona_toolkit._daytona_utils import (
 _CODEACT_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_default_timeout
 
 class DaytonaCodeActInput(BaseModel):
-    """Input schema that asks the model for either command or code."""
+    """Input schema that asks the model for either shell command or Python code."""
 
     mode: Literal["python", "shell"] | None = Field(
         default=None,
@@ -36,7 +36,11 @@ class DaytonaCodeActInput(BaseModel):
     )
     code: str | None = Field(
         default=None,
-        description="Python code to run. Do not also set command.",
+        description=(
+            "Python source only. Do not pass shell commands such as "
+            "`python -m pytest tests -q`; use command for tests, builds, "
+            "and shell. Do not also set command."
+        ),
     )
     command: str | None = Field(
         default=None,
@@ -44,7 +48,11 @@ class DaytonaCodeActInput(BaseModel):
             "Shell command to run from the repo root. Use for tests, builds, "
             "and verification. Do not also set code. Do not include `|`, `>`, "
             "`2>&1`, `2>/dev/null`, `head`, or `tail`; output is captured "
-            "automatically. Do not start with `cd /testbed &&` or `cd /workspace &&`."
+            "automatically. Do not start with `cd /testbed &&` or `cd /workspace &&`. "
+            "The pre-hook may sanitize unsupported output shaping before execution, "
+            "but author commands in the safe form. "
+            "Bad: `python -m pytest tests -q 2>&1 | head -200`. Good: "
+            "`python -m pytest tests -q --tb=short -x`."
         ),
     )
     timeout: int = Field(
@@ -711,9 +719,13 @@ def _files_written_count(
 @tool(
     name="daytona_codeact",
     description=(
-        "Run a shell command or Python code in Daytona. Use `command` for tests, "
-        "builds, and verification. Use `code` only for multi-step Python. Commands "
-        "start at the repo root. Do not include pipes, redirects, head, or tail. "
+        "Run a shell command or Python source in Daytona. Use `command` for tests, "
+        "builds, and verification. Use `code` only for Python source snippets, "
+        "never shell commands such as `python -m pytest ...`. Commands "
+        "start at the repo root. Do not include pipes, redirects, `2>&1`, `head`, "
+        "or `tail`; use pytest flags like `-q --tb=short -x` to bound output. "
+        "The pre-hook may sanitize unsupported output shaping before execution, "
+        "but author commands in the safe form. "
         "Do not use this for file writes, moves, deletes, or file-content reads; "
         "use the file, search, rename, delete, or move tools instead."
     ),

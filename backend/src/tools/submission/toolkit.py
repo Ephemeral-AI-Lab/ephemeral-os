@@ -213,10 +213,12 @@ class SubmitTaskSummaryInput(BaseModel):
             "each acceptance criterion with pass/fail plus the command, probe, "
             "exit code, or key assertion used; on failure include the minimal "
             "repro and hypothesized root cause. For request_replan: start with "
-            "blocking evidence, failing command or tool result, affected paths "
-            "or owners, and why a different owner, scope, sequence, or budget "
-            "is needed. Do not cite benchmark CodeAct commands containing '|' "
-            "or '>' as success evidence; rerun directly or name the gap. "
+            "a replan trigger, exactly one of scope_expansion, "
+            "wrong_owner_or_role, or unresolved_blocker; then include blocking "
+            "evidence, failing command or tool result, affected paths or owners, "
+            "and why a different owner, scope, sequence, or budget is needed. "
+            "Do not cite benchmark CodeAct commands containing '|' or '>' as "
+            "success evidence; rerun directly or name the gap. "
             "Do not submit placeholders such as 'task completed', "
             "'all checks passed', or a filename-only list."
         ),
@@ -246,8 +248,9 @@ class SubmitTaskSummaryTool(BaseTool):
         "or parent_summarizer task. Use type='success' only for satisfied "
         "acceptance criteria with concrete verification evidence; use "
         "type='request_replan' for blockers, red checks, wrong ownership, or "
-        "needed scope/sequence changes. This is terminal: the agent loop ends "
-        "after this call."
+        "needed scope/sequence changes, classified as scope_expansion, "
+        "wrong_owner_or_role, or unresolved_blocker. This is terminal: the "
+        "agent loop ends after this call."
     )
     short_description = "Submit task outcome."
     input_model = SubmitTaskSummaryInput
@@ -304,7 +307,9 @@ class NewTaskSpec(BaseModel):
             "'1. Goal: ...\\n2. Task Details: ...\\n"
             "3. Acceptance Criteria: ...'. Markdown headings "
             "like '## Goal', one-line specs with every label, and labels whose "
-            "body starts on the next line are not accepted."
+            "body starts on the next line are not accepted. Acceptance Criteria "
+            "commands must be CodeAct-safe repo-root commands: no cd, pipes, "
+            "redirects, 2>&1, head, or tail; prefer `-q --tb=short` over `-v`."
         ),
     )
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
@@ -607,7 +612,8 @@ class SubmitPlanTool(BaseTool):
         "on the same line: 1. Goal, 2. Task Details, "
         "3. Acceptance Criteria. Do not tell children to `cd /testbed`, run from "
         "`/testbed`, or wrap CodeAct commands with `2>&1`, redirects, `| head`, "
-        "or `| tail`. Use validator tasks when a distinct verification lane is useful. "
+        "or `| tail`; prefer `python -m pytest ... -q --tb=short` over `-v`. "
+        "Use validator tasks when a distinct verification lane is useful. "
         "Scope paths name implementation owner paths "
         "for developer/planner lanes and production paths being verified for "
         "validator lanes; use repo-relative paths, not `/testbed/...` prefixes; "

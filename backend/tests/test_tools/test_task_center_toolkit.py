@@ -337,6 +337,14 @@ def test_read_task_details_schema_requires_single_task_id():
     assert schema["additionalProperties"] is False
 
 
+def test_read_task_details_description_orders_header_reads_before_graph():
+    description = ReadTaskDetailsTool().to_api_schema()["description"]
+
+    assert "must read their prompt header ids first" in description
+    assert "then may use read_task_graph" in description
+    assert "may use read_task_graph first" not in description
+
+
 def test_read_task_details_parse_rejects_task_ids_list():
     result = parse_tool_input(
         ReadTaskDetailsTool(),
@@ -442,4 +450,3 @@ async def test_read_task_details_labels_initial_plan_and_replan_json():
     assert "**Summary:**\ndev-1 delivered parser retry behavior." in result.output
     assert "### team_planner [initial_planned_tasks]" not in result.output
     assert "### team_replanner [initial_replanned_tasks]" not in result.output
-

@@ -125,6 +125,17 @@ def test_team_root_planner_playbook_uses_plural_task_details_label() -> None:
     assert "`Task Detail`" not in skill
 
 
+def test_team_root_planner_playbook_requires_codeact_safe_commands() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Write CodeAct-safe verification commands" in skill
+    assert "no `cd`, `|`, `>`, `2>&1`, `head`, or `tail`" in skill
+    assert "prefer `python -m pytest ... -q --tb=short` over `-v`" in skill
+    assert "Every child/validator command is CodeAct-safe" in skill
+
+
 def test_team_validator_playbook_uses_developer_style_contract() -> None:
     validator_dir = _BUNDLED_SKILLS_DIR / "team-validator-playbook"
     skill = (validator_dir / "SKILL.md").read_text(encoding="utf-8")
@@ -144,3 +155,103 @@ def test_team_validator_playbook_uses_developer_style_contract() -> None:
     assert reference_files == []
     assert "load_skill_reference" not in skill
     assert "## Conditional references" not in skill
+
+
+def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
+    allowed = {"scope_expansion", "wrong_owner_or_role", "unresolved_blocker"}
+    banned = {
+        "dependency_handoff_gap",
+        "diagnostic_failure",
+        "verification_failure",
+        "invalid_command",
+        "unmet_acceptance",
+        "outside_scope",
+        "repair_not_local",
+        "investigation_blocker",
+        "too_complex_or_out_of_scope",
+        "`none`",
+    }
+    for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
+        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        for trigger in allowed:
+            assert trigger in skill
+        for trigger in banned:
+            assert trigger not in skill
+
+
+def test_developer_playbook_allows_new_file_scope_expansion_only_via_posthook() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "`scope_paths` are the assigned edit surface for existing files" in skill
+    assert "You may widen reads, diagnostics, and test commands" in skill
+    assert "Acceptance criteria and test outcomes never expand `scope_paths` by themselves" in skill
+    assert "A new production file may extend scope only through `daytona_write_file`" in skill
+    assert "no other worker owns that exact path" in skill
+    assert (
+        "The next required change is an existing out-of-scope edit, move, rename, or delete."
+        in skill
+    )
+    assert (
+        "new production file whose `daytona_write_file` scope expansion was blocked or conflicted."
+        in skill
+    )
+    assert (
+        "Before every mutation, verify the target file path, source path, destination path, or rename file hint"
+        in skill
+    )
+    assert "For a new production file required by live evidence, use `daytona_write_file`" in skill
+    assert "If an existing-file mutation is outside scope or the posthook blocks expansion" in skill
+    assert "with trigger `scope_expansion`" in skill
+    assert (
+        "Do not create missing modules, shims, re-exports, or bridges unless live production evidence requires them"
+        in skill
+    )
+    assert (
+        "The next required edit is outside `scope_paths`, even when production evidence proves that path is required."
+        not in skill
+    )
+
+
+def test_developer_and_validator_playbooks_rewrite_verbose_codeact_commands() -> None:
+    for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
+        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        assert "prefer `-q --tb=short` over `-v`" in skill.lower()
+        assert "For first-failure capture, use `-x`, a focused node id, `-k`, or split suites" in skill
+        assert "A sanitizer advisory is not a failure" in skill
+        assert "cite the sanitized command that actually ran" in skill
+        assert "rewrite it to a workflow-valid equivalent before retrying" in skill
+        assert "only when no valid equivalent can preserve the needed evidence" in skill
+        assert "A pre-hook block after sanitization or another policy denial is terminal tooling evidence" not in skill
+        assert "CodeAct-safe" in skill or "direct repo-root commands" in skill
+        assert "Do not put shell, build, or test commands in `code`; `code` is Python source only." in skill
+        assert "never pass a shell command string in `code`" in skill
+
+
+def test_validator_playbook_routes_out_of_scope_corrections_to_replan() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-validator-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "The only apparent correction would edit, move, rename, or delete an existing file" in skill
+    assert "Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths`" in skill
+    assert "by themselves" in skill
+    assert "A new production file may extend scope only through `daytona_write_file`" in skill
+    assert (
+        "new production file whose `daytona_write_file` scope expansion was blocked or conflicted"
+        in skill
+    )
+    assert (
+        "Before every mutation, verify the target file is inside an assigned `scope_paths` entry"
+        in skill
+    )
+    assert "For a new production file required by live evidence, use `daytona_write_file`" in skill
+    assert "If an existing-file mutation is outside scope or the posthook blocks expansion" in skill
+    assert "with trigger `scope_expansion`" in skill

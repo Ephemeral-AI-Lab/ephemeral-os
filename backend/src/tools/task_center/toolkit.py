@@ -382,13 +382,10 @@ class ReadTaskDetailsTool(BaseTool):
     description = (
         "Read full details for one known task id: spec, deps, status, "
         "scope_paths, failure reason, completion summary, and recent notes. "
-        "Input must be exactly {'task_id': '<uuid>'}. "
-        "Non-root developers, validators, child planners, and replanners use "
-        "this for the ids exposed in their prompt headers and dependencies. "
-        "Do not use this for scout/subagent results: they are background work, "
-        "not Task Center tasks, and their handoff is retrieved with "
-        "read_file_note. Child planners and replanners may use read_task_graph "
-        "first to enumerate siblings."
+        "Input must be exactly {'task_id': '<uuid>'}. Non-entry developers, "
+        "validators, child planners, and replanners must read their prompt "
+        "header ids first, then may use read_task_graph for graph-wide "
+        "orientation."
     )
     short_description = "Read one task's details + recent notes by ID."
     input_model = ReadTaskDetailsInput

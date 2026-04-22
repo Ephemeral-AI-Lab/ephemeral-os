@@ -1,7 +1,7 @@
 """Wire a real team run over a provisioned SWE-EVO sandbox.
 
 Drives :class:`team.runtime.team_run.TeamRun` with the builtin
-``team_planner`` / ``developer`` / ``validator`` agents from
+``root_planner`` / ``team_planner`` / ``developer`` / ``validator`` agents from
 ``team.builtins``. Each Task's agent is spawned through
 :func:`engine.runtime.agent.spawn_agent` so it runs with its full
 production tool surface (``sandbox_operations``, ``code_intelligence``,
@@ -95,15 +95,33 @@ def _load_or_create_team_definition(
     *,
     team_name: str = _SWEEVO_TEAM_NAME,
 ) -> TeamDefinition:
-    """Load the sweevo team definition from the DB, seeding from the file
-    registry on first run. Raises if neither source provides the definition."""
+    """Load the sweevo team definition, preferring checked-in builtins.
+
+    The benchmark should run against the current built-in team contract. Older
+    DB rows can predate root_planner and must not shadow the file definition.
+    Custom team names still resolve through the DB when no built-in is loaded.
+    """
     from team.registry import get_team_definition
 
     store = TeamDefinitionStore()
     store.initialize(session_factory)  # type: ignore[arg-type]
     file_defn = get_team_definition(team_name)
     if file_defn is not None:
-        return store.seed_builtin(file_defn)  # dual-write, idempotent
+        seeded = store.seed_builtin(file_defn)  # dual-write, idempotent
+        if (
+            seeded.entry_planner != file_defn.entry_planner
+            or seeded.roster != file_defn.roster
+            or seeded.terminal_tools != file_defn.terminal_tools
+        ):
+            logger.warning(
+                "Ignoring stale DB team definition %s: db entry_planner=%s, "
+                "builtin entry_planner=%s",
+                team_name,
+                seeded.entry_planner,
+                file_defn.entry_planner,
+            )
+            return file_defn
+        return seeded
     existing = store.get_by_name(team_name)
     if existing is not None:
         return existing

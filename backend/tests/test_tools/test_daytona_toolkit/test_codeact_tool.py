@@ -447,34 +447,6 @@ async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
             ],
         ),
         (
-            "printf x > dask/core.py",
-            [
-                "CodeAct policy error: commands must not contain",
-                "`daytona_codeact` already captures stdout/stderr",
-            ],
-        ),
-        (
-            "pytest 2>/tmp/errors.log",
-            [
-                "CodeAct policy error: commands must not contain",
-                "`daytona_codeact` already captures stdout/stderr",
-            ],
-        ),
-        (
-            "printf x >/dev/null.log",
-            [
-                "CodeAct policy error: commands must not contain",
-                "`daytona_codeact` already captures stdout/stderr",
-            ],
-        ),
-        (
-            "printf x | tee dask/core.py",
-            [
-                "CodeAct policy error: commands must not contain",
-                "`daytona_codeact` already captures stdout/stderr",
-            ],
-        ),
-        (
             "mv dask/core.py dask/new_core.py",
             [
                 "BLOCKED: daytona_codeact is for runtime commands",
@@ -537,15 +509,32 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
 
 
 @pytest.mark.parametrize(
-    "command",
+    ("command", "sanitized"),
     [
-        "find . -maxdepth 1 -type f 2>/dev/null|head -n 1",
-        "files=$(find . -name '*.py' 2>/dev/null); printf '%s\\n' \"$files\"",
-        "command -v rg >/dev/null 2>&1; echo ok",
-        "optional-probe &>/dev/null",
+        (
+            "find . -maxdepth 1 -type f 2>/dev/null|head -n 1",
+            "find . -maxdepth 1 -type f",
+        ),
+        (
+            "files=$(find . -name '*.py' 2>/dev/null); printf '%s\\n' \"$files\"",
+            "files=$(find . -name '*.py'); printf '%s\\n' \"$files\"",
+        ),
+        (
+            "files=$(find . -name '*.py' 2>/dev/null | head -1); printf '%s\\n' \"$files\"",
+            "files=$(find . -name '*.py'); printf '%s\\n' \"$files\"",
+        ),
+        ("command -v rg >/dev/null 2>&1; echo ok", "command -v rg ; echo ok"),
+        ("optional-probe &>/dev/null", "optional-probe"),
+        ("printf x > dask/core.py", "printf x"),
+        ("pytest 2>/tmp/errors.log", "pytest"),
+        ("printf x >/dev/null.log", "printf x"),
+        ("printf x | tee dask/core.py", "printf x"),
     ],
 )
-async def test_team_shell_mode_blocks_output_pipeline_before_stderr_suppression(command):
+async def test_team_shell_mode_sanitizes_output_pipeline_before_exec(
+    command,
+    sanitized,
+):
     sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     svc = _ci_service()
     ctx = _ctx(
@@ -559,21 +548,22 @@ async def test_team_shell_mode_blocks_output_pipeline_before_stderr_suppression(
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_codeact,
         {"command": command},
         ctx,
     )
 
-    assert result.is_error
-    assert "CodeAct policy error: commands must not contain" in result.output
-    assert "`daytona_codeact` already captures stdout/stderr" in result.output
-    svc.cmd.assert_not_awaited()
-    sb.process.exec.assert_not_awaited()
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["command"] == sanitized
+    texts = _notification_texts(events)
+    assert any("sanitized CodeAct command" in text for text in texts)
+    svc.cmd.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
 
 
-async def test_team_python_mode_blocks_output_pipeline_before_stderr_suppression():
-    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
+async def test_team_python_mode_sanitizes_output_pipeline_before_exec():
+    sb = _make_sandbox()
     svc = _ci_service()
     ctx = _ctx(
         {
@@ -586,17 +576,17 @@ async def test_team_python_mode_blocks_output_pipeline_before_stderr_suppression
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_codeact,
         {"code": 'shell("find . -name *.py 2>/dev/null")'},
         ctx,
     )
 
-    assert result.is_error
-    assert "CodeAct policy error: commands must not contain" in result.output
-    assert "`daytona_codeact` already captures stdout/stderr" in result.output
-    svc.cmd.assert_not_awaited()
-    sb.process.exec.assert_not_awaited()
+    _assert_ok(result)
+    texts = _notification_texts(events)
+    assert any("sanitized CodeAct command" in text for text in texts)
+    svc.cmd.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
 
 
 @pytest.mark.parametrize(
@@ -1123,7 +1113,7 @@ async def test_coordinated_python_mode_blocks_os_process_wrappers_before_runtime
         assert sb.process.exec.await_count >= 1
 
 
-async def test_shell_mode_blocks_legacy_cd_and_stderr_merge_for_team_agents():
+async def test_shell_mode_sanitizes_legacy_cd_and_stderr_merge_for_team_agents():
     sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     svc = _ci_service()
     ctx = _ctx(
@@ -1141,16 +1131,15 @@ async def test_shell_mode_blocks_legacy_cd_and_stderr_merge_for_team_agents():
         ctx,
     )
 
-    assert result.is_error
-    assert "CodeAct policy error: commands must not contain" in result.output
-    assert "leading `cd /testbed &&`" in result.output
-    svc.cmd.assert_not_awaited()
-    sb.process.exec.assert_not_awaited()
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    svc.cmd.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
     texts = _notification_texts(events)
-    assert not any("pre-hook advisory" in text for text in texts)
+    assert any("sanitized CodeAct command" in text for text in texts)
 
 
-async def test_python_mode_blocks_legacy_shell_calls_for_team_agents():
+async def test_python_mode_sanitizes_legacy_shell_calls_for_team_agents():
     original_code = 'shell("cd /testbed && pytest tests/unit/test_x.py -q 2>&1")'
     sb = _make_sandbox()
     svc = _ci_service()
@@ -1169,10 +1158,8 @@ async def test_python_mode_blocks_legacy_shell_calls_for_team_agents():
         ctx,
     )
 
-    assert result.is_error
-    assert "CodeAct policy error: commands must not contain" in result.output
-    assert "leading `cd /testbed &&`" in result.output
-    svc.cmd.assert_not_awaited()
-    sb.process.exec.assert_not_awaited()
+    _assert_ok(result)
+    svc.cmd.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
     texts = _notification_texts(events)
-    assert not any("pre-hook advisory" in text for text in texts)
+    assert any("sanitized CodeAct command" in text for text in texts)

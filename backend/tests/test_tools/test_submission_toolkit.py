@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from tools.submission.toolkit import SubmitTaskSummaryTool
+from tools.submission.toolkit import SubmitPlanTool, SubmitTaskSummaryTool
 
 
 def test_submit_task_summary_rejects_whitespace_only_content():
@@ -20,3 +20,15 @@ def test_submit_task_summary_schema_requests_evidence_rich_content():
     assert "Evidence-rich terminal summary" in content_desc
     assert "verification commands and outcomes" in content_desc
     assert "affected paths or owners" in content_desc
+
+
+def test_submit_plan_schema_requires_codeact_safe_verification_commands():
+    schema = SubmitPlanTool().to_api_schema()
+    description = schema["description"]
+    spec_desc = schema["input_schema"]["$defs"]["NewTaskSpec"]["properties"]["spec"][
+        "description"
+    ]
+
+    assert "prefer `python -m pytest ... -q --tb=short` over `-v`" in description
+    assert "Acceptance Criteria commands must be CodeAct-safe" in spec_desc
+    assert "prefer `-q --tb=short` over `-v`" in spec_desc
