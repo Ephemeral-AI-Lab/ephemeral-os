@@ -7,13 +7,13 @@ description: Playbook for the root_planner agent. Analyze the user request, scou
 
 Produce the root task DAG from the user request. Finish with exactly one `submit_plan(...)` call.
 
-The root planner routes top-down. Identify owner families, delegate broad or clustered decomposition to child `team_planner` lanes when depth allows, and reserve direct `developer` lanes for narrow exact-owner work.
+The root planner routes top-down. Identify owner families, delegate broad or clustered decomposition to child `team_planner` lanes, and reserve direct `developer` lanes for narrow exact-owner work.
 
 ## Workflow Map
 
 | Stage | Purpose | Output contract |
 | --- | --- | --- |
-| 1. Analyze | Classify the request, read depth, and build an owner ledger. | Clear owners, unresolved owners, verification evidence, and whether child planners are allowed. |
+| 1. Analyze | Classify the request and build an owner ledger. | Clear owners, unresolved owners, and verification evidence. |
 | 2. Scout | Resolve unresolved production ownership only. | Scout notes or explicit uncertainty for each launched target. |
 | 3. Synthesize and submit | Convert evidence into a schema-valid same-payload DAG and emit the terminal payload. | One `submit_plan({ "new_tasks": [...] })` call and no later tools. |
 
@@ -55,7 +55,7 @@ User request
 
 Loadable reference used in Stage 3 via `load_skill_reference(skill_name="team-root-planner-playbook", reference_name="...")`:
 
-- `synthesize-and-submit`: depth rules, clustering and lane selection, coverage/evidence rules, `submit_plan` contract plus `NewTaskSpec` field table, task-spec examples for `developer`, `team_planner`, and `validator`, and dependency DAG examples with rationale. Load in Stage 3 before drafting any `submit_plan(...)` payload.
+- `synthesize-and-submit`: clustering and lane selection, coverage/evidence rules, `submit_plan` contract plus `NewTaskSpec` field table, valid and invalid payload examples, task-spec examples for `developer`, `team_planner`, and `validator`, and dependency DAG examples with rationale. Load in Stage 3 before drafting any `submit_plan(...)` payload.
 
 ## Workflow Details
 
@@ -64,7 +64,7 @@ Loadable reference used in Stage 3 via `load_skill_reference(skill_name="team-ro
 | Section | Contract |
 | --- | --- |
 | **Input** | User request. |
-| **Output** | Owner ledger split into `{ clear, unresolved, evidence }`, child-planner depth availability, plus any clustering signal. Every requested slice is classified as a clear owner, an unresolved owner, or verification evidence for `spec`. |
+| **Output** | Owner ledger split into `{ clear, unresolved, evidence }`, plus any clustering signal. Every requested slice is classified as a clear owner, an unresolved owner, or verification evidence for `spec`. |
 | **Forbidden** | Patching, validating, or reading production files yourself; guessing owners from benchmark imports, filename similarity, or directory listings; treating test-edit / skip / xfail / pytest-reconfiguration as owners. |
 
 #### Steps
@@ -77,8 +77,7 @@ Loadable reference used in Stage 3 via `load_skill_reference(skill_name="team-ro
     Classify intent (bugfix | refactor | feature | migration | benchmark | mixed)
     and raise a clustering flag when the request spans many failing tests,
     several production families, or an engine/dtype/format/API matrix under
-    one broad subsystem. Read the Planning depth section in your prompt and
-    record whether `current_depth + 2 <= max_depth`.
+    one broad subsystem.
     |
     v
 (2) Partition evidence vs ownership         -> reason only
@@ -158,18 +157,16 @@ Launch scouts only for owner information that changes root routing. Do not scout
 [owner ledger + scout notes + uncertainty]
     |
     v
-(1) Apply the Routing Rules                 -> reason only
-    Load the synthesize-and-submit reference and use its Depth Gate,
-    Clustering, Lane Selection, and Dependency DAG rules to decide which
-    slices go to developer, team_planner, or validator and how they connect.
-    Merge user evidence, CI checks, and scout notes (with uncertainty) as
-    you decide.
-    |
-    v
-(2) Draft tasks, loading reference on demand
-                                            -> load_skill_reference(
+(1) Load synthesis reference                -> load_skill_reference(
                                                   skill_name="team-root-planner-playbook",
                                                   reference_name="synthesize-and-submit")
+    Use its Clustering, Lane Selection, and Dependency DAG rules to decide
+    which slices go to developer, team_planner, or validator and how they
+    connect. Merge user evidence, CI checks, and scout notes (with
+    uncertainty) as you decide.
+    |
+    v
+(2) Draft tasks                             -> reason only
     Draft each task with id, description, name, deps, scope_paths, and a
     `spec` structured as `1. Goal:`, `2. Task Details:` (owner evidence +
     constraints), `3. Acceptance Criteria:` (concrete verification). Follow

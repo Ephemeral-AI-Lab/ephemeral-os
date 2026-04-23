@@ -72,12 +72,15 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
         "action-cancel-and-redraft.md",
         "terminal-contract.md",
     }
-    assert len(skill.splitlines()) <= 170
+    assert len(skill.splitlines()) <= 260
     assert len(action_add.splitlines()) <= 50
     assert len(action_cancel.splitlines()) <= 45
     assert len(contract.splitlines()) <= 160
-    assert "## Workflow" in skill
-    assert "```mermaid" in skill
+    assert "## Workflow Map" in skill
+    assert "```mermaid" not in skill
+    assert "Decision flow:" in skill
+    assert "| Section | Contract |" in skill
+    assert "#### Steps" in skill
     assert "Reference Map" in skill
     assert "terminal-contract" in skill
     assert "Every branch must load the matching action reference and then `terminal-contract`" in skill
@@ -256,14 +259,41 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
 
     assert reference_names == {"synthesize-and-submit.md"}
     assert "## Reference Map" in skill
-    assert "`synthesize-and-submit`: field-content rules" in skill
+    assert "`synthesize-and-submit`: clustering and lane selection" in skill
+    assert "valid and invalid payload examples" in skill
+    assert "task-spec examples for `developer`, `team_planner`, and `validator`" in skill
+    assert "dependency DAG examples with rationale" in skill
     assert 'skill_name="team-root-planner-playbook"' in skill
     assert 'reference_name="synthesize-and-submit"' in skill
-    assert "Lookup reference loaded on demand in Stage 3" in reference
-    assert "## Coverage and Evidence Rules" in reference
+    assert "Load this reference in Stage 3 before drafting any `submit_plan(...)` payload" in reference
+    assert "## Synthesis Rules" in reference
     assert "## Submission Rules" in reference
     assert "## Terminal Tool Contract" in reference
-    assert "The Pre-submit Checklist lives in the playbook's Stage 3" in reference
+    assert "Root planner policy is stricter than the runtime minimum" in reference
+    assert "use only the built-in lane names `developer`, `team_planner`, and `validator`" in reference
+    assert "## Payload Examples" in reference
+    assert "### Complete Valid Root Payload" in reference
+    assert "submit_plan({" in reference
+    assert "id: \"val-root-team-runtime\"" in reference
+    assert "deps: [\"dev-task-center\", \"plan-team-runtime-cluster\"]" in reference
+    assert "### Invalid Payload Shapes" in reference
+    assert 'summary: "I made a plan."' in reference
+    assert 'parent_id: "root"' in reference
+    assert 'scope_paths: ["backend/tests/team/test_task_center.py"]' in reference
+    assert 'spec: "1. Goal:\\nRepair the owner.' in reference
+    assert "## TaskSpec Examples" in reference
+    assert "### Developer TaskSpec" in reference
+    assert "### Team Planner TaskSpec" in reference
+    assert "### Validator TaskSpec" in reference
+    assert "## Dependency DAG Examples" in reference
+    assert "### Parallel Fan-Out With Terminal Validator" in reference
+    assert "### Sequential Chain" in reference
+    assert "### Mixed Sequential And Parallel Work" in reference
+    assert "### Planner Output Gating Downstream Integration" in reference
+    assert "### Overlapping Scopes Without Scope-Hygiene Deps" in reference
+    assert "## Final Checklist" in reference
+    assert "## Case Examples" not in reference
+    assert "### Case " not in reference
 
 
 def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
@@ -293,21 +323,25 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
     assert "## Terminal Tool Contract" not in skill
     assert "The root planner routes top-down" in skill
     assert "delegate broad or clustered decomposition to child `team_planner` lanes" in skill
-    assert "Classify each slice on its own" in skill
-    assert "Clear owner names do not override clustering" in skill
-    assert "large test-matrix work" in skill
-    assert "When Stage 1 flagged a clustering signal" in skill
-    assert "include at least one child `team_planner`" in skill
+    assert "Lane Selection" in reference
+    assert "Clear owner names do not override a clustering signal" in reference
+    assert "large benchmark/test-matrix work" in reference
+    assert "### Clustering Guidance" in reference
+    assert "include at least one child `team_planner`" in reference
     assert (
-        "A clustering root with four or more independent `developer` lanes and no child `team_planner` is invalid"
-        in skill
+        "A clustering root payload with four or more independent `developer` lanes and no child `team_planner` is invalid"
+        in reference
     )
-    assert "current_depth" not in skill
-    assert "max_depth" not in skill
-    assert "**Expandable**" in skill
-    assert "cluster/family that must be decomposed below this root" in skill
+    assert (
+        "Broad, shared, clustered, multi-family, unresolved, benchmark, migration, compatibility, or large benchmark/test-matrix work"
+        in reference
+    )
     assert "Use child `team_planner` for broad decomposition" in reference
-    assert "### Case 2: Broad Cluster With Child Planner" in reference
+    assert "Depth Gate" not in reference
+    assert "current_depth" not in reference
+    assert "max_depth" not in reference
+    assert "## TaskSpec Examples" in reference
+    assert "## Dependency DAG Examples" in reference
 
 
 def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
@@ -328,15 +362,23 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
     assert "A clustering payload with four or more independent developer lanes and no child `team_planner` is invalid" in skill
     assert "even when scouts named plausible owners or files" in skill
     assert "Do not flatten those families into sibling developers at the current layer just because owner files are known" in skill
-    assert "Tasks submitted in your plan run at `current_depth + 1`" in skill
-    assert "When `current_depth + 2 <= max_depth`" in skill
-    assert "When `current_depth + 2 > max_depth`" in skill
-    assert "emit direct `developer` and `validator` tasks with broader scopes instead" in skill
     assert (
         "Use another child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration"
         in skill
     )
     assert "route the uncertainty to another child `team_planner`" in skill
+    assert "max_depth" not in skill
+    assert "current_depth" not in skill
+    assert "Depth rules" not in skill
+    assert "## Workflow Map" in skill
+    assert "## Reference Map" in skill
+    assert "```mermaid" not in skill
+    assert "Decision flow:" in skill
+    assert "| Section | Contract |" in skill
+    assert "#### Steps" in skill
+    assert "load submit-child-plan" in skill
+    assert 'skill_name="team-planner-playbook"' in skill
+    assert 'reference_name="submit-child-plan"' in skill
 
 
 def test_team_planner_playbook_requires_fail_to_pass_coverage_owners() -> None:
@@ -369,6 +411,13 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
     planner_skill = (
         _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
+    planner_reference = (
+        _BUNDLED_SKILLS_DIR
+        / "team-planner-playbook"
+        / "references"
+        / "submit-child-plan.md"
+    ).read_text(encoding="utf-8")
+    planner_content = f"{planner_skill}\n{planner_reference}"
     root_planner_skill = (
         _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
@@ -389,7 +438,7 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
         / "completion-contract.md"
     ).read_text(encoding="utf-8")
 
-    for skill in (planner_skill, root_planner_content):
+    for skill in (planner_content, root_planner_content):
         assert (
             "If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, or a verification-only path, do not launch"
             in skill
@@ -415,17 +464,21 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
         assert "pytest configuration" in skill
 
 
-def test_team_validator_playbook_uses_developer_style_contract() -> None:
+def test_team_validator_playbook_uses_root_planner_style_contract() -> None:
     validator_dir = _BUNDLED_SKILLS_DIR / "team-validator-playbook"
     skill = (validator_dir / "SKILL.md").read_text(encoding="utf-8")
     reference_files = list((validator_dir / "references").glob("*.md"))
 
-    assert "## Route" in skill
-    assert "```mermaid" in skill
-    assert "## 1. Read task details" in skill
-    assert "## 2. Build validation plan" in skill
-    assert "## 3. Run diagnostics and exact verification" in skill
-    assert "## 6. Submit terminal summary" in skill
+    assert "## Workflow Map" in skill
+    assert "Decision flow:" in skill
+    assert "## Workflow Details" in skill
+    assert "| Section | Contract |" in skill
+    assert "#### Steps" in skill
+    assert "```mermaid" not in skill
+    assert "### 1. Read task details" in skill
+    assert "### 2. Build validation plan" in skill
+    assert "### 3. Run diagnostics and exact verification" in skill
+    assert "### 6. Submit terminal summary" in skill
     assert "submit_task_summary({" in skill
     assert 'type: "success" | "request_replan"' in skill
     assert "content: string" in skill
@@ -434,6 +487,42 @@ def test_team_validator_playbook_uses_developer_style_contract() -> None:
     assert reference_files == []
     assert "load_skill_reference" not in skill
     assert "## Conditional references" not in skill
+
+
+def test_team_developer_playbook_uses_root_planner_style_contract() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "## Workflow Map" in skill
+    assert "Decision flow:" in skill
+    assert "## Workflow Details" in skill
+    assert "| Section | Contract |" in skill
+    assert "#### Steps" in skill
+    assert "```mermaid" not in skill
+    assert "### 1. Read task details" in skill
+    assert "### 2. Plan" in skill
+    assert "### 3. Implement" in skill
+    assert "### 4. Verify" in skill
+    assert "### 5. Root cause analysis" in skill
+    assert "### 6. Submit terminal summary" in skill
+    assert "submit_task_summary({" in skill
+    assert 'type: "success" | "request_replan"' in skill
+    assert "content: string" in skill
+
+
+def test_developer_and_validator_playbooks_do_not_include_depth_gate_policy() -> None:
+    for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
+        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        assert "Depth Gate" not in skill
+        assert "Planning depth" not in skill
+        assert "current_depth" not in skill
+        assert "max_depth" not in skill
+        assert "child_depth" not in skill
+        assert "grandchild_depth" not in skill
 
 
 def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
