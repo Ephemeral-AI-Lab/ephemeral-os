@@ -563,9 +563,14 @@ async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypa
         "first assistant message that calls tools may contain only the required "
         "`read_file_note(...)` calls"
     ) in captured["prompt"]
+    assert (
+        "after the note reads use at most one file-path `ci_query_symbol(...)` "
+        "per assigned path"
+    ) in captured["prompt"]
     assert "stay read-free and post `submit_file_note(...)` from CI evidence" in captured["prompt"]
     assert "stop after that bootstrap result and post `submit_file_note(...)`" in captured["prompt"]
     assert "do not fan out into generic symbol hunts like helper names, test names, or literals" in captured["prompt"]
+    assert "do not call `ci_workspace_structure(...)` or extra symbol/test queries" in captured["prompt"]
     assert "do not query benchmark tests, parametrized ids, helper names, or adjacent files" in captured["prompt"]
     assert "submit_task_note" not in captured["prompt"]
     assert "exact-file and short fixed-file scouts stay read-free" in captured["prompt"]

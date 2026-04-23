@@ -62,7 +62,7 @@ Any No means the load is premature. Stay in Stage 1 or Stage 2 and do not load t
 | Inspect topology | Call `read_task_graph()` for dependency topology only; do not read sibling task details from graph output. |
 | Classify intent | Mark bugfix, refactor, feature, migration, or mixed; raise a clustering flag for many failing tests, several production families, or a matrix under one broad subsystem. |
 | Build owner ledger | Group inherited owner slices, unresolved owner slices, dependency outputs, and evidence to pass to children. |
-| Mark scout-required | For inherited benchmark/fail-to-pass/migration/compatibility clusters, put each broad family, matrix family, or likely expandable first-pass owner in `scout_required`; failure signal: only unknown families are scouted while clear-looking families enter synthesis with no live scout evidence. |
+| Mark scout-required | For inherited benchmark/fail-to-pass/migration/compatibility clusters, put each broad family, matrix family, or likely expandable first-pass owner in `scout_required`; failure signal: only unknown families are scouted while clear-looking families enter synthesis with no live scout evidence. For a restructured package/directory scope with multiple plausible owner files, keep the slice `scout_required`; do not assign sibling-file owners from failing test names, backend labels, or file-name affinity alone. |
 
 Keep `2. Task Details:` wording intact when carrying parent or dependency context. The output of this stage is an owner ledger plus any clustering signal; `scout_required` and unresolved slices drive Stage 2, and empty `scout_required` plus unresolved groups route straight to Stage 3.
 
@@ -70,7 +70,7 @@ Keep `2. Task Details:` wording intact when carrying parent or dependency contex
 
 | Step | Action |
 | --- | --- |
-| Shape wave | Launch one scout per `scout_required` or unresolved production owner family with `target_paths: ["<one production owner path>"]`. Split target paths from different owner-ledger rows into separate calls in the same wave; for a package family, use one directory path rather than several sibling files. Keep tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`, not `target_paths`. |
+| Shape wave | Launch one scout per `scout_required` or unresolved production owner family with `target_paths: ["<one production owner path>"]`. Split target paths from different owner-ledger rows into separate calls in the same wave; for a package family, use one directory path rather than several sibling files. Keep tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`, not `target_paths`. For restructured package/directory scopes, do not route `core.py`/`arrow.py`-style sibling ownership from test parameters or backend names before live scout evidence names that file. |
 | Launch and supervise | Fire every useful scout before polling. Poll while scouts are `running`; cancel halted, blocked, off-scope, or unchanged scouts and carry that slice as explicit uncertainty. |
 | Harvest notes | Read every available note for exact launched target paths. On cold CI, canceled scouts, or disproved exact files, fall back to the nearest stable production boundary. |
 

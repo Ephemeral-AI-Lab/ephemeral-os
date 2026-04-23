@@ -16,6 +16,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 - Must inspect only and use CI/Task Center tools only.
 - First tool phase after reading the assigned payload: call `read_file_note(file_path="...")` for each assigned target path, even when the result is empty. Do not call `ci_workspace_structure(...)`, `ci_query_symbol(...)`, `ci_diagnostics(...)`, or any source-read tool until every assigned target note has been read.
 - The first assistant message that calls tools may contain only the required `read_file_note(...)` calls. Do not batch a CI/query/source tool in the same first tool message as those note reads.
+- For a single-file or short fixed file-list scout, after the note reads use at most one file-path `ci_query_symbol(...)` per assigned path. If those queries return definitions for every assigned path, the next tool must be `submit_file_note(...)`; do not call `ci_workspace_structure(...)` or extra symbol hunts unless a target stayed cold.
 - After the required file-note reads, prefer `ci_workspace_structure(...)`, `ci_query_symbol(...)`, and `ci_diagnostics(...)` before any raw source read.
 - Must call exactly one `submit_file_note(...)` after evidence collection and before any final response. The tool input must include non-empty `content`.
 - If a prompt lists `final_response` because scout notes are prompt-mandated instead of runtime-terminal, treat it only as an optional post-note acknowledgment. Never use final prose instead of `submit_file_note(...)`.
@@ -31,7 +32,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 1. Read the task payload before the first exploration tool call.
 2. Read existing notes for every assigned `target_paths` entry. This is the required first tool phase.
 3. Enumerate only the assigned `target_paths`.
-4. For directories or packages, map boundaries with CI after notes are read; for exact files, use symbol evidence after notes are read and before any raw source read.
+4. For directories or packages, map boundaries with CI after notes are read; for exact files, use one file-path `ci_query_symbol(...)` per assigned path after notes are read, and if every exact path returns definitions stop and post the note instead of continuing to other CI exploration.
 5. If a target is a benchmark test path and tests are not the explicit owner surface, inspect only the bounded snippet needed to understand failure semantics, then post the production-owner evidence or gap.
 6. If a target is missing or an exact file is disproved by a directory/nested-file structure result, keep it missing and report the gap instead of suggesting a nearby replacement as scope.
 7. Stop as soon as a downstream worker could act without reopening the same scope.

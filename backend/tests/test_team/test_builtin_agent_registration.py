@@ -38,6 +38,17 @@ def test_team_planner_prompt_loads_playbook_before_planning_tools() -> None:
     assert 'load_skill(skill_name="team-planner-playbook")' in defn.system_prompt
     assert "before your first code-intelligence" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
+    assert "restructured package/directory with multiple plausible owner files" in defn.system_prompt
+    assert "do not route sibling ownership from failing test names" in defn.system_prompt
+
+
+def test_developer_prompt_requires_live_path_proof_for_new_modules() -> None:
+    defn = get_definition(DEVELOPER)
+    assert defn is not None
+    assert defn.system_prompt is not None
+    assert "Do not create missing modules, shims, bridges, or re-exports" in defn.system_prompt
+    assert "failing test imports, grep hits, or similarly named sibling paths alone" in defn.system_prompt
+    assert "replan instead of writing it" in defn.system_prompt
 
 
 def test_team_replanner_prompt_loads_playbook_before_planning_tools() -> None:
@@ -71,6 +82,8 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "prefer child planners even when the first-pass owner labels are clear" in defn.system_prompt
     assert "For clustering jobs, include at least one child `team_planner`" in defn.system_prompt
     assert "not multi-cluster benchmark repair" in defn.system_prompt
+    assert "exactly one production owner path in `target_paths`" in defn.system_prompt
+    assert "Never bundle two files/directories into one scout" in defn.system_prompt
 
 
 def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
@@ -78,6 +91,7 @@ def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
     assert defn is not None
     assert defn.system_prompt is not None
     assert 'load_skill(skill_name="team-scout-playbook")' in defn.system_prompt
+    assert 'load_skill_reference(skill_name="team-scout-playbook", reference_name="completion-contract")' in defn.system_prompt
     assert "before your first Task Center or code-intelligence tool call" in defn.system_prompt
     assert "first assistant message that calls tools may contain only `read_file_note" in defn.system_prompt
     assert "stop after exact-file CI evidence" in defn.system_prompt

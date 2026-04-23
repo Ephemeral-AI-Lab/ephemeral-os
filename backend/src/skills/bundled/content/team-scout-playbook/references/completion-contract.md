@@ -16,6 +16,8 @@ Use this reference only when `target_paths` is a single file or a short fixed fi
 ## Workflow
 
 - Must keep the handed scope itself as the deliverable.
+- For a single-file or short fixed file-list scout, use at most one file-path `ci_query_symbol(...)` per assigned path after the note reads. If those queries return definitions for every assigned path, the next tool must be `submit_file_note(...)`.
+- If exact-file bootstrap definitions exist, do not call `ci_workspace_structure(...)` or extra symbol/test queries just to elaborate the same seam; record any unresolved question under `Gaps`.
 - The Task Center note is the durable handoff. Make exactly one `submit_file_note(...)` call with non-empty `content`; do not put the handoff only in visible prose.
 - If the tool result returns and a final response is required, reply only `Posted.` and do not repeat the findings.
 - The note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`.

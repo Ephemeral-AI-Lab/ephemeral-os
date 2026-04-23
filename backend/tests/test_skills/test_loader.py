@@ -323,6 +323,8 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "one broad scout bundles unrelated families" in skill
     assert "HDF scout + parquet scout + CLI scout + config scout" in skill
     assert "CLI/config scout" not in skill
+    assert "Small-cluster merge gate" in skill
+    assert "groupby with JSON, config with compatibility" in skill
     assert "Same-test-family split gate" in skill
     assert "same test file or benchmark cluster" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
@@ -532,6 +534,8 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
             "newly-revealed distinct owner slice: carry as uncertainty",
+            "restructured package/directory scope with multiple plausible owner files",
+            "do not assign sibling-file owners from failing test names, backend labels, or file-name affinity alone",
         ),
     )
     _assert_absent(
@@ -709,6 +713,10 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
         assert "skipping" in skill
         assert "xfail" in skill
         assert "pytest configuration" in skill
+
+    assert "use at most one file-path `ci_query_symbol(...)` per assigned path" in scout_skill
+    assert "the next tool must be `submit_file_note(...)`" in scout_skill
+    assert "do not call `ci_workspace_structure(...)` or extra symbol/test queries" in scout_contract
 
 
 def test_team_validator_playbook_uses_root_planner_style_contract() -> None:
@@ -905,6 +913,14 @@ def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> N
     assert "with trigger `scope_expansion`" in skill
     assert (
         "Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism"
+        in skill
+    )
+    assert (
+        "A failing test import, grep hit, or similarly named sibling path is still test-only or consumer-only evidence"
+        in skill
+    )
+    assert (
+        "If only tests or downstream consumers import a missing path, request replan unless a live production import or explicit assignment proves that path is the repair location."
         in skill
     )
     assert (
