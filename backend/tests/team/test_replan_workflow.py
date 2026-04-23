@@ -139,6 +139,7 @@ async def test_submit_replan_inserts_new_tasks_as_replanner_children():
                     "scope_paths": ["src/a.py"],
                 },
             ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -296,7 +297,8 @@ async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
                     "deps": ["downstream"],
                     "scope_paths": ["src/a.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )

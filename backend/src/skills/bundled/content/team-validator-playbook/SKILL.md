@@ -29,6 +29,7 @@ Read the following sections to verify the assigned developer or child-planner ou
 6. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
 7. Do not claim success from stale, partial, indirect, or wrapper evidence.
 8. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`.
+9. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...`. Those commands are invalid verification evidence.
 
 ## Route
 
@@ -94,7 +95,8 @@ Prove the current repo state.
 5. Use CodeAct only for runtime commands.
 6. For broad or slow suites, use background execution, continue useful foreground review, and check progress only when live status changes whether you wait, cancel, or report.
 7. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
-8. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
+8. A command that suppresses warnings, disables plugins, or overrides pytest configuration is red evidence unless the task explicitly owns pytest configuration itself. Re-run the raw required command, repair the production import/config mechanism when in scope, or request replanning.
+9. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 
 Exit with: command/probe results mapped to criteria, diagnostics status, guardrail result when applicable, and red evidence when present. Green evidence for every acceptance criterion → Stage 6 (`type="success"`). Any red, invalid, partial, unmet, or absent evidence → Stage 4.
 
@@ -198,4 +200,4 @@ For `type="request_replan"`, `content` must include:
 
 Use `scope_expansion` when the verified repair is outside the assigned `scope_paths`. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before validation can pass. Use `unresolved_blocker` when verification, diagnostics, tooling, or root-cause tracing is still blocked but no different owner/scope is proven.
 
-Use `type="success"` only when the latest required verification passed and every acceptance criterion is satisfied by workflow-valid evidence. Use `type="request_replan"` for any nonzero command, error diagnostic, invalid command, missing command, collection failure, partial pass, unmet criterion, ambiguous root cause, outside-scope fix, non-local repair, stale evidence, or summary that would otherwise say "partial".
+Use `type="success"` only when the latest required verification passed and every acceptance criterion is satisfied by workflow-valid evidence. Use `type="request_replan"` for any nonzero command, error diagnostic, invalid command, pytest-config-overridden command, missing command, collection failure, partial pass, unmet criterion, ambiguous root cause, outside-scope fix, non-local repair, stale evidence, or summary that would otherwise say "partial".

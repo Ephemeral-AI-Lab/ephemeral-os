@@ -10,6 +10,7 @@ Use this reference only when `target_paths` is a single file or a short fixed fi
 
 - Never subdivide a single file just because it is long; only name real seams the downstream planner should schedule.
 - Never turn an off-policy benchmark test target into path correction work; report that the planner should scout the production owner path instead.
+- Never prescribe skipping, xfail-marking, rewriting, or reconfiguring benchmark tests, benchmark harness files, or pytest configuration; report dependency, optional-extra, environment, or production-owner evidence as a hypothesis or gap instead.
 - Never claim code was created, fixed, patched, or refactored.
 
 ## Workflow

@@ -30,6 +30,9 @@ def test_tc_note_prompts_reference_submit_task_note() -> None:
         assert "Do not write visible analysis" in prompt
         assert "the note text belongs in the tool's `content` field" in prompt
         assert "Valid input JSON" in prompt
+        assert "Never call the tool with `{}`" in prompt
+        assert "Before calling, self-check" in prompt
+        assert "Never send an empty JSON object" in prompt
         assert "tool input that omits `content`" in prompt
         assert "submit_task_note({})" not in prompt
 
@@ -216,6 +219,7 @@ def test_build_tc_note_user_prompt_appends_snapshot_history() -> None:
     assert "There is no valid no-argument form of this tool" in prompt
     assert "Your assistant message must contain no text block" in prompt
     assert '{"content":"<concise Task Center note>"' in prompt
+    assert "Never send an empty JSON object" in prompt
 
 
 async def test_run_tc_note_sends_structured_snapshot_as_prompt(monkeypatch) -> None:
@@ -261,6 +265,9 @@ def test_tc_note_uses_builtin_note_taker_prompt_when_available() -> None:
     assert "writing a long analysis or note in visible text" in prompt
     assert 'Valid shape: `{"content":"<concise Task Center note>"' in prompt
     assert "There is no valid no-argument form of this tool" in prompt
+    assert "Never call the tool with `{}`" in prompt
+    assert "Before calling, self-check that the JSON object has `content`, `task_id`, and `paths`" in prompt
+    assert "Never send an empty JSON object" in prompt
     assert "submit_task_note({})" not in prompt
     assert "# Identity" not in prompt
     assert "# Role Boundary" not in prompt

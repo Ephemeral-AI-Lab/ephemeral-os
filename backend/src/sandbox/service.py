@@ -9,6 +9,7 @@ Modeled after the synthetic-os sandbox_service for API compatibility.
 from __future__ import annotations
 
 import logging
+import os
 import shlex
 import threading
 from typing import Any
@@ -28,7 +29,21 @@ _SNAPSHOT_LABEL = "ephemeralos_snapshot"
 _IMAGE_LABEL = "ephemeralos_image"
 _LIST_PAGE_LIMIT = 100
 _SNAPSHOT_PAGE_LIMIT = 100
-_SANDBOX_TIMEOUT_SECONDS = 180.0
+
+
+def _timeout_seconds_from_env() -> float:
+    raw = os.getenv("EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS")
+    if not raw:
+        return 300.0
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Invalid EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS=%r; using default", raw)
+        return 300.0
+    return max(value, 1.0)
+
+
+_SANDBOX_TIMEOUT_SECONDS = _timeout_seconds_from_env()
 
 # ---------------------------------------------------------------------------
 # Git bootstrap script — installs git if missing

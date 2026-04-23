@@ -123,6 +123,8 @@ def test_budget_warning_default_success_summary_requires_evidence_and_risk():
     _, event = build_budget_warning(ctx)
     assert "diagnostics-only" in event.text
     assert "verification was not run due to budget" in event.text
+    assert "A known next fix is not an exception" in event.text
+    assert "non-terminal mutation or investigation" in event.text
     assert "latest required verification passed after the final edit" in event.text
     assert "behavior/API delta" in event.text
     assert "exact commands and exit codes" in event.text

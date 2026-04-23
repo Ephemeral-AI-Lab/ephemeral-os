@@ -419,9 +419,10 @@ class SubmitReplanInput(BaseModel):
         ),
     )
     cancel_ids: list[str] = Field(
-        default_factory=list,
+        ...,
         description=(
-            "Direct siblings of the replanner to cancel (cascade "
+            "Required explicit list of direct siblings of the replanner to cancel; "
+            "use [] when no sibling should be cancelled. Cascade "
             "propagates to their subtrees and dependents). Exclude the "
             "Failed task id; the original failed request_replan task is "
             "immutable evidence and is finalized by the runtime."
@@ -767,8 +768,9 @@ class SubmitReplanTool(BaseTool):
     description = (
         "Submit the initial replanned tasks as structured JSON. Provide "
         "non-empty new_tasks for corrective repair work owned by the "
-        "replanner, and cancel_ids for stale direct siblings whose subtrees "
-        "should be cancelled by cascade. A system-generated summary of what "
+        "replanner, and an explicit cancel_ids list for stale direct siblings "
+        "whose subtrees should be cancelled by cascade; use cancel_ids=[] when "
+        "none should be cancelled. A system-generated summary of what "
         "actually happened is produced after children complete — do NOT "
         "write prose. New tasks may target only developer repair lanes or "
         "validator verification lanes. Never put the Failed task id or original failed "

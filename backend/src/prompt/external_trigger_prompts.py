@@ -18,6 +18,13 @@ Required shape:
 `{{"content":"<concise Task Center note>","task_id":"{task_id}","paths":["<path>"],"tags":["discovery"]}}`
 
 There is no valid no-argument form of this tool.
+Never call the tool with `{{}}` or any placeholder object. Your first assistant
+action must be the filled JSON object above, with the note text inside
+`content`.
+Before calling, self-check that the JSON object has `content`, `task_id`,
+and `paths`. Never send an empty JSON object. If a field is uncertain, use
+the injected task id, the best path from the transcript or task scope, or ".",
+and state the uncertainty inside `content`.
 
 Incorrect behavior: writing the note as visible assistant text and then sending
 a tool input that omits `content`. If you drafted note text while reading the
@@ -71,6 +78,12 @@ def build_parent_summary_prompt(parent: Any, children: list[Any]) -> str:
         "replanned/dropped/open-risk classification, and an overall roll-up. "
         "Cite child final summaries, commands, failing ids, exit codes, "
         "blockers, missing summaries, and trivial summaries when present. If "
+        "a child claims success from invalid verification evidence — for "
+        "example pytest config or warning overrides such as `-o`, "
+        "`--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, "
+        "`PYTHONWARNINGS`, or `-p no:` — classify that child as `open risk` "
+        "and submit `type=\"request_replan\"` unless another direct child "
+        "reran the required command without those overrides and passed. If "
         "`read_task_details` for a listed child returns \"Not found in task "
         "graph\" or the detail lacks a summary, record that child's line as "
         "`<id> (<agent>, <status>): missing detail` or `missing summary` — do "

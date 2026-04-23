@@ -42,7 +42,7 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         )
     return (
         "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"
-        "2. Run at most one final verification or diagnostics pass only if you can still reserve the terminal summary call.\n"
+        "2. Run at most one final verification or diagnostics pass only if you already have a post-edit candidate and can still reserve the terminal summary call.\n"
         "3. If evidence is incomplete, diagnostics-only, verification was not run due to budget, verification still fails, or diagnostics cannot be finished within budget, call submit_task_summary(type='request_replan') with the exact evidence now.\n"
         "4. If the latest required verification passed after the final edit and diagnostics are clean, call submit_task_summary(type='success') with behavior/API delta, exact commands and exit codes, diagnostics status, and a Residual Risk line."
     )
@@ -81,7 +81,9 @@ def build_budget_warning(
         f"Stop editing and exploring immediately. Terminal submission counts against this budget; "
         f"keep one call reserved for the role-correct terminal tool. Your next actions must be:\n"
         f"{_budget_warning_steps(context)}\n"
-        f"Do NOT start new edits, file reads, or debugging loops. Submit now."
+        f"Do NOT start new edits, file reads, probes, diagnostics, alternate tests, or debugging loops. "
+        f"A known next fix is not an exception; preserve it in submit_task_summary(type='request_replan'). "
+        f"Any non-terminal mutation or investigation after this warning is a contract violation. Submit now."
     )
     return (
         ConversationMessage.from_user_text(text),

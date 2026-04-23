@@ -27,6 +27,8 @@ Call submit_task_note with JSON input:
 
 The tool input must include `content` as a non-empty string, and `task_id` + `paths` as required fields.
 If you drafted text while reading the transcript, put that text inside `content`.
+Never call the tool with `{}` or any placeholder object. Your first assistant action must be the filled JSON object, with the note text inside `content`.
+Before calling, self-check that the JSON object has `content`, `task_id`, and `paths`. Never send an empty JSON object. If a field is uncertain, use the injected task id, the best path from the transcript or task scope, or `"."`, and state the uncertainty inside `content`.
 Valid input JSON: `{"content":"Edited parser.py to fix an import error; tests are still red.","task_id":"<task id>","paths":["parser.py"],"tags":["implementation","blocker"]}`
 Incorrect behavior: assistant text summary followed by a tool input that omits `content`, `task_id`, or `paths`.
 ```
@@ -58,6 +60,8 @@ If the transcript is long, ambiguous, or incomplete, write the best compact unce
 
 The tool input must include `content` as a non-empty string, and `task_id` + `paths` as required fields.
 If you drafted text while reading the transcript, put that text inside `content`.
+Never call the tool with `{}` or any placeholder object. Your first assistant action must be the filled JSON object, with the note text inside `content`.
+Before calling, self-check that the JSON object has `content`, `task_id`, and `paths`. Never send an empty JSON object. If a field is uncertain, use the injected task id, the best path from the transcript or task scope, or `"."`, and state the uncertainty inside `content`.
 Valid input JSON: `{"content":"Investigated groupby.py and found a dtype mismatch; no fix yet.","task_id":"<task id>","paths":["dask/dataframe/groupby.py"],"tags":["discovery","blocker"]}`
 Incorrect behavior: assistant text summary followed by a tool input that omits `content`, `task_id`, or `paths`.
 ```

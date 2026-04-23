@@ -55,6 +55,8 @@ def test_parent_summarizer_prompt_requests_replan_for_unresolved_rollups() -> No
     assert 'Use `type="request_replan"`' in defn.system_prompt
     assert "replan_trigger: unresolved_blocker" in defn.system_prompt
     assert "open risk`, not `delivered`" in defn.system_prompt
+    assert "success evidence is invalid when it depends on pytest configuration" in defn.system_prompt
+    assert "`--override-ini`" in defn.system_prompt
 
 
 def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:

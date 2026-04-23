@@ -33,8 +33,8 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 
 ## Build
 
-1. Confirm each `cancel_ids` item is a non-terminal direct sibling with the same `parent_id` as this replanner.
-2. Exclude the failed task id, this replanner id, terminal tasks, and nested graph ids.
+1. Confirm each required `cancel_ids` item is a non-terminal direct sibling with the same `parent_id` as this replanner.
+2. Exclude the failed task id, original `request_replan` task, this replanner id, terminal tasks, and nested graph ids. If a draft cancellation equals the failed task id from the prompt, remove it and use `action-add-tasks` when no other stale sibling remains.
 3. Keep replacement work under this replanner; do not create a child planner, replanner, or scout to decide the repair.
 4. Prefer local deps; existing deps require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task.
 5. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local replacement ids it verifies.

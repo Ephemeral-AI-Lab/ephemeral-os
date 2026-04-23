@@ -254,7 +254,9 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     schema = tool.to_api_schema()
 
     assert "new_tasks" in schema["input_schema"]["properties"]
+    assert "cancel_ids" in schema["input_schema"]["required"]
     assert "non-empty new_tasks" in schema["description"]
+    assert "use cancel_ids=[] when none should be cancelled" in schema["description"]
     assert "repo-relative production scope_paths" in schema["description"]
     assert "validator tasks are present" in schema["description"]
     assert "numbered colon labels" in schema["description"]
@@ -269,6 +271,19 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
         SubmitReplanTool.input_model(output="legacy rationale")
     with pytest.raises(ValidationError):
         SubmitReplanTool.input_model(summary="legacy summary")
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "repair-owner",
+                    "description": "Repair owner",
+                    "name": "developer",
+                    "spec": _spec("Repair the production owner."),
+                    "deps": [],
+                    "scope_paths": ["pkg/owner.py"],
+                }
+            ],
+        )
 
 
 @pytest.mark.asyncio
@@ -683,7 +698,8 @@ async def test_submit_replan_rejects_replanner_agent_targets():
                     "name": "team_replanner",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -726,7 +742,8 @@ async def test_submit_replan_rejects_planner_agent_targets():
                     "name": "team_planner",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -770,7 +787,8 @@ async def test_submit_replan_rejects_subagent_targets():
                     "name": "scout",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -815,7 +833,8 @@ async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -867,7 +886,8 @@ async def test_submit_replan_rejects_plan_size_overflow():
                     "name": "developer",
                     "scope_paths": ["src/b.py"],
                 },
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -911,7 +931,8 @@ async def test_submit_replan_rejects_task_budget_overflow():
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
-            ]
+            ],
+            cancel_ids=[],
         ),
         ctx,
     )
@@ -1546,6 +1567,9 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
     assert 'read_task_details(task_id="planner-parent")' in prompt
     assert "read_task_details(task_id=...)" in prompt
     assert "Only after every listed child has been read" in prompt
+    assert "pytest config or warning overrides" in prompt
+    assert "`--override-ini`" in prompt
+    assert 'submit `type="request_replan"`' in prompt
     assert "This terminal submission is the completion signal for the parent task" in prompt
     assert "## Direct child task details" not in prompt
     assert "## Child terminal notes" not in prompt

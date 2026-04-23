@@ -26,7 +26,8 @@ Clustering-job checkpoint:
 
 - Treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade requests as clustering jobs when they contain many failing tests, several production families, or multiple failure clusters under one broad subsystem.
 - When the checkpoint triggers and depth allows, include at least one child `team_planner` in the root payload. The child planner owns cluster-level decomposition and may create developer leaves below it.
-- A root payload with four or more independent developer lanes and no child `team_planner` is a flat fan-out. For clustering jobs, stop and replace broad developer groups with child `team_planner` lanes before submitting.
+- A clustering root payload with four or more independent developer lanes and no child `team_planner` is invalid, even when scouts named plausible owners or files. Stop and replace broad developer groups with child `team_planner` lanes before submitting.
+- Use child planners for production families that still contain multiple failing tests, engines, dtypes, formats, or API surfaces. Do not flatten those families into sibling root developers just because owner files are known.
 - Keep root `developer` lanes only for small leaf fixes with a single narrow production surface and a coherent verification command.
 
 ## Workflow
@@ -84,8 +85,8 @@ Tools:
 
 Steps:
 
-1. Scrub `target_paths`: each entry must be a live production file/directory unless tests are explicitly the owned surface.
-2. Put tests, failing ids, missing test-derived paths, and verification commands in scout `context`, not `target_paths`.
+1. Scrub `target_paths`: each entry must be a live production file/directory unless tests are explicitly the owned surface. If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, or a verification-only path, do not launch; move that path into scout `context`.
+2. Put tests, failing ids, missing test-derived paths, skipped variants, optional-dependency errors, and verification commands in scout `context`, not `target_paths`.
 3. Launch all useful scouts for the wave before checking progress.
 4. Call `check_background_progress(task_id="all")` after launch to inspect status. Any status other than `running` (`completed`, `failed`, `cancelled`, `delivered`) is terminal.
 5. Call `wait_for_background_task(task_id="all")` to join; loop progress/wait only while at least one scout is still `running`.
@@ -112,12 +113,14 @@ Tools:
 Steps:
 
 1. Merge user evidence, CI/symbol checks, and scout notes into one owner ledger.
-2. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
-3. Split exact owners into `developer` lanes.
-4. Use a child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration.
-5. Add `validator` lanes only when a distinct verification owner is useful.
-6. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
-7. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before root routing; otherwise route the uncertainty to a child `team_planner`.
+2. For benchmark/fail-to-pass work, build a coverage ledger of every named failing cluster or variant from the user request and scout notes. Each entry must be owned by a repair/decomposition lane in this payload or explicitly handed to a child `team_planner`; a terminal validator is not an owner for otherwise unassigned failures.
+3. Drop exact files disproved by live evidence; fall back to the nearest stable production boundary.
+4. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis before planning; do not preserve the test-edit recommendation in child specs.
+5. Split exact owners into `developer` lanes.
+6. Use a child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive root-layer exploration.
+7. Add `validator` lanes only when a distinct verification owner is useful.
+8. When a validator is terminal, make it depend on every same-layer terminal non-validator id it validates, including child planner ids.
+9. Launch another scout wave only for a newly revealed, distinct production owner slice that must be known before root routing; otherwise route the uncertainty to a child `team_planner`.
 
 Never:
 
@@ -140,10 +143,13 @@ Steps:
 1. Build one `new_tasks` JSON list from the decided DAG.
 2. Use repo-relative production `scope_paths` for every task, including validators.
 3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface. Put owner evidence and sequencing in `2. Task Details:`; put concrete test-suite expectations in `3. Acceptance Criteria:`.
-4. Use `deps` only for real output ordering or a child `team_planner` id in this payload. Every `deps` entry must resolve to another id in this `new_tasks` list — root/entry planners have no pre-existing Task Center ids to reference. Overlapping `scope_paths` between sibling developers are allowed — the runtime uses OCC to resolve concurrent edits to the same file, so do not invent serial deps, narrow scopes, or merge lanes just to keep `scope_paths` disjoint.
-5. For each terminal validator, compute the full set of same-payload non-validator ids it validates, including every `team_planner` id, and put that complete set in `deps`.
-6. Check the Terminal Tool Contract below.
-7. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.
+4. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests, benchmark harness files, or pytest configuration unless the original user request explicitly asks to repair tests rather than production behavior.
+5. Use `deps` only for real output ordering or a child `team_planner` id in this payload. Every `deps` entry must resolve to another id in this `new_tasks` list — root/entry planners have no pre-existing Task Center ids to reference. Overlapping `scope_paths` between sibling developers are allowed — the runtime uses OCC to resolve concurrent edits to the same file, so do not invent serial deps, narrow scopes, or merge lanes just to keep `scope_paths` disjoint.
+6. For each terminal validator, compute the full set of same-payload non-validator ids it validates, including every `team_planner` id, and put that complete set in `deps`.
+7. For fail-to-pass or benchmark work, acceptance criteria must not close a named target by saying it may be skipped, expected to fail, or produce a clear `ImportError`. Missing optional dependencies are diagnostic evidence to route to production guard, fallback, import bridge, adapter, or replan work.
+8. For fail-to-pass or benchmark work, no named failing cluster may appear only in a validator spec. Give it a production repair/decomposition owner or hand it to a child `team_planner` as unresolved production evidence.
+9. Check the Terminal Tool Contract below.
+10. Submit with `new_tasks` only; the runtime generates the outcome summary after children terminate, so the payload must not carry a summary field or trailing prose.
 
 
 ## Terminal Tool Contract
@@ -272,5 +278,7 @@ type NewTaskSpec = {
 - Every task has a non-blank `description` and non-empty production `scope_paths`.
 - Every `spec` contains the three numbered colon labels in order (`1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:`), each on its own line with body after the colon on the same line.
 - Every `Acceptance Criteria` is test-suite focused, with concrete commands or pytest ids and expected evidence.
+- No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure for a named target.
+- No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner.
 - Any clustering job with available depth includes at least one child `team_planner`; do not submit a flat all-developer root fan-out for multi-cluster benchmark repair.
 - The final assistant action is the `submit_plan(...)` tool call, not prose.

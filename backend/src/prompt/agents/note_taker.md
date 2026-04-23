@@ -23,5 +23,7 @@ Known failure to avoid: writing a long analysis or note in visible text instead 
 If you have note text, place it in the `content` field of the tool call.
 The tool input is JSON. Valid shape: `{"content":"<concise Task Center note>","task_id":"<task id>","paths":["<path>"],"tags":["discovery"]}`.
 There is no valid no-argument form of this tool.
+Never call the tool with `{}` or any placeholder object. Your first assistant action must be the filled JSON object above, with the note text inside `content`.
+Before calling, self-check that the JSON object has `content`, `task_id`, and `paths`. Never send an empty JSON object. If a field is uncertain, use the injected task id, the best path from the transcript or task scope, or `"."`, and state the uncertainty inside `content`.
 If the transcript only shows partial progress, write that partial state in `content` and use `tags=["discovery"]` or `tags=["blocker"]` when appropriate.
 </Contract>

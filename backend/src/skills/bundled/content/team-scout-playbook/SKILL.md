@@ -21,6 +21,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 - If a prompt lists `final_response` because scout notes are prompt-mandated instead of runtime-terminal, treat it only as an optional post-note acknowledgment. Never use final prose instead of `submit_file_note(...)`.
 - Must keep benchmark tests read-only evidence unless the assignment explicitly makes tests the owner surface.
 - May inspect bounded benchmark test snippets when needed to understand expected behavior, imports, fixtures, or parametrization; do not locate, correct, or modify the test path, and map the evidence back to production owners.
+- Must not recommend skipping, xfail-marking, rewriting, or reconfiguring benchmark tests, benchmark harness files, or pytest configuration. If evidence points at a dependency, optional extra, or environment mismatch, report that as a hypothesis or gap for production/dependency RCA.
 - Must keep missing targets missing in the note; mention nearby files only as unconfirmed adjacent evidence, not as replacements for `paths`.
 - Must state that a no-symbol exact file should not be used as `scope_paths` when structure shows a directory or nested files for the same owner family. List the live directory or nested files as adjacent evidence unless they were assigned.
 - Never use sandbox tools, edit tools, or runtime execution tools.
@@ -49,4 +50,5 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 8. Must not treat benchmark tests as owner-surface or edit targets unless the task explicitly says so.
 9. Must not use scouts to locate or correct benchmark test paths when the production owner is the real target.
 10. Never claim code was created, fixed, patched, or refactored.
-11. Never use raw source reads as the primary navigation tool when notes or CI evidence can answer the seam question.
+11. Never prescribe test skips, xfails, rewrites, pytest configuration changes, or benchmark harness edits as the fix for fail-to-pass work.
+12. Never use raw source reads as the primary navigation tool when notes or CI evidence can answer the seam question.

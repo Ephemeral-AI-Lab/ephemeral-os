@@ -28,7 +28,7 @@ Treat the benchmark sandbox as shared evidence. Do not mutate dependencies, inte
 
 Forbidden commands include `pip install`, `uv add`, `uv sync`, `conda install`, `apt install`, `npm install`, `pnpm add`, `yarn add`, `poetry add`, and equivalent install, add, sync, update, or upgrade operations. Package-manager commands are not verification.
 
-If a missing dependency, missing optional extra, or different dependency version appears necessary, do not install it. Capture the exact command, exit code, import error or version evidence, and submit `type="request_replan"` with trigger `unresolved_blocker` unless the trace proves the required production repair is outside `scope_paths`, in which case use `scope_expansion`.
+If a missing dependency, missing optional extra, or different dependency version appears necessary, do not install it. First decide whether the failing fail-to-pass surface expects production compatibility behavior: a guard, fallback, import bridge, explicit error message, version gate, adapter boundary, or wrapper path. If such a production mechanism is in scope, implement that production behavior; do not request replan just because the sandbox lacks the package or version. Request replan only after naming the exact production seam and adjacent mechanisms checked, and never make the requested next action an install, dependency upgrade, skip, xfail, pytest change, test edit, or environment replacement.
 
 Generated interpreter caches are not repair scope. Do not delete or mutate `__pycache__`, `.pyc`, build caches, or ignored transient artifacts to make verification pass. If runtime output appears to contradict edited source, prove the import path and loaded source path with one bounded probe or rerun the command with a non-mutating cache control such as `PYTHONDONTWRITEBYTECODE=1`. Treat refused cache cleanup as tooling noise to report, not as the root cause or a blocker by itself.
 
@@ -40,6 +40,7 @@ Generated interpreter caches are not repair scope. Do not delete or mutate `__py
 4. Do not call `read_task_graph()`; developers address tasks only via UUIDs from the prompt header.
 5. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
 6. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`.
+7. Do not wrap required pytest/build verification in `python -c`, heredocs, `subprocess.run`, helper scripts, output filters, pipelines, manual `print("EXIT CODE")`, `PYTHONWARNINGS`, `warnings.filterwarnings`, or `sys.warnoptions`. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, or `-p no:...`. These make the tool-reported exit status untrustworthy and are invalid success evidence.
 
 ## Route
 
@@ -86,13 +87,15 @@ Planning checks:
 
 1. Use failing tests as evidence, not permission to edit tests. A test import or collection blocker is still evidence; fix production when the traced root cause points to a production path this lane can responsibly repair.
 2. Test files are read-only unless the original user request explicitly asks to repair tests rather than production behavior. A child task that assigns test skip/xfail/rewrite work in a benchmark is invalid; request replanning instead.
-3. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need live production evidence or an explicit assignment. Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism. Test spelling alone is not enough.
-4. When live production evidence proves a missing compatibility module, serialization lane, engine bridge, shim, or re-export path, prefer creating or editing the production file over updating tests. Do not turn a proven production gap into a test-file rewrite.
-5. `scope_paths` are the primary ownership surface, not a hard mutation sandbox for developers. You may widen reads, diagnostics, and test commands to prove ownership. Developers may write, copy, or create production files outside `scope_paths` when that is needed for the assigned task. The tooling may emit an outside-scope system notification; treat it as coordination guidance, not a stop condition, and include the path, notification, rationale, verification, and residual risk in the final summary.
-6. A similarly named sibling path is not implicitly owned. For example, ownership of `pkg/compatibility.py` does not by itself prove `pkg/_compatibility.py` is the right repair path; inspect enough production evidence to justify the path before editing or copying it.
-7. Prefer replanning instead of editing when the change would touch tests, dependency/environment files, require a broad behavior rewrite, or remain ambiguous after one bounded investigation pass.
-8. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
-9. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
+3. Do not dismiss a fail-to-pass parametrized variant as a test design issue because an engine, optional extra, or cross-engine combination is difficult. Keep it as production compatibility evidence, or request replan with the unresolved production seam.
+4. Missing optional dependencies, older dependency versions, and unavailable engines are not final blockers when the expected behavior can be implemented as a production guard, fallback, explicit compatibility error, import bridge, adapter boundary, or wrapper path.
+5. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need live production evidence or an explicit assignment. Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism. Test spelling alone is not enough.
+6. When live production evidence proves a missing compatibility module, serialization lane, engine bridge, shim, or re-export path, prefer creating or editing the production file over updating tests. Do not turn a proven production gap into a test-file rewrite.
+7. `scope_paths` are the primary ownership surface, not a hard mutation sandbox for developers. You may widen reads, diagnostics, and test commands to prove ownership. Developers may write, copy, or create production files outside `scope_paths` when that is needed for the assigned task. The tooling may emit an outside-scope system notification; treat it as coordination guidance, not a stop condition, and include the path, notification, rationale, verification, and residual risk in the final summary.
+8. A similarly named sibling path is not implicitly owned. For example, ownership of `pkg/compatibility.py` does not by itself prove `pkg/_compatibility.py` is the right repair path; inspect enough production evidence to justify the path before editing or copying it.
+9. Prefer replanning instead of editing when the change would touch tests, dependency/environment files, require a broad behavior rewrite, or remain ambiguous after one bounded investigation pass.
+10. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
+11. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
 
 Submit `type="request_replan"` now if any of these hold:
 
@@ -118,6 +121,7 @@ Make one minimal production change that matches the plan.
 6. Never create or edit test files
 7. If an outside-scope notification appears, treat it as coordination context and keep working when the production change is still tied to this task. If the required change becomes broad or ambiguous, submit `type="request_replan"` with trigger `scope_expansion`. If a mutation reports a verification-surface warning, pause and re-check the scope and code path before continuing.
 8. Never use shell deletion or cleanup commands to remove generated caches. A cache-cleanup failure is not evidence that the production fix is impossible; continue root-cause tracing from the failing command, import path, and production mechanism.
+9. If a scoped retry would edit the same function or branch after the same assertion already stayed red, do not make another guess. First write a compact value table from the failing assertion: input keys/state, current value, expected value, and the production rule that selects old vs. new/raise/warn/return. The next edit must follow that table and name a different production mechanism than the failed edit.
 
 Exit with: the smallest justified edit ready for verification.
 
@@ -126,12 +130,15 @@ Exit with: the smallest justified edit ready for verification.
 Prove the latest edit. Do not claim success from stale or partial evidence.
 
 1. Run `ci_diagnostics(file_path="...")` on every edited file before terminal completion.
-2. Run the narrowest relevant runtime command after each edit. Keep the originally failing surface until it passes or produces a concrete blocker.
+2. Run the narrowest relevant runtime command after each edit as a direct command. Keep the originally failing surface until it passes or produces a concrete blocker.
 3. For `daytona_codeact(...)`, use `command` for every shell, build, or test command; never pass a shell command string in `code`.
 4. Run CodeAct commands from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path from AGENTS or environment context.
 5. Do not run package-manager or environment-mutation commands as setup or verification. A command that would install, add, sync, update, upgrade, or pin dependencies is invalid evidence.
-6. Judge runtime pass/fail from the command exit code and failing ids. If pytest exits `4`, collects `0` items, or the named node is missing, treat that as red evidence.
+6. Judge runtime pass/fail from the CodeAct tool-reported command exit code and failing ids for the direct command. A wrapper that prints an inner exit code, filters output, suppresses warnings, changes pytest options with `-o`/`--override-ini`/`-p no:...`, or returns outer exit `0` while an inner command failed is red evidence and cannot support success.
 7. Record command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
+8. If a raw verification command fails at import, collection, warning handling, or pytest configuration before reaching the target assertions, keep that raw failure as evidence. Trace or repair the production mechanism if it is in scope; otherwise request replanning. Do not hide the warning, import failure, or pytest configuration failure with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...` to reach later assertions.
+9. If the acceptance criteria name a verification command and that command exits nonzero, the task is not successful. Do not cherry-pick a passing test id, narrower subtest, or partial assertion from inside the red command as success evidence. The full red command, failing ids, and traced production mechanism must be resolved or submitted as `type="request_replan"`.
+10. For fail-to-pass work, a required command is green only when the tool-reported exit code is 0. Collection errors, import errors, no tests collected, skipped named variants, expected failures, missing optional dependency `ImportError`, or "clear ImportError" outcomes are red evidence, even if the child acceptance criteria mistakenly says "pass or skip." Request replan with the production seam or trace gap instead of submitting success.
 
 Clean diagnostics are not acceptance verification. If the required runtime command was not run after the final edit, including because the budget is nearly exhausted, the evidence is absent and the terminal summary must be `type="request_replan"`, not `type="success"`.
 
@@ -142,6 +149,8 @@ Exit with: green evidence → Stage 6 (`type="success"`); any red, stale, or abs
 If a system budget warning tells you to reserve a terminal call and submit now, treat it as a hard stop. Do not run more reads, searches, probes, diagnostics, edits, or variant test commands after that warning unless it explicitly permits one final verification or diagnostics pass and you already have a post-edit candidate that can become `type="success"`.
 
 When the latest required verification is red, absent, invalid, stale, or the root cause is still unresolved at the warning, submit `type="request_replan"` immediately with the current Stage 5 JSON trace, last command or diagnostic, and the exact decision the replanner must resolve. Do not spend post-warning budget to improve the fix, recover from a failed edit, inspect more files, or rerun alternate commands.
+
+Knowing the next edit is not an exception. If the warning arrives before green verification, preserve the exact proposed edit or value table in the replan summary and stop. A post-warning `daytona_edit_file`, source read, CodeAct probe, diagnostics pass without a green candidate, or alternate pytest run is a contract failure.
 
 ## 5. Root cause analysis
 
@@ -185,13 +194,15 @@ Root-cause checklist — all must hold before you re-enter Stage 3:
 6. Answer three questions: what value/state/import/branch first became wrong, which code made it wrong, and why that code is incorrect for the expected behavior.
 7. If one attempted production mechanism cannot satisfy the expected behavior, do not conclude the fix is impossible or test-only from that failure alone. Check the adjacent production extension points for the same path (for example a sibling hook, fallback lookup, adapter boundary, wrapper object, dispatch registration, compatibility shim, or API option) and record the mechanism you ruled in or out.
 8. Fill the JSON above. If any field is "unknown" or a guess, keep tracing or request replanning — do not re-enter Stage 3 from a shallow trace.
+9. On a repeated red result for the same command and same assertion class, include a small value table before another edit. For merge/config/dispatch/state-machine bugs, the table must name each relevant input value, the observed output, the expected output, and which production rule should choose it. If the table still has contradictory rules or no new code mechanism to change, submit `type="request_replan"` instead of editing again.
 
 Decision:
 
-1. If the trace identifies one assigned-scope, actionable code defect, return to Stage 3 and implement the smallest fix at `fix_location`.
+1. If the trace identifies one assigned-scope or adjacent production-path actionable code defect, return to Stage 3 and implement the smallest fix at `fix_location`. Do not use `request_replan` as a handoff for exact code you already know how to change unless a budget warning requires immediate submission, the edit is test/dependency/config-only, or the production change is broad or ambiguous after a bounded pass.
 2. Request replanning when the trace points to another role or code path, scope expansion, tests not assigned to this task, unproven missing modules, missing dependencies, dependency-version mismatch, environment/runtime mismatch, ambiguous root cause, or tool failure.
-3. A replan summary may say "no production fix" only after naming the attempted mechanism, the adjacent production mechanisms checked, and the evidence that each cannot affect the failing path. Otherwise report the narrower trace gap instead of declaring the test impossible.
-4. Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new code defect.
+3. For fail-to-pass work, `missing dependencies`, `dependency-version mismatch`, or `environment/runtime mismatch` are not final root causes when a production guard, fallback, explicit compatibility error, import bridge, adapter boundary, or wrapper can satisfy the expected behavior. The Stage 5 `next_action` must name the production seam to repair or diagnose; it must not list install, dependency upgrade, skip, xfail, pytest config, test edit, or environment replacement as the path forward.
+4. A replan summary may say "no production fix" only after naming the attempted mechanism, the adjacent production mechanisms checked, and the evidence that each cannot affect the failing path. Otherwise report the narrower trace gap instead of declaring the test impossible.
+5. Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new code defect. A second edit to the same function is justified only by new evidence: a different failing id, a different wrong branch/value, or the value table above naming a corrected rule that the previous edit did not implement.
 
 Exit with: actual root cause found and implementation started, or a terminal replan summary with the trace gap.
 
@@ -226,4 +237,4 @@ For `type="request_replan"`, `content` must include:
 
 Use `scope_expansion` only when the required production repair is clearly a different owner or too broad/ambiguous for this lane, not merely because a developer write/copy was outside `scope_paths` or received a system notification. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before this task can succeed. Use `unresolved_blocker` when verification, diagnostics, tooling, budget, or root-cause tracing is still blocked but no different owner/scope is proven.
 
-Use `type="success"` only when the latest required verification passed. A summary that says verification was not run, was skipped due to budget, or is supported only by diagnostics is not a success summary. Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/code-path, broader-scope, or too-complex verification.
+Use `type="success"` only when the latest required direct verification command passed with tool-reported exit code 0 and collected the named fail-to-pass target instead of skipping or expected-failing it. A summary that says verification was not run, was skipped due to budget, was wrapped, warning-suppressed, pytest-config-overridden (`-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...`), printed an inner exit code, failed the required command while a narrower subtest passed, ended in collection/import/no-tests/optional-dependency failure, or is supported only by diagnostics is not a success summary. Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/code-path, broader-scope, or too-complex verification.
