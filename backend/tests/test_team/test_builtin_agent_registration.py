@@ -73,6 +73,16 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "not multi-cluster benchmark repair" in defn.system_prompt
 
 
+def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
+    defn = get_definition(SCOUT)
+    assert defn is not None
+    assert defn.system_prompt is not None
+    assert 'load_skill(skill_name="team-scout-playbook")' in defn.system_prompt
+    assert "before your first Task Center or code-intelligence tool call" in defn.system_prompt
+    assert "first assistant message that calls tools may contain only `read_file_note" in defn.system_prompt
+    assert "stop after exact-file CI evidence" in defn.system_prompt
+
+
 def test_builtin_team_agents_use_default_tool_call_limits() -> None:
     for name in (TEAM_PLANNER, TEAM_REPLANNER, DEVELOPER, VALIDATOR, SCOUT):
         defn = get_definition(name)

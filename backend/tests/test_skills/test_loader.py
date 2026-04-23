@@ -323,6 +323,8 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "one broad scout bundles unrelated families" in skill
     assert "HDF scout + parquet scout + CLI scout + config scout" in skill
     assert "CLI/config scout" not in skill
+    assert "Same-test-family split gate" in skill
+    assert "same test file or benchmark cluster" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
     assert "a current-layer `developer` is called atomic using only first-pass owner labels" in reference
 

@@ -559,9 +559,14 @@ async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypa
         "exactly one `submit_file_note(...)` call with non-empty `content` "
         "and at least one `paths` entry"
     ) in captured["prompt"]
+    assert (
+        "first assistant message that calls tools may contain only the required "
+        "`read_file_note(...)` calls"
+    ) in captured["prompt"]
     assert "stay read-free and post `submit_file_note(...)` from CI evidence" in captured["prompt"]
     assert "stop after that bootstrap result and post `submit_file_note(...)`" in captured["prompt"]
     assert "do not fan out into generic symbol hunts like helper names, test names, or literals" in captured["prompt"]
+    assert "do not query benchmark tests, parametrized ids, helper names, or adjacent files" in captured["prompt"]
     assert "submit_task_note" not in captured["prompt"]
     assert "exact-file and short fixed-file scouts stay read-free" in captured["prompt"]
     assert "say only `Posted.`" in captured["prompt"]
