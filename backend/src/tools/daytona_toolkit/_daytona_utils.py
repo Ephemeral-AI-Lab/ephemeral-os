@@ -527,7 +527,7 @@ def _team_repo_write_warning(
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
             "Developers may write or copy out-of-scope production files when the change is tied to "
             "the assigned task. Treat this as a notification, verify the change, and include an "
-            "Out-of-scope mutation line with the path, rationale, verification, and residual risk."
+            "Out-of-scope mutation line with the path, rationale, and verification."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "

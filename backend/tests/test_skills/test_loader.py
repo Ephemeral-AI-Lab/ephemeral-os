@@ -419,6 +419,10 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             'the only valid `name` is `"team_planner"`',
             "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
             "one `developer` task spec lists multiple independent fixes across unrelated owners",
+            "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
+            "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
+            'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
+            "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
             "Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs",
             "a `developer` spec calls the family coherent while its `Task Details` lists those APIs or surfaces",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
@@ -479,6 +483,10 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             'must use `name: "team_planner"`, never `name: "developer"`',
             "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
             "submit separate current-layer `developer` lanes",
+            "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
+            "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
+            'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
+            "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
             "Multi-API family gate: trigger -> inherited evidence or scout notes for one family list multiple public APIs",
             "classify the family as expandable and use `team_planner` while `grandchild_depth <= max_depth`",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
@@ -655,6 +663,9 @@ def test_team_developer_playbook_uses_root_planner_style_contract() -> None:
     assert "submit_task_summary({" in skill
     assert 'type: "success" | "request_replan"' in skill
     assert "content: string" in skill
+    assert "Trigger -> budget warning appears" in skill
+    assert "make the next tool call `submit_task_summary(...)`" in skill
+    assert "one more edit or command to chase a known next fix" in skill
 
 
 def test_developer_and_validator_playbooks_do_not_include_depth_gate_policy() -> None:
@@ -671,14 +682,15 @@ def test_developer_and_validator_playbooks_do_not_include_depth_gate_policy() ->
         assert "grandchild_depth" not in skill
 
 
-def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
+def test_terminal_summary_playbooks_do_not_require_explicit_residual_risk() -> None:
     for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
         skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
         assert "Do not omit a line because the answer is \"none\"" in skill
-        assert '`Residual Risk:` with remaining risk, unverified surface, or "none"' in skill
+        assert "Residual Risk:" not in skill
+        assert "residual risk" not in skill
 
 
 def test_developer_playbook_rejects_success_without_runtime_verification() -> None:

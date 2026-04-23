@@ -34,6 +34,10 @@ Atomic tests — all must hold:
 
 Atomic grouping gate: trigger -> two or more atomic slices have different owner files, symbols, or verification commands; required action -> submit separate root `developer` lanes or route the group to `team_planner`; failure signal -> one `developer` task spec lists multiple independent fixes across unrelated owners because each item looked atomic alone.
 
+Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms, says "fix each mechanism", or assigns separate production boundaries inside one lane; required action -> split into one root `developer` per mechanism or route the whole slice to `team_planner`; failure signal -> one `developer` task details names multiple mechanisms and justifies the bundle with shared scope, nearby files, or one verification suite.
+
+Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file, lists several behaviors, entry points, modes, or scenarios, or uses "root cause(s)" because the mechanism is not yet known; required action -> route the slice to `team_planner` or split into root `developer` lanes by known behavior/mechanism; failure signal -> one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations under that file.
+
 Expandable signals — any one routes to `team_planner`:
 
 - **Multi-family failure span.** Failing clusters cross production families, layers, or modules.

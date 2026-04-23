@@ -418,7 +418,6 @@ Success checklist. Do not omit a line because the answer is "none":
 | Diagnostics | Owned-file diagnostics status. |
 | Guardrail | Public-surface guardrail result, or "none" if no guardrail was planned. |
 | Widening rationale | Investigation or guardrail widening rationale, or "none". |
-| `Residual Risk:` with remaining risk, unverified surface, or "none" | Remaining risk, unverified surface, or "none". |
 
 Tiny success example:
 
@@ -432,7 +431,6 @@ submit_task_summary({
     "Diagnostics: backend/src/runtime.py clean.",
     "Guardrail: none.",
     "Widening rationale: none.",
-    "Residual Risk: none.",
   ].join("\n"),
 })
 ```

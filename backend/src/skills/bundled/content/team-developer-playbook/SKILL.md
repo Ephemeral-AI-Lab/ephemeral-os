@@ -162,10 +162,9 @@ Build one trace before another edit or replan:
 
 | Budget state | Required action |
 | --- | --- |
-| Warning to reserve terminal call | Hard stop. |
-| Final verification is green and the warning permits it | Submit success. |
-| Verification is red, absent, invalid, stale, or unresolved | Submit `type="request_replan"` with the current Stage 5 trace, last command or diagnostic, and the decision the replanner must resolve. |
-| After warning | Do not spend budget on more reads, probes, edits, diagnostics, alternate tests, or recovery attempts. |
+| Warning to reserve terminal call | Trigger -> budget warning appears; required action -> make the next tool call `submit_task_summary(...)` using only evidence already gathered; failure signal -> any intervening read, probe, edit, diagnostic, test, or recovery attempt. |
+| Latest evidence already green | Trigger -> before the warning, the latest required verification was green and edited-file diagnostics were clean; required action -> submit success; failure signal -> success after red, absent, stale, or diagnostics-only evidence. |
+| Latest evidence not already green | Trigger -> verification is red, absent, invalid, stale, unresolved, or diagnostics are absent when the warning appears; required action -> submit `type="request_replan"` with the current Stage 5 trace, last command or diagnostic, and the decision the replanner must resolve; failure signal -> one more edit or command to chase a known next fix. |
 
 ### 6. Submit terminal summary
 
@@ -208,8 +207,7 @@ For `type="success"`, `content` must include these labeled facts. Do not omit a 
 | Verification commands | Exact commands run after the final edit, outcomes, and exit codes. |
 | Diagnostics | Diagnostics status for edited files. |
 | Investigation scope | Rationale if reads/probes/tests went outside `scope_paths`. |
-| Out-of-scope mutation | `Out-of-scope mutation:` path, change/copy/new file, notification, rationale, verification, and residual risk, or "none". |
-| Residual risk | `Residual Risk:` with remaining risk, unverified surface, or "none". |
+| Out-of-scope mutation | `Out-of-scope mutation:` path, change/copy/new file, notification, rationale, and verification, or "none". |
 
 For `type="request_replan"`, include:
 

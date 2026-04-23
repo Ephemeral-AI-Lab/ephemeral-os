@@ -13,7 +13,7 @@ Team-mode agents finish by calling a terminal submission tool. The query loop st
 `submit_plan` and `submit_replan` write `resolved_plan` and `plan_is_replan`. `submit_task_summary` writes `task_summary` and `task_summary_type`.
 For `submit_plan` and `submit_replan`, every `new_tasks` item includes a required short `description` label authored by the planner or replanner; the full task briefing stays in `spec`.
 Planners call `submit_plan(new_tasks=[...])` only; replanners call `submit_replan(new_tasks=[...], cancel_ids=[...])` only. They do not submit free-text `output` or `summary` fields. The submission tools append the full structured task JSON to the parent detail as `Initial Plan` or `Initial Replan`, including ids, assignments, acceptance criteria, dependencies, and scope paths.
-Developers and reviewers should use `submit_task_summary(content=...)` for evidence-rich terminal notes: concrete behavior/API delta, acceptance-criteria verdicts, verification commands and outcomes, blockers, and residual risk. Parent summarizers use the same terminal tool to write the planner/replanner roll-up after reading the parent detail and every direct child detail.
+Developers and reviewers should use `submit_task_summary(content=...)` for evidence-rich terminal notes: concrete behavior/API delta, acceptance-criteria verdicts, verification commands and outcomes, blockers, and diagnostics status. Parent summarizers use the same terminal tool to write the planner/replanner roll-up after reading the parent detail and every direct child detail.
 
 ## Executor Dispatch
 
