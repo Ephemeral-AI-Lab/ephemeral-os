@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
@@ -56,6 +57,8 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
+_SCOUT_SINGLE_TARGET_CALLERS = {"root_planner", "team_planner", "team_replanner"}
+_REPO_PATH_RE = re.compile(r"(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+(?:\.py)?")
 
 
 @dataclass
@@ -92,6 +95,51 @@ def _normalize_target_paths(value: Any) -> list[str]:
             if stripped:
                 out.append(stripped)
     return out
+
+
+def _is_test_path(path: str) -> bool:
+    normalized = path.strip("/")
+    if "/tests/" in f"/{normalized}/":
+        return True
+    tail = normalized.rsplit("/", 1)[-1]
+    return tail.startswith("test_")
+
+
+def _candidate_exists_in_repo(candidate: str, repo_root: Path) -> bool:
+    try:
+        root = repo_root.resolve()
+        resolved = (root / candidate).resolve()
+    except Exception:
+        return False
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return False
+    return resolved.exists()
+
+
+def _extract_repoish_paths(value: Any, *, repo_root: Path | None = None) -> list[str]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    seen: set[str] = set()
+    out: list[str] = []
+    for match in _REPO_PATH_RE.findall(value):
+        candidate = match.strip("`'\".,;:()[]{}<>")
+        if not candidate or candidate in seen:
+            continue
+        if repo_root is not None and not _candidate_exists_in_repo(candidate, repo_root):
+            continue
+        seen.add(candidate)
+        out.append(candidate)
+    return out
+
+
+def _path_related_to_target(path: str, target_path: str) -> bool:
+    path_norm = path.strip("/")
+    target_norm = target_path.strip("/")
+    if path_norm == target_norm:
+        return True
+    return path_norm.startswith(target_norm + "/") or target_norm.startswith(path_norm + "/")
 
 
 class RunSubagentInput(BaseModel):
@@ -265,9 +313,44 @@ def _validate_run_subagent_request(
         )
 
     subagent_scope_paths: list[str] = []
+    caller_agent = str((context.metadata or {}).get("agent_name") or "").strip()
+
     if agent_name == "scout" and isinstance(input, dict):
         target_paths = input.get("target_paths")
         subagent_scope_paths = _normalize_target_paths(target_paths)
+        if caller_agent in _SCOUT_SINGLE_TARGET_CALLERS and len(subagent_scope_paths) != 1:
+            return ToolResult(
+                output=(
+                    "run_subagent: planner/replanner scout calls must pass exactly "
+                    "one production owner path in `target_paths`. Split fan-out "
+                    "across multiple `run_subagent(...)` calls and keep tests, "
+                    "missing test-derived paths, and verification evidence in "
+                    "`context`."
+                ),
+                is_error=True,
+            )
+        if caller_agent in _SCOUT_SINGLE_TARGET_CALLERS and len(subagent_scope_paths) == 1:
+            target_path = subagent_scope_paths[0]
+            context_paths = _extract_repoish_paths(
+                input.get("context"), repo_root=context.cwd
+            )
+            extra_production_paths = [
+                path
+                for path in context_paths
+                if not _is_test_path(path) and not _path_related_to_target(path, target_path)
+            ]
+            if extra_production_paths:
+                extra_preview = ", ".join(extra_production_paths[:3])
+                return ToolResult(
+                    output=(
+                        "run_subagent: planner/replanner scout context may not name "
+                        "other production owner paths outside the single declared "
+                        f"`target_paths` entry. Extra paths: {extra_preview}. "
+                        "Launch separate scout calls for those owner families and "
+                        "keep benchmark tests or failing ids in `context`."
+                    ),
+                    is_error=True,
+                )
     elif isinstance(input, dict):
         subagent_scope_paths = scope_paths_from_payload(input)
 

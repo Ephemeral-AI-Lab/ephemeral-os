@@ -77,6 +77,12 @@ def _make_messages() -> list[ConversationMessage]:
     ]
 
 
+def _touch_rel(repo_root: Path, rel_path: str) -> None:
+    path = repo_root / rel_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch()
+
+
 def test_format_last_n_messages_renders_each_block_type():
     out = format_last_n_messages(_make_messages(), n=PEEK_MESSAGE_MAX)
     assert "[text]" in out
@@ -371,8 +377,12 @@ def test_validate_run_subagent_allows_same_bucket_scout_list():
     assert result.subagent_scope_paths == ["dvc/command/run.py", "dvc/command/repro.py"]
 
 
-@pytest.mark.parametrize("parent_agent_name", ["root_planner", "team_planner"])
-def test_validate_run_subagent_allows_planner_multi_path_scout_bundle(parent_agent_name: str):
+@pytest.mark.parametrize(
+    "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
+)
+def test_validate_run_subagent_rejects_planner_multi_path_scout_bundle(
+    parent_agent_name: str,
+):
     ctx = ToolExecutionContext(
         cwd=Path("/tmp"),
         metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
@@ -390,8 +400,131 @@ def test_validate_run_subagent_allows_planner_multi_path_scout_bundle(parent_age
         context=ctx,
     )
 
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "must pass exactly one production owner path" in result.output
+    assert "Split fan-out across multiple `run_subagent(...)` calls" in result.output
+
+
+@pytest.mark.parametrize(
+    "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
+)
+def test_validate_run_subagent_allows_single_path_planner_scout(
+    parent_agent_name: str, tmp_path: Path
+):
+    _touch_rel(tmp_path, "dask/dataframe/io/json.py")
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": ["dask/dataframe/io/json.py"]},
+        context=ctx,
+    )
+
     assert not isinstance(result, ToolResult)
-    assert result.subagent_scope_paths == target_paths
+    assert result.subagent_scope_paths == ["dask/dataframe/io/json.py"]
+
+
+@pytest.mark.parametrize(
+    "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
+)
+def test_validate_run_subagent_rejects_planner_context_with_other_owner_paths(
+    parent_agent_name: str, tmp_path: Path
+):
+    for rel_path in (
+        "dask/dataframe/io/parquet.py",
+        "dask/dataframe/groupby.py",
+        "dask/dataframe/utils.py",
+        "dask/dataframe/io/json.py",
+    ):
+        _touch_rel(tmp_path, rel_path)
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={
+            "target_paths": ["dask/dataframe/io/parquet.py"],
+            "context": (
+                "Confirm parquet, then also check dask/dataframe/groupby.py, "
+                "dask/dataframe/utils.py, and dask/dataframe/io/json.py."
+            ),
+        },
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "may not name other production owner paths" in result.output
+    assert "dask/dataframe/groupby.py" in result.output
+
+
+@pytest.mark.parametrize(
+    "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
+)
+def test_validate_run_subagent_allows_planner_context_with_tests_only(
+    parent_agent_name: str, tmp_path: Path
+):
+    _touch_rel(tmp_path, "dask/dataframe/io/hdf.py")
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={
+            "target_paths": ["dask/dataframe/io"],
+            "context": (
+                "Failing tests include dask/dataframe/io/tests/test_hdf.py::test_to_hdf "
+                "and dask/dataframe/io/tests/test_json.py::test_read_json_engine_str[ujson]. "
+                "Confirm whether dask/dataframe/io/hdf.py exists under this directory."
+            ),
+        },
+        context=ctx,
+    )
+
+    assert not isinstance(result, ToolResult)
+    assert result.subagent_scope_paths == ["dask/dataframe/io"]
+
+
+@pytest.mark.parametrize(
+    "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
+)
+def test_validate_run_subagent_ignores_benchmark_variants_in_planner_context(
+    parent_agent_name: str, tmp_path: Path
+):
+    _touch_rel(tmp_path, "dask/dataframe/groupby.py")
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={
+            "target_paths": ["dask/dataframe/groupby.py"],
+            "context": (
+                "Failing variants include disk/tasks, disk/tasks-uint8, "
+                "disk/tasks-uint8-by1/foo, 1/4/10-processes/sync/threads, "
+                "fastparquet/pyarrow, pyarrow-pandas/pyarrow, and "
+                "config_get/config_list."
+            ),
+        },
+        context=ctx,
+    )
+
+    assert not isinstance(result, ToolResult)
+    assert result.subagent_scope_paths == ["dask/dataframe/groupby.py"]
 
 
 def test_validate_run_subagent_allows_all_test_file_scout():

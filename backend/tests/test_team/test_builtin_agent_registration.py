@@ -40,6 +40,8 @@ def test_team_planner_prompt_loads_playbook_before_planning_tools() -> None:
     assert "Use that playbook to choose and order references" in defn.system_prompt
     assert "restructured package/directory with multiple plausible owner files" in defn.system_prompt
     assert "do not route sibling ownership from failing test names" in defn.system_prompt
+    assert "concrete pytest ids or test files" in defn.system_prompt
+    assert "Do not substitute sibling or similarly named test modules" in defn.system_prompt
 
 
 def test_developer_prompt_requires_live_path_proof_for_new_modules() -> None:

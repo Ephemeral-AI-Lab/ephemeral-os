@@ -639,10 +639,16 @@ def test_team_planner_playbook_preserves_exact_inherited_pytest_ids() -> None:
         reference,
         (
             "Exact target preservation gate",
-            "copy those ids verbatim",
-            "renamed, normalized, or invented variants",
+            "copy those ids/files verbatim",
+            "containing test files",
+            "focused file-level commands",
+            "renamed, normalized, sibling-file, directory-swapped, or invented targets",
             "test_dtype_backend[pyarrow-pyarrow]",
             "test_dtype_backend[pyarrow-pyarrow_dtype]",
+            "dask/dataframe/tests/test_utils_dataframe.py::test_valid_divisions[divisions4-True]",
+            "dask/dataframe/tests/test_utils.py -q",
+            "dask/dataframe/tests/test_groupby.py::test_groupby_unique[disk-uint8]",
+            "dask/dataframe/io/tests/test_groupby.py -q",
         ),
     )
 
