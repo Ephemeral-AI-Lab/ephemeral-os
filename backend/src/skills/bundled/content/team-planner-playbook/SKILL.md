@@ -69,8 +69,8 @@ If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, o
 | --- | --- |
 | Load synthesis reference | `load_skill_reference(skill_name="team-planner-playbook", reference_name="submit-child-plan")`. |
 | Draft tasks | Use id, description, name, deps, scope_paths, and a `spec` with `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:`. |
-| Route lanes | Use child `team_planner` lanes for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work only when `grandchild_depth <= max_depth`; otherwise emit broader direct `developer` or `validator` tasks. |
+| Route lanes | Use child `team_planner` lanes for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work only when `grandchild_depth <= max_depth`; otherwise emit broader direct `developer` or `validator` tasks. Name-field lock: when `grandchild_depth <= max_depth`, any slice you call expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic must have `name: "team_planner"`, never `name: "developer"`. |
 | Close gaps | If a new distinct production owner slice must be known first, return to Stage 2. Use at most one targeted CI call to tighten a boundary or prevent a bad scope. |
 | Submit | Walk the Final Checklist in the reference, then submit top-level `new_tasks` only: no summary, output, parent ids, trailing prose, or later tools. |
 
-Put owner evidence, exact production scope, constraints, and dependency context inside each `Task Details` body so downstream workers inherit the routing you decided at this layer.
+Put owner evidence, exact production scope, constraints, and dependency context inside each `Task Details` body so downstream workers inherit the routing you decided at this layer. Before submit, audit every `developer` task: it either passed every atomic test, or it is an explicit max-depth per-mechanism exception from the reference.

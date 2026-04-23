@@ -375,18 +375,7 @@ def _role_filter_matches(
 
 
 def _rendered_skill_content(skill: object) -> str:
-    content = str(getattr(skill, "content", "") or "")
-    references = getattr(skill, "references", {}) or {}
-    if not references:
-        return content
-    ref_names = list(references.keys())
-    footer = (
-        "\n\n---\n"
-        f"This skill has {len(ref_names)} reference document(s) available: "
-        + ", ".join(f"`{name}`" for name in ref_names)
-        + "\nUse `load_skill_reference` to load any of them."
-    )
-    return content + footer
+    return str(getattr(skill, "content", "") or "")
 
 
 def _append_skill_bundle(

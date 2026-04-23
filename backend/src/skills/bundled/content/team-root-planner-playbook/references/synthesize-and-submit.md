@@ -21,6 +21,8 @@ Treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade reque
 
 Clustering Guidance above is a payload-level signal. The test below runs per owner slice: atomic slices become root `developer` lanes, expandable slices become child `team_planner` lanes. A slice is atomic only when **every** atomic test holds; **any** expandable signal routes it to `team_planner`.
 
+Name-field lock: after classifying a slice, write the `name` field from that classification before writing the rest of the task. If the slice is expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic, the only valid `name` is `"team_planner"`. Do not create a `developer` task whose own `Goal`, `Task Details`, notes, or checklist rationale calls the same slice expandable.
+
 Atomic tests — all must hold:
 
 1. **Single production owner.** The fix lives in one file, symbol, or tight production surface that live scout evidence pinned. Not a shortlist, not a guess, not "start here and see what else breaks".
@@ -29,6 +31,8 @@ Atomic tests — all must hold:
 4. **Bounded blast radius.** The slice touches one invariant, one API boundary, or one behavior — a reviewer can hold the whole repair in their head.
 5. **Ownership settled.** Scout notes do not leave ownership as "could also be X", "between A and B", or "depends on Y". The owner is identified, not shortlisted.
 6. **One failure mechanism.** Every named failing test in the slice traces to the same root cause. Multiple independent root causes on one file is still expandable.
+
+Atomic grouping gate: trigger -> two or more atomic slices have different owner files, symbols, or verification commands; required action -> submit separate root `developer` lanes or route the group to `team_planner`; failure signal -> one `developer` task spec lists multiple independent fixes across unrelated owners because each item looked atomic alone.
 
 Expandable signals — any one routes to `team_planner`:
 
@@ -40,6 +44,8 @@ Expandable signals — any one routes to `team_planner`:
 - **Catch-all drafting.** The draft `2. Task Details:` would have to say "repair everything in module X" or list more than one independent production surface.
 - **Cross-cutting invariant.** The fix must be enforced at multiple independent call sites that each need their own verification.
 - **Mixed intent.** A single slice bundles a bugfix with a refactor, a migration with a feature, or policy with plumbing.
+
+Self-consistency gate: trigger -> your synthesis notes call any slice expandable or say no slice passed the atomic tests; required action -> every named expandable slice is submitted with `name: "team_planner"`; failure signal -> notes say "expandable", "team_planner required", or "no slice passes atomic tests" but the final payload gives that slice `name: "developer"`. If that mismatch appears in your draft, change the `name` to `"team_planner"`; do not rewrite the rationale to make the developer assignment look acceptable.
 
 Borderline cases:
 
@@ -119,7 +125,7 @@ Field contract:
 | --- | --- |
 | `id` | Unique lower-kebab id in this payload. Other tasks reference this exact string in `deps`. |
 | `description` | Short non-blank owner/outcome label. |
-| `name` | Exactly `developer`, `team_planner`, or `validator`. |
+| `name` | Exactly `developer`, `team_planner`, or `validator`. `developer` means the slice passed every atomic test and no expandable signal fired; expandable slices must use `team_planner`. |
 | `spec` | One string with `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order. Each label starts its own line and has body text after the colon on that same line. |
 | `deps` | List of ids from this same payload. Independent work uses `[]`. Validators must depend on at least one upstream same-payload task. |
 | `scope_paths` | Non-empty list of repo-relative production paths owned or verified by the task. Use directories for broad planner or validator scopes. |
@@ -393,6 +399,6 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 | 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure. |
 | 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
 | 11 | Any clustering job includes at least one child `team_planner`. |
-| 12 | Every non-validator task passed the atomic tests or was routed to `team_planner` under a named expandable signal. |
+| 12 | Every non-validator task passed the atomic tests or was routed to `team_planner` under a named expandable signal. A task whose rationale says expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic cannot have `name: "developer"`. |
 | 13 | The payload ends with exactly one terminal `validator` whose `deps` list every same-payload non-validator id. |
 | 14 | The final assistant action is the `submit_plan(...)` tool call, not prose. |

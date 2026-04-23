@@ -149,24 +149,13 @@ def make_skills_toolkit(
                 is_error=True,
             )
 
-        # Include reference list so agent knows what's available to load next
-        ref_names = list(skill.references.keys())
-        if ref_names:
-            footer = (
-                "\n\n---\n"
-                f"This skill has {len(ref_names)} reference document(s) available: "
-                + ", ".join(f"`{r}`" for r in ref_names)
-                + "\nUse `load_skill_reference` to load any of them."
-            )
-            return ToolResult(output=skill.content + footer)
-
         return ToolResult(output=skill.content)
 
     @tool(
         name="load_skill_reference",
         description=(
             "Load a named reference document from a skill. Use only exact "
-            "reference names listed in the skill catalog or in load_skill output; "
+            "reference names listed in the skill catalog or skill instructions; "
             "there is no default reference."
         ),
         short_description="Load a skill reference.",

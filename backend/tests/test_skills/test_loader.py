@@ -269,6 +269,28 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
     assert "CodeAct-safe" not in content
 
 
+def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Benchmark/fail-to-pass clustering trigger" in skill
+    assert "parallel per-family calls before any polling" in skill
+    assert "one broad scout bundles unrelated families" in skill
+    assert "HDF scout + parquet scout + CLI/config scout" in skill
+
+
+def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Catalog only. Do not load references from this map during Stage 1 or Stage 2." in skill
+    assert "Reference load gate: trigger -> owner ledger exists" in skill
+    assert "load `synthesize-and-submit` as the first Stage 3 action" in skill
+    assert 'reference_name="synthesize-and-submit")` appears before Analyze/Scout evidence' in skill
+
+
 def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
     skill_dir = _BUNDLED_SKILLS_DIR / "team-root-planner-playbook"
     skill = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
@@ -359,6 +381,10 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "large benchmark/test-matrix work",
             "four or more independent `developer` lanes",
             "Use child `team_planner` for broad decomposition",
+            "Name-field lock: after classifying a slice, write the `name` field",
+            'the only valid `name` is `"team_planner"`',
+            "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
+            'but the final payload gives that slice `name: "developer"`',
             "## TaskSpec Examples",
             "## Dependency DAG Examples",
         ),
@@ -386,6 +412,8 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "large benchmark/test-matrix work",
             "`grandchild_depth <= max_depth`",
             "broader direct `developer` or `validator` tasks",
+            "Name-field lock",
+            'never `name: "developer"`',
             "load submit-child-plan",
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
@@ -409,8 +437,45 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "### Lane Selection",
             "`grandchild_depth <= max_depth`",
             "use broader direct `developer` and `validator` tasks instead",
+            "Name-field lock: after classifying a slice, write the `name` field",
+            'must use `name: "team_planner"`, never `name: "developer"`',
+            "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
             "## TaskSpec Examples",
             "## Dependency DAG Examples",
+        ),
+    )
+
+
+def test_planner_playbooks_lock_expandable_slices_out_of_developer_lanes() -> None:
+    root_skill = _read_bundled_skill("team-root-planner-playbook")
+    root_reference = _read_bundled_reference(
+        "team-root-planner-playbook", "synthesize-and-submit.md"
+    )
+    team_skill = _read_bundled_skill("team-planner-playbook")
+    team_reference = _read_bundled_reference(
+        "team-planner-playbook", "submit-child-plan.md"
+    )
+
+    _assert_contains_all(
+        "\n".join((root_skill, root_reference)),
+        (
+            "Name-field lock",
+            "if your synthesis calls a slice expandable",
+            'the task\'s `name` must be `team_planner`, never `developer`',
+            "Do not create a `developer` task whose own `Goal`, `Task Details`, notes, or checklist rationale calls the same slice expandable",
+            '`developer` means the slice passed every atomic test and no expandable signal fired',
+            'cannot have `name: "developer"`',
+        ),
+    )
+    _assert_contains_all(
+        "\n".join((team_skill, team_reference)),
+        (
+            "Name-field lock",
+            "when `grandchild_depth <= max_depth`",
+            'must have `name: "team_planner"`, never `name: "developer"`',
+            "do not call the fallback developer lanes atomic",
+            '`developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes',
+            'cannot have `name: "developer"`',
         ),
     )
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -22,6 +23,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from prompt.helpers import (  # noqa: E402
+    _rendered_skill_content,
     build_agent_system_prompt_text,
     build_team_run_user_prompt_report_text_sync,
     build_team_user_prompt_report_text_sync,
@@ -358,3 +360,16 @@ def test_default_team_run_prompt_report_path_uses_run_prefix() -> None:
     path = default_team_run_prompt_report_path("run/with spaces", output_dir="/tmp")
 
     assert str(path) == "/tmp/team-run-user-prompts-run-with-spaces.md"
+
+
+def test_rendered_skill_content_does_not_append_reference_footer() -> None:
+    skill = SimpleNamespace(
+        content="# Demo\n\nUse the main workflow.",
+        references={"extra": "Supplementary guidance."},
+    )
+
+    rendered = _rendered_skill_content(skill)
+
+    assert rendered == "# Demo\n\nUse the main workflow."
+    assert "This skill has" not in rendered
+    assert "Use `load_skill_reference` to load any of them." not in rendered

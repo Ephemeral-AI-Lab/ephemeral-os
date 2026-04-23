@@ -23,6 +23,8 @@ Treat inherited benchmark, fail-to-pass, migration, compatibility, and broad upg
 
 Clustering Guidance above is a payload-level signal. The test below runs per owner slice: atomic slices become current-layer `developer` lanes; expandable slices route to another child `team_planner` when `grandchild_depth <= max_depth`, else to broader direct `developer` + `validator` tasks split by failure mechanism. A slice is atomic only when **every** atomic test holds; **any** expandable signal routes it to the expandable path.
 
+Name-field lock: after classifying a slice, write the `name` field from that classification before writing the rest of the task. When `grandchild_depth <= max_depth`, a slice that is expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic must use `name: "team_planner"`, never `name: "developer"`. When `grandchild_depth > max_depth`, do not call the fallback developer lanes atomic; label them in `Task Details` as max-depth per-mechanism fallback lanes.
+
 Atomic tests — all must hold:
 
 1. **Single production owner.** The fix lives in one file, symbol, or tight production surface that inherited evidence and live scout evidence pinned. Not a shortlist, not a guess, not "start here and see what else breaks".
@@ -43,6 +45,8 @@ Expandable signals — any one routes to the expandable path:
 - **Cross-cutting invariant.** The fix must be enforced at multiple independent call sites that each need their own verification.
 - **Mixed intent.** A single slice bundles a bugfix with a refactor, a migration with a feature, or policy with plumbing.
 - **Multiple failure mechanisms.** Inherited evidence or scout notes name two or more independent root causes under one scope; split by mechanism even when files overlap. At `grandchild_depth > max_depth`, emit one `developer` per mechanism with widened `scope_paths` and a spec that names the mechanism — a four-or-more-mechanism fusion into one catch-all `developer` is a routing bug, not an acceptable collapse.
+
+Self-consistency gate: trigger -> your synthesis notes call any slice expandable or say no slice passed the atomic tests; required action -> when `grandchild_depth <= max_depth`, every named expandable slice is submitted with `name: "team_planner"`; failure signal -> notes say "expandable", "team_planner required", or "no slice passes atomic tests" but the final payload gives that slice `name: "developer"`. If that mismatch appears in your draft, change the `name` to `"team_planner"`; do not rewrite the rationale to make the developer assignment look acceptable.
 
 Borderline cases:
 
@@ -122,7 +126,7 @@ Field contract:
 | --- | --- |
 | `id` | Unique lower-kebab id in this payload. Other tasks reference this exact string in `deps`. |
 | `description` | Short non-blank owner/outcome label. Blank strings are rejected. |
-| `name` | Exactly `developer`, `team_planner`, or `validator`. |
+| `name` | Exactly `developer`, `team_planner`, or `validator`. `developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes when `grandchild_depth > max_depth`; expandable slices must use `team_planner` while `grandchild_depth <= max_depth`. |
 | `spec` | One string with `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order. Each label starts its own line and has body text after the colon on that same line. |
 | `deps` | List of ids from this same payload. Independent work uses `[]`. Validators must depend on at least one upstream same-payload task; a terminal validator must depend on every same-payload non-validator id it verifies. |
 | `scope_paths` | Non-empty list of repo-relative production paths owned or verified by the task. Use directories for broad planner or validator scopes. |
@@ -421,6 +425,6 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 | 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure for a named target. |
 | 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
 | 11 | Any clustering job includes at least one child `team_planner` when `grandchild_depth <= max_depth`; no flat all-developer fan-out is submitted for multi-cluster benchmark repair unless `grandchild_depth > max_depth`. |
-| 12 | Every non-validator task passed the atomic tests or was routed to the expandable path (child `team_planner` when `grandchild_depth <= max_depth`, else per-mechanism broader `developer` + `validator`) under a named expandable signal. |
+| 12 | Every non-validator task passed the atomic tests or was routed to the expandable path (child `team_planner` when `grandchild_depth <= max_depth`, else per-mechanism broader `developer` + `validator`) under a named expandable signal. When `grandchild_depth <= max_depth`, a task whose rationale says expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic cannot have `name: "developer"`. |
 | 13 | When a terminal validator is included, its `deps` list every same-payload non-validator id, including `team_planner` ids. |
 | 14 | The final assistant action is the `submit_plan(...)` tool call, not prose. |
