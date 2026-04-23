@@ -798,6 +798,61 @@ async def test_submit_replan_rejects_subagent_targets():
 
 
 @pytest.mark.asyncio
+async def test_submit_replan_requires_diagnostics_decision_for_unresolved_blocker():
+    task_center = _AsyncTaskCenterStub()
+    task_center.graph = {
+        "replanner-task": Task(
+            id="replanner-task",
+            team_run_id="run-1",
+            agent_name="team_replanner",
+            status=TaskStatus.READY,
+            objective="recover",
+            parent_id="parent",
+        ),
+    }
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+            "max_plan_size": 8,
+        },
+    )
+
+    result = await SubmitReplanTool().execute(
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "missing-decision",
+                    "description": "Repair unresolved blocker",
+                    "spec": _spec(
+                        "Repair unresolved blocker evidence.",
+                        task_details=(
+                            "Classification: unresolved_blocker. "
+                            "Repair the production dispatch path."
+                        ),
+                    ),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                }
+            ],
+            cancel_ids=[],
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert (
+        "unresolved_blocker requires Diagnostics decision: "
+        "trivial_direct_replan or deep_diagnostics"
+        in result.output
+    )
+    assert ctx.metadata.get("resolved_plan") is None
+
+
+@pytest.mark.asyncio
 async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
     task_center = _AsyncTaskCenterStub()
     task_center.graph = {

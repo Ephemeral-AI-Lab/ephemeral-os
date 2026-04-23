@@ -7,13 +7,56 @@ description: Playbook for the root_planner agent. Analyze the user request, scou
 
 Read the following sections to produce the root task DAG from the user request, then finish with exactly one `submit_plan(...)` call.
 
+## When to Use
+
+- You are dispatched as the root/entry task of a team run — there is no parent, no deps, and no Task Center graph context to load.
+- The user request has not yet been decomposed into any same-layer DAG.
+- Your single terminal action is one `submit_plan(...)` call; no tool may run after the payload is ready.
+- Work below this layer may continue through child `team_planner` lanes; broader exploration belongs to them, not to you.
+
 ## Hierarchical Planning Principle
+
+**Route top-down; let child planners decompose.**
 
 Team plans are hierarchical: each planner submits a local child DAG, and child `team_planner` tasks may continue exploration and decomposition below it. At the root level, explore only enough to identify defensible owner families, direct exact-owner work, and broad unresolved regions. Do not try to fully decompose every region in one root payload.
 
 Prefer a child `team_planner` over more root scouting when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration. The root planner's job is top-down routing, not exhaustive single-layer discovery.
 
 Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, route broad families to child `team_planner` lanes when depth allows. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface.
+
+At a glance:
+
+```
+┌─ Depth Gate ───────────────────────────────────────────────────────────┐
+│  Evaluate once, before drafting the payload.                           │
+│                                                                        │
+│  current_depth + 2 <= max_depth ?                                      │
+│     Yes → broad, clustered, or unresolved regions MUST route to        │
+│           a child team_planner lane.                                   │
+│     No  → do not create child team_planner lanes; emit direct          │
+│           developer + validator tasks with broader scopes instead.     │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ Clustering Checkpoint ────────────────────────────────────────────────┐
+│  Triggers when the request shows ANY of:                               │
+│     • many failing tests                                               │
+│     • several production families                                      │
+│     • multi-engine / multi-dtype / multi-format / multi-API matrix     │
+│     • benchmark / fail-to-pass / migration / compatibility / upgrade   │
+│                                                                        │
+│     Triggered + depth allows → include at least one child              │
+│                                 team_planner in the root payload.      │
+│     Triggered + depth denies → broaden developer scope_paths;          │
+│                                 do not force decomposition here.       │
+│     Not triggered            → direct owner lanes are fine.            │
+│                                                                        │
+│  HARD INVALID: a clustering root payload with 4+ independent           │
+│  developer lanes and no child team_planner — even when scouts          │
+│  named plausible owners or files.                                      │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+> **Scout conclusions that edit tests, skip, xfail, or reconfigure pytest are evidence — not owners.** Translate them into production, dependency, environment, or uncertainty hypotheses before drafting a payload. Section 3 codifies this as a bullet; the principle is surfaced up front so you don't carry test-edit recommendations into child specs.
 
 Depth rules:
 
@@ -29,6 +72,21 @@ Clustering-job checkpoint:
 - A clustering root payload with four or more independent developer lanes and no child `team_planner` is invalid, even when scouts named plausible owners or files. Stop and replace broad developer groups with child `team_planner` lanes before submitting.
 - Use child planners for production families that still contain multiple failing tests, engines, dtypes, formats, or API surfaces. Do not flatten those families into sibling root developers just because owner files are known.
 - Keep root `developer` lanes only for small leaf fixes with a single narrow production surface and a coherent verification command.
+
+## Lane Selection
+
+Use this table to pick the `name` for each task you draft in section 3. **Check decomposition rows first.** Only fall through to `developer` when no decomposition signal matches — a named owner file does not override a clustering signal.
+
+| If the slice shows… | Route to… |
+| --- | --- |
+| Multiple failing clusters, families, engines, dtypes, or API surfaces under one region | `team_planner` (only when `current_depth + 2 <= max_depth`) |
+| A benchmark, fail-to-pass, migration, or compatibility matrix that splits into subproblems | `team_planner` (only when `current_depth + 2 <= max_depth`) |
+| A broad or unresolved region the scouts could not pin to a single owner | `team_planner` (only when `current_depth + 2 <= max_depth`) |
+| Any decomposition signal above **but** `current_depth + 2 > max_depth` | `developer` with a broader `scope_paths` — do not create child planners |
+| A same-layer verification owner distinct from the implementers | `validator` |
+| A narrow exact-owner fix — **and** no decomposition signal above matched | `developer` |
+
+Never include `scout` or `team_replanner` in `new_tasks`: scouts run via `run_subagent(...)`, and replanners are spawned reactively by the runtime.
 
 ## Workflow
 
@@ -46,6 +104,8 @@ flowchart TD
 ```
 
 ### 1. Analyze the task
+
+**Produce an owner ledger, not a plan.**
 
 Goal: classify intent and produce an owner ledger.
 
@@ -72,6 +132,8 @@ Never:
 Exit when: you can state which owner slices are clear, which are unresolved, and which benchmark evidence must be passed to children.
 
 ### 2. Launch scouts
+
+**Resolve only unresolved production owners.**
 
 Goal: explore only unresolved production ownership.
 
@@ -103,6 +165,8 @@ Exit when: every scout is finished or canceled, every available note is read, an
 
 ### 3. Synthesize results
 
+**Turn evidence into DAG shape.**
+
 Goal: turn evidence into the same-layer DAG.
 
 Tools:
@@ -132,11 +196,15 @@ Exit when: either a new distinct production owner slice requires another scout w
 
 ### 4. Draft plan and submit
 
+**One `submit_plan(...)` call, then stop.**
+
 Goal: build the terminal payload and submit it.
 
 Tools:
 
 - `submit_plan({ "new_tasks": [...] })` exactly once. No other tool after the payload is ready.
+
+> **OCC resolves concurrent edits to the same file.** Overlapping `scope_paths` between sibling developers are fine — do not invent serial deps, narrow scopes, or merge lanes just to keep them disjoint. Use `deps` for real output ordering, not for scope hygiene.
 
 Steps:
 
@@ -153,6 +221,8 @@ Steps:
 
 
 ## Terminal Tool Contract
+
+> **The root has no graph to inherit.** Every `deps` entry must resolve to another id in *this* `new_tasks` payload — there are no pre-existing Task Center ids to reference, and no ids from a parent layer reach you.
 
 Call:
 
@@ -185,6 +255,100 @@ type NewTaskSpec = {
 | `scope_paths` | Non-empty JSON list of repo-relative production paths the task owns or verifies. Use directories for broad planner/validator scopes. |
 
 ### Examples
+
+#### Worked Decision Walkthrough
+
+A short narrative that shows how evidence becomes payload shape. The JSON examples below show the *output*; this walkthrough shows the *judgment*.
+
+> *Illustrative only — file paths are real, but the failures, clusters, and evidence are fabricated for teaching. Do not treat the scenario below as authoritative prior state when actually planning.*
+
+*Request:* "Get the benchmark suite under `backend/tests/benchmarks/sweevo/` passing. Failures span four production areas: the codeact tool (optional-dep fallback), the routing service (dtype mismatch), submission schema drift, and missing benchmark-target extraction in runtime context."
+
+*Step 1 — Analyze.* Classify as fail-to-pass + clustering (four production families, many failing tests). Owner ledger: two slices have exact named files (`backend/src/tools/daytona_toolkit/codeact_tool.py`, `backend/src/team/runtime/context_builder.py`); two are broader (`backend/src/tools/submission/` schema boundary, `backend/src/code_intelligence/routing/service.py` dtype surface). Benchmark ids and failing test files are written to the scout `context`, never to `target_paths`.
+
+*Step 2 — Scout.* Launch scouts only for the unresolved slices — submission-schema ownership and routing-service dtype boundaries. Skip scouts for codeact and context_builder: the user already named the exact file, so a scout would only confirm what we know. Join the wave via `check_background_progress` → `wait_for_background_task` → `read_file_note`.
+
+*Step 3 — Synthesize.* Clustering Checkpoint fires (multi-family benchmark job). Depth Gate: `current_depth + 2 <= max_depth`, so decomposition is allowed. Routing of each slice:
+
+- codeact fallback → direct `developer` (narrow, coherent, exact owner).
+- runtime context_builder → direct `developer` (narrow, coherent, exact owner).
+- routing dtype + submission schema → one child `team_planner` (two linked families with shared decomposition risk across engines / dtypes / schema versions).
+- One terminal `validator` covering all three non-validator ids.
+
+Named owner files on routing and submission did *not* override the clustering signal — decomposition rows in the Lane Selection table are checked first.
+
+*Step 4 — Submit.* One `submit_plan(...)` call with `new_tasks = [dev-codeact-fallback, dev-runtime-context, plan-routing-and-submission, val-benchmark-sweevo]`. Validator `deps` list all three non-validator ids. No further tool calls.
+
+#### Clustering: Valid vs Invalid
+
+Same request as the walkthrough above. Two shapes it could take — one rejected, one accepted — so the contrast is visible before the canonical JSON examples below.
+
+```
+✗ INVALID (clustering job, flat fan-out)
+
+   developer (codeact fallback)        ← narrow, fine
+   developer (runtime context)         ← narrow, fine
+   developer (routing dtype)           ← broad family, should decompose
+   developer (submission schema)       ← broad family, should decompose
+   validator   (terminal, covers all)
+
+   Reason for rejection: 4 sibling developers on a multi-family benchmark
+   job with no child team_planner. The "A clustering root payload with
+   four or more independent developer lanes and no child team_planner is
+   invalid" rule applies even when scouts named plausible owners or files.
+
+✓ VALID (clustering job, decomposed)
+
+   developer    (codeact fallback)     ← narrow leaf fix
+   developer    (runtime context)      ← narrow leaf fix
+   team_planner (routing + submission) ← two linked families, decomposed below
+   validator    (terminal, deps on all three above)
+
+   Reason for acceptance: the two families with shared decomposition
+   risk are routed to a child team_planner; narrow leaf fixes stay as
+   direct developers; one terminal validator covers all three.
+```
+
+The valid shape as full JSON:
+
+```json
+{
+  "new_tasks": [
+    {
+      "id": "dev-codeact-fallback",
+      "description": "Fix codeact optional-dep fallback",
+      "name": "developer",
+      "spec": "1. Goal: Fix the optional-dependency fallback path so the codeact tool no longer raises under the sweevo benchmark.\n2. Task Details: Own backend/src/tools/daytona_toolkit/codeact_tool.py. Narrow leaf fix — the user named this file directly; scouts were not launched for this slice. Runs independent of the runtime-context and planner lanes.\n3. Acceptance Criteria: Run uv run pytest backend/tests/benchmarks/sweevo -q -k codeact; failing ids close with the real fallback path, not with ImportError, skip, or xfail.",
+      "deps": [],
+      "scope_paths": ["backend/src/tools/daytona_toolkit/codeact_tool.py"]
+    },
+    {
+      "id": "dev-runtime-context",
+      "description": "Add benchmark target extraction in runtime context",
+      "name": "developer",
+      "spec": "1. Goal: Populate benchmark_test_ids and benchmark_test_files in runtime context so the root planner can read them from team_run metadata.\n2. Task Details: Own backend/src/team/runtime/context_builder.py. Narrow leaf fix — user named the file. Runs in parallel with the codeact and planner lanes.\n3. Acceptance Criteria: Run uv run pytest backend/tests/team -q -k context_builder and uv run pytest backend/tests/benchmarks/sweevo -q -k runtime_context; both suites pass and extraction is exercised end-to-end.",
+      "deps": [],
+      "scope_paths": ["backend/src/team/runtime/context_builder.py"]
+    },
+    {
+      "id": "plan-routing-and-submission",
+      "description": "Decompose routing dtype + submission schema repair",
+      "name": "team_planner",
+      "spec": "1. Goal: Decompose the routing-service dtype mismatch and submission-schema drift across their owner families.\n2. Task Details: Own decomposition under backend/src/code_intelligence/routing and backend/src/tools/submission. Scout notes show the dtype surface spans multiple engines and the schema drift spans multiple submission versions; the child planner preserves production-only scopes and owns any further decomposition below. Benchmark evidence: pytest ids for routing_* and submission_* clusters under backend/tests/benchmarks/sweevo/, plus scout notes on engine and schema boundaries.\n3. Acceptance Criteria: Child plan emits exact owner lanes under routing and submission, one child-layer validator, and coverage for uv run pytest backend/tests/benchmarks/sweevo -q -k 'routing or submission' plus focused unit tests named in child evidence.",
+      "deps": [],
+      "scope_paths": ["backend/src/code_intelligence/routing", "backend/src/tools/submission"]
+    },
+    {
+      "id": "val-benchmark-sweevo",
+      "description": "Validate full sweevo benchmark suite",
+      "name": "validator",
+      "spec": "1. Goal: Verify the full sweevo benchmark passes once all parallel and decomposed lanes finish.\n2. Task Details: Verify backend/src/tools/daytona_toolkit/codeact_tool.py, backend/src/team/runtime/context_builder.py, backend/src/code_intelligence/routing, and backend/src/tools/submission. Terminal validator — depends on every same-payload non-validator id, including the planner id whose descendants run later.\n3. Acceptance Criteria: Run uv run pytest backend/tests/benchmarks/sweevo -q; all named clusters close with real production fixes. No cluster is closed via skip, xfail, ImportError, or missing optional dependencies.",
+      "deps": ["dev-codeact-fallback", "dev-runtime-context", "plan-routing-and-submission"],
+      "scope_paths": ["backend/src/tools/daytona_toolkit/codeact_tool.py", "backend/src/team/runtime/context_builder.py", "backend/src/code_intelligence/routing", "backend/src/tools/submission"]
+    }
+  ]
+}
+```
 
 #### Parallel + Terminal Validator
 
@@ -282,3 +446,33 @@ type NewTaskSpec = {
 - No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner.
 - Any clustering job with available depth includes at least one child `team_planner`; do not submit a flat all-developer root fan-out for multi-cluster benchmark repair.
 - The final assistant action is the `submit_plan(...)` tool call, not prose.
+
+## Anti-Patterns
+
+A consolidated recap of the failure modes that most often produce rejected or regret-causing root payloads. Detailed rules live in the sections above; this recap exists so a reader double-checking a draft can scan one list. Grouped by which phase the mistake surfaces in.
+
+### Scouting
+
+- Launching scouts at benchmark tests, test files, benchmark harnesses, missing test-derived paths, or exact files already disproved by live evidence.
+- Bundling unrelated owner slices into one scout to save call count.
+- Cancelling healthy scouts just to save time when their output would change owner boundaries.
+- Patching, validating, or reading production files yourself instead of delegating that work to scouts.
+
+### Planning
+
+- Flattening a clustering job into four or more sibling developers because scouts named plausible owner files.
+- Hiding multi-owner work inside one catch-all developer task.
+- Fully decomposing a broad region at the root layer when a child `team_planner` could own the top-down exploration below it.
+- Relaunching scouts to improve weak notes instead of routing the uncertainty to a child `team_planner`.
+- Preserving scout-authored test-edit, skip, xfail, or pytest-reconfiguration recommendations inside developer specs.
+- Treating a terminal validator as the implicit owner of an otherwise unassigned failing cluster.
+
+### Submission
+
+- Including any top-level key other than `new_tasks`, or any task field beyond the six allowed.
+- Naming a task anything other than `developer`, `team_planner`, or `validator`.
+- Writing `deps` entries that don't resolve to another id in this same `new_tasks` payload.
+- Inventing serial deps or narrowing `scope_paths` just to keep sibling developer scopes disjoint — OCC already handles overlap.
+- Accepting skipped tests, xfail, clear `ImportError`, or missing optional dependencies as closure for a named fail-to-pass target.
+- Submitting a clustering root payload with 4+ sibling developer lanes and no child `team_planner` when depth allows.
+- Continuing with any tool call after the `submit_plan(...)` payload is ready.

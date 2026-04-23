@@ -102,6 +102,13 @@ _SPEC_SECTION_RE = re.compile(
     r"(?im)^\s*(?:\d+[.)]\s*)?"
     r"(Goal|Task Details|Acceptance Criteria)\s*:\s*\S"
 )
+_UNRESOLVED_BLOCKER_RE = re.compile(
+    r"(?i)\bClassification\s*:\s*unresolved_blocker\b"
+)
+_DIAGNOSTICS_DECISION_RE = re.compile(
+    r"(?i)\bDiagnostics decision\s*:\s*"
+    r"(?:trivial_direct_replan|deep_diagnostics)\b"
+)
 
 
 def _spec_format_errors(spec_text: str) -> list[str]:
@@ -123,6 +130,18 @@ def _spec_format_errors(spec_text: str) -> list[str]:
             break
         previous = current
     return errors
+
+
+def _replan_spec_contract_errors(spec_text: str) -> list[str]:
+    if (
+        _UNRESOLVED_BLOCKER_RE.search(spec_text)
+        and not _DIAGNOSTICS_DECISION_RE.search(spec_text)
+    ):
+        return [
+            "unresolved_blocker requires Diagnostics decision: "
+            "trivial_direct_replan or deep_diagnostics"
+        ]
+    return []
 
 
 def _note_budget_issues(
@@ -537,6 +556,11 @@ def _validate_submit_replan_input(
             roster=_roster_from_context(context),
         )
     )
+    for spec in arguments.new_tasks:
+        errors.extend(
+            f"task '{spec.id}': {error}"
+            for error in _replan_spec_contract_errors(spec.spec)
+        )
     if errors:
         return errors
 
