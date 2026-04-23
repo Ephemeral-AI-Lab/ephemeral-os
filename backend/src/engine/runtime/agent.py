@@ -121,7 +121,7 @@ def finalize_tool_registry_and_prompt(
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
     submission_toolkit = tool_registry.get_toolkit("submission")
     if submission_toolkit is not None:
-        from team.runtime.tool_policy import blocked_submission_tools_for_role
+        from team.runtime.context_builder import blocked_submission_tools_for_role
 
         role_blocked_tools = blocked_submission_tools_for_role(role, submission_toolkit.tool_names())
         if role_blocked_tools:

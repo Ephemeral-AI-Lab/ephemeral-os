@@ -60,12 +60,13 @@ Notes are scoped by task and path. `NoteManager` owns note state, posting, reads
 When multiple notes exist for the same upstream task, prompt context prefers the
 most useful note over the merely latest note. For dependency context,
 `TaskContextBuilder` keeps one preferred note per dependency task, avoiding
-low-information checkpoint/status notes when richer worker, scout, planner, or
-reviewer notes exist. For parent context, it first prefers notes whose paths
-match the child task's `scope_paths`, then applies the same preferred-note
-selection. Checkpoint notes remain a fallback when they are the only available
-parent or dependency context.
+low-information status notes when richer worker, scout, planner, or reviewer
+notes exist. For parent context, it first prefers notes whose paths match the
+child task's `scope_paths`, then applies the same preferred-note selection.
 
-## Checkpoints
+## Resume
 
-TaskCenter checkpoints capture the task graph, ready queue order, note state, project context, and budget state. Rollback restores all of those runtime surfaces together so task context and Task Center note reads match the restored task graph.
+TaskCenter no longer exposes a user-facing checkpoint or rollback API. Crash
+recovery rebuilds the task graph from the event log, primes resume-only state,
+and `prepare_for_resume()` restores the replayed task snapshot into the store
+before recovering `running` tasks back to `ready`.

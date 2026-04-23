@@ -6,7 +6,7 @@ the runtime:
 - ``TaskStore``       — persistence + in-memory task graph
 - ``BudgetManager``   — task/replan capacity + budget_update events
 - ``PlanExpander``    — submitted-plan validation, expansion, replan apply
-- ``TransitionTracker`` — diff/emit task state-change events
+- task-state helpers  — diff/emit task state-change events
 - ``NoteManager``     — note posting, scope filtering
 - ``TaskContextBuilder`` — agent prompt context assembly
 """
@@ -37,12 +37,12 @@ from team.persistence.events import (
     TeamRunEvent,
     make_replace_dependency,
     make_task_added,
+    make_task_status,
     task_to_dict,
 )
 from team.persistence.run_store import NullTeamRunStore, TeamRunStore
 from team.persistence.task_store import TaskStore, _has_parent_summarizer_role
 from team.planning.expander import PlanExpander, ReplanApplyOutcome
-from team.runtime.transitions import TransitionTracker
 from team.task_context_builder import TaskContextBuilder
 
 logger = logging.getLogger(__name__)
@@ -71,13 +71,6 @@ class TaskCenter:
             team_run_id=team_run_id,
             budgets=budgets,
             budget_state=budget_state,
-            emit_cb=self._emit,
-        )
-
-        self._transitions = TransitionTracker(
-            team_run_id=team_run_id,
-            graph_getter=lambda: self._store.graph,
-            refresh_graph_fn=self._store.refresh_graph,
             emit_cb=self._emit,
         )
 
@@ -175,6 +168,62 @@ class TaskCenter:
     def _new_id() -> str:
         return str(uuid.uuid4())
 
+    @staticmethod
+    def _iso(value: Any) -> str | None:
+        return value.isoformat() if value is not None else None
+
+    def _task_status_payload(self, task: Task) -> dict[str, Any]:
+        return {
+            "agent_run_id": task.agent_run_id,
+            "started_at": self._iso(task.started_at),
+            "finished_at": self._iso(task.finished_at),
+            "failure_reason": task.failure_reason,
+        }
+
+    def _task_state_signature(self, task: Task | None) -> tuple[Any, ...] | None:
+        if task is None:
+            return None
+        return (
+            task.status.value,
+            task.agent_run_id,
+            self._iso(task.started_at),
+            self._iso(task.finished_at),
+            task.failure_reason,
+        )
+
+    def _snapshot_transitions(
+        self, task_ids: set[str] | None = None
+    ) -> dict[str, tuple[Any, ...] | None]:
+        graph = self.graph
+        ids = task_ids if task_ids is not None else set(graph)
+        return {tid: self._task_state_signature(graph.get(tid)) for tid in ids}
+
+    async def _refresh_and_emit_transitions(
+        self, before: dict[str, tuple[Any, ...] | None]
+    ) -> None:
+        await self._store.refresh_graph()
+        for task_id, prior in before.items():
+            task = self.graph.get(task_id)
+            if task is None:
+                continue
+            current = self._task_state_signature(task)
+            if current == prior:
+                continue
+            self._emit_full_status(task)
+
+    def _emit_full_status(self, task: Task) -> None:
+        self._emit(
+            make_task_status(
+                self._team_run_id,
+                task.id,
+                task.status.value,
+                **self._task_status_payload(task),
+            )
+        )
+
+    def _emit_status(self, task_id: str, status: str, **payload: Any) -> None:
+        self._emit(make_task_status(self._team_run_id, task_id, status, **payload))
+
     def set_cancel_running_task_callback(self, callback: Callable[[str], None] | None) -> None:
         self._cancel_running_task_cb = callback
 
@@ -191,7 +240,7 @@ class TaskCenter:
         for parent_id in awaiting:
             parent = self.graph.get(parent_id)
             if parent is not None:
-                self._transitions.emit_full_status(parent)
+                self._emit_full_status(parent)
             await self._ensure_parent_summary_task(parent_id)
 
     def _resolve_parent_summarizer_agent_name(self) -> str:
@@ -293,7 +342,7 @@ class TaskCenter:
                 return
         existing_summary_task = self._live_parent_summary_task_from_graph(parent_id)
         if existing_summary_task is not None:
-            self._transitions.emit_full_status(existing_summary_task)
+            self._emit_full_status(existing_summary_task)
             return
         children = [
             task for task in self.graph.values()
@@ -310,7 +359,7 @@ class TaskCenter:
         )
         if created:
             self._emit(make_task_added(self._team_run_id, task_to_dict(summary_task)))
-        self._transitions.emit_full_status(summary_task)
+        self._emit_full_status(summary_task)
 
     async def _post_parent_summary_note(
         self, summary_task: Task, summary_content: str
@@ -366,31 +415,31 @@ class TaskCenter:
             return
         origin = self.graph.get(origin_id)
         if origin is not None:
-            self._transitions.emit_full_status(origin)
+            self._emit_full_status(origin)
         promoted, awaiting = await self._store.maybe_promote_expanded_parent(origin_id)
         for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
-            self._transitions.emit_full_status(promoted_task)
+            self._emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
 
     async def _mark_done_emit_promotions(self, task_id: str) -> None:
         promoted_ready = await self._store.mark_done(task_id)
-        self._transitions.emit_status(task_id, "done", finished_at=_utcnow().isoformat())
+        self._emit_status(task_id, "done", finished_at=_utcnow().isoformat())
         for dep_id in promoted_ready:
             dep_task = self.graph.get(dep_id)
             if dep_task is None:
                 continue
-            self._transitions.emit_full_status(dep_task)
+            self._emit_full_status(dep_task)
         promoted, awaiting = await self._store.maybe_promote_expanded_parent(task_id)
         for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
-            self._transitions.emit_full_status(promoted_task)
+            self._emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
@@ -402,10 +451,10 @@ class TaskCenter:
         filter_ids: set[str] | None = None,
     ) -> _T:
         """Snapshot → run op → refresh+emit transitions when op reports change."""
-        before = self._transitions.snapshot(filter_ids)
+        before = self._snapshot_transitions(filter_ids)
         result = await op()
         if result:
-            await self._transitions.refresh_and_emit(before)
+            await self._refresh_and_emit_transitions(before)
         return result
 
     # ---- task lifecycle --------------------------------------------------
@@ -452,7 +501,7 @@ class TaskCenter:
             if outcome.replanner_child_count > 0:
                 await self._emit_replanned_origin_if_finalized(task_id)
                 await self._store.mark_expanded(task_id)
-                self._transitions.emit_status(
+                self._emit_status(
                     task_id,
                     "expanded",
                     finished_at=_utcnow().isoformat(),
@@ -465,7 +514,7 @@ class TaskCenter:
 
         if result.submitted_plan is not None:
             await self._store.mark_expanded(task_id)
-            self._transitions.emit_status(task_id, "expanded", finished_at=_utcnow().isoformat())
+            self._emit_status(task_id, "expanded", finished_at=_utcnow().isoformat())
         else:
             await self._mark_done_emit_promotions(task_id)
             await self._maybe_finalize_parent_via_summary_task(task_id, result)
@@ -508,27 +557,27 @@ class TaskCenter:
 
         Only leaf workers may fail; `TaskStore.fail_task` raises on EXPANDED.
         """
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         await self._store.fail_task(task_id, reason)
-        await self._transitions.refresh_and_emit(before)
+        await self._refresh_and_emit_transitions(before)
 
     async def fail_task(self, task_id: str, reason: str) -> None:
         # A (REQUEST_REPLAN) is already terminal. When its replanner R fails,
         # A stays at REQUEST_REPLAN; only R transitions to FAILED here, and
         # its cascade handles dependents that were rewired onto R.
         failing_task = self.graph.get(task_id)
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         await self._store.fail_task(task_id, reason)
         # FAILED children are now detached; parent may become promotable.
         promoted, awaiting = await self._store.maybe_promote_expanded_parent(task_id)
         for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is not None:
-                self._transitions.emit_full_status(promoted_task)
+                self._emit_full_status(promoted_task)
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
-        await self._transitions.refresh_and_emit(before)
+        await self._refresh_and_emit_transitions(before)
         # Parent-summary sidecar failure must fail its EAS parent and
         # fail-fast the whole run — the parent cannot reach DONE without an
         # authoritative summary.
@@ -551,9 +600,9 @@ class TaskCenter:
         It is reserved for persistence/runtime exceptions where continuing the
         graph would leave tasks wedged in non-dispatchable states.
         """
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         await self._store.mark_terminal(task_id, "failed", reason)
-        await self._transitions.refresh_and_emit(before)
+        await self._refresh_and_emit_transitions(before)
 
     async def request_replan(self, task_id: str, request: ReplanRequest) -> Task:
         self._budget.require_replan_capacity()
@@ -562,7 +611,7 @@ class TaskCenter:
         replanners = find_by_role("replanner")
         if not replanners:
             raise RuntimeError("no agent with role='replanner' is registered")
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         deps_before = {tid: list(task.deps) for tid, task in self.graph.items()}
         rec, is_new = await self._store.request_replan(
             task_id,
@@ -572,7 +621,7 @@ class TaskCenter:
         )
         task = self.graph[rec.id]
         if is_new:
-            await self._transitions.refresh_and_emit(before)
+            await self._refresh_and_emit_transitions(before)
             self._budget.bump_replan_counters()
             self._emit(make_task_added(self._team_run_id, task_to_dict(task)))
             rewired_task_ids = [
@@ -591,7 +640,7 @@ class TaskCenter:
             )
             self._budget.emit_update()
         else:
-            await self._transitions.refresh_and_emit(before)
+            await self._refresh_and_emit_transitions(before)
         return task
 
     async def apply_replan(
@@ -600,7 +649,7 @@ class TaskCenter:
         add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
     ) -> ReplanApplyOutcome:
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         try:
             outcome = await self._expander.apply_replan(
                 replan_task_id=replan_task_id,
@@ -612,7 +661,7 @@ class TaskCenter:
             # REQUEST_REPLAN, so no origin-side transition is needed. The
             # replanner R itself is failed by the executor through the normal
             # worker-failure path.
-            await self._transitions.refresh_and_emit(before)
+            await self._refresh_and_emit_transitions(before)
             raise
 
         # Cancellations during replan may have detached every remaining child
@@ -621,11 +670,11 @@ class TaskCenter:
         for promoted_id in promoted:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is not None:
-                self._transitions.emit_full_status(promoted_task)
+                self._emit_full_status(promoted_task)
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
-        await self._transitions.refresh_and_emit(before)
+        await self._refresh_and_emit_transitions(before)
         return outcome
 
     async def finalize_parent_awaiting_summary(self, parent_id: str) -> None:
@@ -642,13 +691,13 @@ class TaskCenter:
             # Already finalized (idempotent) — nothing to do.
             return
         promoted_ready = await self._store.finalize_parent_summary(parent_id)
-        self._transitions.emit_status(
+        self._emit_status(
             parent_id, "done", finished_at=_utcnow().isoformat()
         )
         for dep_id in promoted_ready:
             dep_task = self.graph.get(dep_id)
             if dep_task is not None:
-                self._transitions.emit_full_status(dep_task)
+                self._emit_full_status(dep_task)
         # Grandparent cascade: the now-DONE parent may satisfy its own
         # parent's promotion condition.
         promoted, awaiting = await self._store.maybe_promote_expanded_parent(parent_id)
@@ -656,7 +705,7 @@ class TaskCenter:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
-            self._transitions.emit_full_status(promoted_task)
+            self._emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
@@ -684,7 +733,7 @@ class TaskCenter:
         if rec.status != "expanded_awaiting_summary":
             return
         await self._store.mark_terminal(parent_id, "failed", reason)
-        self._transitions.emit_status(
+        self._emit_status(
             parent_id, "failed", finished_at=_utcnow().isoformat()
         )
         promoted, awaiting = await self._store.maybe_promote_expanded_parent(parent_id)
@@ -692,7 +741,7 @@ class TaskCenter:
             promoted_task = self.graph.get(promoted_id)
             if promoted_task is None:
                 continue
-            self._transitions.emit_full_status(promoted_task)
+            self._emit_full_status(promoted_task)
             if promoted_task.fired_by_task_id:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._handle_awaiting_summary_ids(awaiting)
@@ -702,10 +751,10 @@ class TaskCenter:
 
     async def fail_orphaned_replanning(self) -> int:
         """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""
-        before = self._transitions.snapshot()
+        before = self._snapshot_transitions()
         count = await self._store.fail_orphaned_replanning()
         if count:
-            await self._transitions.refresh_and_emit(before)
+            await self._refresh_and_emit_transitions(before)
         return count
 
     async def cancel_all_pending(self) -> int:
@@ -719,7 +768,7 @@ class TaskCenter:
         if rec is None:
             raise RuntimeError(f"mark_running: {task_id} not found")
         task = self.graph[task_id]
-        self._transitions.emit_status(
+        self._emit_status(
             task_id,
             "running",
             agent_run_id=agent_run_id,

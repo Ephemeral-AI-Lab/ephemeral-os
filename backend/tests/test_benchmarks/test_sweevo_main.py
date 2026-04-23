@@ -258,34 +258,6 @@ def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
     assert f"[system:runtime_note] {long_system}" in contents
 
 
-def test_main_uses_resume_team_run_id_as_folder(monkeypatch, tmp_path):
-    """When --resume-team-run-id is given, benchmark files land in that folder."""
-    monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
-    monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")
-
-    captured: dict[str, object] = {}
-
-    async def _fake_cmd_run(_args, *, team_run_id):
-        captured["team_run_id"] = team_run_id
-        return 0
-
-    monkeypatch.setattr(sweevo_main, "_cmd_run", _fake_cmd_run)
-
-    exit_code = sweevo_main.main(
-        [
-            "--instance-id",
-            "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--resume-team-run-id",
-            "2026-04-19-08-00_sweevo_benchmark",
-        ]
-    )
-
-    assert exit_code == 0
-    assert captured["team_run_id"] == "2026-04-19-08-00_sweevo_benchmark"
-    benchmark_dir = tmp_path / ".ephemeralos" / "team-runs" / "2026-04-19-08-00_sweevo_benchmark" / "benchmark"
-    assert benchmark_dir.exists()
-
-
 def test_main_uses_selected_team_name_for_fresh_run_folder(monkeypatch, tmp_path):
     monkeypatch.setattr(sweevo_main, "_PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(sweevo_main, "_utc_run_time", lambda: "2026-04-20-10-30")

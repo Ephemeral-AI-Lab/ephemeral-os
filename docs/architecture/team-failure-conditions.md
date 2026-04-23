@@ -44,7 +44,7 @@ Several errors are intentionally not run-fatal:
   `GraphInvariantViolation` are logged and retried.
 - Event-store append failures are logged and ignored so coordination can
   continue.
-- Completion note and activity checkpoint failures are logged and ignored.
+- Completion note post failures are logged and ignored.
 - Scope warnings are injected when possible; injection failures do not fail the
   task.
 

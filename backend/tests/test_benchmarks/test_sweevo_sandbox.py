@@ -50,18 +50,3 @@ async def test_ensure_sweevo_test_patch_uploads_bytes_before_path(
         'base64 -d > /tmp/sweevo_test.patch' in call.args[1]
         for call in exec_mock.await_args_list
     )
-
-
-@pytest.mark.asyncio
-async def test_capture_sweevo_repo_patch_uses_resolved_index_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    exec_mock = AsyncMock(return_value="diff --git a/foo b/foo\n")
-    monkeypatch.setattr(sweevo_sandbox, "_exec", exec_mock)
-
-    patch = await sweevo_sandbox.capture_sweevo_repo_patch("sbx-1", "/testbed")
-
-    assert patch == "diff --git a/foo b/foo"
-    command = exec_mock.await_args.args[1]
-    assert "git rev-parse --git-path index" in command
-    assert "git read-tree HEAD" in command

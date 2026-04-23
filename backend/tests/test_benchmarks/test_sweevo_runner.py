@@ -79,17 +79,12 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
             "structured_log_path": None,
             "usage": None,
             "usage_by_model": [],
-            "checkpoints": [],
-            "checkpoint_ids": [],
-            "latest_checkpoint_id": None,
-            "latest_checkpoint_label": None,
             "max_depth_reached": 0,
             "agent_runs": 0,
             "agent_counts": {},
             "replans_used": 0,
             "budgets": {"max_tasks": 40, "max_depth": 5, "max_plan_size": 12},
             "resumed_from": None,
-            "resumed_from_checkpoint": None,
         }
 
     fake_team_runner.run_sweevo_team = _fake_run_team

@@ -16,7 +16,6 @@ from benchmarks.sweevo.team_runner import (
     _build_agent_overrides,
     _make_external_hook_emitter,
     _build_root_prompt,
-    _checkpoint_repo_patch_from_store,
     _derive_planner_runtime_limits,
     _emit_dispatcher_dag,
     _make_context_builders,
@@ -24,7 +23,7 @@ from benchmarks.sweevo.team_runner import (
 )
 from agents.types import AgentDefinition
 from engine.core.query import QueryExitReason
-from team.persistence.events import TeamRunEvent
+from team.runtime.context_builder import TeamAgentContext
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from team.builtins import (
     DEVELOPER,
@@ -70,45 +69,13 @@ def _fake_team_run(**overrides) -> SimpleNamespace:
         sandbox_id="sbx-1",
         session_id="sess-1",
         budgets=SimpleNamespace(),
-        task_center=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
+        task_center=SimpleNamespace(graph={}),
         resume=AsyncMock(),
         wait=AsyncMock(),
     )
     for k, v in overrides.items():
         setattr(base, k, v)
     return base
-
-
-def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpoint_patch="") -> None:
-    """Apply the shared monkeypatches needed by resume_sweevo_team tests."""
-    if checkpoint_records is None:
-        checkpoint_records = []
-    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
-    monkeypatch.setattr("server.app_factory.ensure_runtime_stores_ready", lambda: object())
-    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_prepare_benchmark_session",
-        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
-    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
-    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_records_from_store",
-        lambda *args, **kwargs: checkpoint_records,
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_repo_patch_from_store",
-        lambda *args, **kwargs: checkpoint_patch,
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_finalize_team_result",
-        lambda **_: {"status": "ok"},
-    )
 
 
 def test_load_or_create_team_definition_uses_requested_db_name(monkeypatch):
@@ -434,31 +401,6 @@ def test_sweevo_budgets_follow_instance_size_ceiling():
     assert budgets.max_depth == 6
 
 
-def test_checkpoint_repo_patch_from_store_returns_latest_matching_patch():
-    store = SimpleNamespace(
-        load_run=lambda _team_run_id: [
-            TeamRunEvent(
-                team_run_id="T1",
-                kind="checkpoint_repo_state",
-                data={"checkpoint_id": "cp-1", "repo_patch": "patch-a"},
-            ),
-            TeamRunEvent(
-                team_run_id="T1",
-                kind="checkpoint_repo_state",
-                data={"checkpoint_id": "cp-2", "repo_patch": "patch-b"},
-            ),
-            TeamRunEvent(
-                team_run_id="T1",
-                kind="checkpoint_repo_state",
-                data={"checkpoint_id": "cp-1", "repo_patch": "patch-a2"},
-            ),
-        ]
-    )
-
-    assert _checkpoint_repo_patch_from_store(store, "T1", "cp-1") == "patch-a2"
-    assert _checkpoint_repo_patch_from_store(store, "T1", "cp-2") == "patch-b"
-    assert _checkpoint_repo_patch_from_store(store, "T1", "missing") == ""
-
 def test_enforce_validation_evidence_requires_daytona_shell():
     def _state(messages):
         return SimpleNamespace(
@@ -485,147 +427,6 @@ def test_enforce_validation_evidence_requires_daytona_shell():
             )
         ])
     )
-
-
-def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch):
-    instance = _pydantic_instance()
-    fake_tr = _fake_team_run()
-
-    _patch_resume_sweevo_common(monkeypatch)
-
-    def fake_resume_from(_store, _team_run_id, *, checkpoint_id=None):
-        assert checkpoint_id is None
-        return fake_tr
-
-    monkeypatch.setattr(
-        sweevo_team_runner.TeamRun,
-        "resume_from",
-        staticmethod(fake_resume_from),
-    )
-
-    seen_factory_calls: list[dict[str, object]] = []
-
-    def fake_make_executor_factory(
-        session_config,
-        sandbox_id,
-        printer,
-        *,
-        repo_dir="/testbed",
-        team_metrics=None,
-        agent_overrides=None,
-    ):
-        seen_factory_calls.append(
-            {
-                "session_config": session_config,
-                "sandbox_id": sandbox_id,
-                "printer": printer,
-                "agent_overrides": agent_overrides,
-            }
-        )
-        return "executor-factory"
-
-    monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", fake_make_executor_factory)
-
-    result = asyncio.run(
-        sweevo_team_runner.resume_sweevo_team(
-            instance,
-            "team-run-1",
-        )
-    )
-
-    assert result == {"status": "ok"}
-    assert seen_factory_calls and seen_factory_calls[0]["sandbox_id"] == "sbx-1"
-    assert seen_factory_calls[0]["agent_overrides"] == {}
-    fake_tr.resume.assert_awaited_once_with(
-        executor_factory="executor-factory",
-        num_executors=sweevo_team_runner._DEFAULT_NUM_EXECUTORS,
-        resumed_from="team-run-1",
-        resumed_from_checkpoint=None,
-    )
-
-
-def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
-    instance = _pydantic_instance()
-    fake_tr = _fake_team_run()
-
-    _patch_resume_sweevo_common(
-        monkeypatch,
-        checkpoint_records=[{"id": "cp-1", "label": "durable:complete:developer:dev1", "sequence": 1}],
-        checkpoint_patch="diff --git a/x b/x",
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner.TeamRun,
-        "resume_from",
-        staticmethod(lambda *_args, **_kwargs: fake_tr),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "setup_sweevo_sandbox", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
-
-    result = asyncio.run(
-        sweevo_team_runner.resume_sweevo_team(
-            instance,
-            "team-run-1",
-            checkpoint_id="cp-1",
-        )
-    )
-
-    assert result == {"status": "ok"}
-    sweevo_team_runner.setup_sweevo_sandbox.assert_awaited_once_with(instance, "sbx-1", "/testbed")
-    sweevo_team_runner.ensure_sweevo_test_patch.assert_awaited_once_with(
-        instance, "sbx-1", "/testbed"
-    )
-    sweevo_team_runner.apply_sweevo_repo_patch.assert_awaited_once_with(
-        "sbx-1",
-        "diff --git a/x b/x",
-        "/testbed",
-    )
-    fake_tr.resume.assert_awaited_once()
-
-
-def test_resume_sweevo_team_reapplies_benchmark_patch_when_checkpoint_patch_missing(monkeypatch):
-    instance = _pydantic_instance(
-        repo="dask/dask",
-        instance_id="dask__dask_2023.3.2_2023.4.0",
-        instance_id_swe="dask__dask_2023.3.2_2023.4.0",
-        start_version="2023.3.2",
-        end_version="2023.4.0",
-        fail_to_pass=["tests/test_groupby.py::test_value_counts"],
-        pass_to_pass=["tests/test_groupby.py::test_existing"],
-    )
-    fake_tr = _fake_team_run()
-
-    _patch_resume_sweevo_common(
-        monkeypatch,
-        checkpoint_records=[{"id": "cp-1", "label": "durable:complete:validator:val1", "sequence": 1}],
-        checkpoint_patch="",
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner.TeamRun,
-        "resume_from",
-        staticmethod(lambda *_args, **_kwargs: fake_tr),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "setup_sweevo_sandbox", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
-    monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
-
-    result = asyncio.run(
-        sweevo_team_runner.resume_sweevo_team(
-            instance,
-            "team-run-1",
-            checkpoint_id="cp-1",
-        )
-    )
-
-    assert result == {"status": "ok"}
-    sweevo_team_runner.setup_sweevo_sandbox.assert_awaited_once_with(instance, "sbx-1", "/testbed")
-    sweevo_team_runner.ensure_sweevo_test_patch.assert_awaited_once_with(
-        instance, "sbx-1", "/testbed"
-    )
-    sweevo_team_runner.apply_sweevo_repo_patch.assert_not_awaited()
-    fake_tr.resume.assert_awaited_once()
 
 
 def test_make_runner_uses_agent_definition_limits(monkeypatch):
@@ -669,7 +470,7 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
         printer=None,
         agent_overrides={"team_planner": {"tool_call_limit": 50}},
     )
-    ctx = sweevo_team_runner.TeamAgentContext(
+    ctx = TeamAgentContext(
         user_message="Plan it",
         tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
     )
@@ -737,7 +538,7 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
             emit=lambda _event: None,
         ),
     )
-    ctx = sweevo_team_runner.TeamAgentContext(
+    ctx = TeamAgentContext(
         user_message="Ship it",
         tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
     )
@@ -811,7 +612,7 @@ def test_make_runner_persists_work_result(monkeypatch):
         sandbox_id="sbx-1",
         printer=None,
     )
-    ctx = sweevo_team_runner.TeamAgentContext(
+    ctx = TeamAgentContext(
         user_message="Plan it",
         tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
     )
@@ -880,7 +681,7 @@ def test_make_runner_writes_agent_run_log_artifact(monkeypatch, tmp_path: Path):
         printer=None,
         team_metrics={"agent_run_log_dir": str(tmp_path)},
     )
-    ctx = sweevo_team_runner.TeamAgentContext(
+    ctx = TeamAgentContext(
         user_message="Fix it",
         tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
     )
@@ -974,7 +775,7 @@ def test_make_runner_marks_cancelled_agent_run_log(monkeypatch, tmp_path: Path):
         printer=None,
         team_metrics={"agent_run_log_dir": str(tmp_path)},
     )
-    ctx = sweevo_team_runner.TeamAgentContext(
+    ctx = TeamAgentContext(
         user_message="Fix it",
         tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
     )
@@ -1003,7 +804,7 @@ def test_make_runner_marks_cancelled_agent_run_log(monkeypatch, tmp_path: Path):
     assert payload["assistant_response"] == "Still working when run cancelled."
 
 
-def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):
+def test_finalize_team_result_surfaces_retry_replan_metadata(monkeypatch):
     printed: list[tuple[str, str]] = []
     fake_usage_store = SimpleNamespace(
         is_ready=True,
@@ -1041,15 +842,12 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
                         depth=1,
                     ),
                 },
-                list_checkpoints=lambda: [],
             ),
         ),
         session_config=SimpleNamespace(session_id="sess-1"),
         team_metrics={
             "agent_runs": 4,
             "agent_counts": Counter({"developer": 2, "validator": 2}),
-            "checkpoint_ids": [],
-            "checkpoints": [],
         },
         budgets=SimpleNamespace(
             max_tasks=10,
@@ -1057,20 +855,13 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
             max_plan_size=6,
         ),
         printer=SimpleNamespace(raw_line=lambda who, body: printed.append((who, body))),
-        checkpoint_records=[
-            {"id": "cp-1", "label": "planner:W1", "sequence": 1},
-            {"id": "cp-2", "label": "durable:complete:developer:A", "sequence": 2},
-        ],
         resumed_from="TR0",
-        resumed_from_checkpoint="cp-1",
     )
 
     assert result["replans_used"] == 2
-    assert result["checkpoints"][-1]["label"] == "durable:complete:developer:A"
-    assert result["latest_checkpoint_id"] == "cp-2"
-    assert result["latest_checkpoint_label"] == "durable:complete:developer:A"
+    assert result["resumed_from"] == "TR0"
     assert any(
-        body == "[team_stats] tasks=2 max_depth=1 agent_runs=4 checkpoints=2 replans=2"
+        body == "[team_stats] tasks=2 max_depth=1 agent_runs=4 replans=2"
         for _, body in printed
     )
 
