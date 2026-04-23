@@ -164,6 +164,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
         "Do not satisfy this requirement with residual risk prose, \"out of scope\" text"
         in action_add
     )
+    assert "Test repair by proxy" in action_add
+    assert "production `scope_paths` paired with test-evidence mutation instructions" in contract
     assert (
         "No named fail-to-pass variant appears only as residual risk, \"out of scope\", unsupported/test-design prose, broad validator coverage, or validator-only closure without an upstream repair."
         in contract
@@ -288,11 +290,37 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     skill = (
         _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
+    reference = _read_bundled_reference(
+        "team-root-planner-playbook", "synthesize-and-submit.md"
+    )
 
     assert "Benchmark/fail-to-pass clustering trigger" in skill
     assert "parallel per-family calls before any polling" in skill
+    assert "scout_required" in skill
+    assert "put each family in `scout_required` even when its first-pass owner label looks clear" in skill
+    assert "only the unknown families are scouted while clear-looking families go to Stage 3" in skill
+    assert "two scouts for six independent clusters because four looked clear" in skill
     assert "one broad scout bundles unrelated families" in skill
     assert "HDF scout + parquet scout + CLI/config scout" in skill
+    assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
+    assert "a current-layer `developer` is called atomic using only first-pass owner labels" in reference
+
+
+def test_team_planner_playbook_requires_scout_required_fanout() -> None:
+    skill = (
+        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    reference = _read_bundled_reference(
+        "team-planner-playbook", "submit-child-plan.md"
+    )
+
+    assert "Resolve unresolved or benchmark-risk production ownership" in skill
+    assert "every `scout_required` or unresolved production owner" in skill
+    assert "put each broad family, matrix family, or likely expandable first-pass owner in `scout_required`" in skill
+    assert "only unknown families are scouted while clear-looking families enter synthesis" in skill
+    assert "Launch one scout per `scout_required` or unresolved production owner family" in skill
+    assert "Scout evidence gate: trigger -> the coverage ledger has an inherited benchmark/fail-to-pass" in reference
+    assert "a current-layer `developer` is called atomic using only inherited or first-pass owner labels" in reference
 
 
 def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three() -> None:
@@ -309,6 +337,9 @@ def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three
     assert "in the same action that first analyzes failing tests" in skill
     assert "benchmark test paths are verification evidence, not owner proof" in skill
     assert "The reference load is the stage transition" in skill
+    assert "The reference load is a one-way transition" in skill
+    assert "no later scout, note-read, CI, workspace, or symbol exploration" in skill
+    assert "before later scout/CI exploration" in skill
 
 
 def test_team_planner_playbook_defers_submit_child_reference_until_stage_three() -> None:
@@ -323,6 +354,9 @@ def test_team_planner_playbook_defers_submit_child_reference_until_stage_three()
     assert 'reference_name="submit-child-plan")` appears before context reads' in skill
     assert "immediately after `load_skill(...)`" in skill
     assert "The reference load is the stage transition" in skill
+    assert "The reference load is a one-way transition" in skill
+    assert "no later scout, note-read, CI, workspace, or symbol exploration" in skill
+    assert "before later scout/CI exploration" in skill
 
 
 def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
@@ -342,6 +376,9 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
     assert 'skill_name="team-root-planner-playbook"' in skill
     assert 'reference_name="synthesize-and-submit"' in skill
     assert "Load this reference in Stage 3 before drafting any `submit_plan(...)` payload" in reference
+    assert "This reference is a one-way Stage 3 transition" in reference
+    assert "after loading it, preserve that slice as uncertainty" in reference
+    assert "instead of launching scouts or CI/workspace/symbol exploration" in reference
     assert "## Synthesis Rules" in reference
     assert "## Submission Rules" in reference
     assert "## Terminal Tool Contract" in reference
@@ -459,6 +496,7 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "load submit-child-plan",
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
+            "newly-revealed distinct owner slice: carry as uncertainty",
         ),
     )
     _assert_absent(
@@ -490,6 +528,7 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "Multi-API family gate: trigger -> inherited evidence or scout notes for one family list multiple public APIs",
             "classify the family as expandable and use `team_planner` while `grandchild_depth <= max_depth`",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
+            "This reference is a one-way Stage 3 transition",
             "## TaskSpec Examples",
             "## Dependency DAG Examples",
         ),
@@ -701,6 +740,8 @@ def test_developer_playbook_rejects_success_without_runtime_verification() -> No
     assert "Clean diagnostics are not acceptance verification" in skill
     assert "the required runtime command was not run after the final edit" in skill
     assert "verification was not run, was skipped due to budget" in skill
+    assert "success because diagnostics are clean or the blocker seems external" in skill
+    assert "success that labels the red command unrelated" in skill
     assert "pass or skip" in skill
     assert "ended in collection/import/no-tests/optional-dependency failure" in skill
     assert "supported only by diagnostics is not a success summary" in skill

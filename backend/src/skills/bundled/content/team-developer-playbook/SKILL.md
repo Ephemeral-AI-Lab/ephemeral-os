@@ -165,6 +165,7 @@ Build one trace before another edit or replan:
 | Warning to reserve terminal call | Trigger -> budget warning appears; required action -> make the next tool call `submit_task_summary(...)` using only evidence already gathered; failure signal -> any intervening read, probe, edit, diagnostic, test, or recovery attempt. |
 | Latest evidence already green | Trigger -> before the warning, the latest required verification was green and edited-file diagnostics were clean; required action -> submit success; failure signal -> success after red, absent, stale, or diagnostics-only evidence. |
 | Latest evidence not already green | Trigger -> verification is red, absent, invalid, stale, unresolved, or diagnostics are absent when the warning appears; required action -> submit `type="request_replan"` with the current Stage 5 trace, last command or diagnostic, and the decision the replanner must resolve; failure signal -> one more edit or command to chase a known next fix. |
+| Red command at warning | Trigger -> latest required command failed at collection, import, pytest config, or environment setup, even if unrelated to the edit; required action -> submit `type="request_replan"`; failure signal -> success because diagnostics are clean or the blocker seems external. |
 
 ### 6. Submit terminal summary
 
@@ -222,4 +223,5 @@ For `type="request_replan"`, include:
 | --- | --- |
 | `type="success"` | Use `type="success"` only when the latest required direct verification command passed with tool-reported exit code 0 and collected the named fail-to-pass target instead of skipping or expected-failing it. |
 | Not success | A summary that says verification was not run, was skipped due to budget, was wrapped, warning-suppressed, pytest-config-overridden, ended in collection/import/no-tests/optional-dependency failure, failed the required command while a narrower subtest passed, or is supported only by diagnostics is not a success summary. |
+| External blocker | Trigger -> required verification is red because collection, import, pytest config, or environment setup failed outside the edited file; required action -> submit `type="request_replan"` with that blocker; failure signal -> success that labels the red command unrelated. |
 | `type="request_replan"` | Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/path, broader-scope, or too-complex verification. |

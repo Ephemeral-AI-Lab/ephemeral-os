@@ -43,7 +43,7 @@ def _budget_warning_steps(context: "QueryContext") -> str:
     return (
         "1. Reserve one call for submit_task_summary; never spend the last tool call on CodeAct, reads, diagnostics, or cleanup.\n"
         "2. Use only evidence already gathered before this warning; do not run one more verification, diagnostic, read, or edit.\n"
-        "3. If evidence is incomplete, diagnostics-only, verification was not already green, verification still fails, or diagnostics are absent, call submit_task_summary(type='request_replan') with the exact evidence now.\n"
+            "3. If evidence is incomplete, diagnostics-only, verification was not already green, verification still fails, or diagnostics are absent, call submit_task_summary(type='request_replan') with the exact evidence now; this includes collection, import, pytest-config, or environment failures even if they look unrelated.\n"
         "4. If the latest required verification was already green after the final edit and diagnostics were already clean, call submit_task_summary(type='success') with behavior/API delta, exact commands and exit codes, and diagnostics status."
     )
 

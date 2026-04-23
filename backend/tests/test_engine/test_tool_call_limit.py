@@ -127,6 +127,7 @@ def test_budget_warning_default_success_summary_requires_evidence():
     assert "Use only evidence already gathered before this warning" in event.text
     assert "do not run one more verification" in event.text
     assert "verification was not already green" in event.text
+    assert "collection, import, pytest-config, or environment failures" in event.text
     assert "A known next fix is not an exception" in event.text
     assert "non-terminal mutation or investigation" in event.text
     assert "latest required verification was already green after the final edit" in event.text

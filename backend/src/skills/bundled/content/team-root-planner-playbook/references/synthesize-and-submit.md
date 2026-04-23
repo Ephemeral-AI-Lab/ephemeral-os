@@ -2,11 +2,13 @@
 
 Load this reference in Stage 3 before drafting any `submit_plan(...)` payload. It holds the synthesis rules, terminal tool contract, task-spec examples, and dependency DAG examples for root planner submissions.
 
-If a newly revealed production owner slice needs scouting before root routing, return to Scout before drafting. After the payload is ready, the final assistant action is the `submit_plan(...)` tool call.
+This reference is a one-way Stage 3 transition. If a newly revealed production owner slice still needs scouting, the reference was loaded too early; after loading it, preserve that slice as uncertainty and route it to child `team_planner` or scoped diagnostic work instead of launching scouts or CI/workspace/symbol exploration. After the payload is ready, the final assistant action is the `submit_plan(...)` tool call.
 
 ## Synthesis Rules
 
 Start from the Stage 1 owner ledger plus Stage 2 scout notes and uncertainty. Produce a same-payload DAG with task ids, lane names, `deps`, `scope_paths`, and validator coverage. Every named failing cluster must have a repair/decomposition owner or be explicitly handed to a child `team_planner`; a terminal validator is never an owner for otherwise unassigned failures.
+
+Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass/migration/compatibility family that Stage 1 marked `scout_required`; required action -> use its scout note, or preserve explicit uncertainty and route the family to `team_planner`; failure signal -> a current-layer `developer` is called atomic using only first-pass owner labels.
 
 ### Clustering Guidance
 

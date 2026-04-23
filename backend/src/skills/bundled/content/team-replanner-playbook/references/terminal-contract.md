@@ -33,6 +33,7 @@ Never include `output`, `summary`, `background`, `parent_id`, `new_sibling_tasks
 | `spec` | Must contain `1. Goal:`, `2. Task Details:`, `3. Acceptance Criteria:` in order. If `Task Details` uses `Classification: unresolved_blocker`, it must also include the exact field `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`. |
 | `deps` | Prefer local payload ids. Existing ids require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task. Validators depend on local payload ids. |
 | `scope_paths` | Non-empty repo-relative production paths. Verification-only tests stay in `spec`; do not scope benchmark tests, test rewrites, skip/xfail work, pytest config, or transient artifacts unless the original user request asked to repair tests. |
+| spec/scope consistency | Trigger -> a spec asks to edit, restore, checkout, or prove no diff for test, benchmark, pytest/config, or verification files; required action -> reject the task unless the original user asked to repair tests and create a production repair or diagnostic instead; failure signal -> production `scope_paths` paired with test-evidence mutation instructions. |
 
 `cancel_ids` may include only stale non-terminal direct siblings of this replanner. Never include the failed task id, original `request_replan` task, this replanner id, terminal tasks, or nested descendants. Same-parent graph position does not make the failed task cancellable. Compare every `cancel_ids` entry against the failed task id from the prompt before submission. Cancel only the stale sibling root; cascade handles descendants and dependents.
 
@@ -96,4 +97,5 @@ Cancel-and-redraft uses the same shape but sets `cancel_ids` to stale direct sib
 | 14 | `cancel_ids` contains only stale non-terminal direct siblings. |
 | 15 | No `cancel_ids` entry equals the failed task id from the prompt, even if that task appears as a same-parent sibling in `read_task_graph()`. |
 | 16 | No benchmark tests, `*/tests/*`, `test_*.py`, benchmark harness files, pytest configuration, skip/xfail work, or verification rewrites are scoped unless the original user request explicitly asked to repair tests rather than production behavior. |
-| 17 | The final assistant action is the `submit_replan(...)` tool call, not prose. |
+| 17 | No task spec tells a developer to edit, restore, checkout, or prove no diff for test evidence while hiding it behind production `scope_paths`. |
+| 18 | The final assistant action is the `submit_replan(...)` tool call, not prose. |
