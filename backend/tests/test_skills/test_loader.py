@@ -281,6 +281,9 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
         in content
     )
     assert "Build a coverage ledger for benchmark/fail-to-pass requests" in content
+    assert "Sibling target exclusivity gate" in content
+    assert "keep each named failing id, file-level command, or focused suite command only in the owning family's spec" in content
+    assert "owner A also carries `pytest tests/test_beta.py -q` while owner B already owns that target" in content
     assert "Do not put a named failing cluster only in a validator spec" in content
     assert (
         "No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner"
@@ -303,9 +306,16 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "put each family in `scout_required` even when its first-pass owner label looks clear" in skill
     assert "only the unknown families are scouted while clear-looking families go to Stage 3" in skill
     assert "two scouts for six independent clusters because four looked clear" in skill
+    assert "Boundary-probe limit" in skill
+    assert "use at most one targeted `ci_workspace_structure` or `ci_query_symbol` call" in skill
+    assert "`dask/dataframe/io`, `dask/dataframe`, and `dask` before the scout wave" in skill
     assert "Single-family payload gate" in skill
     assert "split them into separate `run_subagent` calls in the same wave" in skill
-    assert "one background task mixes I/O, grouping, utilities, and CLI/config ownership" in skill
+    assert "one background task mixes HDF with JSON, groupby with utils, or CLI with config/compat ownership" in skill
+    assert "Stable-boundary gate" in skill
+    assert "choose one stable production boundary path in `target_paths`" in skill
+    assert "both `dask/dataframe/io/parquet.py` and `dask/dataframe/io`" in skill
+    assert "repo-root fallback like `dask` next to concrete owner files" in skill
     assert '"target_paths": ["<one production owner path>"]' in skill
     assert "use one directory path rather than several sibling files" in skill
     assert "one broad scout bundles unrelated families" in skill
@@ -600,6 +610,23 @@ def test_team_planner_playbook_requires_fail_to_pass_coverage_owners() -> None:
             "repair/decomposition",
             "terminal validator",
             "validator spec",
+        ),
+    )
+
+
+def test_team_planner_playbook_preserves_exact_inherited_pytest_ids() -> None:
+    reference = _read_bundled_reference(
+        "team-planner-playbook", "submit-child-plan.md"
+    )
+
+    _assert_contains_all(
+        reference,
+        (
+            "Exact target preservation gate",
+            "copy those ids verbatim",
+            "renamed, normalized, or invented variants",
+            "test_dtype_backend[pyarrow-pyarrow]",
+            "test_dtype_backend[pyarrow-pyarrow_dtype]",
         ),
     )
 

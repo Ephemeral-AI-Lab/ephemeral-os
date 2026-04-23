@@ -83,13 +83,14 @@ Never include `scout` or `team_replanner` in `new_tasks`; scouts run via `run_su
 ### Coverage and Evidence Rules
 
 1. Build a coverage ledger for benchmark/fail-to-pass requests. Track every named failing cluster, variant, or command from the user request and scout notes.
-2. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
-3. Drop exact files disproved by live evidence. Use the nearest stable production boundary instead.
-4. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis.
-5. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests unless the original user request explicitly asks to repair tests rather than production behavior.
-6. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to a child `team_planner`.
-7. Every root payload ends with exactly one terminal `validator`. It is a structural requirement of the payload, not an optional addition. See the `Terminal Validator` section below.
-8. Make the terminal validator depend on every same-payload non-validator id, including child `team_planner` ids.
+2. Sibling target exclusivity gate: trigger -> the coverage ledger is split across multiple root families and one draft producer spec repeats a sibling family's named pytest ids, whole test file, or focused verification command; required action -> keep each named failing id, file-level command, or focused suite command only in the owning family's spec and in the terminal validator roll-up, and if a sibling file matters for context mention it as evidence only without duplicating its targets; failure signal -> one producer lane also carries another lane's ids or `pytest tests/test_beta.py -q` because the topics sound related. Example: ✓ owner A keeps `tests/test_alpha.py::test_case_a` while owner B keeps `tests/test_beta.py::test_case_b`; ✗ owner A also carries `pytest tests/test_beta.py -q` while owner B already owns that target.
+3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
+4. Drop exact files disproved by live evidence. Use the nearest stable production boundary instead.
+5. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis.
+6. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests unless the original user request explicitly asks to repair tests rather than production behavior.
+7. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to a child `team_planner`.
+8. Every root payload ends with exactly one terminal `validator`. It is a structural requirement of the payload, not an optional addition. See the `Terminal Validator` section below.
+9. Make the terminal validator depend on every same-payload non-validator id, including child `team_planner` ids.
 
 ## Submission Rules
 

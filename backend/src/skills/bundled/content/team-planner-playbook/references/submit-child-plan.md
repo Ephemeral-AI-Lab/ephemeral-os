@@ -86,13 +86,14 @@ Never include `scout` or `team_replanner` in `new_tasks`; scouts run via `run_su
 ### Coverage and Evidence Rules
 
 1. Build a coverage ledger for inherited benchmark/fail-to-pass slices. Track every named failing cluster, variant, or command inherited from the parent, dependencies, and scout notes.
-2. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
-3. Drop exact files disproved by live evidence. Use the nearest stable production boundary instead; never preserve a guessed exact path across cold CI or a canceled scout.
-4. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis before planning; do not preserve the test-edit recommendation in child specs.
-5. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests, benchmark harness files, or pytest configuration unless the original user request explicitly asks to repair tests rather than production behavior.
-6. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to another child `team_planner`.
-7. Validator lanes are optional at this layer. When a validator is terminal, it must list every same-payload non-validator id it verifies, including child `team_planner` ids whose descendants will run later.
-8. Route newly revealed uncertainty you cannot resolve this layer to another child `team_planner` rather than to a current-layer developer with weak evidence.
+2. Exact target preservation gate: trigger -> parent, dependency, or scout evidence names concrete pytest ids or parameter variants; required action -> copy those ids verbatim into child `Task Details` or `Acceptance Criteria`, or quote them unchanged before any broader command; failure signal -> renamed, normalized, or invented variants that do not appear in the inherited evidence. Example: ✓ `test_dtype_backend[pyarrow-pyarrow]`; ✗ `test_dtype_backend[pyarrow-pyarrow_dtype]`.
+3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
+4. Drop exact files disproved by live evidence. Use the nearest stable production boundary instead; never preserve a guessed exact path across cold CI or a canceled scout.
+5. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis before planning; do not preserve the test-edit recommendation in child specs.
+6. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests, benchmark harness files, or pytest configuration unless the original user request explicitly asks to repair tests rather than production behavior.
+7. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to another child `team_planner`.
+8. Validator lanes are optional at this layer. When a validator is terminal, it must list every same-payload non-validator id it verifies, including child `team_planner` ids whose descendants will run later.
+9. Route newly revealed uncertainty you cannot resolve this layer to another child `team_planner` rather than to a current-layer developer with weak evidence.
 
 ## Submission Rules
 
