@@ -371,6 +371,29 @@ def test_validate_run_subagent_allows_same_bucket_scout_list():
     assert result.subagent_scope_paths == ["dvc/command/run.py", "dvc/command/repro.py"]
 
 
+@pytest.mark.parametrize("parent_agent_name", ["root_planner", "team_planner"])
+def test_validate_run_subagent_allows_planner_multi_path_scout_bundle(parent_agent_name: str):
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg(), "agent_name": parent_agent_name},
+    )
+    target_paths = [
+        "dask/dataframe/utils.py",
+        "dask/dataframe/_compat.py",
+        "dask/dataframe/__init__.py",
+    ]
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": target_paths},
+        context=ctx,
+    )
+
+    assert not isinstance(result, ToolResult)
+    assert result.subagent_scope_paths == target_paths
+
+
 def test_validate_run_subagent_allows_all_test_file_scout():
     ctx = ToolExecutionContext(
         cwd=Path("/tmp"),
@@ -427,9 +450,15 @@ def test_run_subagent_schema_guides_scout_targets_without_runtime_gate():
         schema["description"]
     )
     assert "Never pair a production owner and its benchmark test" in schema["description"]
+    assert "root/team planners must pass exactly one production owner path per scout call" in (
+        schema["description"]
+    )
     input_description = schema["input_schema"]["properties"]["input"]["description"]
     assert "with live production owner paths only" in input_description
     assert "keep benchmark tests and missing test-derived paths in the context text" in (
+        input_description
+    )
+    assert "For planner-dispatched scouts, pass exactly one production owner path per call" in (
         input_description
     )
     assert "Invalid: mixing `pkg/mod.py` with `pkg/tests/test_mod.py`" in input_description

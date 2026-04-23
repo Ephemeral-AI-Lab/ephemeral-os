@@ -93,7 +93,7 @@ Diagnostics decision: deep_diagnostics
 
 Choose `trivial_direct_replan` only when file notes and CI already name every failing production seam. Choose `deep_diagnostics` when any seam is still unresolved.
 
-Before choosing `trivial_direct_replan`, check it against every observed value in the same failing assertion. For merge/config/dispatch/state bugs, make a compact value table: input path/state, observed value, expected value, proposed rule. If the rule breaks any row or contradicts the failed summary, use diagnostics or create a diagnostic developer instead of copying the handoff into a repair task.
+Before choosing `trivial_direct_replan`, check it against every observed value in the same failing assertion. Value-rule trigger -> the failed task proposes a concrete one-line fix or value mapping; required action -> write a compact value table before the action reference with input path/state, observed value, expected value, proposed rule, and proposed result; failure signal -> a direct repair copies the proposed rule without that table, or any proposed result differs from the expected value. Example: OK `observed int64, expected uint64, proposed astype(original uint8) -> diagnostic`; wrong `trivial_direct_replan` with `astype(original uint8)`.
 
 Never treat another function, line range, or checklist item in the same owner file as scope expansion. A failed task's "test design issue" label does not drop a named fail-to-pass variant.
 

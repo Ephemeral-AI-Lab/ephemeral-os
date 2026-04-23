@@ -53,6 +53,8 @@ Expandable signals — any one routes to `team_planner`:
 
 Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs, backend implementations, or helper surfaces such as read, write, metadata, wrappers, adapters, or engines; required action -> classify the family as expandable and route it to `team_planner`; failure signal -> a `developer` spec calls the family coherent while its `Task Details` lists those APIs or surfaces.
 
+Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic because one shared dependency, library, version, or file likely changed; required action -> name the single internal helper, invariant, or adapter boundary proven by scout evidence, else route to `team_planner`; failure signal -> a `developer` spec cites one broad cause while its `Task Details` lists read/write, load/save, import/export, or multiple public entrypoints.
+
 Self-consistency gate: trigger -> your synthesis notes call any slice expandable or say no slice passed the atomic tests; required action -> every named expandable slice is submitted with `name: "team_planner"`; failure signal -> notes say "expandable", "team_planner required", or "no slice passes atomic tests" but the final payload gives that slice `name: "developer"`. If that mismatch appears in your draft, change the `name` to `"team_planner"`; do not rewrite the rationale to make the developer assignment look acceptable.
 
 Borderline cases:

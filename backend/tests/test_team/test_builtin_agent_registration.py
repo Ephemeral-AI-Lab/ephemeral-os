@@ -57,6 +57,8 @@ def test_parent_summarizer_prompt_requests_replan_for_unresolved_rollups() -> No
     assert "open risk`, not `delivered`" in defn.system_prompt
     assert "success evidence is invalid when it depends on pytest configuration" in defn.system_prompt
     assert "`--override-ini`" in defn.system_prompt
+    assert "whose overridden-evidence child line says `delivered`" in defn.system_prompt
+    assert "reported pass uses -p no:warnings" in defn.system_prompt
 
 
 def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:

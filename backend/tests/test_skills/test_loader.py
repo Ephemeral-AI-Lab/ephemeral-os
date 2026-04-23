@@ -110,7 +110,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Synthesize repair mapping" in skill
     assert "check it against every observed value in the same failing assertion" in skill
     assert "compact value table" in skill
-    assert "copying the handoff into a repair task" in skill
+    assert "proposed result differs from the expected value" in skill
+    assert "observed int64, expected uint64, proposed astype(original uint8) -> diagnostic" in skill
     assert "trace-gap triplets" in skill
     assert "Launch one scout per remaining triplet" in skill
     assert "Wait for all required `read_task_details` results before calling `read_task_graph()`" in skill
@@ -165,6 +166,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
         in action_add
     )
     assert "Test repair by proxy" in action_add
+    assert "correct task specs, acceptance criteria, or test filters" in action_add
+    assert "handoff metadata" in action_add
     assert "production `scope_paths` paired with test-evidence mutation instructions" in contract
     assert (
         "No named fail-to-pass variant appears only as residual risk, \"out of scope\", unsupported/test-design prose, broad validator coverage, or validator-only closure without an upstream repair."
@@ -303,6 +306,8 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "Single-family payload gate" in skill
     assert "split them into separate `run_subagent` calls in the same wave" in skill
     assert "one background task mixes I/O, grouping, utilities, and CLI/config ownership" in skill
+    assert '"target_paths": ["<one production owner path>"]' in skill
+    assert "use one directory path rather than several sibling files" in skill
     assert "one broad scout bundles unrelated families" in skill
     assert "HDF scout + parquet scout + CLI/config scout" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
@@ -323,7 +328,8 @@ def test_team_planner_playbook_requires_scout_required_fanout() -> None:
     assert "only unknown families are scouted while clear-looking families enter synthesis" in skill
     assert "Launch one scout per `scout_required` or unresolved production owner family" in skill
     assert "Split target paths from different owner-ledger rows into separate calls in the same wave" in skill
-    assert "a single scout may include multiple paths only when they belong to one owner family" in skill
+    assert 'target_paths: ["<one production owner path>"]' in skill
+    assert "use one directory path rather than several sibling files" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has an inherited benchmark/fail-to-pass" in reference
     assert "a current-layer `developer` is called atomic using only inherited or first-pass owner labels" in reference
 
@@ -467,6 +473,8 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
             "Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs",
             "a `developer` spec calls the family coherent while its `Task Details` lists those APIs or surfaces",
+            "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
+            "name the single internal helper, invariant, or adapter boundary proven by scout evidence",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
             'but the final payload gives that slice `name: "developer"`',
             "## TaskSpec Examples",
@@ -532,6 +540,8 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
             "Multi-API family gate: trigger -> inherited evidence or scout notes for one family list multiple public APIs",
             "classify the family as expandable and use `team_planner` while `grandchild_depth <= max_depth`",
+            "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
+            "else use `team_planner` while `grandchild_depth <= max_depth`, or split by API/mechanism at max depth",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
             "This reference is a one-way Stage 3 transition",
             "## TaskSpec Examples",

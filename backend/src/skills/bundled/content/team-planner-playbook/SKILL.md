@@ -70,7 +70,7 @@ Keep `2. Task Details:` wording intact when carrying parent or dependency contex
 
 | Step | Action |
 | --- | --- |
-| Shape wave | Launch one scout per `scout_required` or unresolved production owner family. Split target paths from different owner-ledger rows into separate calls in the same wave; a single scout may include multiple paths only when they belong to one owner family. Keep tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`, not `target_paths`. |
+| Shape wave | Launch one scout per `scout_required` or unresolved production owner family with `target_paths: ["<one production owner path>"]`. Split target paths from different owner-ledger rows into separate calls in the same wave; for a package family, use one directory path rather than several sibling files. Keep tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`, not `target_paths`. |
 | Launch and supervise | Fire every useful scout before polling. Poll while scouts are `running`; cancel halted, blocked, off-scope, or unchanged scouts and carry that slice as explicit uncertainty. |
 | Harvest notes | Read every available note for exact launched target paths. On cold CI, canceled scouts, or disproved exact files, fall back to the nearest stable production boundary. |
 

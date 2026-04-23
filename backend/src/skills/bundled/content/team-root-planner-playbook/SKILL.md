@@ -76,7 +76,7 @@ Do not patch, validate, or read production files yourself. Do not guess owners f
 
 Skip this stage only when the owner ledger has no `scout_required` or unresolved production slices.
 
-- Launch one scout per `scout_required` or unresolved production owner family. Use `run_subagent(agent_name="scout", input={"target_paths": [...], "context": "..."})`.
+- Launch one scout per `scout_required` or unresolved production owner family. Use `run_subagent(agent_name="scout", input={"target_paths": ["<one production owner path>"], "context": "..."})`; for a package family, use one directory path rather than several sibling files.
 - Benchmark/fail-to-pass clustering trigger -> launch the first scout wave as parallel per-family calls before any polling -> failure signal: one broad scout bundles unrelated families. Example: ✓ HDF scout + parquet scout + CLI/config scout in the same wave; ✗ one scout with HDF, parquet, groupby, CLI, and config targets.
 - Single-family payload gate: trigger -> one scout input would include target paths from two ledger rows or unrelated failing clusters; required action -> split them into separate `run_subagent` calls in the same wave; failure signal -> one background task mixes I/O, grouping, utilities, and CLI/config ownership.
 - Keep `target_paths` production-only. Put tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, failing ids, skipped variants, optional-dependency errors, and verification commands in scout `context`.

@@ -16,7 +16,7 @@ Keep the required top-level `cancel_ids` key explicitly set to `[]`.
 
 - Budget exhaustion, failed attempts, incomplete verification, or ambient sibling drift.
 - Benchmark-test edits, test-derived helpers, missing paths proven only by tests, skip/xfail/test rewrite/pytest config/benchmark harness changes intended to make verification green.
-- Test repair by proxy: trigger -> candidate spec tells a developer to edit, restore, checkout, or prove no diff for test, benchmark, pytest/config, or verification files while `scope_paths` names production; required action -> reject it and assign a production repair or concrete diagnostic instead; failure signal -> a new task whose goal/action mutates test evidence.
+- Test repair by proxy: trigger -> candidate spec tells a developer to edit, restore, checkout, prove no diff, correct task specs, acceptance criteria, or test filters for test, benchmark, pytest/config, or verification evidence while `scope_paths` names production; required action -> reject it and assign a production repair or concrete diagnostic instead; failure signal -> a new task whose goal/action mutates test evidence or handoff metadata.
 - Dropping a named fail-to-pass variant by labeling it a test design issue, unsupported parametrization, or cross-engine mismatch.
 - Documentation-only or validation-only tasks that accept a named fail-to-pass failure as non-fixable, environmental, unsupported, or residual risk without production repair or concrete production diagnostic.
 - Work already owned by an uncancelled live sibling.
