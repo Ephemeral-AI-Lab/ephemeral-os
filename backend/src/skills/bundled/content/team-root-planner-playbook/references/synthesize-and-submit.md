@@ -45,7 +45,7 @@ Borderline cases:
 
 - One named file with three independent failures that touch different APIs inside it → **expandable**; the file is a scope coincidence, not a coherent fix.
 - Three files in one module that all consume one shared contract change → **atomic**; sibling files are incidental scope, not independent owners.
-- Benchmark-suite request where live scout evidence reduces it to one failing helper in one production file → **atomic**; the clustering signal is disproved at the slice level, and the terminal validator still runs the full suite.
+- Benchmark-suite request where live scout evidence *disproves* the clustering signal at the slice level (stronger than a merely named owner) and reduces it to one failing helper in one production file → **atomic**; the terminal validator still runs the full suite.
 - "Touches every provider" cleanup where each change is mechanical but each provider is an independent owner with independent verification → **expandable**.
 - Scout named an exact symbol but the failing tests span two unrelated behaviors of that symbol → **expandable**; one owner is not the same as one coherent change.
 - Two named files where the second is a thin adapter that only re-exports or forwards to the first → **atomic**; the adapter is not an independent owner.
@@ -393,5 +393,6 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 | 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure. |
 | 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
 | 11 | Any clustering job includes at least one child `team_planner`. |
-| 12 | The payload ends with exactly one terminal `validator` whose `deps` list every same-payload non-validator id. |
-| 13 | The final assistant action is the `submit_plan(...)` tool call, not prose. |
+| 12 | Every non-validator task passed the atomic tests or was routed to `team_planner` under a named expandable signal. |
+| 13 | The payload ends with exactly one terminal `validator` whose `deps` list every same-payload non-validator id. |
+| 14 | The final assistant action is the `submit_plan(...)` tool call, not prose. |
