@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from engine.runtime.tool_trace import record_tool_trace
 from skills.core.registry import SkillRegistry
 from skills.core.types import SkillDefinition
 from tools.builtins.skills.toolkit import make_skills_toolkit
@@ -58,3 +59,79 @@ async def test_load_skill_reference_still_loads_named_references() -> None:
     )
 
     assert result.output == "Supplementary guidance."
+
+
+@pytest.mark.asyncio
+async def test_staged_planner_reference_rejects_immediate_load_after_skill() -> None:
+    registry = SkillRegistry()
+    registry.register(
+        SkillDefinition(
+            name="team-root-planner-playbook",
+            description="Planner skill.",
+            content="# Planner",
+            source="test",
+            references={"synthesize-and-submit": "Synthesis contract."},
+        )
+    )
+    toolkit = make_skills_toolkit(registry)
+    load_reference = toolkit.get("load_skill_reference")
+    assert load_reference is not None
+
+    context = ToolExecutionContext(cwd=Path("/tmp"))
+    record_tool_trace(
+        context.metadata,
+        "load_skill",
+        {"skill_name": "team-root-planner-playbook"},
+    )
+
+    result = await load_reference.execute(
+        load_reference.input_model(
+            skill_name="team-root-planner-playbook",
+            reference_name="synthesize-and-submit",
+        ),
+        context,
+    )
+
+    assert result.is_error is True
+    assert "Premature staged planner reference load" in result.output
+    assert "Complete the playbook's Analyze/Scout work first" in result.output
+
+
+@pytest.mark.asyncio
+async def test_staged_planner_reference_allows_load_after_intervening_work() -> None:
+    registry = SkillRegistry()
+    registry.register(
+        SkillDefinition(
+            name="team-planner-playbook",
+            description="Planner skill.",
+            content="# Planner",
+            source="test",
+            references={"submit-child-plan": "Child synthesis contract."},
+        )
+    )
+    toolkit = make_skills_toolkit(registry)
+    load_reference = toolkit.get("load_skill_reference")
+    assert load_reference is not None
+
+    context = ToolExecutionContext(cwd=Path("/tmp"))
+    record_tool_trace(
+        context.metadata,
+        "load_skill",
+        {"skill_name": "team-planner-playbook"},
+    )
+    record_tool_trace(
+        context.metadata,
+        "read_task_details",
+        {"task_id": "00000000-0000-0000-0000-000000000001"},
+    )
+
+    result = await load_reference.execute(
+        load_reference.input_model(
+            skill_name="team-planner-playbook",
+            reference_name="submit-child-plan",
+        ),
+        context,
+    )
+
+    assert result.is_error is False
+    assert result.output == "Child synthesis contract."

@@ -78,6 +78,7 @@ Skip this stage only when the owner ledger has no `scout_required` or unresolved
 
 - Launch one scout per `scout_required` or unresolved production owner family. Use `run_subagent(agent_name="scout", input={"target_paths": [...], "context": "..."})`.
 - Benchmark/fail-to-pass clustering trigger -> launch the first scout wave as parallel per-family calls before any polling -> failure signal: one broad scout bundles unrelated families. Example: ✓ HDF scout + parquet scout + CLI/config scout in the same wave; ✗ one scout with HDF, parquet, groupby, CLI, and config targets.
+- Single-family payload gate: trigger -> one scout input would include target paths from two ledger rows or unrelated failing clusters; required action -> split them into separate `run_subagent` calls in the same wave; failure signal -> one background task mixes I/O, grouping, utilities, and CLI/config ownership.
 - Keep `target_paths` production-only. Put tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, failing ids, skipped variants, optional-dependency errors, and verification commands in scout `context`.
 - Fire every useful scout before polling. Use `check_background_progress(task_id="all")` and `wait_for_background_task(task_id="all")` until no scout is running.
 - Cancel only a halted, blocked, off-scope, or twice-stale scout with `cancel_background_task(task_id=id)`, then carry that slice as explicit uncertainty.

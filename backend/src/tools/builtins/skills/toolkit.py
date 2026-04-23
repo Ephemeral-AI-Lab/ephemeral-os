@@ -31,6 +31,15 @@ from tools.core.decorator import tool
 from skills.core.registry import SkillRegistry
 
 _LOADED_SKILL_REFERENCES_KEY = "_loaded_skill_references_by_skill_this_turn"
+_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY = (
+    "_non_reference_tool_calls_since_skill_load"
+)
+_STAGED_PLANNER_REFERENCES = frozenset(
+    {
+        ("team-root-planner-playbook", "synthesize-and-submit"),
+        ("team-planner-playbook", "submit-child-plan"),
+    }
+)
 
 
 class LoadSkillInput(BaseModel):
@@ -118,6 +127,34 @@ def make_skills_toolkit(
         loaded[skill_name] = refs
         context.metadata[_LOADED_SKILL_REFERENCES_KEY] = loaded
 
+    def _reject_premature_staged_reference(
+        context: ToolExecutionContext,
+        *,
+        skill_name: str,
+        reference_name: str,
+    ) -> ToolResult | None:
+        if (skill_name, reference_name) not in _STAGED_PLANNER_REFERENCES:
+            return None
+        raw = context.metadata.get(_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY, {})
+        if not isinstance(raw, dict) or raw.get(skill_name) != 0:
+            return None
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "error": "Premature staged planner reference load.",
+                    "skill_name": skill_name,
+                    "reference_name": reference_name,
+                    "required_action": (
+                        "Complete the playbook's Analyze/Scout work first. "
+                        "Build the owner ledger, launch required scouts or "
+                        "carry explicit uncertainty, join the scout wave, and "
+                        "read available notes before retrying this reference."
+                    ),
+                }
+            ),
+            is_error=True,
+        )
+
     @tool(
         name="load_skill",
         description="Load the full instructions for a skill. Call this when a task matches a skill's description.",
@@ -186,6 +223,14 @@ def make_skills_toolkit(
                 output=f"Skill '{skill_name}' not found in registry.",
                 is_error=True,
             )
+
+        premature = _reject_premature_staged_reference(
+            context,
+            skill_name=skill_name,
+            reference_name=reference_name,
+        )
+        if premature is not None:
+            return premature
 
         content = skill.references.get(reference_name)
         if content is None:

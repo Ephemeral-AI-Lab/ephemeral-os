@@ -300,6 +300,9 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "put each family in `scout_required` even when its first-pass owner label looks clear" in skill
     assert "only the unknown families are scouted while clear-looking families go to Stage 3" in skill
     assert "two scouts for six independent clusters because four looked clear" in skill
+    assert "Single-family payload gate" in skill
+    assert "split them into separate `run_subagent` calls in the same wave" in skill
+    assert "one background task mixes I/O, grouping, utilities, and CLI/config ownership" in skill
     assert "one broad scout bundles unrelated families" in skill
     assert "HDF scout + parquet scout + CLI/config scout" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
@@ -319,6 +322,8 @@ def test_team_planner_playbook_requires_scout_required_fanout() -> None:
     assert "put each broad family, matrix family, or likely expandable first-pass owner in `scout_required`" in skill
     assert "only unknown families are scouted while clear-looking families enter synthesis" in skill
     assert "Launch one scout per `scout_required` or unresolved production owner family" in skill
+    assert "Split target paths from different owner-ledger rows into separate calls in the same wave" in skill
+    assert "a single scout may include multiple paths only when they belong to one owner family" in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has an inherited benchmark/fail-to-pass" in reference
     assert "a current-layer `developer` is called atomic using only inherited or first-pass owner labels" in reference
 
