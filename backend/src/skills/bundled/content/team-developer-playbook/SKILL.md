@@ -7,47 +7,32 @@ description: Authoritative playbook for the developer agent. Read task context, 
 
 Complete one bounded coding task from the Task Center handoff. Finish with exactly one `submit_task_summary(...)` call.
 
-## Route
+## Workflow Map
+
+| Stage | Gate | Exit |
+| --- | --- | --- |
+| 1. Read task details | Own task, parent, dependencies, and expected file notes are loaded before source work. | Exact objective, acceptance criteria, scope paths, dependency status, and file-note freshness. |
+| 2. Plan | The repair lane is valid and the production path is concrete. | Bounded edit plan plus exact diagnostics and runtime verification, or replan. |
+| 3. Implement | The mutation is the smallest production change justified by the plan or root-cause trace. | One scoped change, then verification. |
+| 4. Verify | Diagnostics and direct runtime evidence describe the latest edit. | Success evidence or red evidence for root-cause analysis. |
+| 5. Root cause analysis | Red evidence is traced to the first wrong production mechanism. | Another scoped fix or replan. |
+| 6. Submit terminal summary | The task exits through the terminal tool. | One `submit_task_summary({ type, content })` call and no later tools. |
+
+Decision flow:
 
 ```text
-Caption: Full developer path from Task Center handoff to the only allowed terminal summary.
-
-[assigned task: own UUID + parent UUID + dependency UUIDs]
-  |
-  v
-[1. Read task details]
-  own task, parent, deps, expected file notes
-  |
-  v
-[2. Plan]
-  production boundary, intended behavior, verification
-  |
-  +--> deps done and repair is in this lane?
-  |       |
-  |       +-- no --> [6. submit_task_summary(type="request_replan")]
-  |       |
-  |       +-- yes
-  |             |
-  |             v
-  |       [3. Implement]
-  |       one scoped production mutation
-  |             |
-  |             v
-  |       [4. Verify]
-  |       diagnostics + direct runtime command
-  |             |
-  |             +--> green, current, complete evidence?
-  |                     |
-  |                     +-- yes --> [6. submit_task_summary(type="success")]
-  |                     |
-  |                     +-- no --> [5. Root cause analysis]
-  |                                  trace first wrong production mechanism
-  |                                  |
-  |                                  +--> one scoped fix remains?
-  |                                          |
-  |                                          +-- yes --> back to [3. Implement]
-  |                                          |
-  |                                          +-- no --> [6. submit_task_summary(type="request_replan")]
+[handoff UUIDs]
+  -> [1. read own task, parent, deps, file notes]
+  -> [2. plan production path + verification]
+     -> invalid lane, missing prerequisite, broad/ambiguous repair:
+        [6. submit_task_summary(type="request_replan")]
+     -> valid bounded repair:
+        [3. implement one production mutation]
+        -> [4. ci_diagnostics + direct daytona_codeact(command="...")]
+           -> green/current/complete: [6. submit_task_summary(type="success")]
+           -> red/invalid/absent/stale: [5. root cause analysis]
+              -> one scoped production fix remains: back to [3]
+              -> no scoped fix remains: [6. submit_task_summary(type="request_replan")]
 ```
 
 References: none. Use this playbook directly.
@@ -55,7 +40,7 @@ References: none. Use this playbook directly.
 ## Tools
 
 | Purpose | Signature |
-|---|---|
+| --- | --- |
 | Read a known task by UUID | `read_task_details(task_id="<uuid>")` |
 | Read notes for a path | `read_file_note(file_path="...")` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
@@ -67,272 +52,124 @@ References: none. Use this playbook directly.
 | Run tests, builds, or runtime probes | `daytona_codeact(command="...")`; use `code` only for Python source snippets; never use CodeAct for package or environment mutation |
 | Terminal submission | `submit_task_summary({ type: "success" \| "request_replan", content: string })` |
 
-## Invariants
+## Hard Rules
 
 1. Treat the benchmark sandbox as shared evidence.
-2. Do not mutate dependencies, interpreters, package managers, lockfiles, virtualenvs, site-packages, OS packages, global tooling, or generated caches.
+2. Do not mutate dependencies, interpreters, package managers, lockfiles, virtualenvs, site-packages, OS packages, global tooling, generated caches, tests, pytest config, or verification itself.
 3. Forbidden setup or verification includes `pip install`, `uv add`, `uv sync`, `conda install`, `apt install`, `npm install`, `pnpm add`, `yarn add`, `poetry add`, and equivalent install, add, sync, update, or upgrade operations.
-4. Missing dependencies or versions are not final blockers until you check whether production code should provide a guard, fallback, import bridge, explicit error, version gate, adapter boundary, or wrapper.
-5. If runtime output contradicts edited source, prove the loaded source path with one bounded probe or use a non-mutating cache control such as `PYTHONDONTWRITEBYTECODE=1`. Treat refused cache cleanup as tooling noise, not root cause.
-
-## Never
-
-1. Do not edit test files unless the original user request explicitly asks to repair tests rather than production behavior.
-2. Do not use `daytona_codeact` for file reads, writes, moves, or deletes. Use Daytona read, search, or mutation tools.
-3. Do not skip, xfail, rewrite verification, change pytest config, install packages, alter dependency versions, or patch around root/OS permission behavior to turn a command green.
 4. Do not call `read_task_graph()`; developers address tasks only via UUIDs from the prompt header.
-5. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
-6. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root.
-7. Do not wrap required pytest/build verification in `python -c`, heredocs, `subprocess.run`, helper scripts, output filters, pipelines, manual `print("EXIT CODE")`, `PYTHONWARNINGS`, `warnings.filterwarnings`, or `sys.warnoptions`.
-8. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, or `-p no:...`.
+5. Do not use `daytona_codeact` for file reads, writes, moves, deletes, shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or cleanup commands.
+6. Do not wrap required pytest/build verification in `python -c`, heredocs, `subprocess.run`, helper scripts, output filters, pipelines, manual `print("EXIT CODE")`, `PYTHONWARNINGS`, `warnings.filterwarnings`, or `sys.warnoptions`.
+7. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, or `-p no:...`.
+8. If runtime output contradicts edited source, prove the loaded source path with one bounded probe or use non-mutating cache control such as `PYTHONDONTWRITEBYTECODE=1`; refused cache cleanup is tooling noise, not root cause.
 
-## 1. Read task details
+## Workflow Details
 
-```text
-Caption: Stage 1 establishes exact task scope and file-note freshness before any source probes, diagnostics, CodeAct, or edits.
+| Section | Contract |
+| --- | --- |
+| **Input** | Developer task header with own UUID, parent UUID, dependency UUIDs, scope paths, and handoff text. |
+| **Output** | Exactly one terminal `submit_task_summary(...)` call after the staged workflow. |
+| **Forbidden** | Source probes, diagnostics, CodeAct, edits, graph reads, fabricated ids, short ids, scout ids, or submission before the required stage gates. |
 
-[developer task header]
-    |
-    v
-read_task_details(own UUID)
-    load objective, Initial Plan/Replan, scope paths, acceptance criteria
-    |
-    v
-read_task_details(parent UUID)
-    capture parent constraints and validator expectations
-    |
-    v
-read_task_details(each dependency UUID)
-    confirm dependency is done and hands off required artifacts
-    |
-    v
-read_file_note(each expected touched file)
-    confirm freshness before reading or mutating source
-```
+### 1. Read task details
 
-1. Use exact UUIDs only: own task, parent task, and dependency ids from the prompt header.
+#### Steps
+
+1. Use exact UUIDs only: call `read_task_details(task_id=...)` for own task, parent task, and each dependency id from the prompt header.
 2. Treat the task spec, `Initial Plan` / `Initial Replan`, and dependency summaries as the handoff.
 3. Read each distinct expected file note once before any source read, diagnostic, CodeAct command, or edit. Empty notes are valid.
 4. Exit with objective, acceptance criteria, scope paths, dependency status, expected code files, and file-note freshness.
 
-## 2. Plan
+### 2. Plan
 
-```text
-Caption: Stage 2 converts the handoff into either a bounded production plan or an immediate replan request.
+#### Steps
 
-[task context + file notes]
-    |
-    v
-name production boundary
-    files, symbols, control/data/import/config/API path, untouched areas
-    |
-    v
-state current vs intended behavior
-    what is wrong now, what must be true after the edit
-    |
-    v
-check lane validity
-    deps done, owner correct, production path proven, no test/env-only work
-    |
-    +--> invalid?
-    |       |
-    |       +-- yes --> submit_task_summary(type="request_replan", ...)
-    |
-    v
-name verification
-    exact diagnostics and runtime command that will prove the change
-```
-
-Plan before the first edit:
-
-1. Name production files and symbols to inspect or change.
-2. State current behavior and intended behavior.
-3. Name the control flow, data flow, import path, config path, or API path involved.
-4. List the edit boundary and what stays untouched.
-5. List the exact diagnostics and verification command.
+Before the first edit, record production boundary, current vs intended behavior, runtime path, edit boundary, and exact diagnostics plus runtime verification.
 
 Planning checks:
 
-1. Failing tests are evidence, not permission to edit tests.
-2. Test files are read-only unless the original user request explicitly asks to repair tests.
-3. Missing optional dependencies, older versions, and unavailable engines are not final blockers when production compatibility behavior can satisfy the expected result.
-4. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need live production evidence or explicit assignment. Test spelling alone is not enough.
-5. `scope_paths` are the primary ownership surface, not a hard mutation sandbox. Out-of-scope production writes are allowed when tied to this task; record path, notification, rationale, verification, and residual risk in the final summary.
-6. A similarly named sibling path is not implicitly owned. Inspect production evidence before editing, moving, or copying it.
-7. Prefer replanning when the change touches tests, dependency/environment files, broad behavior, or remains ambiguous after one bounded investigation pass.
-8. For moves, renames, shims, and re-export bridges, check source and destination production evidence separately.
-9. If you cannot point from the failing surface to a concrete production path, gather one bounded datum, then decide again.
+1. Tests are evidence, not an edit surface. Test files are read-only unless the original user request explicitly asks to repair tests.
+2. Do not dismiss a fail-to-pass parametrized variant as a test design issue because an engine, optional extra, or cross-engine combination is difficult. Keep it as production compatibility evidence, or request replan with the unresolved seam.
+3. Missing optional dependencies, older dependency versions, and unavailable engines are not final blockers when expected behavior can be implemented as a production guard, fallback, explicit compatibility error, import bridge, adapter boundary, or wrapper path; do not request replan just because the sandbox lacks the package or version.
+4. New helpers, aliases, public APIs, shims, bridges, re-exports, moves, or modules need live production evidence or explicit assignment. Test spelling alone is not enough. Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism.
+5. `scope_paths` are the primary ownership surface, not a hard mutation sandbox. You may widen reads, diagnostics, and test commands to prove ownership. Developers may write, copy, or create production files outside `scope_paths` when needed for the task. Treat an outside-scope system notification as coordination guidance, not a stop condition. Record any outside-scope mutation in the final summary.
+6. A similarly named sibling path is not owned by implication. Inspect source and destination evidence before editing, moving, copying, renaming, shimming, or re-exporting.
+7. Prefer replanning when the change touches tests, dependencies, environment files, broad behavior, or remains ambiguous after one bounded investigation pass.
 
-Submit `type="request_replan"` if dependencies are not done, required artifacts are missing, the edit belongs to another owner, the plan needs test-only/dependency/environment mutation, the production path is unproven, or the repair is too broad for one bounded pass.
+Submit `type="request_replan"` when dependencies are not done, artifacts are missing, another owner must act, the plan requires test-only/dependency/environment mutation, the production path is unproven, or the repair is too broad for one bounded pass. Use `scope_expansion` when: The next required change would be a broad or ambiguous production change that this lane cannot responsibly finish. Use `unresolved_blocker` when the fix is an ambiguous new production file whose missing path and mechanism are not proven by live production evidence.
 
-## 3. Implement
+### 3. Implement
 
-```text
-Caption: Stage 3 makes exactly the smallest production mutation justified by the Stage 2 plan.
+#### Steps
 
-[bounded code plan]
-    |
-    v
-re-check target path
-    production code tied to traced root cause
-    |
-    v
-mutate with one Daytona tool
-    edit, write, rename, delete, or move
-    |
-    v
-handle scope/tool feedback
-    continue for task-owned production changes; replan for wrong owner/broad scope
-    |
-    v
-refresh file notes after edits or surprising runtime/tool output
-```
+| Check | Rule |
+| --- | --- |
+| Production proof | Before every mutation, verify the target file path, source path, destination path, or rename file hint is a production path tied to the traced root cause. |
+| Out-of-scope writes | Out-of-scope production writes, copies, and new files are allowed for developers when production evidence ties them to this task; use Daytona mutation tools so write-scope notifications are recorded. |
+| Mutation size | Use exactly one Daytona mutation tool per change. Keep each pass to one behavior fix, import fix, compatibility adjustment, or config correction. |
+| Freshness | Refresh file notes after edits or surprising runtime/tool output. |
+| Failed delete, move, or rename | Do not retry or bypass the failed tool; preserve the tool error for the terminal summary. |
+| Tests | Never create or edit test files. |
+| Scope notification | If an outside-scope notification appears, treat it as coordination context and keep working when the production change is still tied to this task. Submit `type="request_replan"` with trigger `scope_expansion` only when the repair becomes broad or ambiguous. |
+| Repeated red assertion | Before another edit, write a compact value table: input keys/state, current value, expected value, and the production rule that selects old vs. new/raise/warn/return. |
 
-1. Verify each target file, source path, destination path, or rename hint is production code tied to the traced root cause.
-2. Use exactly one Daytona mutation tool per change.
-3. Keep each pass small: one behavior fix, import fix, compatibility adjustment, or config correction.
-4. Refresh file notes after edits or surprising tool/runtime results.
-5. If a delete, move, or rename tool fails, do not retry or bypass it. Preserve the tool error for the terminal summary.
-6. Never create or edit test files.
-7. If an outside-scope notification appears, keep working when the production change is still tied to this task. Use `scope_expansion` only when the repair becomes broad or ambiguous.
-8. Never use shell deletion or cleanup commands to remove generated caches.
-9. If the same assertion stays red after a scoped retry, write a compact value table before another edit: input keys/state, current value, expected value, and the production rule that selects old vs. new/raise/warn/return.
+### 4. Verify
 
-## 4. Verify
+#### Steps
 
-```text
-Caption: Stage 4 separates valid success evidence from red, stale, wrapped, skipped, or incomplete evidence.
+| Evidence | Rule |
+| --- | --- |
+| Diagnostics | Run `ci_diagnostics(file_path="...")` on every edited file before terminal completion. |
+| Runtime command | Run the narrowest relevant runtime command after each edit. Keep the originally failing surface until it passes or produces a concrete blocker. |
+| CodeAct API | Use `daytona_codeact(command="...")` for shell, build, or test commands; never pass a shell command string in `code`. |
+| Working directory | CodeAct commands already start at the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path. |
+| Exit judgment | Judge pass/fail from the CodeAct tool-reported command exit code and failing ids. A wrapper that prints an inner exit code, filters output, suppresses warnings, changes pytest options, or returns outer exit 0 while an inner command failed is red evidence. Wrapped, filtered, warning-suppressed, pytest-config-overridden, or outer-exit-0 evidence is invalid. |
+| Raw failure | If a raw verification command fails at import, collection, warning handling, or pytest configuration, keep that raw failure as evidence and trace production if in scope. |
+| Acceptance command | If acceptance criteria name a command and it exits nonzero, do not claim success from a narrower passing subset. |
+| Fail-to-pass target | Success requires tool-reported exit code 0 and the named target collected, not skipped, expected-failed, missing, or import-blocked. Collection errors, import errors, no tests collected, skipped named variants, expected failures, missing optional dependency `ImportError`, or "pass or skip" outcomes are red evidence. |
+| Policy block | If a command is blocked by policy, submit `type="request_replan"` with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence. |
+| Missing verification | Clean diagnostics are not acceptance verification. If the required runtime command was not run after the final edit, including because the budget is nearly exhausted, the evidence is absent and the terminal summary must be `type="request_replan"`, not `type="success"`. |
 
-[latest production edit]
-    |
-    v
-ci_diagnostics(every edited file)
-    |
-    v
-daytona_codeact(command="direct verification command")
-    run the narrowest required command after each edit
-    |
-    v
-judge evidence
-    command, exit code, failing ids, diagnostics, useful output
-    |
-    +--> all required evidence green?
-            |
-            +-- yes --> Stage 6 success
-            |
-            +-- no --> Stage 5 root cause analysis
-```
+### 5. Root cause analysis
 
-1. Run `ci_diagnostics(file_path="...")` on every edited file before terminal completion.
-2. Run the narrowest relevant runtime command after each edit. Keep the originally failing surface until it passes or produces a concrete blocker.
-3. For `daytona_codeact(...)`, use `command` for shell, build, or test commands; never pass shell text in `code`.
-4. Run CodeAct from the sandbox repo root. Use repo-relative paths, or `cd frontend/web && ...` for a repo subdirectory.
-5. Do not run package-manager or environment-mutation commands as setup or verification.
-6. Judge pass/fail from the CodeAct tool-reported exit code and failing ids. Wrapped, filtered, warning-suppressed, pytest-config-overridden, or outer-exit-0 evidence is invalid.
-7. If a raw verification command fails at import, collection, warning handling, or pytest configuration, keep that raw failure as evidence and trace production if in scope.
-8. If acceptance criteria name a command and it exits nonzero, do not claim success from a narrower passing subset.
-9. For fail-to-pass work, success requires tool-reported exit code 0 and the named target collected, not skipped, expected-failed, missing, or import-blocked.
-10. Clean diagnostics alone are not acceptance verification. Absent final runtime verification means `type="request_replan"`, not success.
+#### Steps
 
-## Budget Warnings
-
-1. A system budget warning to reserve a terminal call is a hard stop.
-2. If final verification is green and the warning permits it, submit success.
-3. If verification is red, absent, invalid, stale, or unresolved, submit `type="request_replan"` with the current Stage 5 trace, last command or diagnostic, and the decision the replanner must resolve.
-4. Do not spend post-warning budget on more reads, probes, edits, diagnostics, alternate tests, or recovery attempts.
-
-## 5. Root cause analysis
-
-```text
-Caption: Stage 5 must trace red evidence to the first wrong production mechanism before another edit.
-
-[red, invalid, stale, or absent verification]
-    |
-    v
-capture failure
-    exact command, exit code, failing id, exception/assertion, stack frame
-    |
-    v
-trace into production
-    stack, import chain, fixture/input path, API call, config lookup, state transition
-    |
-    v
-fill root-cause JSON
-    expected vs actual, trace, root cause, fix location, next action
-    |
-    +--> assigned or adjacent actionable defect?
-            |
-            +-- yes --> back to Stage 3
-            |
-            +-- no --> Stage 6 request_replan
-```
-
-Build one trace:
+Build one trace before another edit or replan:
 
 ```json
 {
   "failing_command": "exact command and exit code",
   "failing_test_or_error": "test id, exception, import error, warning, or assertion",
-  "expected_vs_actual": "what the test expected and what the code produced",
-  "trace": ["test or command entry", "production call/import/config path", "first wrong value, branch, state, or API result"],
-  "root_cause": "specific code defect, statement, branch, config lookup, import, or state transition that explains the failure",
+  "expected_vs_actual": "returned value, raised exception, imported symbol, branch, state, or output",
+  "trace": ["entry point", "production call/import/config path", "first wrong value, branch, state, or API result"],
+  "root_cause": "specific code defect, statement, branch, config lookup, import, or state transition",
   "fix_location": "file and symbol to change",
   "next_action": "re-implement scoped fix | request_replan"
 }
 ```
 
-Example:
+| Decision point | Rule |
+| --- | --- |
+| Confirm root cause | Use one bounded datum: traceback frame, diagnostic, focused probe, source proof, or before/after value. |
+| Check adjacent seams | If one attempted mechanism cannot satisfy expected behavior, check adjacent production extension points before concluding no production fix exists. |
+| Return to Stage 3 | Return only when the trace identifies one assigned-scope or adjacent production-path actionable code defect. Do not use `request_replan` as a handoff for exact code you already know how to change unless a budget warning requires immediate submission, the edit is test/dependency/config-only, or the production change is broad or ambiguous after a bounded pass. |
+| Request replanning | Use when the trace points to another role/path, scope expansion, tests not assigned to this task, unproven missing modules, missing dependencies, dependency-version mismatch, environment/runtime mismatch, ambiguous root cause, or tool failure. |
+| Dependency or environment mismatch | For fail-to-pass work, missing dependencies, version mismatch, or environment mismatch are not final root causes when a production guard, fallback, explicit compatibility error, import bridge, adapter boundary, or wrapper can satisfy expected behavior. The Stage 5 `next_action` must name the production seam to repair or diagnose; it must not list install, dependency upgrade, skip, xfail, pytest config, test edit, or environment replacement as the path forward. |
+| No production fix | A replan summary may say "no production fix" only after naming the attempted mechanism, adjacent mechanisms checked, and evidence that each cannot affect the failing path. |
+| Retry limit | Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new defect. |
 
-```json
-{
-  "failing_command": "python -m pytest tests/test_config.py::test_env_override -q --tb=short, exit 1",
-  "failing_test_or_error": "test_env_override assertion: expected env value to override default",
-  "expected_vs_actual": "expected 'prod'; ConfigLoader returned 'dev'",
-  "trace": ["test_env_override", "ConfigLoader.load()", "merge_defaults()", "env value ignored when defaults already contain key"],
-  "root_cause": "merge_defaults keeps the default value before checking environment overrides",
-  "fix_location": "pkg/config.py::merge_defaults",
-  "next_action": "re-implement scoped fix"
-}
-```
+### Budget Warnings
 
-Root-cause checklist:
+| Budget state | Required action |
+| --- | --- |
+| Warning to reserve terminal call | Hard stop. |
+| Final verification is green and the warning permits it | Submit success. |
+| Verification is red, absent, invalid, stale, or unresolved | Submit `type="request_replan"` with the current Stage 5 trace, last command or diagnostic, and the decision the replanner must resolve. |
+| After warning | Do not spend budget on more reads, probes, edits, diagnostics, alternate tests, or recovery attempts. |
 
-1. Capture exact red command, exit code, failing id, exception/assertion, and relevant stack frame.
-2. State expected vs. actual in code terms: returned value, raised exception, imported symbol, branch, state, or output.
-3. Follow the stack, import chain, fixture/input path, API call, config lookup, or state transition into production code.
-4. Name the first production mechanism that creates the wrong result: statement, branch condition, transform, config lookup, import target, state mutation, persistence read/write, or API contract mismatch.
-5. Confirm the root cause with one bounded datum: traceback frame, diagnostic, focused probe, source proof, or before/after value.
-6. If one attempted mechanism cannot satisfy the expected behavior, check adjacent production extension points before concluding no production fix exists.
-7. Fill the JSON. If any field is unknown or guessed, keep tracing or request replanning.
-8. On repeated red evidence for the same command and assertion class, include a value table before another edit. If the table has contradictory rules or no new mechanism, request replanning.
+### 6. Submit terminal summary
 
-Decision:
-
-1. Return to Stage 3 only when the trace identifies one assigned-scope or adjacent production-path defect.
-2. Request replanning when the trace points to another role/path, scope expansion, tests not assigned to this task, unproven missing modules, missing dependencies, dependency-version mismatch, environment/runtime mismatch, ambiguous root cause, or tool failure.
-3. For fail-to-pass work, missing dependencies, version mismatch, or environment mismatch are not final root causes when a production guard, fallback, explicit compatibility error, import bridge, adapter boundary, or wrapper can satisfy expected behavior.
-4. A replan summary may say "no production fix" only after naming the attempted mechanism, adjacent mechanisms checked, and evidence that each cannot affect the failing path.
-5. Stop cycling if the same command stays red after a scoped retry and the trace does not identify a new defect.
-
-## 6. Submit terminal summary
-
-```text
-Caption: Stage 6 is the terminal gate; after this tool call, make no further tool calls.
-
-[terminal decision]
-    |
-    +--> latest required evidence is green, current, direct, and complete?
-    |       |
-    |       +-- yes --> submit_task_summary({
-    |                       type: "success",
-    |                       content: "labeled facts..."
-    |                    })
-    |
-    +--> otherwise --> submit_task_summary({
-                            type: "request_replan",
-                            content: "replan_trigger + Stage 5 trace..."
-                         })
-```
+#### Steps
 
 Final action must be exactly one:
 
@@ -345,36 +182,46 @@ submit_task_summary({
 
 The `content` field is the entire terminal payload; there is no separate `summary` key.
 
-### Success Checklist
+Success gates:
 
-| Gate | Required condition | Fails if |
-| --- | --- | --- |
-| Latest edit | The final production change is complete and matches the Stage 2 plan or the Stage 5 traced fix. | The edit is speculative, partial, test-only, dependency/environment mutation, or known to need another production change. |
-| Diagnostics | Every edited file has post-edit `ci_diagnostics(...)` evidence. | Diagnostics were skipped, stale, run before the final edit, or only cover some edited files. |
-| Runtime verification | The required direct `daytona_codeact(command="...")` verification passed with tool-reported exit code 0. | Verification is absent, red, wrapped, filtered, warning-suppressed, pytest-config-overridden, or supported only by diagnostics. |
-| Target coverage | The named fail-to-pass target collected and passed; required acceptance commands were not replaced by a narrower subset after a broader command failed. | The target was skipped, expected-failed, import-blocked, collection-blocked, no-tests-collected, or only a narrower subtest passed. |
-| Evidence freshness | Cited commands and diagnostics were run after the final edit and describe the current code path. | Evidence is stale, from before the final mutation, from a different command, or from a manually printed inner exit code. |
+| Gate | Required condition |
+| --- | --- |
+| Final edit | Production change is complete. |
+| Diagnostics | Every edited file has post-edit diagnostics. |
+| Runtime verification | Required direct runtime verification passed with tool-reported exit code 0. |
+| Fail-to-pass targets | Named targets collected and passed. |
+| Freshness | Cited evidence is fresh after the final edit. |
 
-### Request Replan Checklist
+Request-replan triggers:
 
-| Trigger | Use only when | Required payload | Do not use when |
-| --- | --- | --- | --- |
-| `scope_expansion` | Stage 5 traces the next required production repair to a different owner, broad rewrite, or ambiguous expansion beyond this developer lane. | Root-cause JSON names the attempted mechanism, adjacent mechanisms checked, why the remaining repair is too broad or wrong-owner, and the last red command/diagnostic. | The only issue is an outside-scope notification for a justified production write, or one concrete in-scope fix remains and budget permits edit plus verification. |
-| `wrong_owner_or_role` | A dependency is not done, a dependency summary lacks required artifacts, or another agent role/owner must act before this task can safely continue. | Task/dependency ids, missing handoff or owner boundary, last command/diagnostic if any, and the exact prerequisite the replanner must route. | The dependency is complete and the remaining work is an assigned or adjacent production-path defect this developer can fix. |
-| `unresolved_blocker` | Tooling, diagnostics, budget, verification, or root-cause tracing is blocked after a bounded valid attempt, with no proven different owner or scope expansion. | Stage 5 JSON trace with the unknown still isolated, last command/diagnostic, failing ids, and the decision or code path the replanner must resolve. | A missing dependency/version was not checked for a production guard, fallback, import bridge, explicit error, version gate, adapter boundary, or wrapper path. |
+| Trigger | Use only when |
+| --- | --- |
+| `scope_expansion` | Stage 5 traces the next required production repair to a different owner, broad rewrite, or ambiguous expansion beyond this developer lane. |
+| `wrong_owner_or_role` | A dependency is not done, a dependency summary lacks required artifacts, or another agent role/owner must act first. |
+| `unresolved_blocker` | Tooling, diagnostics, budget, verification, or root-cause tracing is blocked after a bounded valid attempt, with no proven different owner or scope expansion. |
 
-For `type="success"`, include these labeled facts:
+For `type="success"`, `content` must include these labeled facts. Do not omit a line because the answer is "none":
 
-1. behavior/API change, not just filenames;
-2. exact commands run after the final edit, outcomes, and exit codes;
-3. diagnostics status for edited files;
-4. investigation-scope rationale, if reads/probes/tests went outside `scope_paths`;
-5. `Out-of-scope mutation:` path, change/copy/new file, notification, rationale, verification, and residual risk, or `none`;
-6. `Residual Risk:` remaining risk, unverified surface, or `none`.
+| Fact | Required content |
+| --- | --- |
+| Behavior/API change | What changed, not just filenames. |
+| Verification commands | Exact commands run after the final edit, outcomes, and exit codes. |
+| Diagnostics | Diagnostics status for edited files. |
+| Investigation scope | Rationale if reads/probes/tests went outside `scope_paths`. |
+| Out-of-scope mutation | `Out-of-scope mutation:` path, change/copy/new file, notification, rationale, verification, and residual risk, or "none". |
+| Residual risk | `Residual Risk:` with remaining risk, unverified surface, or "none". |
 
 For `type="request_replan"`, include:
 
-1. first non-blank line exactly `replan_trigger: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`;
-2. the Stage 5 root-cause JSON trace embedded verbatim;
-3. last command or diagnostic and failing ids;
-4. what decision or code path the replanner must resolve.
+| Payload part | Required content |
+| --- | --- |
+| Trigger | First non-blank line exactly `replan_trigger: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`. |
+| Trace | Stage 5 root-cause JSON trace embedded verbatim. |
+| Last evidence | Last command or diagnostic and failing ids. |
+| Needed decision | What decision or code path the replanner must resolve. |
+
+| Terminal decision | Rule |
+| --- | --- |
+| `type="success"` | Use `type="success"` only when the latest required direct verification command passed with tool-reported exit code 0 and collected the named fail-to-pass target instead of skipping or expected-failing it. |
+| Not success | A summary that says verification was not run, was skipped due to budget, was wrapped, warning-suppressed, pytest-config-overridden, ended in collection/import/no-tests/optional-dependency failure, failed the required command while a narrower subtest passed, or is supported only by diagnostics is not a success summary. |
+| `type="request_replan"` | Use `type="request_replan"` for red, absent, invalid, stale, incomplete, blocked, another-role/path, broader-scope, or too-complex verification. |

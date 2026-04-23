@@ -13,8 +13,9 @@ Start from the Stage 1 owner ledger (inherited slices, unresolved slices, depend
 Treat inherited benchmark, fail-to-pass, migration, compatibility, and broad upgrade slices as clustering jobs when they contain many failing tests, several production families, or a multi-engine, multi-dtype, multi-format, or multi-API matrix.
 
 - Clear owner names do not override a clustering signal; a named file can still belong to a broader family that should be decomposed below another child planner.
-- When clustering triggers, include at least one child `team_planner` in this payload. That child planner owns the next cluster-level split and may create developer leaves below it.
-- A clustering child payload with four or more independent `developer` lanes and no child `team_planner` is invalid, even when scouts named plausible owners or files.
+- When clustering triggers and `grandchild_depth <= max_depth`, include at least one child `team_planner` in this payload. That child planner owns the next cluster-level split and may create developer leaves below it.
+- A clustering child payload with four or more independent `developer` lanes and no child `team_planner` is invalid when `grandchild_depth <= max_depth`, even when scouts named plausible owners or files.
+- When `grandchild_depth > max_depth`, emit direct `developer` and `validator` tasks with broader scopes instead of a child `team_planner`.
 - Use another child `team_planner` for broad decomposition. Keep current-layer `developer` lanes for small leaf fixes with a single narrow production surface, one coherent failure mechanism, and a coherent verification command.
 - Do not flatten independent failure mechanisms into one developer lane because they share nearby files or verification commands; overlapping `scope_paths` are allowed, split by mechanism when the work is otherwise independent.
 
@@ -24,7 +25,7 @@ Lane selection is advisory, but apply it in this order. A single payload may mix
 
 | Slice shape | Lane | When it fits |
 | --- | --- | --- |
-| Broad decomposition | `team_planner` | Broad, shared, clustered, multi-family, unresolved, benchmark, migration, compatibility, or large benchmark/test-matrix work that must be split below this layer. |
+| Broad decomposition | `team_planner` | Broad, shared, clustered, multi-family, unresolved, benchmark, migration, compatibility, or large benchmark/test-matrix work that must be split below this layer, only when `grandchild_depth <= max_depth`. When `grandchild_depth > max_depth`, use broader direct `developer` and `validator` tasks instead. |
 | Narrow implementation | `developer` | One coherent change with a known exact owner, bounded to a concrete file, symbol, or tight production surface, with one coherent failure mechanism. |
 | Same-layer verification | `validator` | A distinct verification lane after implementation/planner lanes finish. Optional at this layer; when present, it must depend on at least one upstream same-payload task. A terminal validator must depend on every same-payload non-validator id it verifies, including child `team_planner` ids. |
 
@@ -121,7 +122,7 @@ submit_plan({
       id: "dev-skill-registration",
       description: "Update bundled skill registration",
       name: "developer",
-      spec: "1. Goal: Keep bundled team playbook registration aligned with the parent planner changes so new skill ids load without manual edits.\n2. Task Details: Own backend/src/skills and related registration surfaces. This lane is independent from the TaskCenter and submission-policy lanes, so it runs in parallel while still being covered by the terminal validator. Do not widen scope to skill authoring or documentation changes beyond registration wiring.\n3. Acceptance Criteria: Run uv run pytest backend/tests/test_team/test_builtin_agent_registration.py -q and uv run pytest backend/tests/test_skills/test_team_playbook_quality.py -q; both suites pass and registration failures include exact missing skill ids.",
+      spec: "1. Goal: Keep bundled team playbook registration aligned with the parent planner changes so new skill ids load without manual edits.\n2. Task Details: Own backend/src/skills and related registration surfaces. This lane is independent from the TaskCenter and submission-policy lanes, so it runs in parallel while still being covered by the terminal validator. Do not widen scope to skill authoring or documentation changes beyond registration wiring.\n3. Acceptance Criteria: Run uv run pytest backend/tests/test_team/test_builtin_agent_registration.py -q and uv run pytest backend/tests/test_skills/test_loader.py -q; both suites pass and registration failures include exact missing skill ids.",
       deps: [],
       scope_paths: ["backend/src/skills"]
     },
@@ -129,7 +130,7 @@ submit_plan({
       id: "val-child-parallel",
       description: "Validate parallel child plan outputs",
       name: "validator",
-      spec: "1. Goal: Verify all parallel implementation and decomposition outputs at this child layer.\n2. Task Details: Verify backend/src/team/task_center.py, backend/src/tools/submission, backend/src/team/runtime, backend/src/prompt, and backend/src/skills after all parallel lanes finish. This terminal validator depends on every same-payload non-validator id, including the child team_planner. Do not edit production files in this task's scope; report gaps back to the owning lane with exact failing pytest ids.\n3. Acceptance Criteria: Run uv run pytest backend/tests/team/test_replan_workflow.py -q, uv run pytest backend/tests/team/test_task_center.py -q, uv run pytest backend/tests/test_engine backend/tests/team -q, uv run pytest backend/tests/test_team/test_builtin_agent_registration.py -q, and uv run pytest backend/tests/test_skills/test_team_playbook_quality.py -q; report exact failing pytest ids and the owning scope for any remaining failure.",
+      spec: "1. Goal: Verify all parallel implementation and decomposition outputs at this child layer.\n2. Task Details: Verify backend/src/team/task_center.py, backend/src/tools/submission, backend/src/team/runtime, backend/src/prompt, and backend/src/skills after all parallel lanes finish. This terminal validator depends on every same-payload non-validator id, including the child team_planner. Do not edit production files in this task's scope; report gaps back to the owning lane with exact failing pytest ids.\n3. Acceptance Criteria: Run uv run pytest backend/tests/team/test_replan_workflow.py -q, uv run pytest backend/tests/team/test_task_center.py -q, uv run pytest backend/tests/test_engine backend/tests/team -q, uv run pytest backend/tests/test_team/test_builtin_agent_registration.py -q, and uv run pytest backend/tests/test_skills/test_loader.py -q; report exact failing pytest ids and the owning scope for any remaining failure.",
       deps: ["dev-replan-rewire", "plan-submission-policy", "dev-skill-registration"],
       scope_paths: ["backend/src/team/task_center.py", "backend/src/tools/submission", "backend/src/team/runtime", "backend/src/prompt", "backend/src/skills"]
     }
@@ -235,7 +236,7 @@ Use `developer` for a narrow exact-owner implementation task with one coherent f
 
 ### Team Planner TaskSpec
 
-Use `team_planner` when this layer identifies an owner family but that family must be decomposed below this layer.
+Use `team_planner` when this layer identifies an owner family that must be decomposed below this layer and `grandchild_depth <= max_depth`. When `grandchild_depth > max_depth`, emit broader direct `developer` and `validator` tasks instead.
 
 ```text
 1. Goal: Decompose codeact toolkit compatibility failures into per-owner lanes across the overlay commit path, the sandbox command execution path, and the remote run cleanup path so each owner family is repaired on its own production boundary.
@@ -371,16 +372,18 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 
 ## Final Checklist
 
-- Top-level input is only `new_tasks`; any extra key is rejected.
-- Every task has only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`.
-- Every `id` is unique; every `deps` entry resolves to another id in this same payload.
-- No `deps` edge exists solely to serialize independent work or to keep scopes disjoint; chains appear only where real output consumption or terminal validator coverage requires them.
-- Every `name` is exactly `developer`, `team_planner`, or `validator` — never `scout` or `team_replanner`.
-- Every `description` is non-blank; every `scope_paths` is non-empty and uses repo-relative production paths (no `/testbed/...` or other sandbox-absolute prefixes).
-- Every `spec` contains `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order, each label starting its own line with body after the colon on the same line.
-- Every `Acceptance Criteria` is test-suite focused with concrete commands or pytest ids and the evidence expected in the final summary.
-- No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure for a named target.
-- No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner.
-- Any clustering job includes at least one child `team_planner`; no flat all-developer fan-out is submitted for multi-cluster benchmark repair.
-- When a terminal validator is included, its `deps` list every same-payload non-validator id, including `team_planner` ids.
-- The final assistant action is the `submit_plan(...)` tool call, not prose.
+| # | Check |
+|---|---|
+| 1 | Top-level input is only `new_tasks`; any extra key is rejected. |
+| 2 | Every task has only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`. |
+| 3 | Every `id` is unique; every `deps` entry resolves to another id in this same payload. |
+| 4 | No `deps` edge exists solely to serialize independent work or to keep scopes disjoint; chains appear only where real output consumption or terminal validator coverage requires them. |
+| 5 | Every `name` is exactly `developer`, `team_planner`, or `validator` — never `scout` or `team_replanner`. |
+| 6 | Every `description` is non-blank; every `scope_paths` is non-empty and uses repo-relative production paths (no `/testbed/...` or other sandbox-absolute prefixes). |
+| 7 | Every `spec` contains `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order, each label starting its own line with body after the colon on the same line. |
+| 8 | Every `Acceptance Criteria` is test-suite focused with concrete commands or pytest ids and the evidence expected in the final summary. |
+| 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure for a named target. |
+| 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
+| 11 | Any clustering job includes at least one child `team_planner` when `grandchild_depth <= max_depth`; no flat all-developer fan-out is submitted for multi-cluster benchmark repair unless `grandchild_depth > max_depth`. |
+| 12 | When a terminal validator is included, its `deps` list every same-payload non-validator id, including `team_planner` ids. |
+| 13 | The final assistant action is the `submit_plan(...)` tool call, not prose. |

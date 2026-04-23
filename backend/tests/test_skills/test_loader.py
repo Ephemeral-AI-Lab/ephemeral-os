@@ -11,6 +11,26 @@ _BUNDLED_SKILLS_DIR = (
 )
 
 
+def _read_bundled_skill(skill_name: str) -> str:
+    return (_BUNDLED_SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
+
+
+def _read_bundled_reference(skill_name: str, reference_name: str) -> str:
+    return (
+        _BUNDLED_SKILLS_DIR / skill_name / "references" / reference_name
+    ).read_text(encoding="utf-8")
+
+
+def _assert_contains_all(content: str, required: tuple[str, ...]) -> None:
+    for text in required:
+        assert text in content
+
+
+def _assert_absent(content: str, forbidden: tuple[str, ...]) -> None:
+    for text in forbidden:
+        assert text not in content
+
+
 def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("EPHEMERALOS_CONFIG_DIR", str(tmp_path / "config"))
     registry = load_skill_registry()
@@ -297,101 +317,115 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
 
 
 def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
-    skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
-    ).read_text(encoding="utf-8")
-    reference = (
-        _BUNDLED_SKILLS_DIR
-        / "team-root-planner-playbook"
-        / "references"
-        / "synthesize-and-submit.md"
-    ).read_text(encoding="utf-8")
+    skill = _read_bundled_skill("team-root-planner-playbook")
+    reference = _read_bundled_reference(
+        "team-root-planner-playbook", "synthesize-and-submit.md"
+    )
 
-    assert "## Workflow Map" in skill
-    assert "## Reference Map" in skill
-    assert "## When to Use" not in skill
-    assert "## Hierarchical Planning Principle" not in skill
-    assert "## Lane Selection" not in skill
-    assert "```mermaid" not in skill
-    assert "| 1. Analyze | Classify the request and build an owner ledger." in skill
-    assert "| 3. Synthesize and submit | Convert evidence into a schema-valid same-payload DAG" in skill
-    assert "Decision flow:" in skill
-    assert "[3. Synthesize and submit]" in skill
-    assert "load synthesize-and-submit" in skill
-    assert "### 3. Synthesize and submit" in skill
-    assert "### 4. Submit" not in skill
-    assert "## Terminal Tool Contract" not in skill
-    assert "The root planner routes top-down" in skill
-    assert "delegate broad or clustered decomposition to child `team_planner` lanes" in skill
-    assert "Lane Selection" in reference
-    assert "Clear owner names do not override a clustering signal" in reference
-    assert "large benchmark/test-matrix work" in reference
-    assert "### Clustering Guidance" in reference
-    assert "include at least one child `team_planner`" in reference
-    assert (
-        "A clustering root payload with four or more independent `developer` lanes and no child `team_planner` is invalid"
-        in reference
+    _assert_contains_all(
+        skill,
+        (
+            "## Workflow Map",
+            "## Reference Map",
+            "Decision flow:",
+            "### 1. Analyze",
+            "### 2. Scout",
+            "### 3. Synthesize and submit",
+            "load synthesize-and-submit",
+            'skill_name="team-root-planner-playbook"',
+            'reference_name="synthesize-and-submit"',
+            "The root planner routes top-down",
+            "child `team_planner`",
+            "narrow exact-owner work",
+        ),
     )
-    assert (
-        "Broad, shared, clustered, multi-family, unresolved, benchmark, migration, compatibility, or large benchmark/test-matrix work"
-        in reference
+    _assert_absent(
+        skill,
+        (
+            "## When to Use",
+            "## Hierarchical Planning Principle",
+            "## Lane Selection",
+            "```mermaid",
+            "## Terminal Tool Contract",
+            "### 4. Submit",
+        ),
     )
-    assert "Use child `team_planner` for broad decomposition" in reference
-    assert "Depth Gate" not in reference
-    assert "current_depth" not in reference
-    assert "max_depth" not in reference
-    assert "## TaskSpec Examples" in reference
-    assert "## Dependency DAG Examples" in reference
+    _assert_contains_all(
+        reference,
+        (
+            "### Clustering Guidance",
+            "### Lane Selection",
+            "Clear owner names do not override a clustering signal",
+            "large benchmark/test-matrix work",
+            "four or more independent `developer` lanes",
+            "Use child `team_planner` for broad decomposition",
+            "## TaskSpec Examples",
+            "## Dependency DAG Examples",
+        ),
+    )
+    _assert_absent(reference, ("Depth Gate", "current_depth", "max_depth"))
 
 
 def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
-    skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
-    ).read_text(encoding="utf-8")
-
-    assert "## Hierarchical Planning Principle" in skill
-    assert "Team plans are hierarchical" in skill
-    assert "Explore only enough at your current layer to separate exact owner work" in skill
-    assert "Do not try to fully decompose every descendant task in one payload" in skill
-    assert "Your job is top-down routing for this layer, not exhaustive single-layer discovery" in skill
-    assert "Clear owner names do not automatically mean direct developer lanes are best" in skill
-    assert "large benchmark/test-matrix work" in skill
-    assert "Clustering-job checkpoint" in skill
-    assert "include at least one child `team_planner` in this payload" in skill
-    assert "flat all-developer fan-out" in skill
-    assert "A clustering payload with four or more independent developer lanes and no child `team_planner` is invalid" in skill
-    assert "even when scouts named plausible owners or files" in skill
-    assert "Do not flatten those families into sibling developers at the current layer just because owner files are known" in skill
-    assert (
-        "Use another child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration"
-        in skill
+    skill = _read_bundled_skill("team-planner-playbook")
+    reference = _read_bundled_reference(
+        "team-planner-playbook", "submit-child-plan.md"
     )
-    assert "route the uncertainty to another child `team_planner`" in skill
-    assert "max_depth" not in skill
-    assert "current_depth" not in skill
-    assert "Depth rules" not in skill
-    assert "## Workflow Map" in skill
-    assert "## Reference Map" in skill
-    assert "```mermaid" not in skill
-    assert "Decision flow:" in skill
-    assert "| Section | Contract |" in skill
-    assert "#### Steps" in skill
-    assert "load submit-child-plan" in skill
-    assert 'skill_name="team-planner-playbook"' in skill
-    assert 'reference_name="submit-child-plan"' in skill
+
+    assert len(skill.splitlines()) <= 130
+    _assert_contains_all(
+        skill,
+        (
+            "## Hierarchical Planning Principle",
+            "## Workflow Map",
+            "## Reference Map",
+            "Decision flow:",
+            "### 1. Load context",
+            "### 2. Scout",
+            "### 3. Synthesize and submit",
+            "Team plans are hierarchical",
+            "top-down",
+            "narrow production surface",
+            "four or more independent `developer` lanes",
+            "`grandchild_depth <= max_depth`",
+            "`grandchild_depth > max_depth`",
+            "broader direct `developer` or `validator` tasks",
+            "load submit-child-plan",
+            'skill_name="team-planner-playbook"',
+            'reference_name="submit-child-plan"',
+        ),
+    )
+    _assert_absent(skill, ("```mermaid", "current_depth", "Depth rules"))
+    _assert_contains_all(
+        reference,
+        (
+            "### Clustering Guidance",
+            "### Lane Selection",
+            "`grandchild_depth <= max_depth`",
+            "use broader direct `developer` and `validator` tasks instead",
+            "## TaskSpec Examples",
+            "## Dependency DAG Examples",
+        ),
+    )
 
 
 def test_team_planner_playbook_requires_fail_to_pass_coverage_owners() -> None:
-    skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    content = "\n".join(
+        (
+            _read_bundled_skill("team-planner-playbook"),
+            _read_bundled_reference("team-planner-playbook", "submit-child-plan.md"),
+        )
+    )
 
-    assert "a coverage ledger of every named failing cluster or variant" in skill
-    assert "a terminal validator is not an owner for otherwise unassigned failures" in skill
-    assert "no named failing cluster may appear only in a validator spec" in skill
-    assert (
-        "No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner"
-        in skill
+    _assert_contains_all(
+        content,
+        (
+            "coverage ledger",
+            "named failing cluster",
+            "repair/decomposition",
+            "terminal validator",
+            "validator spec",
+        ),
     )
 
 
@@ -439,22 +473,21 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
     ).read_text(encoding="utf-8")
 
     for skill in (planner_content, root_planner_content):
-        assert (
-            "If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, or a verification-only path, do not launch"
-            in skill
-        )
-        assert "optional-dependency errors" in skill
-        assert (
-            "No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure"
-            in skill
-        )
-        assert (
-            "Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only"
-            in skill
-        )
-        assert (
-            "Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests"
-            in skill
+        _assert_contains_all(
+            skill,
+            (
+                "target_paths",
+                "production-only",
+                "scout `context`",
+                "optional-dependency errors",
+                "benchmark",
+                "`spec`",
+                "`scope_paths`",
+                "skip",
+                "xfail",
+                "pytest configuration",
+                "evidence only",
+            ),
         )
 
     for skill in (scout_skill, scout_contract):

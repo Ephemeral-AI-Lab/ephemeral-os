@@ -1,17 +1,14 @@
 # Action Reference: Cancel And Redraft
 
-Use this after failure-mode classification and any diagnostics have produced a corrective mapping that requires replacing stale same-layer work. Final payload shape lives in `terminal-contract`; this reference only decides cancellation boundaries.
+Use this after classification and diagnostics produce corrective work that must replace stale same-layer work. Final payload shape lives in `terminal-contract`; this reference only decides cancellation boundaries.
 
 If no stale direct sibling remains after excluding the failed task, switch to `action-add-tasks` and submit `cancel_ids=[]`.
 
-## Allow
+## Decision Contract
 
-- Cancel a non-terminal direct sibling of this replanner when it is stale because:
-  - it is working from invalidated assumptions
-  - a shared dependency changed
-  - leaving it running would duplicate or conflict with replanner-owned repair
-- Put replacement work in `new_tasks` as direct `developer` children of this replanner, with optional `validator` verification.
-- Include a cancelled sibling's scope in replacement tasks only when that sibling id is in `cancel_ids`.
+Cancel a non-terminal direct sibling of this replanner only when it is stale because it works from invalidated assumptions, a shared dependency changed, or it would duplicate/conflict with replanner-owned repair.
+
+Put replacement work under this replanner as direct `developer` children, with optional `validator` verification. Include a cancelled sibling's scope in replacement tasks only when that sibling id is in `cancel_ids`.
 
 ## Never Cancel
 
@@ -24,8 +21,7 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 ## Drop
 
 - Same-scope continuation of the failed task.
-- Benchmark-test edits or missing paths proven only by tests.
-- Skip, xfail, test rewrite, pytest configuration, or benchmark harness changes intended to make verification green.
+- Benchmark-test edits, missing paths proven only by tests, skip/xfail/test rewrite/pytest config/benchmark harness changes intended to make verification green.
 - Replacement work for an uncancelled sibling's scope.
 - Child `team_planner`, `root_planner`, `team_replanner`, or `scout` tasks.
 - Replacement moves, shims, bridges, or re-exports without production evidence for both source and destination.
@@ -33,9 +29,9 @@ If no stale direct sibling remains after excluding the failed task, switch to `a
 
 ## Build
 
-1. Confirm each required `cancel_ids` item is a non-terminal direct sibling with the same `parent_id` as this replanner.
+1. Confirm every `cancel_ids` item is a non-terminal direct sibling with this replanner's `parent_id`.
 2. Exclude the failed task id, original `request_replan` task, this replanner id, terminal tasks, and nested graph ids. If a draft cancellation equals the failed task id from the prompt, remove it and use `action-add-tasks` when no other stale sibling remains.
-3. Keep replacement work under this replanner; do not create a child planner, replanner, or scout to decide the repair.
+3. Keep replacement work under this replanner; do not create a child planner, replanner, or scout.
 4. Prefer local deps; existing deps require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task.
 5. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local replacement ids it verifies.
 6. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.

@@ -9,13 +9,12 @@ Produce a child task DAG from inherited Task Center context. Route clear exact-o
 
 ## Hierarchical Planning Principle
 
-Team plans are hierarchical: each planner submits a local child DAG, and another child `team_planner` can continue exploration and decomposition below it. Explore only enough at your current layer to separate exact owner work from broad or unresolved regions. Do not try to fully decompose every descendant task in one payload.
+Team plans are hierarchical: each planner submits a local child DAG, and another child `team_planner` can continue exploration and decomposition below it. Your job is top-down routing for this layer, not exhaustive single-layer discovery. Explore only enough at your current layer to separate exact owner work from broad or unresolved regions. Do not try to fully decompose every descendant task in one payload.
 
-Prefer another child `team_planner` when the remaining uncertainty is broad, shared across multiple owner families, or would require detailed implementation-level exploration beyond your assigned layer. Your job is top-down routing for this layer, not exhaustive single-layer discovery.
-
-Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, route broad families to another child `team_planner`. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface including large benchmark/test-matrix work that must be decomposed below this layer.
-
-Clustering-job checkpoint: treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade requests as clustering jobs when they contain many failing tests, several production families, or multiple failure clusters under one broad subsystem. When the checkpoint triggers, include at least one child `team_planner` in this payload. That child planner owns the next cluster-level split and may create developer leaves below it. A clustering payload with four or more independent developer lanes and no child `team_planner` is invalid, even when scouts named plausible owners or files — stop and replace broad developer groups with child `team_planner` lanes before submitting, and never ship a flat all-developer fan-out for multi-cluster benchmark repair. Use child planners for production families that still contain multiple failing tests, engines, dtypes, formats, or API surfaces. Do not flatten those families into sibling developers at the current layer just because owner files are known. Do not collapse independent failure mechanisms into one developer lane because they share nearby files or verification commands; overlapping `scope_paths` are allowed, split by mechanism when the work is otherwise independent. Keep `developer` lanes only for small leaf fixes with a single narrow production surface, one coherent failure mechanism, and a coherent verification command.
+- **Owner names do not force developer lanes.** Clear owner names do not automatically mean direct developer lanes are best. For broad benchmark, migration, or compatibility requests with many failing tests, several production families, or a test matrix that naturally splits into subproblems, route broad families to another child `team_planner` only when the prompt's Planning depth section shows `grandchild_depth <= max_depth`. Reserve direct `developer` lanes for narrow exact-owner fixes with a small, coherent implementation surface; do not use them for large benchmark/test-matrix work that must be decomposed below this layer unless the prompt shows `grandchild_depth > max_depth` or otherwise says there is no room for nested planning.
+- **Clustering-job checkpoint.** Treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade requests as clustering jobs when they contain many failing tests, several production families, or multiple failure clusters under one broad subsystem. When the checkpoint triggers and `grandchild_depth <= max_depth`, include at least one child `team_planner` in this payload; that child planner owns the next cluster-level split and may create developer leaves below it. When `grandchild_depth > max_depth`, emit direct `developer` and `validator` tasks with broader scopes instead of a child `team_planner`.
+- **Invalid shapes.** A clustering payload with four or more independent developer lanes and no child `team_planner` is invalid when `grandchild_depth <= max_depth`, even when scouts named plausible owners or files — replace broad developer groups with child `team_planner` lanes before submitting, and never ship a flat all-developer fan-out for multi-cluster benchmark repair. Use child planners for production families that still contain multiple failing tests, engines, dtypes, formats, or API surfaces only when `grandchild_depth <= max_depth`. Do not flatten those families into sibling developers at the current layer just because owner files are known. Do not collapse independent failure mechanisms into one developer lane because they share nearby files or verification commands; overlapping `scope_paths` are allowed, split by mechanism when the work is otherwise independent.
+- **Developer leaves only.** Keep `developer` lanes only for small leaf fixes with a single narrow production surface, one coherent failure mechanism, and a coherent verification command.
 
 ## Workflow Map
 
@@ -71,7 +70,7 @@ Loadable reference used in Stage 3 via `load_skill_reference(skill_name="team-pl
 
 ## Workflow Details
 
-### 1. Load task context
+### 1. Load context
 
 | Section | Contract |
 | --- | --- |
@@ -195,19 +194,24 @@ If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, o
     Draft each task with id, description, name, deps, scope_paths, and a
     `spec` structured as `1. Goal:`, `2. Task Details:` (owner evidence +
     constraints + dependency context), `3. Acceptance Criteria:` (concrete
-    verification with commands or pytest ids). Use another child
+    verification with commands or pytest ids). When the prompt's Planning
+    depth section shows `grandchild_depth <= max_depth`, use another child
     `team_planner` lane for broad, shared, unresolved, multi-family,
     clustered, or large benchmark/test-matrix work instead of forcing
-    exhaustive current-layer exploration. Do not preserve test-edit
-    recommendations in child specs.
+    exhaustive current-layer exploration. When the prompt shows
+    `grandchild_depth > max_depth` or otherwise says there is no room for
+    nested planning, emit direct `developer` and `validator` tasks with
+    broader scopes. Do not preserve test-edit recommendations in child specs.
     |
     v
 (3) Close routing gaps                      -> ci_workspace_structure | ci_query_symbol
                                               (or return to Stage 2)
     If a new distinct production owner slice must be known before this
-    layer can route work, return to Stage 2 before drafting; otherwise
-    route the uncertainty to another child `team_planner`. Use at most one
-    targeted CI call to tighten a task boundary or prevent a bad scope.
+    layer can route work, return to Stage 2 before drafting. Otherwise, when
+    `grandchild_depth <= max_depth`, route the uncertainty to another child
+    `team_planner`; when `grandchild_depth > max_depth`, preserve the
+    uncertainty in broader direct `developer` or `validator` tasks. Use at most
+    one targeted CI call to tighten a task boundary or prevent a bad scope.
     |
     v
 (4) Run the Final Checklist, then emit
@@ -219,6 +223,6 @@ If any candidate target matches `*/tests/*`, `test_*.py`, a benchmark harness, o
 
 Put owner evidence, exact production scope, constraints, and dependency context inside each `Task Details` body so downstream workers inherit the routing you decided at this layer.
 
-Lane-selection reminder: Use another child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work instead of forcing exhaustive current-layer exploration.
+Lane-selection reminder: Use another child `team_planner` lane for broad, shared, unresolved, multi-family, clustered, or large benchmark/test-matrix work only when `grandchild_depth <= max_depth`; otherwise emit broader direct `developer` and `validator` tasks.
 
 Coverage guard: No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner.

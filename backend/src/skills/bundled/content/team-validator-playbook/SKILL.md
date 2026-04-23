@@ -22,6 +22,8 @@ Read the handoff first, plan exact evidence, verify before substitutes, and appl
 
 **Diagram caption:** Full validator route from assigned task to terminal verdict. Success requires fresh green evidence; red or invalid evidence must be traced before one local correction or replanning.
 
+Decision flow:
+
 ```text
 [assigned validation task]
   |
@@ -75,7 +77,6 @@ No loadable references. Use this playbook directly.
 
 | Purpose | Signature |
 |---|---|
-| Load this playbook | `load_skill(skill_name="team-validator-playbook")` |
 | Read a known task by UUID | `read_task_details(task_id="<uuid>")` |
 | Read notes for a path | `read_file_note(file_path="...")` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
@@ -85,15 +86,14 @@ No loadable references. Use this playbook directly.
 
 ## Never
 
-1. Do not batch `load_skill` with any other tool call.
-2. Do not use `daytona_codeact` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use the Daytona read, search, or mutation tools above.
-3. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
-4. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
-5. Do not edit test files unless the task explicitly owns a test-only bug.
-6. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
-7. Do not claim success from stale, partial, indirect, or wrapper evidence.
-8. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`.
-9. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...`. Those commands are invalid verification evidence.
+1. Do not use `daytona_codeact` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use the Daytona read, search, or mutation tools above.
+2. Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools.
+3. Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green.
+4. Do not edit test files unless the task explicitly owns a test-only bug.
+5. Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure.
+6. Do not claim success from stale, partial, indirect, or wrapper evidence.
+7. Do not prefix CodeAct commands with host paths like `/Users/...` or sandbox-root hops like `cd /testbed &&`; commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`.
+8. Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...`. Those commands are invalid verification evidence.
 
 ## Workflow Details
 
@@ -106,6 +106,8 @@ No loadable references. Use this playbook directly.
 | **Forbidden** | CodeAct, CI, notes, file reads, edits, diagnostics, references, or graph reads before required context reads; fabricated, short, slug, or scout ids. |
 
 **Diagram caption:** Stage 1 context-gathering order. Required task reads come first; file notes follow and must precede all source reads, diagnostics, tests, or edits.
+
+#### Steps
 
 ```text
 [assigned validation task header]
@@ -146,6 +148,8 @@ Rules:
 
 **Diagram caption:** Stage 2 planning route. Every criterion gets a direct evidence path before any diagnostic or runtime command runs; invalid handoffs exit immediately to replanning.
 
+#### Steps
+
 ```text
 [validation context + notes]
     |
@@ -176,9 +180,9 @@ Plan before the first diagnostic, runtime command, or corrective edit:
 1. Map each acceptance criterion to the command, diagnostic, or probe that verifies it.
 2. Put the exact required command from the task or handoff before substitutes, broad suites, unrelated suites, or narrowed confirmation.
 3. Name owned files for `ci_diagnostics(file_path="...")`.
-4. Add one nearby guardrail only when the touched surface affects public serialization, schema shape, API/CLI/docs-visible output, or prompts.
+4. Add one nearby public-surface guardrail only when the touched surface affects public serialization, schema shape, API/CLI/docs-visible output, or prompts.
 5. Keep commands tied to the acceptance criteria and handoff. Do not widen to the full suite just because the surface is public.
-6. Do not expand `scope_paths` from acceptance criteria, handoffs, or test outcomes alone. A new production file is allowed only through `daytona_write_file` when live production evidence proves a missing module, serialization lane, engine bridge, shim, re-export, or bridge and no other worker owns that path.
+6. Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths` by themselves. A new production file may extend scope only through `daytona_write_file` when live production evidence proves a missing module, serialization lane, engine bridge, shim, re-export, or bridge and no other worker owns that path.
 7. Prefer a proven production fix over a test rewrite. Do not edit tests unless explicitly assigned a test-only bug.
 
 Submit `type="request_replan"` now if any of these hold:
@@ -186,7 +190,7 @@ Submit `type="request_replan"` now if any of these hold:
 1. A dependency is not `done` or its handoff does not identify what to validate.
 2. The required verification belongs to another owner, asks for broad redesign, or has no workflow-valid evidence path.
 3. The only apparent correction would edit, move, rename, or delete an existing file outside assigned `scope_paths` and dependency handoff files.
-4. The required correction is an out-of-scope test edit, an unproven missing compatibility module, or a new production file whose `daytona_write_file` expansion was blocked or conflicted.
+4. The required correction is an out-of-scope test edit, an unproven missing compatibility module, or a new production file whose `daytona_write_file` scope expansion was blocked or conflicted.
 
 ### 3. Run diagnostics and exact verification
 
@@ -197,6 +201,8 @@ Submit `type="request_replan"` now if any of these hold:
 | **Forbidden** | Stale, partial, indirect, wrapper, warning-suppressed, pytest-config-overridden, duplicate-equivalent, or missing verification evidence. |
 
 **Diagram caption:** Stage 3 verification route. Diagnostics and exact commands produce either green evidence for success or red evidence that must move to root-cause analysis.
+
+#### Steps
 
 ```text
 [validation plan]
@@ -228,12 +234,12 @@ Submit `type="request_replan"` now if any of these hold:
 
 1. Run `ci_diagnostics(file_path="...")` on every owned or touched production file before terminal completion.
 2. Treat error-severity diagnostics on owned files as red evidence unless explicitly pre-existing and irrelevant.
-3. Run the exact required runtime command first. Use `daytona_codeact(command="...")` for shell, build, and test commands; never pass shell text in `code`.
-4. Run CodeAct from the sandbox repo root with repo-relative paths, or `cd frontend/web && ...` for a subdirectory. Never prefix with `/testbed`, host workspace paths, or sandbox-root hops.
+3. Run the exact required runtime command first. Use `daytona_codeact(command="...")` for shell, build, and test commands; never pass a shell command string in `code`.
+4. Run CodeAct from the sandbox repo root with repo-relative paths, or `cd frontend/web && ...` for a subdirectory. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path.
 5. Use CodeAct only for runtime commands. For broad or slow suites, run in background, continue useful foreground review, and check progress only when live status changes the next action.
 6. Judge pass/fail by exit code and failing ids. Pytest exit `4`, `0` collected items, or a missing named node is red evidence.
 7. Warning suppression, plugin disabling, or pytest-config overrides are invalid evidence unless the task owns pytest config. Re-run the raw command, repair in-scope production import/config, or request replanning.
-8. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If policy blocks the command and no valid equivalent preserves evidence, request replanning with trigger `unresolved_blocker`.
+8. Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. If policy blocks the command, request replanning with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence.
 9. Green evidence for every criterion goes to Stage 6 success. Any red, invalid, partial, unmet, or absent evidence goes to Stage 4.
 
 ### 4. Analyze red evidence
@@ -245,6 +251,8 @@ Submit `type="request_replan"` now if any of these hold:
 | **Forbidden** | Treating symptoms as root causes; correcting outside validator scope; repeated validator repairs without a new local defect. |
 
 **Diagram caption:** Stage 4 red-evidence route. Preserve the failure, trace the first wrong production mechanism, then choose one local correction only if the boundary is proven.
+
+#### Steps
 
 ```text
 [red validation evidence]
@@ -319,6 +327,8 @@ Rules:
 
 **Diagram caption:** Stage 5 correction route. A validator may make one small Daytona mutation, then must refresh notes, diagnostics, and the same verification path.
 
+#### Steps
+
 ```text
 [obvious local correction]
     |
@@ -369,6 +379,8 @@ Do not:
 
 **Diagram caption:** Stage 6 terminal submission route. The summary is the final tool call: success only for workflow-valid green evidence, otherwise request replanning.
 
+#### Steps
+
 ```text
 [terminal decision]
     |
@@ -396,7 +408,7 @@ submit_task_summary({
 
 The `content` field is the entire terminal payload; there is no separate `summary` key.
 
-Success checklist:
+Success checklist. Do not omit a line because the answer is "none":
 
 | Required line | Must show |
 | --- | --- |
@@ -406,7 +418,7 @@ Success checklist:
 | Diagnostics | Owned-file diagnostics status. |
 | Guardrail | Public-surface guardrail result, or "none" if no guardrail was planned. |
 | Widening rationale | Investigation or guardrail widening rationale, or "none". |
-| `Residual Risk:` | Remaining risk, unverified surface, or "none". |
+| `Residual Risk:` with remaining risk, unverified surface, or "none" | Remaining risk, unverified surface, or "none". |
 
 Tiny success example:
 

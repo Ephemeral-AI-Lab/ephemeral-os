@@ -345,16 +345,18 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 
 ## Final Checklist
 
-- Top-level input is only `new_tasks`.
-- Every task has only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`.
-- Every `id` is unique; every `deps` entry resolves to another id in this same payload.
-- No `deps` edge exists solely to serialize independent work or to keep scopes disjoint; chains appear only where real output consumption or terminal validator coverage requires them.
-- Every `name` is exactly `developer`, `team_planner`, or `validator`.
-- Every `description` is non-blank; every `scope_paths` is non-empty and uses repo-relative production paths.
-- Every `spec` contains `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order, each label starting its own line.
-- Every `Acceptance Criteria` is test-suite focused with concrete commands or pytest ids.
-- No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure.
-- No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner.
-- Any clustering job includes at least one child `team_planner`.
-- The payload ends with exactly one terminal `validator` whose `deps` list every same-payload non-validator id.
-- The final assistant action is the `submit_plan(...)` tool call, not prose.
+| # | Check |
+|---|---|
+| 1 | Top-level input is only `new_tasks`. |
+| 2 | Every task has only `id`, `description`, `name`, `spec`, `deps`, and `scope_paths`. |
+| 3 | Every `id` is unique; every `deps` entry resolves to another id in this same payload. |
+| 4 | No `deps` edge exists solely to serialize independent work or to keep scopes disjoint; chains appear only where real output consumption or terminal validator coverage requires them. |
+| 5 | Every `name` is exactly `developer`, `team_planner`, or `validator`. |
+| 6 | Every `description` is non-blank; every `scope_paths` is non-empty and uses repo-relative production paths. |
+| 7 | Every `spec` contains `1. Goal:`, `2. Task Details:`, and `3. Acceptance Criteria:` in order, each label starting its own line. |
+| 8 | Every `Acceptance Criteria` is test-suite focused with concrete commands or pytest ids. |
+| 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure. |
+| 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
+| 11 | Any clustering job includes at least one child `team_planner`. |
+| 12 | The payload ends with exactly one terminal `validator` whose `deps` list every same-payload non-validator id. |
+| 13 | The final assistant action is the `submit_plan(...)` tool call, not prose. |
