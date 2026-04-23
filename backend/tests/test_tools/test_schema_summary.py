@@ -48,10 +48,10 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "      - definitions: list[CiSymbolDefinitionOutput] [default []]" in summary
 
     assert "Toolkit: task_center" in summary
-    assert "  submit_task_note\n" in summary
-    assert "      - tags: list[str] | null [default null]" in summary
+    assert "  submit_file_notes\n" in summary
+    assert "      - notes: list[FileNoteInput] [required]" in summary
     assert "      - note_id: str [required]" in summary
-    assert "      - task_id: str [required]" in summary
+    assert "      - path: str [required]" in summary
 
     assert "Toolkit: submission" in summary
     assert "  submit_task_success\n" in summary

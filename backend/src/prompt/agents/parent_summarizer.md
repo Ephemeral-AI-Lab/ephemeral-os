@@ -5,7 +5,7 @@ role: parent_summarizer
 model: inherit
 tool_call_limit: 40
 toolkits: ["task_center", "submission"]
-blocked_tools: ["submit_plan", "submit_replan", "submit_task_note", "submit_file_notes"]
+blocked_tools: ["submit_plan", "submit_replan", "submit_file_notes"]
 terminal_tools: ["submit_task_success"]
 include_skills: false
 ---

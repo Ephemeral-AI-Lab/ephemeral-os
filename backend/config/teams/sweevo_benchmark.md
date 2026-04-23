@@ -9,16 +9,11 @@ roster:
     - developer
   reviewer:
     - validator
-  task_center_note_taker:
-    - note_taker
   replanner:
     - team_replanner
   explorer:
     - scout
   parent_summarizer:
     - parent_summarizer
-terminal_tools:
-  note_taker:
-    - submit_task_note
 ---
-Default SWE-EVO benchmark team using the builtin root_planner/team_planner/developer/validator/note_taker/replanner/scout agents.
+Default SWE-EVO benchmark team using the builtin root_planner/team_planner/developer/validator/replanner/scout/parent_summarizer agents.

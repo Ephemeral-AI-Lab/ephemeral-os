@@ -4,16 +4,14 @@ Provides :class:`TeamAgentRunner`, the standard implementation of the
 ``QueryRunner`` callable expected by :class:`team.runtime.executor.Executor`.
 It spawns an :class:`EphemeralAgent`, wires ``tool_metadata`` and
 ``terminal_tools`` into the agent's ``QueryContext``, drives the event loop,
-observes tool completions for coordination (``TaskCenter.on_edit`` /
-``on_submission``), and schedules ``tc_note`` checkpoints.
+and surfaces stream events to optional hooks.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from agents.run_tracker import AgentRunTracker
@@ -25,7 +23,7 @@ from engine.core.query import (
     build_terminal_nudge_text,
 )
 from engine.runtime.agent import spawn_agent
-from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
+from message.stream_events import ToolExecutionCompleted
 from team.runtime.context_builder import TeamAgentContext
 
 logger = logging.getLogger(__name__)
@@ -54,18 +52,6 @@ def _ensure_default_executor_raised() -> None:
         # No running loop yet — pytest collection can hit this path.
         return
     _DEFAULT_EXECUTOR_READY = True
-
-# Tools whose completion should tick ``ActivityTracker.on_submission`` for coordination.
-SUBMISSION_TOOL_NAMES = frozenset({
-    "submit_task_success",
-    "request_replan",
-    "submit_task_note",
-    "submit_plan",
-    "submit_replan",
-})
-# Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
-EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
-
 
 def _coerce_terminal_tools(value: Any) -> set[str]:
     if isinstance(value, (set, frozenset)):
@@ -119,7 +105,6 @@ class AgentRunState:
     final_text: str = ""
     error: str | None = None
     cancelled: bool = False
-    pending_tool_inputs: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
 def extract_final_text(messages: list[Any]) -> str:
@@ -140,15 +125,12 @@ class TeamAgentRunner:
       * ``AgentRunTracker`` lifecycle
       * ``spawn_agent`` + tool_metadata wiring
       * ``terminal_tools`` wiring from metadata to QueryContext
-      * ``on_turn`` callback (``task_center.tick``)
-      * Tool completion observation (``on_edit`` / submission tools)
-      * ``tc_note`` checkpoint scheduling (per agent's ``allowed_triggers``)
+      * stream events passed through to optional hooks
 
     Hooks (optional extension points):
       * ``on_spawned(state)`` — synchronous, after spawn, before ``agent.run``
       * ``on_event(event, state)`` — synchronous, per stream event
       * ``on_complete(state)`` — awaitable, after the event loop returns
-      * ``on_checkpoint_event(payload)`` — synchronous, on tc_note lifecycle
     """
 
     def __init__(
@@ -160,7 +142,6 @@ class TeamAgentRunner:
         on_spawned: Callable[[AgentRunState], None] | None = None,
         on_event: Callable[[Any, AgentRunState], None] | None = None,
         on_complete: Callable[[AgentRunState], Awaitable[None]] | None = None,
-        on_checkpoint_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.session_config = session_config
         self.sandbox_id = sandbox_id
@@ -168,7 +149,6 @@ class TeamAgentRunner:
         self.on_spawned = on_spawned
         self.on_event = on_event
         self.on_complete = on_complete
-        self.on_checkpoint_event = on_checkpoint_event
 
     def _effective_defn(self, defn: Any) -> Any:
         if not self.agent_overrides:
@@ -240,120 +220,9 @@ class TeamAgentRunner:
             work_item_id=work_item_id,
             compacted_before=compacted_before,
         )
-        checkpoint_task: asyncio.Task[None] | None = None
-
-        def _snapshot() -> list[dict[str, Any]]:
-            return [m.model_dump(mode="json") for m in agent.display_messages]
-
-        def _schedule_checkpoint(snapshot: list[dict[str, Any]] | None = None) -> None:
-            nonlocal checkpoint_task
-            if not team_run_id or not work_item_id:
-                return
-            if "tc_note" not in getattr(effective_defn, "allowed_triggers", []):
-                return
-            try:
-                from team.runtime.registry import get as get_team_run
-
-                team_run = get_team_run(team_run_id)
-                if team_run is None:
-                    return
-                frozen = snapshot if snapshot is not None else _snapshot()
-                trigger = team_run.task_center.activity.should_take_note(work_item_id)
-                if trigger is None:
-                    return
-                if checkpoint_task is not None and not checkpoint_task.done():
-                    return
-                checkpoint_api_client = agent.query_context.api_client
-                checkpoint_model = agent.model
-
-                async def _run_checkpoint() -> None:
-                    event_base = {
-                        "event": "external_hook",
-                        "hook": "tc_note",
-                        "team_run_id": team_run_id,
-                        "work_item_id": work_item_id,
-                        "agent": effective_defn.name,
-                        "trigger": trigger,
-                    }
-                    if self.on_checkpoint_event is not None:
-                        self.on_checkpoint_event({**event_base, "status": "started"})
-                    try:
-                        posted = await team_run.task_center.activity.check(
-                            work_item_id,
-                            snapshot=frozen,
-                            api_client=checkpoint_api_client,
-                            model=checkpoint_model,
-                        )
-                    except Exception as exc:
-                        if self.on_checkpoint_event is not None:
-                            self.on_checkpoint_event(
-                                {**event_base, "status": "failed", "error": str(exc)}
-                            )
-                        raise
-                    status = "completed" if posted else "skipped"
-                    if self.on_checkpoint_event is not None:
-                        self.on_checkpoint_event({**event_base, "status": status})
-
-                checkpoint_task = asyncio.create_task(_run_checkpoint())
-            except Exception:
-                logger.debug(
-                    "Failed to schedule task-center checkpoint for %s",
-                    work_item_id,
-                    exc_info=True,
-                )
-
-        def _on_turn(display_messages: list[Any]) -> None:
-            if not team_run_id or not work_item_id:
-                return
-            try:
-                from team.runtime.registry import get as get_team_run
-
-                team_run = get_team_run(team_run_id)
-                if team_run is None:
-                    return
-                snap = [m.model_dump(mode="json") for m in display_messages]
-                team_run.task_center.activity.tick(work_item_id)
-                _schedule_checkpoint(snap)
-            except Exception:
-                logger.debug("Failed to observe turn for %s", work_item_id, exc_info=True)
-
-        agent.query_context.on_turn = _on_turn
 
         async def _run_agent_once(run_prompt: str) -> None:
             async for event in agent.run(run_prompt):
-                if isinstance(event, ToolExecutionStarted):
-                    state.pending_tool_inputs.setdefault(event.tool_name, []).append(
-                        event.tool_input
-                    )
-                elif (
-                    isinstance(event, ToolExecutionCompleted)
-                    and team_run_id
-                    and work_item_id
-                ):
-                    try:
-                        from team.runtime.registry import get as get_team_run
-
-                        team_run = get_team_run(team_run_id)
-                        inputs = state.pending_tool_inputs.get(event.tool_name) or []
-                        tool_input = inputs.pop(0) if inputs else {}
-                        if team_run is not None and not event.is_error:
-                            if event.tool_name in EDIT_TOOL_NAMES:
-                                file_path = str(
-                                    tool_input.get("file_path")
-                                    or tool_input.get("path")
-                                    or ""
-                                ).strip()
-                                if file_path:
-                                    team_run.task_center.activity.on_edit(work_item_id, file_path)
-                            if event.tool_name in SUBMISSION_TOOL_NAMES:
-                                team_run.task_center.activity.on_submission(work_item_id)
-                            _schedule_checkpoint()
-                    except Exception:
-                        logger.debug(
-                            "Failed to observe tool completion for %s",
-                            work_item_id,
-                            exc_info=True,
-                        )
                 if self.on_event is not None:
                     self.on_event(event, state)
 
@@ -396,7 +265,6 @@ class TeamAgentRunner:
                         terminal_tools=terminal_tools_raw,
                     )
                     _wire_agent(agent, previous_qc)
-                    agent.query_context.on_turn = _on_turn
                     state.agent = agent
                     await _run_agent_once(nudge_prompt)
                     _carry_forward_usage(previous_agent, agent)
@@ -422,8 +290,6 @@ class TeamAgentRunner:
                 )
                 ctx.tool_metadata["task_summary_type"] = "request_replan"
         finally:
-            if checkpoint_task is not None:
-                await asyncio.gather(checkpoint_task, return_exceptions=True)
             state.final_text = extract_final_text(agent.display_messages)
             if state.final_text:
                 ctx.tool_metadata["work_result"] = state.final_text

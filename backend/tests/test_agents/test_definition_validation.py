@@ -41,7 +41,6 @@ def test_reserved_builtin_agent_names_match_current_team_runtime():
         "validator",
         "scout",
         "team_replanner",
-        "note_taker",
         "parent_summarizer",
     }
 
@@ -65,22 +64,6 @@ def test_registry_ignores_external_reserved_builtin_overrides(monkeypatch):
     assert planner is not None
     assert planner.source == "builtin"
     assert planner.agent_type == "agent"
-
-
-def test_allowed_triggers_defaults_empty():
-    defn = AgentDefinition(name="test_agent", description="test")
-    assert defn.allowed_triggers == []
-
-
-def test_allowed_triggers_from_list():
-    defn = AgentDefinition(name="dev", description="dev", allowed_triggers=["tc_note"])
-    assert defn.allowed_triggers == ["tc_note"]
-
-
-def test_allowed_triggers_csv_split():
-    defn = AgentDefinition(name="dev", description="dev", allowed_triggers="tc_note, future_trigger")
-    assert defn.allowed_triggers == ["tc_note", "future_trigger"]
-
 
 def test_allowed_tools_csv_split():
     defn = AgentDefinition(name="dev", description="dev", allowed_tools="ci_query_symbol, ci_diagnostics")

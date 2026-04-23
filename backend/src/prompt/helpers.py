@@ -75,7 +75,6 @@ def load_agent_definition(name: str, settings) -> AgentDefinition | None:
             skills=record.skills or [],
             blocked_tools=record.blocked_tools or [],
             terminal_tools=record.terminal_tools or [],
-            allowed_triggers=record.allowed_triggers or [],
             hooks=record.hooks,
             background=record.background,
             initial_prompt=record.initial_prompt,

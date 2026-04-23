@@ -5,9 +5,8 @@ role: developer
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence", "task_center", "submission"]
-blocked_tools: ["submit_task_note", "submit_file_notes", "ci_status", "read_task_graph", "ci_workspace_structure"]
+blocked_tools: ["submit_file_notes", "ci_status", "read_task_graph", "ci_workspace_structure"]
 terminal_tools: ["submit_task_success", "request_replan"]
-allowed_triggers: ["tc_note"]
 skills: ["team-developer-playbook"]
 ---
 <Role>

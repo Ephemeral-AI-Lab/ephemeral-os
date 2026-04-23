@@ -154,7 +154,6 @@ def test_load_or_create_team_definition_uses_current_builtin_over_stale_db(monke
             "reviewer": [VALIDATOR],
             "explorer": [SCOUT],
         },
-        terminal_tools={"note_taker": {"submit_task_note"}},
     )
     stale_db = TeamDefinition(
         id="stale-sweevo",
@@ -167,7 +166,6 @@ def test_load_or_create_team_definition_uses_current_builtin_over_stale_db(monke
             "reviewer": [VALIDATOR],
             "explorer": [SCOUT],
         },
-        terminal_tools={"note_taker": {"submit_task_note"}},
     )
     captured: dict[str, object] = {}
 
@@ -285,20 +283,18 @@ def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
     )
     emitter({
         "event": "external_hook",
-        "hook": "tc_note",
+        "hook": "helper_run",
         "team_run_id": "run-1",
         "work_item_id": "task-1",
-        "trigger": "turn",
         "status": "completed",
     })
 
     payload = json.loads(structured_log.read_text(encoding="utf-8").strip())
-    assert payload["hook"] == "tc_note"
-    assert payload["trigger"] == "turn"
+    assert payload["hook"] == "helper_run"
     assert lines == [
         (
             "team",
-            "[external_hook] tc_note task=task-1 trigger=turn status=completed",
+            "[external_hook] helper_run task=task-1 status=completed",
         )
     ]
 
@@ -748,7 +744,7 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
 
     asyncio.run(
         runner(
-            SimpleNamespace(name="developer", allowed_triggers=["tc_note"], model_copy=lambda update: SimpleNamespace(name="developer", allowed_triggers=["tc_note"], **update)),
+            SimpleNamespace(name="developer", model_copy=lambda update: SimpleNamespace(name="developer", **update)),
             ctx,
         )
     )
@@ -1005,219 +1001,6 @@ def test_make_runner_marks_cancelled_agent_run_log(monkeypatch, tmp_path: Path):
     payload = json.loads(files[0].read_text(encoding="utf-8"))
     assert payload["status"] == "cancelled"
     assert payload["assistant_response"] == "Still working when run cancelled."
-
-
-def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
-    structured_log_path = tmp_path / "benchmark.events.jsonl"
-    raw_lines: list[tuple[str, str]] = []
-    checkpoint_calls: list[dict[str, object]] = []
-
-    class _Tracker:
-        run_id = "run-1"
-
-        def finish(self, **_: object) -> None:
-            return None
-
-    class _TaskCenter:
-        def __init__(self) -> None:
-            self._triggered = False
-            self.activity = self
-
-        def tick(self, _task_id: str) -> None:
-            return None
-
-        def should_take_note(self, _task_id: str) -> str | None:
-            if self._triggered:
-                return None
-            self._triggered = True
-            return "turn"
-
-        async def check(
-            self,
-            task_id: str,
-            *,
-            snapshot: list[dict[str, object]] | None = None,
-            api_client: object | None = None,
-            model: str | None = None,
-        ) -> bool:
-            checkpoint_calls.append(
-                {
-                    "task_id": task_id,
-                    "snapshot": snapshot,
-                    "api_client": api_client,
-                    "model": model,
-                }
-            )
-            return True
-
-        def on_edit(self, _task_id: str, _file_path: str) -> None:
-            return None
-
-        def on_submission(self, _task_id: str) -> None:
-            return None
-
-    query_context = SimpleNamespace(
-        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
-        run_id="",
-        tool_call_limit=10,
-        tool_calls_used=0,
-        session_state=None,
-        api_messages_snapshot=[],
-        api_client=object(),
-        on_turn=None,
-        exit_reason=QueryExitReason.TOOL_STOP,
-        terminal_tools=set(),
-    )
-
-    async def _fake_run(_prompt: str):
-        agent.display_messages = [
-            ConversationMessage(role="assistant", content=[TextBlock(text="Working through the task")])
-        ]
-        query_context.on_turn(list(agent.display_messages))
-        if False:
-            yield None
-
-    agent = SimpleNamespace(
-        query_context=query_context,
-        display_messages=[],
-        total_usage=SimpleNamespace(input_tokens=0, output_tokens=0),
-        model="test-model",
-        run=_fake_run,
-    )
-    fake_team_run = SimpleNamespace(
-        task_center=_TaskCenter(),
-    )
-
-    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
-    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
-    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
-    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
-
-    runner = _make_runner(
-        session_config=SimpleNamespace(session_id="sess-1"),
-        sandbox_id="sbx-1",
-        printer=SimpleNamespace(
-            raw_line=lambda who, body: raw_lines.append((who, body)),
-            emit=lambda _event: None,
-        ),
-        team_metrics={"structured_log_path": str(structured_log_path)},
-    )
-    ctx = sweevo_team_runner.TeamAgentContext(
-        user_message="Fix it",
-        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
-    )
-
-    asyncio.run(
-        runner(
-            SimpleNamespace(name="developer", allowed_triggers=["tc_note"], model_copy=lambda update: SimpleNamespace(name="developer", allowed_triggers=["tc_note"], **update)),
-            ctx,
-        )
-    )
-
-    assert checkpoint_calls and checkpoint_calls[0]["task_id"] == "W1"
-    assert checkpoint_calls[0]["model"] == "test-model"
-
-    events = [json.loads(line) for line in structured_log_path.read_text(encoding="utf-8").splitlines()]
-    hook_events = [event for event in events if event.get("event") == "external_hook"]
-    assert [event["status"] for event in hook_events] == ["started", "completed"]
-    assert hook_events
-    assert all(event["hook"] == "tc_note" for event in hook_events)
-    assert any("status=started" in body for _, body in raw_lines)
-    assert any("status=completed" in body for _, body in raw_lines)
-
-
-def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_path):
-    """Checkpoint should NOT fire when allowed_triggers omits 'tc_note'."""
-    checkpoint_calls: list[dict[str, object]] = []
-    structured_log_path = tmp_path / "log.jsonl"
-
-    class _Tracker:
-        run_id = "R1"
-        def finish(self, **_kw): pass
-
-    class _TaskCenter:
-        def __init__(self) -> None:
-            self.activity = self
-
-        def tick(self, _task_id: str) -> None:
-            return None
-
-        def should_take_note(self, _task_id: str) -> str | None:
-            return "turn"  # always eligible
-
-        async def check(self, task_id, *, snapshot=None, api_client=None, model=None):
-            checkpoint_calls.append({"task_id": task_id})
-            return True
-
-        def on_edit(self, _task_id: str, _file_path: str) -> None:
-            return None
-
-        def on_submission(self, _task_id: str) -> None:
-            return None
-
-    query_context = SimpleNamespace(
-        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
-        run_id="",
-        tool_call_limit=10,
-        tool_calls_used=0,
-        session_state=None,
-        api_messages_snapshot=[],
-        api_client=object(),
-        on_turn=None,
-        exit_reason=QueryExitReason.TOOL_STOP,
-        terminal_tools=set(),
-    )
-
-    async def _fake_run(_prompt: str):
-        agent.display_messages = [
-            ConversationMessage(role="assistant", content=[TextBlock(text="Working")])
-        ]
-        query_context.on_turn(list(agent.display_messages))
-        if False:
-            yield None
-
-    agent = SimpleNamespace(
-        query_context=query_context,
-        display_messages=[],
-        total_usage=SimpleNamespace(input_tokens=0, output_tokens=0),
-        model="test-model",
-        run=_fake_run,
-    )
-    fake_team_run = SimpleNamespace(
-        task_center=_TaskCenter(),
-    )
-
-    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
-    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
-    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
-    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
-
-    runner = _make_runner(
-        session_config=SimpleNamespace(session_id="sess-1"),
-        sandbox_id="sbx-1",
-        printer=SimpleNamespace(
-            raw_line=lambda who, body: None,
-            emit=lambda _event: None,
-        ),
-        team_metrics={"structured_log_path": str(structured_log_path)},
-    )
-    ctx = sweevo_team_runner.TeamAgentContext(
-        user_message="Fix it",
-        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
-    )
-
-    # Agent definition WITHOUT tc_note in allowed_triggers
-    asyncio.run(
-        runner(
-            SimpleNamespace(name="scout", allowed_triggers=[], model_copy=lambda update: SimpleNamespace(name="scout", allowed_triggers=[], **update)),
-            ctx,
-        )
-    )
-
-    # Checkpoint should NOT have been called despite should_take_note returning "turn"
-    assert checkpoint_calls == []
 
 
 def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):

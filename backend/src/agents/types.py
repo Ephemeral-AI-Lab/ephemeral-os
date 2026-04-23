@@ -63,6 +63,9 @@ class AgentDefinition(BaseModel):
         description="Tool names that end the agent's query loop when invoked.",
     )
 
+    # --- external triggers ---
+    allowed_triggers: list[str] = Field(default_factory=list)
+
     # --- hooks ---
     hooks: dict[str, Any] | None = None
 
@@ -127,7 +130,6 @@ class AgentDefinition(BaseModel):
         "allowed_tools",
         "blocked_tools",
         "terminal_tools",
-        "allowed_triggers",
         mode="before",
     )
     @classmethod

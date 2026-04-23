@@ -14,7 +14,6 @@ from tools.task_center.toolkit import (
     ReadTaskDetailsTool,
     ReadTaskGraphTool,
     SubmitFileNotesTool,
-    SubmitTaskNoteTool,
 )
 from tools.core.base import ToolExecutionContext, parse_tool_input
 from team.models import Note, Task, TaskStatus
@@ -131,45 +130,6 @@ async def test_submit_file_notes_preserve_order_and_allow_scout_correct_path_con
     assert notes.posted[1].content == "Missing target; correct path appears to be src/session.py."
 
 
-@pytest.mark.asyncio
-async def test_submit_task_note_requires_task_id_and_paths():
-    class _Notes:
-        def __init__(self) -> None:
-            self.posted = []
-
-        async def post(self, note) -> None:
-            self.posted.append(note)
-
-    notes = _Notes()
-    ctx = _ctx(
-        {
-            "task_center": SimpleNamespace(notes=notes),
-            "agent_name": "note_taker",
-        }
-    )
-
-    tool = SubmitTaskNoteTool()
-    result = await tool.execute(
-        tool.input_model(
-            content="Blocker on dep migration.",
-            task_id="task-42",
-            paths=["src/auth.py"],
-            tags=["blocker"],
-        ),
-        ctx,
-    )
-
-    assert result.is_error is False
-    payload = json.loads(result.output)
-    assert payload["task_id"] == "task-42"
-    assert payload["paths"] == ["src/auth.py"]
-
-
-def test_submit_task_note_rejects_whitespace_only_content():
-    with pytest.raises(ValidationError, match="content must contain non-whitespace text"):
-        SubmitTaskNoteTool.input_model(content=" \n\t", task_id="task-1", paths=["src/a.py"])
-
-
 def test_submit_file_notes_reject_whitespace_only_content():
     with pytest.raises(ValidationError, match="content must contain non-whitespace text"):
         SubmitFileNotesTool.input_model(
@@ -191,15 +151,8 @@ def test_submit_file_notes_reject_duplicate_normalized_paths():
             ],
         )
 
-
-def test_submit_task_note_rejects_missing_task_id():
-    with pytest.raises(ValidationError):
-        SubmitTaskNoteTool.input_model(content="note", paths=["src/a.py"])
-
-
 def test_submit_note_schemas_are_pydantic_native():
     file_schema = SubmitFileNotesTool().to_api_schema()
-    task_schema = SubmitTaskNoteTool().to_api_schema()
 
     assert "notes" in file_schema["input_schema"]["properties"]
     assert file_schema["input_schema"]["additionalProperties"] is False
@@ -217,11 +170,6 @@ def test_submit_note_schemas_are_pydantic_native():
     ]
     assert "path" in item_output["properties"]
     assert "paths" not in item_output["properties"]
-
-    assert "task_id" in task_schema["input_schema"]["properties"]
-    assert "paths" in task_schema["input_schema"]["properties"]
-    assert "task-scoped note" in task_schema["description"]
-    assert task_schema["output_schema"]["properties"]["task_id"]["description"]
 
 
 @pytest.mark.asyncio

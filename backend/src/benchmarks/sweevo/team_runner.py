@@ -111,7 +111,6 @@ def _load_or_create_team_definition(
         if (
             seeded.entry_planner != file_defn.entry_planner
             or seeded.roster != file_defn.roster
-            or seeded.terminal_tools != file_defn.terminal_tools
         ):
             logger.warning(
                 "Ignoring stale DB team definition %s: db entry_planner=%s, "

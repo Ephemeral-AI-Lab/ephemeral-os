@@ -164,18 +164,6 @@ def test_post_logs_auto_note(caplog):
     assert "[task_center] auto-note task=task-1" in caplog.text
 
 
-def test_post_resets_activity_counters_for_manual_progress_note():
-    tc = _tc()
-    for i in range(5):
-        tc.activity.on_edit("task-1", f"file-{i}.py")
-
-    assert tc.activity.should_take_note("task-1") == "edit"
-
-    _run(tc.notes.post(_note("n1", "task-1", "manual progress note")))
-
-    assert tc.activity.should_take_note("task-1") is None
-
-
 # ---------------------------------------------------------------------------
 # Filtering: authors
 # ---------------------------------------------------------------------------
@@ -457,126 +445,12 @@ def test_context_for_dedupes_parent_notes_by_task_id():
     assert "stale parent note" not in ctx
 
 
-def test_context_for_prefers_scope_relevant_parent_note_over_checkpoint():
-    tc = _tc()
-    _run(
-        tc.notes.post(
-            _note(
-                "n1",
-                "parent-task",
-                "scout found the diff command owner seam",
-                agent_name="scout",
-                paths=["dvc/command/diff.py", "dvc/command/metrics.py"],
-            )
-        )
-    )
-    _run(
-        tc.notes.post(
-            _note(
-                "n2",
-                "parent-task",
-                "**Checkpoint: parent-task (team_planner) → TaskStatus.RUNNING**",
-                agent_name="checkpoint",
-            )
-        )
-    )
-    task = _task(
-        "work-1",
-        objective="child task",
-        parent_id="parent-task",
-        scope_paths=["dvc/command/diff.py"],
-    )
-
-    parent = _task("parent-task", objective="parent")
-
-    async def _mock_get_task(task_id):
-        return parent if task_id == "parent-task" else None
-
-    tc.get_task = _mock_get_task
-
-    ctx = _run(tc.context.context_for(task))
-    assert "scout found the diff command owner seam" in ctx
-    assert "TaskStatus.RUNNING" not in ctx
-
-
-def test_template_context_for_prefers_scope_relevant_parent_note_over_checkpoint():
-    tc = _tc()
-    _run(
-        tc.notes.post(
-            _note(
-                "n1",
-                "parent-task",
-                "scout found the diff command owner seam",
-                agent_name="scout",
-                paths=["dvc/command/diff.py"],
-            )
-        )
-    )
-    _run(
-        tc.notes.post(
-            _note(
-                "n2",
-                "parent-task",
-                "**Checkpoint: parent-task (team_planner) → TaskStatus.RUNNING**",
-                agent_name="checkpoint",
-            )
-        )
-    )
-    task = _task(
-        "work-1",
-        objective="child task",
-        parent_id="parent-task",
-        scope_paths=["dvc/command/diff.py"],
-    )
-
-    parent = _task("parent-task", objective="parent")
-
-    async def _mock_get_task(task_id):
-        return parent if task_id == "parent-task" else None
-
-    tc.get_task = _mock_get_task
-
-    parts = _run(tc.context.template_context_for(task))
-    assert "scout found the diff command owner seam" in parts.parent_context
-    assert "TaskStatus.RUNNING" not in parts.parent_context
-
-
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "some-task", "context")))
     task = _task("work-1", objective="root level task")
     ctx = _run(tc.context.context_for(task))
     assert "Parent context" not in ctx
-
-
-def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
-    tc = _tc()
-    tc.graph["t1"] = Task(
-        id="t1",
-        team_run_id="run-1",
-        agent_name="developer",
-        status=TaskStatus.RUNNING,
-        objective="fix parser",
-    )
-    for _ in range(15):
-        tc.activity.tick("t1")
-
-    async def _boom(**_kwargs):
-        raise RuntimeError("llm unavailable")
-
-    monkeypatch.setattr("external_trigger.tc_note.run_tc_note", _boom)
-
-    result = _run(
-        tc.activity.check(
-            "t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()
-        )
-    )
-
-    assert result is True
-    notes = _run(tc.notes.read())
-    assert len(notes) == 1
-    assert "Auto note" in notes[0].content
-    assert "15 turns" in notes[0].content
 
 
 def test_context_for_respects_max_context_bytes():

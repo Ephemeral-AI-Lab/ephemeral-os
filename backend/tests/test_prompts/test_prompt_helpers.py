@@ -15,15 +15,6 @@ from team.persistence.model import TeamDefinitionRecord
 from team.persistence.store import TeamDefinitionStore
 from team.models import BudgetConfig, Task, TaskStatus, TeamDefinition
 from team.persistence.events import make_note_posted, make_task_added, make_team_run_created, task_to_dict
-from team.runtime.tool_policy import get_role_tool_policy
-
-
-def default_terminal_tools_for_role(role: str | None) -> set[str]:
-    policy = get_role_tool_policy(role)
-    if policy is None:
-        return set()
-    return set(policy.allowed_submission_tools)
-
 _ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS_DIR = _ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -53,7 +44,7 @@ def test_build_team_user_prompt_report_uses_runtime_context_path(tmp_path: Path)
         roster={
             "planner": ["team_planner"],
             "developer": ["developer"],
-            "task_center_note_taker": ["note_taker"],
+            "reviewer": ["validator"],
         },
     )
 
@@ -73,9 +64,8 @@ def test_build_team_user_prompt_report_uses_runtime_context_path(tmp_path: Path)
     assert "## Agent: developer" in report
     assert "Goal\nImplement the bounded code change" in report
     assert "Acceptance Criteria\n- Keep edits inside the assigned scope." in report
-    assert "## Agent: note_taker" in report
-    assert "### Edit Trigger" in report
-    assert "Call submit_task_note" in report
+    assert "## Agent: validator" in report
+    assert "Verify the implementation evidence and report pass or fail." in report
 
 
 def _team_system_prompt_for(agent_name: str, tmp_path: Path) -> str:
@@ -86,7 +76,7 @@ def _team_system_prompt_for(agent_name: str, tmp_path: Path) -> str:
         cwd=str(tmp_path),
         settings=Settings(),
         sandbox_id="sb-test",
-        terminal_tools=default_terminal_tools_for_role(agent_def.role),
+        terminal_tools=set(agent_def.terminal_tools or []),
     )
 
 
@@ -108,16 +98,13 @@ def test_team_system_prompts_include_only_terminal_guidance(tmp_path: Path) -> N
     assert "submit_plan" in planner
     assert "submit_task_success" not in planner
     assert "submit_replan" not in planner
-    assert "submit_task_note" not in planner
 
     assert "submit_replan" in replanner
     assert "submit_task_success" not in replanner
     assert "submit_plan" not in replanner
-    assert "submit_task_note" not in replanner
 
     assert "<Termination Condition>" not in scout
     assert "submit_file_notes" in scout
-    assert "submit_task_note" not in scout
     assert "submit_task_success" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout
@@ -156,7 +143,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
             role="planner",
             model="inherit",
             toolkits=["code_intelligence", "submission"],
-            blocked_tools=["submit_task_note"],
+            terminal_tools=["submit_plan"],
             include_skills=False,
         ),
         AgentDefinition(
@@ -166,7 +153,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
             role="replanner",
             model="inherit",
             toolkits=["code_intelligence", "submission"],
-            blocked_tools=["submit_task_note"],
+            terminal_tools=["submit_replan"],
             include_skills=False,
         ),
         AgentDefinition(
@@ -177,7 +164,6 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
             model="inherit",
             agent_type="subagent",
             toolkits=["code_intelligence", "task_center"],
-            blocked_tools=["submit_task_note"],
             include_skills=False,
         ),
         AgentDefinition(
@@ -187,6 +173,7 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
             role="reviewer",
             model="inherit",
             toolkits=["sandbox_operations", "code_intelligence", "submission"],
+            terminal_tools=["submit_task_success", "request_replan"],
             include_skills=False,
         ),
     ):
@@ -231,12 +218,10 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
     assert "submit_plan" in planner
     assert "submit_task_success" not in planner
     assert "submit_replan" not in planner
-    assert "submit_task_note" not in planner
 
     assert "submit_replan" in replanner
     assert "submit_task_success" not in replanner
     assert "submit_plan" not in replanner
-    assert "submit_task_note" not in replanner
 
     assert "submit_file_notes" in scout
     assert "submit_task_success" not in scout

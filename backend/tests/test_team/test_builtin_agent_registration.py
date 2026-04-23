@@ -232,7 +232,6 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "daytona_edit_file",
         "daytona_rename_symbol",
         "daytona_shell",
-        "submit_task_note",
         "submit_task_success",
         "submit_plan",
         "submit_replan",
@@ -249,7 +248,6 @@ def test_parent_summarizer_tool_surface_is_read_only_except_terminal_summary(
 
     assert {"read_task_details", "read_task_graph", "submit_task_success"} <= tool_names
     for name in (
-        "submit_task_note",
         "submit_file_notes",
         "submit_plan",
         "submit_replan",
