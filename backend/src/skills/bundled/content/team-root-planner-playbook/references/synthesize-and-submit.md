@@ -34,9 +34,9 @@ Atomic tests — all must hold:
 5. **Ownership settled.** Scout notes do not leave ownership as "could also be X", "between A and B", or "depends on Y". The owner is identified, not shortlisted.
 6. **One failure mechanism.** Every named failing test in the slice traces to the same root cause. Multiple independent root causes on one file is still expandable.
 
-Atomic grouping gate: trigger -> two or more atomic slices have different owner files, symbols, or verification commands; required action -> submit separate root `developer` lanes or route the group to `team_planner`; failure signal -> one `developer` task spec lists multiple independent fixes across unrelated owners because each item looked atomic alone.
+Atomic grouping gate: trigger -> two or more atomic slices have different owner files, symbols, or verification commands; required action -> submit separate root `developer` lanes or route the group to `team_planner`; failure signal -> one `developer` task spec lists multiple independent fixes across unrelated owners because each item looked atomic alone. Example: ✓ one focused `developer` for a single engine-selection fix and one `team_planner` for a broad read/write benchmark family; ✗ one `developer` that bundles the engine fix with dozens of read/write/glob/path failures because both live under the same package.
 
-Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms, says "fix each mechanism", or assigns separate production boundaries inside one lane; required action -> split into one root `developer` per mechanism or route the whole slice to `team_planner`; failure signal -> one `developer` task details names multiple mechanisms and justifies the bundle with shared scope, nearby files, or one verification suite.
+Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms, says "fix each mechanism", or assigns separate production boundaries inside one lane; required action -> split into one root `developer` per mechanism or route the whole slice to `team_planner`; failure signal -> one `developer` task details names multiple mechanisms and justifies the bundle with shared scope, nearby files, or one verification suite. Example: ✓ a child `team_planner` for three method families in one module; ✗ one `developer` lane that says it will fix each mechanism independently across those methods.
 
 Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file, lists several behaviors, entry points, modes, or scenarios, or uses "root cause(s)" because the mechanism is not yet known; required action -> route the slice to `team_planner` or split into root `developer` lanes by known behavior/mechanism; failure signal -> one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations under that file.
 
@@ -86,11 +86,12 @@ Never include `scout` or `team_replanner` in `new_tasks`; scouts run via `run_su
 2. Sibling target exclusivity gate: trigger -> the coverage ledger is split across multiple root families and one draft producer spec repeats a sibling family's named pytest ids, whole test file, or focused verification command; required action -> keep each named failing id, file-level command, or focused suite command only in the owning family's spec and in the terminal validator roll-up, and if a sibling file matters for context mention it as evidence only without duplicating its targets; failure signal -> one producer lane also carries another lane's ids or `pytest tests/test_beta.py -q` because the topics sound related. Example: ✓ owner A keeps `tests/test_alpha.py::test_case_a` while owner B keeps `tests/test_beta.py::test_case_b`; ✗ owner A also carries `pytest tests/test_beta.py -q` while owner B already owns that target.
 3. Put benchmark tests and verification commands in `spec`, not `scope_paths`, unless tests are explicitly the owned surface.
 4. Drop exact files disproved by live evidence. Use the nearest stable production boundary instead.
-5. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis.
-6. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests unless the original user request explicitly asks to repair tests rather than production behavior.
-7. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to a child `team_planner`.
-8. Every root payload ends with exactly one terminal `validator`. It is a structural requirement of the payload, not an optional addition. See the `Terminal Validator` section below.
-9. Make the terminal validator depend on every same-payload non-validator id, including child `team_planner` ids.
+5. Cold/disproved path gate: trigger -> live scout evidence says the drafted exact file is missing, CI-cold, or replaced by a package/directory boundary; required action -> remove the disproved exact file from `scope_paths` and `Task Details`, then use the nearest stable production boundary or carry uncertainty to `team_planner`; failure signal -> the final payload still names the disproved exact path after the scout reported zero coverage or a package boundary.
+6. Treat any scout conclusion that names benchmark tests, skips, xfails, rewrites, pytest configuration, or benchmark harness edits as evidence only. Translate it into a production, dependency, environment, or uncertainty hypothesis.
+7. Never write a developer goal or task details that instruct the child to edit, skip, xfail, rewrite, or reconfigure benchmark tests unless the original user request explicitly asks to repair tests rather than production behavior.
+8. Do not put a named failing cluster only in a validator spec. Give it a production repair/decomposition owner or hand it to a child `team_planner`.
+9. Every root payload ends with exactly one terminal `validator`. It is a structural requirement of the payload, not an optional addition. See the `Terminal Validator` section below.
+10. Make the terminal validator depend on every same-payload non-validator id, including child `team_planner` ids.
 
 ## Submission Rules
 
@@ -244,6 +245,31 @@ submit_plan({
 ```
 
 Invalid because each numbered label must have body text after the colon on the same line.
+
+```ts
+submit_plan({
+  new_tasks: [
+    {
+      id: "dev-owner",
+      description: "Repair the owner",
+      name: "developer",
+      spec: "1. Goal: Repair the owner.\n2. Task Details: Own backend/src/team/task_center.py.\n3. Acceptance Criteria: Run uv run pytest backend/tests/team/test_task_center.py -q.",
+      deps: [],
+      scope_paths: ["backend/src/team/task_center.py"]
+    },
+    {
+      id: "val-root",
+      description: "Validate the owner",
+      name: "validator",
+      spec: "1. Goal: Verify the repair after the producer lane completes.\n2. Task Details: Verify backend/src/team after dev-owner finishes.\n3. Acceptance Criteria: Run uv run pytest backend/tests/team/test_task_center.py -q.",
+      deps: [],
+      scope_paths: ["backend/src/team"]
+    }
+  ]
+})
+```
+
+Invalid because the terminal validator must depend on every same-payload non-validator id it verifies; `deps: []` is rejected with `validator tasks must depend on at least one upstream sibling`.
 
 ## TaskSpec Examples
 

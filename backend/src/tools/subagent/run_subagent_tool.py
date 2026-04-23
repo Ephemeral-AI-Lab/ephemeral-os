@@ -561,6 +561,7 @@ async def run_subagent(
             "- Start source-code scouting with `ci_query_symbol(...)`.",
             "- The durable handoff must be exactly one `submit_file_note(...)` call with non-empty `content` and at least one `paths` entry; never put findings only in final text.",
             "- If `ci_query_symbol(...)` already returned definitions for an exact file target, stay read-free and post `submit_file_note(...)` from CI evidence.",
+            "- Trigger: exact-file or short fixed-file scout already has CI definitions for the assigned path. Required action: stop after that bootstrap result and post `submit_file_note(...)`; do not fan out into generic symbol hunts like helper names, test names, or literals. Failure signal: more `ci_query_symbol(...)` calls appear after the file-path result for broad terms instead of posting the gap.",
             "- On coordinated benchmark lanes, exact-file and short fixed-file scouts stay read-free; if CI stays cold, report the gap instead.",
             "- If the note tool returns and the loop asks for final text, say only `Posted.`",
         ]

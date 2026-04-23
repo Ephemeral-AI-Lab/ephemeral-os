@@ -313,13 +313,16 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "split them into separate `run_subagent` calls in the same wave" in skill
     assert "one background task mixes HDF with JSON, groupby with utils, or CLI with config/compat ownership" in skill
     assert "Stable-boundary gate" in skill
+    assert "a scout family is unresolved between guessed exact files" in skill
     assert "choose one stable production boundary path in `target_paths`" in skill
+    assert "both `pkg/__init__.py` and `pkg/_version.py`" in skill
     assert "both `dask/dataframe/io/parquet.py` and `dask/dataframe/io`" in skill
     assert "repo-root fallback like `dask` next to concrete owner files" in skill
     assert '"target_paths": ["<one production owner path>"]' in skill
     assert "use one directory path rather than several sibling files" in skill
     assert "one broad scout bundles unrelated families" in skill
-    assert "HDF scout + parquet scout + CLI/config scout" in skill
+    assert "HDF scout + parquet scout + CLI scout + config scout" in skill
+    assert "CLI/config scout" not in skill
     assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
     assert "a current-layer `developer` is called atomic using only first-pass owner labels" in reference
 
@@ -415,6 +418,9 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
     assert 'parent_id: "root"' in reference
     assert 'scope_paths: ["backend/tests/team/test_task_center.py"]' in reference
     assert 'spec: "1. Goal:\\nRepair the owner.' in reference
+    assert 'id: "val-root"' in reference
+    assert 'description: "Validate the owner"' in reference
+    assert "validator tasks must depend on at least one upstream sibling" in reference
     assert "## TaskSpec Examples" in reference
     assert "### Developer TaskSpec" in reference
     assert "### Team Planner TaskSpec" in reference
@@ -477,8 +483,10 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             'the only valid `name` is `"team_planner"`',
             "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
             "one `developer` task spec lists multiple independent fixes across unrelated owners",
+            "bundles the engine fix with dozens of read/write/glob/path failures because both live under the same package",
             "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
             "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
+            "one `developer` lane that says it will fix each mechanism independently across those methods",
             'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
             "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
             "Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs",
@@ -487,6 +495,8 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "name the single internal helper, invariant, or adapter boundary proven by scout evidence",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
             'but the final payload gives that slice `name: "developer"`',
+            "Cold/disproved path gate: trigger -> live scout evidence says the drafted exact file is missing, CI-cold, or replaced by a package/directory boundary",
+            "the final payload still names the disproved exact path after the scout reported zero coverage or a package boundary",
             "## TaskSpec Examples",
             "## Dependency DAG Examples",
         ),
