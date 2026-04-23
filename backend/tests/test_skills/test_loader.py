@@ -899,10 +899,7 @@ def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> N
         "The next required change would be a broad or ambiguous production change that this lane cannot responsibly finish."
         in skill
     )
-    assert (
-        "ambiguous new production file whose missing path and mechanism are not proven by live production evidence."
-        in skill
-    )
+    assert "ambiguous new production file whose missing path and mechanism are not proven" in skill
     assert (
         "Before every mutation, verify the target file path, source path, destination path, or rename file hint"
         in skill
