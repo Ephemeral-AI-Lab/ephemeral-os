@@ -17,6 +17,41 @@ Treat benchmark, fail-to-pass, migration, compatibility, and broad upgrade reque
 - A clustering root payload with four or more independent `developer` lanes and no child `team_planner` is invalid, even when scouts named plausible owners or files.
 - Use child `team_planner` for broad decomposition. Keep root `developer` lanes for small leaf fixes with a single narrow production surface and coherent verification command.
 
+### Atomic vs. Expandable Decision
+
+Clustering Guidance above is a payload-level signal. The test below runs per owner slice: atomic slices become root `developer` lanes, expandable slices become child `team_planner` lanes. A slice is atomic only when **every** atomic test holds; **any** expandable signal routes it to `team_planner`.
+
+Atomic tests — all must hold:
+
+1. **Single production owner.** The fix lives in one file, symbol, or tight production surface that live scout evidence pinned. Not a shortlist, not a guess, not "start here and see what else breaks".
+2. **Single coherent verification.** One focused pytest file or a tight cluster of ids under one suite exercises the change. The acceptance command is one line, not a matrix.
+3. **No cross-module spread.** Edits stay inside one module boundary. Multiple files inside the same module are fine when they share one coherent change.
+4. **Bounded blast radius.** The slice touches one invariant, one API boundary, or one behavior — a reviewer can hold the whole repair in their head.
+5. **Ownership settled.** Scout notes do not leave ownership as "could also be X", "between A and B", or "depends on Y". The owner is identified, not shortlisted.
+6. **One failure mechanism.** Every named failing test in the slice traces to the same root cause. Multiple independent root causes on one file is still expandable.
+
+Expandable signals — any one routes to `team_planner`:
+
+- **Multi-family failure span.** Failing clusters cross production families, layers, or modules.
+- **Matrix shape.** The request or scout notes name multi-engine, multi-dtype, multi-format, multi-API, multi-backend, or multi-version coverage.
+- **Four-plus leaf fixes.** The slice requires four or more independent edits, even when each edit is narrow.
+- **Unresolved ownership.** Scout left ownership as a shortlist or gated it on further investigation.
+- **Broad surface request.** Benchmark, migration, compatibility, or framework upgrade work; the request itself is clustering, regardless of how many owners scouts named.
+- **Catch-all drafting.** The draft `2. Task Details:` would have to say "repair everything in module X" or list more than one independent production surface.
+- **Cross-cutting invariant.** The fix must be enforced at multiple independent call sites that each need their own verification.
+- **Mixed intent.** A single slice bundles a bugfix with a refactor, a migration with a feature, or policy with plumbing.
+
+Borderline cases:
+
+- One named file with three independent failures that touch different APIs inside it → **expandable**; the file is a scope coincidence, not a coherent fix.
+- Three files in one module that all consume one shared contract change → **atomic**; sibling files are incidental scope, not independent owners.
+- Benchmark-suite request where live scout evidence reduces it to one failing helper in one production file → **atomic**; the clustering signal is disproved at the slice level, and the terminal validator still runs the full suite.
+- "Touches every provider" cleanup where each change is mechanical but each provider is an independent owner with independent verification → **expandable**.
+- Scout named an exact symbol but the failing tests span two unrelated behaviors of that symbol → **expandable**; one owner is not the same as one coherent change.
+- Two named files where the second is a thin adapter that only re-exports or forwards to the first → **atomic**; the adapter is not an independent owner.
+
+When unsure, prefer `team_planner`. A mis-routed `developer` that grows into a catch-all multi-owner fix under-covers the failing surface and forces a replan. A `team_planner` that routes to a single child `developer` adds one layer of indirection but keeps decomposition correct.
+
 ### Lane Selection
 
 Lane selection is advisory, but apply it in this order. A single payload may mix lane names.

@@ -376,26 +376,32 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
     _assert_contains_all(
         skill,
         (
-            "## Hierarchical Planning Principle",
             "## Workflow Map",
             "## Reference Map",
             "Decision flow:",
             "### 1. Load context",
             "### 2. Scout",
             "### 3. Synthesize and submit",
-            "Team plans are hierarchical",
-            "top-down",
-            "narrow production surface",
-            "four or more independent `developer` lanes",
+            "child `team_planner`",
+            "large benchmark/test-matrix work",
             "`grandchild_depth <= max_depth`",
-            "`grandchild_depth > max_depth`",
             "broader direct `developer` or `validator` tasks",
             "load submit-child-plan",
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
         ),
     )
-    _assert_absent(skill, ("```mermaid", "current_depth", "Depth rules"))
+    _assert_absent(
+        skill,
+        (
+            "## Hierarchical Planning Principle",
+            "Team plans are hierarchical",
+            "top-down routing",
+            "```mermaid",
+            "current_depth",
+            "Depth rules",
+        ),
+    )
     _assert_contains_all(
         reference,
         (
