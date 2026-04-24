@@ -12,7 +12,15 @@ from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from team.errors import GraphInvariantViolation
-from team.models import TERMINAL_STATUSES, Task, TaskDefinition, TaskStatus, _utcnow
+from team.models import (
+    TERMINAL_STATUSES,
+    Task,
+    TaskDefinition,
+    TaskSpec,
+    TaskStatus,
+    _utcnow,
+    render_task_spec,
+)
 from team.persistence import task_queries as q
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_graph import TaskGraph
@@ -38,7 +46,7 @@ def record_to_task(rec: TaskRecord) -> Task:
         team_run_id=rec.team_run_id,
         definition=TaskDefinition(
             id=rec.id,
-            objective=rec.objective,
+            spec=rec.spec or TaskSpec.from_legacy_objective(rec.legacy_objective),
             agent=rec.agent_name,
             description=rec.description or "",
             deps=list(rec.deps) if rec.deps else [],
@@ -226,7 +234,7 @@ class TaskStore:
         *,
         parent_task: Task,
         summarizer_agent: str,
-        objective: str,
+        summary_prompt: str,
     ) -> tuple[Task, bool]:
         """Insert a READY parent-summary task as a child of the EAS parent.
 
@@ -264,7 +272,8 @@ class TaskStore:
                 id=summary_id,
                 team_run_id=self._team_run_id,
                 agent_name=summarizer_agent,
-                objective=objective,
+                spec=TaskSpec.from_legacy_objective(summary_prompt).to_dict(),
+                legacy_objective=summary_prompt,
                 status="ready",
                 deps=[],
                 scope_paths=scope_paths,
@@ -526,12 +535,21 @@ class TaskStore:
             task_text = f"Replan: {rec.agent_name} failed on task {task_id}: {reason}"
             if suggestion:
                 task_text += f"\nSuggestion: {suggestion}"
+            replan_spec = TaskSpec(
+                goal=f"Replan failed task {task_id}.",
+                detail=task_text,
+                acceptance_criteria=(
+                    "Submit exactly one corrective submit_replan payload with at "
+                    "least one new task and explicit cancel_ids."
+                ),
+            )
             scope_paths = list(rec.scope_paths) if rec.scope_paths else []
             replanner = TaskRecord(
                 id=replanner_id,
                 team_run_id=self._team_run_id,
                 agent_name=replanner_agent,
-                objective=task_text,
+                spec=replan_spec.to_dict(),
+                legacy_objective=render_task_spec(replan_spec),
                 status="ready",
                 deps=[],
                 scope_paths=scope_paths,

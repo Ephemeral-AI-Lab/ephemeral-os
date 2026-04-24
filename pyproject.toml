@@ -56,7 +56,7 @@ dump-team-system-prompts = "prompt.prompt_cli:dump_team_system_prompts_main"
 dump-team-user-prompts = "prompt.prompt_cli:dump_team_user_prompts_main"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["backend/src"]
+only-include = ["backend/src", "backend/config"]
 sources = ["backend/src"]
 
 [tool.pytest.ini_options]

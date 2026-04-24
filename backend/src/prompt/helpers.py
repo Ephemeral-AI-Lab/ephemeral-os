@@ -250,20 +250,24 @@ def _example_task_for_agent(
             team_run_id=team_run_id,
             definition=TaskDefinition(
                 id="root",
-                objective=user_request,
+                spec={
+                    "goal": user_request,
+                    "detail": "Plan the requested team run.",
+                    "acceptance_criteria": "Submit a valid child plan for the requested work.",
+                },
                 agent=agent_name,
             ),
             status=TaskStatus.PENDING,
             root_id="root",
             depth=0,
         )
-    objective = _structured_example_objective(agent_name=agent_name, roles=roles)
+    spec = _structured_example_spec(agent_name=agent_name, roles=roles)
     return Task(
         id=task_id,
         team_run_id=team_run_id,
         definition=TaskDefinition(
             id=task_id,
-            objective=objective,
+            spec=spec,
             agent=agent_name,
             description="Synthetic task used only for prompt inspection.",
             scope_paths=["backend/src"],
@@ -275,7 +279,7 @@ def _example_task_for_agent(
     )
 
 
-def _structured_example_objective(*, agent_name: str, roles: list[str]) -> str:
+def _structured_example_spec(*, agent_name: str, roles: list[str]) -> dict[str, str]:
     """Return a realistic structured task spec for synthetic prompt inspection."""
     role_hint = ", ".join(roles) if roles else "team member"
     if "reviewer" in roles:
@@ -307,20 +311,17 @@ def _structured_example_objective(*, agent_name: str, roles: list[str]) -> str:
             "- Run the narrowest verification command and summarize the result."
         )
 
-    return (
-        "Goal\n"
-        f"{action}\n\n"
-        "Environment\n"
-        "- Repository root: /workspace/project\n"
-        "- Use the existing project tooling and prompt contracts.\n\n"
-        "Scope\n"
-        "- backend/src\n\n"
-        "Context\n"
-        f"- This is a synthetic prompt-inspection task for `{agent_name}` ({role_hint}).\n"
-        "- In a live run, this section is written by the planner or replanner with task-specific evidence.\n\n"
-        "Acceptance Criteria\n"
-        f"{acceptance}"
-    )
+    return {
+        "goal": action,
+        "detail": (
+            "- Repository root: /workspace/project\n"
+            "- Use the existing project tooling and prompt contracts.\n"
+            "- Scope: backend/src\n"
+            f"- This is a synthetic prompt-inspection task for `{agent_name}` ({role_hint}).\n"
+            "- In a live run, this section is written by the planner or replanner with task-specific evidence."
+        ),
+        "acceptance_criteria": acceptance,
+    }
 
 
 def _make_task_context(

@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from team.models import Task
+from team.models import Task, render_task_spec
 
 if TYPE_CHECKING:
     from team.persistence.task_store import TaskStore
@@ -114,7 +114,7 @@ class TaskContextBuilder:
                     f"Failed reason: {original.failure_reason or 'unknown'}",
                     "",
                     "### Original task spec",
-                    orig_defn.objective,
+                    render_task_spec(orig_defn.spec),
                 ]
             )
             if orig_defn.description:
@@ -154,7 +154,7 @@ class TaskContextBuilder:
         sections: list[str] = []
         defn = task.definition
 
-        task_section = f"## Your task\n{defn.objective}"
+        task_section = f"## Your task\n{render_task_spec(defn.spec)}"
         if defn.scope_paths:
             task_section += f"\n\nScope: {', '.join(defn.scope_paths)}"
         sections.append(task_section)
@@ -185,7 +185,7 @@ class TaskContextBuilder:
         """Build context fragments for markdown-backed user prompt templates."""
         budget = max_context_bytes
         defn = task.definition
-        task_spec = defn.objective.strip()
+        task_spec = render_task_spec(defn.spec).strip()
         budget -= len(task_spec.encode())
 
         scope_paths = "\n".join(f"- {path}" for path in defn.scope_paths)

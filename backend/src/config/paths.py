@@ -10,6 +10,44 @@ from pathlib import Path
 
 _DEFAULT_BASE_DIR = ".ephemeralos"
 _CONFIG_FILE_NAME = "settings.json"
+_REPO_CONFIG_DIR_NAME = "config"
+
+
+def get_repo_config_dir() -> Path:
+    """Return the repository-bundled config directory.
+
+    In source checkouts this is ``backend/config``.  Wheels may include the
+    directory as data under ``backend/config`` beside installed packages.
+    """
+    here = Path(__file__).resolve()
+    candidates: list[Path] = []
+
+    if len(here.parents) > 2:
+        candidates.append(here.parents[2] / _REPO_CONFIG_DIR_NAME)
+    if len(here.parents) > 3:
+        candidates.append(here.parents[3] / "backend" / _REPO_CONFIG_DIR_NAME)
+    if len(here.parents) > 1:
+        candidates.append(here.parents[1] / "backend" / _REPO_CONFIG_DIR_NAME)
+
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return candidates[0]
+
+
+def get_builtin_agents_dir() -> Path:
+    """Return the bundled agent-definition directory."""
+    return get_repo_config_dir() / "agents"
+
+
+def get_builtin_teams_dir() -> Path:
+    """Return the bundled team-definition directory."""
+    return get_repo_config_dir() / "teams"
+
+
+def get_builtin_skills_dir() -> Path:
+    """Return the bundled skill-definition directory."""
+    return get_repo_config_dir() / "skills"
 
 
 def get_config_dir() -> Path:

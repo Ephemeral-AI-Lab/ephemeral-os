@@ -1,7 +1,7 @@
 """Builtin team-mode agent and team definitions.
 
 Definitions live as Markdown+YAML-frontmatter files in
-``backend/src/prompt/agents/`` and ``backend/config/teams/``.
+``backend/config/agents/`` and ``backend/config/teams/``.
 ``register_all()`` loads them at boot, optionally seeds the database,
 and populates the in-memory registries.
 """
@@ -9,12 +9,12 @@ and populates the in-memory registries.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from agents.loader import load_agents_dir
 from agents.registry import register_definition
 from agents.types import AgentDefinition
+from config.paths import get_builtin_agents_dir, get_builtin_teams_dir
 from team.models import TeamDefinition
 
 if TYPE_CHECKING:
@@ -34,10 +34,8 @@ SCOUT = "scout"
 TEAM_REPLANNER = "team_replanner"
 PARENT_SUMMARIZER = "parent_summarizer"
 
-_BACKEND_SRC = Path(__file__).resolve().parents[2]
-_CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
-_BUILTINS_DIR = _BACKEND_SRC / "prompt" / "agents"
-_TEAMS_BUILTIN_DIR = _CONFIG_ROOT / "teams"
+_BUILTINS_DIR = get_builtin_agents_dir()
+_TEAMS_BUILTIN_DIR = get_builtin_teams_dir()
 
 # Expected number of builtin agents.  If a seed file fails to parse,
 # ``load_agents_dir`` silently skips it — this constant lets us detect

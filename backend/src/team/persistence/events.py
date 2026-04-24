@@ -164,7 +164,7 @@ def task_to_dict(task: Any) -> dict[str, Any]:
         "team_run_id": task.team_run_id,
         "agent_name": defn.agent,
         "status": task.status.value,
-        "objective": defn.objective,
+        "spec": defn.spec.to_dict(),
         "description": defn.description,
         "deps": list(defn.deps),
         "scope_paths": list(defn.scope_paths),
@@ -187,16 +187,21 @@ def task_from_dict(data: dict[str, Any]) -> Any:
     def _parse_dt(iso: str | None) -> datetime | None:
         return datetime.fromisoformat(iso) if iso else None
 
-    objective = str(data.get("objective") or "")
-    if not objective:
-        raise ValueError("Task payload requires a non-empty 'objective'")
     task_id = data["id"]
+    spec_payload = data.get("spec")
+    legacy_objective = data.get("objective")
+    if spec_payload is None and not str(legacy_objective or "").strip():
+        raise ValueError("Task payload requires a non-empty 'spec'")
+    if spec_payload is None:
+        from team.models import TaskSpec
+
+        spec_payload = TaskSpec.from_legacy_objective(legacy_objective)
     return Task(
         id=task_id,
         team_run_id=data["team_run_id"],
         definition=TaskDefinition(
             id=task_id,
-            objective=objective,
+            spec=spec_payload,
             agent=data["agent_name"],
             description=str(data.get("description") or ""),
             deps=list(data.get("deps") or []),

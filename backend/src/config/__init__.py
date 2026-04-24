@@ -20,20 +20,28 @@ from .defaults import (
     OWNED_FAILURES_PREVIEW_LIMIT,
 )
 from .paths import (
+    get_builtin_agents_dir,
+    get_builtin_skills_dir,
+    get_builtin_teams_dir,
     get_config_dir,
     get_config_file_path,
     get_data_dir,
     get_logs_dir,
+    get_repo_config_dir,
 )
 from .settings import DatabaseSettings, Settings, load_settings, save_settings
 
 __all__ = [
     "DatabaseSettings",
     "Settings",
+    "get_builtin_agents_dir",
+    "get_builtin_skills_dir",
+    "get_builtin_teams_dir",
     "get_config_dir",
     "get_config_file_path",
     "get_data_dir",
     "get_logs_dir",
+    "get_repo_config_dir",
     "load_settings",
     "save_settings",
     "DEFAULT_MAX_TASKS",

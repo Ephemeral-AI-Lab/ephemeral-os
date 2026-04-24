@@ -260,13 +260,17 @@ EphemeralOS implements the core Agent Harness pattern across the live backend an
 backend/src/
   engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
   tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent, submission
-  skills/          # 📚 Bundled + user markdown skills, lazy-loaded at runtime
-  agents/          # 🤖 Agent definitions, builder, registry, CRUD API
+  skills/          # 📚 Skill loading, registry, DB store, and API
+  agents/          # 🤖 Agent definition loading, builder, registry, CRUD API
   team/            # 🤝 Task Center, dispatcher, persistence, planner runtime
   server/          # 🌐 FastAPI app, SSE protocol, state snapshots
   sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
   prompts/         # 📝 Runtime/system prompt assembly and capability awareness
   config/          # ⚙️ Settings, model resolution, paths
+backend/config/
+  agents/          # 🤖 Bundled agent definitions
+  teams/           # 🤝 Bundled team rosters
+  skills/          # 📚 Bundled markdown skill playbooks
 frontend/
   web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
   terminal/        # 💬 Terminal UI components and backend session hooks
@@ -353,6 +357,7 @@ Bundled packaged skills:
 - changelog-decompose
 ```
 
+Repo-bundled skill playbooks live under `backend/config/skills/`.
 User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the lazy `skills` tools load them only when an agent asks for them.
 
 ### 🔌 Plugin System

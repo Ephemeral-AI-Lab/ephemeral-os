@@ -118,16 +118,16 @@ class TeamRun:
     ) -> None:
         from team.models import Task, TaskDefinition, TaskStatus
 
-        objective = str(payload.get("objective") or payload.get("user_request") or "").strip()
-        if not objective:
-            raise ValueError("Root payload requires a non-empty 'objective'")
+        spec = payload.get("spec")
+        if spec is None:
+            raise ValueError("Root payload requires a non-empty 'spec'")
         root_id = str(uuid.uuid4())
         root = Task(
             id=root_id,
             team_run_id=self.id,
             definition=TaskDefinition(
                 id=root_id,
-                objective=objective,
+                spec=spec,
                 agent=agent_name,
                 scope_paths=list(payload.get("scope_paths", [])),
             ),

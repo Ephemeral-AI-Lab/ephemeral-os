@@ -10,11 +10,13 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
+from config.paths import get_builtin_skills_dir
+
 if TYPE_CHECKING:
     from skills.db.store import SkillDefinitionStore
 
 # Packaged skills directory — read-only skill content shipped with the codebase
-_PACKAGED_SKILLS_DIR = Path(__file__).resolve().parent.parent / "bundled" / "content"
+_PACKAGED_SKILLS_DIR = get_builtin_skills_dir()
 
 
 def _resolve_packaged_skill_dir(name: str) -> Path | None:

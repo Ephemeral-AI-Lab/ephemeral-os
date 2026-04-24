@@ -1,20 +1,19 @@
 """Bundled skill definitions loaded from directory-based skills.
 
-Each skill is a subdirectory of ``content/`` containing a ``SKILL.md``
+Each skill is a subdirectory of ``backend/config/skills`` containing a ``SKILL.md``
 file with optional YAML frontmatter (``name``, ``description``).
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
+from config.paths import get_builtin_skills_dir
 from skills.core.types import SkillDefinition
 
-_CONTENT_DIR = Path(__file__).parent / "content"
+_CONTENT_DIR = get_builtin_skills_dir()
 
 
 def get_bundled_skills() -> list[SkillDefinition]:
-    """Load all bundled skills from the content/ directory."""
+    """Load all bundled skills from ``backend/config/skills``."""
     skills: list[SkillDefinition] = []
     if not _CONTENT_DIR.exists():
         return skills

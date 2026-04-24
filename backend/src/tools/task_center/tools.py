@@ -17,6 +17,13 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from team.models import (
+    LeafSubmission,
+    PlannerSubmission,
+    ReplanPlan,
+    TaskSpec,
+    TaskStatus,
+)
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from tools.core.base import (
     BaseTool,
@@ -58,7 +65,7 @@ def _task_definition_payload(task_def: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "id": str(getattr(task_def, "id", "") or ""),
         "agent": str(getattr(task_def, "agent", "") or ""),
-        "objective": str(getattr(task_def, "objective", "") or ""),
+        "spec": _task_spec_payload(getattr(task_def, "spec", None)),
         "description": str(getattr(task_def, "description", "") or ""),
         "deps": list(getattr(task_def, "deps", []) or []),
         "scope_paths": list(getattr(task_def, "scope_paths", []) or []),
@@ -69,7 +76,72 @@ def _task_definition_payload(task_def: object) -> dict[str, object]:
     return payload
 
 
-def _append_submission_details(lines: list[str], submission: object | None) -> None:
+def _task_spec_payload(spec: object) -> dict[str, str]:
+    if isinstance(spec, TaskSpec):
+        return spec.to_dict()
+    if isinstance(spec, dict):
+        return {
+            "goal": str(spec.get("goal") or ""),
+            "detail": str(spec.get("detail") or ""),
+            "acceptance_criteria": str(spec.get("acceptance_criteria") or ""),
+        }
+    return {"goal": "", "detail": "", "acceptance_criteria": ""}
+
+
+_STATUS_LABELS: dict[TaskStatus, str] = {
+    TaskStatus.PENDING: "Pending",
+    TaskStatus.READY: "Ready",
+    TaskStatus.RUNNING: "Running",
+    TaskStatus.EXPANDED: "Expanded",
+    TaskStatus.EXPANDED_AWAITING_SUMMARY: "Expanded",
+    TaskStatus.REQUEST_REPLAN: "Request Replan",
+    TaskStatus.DONE: "Success",
+    TaskStatus.FAILED: "Failed",
+    TaskStatus.CANCELLED: "Canceled",
+}
+
+
+def _append_task_spec(lines: list[str], spec: TaskSpec, status: TaskStatus) -> None:
+    lines.extend(
+        [
+            f"# Goal {{Status: {_STATUS_LABELS[status]}}}",
+            "",
+            spec.goal,
+            "",
+            "# Detail",
+            "",
+            spec.detail,
+            "",
+            "# Acceptance Criteria",
+            "",
+            spec.acceptance_criteria,
+        ]
+    )
+
+
+def _append_submission_details(
+    lines: list[str],
+    submission: object | None,
+    *,
+    status: TaskStatus,
+    failure_reason: str | None,
+) -> None:
+    if isinstance(submission, LeafSubmission):
+        if status is TaskStatus.DONE:
+            summary = submission.summary.summary.strip()
+            if summary:
+                lines.extend(["", "# Outcome", "", summary])
+        return
+
+    reason_heading = {
+        TaskStatus.FAILED: "# Failed Reason",
+        TaskStatus.CANCELLED: "# Canceled Reason",
+        TaskStatus.REQUEST_REPLAN: "# Request Replan Reason",
+    }.get(status)
+    if reason_heading is not None and failure_reason:
+        lines.extend(["", reason_heading, "", failure_reason])
+        return
+
     if submission is None:
         return
 
@@ -77,21 +149,20 @@ def _append_submission_details(lines: list[str], submission: object | None) -> N
     if plan is not None:
         if hasattr(plan, "tasks"):
             payload = [_task_definition_payload(item) for item in plan.tasks]
-            lines.extend(["**Plan:**", "```json", json.dumps(payload, indent=2), "```"])
-        elif hasattr(plan, "add_tasks"):
+            lines.extend(["", "# Initial Plan", "", "```json", json.dumps(payload, indent=2), "```"])
+        elif isinstance(plan, ReplanPlan) or hasattr(plan, "add_tasks"):
             payload = {
                 "add_tasks": [
                     _task_definition_payload(item) for item in plan.add_tasks
                 ],
                 "cancel_ids": list(getattr(plan, "cancel_ids", []) or []),
             }
-            lines.extend(["**Replan:**", "```json", json.dumps(payload, indent=2), "```"])
+            lines.extend(["", "# Initial Plan", "", "```json", json.dumps(payload, indent=2), "```"])
 
     summary = getattr(submission, "summary", None)
     summary_text = str(getattr(summary, "summary", "") or "").strip()
     if summary_text:
-        label = "**Summary:**" if plan is not None else "**Success Summary:**"
-        lines.extend([label, summary_text])
+        lines.extend(["", "# Outcome", "", summary_text])
 
 
 # ---------------------------------------------------------------------------
@@ -404,18 +475,19 @@ class ReadTaskDetailsTool(BaseTool):
 
         if defn.description:
             lines.append(f"**Description:** {defn.description}")
-        lines.append(f"**Objective:** {defn.objective}")
+        lines.append("")
+        _append_task_spec(lines, defn.spec, task.status)
         if defn.deps:
-            lines.append(f"**Deps:** {', '.join(defn.deps)}")
+            lines.extend(["", f"**Deps:** {', '.join(defn.deps)}"])
         if defn.scope_paths:
-            lines.append(f"**Scope:** {', '.join(defn.scope_paths)}")
+            lines.extend(["", f"**Scope:** {', '.join(defn.scope_paths)}"])
 
-        status_value = getattr(task.status, "value", str(task.status))
-        is_failure = status_value in {"request_replan", "failed", "cancelled"}
-        if is_failure and task.failure_reason:
-            lines.append(f"**Failure Reason:** {task.failure_reason}")
-
-        _append_submission_details(lines, getattr(task, "submission", None))
+        _append_submission_details(
+            lines,
+            getattr(task, "submission", None),
+            status=task.status,
+            failure_reason=task.failure_reason,
+        )
 
         return ToolResult(output="\n".join(lines))
 
@@ -454,6 +526,7 @@ class ReadTaskGraphTool(BaseTool):
             "agent": defn.agent,
             "status": t.status.value,
             "description": defn.description or "",
+            "spec": _task_spec_payload(defn.spec),
             "deps": list(defn.deps),
             "scope_paths": list(defn.scope_paths),
             "failure_reason": t.failure_reason,

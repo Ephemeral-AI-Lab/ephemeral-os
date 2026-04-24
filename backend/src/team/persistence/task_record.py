@@ -7,8 +7,9 @@ The table is partitioned by team_run_id (LIST partitioning).
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
-from sqlalchemy import DateTime, Integer, Text
+from sqlalchemy import DateTime, Integer, JSON, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,7 +29,12 @@ class TaskRecord(Base):
     team_run_id: Mapped[str] = mapped_column(Text, primary_key=True)
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
-    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    spec: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    legacy_objective: Mapped[str | None] = mapped_column(
+        "objective",
+        Text,
+        nullable=True,
+    )
     description: Mapped[str] = mapped_column(Text, default="")
     deps: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list

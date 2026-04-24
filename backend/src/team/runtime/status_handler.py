@@ -423,7 +423,7 @@ class TaskStatusHandler:
         summary_task, created = await self._store.insert_parent_summary_task(
             parent_task=parent,
             summarizer_agent=self._resolve_parent_summarizer_agent(),
-            objective=build_parent_summary_prompt(parent, children),
+            summary_prompt=build_parent_summary_prompt(parent, children),
         )
         if created:
             self._emit(make_task_added(self._team_run_id, task_to_dict(summary_task)))

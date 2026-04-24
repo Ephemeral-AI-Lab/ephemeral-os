@@ -225,7 +225,9 @@ async def _render_template_user_message(
     variables: dict[str, object] = {
         "task_spec": parts.task_spec,
         "scope_paths": parts.scope_paths,
-        "user_request": str(getattr(team_run, "user_request", "") or task_def.objective).strip(),
+        "user_request": str(
+            getattr(team_run, "user_request", "") or task_def.spec.goal
+        ).strip(),
         "benchmark_targets": _format_benchmark_targets(team_run),
         "terminal_tools": _format_terminal_tools(terminal_tools),
         "your_task_id": str(task.id),

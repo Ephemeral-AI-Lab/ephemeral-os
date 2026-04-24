@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from config.paths import get_builtin_skills_dir
 from skills import get_user_skills_dir, load_skill_registry
 
-_BUNDLED_SKILLS_DIR = (
-    Path(__file__).resolve().parents[2] / "src" / "skills" / "bundled" / "content"
-)
+_BACKEND_SRC_DIR = Path(__file__).resolve().parents[2] / "src"
+_BUNDLED_SKILLS_DIR = get_builtin_skills_dir()
 
 
 def _read_bundled_skill(skill_name: str) -> str:
@@ -65,7 +65,7 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
         / "terminal-contract.md"
     ).read_text(encoding="utf-8")
     prompt = (
-        _BUNDLED_SKILLS_DIR.parents[2]
+        _BACKEND_SRC_DIR
         / "prompt"
         / "user_prompt"
         / "task_replanner.md"

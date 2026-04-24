@@ -19,6 +19,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents.registry import get_definition
+from team.models import TaskSpec
 from team.planning.validation import validate_plan
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
@@ -70,11 +71,6 @@ def _metadata_int(context: ToolExecutionContext, key: str, default: int = 0) -> 
         return default
 
 
-_SPEC_SECTIONS = ("Goal", "Task Details", "Acceptance Criteria")
-_SPEC_SECTION_RE = re.compile(
-    r"(?im)^\s*(?:\d+[.)]\s*)?"
-    r"(Goal|Task Details|Acceptance Criteria)\s*:\s*\S"
-)
 _UNRESOLVED_BLOCKER_RE = re.compile(
     r"(?i)\bClassification\s*:\s*unresolved_blocker\b"
 )
@@ -83,32 +79,10 @@ _DIAGNOSTICS_DECISION_RE = re.compile(
     r"(?:trivial_direct_replan|deep_diagnostics)\b"
 )
 
-
-def _spec_format_errors(spec_text: str) -> list[str]:
-    matches = list(_SPEC_SECTION_RE.finditer(spec_text))
-    found = [match.group(1) for match in matches]
-    missing = [section for section in _SPEC_SECTIONS if section not in found]
-    errors: list[str] = []
-    if missing:
-        errors.append("missing spec section(s): " + ", ".join(missing))
-
-    positions = {match.group(1): match.start() for match in matches}
-    previous = -1
-    for section in _SPEC_SECTIONS:
-        current = positions.get(section)
-        if current is None:
-            continue
-        if current <= previous:
-            errors.append("spec sections must appear in order: " + " -> ".join(_SPEC_SECTIONS))
-            break
-        previous = current
-    return errors
-
-
-def _replan_spec_contract_errors(spec_text: str) -> list[str]:
+def _replan_spec_contract_errors(spec: TaskSpec) -> list[str]:
     if (
-        _UNRESOLVED_BLOCKER_RE.search(spec_text)
-        and not _DIAGNOSTICS_DECISION_RE.search(spec_text)
+        _UNRESOLVED_BLOCKER_RE.search(spec.detail)
+        and not _DIAGNOSTICS_DECISION_RE.search(spec.detail)
     ):
         return [
             "unresolved_blocker requires Diagnostics decision: "
@@ -251,8 +225,8 @@ class RequestReplanTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class NewTaskSpec(BaseModel):
-    """Full spec for a task the agent is creating."""
+class NewTaskDefinition(BaseModel):
+    """Full definition for a task the agent is creating."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -261,18 +235,13 @@ class NewTaskSpec(BaseModel):
         ...,
         description="Agent name or role hint (e.g. 'developer', 'validator')",
     )
-    spec: str = Field(
+    spec: TaskSpec = Field(
         ...,
         description=(
-            "Structured task spec — the agent's sole briefing. Must include sections "
-            "in order using numbered colon labels. Each label must start its own "
-            "line and have body text after the colon on that same line, e.g. "
-            "'1. Goal: ...\\n2. Task Details: ...\\n"
-            "3. Acceptance Criteria: ...'. Markdown headings "
-            "like '## Goal', one-line specs with every label, and labels whose "
-            "body starts on the next line are not accepted. Acceptance Criteria "
-            "should name concrete commands, expected evidence, or specific "
-            "pytest ids where applicable."
+            "Required structured task spec object with goal, detail, and "
+            "acceptance_criteria. The detail field is the agent's full briefing; "
+            "acceptance_criteria should name concrete commands, expected evidence, "
+            "or specific pytest ids where applicable."
         ),
     )
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
@@ -283,7 +252,7 @@ class NewTaskSpec(BaseModel):
             "use repo-relative implementation owner paths, not `/testbed/...` "
             "prefixes. For validators, use the production paths being verified. "
             "Every task should provide at least one path. Keep verification-only "
-            "test targets in spec; test files and test directories are rejected "
+            "test targets in spec.acceptance_criteria; test files and test directories are rejected "
             "as scope_paths."
         ),
     )
@@ -291,7 +260,7 @@ class NewTaskSpec(BaseModel):
 
 class ResolvedTaskOutput(BaseModel):
     id: str = Field(..., description="Task id submitted by the planner.")
-    objective: str = Field(..., description="Full structured task objective.")
+    spec: TaskSpec = Field(..., description="Full structured task spec.")
     agent: str = Field(..., description="Resolved exact agent name.")
     deps: list[str] = Field(default_factory=list, description="Task ids this task depends on.")
     scope_paths: list[str] = Field(default_factory=list, description="Scope paths for this task.")
@@ -311,11 +280,11 @@ class SubmitPlanInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    new_tasks: list[NewTaskSpec] = Field(
+    new_tasks: list[NewTaskDefinition] = Field(
         default_factory=list,
         description=(
             "Structured JSON array of initial child tasks. Each entry is a "
-            "NewTaskSpec with id, name, spec, deps, and "
+            "NewTaskDefinition with id, name, spec, deps, and "
             "non-empty repo-relative scope_paths, including validators. The outcome "
             "summary is generated by the system after children complete; do not author prose."
         ),
@@ -343,7 +312,7 @@ class SubmitReplanInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    new_tasks: list[NewTaskSpec] = Field(
+    new_tasks: list[NewTaskDefinition] = Field(
         default_factory=list,
         description=(
             "Non-empty structured JSON array of corrective tasks to create as direct "
@@ -396,7 +365,7 @@ def _get_graph(context: ToolExecutionContext) -> dict[str, Any] | None:
 
 
 def _validate_task_specs(
-    specs: list[NewTaskSpec],
+    specs: list[NewTaskDefinition],
     *,
     graph_ids: set[str],
     valid_dep_ids: set[str],
@@ -416,10 +385,6 @@ def _validate_task_specs(
             errors.append(f"task '{spec.id}': empty agent name")
         elif get_definition(resolved) is None:
             errors.append(f"task '{spec.id}': unknown agent '{resolved}'")
-        if not spec.spec:
-            errors.append(f"task '{spec.id}': empty spec")
-        for error in _spec_format_errors(spec.spec):
-            errors.append(f"task '{spec.id}': {error}")
         for dep in spec.deps:
             if dep not in valid_dep_ids:
                 errors.append(f"new task '{spec.id}': unknown dep '{dep}'")
@@ -542,7 +507,7 @@ def _validate_submit_replan_input(
 
 
 def _resolved_task_payloads(
-    specs: list[NewTaskSpec],
+    specs: list[NewTaskDefinition],
     *,
     roster: dict[str, list[str]],
     parent_id: str | None = None,
@@ -553,7 +518,7 @@ def _resolved_task_payloads(
         resolved_agent = _resolve_agent_name(spec.name, roster)
         payload: dict[str, Any] = {
             "id": spec.id,
-            "objective": spec.spec,
+            "spec": spec.spec.to_dict(),
             "agent": resolved_agent,
             "deps": list(spec.deps),
             "scope_paths": list(spec.scope_paths),
@@ -665,7 +630,7 @@ class SubmitReplanTool(BaseTool):
         task_spec = (
             schema.get("input_schema", {})
             .get("$defs", {})
-            .get("NewTaskSpec", {})
+            .get("NewTaskDefinition", {})
             .get("properties", {})
             .get("name")
         )

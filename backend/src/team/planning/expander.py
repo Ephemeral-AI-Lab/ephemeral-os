@@ -126,7 +126,7 @@ class PlanExpander:
             ]
             definition = TaskDefinition(
                 id=new_task_id,
-                objective=spec.objective,
+                spec=spec.spec,
                 agent=spec.agent,
                 description=spec.description or "",
                 deps=resolved_deps,
@@ -207,7 +207,7 @@ class PlanExpander:
             local_only_tasks = [
                 TaskDefinition(
                     id=spec.id,
-                    objective=spec.objective,
+                    spec=spec.spec,
                     agent=spec.agent,
                     description=spec.description,
                     deps=[dep_id for dep_id in spec.deps if dep_id in local_ids],
@@ -248,7 +248,7 @@ class PlanExpander:
             specs.append(
                 TaskDefinition(
                     id=new_task_id,
-                    objective=spec.objective,
+                    spec=spec.spec,
                     agent=spec.agent,
                     description=spec.description or "",
                     deps=resolved_deps,

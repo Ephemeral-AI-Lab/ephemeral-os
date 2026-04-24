@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Mapping
 
 from config.defaults import (
     DEFAULT_MAX_DEPTH,
@@ -92,21 +92,155 @@ class Note:
 
 
 # ---------------------------------------------------------------------------
-# TaskDefinition — agent + spec (property 1 of every Task)
+# TaskSpec / TaskDefinition — agent + spec (property 1 of every Task)
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+_LEGACY_SPEC_DEFAULT_DETAIL = "Legacy task detail was not provided."
+_LEGACY_SPEC_DEFAULT_ACCEPTANCE = "Legacy acceptance criteria were not provided."
+
+
+def _non_blank(value: object, *, field_name: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"TaskSpec requires a non-empty '{field_name}'")
+    return text
+
+
+@dataclass(frozen=True)
+class TaskSpec:
+    """Structured task briefing shared by runtime tasks and submission tools."""
+
+    goal: str
+    detail: str
+    acceptance_criteria: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "goal", _non_blank(self.goal, field_name="goal"))
+        object.__setattr__(self, "detail", _non_blank(self.detail, field_name="detail"))
+        object.__setattr__(
+            self,
+            "acceptance_criteria",
+            _non_blank(self.acceptance_criteria, field_name="acceptance_criteria"),
+        )
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "TaskSpec":
+        return cls(
+            goal=data.get("goal"),
+            detail=data.get("detail"),
+            acceptance_criteria=data.get("acceptance_criteria"),
+        )
+
+    @classmethod
+    def from_legacy_objective(cls, objective: object) -> "TaskSpec":
+        text = str(objective or "").strip()
+        if not text:
+            raise ValueError("TaskSpec requires a non-empty 'goal'")
+        parsed = _parse_legacy_structured_spec(text)
+        if parsed is not None:
+            return parsed
+        return cls(
+            goal=text,
+            detail=_LEGACY_SPEC_DEFAULT_DETAIL,
+            acceptance_criteria=_LEGACY_SPEC_DEFAULT_ACCEPTANCE,
+        )
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "goal": self.goal,
+            "detail": self.detail,
+            "acceptance_criteria": self.acceptance_criteria,
+        }
+
+
+def _parse_legacy_structured_spec(text: str) -> TaskSpec | None:
+    import re
+
+    label_re = re.compile(
+        r"^\s*(?:#+\s*)?(?:\d+[.)]\s*)?"
+        r"(Goal|Task Details|Detail|Acceptance Criteria)\s*:\s*(.*)$",
+        re.IGNORECASE,
+    )
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text.splitlines():
+        match = label_re.match(line)
+        if match:
+            label = match.group(1).lower()
+            current = "detail" if label in {"task details", "detail"} else label.replace(" ", "_")
+            sections.setdefault(current, [])
+            first_line = match.group(2).strip()
+            if first_line:
+                sections[current].append(first_line)
+            continue
+        if current is not None:
+            sections.setdefault(current, []).append(line)
+
+    goal = "\n".join(sections.get("goal", [])).strip()
+    detail = "\n".join(sections.get("detail", [])).strip()
+    acceptance = "\n".join(sections.get("acceptance_criteria", [])).strip()
+    if not (goal and detail and acceptance):
+        return None
+    return TaskSpec(goal=goal, detail=detail, acceptance_criteria=acceptance)
+
+
+def render_task_spec(spec: TaskSpec, *, status_label: str | None = None) -> str:
+    goal_header = "# Goal"
+    if status_label:
+        goal_header += f" {{Status: {status_label}}}"
+    return "\n\n".join(
+        [
+            goal_header,
+            spec.goal,
+            "# Detail",
+            spec.detail,
+            "# Acceptance Criteria",
+            spec.acceptance_criteria,
+        ]
+    )
+
+
+@dataclass(init=False)
 class TaskDefinition:
     """What defines a task: which agent, and what to do."""
 
     id: str
-    objective: str
+    spec: TaskSpec
     agent: str
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
     parent_id: str | None = None
+
+    def __init__(
+        self,
+        *,
+        id: str,
+        spec: TaskSpec | Mapping[str, Any] | None = None,
+        agent: str,
+        description: str = "",
+        deps: list[str] | None = None,
+        scope_paths: list[str] | None = None,
+        parent_id: str | None = None,
+    ) -> None:
+        self.id = str(id)
+        if isinstance(spec, TaskSpec):
+            self.spec = spec
+        elif isinstance(spec, Mapping):
+            self.spec = TaskSpec.from_mapping(spec)
+        elif spec is not None:
+            raise ValueError(
+                f"TaskSpec for task '{self.id}' must be an object with "
+                "goal, detail, and acceptance_criteria"
+            )
+        else:
+            raise ValueError(f"TaskDefinition '{self.id}' requires a non-empty 'spec'")
+        self.agent = str(agent)
+        self.description = description
+        self.deps = list(deps or [])
+        self.scope_paths = list(scope_paths or [])
+        self.parent_id = parent_id
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +280,7 @@ class Task:
         status: TaskStatus,
         definition: "TaskDefinition | None" = None,
         agent_name: str | None = None,
-        objective: str | None = None,
+        spec: TaskSpec | Mapping[str, Any] | None = None,
         description: str = "",
         deps: list[str] | None = None,
         scope_paths: list[str] | None = None,
@@ -164,7 +298,7 @@ class Task:
         if definition is None:
             definition = TaskDefinition(
                 id=id,
-                objective=objective or "",
+                spec=spec,
                 agent=agent_name or "",
                 description=description,
                 deps=list(deps or []),
@@ -191,10 +325,6 @@ class Task:
     @property
     def agent_name(self) -> str:
         return self.definition.agent
-
-    @property
-    def objective(self) -> str:
-        return self.definition.objective
 
     @property
     def description(self) -> str:
@@ -278,17 +408,31 @@ def _taskspec_list_from_field(
 def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
     """Build a TaskDefinition from a dict, raising ValueError on missing required fields."""
     task_id = str(it.get("id") or "")
-    objective = str(it.get("objective") or "")
     agent = str(it.get("agent") or "")
     if not task_id:
         raise ValueError("TaskDefinition requires a non-empty 'id'")
-    if not objective:
-        raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'objective'")
     if not agent:
         raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'agent'")
+    try:
+        raw_spec = it.get("spec")
+        if raw_spec is None and it.get("objective") is not None:
+            spec = TaskSpec.from_legacy_objective(it.get("objective"))
+        elif isinstance(raw_spec, TaskSpec):
+            spec = raw_spec
+        elif isinstance(raw_spec, Mapping):
+            spec = TaskSpec.from_mapping(raw_spec)
+        elif raw_spec is not None:
+            raise ValueError(
+                f"TaskSpec for task '{task_id}' must be an object with "
+                "goal, detail, and acceptance_criteria"
+            )
+        else:
+            raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'spec'")
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
     return TaskDefinition(
         id=task_id,
-        objective=objective,
+        spec=spec,
         agent=agent,
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),

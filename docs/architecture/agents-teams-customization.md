@@ -13,7 +13,7 @@ Agents are customized via two complementary paths: **Markdown frontmatter** (for
 ```
 ┌─────────────────────────────────┐        ┌─────────────────────────┐
 │  Markdown Agent Definitions     │        │  REST API               │
-│  backend/src/prompt/agents/*.md     │        │  POST /api/agents       │
+│  backend/config/agents/*.md         │        │  POST /api/agents       │
 └────────────────┬────────────────┘        └───────────┬─────────────┘
                  │ YAML frontmatter + body              │ JSON payload
                  ▼                                      ▼
@@ -455,19 +455,29 @@ This team coordinates...
 
 ## 9. Configuration Directories
 
-Builtin agent and team definitions live in:
+Builtin agent, team, and skill definitions live in:
 
 ```
-backend/src/prompt/agents/
+backend/config/agents/
   ├── developer.md
+  ├── root_planner.md
+  ├── parent_summarizer.md
   ├── validator.md
   ├── team_planner.md
   ├── team_replanner.md
   └── scout.md
 
 backend/config/teams/
-  ├── default_team.md
+  ├── sweevo_benchmark.md
   └── ...
+
+backend/config/skills/
+  ├── team-developer-playbook/
+  ├── team-planner-playbook/
+  ├── team-replanner-playbook/
+  ├── team-root-planner-playbook/
+  ├── team-scout-playbook/
+  └── team-validator-playbook/
 ```
 
 User-created agents are:
