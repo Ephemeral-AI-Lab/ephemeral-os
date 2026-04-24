@@ -138,16 +138,6 @@ def _ensure_team_schema(engine: Engine) -> None:
     _ensure_indexes(engine)
 
 
-def get_team_engine() -> "AsyncEngine | None":
-    """Return the shared async engine."""
-    return get_async_engine()
-
-
-def get_team_session_factory() -> "async_sessionmaker[AsyncSession] | None":
-    """Return the shared async session factory."""
-    return get_async_session_factory()
-
-
 def create_team_engine(
     settings: "Settings | None" = None,
 ) -> "tuple[AsyncEngine, async_sessionmaker[AsyncSession]]":

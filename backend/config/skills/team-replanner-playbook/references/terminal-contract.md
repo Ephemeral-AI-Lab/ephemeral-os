@@ -17,7 +17,7 @@ type TaskSpec = {
 
 type NewTaskDefinition = {
   id: string;
-  name: "developer" | "validator";
+  agent: "developer" | "validator";
   spec: TaskSpec;
   deps: string[];
   scope_paths: string[];
@@ -33,7 +33,7 @@ Never include `output`, `summary`, `background`, `parent_id`, `new_sibling_tasks
 | Field | Rule |
 | --- | --- |
 | `id` | Unique lower-kebab id in this payload. Local deps reference this exact string. |
-| `name` | Use only `developer` or terminal `validator`. Never use `team_planner`, `root_planner`, `scout`, `team_replanner`, or any other role. |
+| `agent` | Use only `developer` or terminal `validator`. Never use `team_planner`, `root_planner`, `scout`, `team_replanner`, or any other role. |
 | `spec` | Required object with non-empty `goal`, `detail`, and `acceptance_criteria` strings. If `detail` uses `Classification: unresolved_blocker`, it must also include the exact field `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`. |
 | `deps` | Prefer local payload ids. Existing ids require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task. Validators depend on local payload ids. |
 | `scope_paths` | Non-empty repo-relative production paths. Verification-only tests stay in `spec`; do not scope benchmark tests, test rewrites, skip/xfail work, pytest config, or transient artifacts unless the original user request asked to repair tests. |
@@ -70,7 +70,7 @@ Add-only direct repair:
   "new_tasks": [
     {
       "id": "repair-config-path",
-      "name": "developer",
+      "agent": "developer",
       "spec": {
         "goal": "Repair the config regression in the production loader path.",
         "detail": "Classification: scope_expansion. The failed task proved the root cause is pkg/config.py, not the original assigned file. Run ci_diagnostics(file_path=\"pkg/config.py\") first and preserve named failing test evidence; test paths remain acceptance-only.",
@@ -92,8 +92,8 @@ Cancel-and-redraft uses the same shape but sets `cancel_ids` to stale direct sib
 |---|---|
 | 1 | Top-level input has only required `new_tasks` and required `cancel_ids`, with `cancel_ids: []` when no sibling should be cancelled. |
 | 2 | `new_tasks` contains at least one corrective task; if no task is justified yet, look deeper into the issues and come back with a concrete corrective task. |
-| 3 | Every task has only `id`, `name`, `spec`, `deps`, and `scope_paths`. |
-| 4 | Every `name` is exactly `developer` or `validator`. |
+| 3 | Every task has only `id`, `agent`, `spec`, `deps`, and `scope_paths`. |
+| 4 | Every `agent` is exactly `developer` or `validator`. |
 | 5 | Every id is unique. |
 | 6 | Every local dep names another task in this payload; any existing dep is freshly proven schedulable and not downstream of this replanner or the failed task. |
 | 7 | Every task has non-empty repo-relative production `scope_paths`. |

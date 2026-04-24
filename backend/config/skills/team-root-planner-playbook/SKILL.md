@@ -96,8 +96,8 @@ Scout only owner information that changes root routing. Do not scout to confirm 
 Enter this stage only after Stage 1 output exists and Stage 2 is complete or explicitly skipped because no unresolved production owners remain. The reference load is the stage transition; if you are still building the owner ledger or might need exploration, do not load it yet. Once the pre-load checklist in the Reference Map is all Yes, load `synthesize-and-submit` as the first Stage 3 action, then proceed without further scout, note-read, CI, workspace, or symbol exploration.
 
 - Use the reference's clustering, lane selection, coverage/evidence, dependency DAG, and submission rules to route each slice to `developer`, `team_planner`, or `validator`.
-- Name-field lock: if your synthesis calls a slice expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic, the task's `name` must be `team_planner`, never `developer`.
-- Draft each task with `id`, `name`, `deps`, `scope_paths`, and a structured `spec` containing non-empty `goal`, `detail`, and `acceptance_criteria`.
+- Agent-field lock: if your synthesis calls a slice expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic, the task's `agent` must be `team_planner`, never `developer`.
+- Draft each task with `id`, `agent`, `deps`, `scope_paths`, and a structured `spec` containing non-empty `goal`, `detail`, and `acceptance_criteria`.
 - Before submit, audit every `developer` task: it must have passed every atomic test in the reference, and its own `goal` / `detail` must not describe the same slice with any expandable signal.
 - If a new production owner slice would require exploration after the reference load, keep it unresolved and route it to a child `team_planner` or scoped diagnostic task; do not call scouts or CI/workspace/symbol tools after the Stage 3 transition.
 - Run the reference's Final Checklist, then emit `submit_plan({ "new_tasks": [...] })` as the final assistant action. Submit top-level `new_tasks` only: no summary, output, parent ids, trailing prose, or later tool calls.

@@ -183,7 +183,6 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 5. **Run**: Drain `agent.run(prompt)` in an async loop; catches `CancelledError` for early-stop salvage
 6. **Envelope**: Format submission as `{kind, summary, run_id, artifact_ref, payload}`:
    - `kind="plan"` if submitted a Plan object
-   - `kind="brief"` if SubmittedSummary with target_paths artifact
    - `kind="summary"` otherwise
    - `kind="raw"` if no submission (fallback to final text)
 7. **Audit Finish**: Persist final messages and status to agent_run_store

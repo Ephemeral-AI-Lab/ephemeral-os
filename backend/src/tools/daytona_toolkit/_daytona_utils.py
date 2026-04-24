@@ -34,7 +34,10 @@ _SANDBOX_RECOVERY_PATTERNS = (
 _VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
-_PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() { command python3 "$@"; }; fi'
+_PYTHON3_SHIM = (
+    'if ! command -v python >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; '
+    'then python() { command python3 "$@"; }; fi'
+)
 _TRAILING_TERM_NOISE_RE = re.compile(r"(?:\x1b\[[0-9;]*[A-Za-z]|TERM environment variable not set\.)+\s*$")
 _TEST_PATH_COMPONENTS = {"test", "tests", "__tests__"}
 _TEST_FILE_ALLOW_METADATA_KEYS = ("allow_test_file_edits", "allow_test_file_writes")
@@ -125,10 +128,12 @@ def _format_shell_stdout(text: str, *, exit_code: int, max_chars: int = _OUTPUT_
 # ---------------------------------------------------------------------------
 
 
-def _wrap_bash_command(command: str) -> str:
+def _wrap_bash_command(command: str, *, cwd: str | None = None) -> str:
     """Wrap *command* so we can recover exit code even if the SDK omits it."""
+    cd_command = f"cd {shlex.quote(cwd)}\n" if cwd else ""
     script = (
         f"{_USER_LOCAL_BIN_EXPORT}\n"
+        f"{cd_command}"
         f"{_PROJECT_VENV_BIN_EXPORT}\n"
         f"{_PYTHON3_SHIM}\n"
         f"{command}\n"

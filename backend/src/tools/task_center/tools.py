@@ -18,7 +18,6 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from team.core.models import (
-    LeafSubmission,
     ReplanPlan,
     TaskSpec,
     TaskStatus,
@@ -119,31 +118,12 @@ def _append_task_spec(lines: list[str], spec: TaskSpec, status: TaskStatus) -> N
 
 def _append_submission_details(
     lines: list[str],
-    submission: object | None,
     *,
+    summary: str,
+    plan: object | None,
     status: TaskStatus,
     failure_reason: str | None,
 ) -> None:
-    if isinstance(submission, LeafSubmission):
-        if status is TaskStatus.DONE:
-            summary = submission.summary.summary.strip()
-            if summary:
-                lines.extend(["", "# Outcome", "", summary])
-        return
-
-    reason_heading = {
-        TaskStatus.FAILED: "# Failed Reason",
-        TaskStatus.CANCELLED: "# Canceled Reason",
-        TaskStatus.REQUEST_REPLAN: "# Request Replan Reason",
-    }.get(status)
-    if reason_heading is not None and failure_reason:
-        lines.extend(["", reason_heading, "", failure_reason])
-        return
-
-    if submission is None:
-        return
-
-    plan = getattr(submission, "plan", None)
     if plan is not None:
         if hasattr(plan, "tasks"):
             payload = [_task_definition_payload(item) for item in plan.tasks]
@@ -155,13 +135,21 @@ def _append_submission_details(
                 ],
                 "cancel_ids": list(getattr(plan, "cancel_ids", []) or []),
             }
-            lines.extend(["", "# Initial Plan", "", "```json", json.dumps(payload, indent=2), "```"])
+            lines.extend(["", "# Replan", "", "```json", json.dumps(payload, indent=2), "```"])
 
-    summary = getattr(submission, "summary", None)
-    summary_text = str(getattr(summary, "summary", "") or "").strip()
-    if summary_text:
-        lines.extend(["", "# Outcome", "", summary_text])
+    if status is TaskStatus.DONE:
+        text = summary.strip()
+        if text:
+            lines.extend(["", "# Outcome", "", text])
+        return
 
+    reason_heading = {
+        TaskStatus.FAILED: "# Failed Reason",
+        TaskStatus.CANCELLED: "# Canceled Reason",
+        TaskStatus.REQUEST_REPLAN: "# Request Replan Reason",
+    }.get(status)
+    if reason_heading is not None and failure_reason:
+        lines.extend(["", reason_heading, "", failure_reason])
 
 # ---------------------------------------------------------------------------
 # SubmitFileNotesTool
@@ -483,7 +471,8 @@ class ReadTaskDetailsTool(BaseTool):
 
         _append_submission_details(
             lines,
-            getattr(task, "submission", None),
+            summary=getattr(task, "summary", ""),
+            plan=getattr(task, "plan", None),
             status=task.status,
             failure_reason=task.failure_reason,
         )

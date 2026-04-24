@@ -95,13 +95,13 @@ async def test_submit_plan_resolves_roster_role_hints():
                 {
                     "id": "impl",
                     "spec": _spec("Implement the API."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "review",
                     "spec": _spec("Validate the API changes."),
-                    "name": "reviewer",
+                    "agent": "reviewer",
                     "deps": ["impl"],
                     "scope_paths": ["src/api.py"],
                 },
@@ -153,7 +153,7 @@ def test_submit_plan_does_not_require_planner_authored_description():
             {
                 "id": "missing-description",
                 "spec": _spec("Implement the API."),
-                "name": "developer",
+                "agent": "developer",
                 "scope_paths": ["src/api.py"],
             }
         ],
@@ -180,6 +180,8 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "output" not in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
     task_def_schema = schema["input_schema"]["$defs"]["NewTaskDefinition"]
+    assert "agent" in task_def_schema["properties"]
+    assert "name" not in task_def_schema["properties"]
     assert "description" not in task_def_schema["properties"]
     spec_desc = task_def_schema["properties"]["spec"][
         "description"
@@ -199,7 +201,7 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
         new_tasks=[
             {
                 "id": "dev-owner",
-                "name": "developer",
+                "agent": "developer",
                 "spec": _spec("Repair the production owner."),
                 "scope_paths": ["pkg/owner.py"],
             }
@@ -232,9 +234,9 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
         "description"
     ]
     assert "test files and test directories are rejected" in scope_desc
-    name_schema = task_def_schema["properties"]["name"]
-    assert name_schema["enum"] == ["developer", "validator"]
-    assert "team_planner" not in name_schema["enum"]
+    agent_schema = task_def_schema["properties"]["agent"]
+    assert agent_schema["enum"] == ["developer", "validator"]
+    assert "team_planner" not in agent_schema["enum"]
     assert "summary" not in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
 
@@ -247,13 +249,28 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
             new_tasks=[
                 {
                     "id": "repair-owner",
-                    "name": "developer",
+                    "agent": "developer",
                     "spec": _spec("Repair the production owner."),
                     "deps": [],
                     "scope_paths": ["pkg/owner.py"],
                 }
             ],
         )
+
+
+def test_submit_plan_accepts_legacy_name_alias_for_task_agent():
+    payload = SubmitPlanTool.input_model(
+        new_tasks=[
+            {
+                "id": "legacy-agent-key",
+                "name": "developer",
+                "spec": _spec("Repair the production owner."),
+                "scope_paths": ["pkg/owner.py"],
+            }
+        ],
+    )
+
+    assert payload.new_tasks[0].agent == "developer"
 
 
 @pytest.mark.asyncio
@@ -300,7 +317,7 @@ def test_submit_plan_rejects_legacy_description_field():
                         "fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone"
                     ),
                     "spec": _spec("Implement the API."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -334,7 +351,7 @@ async def test_submit_plan_accepts_large_task_specs_within_plan_limits():
                         "This task description is intentionally too large.",
                         environment="This environment text is also intentionally long.",
                     ),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -357,7 +374,7 @@ async def test_submit_plan_rejects_legacy_string_spec():
                 {
                     "id": "bad-spec",
                     "spec": "Goal: Implement the API.\nScope: src/api.py",
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -412,13 +429,13 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
                 {
                     "id": "repair",
                     "spec": _spec("Repair the stale implementation path."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "followup",
                     "spec": _spec("Follow-up owned by the replanner."),
-                    "name": "developer",
+                    "agent": "developer",
                     "deps": ["repair"],
                     "scope_paths": ["src/api.py"],
                 },
@@ -454,7 +471,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
                 {
                     "id": "legacy-parent",
                     "spec": _spec("Legacy parent placement is rejected."),
-                    "name": "developer",
+                    "agent": "developer",
                     "parent_id": "parent",
                 }
             ]
@@ -468,7 +485,7 @@ def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
                 {
                     "id": "legacy-parent",
                     "spec": _spec("Planner parent placement is rejected."),
-                    "name": "developer",
+                    "agent": "developer",
                     "parent_id": "parent",
                 }
             ],
@@ -505,7 +522,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
                 {
                     "id": "bad-replanner",
                     "spec": _spec("Try to spawn another replanner."),
-                    "name": "team_replanner",
+                    "agent": "team_replanner",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -548,7 +565,7 @@ async def test_submit_replan_rejects_planner_agent_targets():
                 {
                     "id": "bad-planner",
                     "spec": _spec("Try to delegate replanning to a planner."),
-                    "name": "team_planner",
+                    "agent": "team_planner",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -592,7 +609,7 @@ async def test_submit_replan_rejects_subagent_targets():
                 {
                     "id": "bad-subagent",
                     "spec": _spec("Try to target a subagent directly."),
-                    "name": "scout",
+                    "agent": "scout",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -641,7 +658,7 @@ async def test_submit_replan_requires_diagnostics_decision_for_unresolved_blocke
                             "Repair the production dispatch path."
                         ),
                     ),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -691,7 +708,7 @@ async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
                 {
                     "id": "same-depth-repair",
                     "spec": _spec("Repair at the replanner depth limit."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],
@@ -736,13 +753,13 @@ async def test_submit_replan_rejects_plan_size_overflow():
                 {
                     "id": "repair-a",
                     "spec": _spec("Repair one path."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/a.py"],
                 },
                 {
                     "id": "repair-b",
                     "spec": _spec("Repair another path."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/b.py"],
                 },
             ],
@@ -786,7 +803,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
                 {
                     "id": "repair",
                     "spec": _spec("Repair over the task budget."),
-                    "name": "developer",
+                    "agent": "developer",
                     "scope_paths": ["src/api.py"],
                 }
             ],

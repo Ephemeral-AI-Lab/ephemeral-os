@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -241,6 +242,25 @@ async def test_shell_mode_with_ci_runs_single_audited_process_op():
     assert data["status"] == "ok"
     assert data["files_written"] == 0
     assert "LIVE_BASH_OK" in data["shell_outputs"][0]["stdout"]
+
+
+async def test_shell_mode_enters_cwd_before_project_venv_resolution():
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo with space", "ci_service": _ci_service()})
+
+    result = await daytona_shell.execute(
+        daytona_shell.input_model(command="python -m pytest -q", timeout=25),
+        ctx,
+    )
+
+    _assert_ok(result)
+    exec_command = sb.process.exec.call_args.args[0]
+    script = shlex.split(exec_command)[-1]
+    cd_index = script.index("cd '/repo with space'")
+    venv_index = script.index('if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi')
+    shim_index = script.index("if ! command -v python")
+    command_index = script.index("python -m pytest -q")
+    assert cd_index < venv_index < shim_index < command_index
 
 
 async def test_shell_mode_reports_nonzero_exit_as_error():
@@ -730,5 +750,4 @@ async def test_shell_mode_sanitizes_legacy_cd_and_stderr_merge_for_team_agents()
     sb.process.exec.assert_awaited_once()
     texts = _notification_texts(events)
     assert any("sanitized daytona_shell command" in text for text in texts)
-
 

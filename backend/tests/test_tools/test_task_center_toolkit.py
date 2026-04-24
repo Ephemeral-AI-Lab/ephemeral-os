@@ -17,10 +17,7 @@ from tools.task_center.tools import (
 )
 from tools.core.base import ToolExecutionContext, parse_tool_input
 from team.core.models import (
-    LeafSubmission,
     Plan,
-    PlannerSubmission,
-    SubmittedSummary,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -416,9 +413,7 @@ async def test_read_task_details_reads_single_task():
 @pytest.mark.asyncio
 async def test_read_task_details_renders_leaf_success_outcome():
     task = _task("task-1", parent_id=None, status=TaskStatus.DONE)
-    task.submission = LeafSubmission(
-        summary=SubmittedSummary(summary="Implemented parser retry behavior.")
-    )
+    task.summary = "Implemented parser retry behavior."
     ctx = _ctx({"task_center": SimpleNamespace(graph={"task-1": task})})
 
     result = await ReadTaskDetailsTool().execute(
@@ -454,19 +449,17 @@ async def test_read_task_details_renders_terminal_reason():
 @pytest.mark.asyncio
 async def test_read_task_details_renders_expandable_plan_and_outcome():
     task = _task("planner", parent_id=None, status=TaskStatus.DONE, agent="team_planner")
-    task.submission = PlannerSubmission(
-        plan=Plan(
-            tasks=[
-                TaskDefinition(
-                    id="dev-1",
-                    spec=_spec("Repair parser"),
-                    agent="developer",
-                    scope_paths=["src/parser.py"],
-                )
-            ]
-        ),
-        summary=SubmittedSummary(summary="Parser repair and validation completed."),
+    task.plan = Plan(
+        tasks=[
+            TaskDefinition(
+                id="dev-1",
+                spec=_spec("Repair parser"),
+                agent="developer",
+                scope_paths=["src/parser.py"],
+            )
+        ]
     )
+    task.summary = "Parser repair and validation completed."
     ctx = _ctx({"task_center": SimpleNamespace(graph={"planner": task})})
 
     result = await ReadTaskDetailsTool().execute(
@@ -479,4 +472,3 @@ async def test_read_task_details_renders_expandable_plan_and_outcome():
     assert '"goal": "Repair parser"' in result.output
     assert "# Outcome" in result.output
     assert "Parser repair and validation completed." in result.output
-

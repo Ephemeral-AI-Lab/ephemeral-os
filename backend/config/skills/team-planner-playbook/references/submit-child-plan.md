@@ -25,7 +25,7 @@ Treat inherited benchmark, fail-to-pass, migration, compatibility, and broad upg
 
 Clustering Guidance above is a payload-level signal. The test below runs per owner slice: atomic slices become current-layer `developer` lanes; expandable slices route to another child `team_planner` when `grandchild_depth <= max_depth`, else to broader direct `developer` + `validator` tasks split by failure mechanism. A slice is atomic only when **every** atomic test holds; **any** expandable signal routes it to the expandable path.
 
-Name-field lock: after classifying a slice, write the `name` field from that classification before writing the rest of the task. When `grandchild_depth <= max_depth`, a slice that is expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic must use `name: "team_planner"`, never `name: "developer"`. When `grandchild_depth > max_depth`, do not call the fallback developer lanes atomic; label them in `spec.detail` as max-depth per-mechanism fallback lanes.
+Agent-field lock: after classifying a slice, write the `agent` field from that classification before writing the rest of the task. When `grandchild_depth <= max_depth`, a slice that is expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic must use `agent: "team_planner"`, never `agent: "developer"`. When `grandchild_depth > max_depth`, do not call the fallback developer lanes atomic; label them in `spec.detail` as max-depth per-mechanism fallback lanes.
 
 Atomic tests — all must hold:
 
@@ -58,7 +58,7 @@ Multi-API family gate: trigger -> inherited evidence or scout notes for one fami
 
 Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic because one shared dependency, library, version, or file likely changed; required action -> name the single internal helper, invariant, or adapter boundary proven by scout evidence, else use `team_planner` while `grandchild_depth <= max_depth`, or split by API/mechanism at max depth; failure signal -> a `developer` spec cites one broad cause while its `spec.detail` lists read/write, load/save, import/export, or multiple public entrypoints.
 
-Self-consistency gate: trigger -> your synthesis notes call any slice expandable or say no slice passed the atomic tests; required action -> when `grandchild_depth <= max_depth`, every named expandable slice is submitted with `name: "team_planner"`; failure signal -> notes say "expandable", "team_planner required", or "no slice passes atomic tests" but the final payload gives that slice `name: "developer"`. If that mismatch appears in your draft, change the `name` to `"team_planner"`; do not rewrite the rationale to make the developer assignment look acceptable.
+Self-consistency gate: trigger -> your synthesis notes call any slice expandable or say no slice passed the atomic tests; required action -> when `grandchild_depth <= max_depth`, every named expandable slice is submitted with `agent: "team_planner"`; failure signal -> notes say "expandable", "team_planner required", or "no slice passes atomic tests" but the final payload gives that slice `agent: "developer"`. If that mismatch appears in your draft, change the `agent` to `"team_planner"`; do not rewrite the rationale to make the developer assignment look acceptable.
 
 Borderline cases:
 
@@ -133,7 +133,7 @@ type TaskSpec = {
 
 type NewTaskDefinition = {
   id: string;
-  name: "developer" | "validator" | "team_planner";
+  agent: "developer" | "validator" | "team_planner";
   spec: TaskSpec;
   deps: string[];
   scope_paths: string[];
@@ -145,7 +145,7 @@ Field contract:
 | Field | Contract |
 | --- | --- |
 | `id` | Unique lower-kebab id in this payload. Other tasks reference this exact string in `deps`. |
-| `name` | Exactly `developer`, `team_planner`, or `validator`. `developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes when `grandchild_depth > max_depth`; expandable slices must use `team_planner` while `grandchild_depth <= max_depth`. |
+| `agent` | Exactly `developer`, `team_planner`, or `validator`. `developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes when `grandchild_depth > max_depth`; expandable slices must use `team_planner` while `grandchild_depth <= max_depth`. |
 | `spec.goal` | Non-empty string naming the concrete outcome expected from this task. |
 | `spec.detail` | Non-empty string with owner evidence, exact production scope, constraints, and dependency context. |
 | `spec.acceptance_criteria` | Non-empty string with concrete verification commands or pytest ids and expected evidence. |
@@ -165,7 +165,7 @@ submit_plan({
   new_tasks: [
     {
       id: "dev-replan-rewire",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "Rewire pending downstream dependents through the spawned replanner after a worker failure so task state stays coherent after graph mutation.",
         detail: "Own backend/src/team/task_center.py. Parent plan and scout evidence point at TaskCenter graph mutation behavior, not executor or DispatchQueue ownership. Preserve executor and DispatchQueue boundaries, keep the original failed-task terminal path unchanged, and do not relax the invariant that non-pending dependents raise GraphInvariantViolation.",
@@ -176,7 +176,7 @@ submit_plan({
     },
     {
       id: "plan-submission-policy",
-      name: "team_planner",
+      agent: "team_planner",
       spec: {
         goal: "Decompose submission policy work across schema, runtime policy, and prompt rendering so each owner family is repaired on its own production boundary.",
         detail: "Own decomposition under backend/src/tools/submission, backend/src/team/runtime, and backend/src/prompt. Inherited evidence shows multiple owner families under one broad subsystem, so this slice is a clustering job rather than one coherent fix. The child planner must preserve production-only scopes, treat failing pytest ids as evidence in child specs (not test-edit instructions), and avoid future child ids in this layer's payload.",
@@ -187,7 +187,7 @@ submit_plan({
     },
     {
       id: "dev-skill-registration",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "Keep bundled team playbook registration aligned with the parent planner changes so new skill ids load without manual edits.",
         detail: "Own backend/src/skills and related registration surfaces. This lane is independent from the TaskCenter and submission-policy lanes, so it runs in parallel while still being covered by the terminal validator. Do not widen scope to skill authoring or documentation changes beyond registration wiring.",
@@ -198,7 +198,7 @@ submit_plan({
     },
     {
       id: "val-child-parallel",
-      name: "validator",
+      agent: "validator",
       spec: {
         goal: "Verify all parallel implementation and decomposition outputs at this child layer.",
         detail: "Verify backend/src/team/task_center.py, backend/src/tools/submission, backend/src/team/runtime, backend/src/prompt, and backend/src/skills after all parallel lanes finish. This terminal validator depends on every same-payload non-validator id, including the child team_planner. Do not edit production files in this task's scope; report gaps back to the owning lane with exact failing pytest ids.",
@@ -229,7 +229,7 @@ submit_plan({
   new_tasks: [
     {
       id: "dev-owner",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "Repair the owner.",
         detail: "Own backend/src/team/task_center.py.",
@@ -250,7 +250,7 @@ submit_plan({
   new_tasks: [
     {
       id: "dev-sandbox-path",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "Repair production behavior.",
         detail: "Own the task_center module.",
@@ -270,7 +270,7 @@ submit_plan({
   new_tasks: [
     {
       id: "dev-test-file",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "Repair production behavior covered by the failing test.",
         detail: "Own backend/src/team/task_center.py; keep the test path as evidence only.",
@@ -290,7 +290,7 @@ submit_plan({
   new_tasks: [
     {
       id: "dev-bad-spec",
-      name: "developer",
+      agent: "developer",
       spec: {
         goal: "",
         detail: "Own backend/src/team/task_center.py.",
@@ -307,7 +307,7 @@ Invalid because every `TaskSpec` field is required and must be non-empty.
 
 ## TaskSpec Examples
 
-These examples show the detailed `spec` object each lane should carry in a real payload. Use them as a shape guide for `goal`, `detail`, and `acceptance_criteria` wording. Only the nested `spec` object is shown; real payloads must also carry `id`, `name`, `deps`, and `scope_paths` per the Terminal Tool Contract. The dependency DAG examples further down abstract full payloads into diagrams so graph shape stays readable.
+These examples show the detailed `spec` object each lane should carry in a real payload. Use them as a shape guide for `goal`, `detail`, and `acceptance_criteria` wording. Only the nested `spec` object is shown; real payloads must also carry `id`, `agent`, `deps`, and `scope_paths` per the Terminal Tool Contract. The dependency DAG examples further down abstract full payloads into diagrams so graph shape stays readable.
 
 ### Developer TaskSpec
 
@@ -371,7 +371,7 @@ The Dependency DAG Examples below each show a terminal validator joining the non
 
 ## Dependency DAG Examples
 
-These examples show common dependency shapes as diagrams with rationale. They abstract away lane `name`, `scope_paths`, and `spec` so edge structure stays readable. Real payloads must still carry every contract field, with detailed structured `spec` objects in the style shown in the TaskSpec Examples above.
+These examples show common dependency shapes as diagrams with rationale. They abstract away lane `agent`, `scope_paths`, and `spec` so edge structure stays readable. Real payloads must still carry every contract field, with detailed structured `spec` objects in the style shown in the TaskSpec Examples above.
 
 Diagram convention: each arrow `A ──▶ B` means `B`'s `deps` list includes `A`. Ids prefixed `dev-` are `developer` lanes, `plan-` are `team_planner` lanes, `val-` are `validator` lanes.
 
@@ -468,16 +468,16 @@ Rationale: `backend/src/tools/submission` is nested inside `backend/src/tools`, 
 | # | Check |
 |---|---|
 | 1 | Top-level input is only `new_tasks`; any extra key is rejected. |
-| 2 | Every task has only `id`, `name`, `spec`, `deps`, and `scope_paths`. |
+| 2 | Every task has only `id`, `agent`, `spec`, `deps`, and `scope_paths`. |
 | 3 | Every `id` is unique; every `deps` entry resolves to another id in this same payload. |
 | 4 | No `deps` edge exists solely to serialize independent work or to keep scopes disjoint; chains appear only where real output consumption or terminal validator coverage requires them. |
-| 5 | Every `name` is exactly `developer`, `team_planner`, or `validator` — never `scout` or `team_replanner`. |
+| 5 | Every `agent` is exactly `developer`, `team_planner`, or `validator` — never `scout` or `team_replanner`. |
 | 6 | Every `scope_paths` is non-empty and uses repo-relative production paths (no `/testbed/...` or other sandbox-absolute prefixes). |
 | 7 | Every `spec` is an object with non-empty `goal`, `detail`, and `acceptance_criteria`. |
 | 8 | Every `acceptance_criteria` is test-suite focused with concrete commands or pytest ids and the evidence expected in the final summary; exact inherited pytest ids and test files are preserved verbatim, with no sibling or similarly named test-module substitution. |
 | 9 | No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure for a named target. |
 | 10 | No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner. |
 | 11 | Any clustering job includes at least one child `team_planner` when `grandchild_depth <= max_depth`; no flat all-developer fan-out is submitted for multi-cluster benchmark repair unless `grandchild_depth > max_depth`. |
-| 12 | Every non-validator task passed the atomic tests or was routed to the expandable path (child `team_planner` when `grandchild_depth <= max_depth`, else per-mechanism broader `developer` + `validator`) under a named expandable signal. When `grandchild_depth <= max_depth`, a task whose rationale says expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic cannot have `name: "developer"`. |
+| 12 | Every non-validator task passed the atomic tests or was routed to the expandable path (child `team_planner` when `grandchild_depth <= max_depth`, else per-mechanism broader `developer` + `validator`) under a named expandable signal. When `grandchild_depth <= max_depth`, a task whose rationale says expandable, clustered, broad, multi-family, matrix-shaped, unresolved, mixed, or not atomic cannot have `agent: "developer"`. |
 | 13 | When a terminal validator is included, its `deps` list every same-payload non-validator id, including `team_planner` ids. |
 | 14 | The final assistant action is the `submit_plan(...)` tool call, not prose. |

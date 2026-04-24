@@ -374,27 +374,166 @@ def _validate_task_specs(
     return errors
 
 
-def _validate_submit_plan_input(
-    arguments: SubmitPlanInput,
-    context: ToolExecutionContext,
-) -> list[str]:
-    graph = _get_graph(context)
-    graph_ids = set(graph.keys()) if graph is not None else set()
-    new_ids = {spec.id for spec in arguments.new_tasks}
-    return _validate_task_specs(
-        arguments.new_tasks,
-        graph_ids=graph_ids,
-        valid_dep_ids=new_ids,
-        roster=_roster_from_context(context),
+def _validation_failed_result(errors: list[str]) -> ToolResult:
+    return ToolResult(
+        output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
+        is_error=True,
     )
 
 
-def _validate_submit_replan_input(
+def _issue_messages(issues: list[dict[str, str]], *, fallback: str) -> list[str]:
+    return [str(issue.get("msg") or fallback) for issue in issues]
+
+
+def _runtime_limit_issues(
+    plan: Any,
+    context: ToolExecutionContext,
+    *,
+    action: str,
+    depth_increment: int,
+) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    task_count = len(getattr(plan, "tasks", []) or [])
+
+    max_tasks = _metadata_int(context, "max_tasks")
+    tasks_used = _metadata_int(context, "tasks_used")
+    if max_tasks and tasks_used + task_count > max_tasks:
+        issues.append(
+            {
+                "field": "tasks",
+                "msg": (
+                    f"{action} would exceed max_tasks={max_tasks} "
+                    f"(used={tasks_used}, adding={task_count})"
+                ),
+            }
+        )
+
+    max_depth = _metadata_int(context, "max_depth")
+    task_depth = _metadata_int(context, "task_depth")
+    if max_depth and task_count and (task_depth + depth_increment) > max_depth:
+        issues.append(
+            {
+                "field": "tasks",
+                "msg": (
+                    f"{action} would exceed max_depth={max_depth} "
+                    f"from current depth={task_depth}"
+                ),
+            }
+        )
+    return issues
+
+
+def _local_validation_plan(resolved_tasks: list[dict[str, Any]]) -> Any:
+    from team.core.models import Plan
+
+    local_ids = {str(task.get("id")) for task in resolved_tasks}
+    validation_tasks = [
+        {
+            **task,
+            "deps": [
+                dep_id
+                for dep_id in task.get("deps", [])
+                if str(dep_id) in local_ids
+            ],
+        }
+        for task in resolved_tasks
+    ]
+    return Plan.from_dict({"tasks": validation_tasks})
+
+
+def _validate_plan_model(
+    plan: Any,
+    context: ToolExecutionContext,
+    *,
+    action: str,
+    depth_increment: int,
+    extra_validators: list[Any] | None = None,
+) -> list[str]:
+    max_plan_size = _metadata_int(context, "max_plan_size", 50)
+    issues = validate_plan(
+        plan,
+        max_plan_size=max_plan_size,
+        extra_validators=extra_validators,
+    )
+    issues.extend(
+        _runtime_limit_issues(
+            plan,
+            context,
+            action=action,
+            depth_increment=depth_increment,
+        )
+    )
+    return _issue_messages(issues, fallback=f"invalid {action}")
+
+
+def _prepare_resolved_tasks(
+    specs: list[NewTaskDefinition],
+    context: ToolExecutionContext,
+    *,
+    graph_ids: set[str],
+    valid_dep_ids: set[str],
+    action: str,
+    depth_increment: int,
+    parent_id: str | None = None,
+    include_parent_id: bool = False,
+    extra_validators: list[Any] | None = None,
+) -> tuple[list[dict[str, Any]], Any | None, list[str]]:
+    roster = _roster_from_context(context)
+    errors = _validate_task_specs(
+        specs,
+        graph_ids=graph_ids,
+        valid_dep_ids=valid_dep_ids,
+        roster=roster,
+    )
+    if errors:
+        return [], None, errors
+
+    resolved_tasks = _resolved_task_payloads(
+        specs,
+        roster=roster,
+        parent_id=parent_id,
+        include_parent_id=include_parent_id,
+    )
+    try:
+        plan = _local_validation_plan(resolved_tasks)
+    except (TypeError, ValueError) as exc:
+        return resolved_tasks, None, [f"invalid {action} payload: {exc}"]
+
+    errors = _validate_plan_model(
+        plan,
+        context,
+        action=action,
+        depth_increment=depth_increment,
+        extra_validators=extra_validators,
+    )
+    return resolved_tasks, plan, errors
+
+
+def _prepare_submit_plan(
+    arguments: SubmitPlanInput,
+    context: ToolExecutionContext,
+) -> tuple[list[dict[str, Any]], Any | None, list[str]]:
+    graph = _get_graph(context)
+    graph_ids = set(graph.keys()) if graph is not None else set()
+    new_ids = {spec.id for spec in arguments.new_tasks}
+    return _prepare_resolved_tasks(
+        arguments.new_tasks,
+        context,
+        graph_ids=graph_ids,
+        valid_dep_ids=new_ids,
+        action="plan",
+        depth_increment=1,
+    )
+
+
+def _prepare_submit_replan(
     arguments: SubmitReplanInput,
     context: ToolExecutionContext,
-) -> list[str]:
-    from team.core.models import Plan
-    from team.planning.replan_validation import validate_replan_rules
+) -> tuple[list[dict[str, Any]], list[str]]:
+    from team.planning.replan_validation import (
+        replan_spec_contract_issues,
+        validate_replan_rules,
+    )
 
     graph = _get_graph(context)
     current_task_id = str(context.metadata.get("work_item_id") or "")
@@ -408,85 +547,25 @@ def _validate_submit_replan_input(
     if not arguments.new_tasks:
         errors.append(_EMPTY_REPLAN_ERROR)
     if graph is None:
-        return errors
+        return [], errors
+    if not arguments.new_tasks:
+        return [], errors
 
     new_ids = {spec.id for spec in arguments.new_tasks}
     valid_dep_ids = result.allowed_existing_dep_ids | new_ids
-    errors.extend(
-        _validate_task_specs(
-            arguments.new_tasks,
-            graph_ids=set(graph.keys()),
-            valid_dep_ids=valid_dep_ids,
-            roster=_roster_from_context(context),
-        )
-    )
-    for spec in arguments.new_tasks:
-        errors.extend(
-            f"task '{spec.id}': {error}"
-            for error in _replan_spec_contract_errors(spec.spec)
-        )
-    if errors:
-        return errors
-
-    resolved_tasks = _resolved_task_payloads(
+    resolved_tasks, _plan, task_errors = _prepare_resolved_tasks(
         arguments.new_tasks,
-        roster=_roster_from_context(context),
+        context,
+        graph_ids=set(graph.keys()),
+        valid_dep_ids=valid_dep_ids,
+        action="replan",
+        depth_increment=0,
         parent_id=current_task_id,
         include_parent_id=True,
+        extra_validators=[_replan_agent_target_issues, replan_spec_contract_issues],
     )
-    local_ids = {str(task.get("id")) for task in resolved_tasks}
-    local_validation_tasks = [
-        {
-            **task,
-            "deps": [
-                dep_id
-                for dep_id in task.get("deps", [])
-                if str(dep_id) in local_ids
-            ],
-        }
-        for task in resolved_tasks
-    ]
-    try:
-        plan = Plan.from_dict({"tasks": local_validation_tasks})
-    except (TypeError, ValueError) as exc:
-        return [f"invalid replan payload: {exc}"]
-
-    max_plan_size = _metadata_int(context, "max_plan_size", 50)
-    issues = (
-        validate_plan(
-            plan,
-            max_plan_size=max_plan_size,
-            extra_validators=[_replan_agent_target_issues],
-        )
-        if plan.tasks
-        else []
-    )
-
-    max_tasks = _metadata_int(context, "max_tasks")
-    tasks_used = _metadata_int(context, "tasks_used")
-    if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    f"replan would exceed max_tasks={max_tasks} "
-                    f"(used={tasks_used}, adding={len(plan.tasks)})"
-                ),
-            }
-        )
-    max_depth = _metadata_int(context, "max_depth")
-    task_depth = _metadata_int(context, "task_depth")
-    if max_depth and plan.tasks and task_depth > max_depth:
-        issues.append(
-            {
-                "field": "tasks",
-                "msg": (
-                    f"replan would exceed max_depth={max_depth} from current depth={task_depth}"
-                ),
-            }
-        )
-    errors.extend(str(issue.get("msg") or "invalid replan") for issue in issues)
-    return errors
+    errors.extend(task_errors)
+    return resolved_tasks, errors
 
 
 def _resolved_task_payloads(
@@ -529,57 +608,12 @@ class SubmitPlanTool(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitPlanInput)
-        from team.core.models import Plan
 
-        errors = _validate_submit_plan_input(arguments, context)
+        resolved_tasks, plan, errors = _prepare_submit_plan(arguments, context)
         if errors:
-            return ToolResult(
-                output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
-                is_error=True,
-            )
-
-        resolved_tasks = _resolved_task_payloads(
-            arguments.new_tasks,
-            roster=_roster_from_context(context),
-        )
-        try:
-            plan = Plan.from_dict({"tasks": resolved_tasks})
-        except (TypeError, ValueError) as exc:
-            return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
-
-        max_plan_size = _metadata_int(context, "max_plan_size", 50)
-        issues = validate_plan(
-            plan,
-            max_plan_size=max_plan_size,
-        )
-
-        max_tasks = _metadata_int(context, "max_tasks")
-        tasks_used = _metadata_int(context, "tasks_used")
-        if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
-            issues.append(
-                {
-                    "field": "tasks",
-                    "msg": (
-                        f"plan would exceed max_tasks={max_tasks} "
-                        f"(used={tasks_used}, adding={len(plan.tasks)})"
-                    ),
-                }
-            )
-        max_depth = _metadata_int(context, "max_depth")
-        task_depth = _metadata_int(context, "task_depth")
-        if max_depth and plan.tasks and (task_depth + 1) > max_depth:
-            issues.append(
-                {
-                    "field": "tasks",
-                    "msg": (
-                        f"plan would exceed max_depth={max_depth} from current depth={task_depth}"
-                    ),
-                }
-            )
-
-        if issues:
-            message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
-            return ToolResult(output=f"Error: {message}", is_error=True)
+            return _validation_failed_result(errors)
+        if plan is None:
+            return ToolResult(output="Error: invalid plan payload", is_error=True)
 
         context.metadata["resolved_plan"] = plan
         context.metadata["plan_is_replan"] = False
@@ -615,7 +649,7 @@ class SubmitReplanTool(BaseTool):
             .get("$defs", {})
             .get("NewTaskDefinition", {})
             .get("properties", {})
-            .get("name")
+            .get("agent")
         )
         if isinstance(task_spec, dict):
             task_spec["enum"] = ["developer", "validator"]
@@ -629,21 +663,11 @@ class SubmitReplanTool(BaseTool):
         assert isinstance(arguments, SubmitReplanInput)
         from team.core.models import ReplanPlan
 
-        errors = _validate_submit_replan_input(arguments, context)
+        resolved_tasks, errors = _prepare_submit_replan(arguments, context)
         if errors:
-            return ToolResult(
-                output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
-                is_error=True,
-            )
+            return _validation_failed_result(errors)
 
         current_task_id = str(context.metadata.get("work_item_id") or "")
-        roster = _roster_from_context(context)
-        resolved_tasks = _resolved_task_payloads(
-            arguments.new_tasks,
-            roster=roster,
-            parent_id=current_task_id,
-            include_parent_id=True,
-        )
         try:
             replan = ReplanPlan.from_dict(
                 {

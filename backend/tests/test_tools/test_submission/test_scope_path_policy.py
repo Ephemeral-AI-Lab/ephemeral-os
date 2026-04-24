@@ -50,7 +50,7 @@ async def test_submit_plan_prehook_rejects_test_file_scope_paths() -> None:
         new_tasks=[
             {
                 "id": "impl",
-                "name": "developer",
+                "agent": "developer",
                 "spec": _TASK_SPEC,
                 "scope_paths": ["src/api.py", "pkg/tests/test_owner.py"],
             }
@@ -71,7 +71,7 @@ async def test_submit_replan_prehook_rejects_test_directory_scope_paths() -> Non
         new_tasks=[
             {
                 "id": "repair",
-                "name": "developer",
+                "agent": "developer",
                 "spec": _TASK_SPEC,
                 "scope_paths": ["backend/tests"],
             }
@@ -90,7 +90,7 @@ async def test_submission_prehook_allows_production_scope_paths() -> None:
         new_tasks=[
             {
                 "id": "impl",
-                "name": "developer",
+                "agent": "developer",
                 "spec": _TASK_SPEC,
                 "scope_paths": ["src/api.py", "src/service/auth.ts"],
             }

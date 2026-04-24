@@ -10,7 +10,6 @@ from team.core.models import (
     Note,
     Plan,
     ReplanPlan,
-    SubmittedSummary,
     Task,
     TaskDefinition,
     TaskSpec,
@@ -342,17 +341,6 @@ def test_budget_state_initial_values():
     bs = BudgetState()
     assert bs.tasks_used == 0
     assert bs.replans_used == 0
-
-
-# ---------------------------------------------------------------------------
-# Submission types
-# ---------------------------------------------------------------------------
-
-
-def test_submitted_summary_creation():
-    s = SubmittedSummary(summary="all tests passed")
-    assert s.summary == "all tests passed"
-    assert s.artifact is None
 
 
 # ---------------------------------------------------------------------------

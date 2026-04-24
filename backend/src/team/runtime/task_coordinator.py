@@ -24,11 +24,8 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from team.core.errors import BudgetExceeded, GraphInvariantViolation, InvalidPlan
 from team.core.models import (
-    LeafSubmission,
     Plan,
-    PlannerSubmission,
     ReplanPlan,
-    SubmittedSummary,
     Task,
     TaskStatus,
     TaskStatusUpdate,
@@ -111,9 +108,7 @@ class TaskCoordinator:
     async def handle(self, update: TaskStatusUpdate) -> None:
         """Lock-serialized single dispatch entry."""
         async with self._lock:
-            before = self._snapshot_transitions()
             await self._dispatch(update)
-            await self._refresh_and_emit(before)
 
     async def on_task_added(self, task: Task) -> None:
         """Hook called after the root task (or an externally-inserted task).
@@ -148,12 +143,12 @@ class TaskCoordinator:
     async def _on_success(self, update: TaskStatusUpdate) -> None:
         task_id = update.task_id
         summary = update.summary or ""
-        promoted_ready = await self._store.mark_done(task_id)
+        promoted_ready = await self._mark_done(task_id)
         self._enqueue_many(promoted_ready)
         task = self._store.get_task(task_id)
 
-        if task is not None and task.submission is None:
-            task.submission = LeafSubmission(summary=SubmittedSummary(summary=summary))
+        if task is not None and not task.summary:
+            task.summary = summary
 
         # If the completed task is a replanner, resolve the origin chain.
         if self._is_replanner(task_id):
@@ -177,13 +172,10 @@ class TaskCoordinator:
         parent = self._store.get_task(parent_id)
         if parent is not None:
             summary = _synthesize_parent_summary(parent_id, self._store.graph)
-            if isinstance(parent.submission, PlannerSubmission):
-                parent.submission.summary = SubmittedSummary(summary=summary)
-            else:
-                parent.submission = PlannerSubmission(
-                    plan=Plan(), summary=SubmittedSummary(summary=summary)
-                )
-        promoted_ready = await self._store.mark_done(parent_id)
+            parent.summary = summary
+            if parent.plan is None:
+                parent.plan = Plan()
+        promoted_ready = await self._mark_done(parent_id)
         self._enqueue_many(promoted_ready)
         if self._is_replanner(parent_id):
             await self._finalize_replanned_origin_chain(parent_id)
@@ -203,6 +195,7 @@ class TaskCoordinator:
         origin_id = await self._store.finalize_replanned_origin(replanner_id)
         if origin_id is None:
             return
+        self._emit_status(origin_id)
         await self._cascade_expanded_parent(origin_id)
 
     def _is_replanner(self, task_id: str) -> bool:
@@ -237,14 +230,14 @@ class TaskCoordinator:
         outcome = await self._expander.expand_submitted_plan(rec, plan)
         if plan is None:
             # No children to wait on — finalize directly.
-            promoted_ready = await self._store.mark_done(rec.id)
+            promoted_ready = await self._mark_done(rec.id)
             self._enqueue_many(promoted_ready)
             await self._cascade_expanded_parent(rec.id)
             return
-        await self._store.mark_expanded(rec.id)
+        await self._mark_expanded(rec.id)
         planner_task = self._store.get_task(rec.id)
         if planner_task is not None:
-            planner_task.submission = PlannerSubmission(plan=plan)
+            planner_task.plan = plan
         self._enqueue_many(item.id for item in outcome.new_items)
 
     async def _expand_replan(self, rec: Any, replan: ReplanPlan) -> None:
@@ -255,12 +248,14 @@ class TaskCoordinator:
         )
         replanner_task = self._store.get_task(rec.id)
         if replanner_task is not None:
-            replanner_task.submission = PlannerSubmission(plan=replan)
+            replanner_task.plan = replan
         if self._cancel_running_task is not None:
             for running_id in outcome.cancelled_running_ids:
                 self._cancel_running_task(running_id)
+        for cancelled_id in outcome.cancelled_ids:
+            self._emit_status(cancelled_id)
         if outcome.replanner_child_count > 0:
-            await self._store.mark_expanded(rec.id)
+            await self._mark_expanded(rec.id)
             await self._finalize_replanned_origin_chain(rec.id)
             self._enqueue_many(outcome.inserted_ids)
         else:
@@ -312,6 +307,7 @@ class TaskCoordinator:
                 )
             )
             self._budget.emit_update()
+        self._emit_status(task_id)
         self._enqueue(rec.id)
 
     # ---- CANCELLED -----------------------------------------------------
@@ -319,13 +315,18 @@ class TaskCoordinator:
     async def _on_cancelled(self, update: TaskStatusUpdate) -> None:
         reason = update.summary or "cancelled"
         await self._store.mark_terminal(update.task_id, "cancelled", reason)
-        await self._store.cascade_cancel_recursive(update.task_id)
+        cancelled = await self._store.cascade_cancel_recursive(update.task_id)
+        await self._store.refresh_graph()
+        self._emit_status(update.task_id)
+        self._emit_status_many(cancelled)
 
     # ---- FAILED --------------------------------------------------------
 
     async def _on_failed(self, update: TaskStatusUpdate) -> None:
         reason = update.summary or "failed"
         await self._store.mark_failed(update.task_id, reason)
+        await self._store.refresh_graph()
+        self._emit_status(update.task_id)
         # Idempotent: if fail-fast is already in flight, observe the FAILED
         # row but skip re-triggering the run-level cancel wave.
         if self._cancel_event is not None and self._cancel_event.is_set():
@@ -352,36 +353,39 @@ class TaskCoordinator:
         for tid in task_ids:
             self._enqueue(tid)
 
-    # ---- transition emission ------------------------------------------
+    # ---- status mutation / emission ------------------------------------
 
-    def _snapshot_transitions(self) -> dict[str, tuple[Any, ...] | None]:
-        return {
-            tid: _task_signature(task)
-            for tid, task in self._store.graph.items()
-        }
-
-    async def _refresh_and_emit(
-        self, before: dict[str, tuple[Any, ...] | None]
-    ) -> None:
+    async def _mark_done(self, task_id: str) -> list[str]:
+        promoted_ready = await self._store.mark_done(task_id)
         await self._store.refresh_graph()
-        for task_id, prior in before.items():
-            task = self._store.graph.get(task_id)
-            if task is None:
-                continue
-            current = _task_signature(task)
-            if current == prior:
-                continue
-            self._emit(
-                make_task_status(
-                    self._team_run_id,
-                    task.id,
-                    task.status.value,
-                    agent_run_id=task.agent_run_id,
-                    started_at=_iso(task.started_at),
-                    finished_at=_iso(task.finished_at),
-                    failure_reason=task.failure_reason,
-                )
+        self._emit_status(task_id)
+        self._emit_status_many(promoted_ready)
+        return promoted_ready
+
+    async def _mark_expanded(self, task_id: str) -> None:
+        await self._store.mark_expanded(task_id)
+        await self._store.refresh_graph()
+        self._emit_status(task_id)
+
+    def _emit_status_many(self, task_ids: Iterable[str]) -> None:
+        for task_id in task_ids:
+            self._emit_status(task_id)
+
+    def _emit_status(self, task_id: str) -> None:
+        task = self._store.graph.get(task_id)
+        if task is None:
+            return
+        self._emit(
+            make_task_status(
+                self._team_run_id,
+                task.id,
+                task.status.value,
+                agent_run_id=task.agent_run_id,
+                started_at=_iso(task.started_at),
+                finished_at=_iso(task.finished_at),
+                failure_reason=task.failure_reason,
             )
+        )
 
 
 # ---- module-level helpers ----------------------------------------------
@@ -428,12 +432,7 @@ def _synthesize_parent_summary(parent_id: str, graph: dict[str, Task]) -> str:
 
 
 def _extract_summary_text(task: Task) -> str:
-    submission = task.submission
-    if isinstance(submission, LeafSubmission):
-        return submission.summary.summary.strip()
-    if isinstance(submission, PlannerSubmission) and submission.summary is not None:
-        return submission.summary.summary.strip()
-    return ""
+    return task.summary.strip()
 
 
 def _first_replanner_name() -> str | None:
@@ -445,15 +444,3 @@ def _first_replanner_name() -> str | None:
 
 def _iso(value: Any) -> str | None:
     return value.isoformat() if value is not None else None
-
-
-def _task_signature(task: Task | None) -> tuple[Any, ...] | None:
-    if task is None:
-        return None
-    return (
-        task.status.value,
-        task.agent_run_id,
-        _iso(task.started_at),
-        _iso(task.finished_at),
-        task.failure_reason,
-    )

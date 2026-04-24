@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shlex
 from typing import Callable
 
 from pydantic import BaseModel, Field
@@ -114,10 +113,9 @@ async def _exec_shell_command(
     if get_ci_service(context) is None:
         raise RuntimeError("Code intelligence service is unavailable")
 
-    wrapped_command = command if not cwd else f"cd {shlex.quote(cwd)} && {command}"
     change = await submit_shell_cmd(
         context,
-        command=_wrap_bash_command(wrapped_command),
+        command=_wrap_bash_command(command, cwd=cwd),
         description="daytona_shell",
         timeout=timeout,
         sandbox=sandbox,

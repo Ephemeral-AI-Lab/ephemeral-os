@@ -11,10 +11,7 @@ import pytest
 from team.core.models import (
     BudgetConfig,
     BudgetState,
-    LeafSubmission,
     Plan,
-    PlannerSubmission,
-    SubmittedSummary,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -182,7 +179,7 @@ async def test_success_promotes_parent_with_synthesized_child_summary(
 
     store = FakeStore()
     parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
-    parent.submission = PlannerSubmission(plan=Plan())
+    parent.plan = Plan()
     child = _task(
         child_id,
         status=TaskStatus.RUNNING,
@@ -205,8 +202,7 @@ async def test_success_promotes_parent_with_synthesized_child_summary(
 
     assert store.mark_done.await_args_list[0].args == (child_id,)
     assert store.mark_done.await_args_list[1].args == (parent_id,)
-    assert parent.submission.summary is not None
-    assert parent.submission.summary.summary == "child delivered"
+    assert parent.summary == "child delivered"
 
 
 @pytest.mark.asyncio
@@ -227,10 +223,10 @@ async def test_synthesized_parent_summary_prefers_terminal_validator(
     parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
     dev = _task(dev_id, status=TaskStatus.DONE, agent_name="developer")
     dev.parent_id = parent_id
-    dev.submission = LeafSubmission(summary=SubmittedSummary(summary="developer summary"))
+    dev.summary = "developer summary"
     validator = _task(validator_id, status=TaskStatus.RUNNING, agent_name="validator")
     validator.parent_id = parent_id
-    validator.submission = LeafSubmission(summary=SubmittedSummary(summary="validator summary"))
+    validator.summary = "validator summary"
     store.graph[parent_id] = parent
     store.graph[dev_id] = dev
     store.graph[validator_id] = validator
@@ -249,10 +245,8 @@ async def test_synthesized_parent_summary_prefers_terminal_validator(
 
     store.mark_failed.assert_not_awaited()
     fail_fast.assert_not_awaited()
-    assert parent.submission is not None
-    assert isinstance(parent.submission, PlannerSubmission)
-    assert parent.submission.summary is not None
-    assert parent.submission.summary.summary == "validator summary"
+    assert isinstance(parent.plan, Plan)
+    assert parent.summary == "validator summary"
 
 
 @pytest.mark.asyncio

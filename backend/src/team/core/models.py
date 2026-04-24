@@ -201,18 +201,14 @@ class TaskDefinition:
 
 @dataclass(init=False)
 class Task:
-    """A task is (1) a ``TaskDefinition`` and (2) a ``TaskSubmission``.
-
-    Non-planner agents emit a ``LeafSubmission``. Planners emit a
-    ``PlannerSubmission`` whose ``summary`` is synthesized from children when
-    all children resolve.
-    """
+    """Runtime task state plus its durable task definition."""
 
     id: str
     team_run_id: str
     definition: "TaskDefinition"
     status: TaskStatus
-    submission: "TaskSubmission | None" = None
+    summary: str = ""
+    plan: "Plan | ReplanPlan | None" = None
     parent_id: str | None = None
     root_id: str = ""
     depth: int = 0
@@ -235,7 +231,8 @@ class Task:
         description: str = "",
         deps: list[str] | None = None,
         scope_paths: list[str] | None = None,
-        submission: "TaskSubmission | None" = None,
+        summary: str = "",
+        plan: "Plan | ReplanPlan | None" = None,
         parent_id: str | None = None,
         root_id: str = "",
         depth: int = 0,
@@ -262,7 +259,8 @@ class Task:
         self.team_run_id = team_run_id
         self.definition = definition
         self.status = status
-        self.submission = submission
+        self.summary = summary
+        self.plan = plan
         self.parent_id = parent_id
         self.root_id = root_id
         self.depth = depth
@@ -388,42 +386,6 @@ def _task_definition_from_dict(it: dict[str, Any]) -> TaskDefinition:
         scope_paths=list(it.get("scope_paths") or []),
         parent_id=it.get("parent_id"),
     )
-
-
-# ---------------------------------------------------------------------------
-# Submission types — property 2 of every Task
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class SubmittedSummary:
-    """Agent-emitted summary payload (text + optional artifact)."""
-
-    summary: str
-    artifact: dict[str, Any] | None = None
-
-
-@dataclass
-class LeafSubmission:
-    """Submission from a non-planner agent — a single summary."""
-
-    summary: SubmittedSummary
-
-
-@dataclass
-class PlannerSubmission:
-    """Submission from a planner/replanner.
-
-    ``plan`` is emitted at ``EXPANDED``. ``summary`` is synthesized from
-    children (terminal validator if present, else concatenated non-validator
-    leaves) when all children resolve and the parent transitions to DONE.
-    """
-
-    plan: "Plan | ReplanPlan"
-    summary: SubmittedSummary | None = None
-
-
-TaskSubmission = LeafSubmission | PlannerSubmission
 
 
 # ---------------------------------------------------------------------------
