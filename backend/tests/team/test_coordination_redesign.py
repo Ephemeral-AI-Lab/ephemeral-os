@@ -34,14 +34,6 @@ class _AsyncTaskCenterStub:
         return f"## Task\n{task.objective}"
 
 
-class _AsyncDispatcherStub:
-    def __init__(self, known_ids: set[str] | None = None) -> None:
-        self._known_ids = known_ids or set()
-
-    async def known_task_ids(self) -> set[str]:
-        return set(self._known_ids)
-
-
 def test_build_task_metadata_enables_team_runtime_flags():
     task = Task(
         id="task-1",
@@ -84,12 +76,10 @@ def test_build_task_metadata_enables_team_runtime_flags():
 @pytest.mark.asyncio
 async def test_submit_plan_resolves_roster_role_hints():
     task_center = _AsyncTaskCenterStub()
-    dispatcher = _AsyncDispatcherStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
         metadata={
             "task_center": task_center,
-            "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
             "roster": {"reviewer": ["validator"]},
@@ -477,12 +467,10 @@ async def test_submit_plan_ignores_legacy_description_field():
 @pytest.mark.asyncio
 async def test_submit_plan_rejects_oversize_task_notes():
     task_center = _AsyncTaskCenterStub()
-    dispatcher = _AsyncDispatcherStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
         metadata={
             "task_center": task_center,
-            "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
             "max_plan_size": 8,

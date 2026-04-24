@@ -16,7 +16,6 @@ final status computation sees the root task in `failed`.
 | Invalid root plan | Root planner submits no plan or an invalid plan | `failed` | `PlanExpander` marks the planner task failed with `InvalidPlan: ...`; because the task is the root, final run status is failed. |
 | Failed recovery path | Replanner task fails or crashes | `failed` through fail-fast | The original task stays terminal at `request_replan`; the replanner task failure is a normal `FAILED` outcome and aborts the run. |
 | Invalid runtime replan | Runtime `apply_replan(...)` rejects a submitted replan | `failed` if this failure reaches the root | The original task stays terminal at `request_replan`; the replanner error follows normal task failure handling. |
-| Orphaned replan request | Historical category for `request_replan` tasks with no live recovery path | not run-fatal by itself | `request_replan` is terminal in the current model, and `fail_orphaned_replanning()` is a compatibility no-op. Recovery success or failure is represented by the replanner branch. |
 | Detached-child roll-up | Every child of an expanded parent is detached, with no successful child | parent summary decides | Detached children do not synthesize parent failure. Expandable parents still enter `expanded_awaiting_summary`; the parent summarizer submits the authoritative roll-up or requests replanning. |
 
 ## Task-Local Failure

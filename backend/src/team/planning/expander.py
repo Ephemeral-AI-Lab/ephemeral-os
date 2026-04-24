@@ -122,26 +122,21 @@ class PlanExpander:
                 local_to_global[dep_id] if dep_id in local_to_global else dep_id
                 for dep_id in spec.deps
             ]
-            specs.append(
-                TaskDefinition(
-                    id=new_task_id,
-                    objective=spec.objective,
-                    agent=spec.agent,
-                    description=spec.description or "",
-                    deps=resolved_deps,
-                    scope_paths=list(spec.scope_paths),
-                )
+            definition = TaskDefinition(
+                id=new_task_id,
+                objective=spec.objective,
+                agent=spec.agent,
+                description=spec.description or "",
+                deps=resolved_deps,
+                scope_paths=list(spec.scope_paths),
             )
+            specs.append(definition)
             new_items.append(
                 Task(
                     id=new_task_id,
                     team_run_id=self._team_run_id,
-                    agent_name=spec.agent,
+                    definition=definition,
                     status=TaskStatus.READY if not resolved_deps else TaskStatus.PENDING,
-                    objective=spec.objective,
-                    description=spec.description or "",
-                    deps=resolved_deps,
-                    scope_paths=list(spec.scope_paths),
                     parent_id=task_id,
                     root_id=rec.root_id or task_id,
                     depth=new_depth,

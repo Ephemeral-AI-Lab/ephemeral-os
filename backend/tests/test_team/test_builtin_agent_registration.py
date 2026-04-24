@@ -17,7 +17,9 @@ from team.builtins import (
 )
 from prompt.helpers import resolve_terminal_tools
 from tools.core.base import ToolRegistry
-from tools.core.factory import ToolkitContext, create_toolkit
+from tools.ci_toolkit import make_code_intelligence_tools
+from tools.daytona_toolkit import make_daytona_tools
+from tools.task_center import make_task_center_tools
 
 
 def setup_module() -> None:
@@ -119,50 +121,34 @@ def test_builtin_team_agents_use_default_tool_call_limits() -> None:
         assert defn.tool_call_limit == 100
 
 
-def test_team_agents_share_same_code_intelligence_toolkit_surface() -> None:
-    planner_ci = create_toolkit(
-        "code_intelligence",
-        ToolkitContext(metadata={"agent_name": TEAM_PLANNER}),
-    )
-    developer_ci = create_toolkit(
-        "code_intelligence",
-        ToolkitContext(metadata={"agent_name": DEVELOPER}),
-    )
+def test_team_agents_share_same_code_intelligence_tool_surface() -> None:
+    planner_ci = make_code_intelligence_tools()
+    developer_ci = make_code_intelligence_tools()
 
-    assert set(planner_ci.tool_names()) == set(developer_ci.tool_names())
+    assert {tool.name for tool in planner_ci} == {tool.name for tool in developer_ci}
 
 
-def test_toolkits_do_not_expose_instruction_blocks() -> None:
-    developer_ci = create_toolkit(
-        "code_intelligence",
-        ToolkitContext(metadata={"agent_name": DEVELOPER}),
-    )
-    sandbox_ops = create_toolkit(
-        "sandbox_operations",
-        ToolkitContext(metadata={"sandbox_id": "sb-test"}),
-    )
+def test_tool_sets_do_not_expose_instruction_blocks() -> None:
+    developer_ci = make_code_intelligence_tools()
+    sandbox_ops = make_daytona_tools()
 
-    assert not hasattr(developer_ci, "instructions")
-    assert not hasattr(sandbox_ops, "instructions")
-    assert "daytona_grep" in sandbox_ops.tool_names()
+    assert all(not hasattr(tool, "instructions") for tool in developer_ci)
+    assert all(not hasattr(tool, "instructions") for tool in sandbox_ops)
+    assert "daytona_grep" in {tool.name for tool in sandbox_ops}
 
 
-def test_team_worker_sandbox_toolkit_includes_shell() -> None:
-    developer_sandbox = create_toolkit(
-        "sandbox_operations",
-        ToolkitContext(metadata={"agent_name": DEVELOPER, "sandbox_id": "sb-dev"}),
-    )
-    validator_sandbox = create_toolkit(
-        "sandbox_operations",
-        ToolkitContext(metadata={"agent_name": VALIDATOR, "sandbox_id": "sb-val"}),
-    )
+def test_team_worker_sandbox_tools_include_shell() -> None:
+    developer_sandbox = make_daytona_tools()
+    validator_sandbox = make_daytona_tools()
+    developer_names = {tool.name for tool in developer_sandbox}
+    validator_names = {tool.name for tool in validator_sandbox}
 
-    assert "daytona_shell" in developer_sandbox.tool_names()
-    assert "daytona_shell" in validator_sandbox.tool_names()
-    assert "daytona_edit_file" in developer_sandbox.tool_names()
+    assert "daytona_shell" in developer_names
+    assert "daytona_shell" in validator_names
+    assert "daytona_edit_file" in developer_names
     # daytona_bash has been removed — all agents use daytona_shell
-    assert "daytona_bash" not in developer_sandbox.tool_names()
-    assert "daytona_bash" not in validator_sandbox.tool_names()
+    assert "daytona_bash" not in developer_names
+    assert "daytona_bash" not in validator_names
 
 
 def _final_tool_names(name: str, tmp_path: Path) -> set[str]:
@@ -266,22 +252,17 @@ def test_root_planner_tool_surface_blocks_direct_context_and_diagnostics(tmp_pat
 def test_root_planner_prompt_omits_awareness_sections(tmp_path: Path) -> None:
     prompt = _final_prompt(ROOT_PLANNER, tmp_path)
 
-    assert "<Toolkit Instructions>" not in prompt
     assert "<Available Skills>" not in prompt
     assert "<Background Tasks>" not in prompt
     assert "<Termination Condition>" in prompt
     assert "- `submit_plan`" in prompt
 
 
-def test_task_center_toolkit_survives_restriction() -> None:
-    task_center_toolkit = create_toolkit(
-        "task_center",
-        ToolkitContext(metadata={"agent_name": TEAM_PLANNER}),
-    )
+def test_task_center_tools_survive_restriction() -> None:
     registry = ToolRegistry()
-    registry.register_toolkit(task_center_toolkit)
-    registry.restrict_to_toolkits(["task_center"])
+    registry.register_many(make_task_center_tools())
+    registry.restrict_to_tools(["read_file_note", "read_task_details"])
 
-    assert registry.get_toolkit("task_center") is not None
     assert registry.get("read_file_note") is not None
-    assert registry.get("task_center_changed_since") is None
+    assert registry.get("read_task_details") is not None
+    assert registry.get("read_task_graph") is None

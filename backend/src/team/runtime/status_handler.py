@@ -121,8 +121,8 @@ class TaskStatusHandler:
     async def recover_awaiting_summary_parents(self) -> None:
         """Re-inject parent-summary sidecars on restart.
 
-        Replaces the old ``Executor.run_forever`` prelude. Any parent stuck in
-        ``expanded_awaiting_summary`` with no live summarizer gets one spawned.
+        Any parent stuck in ``expanded_awaiting_summary`` with no live
+        summarizer gets one spawned.
         """
         fetcher = getattr(self._store, "fetch_parents_awaiting_summary", None)
         if fetcher is None:

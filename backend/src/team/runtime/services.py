@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from code_intelligence.editing.arbiter import Arbiter
 from team.context.project import ProjectContext
 from team.models import BudgetConfig, BudgetState
-from team.persistence.run_store import TeamRunStore, build_default_store
+from team.persistence.run_store import TeamRunStore
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -41,7 +41,7 @@ def build_team_runtime_services(
         repo_root=repo_root or "",
         project_key=repo_root or "",
     )
-    store = event_store if event_store is not None else build_default_store()
+    store = event_store if event_store is not None else TeamRunStore.from_env()
 
     task_session_factory = session_factory
     if task_session_factory is None:

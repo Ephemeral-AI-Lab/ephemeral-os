@@ -1,7 +1,6 @@
-"""SQLAlchemy ORM model for the ``tasks`` table (dispatcher work queue).
+"""SQLAlchemy ORM model for the ``tasks`` table.
 
-See Section 14.4 of the coordination redesign doc for schema.
-This model is used by TaskCenter for durable task management.
+This model is used by TaskCenter for durable task graph management.
 The table is partitioned by team_run_id (LIST partitioning).
 """
 
@@ -21,7 +20,7 @@ def _utcnow() -> datetime:
 
 
 class TaskRecord(Base):
-    """Durable record of a task in the dispatcher work queue."""
+    """Durable record of a team task."""
 
     __tablename__ = "tasks"
 

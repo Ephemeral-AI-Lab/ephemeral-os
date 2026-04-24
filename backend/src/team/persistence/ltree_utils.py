@@ -1,7 +1,4 @@
-"""Utilities for converting file paths to PostgreSQL ltree labels.
-
-See Section 14.5 of the coordination redesign doc for specification.
-"""
+"""Utilities for converting file paths to PostgreSQL ltree labels."""
 
 from __future__ import annotations
 

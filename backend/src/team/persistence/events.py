@@ -164,15 +164,16 @@ def task_to_dict(task: Any) -> dict[str, Any]:
     from team.models import Task
 
     assert isinstance(task, Task)
+    defn = task.definition
     return {
         "id": task.id,
         "team_run_id": task.team_run_id,
-        "agent_name": task.agent_name,
+        "agent_name": defn.agent,
         "status": task.status.value,
-        "objective": task.objective,
-        "description": task.description,
-        "deps": list(task.deps),
-        "scope_paths": list(task.scope_paths),
+        "objective": defn.objective,
+        "description": defn.description,
+        "deps": list(defn.deps),
+        "scope_paths": list(defn.scope_paths),
         "parent_id": task.parent_id,
         "root_id": task.root_id,
         "depth": task.depth,
@@ -187,7 +188,7 @@ def task_to_dict(task: Any) -> dict[str, Any]:
 
 def task_from_dict(data: dict[str, Any]) -> Any:
     """Deserialise a ``Task`` dataclass from a JSON-safe dict (inverse of ``task_to_dict``)."""
-    from team.models import Task, TaskStatus
+    from team.models import Task, TaskDefinition, TaskStatus
 
     def _parse_dt(iso: str | None) -> datetime | None:
         return datetime.fromisoformat(iso) if iso else None
@@ -195,15 +196,19 @@ def task_from_dict(data: dict[str, Any]) -> Any:
     objective = str(data.get("objective") or "")
     if not objective:
         raise ValueError("Task payload requires a non-empty 'objective'")
+    task_id = data["id"]
     return Task(
-        id=data["id"],
+        id=task_id,
         team_run_id=data["team_run_id"],
-        agent_name=data["agent_name"],
+        definition=TaskDefinition(
+            id=task_id,
+            objective=objective,
+            agent=data["agent_name"],
+            description=str(data.get("description") or ""),
+            deps=list(data.get("deps") or []),
+            scope_paths=list(data.get("scope_paths") or []),
+        ),
         status=TaskStatus.of(data.get("status") or TaskStatus.PENDING.value),
-        objective=objective,
-        description=str(data.get("description") or ""),
-        deps=list(data.get("deps") or []),
-        scope_paths=list(data.get("scope_paths") or []),
         parent_id=data.get("parent_id"),
         root_id=data.get("root_id") or "",
         depth=int(data.get("depth") or 0),

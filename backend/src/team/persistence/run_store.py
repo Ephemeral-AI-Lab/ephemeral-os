@@ -33,6 +33,11 @@ class TeamRunStore:
         self._lock = threading.Lock()
         self._seqs: dict[str, int] = {}
 
+    @classmethod
+    def from_env(cls) -> "TeamRunStore":
+        """Build the configured production store from environment settings."""
+        return cls(os.environ.get("EPHEMERALOS_TEAM_RUN_DIR"))
+
     def _run_dir(self, team_run_id: str) -> Path:
         if self._base is None:
             raise RuntimeError("TeamRunStore is disabled; no base directory configured")
@@ -100,12 +105,3 @@ class TeamRunStore:
             p.name for p in self._base.iterdir()
             if p.is_dir() and (p / "events.jsonl").exists()
         )
-
-
-def build_default_store(
-    *, base_dir: str | os.PathLike[str] | None = None,
-    session_factory: object | None = None,
-) -> TeamRunStore:
-    env_dir = os.environ.get("EPHEMERALOS_TEAM_RUN_DIR")
-    chosen = base_dir or env_dir
-    return TeamRunStore(chosen)

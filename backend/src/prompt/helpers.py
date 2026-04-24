@@ -21,6 +21,7 @@ from team.models import (
     BudgetState,
     Note,
     Task,
+    TaskDefinition,
     TaskStatus,
 )
 from team.persistence.events import TeamRunEvent, task_from_dict
@@ -251,9 +252,12 @@ def _example_task_for_agent(
         return Task(
             id="root",
             team_run_id=team_run_id,
-            agent_name=agent_name,
+            definition=TaskDefinition(
+                id="root",
+                objective=user_request,
+                agent=agent_name,
+            ),
             status=TaskStatus.PENDING,
-            objective=user_request,
             root_id="root",
             depth=0,
         )
@@ -261,11 +265,14 @@ def _example_task_for_agent(
     return Task(
         id=task_id,
         team_run_id=team_run_id,
-        agent_name=agent_name,
+        definition=TaskDefinition(
+            id=task_id,
+            objective=objective,
+            agent=agent_name,
+            description="Synthetic task used only for prompt inspection.",
+            scope_paths=["backend/src"],
+        ),
         status=TaskStatus.PENDING,
-        objective=objective,
-        description="Synthetic task used only for prompt inspection.",
-        scope_paths=["backend/src"],
         parent_id="root",
         root_id="root",
         depth=1,
