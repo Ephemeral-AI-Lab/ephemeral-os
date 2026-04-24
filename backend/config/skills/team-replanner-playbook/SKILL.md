@@ -7,7 +7,7 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 Produce the smallest corrective DAG justified by failed-task evidence and the failed task's original contract. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
 
-Replanner-created tasks use `developer` repair lanes, `validator` verification lanes, and — only when justified — `team_planner` redraft lanes. The replanner coordinates recovery; it does not patch code and does not create scout or replanner children.
+Replanner-created tasks use `developer` repair lanes and `validator` verification lanes. The replanner coordinates recovery; it does not patch code and does not create scout, planner, or replanner children.
 
 ## Stage Flow
 
@@ -24,7 +24,6 @@ Caption: replanner recovery path. References load only inside the action or subm
   -> [3 Act]
        | add-only -------------> load action-add-tasks
        | cancel-and-redraft ---> load action-cancel-and-redraft
-       ` redraft-via-planner --> load action-replan-via-planner
   -> [4 Submit]
        load terminal-contract -> checklist -> submit_replan(...)
 ```
@@ -104,7 +103,7 @@ Keep failing tests in scout context, not `target_paths`. Harvest notes for every
 ## 3. Act
 
 Enter after classification is written and diagnostics are complete or intentionally skipped.
-Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`; redraft-via-planner -> `action-replan-via-planner`.
+Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`.
 
 ```text
 Caption: cancellation boundary.
@@ -121,7 +120,6 @@ same parent:
 | --- | --- |
 | Add-only | Only new corrective work is needed, or the failed task itself is the only stale item. |
 | Cancel and redraft | Direct siblings in `running`, `pending`, or `ready` are stale, duplicate, or depend on the failed assumption. |
-| Redraft via team_planner | `scope_expansion` with a surface too wide for a bounded developer, or a stale `team_planner` sibling whose subtree must be re-authored with better dependency wiring. Spec must declare `Planner handoff: scope_expansion` or `Planner handoff: planner_redraft`. |
 | Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, `request_replan`, outside the stale region, or a validator continuation. |
 | Preserve live useful work | Objective remains valid after corrective work. |
 
@@ -140,8 +138,8 @@ Terminal reference: `terminal-contract`.
 | Submit check | Expected result |
 | --- | --- |
 | Top-level keys | Only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when add-only. |
-| New tasks | Direct repair children plus needed validator; agents are `developer`, `validator`, or `team_planner`. |
-| Specs | Structured `goal`, `detail`, and `acceptance_criteria`; unresolved blockers include diagnostics decision; `team_planner` tasks include `Planner handoff: scope_expansion` or `Planner handoff: planner_redraft`. |
+| New tasks | Direct repair children plus needed validator; agents are `developer` or `validator`. |
+| Specs | Structured `goal`, `detail`, and `acceptance_criteria`; unresolved blockers include diagnostics decision. |
 | Dependencies | Local recovery ids or freshly proven schedulable existing ids only. |
 | Cancellations | Only stale running/pending/ready direct siblings; never failed, replanner, terminal, descendant, or validator-continuation work. |
 
