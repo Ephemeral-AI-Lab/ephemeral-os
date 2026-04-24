@@ -281,7 +281,9 @@ Detailed team-runtime notes: [`team-coordination`](docs/architecture/team-coordi
 [`team-failure-conditions`](docs/architecture/team-failure-conditions.md),
 [`terminal-submission`](docs/architecture/terminal-submission.md),
 [`replan-workflow-sequence-diagrams`](docs/architecture/replan-workflow-sequence-diagrams.md),
-and [`skill-playbook-evolution`](docs/architecture/skill-playbook-evolution.md).
+[`planner/root-planner playbook guide`](docs/architecture/playbook-guide/planner-root-planner.md),
+[`developer playbook guide`](docs/architecture/playbook-guide/developer.md),
+and [`replanner playbook guide`](docs/architecture/playbook-guide/replanner.md).
 
 ### The Agent Loop
 

@@ -36,6 +36,17 @@ Keep the required top-level `cancel_ids` key explicitly set to `[]`.
 8. For value-selection bugs, reject a repair task whose proposed rule cannot satisfy every observed expected/actual row in the same failing assertion; make a diagnostic developer derive the rule instead.
 9. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
 
+## DAG Level Size
+
+The replanner cannot delegate to a child planner, so level shaping happens entirely through how `developer` siblings are merged or split.
+
+| Situation at this level | Action |
+| --- | --- |
+| Crowded with many siblings | Merge same-owner or same-mechanism developer tasks into fewer siblings. |
+| One broad `developer` task alone covering multiple mechanisms | Split by mechanism into multiple bounded developer siblings. |
+| Many tiny variants under one mechanism | One developer task covering all variants — not many thin-wrapper siblings. |
+| Unrelated owner families | Several sibling `developer` tasks grouped by boundary. |
+
 ## Expected Outcome
 
 The replanner adds only missing corrective children, leaves valid siblings running, and lets already-rewired downstream tasks wait on this replanner.

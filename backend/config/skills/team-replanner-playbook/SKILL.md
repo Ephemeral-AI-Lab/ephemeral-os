@@ -163,11 +163,19 @@ trace gap triplet:
 
 1. Read existing file notes for suspected production paths; skip scouting when notes already contain root-cause-grade evidence.
 2. Enumerate distinct trace-gap triplets in visible reasoning before scout calls.
-3. Launch one scout per remaining triplet with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one triplet>"], "context": "Diagnostic for <triplet>; ..."})`. Use multiple paths only when they belong to the same triplet and each path needs its own durable note. Keep failing tests in scout `context`, not `target_paths`.
+3. Launch one scout per remaining triplet with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one triplet>"], "context": "Diagnostic for <triplet>; ..."})`. Pick scout shape by the triplet hypothesis; a reasonable guess is enough before launching. Keep failing tests in scout `context`, not `target_paths`.
 4. Queue the scout wave before checking progress; then use `check_background_progress` / `wait_for_background_task`.
 5. Harvest notes with `read_file_note(file_paths=[...])` for every path in every launched scout's `target_paths`. Missing notes create uncertainty for that path only.
 6. Synthesize the repair mapping yourself from confirmed, partial, and disproved findings.
 7. Decide add-only vs cancel-and-redraft, then use the matching action reference above.
+
+| Scout shape | Use when |
+| --- | --- |
+| Single path | One file is the likely seam for this triplet. |
+| Multi-path, one triplet | Paths are coupled by dependency, entrypoint, adapter, or shared mechanism inside the triplet. |
+| Directory | Likely seam is a package/subsystem, or exact files are not knowable without mapping. |
+| Separate scouts | Paths belong to different triplets. |
+| No scout | Existing notes already name the seam with root-cause-grade evidence. |
 
 ### 4. Submit
 
