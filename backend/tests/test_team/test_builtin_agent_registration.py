@@ -38,7 +38,8 @@ def test_team_planner_prompt_loads_playbook_before_planning_tools() -> None:
     assert defn is not None
     assert defn.system_prompt is not None
     assert 'load_skill(skill_name="team-planner-playbook")' in defn.system_prompt
-    assert "before your first code-intelligence" in defn.system_prompt
+    assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
+    assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
     assert "restructured package/directory with multiple plausible owner files" in defn.system_prompt
     assert "do not route sibling ownership from failing test names" in defn.system_prompt
@@ -56,6 +57,9 @@ def test_developer_prompt_requires_live_path_proof_for_new_modules() -> None:
     defn = get_definition(DEVELOPER)
     assert defn is not None
     assert defn.system_prompt is not None
+    assert 'load_skill(skill_name="team-developer-playbook")' in defn.system_prompt
+    assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
+    assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
     assert "Do not create missing modules, shims, bridges, or re-exports" in defn.system_prompt
     assert "failing test imports, grep hits, or similarly named sibling paths alone" in defn.system_prompt
     assert "replan instead of writing it" in defn.system_prompt
@@ -66,7 +70,9 @@ def test_team_replanner_prompt_loads_playbook_before_planning_tools() -> None:
     defn = get_definition(TEAM_REPLANNER)
     assert defn is not None
     assert defn.system_prompt is not None
-    assert "load `team-replanner-playbook` before code-intelligence" in defn.system_prompt
+    assert 'load_skill(skill_name="team-replanner-playbook")' in defn.system_prompt
+    assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
+    assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
 
 
@@ -82,6 +88,19 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "not multi-cluster benchmark repair" in defn.system_prompt
     assert "exactly one production owner path in `target_paths`" in defn.system_prompt
     assert "Never bundle two files/directories into one scout" in defn.system_prompt
+    assert 'load_skill(skill_name="team-root-planner-playbook")' in defn.system_prompt
+    assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
+    assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
+
+
+def test_validator_prompt_loads_playbook_before_validation_tools() -> None:
+    defn = get_definition(VALIDATOR)
+    assert defn is not None
+    assert defn.system_prompt is not None
+    assert 'load_skill(skill_name="team-validator-playbook")' in defn.system_prompt
+    assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
+    assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
+    assert "Use that playbook to choose and order references" in defn.system_prompt
 
 
 def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
@@ -95,6 +114,8 @@ def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
     assert "stop after exact-file CI evidence" in defn.system_prompt
     assert "Only `target_paths` authorize exploration" in defn.system_prompt
     assert "treat them as hypotheses to report under gaps" in defn.system_prompt
+    assert "one `prompt` plus a `scoped_paths` list that exactly matches the assigned target paths" in defn.system_prompt
+    assert "The tool stores one note per scoped path" in defn.system_prompt
     assert "If an assigned exact file is missing, CI-cold, or disproved by a package/directory boundary" in defn.system_prompt
     assert "Do not search sibling modules, package structure, or helper-symbol names" in defn.system_prompt
 

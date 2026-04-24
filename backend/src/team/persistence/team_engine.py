@@ -2,18 +2,15 @@
 
 Delegates engine creation to db.engine which manages both sync and async
 engines. This module handles team-specific concerns: registering team
-ORM models, creating team tables, and rejecting unsupported legacy schemas.
+ORM models and creating team tables.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from typing import TYPE_CHECKING
 
-from sqlalchemy import bindparam, column, func, select, table
 from sqlalchemy.engine import Engine
-from sqlalchemy.sql import text
 
 from db.base import Base
 from db.engine import (
@@ -32,108 +29,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_VARCHAR_TYPE_RE = re.compile(r"^(?:character varying|varchar)\((\d+)\)$")
-
-_UNSUPPORTED_LEGACY_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
-    (
-        "tasks",
-        "scope_ltree",
-        "ltree[]",
-        "Legacy tasks.scope_ltree uses ltree[] storage. "
-        "EphemeralOS now requires TEXT[] scope_ltree columns; "
-        "migrate or recreate the tasks table before startup.",
-    ),
-    (
-        "tasks",
-        "task",
-        "text",
-        "Legacy tasks.task columns are no longer auto-migrated. "
-        "Backfill spec/description and drop the legacy task column "
-        "before starting EphemeralOS.",
-    ),
-)
-
-_PG_ATTRIBUTE = table(
-    "pg_attribute",
-    column("attrelid"),
-    column("attname"),
-    column("attnum"),
-    column("attisdropped"),
-    column("atttypid"),
-    column("atttypmod"),
-)
-
 
 def _ensure_team_models_registered() -> None:
     """Import team ORM models so Base.metadata knows about them."""
     from team.persistence.tasks_sql import TaskRecord  # noqa: F401
 
 
-def _legacy_column_type(engine: Engine, table_name: str, column_name: str) -> str | None:
-    """Check the current column type via pg_catalog.format_type (PostgreSQL)."""
-    stmt = select(
-        func.pg_catalog.format_type(_PG_ATTRIBUTE.c.atttypid, _PG_ATTRIBUTE.c.atttypmod)
-    ).where(
-        _PG_ATTRIBUTE.c.attrelid == func.to_regclass(bindparam("table_name")),
-        _PG_ATTRIBUTE.c.attname == bindparam("column_name"),
-        _PG_ATTRIBUTE.c.attnum > 0,
-        _PG_ATTRIBUTE.c.attisdropped.is_(False),
-    )
-    with engine.begin() as conn:
-        return conn.execute(stmt, {"table_name": table_name, "column_name": column_name}).scalar()
-
-
-def _reject_unsupported_legacy_columns(engine: Engine) -> None:
-    """Fail fast when the database still uses unsupported legacy team columns."""
-    if engine.dialect.name != "postgresql":
-        return
-    for table_name, column_name, legacy_type, message in _UNSUPPORTED_LEGACY_COLUMNS:
-        if _legacy_column_type(engine, table_name, column_name) != legacy_type:
-            continue
-        raise RuntimeError(
-            f"Unsupported legacy schema detected at {table_name}.{column_name}: {message}"
-        )
-
-
-def _bounded_varchar_length(column_type: str | None) -> int | None:
-    """Return the current varchar length for bounded VARCHAR columns."""
-    if column_type is None:
-        return None
-    match = _VARCHAR_TYPE_RE.match(column_type.strip().lower())
-    if match is None:
-        return None
-    return int(match.group(1))
-
-
-def _ensure_supported_column_types(engine: Engine) -> None:
-    """Repair supported team-column type drift from older schemas."""
-    if engine.dialect.name != "postgresql":
-        return
-
-    current_type = _legacy_column_type(engine, "tasks", "status")
-    current_length = _bounded_varchar_length(current_type)
-    if current_length is None:
-        return
-
-    logger.info(
-        "Removing tasks.status VARCHAR(%s) length constraint",
-        current_length,
-    )
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                'ALTER TABLE "tasks" ALTER COLUMN "status" '
-                "TYPE TEXT"
-            )
-        )
-
-
 def _ensure_team_schema(engine: Engine) -> None:
     """Register team models and backfill any missing team columns/indexes."""
     _ensure_team_models_registered()
     Base.metadata.create_all(engine)
-    _reject_unsupported_legacy_columns(engine)
-    _ensure_supported_column_types(engine)
     _add_missing_columns(engine)
     _ensure_indexes(engine)
 
@@ -143,7 +48,7 @@ def create_team_engine(
 ) -> "tuple[AsyncEngine, async_sessionmaker[AsyncSession]]":
     """Ensure the team coordination tables exist and return the async engine.
 
-    Registers team ORM models, creates tables, and validates the live schema.
+    Registers team ORM models and creates/repairs supported tables.
     Delegates engine creation to db.engine.initialize_db.
     """
     factory = get_async_session_factory()

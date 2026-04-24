@@ -381,3 +381,18 @@ async def finalize_replanned_origin(
 async def insert_task_record(db: AsyncSession, record: TaskRecord) -> None:
     db.add(record)
     await db.flush()
+
+
+async def set_failure_reason(
+    db: AsyncSession, team_run_id: str, task_id: str, failure_reason: str
+) -> None:
+    """Update ``failure_reason`` without touching status.
+
+    Used by ``TaskStore.persist`` to flush ``FailureReasonPatch`` mutations
+    produced by ``TaskGraph.finalize_replanned_origin``.
+    """
+    await db.execute(
+        update(TaskRecord)
+        .where(TaskRecord.team_run_id == team_run_id, TaskRecord.id == task_id)
+        .values(failure_reason=failure_reason)
+    )

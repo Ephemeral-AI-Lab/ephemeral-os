@@ -2,10 +2,6 @@ Please read the following sections and call the listed terminal tool when your w
 
 {{terminal_tools}}
 
-## Playbook 
-
-For your first tool call please call `load_skill(skill_name="team-root-planner-playbook")` to understand the workflow how to achieve the goal
-
 {{#if max_depth}}
 ## Planning depth
 

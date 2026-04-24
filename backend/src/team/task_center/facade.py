@@ -1,7 +1,7 @@
 """TaskCenter — manager composition facade.
 
 All task lifecycle transitions are owned by ``TaskCoordinator``. TaskCenter
-now only composes the managers the runtime wires together (``store`` /
+composes the managers the runtime wires together (``store`` / ``graph`` /
 ``notes`` / ``context`` / ``budget`` / ``expander``) plus ``add_task`` for
 the initial root insertion and a couple of read-through helpers.
 
@@ -30,6 +30,7 @@ from team.persistence.events import (
 from team.persistence.run_store import TeamRunStore
 from team.persistence.task_store import TaskStore
 from team.planning.expander import PlanExpander
+from team.runtime.task_graph import TaskGraph
 from team.task_center.budget import BudgetManager
 from team.task_center.prompts import TaskContextBuilder
 from team.task_center.notes import NoteManager
@@ -51,6 +52,7 @@ class TaskCenter:
     ) -> None:
         self._team_run_id = team_run_id
         self._store = TaskStore(session_factory, team_run_id)
+        self._task_graph = self._store.task_graph
         self._events: TeamRunStore = event_store or TeamRunStore()
 
         self._budget = BudgetManager(
@@ -61,10 +63,8 @@ class TaskCenter:
         )
         self._expander = PlanExpander(
             team_run_id=team_run_id,
-            store=self._store,
+            graph=self._task_graph,
             budget=self._budget,
-            graph_getter=lambda: self._store.graph,
-            emit_cb=self.emit_event,
         )
         self._notes = NoteManager(
             team_run_id=team_run_id,
@@ -81,6 +81,10 @@ class TaskCenter:
     @property
     def store(self) -> TaskStore:
         return self._store
+
+    @property
+    def task_graph(self) -> TaskGraph:
+        return self._task_graph
 
     @property
     def notes(self) -> NoteManager:
@@ -116,10 +120,10 @@ class TaskCenter:
 
     @property
     def graph(self) -> dict[str, Task]:
-        return self._store.graph
+        return self._task_graph.tasks
 
     async def get_task(self, task_id: str) -> Task | None:
-        return self._store.get_task(task_id)
+        return self._task_graph.get(task_id)
 
     # ---- event emission ------------------------------------------------
 
@@ -134,21 +138,41 @@ class TaskCenter:
     async def add_task(self, t: Task) -> None:
         """Insert ``t`` as a root task (or standalone) and emit task_added."""
         self._budget.require_capacity_for(1)
-        await self._store.insert_plan(
-            [
-                TaskDefinition(
-                    id=t.id,
-                    spec=t.spec,
-                    agent=t.agent,
-                    deps=t.deps,
-                    scope_paths=t.scope_paths,
-                    parent_id=t.parent_id,
-                )
-            ],
+        spec = TaskDefinition(
+            id=t.id,
+            spec=t.spec,
+            agent=t.agent,
+            deps=list(t.deps),
+            scope_paths=list(t.scope_paths),
             parent_id=t.parent_id,
-            parent_depth=max(0, t.depth - 1) if t.parent_id else 0,
-            parent_root_id=t.root_id or None,
         )
+        if t.parent_id is None:
+            # Root insertion: bypass TaskGraph.insert_plan_children (which
+            # requires a parent) and just build + persist the single Task.
+            from team.runtime.task_graph import GraphMutation, TaskInsert
+            from team.core.models import TaskStatus
+
+            root_task = Task(
+                id=t.id,
+                team_run_id=t.team_run_id,
+                spec=t.spec,
+                agent=t.agent,
+                status=TaskStatus.READY if not t.deps else TaskStatus.PENDING,
+                deps=list(t.deps),
+                scope_paths=list(t.scope_paths),
+                parent_id=None,
+                root_id=t.root_id or t.id,
+                depth=0,
+            )
+            mutation = GraphMutation(inserts=(TaskInsert(root_task),))
+        else:
+            mutation = self._task_graph.insert_plan_children(
+                parent_id=t.parent_id, specs=[spec]
+            )
+        await self._store.persist(mutation)
+        self._task_graph.apply(mutation)
         self._budget.add_tasks_used(1)
-        self.emit_event(make_task_added(self._team_run_id, task_to_dict(t)))
+        inserted = self._task_graph.get(t.id)
+        if inserted is not None:
+            self.emit_event(make_task_added(self._team_run_id, task_to_dict(inserted)))
         self._budget.emit_update()

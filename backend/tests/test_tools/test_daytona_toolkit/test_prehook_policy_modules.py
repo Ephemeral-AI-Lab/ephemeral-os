@@ -6,8 +6,6 @@ import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import ToolHookRegistry
 from tools.daytona_toolkit.delete_move_tool import (
@@ -16,7 +14,6 @@ from tools.daytona_toolkit.delete_move_tool import (
 )
 from tools.daytona_toolkit.hooks.prehook import (
     shell_destructive_git,
-    shell_output_pipeline_policy,
     shell_package_mutation_policy,
     shell_stderr_suppression_policy,
     move_src_scope_deny,
@@ -169,110 +166,18 @@ def test_shell_stderr_suppression_policy_blocks_dev_null_stderr() -> None:
     )
 
     assert outcome.has_error is True
-    assert "daytona_shell commands must preserve stderr" in (outcome.error_message or "")
+    assert "daytona_shell commands must preserve stderr" in (
+        outcome.error_message or ""
+    )
     assert "2>/dev/null" in (outcome.error_message or "")
-
-
-def test_shell_output_pipeline_policy_sanitizes_shell_command() -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(
-        command="cd /testbed && pytest tests/unit/test_x.py -q 2>&1 | head -200"
-    )
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is not None
-    assert outcome.tool_input.command == "pytest tests/unit/test_x.py -q"
-    assert "sanitized daytona_shell command" in outcome.advisories[0]
-
-
-@pytest.mark.parametrize(
-    "command",
-    [
-        "head -50 dask/dataframe/io/json.py",
-        "tail -n 40 logs/test.log",
-    ],
-)
-def test_shell_output_pipeline_policy_allows_standalone_head_tail_commands(
-    command: str,
-) -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(command=command)
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is None
-    assert outcome.advisories == ()
-
-
-def test_shell_output_pipeline_policy_keeps_head_tail_when_stripping_redirect() -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(command="tail -n 40 logs/test.log > /tmp/out")
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is not None
-    assert outcome.tool_input.command == "tail -n 40 logs/test.log"
-
-
-def test_shell_output_pipeline_policy_sanitizes_command_substitution_pipeline() -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(
-        command="files=$(find . -name '*.py' 2>/dev/null | head -1); printf '%s\\n' \"$files\""
-    )
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is not None
-    assert (
-        outcome.tool_input.command
-        == "files=$(find . -name '*.py'); printf '%s\\n' \"$files\""
-    )
-
-
-def test_shell_output_pipeline_policy_ignores_arithmetic_expansion() -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(command='count=$((1 + 2)); echo "$count"')
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is None
-    assert outcome.advisories == ()
-
-
-def test_shell_output_pipeline_policy_keeps_arithmetic_inside_substitution() -> None:
-    ctx = _ctx()
-    args = DaytonaShellInput(command='value=$(echo $((1 + 2)) | tail -1); echo "$value"')
-
-    outcome = _run(
-        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
-    )
-
-    assert outcome.has_error is False
-    assert outcome.tool_input is not None
-    assert outcome.tool_input.command == 'value=$(echo $((1 + 2))); echo "$value"'
-
-
 
 
 def test_shell_destructive_git_blocks_common_clean_forms() -> None:
     for command in ("git clean -xdf", "git clean -x -d -f"):
-        assert shell_destructive_git.destructive_git_command_error(command) is not None
+        assert (
+            shell_destructive_git.destructive_git_command_error(command)
+            is not None
+        )
 
 
 def test_shell_destructive_git_blocks_metadata_mutation_commands() -> None:
@@ -290,10 +195,6 @@ def test_shell_destructive_git_blocks_metadata_mutation_commands() -> None:
         err = shell_destructive_git.destructive_git_command_error(command)
         assert err is not None, command
         assert "git mutation commands" in err
-
-
-
-
 
 
 def test_shell_package_mutation_policy_blocks_package_manager_mutations() -> None:
@@ -326,8 +227,6 @@ def test_shell_package_mutation_policy_blocks_package_manager_mutations() -> Non
         assert "package and environment mutation commands are forbidden" in (
             outcome.error_message or ""
         )
-
-
 
 
 def test_shell_package_mutation_policy_allows_read_only_or_quoted_mentions() -> None:

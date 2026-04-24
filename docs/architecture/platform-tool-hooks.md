@@ -420,7 +420,6 @@ backend/src/tools/daytona_toolkit/hooks/
     shell_destructive_shell.py
     shell_stderr_suppression_policy.py
     shell_file_edit_policy.py
-    shell_output_pipeline_policy.py
     shell_package_mutation_policy.py
 
   posthook/
@@ -529,7 +528,6 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | `shell_destructive_shell.py` | pre | `daytona_shell` | Blocks destructive shell commands against workspace roots and dangerous devices. |
 | `shell_stderr_suppression_policy.py` | pre | `daytona_shell` | Blocks shell commands that suppress stderr with `/dev/null`. |
 | `shell_file_edit_policy.py` | pre | `daytona_shell` | Blocks shell file-edit side channels (`sed -i`, `tee`, redirect writes) when `daytona_shell` edit policy is active. |
-| `shell_output_pipeline_policy.py` | pre | `daytona_shell` | Sanitizes output-shaping syntax (pipes, `head`/`tail`, output redirects, leading repo-root `cd`) before execution. |
 | `shell_package_mutation_policy.py` | pre | `daytona_shell` | Blocks package or environment mutation commands (`pip install`, `uv sync`, `npm install`, etc.) on coordinated lanes. |
 
 The move hooks are intentionally split by source and destination behavior. The

@@ -74,6 +74,7 @@ class TeamRun:
         self.arbiter: Any = getattr(runtime_services, "arbiter", None)
         self.coordinator = TaskCoordinator(
             team_run_id=self.id,
+            graph=self.task_center.task_graph,
             store=self.task_center.store,
             budget=self.task_center.budget,
             expander=self.task_center.expander,

@@ -120,10 +120,6 @@ def _populate_plan_submission_context(
         meta["benchmark_test_files"] = test_files
 
 
-def build_initial_messages(task: Task) -> list[ConversationMessage]:
-    return []
-
-
 def _template_name_for_task(
     defn: "AgentDefinition | None", team_run: "TeamRun", task: Task,
 ) -> str | None:
@@ -268,6 +264,5 @@ async def build_query_context(
     )
     return TeamAgentContext(
         user_message=user_message,
-        initial_messages=build_initial_messages(task),
         tool_metadata=meta,
     )

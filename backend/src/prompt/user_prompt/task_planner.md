@@ -2,35 +2,22 @@ Please read the following sections and call the listed terminal tool when your w
 
 {{terminal_tools}}
 
-Follow the bundled team-planner playbook for workflow and rules; this message supplies task data.
-Your first assistant action must contain exactly one tool call: `load_skill(skill_name="team-planner-playbook")`.
-Do not batch that first playbook load with any other tool call.
-
 ## Assigned planner task
 
-Your task id: `{{your_task_id}}`
+## Task Spec
+
+{{task_spec}}
+
+## Depedency and Inheritance
+
+Please call `read_task_details` to check the dependency or parent tasks.
+
 {{#if your_parent_task_id}}
 Your parent task id: `{{your_parent_task_id}}`
 {{/if}}
 {{#if your_deps_ids}}
 Your dependency task ids: {{your_deps_ids}}
 {{/if}}
-
-{{#if max_depth}}
-## Planning depth
-
-Current depth: `{{current_depth}}`
-Max depth: `{{max_depth}}`
-Tasks submitted in this plan will run at depth `{{child_depth}}`.
-A child `team_planner` submitted now would need room to submit its own children at depth `{{grandchild_depth}}`.
-For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs, include child `team_planner` lanes when `{{grandchild_depth}}` is within max depth. Do not flatten multi-cluster benchmark repair into only current-layer developer tasks.
-{{/if}}
-
-Context-read pre-step: this applies to child planners only. After loading the team-planner playbook, use the UUIDs above exactly with `read_task_details(...)` for your task, parent, and each dependency, then call `read_task_graph()` to enumerate siblings before scouts, CI, notes, or `submit_plan(...)`. Each `read_task_details` input must contain only `task_id`; do not pass `skill_name`, planner slugs, short prefixes, or fabricated ids. Do not batch those required context reads with scout, CI, note, file, edit, diagnostics, reference, or submission tools.
-
-```markdown
-{{task_spec}}
-```
 
 {{#if scope_paths}}
 ## scope_paths

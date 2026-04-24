@@ -20,7 +20,8 @@ Use this reference only when `target_paths` is a single file or a short fixed fi
 - Missing exact-target gate: if an exact-file bootstrap query returns no definitions, or the bootstrap evidence shows the exact file is missing or replaced by a directory/package boundary, the next tool must be `submit_file_notes(...)`; do not call `ci_workspace_structure(...)`, run `ci_query_symbol(...)` on nearby helper names like `read_*` or `to_*`, or inspect adjacent files/directories to reverse-engineer a replacement owner.
 - If exact-file bootstrap definitions exist, do not call `ci_workspace_structure(...)` or extra symbol/test queries just to elaborate the same seam; record any unresolved question under `Gaps`.
 - Context hypotheses do not widen the handed file set. If `target_paths` is `["pkg/groupby.py"]`, do not query `pkg/core.py` or sibling owners just because the context speculates about them; record the adjacent path as an unresolved gap instead.
-- The Task Center handoff is durable and batched. Make exactly one `submit_file_notes(...)` call with one note item per assigned target path and non-empty `content` in each item; do not put the handoff only in visible prose.
+- The Task Center handoff is durable and scoped. Make exactly one `submit_file_notes(...)` call that combines one non-empty `prompt` with the exact assigned `scoped_paths`; the tool stores one note per scoped path. Do not put the handoff only in visible prose, and do not use the old per-item note shape.
+- When multiple scoped paths are present, make the `prompt` path-labeled so each stored note remains understandable when read back by a single file path.
 - If the tool result returns and a final response is required, reply only `Posted.` and do not repeat the findings.
 - The note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`.
 - For no-symbol exact files whose owner family is a live directory or nested files, the `Gaps` section should say the exact file should not be used as `scope_paths`; list live directory/nested-file evidence separately.
@@ -32,4 +33,4 @@ Use this reference only when `target_paths` is a single file or a short fixed fi
 
 ## Expected Outcome
 
-- The scout handoff is short, durable, scoped exactly to the handed file set, and stored through `submit_file_notes(...)`.
+- The scout handoff is short, durable, scoped exactly to the handed file set, and stored through `submit_file_notes(...)` as one `prompt` plus the assigned `scoped_paths`.

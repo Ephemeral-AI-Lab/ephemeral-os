@@ -54,36 +54,36 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
 
     assert rendered.startswith("Please read the following sections")
     assert "- submit_task_success: Submit task outcome." in rendered
-    assert "Your task id: `dev-uuid-1234`" in rendered
+    assert "## Task Spec" in rendered
+    assert "## Depedency and Inheritance" in rendered
+    assert "Please call `read_task_details` to check the dependency or parent tasks." in rendered
     assert "Your dependency task ids: `dep-a`, `dep-b`" in rendered
     assert "Your parent task id: `parent-uuid`" in rendered
-    assert (
-        'Your first assistant action must contain exactly one tool call: `load_skill(skill_name="team-developer-playbook")`'
-        in rendered
-    )
-    assert "call `read_task_details` with only one input key, `task_id`" in rendered
-    assert "Do not pass `skill_name`, planner slugs" in rendered
-    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" in rendered
-    assert "daytona_shell commands already start at the sandbox repo root" in rendered
-    assert "never prefix them with a host/local workspace path" in rendered
-    assert "Use repo-relative paths" in rendered
-    assert "Package/environment mutation is forbidden" in rendered
-    assert "Do not run `pip install`, `uv add`, `uv sync`" in rendered
+    assert "Your first assistant action must contain exactly one tool call" not in rendered
+    assert 'load_skill(skill_name="team-developer-playbook")' not in rendered
+    assert "call `read_task_details` with only one input key, `task_id`" not in rendered
+    assert "Do not pass `skill_name`, planner slugs" not in rendered
+    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" not in rendered
+    assert "daytona_shell commands already start at the sandbox repo root" not in rendered
+    assert "never prefix them with a host/local workspace path" not in rendered
+    assert "Use repo-relative paths" not in rendered
+    assert "Package/environment mutation is forbidden" not in rendered
+    assert "Do not run `pip install`, `uv add`, `uv sync`" not in rendered
     assert "Mandatory daytona_shell preflight" not in rendered
     assert "Remove shell redirects and output filters entirely" not in rendered
     assert "Do not rely on sanitizer behavior as your normal workflow" not in rendered
-    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in rendered
-    assert "Developers may write, copy, or create production files outside `scope_paths`" in rendered
-    assert "outside-scope system notification" in rendered
-    assert "that notification is not a stop condition" in rendered
-    assert "clearly a different owner or too broad/ambiguous for this lane" in rendered
-    assert "latest required runtime verification command was run after the final edit and passed" in rendered
-    assert "not run due to budget" in rendered
-    assert "means `request_replan(reason=...)`, not success" in rendered
+    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" not in rendered
+    assert "Developers may write, copy, or create production files outside `scope_paths`" not in rendered
+    assert "outside-scope system notification" not in rendered
+    assert "that notification is not a stop condition" not in rendered
+    assert "clearly a different owner or too broad/ambiguous for this lane" not in rendered
+    assert "latest required runtime verification command was run after the final edit and passed" not in rendered
+    assert "not run due to budget" not in rendered
+    assert "means `request_replan(reason=...)`, not success" not in rendered
     assert "Task id: `dev-uuid-1234`" not in rendered
     assert "Dependency task ids: `dep-a`, `dep-b`" not in rendered
     assert "Parent task id: `parent-uuid`" not in rendered
-    assert "Follow the bundled developer playbook for workflow and rules" in rendered
+    assert "Follow the bundled developer playbook for workflow and rules" not in rendered
     assert "## Rule to Follow" not in rendered
     assert "## Assigned coding task" in rendered
     assert "Goal\nImplement retry handling." in rendered
@@ -158,37 +158,37 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_task_success:" in ctx.user_message
-    assert "Your task id: `dev-1`" in ctx.user_message
+    assert "## Task Spec" in ctx.user_message
+    assert "## Depedency and Inheritance" in ctx.user_message
+    assert "Please call `read_task_details` to check the dependency or parent tasks." in ctx.user_message
     assert "Your dependency task ids: `dep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
-    assert (
-        'Your first assistant action must contain exactly one tool call: `load_skill(skill_name="team-developer-playbook")`'
-        in ctx.user_message
-    )
-    assert "call `read_task_details` with only one input key, `task_id`" in ctx.user_message
-    assert "Do not pass `skill_name`, planner slugs" in ctx.user_message
-    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" in ctx.user_message
-    assert "daytona_shell commands already start at the sandbox repo root" in ctx.user_message
-    assert "never prefix them with a host/local workspace path" in ctx.user_message
-    assert "Use repo-relative paths" in ctx.user_message
-    assert "Package/environment mutation is forbidden" in ctx.user_message
-    assert "Do not run `pip install`, `uv add`, `uv sync`" in ctx.user_message
+    assert "Your first assistant action must contain exactly one tool call" not in ctx.user_message
+    assert 'load_skill(skill_name="team-developer-playbook")' not in ctx.user_message
+    assert "call `read_task_details` with only one input key, `task_id`" not in ctx.user_message
+    assert "Do not pass `skill_name`, planner slugs" not in ctx.user_message
+    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" not in ctx.user_message
+    assert "daytona_shell commands already start at the sandbox repo root" not in ctx.user_message
+    assert "never prefix them with a host/local workspace path" not in ctx.user_message
+    assert "Use repo-relative paths" not in ctx.user_message
+    assert "Package/environment mutation is forbidden" not in ctx.user_message
+    assert "Do not run `pip install`, `uv add`, `uv sync`" not in ctx.user_message
     assert "treat the advisory as workflow guidance" not in ctx.user_message
-    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in ctx.user_message
-    assert "Developers may write, copy, or create production files outside `scope_paths`" in ctx.user_message
-    assert "outside-scope system notification" in ctx.user_message
-    assert "that notification is not a stop condition" in ctx.user_message
-    assert "clearly a different owner or too broad/ambiguous for this lane" in ctx.user_message
+    assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" not in ctx.user_message
+    assert "Developers may write, copy, or create production files outside `scope_paths`" not in ctx.user_message
+    assert "outside-scope system notification" not in ctx.user_message
+    assert "that notification is not a stop condition" not in ctx.user_message
+    assert "clearly a different owner or too broad/ambiguous for this lane" not in ctx.user_message
     assert (
         "latest required runtime verification command was run after the final edit and passed"
-        in ctx.user_message
+        not in ctx.user_message
     )
-    assert "not run due to budget" in ctx.user_message
-    assert "means `request_replan(reason=...)`, not success" in ctx.user_message
+    assert "not run due to budget" not in ctx.user_message
+    assert "means `request_replan(reason=...)`, not success" not in ctx.user_message
     assert "Task id: `dev-1`" not in ctx.user_message
     assert "Dependency task ids: `dep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
-    assert "Follow the bundled developer playbook for workflow and rules" in ctx.user_message
+    assert "Follow the bundled developer playbook for workflow and rules" not in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned coding task" in ctx.user_message
     assert "Goal\nImplement retry handling." in ctx.user_message
@@ -246,25 +246,26 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_task_success:" in ctx.user_message
-    assert "Your task id: `validator-1`" in ctx.user_message
+    assert "## Task Spec" in ctx.user_message
+    assert "## Depedency and Inheritance" in ctx.user_message
     assert "Your dependency task ids: `dev-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
-    assert "Context-read pre-step: after loading the validator playbook" in ctx.user_message
-    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" in ctx.user_message
+    assert "Context-read pre-step: after loading the validator playbook" not in ctx.user_message
+    assert "Use `daytona_shell(command=\"...\")` for shell, build, and test commands" not in ctx.user_message
     assert "Mandatory daytona_shell preflight" not in ctx.user_message
     assert "Remove shell redirects and output filters entirely" not in ctx.user_message
     assert "Do not rely on sanitizer behavior as your normal workflow" not in ctx.user_message
-    assert "correction surface for existing files, renames, moves, and deletes" in ctx.user_message
-    assert "Creating a new production file with `daytona_write_file` may extend scope" in ctx.user_message
-    assert "rely on the write-scope posthook to approve and record the expansion" in ctx.user_message
-    assert "Do not run duplicate equivalent verification commands in parallel" in ctx.user_message
-    assert "A success verdict may cite only commands actually run after the final validator edit" in ctx.user_message
+    assert "correction surface for existing files, renames, moves, and deletes" not in ctx.user_message
+    assert "Creating a new production file with `daytona_write_file` may extend scope" not in ctx.user_message
+    assert "rely on the write-scope posthook to approve and record the expansion" not in ctx.user_message
+    assert "Do not run duplicate equivalent verification commands in parallel" not in ctx.user_message
+    assert "A success verdict may cite only commands actually run after the final validator edit" not in ctx.user_message
     assert "load_skill_reference" not in ctx.user_message
     assert "runtime-" "verification-examples" not in ctx.user_message
     assert "Task id: `validator-1`" not in ctx.user_message
     assert "Dependency task ids: `dev-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
-    assert "Follow the bundled validator playbook for workflow and rules" in ctx.user_message
+    assert "Follow the bundled validator playbook for workflow and rules" not in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned validation task" in ctx.user_message
     assert "Validate retry handling." in ctx.user_message
@@ -309,7 +310,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Context-read pre-step:" not in ctx.user_message
     assert "Task id:" not in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
-    assert 'load_skill(skill_name="team-root-planner-playbook")' in ctx.user_message
+    assert 'load_skill(skill_name="team-root-planner-playbook")' not in ctx.user_message
     assert "## Planning depth" in ctx.user_message
     assert "Current depth: `0`" in ctx.user_message
     assert "Max depth: `4`" in ctx.user_message
@@ -418,22 +419,22 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_plan:" in ctx.user_message
-    assert "Your task id: `planner-1`" in ctx.user_message
+    assert "## Task Spec" in ctx.user_message
+    assert "## Depedency and Inheritance" in ctx.user_message
     assert "Your dependency task ids: `prep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
-    assert "## Planning depth" in ctx.user_message
-    assert "Current depth: `1`" in ctx.user_message
-    assert "Max depth: `4`" in ctx.user_message
-    assert "Tasks submitted in this plan will run at depth `2`" in ctx.user_message
-    assert "would need room to submit its own children at depth `3`" in ctx.user_message
-    assert "For broad benchmark, fail-to-pass, migration, compatibility, or other clustering jobs" in ctx.user_message
-    assert "Do not flatten multi-cluster benchmark repair into only current-layer developer tasks" in ctx.user_message
-    assert "Context-read pre-step: this applies to child planners only" in ctx.user_message
-    assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
+    assert "## Planning depth" not in ctx.user_message
+    assert "Current depth: `1`" not in ctx.user_message
+    assert "Max depth: `4`" not in ctx.user_message
+    assert "Tasks submitted in this plan will run at depth `2`" not in ctx.user_message
+    assert "would need room to submit its own children at depth `3`" not in ctx.user_message
+    assert "Do not flatten multi-cluster benchmark repair into only current-layer developer tasks" not in ctx.user_message
+    assert "Context-read pre-step: this applies to child planners only" not in ctx.user_message
+    assert "then call `read_task_graph()` to enumerate siblings" not in ctx.user_message
     assert "Task id: `planner-1`" not in ctx.user_message
     assert "Dependency task ids: `prep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
-    assert "Follow the bundled team-planner playbook for workflow and rules" in ctx.user_message
+    assert "Follow the bundled team-planner playbook for workflow and rules" not in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned planner task" in ctx.user_message
     assert "Decompose retry handling." in ctx.user_message
@@ -507,16 +508,17 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
 
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_replan:" in ctx.user_message
-    assert "Your task id: `replanner-1`" in ctx.user_message
+    assert "## Task Spec" in ctx.user_message
+    assert "## Depedency and Inheritance" in ctx.user_message
     assert "Your dependency task ids: `prep-1`" in ctx.user_message
     assert "Your parent task id: `root`" in ctx.user_message
-    assert "Context-read pre-step: after loading the replanner playbook" in ctx.user_message
-    assert "then call `read_task_graph()` to enumerate siblings" in ctx.user_message
+    assert "Context-read pre-step: after loading the replanner playbook" not in ctx.user_message
+    assert "then call `read_task_graph()` to enumerate siblings" not in ctx.user_message
     assert "Task id: `replanner-1`" not in ctx.user_message
     assert "Failed task id: `failed-1`" in ctx.user_message
     assert "Dependency task ids: `prep-1`" not in ctx.user_message
     assert "Parent task id: `root`" not in ctx.user_message
-    assert "Follow the bundled team-replanner playbook for workflow and rules" in ctx.user_message
+    assert "Follow the bundled team-replanner playbook for workflow and rules" not in ctx.user_message
     assert "## Rule to Follow" not in ctx.user_message
     assert "## Assigned replanning task" in ctx.user_message
     assert "## Failure context" not in ctx.user_message

@@ -33,7 +33,9 @@ When launching a scout, use `context` only for benchmark evidence, hypotheses, a
 </Scout Context Contract>
 
 ## Playbook Contract
-Call `load_skill(skill_name="team-planner-playbook")` before your first code-intelligence, Task Center, subagent, or submission tool call. Use that playbook to choose and order references.
+Your first assistant action must contain exactly one tool call: `load_skill(skill_name="team-planner-playbook")`.
+Do not batch that first playbook load with any other tool call.
+Use that playbook to choose and order references.
 
 ## Terminal Contract
 Call `submit_plan(...)` exactly once when the plan is ready. Use the runtime task prompt and loaded playbook references for payload details.

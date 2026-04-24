@@ -717,6 +717,9 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
     assert "the next tool must be `submit_file_notes(...)`" in scout_skill
     assert "Missing exact-target gate" in scout_skill
     assert "report zero coverage for that exact path in the note and stop" in scout_skill
+    assert "one non-empty `prompt` with the full `scoped_paths` list" in scout_skill
+    assert "the tool stores one note per scoped path" in scout_contract
+    assert "do not use the old per-item note shape" in scout_contract
     assert "do not call `ci_workspace_structure(...)` or extra symbol/test queries" in scout_contract
     assert "the next tool must be `submit_file_notes(...)`" in scout_contract
     assert "For a missing exact file, the note should say the scout recorded zero coverage" in scout_contract

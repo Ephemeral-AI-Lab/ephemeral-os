@@ -23,6 +23,7 @@ from team.core.models import (
 from team.persistence import tasks_sql as q
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.tasks_sql import TaskRecord
+from team.runtime.task_graph import GraphMutation, TaskGraph
 
 
 def _has_replanner_role(agent_name: str) -> bool:
@@ -65,31 +66,99 @@ class TaskStore:
     ) -> None:
         self._sf = session_factory
         self._team_run_id = team_run_id
-        self._tasks: dict[str, Task] = {}
+        self._task_graph = TaskGraph()
 
     # ---- in-memory graph proxy --------------------------------------------
 
     @property
+    def task_graph(self) -> TaskGraph:
+        """The in-memory graph owner used by TaskCoordinator / PlanExpander."""
+        return self._task_graph
+
+    @property
     def graph(self) -> dict[str, Task]:
-        return self._tasks
+        """Backward-compat dict view. New code should use ``task_graph``."""
+        return self._task_graph.tasks
 
     @graph.setter
     def graph(self, value: dict[str, Task]) -> None:
-        self._tasks = value
+        self._task_graph.replace_all(value.values())
 
     def get_task(self, task_id: str) -> Task | None:
         """Fast in-memory lookup — no DB call."""
-        return self._tasks.get(task_id)
+        return self._task_graph.get(task_id)
 
     async def refresh_graph(self) -> dict[str, Task]:
         """Sync in-memory graph from DB. Returns the graph."""
         records = await self.get_all_tasks()
-        tasks = [record_to_task(r) for r in records]
-        self._tasks = {task.id: task for task in tasks}
-        return self._tasks
+        self._task_graph.replace_all(record_to_task(r) for r in records)
+        return self._task_graph.tasks
+
+    async def load_graph(self) -> list[Task]:
+        """Read every task for this run and return them as domain ``Task`` objects.
+
+        Callers (typically ``TaskCenter``) hand the result to
+        ``TaskGraph.replace_all`` to hydrate the in-memory graph at startup.
+        """
+        records = await self.get_all_tasks()
+        return [record_to_task(r) for r in records]
+
+    async def persist(self, mutation: GraphMutation) -> None:
+        """Flush one ``GraphMutation`` to the database in a single transaction.
+
+        The mutation carries pre-computed status changes, inserts, dep
+        rewires, and failure-reason patches from ``TaskGraph``. This method
+        performs only CRUD; every rule (dependent promotion, cascade,
+        rewire-invariant) has already been enforced upstream.
+        """
+        if mutation.is_empty():
+            return
+        async with self._sf() as db:
+            for change in mutation.status_changes:
+                await q.set_status(
+                    db,
+                    self._team_run_id,
+                    change.task_id,
+                    change.new_status.value,
+                    change.reason,
+                )
+            for insert in mutation.inserts:
+                record = self._task_to_record(insert.task)
+                await q.insert_task_record(db, record)
+            for rewire in mutation.rewires:
+                await q.replace_dependency(
+                    db,
+                    self._team_run_id,
+                    old_dep_id=rewire.old_dep_id,
+                    new_dep_ids=list(rewire.new_dep_ids),
+                )
+            for patch in mutation.failure_reason_patches:
+                await q.set_failure_reason(
+                    db,
+                    self._team_run_id,
+                    patch.task_id,
+                    patch.failure_reason,
+                )
+            await db.commit()
+
+    def _task_to_record(self, task: Task) -> TaskRecord:
+        return TaskRecord(
+            id=task.id,
+            team_run_id=task.team_run_id,
+            agent_name=task.agent,
+            status=task.status.value,
+            spec=task.spec.to_dict(),
+            deps=list(task.deps),
+            scope_paths=list(task.scope_paths),
+            scope_ltree=[path_to_ltree(p) for p in task.scope_paths],
+            parent_id=task.parent_id,
+            root_id=task.root_id or "",
+            depth=task.depth or 0,
+            fired_by_task_id=task.fired_by_task_id,
+        )
 
     def _upsert(self, task: Task) -> None:
-        self._tasks[task.id] = task
+        self._task_graph.tasks[task.id] = task
 
     # ---- queries -------------------------------------------------------------
 
@@ -154,7 +223,7 @@ class TaskStore:
         """
         return [
             task.id
-            for task in self._tasks.values()
+            for task in self._task_graph.tasks.values()
             if task.parent_id is not None and task.status in TERMINAL_STATUSES
         ]
 

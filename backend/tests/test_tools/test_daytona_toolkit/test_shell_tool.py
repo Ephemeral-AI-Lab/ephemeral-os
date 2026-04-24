@@ -439,60 +439,6 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
 
 
 @pytest.mark.parametrize(
-    ("command", "sanitized"),
-    [
-        (
-            "find . -maxdepth 1 -type f 2>/dev/null|head -n 1",
-            "find . -maxdepth 1 -type f",
-        ),
-        (
-            "files=$(find . -name '*.py' 2>/dev/null); printf '%s\\n' \"$files\"",
-            "files=$(find . -name '*.py'); printf '%s\\n' \"$files\"",
-        ),
-        (
-            "files=$(find . -name '*.py' 2>/dev/null | head -1); printf '%s\\n' \"$files\"",
-            "files=$(find . -name '*.py'); printf '%s\\n' \"$files\"",
-        ),
-        ("command -v rg >/dev/null 2>&1; echo ok", "command -v rg ; echo ok"),
-        ("optional-probe &>/dev/null", "optional-probe"),
-        ("printf x > dask/core.py", "printf x"),
-        ("pytest 2>/tmp/errors.log", "pytest"),
-        ("printf x >/dev/null.log", "printf x"),
-        ("printf x | tee dask/core.py", "printf x"),
-    ],
-)
-async def test_team_shell_mode_sanitizes_output_pipeline_before_exec(
-    command,
-    sanitized,
-):
-    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
-    svc = _ci_service()
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "daytona_cwd": "/testbed",
-            "agent_name": "developer",
-            "team_run_id": "run-1",
-            "work_item_id": "task-1",
-            "ci_service": svc,
-        }
-    )
-
-    result, events = await _run_with_events(
-        daytona_shell,
-        {"command": command},
-        ctx,
-    )
-
-    data = _assert_ok(result)
-    assert data["shell_outputs"][0]["command"] == sanitized
-    texts = _notification_texts(events)
-    assert any("sanitized daytona_shell command" in text for text in texts)
-    svc.cmd.assert_awaited_once()
-    sb.process.exec.assert_awaited_once()
-
-
-@pytest.mark.parametrize(
     "command",
     [
         "head -50 dask/dataframe/io/json.py",
@@ -523,14 +469,9 @@ async def test_team_shell_mode_does_not_sanitize_standalone_head_tail_commands(
 
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["command"] == command
-    assert not any(
-        "sanitized daytona_shell command" in text
-        for text in _notification_texts(events)
-    )
+    assert _notification_texts(events) == []
     svc.cmd.assert_awaited_once()
     sb.process.exec.assert_awaited_once()
-
-
 
 
 @pytest.mark.parametrize(
@@ -624,8 +565,6 @@ async def test_team_shell_mode_allows_file_read_side_channels(command):
     assert data["shell_outputs"][0]["stdout"] == "contents"
     svc.cmd.assert_awaited_once()
     sb.process.exec.assert_awaited_once()
-
-
 
 
 async def test_team_shell_mode_still_allows_runtime_commands():
@@ -725,9 +664,9 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
 
     data = _assert_ok(result)
     assert data["files_written"] == 0
-    assert result.metadata.get("ambient_changed_paths") == ["/testbed/dask/_compatibility.py"]
-
-
+    assert result.metadata.get("ambient_changed_paths") == [
+        "/testbed/dask/_compatibility.py"
+    ]
 
 
 async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():
@@ -760,22 +699,12 @@ async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():
     data = _assert_ok(result)
     assert data["files_written"] == 1
     assert data["warnings"] == []
-    assert any("outside write_scope" in text for text in _notification_texts(events))
+    assert any(
+        "outside write_scope" in text for text in _notification_texts(events)
+    )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-async def test_shell_mode_sanitizes_legacy_cd_and_stderr_merge_for_team_agents():
+async def test_shell_mode_passes_cd_and_stderr_merge_through():
     sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     svc = _ci_service()
     ctx = _ctx(
@@ -794,8 +723,10 @@ async def test_shell_mode_sanitizes_legacy_cd_and_stderr_merge_for_team_agents()
     )
 
     data = _assert_ok(result)
-    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    assert (
+        data["shell_outputs"][0]["command"]
+        == "cd /testbed && pytest tests/unit/test_x.py -q 2>&1"
+    )
     svc.cmd.assert_awaited_once()
     sb.process.exec.assert_awaited_once()
-    texts = _notification_texts(events)
-    assert any("sanitized daytona_shell command" in text for text in texts)
+    assert _notification_texts(events) == []

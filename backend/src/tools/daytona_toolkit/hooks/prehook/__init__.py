@@ -7,7 +7,6 @@ from tools.daytona_toolkit.hooks.prehook import (
     shell_destructive_git,
     shell_destructive_shell,
     shell_file_edit_policy,
-    shell_output_pipeline_policy,
     shell_package_mutation_policy,
     shell_stderr_suppression_policy,
     move_dst_scope_advisory,
@@ -31,7 +30,6 @@ _MODULES = (
     shell_destructive_shell,
     shell_package_mutation_policy,
     shell_stderr_suppression_policy,
-    shell_output_pipeline_policy,
     shell_file_edit_policy,
 )
 

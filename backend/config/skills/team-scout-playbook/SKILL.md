@@ -19,7 +19,8 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 - For a single-file or short fixed file-list scout, after the note reads use at most one file-path `ci_query_symbol(...)` per assigned path. If those queries return definitions for every assigned path, the next tool must be `submit_file_notes(...)`; do not call `ci_workspace_structure(...)` or extra symbol hunts unless a target stayed cold.
 - Missing exact-target gate: if an exact-file bootstrap query returns no definitions, or if bootstrap/structure evidence shows the assigned exact file is missing or replaced by a package/directory boundary, the next tool must be `submit_file_notes(...)`. Do not call `ci_workspace_structure(...)`, run `ci_query_symbol(...)` on nearby helper names, or inspect adjacent files/directories to discover a replacement owner in the same scout.
 - After the required file-note reads, prefer `ci_workspace_structure(...)`, `ci_query_symbol(...)`, and `ci_diagnostics(...)` before any raw source read.
-- Must call exactly one `submit_file_notes(...)` after evidence collection and before any final response. The tool input must include one note item per assigned target path, with non-empty `content` in each item.
+- Must call exactly one `submit_file_notes(...)` after evidence collection and before any final response. The tool input must combine one non-empty `prompt` with the full `scoped_paths` list; `scoped_paths` must contain exactly one entry per assigned target path.
+- The `submit_file_notes(...)` `prompt` must be path-labeled when more than one scoped path is present, so the stored note for each scoped path can stand alone after the tool fans out the submission.
 - If a prompt lists `final_response` because scout notes are prompt-mandated instead of runtime-terminal, treat it only as an optional post-note acknowledgment. Never use final prose instead of `submit_file_notes(...)`.
 - Context may mention benchmark ids, hypotheses, or adjacent production files, but it does not widen scope. If `context` asks you to inspect `core.py` while `target_paths` contains only `groupby.py`, keep `core.py` as an unresolved adjacent hypothesis in the note and do not query or read it.
 - Must keep benchmark tests read-only evidence unless the assignment explicitly makes tests the owner surface.
@@ -39,7 +40,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 5. If a target is a benchmark test path and tests are not the explicit owner surface, inspect only the bounded snippet needed to understand failure semantics, then post the production-owner evidence or gap.
 6. If a target is missing or an exact file is disproved by a directory/nested-file structure result, keep it missing, record zero coverage, and post the gap instead of suggesting or hunting for a nearby replacement as scope.
 7. Stop as soon as a downstream worker could act without reopening the same scope.
-8. Post durable batched notes with scope, mapped files, entry points, owner seam, subdivisions, and gaps via `submit_file_notes(...)`, using one note item per assigned target path.
+8. Post durable scoped notes with scope, mapped files, entry points, owner seam, subdivisions, and gaps via `submit_file_notes(...)`, using one `prompt` plus the exact assigned `scoped_paths` so the tool stores one note per scoped path.
 9. If the tool result returns and a final response is required, reply only `Posted.` and do not include findings there.
 
 ## Hard rules
@@ -57,3 +58,4 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 11. Never claim code was created, fixed, patched, or refactored.
 12. Never prescribe test skips, xfails, rewrites, pytest configuration changes, or benchmark harness edits as the fix for fail-to-pass work.
 13. Never use raw source reads as the primary navigation tool when notes or CI evidence can answer the seam question.
+14. Never submit the old per-item note shape; `submit_file_notes(...)` is a `prompt` plus multiple `scoped_paths`, and scout coverage is complete only when every assigned `target_paths` entry is included in `scoped_paths`.
