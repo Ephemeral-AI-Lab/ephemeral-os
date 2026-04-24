@@ -75,8 +75,9 @@ Use this stage for route-changing exploration: superficial directory/multi-file 
 Caption: scout fan-out supports the next sibling wave.
 
 row: HDF family     -> scout(["pkg/io/hdf"])     -> read_file_note(["pkg/io/hdf"])
-row: parquet family -> scout(["pkg/io/parquet"]) -> read_file_note(["pkg/io/parquet"])
-row: config seam    -> scout(["pkg/config", "pkg/options"])
+row: parquet/json   -> scout(["pkg/io/parquet", "pkg/io/json"])
+row: groupby dtype  -> scout(["pkg/dataframe/groupby"])
+row: config/compat  -> scout(["pkg/config", "pkg/compat"])
 ```
 
 | Scout shape | Use when |
@@ -85,7 +86,6 @@ row: config seam    -> scout(["pkg/config", "pkg/options"])
 | Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
 | Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
 | Wave size | One scout per changelog/mechanism row; split large owners, avoid one-per-test. |
-| No scout | Leaf-only detail; preserve uncertainty in expandable task specs. |
 
 Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Launch before polling; missing notes become uncertainty for that path only.
 
