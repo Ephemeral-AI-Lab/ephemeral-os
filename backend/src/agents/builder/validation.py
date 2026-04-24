@@ -30,23 +30,12 @@ class AgentDefinitionValidator:
         if isinstance(name, str) and name in RESERVED_BUILTIN_AGENT_NAMES:
             errors.append(f"Agent name is reserved for a builtin runtime agent: {name}")
 
-        toolkits = getattr(defn, "toolkits", None)
-        if toolkits:
-            known: set[str] = set()
-            if self._tool_registry:
-                known = {tk.name for tk in self._tool_registry.list_toolkits()}
-            from tools.core.factory import has_toolkit
-            for tk in toolkits:
-                if tk not in known and not has_toolkit(tk):
-                    errors.append(f"Unknown toolkit: {tk}")
-
-        allowed_tools = getattr(defn, "allowed_tools", None)
-        if allowed_tools:
-            known_tools = self._resolve_all_tool_names(toolkits or [])
-            if known_tools:
-                unknown_tools = sorted(set(allowed_tools) - known_tools)
-                for tool_name in unknown_tools:
-                    errors.append(f"Unknown allowed tool: {tool_name}")
+        requested_tools = getattr(defn, "tools", None)
+        if requested_tools:
+            known_tools = self._resolve_all_tool_names()
+            unknown_tools = sorted(set(requested_tools) - known_tools)
+            for tool_name in unknown_tools:
+                errors.append(f"Unknown tool: {tool_name}")
 
         effort = getattr(defn, "effort", None)
         if effort is not None and effort not in EFFORT_LEVELS:
@@ -54,33 +43,8 @@ class AgentDefinitionValidator:
 
         return AgentValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
 
-    def _resolve_tool_names(self, toolkit_names: list[str]) -> set[str]:
-        from tools.core.factory import ToolkitContext, create_toolkit, has_toolkit
+    def _resolve_all_tool_names(self) -> set[str]:
+        from tools.core.factory import list_available_tools
 
-        names: set[str] = set()
-        for tk_name in toolkit_names:
-            if not has_toolkit(tk_name):
-                continue
-            try:
-                toolkit = create_toolkit(
-                    tk_name,
-                    ToolkitContext(
-                        metadata={"agent_name": "validator", "sandbox_id": "sb-validate"}
-                    ),
-                )
-            except Exception:
-                logger.debug(
-                    "Failed to inspect toolkit %s during agent validation",
-                    tk_name,
-                    exc_info=True,
-                )
-                continue
-            names.update(toolkit.tool_names())
-        return names
-
-    def _resolve_all_tool_names(self, toolkit_names: list[str]) -> set[str]:
-        from tools.core.factory import list_toolkits
-
-        names = self._resolve_tool_names(toolkit_names)
-        names.update(self._resolve_tool_names(list_toolkits()))
+        names = set(list_available_tools())
         return names

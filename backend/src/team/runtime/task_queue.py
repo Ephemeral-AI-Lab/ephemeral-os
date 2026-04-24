@@ -1,15 +1,14 @@
 """TaskQueue — push-driven ready queue for N worker coroutines.
 
-Replaces the poll-based ``DispatchQueue`` (``pop_ready`` + ``sleep(0.05)``)
-with a single ``asyncio.Queue[str]`` that the handler writes into as tasks
+Uses a single ``asyncio.Queue[str]`` that the handler writes into as tasks
 become ready. Workers block on ``Queue.get()`` until pushed.
 
 Workflow per worker tick:
 
     task_id = await self._ready.get()
     update  = await self._executor.run(task_id)
-    await self._handler.handle(update)
-    await self._executor.post_dispatch(update)
+    handled_update = await self._handle_update(task_id, update)
+    await self._executor.post_dispatch(handled_update)
 
 The handler's ``async with self._lock`` serializes the match-block body so
 concurrent workers don't interleave graph mutations.
@@ -101,14 +100,39 @@ class TaskQueue:
                 status=TaskStatus.FAILED,
                 summary=f"executor_exception: {exc}",
             )
+        handled_update = await self._handle_update(task_id, update)
+        if handled_update is None:
+            return
+        try:
+            await self._executor.post_dispatch(handled_update)
+        except Exception:
+            logger.debug("after_dispatch hook raised for %s", task_id, exc_info=True)
+
+    async def _handle_update(
+        self, task_id: str, update: TaskStatusUpdate
+    ) -> TaskStatusUpdate | None:
         try:
             await self._handler.handle(update)
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except Exception as exc:
             logger.exception("handler.handle failed for %s", task_id)
-            return
-        try:
-            await self._executor.post_dispatch(update)
-        except Exception:
-            logger.debug("after_dispatch hook raised for %s", task_id, exc_info=True)
+            if update.status == TaskStatus.FAILED:
+                return None
+            failed_update = TaskStatusUpdate(
+                task_id=task_id,
+                status=TaskStatus.FAILED,
+                summary=f"handler_exception: {exc}",
+            )
+            try:
+                await self._handler.handle(failed_update)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception(
+                    "handler.handle failed while failing %s",
+                    task_id,
+                )
+                return None
+            return failed_update
+        return update

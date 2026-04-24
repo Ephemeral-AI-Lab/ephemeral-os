@@ -12,7 +12,7 @@ from .helpers import structured_spec as _spec
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
-from tools.submission.toolkit import SubmitPlanTool, SubmitReplanTool
+from tools.submission import SubmitPlanTool, SubmitReplanTool
 from prompt.external_trigger_prompts import build_parent_summary_prompt as _build_parent_summary_prompt
 
 

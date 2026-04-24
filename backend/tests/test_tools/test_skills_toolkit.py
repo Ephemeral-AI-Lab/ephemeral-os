@@ -7,7 +7,7 @@ import pytest
 from engine.runtime.tool_trace import record_tool_trace
 from skills.core.registry import SkillRegistry
 from skills.core.types import SkillDefinition
-from tools.builtins.skills.toolkit import make_skills_toolkit
+from tools.builtins.skills.tools import make_skills_tools
 from tools.core.base import ToolExecutionContext
 
 
@@ -23,8 +23,8 @@ async def test_load_skill_does_not_append_reference_footer() -> None:
             references={"extra": "Supplementary guidance."},
         )
     )
-    toolkit = make_skills_toolkit(registry)
-    load_skill = toolkit.get("load_skill")
+    tools = {tool.name: tool for tool in make_skills_tools(registry)}
+    load_skill = tools.get("load_skill")
 
     assert load_skill is not None
     result = await load_skill.execute(
@@ -49,8 +49,8 @@ async def test_load_skill_reference_still_loads_named_references() -> None:
             references={"extra": "Supplementary guidance."},
         )
     )
-    toolkit = make_skills_toolkit(registry)
-    load_reference = toolkit.get("load_skill_reference")
+    tools = {tool.name: tool for tool in make_skills_tools(registry)}
+    load_reference = tools.get("load_skill_reference")
 
     assert load_reference is not None
     result = await load_reference.execute(
@@ -73,8 +73,8 @@ async def test_staged_planner_reference_rejects_immediate_load_after_skill() -> 
             references={"synthesize-and-submit": "Synthesis contract."},
         )
     )
-    toolkit = make_skills_toolkit(registry)
-    load_reference = toolkit.get("load_skill_reference")
+    tools = {tool.name: tool for tool in make_skills_tools(registry)}
+    load_reference = tools.get("load_skill_reference")
     assert load_reference is not None
 
     context = ToolExecutionContext(cwd=Path("/tmp"))
@@ -109,8 +109,8 @@ async def test_staged_planner_reference_allows_load_after_intervening_work() -> 
             references={"submit-child-plan": "Child synthesis contract."},
         )
     )
-    toolkit = make_skills_toolkit(registry)
-    load_reference = toolkit.get("load_skill_reference")
+    tools = {tool.name: tool for tool in make_skills_tools(registry)}
+    load_reference = tools.get("load_skill_reference")
     assert load_reference is not None
 
     context = ToolExecutionContext(cwd=Path("/tmp"))

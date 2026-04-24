@@ -4,7 +4,7 @@ The subagent is built and executed via the same `spawn_agent` /
 `EphemeralAgent` machinery used for top-level agents. The only difference is
 the loaded `AgentDefinition` carries `agent_type="subagent"`, which causes
 the engine to:
-  - skip registering the background-management toolkit (subagents cannot
+  - skip registering background-management tools (subagents cannot
     launch their own background tasks),
   - use the subagent's focused-worker system prompt.
 

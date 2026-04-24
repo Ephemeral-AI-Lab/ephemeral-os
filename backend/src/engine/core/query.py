@@ -344,26 +344,21 @@ async def _run_query_loop(
             ),
         )
 
-        daytona_toolkit = context.tool_registry.get_toolkit("sandbox_operations")
+        registered_tool_names = {tool.name for tool in context.tool_registry.list_tools()}
+        needs_daytona_context = any(
+            name.startswith("daytona_") or name.startswith("ci_")
+            for name in registered_tool_names
+        )
         if (
-            daytona_toolkit is None
-            and context.tool_metadata is not None
+            context.tool_metadata is not None
             and context.tool_metadata.sandbox_id
-            and context.tool_registry.get_toolkit("code_intelligence") is not None
+            and needs_daytona_context
         ):
             try:
-                from tools.daytona_toolkit import DaytonaToolkit
+                from tools.daytona_toolkit import DaytonaContextPreparer
 
-                daytona_toolkit = DaytonaToolkit(sandbox_id=context.tool_metadata.sandbox_id)
-            except Exception as exc:
-                logger.debug(
-                    "Temporary DaytonaToolkit creation skipped during CI context injection: %s",
-                    exc,
-                )
-
-        if daytona_toolkit is not None and getattr(daytona_toolkit, "sandbox_id", None):
-            try:
-                await daytona_toolkit.prepare_context_async(executor._context)
+                preparer = DaytonaContextPreparer(context.tool_metadata.sandbox_id)
+                await preparer.prepare_context_async(executor._context)
                 if context.tool_metadata is None:
                     context.tool_metadata = ExecutionMetadata()
                 context.tool_metadata.update(executor._context.metadata)

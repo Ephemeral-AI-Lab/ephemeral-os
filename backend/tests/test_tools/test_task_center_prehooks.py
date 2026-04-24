@@ -10,7 +10,7 @@ from message.stream_events import StreamEvent
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import ToolHookRegistry, run_pre_hooks
 from tools.task_center.hooks.prehook import scout_file_note_coverage_policy
-from tools.task_center.toolkit import SubmitFileNotesTool
+from tools.task_center.tools import SubmitFileNotesTool
 
 pytestmark = pytest.mark.asyncio
 

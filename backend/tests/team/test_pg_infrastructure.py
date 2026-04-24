@@ -217,7 +217,7 @@ def test_cascade_cancel_recursive_loads_non_terminal_task_graph():
     assert "tasks.status NOT IN" in sql
 
 
-def test_all_detached_expandable_parent_awaits_summary_instead_of_failing(
+def test_detached_expandable_parent_awaits_summary_instead_of_failing(
     monkeypatch,
 ):
     session = _FakeCascadeSession()
@@ -248,7 +248,7 @@ def test_all_detached_expandable_parent_awaits_summary_instead_of_failing(
     async def _fake_parent_candidate(db, team_run_id, current_id):
         del db, team_run_id
         if current_id == "child":
-            return SimpleNamespace(id="parent", all_detached=True)
+            return SimpleNamespace(id="parent")
         return None
 
     async def _mark_awaiting(task_id: str) -> None:

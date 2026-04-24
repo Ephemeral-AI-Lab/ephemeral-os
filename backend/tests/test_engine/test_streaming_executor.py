@@ -20,7 +20,7 @@ from engine.core.streaming_executor import (
 )
 from providers.types import ApiToolUseDeltaEvent
 from team.models import Plan
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 
 
 # ---------------------------------------------------------------------------
@@ -105,13 +105,9 @@ class AtlasTool(BaseTool):
         )
 
 
-def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
-    return BaseToolkit(name="test_toolkit", description="Test", tools=list(tools))
-
-
 def _make_registry(*tools: BaseTool) -> ToolRegistry:
     registry = ToolRegistry()
-    registry.register_toolkit(_make_toolkit(*tools))
+    registry.register_many(tools)
     return registry
 
 

@@ -1,4 +1,4 @@
-"""Tests for tools.task_center.toolkit."""
+"""Tests for tools.task_center.tools."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from tools.task_center.toolkit import (
+from tools.task_center.tools import (
     ReadFileNoteTool,
     ReadTaskDetailsTool,
     ReadTaskGraphTool,

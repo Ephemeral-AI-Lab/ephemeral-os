@@ -25,7 +25,8 @@ The following conditions fail or replan a task but do not by themselves fail the
 team run:
 
 - A worker calls `request_replan(reason=...)`; the executor
-  converts this into `TaskCenter.request_replan(...)`.
+  converts this into `TaskStatusUpdate(REQUEST_REPLAN, ...)` for
+  `TaskStatusHandler`.
 - An agent exits without calling a terminal submission tool; the runner writes a
   failure summary and the executor treats it as a replan request.
 - A non-root planner submits an invalid plan; the planner task fails and parent
@@ -41,8 +42,8 @@ ultimately becomes `failed`.
 
 Several errors are intentionally not run-fatal:
 
-- Transient `DispatchQueue.pop_ready(...)` errors other than
-  `GraphInvariantViolation` are logged and retried.
+- `Executor.post_dispatch(...)` hook failures are logged after the status update
+  has already been handled.
 - Event-store append failures are logged and ignored so coordination can
   continue.
 - Completion note post failures are logged and ignored.

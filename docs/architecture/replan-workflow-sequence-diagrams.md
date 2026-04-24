@@ -45,21 +45,23 @@ a sweep after `apply_replan` to catch bulk cascade cancels.
 sequenceDiagram
     participant W as Worker Task A
     participant Ex as Executor
+    participant Q as TaskQueue
     participant Run as TeamRun
-    participant TC as TaskCenter
+    participant H as TaskStatusHandler
     participant TS as TaskStore
     participant G as Task Graph
     participant R as Replanner Task R
 
     W->>Ex: request_replan(reason)
-    Note over W,Ex: Tool writes task_summary + task_summary_type="request_replan"<br/>into tool_metadata. Executor._read_result<br/>promotes that into a ReplanRequest.
-    Ex->>TC: request_replan(A, reason)
-    TC->>TC: require_replan_capacity()
+    Note over W,Ex: Tool writes task_summary + task_summary_type="request_replan"<br/>into tool_metadata. translate_tool_metadata<br/>promotes that into TaskStatusUpdate(REQUEST_REPLAN).
+    Ex-->>Q: TaskStatusUpdate(REQUEST_REPLAN, A, reason)
+    Q->>H: handle(update)
+    H->>H: require_replan_capacity()
     alt replan budget exhausted
-        TC-->>Ex: BudgetExceeded
-        Ex->>Run: fail_fast(replan_budget_exhausted)
+        H->>H: dispatch FAILED update
+        H->>Run: fail_fast(replan_budget_exhausted)
     end
-    TC->>TS: request_replan(A, reason, team_replanner)
+    H->>TS: request_replan(A, reason, team_replanner)
 
     TS->>TS: mark A as REQUEST_REPLAN
     TS->>TS: create R assigned to team_replanner
@@ -70,30 +72,30 @@ sequenceDiagram
         TS->>TS: replace A with R in pending dependents
         TS->>TS: keep rewritten dependents pending on R
         TS->>G: refresh graph
-        TS-->>TC: R
-        TC->>G: emit task_added(R)
-        TC->>G: emit status changes
+        TS-->>H: R
+        H->>G: emit task_added(R)
+        H->>G: emit status changes
     else any dependent of A is not PENDING
-        TS-->>TC: GraphInvariantViolation
-        TC-->>Ex: replan request fails
-        Ex->>Run: fail_fast(graph_invariant_violation)
+        TS-->>H: GraphInvariantViolation
+        H-->>Q: handler raises
+        Q->>H: TaskStatusUpdate(FAILED, handler_exception)
+        H->>Run: fail_fast(handler_exception)
     end
 ```
 
-The executor routes failure through `TaskCenter.request_replan` because the
-executor only interprets the agent's terminal submission. TaskCenter owns the
-task lifecycle boundary: replan budget checks, replanner selection, event
+The executor routes failure through `TaskStatusUpdate(REQUEST_REPLAN, ...)`
+because the executor only interprets the agent's terminal submission.
+`TaskStatusHandler` owns the task lifecycle boundary: replan budget checks,
+replanner selection, event
 emission, and the atomic TaskStore mutation that creates `R` and rewires
-pending dependents. A graph invariant violation is fatal; the executor fails
-the team run immediately.
+pending dependents. A graph invariant violation is fatal; `TaskQueue` converts
+the handler failure into a `FAILED` update and the handler fail-fasts the run.
 
 ### 1a. Replan Budget Exhausted
 
-`TaskCenter.request_replan` calls `require_replan_capacity()` before creating
-`R`. If the budget is exhausted, `BudgetExceeded` propagates to the executor,
-which treats it as terminal for the whole team run: the executor calls
-`team_run.fail_fast("replan_budget_exhausted: {exc}")` (same mechanism as a
-graph invariant violation). The replan budget is a run-level guarantee, not a
+`TaskStatusHandler` calls `require_replan_capacity()` before creating `R`. If
+the budget is exhausted, it dispatches a `FAILED` update for the task and
+fail-fasts the run. The replan budget is a run-level guarantee, not a
 per-branch one — once it's gone, no further recovery is possible anywhere in
 the tree, so localizing the failure to `A` would just defer the inevitable
 while letting unrelated work keep burning resources.
@@ -119,39 +121,39 @@ work instead of closing recovery with no new tasks.
 ```mermaid
 sequenceDiagram
     participant R as Replanner Task R
-    participant TC as TaskCenter
+    participant H as TaskStatusHandler
     participant PE as PlanExpander
     participant TS as TaskStore
     participant C as Children Of R
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>TC: complete_task(R, submitted_replan with new_tasks)
-    TC->>PE: apply_replan(R, add_tasks)
+    R->>H: TaskStatusUpdate(EXPANDED, replan with new_tasks)
+    H->>PE: apply_replan(R, add_tasks)
     PE->>TS: apply_replan_atomic(specs include parent_id=R)
 
     TS->>TS: insert child tasks under R
     TS-->>PE: inserted children
-    PE-->>TC: replanner_child_count > 0
+    PE-->>H: replanner_child_count > 0
 
-    TC->>TS: mark R EXPANDED
+    H->>TS: mark R EXPANDED
     Note over D,A: D still waits on R. A stays REQUEST_REPLAN.
 
-    C->>TC: child completes DONE
-    TC->>TS: mark child DONE
+    C->>H: TaskStatusUpdate(DONE)
+    H->>TS: mark child DONE
     TS->>TS: maybe_promote_expanded_parent(child)
 
     alt every non-detached child of R is DONE (≥1 DONE)
         TS->>R: mark R EXPANDED_AWAITING_SUMMARY
-        TC->>R: parent_summarizer reads R + every direct child
-        R->>TC: submit_task_success(summary=roll-up)
+        H->>R: parent_summarizer reads R + every direct child
+        R->>H: TaskStatusUpdate(DONE, summary=roll-up)
         TS->>R: mark R DONE
         TS->>D: promote downstream dependents
-        TC->>TS: finalize_replanned_origin(R)
+        H->>TS: finalize_replanned_origin(R)
         TS->>A: record replanned_by on A (A stays REQUEST_REPLAN; terminal)
     else every child is detached (0 DONE, all FAILED/CANCELLED)
         TS->>R: mark R EXPANDED_AWAITING_SUMMARY
-        TC->>R: parent_summarizer reads R + every direct child
+        H->>R: parent_summarizer reads R + every direct child
         Note over D,A: Detached children do not synthesize parent failure.
     else some child still live
         TS->>R: keep R EXPANDED
@@ -170,15 +172,15 @@ the detached-child outcome is deliverable or needs `request_replan`.
 ```mermaid
 sequenceDiagram
     participant R as Replanner Task R
-    participant TC as TaskCenter
+    participant H as TaskStatusHandler
     participant PE as PlanExpander
     participant TS as TaskStore
     participant C as Children Of R
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>TC: complete_task(R, submitted_replan with new_tasks)
-    TC->>PE: apply_replan(R, add_tasks)
+    R->>H: TaskStatusUpdate(EXPANDED, replan with new_tasks)
+    H->>PE: apply_replan(R, add_tasks)
 
     PE->>PE: enforce each spec.parent_id == R.id
     PE->>PE: validate plan policy, depth, and budget
@@ -186,9 +188,9 @@ sequenceDiagram
 
     TS->>C: insert child tasks
     TS-->>PE: inserted tasks
-    PE-->>TC: replanner_child_count > 0
+    PE-->>H: replanner_child_count > 0
 
-    TC->>TS: mark R EXPANDED
+    H->>TS: mark R EXPANDED
     Note over D,A: Downstream remains blocked on R until child repairs finish.
 ```
 
@@ -246,7 +248,8 @@ sequenceDiagram
     participant R as Replanner Task R
     participant Tool as submit_replan
     participant PE as PlanExpander
-    participant TC as TaskCenter
+    participant H as TaskStatusHandler
+    participant Run as TeamRun
     participant A as Original Task A
 
     R->>Tool: submit_replan(...)
@@ -256,23 +259,24 @@ sequenceDiagram
         Tool-->>R: validation error
         Note over R: R keeps running and can resubmit.
     else invalid at runtime layer
-        Tool-->>TC: submitted_replan
-        TC->>PE: apply_replan(...)
-        PE-->>TC: InvalidPlan
+        Tool-->>H: TaskStatusUpdate(EXPANDED, replan=...)
+        H->>PE: apply_replan(...)
+        PE-->>H: InvalidPlan
         Note over A: A stays REQUEST_REPLAN (already terminal).
-        TC-->>R: error propagated (R fails via normal worker path)
+        H->>H: dispatch FAILED update for R
+        H->>Run: fail_fast(InvalidPlan)
     else task budget exhausted at runtime layer
-        PE-->>Ex: BudgetExceeded
-        Ex->>Run: fail_fast(tasks_budget_exhausted)
+        PE-->>H: BudgetExceeded
+        H->>H: dispatch FAILED update for R
+        H->>Run: fail_fast(BudgetExceeded)
     end
 ```
 
 Tool-layer validation is recoverable inside the replanner turn. Runtime apply
-failure propagates the exception; A is already terminal at REQUEST_REPLAN so
-no origin-side transition is needed. The executor treats the exception as an
-unrecoverable worker error, and `R` is failed through the normal replanner
-failure path. Task-budget exhaustion is handled like other run-level budget
-exhaustion: the executor terminates the team run via `fail_fast`.
+failure becomes a `FAILED` update for `R`; A is already terminal at
+REQUEST_REPLAN so no origin-side transition is needed. Task-budget exhaustion
+is handled like other run-level budget exhaustion: `TaskStatusHandler`
+terminates the team run via `fail_fast`.
 
 ### Idempotency
 
@@ -283,8 +287,8 @@ exhaustion: the executor terminates the team run via `fail_fast`.
 - New task inserts use `add_all` without upsert, so retrying with the same
   task IDs raises a database integrity error.
 
-Callers must ensure at-most-once delivery of `apply_replan` from executor to
-TaskCenter. A crash between `apply_replan_atomic` commit and the executor's
+Callers must ensure at-most-once delivery of `apply_replan` from the status
+handler to persistence. A crash between `apply_replan_atomic` commit and the executor's
 acknowledgement cannot be safely retried with the same spec set.
 
 ## 7. Replanner Fails
@@ -293,19 +297,19 @@ acknowledgement cannot be safely retried with the same spec set.
 sequenceDiagram
     participant R as Replanner Task R
     participant Ex as Executor
-    participant TC as TaskCenter
+    participant H as TaskStatusHandler
     participant TS as TaskStore
     participant A as Original Task A
     participant D as Downstream Tasks
 
     R->>Ex: runner_exception or fail
-    Ex->>TC: fail_task(R, reason)
+    Ex->>H: TaskStatusUpdate(FAILED, R, reason)
 
-    TC->>TS: check R.fired_by_task_id
-    TS-->>TC: A
+    H->>TS: check R.fired_by_task_id
+    TS-->>H: A
 
     Note over A: A stays REQUEST_REPLAN (terminal).
-    TC->>TS: fail_task(R, reason)
+    H->>TS: mark_failed(R, reason)
     TS->>R: mark FAILED
     TS->>D: cascade cancel dependents rewired onto R
 ```

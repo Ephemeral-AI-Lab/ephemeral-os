@@ -45,7 +45,7 @@ import type {
   ModalRequest,
   SelectOption,
   TaskSnapshot,
-  ToolkitSnapshot,
+  ToolSnapshot,
   TranscriptItem,
 } from './types'
 
@@ -151,20 +151,20 @@ export function useBridgeSessions(): BridgeSessionSnapshot[] {
   return sessions
 }
 
-/** Toolkits from state snapshots */
-export function useToolkits(): ToolkitSnapshot[] {
-  const [toolkits, setToolkits] = useState<ToolkitSnapshot[]>([])
+/** Tools from state snapshots */
+export function useTools(): ToolSnapshot[] {
+  const [tools, setTools] = useState<ToolSnapshot[]>([])
   useEffect(() => {
     fetchState()
-      .then((e) => setToolkits((e.toolkits ?? []) as ToolkitSnapshot[]))
+      .then((e) => setTools((e.tools ?? []) as ToolSnapshot[]))
       .catch(() => {})
     return _onEvent('*', (e) => {
-      if ((e.type === 'ready' || e.type === 'state_snapshot') && e.toolkits) {
-        setToolkits(e.toolkits as ToolkitSnapshot[])
+      if ((e.type === 'ready' || e.type === 'state_snapshot') && e.tools) {
+        setTools(e.tools as ToolSnapshot[])
       }
     })
   }, [])
-  return toolkits
+  return tools
 }
 
 /** Available slash commands */

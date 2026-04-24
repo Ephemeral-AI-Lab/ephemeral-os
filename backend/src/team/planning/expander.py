@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable
 
 from agents.registry import has_role
-from team.budget_manager import BudgetManager
+from team.task_center.budget import BudgetManager
 from team.errors import BudgetExceeded, InvalidPlan
 from team.models import Plan, Task, TaskDefinition, TaskStatus
 from team.persistence.events import TeamRunEvent, make_task_added, task_to_dict

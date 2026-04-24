@@ -19,9 +19,8 @@ class AgentDefinitionCreate(BaseModel):
     )
     effort: str | None = None
     tool_call_limit: int | None = Field(default=None, gt=0)
-    toolkits: list[str] | None = None
+    tools: list[str] | None = None
     skills: list[str] = Field(default_factory=list)
-    allowed_tools: list[str] = Field(default_factory=list)
     blocked_tools: list[str] = Field(default_factory=list)
     hooks: dict[str, Any] | None = None
     background: bool = False
@@ -44,9 +43,8 @@ class AgentDefinitionUpdate(BaseModel):
     model: str | None = Field(default=None, description="Model key override")
     effort: str | None = None
     tool_call_limit: int | None = Field(default=None, gt=0)
-    toolkits: list[str] | None = None
+    tools: list[str] | None = None
     skills: list[str] | None = None
-    allowed_tools: list[str] | None = None
     blocked_tools: list[str] | None = None
     hooks: dict[str, Any] | None = None
     background: bool | None = None
@@ -72,9 +70,8 @@ class AgentDefinitionResponse(BaseModel):
     model: str
     effort: str | None = None
     tool_call_limit: int | None = None
-    toolkits: list[str] | None = None
+    tools: list[str] | None = None
     skills: list[str] = Field(default_factory=list)
-    allowed_tools: list[str] = Field(default_factory=list)
     blocked_tools: list[str] = Field(default_factory=list)
     hooks: dict[str, Any] | None = None
     background: bool = False

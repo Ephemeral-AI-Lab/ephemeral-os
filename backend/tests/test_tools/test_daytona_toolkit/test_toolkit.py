@@ -1,4 +1,4 @@
-"""Tests for tools.daytona_toolkit.toolkit.DaytonaToolkit."""
+"""Tests for Daytona tool exports and context preparation."""
 
 from __future__ import annotations
 
@@ -8,8 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext, ToolRegistry
-from tools.core.factory import ToolkitContext
-from tools.daytona_toolkit.toolkit import DaytonaToolkit
+from tools.daytona_toolkit import DaytonaContextPreparer, make_daytona_tools
 
 
 # pytest-asyncio runs in auto mode (configured in pyproject.toml) — async
@@ -31,35 +30,23 @@ def _sandbox_with_noop_io():
 
 
 # ---------------------------------------------------------------------------
-# __init__ and module-level import
+# Context setup and module-level import
 # ---------------------------------------------------------------------------
 
 
 def test_init_import():
-    from tools.daytona_toolkit import DaytonaToolkit as DT
+    from tools.daytona_toolkit import DaytonaContextPreparer as DCP
 
-    assert DT is DaytonaToolkit
-
-
-def test_toolkit_instantiation():
-    tk = DaytonaToolkit(sandbox_id="sb-test123")
-    assert tk.sandbox_id == "sb-test123"
-    assert tk.name == "sandbox_operations"
+    assert DCP is DaytonaContextPreparer
 
 
-def test_toolkit_no_sandbox_id():
-    tk = DaytonaToolkit()
-    assert tk.sandbox_id is None
+def test_context_preparer_instantiation():
+    preparer = DaytonaContextPreparer(sandbox_id="sb-test123")
+    assert preparer.sandbox_id == "sb-test123"
 
 
-# ---------------------------------------------------------------------------
-# Tool registration
-# ---------------------------------------------------------------------------
-
-
-def test_toolkit_registers_expected_tools():
-    tk = DaytonaToolkit()
-    names = set(tk.tool_names())
+def test_daytona_exports_expected_tools():
+    names = {tool.name for tool in make_daytona_tools()}
     expected = {
         "daytona_shell",
         "daytona_read_file",
@@ -76,7 +63,7 @@ def test_toolkit_registers_expected_tools():
 
 async def test_registered_write_capable_tools_require_ci_service():
     registry = ToolRegistry()
-    registry.register_toolkit(DaytonaToolkit())
+    registry.register_many(make_daytona_tools())
     tools_by_name = {tool.name: tool for tool in registry.list_tools()}
     write_inputs = {
         "daytona_write_file": {"file_path": "/repo/new.txt", "content": "hello"},
@@ -110,31 +97,24 @@ async def test_registered_write_capable_tools_require_ci_service():
         assert result.metadata.get("ci_required") is True, tool_name
 
 
-def test_toolkit_from_context_includes_shell():
-    developer_tk = DaytonaToolkit.from_context(
-        ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
-    )
-    validator_tk = DaytonaToolkit.from_context(
-        ToolkitContext(metadata={"sandbox_id": "sb-val", "agent_name": "validator"})
-    )
+def test_make_daytona_tools_includes_shell():
+    names = {tool.name for tool in make_daytona_tools()}
 
-    assert "daytona_shell" in developer_tk.tool_names()
-    assert "daytona_shell" in validator_tk.tool_names()
-    assert "daytona_edit_file" in developer_tk.tool_names()
-    assert "daytona_list_files" not in developer_tk.tool_names()
-    assert "daytona_list_files" not in validator_tk.tool_names()
+    assert "daytona_shell" in names
+    assert "daytona_edit_file" in names
+    assert "daytona_list_files" not in names
 
 
-def test_toolkit_get_tool():
-    tk = DaytonaToolkit()
-    tool = tk.get("daytona_shell")
+def test_get_daytona_tool_by_name():
+    tools = {tool.name: tool for tool in make_daytona_tools()}
+    tool = tools.get("daytona_shell")
     assert tool is not None
     assert tool.name == "daytona_shell"
 
 
 def test_shell_schema_describes_command():
-    tk = DaytonaToolkit()
-    tool = tk.get("daytona_shell")
+    tools = {tool.name: tool for tool in make_daytona_tools()}
+    tool = tools.get("daytona_shell")
     assert tool is not None
 
     schema = tool.to_api_schema()["input_schema"]
@@ -144,20 +124,18 @@ def test_shell_schema_describes_command():
     assert tool.short_description == "Run a shell command from the repo root."
 
 
-def test_toolkit_get_missing_tool():
-    tk = DaytonaToolkit()
-    assert tk.get("nonexistent_tool") is None
+def test_missing_daytona_tool_absent():
+    tools = {tool.name: tool for tool in make_daytona_tools()}
+    assert tools.get("nonexistent_tool") is None
 
 
-def test_toolkit_list_tools_length():
-    tk = DaytonaToolkit()
-    tools = tk.list_tools()
+def test_daytona_tool_count():
+    tools = make_daytona_tools()
     assert len(tools) == 8
 
 
-def test_toolkit_omits_instruction_block():
-    tk = DaytonaToolkit()
-    assert not hasattr(tk, "instructions")
+def test_daytona_tools_omit_instruction_block():
+    assert all(not hasattr(tool, "instructions") for tool in make_daytona_tools())
 
 
 # ---------------------------------------------------------------------------
@@ -166,22 +144,22 @@ def test_toolkit_omits_instruction_block():
 
 
 def test_get_sandbox_no_id_raises():
-    tk = DaytonaToolkit()
+    tk = DaytonaContextPreparer("")
     with pytest.raises(RuntimeError, match="No sandbox_id"):
         tk._get_sandbox()
 
 
 def test_get_sandbox_caches_instance():
-    tk = DaytonaToolkit(sandbox_id="sb-abc")
+    tk = DaytonaContextPreparer(sandbox_id="sb-abc")
     fake_sb = MagicMock()
-    with patch("tools.daytona_toolkit.toolkit.DaytonaToolkit._get_sandbox") as mock_get:
+    with patch("tools.daytona_toolkit.context.DaytonaContextPreparer._get_sandbox") as mock_get:
         mock_get.return_value = fake_sb
         result = tk._get_sandbox()
         assert result is fake_sb
 
 
 def test_get_sandbox_uses_cached():
-    tk = DaytonaToolkit(sandbox_id="sb-abc")
+    tk = DaytonaContextPreparer(sandbox_id="sb-abc")
     fake_sb = MagicMock()
     tk._sandbox = fake_sb
     # Should return cached without importing sandbox module
@@ -195,13 +173,13 @@ def test_get_sandbox_uses_cached():
 
 
 async def test_get_sandbox_async_no_id_raises():
-    tk = DaytonaToolkit()
+    tk = DaytonaContextPreparer("")
     with pytest.raises(RuntimeError, match="No sandbox_id"):
         await tk._get_sandbox_async()
 
 
 async def test_get_sandbox_async_caches_per_loop():
-    tk = DaytonaToolkit(sandbox_id="sb-xyz")
+    tk = DaytonaContextPreparer(sandbox_id="sb-xyz")
     fake_sb = MagicMock()
 
     async def fake_get_async(sandbox_id):
@@ -220,7 +198,7 @@ async def test_get_sandbox_async_caches_per_loop():
 
 async def test_get_sandbox_async_invalidates_on_new_loop():
     """Stale sandbox from different loop ID should be discarded."""
-    tk = DaytonaToolkit(sandbox_id="sb-xyz")
+    tk = DaytonaContextPreparer(sandbox_id="sb-xyz")
     old_sb = MagicMock()
     tk._sandbox = old_sb
     tk._sandbox_loop_id = 999999  # fake old loop id
@@ -243,13 +221,13 @@ async def test_get_sandbox_async_invalidates_on_new_loop():
 
 
 def test_prepare_context_injects_sandbox_and_cwd():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx()
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
-        patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"),
+        patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"),
         patch("sandbox.workspace.inject_code_intelligence"),
     ):
         tk.prepare_context(ctx)
@@ -260,13 +238,13 @@ def test_prepare_context_injects_sandbox_and_cwd():
 
 
 def test_prepare_context_no_cwd_skips_metadata_key():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx()
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
-        patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value=None),
+        patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value=None),
         patch("sandbox.workspace.inject_code_intelligence"),
     ):
         tk.prepare_context(ctx)
@@ -277,14 +255,14 @@ def test_prepare_context_no_cwd_skips_metadata_key():
 
 
 def test_prepare_context_respects_preseeded_workspace_root_override():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(
-            DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"
+            DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"
         ) as resolve_mock,
         patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
     ):
@@ -303,7 +281,7 @@ def test_prepare_context_respects_preseeded_workspace_root_override():
 
 
 async def test_prepare_context_async_injects_sandbox_and_cwd():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx()
 
@@ -316,7 +294,9 @@ async def test_prepare_context_async_injects_sandbox_and_cwd():
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch.object(
-            DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/async/workspace")
+            DaytonaContextPreparer,
+            "_resolve_cwd_async",
+            new=AsyncMock(return_value="/async/workspace"),
         ),
         patch("sandbox.workspace.inject_code_intelligence"),
     ):
@@ -328,13 +308,17 @@ async def test_prepare_context_async_injects_sandbox_and_cwd():
 
 
 async def test_prepare_context_async_no_cwd():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx()
 
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
-        patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value=None)),
+        patch.object(
+            DaytonaContextPreparer,
+            "_resolve_cwd_async",
+            new=AsyncMock(return_value=None),
+        ),
         patch("sandbox.workspace.inject_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
@@ -345,14 +329,14 @@ async def test_prepare_context_async_no_cwd():
 
 
 async def test_prepare_context_async_respects_preseeded_workspace_root_override():
-    tk = DaytonaToolkit(sandbox_id="sb-test")
+    tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch.object(
-            DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
+            DaytonaContextPreparer, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
         ) as resolve_mock,
         patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
     ):
@@ -375,7 +359,7 @@ def test_resolve_cwd_sync_calls_discover_workspace():
     mock_module = MagicMock()
     mock_module.discover_workspace.return_value = "/found/workspace"
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
-        result = DaytonaToolkit._resolve_cwd_sync(fake_sb)
+        result = DaytonaContextPreparer._resolve_cwd_sync(fake_sb)
         assert result == "/found/workspace"
         mock_module.discover_workspace.assert_called_once_with(fake_sb)
 
@@ -385,21 +369,11 @@ async def test_resolve_cwd_async_calls_discover_workspace_async():
     mock_module = MagicMock()
     mock_module.discover_workspace_async = AsyncMock(return_value="/async/found")
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
-        result = await DaytonaToolkit._resolve_cwd_async(fake_sb)
+        result = await DaytonaContextPreparer._resolve_cwd_async(fake_sb)
         assert result == "/async/found"
 
 
 # ---------------------------------------------------------------------------
-# Toolkit description present
-# ---------------------------------------------------------------------------
-
-
-def test_toolkit_has_description():
-    tk = DaytonaToolkit()
-    assert tk.description
-    assert "sandbox" in tk.description.lower()
-
-
-def test_toolkit_has_no_instructions():
-    tk = DaytonaToolkit()
+def test_daytona_context_preparer_has_no_instructions():
+    tk = DaytonaContextPreparer("sb-test")
     assert not hasattr(tk, "instructions")

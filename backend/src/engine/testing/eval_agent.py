@@ -240,7 +240,7 @@ class EvalAgent:
 
     Wraps an :class:`EphemeralAgent` (built via :func:`spawn_agent`) with
     credentials from settings.json. Test classes configure their specific
-    agent (system prompt, toolkits, background tasks) via the
+    agent (system prompt, tools, background tasks) via the
     :meth:`create` classmethod.
     """
 
@@ -324,13 +324,13 @@ class EvalAgent:
         tool_call_limit: int | None = None,
         max_tokens: int | None = None,
         settings: Settings | None = None,
-        toolkits: list[str] | None = None,
+        tools: list[str] | None = None,
     ) -> EvalAgent:
         """Create a configured EvalAgent.
 
         EvalAgent is a thin test harness wrapper around :func:`spawn_agent`.
         All production spawn semantics (model resolution, API client,
-        Daytona toolkit registration, capability gating) run through the
+        Daytona tool registration, capability gating) run through the
         same code path as the server router, so tests exercise the real
         stack rather than a parallel implementation.
 
@@ -343,8 +343,8 @@ class EvalAgent:
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
-            toolkits: List of toolkit names to register. Defaults to
-                ["sandbox_operations", "subagent"].
+            tools: List of tool names to register. Defaults to Daytona sandbox
+                tools plus ``run_subagent``.
 
         Returns:
             Configured EvalAgent ready to invoke.
@@ -385,13 +385,23 @@ class EvalAgent:
         # Tune the AgentDefinition so spawn_agent produces the same tool
         # surface EvalAgent historically exposed: Daytona + subagent, no
         # auto-loaded skills, the raw test system prompt.
-        if toolkits is None:
-            toolkits = ["sandbox_operations", "subagent"]
+        if tools is None:
+            tools = [
+                "daytona_grep",
+                "daytona_glob",
+                "daytona_read_file",
+                "daytona_write_file",
+                "daytona_edit_file",
+                "daytona_delete_file",
+                "daytona_move_file",
+                "daytona_shell",
+                "run_subagent",
+            ]
         agent_def = AgentDefinition(
             name="eval_agent",
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
-            toolkits=toolkits,
+            tools=tools,
             tool_call_limit=tool_call_limit,
             include_skills=False,
             source="builtin",

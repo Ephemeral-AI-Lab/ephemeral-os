@@ -13,6 +13,6 @@ def configure_runtime_logging(*, verbose: bool) -> None:
         "httpcore",
         "engine.core.query",
         "engine.core.streaming_executor",
-        "tools.daytona_toolkit.toolkit",
+        "tools.daytona_toolkit.all_tools",
     ):
         logging.getLogger(name).setLevel(logging.WARNING)

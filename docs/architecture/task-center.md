@@ -1,15 +1,18 @@
 # Task Center
 
-TaskCenter owns the team task graph, notes, status transitions, budget counters, task context assembly, and replan application. It is the coordination layer between planners, workers, replanners, and the dispatch queue.
+TaskCenter is the composition facade for team coordination: task graph
+persistence, notes, budgets, context assembly, event emission, and runtime
+wiring. Runtime status transitions flow through `TaskStatusHandler`, while
+`TaskQueue` dispatches ready task ids to the executor.
 
 ## Responsibilities
 
 - Insert validated plans into the task DAG.
 - Track task status and dependency readiness.
 - Build injected task context through `TaskContextBuilder` from dependency notes, parent context, replanner root cause traces, and recent scope changes.
-- Mark work complete or failed.
-- Spawn replanner tasks when a worker submits failure.
-- Apply replanner output by inserting new tasks, cancelling stale tasks, and completing or expanding the replanner.
+- Route work completion, failure, cancellation, parent-summary finalization, and replan requests through `TaskStatusHandler`.
+- Spawn replanner tasks when a worker submits `request_replan`.
+- Apply replanner output by inserting new tasks, cancelling stale tasks, and completing or expanding the replanner through the unified status handler.
 
 ## Statuses
 
@@ -21,18 +24,20 @@ Task statuses are `pending`, `ready`, `running`, `expanded`,
 
 ## Replanning
 
-When a worker reports failure, the executor calls `TaskCenter.request_replan`.
-The executor only interprets the agent result; TaskCenter owns the lifecycle
-mutation, budget accounting, event emission, and persistence transaction.
+When a worker reports failure, the executor returns
+`TaskStatusUpdate(REQUEST_REPLAN, summary=...)`. The executor only interprets
+terminal tool metadata; `TaskStatusHandler` owns the lifecycle mutation, budget
+accounting, event emission, and persistence transaction.
 
-TaskCenter marks the original task `request_replan`, creates a replanner task, and
-rewires each `pending` dependent from the failed task to the replanner. A
+`TaskStatusHandler` marks the original task `request_replan`, creates a replanner
+task, and rewires each `pending` dependent from the failed task to the replanner. A
 dependent with any other status is a task graph invariant violation: downstream
 work that depends on the failed task should not be `ready`, `running`,
 `expanded`, `request_replan`, or terminal.
 
-`GraphInvariantViolation` is fatal to the team run. The executor immediately
-fails the team run so the corrupted task graph cannot continue dispatching.
+`GraphInvariantViolation` is fatal to the team run. The failed status update
+routes through `TaskStatusHandler`, which fail-fasts the run so the corrupted
+task graph cannot continue dispatching.
 
 Dependency readiness is strict: a task can leave `pending` for scheduler-owned
 work states (`ready`, `running`, `expanded`, `request_replan`, or `done`) only when

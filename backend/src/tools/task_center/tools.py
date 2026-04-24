@@ -5,8 +5,7 @@ Tools exposed in the main loop:
 - read_task_details             — task spec + recent notes by task id / scope
 - read_file_note                — search notes by file path
 
-Role-based restrictions are handled via ``blocked_tools`` in agent definitions
-rather than separate read/write toolkit variants.
+Role-based restrictions are handled via ``blocked_tools`` in agent definitions.
 """
 
 from __future__ import annotations

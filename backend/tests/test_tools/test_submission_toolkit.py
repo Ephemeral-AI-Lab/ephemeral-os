@@ -1,11 +1,11 @@
-"""Tests for tools.submission.toolkit."""
+"""Tests for tools.submission.tools."""
 
 from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
 
-from tools.submission.toolkit import (
+from tools.submission.tools import (
     RequestReplanTool,
     SubmitPlanTool,
     SubmitTaskSuccessTool,

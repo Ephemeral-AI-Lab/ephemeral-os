@@ -24,8 +24,7 @@ interface AgentDetail {
   effort: string | null
   tool_call_limit: number | null
   tools: string[] | null
-  disallowed_tools: string[] | null
-  toolkits: string[] | null
+  blocked_tools: string[] | null
   skills: string[]
   hooks: Record<string, unknown> | null
   background: boolean
@@ -136,12 +135,6 @@ async function fetchAvailableTools(): Promise<AvailableTool[]> {
   return res.json()
 }
 
-async function fetchAvailableToolkits(): Promise<string[]> {
-  const res = await fetch(`${API}/toolkits/available`)
-  if (!res.ok) return []
-  return res.json()
-}
-
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -230,8 +223,7 @@ interface FormData {
   effort: string
   tool_call_limit: string
   tools: string
-  disallowed_tools: string
-  toolkits: string
+  blocked_tools: string
   skills: string
   background: boolean
   initial_prompt: string
@@ -247,8 +239,7 @@ const EMPTY_FORM: FormData = {
   effort: '',
   tool_call_limit: '',
   tools: '',
-  disallowed_tools: '',
-  toolkits: '',
+  blocked_tools: '',
   skills: '',
   background: false,
   initial_prompt: '',
@@ -265,8 +256,7 @@ function agentToForm(agent: AgentDetail): FormData {
     effort: agent.effort ?? '',
     tool_call_limit: agent.tool_call_limit?.toString() ?? '',
     tools: agent.tools?.join(', ') ?? '',
-    disallowed_tools: agent.disallowed_tools?.join(', ') ?? '',
-    toolkits: agent.toolkits?.join(', ') ?? '',
+    blocked_tools: agent.blocked_tools?.join(', ') ?? '',
     skills: agent.skills?.join(', ') ?? '',
     background: agent.background,
     initial_prompt: agent.initial_prompt ?? '',
@@ -288,8 +278,7 @@ function formToPayload(form: FormData): Record<string, unknown> {
     effort: form.effort || null,
     tool_call_limit: form.tool_call_limit ? parseInt(form.tool_call_limit, 10) : null,
     tools: splitList(form.tools),
-    disallowed_tools: splitList(form.disallowed_tools),
-    toolkits: splitList(form.toolkits),
+    blocked_tools: splitList(form.blocked_tools),
     skills: splitList(form.skills) ?? [],
     background: form.background,
     initial_prompt: form.initial_prompt || null,
@@ -370,14 +359,12 @@ function AgentBuilderForm({
   initial,
   editing,
   availableTools,
-  availableToolkits,
   onSave,
   onCancel,
 }: {
   initial: FormData
   editing: boolean
   availableTools: AvailableTool[]
-  availableToolkits: string[]
   onSave: (payload: Record<string, unknown>) => Promise<void>
   onCancel: () => void
 }) {
@@ -468,7 +455,7 @@ function AgentBuilderForm({
       {/* Tools & Skills */}
       <section className="space-y-3">
         <SectionHeader>Tools &amp; Skills</SectionHeader>
-        <TextField label="Allowed Tools" value={form.tools} onChange={v => set('tools', v)} placeholder="Read, Write, Bash (comma-separated, empty = all)" />
+        <TextField label="Tools" value={form.tools} onChange={v => set('tools', v)} placeholder="daytona_read_file, ci_query_symbol (comma-separated)" />
         {availableTools.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {availableTools.map(t => (
@@ -488,26 +475,7 @@ function AgentBuilderForm({
             ))}
           </div>
         )}
-        <TextField label="Disallowed Tools" value={form.disallowed_tools} onChange={v => set('disallowed_tools', v)} placeholder="agent, file_edit (comma-separated)" />
-        <TextField label="Toolkits" value={form.toolkits} onChange={v => set('toolkits', v)} placeholder="daytona, mcp (comma-separated)" />
-        {availableToolkits.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {availableToolkits.map(tk => (
-              <button
-                key={tk}
-                className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-500"
-                onClick={() => {
-                  const current = form.toolkits ? form.toolkits.split(',').map(s => s.trim()).filter(Boolean) : []
-                  if (!current.includes(tk)) {
-                    set('toolkits', [...current, tk].join(', '))
-                  }
-                }}
-              >
-                + {tk}
-              </button>
-            ))}
-          </div>
-        )}
+        <TextField label="Blocked Tools" value={form.blocked_tools} onChange={v => set('blocked_tools', v)} placeholder="daytona_delete_file, ci_status (comma-separated)" />
         <TextField label="Skills" value={form.skills} onChange={v => set('skills', v)} placeholder="skill-slug-1, skill-slug-2" />
       </section>
 
@@ -605,13 +573,10 @@ function AgentDetailView({
       </div>
 
       {agent.tools && (
-        <TagSection label="Allowed Tools" items={agent.tools} />
+        <TagSection label="Tools" items={agent.tools} />
       )}
-      {agent.disallowed_tools && (
-        <TagSection label="Disallowed Tools" items={agent.disallowed_tools} accent="text-red-400 border-red-800" />
-      )}
-      {agent.toolkits && (
-        <TagSection label="Toolkits" items={agent.toolkits} accent="text-purple-400 border-purple-800" />
+      {agent.blocked_tools && (
+        <TagSection label="Blocked Tools" items={agent.blocked_tools} accent="text-red-400 border-red-800" />
       )}
       {agent.skills && agent.skills.length > 0 && (
         <TagSection label="Skills" items={agent.skills} accent="text-emerald-400 border-emerald-800" />
@@ -680,7 +645,6 @@ export default function AgentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'builtin' | 'user'>('all')
   const [availableTools, setAvailableTools] = useState<AvailableTool[]>([])
-  const [availableToolkits, setAvailableToolkits] = useState<string[]>([])
 
   const refresh = useCallback(async () => {
     try {
@@ -697,9 +661,8 @@ export default function AgentsPage() {
   useEffect(() => { refresh() }, [refresh])
 
   const loadMeta = useCallback(async () => {
-    const [tools, toolkits] = await Promise.all([fetchAvailableTools(), fetchAvailableToolkits()])
+    const tools = await fetchAvailableTools()
     setAvailableTools(tools)
-    setAvailableToolkits(toolkits)
   }, [])
 
   const selectAgent = async (name: string) => {
@@ -812,7 +775,6 @@ export default function AgentsPage() {
           initial={EMPTY_FORM}
           editing={false}
           availableTools={availableTools}
-          availableToolkits={availableToolkits}
           onSave={async (payload) => {
             await createAgent(payload)
             await refresh()
@@ -828,7 +790,6 @@ export default function AgentsPage() {
           initial={agentToForm(selectedAgent)}
           editing={true}
           availableTools={availableTools}
-          availableToolkits={availableToolkits}
           onSave={async (payload) => {
             const updated = await updateAgent(selectedAgent.name, payload)
             setSelectedAgent(updated)

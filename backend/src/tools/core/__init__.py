@@ -2,7 +2,6 @@
 
 from tools.core.base import (
     BaseTool,
-    BaseToolkit,
     TextToolOutput,
     ToolExecutionContext,
     ToolRegistry,
@@ -14,7 +13,6 @@ from tools.core.decorator import tool
 
 __all__ = [
     "BaseTool",
-    "BaseToolkit",
     "TextToolOutput",
     "ToolExecutionContext",
     "ToolRegistry",

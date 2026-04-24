@@ -37,12 +37,11 @@ class TranscriptItem(BaseModel):
     is_error: bool | None = None
 
 
-class ToolkitSnapshot(BaseModel):
-    """UI-safe toolkit representation."""
+class ToolSnapshot(BaseModel):
+    """UI-safe tool representation."""
 
     name: str
     description: str
-    tools: list[str]
 
 
 class BackendEvent(BaseModel):
@@ -66,7 +65,7 @@ class BackendEvent(BaseModel):
     message: str | None = None
     item: TranscriptItem | None = None
     state: dict[str, Any] | None = None
-    toolkits: list[ToolkitSnapshot] | None = None
+    tools: list[ToolSnapshot] | None = None
     tool_name: str | None = None
     tool_input: dict[str, Any] | None = None
     output: str | None = None
@@ -76,12 +75,12 @@ class BackendEvent(BaseModel):
     @classmethod
     def ready(
         cls,
-        toolkits: list[ToolkitSnapshot] | None = None,
+        tools: list[ToolSnapshot] | None = None,
         state: dict[str, Any] | None = None,
     ) -> BackendEvent:
         return cls(
             type="ready",
-            toolkits=toolkits or [],
+            tools=tools or [],
             state=state,
         )
 
@@ -90,6 +89,6 @@ __all__ = [
     "BackendEvent",
     "BackendHostConfig",
     "FrontendRequest",
-    "ToolkitSnapshot",
+    "ToolSnapshot",
     "TranscriptItem",
 ]

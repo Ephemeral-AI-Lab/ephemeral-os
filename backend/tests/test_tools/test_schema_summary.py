@@ -6,8 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
-from tools.core.schema_summary import collect_schema_toolkits, format_tool_schema_summary
+from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.core.schema_summary import collect_schema_tools, format_tool_schema_summary
 
 
 class _SyntheticInput(BaseModel):
@@ -36,87 +36,74 @@ class _SyntheticTool(BaseTool):
 
 
 def test_schema_summary_prints_live_input_and_output_models(tmp_path):
-    toolkits = collect_schema_toolkits(cwd=tmp_path, caller_agent="team_planner")
+    tools = collect_schema_tools(cwd=tmp_path, caller_agent="team_planner")
 
-    summary = format_tool_schema_summary(toolkits, include_descriptions=False)
+    summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Toolkit: code_intelligence" in summary
-    assert "  ci_workspace_structure\n" in summary
+    assert "Tool: ci_workspace_structure" in summary
     assert "      - max_depth: int [default 3]" in summary
     assert "      - paths: list[str] [default []]" in summary
-    assert "  ci_query_symbol\n" in summary
+    assert "Tool: ci_query_symbol" in summary
     assert "      - definitions: list[CiSymbolDefinitionOutput] [default []]" in summary
 
-    assert "Toolkit: task_center" in summary
-    assert "  submit_file_notes\n" in summary
+    assert "Tool: submit_file_notes" in summary
     assert "      - notes: list[FileNoteInput] [required]" in summary
     assert "      - notes: list[FileNoteItemOutput] [default []]" in summary
 
-    assert "Toolkit: submission" in summary
-    assert "  submit_task_success\n" in summary
+    assert "Tool: submit_task_success" in summary
     assert "      - summary: str [required]" in summary
-    assert "  request_replan\n" in summary
+    assert "Tool: request_replan" in summary
     assert "      - reason: str [required]" in summary
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):
-    toolkits = collect_schema_toolkits(cwd=tmp_path)
-    summary = format_tool_schema_summary(toolkits, include_descriptions=False)
+    tools = collect_schema_tools(cwd=tmp_path)
+    summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    for toolkit in toolkits:
-        assert f"Toolkit: {toolkit.name}" in summary
-        for tool in toolkit.list_tools():
-            lines = summary.splitlines()
-            start = lines.index(f"  {tool.name}")
-            end = next(
-                (
-                    idx
-                    for idx in range(start + 1, len(lines))
-                    if lines[idx].startswith("  ") and not lines[idx].startswith("    ")
-                ),
-                len(lines),
-            )
-            block = "\n".join(lines[start:end])
-            assert "    input:" in block
-            assert "    output:" in block
+    for tool in tools:
+        assert f"Tool: {tool.name}" in summary
+        lines = summary.splitlines()
+        start = lines.index(f"Tool: {tool.name}")
+        end = next(
+            (
+                idx
+                for idx in range(start + 1, len(lines))
+                if lines[idx].startswith("Tool: ")
+            ),
+            len(lines),
+        )
+        block = "\n".join(lines[start:end])
+        assert "    input:" in block
+        assert "    output:" in block
 
 
-def test_schema_summary_omits_toolkit_instructions(tmp_path):
-    toolkits = collect_schema_toolkits(cwd=tmp_path)
+def test_schema_summary_omits_instruction_blocks(tmp_path):
+    tools = collect_schema_tools(cwd=tmp_path)
 
-    summary = format_tool_schema_summary(toolkits, include_descriptions=False)
+    summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Toolkit: code_intelligence" in summary
+    assert "Tool: ci_query_symbol" in summary
     assert "  instructions:" not in summary
 
 
 def test_daytona_summary_lists_prefixed_tools_without_instruction_block(tmp_path):
-    toolkits = collect_schema_toolkits(cwd=tmp_path)
+    tools = collect_schema_tools(cwd=tmp_path)
 
-    summary = format_tool_schema_summary(toolkits, include_descriptions=True)
+    summary = format_tool_schema_summary(tools, include_descriptions=True)
 
-    assert "Toolkit: sandbox_operations" in summary
-    assert "  daytona_write_file" in summary
-    assert "  daytona_shell" in summary
-    assert "  write_file\n" not in summary
+    assert "Tool: daytona_write_file" in summary
+    assert "Tool: daytona_shell" in summary
+    assert "Tool: write_file\n" not in summary
 
 
 def test_schema_summary_formats_literals_defaults_and_root_models():
     summary = format_tool_schema_summary(
-        [
-            BaseToolkit(
-                name="synthetic",
-                description="Synthetic toolkit.",
-                tools=[_SyntheticTool()],
-            )
-        ],
+        [_SyntheticTool()],
         include_descriptions=True,
     )
 
-    assert "Toolkit: synthetic" in summary
-    assert "  Synthetic toolkit." in summary
-    assert "  synthetic_tool" in summary
-    assert "    description: Synthetic formatter coverage." in summary
+    assert "Tool: synthetic_tool" in summary
+    assert "  description: Synthetic formatter coverage." in summary
     assert '      - mode: "fast" | "safe" [required] - Execution mode.' in summary
     assert (
         "      - labels: dict[str, str] [default {}] - Lookup labels."

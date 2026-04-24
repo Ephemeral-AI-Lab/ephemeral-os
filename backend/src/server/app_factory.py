@@ -29,11 +29,11 @@ from config import Settings, load_settings
 from db.engine import get_session_factory, initialize_db
 from db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from skills.db.store import SkillDefinitionStore
-from server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
+from server.protocol import BackendEvent, BackendHostConfig, ToolSnapshot
 from server.logging_config import configure_runtime_logging
 from providers.types import SupportsStreamingMessages
 from tools import ToolRegistry
-from tools.core.catalog import collect_toolkit_catalog
+from tools.core.catalog import collect_tool_catalog
 from providers.api import create_models_router
 from agents.api.router import create_agents_router
 from server.routers.core import create_core_router
@@ -115,7 +115,7 @@ class SessionState:
             api_client=host_config.api_client,
             restore_messages=host_config.restore_messages,
         )
-        # Keep a tool registry for config-time queries (agent builder, toolkit snapshots)
+        # Keep a tool registry for config-time queries.
         from tools import create_default_tool_registry
 
         self._tool_registry = create_default_tool_registry()
@@ -151,18 +151,17 @@ class SessionState:
     def set_event_queue(self, queue: asyncio.Queue[BackendEvent | None] | None) -> None:
         self._event_queue = queue
 
-    def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
+    def _tool_snapshots(self) -> list[ToolSnapshot]:
         if self._tool_registry is None:
             raise RuntimeError("Tool registry not initialised")
         return [
-            ToolkitSnapshot(
+            ToolSnapshot(
                 name=entry.name,
                 description=entry.description,
-                tools=entry.tools,
             )
-            for entry in collect_toolkit_catalog(
+            for entry in collect_tool_catalog(
                 self._tool_registry,
-                include_runtime_toolkits=True,
+                include_runtime_tools=True,
                 cwd=self.cwd,
             )
         ]
@@ -211,14 +210,6 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
         model_store.initialize(sf)
 
     model_store.seed_from_json(str(_model_registry_path()))
-    try:
-        from team.memory.store import get_default_store as get_team_memory_store
-
-        memory_store = get_team_memory_store()
-        if not memory_store.is_initialised():
-            memory_store.initialize(sf)
-    except Exception:
-        logger.debug("TeamMemoryStore initialisation skipped", exc_info=True)
     return sf
 
 

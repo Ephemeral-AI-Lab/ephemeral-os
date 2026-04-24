@@ -30,7 +30,6 @@ from providers.types import (
 )
 from tools.core.base import (
     BaseTool,
-    BaseToolkit,
     ExecutionMetadata,
     ToolExecutionContext,
     ToolRegistry,
@@ -40,7 +39,7 @@ from tools.core.base import (
 )
 from tools.core.decorator import tool
 from tools.core.tool_execution import execute_tool_call
-from tools.task_center.toolkit import ReadTaskDetailsTool
+from tools.task_center.tools import ReadTaskDetailsTool
 
 
 # ---------------------------------------------------------------------------
@@ -262,13 +261,9 @@ class InvalidJsonOutputTool(BaseTool):
         return ToolResult(output="plain text")
 
 
-def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
-    return BaseToolkit(name="test_toolkit", description="Test", tools=list(tools))
-
-
 def _make_registry(*tools: BaseTool) -> ToolRegistry:
     registry = ToolRegistry()
-    registry.register_toolkit(_make_toolkit(*tools))
+    registry.register_many(tools)
     return registry
 
 
@@ -476,20 +471,15 @@ class TestToolRegistration:
         assert registry.get("echo") is not None
         assert registry.get("nonexistent") is None
 
-    def test_register_toolkit(self):
+    def test_register_multiple_tools(self):
         registry = _make_registry(EchoTool(), AddTool())
         assert len(registry.list_tools()) == 2
-        assert len(registry.list_toolkits()) == 1
 
-    def test_restrict_to_toolkits(self):
-        registry = ToolRegistry()
-        tk1 = BaseToolkit(name="tk1", description="A", tools=[EchoTool()])
-        tk2 = BaseToolkit(name="tk2", description="B", tools=[AddTool()])
-        registry.register_toolkit(tk1)
-        registry.register_toolkit(tk2)
+    def test_restrict_to_tools(self):
+        registry = _make_registry(EchoTool(), AddTool())
         assert len(registry.list_tools()) == 2
 
-        registry.restrict_to_toolkits(["tk1"])
+        registry.restrict_to_tools(["echo"])
         assert len(registry.list_tools()) == 1
         assert registry.get("echo") is not None
         assert registry.get("add") is None
@@ -1110,10 +1100,9 @@ async def test_no_tool_calls_returns_immediately(tmp_path: Path):
 
 class TestDaytonaToolSchemas:
     def test_all_daytona_tools_have_output_schemas(self):
-        from tools.daytona_toolkit.toolkit import DaytonaToolkit
+        from tools.daytona_toolkit import make_daytona_tools
 
-        tk = DaytonaToolkit(sandbox_id="test")
-        for daytona_tool in tk.list_tools():
+        for daytona_tool in make_daytona_tools():
             schema = daytona_tool.to_api_schema()
             assert "output_schema" in schema, (
                 f"{daytona_tool.name} missing output_schema — add output_model"

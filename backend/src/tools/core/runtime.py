@@ -7,7 +7,7 @@ still behaving like a mutable mapping so the engine can keep using
 ``metadata.get("key")``, ``metadata["key"] = value``, and
 ``{**metadata, ...}`` without a big-bang rewrite.
 
-Unknown keys land in ``extras`` so third-party toolkits can still add
+Unknown keys land in ``extras`` so third-party tools can still add
 their own plumbing without touching this file.
 """
 
@@ -33,7 +33,7 @@ MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
 class ExecutionMetadata:
     """Typed bag of runtime metadata passed to tool executions.
 
-    Known fields have typed accessors. Unknown keys (e.g. toolkit-specific
+    Known fields have typed accessors. Unknown keys (e.g. tool-specific
     values) are stored in :attr:`extras` and accessed via the mapping
     interface.
     """
@@ -58,7 +58,7 @@ class ExecutionMetadata:
     background_task_id: str | None = None
     on_progress_line: Callable[[str], None] | None = None
 
-    # Daytona sandbox plumbing, injected by ``DaytonaToolkit.prepare_context``.
+    # Daytona sandbox plumbing, injected by Daytona context preparation.
     daytona_sandbox: Any | None = None
     # Deprecated compatibility alias for older callers. New code should use
     # ``repo_root`` and ``exec_cwd`` instead.
@@ -76,9 +76,9 @@ class ExecutionMetadata:
     team_run_id: str | None = None
     work_item_id: str | None = None
 
-    # Escape hatch for toolkit-specific values the engine does not know
+    # Escape hatch for tool-specific values the engine does not know
     # about. Prefer adding a typed field above when a value is used by
-    # more than one toolkit.
+    # more than one tool.
     extras: dict[str, Any] = field(default_factory=dict)
 
     _TYPED_FIELDS: ClassVar[frozenset[str]] = frozenset(

@@ -1,7 +1,7 @@
 """Agent runtime exports.
 
 Avoid eager imports so tests can pull in background-task helpers without
-instantiating the full agent / toolkit factory stack at import time.
+instantiating the full agent / tool factory stack at import time.
 """
 
 from __future__ import annotations

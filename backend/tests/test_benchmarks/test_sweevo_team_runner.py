@@ -34,7 +34,7 @@ from team.builtins import (
     VALIDATOR,
 )
 from team.models import Task, TaskStatus, TeamDefinition, TeamRunStatus
-from team.task_context_builder import UserPromptContextParts
+from team.task_center.context_builder import UserPromptContextParts
 from tools.core.runtime import ExecutionMetadata
 
 

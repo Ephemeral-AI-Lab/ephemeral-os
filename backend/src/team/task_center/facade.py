@@ -17,14 +17,12 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from team.budget_manager import BudgetManager
 from team.models import (
     BudgetConfig,
     BudgetState,
     Task,
     TaskDefinition,
 )
-from team.note_manager import NoteManager
 from team.persistence.events import (
     TeamRunEvent,
     make_task_added,
@@ -33,7 +31,9 @@ from team.persistence.events import (
 from team.persistence.run_store import TeamRunStore
 from team.persistence.task_store import TaskStore
 from team.planning.expander import PlanExpander
-from team.task_context_builder import TaskContextBuilder
+from team.task_center.budget import BudgetManager
+from team.task_center.context_builder import TaskContextBuilder
+from team.task_center.notes import NoteManager
 
 logger = logging.getLogger(__name__)
 

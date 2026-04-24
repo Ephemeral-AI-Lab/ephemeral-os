@@ -163,7 +163,7 @@ def ensure_code_intelligence_runtime(
     """Inject Daytona runtime metadata and attach code intelligence if available.
 
     This is the shared boundary for Daytona-backed tools. Callers may discover
-    ``workspace_root`` differently (sync toolkit prepare, async toolkit prepare,
+    ``workspace_root`` differently (sync context prepare, async context prepare,
     lazy attach), but this helper owns the metadata contract and CI attachment.
     """
     metadata = context.metadata

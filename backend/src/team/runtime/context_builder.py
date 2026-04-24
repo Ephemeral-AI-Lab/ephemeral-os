@@ -166,19 +166,9 @@ def _format_benchmark_targets(team_run: "TeamRun") -> str:
 
 @lru_cache(maxsize=1)
 def _terminal_tool_descriptions() -> dict[str, str]:
-    from tools.submission.toolkit import (
-        RequestReplanTool,
-        SubmitPlanTool,
-        SubmitReplanTool,
-        SubmitTaskSuccessTool,
-    )
+    from tools.submission import make_submission_tools
 
-    tools = [
-        SubmitPlanTool(),
-        SubmitReplanTool(),
-        SubmitTaskSuccessTool(),
-        RequestReplanTool(),
-    ]
+    tools = make_submission_tools()
     return {
         tool.name: (tool.description or tool.short_description or tool.name).strip()
         for tool in tools

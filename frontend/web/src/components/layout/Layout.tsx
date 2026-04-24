@@ -36,12 +36,12 @@ export default function Layout() {
             Conversation
           </NavLink>
           <NavLink
-            to="/toolkits"
+            to="/tools"
             className={({ isActive }) =>
               `rounded px-3 py-1.5 text-sm transition ${isActive ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'}`
             }
           >
-            Toolkits
+            Tools
           </NavLink>
           <NavLink
             to="/agents"

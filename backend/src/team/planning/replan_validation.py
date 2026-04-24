@@ -1,6 +1,6 @@
 """Shared replan validation rules.
 
-The submission toolkit (pre-submission, inside
+The submission tool validation path (pre-submission, inside
 ``_validate_submit_replan_input``) and the plan expander (at-apply, inside
 ``PlanExpander.apply_replan``) enforce the same layer-restricted rules.
 They live here so the two callers cannot drift apart.

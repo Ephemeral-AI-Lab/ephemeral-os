@@ -7,19 +7,21 @@ EphemeralOS team coordination separates work execution from failure recovery acr
 ```mermaid
 sequenceDiagram
     participant Planner
-    participant TaskCenter
-    participant DispatchQueue
+    participant Executor
+    participant TaskStatusHandler
+    participant TaskQueue
     participant Worker
 
-    Planner->>TaskCenter: submit_plan(new_tasks=[...])
-    TaskCenter->>TaskCenter: validate and insert task DAG
-    DispatchQueue->>TaskCenter: pop_ready()
-    TaskCenter-->>DispatchQueue: ready task
-    DispatchQueue->>Worker: run task with notes and dependencies
-    Worker->>TaskCenter: submit_task_success(summary)
-    TaskCenter->>TaskCenter: mark child done
-    TaskCenter->>TaskCenter: planner/replanner parent awaits parent_summarizer
-    TaskCenter->>TaskCenter: parent_summarizer posts roll-up, parent becomes done
+    Planner->>Executor: submit_plan(new_tasks=[...])
+    Executor->>TaskStatusHandler: TaskStatusUpdate(EXPANDED, plan=...)
+    TaskStatusHandler->>TaskStatusHandler: validate and insert task DAG
+    TaskStatusHandler->>TaskQueue: enqueue ready task ids
+    TaskQueue->>Worker: run task with notes and dependencies
+    Worker->>Executor: submit_task_success(summary)
+    Executor->>TaskStatusHandler: TaskStatusUpdate(DONE, summary=...)
+    TaskStatusHandler->>TaskStatusHandler: mark child done
+    TaskStatusHandler->>TaskStatusHandler: planner/replanner parent awaits parent_summarizer
+    TaskStatusHandler->>TaskStatusHandler: parent_summarizer submits roll-up, parent becomes done
 ```
 
 ## Failure Recovery
@@ -27,18 +29,21 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Worker
-    participant TaskCenter
+    participant Executor
+    participant TaskStatusHandler
     participant Replanner
 
-    Worker->>TaskCenter: request_replan(reason)
-    TaskCenter->>TaskCenter: mark original REQUEST_REPLAN
-    TaskCenter->>TaskCenter: rewire pending dependents from original to replanner
-    TaskCenter->>Replanner: spawn replanner with root cause trace and failure context
-    Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...])
-    TaskCenter->>TaskCenter: apply replan and complete or expand replanner
+    Worker->>Executor: request_replan(reason)
+    Executor->>TaskStatusHandler: TaskStatusUpdate(REQUEST_REPLAN, summary=...)
+    TaskStatusHandler->>TaskStatusHandler: mark original REQUEST_REPLAN
+    TaskStatusHandler->>TaskStatusHandler: rewire pending dependents from original to replanner
+    TaskStatusHandler->>Replanner: enqueue replanner with root cause trace and failure context
+    Replanner->>Executor: submit_replan(new_tasks=[...], cancel_ids=[...])
+    Executor->>TaskStatusHandler: TaskStatusUpdate(EXPANDED, replan=...)
+    TaskStatusHandler->>TaskStatusHandler: apply replan and complete or expand replanner
 ```
 
-When a task enters `request_replan`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, `request_replan`, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction. The failed task summary should carry the developer's root cause trace when verification failed, including the failing command, expected-vs-actual behavior, traced production path, root-cause mechanism, and fix location.
+When a task enters `request_replan`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, `request_replan`, or terminal. The executor reaches this path by translating terminal metadata into `TaskStatusUpdate(REQUEST_REPLAN, ...)`; `TaskStatusHandler` owns the lifecycle mutation and persistence transaction. The failed task summary should carry the developer's root cause trace when verification failed, including the failing command, expected-vs-actual behavior, traced production path, root-cause mechanism, and fix location.
 
 Graph invariant violations fail the team run immediately. Across dispatch
 and recovery, scheduler-owned work states (`ready`,

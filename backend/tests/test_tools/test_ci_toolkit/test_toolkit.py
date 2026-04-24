@@ -1,12 +1,10 @@
-"""Tests for tools.ci_toolkit.CIToolkit."""
+"""Tests for code intelligence tool exports."""
 
-from tools.ci_toolkit import CIToolkit
+from tools.ci_toolkit import make_code_intelligence_tools
 
 
-def test_ci_toolkit_registers_all_tools():
-    ctx = type("Ctx", (), {"metadata": {}})()
-    tk = CIToolkit.from_context(ctx)
-    names = set(tk.tool_names())
+def test_ci_exports_all_tools():
+    names = {tool.name for tool in make_code_intelligence_tools()}
     expected = {
         "ci_status",
         "ci_workspace_structure",
@@ -16,15 +14,12 @@ def test_ci_toolkit_registers_all_tools():
     assert expected == names
 
 
-def test_ci_toolkit_blocked_tools_handled_by_registry():
+def test_ci_blocked_tools_handled_by_registry():
     """Verify that ToolRegistry.remove_tools works for role-based restrictions."""
     from tools.core.base import ToolRegistry
 
-    ctx = type("Ctx", (), {"metadata": {}})()
-    tk = CIToolkit.from_context(ctx)
-
     registry = ToolRegistry()
-    registry.register_toolkit(tk)
+    registry.register_many(make_code_intelligence_tools())
 
     # Simulate planner blocklist
     registry.remove_tools(["ci_status"])

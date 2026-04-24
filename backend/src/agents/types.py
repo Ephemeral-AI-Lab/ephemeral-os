@@ -9,10 +9,6 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator
 #: Valid effort level strings.
 EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
 
-#: Toolkit names that must not appear in the ``toolkits`` list.
-#: Toolkit names that must not appear in the ``toolkits`` list.
-_RESERVED_TOOLKIT_NAMES: frozenset[str] = frozenset()
-
 AgentSource = Literal["builtin", "user", "plugin"]
 AgentType = Literal["agent", "subagent"]
 
@@ -44,18 +40,16 @@ class AgentDefinition(BaseModel):
         default=None, validation_alias=AliasChoices("tool_call_limit", "toolCallLimit")
     )
 
-    # --- skills & toolkits ---
+    # --- skills & tools ---
     skills: list[str] = Field(default_factory=list)
-    toolkits: list[str] = Field(default_factory=list)
-    allowed_tools: list[str] = Field(
+    tools: list[str] = Field(
         default_factory=list,
-        validation_alias=AliasChoices("allowed_tools", "allowedTools"),
-        description="Optional extra tool names to add after toolkit assembly and before blocked_tools.",
+        description="Tool names available to this agent before blocked_tools filtering.",
     )
     blocked_tools: list[str] = Field(
         default_factory=list,
         validation_alias=AliasChoices("blocked_tools", "blockedTools"),
-        description="Tool names to remove after toolkit assembly. Use for role-based restrictions.",
+        description="Tool names to remove after tool registration. Use for role-based restrictions.",
     )
     terminal_tools: list[str] = Field(
         default_factory=list,
@@ -102,12 +96,12 @@ class AgentDefinition(BaseModel):
     )
 
     # Capability flags (authoritative for engine behaviour).
-    # ``can_spawn_subagents`` gates registration of the background toolkit
+    # ``can_spawn_subagents`` gates registration of background management tools
     # (subagents cannot launch their own background work or spawn further
     # subagents). ``require_fresh_client`` forces a dedicated API client
     # per agent instance — used for subagents so concurrent workers do
     # not share one httpx connection pool. ``include_skills`` opts into
-    # automatic skill toolkit registration; test harnesses set it to
+    # automatic skill tool registration; test harnesses set it to
     # False to get a minimal tool surface.
     can_spawn_subagents: bool = True
     require_fresh_client: bool = False
@@ -122,9 +116,8 @@ class AgentDefinition(BaseModel):
 
     @field_validator(
         "skills",
-        "toolkits",
         "permissions",
-        "allowed_tools",
+        "tools",
         "blocked_tools",
         "terminal_tools",
         mode="before",
@@ -133,17 +126,6 @@ class AgentDefinition(BaseModel):
     def _split_csv(cls, v: Any) -> Any:
         if isinstance(v, str):
             return [s.strip() for s in v.split(",") if s.strip()]
-        return v
-
-    @field_validator("toolkits", mode="after")
-    @classmethod
-    def _reject_reserved_toolkits(cls, v: list[str]) -> list[str]:
-        bad = [name for name in v if name in _RESERVED_TOOLKIT_NAMES]
-        if bad:
-            raise ValueError(
-                f"Toolkit(s) {bad} cannot be listed in 'toolkits'. "
-                f"These toolkit names are reserved."
-            )
         return v
 
     @field_validator("tool_call_limit", mode="before")

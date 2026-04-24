@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from code_intelligence.editing.change_labels import change_actor_label
 from team._path_utils import ScopePath
 from team.models import Note, Task
-from team.note_manager import NoteManager
+from team.task_center.notes import NoteManager
 
 if TYPE_CHECKING:
     from team.persistence.task_store import TaskStore

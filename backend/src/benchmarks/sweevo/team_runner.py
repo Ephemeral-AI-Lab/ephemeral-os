@@ -324,7 +324,7 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
     """Attach SWE-EVO runtime limits to each builtin agent."""
     exec_limits = _derive_execution_runtime_limits(instance)
     planner_limits = _derive_planner_runtime_limits(instance)
-    # (agent_name, limits, include_toolkits)
+    # (agent_name, limits, include_tools)
     spec: list[tuple[str, dict[str, int], bool]] = [
         (ROOT_PLANNER, planner_limits, True),
         (TEAM_PLANNER, planner_limits, True),
@@ -334,13 +334,13 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
         (TEAM_REPLANNER, exec_limits, False),
     ]
     overrides: dict[str, dict[str, Any]] = {}
-    for name, limits, include_toolkits in spec:
+    for name, limits, include_tools in spec:
         defn = get_definition(name)
         if defn is None:
             continue
         entry: dict[str, Any] = {"skills": list(defn.skills), **limits}
-        if include_toolkits:
-            entry["toolkits"] = list(defn.toolkits or [])
+        if include_tools:
+            entry["tools"] = list(defn.tools or [])
         overrides[name] = entry
     return overrides
 

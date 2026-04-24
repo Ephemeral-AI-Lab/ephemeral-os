@@ -34,10 +34,9 @@ export type BridgeSessionSnapshot = {
   output_path: string
 }
 
-export type ToolkitSnapshot = {
+export type ToolSnapshot = {
   name: string
   description: string
-  tools: string[]
 }
 
 export type SelectOption = {
@@ -80,7 +79,7 @@ export type BackendEvent = {
   item?: TranscriptItem | null
   state?: AppState | null
   tasks?: TaskSnapshot[] | null
-  toolkits?: ToolkitSnapshot[] | null
+  tools?: ToolSnapshot[] | null
   mcp_servers?: McpServerSnapshot[] | null
   bridge_sessions?: BridgeSessionSnapshot[] | null
   commands?: string[] | null

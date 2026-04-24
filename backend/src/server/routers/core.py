@@ -251,7 +251,7 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
             "output_style": "verbose" if settings.verbose else "normal",
         }
         ready = BackendEvent.ready(
-            toolkits=session._toolkit_snapshots(),
+            tools=session._tool_snapshots(),
             state=app_state,
         )
         return JSONResponse(content=json.loads(ready.model_dump_json()))

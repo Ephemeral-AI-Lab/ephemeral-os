@@ -22,7 +22,7 @@ if "anthropic.types" not in sys.modules:
     sys.modules["anthropic.types"] = types.ModuleType("anthropic.types")
 
 from tools.core.base import ToolExecutionContext
-from tools.subagent import SubagentToolkit
+from tools.subagent import make_subagent_tool_from_context
 from tools.subagent.run_subagent_tool import run_subagent
 from team.builtins import register_all as _register_team_builtins
 
@@ -79,35 +79,35 @@ def test_run_subagent_api_schema_requires_one_of_prompt_or_input():
     _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
 
 
-def test_subagent_toolkit_schema_limits_planner_to_scout():
-    toolkit = SubagentToolkit.from_context(
+def test_subagent_tool_schema_limits_planner_to_scout():
+    tool = make_subagent_tool_from_context(
         SimpleNamespace(metadata={"agent_name": "team_planner"})
     )
 
-    schema = toolkit.list_tools()[0].to_api_schema()["input_schema"]
+    schema = tool.to_api_schema()["input_schema"]
     enum = schema["properties"]["agent_name"]["enum"]
 
     assert enum == ["scout"]
     _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
 
 
-def test_subagent_toolkit_schema_limits_replanner_to_scout():
-    toolkit = SubagentToolkit.from_context(
+def test_subagent_tool_schema_limits_replanner_to_scout():
+    tool = make_subagent_tool_from_context(
         SimpleNamespace(metadata={"agent_name": "team_replanner"})
     )
 
-    schema = toolkit.list_tools()[0].to_api_schema()["input_schema"]
+    schema = tool.to_api_schema()["input_schema"]
     enum = schema["properties"]["agent_name"]["enum"]
 
     assert enum == ["scout"]
 
 
-def test_subagent_toolkit_schema_excludes_non_subagent_team_roles():
-    toolkit = SubagentToolkit.from_context(
+def test_subagent_tool_schema_excludes_non_subagent_team_roles():
+    tool = make_subagent_tool_from_context(
         SimpleNamespace(metadata={"agent_name": "coordinator"})
     )
 
-    schema = toolkit.list_tools()[0].to_api_schema()["input_schema"]
+    schema = tool.to_api_schema()["input_schema"]
     enum = schema["properties"]["agent_name"]["enum"]
 
     assert "scout" in enum

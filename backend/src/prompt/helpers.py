@@ -23,10 +23,10 @@ from team.models import (
     Task,
     TaskStatus,
 )
-from team.note_manager import NoteManager
 from team.persistence.events import TeamRunEvent, task_from_dict
 from team.persistence.run_store import TeamRunStore
-from team.task_context_builder import TaskContextBuilder
+from team.task_center.context_builder import TaskContextBuilder
+from team.task_center.notes import NoteManager
 from team.builtins import register_all as register_team_builtins
 from team.models import TeamDefinition
 from team.registry import get_team_definition, list_team_definitions
@@ -70,7 +70,7 @@ def load_agent_definition(name: str, settings) -> AgentDefinition | None:
             model=record.model,
             effort=record.effort,
             tool_call_limit=record.tool_call_limit,
-            toolkits=record.toolkits or [],
+            tools=record.tools or [],
             skills=record.skills or [],
             blocked_tools=record.blocked_tools or [],
             terminal_tools=record.terminal_tools or [],
@@ -374,7 +374,7 @@ def _append_skill_bundle(
 ) -> None:
     lines.extend(["", "### Skill Bundle"])
     if not agent_def.include_skills:
-        lines.extend(["", "_Skill toolkit disabled for this agent._"])
+        lines.extend(["", "_Skill loading tools disabled for this agent._"])
         return
 
     registry = load_skill_registry(cwd)

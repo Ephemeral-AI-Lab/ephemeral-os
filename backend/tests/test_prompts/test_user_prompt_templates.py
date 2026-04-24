@@ -9,9 +9,9 @@ from agents.registry import get_definition
 from prompt.user_prompt_templates import render_user_prompt_template
 from team.builtins import register_all
 from team.models import BudgetConfig, Note, Task, TaskStatus
-from team.note_manager import NoteManager
 from team.runtime.context_builder import build_query_context
-from team.task_context_builder import TaskContextBuilder
+from team.task_center.context_builder import TaskContextBuilder
+from team.task_center.notes import NoteManager
 
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompt" / "user_prompt"

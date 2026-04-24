@@ -1,4 +1,4 @@
-"""Diagnostics tool owned by the code intelligence toolkit."""
+"""Diagnostics tool owned by code intelligence tools."""
 
 from __future__ import annotations
 

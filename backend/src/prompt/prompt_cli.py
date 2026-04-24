@@ -29,7 +29,7 @@ def build_system_prompt_main() -> int:
     parser = argparse.ArgumentParser(description="Build system prompt for a named agent")
     parser.add_argument("agent_name", help="Name of the agent definition to look up")
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory (default: cwd)")
-    parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to toolkit setup")
+    parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to tool setup")
     parser.add_argument(
         "--no-runtime-sections",
         action="store_true",
@@ -148,7 +148,7 @@ def dump_team_system_prompts_main() -> int:
         help="Team definition id to resolve from the DB. Falls back to team name if no id match is found.",
     )
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory used for prompt assembly")
-    parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to toolkit setup")
+    parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to tool setup")
     parser.add_argument(
         "--output",
         default="",

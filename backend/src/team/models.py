@@ -115,13 +115,17 @@ class Note:
 
 
 # ---------------------------------------------------------------------------
-# TaskDefinition — what the planner submits
+# TaskDefinition — agent + spec (property 1 of every Task)
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class TaskDefinition:
-    """One item in a plan."""
+    """What defines a task: which agent, and what to do.
+
+    ``parent_id`` is NOT part of the definition — it is runtime-assigned by the
+    expander when children are inserted (see ``Task.parent_id``).
+    """
 
     id: str
     objective: str
@@ -129,7 +133,6 @@ class TaskDefinition:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
-    parent_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -139,14 +142,20 @@ class TaskDefinition:
 
 @dataclass
 class Task:
+    """A task is (1) a ``TaskDefinition`` and (2) a ``TaskSubmission``.
+
+    Non-planner agents emit a single ``LeafSubmission``. Planners emit a
+    two-stage ``PlannerSubmission``: stage 1 (the plan) at ``EXPANDED``, stage
+    2 (the summary) when the parent-summarizer sidecar succeeds.
+
+    ``submission`` is in-memory only — it is not persisted across restart.
+    """
+
     id: str
     team_run_id: str
-    agent_name: str
+    definition: "TaskDefinition"
     status: TaskStatus
-    objective: str
-    description: str = ""
-    deps: list[str] = field(default_factory=list)
-    scope_paths: list[str] = field(default_factory=list)
+    submission: "TaskSubmission | None" = None
     parent_id: str | None = None
     root_id: str = ""
     depth: int = 0
@@ -229,7 +238,6 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
     task_id = str(it.get("id") or "")
     objective = str(it.get("objective") or "")
     agent = str(it.get("agent") or "")
-    parent_id = it.get("parent_id")
     if not task_id:
         raise ValueError("TaskDefinition requires a non-empty 'id'")
     if not objective:
@@ -243,20 +251,45 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
-        parent_id=str(parent_id) if parent_id is not None else None,
     )
 
 
 # ---------------------------------------------------------------------------
-# Submission types
+# Submission types — property 2 of every Task
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class SubmittedSummary:
+    """Agent-emitted summary payload (text + optional artifact)."""
+
     summary: str
     artifact: dict[str, Any] | None = None
-    submission_kind: str = field(default="summary", init=False, repr=False)
+
+
+@dataclass
+class LeafSubmission:
+    """Submission from a non-planner agent — a single summary."""
+
+    summary: SubmittedSummary
+    kind: str = field(default="summary", init=False, repr=False)
+
+
+@dataclass
+class PlannerSubmission:
+    """Two-stage submission from a planner/replanner agent.
+
+    Stage 1 (``plan``) lands at ``EXPANDED`` when the planner emits children.
+    Stage 2 (``summary``) lands when the parent-summarizer sidecar succeeds
+    and its summary is copied onto the parent planner.
+    """
+
+    plan: "Plan | ReplanPlan"
+    summary: SubmittedSummary | None = None
+    kind: str = field(default="planner", init=False, repr=False)
+
+
+TaskSubmission = LeafSubmission | PlannerSubmission
 
 
 # ---------------------------------------------------------------------------

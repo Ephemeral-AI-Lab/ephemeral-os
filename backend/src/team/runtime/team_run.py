@@ -117,18 +117,22 @@ class TeamRun:
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
     ) -> None:
-        from team.models import Task, TaskStatus
+        from team.models import Task, TaskDefinition, TaskStatus
 
         objective = str(payload.get("objective") or payload.get("user_request") or "").strip()
         if not objective:
             raise ValueError("Root payload requires a non-empty 'objective'")
+        root_id = str(uuid.uuid4())
         root = Task(
-            id=str(uuid.uuid4()),
+            id=root_id,
             team_run_id=self.id,
-            agent_name=agent_name,
+            definition=TaskDefinition(
+                id=root_id,
+                objective=objective,
+                agent=agent_name,
+                scope_paths=list(payload.get("scope_paths", [])),
+            ),
             status=TaskStatus.PENDING,
-            objective=objective,
-            scope_paths=list(payload.get("scope_paths", [])),
             depth=0,
         )
         root.root_id = root.id

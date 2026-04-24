@@ -16,27 +16,29 @@ Developers and reviewers should use `submit_task_success(summary=...)` for evide
 
 ## Executor Dispatch
 
-The executor maps terminal metadata to runtime actions:
+The executor maps terminal metadata to one `TaskStatusUpdate`, and
+`TaskQueue` hands that update to `TaskStatusHandler`:
 
-- `AgentResult(submitted_plan=...)` expands planner tasks.
-- `AgentResult(submitted_replan=...)` applies corrective graph changes.
-- `AgentResult(summary=...)` completes successful work.
-- `ReplanRequest(reason=...)` starts a replanner for failed work.
+- `submit_plan(...)` becomes `TaskStatusUpdate(EXPANDED, plan=...)`.
+- `submit_replan(...)` becomes `TaskStatusUpdate(EXPANDED, replan=...)`.
+- `submit_task_success(summary=...)` becomes `TaskStatusUpdate(DONE, summary=...)`.
+- `request_replan(reason=...)` becomes `TaskStatusUpdate(REQUEST_REPLAN, summary=...)`.
 
 Planner and replanner parents with children do not become `done` at submission
 time. They move through `expanded`; after all direct children are terminal,
-TaskCenter moves them to `expanded_awaiting_summary`, injects a dispatchable
-`parent_summarizer` sidecar task, and only finalizes them as `done` after the
-roll-up is posted.
+`TaskStatusHandler` moves them to `expanded_awaiting_summary`, injects a
+dispatchable `parent_summarizer` sidecar task, and only finalizes them as
+`done` after the roll-up is durably submitted.
 
 ## Parent Summary Sidecar
 
 The parent-summary path is now a first-class team task, not an external trigger.
 When every direct child of a planner or replanner parent is terminal,
-TaskCenter creates a READY `parent_summarizer` sidecar with
+`TaskStatusHandler` creates a READY `parent_summarizer` sidecar with
 `fired_by_task_id` pointing at the awaiting-summary parent. The normal executor
 runs it with `read_task_details` and one terminal submission tool; successful
-submission posts the authoritative parent roll-up and finalizes the parent.
+submission calls `NoteManager.submit_summary(...)` for the authoritative parent
+roll-up and then finalizes the parent.
 If the summarizer finds unresolved child evidence, it submits
 `request_replan(reason=...)` instead; the executor replans the summarized parent
 rather than marking it `done`.

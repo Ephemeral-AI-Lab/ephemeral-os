@@ -1,11 +1,11 @@
-"""Helpers for enumerating toolkits and tools exposed by the runtime."""
+"""Helpers for enumerating tools exposed by the runtime."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tools.core.base import BaseToolkit, ToolRegistry
-from tools.core.factory import ToolkitContext, create_toolkit, list_toolkits
+from tools.core.base import BaseTool, ToolRegistry
+from tools.core.factory import ToolFactoryContext, create_tool, list_available_tools
 
 
 @dataclass(frozen=True)
@@ -16,77 +16,19 @@ class ToolCatalogEntry:
     description: str
 
 
-@dataclass(frozen=True)
-class ToolkitCatalogEntry:
-    """UI/API-safe toolkit metadata."""
-
-    name: str
-    description: str
-    tools: list[str]
-
-
-def _snapshot_contexts(toolkit_name: str) -> list[ToolkitContext]:
-    return [ToolkitContext()]
-
-
-def _iter_registered_toolkits() -> list[BaseToolkit]:
-    toolkits: list[BaseToolkit] = []
-    for toolkit_name in list_toolkits():
-        for ctx in _snapshot_contexts(toolkit_name):
-            toolkits.append(create_toolkit(toolkit_name, ctx))
-    return toolkits
+def _iter_available_tools() -> list[BaseTool]:
+    ctx = ToolFactoryContext()
+    return [create_tool(name, ctx) for name in list_available_tools()]
 
 
 def _background_tool_names() -> list[str]:
     return sorted(
         {
             tool.name
-            for toolkit in _iter_registered_toolkits()
-            for tool in toolkit.list_tools()
+            for tool in _iter_available_tools()
             if getattr(tool, "background", "forbidden") != "forbidden"
         }
     )
-
-
-def collect_toolkit_catalog(
-    tool_registry: ToolRegistry | None = None,
-    *,
-    include_runtime_toolkits: bool = False,
-    cwd: str | None = None,
-) -> list[ToolkitCatalogEntry]:
-    """Return deduplicated toolkit snapshots suitable for APIs and UI."""
-
-    by_name: dict[str, ToolkitCatalogEntry] = {}
-
-    def _merge(toolkit: BaseToolkit) -> None:
-        current = by_name.get(toolkit.name)
-        merged_tools = set(current.tools if current is not None else [])
-        merged_tools.update(toolkit.tool_names())
-        by_name[toolkit.name] = ToolkitCatalogEntry(
-            name=toolkit.name,
-            description=(current.description if current is not None else toolkit.description),
-            tools=sorted(merged_tools),
-        )
-
-    for toolkit in (tool_registry.list_toolkits() if tool_registry is not None else []):
-        _merge(toolkit)
-    for toolkit in _iter_registered_toolkits():
-        _merge(toolkit)
-
-    if include_runtime_toolkits:
-        from skills.core.loader import load_skill_registry
-        from tools.builtins.background import make_background_toolkit
-        from tools.builtins.skills import make_skills_toolkit
-
-        skills_toolkit = make_skills_toolkit(load_skill_registry(cwd))
-        if skills_toolkit.list_tools():
-            _merge(skills_toolkit)
-
-        background_tool_names = _background_tool_names()
-        if background_tool_names:
-            _merge(make_background_toolkit(background_tool_names))
-
-    return sorted(by_name.values(), key=lambda entry: entry.name)
 
 
 def collect_tool_catalog(
@@ -99,31 +41,29 @@ def collect_tool_catalog(
 
     by_name: dict[str, ToolCatalogEntry] = {}
 
-    def _merge_tool(name: str, description: str) -> None:
-        if name not in by_name:
-            by_name[name] = ToolCatalogEntry(name=name, description=description)
+    def _merge_tool(tool: BaseTool) -> None:
+        if tool.name not in by_name:
+            by_name[tool.name] = ToolCatalogEntry(
+                name=tool.name,
+                description=tool.description,
+            )
 
-    for toolkit in (tool_registry.list_toolkits() if tool_registry is not None else []):
-        for tool in toolkit.list_tools():
-            _merge_tool(tool.name, tool.description)
-    for toolkit in _iter_registered_toolkits():
-        for tool in toolkit.list_tools():
-            _merge_tool(tool.name, tool.description)
+    for tool in tool_registry.list_tools() if tool_registry is not None else []:
+        _merge_tool(tool)
+    for tool in _iter_available_tools():
+        _merge_tool(tool)
 
     if include_runtime_tools:
         from skills.core.loader import load_skill_registry
-        from tools.builtins.background import make_background_toolkit
-        from tools.builtins.skills import make_skills_toolkit
+        from tools.builtins.background import make_background_tools
+        from tools.builtins.skills import make_skills_tools
 
-        skill_registry = load_skill_registry(cwd)
-        skills_toolkit = make_skills_toolkit(skill_registry)
-        for tool in skills_toolkit.list_tools():
-            _merge_tool(tool.name, tool.description)
+        for tool in make_skills_tools(load_skill_registry(cwd)):
+            _merge_tool(tool)
 
         background_tool_names = _background_tool_names()
         if background_tool_names:
-            background_toolkit = make_background_toolkit(background_tool_names)
-            for tool in background_toolkit.list_tools():
-                _merge_tool(tool.name, tool.description)
+            for tool in make_background_tools(background_tool_names):
+                _merge_tool(tool)
 
     return sorted(by_name.values(), key=lambda entry: entry.name)

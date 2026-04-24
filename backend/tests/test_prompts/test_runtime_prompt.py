@@ -1,4 +1,4 @@
-"""Tests for prompt.runtime_prompt and background-related toolkit guidance."""
+"""Tests for prompt.runtime_prompt and background-related tool guidance."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ from prompt.runtime_prompt import (
     build_runtime_system_prompt,
     build_termination_condition_prompt,
 )
-from tools.builtins.background import make_background_toolkit
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
-from tools.subagent import SubagentToolkit
+from tools.builtins.background import make_background_tools
+from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.subagent import make_subagent_tools
 
 
 class _EmptyInput(BaseModel):
@@ -25,7 +25,7 @@ class _DemoTool(BaseTool):
     name = "demo_tool"
     description = (
         "Inspect the current target and summarize the next safe action. "
-        "Use only when the demo toolkit is active."
+        "Use only when the demo tool is active."
     )
     short_description = "Inspect the current target."
     input_model = _EmptyInput
@@ -44,20 +44,17 @@ def test_termination_condition_prompt_returns_empty_without_terminal_tools():
     assert "<Background Tasks>" not in prompt
 
 
-def test_subagent_toolkit_exposes_run_subagent_without_instruction_block():
-    toolkit = SubagentToolkit()
+def test_subagent_tools_expose_run_subagent_without_instruction_block():
+    tools = make_subagent_tools()
 
-    assert not hasattr(toolkit, "instructions")
-    assert toolkit.tool_names() == ["run_subagent"]
-    assert toolkit.get("run_subagent").short_description == "Spawn a subagent in the background."
+    assert [tool.name for tool in tools] == ["run_subagent"]
+    assert tools[0].short_description == "Spawn a subagent in the background."
 
 
-def test_background_toolkit_tracks_background_capable_tools_without_instruction_block():
-    toolkit = make_background_toolkit(["run_subagent"])
+def test_background_tools_expose_management_tools_without_instruction_block():
+    tools = make_background_tools(["run_subagent"])
 
-    assert not hasattr(toolkit, "instructions")
-    assert toolkit.background_capable_tools == ["run_subagent"]
-    assert toolkit.tool_names() == [
+    assert [tool.name for tool in tools] == [
         "check_background_progress",
         "cancel_background_task",
         "wait_for_background_task",
@@ -88,34 +85,22 @@ def test_termination_condition_prompt_only_renders_termination_condition():
     assert "- `submit_plan`" in prompt
 
 
-def test_tool_registry_remove_tools_filters_toolkits_too():
+def test_tool_registry_remove_tools_filters_registered_tools():
     registry = ToolRegistry()
-    toolkit = BaseToolkit(
-        name="demo",
-        description="Demo toolkit",
-        tools=[_DemoTool()],
-    )
-    registry.register_toolkit(toolkit)
+    registry.register(_DemoTool())
 
     registry.remove_tools(["demo_tool"])
 
     assert registry.get("demo_tool") is None
-    assert toolkit.list_tools() == []
 
 
-def test_tool_registry_restrict_to_tools_filters_toolkits_too():
+def test_tool_registry_restrict_to_tools_filters_registered_tools():
     registry = ToolRegistry()
-    toolkit = BaseToolkit(
-        name="demo",
-        description="Demo toolkit",
-        tools=[_DemoTool()],
-    )
-    registry.register_toolkit(toolkit)
+    registry.register(_DemoTool())
 
     registry.restrict_to_tools(["missing_tool"])
 
     assert registry.get("demo_tool") is None
-    assert registry.get_toolkit("demo") is None
 
 
 def test_runtime_context_message_contains_environment(monkeypatch):

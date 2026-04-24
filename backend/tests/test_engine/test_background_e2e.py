@@ -48,7 +48,7 @@ from tools.builtins.background.check_background_progress import (
     CheckBackgroundProgressInput,
     CheckBackgroundProgressTool,
 )
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.core.runtime import ExecutionMetadata
 from tools.subagent.run_subagent_tool import run_subagent
 from pydantic import BaseModel, Field

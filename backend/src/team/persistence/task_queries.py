@@ -128,9 +128,9 @@ async def fetch_expanded_parent_candidate(
 ) -> Row[Any] | None:
     """Return an expanded parent of ``current_id`` if live children are resolved.
 
-    ``all_detached`` is true when the parent has no successful child, but this
-    is not a failure signal; the caller still resolves the parent through the
-    normal summary/finalization path.
+    Failed, cancelled, and ``request_replan`` children are detached from
+    promotion readiness. They do not synthesize parent failure; the caller
+    resolves expandable parents through the normal summary/finalization path.
     """
     child = aliased(TaskRecord, name="child")
     parent_id_sub = (
@@ -150,18 +150,7 @@ async def fetch_expanded_parent_candidate(
         )
         .exists()
     )
-    all_children_detached = ~(
-        select(1)
-        .where(
-            sibling.parent_id == TaskRecord.id,
-            sibling.team_run_id == team_run_id,
-            sibling.status == "done",
-        )
-        .exists()
-    )
-    stmt = select(
-        TaskRecord.id, all_children_detached.label("all_detached")
-    ).where(
+    stmt = select(TaskRecord.id).where(
         TaskRecord.id == parent_id_sub,
         TaskRecord.team_run_id == team_run_id,
         TaskRecord.status == "expanded",

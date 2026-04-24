@@ -25,7 +25,6 @@ import uuid
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
-from team.budget_manager import BudgetManager
 from team.errors import BudgetExceeded, GraphInvariantViolation, InvalidPlan
 from team.models import (
     TERMINAL_STATUSES,
@@ -36,7 +35,8 @@ from team.models import (
     TaskStatus,
     TaskStatusUpdate,
 )
-from team.note_manager import NoteManager
+from team.task_center.budget import BudgetManager
+from team.task_center.notes import NoteManager
 from team.persistence.events import (
     TeamRunEvent,
     make_replace_dependency,

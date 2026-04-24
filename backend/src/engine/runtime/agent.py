@@ -26,8 +26,11 @@ from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompt import build_runtime_context_message, build_runtime_system_prompt
 from tools import create_default_tool_registry
-from tools.core.base import BaseToolkit
-from tools.core.factory import create_toolkit, has_toolkit, list_toolkits, ToolkitContext
+from tools.core.factory import (
+    ToolFactoryContext,
+    create_tool,
+    has_tool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -92,15 +95,15 @@ def finalize_tool_registry_and_prompt(
     This is the shared setup logic used by both spawn_agent() and EvalAgent.
 
     Args:
-        tool_registry: The tool registry (mutated in-place to add background toolkit).
+        tool_registry: The tool registry (mutated in-place to add background tools).
         system_prompt: The base system prompt.
         can_spawn_subagents: Whether this agent is allowed to launch background
             tasks and spawn subagents. Agents that cannot (e.g. subagents
-            themselves) have the background management toolkit
+            themselves) have the background management tools
             (check_background_progress / wait_for_background_task / cancel)
             withheld regardless of registry contents.
-        blocked_tools: Tool names that must be removed after all toolkits,
-            including runtime-added toolkits such as background management,
+        blocked_tools: Tool names that must be removed after tool registration,
+            including runtime-added tools such as background management,
             have been registered.
         terminal_tools: Tools that terminate the run immediately when called.
 
@@ -108,7 +111,8 @@ def finalize_tool_registry_and_prompt(
         Tuple of (updated_system_prompt, has_background_tools).
     """
     from prompt.runtime_prompt import build_termination_condition_prompt
-    from tools.builtins.background import make_background_toolkit
+    from tools.builtins.background import make_background_tools
+    from tools.submission import make_submission_tools
 
     bg_tool_names = [
         t.name
@@ -117,18 +121,20 @@ def finalize_tool_registry_and_prompt(
     ]
     has_background_tools = bool(bg_tool_names) and can_spawn_subagents
     if has_background_tools:
-        tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
-    submission_toolkit = tool_registry.get_toolkit("submission")
-    if submission_toolkit is not None:
+        tool_registry.register_many(make_background_tools(bg_tool_names))
+
+    registered_tool_names = {tool.name for tool in tool_registry.list_tools()}
+    submission_tool_names = {tool.name for tool in make_submission_tools()}
+    if registered_tool_names & submission_tool_names:
         allowed_terminal_tools = {
             str(name).strip()
             for name in (terminal_tools or [])
             if str(name).strip()
         }
         blocked_submission_tools = {
-            str(name).strip()
-            for name in submission_toolkit.tool_names()
-            if str(name).strip() and str(name).strip() not in allowed_terminal_tools
+            name
+            for name in submission_tool_names
+            if name in registered_tool_names and name not in allowed_terminal_tools
         }
         if blocked_submission_tools:
             tool_registry.remove_tools(sorted(blocked_submission_tools))
@@ -192,13 +198,13 @@ def _build_agent_tool_registry(
 ) -> ToolRegistry:
     """Build the tool registry for a spawning agent.
 
-    Registers toolkits requested by *agent_def*, the Daytona toolkit when
-    a sandbox is selected, restricts to the requested set, and finally
-    registers the skills toolkit unless the agent opts out.
+    Registers tools requested by *agent_def*, Daytona sandbox tools when
+    a sandbox is selected for a default agent, and skill loading tools unless
+    the agent opts out.
     """
     tool_registry = create_default_tool_registry()
 
-    toolkit_ctx = ToolkitContext(
+    tool_ctx = ToolFactoryContext(
         metadata={
             "agent_name": agent_name,
             "role": agent_def.role if agent_def else "",
@@ -206,108 +212,62 @@ def _build_agent_tool_registry(
             "sandbox_id": sandbox_id or "",
         },
     )
-    if agent_def and agent_def.toolkits:
-        for tk_name in agent_def.toolkits:
-            if tool_registry.get_toolkit(tk_name) is not None:
-                continue  # already registered
-            if has_toolkit(tk_name):
-                try:
-                    tk = create_toolkit(tk_name, toolkit_ctx)
-                    tool_registry.register_toolkit(tk)
-                    logger.info("Registered toolkit %r for agent %r", tk_name, agent_name)
-                except Exception:
-                    logger.warning(
-                        "Failed to create toolkit %r for agent %r",
-                        tk_name,
-                        agent_name,
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    "No toolkit class for %r requested by agent %r", tk_name, agent_name
-                )
+    if agent_def and agent_def.tools:
+        _register_requested_tools(tool_registry, agent_def.tools, tool_ctx, agent_name)
+    elif sandbox_id:
+        from tools.daytona_toolkit import make_daytona_tools
 
-    # Register Daytona sandbox tools when a sandbox is selected (if not
-    # already registered above).
-    if sandbox_id and tool_registry.get_toolkit("sandbox_operations") is None:
-        try:
-            from tools.daytona_toolkit import DaytonaToolkit
+        tool_registry.register_many(make_daytona_tools())
+        logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
 
-            daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
-            tool_registry.register_toolkit(daytona_toolkit)
-            logger.info("Registered DaytonaToolkit for sandbox %s", sandbox_id)
-        except Exception:
-            logger.warning(
-                "Failed to register DaytonaToolkit for sandbox %s",
-                sandbox_id,
-                exc_info=True,
-            )
-
-    if agent_def and agent_def.toolkits:
-        # restrict_to_toolkits([]) would clear ALL tools, so we only call
-        # it when agent_def.toolkits is non-empty.
-        tool_registry.restrict_to_toolkits(agent_def.toolkits)
-
-    if agent_def and agent_def.allowed_tools:
-        _register_additional_allowed_tools(tool_registry, agent_def.allowed_tools, toolkit_ctx)
-
-    # Submission tools are registered in the main query loop.
+    # Submission tools are registered from explicit agent tool lists.
     # Team-mode terminal submissions are handled by the executor reading
     # ``tool_metadata`` after the query loop stops.
 
-    # Skills toolkit — opt-out via ``include_skills=False``.
+    # Skill loading tools — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True
     if include_skills:
         from skills.core.loader import load_skill_registry
-        from tools.builtins.skills import make_skills_toolkit
+        from tools.builtins.skills import make_skills_tools
 
         skill_filter = agent_def.skills if agent_def and agent_def.skills else None
         skill_registry = load_skill_registry(config.cwd)
-        skills_toolkit = make_skills_toolkit(skill_registry, skill_filter)
-        if skills_toolkit.list_tools():
-            tool_registry.register_toolkit(skills_toolkit)
+        skill_tools = make_skills_tools(skill_registry, skill_filter)
+        if skill_tools:
+            tool_registry.register_many(skill_tools)
             logger.info(
-                "Registered SkillsToolkit (%d tools) for agent %r",
-                len(skills_toolkit.list_tools()),
+                "Registered %d skill loading tools for agent %r",
+                len(skill_tools),
                 agent_name,
             )
 
     return tool_registry
 
 
-def _register_additional_allowed_tools(
+def _register_requested_tools(
     tool_registry: ToolRegistry,
-    allowed_tools: list[str],
-    toolkit_ctx: ToolkitContext,
+    tool_names: list[str],
+    tool_ctx: ToolFactoryContext,
+    agent_name: str,
 ) -> None:
-    """Add explicit tools from any available toolkit into the final tool surface."""
-    wanted = {str(name).strip() for name in allowed_tools if str(name).strip()}
-    if not wanted:
-        return
-
-    for tk_name in list_toolkits():
-        existing_toolkit = tool_registry.get_toolkit(tk_name)
+    """Add explicit tools into the final tool surface."""
+    for name in tool_names:
+        clean_name = str(name).strip()
+        if not clean_name or tool_registry.get(clean_name) is not None:
+            continue
+        if not has_tool(clean_name):
+            logger.warning("No tool factory for %r requested by agent %r", clean_name, agent_name)
+            continue
         try:
-            source_toolkit = existing_toolkit or create_toolkit(tk_name, toolkit_ctx)
+            tool_registry.register(create_tool(clean_name, tool_ctx))
+            logger.info("Registered tool %r for agent %r", clean_name, agent_name)
         except Exception:
-            logger.debug("Failed to inspect toolkit %r for allowed_tools", tk_name, exc_info=True)
-            continue
-
-        matching_tools = [tool for tool in source_toolkit.list_tools() if tool.name in wanted]
-        if not matching_tools:
-            continue
-
-        if existing_toolkit is None:
-            filtered_toolkit = BaseToolkit(
-                name=source_toolkit.name,
-                description=source_toolkit.description,
-                tools=matching_tools,
+            logger.warning(
+                "Failed to create tool %r for agent %r",
+                clean_name,
+                agent_name,
+                exc_info=True,
             )
-            tool_registry.register_toolkit(filtered_toolkit)
-        else:
-            for tool in matching_tools:
-                existing_toolkit.register(tool)
-                tool_registry.register(tool)
 
 
 def _build_agent_system_prompt(
@@ -346,7 +306,7 @@ def spawn_agent(
     If *agent_def* is provided, its fields customize the session defaults:
     - ``model`` overrides the session model
     - ``system_prompt`` is appended after the session system prompt
-    - ``toolkits`` restricts available toolkits
+    - ``tools`` names the available tool surface
     - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """
     from pathlib import Path

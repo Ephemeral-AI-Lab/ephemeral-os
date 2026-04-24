@@ -172,7 +172,7 @@ def _extract_exit_code(
 def _sandbox_context_error(detail: str | None = None) -> str:
     base = (
         "No Daytona sandbox in context. "
-        "Ensure DaytonaToolkit was initialized with a valid sandbox_id."
+        "Ensure Daytona context was initialized with a valid sandbox_id."
     )
     if detail:
         return f"{base} Last recovery error: {detail}"

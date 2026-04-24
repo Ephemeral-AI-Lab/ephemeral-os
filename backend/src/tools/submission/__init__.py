@@ -1,6 +1,6 @@
 """Submission tools — terminal actions for team-mode agents."""
 
-from tools.submission.toolkit import (
+from tools.submission.tools import (
     make_submission_tools,
     RequestReplanTool,
     SubmitPlanTool,
@@ -9,7 +9,7 @@ from tools.submission.toolkit import (
 )
 
 # Side-effect import: registers submission platform hooks on the default hook
-# registry whenever the toolkit package loads.
+# registry whenever the package loads.
 from tools.submission import hooks as _hooks  # noqa: F401
 
 __all__ = [

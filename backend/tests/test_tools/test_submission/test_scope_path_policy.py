@@ -10,7 +10,7 @@ from message.stream_events import StreamEvent
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import ToolHookRegistry, run_pre_hooks
 from tools.submission.hooks.prehook import scope_path_policy
-from tools.submission.toolkit import SubmitPlanTool, SubmitReplanTool
+from tools.submission.tools import SubmitPlanTool, SubmitReplanTool
 
 pytestmark = pytest.mark.asyncio
 

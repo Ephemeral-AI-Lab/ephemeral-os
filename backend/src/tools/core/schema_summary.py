@@ -11,82 +11,68 @@ from pydantic import BaseModel, RootModel
 from pydantic_core import PydanticUndefined
 
 from skills.core.loader import load_skill_registry
-from tools.core.base import BaseToolkit, BaseTool
-from tools.core.factory import ToolkitContext, create_toolkit, list_toolkits
+from tools.core.base import BaseTool
+from tools.core.factory import ToolFactoryContext, create_tool, list_available_tools
 
 
-def collect_schema_toolkits(
+def collect_schema_tools(
     *,
     cwd: str | Path | None = None,
     sandbox_id: str = "schema-dump",
     caller_agent: str = "",
-) -> list[BaseToolkit]:
-    """Instantiate toolkits suitable for live schema inspection."""
-    ctx = ToolkitContext(
+) -> list[BaseTool]:
+    """Instantiate tools suitable for live schema inspection."""
+    ctx = ToolFactoryContext(
         metadata={
             "sandbox_id": sandbox_id,
             "agent_name": caller_agent,
         }
     )
-    toolkits = [create_toolkit(name, ctx) for name in sorted(list_toolkits())]
+    tools = [create_tool(name, ctx) for name in sorted(list_available_tools())]
 
-    from tools.builtins.background import make_background_toolkit
-    from tools.builtins.skills import make_skills_toolkit
+    from tools.builtins.background import make_background_tools
+    from tools.builtins.skills import make_skills_tools
 
     background_tool_names = sorted(
         {
             tool.name
-            for toolkit in toolkits
-            for tool in toolkit.list_tools()
+            for tool in tools
             if getattr(tool, "background", "forbidden") != "forbidden"
         }
     )
     if background_tool_names:
-        toolkits.append(make_background_toolkit(background_tool_names))
+        tools.extend(make_background_tools(background_tool_names))
 
-    skills_toolkit = make_skills_toolkit(load_skill_registry(cwd))
-    if skills_toolkit.list_tools():
-        toolkits.append(skills_toolkit)
+    tools.extend(make_skills_tools(load_skill_registry(cwd)))
 
-    return _dedupe_toolkits(toolkits)
+    return _dedupe_tools(tools)
 
 
 def format_tool_schema_summary(
-    toolkits: Sequence[BaseToolkit],
+    tools: Sequence[BaseTool],
     *,
     include_descriptions: bool = True,
 ) -> str:
     """Render a human-readable input/output schema summary for each tool."""
     sections: list[str] = []
-    for toolkit in toolkits:
-        lines = [f"Toolkit: {toolkit.name}"]
-        if include_descriptions and toolkit.description:
-            lines.append(f"  {toolkit.description}")
-        for tool in toolkit.list_tools():
-            lines.extend(_format_tool(tool, include_descriptions=include_descriptions))
-        sections.append("\n".join(lines))
+    for tool in tools:
+        sections.append(
+            "\n".join(_format_tool(tool, include_descriptions=include_descriptions))
+        )
     return "\n\n".join(sections)
 
 
-def _dedupe_toolkits(toolkits: list[BaseToolkit]) -> list[BaseToolkit]:
-    by_name: dict[str, BaseToolkit] = {}
-    for toolkit in toolkits:
-        current = by_name.get(toolkit.name)
-        if current is None:
-            by_name[toolkit.name] = toolkit
-            continue
-        existing_names = set(current.tool_names())
-        for tool in toolkit.list_tools():
-            if tool.name not in existing_names:
-                current.register(tool)
-                existing_names.add(tool.name)
-    return sorted(by_name.values(), key=lambda toolkit: toolkit.name)
+def _dedupe_tools(tools: list[BaseTool]) -> list[BaseTool]:
+    by_name: dict[str, BaseTool] = {}
+    for tool in tools:
+        by_name.setdefault(tool.name, tool)
+    return sorted(by_name.values(), key=lambda tool: tool.name)
 
 
 def _format_tool(tool: BaseTool, *, include_descriptions: bool) -> list[str]:
-    lines = [f"  {tool.name}"]
+    lines = [f"Tool: {tool.name}"]
     if include_descriptions and tool.description:
-        lines.append(f"    description: {tool.description}")
+        lines.append(f"  description: {tool.description}")
     lines.extend(
         _format_model(
             "input",

@@ -1,4 +1,4 @@
-"""Shared execution-context helpers for sandbox-backed toolkits."""
+"""Shared execution-context helpers for sandbox-backed tools."""
 
 from __future__ import annotations
 
