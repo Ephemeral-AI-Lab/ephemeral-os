@@ -203,7 +203,7 @@ class TaskCoordinator:
         return (
             task is not None
             and bool(task.fired_by_task_id)
-            and _has_replanner_role(task.definition.agent)
+            and _has_replanner_role(task.agent)
         )
 
     # ---- EXPANDED -------------------------------------------------------
@@ -280,7 +280,7 @@ class TaskCoordinator:
             await self._dispatch(_fail(task_id, "no_replanner_registered"))
             return
 
-        deps_before = {tid: list(task.definition.deps) for tid, task in self._store.graph.items()}
+        deps_before = {tid: list(task.deps) for tid, task in self._store.graph.items()}
         rec, is_new = await self._store.request_replan(
             task_id,
             reason=update.summary or "",
@@ -410,9 +410,9 @@ def _synthesize_parent_summary(parent_id: str, graph: dict[str, Task]) -> str:
         return ""
     from agents.registry import has_role
 
-    sibling_deps = {d for c in children for d in (c.definition.deps or [])}
+    sibling_deps = {d for c in children for d in (c.deps or [])}
     terminal_validators = sorted(
-        (c for c in children if has_role(c.definition.agent, "reviewer") and c.id not in sibling_deps),
+        (c for c in children if has_role(c.agent, "reviewer") and c.id not in sibling_deps),
         key=lambda t: t.created_at,
     )
     if terminal_validators:
@@ -421,7 +421,7 @@ def _synthesize_parent_summary(parent_id: str, graph: dict[str, Task]) -> str:
             return text
     leaves = [
         c for c in children
-        if c.id not in sibling_deps and not has_role(c.definition.agent, "reviewer")
+        if c.id not in sibling_deps and not has_role(c.agent, "reviewer")
     ]
     parts = [
         text

@@ -39,7 +39,7 @@ class TaskContextBuilder:
 
     @staticmethod
     def _is_replanner_task(task: Task) -> bool:
-        agent_name = str(task.definition.agent or "").strip()
+        agent_name = str(task.agent or "").strip()
         if agent_name == "team_replanner":
             return True
         try:
@@ -79,7 +79,7 @@ class TaskContextBuilder:
             return [
                 task
                 for task in graph.values()
-                if dep_id in [str(item) for item in (task.definition.deps or [])]
+                if dep_id in [str(item) for item in (task.deps or [])]
             ]
         if self._task_store is None or not hasattr(self._task_store, "get_all_tasks"):
             return []

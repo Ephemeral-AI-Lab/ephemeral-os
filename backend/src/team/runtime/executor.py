@@ -104,7 +104,7 @@ class Executor:
                 summary="claim_running_failed: task not in ready/running state",
             )
 
-        agent_name = task.definition.agent
+        agent_name = task.agent
         defn = self.agent_lookup(agent_name)
         if defn is None:
             return TaskStatusUpdate(

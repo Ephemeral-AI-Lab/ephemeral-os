@@ -169,6 +169,7 @@ class TaskDefinition:
         id: str,
         spec: TaskSpec | Mapping[str, Any],
         agent: str,
+        description: str = "",
         deps: list[str] | None = None,
         scope_paths: list[str] | None = None,
         parent_id: str | None = None,
@@ -187,6 +188,10 @@ class TaskDefinition:
         self.deps = list(deps or [])
         self.scope_paths = list(scope_paths or [])
         self.parent_id = parent_id
+
+    @property
+    def description(self) -> str:
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -222,9 +227,12 @@ class Task:
         *,
         id: str,
         team_run_id: str,
-        spec: TaskSpec | Mapping[str, Any],
-        agent: str,
         status: TaskStatus,
+        spec: TaskSpec | Mapping[str, Any] | None = None,
+        agent: str | None = None,
+        definition: TaskDefinition | None = None,
+        agent_name: str | None = None,
+        description: str = "",
         deps: list[str] | None = None,
         scope_paths: list[str] | None = None,
         summary: str = "",
@@ -239,6 +247,12 @@ class Task:
         failure_reason: str | None = None,
         fired_by_task_id: str | None = None,
     ) -> None:
+        if definition is not None:
+            spec = definition.spec if spec is None else spec
+            agent = definition.agent if agent is None else agent
+            deps = definition.deps if deps is None else deps
+            scope_paths = definition.scope_paths if scope_paths is None else scope_paths
+            parent_id = definition.parent_id if parent_id is None else parent_id
         self.id = str(id)
         self.team_run_id = team_run_id
         if isinstance(spec, TaskSpec):
@@ -250,7 +264,7 @@ class Task:
                 f"Task '{self.id}' requires a spec object with "
                 "goal, detail, and acceptance_criteria"
             )
-        self.agent = str(agent)
+        self.agent = str(agent or agent_name or "")
         self.deps = list(deps or [])
         self.scope_paths = list(scope_paths or [])
         self.status = status
@@ -265,6 +279,21 @@ class Task:
         self.finished_at = finished_at
         self.failure_reason = failure_reason
         self.fired_by_task_id = fired_by_task_id
+
+    @property
+    def definition(self) -> TaskDefinition:
+        return TaskDefinition(
+            id=self.id,
+            spec=self.spec,
+            agent=self.agent,
+            deps=self.deps,
+            scope_paths=self.scope_paths,
+            parent_id=self.parent_id,
+        )
+
+    @property
+    def agent_name(self) -> str:
+        return self.agent
 
 # ---------------------------------------------------------------------------
 # Plan types

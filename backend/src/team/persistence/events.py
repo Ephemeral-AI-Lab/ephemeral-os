@@ -150,16 +150,14 @@ def task_to_dict(task: Any) -> dict[str, Any]:
     from team.core.models import Task
 
     assert isinstance(task, Task)
-    defn = task.definition
     return {
         "id": task.id,
         "team_run_id": task.team_run_id,
-        "agent_name": defn.agent,
+        "agent_name": task.agent,
         "status": task.status.value,
-        "spec": defn.spec.to_dict(),
-        "description": defn.description,
-        "deps": list(defn.deps),
-        "scope_paths": list(defn.scope_paths),
+        "spec": task.spec.to_dict(),
+        "deps": list(task.deps),
+        "scope_paths": list(task.scope_paths),
         "parent_id": task.parent_id,
         "root_id": task.root_id,
         "depth": task.depth,
@@ -174,26 +172,21 @@ def task_to_dict(task: Any) -> dict[str, Any]:
 
 def task_from_dict(data: dict[str, Any]) -> Any:
     """Deserialise a ``Task`` dataclass from a JSON-safe dict (inverse of ``task_to_dict``)."""
-    from team.core.models import Task, TaskDefinition, TaskStatus
+    from team.core.models import Task, TaskStatus
 
     def _parse_dt(iso: str | None) -> datetime | None:
         return datetime.fromisoformat(iso) if iso else None
 
-    task_id = data["id"]
     spec_payload = data.get("spec")
     if spec_payload is None:
         raise ValueError("Task payload requires a non-empty 'spec'")
     return Task(
-        id=task_id,
+        id=data["id"],
         team_run_id=data["team_run_id"],
-        definition=TaskDefinition(
-            id=task_id,
-            spec=spec_payload,
-            agent=data["agent_name"],
-            description=str(data.get("description") or ""),
-            deps=list(data.get("deps") or []),
-            scope_paths=list(data.get("scope_paths") or []),
-        ),
+        spec=spec_payload,
+        agent=data["agent_name"],
+        deps=list(data.get("deps") or []),
+        scope_paths=list(data.get("scope_paths") or []),
         status=TaskStatus.of(data.get("status") or TaskStatus.PENDING.value),
         parent_id=data.get("parent_id"),
         root_id=data.get("root_id") or "",

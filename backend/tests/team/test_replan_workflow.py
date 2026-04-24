@@ -500,7 +500,6 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
                 agent_name="developer",
                 status=TaskStatus.REQUEST_REPLAN,
                 spec=_spec("Fix the parser."),
-                description="Original detailed task description.",
                 deps=["dep"],
                 scope_paths=["src/parser.py"],
                 parent_id="parent",
@@ -532,6 +531,5 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
     assert "## Replan root cause trace" in context
     assert "Original task: failed" in context
     assert "Fix the parser." in context
-    assert "Original detailed task description." in context
     assert "replan_requested: parser failure" in context
     assert "downstream (pending); deps: replanner" in context

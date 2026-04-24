@@ -31,12 +31,10 @@ def _task() -> Task:
 
 def test_task_serialization_round_trip_preserves_task_fields():
     original = _task()
-    original.definition.description = "Repair shared import label"
 
     payload = task_to_dict(original)
     restored = task_from_dict(payload)
 
-    assert restored.definition.description == "Repair shared import label"
     assert restored.definition.deps == ["dep-1"]
     assert restored.definition.scope_paths == ["pkg/_compat.py"]
     assert restored.agent_run_id == "agent-run-1"

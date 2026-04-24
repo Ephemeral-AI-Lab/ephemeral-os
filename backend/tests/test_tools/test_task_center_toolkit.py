@@ -228,7 +228,6 @@ async def test_read_task_graph_defaults_to_peer_tree_json():
         "id": "parent",
         "agent": "planner",
         "status": "ready",
-        "description": "Parent",
     }
     assert [task["id"] for task in payload["tasks"]] == ["self", "peer"]
     self_node = payload["tasks"][0]
@@ -400,7 +399,6 @@ async def test_read_task_details_reads_single_task():
 
     assert result.is_error is False
     assert "## task-1 (developer) [running]" in result.output
-    assert "**Description:** Patch parser" in result.output
     assert "# Goal {Status: Running}" in result.output
     assert "Goal for task-1" in result.output
     assert "# Detail" in result.output

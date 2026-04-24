@@ -513,7 +513,6 @@ class ReadTaskGraphTool(BaseTool):
             "id": t.id,
             "agent": defn.agent,
             "status": t.status.value,
-            "description": defn.description or "",
             "spec": _task_spec_payload(defn.spec),
             "deps": list(defn.deps),
             "scope_paths": list(defn.scope_paths),
@@ -565,7 +564,6 @@ class ReadTaskGraphTool(BaseTool):
                     "id": parent_task.id,
                     "agent": parent_task.definition.agent,
                     "status": parent_task.status.value,
-                    "description": parent_task.definition.description or "",
                 }
                 if parent_task is not None
                 else None
