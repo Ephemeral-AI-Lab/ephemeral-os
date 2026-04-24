@@ -492,6 +492,45 @@ async def test_team_shell_mode_sanitizes_output_pipeline_before_exec(
     sb.process.exec.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "head -50 dask/dataframe/io/json.py",
+        "tail -n 40 logs/test.log",
+    ],
+)
+async def test_team_shell_mode_does_not_sanitize_standalone_head_tail_commands(
+    command,
+):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("contents", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result, events = await _run_with_events(
+        daytona_shell,
+        {"command": command},
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["command"] == command
+    assert not any(
+        "sanitized daytona_shell command" in text
+        for text in _notification_texts(events)
+    )
+    svc.cmd.assert_awaited_once()
+    sb.process.exec.assert_awaited_once()
+
+
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,8 @@ import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from tools.core.base import ToolExecutionContext
 from tools.core.hooks import ToolHookRegistry
 from tools.daytona_toolkit.delete_move_tool import (
@@ -187,7 +189,29 @@ def test_shell_output_pipeline_policy_sanitizes_shell_command() -> None:
     assert "sanitized daytona_shell command" in outcome.advisories[0]
 
 
-def test_shell_output_pipeline_policy_sanitizes_head_tail_command() -> None:
+@pytest.mark.parametrize(
+    "command",
+    [
+        "head -50 dask/dataframe/io/json.py",
+        "tail -n 40 logs/test.log",
+    ],
+)
+def test_shell_output_pipeline_policy_allows_standalone_head_tail_commands(
+    command: str,
+) -> None:
+    ctx = _ctx()
+    args = DaytonaShellInput(command=command)
+
+    outcome = _run(
+        shell_output_pipeline_policy.hook("daytona_shell", args, ctx)
+    )
+
+    assert outcome.has_error is False
+    assert outcome.tool_input is None
+    assert outcome.advisories == ()
+
+
+def test_shell_output_pipeline_policy_keeps_head_tail_when_stripping_redirect() -> None:
     ctx = _ctx()
     args = DaytonaShellInput(command="tail -n 40 logs/test.log > /tmp/out")
 
@@ -197,7 +221,7 @@ def test_shell_output_pipeline_policy_sanitizes_head_tail_command() -> None:
 
     assert outcome.has_error is False
     assert outcome.tool_input is not None
-    assert outcome.tool_input.command == "cat logs/test.log"
+    assert outcome.tool_input.command == "tail -n 40 logs/test.log"
 
 
 def test_shell_output_pipeline_policy_sanitizes_command_substitution_pipeline() -> None:
