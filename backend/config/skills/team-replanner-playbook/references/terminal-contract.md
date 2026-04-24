@@ -1,6 +1,6 @@
 # Replanner Terminal Contract
 
-Load this reference before drafting any `submit_replan(...)` payload.
+Use this reference while drafting and checking a `submit_replan(...)` payload.
 
 ## Call Shape
 

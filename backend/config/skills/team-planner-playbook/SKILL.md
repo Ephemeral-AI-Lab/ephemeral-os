@@ -19,11 +19,11 @@ Planner lane routing:
 | Stage | Output |
 | --- | --- |
 | 1. Load context | Owner ledger split into inherited, `scout_required`, unresolved, deps, and evidence groups. |
-| 2. Scout | Scout notes by scoped path, plus explicit uncertainty for missing notes. |
-| 3. Synthesize and submit | `submit-child-plan` reference read, payload checked, one `submit_plan(...)`. |
+| 2. Scout | Optional small scout wave, or explicit uncertainty delegated downward. |
+| 3. Synthesize and submit | `submit-child-plan` reference available for synthesis, payload checked, one `submit_plan(...)`. |
 
 ```text
-Caption: child planner stage machine. Read references only when entering synthesis.
+Caption: child planner stage machine. References support synthesis.
 
 [assigned planner task]
   |
@@ -32,20 +32,22 @@ Caption: child planner stage machine. Read references only when entering synthes
   | read own task, parent, deps, and graph topology
   | build owner ledger
   |
-  | unresolved or benchmark-risk owner?
-  |-- yes --> [2 Scout]
+  | unresolved or benchmark-risk owner
+  | and scout would change routing?
+	  |-- yes --> [2 Scout]
   |             | join scouts
   |             | read notes by scoped path
   |             v
-  +----------- update owner ledger
+	  +----------- update owner ledger
+  |-- no --> carry uncertainty
   |
   v
 [3 Synthesize]
-  first tool in stage:
-    load_skill_reference(
-      skill_name="team-planner-playbook",
-      reference_name="submit-child-plan"
-    )
+	  synthesis guidance:
+	    load_skill_reference(
+	      skill_name="team-planner-playbook",
+	      reference_name="submit-child-plan"
+	    )
   then: draft -> checklist -> submit_plan(...)
 ```
 
@@ -93,16 +95,16 @@ Different rows stay in different scout calls.
 
 | Step | Action |
 | --- | --- |
-| Shape wave | Launch one scout per `scout_required` or unresolved production owner family with `target_paths: ["<one or more scoped production paths for that one owner family>"]`. Multi-path scouts are valid only when every path belongs to the same owner-ledger row and should produce its own durable note. |
+| Shape wave | Launch scouts only for high-value `scout_required` or unresolved owner families. A useful wave is usually 1-3 families; avoid one scout per failing test and one broad catch-all scout. Multi-path scouts are valid only when every path belongs to the same owner-ledger row. |
 | Keep scope clean | Keep `target_paths` production-only. Put tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`. |
 | Launch and supervise | Fire every useful scout before polling. Poll while scouts are `running`; cancel halted, blocked, off-scope, or unchanged scouts and carry that slice as explicit uncertainty. |
 | Harvest notes | Call `read_file_note(file_paths=[...])` with every path in every launched scout's `target_paths`. Missing notes, cold CI, canceled scouts, or disproved exact files create uncertainty only for the affected path. |
 
-If an adjacent owner is only a hypothesis, launch a separate scout for that path or carry it as uncertainty; do not ask one scout to inspect files outside its `target_paths`.
+If an adjacent owner is only a hypothesis, launch a separate scout for that path when it changes current-layer routing, or carry it as uncertainty; do not ask one scout to inspect files outside its `target_paths`.
 
 ### 3. Synthesize and submit
 
-Enter this stage only after context is loaded, the owner ledger is written, and scouts are either done or explicitly skipped. Read the synthesis reference here:
+	Enter this stage after context is loaded, the owner ledger is written, and scouts are either done or explicitly skipped. Load the synthesis reference when it helps draft or check the child plan:
 
 ```text
 load_skill_reference(
@@ -111,7 +113,7 @@ load_skill_reference(
 )
 ```
 
-After this reference is loaded, continue with drafting and submission only. If a new distinct owner slice would require exploration, carry it as uncertainty and route it to another child `team_planner` when depth allows, or to a max-depth diagnostic/repair lane.
+After loading the reference, normally continue with drafting and submission. If a new distinct owner slice would require exploration, carry it as uncertainty or make a bounded routing check before assigning it to another child `team_planner` when depth allows, or to a max-depth diagnostic/repair lane.
 
 ```text
 Caption: lane routing with depth.

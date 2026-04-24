@@ -228,8 +228,9 @@ def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
 
     assert result is not None
     assert "3+ outside-scope warnings" in result
-    assert "continue if they are still the right repair" in result
-    assert "final summary" in result
+    assert "Stop now" in result
+    assert "next tool call must be request_replan()" in result
+    assert "trigger scope_expansion" in result
     assert "one coherent production owner" not in result
     assert _team_repo_write_error(
         ctx,

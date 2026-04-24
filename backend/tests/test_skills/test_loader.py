@@ -86,10 +86,10 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "## Workflow Map" in skill
     assert "```mermaid" not in skill
     assert "Caption: replanner recovery path" in skill
-    assert "References are read at action and submit time" in skill
+    assert "References support action and submit time" in skill
     assert "Reference Map" not in skill
     assert "terminal-contract" in skill
-    assert "Every path loads one action reference in Stage 3 and `terminal-contract` in Stage 4" in skill
+    assert "The intended path uses one action reference in Stage 3 and `terminal-contract` in Stage 4" in skill
     assert "Classify failure mode" in skill
     assert "Direct replan" in skill
     assert "Diagnostics" in skill
@@ -201,17 +201,17 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "Replan trigger gate" not in skill
 
 
-def test_team_replanner_playbook_defers_references_until_action_and_submit_stages() -> None:
+def test_team_replanner_playbook_recommends_references_for_action_and_submit_stages() -> None:
     skill = _read_bundled_skill("team-replanner-playbook")
 
-    assert "Caption: replanner recovery path. References are read at action and submit time." in skill
-    assert "Every path loads one action reference in Stage 3 and `terminal-contract` in Stage 4" in skill
-    assert "Skip reference reads until the current stage has the evidence it needs" in skill
+    assert "Caption: replanner recovery path. References support action and submit time." in skill
+    assert "The intended path uses one action reference in Stage 3 and `terminal-contract` in Stage 4" in skill
+    assert "Prefer reading references when the current stage has the evidence it needs" in skill
     assert 'reference_name="action-add-tasks"' in skill
     assert 'reference_name="action-cancel-and-redraft"' in skill
     assert 'reference_name="terminal-contract"' in skill
-    assert "Enter this stage only after classification is written and diagnostics are complete or explicitly skipped" in skill
-    assert "Enter this stage only after the matching Stage 3 action reference has been loaded" in skill
+    assert "Enter this stage after classification is written and diagnostics are complete or explicitly skipped" in skill
+    assert "Enter this stage after the matching Stage 3 action reference has shaped the corrective mapping" in skill
     assert "## Reference Map" not in skill
 
 
@@ -256,22 +256,15 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
     ).read_text(encoding="utf-8")
     content = f"{skill}\n{reference}"
 
-    assert "Put benchmark tests and verification commands in `spec`, not `scope_paths`" in content
-    assert "acceptance_criteria` must be test-suite focused with concrete commands" in content
-    assert "Every `acceptance_criteria` is test-suite focused" in content
+    assert "Tests and benchmark ids" in content
+    assert "Keep them in `spec.detail` or `spec.acceptance_criteria`, not `scope_paths`" in content
+    assert "`spec.acceptance_criteria`" in content
     assert (
-        "No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure"
+        "Do not treat skipped, expected-failed, missing optional dependency, or clear `ImportError` outcomes as passing fail-to-pass closure"
         in content
     )
-    assert "Build a coverage ledger for benchmark/fail-to-pass requests" in content
-    assert "Sibling target exclusivity gate" in content
-    assert "keep each named failing id, file-level command, or focused suite command only in the owning family's spec" in content
-    assert "owner A also carries `pytest tests/test_beta.py -q` while owner B already owns that target" in content
-    assert "Do not put a named failing cluster only in a validator spec" in content
-    assert (
-        "No named fail-to-pass cluster is covered only by a validator without a repair/decomposition owner"
-        in content
-    )
+    assert "Named failing clusters" in content
+    assert "Give each cluster a repair/decomposition owner" in content
     assert "daytona_shell-safe" not in content
 
 
@@ -288,13 +281,14 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     assert "mark each broad family as `scout_required` even when the first-pass owner label looks plausible" in skill
     assert "Use at most one targeted `ci_workspace_structure` or `ci_query_symbol` call" in skill
     assert "Do not merge unrelated rows into one scout" in skill
+    assert "A scout wave is usually 1-3 owner families" in skill
     assert "Multi-path scout = same row only" in skill
     assert '"target_paths": ["<one or more scoped production paths for that one owner family>"]' in skill
     assert "Prefer one stable boundary path" in skill
     assert "read_file_note(file_paths=[...])" in skill
     assert "CLI/config scout" not in skill
-    assert "Scout evidence gate: trigger -> the coverage ledger has a benchmark/fail-to-pass" in reference
-    assert "a current-layer `developer` is called atomic using only first-pass owner labels" in reference
+    assert "does not need to discover every leaf fix" in reference
+    assert "When unsure, route to `team_planner`" in reference
 
 
 def test_team_planner_playbook_requires_scout_required_fanout() -> None:
@@ -308,40 +302,41 @@ def test_team_planner_playbook_requires_scout_required_fanout() -> None:
     assert "Caption: one scout per owner-ledger row" in skill
     assert "Different rows stay in different scout calls" in skill
     assert "put each broad family, matrix family, or likely expandable first-pass owner in `scout_required`" in skill
-    assert "Launch one scout per `scout_required` or unresolved production owner family" in skill
-    assert 'target_paths: ["<one or more scoped production paths for that one owner family>"]' in skill
+    assert "Launch scouts only for high-value `scout_required` or unresolved owner families" in skill
     assert "Multi-path scouts are valid only when every path belongs to the same owner-ledger row" in skill
     assert "read_file_note(file_paths=[...])" in skill
-    assert "Scout evidence gate: trigger -> the coverage ledger has an inherited benchmark/fail-to-pass" in reference
-    assert "a current-layer `developer` is called atomic using only inherited or first-pass owner labels" in reference
+    assert "When uncertain and depth remains, use `team_planner`" in reference
+    assert "Preserve concrete pytest ids" in reference
 
 
-def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three() -> None:
+def test_team_root_planner_playbook_recommends_synthesis_reference() -> None:
     skill = (
         _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
-    assert "Caption: root planner stage machine. References are read at the stage that uses them." in skill
-    assert "Enter this stage only after the ledger is complete and scouts are either done or explicitly skipped" in skill
-    assert "Read the reference here, not earlier" in skill
+    assert "Caption: root planner stage machine. References support the stage that uses them." in skill
+    assert "Enter this stage after the ledger is complete and scouts are either done or explicitly skipped" in skill
+    assert 'skill_name="team-root-planner-playbook"' in skill
+    assert "Load the synthesis reference when it helps draft or check the plan" in skill
     assert 'reference_name="synthesize-and-submit"' in skill
     assert "Keep benchmark test paths as verification evidence; they are not owner proof" in skill
-    assert "After this reference is loaded, stay on draft/check/submit" in skill
-    assert "instead of doing more exploration" in skill
+    assert "After loading the reference, normally continue with draft/check/submit" in skill
+    assert "make a bounded routing check" in skill
     assert "## Reference Map" not in skill
 
 
-def test_team_planner_playbook_defers_submit_child_reference_until_stage_three() -> None:
+def test_team_planner_playbook_recommends_submit_child_reference() -> None:
     skill = (
         _CONFIG_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
-    assert "Caption: child planner stage machine. Read references only when entering synthesis." in skill
-    assert "Enter this stage only after context is loaded, the owner ledger is written" in skill
-    assert "Read the synthesis reference here" in skill
+    assert "Caption: child planner stage machine. References support synthesis." in skill
+    assert "Enter this stage after context is loaded, the owner ledger is written" in skill
+    assert 'skill_name="team-planner-playbook"' in skill
+    assert "Load the synthesis reference when it helps draft or check the child plan" in skill
     assert 'reference_name="submit-child-plan"' in skill
-    assert "After this reference is loaded, continue with drafting and submission only" in skill
-    assert "If a new distinct owner slice would require exploration, carry it as uncertainty" in skill
+    assert "After loading the reference, normally continue with drafting and submission" in skill
+    assert "make a bounded routing check" in skill
     assert "## Reference Map" not in skill
 
 
@@ -355,42 +350,21 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
 
     assert reference_names == {"synthesize-and-submit.md"}
     assert "## Reference Map" not in skill
-    assert "Read the reference here, not earlier" in skill
+    assert "Load the synthesis reference when it helps draft or check the plan" in skill
     assert "Use the reference's clustering, lane selection, coverage/evidence, dependency DAG, and submission rules" in skill
     assert 'skill_name="team-root-planner-playbook"' in skill
     assert 'reference_name="synthesize-and-submit"' in skill
-    assert "Load this reference in Stage 3 before drafting any `submit_plan(...)` payload" in reference
-    assert "This reference is a one-way Stage 3 transition" in reference
-    assert "after loading it, preserve that slice as uncertainty" in reference
-    assert "instead of launching scouts or CI/workspace/symbol exploration" in reference
-    assert "## Synthesis Rules" in reference
-    assert "## Submission Rules" in reference
-    assert "## Terminal Tool Contract" in reference
-    assert "Root planner policy is stricter than the runtime minimum" in reference
-    assert "use only the built-in lane names `developer`, `team_planner`, and `validator`" in reference
-    assert "## Payload Examples" in reference
-    assert "### Complete Valid Root Payload" in reference
+    assert "This reference supports Stage 3 synthesis" in reference
+    assert "Loading it does not freeze the workflow" in reference
+    assert "make only bounded routing checks" in reference
+    assert "## Routing Flow" in reference
+    assert "## Submission Shape" in reference
+    assert "## Payload Pattern" in reference
     assert "submit_plan({" in reference
-    assert "id: \"val-root-team-runtime\"" in reference
-    assert "deps: [\"dev-task-center\", \"plan-team-runtime-cluster\"]" in reference
-    assert "### Invalid Payload Shapes" in reference
-    assert 'summary: "I made a plan."' in reference
-    assert 'parent_id: "root"' in reference
-    assert 'scope_paths: ["backend/tests/team/test_task_center.py"]' in reference
-    assert 'goal: "Repair the owner."' in reference
     assert 'id: "val-root"' in reference
+    assert 'deps: ["dev-focused-owner", "plan-runtime-cluster"]' in reference
     assert 'description: "Validate the owner"' not in reference
-    assert "validator tasks must depend on at least one upstream sibling" in reference
-    assert "## TaskSpec Examples" in reference
-    assert "### Developer TaskSpec" in reference
-    assert "### Team Planner TaskSpec" in reference
-    assert "### Validator TaskSpec" in reference
-    assert "## Dependency DAG Examples" in reference
-    assert "### Parallel Fan-Out With Terminal Validator" in reference
-    assert "### Sequential Chain" in reference
-    assert "### Mixed Sequential And Parallel Work" in reference
-    assert "### Planner Output Gating Downstream Integration" in reference
-    assert "### Overlapping Scopes Without Scope-Hygiene Deps" in reference
+    assert "## DAG Patterns" in reference
     assert "## Final Checklist" in reference
     assert "## Case Examples" not in reference
     assert "### Case " not in reference
@@ -409,7 +383,7 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "Caption: root planner stage machine",
             "Caption: split evidence from ownership",
             "Caption: fan out by owner family",
-            "Caption: lane routing after the Stage 3 reference is loaded",
+            "Caption: lane routing during synthesis",
             "### 1. Analyze",
             "### 2. Scout",
             "### 3. Synthesize and submit",
@@ -434,35 +408,18 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
     _assert_contains_all(
         reference,
         (
-            "### Clustering Guidance",
-            "### Lane Selection",
-            "Clear owner names do not override a clustering signal",
-            "large benchmark/test-matrix work",
-            "four or more independent `developer` lanes",
-            "Use child `team_planner` for broad decomposition",
-            "Agent-field lock: after classifying a slice, write the `agent` field",
-            'the only valid `agent` is `"team_planner"`',
-            "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
-            "one `developer` task spec lists multiple independent fixes across unrelated owners",
-            "bundles the engine fix with dozens of read/write/glob/path failures because both live under the same package",
-            "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
-            "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
-            "one `developer` lane that says it will fix each mechanism independently across those methods",
-            'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
-            "one `developer` `spec.goal` says to repair all failures in a file while `spec.detail` enumerates many operations",
-            "Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs",
-            "a `developer` spec calls the family coherent while its `spec.detail` lists those APIs or surfaces",
-            "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
-            "name the single internal helper, invariant, or adapter boundary proven by scout evidence",
-            "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
-            'but the final payload gives that slice `agent: "developer"`',
-            "Cold/disproved path gate: trigger -> live scout evidence says the drafted exact file is missing, CI-cold, or replaced by a package/directory boundary",
-            "the final payload still names the disproved exact path after the scout reported zero coverage or a package boundary",
-            "## TaskSpec Examples",
-            "## Dependency DAG Examples",
+            "## Routing Flow",
+            "## Atomic vs Expandable",
+            "Prefer top-down decomposition",
+            "does not need to discover every leaf fix",
+            "Benchmark, fail-to-pass, migration, compatibility",
+            "Four or more independent leaf fixes",
+            "When unsure, route to `team_planner`",
+            "## Payload Pattern",
+            "## DAG Patterns",
         ),
     )
-    _assert_absent(reference, ("Depth Gate", "current_depth", "max_depth"))
+    _assert_absent(reference, ("Depth Gate", "current_depth", "max_depth", "failure signal"))
 
 
 def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
@@ -471,7 +428,7 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
         "team-planner-playbook", "submit-child-plan.md"
     )
 
-    assert len(skill.splitlines()) <= 130
+    assert len(skill.splitlines()) <= 140
     _assert_contains_all(
         skill,
         (
@@ -485,13 +442,13 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "### 3. Synthesize and submit",
             "child `team_planner`",
             "large benchmark/test-matrix work",
-            "`grandchild_depth <= max_depth`",
+            "grandchild_depth <= max_depth",
             "broader direct `developer` or `validator` tasks",
             "Choose each task's agent while drafting",
             "cover every named failing cluster with a repair/decomposition owner or child `team_planner`",
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
-            "If a new distinct owner slice would require exploration, carry it as uncertainty",
+            "make a bounded routing check",
             "restructured packages with multiple plausible owner files",
             "scout first instead of assigning sibling-file owners from test names",
         ),
@@ -510,26 +467,16 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
     _assert_contains_all(
         reference,
         (
-            "### Clustering Guidance",
-            "### Lane Selection",
-            "`grandchild_depth <= max_depth`",
-            "use broader direct `developer` and `validator` tasks instead",
-            "Agent-field lock: after classifying a slice, write the `agent` field",
-            'must use `agent: "team_planner"`, never `agent: "developer"`',
-            "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
-            "submit separate current-layer `developer` lanes",
-            "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
-            "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
-            'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
-            "one `developer` `spec.goal` says to repair all failures in a file while `spec.detail` enumerates many operations",
-            "Multi-API family gate: trigger -> inherited evidence or scout notes for one family list multiple public APIs",
-            "classify the family as expandable and use `team_planner` while `grandchild_depth <= max_depth`",
-            "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
-            "else use `team_planner` while `grandchild_depth <= max_depth`, or split by API/mechanism at max depth",
-            "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
-            "This reference is a one-way Stage 3 transition",
-            "## TaskSpec Examples",
-            "## Dependency DAG Examples",
+            "## Routing Flow",
+            "## Atomic vs Expandable",
+            "grandchild_depth <= max_depth",
+            "child `team_planner`",
+            "max depth reached",
+            "Four or more independent leaf fixes",
+            "When uncertain and depth remains, use `team_planner`",
+            "avoid one catch-all developer task",
+            "## Payload Pattern",
+            "## DAG Patterns",
         ),
     )
 
@@ -547,22 +494,20 @@ def test_planner_playbooks_lock_expandable_slices_out_of_developer_lanes() -> No
     _assert_contains_all(
         "\n".join((root_skill, root_reference)),
         (
-            "Agent-field lock",
             "Broad, clustered, matrix-shaped, or unresolved work -> child `team_planner`",
             "Before submit, audit every `developer` task",
-            '`developer` means the slice passed every atomic test and no expandable signal fired',
-            'cannot have `agent: "developer"`',
+            "Expandable, route to `team_planner`",
+            "When unsure, route to `team_planner`",
         ),
     )
     _assert_contains_all(
         "\n".join((team_skill, team_reference)),
         (
-            "Agent-field lock",
             "when `grandchild_depth <= max_depth`",
             "expandable slice + grandchild_depth <= max_depth -> team_planner",
             "Before submit, audit every `developer` task",
-            '`developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes',
-            'cannot have `agent: "developer"`',
+            "Expandable path",
+            "avoid one catch-all developer task",
         ),
     )
 
@@ -578,11 +523,9 @@ def test_team_planner_playbook_requires_fail_to_pass_coverage_owners() -> None:
     _assert_contains_all(
         content,
         (
-            "coverage ledger",
             "named failing cluster",
             "repair/decomposition",
-            "terminal validator",
-            "validator spec",
+            "Validators",
         ),
     )
 
@@ -595,17 +538,11 @@ def test_team_planner_playbook_preserves_exact_inherited_pytest_ids() -> None:
     _assert_contains_all(
         reference,
         (
-            "Exact target preservation gate",
-            "copy those ids/files verbatim",
-            "containing test files",
-            "focused file-level commands",
-            "renamed, normalized, sibling-file, directory-swapped, or invented targets",
-            "test_dtype_backend[pyarrow-pyarrow]",
-            "test_dtype_backend[pyarrow-pyarrow_dtype]",
-            "dask/dataframe/tests/test_utils_dataframe.py::test_valid_divisions[divisions4-True]",
-            "dask/dataframe/tests/test_utils.py -q",
-            "dask/dataframe/tests/test_groupby.py::test_groupby_unique[disk-uint8]",
-            "dask/dataframe/io/tests/test_groupby.py -q",
+            "Inherited failing targets",
+            "Preserve concrete pytest ids",
+            "variants",
+            "file-level commands verbatim",
+            "`spec.detail` or `spec.acceptance_criteria`",
         ),
     )
 
@@ -666,8 +603,7 @@ def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
                 "`scope_paths`",
                 "skip",
                 "xfail",
-                "pytest configuration",
-                "evidence only",
+                "Tests and benchmark ids",
             ),
         )
 
@@ -701,7 +637,7 @@ def test_planner_and_scout_playbooks_lock_single_file_scout_scope() -> None:
         (
             "Keep `target_paths` production-only",
             "If an adjacent owner is only a hypothesis",
-            "launch a separate scout for that path or carry it as uncertainty",
+                "launch a separate scout for that path when it changes current-layer routing, or carry it as uncertainty",
         ),
     )
     _assert_contains_all(
@@ -732,13 +668,11 @@ def test_team_planner_reference_requires_live_proof_for_scope_paths() -> None:
     _assert_contains_all(
         reference,
         (
-            "Cold/disproved path gate",
-            "read_file_note(file_paths=[\"<launched target>\"])` produced no scout note",
-            "replacement path discovered only by ad hoc CI/workspace/symbol exploration",
-            "Scope-path proof gate",
-            "keep that path out of child `scope_paths` unless live scout evidence proved it",
-            "guessed owners such as `pkg/distributed/cli`",
-            "`scope_paths` must be live proven owner paths",
+            "Scout gaps",
+            "Missing notes, cold paths, and adjacent-owner hypotheses stay as uncertainty",
+            "unless live scout evidence proves the path",
+            "`scope_paths`",
+            "proven by inherited context or scout evidence",
         ),
     )
 
@@ -906,16 +840,16 @@ def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
             assert trigger not in skill
 
 
-def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> None:
+def test_developer_playbook_limits_out_of_scope_production_edits_before_replan() -> None:
     skill = (
         _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in skill
     assert "You may widen reads, diagnostics, and test commands" in skill
-    assert "Developers may write, copy, or create production files outside `scope_paths`" in skill
-    assert "outside-scope system notification" in skill
-    assert "coordination guidance, not a stop condition" in skill
+    assert "A few lightweight out-of-scope production writes, moves, deletes, or creates are acceptable" in skill
+    assert "The third outside-scope mutation" in skill
+    assert "exits through `request_replan`" in skill
     assert (
         "The next required change would be a broad or ambiguous production change that this lane cannot responsibly finish."
         in skill
@@ -925,9 +859,9 @@ def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> N
         "Before every mutation, verify the target file path, source path, destination path, or rename file hint"
         in skill
     )
-    assert "Out-of-scope production writes, copies, and new files are allowed for developers" in skill
-    assert "write-scope notifications are recorded" in skill
-    assert "treat it as coordination context and keep working" in skill
+    assert "Out-of-scope production writes, copies, moves, deletes, and new files are limited" in skill
+    assert "If the work needs three or more outside-scope mutations" in skill
+    assert "A third outside-scope warning" in skill
     assert "with trigger `scope_expansion`" in skill
     assert (
         "Do not create missing modules, shims, re-exports, or bridges unless live production evidence names the missing path and mechanism"

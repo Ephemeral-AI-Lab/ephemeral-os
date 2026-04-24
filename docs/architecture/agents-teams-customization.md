@@ -197,6 +197,12 @@ backend/config/skills/*/SKILL.md
 2. Restart the runtime.
 3. `register_all()` and the skill loaders rebuild in-memory registries from `backend/config`.
 
+Skill and team playbook changes should follow the evolution rules in
+[`skill-playbook-evolution.md`](skill-playbook-evolution.md): keep planner
+decomposition tree-shaped, route worker blockers through replanning, simplify
+playbooks/toolkits by default, and load references only at the stage that uses
+them.
+
 ---
 
 ## 5. Team Run Lifecycle Wiring

@@ -523,9 +523,9 @@ def _team_repo_write_warning(
     if scope_warnings >= 3:
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-            "You have 3+ outside-scope warnings. Re-check that these production writes are tied to "
-            "the assigned task, then continue if they are still the right repair. Include each "
-            "out-of-scope path and verification evidence in the final summary."
+            "You have 3+ outside-scope warnings. Stop now: your next tool call must be "
+            "request_replan() with trigger scope_expansion, including each out-of-scope path, "
+            "why it was needed, and the latest verification or diagnostic evidence."
         )
     agent_name = str(context.metadata.get("agent_name") or "").strip()
     if agent_name == "developer":

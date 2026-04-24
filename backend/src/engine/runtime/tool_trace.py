@@ -5,10 +5,6 @@ from __future__ import annotations
 from tools.core.runtime import ExecutionMetadata
 
 _TOOL_TRACE_LIMIT = 64
-_LOADED_SKILLS_THIS_TURN_KEY = "_loaded_skills_this_turn"
-_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY = (
-    "_non_reference_tool_calls_since_skill_load"
-)
 
 
 def _normalize_trace_paths(value: object) -> list[str]:
@@ -51,36 +47,6 @@ def _increment_trace_counter(metadata: ExecutionMetadata | None, key: str) -> No
     metadata[key] = int(current) + 1 if isinstance(current, (int, float)) else 1
 
 
-def _record_skill_load(metadata: ExecutionMetadata | None, skill_name: object) -> None:
-    if metadata is None or not isinstance(skill_name, str):
-        return
-    skill = skill_name.strip()
-    if not skill:
-        return
-    _append_trace_values(metadata, _LOADED_SKILLS_THIS_TURN_KEY, [skill])
-    raw = metadata.get(_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY, {})
-    counts = raw.copy() if isinstance(raw, dict) else {}
-    counts[skill] = 0
-    metadata[_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY] = counts
-
-
-def _record_non_reference_tool_after_skill_load(
-    metadata: ExecutionMetadata | None,
-    tool_name: str,
-) -> None:
-    if metadata is None or tool_name in {"load_skill", "load_skill_reference"}:
-        return
-    raw = metadata.get(_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY, {})
-    if not isinstance(raw, dict) or not raw:
-        return
-    counts: dict[str, int] = {}
-    for key, value in raw.items():
-        if not isinstance(key, str):
-            continue
-        counts[key] = int(value) + 1 if isinstance(value, (int, float)) else 1
-    metadata[_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY] = counts
-
-
 def record_tool_trace(
     metadata: ExecutionMetadata | None,
     tool_name: str,
@@ -90,10 +56,6 @@ def record_tool_trace(
 ) -> None:
     if metadata is None:
         return
-    if tool_name == "load_skill":
-        _record_skill_load(metadata, tool_input.get("skill_name"))
-        return
-    _record_non_reference_tool_after_skill_load(metadata, tool_name)
     if tool_name == "read_task_details":
         _increment_trace_counter(metadata, "_read_task_details_calls")
         return

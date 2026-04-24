@@ -24,21 +24,9 @@ import json
 
 from pydantic import BaseModel, Field
 
-from config.defaults import SKILL_REFERENCE_TRACE_LIMIT
 from tools.core.base import BaseTool, TextToolOutput, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from skills.core.registry import SkillRegistry
-
-_LOADED_SKILL_REFERENCES_KEY = "_loaded_skill_references_by_skill_this_turn"
-_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY = (
-    "_non_reference_tool_calls_since_skill_load"
-)
-_STAGED_PLANNER_REFERENCES = frozenset(
-    {
-        ("team-root-planner-playbook", "synthesize-and-submit"),
-        ("team-planner-playbook", "submit-child-plan"),
-    }
-)
 
 
 class LoadSkillInput(BaseModel):
@@ -91,68 +79,6 @@ def make_skills_tools(
                 "description": skill.description,
                 "references": list(skill.references.keys()),
             }
-
-    def _loaded_skill_references(
-        context: ToolExecutionContext,
-        *,
-        skill_name: str,
-    ) -> list[str]:
-        raw = context.metadata.get(_LOADED_SKILL_REFERENCES_KEY, {})
-        if not isinstance(raw, dict):
-            return []
-        refs = raw.get(skill_name, [])
-        if not isinstance(refs, list):
-            return []
-        out: list[str] = []
-        for item in refs:
-            if isinstance(item, str):
-                stripped = item.strip()
-                if stripped:
-                    out.append(stripped)
-        return out
-
-    def _record_loaded_skill_reference(
-        context: ToolExecutionContext,
-        *,
-        skill_name: str,
-        reference_name: str,
-    ) -> None:
-        raw = context.metadata.get(_LOADED_SKILL_REFERENCES_KEY, {})
-        loaded = raw.copy() if isinstance(raw, dict) else {}
-        refs = _loaded_skill_references(context, skill_name=skill_name)
-        refs.append(reference_name)
-        if len(refs) > SKILL_REFERENCE_TRACE_LIMIT:
-            refs = refs[-SKILL_REFERENCE_TRACE_LIMIT:]
-        loaded[skill_name] = refs
-        context.metadata[_LOADED_SKILL_REFERENCES_KEY] = loaded
-
-    def _reject_premature_staged_reference(
-        context: ToolExecutionContext,
-        *,
-        skill_name: str,
-        reference_name: str,
-    ) -> ToolResult | None:
-        if (skill_name, reference_name) not in _STAGED_PLANNER_REFERENCES:
-            return None
-        raw = context.metadata.get(_NON_REFERENCE_TOOL_CALLS_SINCE_SKILL_LOAD_KEY, {})
-        if not isinstance(raw, dict) or raw.get(skill_name) != 0:
-            return None
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "error": "Premature staged planner reference load.",
-                    "skill_name": skill_name,
-                    "reference_name": reference_name,
-                    "required_action": (
-                        "Complete the playbook's Analyze/Scout work first. "
-                        "Build the owner ledger, launch required scouts or "
-                        "carry explicit uncertainty, join the scout wave, and "
-                        "read available notes before retrying this reference."
-                    ),
-                }
-            ),
-            is_error=True,
-        )
 
     @tool(
         name="load_skill",
@@ -219,14 +145,6 @@ def make_skills_tools(
                 is_error=True,
             )
 
-        premature = _reject_premature_staged_reference(
-            context,
-            skill_name=skill_name,
-            reference_name=reference_name,
-        )
-        if premature is not None:
-            return premature
-
         content = skill.references.get(reference_name)
         if content is None:
             return ToolResult(
@@ -239,11 +157,6 @@ def make_skills_tools(
                 is_error=True,
             )
 
-        _record_loaded_skill_reference(
-            context,
-            skill_name=skill_name,
-            reference_name=reference_name,
-        )
         return ToolResult(output=content)
 
     return [load_skill, load_skill_reference]

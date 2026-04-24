@@ -18,11 +18,11 @@ The root routes top-down:
 | Stage | Output |
 | --- | --- |
 | 1. Analyze | Owner ledger: `{ clear, scout_required, unresolved, evidence }`. |
-| 2. Scout | Scout notes by scoped path, plus explicit uncertainty for missing notes. |
-| 3. Synthesize and submit | `synthesize-and-submit` reference read, payload checked, one `submit_plan(...)`. |
+| 2. Scout | Optional small scout wave, or explicit uncertainty handed to child planning. |
+| 3. Synthesize and submit | `synthesize-and-submit` reference available for synthesis, payload checked, one `submit_plan(...)`. |
 
 ```text
-Caption: root planner stage machine. References are read at the stage that uses them.
+Caption: root planner stage machine. References support the stage that uses them.
 
 User request
   |
@@ -31,20 +31,22 @@ User request
   | owner ledger complete?
   |-- no ------------------------------+
   |                                    |
-  | unresolved or benchmark-risk owner |
+  | unresolved or benchmark-risk owner
+  | and scout would change routing?
   |-- yes --> [2 Scout]                |
-  |             | join scouts          |
+  |             | join small scout wave|
   |             | read notes by path   |
   |             v                      |
+  |-- no --> carry uncertainty --------+
   +----------- back to ledger ---------+
   |
   v
-[3 Synthesize]
-  first tool in stage:
-    load_skill_reference(
-      skill_name="team-root-planner-playbook",
-      reference_name="synthesize-and-submit"
-    )
+	[3 Synthesize]
+	  synthesis guidance:
+	    load_skill_reference(
+	      skill_name="team-root-planner-playbook",
+	      reference_name="synthesize-and-submit"
+	    )
   then: draft -> checklist -> submit_plan(...)
 ```
 
@@ -74,21 +76,22 @@ Avoid implementation work here: no patching, validation, broad file reading, or 
 
 ### 2. Scout
 
-Skip this stage only when the owner ledger has no `scout_required` or unresolved production slices.
+	Use this stage only when a bounded scout wave will materially improve this layer's routing. The root does not have to fully explore unresolved or expandable work; it may preserve uncertainty and assign the slice to a child `team_planner`.
 
 ```text
-Caption: fan out by owner family, then read notes by the exact assigned paths.
+	Caption: fan out by owner family when scouting is worth the routing cost.
 
 owner ledger row A -> scout(target_paths=["pkg/io/parquet"]) -> read_file_note(file_paths=["pkg/io/parquet"])
 owner ledger row B -> scout(target_paths=["pkg/cli"])        -> read_file_note(file_paths=["pkg/cli"])
 owner ledger row C -> scout(target_paths=["pkg/config"])     -> read_file_note(file_paths=["pkg/config"])
 
-Do not merge unrelated rows into one scout.
-Multi-path scout = same row only, one durable note expected per path.
+A scout wave is usually 1-3 owner families. Avoid both one scout per failing test and one giant all-purpose scout.
+Do not merge unrelated rows into one scout. Multi-path scout = same row only.
 ```
 
-- Launch one scout per `scout_required` or unresolved production owner family with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one owner family>"], "context": "..."})`.
-- Prefer one stable boundary path. Use multiple paths only when every path belongs to the same owner-ledger row and needs its own durable note.
+- Launch scouts only for high-value `scout_required` or unresolved production owner families with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one owner family>"], "context": "..."})`.
+- Prefer one stable boundary path. Use multiple paths only when every path belongs to the same owner-ledger row.
+- Route low-value uncertainty to a child `team_planner` or diagnostic lane instead of widening root exploration.
 - Keep `target_paths` production-only. Put tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`.
 - Fire the useful scout wave before polling. Use `check_background_progress(task_id="all")` and `wait_for_background_task(task_id="all")` until no scout is running.
 - Track every launched scout's `target_paths`. After the wave joins, call `read_file_note(file_paths=[...])` with all assigned paths; `submit_file_notes(...)` stores one note per scoped path.
@@ -96,7 +99,7 @@ Multi-path scout = same row only, one durable note expected per path.
 
 ### 3. Synthesize and submit
 
-Enter this stage only after the ledger is complete and scouts are either done or explicitly skipped. Read the reference here, not earlier:
+	Enter this stage after the ledger is complete and scouts are either done or explicitly skipped. Load the synthesis reference when it helps draft or check the plan:
 
 ```text
 load_skill_reference(
@@ -105,10 +108,10 @@ load_skill_reference(
 )
 ```
 
-After this reference is loaded, stay on draft/check/submit. If a new owner gap appears, preserve it as uncertainty and route it to a child `team_planner` or scoped diagnostic lane instead of doing more exploration.
+After loading the reference, normally continue with draft/check/submit. If a new owner gap appears, preserve it as uncertainty or make a bounded routing check before assigning it to a child `team_planner` or scoped diagnostic lane.
 
 ```text
-Caption: lane routing after the Stage 3 reference is loaded.
+Caption: lane routing during synthesis.
 
 single live-proven owner + one coherent mechanism
   -> developer

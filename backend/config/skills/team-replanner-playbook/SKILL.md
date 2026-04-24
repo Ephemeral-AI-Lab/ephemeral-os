@@ -19,7 +19,7 @@ Replanner-created tasks use only `developer` repair lanes and `validator` verifi
 | 4. Submit | `terminal-contract` reference read, payload checked, one `submit_replan(...)`. |
 
 ```text
-Caption: replanner recovery path. References are read at action and submit time.
+Caption: replanner recovery path. References support action and submit time.
 
 [1 Load recovery context]
   |
@@ -45,7 +45,7 @@ Caption: replanner recovery path. References are read at action and submit time.
   load terminal-contract -> self-check -> submit_replan(...)
 ```
 
-Every path loads one action reference in Stage 3 and `terminal-contract` in Stage 4. Skip reference reads until the current stage has the evidence it needs.
+The intended path uses one action reference in Stage 3 and `terminal-contract` in Stage 4. Prefer reading references when the current stage has the evidence it needs.
 
 ## Workflow Details
 
@@ -108,7 +108,7 @@ A failed task's "test design issue" label does not drop a named fail-to-pass var
 
 ### 3. Act
 
-Enter this stage only after classification is written and diagnostics are complete or explicitly skipped. Read exactly the action reference matching the final cancellation decision:
+Enter this stage after classification is written and diagnostics are complete or explicitly skipped. Use the action reference matching the final cancellation decision:
 
 ```text
 # Add-only recovery
@@ -143,7 +143,7 @@ Use for `scope_expansion`, `wrong_owner_or_role`, and `unresolved_blocker` with 
 1. Preserve valid live siblings and downstream validators.
 2. Drop test-edit, doc-only, benchmark-only, and value-table contradiction candidates.
 3. Map every named failing variant to a repair/diagnostic task or an explicitly preserved live repair owner.
-4. Decide add-only vs cancel-and-redraft, then load the matching action reference above.
+4. Decide add-only vs cancel-and-redraft, then use the matching action reference above.
 
 The failed/original request_replan task can appear as a same-parent sibling in `read_task_graph()`; it is never stale sibling work and stays out of `cancel_ids`.
 
@@ -167,11 +167,11 @@ trace gap triplet:
 4. Queue the scout wave before checking progress; then use `check_background_progress` / `wait_for_background_task`.
 5. Harvest notes with `read_file_note(file_paths=[...])` for every path in every launched scout's `target_paths`. Missing notes create uncertainty for that path only.
 6. Synthesize the repair mapping yourself from confirmed, partial, and disproved findings.
-7. Decide add-only vs cancel-and-redraft, then load the matching action reference above.
+7. Decide add-only vs cancel-and-redraft, then use the matching action reference above.
 
 ### 4. Submit
 
-Enter this stage only after the matching Stage 3 action reference has been loaded and the corrective mapping is ready to check. Read the terminal contract here:
+Enter this stage after the matching Stage 3 action reference has shaped the corrective mapping. Use the terminal contract while checking the payload:
 
 ```text
 load_skill_reference(
