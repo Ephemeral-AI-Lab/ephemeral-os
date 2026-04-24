@@ -5,109 +5,87 @@ description: Playbook for the root_planner agent. Analyze the user request, scou
 
 # Team Root Planner Playbook
 
-Produce the root task DAG from the user request. Finish with exactly one `submit_plan(...)` call.
+Produce the top-level task DAG from the user request. Finish with exactly one `submit_plan(...)` call.
 
-The root routes top-down:
+| Route | Use when |
+| --- | --- |
+| `developer` | Exact, live-proven owner plus one bounded mechanism. |
+| `team_planner` | Broad, clustered, matrix-shaped, mixed, or unresolved owner boundary. |
+| `validator` | Same-payload verification after producer lanes. |
 
-- Exact, live-proven, single-owner work -> `developer`.
-- Broad, clustered, matrix-shaped, or unresolved work -> child `team_planner`.
-- Same-payload verification -> `validator`.
+## Stage Flow
 
-## Workflow Map
+```text
+Caption: root planner stage machine. Each reference is loaded only at the stage that uses it.
+
+user request
+  |
+  v
+[1 Load context]
+  | request evidence -> owner ledger
+  |
+  | scout would change this level's routing?
+  |-- yes --> [2 Scout] -> harvest notes -> update ledger
+  |-- no ---> carry uncertainty in child spec
+  |
+  v
+[3 Synthesize]
+  load synthesize-and-submit
+  draft -> checklist -> submit_plan(...)
+```
 
 | Stage | Output |
 | --- | --- |
-| 1. Analyze | Owner ledger: `{ clear, scout_required, unresolved, evidence }`. |
-| 2. Scout | Optional small scout wave, or explicit uncertainty handed to child planning. |
-| 3. Synthesize and submit | `synthesize-and-submit` reference available for synthesis, payload checked, one `submit_plan(...)`. |
+| 1. Load context | Owner ledger: clear owners, scout candidates, unresolved clusters, verification evidence. |
+| 2. Scout | Optional 1-3 scout wave, grouped by owner family. |
+| 3. Synthesize | Top-level local DAG with `developer`, `team_planner`, and optional `validator` nodes. |
 
-```text
-Caption: root planner stage machine. References support the stage that uses them.
-
-User request
-  |
-  v
-[1 Analyze]
-  | owner ledger complete?
-  |-- no ------------------------------+
-  |                                    |
-  | unresolved or benchmark-risk owner
-  | and scout would change routing?
-  |-- yes --> [2 Scout]                |
-  |             | join small scout wave|
-  |             | read notes by path   |
-  |             v                      |
-  |-- no --> carry uncertainty --------+
-  +----------- back to ledger ---------+
-  |
-  v
-	[3 Synthesize]
-	  synthesis guidance:
-	    load_skill_reference(
-	      skill_name="team-root-planner-playbook",
-	      reference_name="synthesize-and-submit"
-	    )
-  then: draft -> checklist -> submit_plan(...)
-```
-
-## Workflow Details
-
-### 1. Analyze
-
-Build the owner ledger before routing. The root planner has no parent, deps, or Task Center graph context to load.
+## 1. Load Context
 
 ```text
 Caption: split evidence from ownership before making lanes.
 
-request text
-  |-- failing tests / benchmark ids / commands ------> evidence
-  |-- exact production path or symbol ----------------> clear
-  |-- broad family, matrix, migration, compatibility -> scout_required
-  `-- guessed or ambiguous production owner ----------> unresolved
+request
+  |-- commands / benchmark ids / failing tests -> evidence
+  |-- exact production file or symbol ---------> clear owner
+  |-- broad family / matrix / migration -------> scout candidate
+  `-- guessed or test-derived owner -----------> unresolved
 ```
 
-- Classify the request as bugfix, refactor, feature, migration, benchmark, or mixed.
-- Raise a clustering flag for many failing tests, several production families, or an engine/dtype/format/API matrix under one subsystem.
-- For benchmark, fail-to-pass, migration, or compatibility work, mark each broad family as `scout_required` even when the first-pass owner label looks plausible.
-- Use at most one targeted `ci_workspace_structure` or `ci_query_symbol` call before scouting if one live boundary check would materially improve the scout wave.
-- Keep benchmark test paths as verification evidence; they are not owner proof.
+| Check | Root-planner action |
+| --- | --- |
+| Intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
+| Clustering | Group many failures by owner family, mechanism, API, dtype, engine, or format. |
+| Benchmark evidence | Keep tests and ids as verification evidence, not owner proof. |
+| Boundary probe | Use at most one targeted CI structure/symbol query when it changes scout shape. |
 
-Avoid implementation work here: no patching, validation, broad file reading, or test-edit ownership unless the user requested test repair.
+Avoid implementation work in this stage. Preserve uncertain ownership in the child task instead of proving every leaf.
 
-### 2. Scout
+## 2. Scout
 
-	Use this stage only when a bounded scout wave will materially improve this layer's routing. The root does not have to fully explore unresolved or expandable work; it may preserve uncertainty and assign the slice to a child `team_planner`.
+Use this stage only when live evidence changes this level's DAG. A useful wave is usually 1-3 owner families.
 
 ```text
-	Caption: fan out by owner family when scouting is worth the routing cost.
+Caption: scout fan-out follows owner-ledger rows.
 
-owner ledger row A -> scout(target_paths=["pkg/io/parquet"]) -> read_file_note(file_paths=["pkg/io/parquet"])
-owner ledger row B -> scout(target_paths=["pkg/cli"])        -> read_file_note(file_paths=["pkg/cli"])
-owner ledger row C -> scout(target_paths=["pkg/config"])     -> read_file_note(file_paths=["pkg/config"])
-
-A scout wave is usually 1-3 owner families. Avoid both one scout per failing test and one giant all-purpose scout.
-Do not merge unrelated rows into one scout. Multi-path scout = same row only.
+row: parquet family -> scout(["pkg/io/parquet"]) -> read_file_note(["pkg/io/parquet"])
+row: CLI family     -> scout(["pkg/cli"])        -> read_file_note(["pkg/cli"])
+row: config seam    -> scout(["pkg/config", "pkg/options"])
 ```
-
-- Launch scouts only for high-value `scout_required` or unresolved production owner families with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one owner family>"], "context": "..."})`.
-- Pick scout shape by dependency hypothesis; a reasonable guess is enough before launching.
-- Route low-value uncertainty to a child `team_planner` or diagnostic lane instead of widening root exploration.
-- Keep `target_paths` production-only. Put tests, `test_*.py`, benchmark harnesses, verification paths, missing test-derived files, skipped variants, optional-dependency errors, and verification commands in scout `context`.
-- Fire the useful scout wave before polling. Use `check_background_progress(task_id="all")` and `wait_for_background_task(task_id="all")` until no scout is running.
-- Track every launched scout's `target_paths`. After the wave joins, call `read_file_note(file_paths=[...])` with all assigned paths; `submit_file_notes(...)` stores one note per scoped path.
-- If a delivered scout leaves one assigned path without a note, carry missing-note uncertainty for that path without discarding sibling path notes.
 
 | Scout shape | Use when |
 | --- | --- |
 | Single path | One file or module is the likely owner. |
-| Multi-path, one row | Paths are coupled by dependency, entrypoint, adapter, or shared mechanism. |
-| Directory | Owner is a package/subsystem, or exact files are not knowable without mapping. |
-| Separate scouts | Paths belong to different owner families. |
-| No scout, route to `team_planner` | Boundary is broad enough that exploration becomes decomposition. |
+| Multi-path | Paths form one dependency, entrypoint, adapter, or shared mechanism. |
+| Directory | Owner is a package/subsystem and exact files are unknown. |
+| Separate scouts | Candidate owner families are independent. |
+| No scout | Exploration becomes decomposition; route to `team_planner`. |
 
-### 3. Synthesize and submit
+Keep scout `target_paths` production-only. Put tests, benchmark ids, optional-dependency signals, commands, and hypotheses in scout context. Launch the useful wave before polling, then read notes for every assigned path. Missing notes become uncertainty for that path only.
 
-	Enter this stage after the ledger is complete and scouts are either done or explicitly skipped. Load the synthesis reference when it helps draft or check the plan:
+## 3. Synthesize
+
+Enter after the ledger is complete and scouts are done or intentionally skipped. Load the Stage 3 reference only now:
 
 ```text
 load_skill_reference(
@@ -116,23 +94,20 @@ load_skill_reference(
 )
 ```
 
-After loading the reference, normally continue with draft/check/submit. If a new owner gap appears, preserve it as uncertainty or make a bounded routing check before assigning it to a child `team_planner` or scoped diagnostic lane.
-
 ```text
-Caption: lane routing during synthesis.
+Caption: root routing during synthesis.
 
-single live-proven owner + one coherent mechanism
-  -> developer
-
-broad, clustered, matrix-shaped, mixed, or unresolved owner
-  -> team_planner
-
-same-payload verification of all producers
-  -> validator with deps=[every producer it verifies]
+atomic exact owner        -> developer
+expandable boundary      -> team_planner
+same-payload evidence    -> validator with deps=[verified producers]
 ```
 
-- Use the reference's clustering, lane selection, coverage/evidence, dependency DAG, and submission rules.
-- Draft each task with `id`, `agent`, `deps`, `scope_paths`, and a structured `spec` containing non-empty `goal`, `detail`, and `acceptance_criteria`.
-- Before submit, audit every `developer` task: it must be exact-owner work, and its own `goal` / `detail` must not describe the same slice as expandable.
-- Every named failing cluster is owned by a repair/decomposition task or handed to a child `team_planner`; a terminal validator is never the owner of otherwise unassigned work.
-- Run the reference's Final Checklist, then emit `submit_plan({ "new_tasks": [...] })` as the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.
+| Draft check | Expected result |
+| --- | --- |
+| Coverage | Every named cluster has a producer owner or child `team_planner`. |
+| Developer lanes | Exact owner and one mechanism; not a hidden broad cluster. |
+| Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
+| Validators | Depend on every same-payload producer they verify. |
+| Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
+
+Run the reference checklist, then make `submit_plan({ "new_tasks": [...] })` the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.

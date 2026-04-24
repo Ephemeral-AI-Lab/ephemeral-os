@@ -1,41 +1,36 @@
 # Action Reference: Cancel And Redraft
 
-Use this after classification and diagnostics produce corrective work that must replace stale same-layer work. Final payload shape lives in `terminal-contract`; this reference only decides cancellation boundaries.
+Use after classification and diagnostics show stale same-layer work must be replaced. Final schema lives in `terminal-contract`.
 
-If no stale direct sibling remains after excluding the failed task, switch to `action-add-tasks` and submit `cancel_ids=[]`.
+## Decision Flow
 
-## Decision Contract
+```text
+Caption: cancel-and-redraft names only stale non-terminal direct siblings.
 
-Cancel a non-terminal direct sibling of this replanner only when it is stale because it works from invalidated assumptions, a shared dependency changed, or it would duplicate/conflict with replanner-owned repair.
+same parent
+  |-- failed origin task -> preserve
+  |-- this replanner     -> preserve
+  |-- terminal sibling   -> preserve
+  |-- live useful sibling -> preserve
+  `-- stale non-terminal sibling -> cancel_ids
+```
 
-Put replacement work under this replanner as direct `developer` children, with optional `validator` verification. Include a cancelled sibling's scope in replacement tasks only when that sibling id is in `cancel_ids`.
-
-## Never Cancel
-
-- The failed task or original `request_replan` task, even when `read_task_graph()` shows it as a same-parent sibling.
-- This replanner.
-- `done`, `failed`, or `cancelled` tasks.
-- Nested descendants or dependents directly; cancel the stale sibling root and let cascade handle them.
-- Tasks that are merely inconvenient but not stale.
-
-## Drop
-
-- Same-scope continuation of the failed task.
-- Benchmark-test edits, missing paths proven only by tests, skip/xfail/test rewrite/pytest config/benchmark harness changes intended to make verification green.
-- Replacement work for an uncancelled sibling's scope.
-- Child `team_planner`, `root_planner`, `team_replanner`, or `scout` tasks.
-- Replacement moves, shims, bridges, or re-exports without production evidence for both source and destination.
-- Dependencies on downstream tasks already blocked on this replanner.
+| Candidate | Action |
+| --- | --- |
+| Stale non-terminal direct sibling | Add its id to `cancel_ids`. |
+| Failed task or original `request_replan` task | Preserve. |
+| This replanner | Preserve. |
+| Done, failed, cancelled, nested descendant, or dependent | Preserve; cascade handles descendants from the stale root. |
+| Replacement for uncancelled sibling scope | Drop or switch to add-only. |
 
 ## Build
 
-1. Confirm every `cancel_ids` item is a non-terminal direct sibling with this replanner's `parent_id`.
-2. Exclude the failed task id, original `request_replan` task, this replanner id, terminal tasks, and nested graph ids. If a draft cancellation equals the failed task id from the prompt, remove it and use `action-add-tasks` when no other stale sibling remains.
-3. Keep replacement work under this replanner; do not create a child planner, replanner, or scout.
-4. Prefer local deps; existing deps require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task.
-5. If a separate verification lane is useful and no preserved downstream validator covers the surface, add a validator with deps on the local replacement ids it verifies.
-6. Load `terminal-contract`, self-check the payload, then submit exactly one `submit_replan(...)` call.
+| Check | Rule |
+| --- | --- |
+| Cancellation proof | Each `cancel_ids` item is non-terminal and has this replanner's `parent_id`. |
+| Replacement scope | Include cancelled sibling scope only when that sibling id is in `cancel_ids`. |
+| Children | Add only `developer` repair/diagnostic tasks and optional `validator` tasks. |
+| Dependencies | Prefer local deps; existing deps need fresh schedulable graph proof. |
+| No stale sibling left | Switch to `action-add-tasks` and submit `cancel_ids=[]`. |
 
-## Expected Outcome
-
-Stale sibling work is replaced cleanly at this layer; cascade handles deeper cleanup without duplicate or dangling work.
+Load `terminal-contract`, self-check, then submit exactly one `submit_replan(...)`.

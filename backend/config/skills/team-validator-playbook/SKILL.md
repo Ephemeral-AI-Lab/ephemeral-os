@@ -5,226 +5,116 @@ description: Authoritative playbook for the validator agent. Read task context, 
 
 # Team Validator Playbook
 
-Verify the assigned developer or child-planner outcome from live repo evidence. Finish with exactly one `submit_task_success(...)` or `request_replan(...)` call, then stop.
+Verify the assigned developer or child-planner outcome from live repo evidence. Finish with exactly one `submit_task_success(...)` or `request_replan(...)` call.
 
-Read the handoff first, plan exact evidence, verify before substitutes, and apply at most one obvious local correction only when red evidence proves it belongs inside validator scope.
-
-## Workflow Map
-
-| Stage | Purpose | Output contract |
-| --- | --- | --- |
-| 1. Read task details | Load validation task, parent, dependencies, and file notes. | Criteria, handoff status, touched files, scope paths, freshness. |
-| 2. Build validation plan | Map every criterion to direct evidence. | Acceptance map, command order, diagnostics, public-surface guardrail decision. |
-| 3. Run diagnostics and exact verification | Prove current repo state. | Green evidence for Stage 6, or red evidence for Stage 4. |
-| 4. Analyze red evidence | Trace the first wrong mechanism. | Root-cause packet plus correction or replan decision. |
-| 5. Apply one scoped correction | Patch only an obvious local defect. | One correction plus fresh verification route. |
-| 6. Submit terminal summary | Emit the only terminal outcome. | One success or replan call; no later tools. |
-
-**Diagram caption:** Validator route. The validator first builds an evidence map, runs direct verification, then either succeeds, applies one local correction, or asks for replanning.
-
-Decision flow:
+## Stage Flow
 
 ```text
-+----------------------------+
-| assigned validation task   |
-+-------------+--------------+
-              |
-              v
-+----------------------------+
-| 1. read task + notes       |
-+-------------+--------------+
-              |
-              v
-+----------------------------+       invalid handoff
-| 2. map criteria to evidence|--------------------------+
-+-------------+--------------+                          |
-              |                                         v
-              v                              +----------------------+
-+----------------------------+      red      | 6. request_replan   |
-| 3. diagnostics + exact cmd |-------------->+----------------------+
-+-------------+--------------+               ^          ^
-              | green                        |          |
-              v                              |          |
-+----------------------------+               |          |
-| 6. submit success          |               |          |
-+----------------------------+               |          |
-                                             |          |
-                              no local fix   |          | same surface
-                        +--------------------+          |
-                        |                               |
-                        v                               |
-              +----------------------------+  one fix   |
-              | 4. red evidence trace      |----------->|
-              +-------------+--------------+            |
-                            |                           |
-                            v                           |
-              +----------------------------+            |
-              | 5. one scoped correction   |------------+
-              +----------------------------+
+Caption: validator route. Direct evidence comes first; red evidence either gets one local correction or returns to replanning.
+
+validation UUIDs
+  -> [1 Read context]
+  -> [2 Map criteria to evidence]
+       | invalid handoff / wrong owner / budget risk -> request_replan
+  -> [3 Run diagnostics + exact command]
+       | green -> submit_task_success
+       ` red / invalid / absent -> [4 Analyze red evidence]
+  -> [4 Analyze red evidence]
+       | obvious local correction -> [5 Apply one correction]
+       ` blocker / outside scope / broad / budget -> request_replan
+  -> [5 Apply one correction] -> fresh Stage 3 evidence
 ```
 
-## Reference Map
-
-No loadable references. Use this playbook directly.
+| Stage | Gate |
+| --- | --- |
+| 1. Read context | Validation task, parent, dependencies, and file notes are loaded first. |
+| 2. Build plan | Every criterion maps to direct evidence. |
+| 3. Verify | Diagnostics and exact command run before substitutes. |
+| 4. Analyze red | Failure is traced to a local correction or replanner decision. |
+| 5. Correct once | One obvious local mutation only. |
+| 6. Submit | Terminal tool is the final action. |
 
 ## Tools
 
 | Purpose | Signature |
-|---|---|
-| Read a known task by UUID | `read_task_details(task_id="<uuid>")` |
-| Read notes for paths | `read_file_note(file_paths=[...])` |
+| --- | --- |
+| Read task context | `read_task_details(task_id="<uuid>")` |
+| Read file notes | `read_file_note(file_paths=[...])` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
-| Run tests or shell | `daytona_shell(command="...")` |
-| Edit by exact text | `daytona_edit_file(file_path=..., old_text=..., new_text=...)` or `(file_path, edits=[...])` |
-| Create a proven new file | `daytona_write_file(file_path=..., content=...)` |
+| Run verification | `daytona_shell(command="...")` |
+| Apply one correction | `daytona_edit_file(...)` or `daytona_write_file(...)` |
 | Terminal success | `submit_task_success({ summary: string })` |
-| Terminal replan request | `request_replan({ reason: string })` |
+| Terminal replan | `request_replan({ reason: string })` |
 
-## Guardrail Matrix
+## Operating Guardrails
 
 | Surface | Compact rule |
 | --- | --- |
-| Shell boundary | Do not use `daytona_shell` for file reads, writes, moves, deletes, introspection, or wrapper health checks. Use Daytona read, search, or mutation tools. |
-| Shell edits | Do not edit through shell redirects, inline Python writes, raw git moves, `sed -i`, `tee`, `cp`, `mv`, or unprefixed file tools. |
-| Verification integrity | Do not skip, xfail, rewrite verification, change pytest config, install packages, or patch around root/OS permission behavior to turn a command green. |
-| Test files | Do not edit test files unless the task explicitly owns a test-only bug. |
-| Duplicate work | Do not launch duplicate equivalent verification commands in parallel. One exact command per suite is enough unless sharding after a transient no-output failure. |
-| Evidence freshness | Do not claim success from stale, partial, indirect, or wrapper evidence. |
-| Working directory | daytona_shell commands already start at the sandbox repo root. Use repo-relative commands such as `python -m pytest ...`. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path. |
-| Pytest overrides | Do not suppress or alter pytest configuration with `-o`, `--override-ini`, `filterwarnings=`, `addopts=`, `-W ignore`, `--disable-warnings`, `PYTHONWARNINGS`, or `-p no:...`. Those commands are invalid verification evidence. |
+| Shell boundary | Use `daytona_shell` only for tests, builds, or runtime probes, not reads, writes, moves, deletes, introspection, redirects, or wrapper health checks. |
+| Verification integrity | Do not skip, xfail, rewrite verification, change pytest config, install packages, or use warning/plugin overrides to turn a command green. |
+| Test files | Treat tests as evidence unless this task explicitly owns a test-only bug. |
+| Evidence freshness | Stale, partial, indirect, duplicate-equivalent, wrapper, or missing evidence is red. |
+| Correction scope | One correction only; outside-scope, move/delete, multi-file, or repeated correction paths go to replan. |
 
-## Workflow Details
-
-### 1. Read task details
-
-| Section | Contract |
-| --- | --- |
-| **Input** | The assigned validation task header with own UUID, parent UUID, and dependency UUIDs. |
-| **Output** | Goal, detail, acceptance criteria, parent guidance, dependency handoff status, touched files, scope paths, and file-note freshness. |
-| **Forbidden** | daytona_shell, CI, notes, file reads, edits, diagnostics, references, or graph reads before required context reads; fabricated, short, slug, or scout ids. |
-
-**Diagram caption:** Stage 1 context order. Required UUID reads come first; file notes follow and must precede source reads, diagnostics, tests, or edits.
-
-#### Steps
+## 1. Read Context
 
 ```text
-[prompt header UUIDs]
-      |
-      v
+Caption: UUID reads precede notes; notes precede source reads, diagnostics, commands, and edits.
+
 own task -> parent task -> dependency tasks -> touched/owned file notes
-      |
-      v
-[criteria + handoff evidence + scope paths + freshness gaps]
+  -> criteria + handoff evidence + scope paths + freshness gaps
 ```
 
-1. Call `read_task_details(task_id="<uuid>")` for your task, parent task, and every dependency from the prompt header.
-2. Use exact UUIDs only; never planner slugs, short prefixes, fabricated ids, or scout ids.
-3. Treat your task spec as the validation contract. Treat dependency task details and parent details as the implementation handoff.
-4. After required UUID reads, call `read_file_note(file_paths=[...])` once with every touched or owned production file before source reads, diagnostics, tests, or edits. Empty notes count.
-5. Record missing, boilerplate, stale, or evidence-free dependency summaries as validation gaps.
+Use exact UUIDs from the prompt header. Treat dependency details as implementation handoff. Missing, stale, boilerplate, or evidence-free dependency summaries are validation gaps.
 
-### 2. Build validation plan
-
-| Section | Contract |
-| --- | --- |
-| **Input** | Stage 1 validation task, parent guidance, dependency handoffs, touched files, scope paths, and file notes. |
-| **Output** | Acceptance-criterion map, exact command order, diagnostics list, guardrail decision, and any handoff gaps. |
-| **Forbidden** | Substituting broad, unrelated, narrowed, or duplicate commands before the exact required command; expanding correction scope from tests, acceptance criteria, or import errors alone. |
-
-**Diagram caption:** Stage 2 evidence map. Every criterion receives a direct diagnostic, command, or probe before validation begins; invalid handoffs exit to replanning.
-
-#### Steps
+## 2. Build Validation Plan
 
 ```text
-[validation context]
-      |
-      v
-[criteria] -> [exact command first] -> [diagnostics] -> [guardrail?]
-      |
-      +--> dependency/handoff/scope invalid --> request_replan
-      |
-      v
-Stage 3
-```
+Caption: every criterion gets direct evidence before validation begins.
 
-Plan before the first diagnostic, runtime command, or corrective edit:
+criteria -> exact command first -> diagnostics -> optional public-surface guardrail
+```
 
 | Planning item | Compact rule |
 | --- | --- |
-| Criteria map | Map each acceptance criterion to the command, diagnostic, or probe that verifies it. |
-| Exact command | Put the exact required command from the task or handoff before substitutes, broad suites, unrelated suites, or narrowed confirmation. |
-| Diagnostics | Name owned files for `ci_diagnostics(file_path="...")`. |
-| Guardrail | Add one nearby public-surface guardrail only when the touched surface affects public serialization, schema shape, API/CLI/docs-visible output, or prompts. |
-| Scope expansion | Acceptance criteria, dependency handoffs, and test outcomes never expand `scope_paths` by themselves. A new production file may extend scope only through `daytona_write_file` when live production evidence proves a missing module, serialization lane, engine bridge, shim, re-export, or bridge and no other worker owns that path. |
-| Tests | Prefer a proven production fix over a test rewrite. Do not edit tests unless explicitly assigned a test-only bug. |
+| Criteria map | Map each acceptance criterion to a command, diagnostic, or probe. |
+| Exact command | Run the required command before substitutes, broad suites, or narrowed confirmation. |
+| Diagnostics | Name owned or touched production files for `ci_diagnostics`. |
+| Guardrail | Add one nearby public-surface guardrail only when the touched surface affects public output. |
+| Replan check | Dependency not done, missing handoff, wrong owner, no valid evidence path, budget risk, or correction outside assigned surface. |
 
-Call `request_replan` now when a dependency is not done, the handoff does not identify what to validate, the required verification belongs to another owner, the validation surface has no workflow-valid evidence path, or The only apparent correction would edit, move, rename, or delete an existing file outside assigned `scope_paths` and dependency handoff files. Also replan for an out-of-scope test edit, an unproven missing compatibility module, or a new production file whose `daytona_write_file` scope expansion was blocked or conflicted.
+Acceptance criteria and test outcomes do not expand `scope_paths` by themselves. A new production file is valid only when live production evidence proves the missing module, shim, bridge, serializer, or re-export and no worker owns it.
 
-### 3. Run diagnostics and exact verification
-
-| Section | Contract |
-| --- | --- |
-| **Input** | Stage 2 validation plan. |
-| **Output** | Command/probe results mapped to criteria, diagnostics status, guardrail result when applicable, and red evidence when present. |
-| **Forbidden** | Stale, partial, indirect, wrapper, warning-suppressed, pytest-config-overridden, duplicate-equivalent, or missing verification evidence. |
-
-**Diagram caption:** Stage 3 evidence gate. Diagnostics and exact commands produce either workflow-valid green evidence or red evidence for tracing.
-
-#### Steps
+## 3. Run Diagnostics And Exact Verification
 
 ```text
-[validation plan]
-      |
-      +--> ci_diagnostics(owned/touched production files)
-      |
-      +--> daytona_shell(exact required command first)
-      |
-      +--> daytona_shell(bounded guardrail, if planned)
-      |
-      v
-[criteria result table]
-      |
-      +--> all green --> Stage 6 success
-      +--> any red/invalid/absent --> Stage 4
+Caption: direct evidence decides success or red-evidence analysis.
+
+validation plan
+  -> ci_diagnostics(owned/touched production files)
+  -> daytona_shell(exact required command)
+  -> guardrail if planned
+  -> criteria result table
 ```
 
 | Evidence item | Compact rule |
 | --- | --- |
-| Diagnostics | Run `ci_diagnostics(file_path="...")` on every owned or touched production file before terminal completion. Error-severity diagnostics on owned files are red evidence unless explicitly pre-existing and irrelevant. |
-| Exact command | Run the exact required runtime command first. Use `daytona_shell(command="...")` for shell, build, and test commands. |
-| Working directory | Run daytona_shell from the sandbox repo root with repo-relative paths, or `cd frontend/web && ...` for a subdirectory. Never prefix commands with `cd /testbed &&`, and never `cd` to a host/local workspace path. |
-| Exit judgment | Judge pass/fail by exit code and failing ids. Pytest exit `4`, `0` collected items, or a missing named node is red evidence. |
-| Invalid overrides | Warning suppression, plugin disabling, or pytest-config overrides are invalid evidence unless the task owns pytest config. Re-run the raw command, repair in-scope production import/config, or request replanning. |
-| Policy block | If policy blocks the command, request replanning with trigger `unresolved_blocker` only when no valid equivalent can preserve the needed evidence. |
-| Evidence packet | Capture exact command, exit code, failing ids, diagnostics, and the shortest useful output snippet. |
+| Diagnostics | Error-severity diagnostics on owned files are red unless pre-existing and irrelevant. |
+| Exact command | Use the raw required command first. Exit 4, zero collected items, missing named nodes, skips, xfails, imports, or missing optional deps are red for named targets. |
+| Invalid overrides | Warning suppression, plugin disabling, or pytest-config overrides are invalid unless this task owns pytest config. |
+| Policy block | Use `unresolved_blocker` when no valid equivalent preserves the evidence. |
+| Budget warning | The next tool call is terminal; choose success only if green evidence and diagnostics already exist. |
 
-### 4. Analyze red evidence
-
-| Section | Contract |
-| --- | --- |
-| **Input** | Red, invalid, partial, unmet, or absent evidence from Stage 3. |
-| **Output** | One root-cause packet and either a scoped correction target or a terminal replan summary. |
-| **Forbidden** | Treating symptoms as root causes; correcting outside validator scope; repeated validator repairs without a new local defect. |
-
-**Diagram caption:** Stage 4 trace route. Preserve the failure, identify the first wrong production mechanism, and choose local correction only when the boundary is proven.
-
-#### Steps
+## 4. Analyze Red Evidence
 
 ```text
-[red evidence]
-      |
-      v
-[exact failure + exit + ids + snippet]
-      |
-      v
-[boundary: local | handoff | outside scope | tooling | unclear]
-      |
-      +--> obvious local correction --> Stage 5
-      |
-      +--> anything else -------------> Stage 6 request_replan
+Caption: a symptom is not a root cause; trace the first wrong production mechanism.
+
+red evidence -> failure + exit + ids + snippet
+  -> boundary: local | handoff | outside scope | tooling | unclear
 ```
 
-Build one root-cause packet:
+Root-cause packet:
 
 ```json
 {
@@ -232,117 +122,72 @@ Build one root-cause packet:
   "failing_test_diagnostic_or_error": "test id, diagnostic id, exception, import error, warning, or assertion",
   "expected_vs_actual": "what the criterion expected and what the repo produced",
   "boundary": "owned local surface | dependency handoff | outside scope | environment/tooling | unclear",
-  "trace": ["verification entry", "production call/import/config path", "first wrong value, branch, state, or API result"],
+  "trace": ["verification entry", "production call/import/config path", "first wrong mechanism"],
   "hypothesized_root_cause": "specific code defect or trace gap",
   "candidate_fix": "file and symbol if local, otherwise replanner decision needed",
   "next_action": "apply one scoped correction | request_replan"
 }
 ```
 
-Rules:
-
-1. A failing id, assertion mismatch, import error, or wrong value is a symptom, not a root cause.
-2. A valid local correction needs evidence for the exact file, symbol, statement, branch, config lookup, import target, state transition, or serializer that first creates the wrong result.
-3. Request replanning when the trace points outside owned scope, crosses into another role, requires broad design, would edit tests not explicitly owned, depends on missing handoff context, or remains ambiguous.
-4. Stop cycling if the same command stays red after one validator correction and the trace does not identify a new local defect.
-
-### 5. Apply one scoped correction
-
-| Section | Contract |
+| Boundary | Route |
 | --- | --- |
-| **Input** | Stage 4 root-cause packet with an obvious local correction target. |
-| **Output** | One scoped correction and fresh verification evidence, or a terminal replan summary if the correction is not allowed. |
-| **Forbidden** | Broad refactors, speculative owner changes, test edits, pytest config changes, environment workarounds, shell edits, or bypassing mutation-tool scope warnings. |
+| Obvious local defect in owned/touched production surface | Stage 5 correction. |
+| Outside scope, another role, broad design, missing handoff, ambiguous cause, tooling block, or budget warning without green evidence | `request_replan`. |
+| Same command stays red after one correction without a new local defect | `request_replan`. |
 
-**Diagram caption:** Stage 5 correction gate. One validator mutation is allowed, then the same diagnostics and verification path must be refreshed.
-
-#### Steps
+## 5. Apply One Scoped Correction
 
 ```text
-[obvious local correction]
-      |
-      v
-[inside scope or proven new production file?]
-      |
-      +--> no --> request_replan
-      |
-      v
-[one Daytona mutation]
-      |
-      v
-[refresh notes + diagnostics + same verification] -> Stage 3
+Caption: one validator mutation is allowed, then the same evidence path is refreshed.
+
+local correction -> allowed target? -> one Daytona mutation -> notes/diagnostics/exact command
 ```
 
-| Correction gate | Compact rule |
+| Correction gate | Route |
 | --- | --- |
-| Existing files | Before every mutation, verify the target file is inside an assigned `scope_paths` entry or a touched production file handed off by a dependency. |
-| New files | For a new production file required by live evidence, use `daytona_write_file` and let the write-scope posthook approve and record expansion. |
-| Scope warning | If an existing-file mutation is outside scope or the posthook blocks expansion, call `request_replan` with trigger `scope_expansion`. |
-| Mutation tool | Use only `daytona_edit_file` or `daytona_write_file`; exactly one mutation tool per change. |
-| Freshness | Refresh file notes after edits or surprising tool/runtime results. |
-| Tests | Never create or edit test files. |
-| Advisory warnings | If a mutation reports an outside-scope warning for an existing file, stop immediately; an advisory warning is workflow evidence, not permission to continue editing. |
-| Reverify | Re-run `ci_diagnostics` and the same owned verification surface after the correction. |
+| Existing file inside assigned `scope_paths` or dependency-touched production file | One `daytona_edit_file`. |
+| Proven new production file | One `daytona_write_file`. |
+| Existing-file outside scope, blocked expansion, move/delete, test edit, broad refactor, second correction, or multiple outside-scope edits | `request_replan` with `scope_expansion` or fitting trigger. |
 
-### 6. Submit terminal summary
-
-| Section | Contract |
-| --- | --- |
-| **Input** | Green Stage 3 evidence, or a Stage 4/5 trace and replan decision. |
-| **Output** | Exactly one terminal `submit_task_success(...)` or `request_replan(...)` call. |
-| **Forbidden** | Any later tool call; success with nonzero, missing, stale, partial, invalid, outside-scope, or diagnostics-only evidence. |
-
-**Diagram caption:** Stage 6 terminal gate. Success is only for fresh green evidence mapped to every criterion; all other states request replanning.
-
-#### Steps
+## 6. Submit Terminal Summary
 
 ```text
-[terminal decision]
-      |
-      +--> every criterion has workflow-valid green evidence
-      |       |
-      |       v
-      |   submit_task_success({ summary })
-      |
-      +--> any red / invalid / missing / stale / partial criterion
-              |
-              v
-          request_replan({ reason })
+Caption: terminal gate. Success is only for fresh green evidence mapped to every criterion.
+
+all criteria green + diagnostics clean
+  -> submit_task_success({ summary })
+
+any red / invalid / missing / stale / partial / blocked / budget-risk
+  -> request_replan({ reason })
 ```
 
-Final action must be exactly one of:
+Success summary includes:
 
-```ts
-submit_task_success({ summary: string })
-// or
-request_replan({ reason: string })
-```
-
-The `summary` (success) or `reason` (replan) field is the entire terminal payload.
-
-Success checklist. Do not omit a line because the answer is "none":
-
-| Required line | Must show |
+| Line | Content |
 | --- | --- |
 | Acceptance criteria | Each criterion mapped to pass evidence. |
-| Verification | Exact final commands or probes and observed outcomes. |
-| Exit evidence | Exit codes or key assertions for every cited command or probe. |
+| Verification | Exact final commands/probes and outcomes. |
+| Exit evidence | Exit codes or key assertions. |
 | Diagnostics | Owned-file diagnostics status. |
-| Guardrail | Public-surface guardrail result, or "none" if no guardrail was planned. |
-| Widening rationale | Investigation or guardrail widening rationale, or "none". |
-| Residual risk | `Residual risk:` plus the remaining validation caveat, follow-up risk, or "none". |
+| Guardrail | Public-surface guardrail result, or `none`. |
+| Widening rationale | Investigation or guardrail widening rationale, or `none`. |
+| Residual risk | Remaining caveat or `none`. |
 
-Request-replan checklist:
+Replan reason includes:
 
-| Required line | Must show |
+| Line | Content |
 | --- | --- |
-| Trigger | Exactly one of `scope_expansion`, `wrong_owner_or_role`, or `unresolved_blocker`. |
-| Root-cause packet | Stage 4 packet embedded verbatim inside `content`. |
-| Failing evidence | Exact failing command, diagnostic, or probe and its exit code. |
-| Failing ids | Test ids, diagnostic ids, or "none available". |
+| Trigger | `scope_expansion`, `wrong_owner_or_role`, or `unresolved_blocker`. |
+| Root-cause packet | Stage 4 packet embedded verbatim. |
+| Failing evidence | Exact failing command, diagnostic, or probe and exit code. |
+| Failing ids | Test ids, diagnostic ids, or `none available`. |
 | Output snippet | Shortest useful output and minimal reproduction. |
-| Replanner decision | Owner, scope, sequence, or design issue the replanner must resolve. |
+| Replanner decision | Owner, scope, sequence, budget, or design decision needed. |
 
-Use `scope_expansion` when the verified repair is outside the assigned `scope_paths`. Use `wrong_owner_or_role` when another agent role, dependency, or production owner must act before validation can pass. Use `unresolved_blocker` when verification, diagnostics, tooling, or root-cause tracing is still blocked but no different owner/scope is proven.
+Trigger guide:
 
-Call `submit_task_success` only when the latest required verification passed and every acceptance criterion is satisfied by workflow-valid evidence. Call `request_replan` for any nonzero command, error diagnostic, invalid command, pytest-config-overridden command, missing command, collection failure, partial pass, unmet criterion, ambiguous root cause, outside-scope fix, non-local repair, stale evidence, or summary that would otherwise say "partial".
+| Trigger | Use when |
+| --- | --- |
+| `scope_expansion` | Verified repair is outside assigned scope, broad, or requires multiple/out-of-scope edits. |
+| `wrong_owner_or_role` | Another agent role, dependency, or production owner must act first. |
+| `unresolved_blocker` | Verification, diagnostics, tooling, budget, or root-cause tracing is blocked without proven different owner. |
