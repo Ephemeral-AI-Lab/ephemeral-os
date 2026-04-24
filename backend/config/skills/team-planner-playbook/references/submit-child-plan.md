@@ -104,63 +104,122 @@ type NewTaskDefinition = {
 
 Submit top-level `new_tasks` only. Do not include `summary`, `output`, `parent_id`, sandbox-absolute paths, or prose after the tool call.
 
-## Payload Pattern
+## DAG And Dependency Patterns
+
+Use separate cases to reason about child-plan DAG shape. The final payload's `deps` must match the chosen diagram, and parent/dependency UUIDs from task context must not be copied into `deps`.
+
+### Sequential Case
+
+```text
+Caption: sequential child-planner output dependency.
+
+seq-contract (team_planner) -> seq-consumer (team_planner)
+```
+
+Rationale: use a sequential edge when the second child task consumes concrete output from the first task, such as a narrowed contract, generated migration primitive, normalized schema, or established API behavior. The nodes may be `team_planner` tasks when depth remains and each slice still needs further decomposition.
+
+Check before submitting:
+
+| Check | Rule |
+| --- | --- |
+| Output dependency | The consumer cannot safely start until the producer finishes. |
+| Edge direction | The dependent task lists the producer id in `deps`; the producer has no reverse edge. |
+| Context ids | Parent task ids and inherited dependency UUIDs stay in `spec.detail`, not `deps`. |
+| Depth | Use `team_planner` only while depth remains; at max depth split into direct repair/diagnostic lanes. |
+
+### Parallel Case
+
+```text
+Caption: independent child tasks with no output dependency.
+
+par-submission (team_planner)
+par-prompt (team_planner)
+```
+
+Rationale: use parallel siblings when inherited evidence already separates owner families and neither task needs the other's output. This keeps the child level schedulable without inventing ordering.
+
+Check before submitting:
+
+| Check | Rule |
+| --- | --- |
+| Independence | Each task can start from inherited context and notes. |
+| No hidden consumer | Neither task's acceptance criteria require the other task's changed behavior. |
+| No fake ordering | Both tasks use `deps: []` unless a validator later joins them. |
+| Boundary clarity | If paths are adjacent, state ownership boundaries in `spec.detail` instead of adding a dependency. |
+
+### Mixed Case
+
+```text
+Caption: sequential and parallel child producers join into one validator.
+
+mix-contract (team_planner) -> mix-bridge (team_planner) --\
+                                                            -> mix-validator (validator)
+mix-runtime (team_planner) --------------------------------/
+```
+
+Rationale: use a mixed shape when one lane has true sequence, another lane can progress independently, and a later validator needs both outputs. This captures required ordering without serializing unrelated child work.
+
+Check before submitting:
+
+| Check | Rule |
+| --- | --- |
+| Local sequence | Only the true consumer depends on the producer. |
+| Parallel lane | Independent work keeps `deps: []` and starts immediately. |
+| Join task | The validator depends on every same-payload producer it verifies. |
+| Max-depth fallback | If depth is exhausted, replace planner nodes with focused direct tasks and keep uncertainty visible in `spec.detail`. |
+
+Use `deps` only for same-payload output ordering or validator coverage. Do not add a dependency merely because two tasks touch related directories.
+
+## Detailed Task Spec Payload Pattern
+
+Show sophisticated `spec.goal`, `spec.detail`, and `spec.acceptance_criteria` only inside a complete `submit_plan(...)` payload.
+
+```text
+Caption: detailed child payload with a focused repair, child planning lane, and validator join.
+
+focused-rewire-repair (developer) -----------\
+                                               +--> child-output-validator (validator)
+submission-policy-planning (team_planner) ----/
+```
 
 ```ts
 submit_plan({
   new_tasks: [
     {
-      id: "dev-replan-rewire",
+      id: "focused-rewire-repair",
       agent: "developer",
       spec: {
-        goal: "Repair the focused replan rewire invariant.",
-        detail: "Own backend/src/team/task_center.py. Parent context and notes point to one mutation path; no child split is needed.",
-        acceptance_criteria: "Run uv run pytest backend/tests/team/test_replan_workflow.py -q and report exit code plus changed behavior."
+        goal: "Repair the focused replan rewire invariant inherited from the parent task.",
+        detail: "Own backend/src/team/task_center.py and adjacent team tests. Parent context and notes point to one mutation path: pending dependents are rewired at replan request time, but readiness must still be refreshed after the new edge is applied. Keep graph mutation policy inside TaskCenter and preserve inherited failing pytest ids verbatim.",
+        acceptance_criteria: "Add or update a focused backend/tests/team test that fails before the fix and passes after it. Run uv run pytest backend/tests/team/test_replan_workflow.py -q. Report command exit code, changed scheduling behavior, and any remaining inherited failing ids."
       },
       deps: [],
-      scope_paths: ["backend/src/team/task_center.py"]
+      scope_paths: ["backend/src/team/task_center.py", "backend/tests/team"]
     },
     {
-      id: "plan-submission-policy",
+      id: "submission-policy-planning",
       agent: "team_planner",
       spec: {
-        goal: "Decompose submission policy work across schema, runtime policy, and prompt rendering.",
-        detail: "Inherited evidence spans multiple owner families below backend/src/tools/submission and backend/src/prompt.",
-        acceptance_criteria: "Child plan preserves inherited pytest ids and assigns each cluster to an owner or diagnostic lane."
+        goal: "Plan the inherited submission policy work across schema, runtime policy, and prompt rendering.",
+        detail: "Inherited evidence spans multiple owner families below backend/src/tools/submission and backend/src/prompt. Depth remains, so preserve hierarchy instead of flattening this into one broad developer task. Split child work by owner/mechanism, keep uncertain owner hypotheses explicit, and preserve inherited pytest ids and benchmark targets in the child plan.",
+        acceptance_criteria: "The resulting child plan accounts for every inherited submission/prompt failure id or records why an id is out of scope. It assigns each cluster to an owner or diagnostic lane and does not count skip, xfail, missing optional dependency, or test rewrite closure as success."
       },
       deps: [],
-      scope_paths: ["backend/src/tools/submission", "backend/src/prompt"]
+      scope_paths: ["backend/src/tools/submission", "backend/src/prompt", "backend/tests"]
     },
     {
-      id: "val-child",
+      id: "child-output-validator",
       agent: "validator",
       spec: {
-        goal: "Verify all same-payload producer lanes.",
-        detail: "Verify dev-replan-rewire and plan-submission-policy after both finish. Report gaps to the owning lane.",
-        acceptance_criteria: "Run the focused replan suite and any inherited submission/prompt checks; report failing ids and owner gaps."
+        goal: "Verify the completed child-level producer lanes close the inherited behavior together.",
+        detail: "Depends on every same-payload producer it verifies. Check focused-rewire-repair and submission-policy-planning output as one same-layer evidence sweep. If a producer leaves uncovered failures, report failing ids and route them to the owning lane instead of editing code.",
+        acceptance_criteria: "Run uv run pytest backend/tests/team/test_replan_workflow.py -q and the focused commands reported by submission-policy-planning. Report command exit codes, failing ids, owner gaps, and whether closure relies on skipped, xfailed, or missing-dependency tests."
       },
-      deps: ["dev-replan-rewire", "plan-submission-policy"],
-      scope_paths: ["backend/src/team", "backend/src/tools/submission", "backend/src/prompt"]
+      deps: ["focused-rewire-repair", "submission-policy-planning"],
+      scope_paths: ["backend/src/team", "backend/src/tools/submission", "backend/src/prompt", "backend/tests"]
     }
   ]
 })
-```
-
-## DAG Patterns
-
-```text
-Caption: parallel child producers with optional validator join.
-
-dev-replan-rewire ----\
-plan-submission-policy -> val-child
-```
-
-```text
-Caption: child planner output can gate a downstream integration lane.
-
-plan-provider-contract -> dev-provider-bridge
-plan-provider-contract -> val-provider
-dev-provider-bridge   -> val-provider
 ```
 
 ## Final Checklist
