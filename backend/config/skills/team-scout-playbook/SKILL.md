@@ -18,9 +18,7 @@ payload -> [1 Notes] -> [2 Explore] -> [3 Exact-file completion] -> [4 Submit no
 | 1. Notes | `read_file_note(file_paths=[all assigned target_paths])` as the first tool phase. |
 | 2. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps. |
 | 3. Exact-file completion | Use the exact-file completion contract only after notes and exploration. |
-| 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` using the assigned path keys. |
-
-First tool phase: only `read_file_note(...)`.
+| 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` using assigned repo-relative keys, then stop. |
 
 ## 2. Explore
 
@@ -28,11 +26,11 @@ First tool phase: only `read_file_note(...)`.
 | --- | --- |
 | Single file / short fixed file list | Use at most one file-path `ci_query_symbol(...)` per assigned path, then Stage 3. |
 | Directory/package | Use CI tools to map subdivisions, entry points, owner seam, and gaps. |
-| Benchmark test path without test ownership | Inspect only enough snippet to understand expected behavior, then map production-owner evidence or gaps. |
+| Benchmark/test path | Record expected behavior, then map production-owner evidence or gaps. |
 | Missing exact target | Record zero coverage and do not hunt nearby replacements. |
 | Context-only adjacent files | Record as hypotheses unless assigned. |
 
-Keep `target_paths` as the exploration boundary. Prefer notes and CI before raw source reads. Do not use sandbox, edit, or runtime execution tools.
+Keep `target_paths` as the exploration boundary. Prefer notes and CI before raw source reads. No sandbox, edit, command, pytest, or runtime execution tools.
 
 If exact-path symbol queries returned definitions, submit notes next. If a target is missing, no-symbol, or replaced by a package boundary, submit notes with that gap instead of widening exploration.
 
@@ -47,6 +45,6 @@ Scope | Files mapped | Entry points | Owner seam | Suggested subdivisions | Gaps
 | Coverage | Every assigned target appears once in `scoped_paths`; directory targets stay directory keys and fixed-file targets stay exact files. |
 | Multi-path prompt | Path-labeled findings that stand alone when read back. |
 | Scope honesty | Missing/no-symbol/off-policy/adjacent hypotheses stay explicit. |
-| Terminal action | Exactly one `submit_file_notes(...)`; findings are not left only in prose. |
+| Terminal action | Successful `submit_file_notes(...)` is the last tool action. |
 
-If a final response is required after the tool returns, reply only `Posted.`
+After a successful submit, reply only `Posted.` if asked for final text.

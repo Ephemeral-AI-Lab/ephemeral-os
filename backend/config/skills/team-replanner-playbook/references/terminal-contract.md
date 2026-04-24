@@ -32,7 +32,7 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 | `agent` | Only `developer` or `validator`. |
 | `spec` | Non-empty `goal`, `detail`, and `acceptance_criteria`. |
 | `deps` | Prefer local payload ids; existing ids require fresh graph proof that they are schedulable and not downstream of this replanner or the failed task. |
-| `scope_paths` | Repo-relative production paths; tests and benchmark harnesses stay in `spec` unless the original request asked for test repair. |
+| `scope_paths` | Repo-relative production paths; tests and benchmark harnesses stay in `spec`. |
 | `cancel_ids` | Only stale non-terminal direct siblings; never failed task, any `request_replan` task, this replanner, terminal tasks, or nested descendants. |
 
 `spec.detail` names classification, diagnostics decision for `unresolved_blocker`, root-cause mechanism or gap, production scope, original-contract coverage, sibling/cancel handling, dependency context, evidence, and uncertainty.
@@ -51,6 +51,6 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 | 6 | Every task has non-empty production `scope_paths`. |
 | 7 | Every unresolved-blocker spec includes `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`. |
 | 8 | Named fail-to-pass variants and uncompleted original task criteria are not dropped as unsupported, test design, residual risk, or validator-only coverage. |
-| 9 | No task asks for test/benchmark/pytest-config mutation unless the user requested test repair. |
+| 9 | No task asks for test/benchmark/pytest-config mutation. |
 | 10 | `cancel_ids` contains only stale non-terminal direct siblings and no failed, terminal, replanner, descendant, or `request_replan` task id. |
 | 11 | The final assistant action is the `submit_replan(...)` tool call, not prose. |

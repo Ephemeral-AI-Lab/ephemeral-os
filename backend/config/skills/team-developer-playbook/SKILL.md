@@ -52,7 +52,7 @@ handoff UUIDs
 | Shared sandbox | Treat it as shared evidence; avoid setup or cleanup churn. |
 | Dependency/env mutation | Do not mutate packages, interpreters, lockfiles, virtualenvs, site-packages, OS packages, global tooling, generated caches, tests, pytest config, or verification itself. |
 | Shell boundary | Use `daytona_shell` only for tests, builds, or runtime probes, not reads, writes, moves, deletes, redirects, inline file writes, or cleanup commands. |
-| Verification integrity | Use raw required commands. Warning suppression, pytest overrides, wrappers, helper scripts, output filters, or inner-exit-code tricks are invalid evidence. |
+| Verification integrity | A failed raw command stays red; pytest overrides, wrappers, helper scripts, filters, or inner-exit-code tricks are RCA-only. |
 | Graph reads | Developers work from prompt UUIDs and task details, not `read_task_graph()`. |
 
 ## 1. Read Context
@@ -84,7 +84,7 @@ context
 | Verification | Exact post-edit command plus diagnostics for edited files. |
 | Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or fully spent budget with work incomplete. |
 
-Tests and benchmark ids are evidence, not edit surfaces, unless the original request assigns test repair. Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
+Tests and benchmark ids are evidence, not edit surfaces. Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
 
 ## 3. Implement
 

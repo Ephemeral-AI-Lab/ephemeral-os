@@ -30,7 +30,7 @@ classification + root-cause trace
 | Failure coverage | Every named variant maps to a repair/diagnostic task or preserved live owner. |
 | Original-contract coverage | Every uncompleted goal, acceptance criterion, and scope item from the failed developer/validator contract maps to a new recovery child or an explicitly preserved live owner; blocker-only repair is insufficient. |
 | Dependencies | Use local deps only for real output ordering; overlapping scopes alone are fine. |
-| Scope | Production paths only unless original user asked to repair tests. |
+| Scope | Production paths only; put tests in specs. |
 | Moves/removals | Name `daytona_move_file` or `daytona_delete_file` when that is the production repair. |
 | Value rules | If one proposed rule contradicts another observed expected/actual row, create a diagnostic developer. |
 

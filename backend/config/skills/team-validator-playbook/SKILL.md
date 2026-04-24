@@ -17,7 +17,7 @@ validation UUIDs
   -> [2 Map criteria to evidence]
        | invalid handoff / wrong owner / budget spent + incomplete -> request_replan
   -> [3 Run diagnostics + exact command]
-       | green -> submit_task_success
+       | raw exact command green -> submit_task_success
        ` red / invalid / absent -> [4 Analyze red evidence]
   -> [4 Analyze red evidence]
        | obvious local correction -> [5 Apply one correction]
@@ -51,9 +51,8 @@ validation UUIDs
 | Surface | Compact rule |
 | --- | --- |
 | Shell boundary | Use `daytona_shell` only for tests, builds, or runtime probes, not reads, writes, moves, deletes, introspection, redirects, or wrapper health checks. |
-| Verification integrity | Do not skip, xfail, rewrite verification, change pytest config, install packages, or use warning/plugin overrides to turn a command green. |
-| Test files | Treat tests as evidence unless this task explicitly owns a test-only bug. |
-| Evidence freshness | Stale, partial, indirect, duplicate-equivalent, wrapper, or missing evidence is red. |
+| Verification integrity | A failed raw command stays red; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
+| Evidence freshness | Stale, partial, indirect, wrapper, altered-command, or missing evidence is red. |
 | Correction scope | One correction only; single light write/move/delete can continue, while broad or repeated correction paths go to replan. |
 
 ## 1. Read Context
@@ -101,8 +100,8 @@ validation plan
 | --- | --- |
 | Diagnostics | Error-severity diagnostics on owned files are red unless pre-existing and irrelevant. |
 | Exact command | Use the raw required command first. Exit 4, zero collected items, missing named nodes, skips, xfails, imports, or missing optional deps are red for named targets. |
-| Invalid overrides | Warning suppression, plugin disabling, or pytest-config overrides are invalid unless this task owns pytest config. |
-| Policy block | Use `unresolved_blocker` when no valid equivalent preserves the evidence. |
+| Invalid overrides | Warning/plugin/pytest-config overrides, `--noconftest`, wrappers, or narrowed substitutes cannot make success. |
+| Policy block | No valid raw evidence -> `unresolved_blocker`. |
 | Budget fully spent | Use `request_replan` unless green evidence and diagnostics already exist. |
 
 ## 4. Analyze Red Evidence
@@ -152,7 +151,7 @@ local correction -> allowed target? -> one Daytona mutation -> notes/diagnostics
 ## 6. Submit Terminal Summary
 
 ```text
-Caption: terminal gate. Success is only for fresh green evidence mapped to every criterion.
+Caption: terminal gate. Success is only for raw green evidence mapped to every criterion.
 
 all criteria green + diagnostics clean
   -> submit_task_success({ summary })
