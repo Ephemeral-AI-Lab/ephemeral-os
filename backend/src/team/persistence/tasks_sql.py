@@ -1,6 +1,6 @@
-"""Pure SQLAlchemy query functions for task persistence.
+"""Task SQL layer — ORM model + query functions for the ``tasks`` table.
 
-Each function takes an ``AsyncSession`` (caller owns the transaction) and a
+Queries take an ``AsyncSession`` (caller owns the transaction) and a
 ``team_run_id`` scope. No session_factory, no in-memory graph, no commits —
 those belong to :class:`team.persistence.task_store.TaskStore`.
 """
@@ -8,24 +8,89 @@ those belong to :class:`team.persistence.task_store.TaskStore`.
 from __future__ import annotations
 
 from collections import defaultdict, deque
+from datetime import datetime, timezone
 from typing import Any, cast as type_cast
 
-from sqlalchemy import Text, cast, func, select, update
+from sqlalchemy import (
+    DateTime,
+    Integer,
+    JSON,
+    Text,
+    cast,
+    func,
+    select,
+    update,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import CursorResult, Row
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Mapped, aliased, mapped_column
 
+from db.base import Base
 from team.core.errors import GraphInvariantViolation
 from team.core.models import TERMINAL_STATUSES, TaskDefinition
 from team.persistence.ltree_utils import path_to_ltree
-from team.persistence.task_record import TaskRecord
 
-# ---- reads --------------------------------------------------------------
+# ---- ORM ----------------------------------------------------------------
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class TaskRecord(Base):
+    """Durable record of a team task. Partitioned by ``team_run_id``."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    team_run_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    agent_name: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
+    spec: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    deps: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    scope_paths: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    parent_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_id: Mapped[str] = mapped_column(Text, default="")
+    depth: Mapped[int] = mapped_column(Integer, default=0)
+    agent_run_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fired_by_task_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# ---- helpers ------------------------------------------------------------
 
 
 def _rowcount(result: object) -> int:
     return int(type_cast(CursorResult[Any], result).rowcount or 0)
+
+
+async def _update_task(
+    db: AsyncSession, team_run_id: str, task_id: str, **values: Any
+) -> None:
+    """Apply ``values`` to a single (task_id, team_run_id) row."""
+    await db.execute(
+        update(TaskRecord)
+        .where(
+            TaskRecord.id == task_id,
+            TaskRecord.team_run_id == team_run_id,
+        )
+        .values(**values)
+    )
+
+
+# ---- reads --------------------------------------------------------------
 
 
 async def fetch_record(
@@ -78,19 +143,6 @@ async def fetch_pending_dependents_for_update(
         .with_for_update()
     )
     return list((await db.execute(stmt)).scalars().all())
-
-
-async def fetch_done_dep_ids(
-    db: AsyncSession, team_run_id: str, dep_ids: set[str]
-) -> set[str]:
-    if not dep_ids:
-        return set()
-    stmt = select(TaskRecord.id).where(
-        TaskRecord.team_run_id == team_run_id,
-        TaskRecord.id.in_(dep_ids),
-        TaskRecord.status == "done",
-    )
-    return {str(row) for row in (await db.execute(stmt)).scalars().all()}
 
 
 async def fetch_unsatisfied_dep_ids(
@@ -226,17 +278,17 @@ async def fetch_task_status(
 async def fetch_parent_depth_and_root(
     db: AsyncSession, team_run_id: str, parent_id: str
 ) -> tuple[int, str | None]:
-    rec = (
+    row = (
         await db.execute(
-            select(TaskRecord).where(
+            select(TaskRecord.depth, TaskRecord.root_id, TaskRecord.id).where(
                 TaskRecord.team_run_id == team_run_id,
                 TaskRecord.id == parent_id,
             )
         )
-    ).scalar_one_or_none()
-    if rec is None:
+    ).first()
+    if row is None:
         raise ValueError(f"replan parent '{parent_id}' not found")
-    return rec.depth or 0, rec.root_id or rec.id
+    return row.depth or 0, row.root_id or row.id
 
 
 # ---- mutations ----------------------------------------------------------
@@ -245,39 +297,40 @@ async def fetch_parent_depth_and_root(
 async def set_status_done(
     db: AsyncSession, team_run_id: str, task_id: str
 ) -> None:
-    await db.execute(
-        update(TaskRecord)
-        .where(
-            TaskRecord.id == task_id,
-            TaskRecord.team_run_id == team_run_id,
-        )
-        .values(status="done", finished_at=func.now())
+    await _update_task(
+        db, team_run_id, task_id, status="done", finished_at=func.now()
     )
 
 
 async def set_status_expanded(
     db: AsyncSession, team_run_id: str, task_id: str
 ) -> None:
-    await db.execute(
-        update(TaskRecord)
-        .where(
-            TaskRecord.id == task_id,
-            TaskRecord.team_run_id == team_run_id,
-        )
-        .values(status="expanded")
-    )
+    await _update_task(db, team_run_id, task_id, status="expanded")
 
 
 async def set_status_terminal(
     db: AsyncSession, team_run_id: str, task_id: str, status: str, reason: str
 ) -> None:
-    await db.execute(
-        update(TaskRecord)
-        .where(
-            TaskRecord.id == task_id,
-            TaskRecord.team_run_id == team_run_id,
-        )
-        .values(status=status, finished_at=func.now(), failure_reason=reason)
+    await _update_task(
+        db,
+        team_run_id,
+        task_id,
+        status=status,
+        finished_at=func.now(),
+        failure_reason=reason,
+    )
+
+
+async def set_status_request_replan(
+    db: AsyncSession, team_run_id: str, task_id: str, reason: str
+) -> None:
+    await _update_task(
+        db,
+        team_run_id,
+        task_id,
+        status="request_replan",
+        finished_at=func.now(),
+        failure_reason=f"replan_requested: {reason}",
     )
 
 
@@ -337,13 +390,20 @@ async def insert_plan_records(
     if not specs:
         return []
     all_dep_ids = {dep_id for spec in specs for dep_id in spec.deps}
-    done_ids = await fetch_done_dep_ids(db, team_run_id, all_dep_ids)
-    records: list[TaskRecord] = []
+    done_ids: set[str] = set()
+    if all_dep_ids:
+        done_stmt = select(TaskRecord.id).where(
+            TaskRecord.team_run_id == team_run_id,
+            TaskRecord.id.in_(all_dep_ids),
+            TaskRecord.status == "done",
+        )
+        done_ids = {str(r) for r in (await db.execute(done_stmt)).scalars().all()}
     record_depth = (
         child_depth
         if child_depth is not None
         else ((parent_depth + 1) if parent_id else 0)
     )
+    records: list[TaskRecord] = []
     for spec in specs:
         status = "ready" if all(dep_id in done_ids for dep_id in spec.deps) else "pending"
         root_id = parent_root_id if parent_id else spec.id
@@ -502,20 +562,6 @@ async def mark_running(
     return (await db.execute(stmt)).scalar_one_or_none()
 
 
-async def set_status_request_replan(
-    db: AsyncSession, team_run_id: str, task_id: str, reason: str
-) -> None:
-    await db.execute(
-        update(TaskRecord)
-        .where(TaskRecord.id == task_id, TaskRecord.team_run_id == team_run_id)
-        .values(
-            status="request_replan",
-            finished_at=func.now(),
-            failure_reason=f"replan_requested: {reason}",
-        )
-    )
-
-
 async def finalize_replanned_origin(
     db: AsyncSession,
     team_run_id: str,
@@ -532,15 +578,11 @@ async def finalize_replanned_origin(
             TaskRecord.id == origin_id,
             TaskRecord.status == "request_replan",
         )
-        .values(
-            failure_reason=f"replanned_by:{replanner_task_id}",
-        )
+        .values(failure_reason=f"replanned_by:{replanner_task_id}")
     )
     return _rowcount(result)
 
 
-async def insert_task_record(
-    db: AsyncSession, record: TaskRecord
-) -> None:
+async def insert_task_record(db: AsyncSession, record: TaskRecord) -> None:
     db.add(record)
     await db.flush()

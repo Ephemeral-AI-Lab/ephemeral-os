@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import re
-from types import SimpleNamespace
 
 from sqlalchemy import Text
 
 from team.core.models import BudgetConfig, BudgetState, TERMINAL_STATUSES, Task, TaskStatus
 from team.persistence.ltree_utils import _escape_char, path_to_ltree
-from team.persistence import task_queries
-from team.persistence.task_record import TaskRecord
+from team.persistence import tasks_sql as task_queries
+from team.persistence.tasks_sql import TaskRecord
 from team.runtime.task_queue import TaskQueue
 from team.task_center import TaskCenter
 
@@ -113,7 +112,16 @@ class TestTaskRecord:
     def test_status_column_is_unbounded_text(self):
         assert isinstance(TaskRecord.status.type, Text)
         assert TaskRecord.status.type.length is None
-        assert max(len(status.value) for status in TaskStatus) > 16
+        assert {status.value for status in TaskStatus} == {
+            "pending",
+            "ready",
+            "running",
+            "expanded",
+            "request_replan",
+            "done",
+            "failed",
+            "cancelled",
+        }
 
 # ---------------------------------------------------------------------------
 # TaskCenter — structure check (no DB)
@@ -226,7 +234,7 @@ def test_cascade_cancel_recursive_loads_non_terminal_task_graph():
     assert "tasks.status NOT IN" in sql
 
 
-def test_detached_expandable_parent_awaits_summary_instead_of_failing(
+def test_detached_expandable_parent_is_promotable(
     monkeypatch,
 ):
     session = _FakeCascadeSession()
@@ -252,32 +260,20 @@ def test_detached_expandable_parent_awaits_summary_instead_of_failing(
         parent_id="parent",
     )
     tc.store.graph = {"parent": parent, "child": child}
-    marked_awaiting: list[str] = []
 
     async def _fake_parent_candidate(db, team_run_id, current_id):
         del db, team_run_id
         if current_id == "child":
-            return SimpleNamespace(id="parent")
+            return "parent"
         return None
-
-    async def _mark_awaiting(task_id: str) -> None:
-        marked_awaiting.append(task_id)
-        parent.status = TaskStatus.EXPANDED_AWAITING_SUMMARY
-
-    async def _unexpected_failed(task_id: str, status: str, reason: str) -> None:
-        raise AssertionError(f"detached parent must not be marked {status}: {task_id} {reason}")
 
     monkeypatch.setattr(
         task_queries,
         "fetch_expanded_parent_candidate",
         _fake_parent_candidate,
     )
-    monkeypatch.setattr(tc.store, "mark_expanded_awaiting_summary", _mark_awaiting)
-    monkeypatch.setattr(tc.store, "mark_terminal", _unexpected_failed)
 
-    promoted, awaiting = asyncio.run(tc.store.maybe_promote_expanded_parent("child"))
+    promoted_parent = asyncio.run(tc.store.fetch_promotable_parent("child"))
 
-    assert promoted == []
-    assert awaiting == ["parent"]
-    assert marked_awaiting == ["parent"]
-    assert parent.status == TaskStatus.EXPANDED_AWAITING_SUMMARY
+    assert promoted_parent == "parent"
+    assert parent.status == TaskStatus.EXPANDED

@@ -13,7 +13,6 @@ from team.core.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.agent_context import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
 from tools.submission import SubmitPlanTool, SubmitReplanTool
-from prompt.external_trigger_prompts import build_parent_summary_prompt as _build_parent_summary_prompt
 
 
 if get_definition("developer") is None:
@@ -805,44 +804,6 @@ def test_submit_replan_rejects_removed_expected_projection_argument():
         SubmitReplanTool.input_model(expected_projection={"root_parent_id": "parent"})
 
 
-def test_parent_summary_prompt_lists_completed_children_to_read_first():
-    parent = Task(
-        id="planner-parent",
-        team_run_id="run-1",
-        agent_name="team_planner",
-        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
-        spec=_spec("Plan retry work."),
-        depth=0,
-        root_id="planner-parent",
-    )
-    child = Task(
-        id="dev-child",
-        team_run_id="run-1",
-        agent_name="developer",
-        status=TaskStatus.DONE,
-        spec=_spec("Repair retry owner."),
-        parent_id="planner-parent",
-        root_id="planner-parent",
-        depth=1,
-        scope_paths=["src/retry.py"],
-    )
-    prompt = _build_parent_summary_prompt(parent, [child])
-
-    assert "# Parent summarizer task" in prompt
-    assert "All direct children of the parent task are terminal" in prompt
-    assert "## Parent task id\nplanner-parent" in prompt
-    assert "## Terminal direct child task ids to read\n- dev-child" in prompt
-    assert 'read_task_details(task_id="planner-parent")' in prompt
-    assert "read_task_details(task_id=...)" in prompt
-    assert "Only after every listed child has been read" in prompt
-    assert "pytest config or warning overrides" in prompt
-    assert "`--override-ini`" in prompt
-    assert "`request_replan(reason=...)`" in prompt
-    assert "This terminal submission is the completion signal for the parent task" in prompt
-    assert "## Direct child task details" not in prompt
-    assert "## Child terminal summaries" not in prompt
-
-
 @pytest.mark.asyncio
 async def test_build_query_context_planner_terminal_tools():
     task = Task(
@@ -874,46 +835,6 @@ async def test_build_query_context_planner_terminal_tools():
     )
 
     assert ctx.tool_metadata["terminal_tools"] == {"submit_plan"}
-
-
-@pytest.mark.asyncio
-async def test_build_query_context_parent_summarizer_terminal_tools():
-    task = Task(
-        id="summary-task",
-        team_run_id="run-1",
-        agent_name="parent_summarizer",
-        status=TaskStatus.READY,
-        spec=_spec("summarize parent task"),
-        fired_by_task_id="planner-parent",
-    )
-    task_center = _AsyncTaskCenterStub()
-    team_run = SimpleNamespace(
-        id="run-1",
-        sandbox_id="sbx-1",
-        repo_root="/repo",
-        coordination_metadata={},
-        task_center=task_center,
-        arbiter=None,
-        budgets=None,
-        budget_state=None,
-        root_task_id="planner-task",
-        roster={"parent_summarizer": ["parent_summarizer"]},
-        team_definition=None,
-    )
-
-    ctx = await build_query_context(
-        SimpleNamespace(
-            role="parent_summarizer",
-            terminal_tools=["submit_task_success", "request_replan"],
-        ),
-        team_run,
-        task,
-    )
-
-    assert ctx.tool_metadata["terminal_tools"] == {
-        "request_replan",
-        "submit_task_success",
-    }
 
 
 @pytest.mark.asyncio

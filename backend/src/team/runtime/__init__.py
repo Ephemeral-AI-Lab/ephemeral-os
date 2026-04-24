@@ -9,7 +9,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-__all__ = ["Executor", "TaskQueue", "TaskStatusHandler", "TeamRun"]
+__all__ = ["Executor", "TaskCoordinator", "TaskQueue", "TeamRun"]
 
 
 def __getattr__(name: str) -> Any:
@@ -17,8 +17,8 @@ def __getattr__(name: str) -> Any:
         return import_module("team.runtime.executor").Executor
     if name == "TaskQueue":
         return import_module("team.runtime.task_queue").TaskQueue
-    if name == "TaskStatusHandler":
-        return import_module("team.runtime.status_handler").TaskStatusHandler
+    if name == "TaskCoordinator":
+        return import_module("team.runtime.task_coordinator").TaskCoordinator
     if name == "TeamRun":
         return import_module("team.runtime.team_run").TeamRun
     raise AttributeError(name)

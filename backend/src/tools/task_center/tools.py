@@ -92,7 +92,6 @@ _STATUS_LABELS: dict[TaskStatus, str] = {
     TaskStatus.READY: "Ready",
     TaskStatus.RUNNING: "Running",
     TaskStatus.EXPANDED: "Expanded",
-    TaskStatus.EXPANDED_AWAITING_SUMMARY: "Expanded",
     TaskStatus.REQUEST_REPLAN: "Request Replan",
     TaskStatus.DONE: "Success",
     TaskStatus.FAILED: "Failed",

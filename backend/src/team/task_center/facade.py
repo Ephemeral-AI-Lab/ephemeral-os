@@ -1,13 +1,13 @@
 """TaskCenter — manager composition facade.
 
-All task lifecycle transitions are owned by ``TaskStatusHandler``. TaskCenter
+All task lifecycle transitions are owned by ``TaskCoordinator``. TaskCenter
 now only composes the managers the runtime wires together (``store`` /
 ``notes`` / ``context`` / ``budget`` / ``expander``) plus ``add_task`` for
 the initial root insertion and a couple of read-through helpers.
 
 Bulk cancellation flows through ``task_center.store.cancel_all_pending`` /
 ``cancel_all_running`` directly; the atomic ``ready → running`` claim runs
-through ``task_center.store.mark_running`` from the executor.
+through ``TaskCoordinator.claim_running`` from the executor.
 """
 
 from __future__ import annotations

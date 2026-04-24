@@ -1,4 +1,4 @@
-"""Unit tests for TaskStatusHandler core match-block cases."""
+"""Unit tests for TaskCoordinator core match-block cases."""
 
 from __future__ import annotations
 
@@ -11,14 +11,16 @@ import pytest
 from team.core.models import (
     BudgetConfig,
     BudgetState,
+    LeafSubmission,
     Plan,
     PlannerSubmission,
+    SubmittedSummary,
     Task,
     TaskDefinition,
     TaskStatus,
     TaskStatusUpdate,
 )
-from team.runtime.status_handler import TaskStatusHandler
+from team.runtime.task_coordinator import TaskCoordinator
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +50,7 @@ def _task(
 
 
 class FakeStore:
-    """In-memory fake that satisfies TaskStatusHandler's store interface."""
+    """In-memory fake that satisfies TaskCoordinator's store interface."""
 
     def __init__(self) -> None:
         self.graph: dict[str, Task] = {}
@@ -61,16 +63,25 @@ class FakeStore:
         self.mark_terminal = AsyncMock()
         self.refresh_graph = AsyncMock()
         self.get_record = AsyncMock(return_value=None)
-        self.maybe_promote_expanded_parent = AsyncMock(return_value=([], []))
-        self.finalize_parent_summary = AsyncMock(return_value=[])
         self.finalize_replanned_origin = AsyncMock(return_value=None)
-        self.sweep_expanded_promotions = AsyncMock(return_value=([], []))
         self.request_replan = AsyncMock()
-        self.insert_parent_summary_task = AsyncMock()
         self.cascade_cancel_recursive = AsyncMock()
+        self.fetch_promotable_parent = AsyncMock(return_value=None)
 
     def get_task(self, task_id: str) -> Task | None:
         return self.graph.get(task_id)
+
+    def terminal_child_ids(self) -> list[str]:
+        return [
+            task.id
+            for task in self.graph.values()
+            if task.parent_id is not None and task.status in {
+                TaskStatus.DONE,
+                TaskStatus.FAILED,
+                TaskStatus.CANCELLED,
+                TaskStatus.REQUEST_REPLAN,
+            }
+        ]
 
 
 class FakeBudget:
@@ -117,8 +128,8 @@ def _make_handler(
     expander: FakeExpander,
     fail_fast: AsyncMock,
     cancel_event: asyncio.Event | None = None,
-) -> TaskStatusHandler:
-    handler = TaskStatusHandler(
+) -> TaskCoordinator:
+    handler = TaskCoordinator(
         team_run_id="run-1",
         store=store,
         budget=budget,
@@ -161,68 +172,71 @@ async def test_success_marks_done_and_enqueues_newly_ready_deps():
 
 
 @pytest.mark.asyncio
-async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_parent(
+async def test_success_promotes_parent_with_synthesized_child_summary(
     monkeypatch,
 ):
-    """DONE on parent_summarizer sidecar → finalize parent and attach summary."""
+    """DONE child of an expanded parent -> synthesized parent summary + DONE."""
     parent_id = "parent-task"
-    sidecar_id = "sidecar-task"
+    child_id = "child-task"
 
-    # Make get_role return "parent_summarizer" for the sidecar's agent
-    monkeypatch.setattr("agents.registry.get_role", lambda name: "parent_summarizer")
+    monkeypatch.setattr("agents.registry.has_role", lambda name, role: False)
 
     store = FakeStore()
-    parent = _task(parent_id, status=TaskStatus.EXPANDED_AWAITING_SUMMARY, agent_name="developer")
+    parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
     parent.submission = PlannerSubmission(plan=Plan())
-    sidecar = _task(
-        sidecar_id,
+    child = _task(
+        child_id,
         status=TaskStatus.RUNNING,
-        agent_name="parent_summarizer",
-        fired_by_task_id=parent_id,
+        agent_name="developer",
     )
+    child.parent_id = parent_id
     store.graph[parent_id] = parent
-    store.graph[sidecar_id] = sidecar
+    store.graph[child_id] = child
 
-    # mark_done returns nothing extra for the sidecar
     store.mark_done.return_value = []
-    # get_record for parent must return EAS status
-    store.get_record.return_value = SimpleNamespace(status="expanded_awaiting_summary")
-    store.finalize_parent_summary.return_value = []
+    store.fetch_promotable_parent.side_effect = [parent_id, None]
 
     queue = FakeQueue()
     handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(
-        TaskStatusUpdate(task_id=sidecar_id, status=TaskStatus.DONE, summary="roll-up")
+        TaskStatusUpdate(task_id=child_id, status=TaskStatus.DONE, summary="child delivered")
     )
 
-    store.finalize_parent_summary.assert_awaited_once_with(parent_id)
+    assert store.mark_done.await_args_list[0].args == (child_id,)
+    assert store.mark_done.await_args_list[1].args == (parent_id,)
     assert parent.submission.summary is not None
-    assert parent.submission.summary.summary == "roll-up"
+    assert parent.submission.summary.summary == "child delivered"
 
 
 @pytest.mark.asyncio
-async def test_success_on_parent_summary_sidecar_empty_summary_fails_parent_and_fails_fast(
+async def test_synthesized_parent_summary_prefers_terminal_validator(
     monkeypatch,
 ):
-    """DONE with empty summary → FAILED on parent + fail_fast called."""
+    """Parent summary uses the terminal validator when one exists."""
     parent_id = "parent-task"
-    sidecar_id = "sidecar-task"
+    dev_id = "dev-task"
+    validator_id = "validator-task"
 
-    monkeypatch.setattr("agents.registry.get_role", lambda name: "parent_summarizer")
+    monkeypatch.setattr(
+        "agents.registry.has_role",
+        lambda name, role: name == "validator" and role == "reviewer",
+    )
 
     store = FakeStore()
-    parent = _task(parent_id, status=TaskStatus.EXPANDED_AWAITING_SUMMARY, agent_name="developer")
-    sidecar = _task(
-        sidecar_id,
-        status=TaskStatus.RUNNING,
-        agent_name="parent_summarizer",
-        fired_by_task_id=parent_id,
-    )
+    parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
+    dev = _task(dev_id, status=TaskStatus.DONE, agent_name="developer")
+    dev.parent_id = parent_id
+    dev.submission = LeafSubmission(summary=SubmittedSummary(summary="developer summary"))
+    validator = _task(validator_id, status=TaskStatus.RUNNING, agent_name="validator")
+    validator.parent_id = parent_id
+    validator.submission = LeafSubmission(summary=SubmittedSummary(summary="validator summary"))
     store.graph[parent_id] = parent
-    store.graph[sidecar_id] = sidecar
+    store.graph[dev_id] = dev
+    store.graph[validator_id] = validator
     store.mark_done.return_value = []
+    store.fetch_promotable_parent.side_effect = [parent_id, None]
 
     cancel_event = asyncio.Event()
     fail_fast = AsyncMock()
@@ -231,11 +245,15 @@ async def test_success_on_parent_summary_sidecar_empty_summary_fails_parent_and_
     handler.bind_queue(queue)
 
     await handler.handle(
-        TaskStatusUpdate(task_id=sidecar_id, status=TaskStatus.DONE, summary="")
+        TaskStatusUpdate(task_id=validator_id, status=TaskStatus.DONE, summary="validator summary")
     )
 
-    store.mark_failed.assert_awaited_once_with(parent_id, "parent_summary_empty")
-    fail_fast.assert_awaited_once_with("parent_summary_empty")
+    store.mark_failed.assert_not_awaited()
+    fail_fast.assert_not_awaited()
+    assert parent.submission is not None
+    assert isinstance(parent.submission, PlannerSubmission)
+    assert parent.submission.summary is not None
+    assert parent.submission.summary.summary == "validator summary"
 
 
 @pytest.mark.asyncio

@@ -1,20 +1,19 @@
-"""TaskStatusHandler — single dispatch entry for every task status change.
+"""TaskCoordinator — single owner of every task status change.
 
-One match block, six cases:
+Outcome-driven transitions go through ``handle()`` (one match block, five
+cases) under an asyncio lock so concurrent workers never interleave graph
+mutations:
 
-- ``SUCCESS``                          — mark done + cascade promotions
-- ``EXPANDED``                         — insert plan/replan children
-- ``EXPANDED_AWAITING_SUMMARY``        — inject parent-summary sidecar
-- ``REQUEST_REPLAN``                   — spawn recovery replanner
-- ``CANCELLED``                        — cascade cancel
-- ``FAILED``                           — mark failed + fail-fast the run
+- ``DONE``              — mark done + cascade promotions
+- ``EXPANDED``          — insert plan/replan children
+- ``REQUEST_REPLAN``    — spawn recovery replanner
+- ``CANCELLED``         — cascade cancel
+- ``FAILED``            — mark failed + fail-fast the run
 
-``handle()`` wraps the match block in ``async with self._lock`` so N workers
-calling it concurrently see a single-transition site. Re-entry from inside a
-case calls ``self._dispatch`` directly (the lock is already held).
-
-The only writer outside this handler is ``TaskExecutor.mark_running`` — the
-atomic ``ready → running`` claim — which is documented, not enforced.
+The atomic ``ready → running`` claim is exposed as ``claim_running()``; it is
+the executor's intent-to-start handshake and also emits the ``running`` event.
+Re-entry from inside a ``_dispatch`` case calls ``self._dispatch`` directly
+(the lock is already held).
 """
 
 from __future__ import annotations
@@ -26,7 +25,6 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from team.core.errors import BudgetExceeded, GraphInvariantViolation, InvalidPlan
 from team.core.models import (
-    TERMINAL_STATUSES,
     LeafSubmission,
     Plan,
     PlannerSubmission,
@@ -44,11 +42,7 @@ from team.persistence.events import (
     make_task_status,
     task_to_dict,
 )
-from team.persistence.task_store import (
-    TaskStore,
-    _has_parent_summarizer_role,
-    _has_replanner_role,
-)
+from team.persistence.task_store import TaskStore, _has_replanner_role
 from team.planning.expander import PlanExpander
 
 if TYPE_CHECKING:
@@ -60,8 +54,8 @@ logger = logging.getLogger(__name__)
 RosterGetter = Callable[[], dict[str, list[str]] | None]
 
 
-class TaskStatusHandler:
-    """Lock-serialized sink for every ``TaskStatusUpdate``."""
+class TaskCoordinator:
+    """Single owner for every task status transition."""
 
     def __init__(
         self,
@@ -98,6 +92,33 @@ class TaskStatusHandler:
 
     # ---- public entry points --------------------------------------------
 
+    async def claim_running(self, task_id: str, agent_run_id: str) -> Task | None:
+        """Atomic ``ready → running`` claim for the executor.
+
+        Returns the claimed ``Task`` on success, or ``None`` when the task is
+        no longer in ``ready``/``running`` state (already claimed, cancelled,
+        or missing). Emits the ``running`` status event as a side-effect.
+
+        Runs lockless: ``store.mark_running`` is DB-atomic, and serializing
+        every worker claim on the coordinator lock would bottleneck startup.
+        """
+        rec = await self._store.mark_running(task_id, agent_run_id)
+        if rec is None:
+            return None
+        task = self._store.get_task(task_id)
+        if task is None:
+            return None
+        self._emit(
+            make_task_status(
+                self._team_run_id,
+                task_id,
+                "running",
+                agent_run_id=agent_run_id,
+                started_at=_iso(task.started_at),
+            )
+        )
+        return task
+
     async def handle(self, update: TaskStatusUpdate) -> None:
         """Lock-serialized single dispatch entry."""
         async with self._lock:
@@ -116,30 +137,6 @@ class TaskStatusHandler:
             if current.status == TaskStatus.READY:
                 self._enqueue(current.id)
 
-    async def recover_awaiting_summary_parents(self) -> None:
-        """Re-inject parent-summary sidecars on restart.
-
-        Any parent stuck in ``expanded_awaiting_summary`` with no live
-        summarizer gets one spawned.
-        """
-        fetcher = getattr(self._store, "fetch_parents_awaiting_summary", None)
-        if fetcher is None:
-            return
-        async with self._lock:
-            before = self._snapshot_transitions()
-            stuck = await fetcher()
-            for parent_id in stuck:
-                try:
-                    sidecar_id = await self._inject_parent_summary(parent_id)
-                    if sidecar_id is not None:
-                        self._enqueue(sidecar_id)
-                except Exception:
-                    logger.exception(
-                        "failed to re-inject parent-summary sidecar for %s",
-                        parent_id,
-                    )
-            await self._refresh_and_emit(before)
-
     # ---- dispatch (single match site) -----------------------------------
 
     async def _dispatch(self, update: TaskStatusUpdate) -> None:
@@ -148,8 +145,6 @@ class TaskStatusHandler:
             await self._on_success(update)
         elif status is TaskStatus.EXPANDED:
             await self._on_expanded(update)
-        elif status is TaskStatus.EXPANDED_AWAITING_SUMMARY:
-            await self._on_awaiting_summary(update)
         elif status is TaskStatus.REQUEST_REPLAN:
             await self._on_request_replan(update)
         elif status is TaskStatus.CANCELLED:
@@ -171,32 +166,6 @@ class TaskStatusHandler:
         if task is not None and task.submission is None:
             task.submission = LeafSubmission(summary=SubmittedSummary(summary=summary))
 
-        if task is not None and _is_parent_summary_sidecar(task):
-            parent_id = task.fired_by_task_id
-            if not parent_id:
-                await self._dispatch(_fail(task_id, "parent_summary_missing_parent"))
-                return
-            if summary.strip():
-                parent = self._store.get_task(parent_id)
-                if parent is not None:
-                    if isinstance(parent.submission, PlannerSubmission):
-                        parent.submission.summary = SubmittedSummary(summary=summary.strip())
-                    else:
-                        parent.submission = PlannerSubmission(
-                            plan=Plan(),
-                            summary=SubmittedSummary(summary=summary.strip()),
-                        )
-                await self._finalize_awaiting_summary(parent_id)
-            else:
-                await self._dispatch(
-                    TaskStatusUpdate(
-                        task_id=parent_id,
-                        status=TaskStatus.FAILED,
-                        summary="parent_summary_empty",
-                    )
-                )
-                return
-
         # If the completed task is a replanner, resolve the origin chain.
         if self._is_replanner(task_id):
             await self._finalize_replanned_origin_chain(task_id)
@@ -204,37 +173,41 @@ class TaskStatusHandler:
         # Cascade promotion up expanded parent(s).
         await self._cascade_expanded_parent(task_id)
 
-    async def _finalize_awaiting_summary(self, parent_id: str) -> None:
-        """Transition an EAS parent → DONE and cascade further promotions."""
-        rec = await self._store.get_record(parent_id)
-        if rec is None or rec.status != TaskStatus.EXPANDED_AWAITING_SUMMARY.value:
-            return
-        promoted_ready = await self._store.finalize_parent_summary(parent_id)
+    async def _cascade_expanded_parent(self, child_id: str) -> None:
+        """Walk up EXPANDED parents, synthesizing each parent's summary and marking DONE."""
+        current = child_id
+        while True:
+            parent_id = await self._store.fetch_promotable_parent(current)
+            if parent_id is None:
+                return
+            await self._finalize_expanded_parent(parent_id)
+            current = parent_id
+
+    async def _finalize_expanded_parent(self, parent_id: str) -> None:
+        """Synthesize the planner's summary from children, mark DONE, chain promotions."""
+        parent = self._store.get_task(parent_id)
+        if parent is not None:
+            summary = _synthesize_parent_summary(parent_id, self._store.graph)
+            if isinstance(parent.submission, PlannerSubmission):
+                parent.submission.summary = SubmittedSummary(summary=summary)
+            else:
+                parent.submission = PlannerSubmission(
+                    plan=Plan(), summary=SubmittedSummary(summary=summary)
+                )
+        promoted_ready = await self._store.mark_done(parent_id)
         self._enqueue_many(promoted_ready)
-        await self._cascade_expanded_parent(parent_id)
         if self._is_replanner(parent_id):
             await self._finalize_replanned_origin_chain(parent_id)
 
-    async def _cascade_expanded_parent(self, child_id: str) -> None:
-        """Walk up EXPANDED parents, promoting / emitting EAS injections."""
-        promoted, awaiting = await self._store.maybe_promote_expanded_parent(child_id)
-        await self._apply_promotions(promoted, awaiting)
+    async def _sweep_promotable_parents(self) -> None:
+        """Re-run promotion checks for parents whose children have all detached.
 
-    async def _apply_promotions(
-        self, promoted: list[str], awaiting: list[str]
-    ) -> None:
-        """Enqueue newly READY ids, chain replanner origins, dispatch EAS parents."""
-        self._enqueue_many(promoted)
-        for promoted_id in promoted:
-            if self._is_replanner(promoted_id):
-                await self._finalize_replanned_origin_chain(promoted_id)
-        for parent_id in awaiting:
-            await self._dispatch(
-                TaskStatusUpdate(
-                    task_id=parent_id,
-                    status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
-                )
-            )
+        Called after bulk graph changes (replan cancels, cascade) that can
+        cause an EXPANDED parent to become promotable without a direct
+        child-DONE event. Walks upward from every terminal child.
+        """
+        for child_id in self._store.terminal_child_ids():
+            await self._cascade_expanded_parent(child_id)
 
     async def _finalize_replanned_origin_chain(self, replanner_id: str) -> None:
         """Recursively finalize REQUEST_REPLAN origins up the replanner chain."""
@@ -306,21 +279,7 @@ class TaskStatusHandler:
             # its job, so fail it rather than synthesizing a success summary.
             await self._dispatch(_fail(rec.id, "replan_produced_no_corrective_tasks"))
         # Replan cancels may have detached whole subtrees; sweep parents.
-        promoted, awaiting = await self._store.sweep_expanded_promotions()
-        await self._apply_promotions(promoted, awaiting)
-
-    # ---- EXPANDED_AWAITING_SUMMARY -------------------------------------
-
-    async def _on_awaiting_summary(self, update: TaskStatusUpdate) -> None:
-        """Inject a parent-summary sidecar for an EAS parent.
-
-        The DB row has already been set to ``expanded_awaiting_summary`` by
-        ``TaskStore.maybe_promote_expanded_parent``; this case only injects
-        the summarizer task.
-        """
-        sidecar_id = await self._inject_parent_summary(update.task_id)
-        if sidecar_id is not None:
-            self._enqueue(sidecar_id)
+        await self._sweep_promotable_parents()
 
     # ---- REQUEST_REPLAN ------------------------------------------------
 
@@ -384,74 +343,6 @@ class TaskStatusHandler:
             return
         await self._fail_fast(reason)
 
-    # ---- parent-summary sidecar injection ------------------------------
-
-    async def _inject_parent_summary(self, parent_id: str) -> str | None:
-        parent = self._store.graph.get(parent_id)
-        if parent is None:
-            await self._store.refresh_graph()
-            parent = self._store.graph.get(parent_id)
-            if parent is None:
-                logger.warning(
-                    "inject_parent_summary: parent %s missing from graph", parent_id
-                )
-                return None
-
-        if _has_recorded_parent_summary(parent):
-            await self._finalize_awaiting_summary(parent_id)
-            return None
-
-        live_sidecar = next(
-            (
-                task
-                for task in self._store.graph.values()
-                if task.fired_by_task_id == parent_id
-                and task.status not in TERMINAL_STATUSES
-                and _has_parent_summarizer_role(task.definition.agent)
-            ),
-            None,
-        )
-        if live_sidecar is not None:
-            return live_sidecar.id
-
-        from prompt.external_trigger_prompts import build_parent_summary_prompt
-
-        children = [
-            t for t in self._store.graph.values()
-            if getattr(t, "parent_id", None) == parent_id
-        ]
-        summary_task, created = await self._store.insert_parent_summary_task(
-            parent_task=parent,
-            summarizer_agent=self._resolve_parent_summarizer_agent(),
-            summary_prompt=build_parent_summary_prompt(parent, children),
-        )
-        if created:
-            self._emit(make_task_added(self._team_run_id, task_to_dict(summary_task)))
-        return summary_task.id
-
-    def _resolve_parent_summarizer_agent(self) -> str:
-        """Pick the roster's parent_summarizer; fall back to canonical name."""
-        default = "parent_summarizer"
-        roster = self._roster_getter() if self._roster_getter is not None else None
-        if not isinstance(roster, dict):
-            return default
-        candidates = roster.get("parent_summarizer")
-        if not isinstance(candidates, list):
-            return default
-        try:
-            from agents.registry import get_definition
-        except Exception:
-            return default
-        for candidate in candidates:
-            name = str(candidate).strip()
-            if not name:
-                continue
-            defn = get_definition(name)
-            if defn is None or getattr(defn, "role", None) != "parent_summarizer":
-                continue
-            return name
-        return default
-
     # ---- queue / emit helpers ------------------------------------------
 
     def _enqueue(self, task_id: str) -> None:
@@ -511,18 +402,49 @@ def _fail(task_id: str, reason: str) -> TaskStatusUpdate:
     return TaskStatusUpdate(task_id=task_id, status=TaskStatus.FAILED, summary=reason)
 
 
-def _is_parent_summary_sidecar(task: Task) -> bool:
-    return bool(task.fired_by_task_id) and _has_parent_summarizer_role(
-        task.definition.agent
+def _synthesize_parent_summary(parent_id: str, graph: dict[str, Task]) -> str:
+    """Build a parent's summary from its children.
+
+    Priority:
+    1. Terminal validator (reviewer role not depended on by any sibling,
+       chosen by earliest ``created_at``) — use its submission summary.
+    2. If no validator or the validator produced empty text, concatenate
+       the summaries of terminal non-validator leaves ordered by
+       ``created_at``, joined with ``\\n\\n---\\n\\n``.
+    """
+    children = [t for t in graph.values() if t.parent_id == parent_id]
+    if not children:
+        return ""
+    from agents.registry import has_role
+
+    sibling_deps = {d for c in children for d in (c.definition.deps or [])}
+    terminal_validators = sorted(
+        (c for c in children if has_role(c.definition.agent, "reviewer") and c.id not in sibling_deps),
+        key=lambda t: t.created_at,
     )
+    if terminal_validators:
+        text = _extract_summary_text(terminal_validators[0])
+        if text:
+            return text
+    leaves = [
+        c for c in children
+        if c.id not in sibling_deps and not has_role(c.definition.agent, "reviewer")
+    ]
+    parts = [
+        text
+        for text in (_extract_summary_text(c) for c in sorted(leaves, key=lambda t: t.created_at))
+        if text
+    ]
+    return "\n\n---\n\n".join(parts)
 
 
-def _has_recorded_parent_summary(task: Task) -> bool:
+def _extract_summary_text(task: Task) -> str:
     submission = task.submission
-    if not isinstance(submission, PlannerSubmission):
-        return False
-    summary = submission.summary
-    return bool(summary is not None and summary.summary.strip())
+    if isinstance(submission, LeafSubmission):
+        return submission.summary.summary.strip()
+    if isinstance(submission, PlannerSubmission) and submission.summary is not None:
+        return submission.summary.summary.strip()
+    return ""
 
 
 def _first_replanner_name() -> str | None:

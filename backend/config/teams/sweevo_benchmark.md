@@ -13,7 +13,5 @@ roster:
     - team_replanner
   explorer:
     - scout
-  parent_summarizer:
-    - parent_summarizer
 ---
-Default SWE-EVO benchmark team using the builtin root_planner/team_planner/developer/validator/replanner/scout/parent_summarizer agents.
+Default SWE-EVO benchmark team using the builtin root_planner/team_planner/developer/validator/replanner/scout agents.

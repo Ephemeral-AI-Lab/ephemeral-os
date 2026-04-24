@@ -16,7 +16,7 @@ from team.runtime.executor import Executor
 from team.runtime.run_registry import register as _register_team_run
 from team.runtime.run_registry import unregister as _unregister_team_run
 from team.runtime.services import TeamRuntimeServices, build_team_runtime_services
-from team.runtime.status_handler import TaskStatusHandler
+from team.runtime.task_coordinator import TaskCoordinator
 from team.runtime.task_queue import TaskQueue
 
 
@@ -72,7 +72,7 @@ class TeamRun:
         self.roster: dict[str, list[str]] = {}
         self.team_definition: Any | None = None
         self.arbiter: Any = getattr(runtime_services, "arbiter", None)
-        self.status_handler = TaskStatusHandler(
+        self.coordinator = TaskCoordinator(
             team_run_id=self.id,
             store=self.task_center.store,
             budget=self.task_center.budget,
@@ -152,15 +152,12 @@ class TeamRun:
         self.task_queue = TaskQueue(
             num_workers=self._num_executors,
             executor=executor,
-            handler=self.status_handler,
+            coordinator=self.coordinator,
         )
-        self.status_handler.bind_queue(self.task_queue)
+        self.coordinator.bind_queue(self.task_queue)
         await self.task_queue.start()
-        # Restart recovery must happen after the queue is bound so any
-        # re-injected sidecars land on the push queue.
-        await self.status_handler.recover_awaiting_summary_parents()
         await self.task_center.add_task(root)
-        await self.status_handler.on_task_added(root)
+        await self.coordinator.on_task_added(root)
 
     async def start_with_team_definition(
         self,

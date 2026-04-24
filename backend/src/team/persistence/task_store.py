@@ -1,7 +1,7 @@
 """TaskStore — SQL persistence layer for tasks.
 
 Owns session lifecycle + in-memory ``TaskGraph`` bookkeeping. All SQLAlchemy
-queries live in :mod:`team.persistence.task_queries`.
+queries and the ``TaskRecord`` ORM live in :mod:`team.persistence.tasks_sql`.
 """
 
 from __future__ import annotations
@@ -20,10 +20,10 @@ from team.core.models import (
     TaskStatus,
     _utcnow,
 )
-from team.persistence import task_queries as q
+from team.persistence import tasks_sql as q
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_graph import TaskGraph
-from team.persistence.task_record import TaskRecord
+from team.persistence.tasks_sql import TaskRecord
 
 
 def _has_replanner_role(agent_name: str) -> bool:
@@ -60,7 +60,7 @@ def record_to_task(rec: TaskRecord) -> Task:
 
 class TaskStore:
     """SQL persistence for tasks. Owns session_factory and team_run_id; delegates
-    raw queries to :mod:`task_queries` and in-memory graph / ready-queue
+    raw queries to :mod:`tasks_sql` and in-memory graph / ready-queue
     bookkeeping to :class:`TaskGraph`.
     """
 
@@ -141,186 +141,30 @@ class TaskStore:
             await db.commit()
         self._tg.mark_expanded(task_id)
 
-    async def mark_expanded_awaiting_summary(self, task_id: str) -> None:
-        async with self._sf() as db:
-            await q.set_status_expanded_awaiting_summary(
-                db, self._team_run_id, task_id
-            )
-            await db.commit()
-        self._tg.mark_expanded_awaiting_summary(task_id)
+    async def fetch_promotable_parent(self, child_id: str) -> str | None:
+        """Return the id of an EXPANDED parent of ``child_id`` ready to promote.
 
-    @staticmethod
-    def _is_expandable_parent_agent(agent_name: str) -> bool:
-        """Return True if ``agent_name`` triggers the parent-summary handoff.
-
-        Matches by agent *role* so a team roster can rename the canonical
-        planners/replanners without silently disabling the summary handoff.
-        Canonical agent names (``root_planner``, ``team_planner``,
-        ``team_replanner``) are accepted as a defensive fallback when the
-        registry is not yet populated (e.g. some unit tests).
-        """
-        if agent_name in {"root_planner", "team_planner", "team_replanner"}:
-            return True
-        try:
-            from agents.registry import get_role
-
-            return get_role(agent_name) in {"planner", "replanner"}
-        except Exception:
-            return False
-
-    async def maybe_promote_expanded_parent(
-        self, child_id: str
-    ) -> tuple[list[str], list[str]]:
-        """Resolve the chain of EXPANDED parents rooted at ``child_id``.
-
-        Returns ``(promoted_ids, awaiting_summary_ids)``:
-
-        - ``promoted_ids``: parents transitioned directly to DONE (non-expandable
-          agent) or READY dependents promoted as a side effect of mark_done.
-        - ``awaiting_summary_ids``: parents of planner/replanner role whose
-          children all terminated; these transitioned to
-          EXPANDED_AWAITING_SUMMARY and await a parent-summary sidecar.
-        """
-        promoted_all: list[str] = []
-        awaiting_all: list[str] = []
-        current = child_id
-        while True:
-            async with self._sf() as db:
-                row = await q.fetch_expanded_parent_candidate(
-                    db, self._team_run_id, current
-                )
-            if row is None:
-                break
-            pid = str(row.id)
-            parent = self._tg.tasks.get(pid)
-            parent_agent = parent.agent_name if parent is not None else ""
-            if self._is_expandable_parent_agent(parent_agent):
-                # Don't mark DONE yet — a parent-summary sidecar must run.
-                # Detached children still need an authoritative roll-up; they
-                # are not a synthetic parent failure.
-                await self.mark_expanded_awaiting_summary(pid)
-                awaiting_all.append(pid)
-                # Stop the chain walk; grandparents must wait until this
-                # parent actually transitions to DONE.
-                break
-            promoted = await self.mark_done(pid)
-            promoted_all.extend(promoted)
-            promoted_all.append(pid)
-            current = pid
-        return promoted_all, awaiting_all
-
-    async def finalize_parent_summary(self, parent_id: str) -> list[str]:
-        """Transition an awaiting-summary parent to DONE and promote dependents.
-
-        Mirrors the tail of ``mark_done`` for the parent (sets DONE + promotes
-        pending dependents whose deps are all satisfied). Returns newly-READY
-        dependent ids.
-        """
-        return await self.mark_done(parent_id)
-
-    async def insert_parent_summary_task(
-        self,
-        *,
-        parent_task: Task,
-        summarizer_agent: str,
-        summary_prompt: str,
-    ) -> tuple[Task, bool]:
-        """Insert a READY parent-summary task as a child of the EAS parent.
-
-        Uses ``fired_by_task_id = parent_task.id`` as the linkage and the
-        ``parent_summarizer`` agent role as the discriminator. The summary task
-        is a direct child of the awaiting-summary parent (depth = parent+1),
-        which keeps it off the grandparent's promotion check because
-        ``fetch_expanded_parent_candidate`` matches only ``status='expanded'``
-        (not ``expanded_awaiting_summary``).
-
-        Returns ``(task, created)``. Idempotent: if a live summary task already
-        exists for the parent, the existing task is returned with
-        ``created=False``.
+        "Ready to promote" means every live (non-detached) child has
+        terminated. Detached statuses (failed/cancelled/request_replan) do
+        not block promotion — the coordinator synthesizes the parent summary
+        before calling :meth:`mark_done`.
         """
         async with self._sf() as db:
-            candidates = await q.find_live_tasks_by_fired_origin(
-                db, self._team_run_id, parent_task.id
+            return await q.fetch_expanded_parent_candidate(
+                db, self._team_run_id, child_id
             )
-            existing = next(
-                (
-                    cand for cand in candidates
-                    if _has_parent_summarizer_role(cand.agent_name)
-                ),
-                None,
-            )
-            if existing is not None:
-                await db.commit()
-                task = record_to_task(existing)
-                self._tg.upsert(task)
-                return task, False
 
-            summary_id = str(uuid.uuid4())
-            scope_paths = list(parent_task.definition.scope_paths or [])
-            record = TaskRecord(
-                id=summary_id,
-                team_run_id=self._team_run_id,
-                agent_name=summarizer_agent,
-                spec=TaskSpec(
-                    goal=f"Summarize parent task {parent_task.id}.",
-                    detail=summary_prompt,
-                    acceptance_criteria=(
-                        "Submit a concise outcome summary for the parent task."
-                    ),
-                ).to_dict(),
-                status="ready",
-                deps=[],
-                scope_paths=scope_paths,
-                scope_ltree=[path_to_ltree(p) for p in scope_paths],
-                parent_id=parent_task.id,
-                root_id=parent_task.root_id or "",
-                depth=(parent_task.depth or 0) + 1,
-                fired_by_task_id=parent_task.id,
-            )
-            await q.insert_task_record(db, record)
-            await db.commit()
-        task = record_to_task(record)
-        self._tg.upsert(task)
-        return task, True
+    def terminal_child_ids(self) -> list[str]:
+        """Return ids of every terminal child with a parent in the graph.
 
-    async def fetch_parents_awaiting_summary(self) -> list[str]:
-        """Return task ids currently stuck in expanded_awaiting_summary.
-
-        Used on team-run restart to make sure parents the previous lifetime
-        left mid-flight have a live parent-summary sidecar.
+        Used after bulk graph changes (cascade-cancel, replan) so the coordinator
+        can re-run promotion checks from each child upward.
         """
-        async with self._sf() as db:
-            return await q.fetch_awaiting_summary_ids(db, self._team_run_id)
-
-    async def sweep_expanded_promotions(
-        self,
-    ) -> tuple[list[str], list[str]]:
-        """Resolve EXPANDED parents after bulk graph changes detach children.
-
-        Returns ``(promoted_ids, awaiting_summary_ids)`` mirroring
-        :meth:`maybe_promote_expanded_parent`.
-        """
-        promoted_all: list[str] = []
-        awaiting_all: list[str] = []
-        seen: set[str] = set()
-        candidate_child_ids = [
+        return [
             task.id
             for task in self._tg.tasks.values()
             if task.parent_id is not None and task.status in TERMINAL_STATUSES
         ]
-        for child_id in candidate_child_ids:
-            promoted, awaiting = await self.maybe_promote_expanded_parent(child_id)
-            for promoted_id in promoted:
-                if promoted_id in seen:
-                    continue
-                seen.add(promoted_id)
-                promoted_all.append(promoted_id)
-            for awaiting_id in awaiting:
-                if awaiting_id in seen:
-                    continue
-                seen.add(awaiting_id)
-                awaiting_all.append(awaiting_id)
-        return promoted_all, awaiting_all
 
     async def mark_terminal(self, task_id: str, status: str, reason: str) -> None:
         async with self._sf() as db:
@@ -381,8 +225,8 @@ class TaskStore:
     async def mark_failed(self, task_id: str, reason: str) -> None:
         """Mark ``task_id`` FAILED regardless of its non-terminal status.
 
-        Unified failure mutation for ``TaskStatusHandler``: accepts
-        RUNNING / EXPANDED / EXPANDED_AWAITING_SUMMARY / REQUEST_REPLAN /
+        Unified failure mutation for ``TaskCoordinator``: accepts
+        RUNNING / EXPANDED / REQUEST_REPLAN /
         READY / PENDING. Already-terminal tasks are a no-op so repeated
         FAILED updates remain idempotent.
         """
@@ -397,7 +241,7 @@ class TaskStore:
             count = await q.cancel_statuses(
                 db,
                 self._team_run_id,
-                ("pending", "ready", "expanded", "expanded_awaiting_summary"),
+                ("pending", "ready", "expanded"),
                 "team_run cancelled",
             )
             await db.commit()

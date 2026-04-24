@@ -7,7 +7,6 @@ from agents.registry import get_definition
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from team.definitions import (
     DEVELOPER,
-    PARENT_SUMMARIZER,
     ROOT_PLANNER,
     SCOUT,
     TEAM_PLANNER,
@@ -69,20 +68,6 @@ def test_team_replanner_prompt_loads_playbook_before_planning_tools() -> None:
     assert defn.system_prompt is not None
     assert "load `team-replanner-playbook` before code-intelligence" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
-
-
-def test_parent_summarizer_prompt_requests_replan_for_unresolved_rollups() -> None:
-    defn = get_definition(PARENT_SUMMARIZER)
-    assert defn is not None
-    assert defn.system_prompt is not None
-    assert "`submit_task_success(summary=...)`" in defn.system_prompt
-    assert "`request_replan(reason=...)`" in defn.system_prompt
-    assert "replan_trigger: unresolved_blocker" in defn.system_prompt
-    assert "open risk`, not `delivered`" in defn.system_prompt
-    assert "success evidence is invalid when it depends on pytest configuration" in defn.system_prompt
-    assert "`--override-ini`" in defn.system_prompt
-    assert "whose overridden-evidence child line says `delivered`" in defn.system_prompt
-    assert "reported pass uses -p no:warnings" in defn.system_prompt
 
 
 def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
@@ -217,20 +202,6 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "submit_replan",
         "read_task_details",
         "read_task_graph",
-    ):
-        assert name not in tool_names
-
-
-def test_parent_summarizer_tool_surface_is_read_only_except_terminal_summary(
-    tmp_path: Path,
-) -> None:
-    tool_names = _final_tool_names(PARENT_SUMMARIZER, tmp_path)
-
-    assert {"read_task_details", "read_task_graph", "submit_task_success"} <= tool_names
-    for name in (
-        "submit_file_notes",
-        "submit_plan",
-        "submit_replan",
     ):
         assert name not in tool_names
 

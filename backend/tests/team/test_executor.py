@@ -37,7 +37,6 @@ class _NotesProxy(list):
 class FakeStore:
     def __init__(self, task):
         self._task = task
-        self.mark_running = AsyncMock(return_value=task)
 
     def get_task(self, task_id):
         return self._task if self._task and self._task.id == task_id else None
@@ -54,13 +53,20 @@ class FakeTaskCenter:
         self.emitted.append(event)
 
 
+class FakeCoordinator:
+    def __init__(self, task):
+        self._task = task
+        self.claim_running = AsyncMock(return_value=task)
+
+
 class FakeTeamRun:
-    def __init__(self, task_center=None, arbiter=None):
+    def __init__(self, task_center=None, arbiter=None, task=None):
         self.id = "test-run-001"
         self.task_center = task_center or FakeTaskCenter()
         self.arbiter = arbiter
         self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self.cancel_event = asyncio.Event()
+        self.coordinator = FakeCoordinator(task or (task_center.store._task if task_center else None))
 
     def register_agent_run(self, task_id, runner_task):
         self._active_agent_runs[task_id] = runner_task

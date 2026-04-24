@@ -108,7 +108,7 @@ async def test_runner_executes_nonterminal_tools_until_terminal_submission(monke
 
     read_tool = _ReadTool()
     submit_tool = _RetryingTool()
-    context = ToolExecutionContext(cwd=Path("."), metadata={"agent_name": "parent_summarizer"})
+    context = ToolExecutionContext(cwd=Path("."), metadata={"agent_name": "rollup_agent"})
     result = await run(
         agent_name="test:parent_summary",
         messages=[],

@@ -7,7 +7,7 @@ Extracted from TaskCenter. Owns:
 - Applying replans (cancel allowed graph-region tasks + add new tasks)
 
 Validation failures raise ``InvalidPlan``. Budget overruns raise
-``BudgetExceeded``. Callers (``TaskStatusHandler``) translate either into a
+``BudgetExceeded``. Callers (``TaskCoordinator``) translate either into a
 ``FAILED`` update on the submitting task so the run aborts cleanly.
 """
 
@@ -21,7 +21,7 @@ from agents.registry import has_role
 from team.core.errors import BudgetExceeded, InvalidPlan
 from team.core.models import Plan, Task, TaskDefinition, TaskStatus
 from team.persistence.events import TeamRunEvent, make_task_added, task_to_dict
-from team.persistence.task_record import TaskRecord
+from team.persistence.tasks_sql import TaskRecord
 from team.persistence.task_store import TaskStore
 from team.planning.replan_validation import validate_replan_rules
 from team.planning.validation import _has_cycle, validate_plan

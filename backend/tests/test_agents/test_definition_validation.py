@@ -41,7 +41,6 @@ def test_reserved_builtin_agent_names_match_current_team_runtime():
         "validator",
         "scout",
         "team_replanner",
-        "parent_summarizer",
     }
 
 

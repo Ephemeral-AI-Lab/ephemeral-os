@@ -2,11 +2,11 @@
 
 Every outcome (success, plan, replan, request_replan, runner exception,
 cooperative cancellation, unknown-agent, no-terminal-call) is encoded in the
-returned update. ``TaskQueue`` hands the update to ``TaskStatusHandler``,
+returned update. ``TaskQueue`` hands the update to ``TaskCoordinator``,
 which owns every graph-level transition.
 
-The executor is the only writer of ``ready → running`` (via
-``store.mark_running``); every other status change is owned by the handler.
+The ``ready → running`` claim goes through ``coordinator.claim_running``; the
+executor does not write task status directly.
 """
 
 from __future__ import annotations
@@ -23,7 +23,6 @@ from team.core.models import (
     TaskStatus,
     TaskStatusUpdate,
 )
-from team.persistence.events import make_task_status
 from team.runtime.agent_context import TeamAgentContext
 
 if TYPE_CHECKING:
@@ -98,32 +97,15 @@ class Executor:
         self.after_dispatch = after_dispatch
 
     async def run(self, task_id: str) -> TaskStatusUpdate:
-        """Claim and run one task; return the outcome update (no handler call)."""
-        tc = self.team_run.task_center
+        """Claim and run one task; return the outcome update (no coordinator call)."""
         agent_run_id = str(uuid.uuid4())
-        rec = await tc.store.mark_running(task_id, agent_run_id)
-        if rec is None:
-            return TaskStatusUpdate(
-                task_id=task_id,
-                status=TaskStatus.FAILED,
-                summary="mark_running_failed: task not in ready/running state",
-            )
-        task = tc.store.get_task(task_id)
+        task = await self.team_run.coordinator.claim_running(task_id, agent_run_id)
         if task is None:
             return TaskStatusUpdate(
                 task_id=task_id,
                 status=TaskStatus.FAILED,
-                summary="mark_running_failed: task not in graph after claim",
+                summary="claim_running_failed: task not in ready/running state",
             )
-        tc.emit_event(
-            make_task_status(
-                self.team_run.id,
-                task_id,
-                "running",
-                agent_run_id=agent_run_id,
-                started_at=task.started_at.isoformat() if task.started_at else None,
-            )
-        )
 
         agent_name = task.definition.agent
         defn = self.agent_lookup(agent_name)

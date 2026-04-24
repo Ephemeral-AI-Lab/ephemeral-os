@@ -1,6 +1,6 @@
 """TaskQueue — push-driven ready queue for N worker coroutines.
 
-Uses a single ``asyncio.Queue[str]`` that the handler writes into as tasks
+Uses a single ``asyncio.Queue[str]`` that the coordinator writes into as tasks
 become ready. Workers block on ``Queue.get()`` until pushed.
 
 Workflow per worker tick:
@@ -10,7 +10,7 @@ Workflow per worker tick:
     handled_update = await self._handle_update(task_id, update)
     await self._executor.post_dispatch(handled_update)
 
-The handler's ``async with self._lock`` serializes the match-block body so
+The coordinator's ``async with self._lock`` serializes the match-block body so
 concurrent workers don't interleave graph mutations.
 """
 
@@ -24,24 +24,24 @@ from team.core.models import TaskStatus, TaskStatusUpdate
 
 if TYPE_CHECKING:
     from team.runtime.executor import Executor
-    from team.runtime.status_handler import TaskStatusHandler
+    from team.runtime.task_coordinator import TaskCoordinator
 
 logger = logging.getLogger(__name__)
 
 
 class TaskQueue:
-    """Bounded-worker push queue driving the handler/executor loop."""
+    """Bounded-worker push queue driving the coordinator/executor loop."""
 
     def __init__(
         self,
         *,
         num_workers: int,
         executor: "Executor",
-        handler: "TaskStatusHandler",
+        coordinator: "TaskCoordinator",
     ) -> None:
         self._num_workers = max(1, num_workers)
         self._executor = executor
-        self._handler = handler
+        self._coordinator = coordinator
         self._ready: asyncio.Queue[str] = asyncio.Queue()
         self._workers: list[asyncio.Task[None]] = []
         self._stopped = False
@@ -112,25 +112,25 @@ class TaskQueue:
         self, task_id: str, update: TaskStatusUpdate
     ) -> TaskStatusUpdate | None:
         try:
-            await self._handler.handle(update)
+            await self._coordinator.handle(update)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            logger.exception("handler.handle failed for %s", task_id)
+            logger.exception("coordinator.handle failed for %s", task_id)
             if update.status == TaskStatus.FAILED:
                 return None
             failed_update = TaskStatusUpdate(
                 task_id=task_id,
                 status=TaskStatus.FAILED,
-                summary=f"handler_exception: {exc}",
+                summary=f"coordinator_exception: {exc}",
             )
             try:
-                await self._handler.handle(failed_update)
+                await self._coordinator.handle(failed_update)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception(
-                    "handler.handle failed while failing %s",
+                    "coordinator.handle failed while failing %s",
                     task_id,
                 )
                 return None

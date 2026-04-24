@@ -26,7 +26,7 @@ class _FailingOnceHandler:
     async def handle(self, update: TaskStatusUpdate) -> None:
         self.updates.append(update)
         if len(self.updates) == 1:
-            raise RuntimeError("handler exploded")
+            raise RuntimeError("coordinator exploded")
 
 
 @pytest.mark.asyncio
@@ -34,14 +34,14 @@ async def test_process_one_converts_handler_exception_to_failed_update() -> None
     executor = _Executor(
         TaskStatusUpdate(task_id="task-1", status=TaskStatus.DONE, summary="ok")
     )
-    handler = _FailingOnceHandler()
-    queue = TaskQueue(num_workers=1, executor=executor, handler=handler)
+    coordinator = _FailingOnceHandler()
+    queue = TaskQueue(num_workers=1, executor=executor, coordinator=coordinator)
 
     await queue._process_one("task-1")
 
-    assert [update.status for update in handler.updates] == [
+    assert [update.status for update in coordinator.updates] == [
         TaskStatus.DONE,
         TaskStatus.FAILED,
     ]
-    assert handler.updates[1].summary == "handler_exception: handler exploded"
-    assert executor.posted == [handler.updates[1]]
+    assert coordinator.updates[1].summary == "coordinator_exception: coordinator exploded"
+    assert executor.posted == [coordinator.updates[1]]

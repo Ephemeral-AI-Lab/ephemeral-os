@@ -540,34 +540,3 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
     assert "replan_requested: parser failure" in context
     assert "downstream (pending); deps: replanner" in context
 
-
-@pytest.mark.asyncio
-async def test_parent_summarizer_context_skips_replanner_failure_trace():
-    tc = TaskCenter(
-        session_factory=_FakeSessionFactory(),
-        team_run_id="run-1",
-        budgets=BudgetConfig(),
-        budget_state=BudgetState(),
-    )
-    tc.graph.update(
-        {
-            "parent": _task("parent", agent_name="team_planner", status=TaskStatus.EXPANDED),
-            "summary": Task(
-                id="summary",
-                team_run_id="run-1",
-                agent_name="parent_summarizer",
-                status=TaskStatus.READY,
-                spec=_spec("Summarize parent task after children finish."),
-                parent_id="parent",
-                root_id="root",
-                depth=1,
-                fired_by_task_id="parent",
-            ),
-        }
-    )
-    context = await tc.context.context_for(tc.graph["summary"])
-
-    assert "Summarize parent task after children finish." in context
-    assert "## Replan root cause trace" not in context
-    assert "Failed reason:" not in context
-    assert "Downstream dependents rewired to this replanner" not in context

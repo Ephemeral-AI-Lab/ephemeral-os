@@ -28,9 +28,8 @@ DEVELOPER = "developer"
 VALIDATOR = "validator"
 SCOUT = "scout"
 TEAM_REPLANNER = "team_replanner"
-PARENT_SUMMARIZER = "parent_summarizer"
 
-_EXPECTED_CONFIG_AGENT_COUNT = 7
+_EXPECTED_CONFIG_AGENT_COUNT = 6
 _EXPECTED_CONFIG_TEAM_COUNT = 1
 
 _AGENTS_CONFIG_DIR = get_config_agents_dir()

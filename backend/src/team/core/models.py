@@ -427,13 +427,13 @@ TaskSubmission = LeafSubmission | PlannerSubmission
 
 
 # ---------------------------------------------------------------------------
-# Unified task status update — the single object handed to TaskStatusHandler
+# Unified task status update — the single object handed to TaskCoordinator
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class TaskStatusUpdate:
-    """One outcome emitted for a task — the single dispatch input to the handler.
+    """One outcome emitted for a task — the single dispatch input to the coordinator.
 
     Exactly one of ``plan`` / ``replan`` is set for ``EXPANDED`` updates; both
     are ``None`` for every other status. ``summary`` carries the success

@@ -17,7 +17,6 @@ RESERVED_BUILTIN_AGENT_NAMES = frozenset(
         "validator",
         "scout",
         "team_replanner",
-        "parent_summarizer",
     }
 )
 
