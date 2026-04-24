@@ -144,8 +144,8 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         assert run.team_definition == team_def
         assert run.root_task_id is not None
         root = run.task_center.graph[run.root_task_id]
-        assert root.agent_name == "my_planner"
-        assert root.definition.spec.goal == "Plan the requested work"
+        assert root.agent == "my_planner"
+        assert root.spec.goal == "Plan the requested work"
         assert root.scope_paths == ["src/app.py"]
     finally:
         await _cleanup_run(run)

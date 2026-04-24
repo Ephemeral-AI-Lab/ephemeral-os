@@ -106,26 +106,20 @@ class TaskContextBuilder:
         original = await self.get_task(original_id)
         lines = ["## Replan root cause trace", f"Original task: {original_id}"]
         if original is not None:
-            orig_defn = original.definition
             lines.extend(
                 [
-                    f"Original agent: {orig_defn.agent}",
+                    f"Original agent: {original.agent}",
                     f"Original status: {original.status.value}",
                     f"Failed reason: {original.failure_reason or 'unknown'}",
                     "",
                     "### Original task spec",
-                    render_task_spec(orig_defn.spec),
+                    render_task_spec(original.spec),
+                    "",
+                    "Original scope paths: "
+                    + (", ".join(original.scope_paths) if original.scope_paths else "(none)"),
+                    "Original deps: "
+                    + (", ".join(original.deps) if original.deps else "(none)"),
                 ]
-            )
-            if orig_defn.description:
-                lines.extend(["", "### Original description", orig_defn.description])
-            lines.append("")
-            lines.append(
-                "Original scope paths: "
-                + (", ".join(orig_defn.scope_paths) if orig_defn.scope_paths else "(none)")
-            )
-            lines.append(
-                "Original deps: " + (", ".join(orig_defn.deps) if orig_defn.deps else "(none)")
             )
         else:
             lines.append("Failed reason: unknown")
@@ -135,7 +129,7 @@ class TaskContextBuilder:
         if dependents:
             lines.extend(["", "### Downstream dependents rewired to this replanner"])
             for dependent in sorted(dependents, key=lambda item: item.id):
-                dep_deps = dependent.definition.deps
+                dep_deps = dependent.deps
                 deps = ", ".join(dep_deps) if dep_deps else "(none)"
                 lines.append(f"- {dependent.id} ({dependent.status.value}); deps: {deps}")
         else:
@@ -152,11 +146,10 @@ class TaskContextBuilder:
         """Build the injected context string for a task."""
         budget = max_context_bytes
         sections: list[str] = []
-        defn = task.definition
 
-        task_section = f"## Your task\n{render_task_spec(defn.spec)}"
-        if defn.scope_paths:
-            task_section += f"\n\nScope: {', '.join(defn.scope_paths)}"
+        task_section = f"## Your task\n{render_task_spec(task.spec)}"
+        if task.scope_paths:
+            task_section += f"\n\nScope: {', '.join(task.scope_paths)}"
         sections.append(task_section)
         budget -= len(task_section.encode())
 
@@ -184,11 +177,10 @@ class TaskContextBuilder:
     ) -> UserPromptContextParts:
         """Build context fragments for markdown-backed user prompt templates."""
         budget = max_context_bytes
-        defn = task.definition
-        task_spec = render_task_spec(defn.spec).strip()
+        task_spec = render_task_spec(task.spec).strip()
         budget -= len(task_spec.encode())
 
-        scope_paths = "\n".join(f"- {path}" for path in defn.scope_paths)
+        scope_paths = "\n".join(f"- {path}" for path in task.scope_paths)
         budget -= len(scope_paths.encode())
 
         return UserPromptContextParts(

@@ -145,25 +145,27 @@ def test_task_creation_with_required_fields():
     task = Task(
         id="x",
         team_run_id="run-1",
-        definition=TaskDefinition(id="x", spec=_spec("implement feature"), agent="developer"),
+        spec=_spec("implement feature"),
+        agent="developer",
         status=TaskStatus.PENDING,
     )
     assert task.id == "x"
     assert task.team_run_id == "run-1"
-    assert task.definition.agent == "developer"
+    assert task.agent == "developer"
     assert task.status == TaskStatus.PENDING
-    assert task.definition.spec.goal == "implement feature"
+    assert task.spec.goal == "implement feature"
 
 
 def test_task_defaults():
     task = Task(
         id="x",
         team_run_id="run-1",
-        definition=TaskDefinition(id="x", spec=_spec("do it"), agent="developer"),
+        spec=_spec("do it"),
+        agent="developer",
         status=TaskStatus.PENDING,
     )
-    assert task.definition.deps == []
-    assert task.definition.scope_paths == []
+    assert task.deps == []
+    assert task.scope_paths == []
     assert task.parent_id is None
     assert task.root_id == ""
     assert task.depth == 0

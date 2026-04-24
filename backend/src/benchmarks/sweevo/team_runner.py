@@ -283,9 +283,9 @@ def _make_executor_factory(
 
     def factory(team_run):
         def after_dispatch(wi, update):
-            if update.plan is None or wi.agent_name not in {ROOT_PLANNER, TEAM_PLANNER}:
+            if update.plan is None or wi.agent not in {ROOT_PLANNER, TEAM_PLANNER}:
                 return
-            _emit_dispatcher_dag(printer, team_run, trigger_agent=wi.agent_name)
+            _emit_dispatcher_dag(printer, team_run, trigger_agent=wi.agent)
 
         return Executor(
             team_run=team_run,

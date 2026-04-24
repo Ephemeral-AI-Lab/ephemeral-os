@@ -20,6 +20,7 @@ from team.core.models import (
     BudgetConfig,
     BudgetState,
     Task,
+    TaskDefinition,
 )
 from team.persistence.events import (
     TeamRunEvent,
@@ -134,7 +135,16 @@ class TaskCenter:
         """Insert ``t`` as a root task (or standalone) and emit task_added."""
         self._budget.require_capacity_for(1)
         await self._store.insert_plan(
-            [t.definition],
+            [
+                TaskDefinition(
+                    id=t.id,
+                    spec=t.spec,
+                    agent=t.agent,
+                    deps=t.deps,
+                    scope_paths=t.scope_paths,
+                    parent_id=t.parent_id,
+                )
+            ],
             parent_id=t.parent_id,
             parent_depth=max(0, t.depth - 1) if t.parent_id else 0,
             parent_root_id=t.root_id or None,

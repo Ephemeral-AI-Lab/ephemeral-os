@@ -172,7 +172,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
         Task(
             id="W1",
             team_run_id="T1",
-            agent_name="developer",
+            agent="developer",
             status=TaskStatus.PENDING,
             spec=_spec("Fix it"),
         ),
@@ -299,7 +299,7 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
         Task(
             id="W1",
             team_run_id="T1",
-            agent_name="root_planner",
+            agent="root_planner",
             status=TaskStatus.PENDING,
             spec=_spec("Root planning task"),
             depth=0,
@@ -814,14 +814,14 @@ def test_finalize_team_result_surfaces_retry_replan_metadata(monkeypatch):
                     "A": Task(
                         id="A",
                         team_run_id="TR1",
-                        agent_name="developer",
+                        agent="developer",
                         status=TaskStatus.DONE,
                         spec=_spec("task"),
                     ),
                     "B": Task(
                         id="B",
                         team_run_id="TR1",
-                        agent_name="validator",
+                        agent="validator",
                         status=TaskStatus.DONE,
                         spec=_spec("task"),
                         depth=1,
@@ -855,7 +855,7 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     root = Task(
         id="root-1",
         team_run_id="TR1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.DONE,
         spec=_spec("plan"),
         depth=0,
@@ -863,7 +863,7 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     child = Task(
         id="child-1",
         team_run_id="TR1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.READY,
         spec=_spec("child task"),
         deps=["root-1"],

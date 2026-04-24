@@ -255,7 +255,7 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
     root = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.DONE,
         spec=_spec("Fix retry behavior."),
         root_id="root",
@@ -264,7 +264,7 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
     dev = Task(
         id="dev-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.READY,
         spec=_spec("Implement the retry fix."),
         deps=["root"],

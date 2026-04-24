@@ -464,7 +464,6 @@ async def test_apply_replan_atomic_inserts_children_at_replanner_depth(monkeypat
                 id="same-depth-repair",
                 spec=_spec("Repair at replanner depth."),
                 agent="developer",
-                description="repair",
                 scope_paths=["src/parser.py"],
                 parent_id="replanner",
             )
@@ -497,7 +496,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
             "failed": Task(
                 id="failed",
                 team_run_id="run-1",
-                agent_name="developer",
+                agent="developer",
                 status=TaskStatus.REQUEST_REPLAN,
                 spec=_spec("Fix the parser."),
                 deps=["dep"],
@@ -510,7 +509,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
             "replanner": Task(
                 id="replanner",
                 team_run_id="run-1",
-                agent_name="team_replanner",
+                agent="team_replanner",
                 status=TaskStatus.READY,
                 spec=_spec("Replan failed parser task."),
                 scope_paths=["src/parser.py"],

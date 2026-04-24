@@ -20,7 +20,6 @@ from team.core.models import (
     BudgetConfig,
     BudgetState,
     Task,
-    TaskDefinition,
     TaskStatus,
 )
 from team.persistence.events import TeamRunEvent, task_from_dict
@@ -192,15 +191,12 @@ def _example_task_for_agent(
         return Task(
             id="root",
             team_run_id=team_run_id,
-            definition=TaskDefinition(
-                id="root",
-                spec={
-                    "goal": user_request,
-                    "detail": "Plan the requested team run.",
-                    "acceptance_criteria": "Submit a valid child plan for the requested work.",
-                },
-                agent=agent_name,
-            ),
+            spec={
+                "goal": user_request,
+                "detail": "Plan the requested team run.",
+                "acceptance_criteria": "Submit a valid child plan for the requested work.",
+            },
+            agent=agent_name,
             status=TaskStatus.PENDING,
             root_id="root",
             depth=0,
@@ -209,13 +205,9 @@ def _example_task_for_agent(
     return Task(
         id=task_id,
         team_run_id=team_run_id,
-        definition=TaskDefinition(
-            id=task_id,
-            spec=spec,
-            agent=agent_name,
-            description="Synthetic task used only for prompt inspection.",
-            scope_paths=["backend/src"],
-        ),
+        spec=spec,
+        agent=agent_name,
+        scope_paths=["backend/src"],
         status=TaskStatus.PENDING,
         parent_id="root",
         root_id="root",
@@ -668,25 +660,24 @@ async def build_team_run_user_prompt_report_text(
 
     missing: list[str] = []
     for task in _sort_tasks_for_prompt_report(tasks):
-        defn = task.definition
-        agent_def = load_agent_definition(defn.agent, settings)
+        agent_def = load_agent_definition(task.agent, settings)
         lines.extend(
             [
                 "",
                 f"### Task: {task.id}",
                 "",
-                f"- Agent: `{defn.agent}`",
+                f"- Agent: `{task.agent}`",
                 f"- Status: `{task.status.value}`",
                 f"- Depth: `{task.depth}`",
                 f"- Parent: `{task.parent_id or '(root)'}`",
             ]
         )
-        if defn.deps:
-            lines.append(f"- Deps: `{', '.join(defn.deps)}`")
-        if defn.scope_paths:
-            lines.append(f"- Scope: `{', '.join(defn.scope_paths)}`")
+        if task.deps:
+            lines.append(f"- Deps: `{', '.join(task.deps)}`")
+        if task.scope_paths:
+            lines.append(f"- Scope: `{', '.join(task.scope_paths)}`")
         if agent_def is None:
-            missing.append(defn.agent)
+            missing.append(task.agent)
             lines.extend(["", "_Agent definition not found in backend/config registry._"])
             continue
         ctx = await build_query_context(agent_def, team_run, task)

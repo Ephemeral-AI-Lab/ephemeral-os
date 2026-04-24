@@ -341,7 +341,6 @@ async def test_replan_expander_allows_children_at_replanner_depth_limit():
                 id="same-depth-repair",
                 spec=_spec("Repair at the replanner depth limit."),
                 agent="developer",
-                description="repair at depth limit",
                 scope_paths=["src/a.py"],
                 parent_id="replanner",
             )
@@ -418,7 +417,6 @@ async def test_replan_expander_applies_plan_policy_to_added_tasks():
                     id="bad-replanner",
                     spec=_spec("Invalid replanner target."),
                     agent="team_replanner",
-                    description="invalid replanner target",
                     scope_paths=["src/a.py"],
                     parent_id="replanner",
                 )
@@ -460,7 +458,6 @@ async def test_replan_expander_rejects_dep_on_rewired_downstream_task():
                     id="repair",
                     spec=_spec("Invalidly wait for downstream work blocked on R."),
                     agent="developer",
-                    description="invalid downstream dependency",
                     deps=["downstream"],
                     scope_paths=["src/a.py"],
                     parent_id="replanner",

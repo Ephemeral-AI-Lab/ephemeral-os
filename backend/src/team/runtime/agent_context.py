@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from team.runtime.team_run import TeamRun
 
+BenchmarkTargets = set[str] | list[str] | tuple[str, ...]
+
 
 def _resolve_terminal_tools(defn: "AgentDefinition") -> set[str]:
     return {
@@ -87,6 +89,17 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     return meta
 
 
+def _benchmark_targets(
+    team_run: "TeamRun",
+) -> tuple[BenchmarkTargets | None, BenchmarkTargets | None]:
+    """Return (test_ids, test_files) for a benchmark run, or (None, None)."""
+    try:
+        from benchmarks.sweevo.plan_normalization import extract_benchmark_targets_from_team_run
+    except ImportError:
+        return None, None
+    return extract_benchmark_targets_from_team_run(team_run.id)
+
+
 def _populate_plan_submission_context(
     meta: ExecutionMetadata, team_run: "TeamRun", task: Task,
 ) -> None:
@@ -100,15 +113,11 @@ def _populate_plan_submission_context(
         if agent_names:
             meta["roster_agent_names"] = agent_names
 
-    try:
-        from benchmarks.sweevo.plan_normalization import extract_benchmark_targets_from_team_run
-        test_ids, test_files = extract_benchmark_targets_from_team_run(team_run.id)
-        if test_ids:
-            meta["benchmark_test_ids"] = test_ids
-        if test_files:
-            meta["benchmark_test_files"] = test_files
-    except ImportError:
-        pass
+    test_ids, test_files = _benchmark_targets(team_run)
+    if test_ids:
+        meta["benchmark_test_ids"] = test_ids
+    if test_files:
+        meta["benchmark_test_files"] = test_files
 
 
 def build_initial_messages(task: Task) -> list[ConversationMessage]:
@@ -135,15 +144,7 @@ def _template_name_for_task(
 
 
 def _format_benchmark_targets(team_run: "TeamRun") -> str:
-    test_ids: set[str] | list[str] | tuple[str, ...] | None = None
-    test_files: set[str] | list[str] | tuple[str, ...] | None = None
-    try:
-        from benchmarks.sweevo.plan_normalization import extract_benchmark_targets_from_team_run
-
-        test_ids, test_files = extract_benchmark_targets_from_team_run(team_run.id)
-    except ImportError:
-        pass
-
+    test_ids, test_files = _benchmark_targets(team_run)
     if not test_ids:
         test_ids = getattr(team_run, "coordination_metadata", {}).get("benchmark_test_ids")
     if not test_files:

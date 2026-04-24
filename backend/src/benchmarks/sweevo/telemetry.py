@@ -325,7 +325,7 @@ def emit_dispatcher_dag(printer: Any, team_run: Any, *, trigger_agent: str) -> N
         deps = [d[:8] for d in wi.deps]
         printer.raw_line(
             "team",
-            f"[dag] {wi.id[:8]} agent={wi.agent_name} status={wi.status.value} "
+            f"[dag] {wi.id[:8]} agent={wi.agent} status={wi.status.value} "
             f"depth={wi.depth} deps={deps or []}",
         )
 
@@ -528,12 +528,12 @@ def finalize_team_run(
                 continue
             logger.warning(
                 "failed task: id=%s agent=%s reason=%s",
-                wi.id, wi.agent_name, wi.failure_reason,
+                wi.id, wi.agent, wi.failure_reason,
             )
             if printer is not None:
                 printer.raw_line(
                     "team",
-                    f"[failed_task] agent={wi.agent_name} id={wi.id[:8]} "
+                    f"[failed_task] agent={wi.agent} id={wi.id[:8]} "
                     f"reason={wi.failure_reason or 'unknown'}",
                 )
 

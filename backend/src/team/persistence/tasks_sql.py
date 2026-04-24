@@ -42,7 +42,6 @@ class TaskRecord(Base):
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     spec: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    description: Mapped[str] = mapped_column(Text, default="")
     deps: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     scope_paths: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
@@ -254,7 +253,6 @@ async def insert_plan_records(
             agent_name=spec.agent,
             status="ready" if all(d in done_ids for d in spec.deps) else "pending",
             spec=spec.spec.to_dict(),
-            description=spec.description or "",
             deps=list(spec.deps),
             scope_paths=list(spec.scope_paths),
             scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],

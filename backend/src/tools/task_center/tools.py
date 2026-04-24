@@ -64,7 +64,6 @@ def _task_definition_payload(task_def: object) -> dict[str, object]:
         "id": str(getattr(task_def, "id", "") or ""),
         "agent": str(getattr(task_def, "agent", "") or ""),
         "spec": _task_spec_payload(getattr(task_def, "spec", None)),
-        "description": str(getattr(task_def, "description", "") or ""),
         "deps": list(getattr(task_def, "deps", []) or []),
         "scope_paths": list(getattr(task_def, "scope_paths", []) or []),
     }
@@ -456,18 +455,13 @@ class ReadTaskDetailsTool(BaseTool):
         if task is None:
             return ToolResult(output=f"## {tid}\nNot found in task graph.")
 
-        defn = task.definition
-        header = f"## {task.id} ({defn.agent}) [{task.status.value}]"
-        lines = [header]
-
-        if defn.description:
-            lines.append(f"**Description:** {defn.description}")
-        lines.append("")
-        _append_task_spec(lines, defn.spec, task.status)
-        if defn.deps:
-            lines.extend(["", f"**Deps:** {', '.join(defn.deps)}"])
-        if defn.scope_paths:
-            lines.extend(["", f"**Scope:** {', '.join(defn.scope_paths)}"])
+        header = f"## {task.id} ({task.agent}) [{task.status.value}]"
+        lines = [header, ""]
+        _append_task_spec(lines, task.spec, task.status)
+        if task.deps:
+            lines.extend(["", f"**Deps:** {', '.join(task.deps)}"])
+        if task.scope_paths:
+            lines.extend(["", f"**Scope:** {', '.join(task.scope_paths)}"])
 
         _append_submission_details(
             lines,
@@ -508,14 +502,13 @@ class ReadTaskGraphTool(BaseTool):
 
     @staticmethod
     def _node(t: object, self_id: str, children: list[dict]) -> dict:
-        defn = t.definition
         return {
             "id": t.id,
-            "agent": defn.agent,
+            "agent": t.agent,
             "status": t.status.value,
-            "spec": _task_spec_payload(defn.spec),
-            "deps": list(defn.deps),
-            "scope_paths": list(defn.scope_paths),
+            "spec": _task_spec_payload(t.spec),
+            "deps": list(t.deps),
+            "scope_paths": list(t.scope_paths),
             "failure_reason": t.failure_reason,
             "is_you": t.id == self_id,
             "children": children,
@@ -562,7 +555,7 @@ class ReadTaskGraphTool(BaseTool):
             parent_json = (
                 {
                     "id": parent_task.id,
-                    "agent": parent_task.definition.agent,
+                    "agent": parent_task.agent,
                     "status": parent_task.status.value,
                 }
                 if parent_task is not None

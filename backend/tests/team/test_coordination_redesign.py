@@ -30,14 +30,14 @@ class _AsyncTaskCenterStub:
         self.posted.append(note)
 
     async def context_for(self, task: Task) -> str:
-        return f"## Task\n{task.definition.spec.goal}"
+        return f"## Task\n{task.spec.goal}"
 
 
 def test_build_task_metadata_enables_team_runtime_flags():
     task = Task(
         id="task-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.PENDING,
         spec=_spec("implement auth"),
         deps=["dep-1", "dep-2"],
@@ -119,7 +119,7 @@ async def test_submit_plan_resolves_roster_role_hints():
     assert "description" not in payload["new_tasks"][0]
     resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
-    assert resolved_plan.tasks[0].description == ""
+    assert resolved_plan.tasks[0].spec.goal == "Implement the API."
     assert resolved_plan.tasks[1].agent == "validator"
     assert task_center.posted == []
 
@@ -278,7 +278,7 @@ async def test_submit_replan_rejects_empty_new_tasks_with_deeper_diagnosis_promp
     task_center.graph["replanner-task"] = Task(
         id="replanner-task",
         team_run_id="run-1",
-        agent_name="team_replanner",
+        agent="team_replanner",
         status=TaskStatus.RUNNING,
         spec=_spec("recover failed work"),
         parent_id="root",
@@ -387,7 +387,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -395,7 +395,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
         "stale": Task(
             id="stale",
             team_run_id="run-1",
-            agent_name="developer",
+            agent="developer",
             status=TaskStatus.READY,
             spec=_spec("stale work"),
             parent_id="parent",
@@ -403,7 +403,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
         "survivor": Task(
             id="survivor",
             team_run_id="run-1",
-            agent_name="validator",
+            agent="validator",
             status=TaskStatus.EXPANDED,
             spec=_spec("validate"),
             deps=[],
@@ -498,7 +498,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -541,7 +541,7 @@ async def test_submit_replan_rejects_planner_agent_targets():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -585,7 +585,7 @@ async def test_submit_replan_rejects_subagent_targets():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -628,7 +628,7 @@ async def test_submit_replan_requires_diagnostics_decision_for_unresolved_blocke
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -682,7 +682,7 @@ async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -729,7 +729,7 @@ async def test_submit_replan_rejects_plan_size_overflow():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -778,7 +778,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
         "replanner-task": Task(
             id="replanner-task",
             team_run_id="run-1",
-            agent_name="team_replanner",
+            agent="team_replanner",
             status=TaskStatus.READY,
             spec=_spec("recover"),
             parent_id="parent",
@@ -825,7 +825,7 @@ async def test_build_query_context_planner_terminal_tools():
     task = Task(
         id="planner-task",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.READY,
         spec=_spec("plan work"),
     )
@@ -858,7 +858,7 @@ async def test_build_query_context_uses_agent_terminal_tools_for_developer():
     task = Task(
         id="dev-task",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.READY,
         spec=_spec("implement retry handling"),
     )
@@ -891,7 +891,7 @@ async def test_build_query_context_requires_agent_terminal_tools_without_role_fa
     task = Task(
         id="dev-task",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.READY,
         spec=_spec("implement retry handling"),
     )

@@ -42,7 +42,6 @@ def _task(
     parent_id: str | None,
     status: TaskStatus = TaskStatus.READY,
     agent: str = "developer",
-    description: str = "",
     deps: list[str] | None = None,
     scope_paths: list[str] | None = None,
     failure_reason: str | None = None,
@@ -50,14 +49,10 @@ def _task(
     return Task(
         id=task_id,
         team_run_id="run-1",
-        definition=TaskDefinition(
-            id=task_id,
-            spec=_spec(f"Goal for {task_id}"),
-            agent=agent,
-            description=description,
-            deps=list(deps or []),
-            scope_paths=list(scope_paths or []),
-        ),
+        spec=_spec(f"Goal for {task_id}"),
+        agent=agent,
+        deps=list(deps or []),
+        scope_paths=list(scope_paths or []),
         status=status,
         parent_id=parent_id,
         failure_reason=failure_reason,
@@ -191,22 +186,20 @@ def test_submit_note_schemas_are_pydantic_native():
 @pytest.mark.asyncio
 async def test_read_task_graph_defaults_to_peer_tree_json():
     graph = {
-        "root": _task("root", parent_id=None, agent="planner", description="Root"),
-        "parent": _task("parent", parent_id="root", agent="planner", description="Parent"),
+        "root": _task("root", parent_id=None, agent="planner"),
+        "parent": _task("parent", parent_id="root", agent="planner"),
         "self": _task(
             "self",
             parent_id="parent",
             status=TaskStatus.RUNNING,
-            description="Current task",
             deps=["peer"],
             scope_paths=["src/self.py"],
         ),
-        "peer": _task("peer", parent_id="parent", description="Peer task"),
+        "peer": _task("peer", parent_id="parent"),
         "peer-child": _task(
             "peer-child",
             parent_id="peer",
             status=TaskStatus.PENDING,
-            description="Nested child",
         ),
         "other-branch": _task("other-branch", parent_id="root"),
     }
@@ -242,7 +235,7 @@ async def test_read_task_graph_defaults_to_peer_tree_json():
 async def test_read_task_graph_global_scope_includes_roots_and_detached_nodes():
     graph = {
         "root": _task("root", parent_id=None, agent="planner"),
-        "child": _task("child", parent_id="root", description="Child"),
+        "child": _task("child", parent_id="root"),
         "orphan": _task(
             "orphan",
             parent_id="missing-parent",
@@ -384,11 +377,10 @@ async def test_read_task_details_reads_single_task():
             parent_id=None,
             status=TaskStatus.RUNNING,
             agent="developer",
-            description="Patch parser",
             deps=["dep-1"],
             scope_paths=["src/parser.py"],
         ),
-        "task-2": _task("task-2", parent_id=None, description="Other task"),
+        "task-2": _task("task-2", parent_id=None),
     }
     ctx = _ctx({"task_center": SimpleNamespace(graph=graph, notes=_Notes())})
 

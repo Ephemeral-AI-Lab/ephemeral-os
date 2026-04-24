@@ -36,14 +36,10 @@ def record_to_task(rec: TaskRecord) -> Task:
     return Task(
         id=rec.id,
         team_run_id=rec.team_run_id,
-        definition=TaskDefinition(
-            id=rec.id,
-            spec=rec.spec,
-            agent=rec.agent_name,
-            description=rec.description or "",
-            deps=list(rec.deps) if rec.deps else [],
-            scope_paths=list(rec.scope_paths) if rec.scope_paths else [],
-        ),
+        spec=rec.spec,
+        agent=rec.agent_name,
+        deps=list(rec.deps) if rec.deps else [],
+        scope_paths=list(rec.scope_paths) if rec.scope_paths else [],
         status=TaskStatus.of(rec.status),
         parent_id=rec.parent_id,
         root_id=rec.root_id or "",

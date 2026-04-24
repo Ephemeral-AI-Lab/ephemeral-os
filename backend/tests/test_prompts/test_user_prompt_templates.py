@@ -120,7 +120,7 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     dep = Task(
         id="dep-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.DONE,
         spec=_spec("Prepare retry helper."),
         parent_id="root",
@@ -130,7 +130,7 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     task = Task(
         id="dev-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.READY,
         spec=_spec("Goal\nImplement retry handling."),
         deps=["dep-1"],
@@ -208,7 +208,7 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
     dep = Task(
         id="dev-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.DONE,
         spec=_spec("Implement retry handling."),
         parent_id="root",
@@ -218,7 +218,7 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
     task = Task(
         id="validator-1",
         team_run_id="run-1",
-        agent_name="validator",
+        agent="validator",
         status=TaskStatus.READY,
         spec=_spec("Validate retry handling."),
         deps=["dev-1"],
@@ -278,7 +278,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     task = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="root_planner",
+        agent="root_planner",
         status=TaskStatus.READY,
         spec=_spec("Root planner task goal."),
         root_id="root",
@@ -337,7 +337,7 @@ async def test_build_query_context_omits_planning_depth_without_budget() -> None
     task = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="root_planner",
+        agent="root_planner",
         status=TaskStatus.READY,
         spec=_spec("Root planner task goal."),
         root_id="root",
@@ -371,7 +371,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     root = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.EXPANDED,
         spec=_spec("Root task."),
         root_id="root",
@@ -380,7 +380,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     dep = Task(
         id="prep-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.DONE,
         spec=_spec("Prepare retry owner evidence."),
         parent_id="root",
@@ -390,7 +390,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     child_planner = Task(
         id="planner-1",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.READY,
         spec=_spec("Decompose retry handling."),
         deps=["prep-1"],
@@ -449,7 +449,7 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     root = Task(
         id="root",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.EXPANDED,
         spec=_spec("Root task."),
         root_id="root",
@@ -458,7 +458,7 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     dep = Task(
         id="prep-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.DONE,
         spec=_spec("Prepare retry owner evidence."),
         parent_id="root",
@@ -468,7 +468,7 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     failed = Task(
         id="failed-1",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.FAILED,
         spec=_spec("Goal\nImplement retry handling."),
         failure_reason="unit test still fails",
@@ -478,7 +478,7 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     replanner = Task(
         id="replanner-1",
         team_run_id="run-1",
-        agent_name="team_replanner",
+        agent="team_replanner",
         status=TaskStatus.READY,
         spec=_spec("Recover from failed-1."),
         fired_by_task_id="failed-1",
@@ -532,7 +532,7 @@ async def test_build_query_context_does_not_use_removed_scout_task_template() ->
     task = Task(
         id="scout-1",
         team_run_id="run-1",
-        agent_name="scout",
+        agent="scout",
         status=TaskStatus.READY,
         spec=_spec("Map retry module ownership."),
         scope_paths=["backend/src/retry.py"],

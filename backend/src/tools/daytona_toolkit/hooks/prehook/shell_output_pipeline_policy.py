@@ -13,7 +13,7 @@ from tools.daytona_toolkit.hooks.prehook._shell_common import shell_command
 
 PIPELINE_POLICY_MESSAGE = (
     "daytona_shell policy error: command could not be sanitized to a runnable command. "
-    "Commands must not contain `|`, `>`, `2>&1`, `head`, `tail`, or a leading "
+    "Commands must not contain `|`, `>`, `2>&1`, or a leading "
     "`cd /testbed &&` / `cd /workspace &&`. "
     "`daytona_shell` already captures stdout/stderr and starts at the repo root. "
     "Use pytest flags (`-x`, `-k`, `--tb=short`), a narrower node id, "
@@ -22,15 +22,10 @@ PIPELINE_POLICY_MESSAGE = (
 
 PIPELINE_POLICY_ADVISORY = (
     "sanitized daytona_shell command before execution; removed unsupported output "
-    "piping/redirection, head/tail filtering, or a leading repo-root cd."
+    "piping/redirection or a leading repo-root cd."
 )
 
 _LEADING_ROOT_CD_RE = re.compile(r"^\s*cd\s+/(testbed|workspace)\s*&&\s*", re.DOTALL)
-_HEAD_TAIL_RE = re.compile(r"^\s*(head|tail)(?=\s|$)")
-_HEAD_TAIL_OPTION_RE = re.compile(
-    r"^\s*(?:-\d+|-[nc]\s+\S+|-[nc]\S+|--(?:lines|bytes)(?:=\S+|\s+\S+)?|-[qv])"
-    r"(?=\s|$)"
-)
 
 
 @dataclass(frozen=True)
@@ -185,24 +180,6 @@ def _strip_after_unquoted_pipe(command: str) -> tuple[str, bool]:
 def _strip_leading_repo_root_cd(command: str) -> tuple[str, bool]:
     sanitized = _LEADING_ROOT_CD_RE.sub("", command or "", count=1)
     return sanitized.strip(), sanitized != command
-
-
-def _strip_head_tail_options(rest: str) -> str:
-    while True:
-        match = _HEAD_TAIL_OPTION_RE.match(rest)
-        if match is None:
-            return rest.strip()
-        rest = rest[match.end() :]
-
-
-def _rewrite_head_tail_command(command: str) -> tuple[str, bool]:
-    match = _HEAD_TAIL_RE.match(command or "")
-    if match is None:
-        return command, False
-    rest = _strip_head_tail_options(command[match.end() :])
-    if not rest:
-        return "", True
-    return f"cat {rest}", True
 
 
 def _find_arithmetic_expansion_end(command: str, index: int) -> int | None:
@@ -399,7 +376,6 @@ def _sanitize_shell_command(command: str) -> _SanitizedCommand:
         _strip_leading_repo_root_cd,
         _strip_after_unquoted_pipe,
         _strip_unquoted_redirections,
-        _rewrite_head_tail_command,
     ):
         sanitized, did_change = sanitizer(sanitized)
         changed = changed or did_change

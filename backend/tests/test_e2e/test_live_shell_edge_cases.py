@@ -20,6 +20,7 @@ Run with: pytest tests/test_e2e/test_live_shell_edge_cases.py -m live -v
 from __future__ import annotations
 
 import json
+import shlex
 import uuid
 
 import pytest
@@ -36,9 +37,61 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 CODEACT_PROMPT = (
     "You are a developer with a remote Daytona sandbox. "
     "You MUST use daytona_shell for every action -- never just describe what you'd do. "
-    "When asked to run code, use the daytona_shell tool with the Python code provided. "
+    "daytona_shell runs raw shell commands via its command field. "
+    "When asked to run Python code, translate it into a shell command such as python3 -c. "
     "Be concise. Do exactly what is asked."
 )
+
+
+def _shell_outputs(result) -> list:
+    return [ev for ev in result.tools_completed() if ev.tool_name == "daytona_shell"]
+
+
+def _assert_shell_completed(result) -> list:
+    completed = _shell_outputs(result)
+    assert completed, "No daytona_shell completions"
+    assert not any(ev.is_error for ev in completed), (
+        "daytona_shell returned an error: "
+        + "; ".join(ev.output[:500] for ev in completed if ev.is_error)
+    )
+    return completed
+
+
+def _prepare_overlay_git_workspace(sandbox_id: str) -> str:
+    from tests.test_e2e.conftest import get_sandbox_service
+
+    svc = get_sandbox_service()
+    raw_sandbox = svc.get_sandbox_object(sandbox_id)
+    home_resp = raw_sandbox.process.exec("pwd", timeout=10)
+    home = (getattr(home_resp, "result", "") or "").strip() or "/home/daytona"
+    workspace = f"{home}/shell_edge_overlay_repo"
+    setup_cmd = " && ".join(
+        [
+            f"rm -rf {shlex.quote(workspace)}",
+            f"mkdir -p {shlex.quote(workspace)}",
+            f"cd {shlex.quote(workspace)}",
+            "git init -q",
+            "git config user.email shell-edge@test.invalid",
+            "git config user.name shell-edge",
+            "printf '%s\\n' '# shell edge overlay repo' > README.md",
+            "git add README.md",
+            "git commit -q -m seed",
+        ]
+    )
+    response = raw_sandbox.process.exec(f"bash -lc {shlex.quote(setup_cmd)}", timeout=60)
+    if getattr(response, "exit_code", 0) not in (0, None):
+        pytest.fail(
+            "Failed to prepare git workspace for daytona_shell overlay tests: "
+            f"{getattr(response, 'result', '')}"
+        )
+
+    labels = dict(getattr(raw_sandbox, "labels", None) or {})
+    labels["project_dir"] = workspace
+    set_labels = getattr(raw_sandbox, "set_labels", None)
+    if not callable(set_labels):
+        pytest.skip("Daytona SDK sandbox does not support project_dir labels")
+    set_labels(labels)
+    return workspace
 
 
 # ---------------------------------------------------------------------------
@@ -50,6 +103,7 @@ def sandbox_id():
     if not EvalAgent.has_all():
         pytest.skip("LLM + Daytona credentials required")
     sb = create_test_sandbox("shell-edge")
+    _prepare_overlay_git_workspace(sb["id"])
     yield sb["id"]
     delete_test_sandbox(sb["id"])
 
@@ -116,17 +170,15 @@ async def test_pip_install_allowed_with_team_metadata(agent):
 async def test_cwd_is_set_in_shell_helper(agent):
     """shell() commands execute from the configured daytona_cwd."""
     result = await agent.invoke(
-        "Use daytona_shell with this Python code:\n"
-        "result = shell('pwd')\n"
-        "print('CWD:', result['stdout'].strip())"
+        "Use daytona_shell to run this exact command: pwd"
     )
     assert result.has_tool("daytona_shell"), f"Expected daytona_shell, got: {result.tool_names}"
 
-    completed = result.tools_completed()
-    shell_outputs_list = [ev.output for ev in completed if ev.tool_name == "daytona_shell"]
+    completed = _assert_shell_completed(result)
+    shell_outputs_list = [ev.output for ev in completed]
 
     all_output = " ".join(shell_outputs_list) + " " + result.text
-    assert any(c in all_output for c in ("/home", "/workspace", "/testbed", "/")), (
+    assert "shell_edge_overlay_repo" in all_output, (
         f"Expected a real cwd path in output: {all_output[:500]}"
     )
 

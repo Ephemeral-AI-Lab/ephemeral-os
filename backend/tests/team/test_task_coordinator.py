@@ -40,7 +40,8 @@ def _task(
     return Task(
         id=task_id,
         team_run_id="run-1",
-        definition=TaskDefinition(id=task_id, spec=spec, agent=agent_name),
+        spec=spec,
+        agent=agent_name,
         status=status,
         fired_by_task_id=fired_by_task_id,
     )

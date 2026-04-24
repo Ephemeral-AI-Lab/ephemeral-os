@@ -85,7 +85,7 @@ def _make_task(
     return Task(
         id="task-1",
         team_run_id="test-run-001",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus(status),
         spec={
             "goal": "fix the bug",

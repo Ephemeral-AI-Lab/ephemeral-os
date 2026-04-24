@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from team.core.models import BudgetConfig, BudgetState, Note, Task, TaskDefinition, TaskStatus
+from team.core.models import BudgetConfig, BudgetState, Note, Task, TaskStatus
 from team.task_center import TaskCenter
 
 
@@ -83,17 +83,14 @@ def _task(
     return Task(
         id=id_,
         team_run_id="run-1",
-        definition=TaskDefinition(
-            id=id_,
-            spec={
-                "goal": goal,
-                "detail": f"Detail for {goal}",
-                "acceptance_criteria": f"Acceptance for {goal}",
-            },
-            agent="developer",
-            deps=deps or [],
-            scope_paths=scope_paths or [],
-        ),
+        spec={
+            "goal": goal,
+            "detail": f"Detail for {goal}",
+            "acceptance_criteria": f"Acceptance for {goal}",
+        },
+        agent="developer",
+        deps=deps or [],
+        scope_paths=scope_paths or [],
         status=TaskStatus.PENDING,
         parent_id=parent_id,
     )

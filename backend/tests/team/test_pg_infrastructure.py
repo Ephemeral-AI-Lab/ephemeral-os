@@ -247,14 +247,14 @@ def test_detached_expandable_parent_is_promotable(
     parent = Task(
         id="parent",
         team_run_id="run-1",
-        agent_name="team_planner",
+        agent="team_planner",
         status=TaskStatus.EXPANDED,
         spec=_spec("parent"),
     )
     child = Task(
         id="child",
         team_run_id="run-1",
-        agent_name="developer",
+        agent="developer",
         status=TaskStatus.CANCELLED,
         spec=_spec("child"),
         parent_id="parent",

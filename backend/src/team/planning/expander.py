@@ -117,35 +117,23 @@ class PlanExpander:
             spec.id: self.new_id() for spec in plan.tasks if spec.id
         }
         specs: list[TaskDefinition] = []
-        new_items: list[Task] = []
         for spec in plan.tasks:
             new_task_id = local_to_global.get(spec.id) or self.new_id()
             resolved_deps = [
                 local_to_global[dep_id] if dep_id in local_to_global else dep_id
                 for dep_id in spec.deps
             ]
-            definition = TaskDefinition(
-                id=new_task_id,
-                spec=spec.spec,
-                agent=spec.agent,
-                description=spec.description or "",
-                deps=resolved_deps,
-                scope_paths=list(spec.scope_paths),
-            )
-            specs.append(definition)
-            new_items.append(
-                Task(
+            specs.append(
+                TaskDefinition(
                     id=new_task_id,
-                    team_run_id=self._team_run_id,
-                    definition=definition,
-                    status=TaskStatus.READY if not resolved_deps else TaskStatus.PENDING,
-                    parent_id=task_id,
-                    root_id=rec.root_id or task_id,
-                    depth=new_depth,
+                    spec=spec.spec,
+                    agent=spec.agent,
+                    deps=resolved_deps,
+                    scope_paths=list(spec.scope_paths),
                 )
             )
 
-        if not self._budget.has_capacity_for(len(new_items)):
+        if not self._budget.has_capacity_for(len(specs)):
             raise BudgetExceeded(
                 f"max_tasks={self._budget.budgets.max_tasks} would be exceeded by plan"
             )
@@ -156,7 +144,7 @@ class PlanExpander:
             parent_depth=rec.depth or 0,
             parent_root_id=rec.root_id or task_id,
         )
-        self._budget.add_tasks_used(len(new_items))
+        self._budget.add_tasks_used(len(specs))
         graph = self._graph_getter()
         materialized = [graph[item.id] for item in inserted if item.id in graph]
         for item in materialized:
@@ -209,7 +197,6 @@ class PlanExpander:
                     id=spec.id,
                     spec=spec.spec,
                     agent=spec.agent,
-                    description=spec.description,
                     deps=[dep_id for dep_id in spec.deps if dep_id in local_ids],
                     scope_paths=list(spec.scope_paths),
                 )
@@ -250,7 +237,6 @@ class PlanExpander:
                     id=new_task_id,
                     spec=spec.spec,
                     agent=spec.agent,
-                    description=spec.description or "",
                     deps=resolved_deps,
                     scope_paths=list(spec.scope_paths),
                     parent_id=replan_task_id,

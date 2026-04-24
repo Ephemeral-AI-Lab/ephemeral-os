@@ -110,7 +110,7 @@ class TeamRun:
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
     ) -> None:
-        from team.core.models import Task, TaskDefinition, TaskStatus
+        from team.core.models import Task, TaskStatus
 
         spec = payload.get("spec")
         if spec is None:
@@ -119,12 +119,9 @@ class TeamRun:
         root = Task(
             id=root_id,
             team_run_id=self.id,
-            definition=TaskDefinition(
-                id=root_id,
-                spec=spec,
-                agent=agent_name,
-                scope_paths=list(payload.get("scope_paths", [])),
-            ),
+            spec=spec,
+            agent=agent_name,
+            scope_paths=list(payload.get("scope_paths", [])),
             status=TaskStatus.PENDING,
             depth=0,
         )

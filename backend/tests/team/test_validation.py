@@ -19,7 +19,6 @@ def _spec(
     goal: str = "do work",
     deps: list[str] | None = None,
     scope_paths: list[str] | None = None,
-    description: str = "test task",
 ) -> TaskDefinition:
     return TaskDefinition(
         id=id_,
@@ -29,7 +28,6 @@ def _spec(
             "acceptance_criteria": f"Acceptance for {goal}",
         },
         agent=agent,
-        description=description,
         deps=deps or [],
         scope_paths=scope_paths or [],
     )
@@ -147,17 +145,14 @@ def test_known_agent_passes_agent_check():
 
 
 # ---------------------------------------------------------------------------
-# Description
+# Labels
 # ---------------------------------------------------------------------------
 
 
-def test_description_allows_long_labels():
+def test_goal_allows_long_labels():
     spec = _spec(
         "t1",
-        description=(
-            "one two three four five six seven eight nine ten eleven twelve "
-            "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone"
-        ),
+        goal="one two three four five six seven eight nine ten eleven twelve",
         scope_paths=["src/api.py"],
     )
     plan = _plan(spec)
@@ -166,7 +161,7 @@ def test_description_allows_long_labels():
          patch(_GET_DEFN_PATH, return_value=_mock_agent()):
         issues = validate_plan(plan)
 
-    assert not any("description has" in i["msg"] for i in issues)
+    assert not any("goal" in i["field"] for i in issues)
 
 
 # ---------------------------------------------------------------------------
