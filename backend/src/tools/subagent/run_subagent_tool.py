@@ -40,7 +40,7 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from team.core.scope import scope_paths_from_payload
+from team.core.scope import is_test_scope_path, scope_paths_from_payload
 from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
@@ -77,6 +77,10 @@ def _compact_args(inp: Any) -> str:
     except Exception:
         s = str(inp)
     return _truncate(s)
+
+
+def _forbidden_scout_target_paths(paths: list[str]) -> list[str]:
+    return [path for path in paths if is_test_scope_path(path)]
 
 
 class RunSubagentInput(BaseModel):
@@ -236,9 +240,24 @@ def _validate_run_subagent_request(
             is_error=True,
         )
 
+    subagent_scope_paths = scope_paths_from_payload(input)
+    if sub_def.name == "scout":
+        forbidden_targets = _forbidden_scout_target_paths(subagent_scope_paths)
+        if forbidden_targets:
+            rendered = "\n  - ".join(forbidden_targets)
+            return ToolResult(
+                output=(
+                    "run_subagent: scout target_paths must be production paths. "
+                    "Keep test files and test directories in context/spec text "
+                    "instead of dispatching scouts to them. "
+                    f"Offending target_paths:\n  - {rendered}"
+                ),
+                is_error=True,
+            )
+
     return _ValidatedRunSubagentRequest(
         sub_def=sub_def,
-        subagent_scope_paths=scope_paths_from_payload(input),
+        subagent_scope_paths=subagent_scope_paths,
     )
 
 

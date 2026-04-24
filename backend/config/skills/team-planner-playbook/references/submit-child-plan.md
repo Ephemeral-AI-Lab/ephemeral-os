@@ -1,6 +1,6 @@
 # Team Planner Submit Plan Reference
 
-Do not load this reference to decide whether to scout. Load it in Stage 3 only, after task context is loaded, the owner ledger is complete, and useful scouts have joined or been skipped.
+Load this reference at Stage 3 before drafting; do not use it to decide whether to scout.
 
 ## Routing Flow
 
@@ -8,16 +8,16 @@ Do not load this reference to decide whether to scout. Load it in Stage 3 only, 
 Caption: planner routes owner-ledger rows without exploring every leaf.
 
 owner slice
-  |-- atomic + exact owner + one mechanism --------------> developer (default for atomic work)
-  |-- clustered residue + grandchild_depth <= max_depth -> team_planner
-  |-- clustered residue + grandchild_depth > max_depth --> per-mechanism developer/validator split
-  `-- same-layer verification after producers -----------> validator
+  |-- atomic + exact owner + small surface ------> developer
+  |-- broad / matrix row + depth ---------------> team_planner
+  |-- broad row at max depth -------------------> per-mechanism split
+  `-- same-layer verification after producers --> validator
 ```
 
 | Slice signal | Route |
 | --- | --- |
-| Live or inherited evidence names one owner file, symbol, or tight production surface | `developer` |
-| Several mechanisms, APIs, engines, formats, public entry points, or mixed broad/trivial work and depth remains | Split: each atomic slice to its own `developer`; only the clustered remainder to `team_planner`. |
+| Live or inherited evidence names one owner file, symbol, or tight small surface | `developer` |
+| Several mechanisms, APIs, engines, formats, matrices, public entry points, or mixed broad/trivial work and depth remains | Split exact slices to `developer`; clustered row to `team_planner`. |
 | Broad or unresolved at max depth | Direct per-mechanism `developer` tasks plus validation/diagnostic wording |
 | Same-layer evidence sweep after producers finish | `validator` with producer deps |
 
@@ -88,7 +88,7 @@ type NewTaskDefinition = {
 | `spec.detail` | Owner evidence, inherited context, scope, uncertainty, and dependency context. |
 | `spec.acceptance_criteria` | Commands, pytest ids, expected evidence, and no skip/xfail closure. |
 | `deps` | Same-payload ids only; prompt UUIDs are context. |
-| `scope_paths` | Repo-relative production paths proven by inherited context or scout evidence. |
+| `scope_paths` | Repo-relative production paths proven by context/scouts; tests stay in `spec`. |
 
 ## Final Checklist
 

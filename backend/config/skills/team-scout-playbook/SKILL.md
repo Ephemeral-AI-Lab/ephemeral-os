@@ -26,7 +26,7 @@ payload -> [1 Notes] -> [2 Explore] -> [3 Load completion-contract if exact-file
 | --- | --- |
 | Single file / short fixed file list | Use at most one file-path `ci_query_symbol(...)` per assigned path, then Stage 3. |
 | Directory/package | Use CI tools to map subdivisions, entry points, owner seam, and gaps. |
-| Benchmark/test path | Record expected behavior, then map production-owner evidence or gaps. |
+| Benchmark/test path | Record off-policy evidence only; do not widen into production mapping. |
 | Missing exact target | Record zero coverage and do not hunt nearby replacements. |
 | Adjacent files | Mention inside assigned-path note content, not as submitted paths. |
 

@@ -363,6 +363,30 @@ def test_validate_run_subagent_allows_planner_scout_bundle(
     ]
 
 
+def test_validate_run_subagent_rejects_scout_test_target_paths():
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg(), "agent_name": "root_planner"},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={
+            "target_paths": [
+                "/testbed/dask/dataframe/io/hdf.py",
+                "/testbed/dask/tests/test_cli.py",
+            ]
+        },
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "scout target_paths must be production paths" in result.output
+    assert "/testbed/dask/tests/test_cli.py" in result.output
+
+
 def test_run_subagent_schema_is_agent_agnostic():
     """The tool schema must stay generic — each dispatchable subagent owns
     its own contract documentation."""

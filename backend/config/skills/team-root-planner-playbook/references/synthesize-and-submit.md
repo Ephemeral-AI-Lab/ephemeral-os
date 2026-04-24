@@ -1,6 +1,6 @@
 # Root Planner Submit Plan Reference
 
-Do not load this reference to decide whether to scout. Load it in Stage 3 only, after the owner ledger is complete and useful scouts have joined or been skipped.
+Load this reference at Stage 3 before drafting; do not use it to decide whether to scout.
 
 ## Routing Flow
 
@@ -8,16 +8,16 @@ Do not load this reference to decide whether to scout. Load it in Stage 3 only, 
 Caption: root planner routes owner-ledger rows without exploring every leaf.
 
 owner slice
-  |-- atomic + exact owner + one mechanism --------------> developer
-  |-- clustered / matrix / unresolved residue only ------> team_planner
-  `-- same-payload verification after producers ---------> validator
+  |-- atomic + exact owner + small surface --------> developer
+  |-- broad / matrix / unresolved row -------------> team_planner
+  `-- same-payload verification after producers ---> validator
 ```
 
 | Slice signal | Route |
 | --- | --- |
-| Live evidence names one owner file, symbol, or tight production surface | `developer` |
-| Several mechanisms, APIs, engines, formats, public entry points, or mixed broad/trivial work | Split: each atomic slice to its own `developer`; only the clustered remainder to `team_planner`. |
-| Benchmark, fail-to-pass, migration, compatibility, or unresolved owner | Peel atomic pieces to `developer` first; residual clustered/unresolved work to `team_planner`. |
+| Live evidence names one owner file, symbol, or tight small surface | `developer` |
+| Several mechanisms, APIs, engines, formats, matrices, public entry points, or mixed broad/trivial work | Split exact slices to `developer`; clustered row to `team_planner`. |
+| Benchmark, fail-to-pass, migration, compatibility, or unresolved owner | Peel exact slices to `developer`; residual clustered/unresolved work to `team_planner`. |
 | Root-level evidence sweep after producers finish | `validator` with producer deps |
 
 ## Level Shape
@@ -87,7 +87,7 @@ type NewTaskDefinition = {
 | `spec.detail` | Owner evidence, scope, uncertainty, and dependency context. |
 | `spec.acceptance_criteria` | Commands, pytest ids, expected evidence, and no skip/xfail closure. |
 | `deps` | Same-payload ids only. |
-| `scope_paths` | Repo-relative production paths or directories. |
+| `scope_paths` | Repo-relative production paths or directories; tests stay in `spec`. |
 
 ## Final Checklist
 

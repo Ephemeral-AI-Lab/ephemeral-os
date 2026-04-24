@@ -14,15 +14,15 @@ Never assign subagents to explore test suites or test files.
 
 | Route | Use when |
 | --- | --- |
-| `developer` | Atomic slice: exact owner + one mechanism. Default for every atomic piece, even inside a broad task. |
-| `team_planner` | Clustered/complex/unresolved residue only, while depth remains. Never wrap an atomic slice or delegate the whole task. |
+| `developer` | Atomic slice: exact owner + one mechanism + small failure surface. |
+| `team_planner` | Broad, matrix, clustered, complex, or unresolved row while depth remains. |
 | `developer` / `validator` fallback | Max depth reached; split by mechanism and keep uncertainty in `spec.detail`. |
 | `validator` | Same-layer verification after producer lanes. |
 
 | Gate | Action |
 | --- | --- |
-| Owner questions change this DAG | Scout by production mechanism. |
-| Several owner/mechanism rows | Launch one scout per independent row; synthesize sibling lanes. |
+| Owner questions change this DAG | Scout one production owner-family row or small independent wave. |
+| Test-only evidence | Keep in task/spec context, not workspace or scout targets. |
 
 ## Stage Flow
 
@@ -69,50 +69,49 @@ parent/deps/notes
 | Read context | Call `read_task_details(task_id=...)` for own task, parent, and each dep UUID. |
 | Inspect topology | Call `read_task_graph()` for dependency topology only. |
 | Classify intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
-| Build ledger | Group inherited changelog rows, owners, mechanisms, deps, and evidence. |
+| Build ledger | Group inherited owners, mechanisms, deps, and evidence; keep tests in spec context. |
 
 Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
 
 ## 2. Scout
 
 ```text
-Caption: scout fan-out supports the next sibling wave.
+Caption: scout fan-out follows owner-family rows, not individual tests.
 
-HDF row           -> run_subagent(agent_name="scout", input={"target_paths":["pkg/io/hdf.py"], "context":"Objective: map HDF owner."})
-parquet package   -> run_subagent(agent_name="scout", input={"target_paths":["pkg/io/parquet"], "context":"Depth: superficial package map."})
-groupby row       -> run_subagent(agent_name="scout", input={"target_paths":["pkg/dataframe/groupby.py"], "context":"Objective: map dtype owner."})
-config row        -> run_subagent(agent_name="scout", input={"target_paths":["pkg/config.py"], "context":"Objective: map config owner."})
-compatibility row -> run_subagent(agent_name="scout", input={"target_paths":["pkg/compatibility.py"], "context":"Objective: map compatibility owner."})
+owner ledger
+  |-- exact file/symbol row ------> one deep single/multi-path scout
+  |-- package/engine row ---------> one superficial directory scout
+  |-- unrelated rows -------------> separate scouts or handoff
+  `-- still broad after map ------> team_planner handoff
 ```
 
 | Scout shape | Use when |
 | --- | --- |
-| Single path | Deep scout when one file or module is the likely owner. |
-| Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
-| Directory | Superficial scout when owner is a package/subsystem, engine matrix, or package-like import path. |
-| Wave size | One scout per independent row; avoid unrelated bundles and one-per-test. |
+| Single/multi-path | One likely production owner, tight dependency, entrypoint, adapter, or shared mechanism. |
+| Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
+| Row wave | Independent production families; separate scouts, then stop after the first routing-changing wave. |
 
-Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only: one directory or short coupled file list. If a guessed file is missing or becomes a package, do one superficial directory scout or hand off to `team_planner`.
+Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
 
 ## 3. Synthesize
 
-Enter after context is loaded and the first useful row wave is done or intentionally skipped; do not load the Stage 3 reference to decide whether to scout.
+Enter after context and scout/no-scout closure. Load the Stage 3 reference first; use it for synthesis, not scout decisions.
 
 ```text
 Caption: child routing with depth.
 
-atomic slice                         -> developer
-clustered residue + depth remains    -> team_planner sibling
-owner cluster + max depth reached    -> per-mechanism developer/validator split
-same-layer evidence                  -> validator with deps=[verified producers]
+atomic + small surface               -> developer
+broad / matrix cluster + depth       -> team_planner sibling
+max-depth cluster                    -> per-mechanism developer/validator split
+same-layer evidence                  -> validator with production scopes
 ```
 
 | Draft check | Expected result |
 | --- | --- |
-| Coverage | Every inherited cluster has a producer owner or sibling `team_planner`; trivial slices stay separate. |
-| Developer lanes | Exact owner and one mechanism, unless this is a max-depth fallback. |
+| Coverage | Every inherited cluster has a producer owner or sibling `team_planner`; tiny slices stay separate. |
+| Developer lanes | Exact owner, one mechanism, small failure surface unless max-depth fallback. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
-| Validators | Depend on every same-payload producer they verify. |
+| Validators | Depend on every same-layer producer they verify; `scope_paths` are production surfaces. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
 
 Run this checklist, then make `submit_plan({ "new_tasks": [...] })` the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.
