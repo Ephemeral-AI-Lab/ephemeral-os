@@ -50,8 +50,8 @@ validation UUIDs
 
 | Surface | Compact rule |
 | --- | --- |
-| Shell boundary | Use `daytona_shell` only for tests, builds, or runtime probes, not reads, writes, moves, deletes, introspection, redirects, or wrapper health checks. |
-| Verification integrity | A failed raw command stays red; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
+| Shell boundary | Run exact tests/probes only; reads, writes, deletes, redirects, cleanup, or wrapper checks are red evidence. |
+| Verification integrity | Latest red raw command controls status; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
 | Evidence freshness | Stale, partial, indirect, wrapper, altered-command, or missing evidence is red. |
 | Correction scope | One correction only; a few light outside-scope ops can continue, while multiple files, broad, or repeated paths go to replan. |
 

@@ -109,17 +109,17 @@ Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-can
 Caption: cancellation boundary.
 
 same parent:
-  failed origin task -> preserve
+  failed request_replan/origin -> preserve; never cancel
   this replanner     -> preserve
   terminal sibling   -> preserve
   live useful sibling -> preserve
-  stale non-terminal direct sibling -> may appear in cancel_ids
+  other stale live sibling -> may appear in cancel_ids
 ```
 
 | Action | Use when |
 | --- | --- |
-| Add-only | Existing live siblings remain valid; only new corrective work is needed. |
-| Cancel and redraft | Non-terminal direct siblings are stale, duplicate, or depend on the failed assumption. |
+| Add-only | Only new corrective work is needed, or the failed task itself is the only stale item. |
+| Cancel and redraft | Other non-terminal direct siblings are stale, duplicate, or depend on the failed assumption. |
 | Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, or outside the stale region. |
 | Preserve live useful work | Objective remains valid after corrective work. |
 
@@ -128,7 +128,7 @@ same parent:
 | Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
 | Uncompleted original goal, criterion, scope item, or validation evidence | Map to a recovery child or preserved live owner. |
 | Blocker-only fix leaves original contract uncovered | Add continuation or validator coverage. |
-| Benchmark/test-edit, skip/xfail, pytest-config, doc-only, or contradictory value rule | Drop or turn into a production diagnostic. |
+| Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, or contradictory value rule | Evidence only; add a production diagnostic or blocker task. |
 
 ## 4. Submit
 

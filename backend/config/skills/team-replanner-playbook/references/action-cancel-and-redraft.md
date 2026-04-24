@@ -8,17 +8,17 @@ Use after classification and diagnostics show stale same-layer work must be repl
 Caption: cancel-and-redraft names only stale non-terminal direct siblings.
 
 same parent
-  |-- failed origin task -> preserve
+  |-- failed request_replan/origin -> preserve; never cancel
   |-- this replanner     -> preserve
   |-- terminal sibling   -> preserve
   |-- live useful sibling -> preserve
-  `-- stale non-terminal sibling -> cancel_ids
+  `-- other stale live sibling -> cancel_ids
 ```
 
 | Candidate | Action |
 | --- | --- |
-| Stale non-terminal direct sibling | Add its id to `cancel_ids`. |
-| Failed task or original `request_replan` task | Preserve. |
+| Other stale non-terminal direct sibling | Add its id to `cancel_ids`. |
+| Failed task or original `request_replan` task | Preserve; switch to add-only if this is the only stale item. |
 | This replanner | Preserve. |
 | Done, failed, cancelled, nested descendant, or dependent | Preserve; cascade handles descendants from the stale root. |
 | Replacement for uncancelled sibling scope | Drop or switch to add-only. |

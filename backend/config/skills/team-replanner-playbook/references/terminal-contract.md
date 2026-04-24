@@ -51,6 +51,6 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 | 6 | Every task has non-empty production `scope_paths`. |
 | 7 | Every unresolved-blocker spec includes `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`. |
 | 8 | Named fail-to-pass variants and uncompleted original task criteria are not dropped as unsupported, test design, residual risk, or validator-only coverage. |
-| 9 | No task asks for test/benchmark/pytest-config mutation. |
+| 9 | Test/benchmark/pytest-config restore/edit stays evidence; no child task owns it. |
 | 10 | `cancel_ids` contains only stale non-terminal direct siblings and no failed, terminal, replanner, descendant, or `request_replan` task id. |
 | 11 | The final assistant action is the `submit_replan(...)` tool call, not prose. |
