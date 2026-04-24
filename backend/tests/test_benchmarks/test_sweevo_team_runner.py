@@ -276,7 +276,7 @@ def test_agent_overrides_attach_validator_skill_without_prompt_duplication():
     overrides = _build_agent_overrides(instance)
 
     assert "system_prompt" not in overrides[TEAM_PLANNER]
-    assert "task_center" in overrides[TEAM_PLANNER]["toolkits"]
+    assert "read_task_details" in overrides[TEAM_PLANNER]["tools"]
     assert overrides[TEAM_PLANNER]["tool_call_limit"] == 100
     assert "system_prompt" not in overrides[DEVELOPER]
     assert overrides[DEVELOPER]["tool_call_limit"] == 50
@@ -341,11 +341,11 @@ def test_build_benchmark_event_store_uses_project_local_team_run_dir(monkeypatch
     captured: dict[str, object] = {}
     sentinel = object()
 
-    def fake_build_default_store(*, base_dir):
+    def fake_team_run_store(base_dir):
         captured["base_dir"] = base_dir
         return sentinel
 
-    monkeypatch.setattr(sweevo_team_runner, "build_default_store", fake_build_default_store)
+    monkeypatch.setattr(sweevo_team_runner, "TeamRunStore", fake_team_run_store)
 
     store = sweevo_team_runner._build_benchmark_event_store()
 

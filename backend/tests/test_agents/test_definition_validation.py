@@ -24,7 +24,7 @@ def test_builder_validation_rejects_reserved_builtin_agent_names():
     result = validator.validate(  # type: ignore[arg-type]
         SimpleNamespace(
             name="team_planner",
-            toolkits=None,
+            tools=None,
             effort=None,
         )
     )
@@ -65,19 +65,18 @@ def test_registry_ignores_external_reserved_builtin_overrides(monkeypatch):
     assert planner.source == "builtin"
     assert planner.agent_type == "agent"
 
-def test_allowed_tools_csv_split():
-    defn = AgentDefinition(name="dev", description="dev", allowed_tools="ci_query_symbol, ci_diagnostics")
-    assert defn.allowed_tools == ["ci_query_symbol", "ci_diagnostics"]
+def test_tools_csv_split():
+    defn = AgentDefinition(name="dev", description="dev", tools="ci_query_symbol, ci_diagnostics")
+    assert defn.tools == ["ci_query_symbol", "ci_diagnostics"]
 
 
-def test_builder_validation_allows_global_allowed_tools_without_toolkits():
+def test_builder_validation_allows_known_tools():
     validator = AgentDefinitionValidator(tool_registry=None)
 
     result = validator.validate(  # type: ignore[arg-type]
         SimpleNamespace(
             name="custom_agent",
-            toolkits=None,
-            allowed_tools=["ci_query_symbol"],
+            tools=["ci_query_symbol"],
             effort=None,
         )
     )
@@ -86,17 +85,16 @@ def test_builder_validation_allows_global_allowed_tools_without_toolkits():
     assert result.errors == []
 
 
-def test_builder_validation_rejects_unknown_allowed_tools():
+def test_builder_validation_rejects_unknown_tools():
     validator = AgentDefinitionValidator(tool_registry=None)
 
     result = validator.validate(  # type: ignore[arg-type]
         SimpleNamespace(
             name="custom_agent",
-            toolkits=["code_intelligence"],
-            allowed_tools=["does_not_exist"],
+            tools=["does_not_exist"],
             effort=None,
         )
     )
 
     assert result.valid is False
-    assert "Unknown allowed tool: does_not_exist" in result.errors
+    assert "Unknown tool: does_not_exist" in result.errors

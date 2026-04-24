@@ -31,7 +31,7 @@ from team.builtins import (
 )
 from team.models import BudgetConfig, TeamDefinition
 from team.persistence.store import TeamDefinitionStore
-from team.persistence.run_store import build_default_store
+from team.persistence.run_store import TeamRunStore
 from team.runtime.executor import Executor
 from team.runtime.runner import AgentRunState, TeamAgentRunner
 from team.runtime.team_run import TeamRun
@@ -128,7 +128,7 @@ def _benchmark_team_run_dir() -> Path:
 
 def _build_benchmark_event_store() -> Any:
     """Project-local TeamRun event log used for benchmark observability."""
-    return build_default_store(base_dir=_benchmark_team_run_dir())
+    return TeamRunStore(_benchmark_team_run_dir())
 
 
 # ---------------------------------------------------------------------------

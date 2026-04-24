@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from agents.registry import RESERVED_BUILTIN_AGENT_NAMES
@@ -12,9 +11,6 @@ from agents.api.schemas import AgentValidationResult
 if TYPE_CHECKING:
     from agents.api.schemas import AgentDefinitionCreate, AgentDefinitionUpdate
     from tools.core.base import ToolRegistry
-
-logger = logging.getLogger(__name__)
-
 
 class AgentDefinitionValidator:
     """Validates that agent definition references are resolvable."""

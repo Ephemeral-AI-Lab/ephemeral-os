@@ -428,16 +428,17 @@ class ReadTaskDetailsTool(BaseTool):
         if task is None:
             return ToolResult(output=f"## {tid}\nNot found in task graph.")
 
-        header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
+        defn = task.definition
+        header = f"## {task.id} ({defn.agent}) [{task.status.value}]"
         lines = [header]
 
-        if task.description:
-            lines.append(f"**Description:** {task.description}")
-        lines.append(f"**Objective:** {task.objective}")
-        if task.deps:
-            lines.append(f"**Deps:** {', '.join(task.deps)}")
-        if task.scope_paths:
-            lines.append(f"**Scope:** {', '.join(task.scope_paths)}")
+        if defn.description:
+            lines.append(f"**Description:** {defn.description}")
+        lines.append(f"**Objective:** {defn.objective}")
+        if defn.deps:
+            lines.append(f"**Deps:** {', '.join(defn.deps)}")
+        if defn.scope_paths:
+            lines.append(f"**Scope:** {', '.join(defn.scope_paths)}")
 
         status_value = getattr(task.status, "value", str(task.status))
         is_success = status_value == "done"

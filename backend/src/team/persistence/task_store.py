@@ -259,7 +259,7 @@ class TaskStore:
                 return task, False
 
             summary_id = str(uuid.uuid4())
-            scope_paths = list(parent_task.scope_paths or [])
+            scope_paths = list(parent_task.definition.scope_paths or [])
             record = TaskRecord(
                 id=summary_id,
                 team_run_id=self._team_run_id,

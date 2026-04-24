@@ -212,7 +212,7 @@ def test_builtin_subagent_is_registered():
     assert defn.agent_type == "subagent"
     assert defn.name == "scout"
     assert defn.system_prompt
-    assert "subagent" not in defn.toolkits  # cannot nest
+    assert "run_subagent" not in defn.tools  # cannot nest
 
 
 def test_run_subagent_tool_flags():
