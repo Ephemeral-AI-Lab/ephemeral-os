@@ -35,26 +35,21 @@ from config.defaults import (
 def test_note_creation_with_all_fields():
     note = Note(
         id="n1",
-        task_id="task-1",
         agent_name="developer",
         content="some output",
         timestamp=1000.0,
         paths=["src/auth/session.py"],
-        parent_note_id="n0",
     )
     assert note.id == "n1"
-    assert note.task_id == "task-1"
     assert note.agent_name == "developer"
     assert note.content == "some output"
     assert note.timestamp == 1000.0
     assert note.paths == ["src/auth/session.py"]
-    assert note.parent_note_id == "n0"
 
 
 def test_note_defaults():
-    note = Note(id="n2", task_id="t", agent_name="a", content="c", timestamp=0.0)
+    note = Note(id="n2", agent_name="a", content="c", timestamp=0.0)
     assert note.paths == []
-    assert note.parent_note_id is None
 
 
 # ---------------------------------------------------------------------------

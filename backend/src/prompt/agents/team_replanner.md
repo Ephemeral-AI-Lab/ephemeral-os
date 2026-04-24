@@ -1,6 +1,6 @@
 ---
 name: team_replanner
-description: "Replanner: reads failure context and produces corrective child tasks."
+description: "Replanner: reads failed task details and produces corrective child tasks."
 role: replanner
 model: inherit
 tool_call_limit: 100

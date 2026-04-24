@@ -38,7 +38,16 @@ MINIMAX_ANTHROPIC_FORMAT = "anthropic"
 
 MODEL_KEY = "minimax-anthropic-native"
 AGENT_NAME = "test-anthropic-native-agent"
-AGENT_TOOLKITS = ["sandbox_operations"]
+AGENT_TOOLS = [
+    "daytona_grep",
+    "daytona_glob",
+    "daytona_read_file",
+    "daytona_write_file",
+    "daytona_edit_file",
+    "daytona_delete_file",
+    "daytona_move_file",
+    "daytona_shell",
+]
 AGENT_PROMPT = (
     "You are test-anthropic-native-agent, a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
@@ -82,7 +91,7 @@ def _create_agent(client, name: str = AGENT_NAME) -> dict:
             "name": name,
             "description": f"E2E test: Anthropic-native agent ({name})",
             "model": MODEL_KEY,
-            "toolkits": AGENT_TOOLKITS,
+            "tools": AGENT_TOOLS,
             "system_prompt": AGENT_PROMPT,
         },
     )

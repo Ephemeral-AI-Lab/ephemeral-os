@@ -2,7 +2,7 @@
 """LLM Tool Selection Eval — tests whether the model picks the right tool.
 
 Each test sends a natural-language intent to the configured LLM with the
-full Daytona toolkit, then verifies:
+full Daytona tool set, then verifies:
   1. The model selected the correct tool(s)
   2. The input parameters are well-formed
 

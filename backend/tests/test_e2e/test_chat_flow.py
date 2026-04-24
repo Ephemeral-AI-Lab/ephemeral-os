@@ -132,14 +132,14 @@ class TestChatWithToolCalls:
         )
 
     def test_tool_started_event(self, app_client):
-        """Default agent has no toolkits — tool_started comes from mock tool_use block,
+        """Default agent has no configured tools; tool_started comes from mock tool_use block,
         handled as unknown tool (tool_completed with error)."""
         client, _ = app_client
         resp = client.post("/api/chat", json={"line": "List /tmp"})
         events = parse_sse_events(resp.text)
 
         # The mock response contains a tool_use block for "list_directory".
-        # Since no toolkit registers "list_directory", the engine handles it
+        # Since no tool named "list_directory" is registered, the engine handles it
         # as an unknown tool and emits tool_completed with is_error=True.
         tool_completed = events_of_type(events, "tool_completed")
         assert len(tool_completed) >= 1
@@ -205,7 +205,7 @@ class TestChatThinkingAndTools:
 
         types = [e["type"] for e in events]
         assert "thinking_delta" in types
-        # Tool is unknown (no toolkit registers "list_directory"),
+        # Tool is unknown (no tool named "list_directory" is registered),
         # so tool_started may not appear but tool_completed will (with error)
         assert "tool_completed" in types
         assert "line_complete" in types
@@ -228,7 +228,7 @@ class TestRequestCapture:
         assert isinstance(mock.last_request.system_prompt, str)
 
     def test_tools_passed_to_api(self, app_client):
-        """Default agent has no toolkits, but skills tools are always registered."""
+        """Default agent has no configured tools, but skills tools are always registered."""
         client, mock = app_client
         client.post("/api/chat", json={"line": "test"})
 

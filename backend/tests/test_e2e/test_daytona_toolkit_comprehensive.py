@@ -3,14 +3,14 @@
 
 Covers sandbox and CI concerns:
   Audited Editing:     daytona_edit_file with Arbiter ledger/lock/conflict
-  CI toolkit:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
+  CI tools:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
   daytona_shell:             daytona_shell multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
   Conflict Resolution: Arbiter, TimeMachine, Ledger, audited edit flow
   Live Sandbox:        real Daytona execution
 
-Run with: pytest tests/test_e2e/test_daytona_toolkit_comprehensive.py -v
+Run with: pytest tests/test_e2e/test_daytona_tools_comprehensive.py -v
 """
 
 from __future__ import annotations
@@ -248,7 +248,7 @@ def _make_ci_service_for_sandbox(sandbox: Any, *, workspace: str = "/workspace")
     from code_intelligence.routing.service import CodeIntelligenceService
 
     return CodeIntelligenceService(
-        sandbox_id="daytona-toolkit-comprehensive",
+        sandbox_id="daytona-tools-comprehensive",
         workspace_root=workspace,
         sandbox=sandbox,
     )
@@ -535,24 +535,23 @@ class TestDaytonaCiTools:
 
 
 # ===========================================================================
-# Toolkit integration tests
+# Tool integration tests
 # ===========================================================================
 
 
-class TestDaytonaToolkitIntegration:
-    """Test the DaytonaToolkit orchestrator."""
+class TestDaytonaToolIntegration:
+    """Test Daytona tool registration helpers."""
 
-    def _toolkit(self, sandbox_id="test"):
-        from tools.daytona_toolkit import DaytonaToolkit
+    def _tools(self):
+        from tools.daytona_toolkit import make_daytona_tools
 
-        return DaytonaToolkit(sandbox_id=sandbox_id)
+        return make_daytona_tools()
 
-    def test_toolkit_registers_all_6_tools(self):
-        toolkit = self._toolkit("test-123")
-        tools = toolkit.list_tools()
-        names = toolkit.tool_names()
+    def test_daytona_registers_all_tools(self):
+        tools = self._tools()
+        names = [tool.name for tool in tools]
 
-        assert len(tools) == 6, f"Expected 6 tools, got {len(tools)}: {names}"
+        assert len(tools) == 8, f"Expected 8 tools, got {len(tools)}: {names}"
 
         expected = {
             "daytona_shell",
@@ -561,64 +560,55 @@ class TestDaytonaToolkitIntegration:
             "daytona_grep",
             "daytona_glob",
             "daytona_edit_file",
+            "daytona_delete_file",
+            "daytona_move_file",
         }
         assert set(names) == expected, (
             f"Missing: {expected - set(names)}, Extra: {set(names) - expected}"
         )
 
-    def test_toolkit_name_is_sandbox_operations(self):
-        from tools.daytona_toolkit import DaytonaToolkit
+    def test_context_preparer_no_sandbox_id_raises_on_get(self):
+        from tools.daytona_toolkit import DaytonaContextPreparer
 
-        toolkit = DaytonaToolkit()
-        assert toolkit.name == "sandbox_operations"
-
-    def test_toolkit_no_sandbox_id_raises_on_get(self):
-        from tools.daytona_toolkit import DaytonaToolkit
-
-        toolkit = DaytonaToolkit()
+        preparer = DaytonaContextPreparer()
         with pytest.raises(RuntimeError, match="No sandbox_id"):
-            toolkit._get_sandbox()
+            preparer._get_sandbox()
 
-    def test_toolkit_get_tool_by_name(self):
-        toolkit = self._toolkit()
+    def test_get_tool_by_name(self):
+        by_name = {tool.name: tool for tool in self._tools()}
         for name in ["daytona_shell", "daytona_edit_file"]:
-            tool = toolkit.get(name)
+            tool = by_name.get(name)
             assert tool is not None, f"Tool {name} not found"
             assert tool.name == name
 
-    def test_toolkit_tools_have_api_schema(self):
-        toolkit = self._toolkit()
-        for tool in toolkit.list_tools():
+    def test_daytona_tools_have_api_schema(self):
+        for tool in self._tools():
             schema = tool.to_api_schema()
             assert "name" in schema
             assert "description" in schema
             assert "input_schema" in schema
             assert schema["name"] == tool.name
 
-    def test_toolkit_registry_integration(self):
-        """Toolkit should integrate with ToolRegistry correctly."""
+    def test_tool_registry_integration(self):
+        """Daytona tools should integrate with ToolRegistry correctly."""
         from tools.core.base import ToolRegistry
-        from tools.daytona_toolkit import DaytonaToolkit
 
         registry = ToolRegistry()
-        toolkit = DaytonaToolkit(sandbox_id="test")
-        registry.register_toolkit(toolkit)
+        registry.register_many(self._tools())
 
-        assert registry.get_toolkit("sandbox_operations") is toolkit
         assert registry.get("daytona_shell") is not None
         assert registry.get("daytona_shell") is not None
-        assert len(registry.to_api_schema()) == 6
+        assert len(registry.to_api_schema()) == 8
 
-    def test_toolkit_restrict_preserves_sandbox_tools(self):
-        """restrict_to_toolkits should keep sandbox_operations."""
+    def test_restrict_preserves_sandbox_tools(self):
+        """restrict_to_tools should keep requested Daytona tools."""
         from tools.core.base import ToolRegistry
-        from tools.daytona_toolkit import DaytonaToolkit
 
         registry = ToolRegistry()
-        registry.register_toolkit(DaytonaToolkit(sandbox_id="test"))
-        registry.restrict_to_toolkits(["sandbox_operations"])
+        registry.register_many(self._tools())
+        registry.restrict_to_tools(["daytona_shell", "daytona_read_file"])
 
-        assert len(registry.list_tools()) == 6
+        assert len(registry.list_tools()) == 2
         assert registry.get("daytona_shell") is not None
 
 
@@ -667,7 +657,7 @@ class TestCIIntegrationHelpers:
 
 @pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona not configured")
 @pytest.mark.live
-class TestDaytonaToolkitLive:
+class TestDaytonaToolLive:
     """Direct tool execution against a real Daytona sandbox."""
 
     @pytest.fixture(scope="class")
@@ -676,9 +666,9 @@ class TestDaytonaToolkitLive:
 
         svc = SandboxService()
         sb = svc.create_sandbox(
-            name=f"toolkit-test-{int(time.time())}",
+            name=f"tools-test-{int(time.time())}",
             language="python",
-            labels={"purpose": "toolkit-e2e"},
+            labels={"purpose": "tools-e2e"},
         )
         # Get async sandbox — tools use `await sandbox.process.exec(...)` etc.
         from sandbox.async_client import get_async_sandbox
@@ -752,13 +742,13 @@ class TestDaytonaToolkitLive:
         result = _run(
             bash_tool.execute(
                 bash_tool.input_model(
-                    command="bash -c \"echo 'toolkit e2e content' > /tmp/toolkit_test.txt && echo 'second line' >> /tmp/toolkit_test.txt && cat /tmp/toolkit_test.txt\"",
+                    command="bash -c \"echo 'tools e2e content' > /tmp/tools_test.txt && echo 'second line' >> /tmp/tools_test.txt && cat /tmp/tools_test.txt\"",
                 ),
                 ctx,
             )
         )
         _assert_success(result)
-        assert "toolkit e2e content" in result.output
+        assert "tools e2e content" in result.output
         assert "second line" in result.output
 
     # -- Live list files --
@@ -853,13 +843,13 @@ class TestToolSelectionAndOrdering:
         "daytona_edit_file",
     }
 
-    def _get_toolkit(self):
-        from tools.daytona_toolkit import DaytonaToolkit
+    def _get_tools(self):
+        from tools.daytona_toolkit import make_daytona_tools
 
-        return DaytonaToolkit(sandbox_id="ordering-test")
+        return make_daytona_tools()
 
     def _get_tool_names(self) -> list[str]:
-        return self._get_toolkit().tool_names()
+        return [tool.name for tool in self._get_tools()]
 
     # -- Completeness --
 
@@ -874,8 +864,8 @@ class TestToolSelectionAndOrdering:
         unexpected = names - self.EXPECTED_TOOLS
         assert not unexpected, f"Unexpected tools: {unexpected}"
 
-    def test_exactly_6_tools(self):
-        assert len(self._get_tool_names()) == 6
+    def test_exactly_8_tools(self):
+        assert len(self._get_tool_names()) == 8
 
     # -- Ordering: read tools before write tools --
 
@@ -895,15 +885,13 @@ class TestToolSelectionAndOrdering:
     # -- Schema validation --
 
     def test_all_tools_have_descriptions_over_20_chars(self):
-        toolkit = self._get_toolkit()
-        for tool in toolkit.list_tools():
+        for tool in self._get_tools():
             assert len(tool.description) > 20, (
                 f"{tool.name} has too-short description: {tool.description!r}"
             )
 
     def test_all_tools_have_input_schema_with_properties(self):
-        toolkit = self._get_toolkit()
-        for tool in toolkit.list_tools():
+        for tool in self._get_tools():
             schema = tool.to_api_schema()
             input_schema = schema["input_schema"]
             assert "properties" in input_schema, (
@@ -963,7 +951,7 @@ class TestToolSelectionAndOrdering:
 
 
 # ===========================================================================
-# LSP query routing through the CI toolkit (ported from synthetic-os)
+# LSP query routing through CI tools (ported from synthetic-os)
 # ===========================================================================
 
 

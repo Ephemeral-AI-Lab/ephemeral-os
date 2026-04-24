@@ -35,7 +35,7 @@ def build_parent_summary_prompt(parent: Any, children: list[Any]) -> str:
         "listed child has been read, produce exactly one terminal submission "
         "call: `submit_task_success(summary=...)` when the roll-up is delivered "
         "or `request_replan(reason=...)` when unresolved child evidence keeps "
-        "the parent open. The terminal note body must report what the parent "
+        "the parent open. The terminal summary body must report what the parent "
         "planned, one direct child line per child with status plus delivered/"
         "replanned/dropped/open-risk classification, and an overall roll-up. "
         "Cite child final summaries, commands, failing ids, exit codes, "

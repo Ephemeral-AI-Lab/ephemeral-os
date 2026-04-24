@@ -26,7 +26,7 @@ def setup_module() -> None:
     register_all()
 
 
-def test_builtin_team_agents_preload_skills_without_lazy_skill_toolkit() -> None:
+def test_builtin_team_agents_preload_skills_without_lazy_skill_tools() -> None:
     for name in (TEAM_PLANNER, TEAM_REPLANNER, DEVELOPER, VALIDATOR, SCOUT):
         defn = get_definition(name)
         assert defn is not None

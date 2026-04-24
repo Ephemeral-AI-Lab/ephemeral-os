@@ -45,15 +45,16 @@ class TeamAgentContext:
 
 def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     """Build the canonical routing metadata for a team task."""
+    defn = task.definition
     meta = ExecutionMetadata(
         team_run_id=team_run.id,
         work_item_id=task.id,
         agent_run_id=task.agent_run_id,
-        agent_name=task.agent_name,
+        agent_name=defn.agent,
         sandbox_id=getattr(team_run, "sandbox_id", "") or "",
     )
     meta["work_item_started_at"] = time.time()
-    meta["task_deps"] = list(task.deps)
+    meta["task_deps"] = list(defn.deps)
     meta["task_parent_id"] = task.parent_id
     meta["task_depth"] = task.depth
     repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
@@ -63,8 +64,8 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
         meta["ci_workspace_root"] = repo_root
     for key, value in getattr(team_run, "coordination_metadata", {}).items():
         meta[key] = value
-    if task.scope_paths:
-        meta["write_scope"] = task.scope_paths
+    if defn.scope_paths:
+        meta["write_scope"] = defn.scope_paths
 
     meta["task_center"] = team_run.task_center
     arbiter = getattr(team_run, "arbiter", None)
@@ -122,7 +123,7 @@ def _template_name_for_task(
     defn: "AgentDefinition | None", team_run: "TeamRun", task: Task,
 ) -> str | None:
     role = str(getattr(defn, "role", "") or "").strip()
-    agent_name = str(getattr(task, "agent_name", "") or "").strip()
+    agent_name = str(task.definition.agent or "").strip()
 
     if agent_name == "root_planner":
         return "root_task_planner"
@@ -220,17 +221,15 @@ async def _render_template_user_message(
         return None
 
     parts = await template_context_for(task)
-    deps_line = ", ".join(f"`{dep}`" for dep in task.deps if dep)
+    task_def = task.definition
+    deps_line = ", ".join(f"`{dep}`" for dep in task_def.deps if dep)
     parent_id = str(task.parent_id) if task.parent_id else ""
     failed_id = str(task.fired_by_task_id) if task.fired_by_task_id else ""
     variables: dict[str, object] = {
         "task_spec": parts.task_spec,
         "scope_paths": parts.scope_paths,
-        "context_from_dependencies": parts.context_from_dependencies,
         "recent_scope_changes": parts.recent_scope_changes,
-        "parent_context": parts.parent_context,
-        "failure_context": parts.failure_context,
-        "user_request": str(getattr(team_run, "user_request", "") or task.objective).strip(),
+        "user_request": str(getattr(team_run, "user_request", "") or task_def.objective).strip(),
         "benchmark_targets": _format_benchmark_targets(team_run),
         "terminal_tools": _format_terminal_tools(terminal_tools),
         "your_task_id": str(task.id),

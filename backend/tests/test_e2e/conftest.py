@@ -755,7 +755,7 @@ def create_test_agent(
     client,
     name: str,
     *,
-    toolkits: list[str] | None = None,
+    tools: list[str] | None = None,
     skills: list[str] | None = None,
     system_prompt: str | None = None,
     model: str | None = None,
@@ -766,8 +766,8 @@ def create_test_agent(
         "description": f"E2E test agent: {name}",
         "model": model or MINIMAX_MODEL,
     }
-    if toolkits:
-        payload["toolkits"] = toolkits
+    if tools:
+        payload["tools"] = tools
     if skills:
         payload["skills"] = skills
     if system_prompt:

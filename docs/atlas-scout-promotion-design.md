@@ -124,7 +124,7 @@ Acceptance criteria:
 Status:
 - implemented
 
-### Phase 3: Planner And Toolkit Contract Cleanup
+### Phase 3: Planner And Tool Contract Cleanup
 Objective:
 Remove legacy instructions that told planners scout results were not real artifact refs.
 
@@ -135,7 +135,7 @@ Changes:
 
 Acceptance criteria:
 - planner instructions no longer prohibit reuse of fresh scout `artifact_ref`
-- prompt/toolkit guidance consistently separates `run_id` from `artifact_ref`
+- prompt/tool guidance consistently separates `run_id` from `artifact_ref`
 - no stale instruction path still tells workers to ignore a real scout artifact ref
 
 Status:

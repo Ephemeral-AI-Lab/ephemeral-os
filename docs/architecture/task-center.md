@@ -9,7 +9,7 @@ wiring. Runtime status transitions flow through `TaskStatusHandler`, while
 
 - Insert validated plans into the task DAG.
 - Track task status and dependency readiness.
-- Build injected task context through `TaskContextBuilder` from dependency notes, parent context, replanner root cause traces, and recent scope changes.
+- Build injected task context through `TaskContextBuilder` from the assigned task, replanner root cause traces, and recent scope changes.
 - Route work completion, failure, cancellation, parent-summary finalization, and replan requests through `TaskStatusHandler`.
 - Spawn replanner tasks when a worker submits `request_replan`.
 - Apply replanner output by inserting new tasks, cancelling stale tasks, and completing or expanding the replanner through the unified status handler.
@@ -50,24 +50,21 @@ After the replan:
 
 - `new_tasks` are inserted as direct children of the replanner at the replanner's depth. The replanner never sets `parent_id` per task.
 - Each `new_tasks` item carries the full task briefing in `spec`; a separate short `description` label is not required.
-- The full corrective task JSON is appended to the replanner detail as `Initial Replan`; the replanner does not submit a free-text summary.
+- The replanner does not submit a free-text summary.
 - `cancel_ids` may target only direct siblings of the replanner. Cancelled tasks are marked `cancelled`, including cascaded descendants and dependents.
 - New replan tasks may depend on local new-task IDs or schedulable existing tasks (`done`, `ready`, `pending`) that do not already depend on the replanner or the original failed task.
 - The replanner is marked `done` immediately when it has no new child tasks, or `expanded` when it created direct child tasks.
-- Expanded replanners transition to `expanded_awaiting_summary` after all direct children are terminal; `parent_summarizer` then reads every child detail, posts the roll-up, and finalizes the replanner as `done` only when the roll-up has no unresolved child evidence.
+- Expanded replanners transition to `expanded_awaiting_summary` after all direct children are terminal; `parent_summarizer` then reads every child detail, submits the roll-up, and finalizes the replanner as `done` only when the roll-up has no unresolved child evidence.
 - A `parent_summarizer` may call `request_replan(reason=...)` for unresolved roll-ups; the executor targets that replan at the summarized parent.
 - The original failed task stays `request_replan` after the replanner succeeds. The origin is terminal from recovery start; success records `replanned_by:<replanner_id>` on its failure reason while pending dependents remain rewired to the replanner.
 
 ## Notes
 
-Notes are scoped by task and path. `NoteManager` owns note state, posting, reads, and scope filtering. `TaskContextBuilder` owns agent-facing context injection: the assigned task, dependency notes, parent context, replanner root cause traces, and recent overlapping scope changes.
-
-When multiple notes exist for the same upstream task, prompt context prefers the
-most useful note over the merely latest note. For dependency context,
-`TaskContextBuilder` keeps one preferred note per dependency task, avoiding
-low-information status notes when richer worker, scout, planner, or reviewer
-notes exist. For parent context, it first prefers notes whose paths match the
-child task's `scope_paths`, then applies the same preferred-note selection.
+Notes are file scoped only. `NoteManager` owns append-only note state, posting,
+path-based reads, and scope filtering. Notes are not attached to task ids, do
+not form parent/child threads, and are not appended to `read_task_details`
+output. Agents use `read_file_note(file_path=...)` for file evidence instead of
+receiving task-scoped note context automatically.
 
 ## Resume
 

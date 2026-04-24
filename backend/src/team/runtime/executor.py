@@ -127,12 +127,13 @@ class Executor:
             )
         )
 
-        defn = self.agent_lookup(task.agent_name)
+        agent_name = task.definition.agent
+        defn = self.agent_lookup(agent_name)
         if defn is None:
             return TaskStatusUpdate(
                 task_id=task_id,
                 status=TaskStatus.FAILED,
-                summary=f"unknown_agent: {task.agent_name}",
+                summary=f"unknown_agent: {agent_name}",
             )
 
         await self.scope_notifier.inject_warning(task)

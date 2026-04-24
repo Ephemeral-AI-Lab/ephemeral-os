@@ -85,7 +85,6 @@ async def test_submit_file_notes_store_one_note_per_item():
         "Mapped session surface.",
     ]
     assert len(notes.posted) == 2
-    assert notes.posted[0].task_id == ""
     assert notes.posted[0].paths == ["src/auth.py"]
     assert notes.posted[1].paths == ["src/session.py"]
     assert notes.posted[0].id == payload["notes"][0]["note_id"]
@@ -390,30 +389,24 @@ async def test_read_task_details_reads_single_task():
 
 
 @pytest.mark.asyncio
-async def test_read_task_details_labels_initial_plan_and_replan_json():
+async def test_read_task_details_does_not_append_notes():
     class _Notes:
         async def read(self, **_kwargs):
             return [
                 Note(
                     id="plan-note",
-                    task_id="task-1",
                     agent_name="team_planner",
                     content='[{"id": "dev-1", "agent": "developer"}]',
-                    tags=["initial_planned_tasks"],
                 ),
                 Note(
                     id="replan-note",
-                    task_id="task-1",
                     agent_name="team_replanner",
                     content='[{"id": "fix-1", "agent": "developer"}]',
-                    tags=["initial_replanned_tasks"],
                 ),
                 Note(
                     id="summary-note",
-                    task_id="task-1",
                     agent_name="parent_summarizer",
                     content="dev-1 delivered parser retry behavior.",
-                    tags=["implementation", "parent_summary"],
                 ),
             ]
 
@@ -434,9 +427,7 @@ async def test_read_task_details_labels_initial_plan_and_replan_json():
     )
 
     assert result.is_error is False
-    assert "**Initial Plan:**\n```json\n[{\"id\": \"dev-1\", \"agent\": \"developer\"}]\n```" in result.output
-    assert "**Initial Replan:**\n```json\n[{\"id\": \"fix-1\", \"agent\": \"developer\"}]\n```" in result.output
-    assert "**Summary:**\ndev-1 delivered parser retry behavior." in result.output
-    assert "### team_planner [initial_planned_tasks]" not in result.output
-    assert "### team_replanner [initial_replanned_tasks]" not in result.output
-    assert result.output.count("dev-1 delivered parser retry behavior.") == 1
+    assert "dev-1 delivered parser retry behavior." not in result.output
+    assert "**Recent notes:**" not in result.output
+    assert "### team_planner" not in result.output
+    assert "### team_replanner" not in result.output

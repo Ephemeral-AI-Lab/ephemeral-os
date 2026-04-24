@@ -1,14 +1,12 @@
-"""NoteManager — in-memory note lifecycle management.
+"""NoteManager — in-memory file-scoped note lifecycle management.
 
-Extracted from TaskCenter. Owns in-memory note state, posting, reading,
-and scope filtering. Persistence of note events is delegated to the event
-store callback.
+Notes describe paths and agent observations. Persistence of note events is
+delegated to the event store callback.
 """
 
 from __future__ import annotations
 
 import logging
-import uuid
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -29,11 +27,7 @@ def _note_preview(content: str, *, limit: int = 240) -> str:
 
 
 class NoteManager:
-    """In-memory note lifecycle management.
-
-    Owns note state and scope filtering.
-    Emits events via an event_store callback.
-    """
+    """In-memory file-scoped note lifecycle management."""
 
     def __init__(
         self,
@@ -54,37 +48,12 @@ class NoteManager:
         """Replace in-memory notes with the given list."""
         self._notes = list(notes)
 
-    async def submit_summary(
-        self,
-        *,
-        task_id: str,
-        agent_name: str,
-        content: str,
-        paths: list[str] | None = None,
-        tags: list[str] | None = None,
-    ) -> Note:
-        """Submit a terminal task summary through the note stream."""
-        summary_tags = ["implementation", *(tags or [])]
-        note = Note(
-            id=str(uuid.uuid4()),
-            task_id=task_id,
-            agent_name=agent_name,
-            content=content,
-            paths=list(paths or []),
-            tags=list(dict.fromkeys(summary_tags)),
-        )
-        await self.post(note)
-        return note
-
     async def post(self, note: Note) -> None:
         """Append a note and emit the posted event."""
         self._notes.append(note)
-        auto_generated = note.agent_name.endswith(" (auto)")
         preview = _note_preview(note.content)
         logger.info(
-            "[task_center] %snote task=%s agent=%s scope=%s preview=%s",
-            "auto-" if auto_generated else "",
-            note.task_id,
+            "[task_center] note agent=%s scope=%s preview=%s",
             note.agent_name,
             ",".join(note.paths) if note.paths else "-",
             preview,
@@ -95,9 +64,7 @@ class NoteManager:
             self._event_store_cb(
                 make_note_posted(
                     self._team_run_id,
-                    task_id=note.task_id,
                     agent_name=note.agent_name,
-                    auto=auto_generated,
                     scope_paths=note.paths,
                     content_preview=preview,
                     content_bytes=len(note.content.encode("utf-8")),
@@ -109,23 +76,15 @@ class NoteManager:
     async def read(
         self,
         *,
-        authors: list[str] | None = None,
         paths: list[str] | None = None,
-        tags: list[str] | None = None,
         keyword: str | None = None,
         since: float | None = None,
         last_n: int | None = None,
     ) -> list[Note]:
-        """Filter and return notes by author, paths, tags, keyword, timestamp, and last_n."""
+        """Filter and return notes by paths, keyword, timestamp, and last_n."""
         results = list(self._notes)
-        if authors:
-            s = set(authors)
-            results = [n for n in results if n.task_id in s]
         if paths:
             results = [n for n in results if ScopePath.matches_scopes(n.paths, paths)]
-        if tags:
-            tag_set = set(tags)
-            results = [n for n in results if tag_set & set(n.tags)]
         if keyword:
             keywords = [k.strip().lower() for k in keyword.split("|") if k.strip()]
             if keywords:

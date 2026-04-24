@@ -110,7 +110,7 @@ class TestToolCallingAndSkillLoading:
 
     @pytest.mark.asyncio
     async def test_skill_tool_available(self):
-        """The skill discovery tool should be available when using discovery toolkit."""
+        """The skill discovery tool should be available by default."""
         agent = create_eval_agent(
             system_prompt="You are a test assistant. Be concise.",
         )
@@ -129,7 +129,7 @@ class TestToolCallingAndSkillLoading:
 
     @pytest.mark.asyncio
     async def test_sandbox_tools_schema_complete(self, sandbox):
-        """Verify sandbox_operations toolkit provides all expected tools."""
+        """Verify sandbox tools expose expected schemas."""
         agent = create_eval_agent(
             sandbox_id=sandbox["id"],
         )

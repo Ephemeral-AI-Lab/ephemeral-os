@@ -410,7 +410,7 @@ The `display_messages` list is the source of truth for conversation history. Eac
 
 ## Agent Runtime Wrapper
 
-The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the query loop with agent-specific config: model, toolkits, system prompt, and budget. It owns the mutable `display_messages` list and exposes a read-only `display_messages` property to callers.
+The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the query loop with agent-specific config: model, tools, system prompt, and budget. It owns the mutable `display_messages` list and exposes a read-only `display_messages` property to callers.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -427,11 +427,11 @@ The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the que
        │                │                     │ awareness
        ▼                ▼                     ▼
 ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐
-│ resolved_   │  │skill_registry│  │ finalize_tool_       │
-│ model       │  │daytona_tool  │  │ registry_and_prompt()│
-│ api_client  │  │kit           │  │ inject capability    │
-└──────┬──────┘  │background_  │  │ text                 │
-       │         │toolkit      │  └──────────┬───────────┘
+│ resolved_   │  │ tool         │  │ finalize_tool_       │
+│ model       │  │ registry     │  │ registry_and_prompt()│
+│ api_client  │  │ entries      │  │ inject capability    │
+└──────┬──────┘  │              │  │ text                 │
+       │         │              │  └──────────┬───────────┘
        │         └──────┬───────┘             │
        │                │                     ▼
        │                │          ┌──────────────────────┐

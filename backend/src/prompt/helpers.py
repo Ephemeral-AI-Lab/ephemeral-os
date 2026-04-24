@@ -478,7 +478,7 @@ async def build_team_user_prompt_report_text(
         "- Source: representative synthetic task graph rendered through `build_query_context`.",
         "- User prompt templates: `backend/src/prompt/user_prompt/*.md`.",
         "",
-        "Team task prompts vary at runtime with task specs, dependency notes, "
+        "Team task prompts vary at runtime with task specs, "
         "replan root cause traces, scope paths, and recent edits. This report shows "
         "the current assembly path and prompt shape.",
         "",
@@ -688,11 +688,9 @@ def _replay_team_run_events(
             notes.append(
                 Note(
                     id=f"event-{event.seq}",
-                    task_id=str(event.data.get("task_id") or ""),
                     agent_name=str(event.data.get("agent_name") or ""),
                     content=content + "\n\n[preview from persisted event log]",
                     paths=list(event.data.get("scope_paths") or []),
-                    tags=[],
                 )
             )
             continue
@@ -758,24 +756,25 @@ async def build_team_run_user_prompt_report_text(
 
     missing: list[str] = []
     for task in _sort_tasks_for_prompt_report(tasks):
-        agent_def = load_agent_definition(task.agent_name, settings)
+        defn = task.definition
+        agent_def = load_agent_definition(defn.agent, settings)
         lines.extend(
             [
                 "",
                 f"### Task: {task.id}",
                 "",
-                f"- Agent: `{task.agent_name}`",
+                f"- Agent: `{defn.agent}`",
                 f"- Status: `{task.status.value}`",
                 f"- Depth: `{task.depth}`",
                 f"- Parent: `{task.parent_id or '(root)'}`",
             ]
         )
-        if task.deps:
-            lines.append(f"- Deps: `{', '.join(task.deps)}`")
-        if task.scope_paths:
-            lines.append(f"- Scope: `{', '.join(task.scope_paths)}`")
+        if defn.deps:
+            lines.append(f"- Deps: `{', '.join(defn.deps)}`")
+        if defn.scope_paths:
+            lines.append(f"- Scope: `{', '.join(defn.scope_paths)}`")
         if agent_def is None:
-            missing.append(task.agent_name)
+            missing.append(defn.agent)
             lines.extend(["", "_Agent definition not found in registry or database._"])
             continue
         ctx = await build_query_context(agent_def, team_run, task)

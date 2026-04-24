@@ -2,7 +2,7 @@
 
 ## Overview
 
-EphemeralOS agents are customizable runtime units defined through Markdown files or API endpoints. Teams orchestrate multiple agents in coordinated workflows with persistent task queues, task notes, and replanning. This document describes the customization surface, loading pipeline, persistence model, and team run lifecycle.
+EphemeralOS agents are customizable runtime units defined through Markdown files or API endpoints. Teams orchestrate multiple agents in coordinated workflows with persistent task queues, scoped coordination notes, and replanning. This document describes the customization surface, loading pipeline, persistence model, and team run lifecycle.
 
 ---
 
@@ -56,8 +56,7 @@ description: "Team-mode developer: reads, writes, and edits code."
 role: developer
 model: inherit
 tool_call_limit: 100
-toolkits: ["sandbox_operations", "code_intelligence"]
-allowed_tools: ["daytona_shell", "ci_query_symbol", "ci_diagnostics"]
+tools: ["daytona_shell", "ci_query_symbol", "ci_diagnostics"]
 blocked_tools: []
 terminal_tools: ["submit_task_success", "request_replan"]
 ---
@@ -69,13 +68,13 @@ Execute one bounded coding task...
 - `name`, `description` (required)
 - `system_prompt` (optional; overridden by body text)
 - `model`, `effort`, `tool_call_limit`
-- `toolkits`, `skills`, `allowed_tools`, `blocked_tools`, `terminal_tools`
+- `tools`, `skills`, `blocked_tools`, `terminal_tools`
 - `background`, `role`, `agent_type` (agent | subagent)
 - `source` (builtin | user | plugin), capability flags
 
 `terminal_tools` is the runtime source of truth for tools that may end the
-agent's loop. For team-mode agents using the `submission` toolkit, it also
-determines which submission tools remain visible after toolkit assembly.
+agent's loop. For team-mode agents it also determines which submission tools
+remain visible after tool registration.
 
 ### REST API Surface
 
@@ -87,8 +86,7 @@ POST /api/agents
   "description": "...",
   "model": "claude-opus",
   "system_prompt": "...",
-  "toolkits": ["search", "note_taking"],
-  "allowed_tools": ["search_web", "read_note"],
+  "tools": ["search_web", "read_note"],
   "blocked_tools": [],
   "terminal_tools": [],
   "effort": "high",
@@ -101,7 +99,7 @@ POST /api/agents
 PATCH /api/agents/{name}
 {
   "system_prompt": "...",
-  "toolkits": ["new_toolkit"]
+  "tools": ["new_tool"]
 }
 ```
 
@@ -182,9 +180,8 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  model               string         │
 │  effort              string         │
 │  tool_call_limit     int            │
-│  toolkits            json           │
 │  skills              json           │
-│  allowed_tools       json           │
+│  tools               json           │
 │  blocked_tools       json           │
 │  hooks               json           │
 │  background          boolean        │
@@ -299,14 +296,14 @@ REST Client         Router                                            agent_defi
     │  AgentDefinition│                  │                 │                 │                │
     │  Response       │                  │                 │                 │                │
 
-  NOTE: Validation includes effort levels, model keys, and toolkit names.
+  NOTE: Validation includes effort levels, model keys, and tool names.
   NOTE: Next get_definition(name) lookup returns immediately from registry.
 ```
 
 **Steps:**
 
 1. **API** receives `AgentDefinitionCreate` payload.
-2. **Validation** checks effort levels, model keys, toolkit names.
+2. **Validation** checks effort levels, model keys, and tool names.
 3. **Builder** converts payload → `_record_payload_from_request()`.
 4. **Store** inserts `AgentDefinitionRecord` into DB.
 5. **Builder** converts record back → `AgentDefinition` via `record_to_definition()`.
@@ -400,8 +397,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
 | `model` | LLM selection; "inherit" uses default | "claude-opus-4", "inherit" |
 | `effort` | Heuristic budget; low/medium/high | High = larger tool_call_limit |
 | `tool_call_limit` | Max tool calls before agent stops | 50, 100, unlimited (None) |
-| `toolkits` | Allowed tool groups (sandbox, code_intelligence, search) | ["sandbox_operations", "code_intelligence"] |
-| `allowed_tools` | Optional allowlist inside the assembled toolkits | ["daytona_shell", "ci_query_symbol"] |
+| `tools` | Tool names to register for the agent | ["daytona_shell", "ci_query_symbol"] |
 | `blocked_tools` | Tool names to remove after assembly | [] |
 | `skills` | Skill playbooks to inject | ["team-developer-playbook"] |
 | `role` | Team dispatch label (planner, developer, reviewer) | "developer" |

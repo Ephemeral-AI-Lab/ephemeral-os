@@ -2,7 +2,7 @@
 
 Tools exposed in the main loop:
 - submit_file_notes             — post batched file-scoped notes
-- read_task_details             — task spec + recent notes by task id / scope
+- read_task_details             — task spec, status, and terminal submission data
 - read_file_note                — search notes by file path
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions.
@@ -54,18 +54,44 @@ def _sanitize_scout_gap_paths(content: str, note_paths: list[str]) -> str:
     return _BACKTICK_PATH_RE.sub(_rewrite, content)
 
 
-def _select_summary_note(task_notes: list[object], *, is_success: bool) -> object | None:
-    for note in reversed(task_notes):
-        tags = getattr(note, "tags", None) or []
-        if "parent_summary" in tags:
-            return note
-    if not is_success:
-        return None
-    for note in reversed(task_notes):
-        tags = getattr(note, "tags", None) or []
-        if "implementation" in tags:
-            return note
-    return None
+def _task_definition_payload(task_def: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "id": str(getattr(task_def, "id", "") or ""),
+        "agent": str(getattr(task_def, "agent", "") or ""),
+        "objective": str(getattr(task_def, "objective", "") or ""),
+        "description": str(getattr(task_def, "description", "") or ""),
+        "deps": list(getattr(task_def, "deps", []) or []),
+        "scope_paths": list(getattr(task_def, "scope_paths", []) or []),
+    }
+    parent_id = getattr(task_def, "parent_id", None)
+    if parent_id:
+        payload["parent_id"] = str(parent_id)
+    return payload
+
+
+def _append_submission_details(lines: list[str], submission: object | None) -> None:
+    if submission is None:
+        return
+
+    plan = getattr(submission, "plan", None)
+    if plan is not None:
+        if hasattr(plan, "tasks"):
+            payload = [_task_definition_payload(item) for item in plan.tasks]
+            lines.extend(["**Plan:**", "```json", json.dumps(payload, indent=2), "```"])
+        elif hasattr(plan, "add_tasks"):
+            payload = {
+                "add_tasks": [
+                    _task_definition_payload(item) for item in plan.add_tasks
+                ],
+                "cancel_ids": list(getattr(plan, "cancel_ids", []) or []),
+            }
+            lines.extend(["**Replan:**", "```json", json.dumps(payload, indent=2), "```"])
+
+    summary = getattr(submission, "summary", None)
+    summary_text = str(getattr(summary, "summary", "") or "").strip()
+    if summary_text:
+        label = "**Summary:**" if plan is not None else "**Success Summary:**"
+        lines.extend([label, summary_text])
 
 
 # ---------------------------------------------------------------------------
@@ -143,18 +169,12 @@ class SubmitFileNotesInput(BaseModel):
         return self
 
 
-class TaskNoteOutput(BaseModel):
+class NoteOutput(BaseModel):
     note_id: str = Field(..., description="Created Task Center note id.")
-    task_id: str = Field(..., description="Task id attached to the note (empty for file notes).")
     agent_name: str = Field(..., description="Runtime-stamped agent name that posted the note.")
     content: str = Field(..., description="Stored note content.")
     timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
     paths: list[str] = Field(default_factory=list, description="Scope paths attached to the note.")
-    tags: list[str] = Field(default_factory=list, description="Tags attached to the note.")
-    parent_note_id: str | None = Field(
-        default=None,
-        description="Parent note id when the note is part of a thread.",
-    )
 
 
 class FileNoteItemOutput(BaseModel):
@@ -175,25 +195,13 @@ async def _post_note(
     *,
     content: str,
     paths: list[str],
-    tags: list[str] | None,
-    parent_note_id: str | None,
-    task_id: str,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    from team.models import Note, NoteTag
+    from team.models import Note
 
     tc = context.metadata.get("task_center")
     if tc is None:
         return ToolResult(output="Error: Task Center not available", is_error=True)
-
-    if tags:
-        valid_tags = {t.value for t in NoteTag}
-        invalid = [t for t in tags if t not in valid_tags]
-        if invalid:
-            return ToolResult(
-                output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                is_error=True,
-            )
 
     note_paths = normalize_scope_paths(paths)
     if str(context.metadata.get("agent_name") or "").strip() == "scout" and note_paths:
@@ -202,24 +210,18 @@ async def _post_note(
 
     note = Note(
         id=str(uuid.uuid4()),
-        task_id=task_id,
         agent_name=context.metadata.get("agent_name", ""),
         content=content,
         timestamp=time.time(),
         paths=note_paths,
-        tags=list(tags or []),
-        parent_note_id=parent_note_id,
     )
     await tc.notes.post(note)
-    payload = TaskNoteOutput(
+    payload = NoteOutput(
         note_id=note.id,
-        task_id=note.task_id,
         agent_name=note.agent_name,
         content=note.content,
         timestamp=note.timestamp,
         paths=note.paths,
-        tags=note.tags,
-        parent_note_id=note.parent_note_id,
     )
     return ToolResult(output=payload.model_dump_json())
 
@@ -233,15 +235,12 @@ async def _create_file_note_output(
     result = await _post_note(
         content=content,
         paths=[path],
-        tags=None,
-        parent_note_id=None,
-        task_id="",
         context=context,
     )
     if result.is_error:
         return result
 
-    note = TaskNoteOutput.model_validate_json(result.output)
+    note = NoteOutput.model_validate_json(result.output)
     return FileNoteItemOutput(
         note_id=note.note_id,
         path=note.paths[0] if note.paths else "",
@@ -305,14 +304,6 @@ class ReadFileNoteInput(BaseModel):
             "actual path here; free-form call context is not searched."
         ),
     )
-    tags: list[str] | None = Field(
-        default=None,
-        description=(
-            "Filter by tag (OR semantics). Valid tags: discovery, implementation, "
-            "bug_fix, blocker, proposal, verification, architecture, dependency, "
-            "warning, refactor."
-        ),
-    )
     last_n: int | None = Field(
         default=None, description="Return only the N most recent matching notes."
     )
@@ -321,7 +312,7 @@ class ReadFileNoteInput(BaseModel):
 class ReadFileNoteTool(BaseTool):
     name = "read_file_note"
     description = (
-        "Use to search Task Center notes for a file or directory path. "
+        "Use to search file notes for a file or directory path. "
         "Developers and validators use this before reading or editing files "
         "that may have notes; planners use it after scouts post findings or "
         "when the prompt names a known note path."
@@ -332,20 +323,10 @@ class ReadFileNoteTool(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadFileNoteInput)
-        from team.models import NoteTag
 
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="Error: Task Center not available", is_error=True)
-
-        if arguments.tags:
-            valid_tags = {t.value for t in NoteTag}
-            invalid = [t for t in arguments.tags if t not in valid_tags]
-            if invalid:
-                return ToolResult(
-                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                    is_error=True,
-                )
 
         paths = [arguments.file_path]
 
@@ -361,7 +342,6 @@ class ReadFileNoteTool(BaseTool):
 
         notes = await tc.notes.read(
             paths=paths,
-            tags=arguments.tags,
             last_n=arguments.last_n,
         )
 
@@ -369,11 +349,9 @@ class ReadFileNoteTool(BaseTool):
             return ToolResult(output="No notes found.")
         lines: list[str] = []
         for n in notes:
-            header = f"### {n.agent_name} ({n.task_id})"
+            header = f"### {n.agent_name}"
             if n.paths:
                 header += f" [paths: {', '.join(n.paths)}]"
-            if n.tags:
-                header += f" [tags: {', '.join(n.tags)}]"
             lines.append(header)
             lines.append(n.content)
             lines.append("")
@@ -403,12 +381,11 @@ class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
         "Use to inspect one known Task Center task, including its spec, deps, "
-        "status, scope paths, failure reason, completion summary, and recent "
-        "notes. Non-entry developers, validators, child planners, and "
-        "replanners use this for prompt-header tasks before broader graph "
-        "orientation."
+        "status, scope paths, and failure reason. Non-entry developers, "
+        "validators, child planners, and replanners use this for prompt-header "
+        "tasks before broader graph orientation."
     )
-    short_description = "Read one task's details + recent notes by ID."
+    short_description = "Read one task's details by ID."
     input_model = ReadTaskDetailsInput
     output_model = TextToolOutput
 
@@ -441,80 +418,11 @@ class ReadTaskDetailsTool(BaseTool):
             lines.append(f"**Scope:** {', '.join(defn.scope_paths)}")
 
         status_value = getattr(task.status, "value", str(task.status))
-        is_success = status_value == "done"
         is_failure = status_value in {"request_replan", "failed", "cancelled"}
         if is_failure and task.failure_reason:
             lines.append(f"**Failure Reason:** {task.failure_reason}")
 
-        # Notes for this task — full content, initial plan/replan artifacts,
-        # the terminal summary note when present, and the last three remaining
-        # notes without re-printing the summary block.
-        try:
-            task_notes = await tc.notes.read(authors=[tid])
-            if task_notes:
-                summary_note = _select_summary_note(task_notes, is_success=is_success)
-                initial_plan_note = next(
-                    (
-                        n
-                        for n in reversed(task_notes)
-                        if "initial_planned_tasks" in (n.tags or [])
-                    ),
-                    None,
-                )
-                if initial_plan_note is not None:
-                    lines.append("**Initial Plan:**")
-                    lines.append("```json")
-                    lines.append(initial_plan_note.content)
-                    lines.append("```")
-
-                initial_replan_note = next(
-                    (
-                        n
-                        for n in reversed(task_notes)
-                        if "initial_replanned_tasks" in (n.tags or [])
-                    ),
-                    None,
-                )
-                if initial_replan_note is not None:
-                    lines.append("**Initial Replan:**")
-                    lines.append("```json")
-                    lines.append(initial_replan_note.content)
-                    lines.append("```")
-
-                if summary_note is not None:
-                    if "parent_summary" in (summary_note.tags or []):
-                        lines.append("**Summary:**")
-                    else:
-                        lines.append("**Success Summary:**")
-                    lines.append(summary_note.content)
-
-                structured_plan_tags = {
-                    "initial_planned_tasks",
-                    "initial_replanned_tasks",
-                }
-                excluded_note_ids = {
-                    note.id
-                    for note in (summary_note, initial_plan_note, initial_replan_note)
-                    if note is not None
-                }
-                recent_candidates = [
-                    n
-                    for n in task_notes
-                    if n.id not in excluded_note_ids
-                    and not structured_plan_tags.intersection(n.tags or [])
-                ]
-                recent = recent_candidates[-3:]
-                if recent:
-                    lines.append("**Recent notes:**")
-                    for n in recent:
-                        tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
-                        path_str = (
-                            f" [paths: {', '.join(n.paths)}]" if n.paths else ""
-                        )
-                        lines.append(f"### {n.agent_name}{tag_str}{path_str}")
-                        lines.append(n.content)
-        except Exception:
-            pass  # notes unavailable
+        _append_submission_details(lines, getattr(task, "submission", None))
 
         return ToolResult(output="\n".join(lines))
 
@@ -549,13 +457,14 @@ class ReadTaskGraphTool(BaseTool):
 
     @staticmethod
     def _node(t: object, self_id: str, children: list[dict]) -> dict:
+        defn = t.definition
         return {
             "id": t.id,
-            "agent": t.agent_name,
+            "agent": defn.agent,
             "status": t.status.value,
-            "description": t.description or "",
-            "deps": list(t.deps),
-            "scope_paths": list(t.scope_paths),
+            "description": defn.description or "",
+            "deps": list(defn.deps),
+            "scope_paths": list(defn.scope_paths),
             "failure_reason": t.failure_reason,
             "is_you": t.id == self_id,
             "children": children,
@@ -602,9 +511,9 @@ class ReadTaskGraphTool(BaseTool):
             parent_json = (
                 {
                     "id": parent_task.id,
-                    "agent": parent_task.agent_name,
+                    "agent": parent_task.definition.agent,
                     "status": parent_task.status.value,
-                    "description": parent_task.description or "",
+                    "description": parent_task.definition.description or "",
                 }
                 if parent_task is not None
                 else None

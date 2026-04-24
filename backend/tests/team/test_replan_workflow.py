@@ -9,7 +9,6 @@ from team.builtins import register_all as register_team_builtins
 from team.models import (
     BudgetConfig,
     BudgetState,
-    Note,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -535,31 +534,6 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
             ),
         }
     )
-    await tc.notes.post(
-        Note(
-            id="n-dep",
-            task_id="dep",
-            agent_name="developer",
-            content="Dependency produced parser setup.",
-        )
-    )
-    await tc.notes.post(
-        Note(
-            id="n-failed",
-            task_id="failed",
-            agent_name="developer",
-            content="Parser failed because the grammar changed.",
-        )
-    )
-    await tc.notes.post(
-        Note(
-            id="n-parent",
-            task_id="parent",
-            agent_name="team_planner",
-            content="Parent split parser work from lexer work.",
-        )
-    )
-
     context = await tc.context.context_for(tc.graph["replanner"])
 
     assert "## Replan root cause trace" in context
@@ -567,10 +541,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
     assert "1. Goal: Fix the parser." in context
     assert "Original detailed task description." in context
     assert "replan_requested: parser failure" in context
-    assert "Dependency produced parser setup." in context
-    assert "Parser failed because the grammar changed." in context
     assert "downstream (pending); deps: replanner" in context
-    assert "Parent split parser work from lexer work." in context
 
 
 @pytest.mark.asyncio
@@ -597,21 +568,9 @@ async def test_parent_summarizer_context_skips_replanner_failure_trace():
             ),
         }
     )
-    await tc.notes.post(
-        Note(
-            id="n-parent",
-            task_id="parent",
-            agent_name="team_planner",
-            content="Parent split parser work from lexer work.",
-        )
-    )
-
     context = await tc.context.context_for(tc.graph["summary"])
-    parts = await tc.context.template_context_for(tc.graph["summary"])
 
     assert "Summarize parent task after children finish." in context
-    assert "Parent split parser work from lexer work." in context
     assert "## Replan root cause trace" not in context
     assert "Failed reason:" not in context
     assert "Downstream dependents rewired to this replanner" not in context
-    assert parts.failure_context == ""

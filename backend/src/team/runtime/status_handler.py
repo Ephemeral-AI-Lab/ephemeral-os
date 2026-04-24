@@ -21,16 +21,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from team.errors import BudgetExceeded, GraphInvariantViolation, InvalidPlan
 from team.models import (
     TERMINAL_STATUSES,
-    Note,
+    LeafSubmission,
     Plan,
+    PlannerSubmission,
     ReplanPlan,
+    SubmittedSummary,
     Task,
     TaskStatus,
     TaskStatusUpdate,
@@ -170,8 +171,8 @@ class TaskStatusHandler:
         self._enqueue_many(promoted_ready)
         task = self._store.get_task(task_id)
 
-        if task is not None and summary:
-            await self._post_completion_note(task, summary)
+        if task is not None and task.submission is None:
+            task.submission = LeafSubmission(summary=SubmittedSummary(summary=summary))
 
         if task is not None and _is_parent_summary_sidecar(task):
             parent_id = task.fired_by_task_id
@@ -179,16 +180,15 @@ class TaskStatusHandler:
                 await self._dispatch(_fail(task_id, "parent_summary_missing_parent"))
                 return
             if summary.strip():
-                submitted = await self._submit_parent_summary(task, summary.strip())
-                if not submitted:
-                    await self._dispatch(
-                        TaskStatusUpdate(
-                            task_id=parent_id,
-                            status=TaskStatus.FAILED,
-                            summary="parent_summary_submit_failed",
+                parent = self._store.get_task(parent_id)
+                if parent is not None:
+                    if isinstance(parent.submission, PlannerSubmission):
+                        parent.submission.summary = SubmittedSummary(summary=summary.strip())
+                    else:
+                        parent.submission = PlannerSubmission(
+                            plan=Plan(),
+                            summary=SubmittedSummary(summary=summary.strip()),
                         )
-                    )
-                    return
                 await self._finalize_awaiting_summary(parent_id)
             else:
                 await self._dispatch(
@@ -251,7 +251,7 @@ class TaskStatusHandler:
         return (
             task is not None
             and bool(task.fired_by_task_id)
-            and _has_replanner_role(task.agent_name)
+            and _has_replanner_role(task.definition.agent)
         )
 
     # ---- EXPANDED -------------------------------------------------------
@@ -283,6 +283,9 @@ class TaskStatusHandler:
             await self._cascade_expanded_parent(rec.id)
             return
         await self._store.mark_expanded(rec.id)
+        planner_task = self._store.get_task(rec.id)
+        if planner_task is not None:
+            planner_task.submission = PlannerSubmission(plan=plan)
         self._enqueue_many(item.id for item in outcome.new_items)
 
     async def _expand_replan(self, rec: Any, replan: ReplanPlan) -> None:
@@ -291,6 +294,9 @@ class TaskStatusHandler:
             add_tasks=list(replan.add_tasks),
             cancel_ids=list(replan.cancel_ids),
         )
+        replanner_task = self._store.get_task(rec.id)
+        if replanner_task is not None:
+            replanner_task.submission = PlannerSubmission(plan=replan)
         if self._cancel_running_task is not None:
             for running_id in outcome.cancelled_running_ids:
                 self._cancel_running_task(running_id)
@@ -335,7 +341,7 @@ class TaskStatusHandler:
             await self._dispatch(_fail(task_id, "no_replanner_registered"))
             return
 
-        deps_before = {tid: list(task.deps) for tid, task in self._store.graph.items()}
+        deps_before = {tid: list(task.definition.deps) for tid, task in self._store.graph.items()}
         rec, is_new = await self._store.request_replan(
             task_id,
             reason=update.summary or "",
@@ -385,18 +391,6 @@ class TaskStatusHandler:
     # ---- parent-summary sidecar injection ------------------------------
 
     async def _inject_parent_summary(self, parent_id: str) -> str | None:
-        # Restart-recovery: if the authoritative note was already posted in a
-        # prior lifetime, finalize without re-spawning a summarizer.
-        try:
-            existing_notes = await self._notes.read(
-                authors=[parent_id], tags=["parent_summary"]
-            )
-        except Exception:
-            existing_notes = []
-        if existing_notes:
-            await self._finalize_awaiting_summary(parent_id)
-            return None
-
         parent = self._store.graph.get(parent_id)
         if parent is None:
             await self._store.refresh_graph()
@@ -407,13 +401,17 @@ class TaskStatusHandler:
                 )
                 return None
 
+        if _has_recorded_parent_summary(parent):
+            await self._finalize_awaiting_summary(parent_id)
+            return None
+
         live_sidecar = next(
             (
                 task
                 for task in self._store.graph.values()
                 if task.fired_by_task_id == parent_id
                 and task.status not in TERMINAL_STATUSES
-                and _has_parent_summarizer_role(task.agent_name)
+                and _has_parent_summarizer_role(task.definition.agent)
             ),
             None,
         )
@@ -457,59 +455,6 @@ class TaskStatusHandler:
                 continue
             return name
         return default
-
-    # ---- note helpers --------------------------------------------------
-
-    async def _post_completion_note(self, task: Task, summary: str) -> None:
-        if summary.startswith("completed ("):
-            return
-        max_bytes = getattr(self._budget.budgets, "max_note_bytes", 100_000)
-        try:
-            await self._notes.post(
-                Note(
-                    id=str(uuid.uuid4()),
-                    task_id=task.id,
-                    agent_name=task.agent_name or "unknown",
-                    content=summary[:max_bytes],
-                    paths=list(task.scope_paths) if task.scope_paths else [],
-                    tags=["implementation"],
-                )
-            )
-        except Exception:
-            logger.debug("completion note: post failed for %s", task.id, exc_info=True)
-
-    async def _submit_parent_summary(
-        self, summary_task: Task, summary_content: str
-    ) -> bool:
-        parent_id = summary_task.fired_by_task_id
-        if not parent_id:
-            return False
-        try:
-            existing = await self._notes.read(
-                authors=[parent_id], tags=["parent_summary"]
-            )
-        except Exception:
-            existing = []
-        if existing:
-            return True
-        parent = self._store.graph.get(parent_id)
-        scope_paths = list(getattr(parent, "scope_paths", []) or [])
-        try:
-            await self._notes.submit_summary(
-                task_id=parent_id,
-                agent_name=summary_task.agent_name,
-                content=summary_content,
-                paths=scope_paths,
-                tags=["parent_summary"],
-            )
-        except Exception:
-            logger.exception(
-                "parent_summary submit failed for parent=%s summary_task=%s",
-                parent_id,
-                summary_task.id,
-            )
-            return False
-        return True
 
     # ---- queue / emit helpers ------------------------------------------
 
@@ -571,7 +516,17 @@ def _fail(task_id: str, reason: str) -> TaskStatusUpdate:
 
 
 def _is_parent_summary_sidecar(task: Task) -> bool:
-    return bool(task.fired_by_task_id) and _has_parent_summarizer_role(task.agent_name)
+    return bool(task.fired_by_task_id) and _has_parent_summarizer_role(
+        task.definition.agent
+    )
+
+
+def _has_recorded_parent_summary(task: Task) -> bool:
+    submission = task.submission
+    if not isinstance(submission, PlannerSubmission):
+        return False
+    summary = submission.summary
+    return bool(summary is not None and summary.summary.strip())
 
 
 def _first_replanner_name() -> str | None:

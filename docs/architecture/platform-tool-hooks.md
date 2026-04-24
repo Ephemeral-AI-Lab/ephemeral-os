@@ -421,7 +421,7 @@ Responsibilities:
 
 ## Policy Hook Module Layout
 
-Policy hooks should live with the toolkit that owns the policy. They are hook
+Policy hooks should live with the tool folder that owns the policy. They are hook
 modules, not tools. The generic framework belongs in `tools.core.hooks`; Daytona
 write-scope and daytona_shell policy belongs in `tools.daytona_toolkit.hooks`.
 
@@ -1064,7 +1064,7 @@ Existing hook registrations moved:
 ```text
 backend/src/tools/daytona_toolkit/guards.py
 backend/src/tools/daytona_toolkit/__init__.py
-backend/src/tools/daytona_toolkit/toolkit.py
+backend/src/tools/daytona_toolkit/all_tools.py
 ```
 
 These now register platform hooks through `tools.core.hooks`, preserving the

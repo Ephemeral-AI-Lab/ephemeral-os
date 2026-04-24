@@ -37,7 +37,7 @@ sequenceDiagram
     Executor->>TaskStatusHandler: TaskStatusUpdate(REQUEST_REPLAN, summary=...)
     TaskStatusHandler->>TaskStatusHandler: mark original REQUEST_REPLAN
     TaskStatusHandler->>TaskStatusHandler: rewire pending dependents from original to replanner
-    TaskStatusHandler->>Replanner: enqueue replanner with root cause trace and failure context
+    TaskStatusHandler->>Replanner: enqueue replanner with root cause trace
     Replanner->>Executor: submit_replan(new_tasks=[...], cancel_ids=[...])
     Executor->>TaskStatusHandler: TaskStatusUpdate(EXPANDED, replan=...)
     TaskStatusHandler->>TaskStatusHandler: apply replan and complete or expand replanner
@@ -52,7 +52,7 @@ dependencies are `done`; failed or cancelled dependencies are not satisfied.
 For the broader run-failure taxonomy, see
 [`team-failure-conditions.md`](team-failure-conditions.md).
 
-The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, every new task is inserted as a direct child of the replanner at the replanner's depth, and `cancel_ids` may target only the replanner's direct siblings; their subtrees cancel by cascade. The submitted corrective task JSON is appended to the replanner detail as `Initial Replan`, while downstream context is produced by the parent summarizer after the replanner's children terminate. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. `submit_replan` rejects empty `new_tasks`; a replanner that cannot justify at least one corrective child must keep diagnosing the failed work. The replanner becomes `EXPANDED` after submitting direct child tasks, then `EXPANDED_AWAITING_SUMMARY` after all direct children are terminal, and reaches `DONE` only after `parent_summarizer` posts the roll-up.
+The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, every new task is inserted as a direct child of the replanner at the replanner's depth, and `cancel_ids` may target only the replanner's direct siblings; their subtrees cancel by cascade. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. `submit_replan` rejects empty `new_tasks`; a replanner that cannot justify at least one corrective child must keep diagnosing the failed work. The replanner becomes `EXPANDED` after submitting direct child tasks, then `EXPANDED_AWAITING_SUMMARY` after all direct children are terminal, and reaches `DONE` only after `parent_summarizer` submits the roll-up.
 
 ## Status Model
 
@@ -75,7 +75,7 @@ Terminal statuses are `done`, `failed`, `cancelled`, and `request_replan`.
 - Worker agents do not change the graph directly; they submit success summaries or request replanning with evidence. Verification failures should include a root cause trace deep enough to name the first production mechanism that created the wrong result.
 - Replanners are the only agents that mutate the recovery graph through `submit_replan`.
 - Planner and replanner `new_tasks` items carry full task instructions in `spec`; they do not require a separate short `description` field.
-- Planner and replanner submissions carry structured task JSON only. They do not author free-text outcome summaries; their `Initial Plan` / `Initial Replan` JSON is stored on the parent detail, and `parent_summarizer` later writes the outcome roll-up.
+- Planner and replanner submissions carry structured task JSON only. They do not author free-text outcome summaries or Task Center notes; `parent_summarizer` later submits the outcome roll-up.
 - Parent summarizers finalize parents only when the child evidence is actually delivered; unresolved roll-ups use `request_replan(reason=...)` so the summarized parent is replanned instead of marked `done`.
 - Ready tasks dispatch as soon as dependencies are satisfied.
 - Scope change auto-checks warn workers when another agent edits overlapping paths.

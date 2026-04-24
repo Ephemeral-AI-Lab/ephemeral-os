@@ -1,4 +1,4 @@
-"""Shared Daytona toolkit test setup."""
+"""Shared Daytona tool test setup."""
 
 from __future__ import annotations
 

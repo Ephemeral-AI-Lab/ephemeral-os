@@ -12,11 +12,8 @@ Tool surface:
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-import time
-import uuid
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -31,31 +28,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-async def _post_submission_note(
-    context: ToolExecutionContext,
-    *,
-    content: str,
-    scope_paths: list[str] | None = None,
-    tags: list[str] | None = None,
-) -> None:
-    tc = context.metadata.get("task_center")
-    if tc is None:
-        return
-    from team.models import Note
-
-    await tc.notes.post(
-        Note(
-            id=str(uuid.uuid4()),
-            task_id=context.metadata.get("work_item_id", ""),
-            agent_name=context.metadata.get("agent_name", ""),
-            content=content,
-            timestamp=time.time(),
-            paths=list(scope_paths or context.metadata.get("write_scope") or []),
-            tags=tags or [],
-        )
-    )
 
 
 def _resolve_agent_name(agent_value: str, roster: dict[str, list[str]]) -> str:
@@ -145,7 +117,7 @@ def _replan_spec_contract_errors(spec_text: str) -> list[str]:
     return []
 
 
-def _note_budget_issues(
+def _task_spec_budget_issues(
     tasks: list[dict[str, Any]],
     *,
     max_note_bytes: int | None,
@@ -159,7 +131,7 @@ def _note_budget_issues(
         size = len(objective.encode("utf-8"))
         if size > max_note_bytes:
             issues.append(
-                f"task '{task_id}' is {size} bytes, exceeds max_note_bytes={max_note_bytes}"
+                f"task '{task_id}' spec is {size} bytes, exceeds max_note_bytes={max_note_bytes}"
             )
     return issues
 
@@ -185,50 +157,6 @@ def _replan_agent_target_issues(tasks: list[Any]) -> list[dict[str, str]]:
     return issues
 
 
-def _format_task_summary_lines(tasks: list[dict[str, Any]], *, limit: int = 12) -> str:
-    lines: list[str] = []
-    for item in tasks[:limit]:
-        task_id = str(item.get("id") or "<unknown>")
-        agent = str(item.get("agent") or "<unknown>")
-        description = str(item.get("description") or "").strip()
-        deps = [str(dep) for dep in item.get("deps") or []]
-        scopes = [str(path) for path in item.get("scope_paths") or []]
-
-        details: list[str] = []
-        if description:
-            details.append(description)
-        if deps:
-            details.append("deps=" + ", ".join(deps))
-        if scopes:
-            shown_scopes = scopes[:3]
-            scope_text = ", ".join(shown_scopes)
-            if len(scopes) > len(shown_scopes):
-                scope_text += f", +{len(scopes) - len(shown_scopes)} more"
-            details.append("scope=" + scope_text)
-
-        suffix = "; ".join(details) if details else "no description"
-        lines.append(f"- {task_id} ({agent}): {suffix}")
-
-    if len(tasks) > limit:
-        lines.append(f"- ... {len(tasks) - limit} more task(s)")
-    return "\n".join(lines)
-
-
-def _format_plan_note(
-    *,
-    header: str,
-    tasks: list[dict[str, Any]] | None = None,
-    task_section_title: str = "Tasks",
-    cancel_ids: list[str] | None = None,
-) -> str:
-    sections = [header]
-    if tasks:
-        sections.append(f"{task_section_title}:\n{_format_task_summary_lines(tasks)}")
-    if cancel_ids:
-        sections.append("Cancelled siblings: " + ", ".join(str(item) for item in cancel_ids))
-    return "\n\n".join(sections)
-
-
 # ---------------------------------------------------------------------------
 # SubmitTaskSuccessTool / RequestReplanTool — terminal for non-planner agents
 # ---------------------------------------------------------------------------
@@ -239,7 +167,7 @@ class SubmitTaskSuccessInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Evidence-rich success summary for Task Center notes. Developers: "
+            "Evidence-rich success summary for the task details. Developers: "
             "state the concrete API or behavior delta, verification commands and outcomes "
             "observed after the final edit, and known gaps or deferred items. Validators: "
             "list each acceptance criterion with pass/fail plus the command, probe, "
@@ -280,9 +208,6 @@ class SubmitTaskSuccessTool(BaseTool):
         context.metadata["task_summary"] = arguments.summary
         context.metadata["task_summary_type"] = "success"
 
-        await _post_submission_note(
-            context, content=arguments.summary, tags=["implementation"]
-        )
         payload = SubmitTaskSuccessOutput(
             task_id=str(context.metadata.get("work_item_id") or ""),
             agent_name=str(context.metadata.get("agent_name") or ""),
@@ -296,7 +221,7 @@ class RequestReplanInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "Evidence-rich replan request for Task Center notes. Start with "
+            "Evidence-rich replan request for the task details. Start with "
             "a replan trigger, exactly one of scope_expansion, "
             "wrong_owner_or_role, or unresolved_blocker; then include blocking "
             "evidence, failing command or tool result, affected paths or owners, "
@@ -335,9 +260,6 @@ class RequestReplanTool(BaseTool):
         context.metadata["task_summary"] = arguments.reason
         context.metadata["task_summary_type"] = "request_replan"
 
-        await _post_submission_note(
-            context, content=arguments.reason, tags=["warning"]
-        )
         payload = RequestReplanOutput(
             task_id=str(context.metadata.get("work_item_id") or ""),
             agent_name=str(context.metadata.get("agent_name") or ""),
@@ -645,11 +567,11 @@ def _validate_submit_replan_input(
                 ),
             }
         )
-    note_budget_issues = _note_budget_issues(
+    spec_budget_issues = _task_spec_budget_issues(
         resolved_tasks,
         max_note_bytes=_metadata_int(context, "max_note_bytes"),
     )
-    issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
+    issues.extend({"field": "tasks", "msg": msg} for msg in spec_budget_issues)
     errors.extend(str(issue.get("msg") or "invalid replan") for issue in issues)
     return errors
 
@@ -744,41 +666,15 @@ class SubmitPlanTool(BaseTool):
                 }
             )
 
-        note_budget_issues = _note_budget_issues(
+        spec_budget_issues = _task_spec_budget_issues(
             resolved_tasks,
             max_note_bytes=_metadata_int(context, "max_note_bytes"),
         )
-        issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
+        issues.extend({"field": "tasks", "msg": msg} for msg in spec_budget_issues)
 
         if issues:
             message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
             return ToolResult(output=f"Error: {message}", is_error=True)
-
-        note_content = _format_plan_note(
-            header=f"Submitted plan with {len(plan.tasks)} task(s).",
-            tasks=resolved_tasks,
-        )
-        await _post_submission_note(context, content=note_content, tags=["architecture"])
-
-        # Persist the structured task JSON on the parent so
-        # `read_task_details(<parent_id>)` surfaces the authoritative
-        # initial planning payload (id, name, spec, deps, scope_paths) to
-        # downstream readers.
-        scope_union: list[str] = []
-        seen_paths: set[str] = set()
-        for item in resolved_tasks:
-            for path in item.get("scope_paths") or []:
-                path_str = str(path)
-                if path_str in seen_paths:
-                    continue
-                seen_paths.add(path_str)
-                scope_union.append(path_str)
-        await _post_submission_note(
-            context,
-            content=json.dumps(resolved_tasks, indent=2),
-            scope_paths=scope_union,
-            tags=["initial_planned_tasks"],
-        )
 
         context.metadata["resolved_plan"] = plan
         context.metadata["plan_is_replan"] = False
@@ -854,37 +750,6 @@ class SubmitReplanTool(BaseTool):
             )
         except (TypeError, ValueError) as exc:
             return ToolResult(output=f"Error: invalid replan payload: {exc}", is_error=True)
-
-        note_content = _format_plan_note(
-            header=(
-                f"Replanner submitted replan: {len(replan.add_tasks)} new task(s), "
-                f"{len(replan.cancel_ids)} cancelled."
-            ),
-            tasks=resolved_tasks,
-            task_section_title="Corrective tasks",
-            cancel_ids=list(arguments.cancel_ids),
-        )
-        await _post_submission_note(context, content=note_content, tags=["refactor"])
-
-        # Persist the structured corrective-task JSON on the parent so
-        # `read_task_details(<parent_id>)` surfaces the authoritative
-        # initial replanning payload (id, name, spec, deps, scope_paths,
-        # parent_id) to downstream readers.
-        scope_union: list[str] = []
-        seen_paths: set[str] = set()
-        for item in resolved_tasks:
-            for path in item.get("scope_paths") or []:
-                path_str = str(path)
-                if path_str in seen_paths:
-                    continue
-                seen_paths.add(path_str)
-                scope_union.append(path_str)
-        await _post_submission_note(
-            context,
-            content=json.dumps(resolved_tasks, indent=2),
-            scope_paths=scope_union,
-            tags=["initial_replanned_tasks"],
-        )
 
         context.metadata["resolved_plan"] = replan
         context.metadata["plan_is_replan"] = True

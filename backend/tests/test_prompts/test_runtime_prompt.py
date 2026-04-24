@@ -39,7 +39,6 @@ def test_termination_condition_prompt_returns_empty_without_terminal_tools():
     prompt = build_termination_condition_prompt()
 
     assert prompt == ""
-    assert "<Toolkit Instructions>" not in prompt
     assert "<Available Skills>" not in prompt
     assert "<Background Tasks>" not in prompt
 
@@ -78,7 +77,6 @@ def test_termination_condition_prompt_omits_tool_call_notes_and_background_secti
 def test_termination_condition_prompt_only_renders_termination_condition():
     prompt = build_termination_condition_prompt(terminal_tools=["submit_plan"])
 
-    assert "<Toolkit Instructions>" not in prompt
     assert "<Available Skills>" not in prompt
     assert "<Background Tasks>" not in prompt
     assert prompt.startswith("<Termination Condition>")

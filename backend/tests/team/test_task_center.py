@@ -66,16 +66,13 @@ def _note(
     agent_name: str = "developer",
     timestamp: float | None = None,
     paths: list[str] | None = None,
-    parent_note_id: str | None = None,
 ) -> Note:
     return Note(
         id=id_,
-        task_id=task_id,
         agent_name=agent_name,
         content=content,
         timestamp=timestamp if timestamp is not None else time.time(),
         paths=paths or [],
-        parent_note_id=parent_note_id,
     )
 
 
@@ -143,33 +140,12 @@ def test_post_emits_note_posted_event():
     assert len(store.events) == 1
     event = store.events[0]
     assert event.kind == "note_posted"
-    assert event.data["task_id"] == "task-1"
     assert event.data["agent_name"] == "developer (auto)"
-    assert event.data["auto"] is True
     assert event.data["scope_paths"] == ["src/auth"]
     assert event.data["content_preview"] == "first line second line"
 
 
-def test_submit_summary_posts_implementation_summary_note():
-    tc = _tc()
-
-    note = _run(
-        tc.notes.submit_summary(
-            task_id="task-1",
-            agent_name="parent_summarizer",
-            content="parent roll-up",
-            paths=["src/auth"],
-            tags=["parent_summary"],
-        )
-    )
-
-    assert note.task_id == "task-1"
-    assert note.content == "parent roll-up"
-    assert note.tags == ["implementation", "parent_summary"]
-    assert _run(tc.notes.read(authors=["task-1"])) == [note]
-
-
-def test_post_logs_auto_note(caplog):
+def test_post_logs_file_scoped_note(caplog):
     tc = _tc()
 
     with caplog.at_level("INFO", logger="team.task_center"):
@@ -179,39 +155,7 @@ def test_post_logs_auto_note(caplog):
             )
         )
 
-    assert "[task_center] auto-note task=task-1" in caplog.text
-
-
-# ---------------------------------------------------------------------------
-# Filtering: authors
-# ---------------------------------------------------------------------------
-
-
-def test_read_filters_by_task_id():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-A")))
-    _run(tc.notes.post(_note("n2", "task-B")))
-    _run(tc.notes.post(_note("n3", "task-A")))
-
-    results = _run(tc.notes.read(authors=["task-A"]))
-    assert len(results) == 2
-    assert all(n.task_id == "task-A" for n in results)
-
-
-def test_read_authors_multiple():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-A")))
-    _run(tc.notes.post(_note("n2", "task-B")))
-    _run(tc.notes.post(_note("n3", "task-C")))
-
-    results = _run(tc.notes.read(authors=["task-A", "task-C"]))
-    assert {n.task_id for n in results} == {"task-A", "task-C"}
-
-
-def test_read_authors_no_match_returns_empty():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-A")))
-    assert _run(tc.notes.read(authors=["task-Z"])) == []
+    assert "[task_center] note agent=developer (auto)" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +184,7 @@ def test_read_paths_no_paths_on_note_includes_note():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "task-1")))
     results = _run(tc.notes.read(paths=["src/auth"]))
-    assert [note.id for note in results] == ["n1"]
+    assert results == []
 
 
 def test_read_paths_trailing_slash_stripped():
@@ -315,13 +259,13 @@ def test_read_limit_larger_than_total_returns_all():
 # ---------------------------------------------------------------------------
 
 
-def test_read_combined_authors_and_since():
+def test_read_combined_paths_and_since():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-A", timestamp=100.0)))
-    _run(tc.notes.post(_note("n2", "task-A", timestamp=300.0)))
-    _run(tc.notes.post(_note("n3", "task-B", timestamp=300.0)))
+    _run(tc.notes.post(_note("n1", "task-A", timestamp=100.0, paths=["src/auth/a.py"])))
+    _run(tc.notes.post(_note("n2", "task-A", timestamp=300.0, paths=["src/auth/b.py"])))
+    _run(tc.notes.post(_note("n3", "task-B", timestamp=300.0, paths=["src/billing/a.py"])))
 
-    results = _run(tc.notes.read(authors=["task-A"], since=200.0))
+    results = _run(tc.notes.read(paths=["src/auth"], since=200.0))
     assert len(results) == 1
     assert results[0].id == "n2"
 
@@ -366,13 +310,13 @@ def test_context_for_no_scope_paths_omits_scope_line():
     assert "Scope:" not in ctx
 
 
-def test_context_for_includes_dep_notes_when_deps_exist():
+def test_context_for_does_not_include_dep_notes():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
     task = _task("work-1", objective="build on dep", deps=["dep-task"])
     ctx = _run(tc.context.context_for(task))
-    assert "Context from dependencies" in ctx
-    assert "dependency output" in ctx
+    assert "Context from dependencies" not in ctx
+    assert "dependency output" not in ctx
 
 
 def test_context_for_dep_notes_absent_when_no_deps():
@@ -383,7 +327,7 @@ def test_context_for_dep_notes_absent_when_no_deps():
     assert "Context from dependencies" not in ctx
 
 
-def test_context_for_includes_parent_notes_when_parent_id_matches():
+def test_context_for_does_not_include_parent_notes_when_parent_id_matches():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "parent-task", "parent reasoning", agent_name="team_planner")))
     task = _task("work-1", objective="child task", parent_id="parent-task")
@@ -397,11 +341,11 @@ def test_context_for_includes_parent_notes_when_parent_id_matches():
     tc.get_task = _mock_get_task
 
     ctx = _run(tc.context.context_for(task))
-    assert "Parent context" in ctx
-    assert "parent reasoning" in ctx
+    assert "Parent context" not in ctx
+    assert "parent reasoning" not in ctx
 
 
-def test_context_for_walks_parent_chain_via_internal_get_task():
+def test_context_for_does_not_walk_parent_chain_for_notes():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
     _run(tc.notes.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
@@ -421,11 +365,11 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
     tc.get_task = _mock_get_task
 
     ctx = _run(tc.context.context_for(task))
-    assert "root rationale" in ctx
-    assert "parent reasoning" in ctx
+    assert "root rationale" not in ctx
+    assert "parent reasoning" not in ctx
 
 
-def test_context_for_dedupes_parent_notes_by_task_id():
+def test_context_for_ignores_parent_notes():
     tc = _tc()
     _run(
         tc.notes.post(
@@ -459,7 +403,7 @@ def test_context_for_dedupes_parent_notes_by_task_id():
     tc.get_task = _mock_get_task
 
     ctx = _run(tc.context.context_for(task))
-    assert "fresh parent note" in ctx
+    assert "fresh parent note" not in ctx
     assert "stale parent note" not in ctx
 
 
@@ -629,4 +573,3 @@ def test_ready_queue_order_returns_copy():
     observed.append("task-2")
 
     assert tc.ready_queue_order == ["task-1"]
-

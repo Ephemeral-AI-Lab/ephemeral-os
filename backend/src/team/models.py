@@ -78,40 +78,19 @@ TERMINAL_STATUSES: frozenset[TaskStatus] = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Note tags — controlled vocabulary for note classification
-# ---------------------------------------------------------------------------
-
-
-class NoteTag(str, Enum):
-    DISCOVERY = "discovery"
-    IMPLEMENTATION = "implementation"
-    BUG_FIX = "bug_fix"
-    BLOCKER = "blocker"
-    PROPOSAL = "proposal"
-    VERIFICATION = "verification"
-    ARCHITECTURE = "architecture"
-    DEPENDENCY = "dependency"
-    WARNING = "warning"
-    REFACTOR = "refactor"
-
-
-# ---------------------------------------------------------------------------
 # Notes
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class Note:
-    """One entry in the Task Center."""
+    """One file-scoped entry in the Task Center."""
 
     id: str
-    task_id: str
     agent_name: str
     content: str
     timestamp: float = field(default_factory=time.time)
     paths: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
-    parent_note_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +102,9 @@ class Note:
 class TaskDefinition:
     """What defines a task: which agent, and what to do.
 
-    ``parent_id`` is NOT part of the definition — it is runtime-assigned by the
-    expander when children are inserted (see ``Task.parent_id``).
+    ``parent_id`` is normally runtime-assigned on ``Task``. Replan validation
+    also stamps it on transient child definitions before insertion so the
+    expander can keep parent ownership explicit while rewriting local ids.
     """
 
     id: str
@@ -133,6 +113,7 @@ class TaskDefinition:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
+    parent_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +121,7 @@ class TaskDefinition:
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(init=False)
 class Task:
     """A task is (1) a ``TaskDefinition`` and (2) a ``TaskSubmission``.
 
@@ -165,6 +146,108 @@ class Task:
     finished_at: datetime | None = None
     failure_reason: str | None = None
     fired_by_task_id: str | None = None
+
+    def __init__(
+        self,
+        *,
+        id: str,
+        team_run_id: str,
+        status: TaskStatus,
+        definition: "TaskDefinition | None" = None,
+        agent_name: str | None = None,
+        objective: str | None = None,
+        description: str = "",
+        deps: list[str] | None = None,
+        scope_paths: list[str] | None = None,
+        submission: "TaskSubmission | None" = None,
+        parent_id: str | None = None,
+        root_id: str = "",
+        depth: int = 0,
+        agent_run_id: str | None = None,
+        created_at: datetime | None = None,
+        started_at: datetime | None = None,
+        finished_at: datetime | None = None,
+        failure_reason: str | None = None,
+        fired_by_task_id: str | None = None,
+    ) -> None:
+        if definition is None:
+            definition = TaskDefinition(
+                id=id,
+                objective=objective or "",
+                agent=agent_name or "",
+                description=description or "",
+                deps=list(deps or []),
+                scope_paths=list(scope_paths or []),
+                parent_id=parent_id,
+            )
+        else:
+            if agent_name is not None:
+                definition.agent = agent_name
+            if objective is not None:
+                definition.objective = objective
+            if description:
+                definition.description = description
+            if deps is not None:
+                definition.deps = list(deps)
+            if scope_paths is not None:
+                definition.scope_paths = list(scope_paths)
+            if definition.parent_id is None:
+                definition.parent_id = parent_id
+
+        self.id = id
+        self.team_run_id = team_run_id
+        self.definition = definition
+        self.status = status
+        self.submission = submission
+        self.parent_id = parent_id
+        self.root_id = root_id
+        self.depth = depth
+        self.agent_run_id = agent_run_id
+        self.created_at = created_at or _utcnow()
+        self.started_at = started_at
+        self.finished_at = finished_at
+        self.failure_reason = failure_reason
+        self.fired_by_task_id = fired_by_task_id
+
+    @property
+    def agent_name(self) -> str:
+        return self.definition.agent
+
+    @agent_name.setter
+    def agent_name(self, value: str) -> None:
+        self.definition.agent = value
+
+    @property
+    def objective(self) -> str:
+        return self.definition.objective
+
+    @objective.setter
+    def objective(self, value: str) -> None:
+        self.definition.objective = value
+
+    @property
+    def description(self) -> str:
+        return self.definition.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        self.definition.description = value
+
+    @property
+    def deps(self) -> list[str]:
+        return self.definition.deps
+
+    @deps.setter
+    def deps(self, value: list[str]) -> None:
+        self.definition.deps = list(value)
+
+    @property
+    def scope_paths(self) -> list[str]:
+        return self.definition.scope_paths
+
+    @scope_paths.setter
+    def scope_paths(self, value: list[str]) -> None:
+        self.definition.scope_paths = list(value)
 
     @property
     def detached(self) -> bool:
@@ -251,6 +334,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
+        parent_id=it.get("parent_id"),
     )
 
 
@@ -265,6 +349,7 @@ class SubmittedSummary:
 
     summary: str
     artifact: dict[str, Any] | None = None
+    submission_kind: str = field(default="summary", init=False, repr=False)
 
 
 @dataclass

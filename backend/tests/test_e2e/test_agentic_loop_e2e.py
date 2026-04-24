@@ -151,7 +151,7 @@ async def test_multiple_tools_different_purposes(sandbox_id):
 # ===========================================================================
 # AREA 2: Skill Loading & Instruction Following
 #
-# NOTE: EvalAgent uses DaytonaToolkit directly and does not register a
+# NOTE: EvalAgent uses Daytona tools directly and does not register a
 # load_skill tool. Tests that relied on load_skill being available via
 # the HTTP agent creation path are skipped. Tests that verify instruction
 # following via system_prompt injection are preserved.
@@ -165,7 +165,7 @@ async def test_multiple_tools_different_purposes(sandbox_id):
 async def test_skill_load_skill_tool_invoked(sandbox_id):
     """Agent should invoke load_skill tool when given a skill-dependent task.
 
-    Skipped: EvalAgent registers DaytonaToolkit only; load_skill is not available.
+    Skipped: EvalAgent registers Daytona tools only; load_skill is not available.
     """
     pass
 
@@ -177,7 +177,7 @@ async def test_skill_load_skill_tool_invoked(sandbox_id):
 async def test_skill_instructions_followed_exactly(sandbox_id):
     """Agent should follow skill instructions with exact string matching.
 
-    Skipped: EvalAgent registers DaytonaToolkit only; load_skill is not available.
+    Skipped: EvalAgent registers Daytona tools only; load_skill is not available.
     """
     pass
 

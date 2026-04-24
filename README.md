@@ -58,16 +58,16 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 </td>
 <td width="20%" align="center" style="vertical-align: top; padding: 15px;">
 
-<h3>🔧 Harness Toolkit</h3>
+<h3>🔧 Harness Tools</h3>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/36_Builtin_Tools-10B981?style=for-the-badge&logo=toolbox&logoColor=white" alt="Toolkit" />
+  <img src="https://img.shields.io/badge/36_Builtin_Tools-10B981?style=for-the-badge&logo=toolbox&logoColor=white" alt="Tools" />
 </div>
 
-<img src="assets/scene-toolkit.png" width="140">
+<img src="assets/scene-tools.png" width="140">
 
-<p align="center"><strong>• 36 built-in tools across 7 factory toolkits</strong></p>
-<p align="center"><strong>• Runtime adds `skills` and `background` toolkits</strong></p>
+<p align="center"><strong>• 36 built-in tools in one flat registry</strong></p>
+<p align="center"><strong>• Runtime adds `skills` and `background` tools</strong></p>
 <p align="center"><strong>• On-Demand Skill Loading (.md)</strong></p>
 <p align="center"><strong>• Plugin Ecosystem (Skills + Hooks + Agents)</strong></p>
 <p align="center"><strong>• Compatible with anthropics/skills & plugins</strong></p>
@@ -259,7 +259,7 @@ EphemeralOS implements the core Agent Harness pattern across the live backend an
 ```
 backend/src/
   engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
-  tools/           # 🔧 Factory toolkits: sandbox, CI, context, memory, subagent, submission
+  tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent, submission
   skills/          # 📚 Bundled + user markdown skills, lazy-loaded at runtime
   agents/          # 🤖 Agent definitions, builder, registry, CRUD API
   team/            # 🤝 Task Center, dispatcher, persistence, planner runtime
@@ -268,7 +268,7 @@ backend/src/
   prompts/         # 📝 Runtime/system prompt assembly and capability awareness
   config/          # ⚙️ Settings, model resolution, paths
 frontend/
-  web/             # 🖥️ React dashboard (agents, toolkits, sessions, sandboxes)
+  web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
   terminal/        # 💬 Terminal UI components and backend session hooks
 ```
 
@@ -353,7 +353,7 @@ Bundled packaged skills:
 - changelog-decompose
 ```
 
-User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the lazy `skills` toolkit loads them only when an agent asks for them.
+User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the lazy `skills` tools load them only when an agent asks for them.
 
 ### 🔌 Plugin System
 
@@ -366,7 +366,7 @@ User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the l
 | `hookify` | Commands + Agents | Create custom behavior hooks |
 | `feature-dev` | Commands | Feature development workflow |
 | `code-review` | Agents | Multi-agent PR review |
-| `pr-review-toolkit` | Agents | Specialized PR review agents |
+| `pr-review-agents` | Agents | Specialized PR review agents |
 
 ```bash
 # Manage plugins

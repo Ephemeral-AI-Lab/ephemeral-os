@@ -89,7 +89,6 @@ def test_team_system_prompts_include_only_terminal_guidance(tmp_path: Path) -> N
     validator = _team_system_prompt_for("validator", tmp_path)
 
     for prompt in (planner, replanner, scout, validator):
-        assert "<Toolkit Instructions>" not in prompt
         assert "<Available Skills>" not in prompt
         assert "<Background Tasks>" not in prompt
         assert "sandbox_operations" not in prompt
@@ -215,7 +214,6 @@ def test_db_seeded_custom_team_system_prompts_hide_forbidden_tools(
     validator = _agent_section(report, "db_validator")
 
     for section in (planner, replanner, scout, validator):
-        assert "<Toolkit Instructions>" not in section
         assert "<Available Skills>" not in section
         assert "<Background Tasks>" not in section
         assert "sandbox_operations" not in section

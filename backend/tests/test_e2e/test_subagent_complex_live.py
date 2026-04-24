@@ -52,7 +52,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 # ---------------------------------------------------------------------------
 # Local agent factory — thin wrapper around EvalAgent.create().
-# EvalAgent registers SubagentToolkit and injects a SessionConfig by default,
+# EvalAgent registers subagent tools and injects a SessionConfig by default,
 # and spawn_agent gives each subagent its own fresh API client, so no manual
 # wiring is needed here.
 # ---------------------------------------------------------------------------

@@ -120,8 +120,8 @@ Both paths share the per-sandbox `Arbiter` ledger. Tools require `ci_service`
 and pass typed specs; they do not carry concurrency state, base hashes,
 transactions, diffs, edit labels, or audit path hints.
 
-Callers may discover `repo_root` differently: sync toolkit prepare uses
-`discover_workspace(...)`, async toolkit prepare uses
+Callers may discover `repo_root` differently: sync context preparation uses
+`discover_workspace(...)`, async context preparation uses
 `discover_workspace_async(...)`, and lazy tool attach may resolve the sandbox on
 first use. After discovery, all callers delegate metadata seeding and CI service
 attachment to the shared helper. `daytona_cwd` remains a deprecated compatibility

@@ -28,7 +28,7 @@ class ScopeChangeNotifier:
         self.team_run = team_run
 
     async def inject_warning(self, task: "Task") -> None:
-        if not task.scope_paths:
+        if not task.definition.scope_paths:
             return
         arbiter = getattr(self.team_run, "arbiter", None)
         if arbiter is None or not getattr(arbiter, "initialized", False):
@@ -40,7 +40,7 @@ class ScopeChangeNotifier:
             e
             for e in changes
             if e.agent_run_id != own_run
-            and ScopePath.matches_scopes([str(e.file_path)], task.scope_paths)
+            and ScopePath.matches_scopes([str(e.file_path)], task.definition.scope_paths)
         ]
         if not external:
             return
@@ -64,11 +64,10 @@ class ScopeChangeNotifier:
             await self.team_run.task_center.notes.post(
                 Note(
                     id=str(uuid.uuid4()),
-                    task_id=task.id,
                     agent_name="system",
                     content="\n".join(lines),
                     timestamp=now,
-                    paths=list(task.scope_paths),
+                    paths=list(task.definition.scope_paths),
                 )
             )
         except Exception:

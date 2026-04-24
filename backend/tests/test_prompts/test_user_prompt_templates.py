@@ -38,9 +38,7 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
         {
             "task_spec": "Goal\nImplement retry handling.",
             "scope_paths": "- backend/src/retry.py",
-            "context_from_dependencies": "",
             "recent_scope_changes": "",
-            "parent_context": "",
             "terminal_tools": "- submit_task_success: Submit task outcome.",
             "your_task_id": "dev-uuid-1234",
             "your_deps_ids": "`dep-a`, `dep-b`",

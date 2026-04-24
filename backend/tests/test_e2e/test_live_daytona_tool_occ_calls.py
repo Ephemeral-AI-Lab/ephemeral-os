@@ -1,4 +1,4 @@
-"""Live E2E coverage for direct Daytona toolkit process-audit tool calls.
+"""Live E2E coverage for direct Daytona process-audit tool calls.
 
 This suite exercises the actual tool implementations, not just CI service
 helpers:

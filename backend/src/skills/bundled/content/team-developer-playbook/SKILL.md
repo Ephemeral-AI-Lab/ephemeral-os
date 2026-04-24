@@ -76,7 +76,7 @@ References: none. Use this playbook directly.
 #### Steps
 
 1. Use exact UUIDs only: call `read_task_details(task_id=...)` for own task, parent task, and each dependency id from the prompt header.
-2. Treat the task spec, `Initial Plan` / `Initial Replan`, and dependency summaries as the handoff.
+2. Treat the task spec and dependency task details as the handoff.
 3. Read each distinct expected file note once before any source read, diagnostic, daytona_shell command, or edit. Empty notes are valid.
 4. Exit with objective, acceptance criteria, scope paths, dependency status, expected code files, and file-note freshness.
 

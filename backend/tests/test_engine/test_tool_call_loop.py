@@ -442,7 +442,7 @@ def test_background_schema_decorator_skips_terminal_tools():
     assert "background" not in submit_schema["properties"]
 
 
-def test_background_schema_decorator_does_not_add_task_notes():
+def test_background_schema_decorator_does_not_add_removed_note_field():
     removed_field = "task" + "_note"
     registry = _make_registry(BackgroundEchoTool(), ReadTaskDetailsTool())
     schemas = decorate_schemas_for_background(

@@ -12,6 +12,7 @@ from team.models import (
     BudgetConfig,
     BudgetState,
     Plan,
+    PlannerSubmission,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -97,41 +98,7 @@ class FakeExpander:
 
 
 class FakeNoteManager:
-    """Fake NoteManager that records posted notes."""
-
-    def __init__(self) -> None:
-        self.posted: list = []
-        self.raise_on_submit_summary = False
-
-    async def post(self, note) -> None:
-        self.posted.append(note)
-
-    async def submit_summary(
-        self,
-        *,
-        task_id: str,
-        agent_name: str,
-        content: str,
-        paths: list[str] | None = None,
-        tags: list[str] | None = None,
-    ):
-        if self.raise_on_submit_summary:
-            raise RuntimeError("summary store unavailable")
-        from team.models import Note
-
-        note = Note(
-            id=f"summary-{len(self.posted)}",
-            task_id=task_id,
-            agent_name=agent_name,
-            content=content,
-            paths=list(paths or []),
-            tags=["implementation", *(tags or [])],
-        )
-        self.posted.append(note)
-        return note
-
-    async def read(self, *, authors=None, tags=None) -> list:
-        return []
+    """Placeholder NoteManager; status handling no longer writes task notes."""
 
 
 class FakeQueue:
@@ -199,7 +166,7 @@ async def test_success_marks_done_and_enqueues_newly_ready_deps():
 async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_parent(
     monkeypatch,
 ):
-    """DONE on parent_summarizer sidecar → finalize_parent_summary called, note posted."""
+    """DONE on parent_summarizer sidecar → finalize parent and attach summary."""
     parent_id = "parent-task"
     sidecar_id = "sidecar-task"
 
@@ -208,6 +175,7 @@ async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_pare
 
     store = FakeStore()
     parent = _task(parent_id, status=TaskStatus.EXPANDED_AWAITING_SUMMARY, agent_name="developer")
+    parent.submission = PlannerSubmission(plan=Plan())
     sidecar = _task(
         sidecar_id,
         status=TaskStatus.RUNNING,
@@ -223,9 +191,8 @@ async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_pare
     store.get_record.return_value = SimpleNamespace(status="expanded_awaiting_summary")
     store.finalize_parent_summary.return_value = []
 
-    notes = FakeNoteManager()
     queue = FakeQueue()
-    handler = _make_handler(store, notes, FakeBudget(), FakeExpander(), AsyncMock())
+    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), FakeExpander(), AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(
@@ -233,11 +200,8 @@ async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_pare
     )
 
     store.finalize_parent_summary.assert_awaited_once_with(parent_id)
-    parent_summary_notes = [
-        n for n in notes.posted if "parent_summary" in getattr(n, "tags", [])
-    ]
-    assert parent_summary_notes, "expected a parent_summary-tagged note"
-    assert parent_summary_notes[0].task_id == parent_id
+    assert parent.submission.summary is not None
+    assert parent.submission.summary.summary == "roll-up"
 
 
 @pytest.mark.asyncio
@@ -275,51 +239,6 @@ async def test_success_on_parent_summary_sidecar_empty_summary_fails_parent_and_
 
     store.mark_failed.assert_awaited_once_with(parent_id, "parent_summary_empty")
     fail_fast.assert_awaited_once_with("parent_summary_empty")
-
-
-@pytest.mark.asyncio
-async def test_parent_summary_submit_failure_fails_parent_without_finalizing(
-    monkeypatch,
-):
-    """Parent roll-up must be durable before the EAS parent can become DONE."""
-    parent_id = "parent-task"
-    sidecar_id = "sidecar-task"
-
-    monkeypatch.setattr("agents.registry.get_role", lambda name: "parent_summarizer")
-
-    store = FakeStore()
-    store.graph[parent_id] = _task(
-        parent_id,
-        status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
-        agent_name="team_planner",
-    )
-    store.graph[sidecar_id] = _task(
-        sidecar_id,
-        status=TaskStatus.RUNNING,
-        agent_name="parent_summarizer",
-        fired_by_task_id=parent_id,
-    )
-    store.mark_done.return_value = []
-
-    notes = FakeNoteManager()
-    notes.raise_on_submit_summary = True
-    fail_fast = AsyncMock()
-    handler = _make_handler(store, notes, FakeBudget(), FakeExpander(), fail_fast)
-
-    await handler.handle(
-        TaskStatusUpdate(
-            task_id=sidecar_id,
-            status=TaskStatus.DONE,
-            summary="roll-up",
-        )
-    )
-
-    store.finalize_parent_summary.assert_not_awaited()
-    store.mark_failed.assert_awaited_once_with(
-        parent_id,
-        "parent_summary_submit_failed",
-    )
-    fail_fast.assert_awaited_once_with("parent_summary_submit_failed")
 
 
 @pytest.mark.asyncio

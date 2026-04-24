@@ -1,9 +1,8 @@
-"""E2E tests: agent toolkit/skill assignment and chat integration.
+"""E2E tests: agent tool/skill assignment and chat integration.
 
 Tests the full flow:
-- Create agents with toolkits and skills via API
+- Create agents with tools and skills via API
 - Chat with agents and verify tools are passed to the LLM
-- Verify skill/toolkit sections stay out of the system prompt
 - Verify model key resolution (minimax, anthropic-compatible)
 """
 
@@ -12,6 +11,24 @@ from __future__ import annotations
 import pytest
 
 pytestmark = pytest.mark.e2e
+
+SANDBOX_TOOLS = [
+    "daytona_grep",
+    "daytona_glob",
+    "daytona_read_file",
+    "daytona_write_file",
+    "daytona_edit_file",
+    "daytona_delete_file",
+    "daytona_move_file",
+    "daytona_shell",
+]
+
+CI_TOOLS = [
+    "ci_status",
+    "ci_workspace_structure",
+    "ci_query_symbol",
+    "ci_diagnostics",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -38,28 +55,24 @@ class TestInfrastructure:
         assert data["type"] == "ready"
         assert data["state"] is not None
         assert "model" in data["state"]
-        assert data["toolkits"] is not None
-        toolkits = {entry["name"]: entry["tools"] for entry in data["toolkits"]}
-        assert set(toolkits["submission"]) == {
-            "submit_task_success",
-            "submit_plan",
-            "submit_replan",
-        }
-        assert "submit_task_plan" not in toolkits["submission"]
-        assert "declare_blocker" not in toolkits["submission"]
-        assert "skills" in toolkits
-        assert "background" in toolkits
+        assert data["tools"] is not None
+        tool_names = {entry["name"] for entry in data["tools"]}
+        assert {"submit_task_success", "submit_plan", "submit_replan"} <= tool_names
+        assert "submit_task_plan" not in tool_names
+        assert "declare_blocker" not in tool_names
+        assert "load_skill" in tool_names
+        assert "check_background_progress" in tool_names
 
 
 # ---------------------------------------------------------------------------
-# US-002: Agent CRUD with toolkits and skills
+# US-002: Agent CRUD with tools and skills
 # ---------------------------------------------------------------------------
 
 
 class TestAgentCRUD:
-    """Create, read, update agents with toolkit and skill assignments."""
+    """Create, read, update agents with tool and skill assignments."""
 
-    def test_create_agent_with_toolkits_and_skills(self, app_client):
+    def test_create_agent_with_tools_and_skills(self, app_client):
         client, _ = app_client
         resp = client.post(
             "/api/agents/",
@@ -67,18 +80,18 @@ class TestAgentCRUD:
                 "name": "test-coder",
                 "description": "A test coding agent",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
                 "skills": ["team-planner-playbook"],
             },
         )
         assert resp.status_code == 201, resp.text
         data = resp.json()
         assert data["name"] == "test-coder"
-        assert data["toolkits"] == ["sandbox_operations"]
+        assert data["tools"] == SANDBOX_TOOLS
         assert data["skills"] == ["team-planner-playbook"]
         assert data["model"] == "minimax"
 
-    def test_get_agent_returns_toolkits_and_skills(self, app_client):
+    def test_get_agent_returns_tools_and_skills(self, app_client):
         client, _ = app_client
         # Create first
         client.post(
@@ -87,7 +100,7 @@ class TestAgentCRUD:
                 "name": "reader-agent",
                 "description": "Reads code",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations", "code_intelligence"],
+                "tools": SANDBOX_TOOLS + CI_TOOLS,
                 "skills": ["team-planner-playbook"],
             },
         )
@@ -95,11 +108,11 @@ class TestAgentCRUD:
         resp = client.get("/api/agents/reader-agent")
         assert resp.status_code == 200
         data = resp.json()
-        assert "sandbox_operations" in data["toolkits"]
-        assert "code_intelligence" in data["toolkits"]
+        assert "daytona_shell" in data["tools"]
+        assert "ci_query_symbol" in data["tools"]
         assert "team-planner-playbook" in data["skills"]
 
-    def test_update_agent_toolkits(self, app_client):
+    def test_update_agent_tools(self, app_client):
         client, _ = app_client
         # Create
         client.post(
@@ -108,28 +121,19 @@ class TestAgentCRUD:
                 "name": "updatable-agent",
                 "description": "Will be updated",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
-        # Update toolkits
+        # Update tools
         resp = client.put(
             "/api/agents/updatable-agent",
             json={
-                "toolkits": ["sandbox_operations", "code_intelligence"],
+                "tools": SANDBOX_TOOLS + CI_TOOLS,
             },
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert set(data["toolkits"]) == {"sandbox_operations", "code_intelligence"}
-
-    def test_list_available_toolkits(self, app_client):
-        client, _ = app_client
-        resp = client.get("/api/agents/toolkits/available")
-        assert resp.status_code == 200
-        toolkits = resp.json()
-        assert isinstance(toolkits, list)
-        assert "sandbox_operations" in toolkits
-        assert "code_intelligence" in toolkits
+        assert set(data["tools"]) == set(SANDBOX_TOOLS + CI_TOOLS)
 
     def test_list_available_tools(self, app_client):
         client, _ = app_client
@@ -142,19 +146,19 @@ class TestAgentCRUD:
         assert "load_skill" in tools
         assert "check_background_progress" in tools
 
-    def test_create_agent_no_toolkits(self, app_client):
+    def test_create_agent_no_tools(self, app_client):
         client, _ = app_client
         resp = client.post(
             "/api/agents/",
             json={
                 "name": "bare-agent",
-                "description": "No toolkits",
+                "description": "No tools",
                 "model": "minimax",
             },
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["toolkits"] is None or data["toolkits"] == []
+        assert data["tools"] is None or data["tools"] == []
 
     def test_create_agent_empty_skills(self, app_client):
         client, _ = app_client
@@ -179,7 +183,7 @@ class TestAgentCRUD:
                 "name": "listed-agent",
                 "description": "Should appear in list",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
         resp = client.get("/api/agents/")
@@ -206,11 +210,11 @@ class TestAgentCRUD:
 
 
 # ---------------------------------------------------------------------------
-# US-003: Chat verifies toolkit tools are passed to LLM
+# US-003: Chat verifies configured tools are passed to LLM
 # ---------------------------------------------------------------------------
 
 
-class TestChatToolkitIntegration:
+class TestChatToolIntegration:
     """Chat with agents and verify the LLM receives correct tool schemas."""
 
     def _chat_and_get_tools(self, client, mock_client, agent_name=None, sandbox_id=None):
@@ -233,16 +237,16 @@ class TestChatToolkitIntegration:
             return [t["name"] for t in mock_client.last_request.tools]
         return []
 
-    def test_agent_with_sandbox_toolkit_gets_sandbox_tools(self, app_client):
+    def test_agent_with_sandbox_tools_gets_sandbox_tools(self, app_client):
         client, mock_client = app_client
-        # Create agent with sandbox_operations toolkit
+        # Create agent with sandbox tools
         client.post(
             "/api/agents/",
             json={
                 "name": "sandbox-agent",
                 "description": "Agent with sandbox tools",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
 
@@ -259,9 +263,9 @@ class TestChatToolkitIntegration:
         daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
         assert len(daytona_tools) > 0, f"Expected daytona_* sandbox tools, got: {tool_names}"
 
-    def test_agent_without_toolkits_gets_defaults(self, app_client):
+    def test_agent_without_tools_gets_defaults(self, app_client):
         client, mock_client = app_client
-        # Create agent with no toolkits
+        # Create agent with no configured tools
         client.post(
             "/api/agents/",
             json={
@@ -273,40 +277,40 @@ class TestChatToolkitIntegration:
 
         tool_names = self._chat_and_get_tools(client, mock_client, agent_name="default-agent")
 
-        # Agent with no toolkits still gets skills tools (load_skill, load_skill_reference)
+        # Agent with no configured tools still gets skills tools.
         skill_tools = [t for t in tool_names if "skill" in t.lower()]
         assert len(tool_names) == len(skill_tools), (
-            f"Agent with no toolkits should only have skills tools, got: {tool_names}"
+            f"Agent with no configured tools should only have skills tools, got: {tool_names}"
         )
 
-    def test_agent_with_toolkits_restricts_tools(self, app_client):
+    def test_agent_with_explicit_tools_restricts_tools(self, app_client):
         client, mock_client = app_client
-        # Create agent restricted to sandbox_operations only
+        # Create agent restricted to sandbox tools only
         client.post(
             "/api/agents/",
             json={
                 "name": "restricted-agent",
                 "description": "Only sandbox tools",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
 
         tool_names = self._chat_and_get_tools(client, mock_client, agent_name="restricted-agent")
 
-        # Discovery toolkit tools (skill, tool_search) should NOT be present
+        # Skill discovery tools should NOT be present.
         assert "skill" not in tool_names, (
             f"discovery tools should be restricted out, got: {tool_names}"
         )
 
 
 # ---------------------------------------------------------------------------
-# US-004: Chat omits skill/toolkit sections from system prompt
+# US-004: Chat omits skill metadata sections from system prompt
 # ---------------------------------------------------------------------------
 
 
 class TestChatPromptSections:
-    """Verify skills and toolkit metadata do not inflate the system prompt."""
+    """Verify skill metadata does not inflate the system prompt."""
 
     def _chat_and_get_system_prompt(self, client, mock_client, agent_name=None):
         """Send a chat request and return the system_prompt from the last API call."""
@@ -323,7 +327,7 @@ class TestChatPromptSections:
             return mock_client.last_request.system_prompt or ""
         return ""
 
-    def test_agent_with_toolkits_omits_toolkit_sections(self, app_client):
+    def test_agent_with_tools_omits_group_names(self, app_client):
         client, mock_client = app_client
         client.post(
             "/api/agents/",
@@ -331,7 +335,7 @@ class TestChatPromptSections:
                 "name": "aware-agent",
                 "description": "Should know its tools",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
 
@@ -339,10 +343,9 @@ class TestChatPromptSections:
             client, mock_client, agent_name="aware-agent"
         )
 
-        assert "<Toolkit Instructions>" not in system_prompt
         assert "sandbox_operations" not in system_prompt
 
-    def test_agent_with_custom_system_prompt_omits_toolkit_sections(self, app_client):
+    def test_agent_with_custom_system_prompt_omits_group_names(self, app_client):
         client, mock_client = app_client
         client.post(
             "/api/agents/",
@@ -351,7 +354,7 @@ class TestChatPromptSections:
                 "description": "Has custom prompt",
                 "model": "minimax",
                 "system_prompt": "You are a specialized coding assistant.",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
 
@@ -360,7 +363,6 @@ class TestChatPromptSections:
         )
 
         assert system_prompt.startswith("You are a specialized coding assistant.")
-        assert "<Toolkit Instructions>" not in system_prompt
 
     def test_default_agent_omits_available_skills_section(self, app_client):
         client, mock_client = app_client
@@ -423,7 +425,7 @@ class TestModelKeyIntegration:
                 "name": "minimax-agent",
                 "description": "Uses minimax model",
                 "model": "minimax",
-                "toolkits": ["sandbox_operations"],
+                "tools": SANDBOX_TOOLS,
             },
         )
         assert resp.status_code == 201

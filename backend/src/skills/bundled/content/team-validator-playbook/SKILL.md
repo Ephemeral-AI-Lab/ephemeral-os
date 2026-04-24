@@ -123,8 +123,7 @@ No loadable references. Use this playbook directly.
     |
     v
 (3) Read each dependency detail             -> read_task_details(task_id=<dep uuid>)
-    Inspect final summaries, appended `Initial Plan` / `Initial Replan`, and
-    named verification evidence from implementation lanes.
+    Inspect task detail status and named verification evidence from implementation lanes.
     |
     v
 (4) Read touched or owned file notes        -> read_file_note(file_path=...)
@@ -135,7 +134,7 @@ Rules:
 
 1. Call `read_task_details(task_id="<uuid>")` for your task, parent task, and every dependency from the prompt header.
 2. Use exact UUIDs only; never planner slugs, short prefixes, fabricated ids, or scout ids.
-3. Treat your task spec as the validation contract. Treat dependency summaries, appended `Initial Plan` / `Initial Replan` JSON, and parent details as the implementation handoff.
+3. Treat your task spec as the validation contract. Treat dependency task details and parent details as the implementation handoff.
 4. After required UUID reads, call `read_file_note(file_path="...")` once for each touched or owned production file before source reads, diagnostics, tests, or edits. Empty notes count. Do not batch note reads with source reads, diagnostics, daytona_shell, or edits.
 5. Record missing, boilerplate, stale, or evidence-free dependency summaries as validation gaps.
 

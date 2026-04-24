@@ -176,9 +176,9 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 1. **Validation**: Check agent_name is dispatchable and user has permission
 2. **Audit Record**: Create `AgentRunRecord` (FK parent run) BEFORE spawn (so failures are auditable)
 3. **Spawn**: Call `spawn_agent(agent_def=subagent)` to create fresh agent with:
-   - NO background management toolkit (subagents cannot spawn their own background tasks)
+   - NO background management tools (subagents cannot spawn their own background tasks)
    - Dedicated fresh API client (no connection pool contention)
-   - Subagent system prompt and restricted toolkits
+   - Subagent system prompt and restricted tools
 4. **Progress Provider**: Register a pull callback on BackgroundTaskManager so parent can peek at live messages
 5. **Run**: Drain `agent.run(prompt)` in an async loop; catches `CancelledError` for early-stop salvage
 6. **Envelope**: Format submission as `{kind, summary, run_id, artifact_ref, payload}`:
@@ -197,7 +197,7 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 | **Spawning** | Top-level entry (via /api/run or relay) | Spawned by `run_subagent` tool (nested) | Called by agent; no nested spawning |
 | **Message History** | Appended only during run; accessible only after | Live display_messages list; readable during execution | Not applicable (tool output only) |
 | **Progress Access** | None (awaited to completion) | Via `check_background_progress` + progress_provider callback | Via `check_background_progress` + progress_lines buffer |
-| **Background Toolkit** | Registered (has background management tools) | NOT registered (subagents cannot spawn subagents) | N/A |
+| **Background Tools** | Registered (has background management tools) | NOT registered (subagents cannot spawn subagents) | N/A |
 | **API Client** | Session's shared client pool | Fresh dedicated client (no contention) | Inherits parent's execution context |
 | **Cancellation** | No (ephemeral runs block until done) | Via early-stop mode: `CancelledError` → salvage partial result | Via kill_callback + `TaskStatus.CANCELLED` |
 | **Audit Trail** | Row in agent_run_store (user-visible) | Row in agent_run_store with parent_run_id + parent_task_id (hidden from user list) | No dedicated row (embedded in background task) |

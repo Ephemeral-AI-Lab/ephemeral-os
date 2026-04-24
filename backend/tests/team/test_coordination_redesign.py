@@ -127,17 +127,7 @@ async def test_submit_plan_resolves_roster_role_hints():
     assert resolved_plan is not None
     assert resolved_plan.tasks[0].description == ""
     assert resolved_plan.tasks[1].agent == "validator"
-    audit_notes = [
-        n for n in task_center.posted if "architecture" in (n.tags or [])
-    ]
-    assert len(audit_notes) == 1
-    assert "Submitted plan with 2 task(s)." in audit_notes[0].content
-    assert "Tasks:" in audit_notes[0].content
-    assert "- impl (developer): scope=src/api.py" in audit_notes[0].content
-    assert (
-        "- review (validator): deps=impl; scope=src/api.py"
-        in audit_notes[0].content
-    )
+    assert task_center.posted == []
 
 
 @pytest.mark.asyncio
@@ -322,115 +312,6 @@ async def test_submit_replan_rejects_empty_new_tasks_with_deeper_diagnosis_promp
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_posts_structured_initial_planned_tasks_note():
-    """After validation, submit_plan attaches the structured JSON payload as a
-    note tagged `initial_planned_tasks` on the parent task so downstream
-    readers can retrieve it via read_task_details."""
-    task_center = _AsyncTaskCenterStub()
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "task_center": task_center,
-            "work_item_id": "planner-task",
-            "agent_name": "team_planner",
-            "max_plan_size": 8,
-            "max_note_bytes": 10_000,
-        },
-    )
-
-    tool = SubmitPlanTool()
-    result = await tool.execute(
-        tool.input_model(
-            new_tasks=[
-                {
-                    "id": "impl",
-                    "description": "Implement API",
-                    "spec": _spec("Implement the API."),
-                    "name": "developer",
-                    "scope_paths": ["src/api.py"],
-                },
-            ],
-        ),
-        ctx,
-    )
-    assert result.is_error is False, result.output
-
-    tagged = [
-        n for n in task_center.posted if "initial_planned_tasks" in (n.tags or [])
-    ]
-    assert len(tagged) == 1
-    note = tagged[0]
-    assert note.task_id == "planner-task"
-    payload = json.loads(note.content)
-    assert isinstance(payload, list)
-    assert payload[0]["id"] == "impl"
-    assert payload[0]["agent"] == "developer"
-    assert payload[0]["scope_paths"] == ["src/api.py"]
-    assert "src/api.py" in (note.paths or [])
-
-
-@pytest.mark.asyncio
-async def test_submit_replan_posts_structured_initial_replanned_tasks_note():
-    task_center = _AsyncTaskCenterStub()
-    parent = Task(
-        id="replan-1",
-        team_run_id="run-1",
-        agent_name="replanner",
-        status=TaskStatus.RUNNING,
-        objective="replan",
-        scope_paths=[],
-        parent_id="root",
-    )
-    task_center.graph["replan-1"] = parent
-    task_center.graph["root"] = Task(
-        id="root",
-        team_run_id="run-1",
-        agent_name="team_planner",
-        status=TaskStatus.EXPANDED,
-        objective="root",
-    )
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "task_center": task_center,
-            "work_item_id": "replan-1",
-            "agent_name": "replanner",
-            "max_plan_size": 8,
-            "max_note_bytes": 10_000,
-        },
-    )
-
-    tool = SubmitReplanTool()
-    result = await tool.execute(
-        tool.input_model(
-            new_tasks=[
-                {
-                    "id": "fix-api",
-                    "description": "Fix broken API",
-                    "spec": _spec("Repair the API."),
-                    "name": "developer",
-                    "scope_paths": ["src/api.py"],
-                },
-            ],
-            cancel_ids=[],
-        ),
-        ctx,
-    )
-    assert result.is_error is False, result.output
-
-    tagged = [
-        n for n in task_center.posted if "initial_replanned_tasks" in (n.tags or [])
-    ]
-    assert len(tagged) == 1
-    note = tagged[0]
-    assert note.task_id == "replan-1"
-    payload = json.loads(note.content)
-    assert isinstance(payload, list)
-    assert payload[0]["id"] == "fix-api"
-    assert payload[0]["parent_id"] == "replan-1"
-
-
-@pytest.mark.asyncio
 async def test_submit_plan_ignores_legacy_description_field():
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -465,7 +346,7 @@ async def test_submit_plan_ignores_legacy_description_field():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_oversize_task_notes():
+async def test_submit_plan_rejects_oversize_task_payloads():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -617,7 +498,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
         "replanner-task",
     ]
     audit_notes = [
-        n for n in task_center.posted if "refactor" in (n.tags or [])
+        n for n in task_center.posted if "Corrective tasks:" in n.content
     ]
     assert len(audit_notes) == 1
     assert "Corrective tasks:" in audit_notes[0].content

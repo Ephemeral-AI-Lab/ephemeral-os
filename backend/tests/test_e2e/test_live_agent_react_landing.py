@@ -3,7 +3,7 @@
 
 Verifies the FULL agent pipeline with deep assertions:
 1. Daytona tool use — tool_name, tool_input keys, tool_completed output content
-2. Skill & toolkit availability — sandbox/code intelligence toolkits, skill registry, sandbox health
+2. Skill & tool availability — sandbox/code intelligence tools, skill registry, sandbox health
 3. Reasoning/thinking blocks — ordering, content, API param exclusion
 4. Code intelligence — service status, LSP client, registry singleton
 5. Multi-turn tool chaining — create → read → modify with content verification
@@ -167,28 +167,27 @@ async def test_tool_roundtrip_write_then_read(sandbox_id):
 
 
 # ===========================================================================
-# AREA 2: Skill & Toolkit Availability Verification
+# AREA 2: Skill & Tool Availability Verification
 # ===========================================================================
 
 
-class TestSkillAndToolkitAvailability:
-    """Verify toolkit registration, tool schemas, skill registry, sandbox health."""
+class TestSkillAndToolAvailability:
+    """Verify tool registration, tool schemas, skill registry, sandbox health."""
 
-    def test_available_toolkits_includes_sandbox_operations(self, app_client):
-        """GET /api/agents/toolkits/available must include sandbox_operations."""
+    def test_available_tools_includes_sandbox_and_ci_tools(self, app_client):
+        """GET /api/agents/tools/available must include sandbox and CI tools."""
         client, _ = app_client
-        resp = client.get("/api/agents/toolkits/available")
+        resp = client.get("/api/agents/tools/available")
         assert resp.status_code == 200
-        toolkits = resp.json()
-        assert "sandbox_operations" in toolkits, f"Missing sandbox_operations. Got: {toolkits}"
-        assert "code_intelligence" in toolkits, f"Missing code_intelligence. Got: {toolkits}"
+        tools = {entry["name"] for entry in resp.json()}
+        assert "daytona_shell" in tools, f"Missing daytona_shell. Got: {tools}"
+        assert "ci_query_symbol" in tools, f"Missing ci_query_symbol. Got: {tools}"
 
     def test_sandbox_operations_has_current_tools(self):
-        """DaytonaToolkit should expose only sandbox file/edit/exec tools."""
-        from tools.daytona_toolkit import DaytonaToolkit
+        """Daytona helpers should expose sandbox file/edit/exec tools."""
+        from tools.daytona_toolkit import make_daytona_tools
 
-        toolkit = DaytonaToolkit(sandbox_id="schema-test")
-        names = sorted(toolkit.tool_names())
+        names = sorted(tool.name for tool in make_daytona_tools())
         expected = sorted(
             [
                 "daytona_shell",
@@ -197,16 +196,17 @@ class TestSkillAndToolkitAvailability:
                 "daytona_grep",
                 "daytona_glob",
                 "daytona_edit_file",
+                "daytona_delete_file",
+                "daytona_move_file",
             ]
         )
         assert names == expected, f"Tool mismatch.\nGot:      {names}\nExpected: {expected}"
 
     def test_each_tool_has_valid_api_schema(self):
         """Every tool must produce a valid API schema with name, description, input_schema."""
-        from tools.daytona_toolkit import DaytonaToolkit
+        from tools.daytona_toolkit import make_daytona_tools
 
-        toolkit = DaytonaToolkit(sandbox_id="schema-test")
-        for tool in toolkit.list_tools():
+        for tool in make_daytona_tools():
             schema = tool.to_api_schema()
             assert schema["name"] == tool.name
             assert len(schema["description"]) > 10, f"{tool.name} has too-short description"
