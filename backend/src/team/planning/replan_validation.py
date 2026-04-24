@@ -74,12 +74,7 @@ def _replan_spec_contract_errors(spec: TaskSpec, agent_name: str) -> list[str]:
             "unresolved_blocker requires Diagnostics decision: "
             "trivial_direct_replan or deep_diagnostics"
         )
-    agent_def = get_definition(agent_name) if agent_name else None
-    if (
-        agent_def is not None
-        and agent_def.role == "planner"
-        and not _PLANNER_HANDOFF_RE.search(spec.detail)
-    ):
+    if has_role(agent_name, "planner") and not _PLANNER_HANDOFF_RE.search(spec.detail):
         errors.append(
             "team_planner replan children require Planner handoff: "
             "scope_expansion or planner_redraft in spec.detail"

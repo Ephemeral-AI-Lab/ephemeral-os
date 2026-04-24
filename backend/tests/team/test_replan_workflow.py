@@ -251,6 +251,99 @@ async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
     assert "unknown dep 'downstream'" in result.output
 
 
+@pytest.mark.asyncio
+async def test_submit_replan_accepts_team_planner_with_handoff():
+    task_center = SimpleNamespace(
+        posted=[],
+        notes=SimpleNamespace(post=lambda note: None),
+        graph={
+            "replanner": _task(
+                "replanner",
+                agent_name="team_replanner",
+                status=TaskStatus.RUNNING,
+            ),
+        },
+    )
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    result = await SubmitReplanTool().execute(
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "redraft",
+                    "agent": "team_planner",
+                    "spec": _spec(
+                        "Redraft failed parser scope.",
+                        task_details=(
+                            "Classification: scope_expansion. "
+                            "Planner handoff: scope_expansion. "
+                            "Redraft the parser subtree with a fresh DAG."
+                        ),
+                    ),
+                    "scope_paths": ["src/parser.py"],
+                }
+            ],
+            cancel_ids=[],
+        ),
+        ctx,
+    )
+
+    assert result.is_error is False, result.output
+
+
+@pytest.mark.asyncio
+async def test_submit_replan_rejects_team_planner_without_handoff():
+    task_center = SimpleNamespace(
+        posted=[],
+        notes=SimpleNamespace(post=lambda note: None),
+        graph={
+            "replanner": _task(
+                "replanner",
+                agent_name="team_replanner",
+                status=TaskStatus.RUNNING,
+            ),
+        },
+    )
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    result = await SubmitReplanTool().execute(
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "redraft",
+                    "agent": "team_planner",
+                    "spec": _spec(
+                        "Redraft failed parser scope.",
+                        task_details="Classification: scope_expansion. Redraft the parser subtree.",
+                    ),
+                    "scope_paths": ["src/parser.py"],
+                }
+            ],
+            cancel_ids=[],
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "Planner handoff" in result.output
+
+
 # request_replan idempotency, replanner insertion/rewiring, and replan
 # same-depth child insertion are covered by pure in-memory tests in
 # tests/team/test_task_graph.py (``TestPlanRequestReplan`` and
