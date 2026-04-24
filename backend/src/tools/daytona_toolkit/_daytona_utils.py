@@ -151,10 +151,11 @@ def _extract_exit_code(
 ) -> tuple[str, int]:
     """Strip the synthetic exit marker and return the resolved exit code."""
     sanitized = _TRAILING_TERM_NOISE_RE.sub("", output or "").rstrip()
-    match = re.search(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)\s*$", sanitized, flags=re.S)
-    if match:
-        resolved = int(match.group(1))
-        cleaned = sanitized[: match.start()]
+    matches = list(re.finditer(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)", sanitized, flags=re.S))
+    if matches:
+        marker = matches[-1]
+        resolved = int(marker.group(1))
+        cleaned = sanitized[: marker.start()]
         if cleaned.endswith("\n"):
             cleaned = cleaned[:-1]
         return cleaned, resolved

@@ -187,6 +187,23 @@ async def test_shell_input_model_accepts_command():
     assert inp.timeout == 30
 
 
+async def test_extract_exit_code_uses_marker_before_terminal_cleanup_noise():
+    output = (
+        "command output\n"
+        "__CODEX_EXIT_CODE__=0\n"
+        "+ exit 0\n"
+        "++ /usr/bin/clear_console -q\n"
+    )
+
+    cleaned, exit_code = shell_tool_module._extract_exit_code(
+        output,
+        fallback_exit_code=1,
+    )
+
+    assert cleaned == "command output"
+    assert exit_code == 0
+
+
 
 
 
@@ -750,4 +767,3 @@ async def test_shell_mode_sanitizes_legacy_cd_and_stderr_merge_for_team_agents()
     sb.process.exec.assert_awaited_once()
     texts = _notification_texts(events)
     assert any("sanitized daytona_shell command" in text for text in texts)
-

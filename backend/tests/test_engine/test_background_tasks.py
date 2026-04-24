@@ -337,7 +337,7 @@ async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> Non
             await asyncio.sleep(10)
         except asyncio.CancelledError:
             cancelled.set()
-            return ToolResult(output="partial brief")
+            return ToolResult(output="partial summary")
         return ToolResult(output="done")
 
     _launch_subagent(mgr, task_id="bg_early", coro=_subagent_coro())
@@ -352,7 +352,7 @@ async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> Non
     assert tracked.stop_mode == "early_stop"
     assert tracked.completion_mode == "early_stopped"
     assert tracked.result is not None
-    assert tracked.result.output == "partial brief"
+    assert tracked.result.output == "partial summary"
 
 
 # ---------------------------------------------------------------------------

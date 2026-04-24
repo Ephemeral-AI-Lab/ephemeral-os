@@ -1298,7 +1298,7 @@ Rules:
   task_id you observed.
 - Prefer targeted waits over ``wait_for_background_task(task_id="all")`` when
   you already know stragglers should be pruned.
-- Keep narration brief and synthesise from completed, non-cancelled workers.
+- Keep narration concise and synthesise from completed, non-cancelled workers.
 """
 
     @pytest.mark.asyncio
@@ -1331,7 +1331,7 @@ Rules:
             textwrap.dedent("""\
             You are the chief strategy officer of Nexus Platforms, a fictional
             B2B SaaS company. The board meets in a few minutes — you have only
-            a few minutes to deliver the briefing. Partial coverage with
+            a few minutes to deliver the summary. Partial coverage with
             explicit abandonment of slow analysts is acceptable; missing the
             deadline entirely is not.
 

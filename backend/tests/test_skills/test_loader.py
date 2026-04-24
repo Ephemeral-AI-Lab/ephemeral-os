@@ -133,8 +133,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "`new_tasks` contains at least one corrective task" in contract
     assert "Empty Replan" not in contract
     assert '"new_tasks": []' not in contract
-    assert 'name: "developer" | "validator";' in contract
-    assert "Every `name` is exactly `developer` or `validator`" in contract
+    assert 'agent: "developer" | "validator";' in contract
+    assert "Every `agent` is exactly `developer` or `validator`" in contract
     assert "team_planner is accepted" not in contract
     assert "## Examples" in contract
     assert "## Final Checklist" in contract
@@ -476,8 +476,8 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "large benchmark/test-matrix work",
             "four or more independent `developer` lanes",
             "Use child `team_planner` for broad decomposition",
-            "Name-field lock: after classifying a slice, write the `name` field",
-            'the only valid `name` is `"team_planner"`',
+            "Agent-field lock: after classifying a slice, write the `agent` field",
+            'the only valid `agent` is `"team_planner"`',
             "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
             "one `developer` task spec lists multiple independent fixes across unrelated owners",
             "bundles the engine fix with dozens of read/write/glob/path failures because both live under the same package",
@@ -491,7 +491,7 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
             "name the single internal helper, invariant, or adapter boundary proven by scout evidence",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
-            'but the final payload gives that slice `name: "developer"`',
+            'but the final payload gives that slice `agent: "developer"`',
             "Cold/disproved path gate: trigger -> live scout evidence says the drafted exact file is missing, CI-cold, or replaced by a package/directory boundary",
             "the final payload still names the disproved exact path after the scout reported zero coverage or a package boundary",
             "## TaskSpec Examples",
@@ -521,8 +521,8 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "large benchmark/test-matrix work",
             "`grandchild_depth <= max_depth`",
             "broader direct `developer` or `validator` tasks",
-            "Name-field lock",
-            'never `name: "developer"`',
+            "Agent-field lock",
+            'never `agent: "developer"`',
             "load submit-child-plan",
             'skill_name="team-planner-playbook"',
             'reference_name="submit-child-plan"',
@@ -549,8 +549,8 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "### Lane Selection",
             "`grandchild_depth <= max_depth`",
             "use broader direct `developer` and `validator` tasks instead",
-            "Name-field lock: after classifying a slice, write the `name` field",
-            'must use `name: "team_planner"`, never `name: "developer"`',
+            "Agent-field lock: after classifying a slice, write the `agent` field",
+            'must use `agent: "team_planner"`, never `agent: "developer"`',
             "Atomic grouping gate: trigger -> two or more atomic slices have different owner files",
             "submit separate current-layer `developer` lanes",
             "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
@@ -582,23 +582,23 @@ def test_planner_playbooks_lock_expandable_slices_out_of_developer_lanes() -> No
     _assert_contains_all(
         "\n".join((root_skill, root_reference)),
         (
-            "Name-field lock",
+            "Agent-field lock",
             "if your synthesis calls a slice expandable",
-            'the task\'s `name` must be `team_planner`, never `developer`',
+            'the task\'s `agent` must be `team_planner`, never `developer`',
             "Do not create a `developer` task whose own `spec.goal`, `spec.detail`, notes, or checklist rationale calls the same slice expandable",
             '`developer` means the slice passed every atomic test and no expandable signal fired',
-            'cannot have `name: "developer"`',
+            'cannot have `agent: "developer"`',
         ),
     )
     _assert_contains_all(
         "\n".join((team_skill, team_reference)),
         (
-            "Name-field lock",
+            "Agent-field lock",
             "when `grandchild_depth <= max_depth`",
-            'must have `name: "team_planner"`, never `name: "developer"`',
+            'must have `agent: "team_planner"`, never `agent: "developer"`',
             "do not call the fallback developer lanes atomic",
             '`developer` means the slice passed every atomic test, except for explicit max-depth per-mechanism fallback lanes',
-            'cannot have `name: "developer"`',
+            'cannot have `agent: "developer"`',
         ),
     )
 

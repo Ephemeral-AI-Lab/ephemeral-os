@@ -71,8 +71,8 @@ class ExecutionMetadata:
     tool_id: str | None = None
 
     # Team-mode plumbing. ``team_run_id`` lets tools that need run-scoped
-    # state (e.g. ``share_briefing``) look up their owning ``TeamRun`` via
-    # the in-process registry without holding a hard reference.
+    # state look up their owning ``TeamRun`` via the in-process registry
+    # without holding a hard reference.
     team_run_id: str | None = None
     work_item_id: str | None = None
 

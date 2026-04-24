@@ -1,8 +1,8 @@
 """In-process registry mapping ``team_run_id`` → live ``TeamRun``.
 
-Tools that need run-scoped state (notably ``share_briefing``) look up
-their owning ``TeamRun`` here using the ``team_run_id`` plumbed onto
-``ExecutionMetadata`` by the executor's query-context builder.
+Tools that need run-scoped state look up their owning ``TeamRun`` here
+using the ``team_run_id`` plumbed onto ``ExecutionMetadata`` by the
+executor's query-context builder.
 
 The registry is a module-level dict guarded by a ``threading.Lock``.
 Single-process by design — distributed coordination would use a

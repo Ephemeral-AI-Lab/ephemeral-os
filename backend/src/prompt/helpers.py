@@ -234,7 +234,7 @@ def _structured_example_spec(*, agent_name: str, roles: list[str]) -> dict[str, 
             "- Include failing command output when validation fails."
         )
     elif "explorer" in roles:
-        action = "Inspect the assigned paths and produce a compact evidence brief without editing files."
+        action = "Inspect the assigned paths and produce a compact evidence summary without editing files."
         acceptance = (
             "- Do not edit files.\n"
             "- Name the files and functions that matter.\n"

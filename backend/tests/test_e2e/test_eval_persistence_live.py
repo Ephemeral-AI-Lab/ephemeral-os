@@ -30,7 +30,7 @@ ALLOWED_SUBAGENT_TOOLS = {
 
 SUBAGENT_SYSTEM_PROMPT = (
     "Use only subagent background tools. Check progress before waiting. "
-    "Ignore sandbox tools. Keep replies brief."
+    "Ignore sandbox tools. Keep replies concise."
 )
 DETAIL_REPEAT = 32
 

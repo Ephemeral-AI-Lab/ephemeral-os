@@ -16,14 +16,9 @@ def build_scope_status(
     symbol_index: Any,
     scope_paths: list[str] | tuple[str, ...] | None,
     team_run_id: str | None = None,
-    briefing_versions: list[dict[str, Any]] | None = None,
-    context_pressure: dict[str, Any] | None = None,
-    shared_context: list[dict[str, Any]] | None = None,
-    baseline_packet: dict[str, Any] | None = None,
     recent_seconds: float = CODE_INTELLIGENCE_TUNING.scope_recent_seconds,
 ) -> dict[str, Any]:
     """Return the authoritative live coordination snapshot for *scope_paths*."""
-    del briefing_versions, context_pressure, shared_context, baseline_packet
     normalized = normalize_scope_paths(scope_paths)
     history_ready = getattr(arbiter, "initialized", False)
 

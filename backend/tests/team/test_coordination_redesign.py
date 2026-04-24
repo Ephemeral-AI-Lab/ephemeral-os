@@ -258,19 +258,18 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
         )
 
 
-def test_submit_plan_accepts_legacy_name_alias_for_task_agent():
-    payload = SubmitPlanTool.input_model(
-        new_tasks=[
-            {
-                "id": "legacy-agent-key",
-                "name": "developer",
-                "spec": _spec("Repair the production owner."),
-                "scope_paths": ["pkg/owner.py"],
-            }
-        ],
-    )
-
-    assert payload.new_tasks[0].agent == "developer"
+def test_submit_plan_rejects_legacy_name_field_for_task_agent():
+    with pytest.raises(ValidationError):
+        SubmitPlanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "legacy-agent-key",
+                    "name": "developer",
+                    "spec": _spec("Repair the production owner."),
+                    "scope_paths": ["pkg/owner.py"],
+                }
+            ],
+        )
 
 
 @pytest.mark.asyncio

@@ -102,7 +102,7 @@ def _non_blank(value: object, *, field_name: str) -> str:
 
 @dataclass(frozen=True)
 class TaskSpec:
-    """Structured task briefing shared by runtime tasks and submission tools."""
+    """Structured task detail shared by runtime tasks and submission tools."""
 
     goal: str
     detail: str
@@ -152,46 +152,42 @@ def render_task_spec(spec: TaskSpec, *, status_label: str | None = None) -> str:
     )
 
 
-@dataclass(init=False)
+def _coerce_task_spec(
+    spec: TaskSpec | Mapping[str, Any] | None,
+    *,
+    task_id: str,
+) -> TaskSpec:
+    if isinstance(spec, TaskSpec):
+        return spec
+    if isinstance(spec, Mapping):
+        return TaskSpec.from_mapping(spec)
+    if spec is None:
+        raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'spec'")
+    raise ValueError(
+        f"TaskSpec for task '{task_id}' must be an object with "
+        "goal, detail, and acceptance_criteria"
+    )
+
+
+@dataclass
 class TaskDefinition:
     """What defines a task: which agent, and what to do."""
 
     id: str
-    spec: TaskSpec
+    spec: TaskSpec | Mapping[str, Any]
     agent: str
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
     parent_id: str | None = None
 
-    def __init__(
-        self,
-        *,
-        id: str,
-        spec: TaskSpec | Mapping[str, Any] | None = None,
-        agent: str,
-        description: str = "",
-        deps: list[str] | None = None,
-        scope_paths: list[str] | None = None,
-        parent_id: str | None = None,
-    ) -> None:
-        self.id = str(id)
-        if isinstance(spec, TaskSpec):
-            self.spec = spec
-        elif isinstance(spec, Mapping):
-            self.spec = TaskSpec.from_mapping(spec)
-        elif spec is not None:
-            raise ValueError(
-                f"TaskSpec for task '{self.id}' must be an object with "
-                "goal, detail, and acceptance_criteria"
-            )
-        else:
-            raise ValueError(f"TaskDefinition '{self.id}' requires a non-empty 'spec'")
-        self.agent = str(agent)
-        self.description = description
-        self.deps = list(deps or [])
-        self.scope_paths = list(scope_paths or [])
-        self.parent_id = parent_id
+    def __post_init__(self) -> None:
+        self.id = str(self.id)
+        self.spec = _coerce_task_spec(self.spec, task_id=self.id)
+        self.agent = str(self.agent)
+        self.description = str(self.description or "")
+        self.deps = list(self.deps or [])
+        self.scope_paths = list(self.scope_paths or [])
 
 
 # ---------------------------------------------------------------------------

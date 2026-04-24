@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents.registry import get_definition
 from team.core.models import TaskSpec
@@ -212,17 +212,13 @@ class NewTaskDefinition(BaseModel):
     id: str = Field(..., description="Unique ID for the new task")
     agent: str = Field(
         ...,
-        validation_alias=AliasChoices("agent", "name"),
-        description=(
-            "Agent name or role hint (e.g. 'developer', 'validator'). "
-            "The legacy input key `name` is still accepted for compatibility."
-        ),
+        description="Agent name or role hint (e.g. 'developer', 'validator').",
     )
     spec: TaskSpec = Field(
         ...,
         description=(
             "Required structured task spec object with goal, detail, and "
-            "acceptance_criteria. The detail field is the agent's full briefing; "
+            "acceptance_criteria. The detail field is the agent's full task detail; "
             "acceptance_criteria should name concrete commands, expected evidence, "
             "or specific pytest ids where applicable."
         ),
