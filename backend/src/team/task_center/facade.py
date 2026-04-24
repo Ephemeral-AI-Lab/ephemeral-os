@@ -117,10 +117,6 @@ class TaskCenter:
     def graph(self) -> dict[str, Task]:
         return self._store.graph
 
-    @property
-    def ready_queue_order(self) -> list[str]:
-        return self._store.ready_queue_order
-
     async def get_task(self, task_id: str) -> Task | None:
         return self._store.get_task(task_id)
 

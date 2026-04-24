@@ -354,31 +354,6 @@ execution stream owned by that background task.
 The migration must make this boundary explicit so hooks do not accidentally run
 only for foreground tools.
 
-## External Trigger Workflow
-
-External triggers execute tools outside the main model streaming loop but still
-use production tool execution semantics. They must run platform hooks through
-the same execution primitive used by foreground and background tools.
-
-| Stage | Runtime action | Hook behavior |
-| --- | --- | --- |
-| Trigger builds constrained tool request. | Runtime validates tool input. | Invalid input returns trigger-local failed result. |
-| Trigger executes the tool. | Runtime invokes the shared hook-aware execution primitive. | Pre-hooks, tool execution, and post-hooks run in normal order. |
-| Advisory produced. | Runtime emits or records trigger-visible notification according to trigger capabilities. | Advisory is not added to model API history. |
-| Hook denial produced. | Runtime returns failed tool result to the trigger path. | Denial is visible as the tool result. |
-
-External triggers must not call tool bodies directly if the tool is covered by
-platform hook policy.
-
-When a caller cannot surface advisories (headless triggers, tests), it must
-still pass a valid `EmitStreamEvent`. The contract is:
-
-- A no-op async `emit` that drops events is legal. The pipeline never assumes
-  subscribers.
-- `emit` must still be awaitable; the pipeline awaits it for every advisory.
-- Callers that want to capture advisories for logs or telemetry can substitute
-  an async callable that records events instead of forwarding them.
-
 ## Runtime Boundary
 
 The existing plain `run_tool_safely()` shape is not sufficient as the top-level
@@ -823,7 +798,7 @@ async def run_post_hooks(
 
 The hook-aware tool-call primitive emits stream events and returns exactly one
 `ToolResult`. It becomes the orchestration boundary for foreground, streaming,
-background, and external-trigger paths. The caller is responsible for wrapping
+and background paths. The caller is responsible for wrapping
 the final `ToolResult` in a `ToolResultBlock` keyed by `tool_use_id` and for
 emitting `ToolExecutionCompleted` with the final result; the primitive only
 owns pre-hook, tool body, and post-hook ordering plus `ToolExecutionStarted`.
@@ -951,7 +926,7 @@ short-circuiting.
 
 The migration should remove the legacy `hooks` package behavior only after the
 new streaming execution primitive is wired through foreground execution,
-streaming execution, background execution, and external triggers.
+streaming execution, and background execution.
 
 The migration should update tests around:
 
@@ -1045,7 +1020,6 @@ backend/src/tools/core/base.py
 backend/src/engine/core/query.py
 backend/src/engine/core/streaming_executor.py
 backend/src/engine/runtime/background_dispatch.py
-backend/src/external_trigger/runner.py
 backend/src/engine/runtime/agent.py
 ```
 
@@ -1222,30 +1196,24 @@ backend/tests/test_engine/test_streaming_executor.py
 backend/tests/test_engine/test_tool_hook_concurrency.py
 ```
 
-### Phase 6: Wire Background and External Trigger Paths
+### Phase 6: Wire Background Paths
 
 Deliverables:
 
 - Ensure background task execution uses the hook-aware primitive for the actual
   background tool body.
 - Preserve background launch acknowledgement semantics.
-- Retarget external trigger tool execution to the shared hook-aware primitive.
-- Define how external-trigger advisory notifications are exposed when no live
-  stream subscriber exists.
 
 Exit criteria:
 
 - Background tool advisories are user-visible when a stream exists.
 - Background post-hook denial can replace the background task result.
-- External triggers do not call tool bodies directly for hooked tools.
-- External trigger hook denial returns a failed trigger-local tool result.
 
 Suggested tests:
 
 ```text
 backend/tests/test_engine/test_background_tasks.py
 backend/tests/test_engine/test_background_e2e.py
-backend/tests/test_external_trigger/test_runner.py
 ```
 
 ### Phase 7: Migrate Existing Policy Registrations
@@ -1308,7 +1276,7 @@ uv run pytest backend/tests/test_tools/test_hooks backend/tests/test_engine/test
 
 Deliverables:
 
-- Run targeted hook, engine, Daytona, background, and external-trigger tests.
+- Run targeted hook, engine, Daytona, and background tests.
 - Run broader backend tests if the change touches shared execution semantics.
 - Update architecture docs and README references.
 
@@ -1317,7 +1285,7 @@ Suggested commands:
 ```text
 uv run pytest backend/tests/test_tools/test_hooks -q
 uv run pytest backend/tests/test_engine/test_tool_call_loop.py backend/tests/test_engine/test_streaming_executor.py -q
-uv run pytest backend/tests/test_engine/test_background_tasks.py backend/tests/test_external_trigger/test_runner.py -q
+uv run pytest backend/tests/test_engine/test_background_tasks.py -q
 uv run pytest backend/tests/test_tools/test_daytona_toolkit -q
 uv run ruff check backend/src backend/tests
 uv run mypy --config-file backend/mypy.ini backend/src/team backend/src/agents

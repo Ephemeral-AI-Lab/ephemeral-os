@@ -85,10 +85,6 @@ class TaskStore:
             task.id for task in value.values() if task.status == TaskStatus.READY
         ]
 
-    @property
-    def ready_queue_order(self) -> list[str]:
-        return list(self._ready_order)
-
     def get_task(self, task_id: str) -> Task | None:
         """Fast in-memory lookup — no DB call."""
         return self._tasks.get(task_id)
