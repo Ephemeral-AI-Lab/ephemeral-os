@@ -327,8 +327,8 @@ def _clear_current_task_cancellation() -> None:
 @tool(
     name="run_subagent",
     description=(
-        "Starts a dispatchable subagent as a background task and returns its "
-        "background task id."
+        "Starts a dispatchable subagent as a background task using exactly one "
+        "of `prompt` or `input`, and returns its background task id."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
@@ -417,6 +417,11 @@ async def run_subagent(
     qc = getattr(agent, "query_context", None)
     if qc is not None and qc.tool_metadata is not None:
         qc.tool_metadata.agent_name = sub_def.name
+        task_center = context.metadata.get("task_center")
+        if task_center is not None:
+            # Dispatchable scouts are not Task Center tasks, but their note
+            # tools must read from and post to the parent run's note store.
+            qc.tool_metadata["task_center"] = task_center
         # `target_paths` carries the subagent's declared scope (derived from
         # the caller's `input` payload via scope_paths_from_payload). This is
         # deliberately distinct from `write_scope` — the latter is a

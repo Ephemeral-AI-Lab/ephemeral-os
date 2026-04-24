@@ -15,13 +15,13 @@ Caption: validator route. Direct evidence comes first; red evidence either gets 
 validation UUIDs
   -> [1 Read context]
   -> [2 Map criteria to evidence]
-       | invalid handoff / child-owned red suite / budget spent + incomplete -> request_replan
+       | invalid handoff / child-owned red suite / budget fully spent + incomplete -> request_replan
   -> [3 Run diagnostics + exact command]
-       | raw exact command green -> submit_task_success
+       | raw exact command green/no target reds -> submit_task_success
        ` red / invalid / absent -> [4 Analyze red evidence]
   -> [4 Analyze red evidence]
        | obvious local correction -> [5 Apply one correction]
-       ` blocker / broad / budget spent + incomplete -> request_replan
+       ` blocker / broad / budget fully spent + incomplete -> request_replan
   -> [5 Apply one correction] -> fresh Stage 3 evidence
 ```
 
@@ -80,7 +80,7 @@ criteria -> exact command first -> diagnostics -> optional public-surface guardr
 | Exact command | Run the required command before substitutes, broad suites, or narrowed confirmation. |
 | Diagnostics | Name owned or touched production files for `ci_diagnostics`. |
 | Guardrail | Add one nearby public-surface guardrail only when the touched surface affects public output. |
-| Replan check | Dependency not done, child-owned suite red, wrong owner, no valid evidence path, spent budget incomplete, or broad correction. |
+| Replan check | Dependency not done, child-owned suite red, wrong owner, no valid evidence path, fully spent budget incomplete, or broad correction. |
 
 Acceptance criteria and test outcomes do not expand `scope_paths` by themselves. A new production file is valid only when live production evidence proves the missing module, shim, bridge, serializer, or re-export and no worker owns it.
 
@@ -131,7 +131,7 @@ Root-cause packet:
 | Boundary | Route |
 | --- | --- |
 | Obvious local defect in owned/touched production surface | Stage 5 correction. |
-| Child-owned suite red, broad outside scope, another role, missing handoff, ambiguous cause, tooling block, or spent budget without green evidence | `request_replan`. |
+| Child-owned suite red, broad outside scope, another role, missing handoff, ambiguous cause, tooling block, or fully spent budget without green evidence | `request_replan`. |
 | Same command stays red after one correction without a new local defect | `request_replan`. |
 
 ## 5. Apply One Scoped Correction
@@ -156,7 +156,7 @@ Caption: terminal gate. Success is only for raw green evidence mapped to every c
 all criteria green + diagnostics clean
   -> submit_task_success({ summary })
 
-any red / invalid / missing / stale / partial / blocked / budget spent + incomplete
+any red / invalid / missing / stale / partial / blocked / budget fully spent + incomplete
   -> request_replan({ reason })
 ```
 
@@ -170,7 +170,7 @@ Success summary includes:
 | Diagnostics | Owned-file diagnostics status. |
 | Guardrail | Public-surface guardrail result, or `none`. |
 | Widening rationale | Investigation or guardrail widening rationale, or `none`. |
-| Residual risk | Remaining caveat or `none`. |
+| Residual risk | Non-target caveat or `none`; target red means replan. |
 
 Replan reason includes:
 
@@ -190,4 +190,4 @@ Trigger guide:
 | --- | --- |
 | `scope_expansion` | Verified repair is broad, ambiguous, or requires multiple outside-scope mutations. |
 | `wrong_owner_or_role` | Child-owned suite, dependency, role, or production owner must act first. |
-| `unresolved_blocker` | Verification, diagnostics, tooling, spent budget, or root-cause tracing is blocked without proven different owner. |
+| `unresolved_blocker` | Verification, diagnostics, tooling, fully spent budget, or root-cause tracing is blocked without proven different owner. |

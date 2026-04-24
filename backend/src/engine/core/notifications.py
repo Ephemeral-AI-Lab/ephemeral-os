@@ -40,11 +40,18 @@ def _budget_warning_steps(context: "QueryContext") -> str:
             "2. Run one final exact verification command (daytona_shell) only if you can still reserve the terminal submission call.\n"
             "3. Call submit_task_success() for PASS with exact commands, exit codes, and diagnostics status, or request_replan() with exact evidence for FAILURE."
         )
+    remaining = context.tool_call_limit - context.tool_calls_used if context.tool_call_limit else 0
+    if remaining <= 1:
+        return (
+            "1. Use this last call for submit_task_success or request_replan.\n"
+            "2. If evidence is incomplete, diagnostics-only, red, absent, or invalid, call request_replan() with exact evidence.\n"
+            "3. Call submit_task_success() only when latest required verification is green and diagnostics are clean."
+        )
     return (
         "1. Reserve one call for submit_task_success or request_replan; never spend the last tool call on daytona_shell, reads, diagnostics, or cleanup.\n"
-        "2. Use only evidence already gathered before this warning; do not run one more verification, diagnostic, read, or edit.\n"
-            "3. If evidence is incomplete, diagnostics-only, verification was not already green, verification still fails, or diagnostics are absent, call request_replan() with the exact evidence now; this includes collection, import, pytest-config, or environment failures even if they look unrelated.\n"
-        "4. If the latest required verification was already green after the final edit and diagnostics were already clean, call submit_task_success() with behavior/API delta, exact commands and exit codes, and diagnostics status."
+        "2. Continue only with a bounded known fix, required diagnostic, or exact verification that still leaves a terminal call.\n"
+        "3. If evidence is incomplete when only the terminal call remains, call request_replan() with exact evidence.\n"
+        "4. Call submit_task_success() only when latest required verification is green and diagnostics are clean."
     )
 
 
@@ -78,13 +85,12 @@ def build_budget_warning(
     text = (
         f"[budget warning] Only {remaining} of {limit} tool calls remain "
         f"({context.tool_calls_used} already used). "
-        f"Stop editing and exploring immediately. Terminal submission counts against this budget; "
+        f"This is an advisory warning, not a terminal trigger. Terminal submission counts against this budget; "
         f"keep one call reserved for the role-correct terminal tool. "
-        f"Prepare to enter the terminal summarization flow soon. Your next actions must be:\n"
+        f"Prepare the terminal path while using any remaining safe calls deliberately:\n"
         f"{_budget_warning_steps(context)}\n"
-        f"Do NOT start new edits, file reads, probes, diagnostics, alternate tests, or debugging loops. "
-        f"A known next fix is not an exception; preserve it in request_replan(). "
-        f"Any non-terminal mutation or investigation after this warning is a contract violation. Submit now."
+        f"Do not spend the final reserved call on non-terminal mutation or investigation. "
+        f"Once only the terminal call remains, partial or red work belongs in request_replan()."
     )
     return (
         ConversationMessage.from_user_text(text),

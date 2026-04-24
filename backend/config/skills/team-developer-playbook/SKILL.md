@@ -15,14 +15,14 @@ Caption: developer route. Plan one mechanism, verify fresh evidence, and run req
 handoff UUIDs
   -> [1 Read context]
   -> [2 Plan boundary]
-       | wrong owner / broad / blocked / budget spent + incomplete -> request_replan
+       | wrong owner / broad / blocked / budget fully spent + incomplete -> request_replan
   -> [3 Implement one mechanism]
   -> [4 Verify]
-       | green + current + criteria met -> submit_task_success
+       | green/current/no target reds -> submit_task_success
        ` red / absent / invalid
    -> [Required RCA]
        | one scoped production defect + budget remains -> Stage 3
-       ` unclear / broad / stale / budget spent + incomplete -> request_replan
+       ` unclear / broad / stale / budget fully spent + incomplete -> request_replan
 ```
 
 | Stage | Gate |
@@ -163,11 +163,11 @@ RCA packet:
 ```text
 Caption: terminal gate. Success is only for current, direct, passing verification.
 
-latest required verification passed + diagnostics clean + criteria met
+latest required verification green + diagnostics clean + no target-red caveats
   -> submit_task_success({ summary })
 
 red / absent / invalid / stale / partial after Stage 4 RCA
-  or blocked / broad / wrong-owner / budget spent + incomplete
+  or blocked / broad / wrong-owner / budget fully spent + incomplete
   -> request_replan({ reason })
 ```
 
@@ -180,7 +180,7 @@ Success summary includes:
 | Diagnostics | Edited-file diagnostics status. |
 | Investigation scope | Why reads/probes/tests went outside `scope_paths`, or `none`. |
 | Out-of-scope mutation | Path, action, rationale, verification, or `none`. |
-| Residual risk | Remaining caveat or `none`. |
+| Residual risk | Non-target caveat or `none`; target red means replan. |
 
 Replan reason includes:
 

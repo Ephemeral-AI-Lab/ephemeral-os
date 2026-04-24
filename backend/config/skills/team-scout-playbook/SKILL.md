@@ -18,7 +18,7 @@ payload -> [1 Notes] -> [2 Explore] -> [3 Load completion-contract if exact-file
 | 1. Notes | `read_file_note(file_paths=[all assigned target_paths])` as the first tool phase. |
 | 2. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps. |
 | 3. Exact-file completion | Load `completion-contract` only after notes and exploration. |
-| 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` covering exactly assigned repo-relative keys, then stop. |
+| 4. Submit notes | One `submit_file_notes({ notes: [{ path, content }, ...] })` covering exactly assigned repo-relative keys, then stop. |
 
 ## 2. Explore
 
@@ -28,7 +28,7 @@ payload -> [1 Notes] -> [2 Explore] -> [3 Load completion-contract if exact-file
 | Directory/package | Use CI tools to map subdivisions, entry points, owner seam, and gaps. |
 | Benchmark/test path | Record expected behavior, then map production-owner evidence or gaps. |
 | Missing exact target | Record zero coverage and do not hunt nearby replacements. |
-| Adjacent files | Mention inside assigned-path notes, not `scoped_paths`. |
+| Adjacent files | Mention inside assigned-path note content, not as submitted paths. |
 
 Keep `target_paths` as the exploration boundary. Prefer notes and CI before raw source reads. No sandbox, edit, command, pytest, or runtime execution tools.
 
@@ -42,7 +42,7 @@ Scope | Files mapped | Entry points | Owner seam | Suggested subdivisions | Gaps
 
 | Check | Expected result |
 | --- | --- |
-| Coverage | Each assigned target appears once in `scoped_paths`; no discovered extras. |
+| Coverage | Each assigned target appears once as a submitted `notes[].path`; no discovered extras. |
 | Multi-path prompt | Path-labeled findings that stand alone when read back. |
 | Scope honesty | Missing/no-symbol/adjacent evidence stays explicit in assigned notes. |
 | Terminal action | Successful `submit_file_notes(...)` is the last tool action. |

@@ -460,9 +460,8 @@ async def test_run_subagent_passes_payload_verbatim(monkeypatch):
 async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
     """Subagent is parameterized solely by `prompt` / `input`; parent
     metadata (write_scope, team_run_id, role) MUST NOT leak into the child's
-    tool_metadata. The child's tool_metadata is the fresh ExecutionMetadata
-    that `spawn_agent` produced — only `agent_name` and
-    `work_item_started_at` are added here."""
+    tool_metadata. The child keeps only the minimal coordination channel that
+    scout note tools need."""
     from tools.core.runtime import ExecutionMetadata
 
     scripted = [
@@ -491,6 +490,7 @@ async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
             "write_scope": ["parent/scope.py"],
             "team_run_id": "parent_team_run",
             "role": "parent_role",
+            "task_center": object(),
         },
     )
 
@@ -510,6 +510,7 @@ async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
     # this key; empty means no coverage enforcement).
     assert child_meta.get("target_paths") == []
     assert child_meta.get("team_run_id") is None
+    assert child_meta.get("task_center") is ctx.metadata["task_center"]
     # `role` comes from the child agent definition (sub_def.role), not from
     # the parent metadata — scout's definition sets role="explorer".
     assert child_meta.get("role") == "explorer"

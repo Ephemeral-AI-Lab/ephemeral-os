@@ -122,17 +122,14 @@ def test_budget_warning_guides_validator_to_wrap_up():
 def test_budget_warning_default_success_summary_requires_evidence():
     ctx = _ctx(100, 75)
     _, event = build_budget_warning(ctx)
-    assert "Prepare to enter the terminal summarization flow soon" in event.text
-    assert "diagnostics-only" in event.text
-    assert "Use only evidence already gathered before this warning" in event.text
-    assert "do not run one more verification" in event.text
-    assert "verification was not already green" in event.text
-    assert "collection, import, pytest-config, or environment failures" in event.text
-    assert "A known next fix is not an exception" in event.text
-    assert "non-terminal mutation or investigation" in event.text
-    assert "latest required verification was already green after the final edit" in event.text
-    assert "behavior/API delta" in event.text
-    assert "exact commands and exit codes" in event.text
+    assert "advisory warning, not a terminal trigger" in event.text
+    assert "bounded known fix, required diagnostic, or exact verification" in event.text
+    assert "still leaves a terminal call" in event.text
+    assert "evidence is incomplete when only the terminal call remains" in event.text
+    assert "latest required verification is green" in event.text
+    assert "diagnostics are clean" in event.text
+    assert "final reserved call" in event.text
+    assert "partial or red work belongs in request_replan" in event.text
     assert "Residual Risk line" not in event.text
 
 

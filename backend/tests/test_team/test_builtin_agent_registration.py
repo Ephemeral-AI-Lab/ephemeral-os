@@ -115,8 +115,9 @@ def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
     assert "stop after exact-file CI evidence" in defn.system_prompt
     assert "Only `target_paths` authorize exploration" in defn.system_prompt
     assert "treat them as hypotheses to report under gaps" in defn.system_prompt
-    assert "one `prompt` plus a `scoped_paths` list that exactly matches the assigned target paths" in defn.system_prompt
-    assert "The tool stores one note per scoped path" in defn.system_prompt
+    assert 'notes=[{"path": "...", "content": "..."}]' in defn.system_prompt
+    assert "one note item per assigned target path" in defn.system_prompt
+    assert "scoped_paths" not in defn.system_prompt
     assert "If an assigned exact file is missing, CI-cold, or disproved by a package/directory boundary" in defn.system_prompt
     assert "Do not search sibling modules, package structure, or helper-symbol names" in defn.system_prompt
 
