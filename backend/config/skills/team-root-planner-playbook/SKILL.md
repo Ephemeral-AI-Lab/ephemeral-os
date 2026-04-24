@@ -1,6 +1,6 @@
 ---
 name: team-root-planner-playbook
-description: Playbook for the root_planner agent. Analyze the user request, scout risk-bearing production ownership, then synthesize and submit a schema-valid root plan with submit_plan(...).
+description: Playbook for the root_planner agent. Analyze the user request, optionally scout routing-changing production ownership, then submit a schema-valid root plan with submit_plan(...).
 ---
 
 # Team Root Planner Playbook
@@ -10,8 +10,14 @@ Produce the top-level task DAG from the user request. Finish with exactly one `s
 | Route | Use when |
 | --- | --- |
 | `developer` | Exact, live-proven owner plus one bounded mechanism. |
-| `team_planner` | Broad, clustered, matrix-shaped, mixed, or unresolved owner boundary. |
+| `team_planner` | Broad, clustered, matrix-shaped, mixed, unresolved, or more than 3 owner families. |
 | `validator` | Same-payload verification after producer lanes. |
+
+| Gate | Action |
+| --- | --- |
+| 1-3 owner questions change this DAG | Scout by production owner family. |
+| More than 3 owner families | Skip scouts; submit child `team_planner` clusters. |
+| Test or benchmark path | Keep as evidence in `spec`, not `target_paths`. |
 
 ## Stage Flow
 
@@ -24,20 +30,19 @@ user request
 [1 Load context]
   | request evidence -> owner ledger
   |
-  | scout would change this level's routing?
+  | 1-3 owner questions would change this level's routing?
   |-- yes --> [2 Scout] -> harvest notes -> update ledger
-  |-- no ---> carry uncertainty in child spec
+  |-- no / >3 rows / test-only -> carry uncertainty in child spec
   |
   v
 [3 Synthesize]
-  load synthesize-and-submit
-  draft -> checklist -> submit_plan(...)
+  Stage 2 closed -> draft -> checklist -> submit_plan(...)
 ```
 
 | Stage | Output |
 | --- | --- |
 | 1. Load context | Owner ledger: clear owners, scout candidates, unresolved clusters, verification evidence. |
-| 2. Scout | Optional small scout wave, grouped by owner family. |
+| 2. Scout | Small owner-family wave; avoid per-assertion or all-purpose scouts. |
 | 3. Synthesize | Top-level local DAG with `developer`, `team_planner`, and optional `validator` nodes. |
 
 ## 1. Load Context
@@ -78,21 +83,16 @@ row: config seam    -> scout(["pkg/config", "pkg/options"])
 | Single path | One file or module is the likely owner. |
 | Multi-path | Paths form one dependency, entrypoint, adapter, or shared mechanism. |
 | Directory | Owner is a package/subsystem and exact files are unknown. |
-| Separate scouts | Candidate owner families are independent. |
-| No scout | Exploration becomes decomposition; route to `team_planner`. |
+| Small wave | 1-3 independent owner-family rows would change lanes. |
+| Too many rows | Submit child planners instead of scouting. |
+| Test path | Keep in context only. |
+| No scout | Leaf discovery or unrelated candidates; route to `team_planner`. |
 
-Keep scout `target_paths` as exact production coverage keys: one directory or a short file list, not a parent directory mixed with nested files or tests. Put tests, benchmark ids, optional-dependency signals, commands, and hypotheses in scout context. Launch the useful wave before polling, then read notes for every assigned path. Missing notes become uncertainty for that path only.
+Keep `target_paths` to one directory or a short production file list. Put tests, benchmark ids, commands, optional-dependency signals, and hypotheses in scout context. Launch the useful wave before polling; missing notes become uncertainty for that path only.
 
 ## 3. Synthesize
 
-Enter after the ledger is complete and scouts are done or intentionally skipped. Load the Stage 3 reference only now:
-
-```text
-load_skill_reference(
-  skill_name="team-root-planner-playbook",
-  reference_name="synthesize-and-submit"
-)
-```
+Enter after the ledger is complete and scouts are done or intentionally skipped.
 
 ```text
 Caption: root routing during synthesis.
@@ -110,4 +110,4 @@ same-payload evidence    -> validator with deps=[verified producers]
 | Validators | Depend on every same-payload producer they verify. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
 
-Run the reference checklist, then make `submit_plan({ "new_tasks": [...] })` the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.
+Run this checklist, then make `submit_plan({ "new_tasks": [...] })` the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.

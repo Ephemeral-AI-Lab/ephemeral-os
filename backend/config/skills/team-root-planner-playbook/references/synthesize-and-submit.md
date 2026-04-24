@@ -26,6 +26,7 @@ owner slice
 | --- | --- |
 | Crowded level | Group by owner family or mechanism. |
 | One broad `developer` | Route to `team_planner` unless exact-owner evidence makes it atomic. |
+| More than 3 scout candidates | Route by child planner clusters instead of widening the scout wave. |
 | Many tiny variants under one mechanism | One task or one child planner, not many thin siblings. |
 | Unrelated owner families | Several siblings or child planners, grouped by boundary. |
 
@@ -87,25 +88,6 @@ type NewTaskDefinition = {
 | `spec.acceptance_criteria` | Commands, pytest ids, expected evidence, and no skip/xfail closure. |
 | `deps` | Same-payload ids only. |
 | `scope_paths` | Repo-relative production paths or directories. |
-
-## Compact Example
-
-```text
-Caption: one atomic repair, one expandable child plan, one validator join.
-
-focused-runtime-fix (developer) --------\
-api-matrix-planning (team_planner) ------> root-validator (validator)
-```
-
-```ts
-submit_plan({
-  new_tasks: [
-    { id: "focused-runtime-fix", agent: "developer", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: [], scope_paths: ["pkg/runtime.py"] },
-    { id: "api-matrix-planning", agent: "team_planner", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: [], scope_paths: ["pkg/api"] },
-    { id: "root-validator", agent: "validator", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: ["focused-runtime-fix", "api-matrix-planning"], scope_paths: ["pkg"] }
-  ]
-})
-```
 
 ## Final Checklist
 

@@ -27,6 +27,7 @@ owner slice
 | --- | --- |
 | Crowded level | Group by owner family or mechanism. |
 | One broad `developer` | Route to child `team_planner` while depth remains. |
+| More than 3 scout candidates | Route by child planner clusters instead of widening the scout wave. |
 | Many tiny variants under one mechanism | One task or one child planner, not many thin siblings. |
 | Unrelated owner families | Several siblings or child planners, grouped by boundary. |
 
@@ -88,25 +89,6 @@ type NewTaskDefinition = {
 | `spec.acceptance_criteria` | Commands, pytest ids, expected evidence, and no skip/xfail closure. |
 | `deps` | Same-payload ids only; prompt UUIDs are context. |
 | `scope_paths` | Repo-relative production paths proven by inherited context or scout evidence. |
-
-## Compact Example
-
-```text
-Caption: one atomic repair, one expandable child plan, one validator join.
-
-focused-rewire-repair (developer) --------\
-submission-policy-planning (team_planner) -> child-output-validator (validator)
-```
-
-```ts
-submit_plan({
-  new_tasks: [
-    { id: "focused-rewire-repair", agent: "developer", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: [], scope_paths: ["backend/src/team/task_center.py"] },
-    { id: "submission-policy-planning", agent: "team_planner", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: [], scope_paths: ["backend/src/tools/submission", "backend/src/prompt"] },
-    { id: "child-output-validator", agent: "validator", spec: { goal: "...", detail: "...", acceptance_criteria: "..." }, deps: ["focused-rewire-repair", "submission-policy-planning"], scope_paths: ["backend/src/team", "backend/src/tools/submission", "backend/src/prompt"] }
-  ]
-})
-```
 
 ## Final Checklist
 

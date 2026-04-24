@@ -8,19 +8,19 @@ description: Authoritative playbook for the scout subagent. Performs evidence-on
 Scout only assigned `target_paths`, post durable notes, then finish with exactly one `submit_file_notes(...)`.
 
 ```text
-Caption: scout route. Notes first; completion reference loads only for exact-file completion.
+Caption: scout route. Notes first, then exploration, then exact-file completion when needed.
 
-payload -> [1 Notes] -> [2 Explore] -> [3 Exact-file completion?] -> [4 Submit notes]
+payload -> [1 Notes] -> [2 Explore] -> [3 Exact-file completion] -> [4 Submit notes]
 ```
 
 | Stage | Output |
 | --- | --- |
 | 1. Notes | `read_file_note(file_paths=[all assigned target_paths])` as the first tool phase. |
 | 2. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps. |
-| 3. Exact-file completion | Load `completion-contract` only for a single file or short fixed file list. |
+| 3. Exact-file completion | Use the exact-file completion contract only after notes and exploration. |
 | 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` using the assigned path keys. |
 
-The first tool phase contains only the required `read_file_note(...)` call. Do not batch CI, source reads, diagnostics, or structure queries with it.
+First tool phase: only `read_file_note(...)`.
 
 ## 2. Explore
 
@@ -33,13 +33,6 @@ The first tool phase contains only the required `read_file_note(...)` call. Do n
 | Context-only adjacent files | Record as hypotheses unless assigned. |
 
 Keep `target_paths` as the exploration boundary. Prefer notes and CI before raw source reads. Do not use sandbox, edit, or runtime execution tools.
-
-```text
-load_skill_reference(
-  skill_name="team-scout-playbook",
-  reference_name="completion-contract"
-)
-```
 
 If exact-path symbol queries returned definitions, submit notes next. If a target is missing, no-symbol, or replaced by a package boundary, submit notes with that gap instead of widening exploration.
 

@@ -15,14 +15,14 @@ Caption: developer route. Plan one mechanism, verify fresh evidence, and run req
 handoff UUIDs
   -> [1 Read context]
   -> [2 Plan boundary]
-       | wrong owner / broad / blocked / budget exhausted -> request_replan
+       | wrong owner / broad / blocked / budget spent + incomplete -> request_replan
   -> [3 Implement one mechanism]
   -> [4 Verify]
        | green + current + criteria met -> submit_task_success
        ` red / absent / invalid
    -> [Required RCA]
        | one scoped production defect + budget remains -> Stage 3
-       ` unclear / broad / stale / budget exhausted -> request_replan
+       ` unclear / broad / stale / budget spent + incomplete -> request_replan
 ```
 
 | Stage | Gate |
@@ -82,7 +82,7 @@ context
 | Behavior delta | Concrete wrong value, branch, import, config, state, output, or API behavior. |
 | Edit boundary | One mechanism; adjacent files only when live evidence couples them. |
 | Verification | Exact post-edit command plus diagnostics for edited files. |
-| Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or no budget for verification plus terminal. |
+| Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or fully spent budget with work incomplete. |
 
 Tests and benchmark ids are evidence, not edit surfaces, unless the original request assigns test repair. Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
 
@@ -97,8 +97,8 @@ bounded edit plan -> prove file/symbol/rename target -> one Daytona mutation -> 
 | Mutation check | Route |
 | --- | --- |
 | Assigned or proven adjacent production path | Edit with the narrowest Daytona mutation tool. |
-| One or two lightweight outside-scope writes/moves/deletes/creates tied to the same mechanism | Continue with evidence and record in the terminal payload. |
-| Third outside-scope mutation, blocked move/delete, broad change, or unclear boundary | `request_replan` with `scope_expansion`. |
+| A few light outside-scope operations tied to the same mechanism | Continue with evidence and record in the terminal payload. |
+| Multiple outside-scope files, repeated outside-scope mutation, blocked move/delete, broad change, or unclear boundary | `request_replan` with `scope_expansion`. |
 | Test edit, dependency edit, environment edit, or verification rewrite | `request_replan` with the fitting trigger. |
 
 After a red command, write a compact value table, then complete Stage 4 RCA before another edit:
@@ -122,7 +122,7 @@ post-edit repo
 | Diagnostics | Run `ci_diagnostics` on every edited file before terminal completion. |
 | Runtime command | Run the narrowest required command after each edit; keep the original failing surface until it passes or blocks. |
 | Exit judgment | Use tool-reported exit code and failing ids. Collection/import/no-tests/skips/xfails/missing optional deps are red for named fail-to-pass targets. |
-| Missing verification | If the required command was not run after the final edit, including due to budget, request replan. |
+| Missing verification | If the required command was not run after the final edit, including fully spent budget, request replan. |
 | Policy block | Use `unresolved_blocker` when no valid equivalent can preserve the required evidence. |
 | Verify failure | RCA is mandatory before the next edit, `submit_task_success`, or `request_replan`. |
 
@@ -156,7 +156,7 @@ RCA packet:
 | --- | --- |
 | One assigned-scope or proven adjacent production defect and enough budget | Return to Stage 3. |
 | Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, repeated red command, or tool failure | `request_replan`. |
-| Budget exhausted before green verification | Use `request_replan` unless already green with clean diagnostics. |
+| Budget fully spent before green verification | Use `request_replan` unless already green with clean diagnostics. |
 
 ## 5. Submit Terminal Summary
 
@@ -167,7 +167,7 @@ latest required verification passed + diagnostics clean + criteria met
   -> submit_task_success({ summary })
 
 red / absent / invalid / stale / partial after Stage 4 RCA
-  or blocked / broad / wrong-owner / budget exhausted
+  or blocked / broad / wrong-owner / budget spent + incomplete
   -> request_replan({ reason })
 ```
 
@@ -198,4 +198,4 @@ Trigger guide:
 | --- | --- |
 | `scope_expansion` | Next repair is broad, ambiguous, or requires multiple outside-scope mutations. |
 | `wrong_owner_or_role` | A dependency is not done or another owner/role must act. |
-| `unresolved_blocker` | Tooling, diagnostics, budget, verification, or trace evidence is blocked with no proven different owner. |
+| `unresolved_blocker` | Tooling, diagnostics, spent budget, verification, or trace evidence is blocked with no proven different owner. |

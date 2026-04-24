@@ -102,21 +102,8 @@ Keep failing tests in scout context, not `target_paths`. Harvest notes for every
 
 ## 3. Act
 
-Enter after classification is written and diagnostics are complete or intentionally skipped. Load the matching action reference:
-
-```text
-# Add missing corrective children only
-load_skill_reference(
-  skill_name="team-replanner-playbook",
-  reference_name="action-add-tasks"
-)
-
-# Replace stale same-layer work
-load_skill_reference(
-  skill_name="team-replanner-playbook",
-  reference_name="action-cancel-and-redraft"
-)
-```
+Enter after classification is written and diagnostics are complete or intentionally skipped.
+Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`.
 
 ```text
 Caption: cancellation boundary.
@@ -136,18 +123,17 @@ same parent:
 | Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, or outside the stale region. |
 | Preserve live useful work | Objective remains valid after corrective work. |
 
-Map every named failing variant to a repair/diagnostic task or an explicitly preserved live repair owner. Because the original task becomes terminal after `request_replan`, also map every uncompleted part of the failed developer/validator contract to a new recovery child or to an explicitly preserved live owner. A blocker-only fix is insufficient when it would leave the failed task's original goal, acceptance criteria, or validation evidence uncovered. Drop benchmark/test-edit, skip/xfail, pytest-config, doc-only, and value-rule contradiction candidates.
+| Coverage row | Action |
+| --- | --- |
+| Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
+| Uncompleted original goal, criterion, scope item, or validation evidence | Map to a recovery child or preserved live owner. |
+| Blocker-only fix leaves original contract uncovered | Add continuation or validator coverage. |
+| Benchmark/test-edit, skip/xfail, pytest-config, doc-only, or contradictory value rule | Drop or turn into a production diagnostic. |
 
 ## 4. Submit
 
-Enter after the Stage 3 reference has shaped the corrective mapping. Load the terminal contract while checking the payload:
-
-```text
-load_skill_reference(
-  skill_name="team-replanner-playbook",
-  reference_name="terminal-contract"
-)
-```
+Enter after the Stage 3 reference has shaped the corrective mapping.
+Terminal reference: `terminal-contract`.
 
 | Submit check | Expected result |
 | --- | --- |
