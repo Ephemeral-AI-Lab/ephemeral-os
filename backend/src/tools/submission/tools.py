@@ -297,6 +297,9 @@ class SubmitReplanInput(BaseModel):
             "Non-empty structured JSON array of corrective tasks to create as direct "
             "children of this replanner. The outcome summary is generated "
             "by the system after children complete; do not author prose. "
+            "The tasks must cover the blocker fix plus any uncompleted original "
+            "developer/validator work unless that work is explicitly preserved "
+            "in an existing live owner. "
             "Each new task should include non-empty repo-relative scope_paths, "
             "including validators."
         ),

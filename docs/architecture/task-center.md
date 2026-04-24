@@ -49,6 +49,7 @@ After the replan:
 
 - `new_tasks` are inserted as direct children of the replanner at the replanner's depth. The replanner never sets `parent_id` per task.
 - Each `new_tasks` item carries the full task detail in `spec`; a separate short `description` label is not required.
+- Replan tasks must cover the blocker fix plus any uncompleted original developer/validator goal, acceptance criterion, and required evidence path, unless that work is explicitly preserved in an existing live owner.
 - The replanner does not submit a free-text summary.
 - `cancel_ids` may target only direct siblings of the replanner. Cancelled tasks are marked `cancelled`, including cascaded descendants and dependents.
 - New replan tasks may depend on local new-task IDs or schedulable existing tasks (`done`, `ready`, `pending`) that do not already depend on the replanner or the original failed task.

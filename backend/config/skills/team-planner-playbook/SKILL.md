@@ -38,7 +38,7 @@ assigned planner task
 | Stage | Output |
 | --- | --- |
 | 1. Load context | Owner ledger: inherited owners, scout candidates, unresolved clusters, deps, verification evidence. |
-| 2. Scout | Optional 1-3 scout wave, grouped by owner family. |
+| 2. Scout | Optional small scout wave, grouped by owner family. |
 | 3. Synthesize | Child local DAG with `developer`, `team_planner`, and optional `validator` nodes. |
 
 ## 1. Load Context
@@ -65,7 +65,7 @@ Keep inherited wording intact when passing parent or dependency context to child
 
 ## 2. Scout
 
-Use this stage only when live evidence changes this level's DAG. A useful wave is usually 1-3 owner families.
+Use this stage only when live evidence changes this level's DAG.
 
 ```text
 Caption: one scout per owner-ledger row.
@@ -83,7 +83,7 @@ row: prompt family  -> scout(["pkg/prompt"])
 | Separate scouts | Candidate owner families are independent. |
 | No scout | Exploration becomes decomposition; route to `team_planner` when depth allows. |
 
-Keep scout `target_paths` production-only. Put tests, benchmark ids, optional-dependency signals, commands, and hypotheses in scout context. Launch the useful wave before polling, then read notes for every assigned path. Missing notes, cold CI, canceled scouts, or disproved exact files become uncertainty for that path only.
+Keep scout `target_paths` as exact production coverage keys: one directory or a short file list, not a parent directory mixed with nested files or tests. Put tests, benchmark ids, optional-dependency signals, commands, and hypotheses in scout context. Launch the useful wave before polling, then read notes for every assigned path. Missing notes, cold CI, canceled scouts, or disproved exact files become uncertainty for that path only.
 
 ## 3. Synthesize
 

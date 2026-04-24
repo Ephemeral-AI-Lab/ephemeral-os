@@ -222,6 +222,7 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
     assert "Use when" not in schema["description"]
     new_tasks_desc = schema["input_schema"]["properties"]["new_tasks"]["description"]
     assert "Non-empty structured JSON array" in new_tasks_desc
+    assert "uncompleted original developer/validator work" in new_tasks_desc
     assert "non-empty repo-relative scope_paths" in new_tasks_desc
     cancel_ids_desc = schema["input_schema"]["properties"]["cancel_ids"]["description"]
     assert "use [] when no sibling should be cancelled" in cancel_ids_desc

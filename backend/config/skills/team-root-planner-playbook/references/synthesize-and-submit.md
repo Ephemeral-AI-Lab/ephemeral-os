@@ -115,5 +115,5 @@ submit_plan({
 | 2 | `deps` resolve within this payload and express output order or validator coverage. |
 | 3 | Expandable or unresolved slices use `team_planner`. |
 | 4 | Named failing clusters have a producer owner or child planner. |
-| 5 | Tests and benchmark ids stay as evidence in `spec`; production paths stay in `scope_paths`. |
+| 5 | Tests and benchmark ids stay in `spec`; production/scout paths stay exact in `scope_paths`. |
 | 6 | The final assistant action is `submit_plan(...)` with no trailing prose. |

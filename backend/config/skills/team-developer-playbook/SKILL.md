@@ -10,19 +10,19 @@ Complete one bounded coding task from the Task Center handoff. Finish with exact
 ## Stage Flow
 
 ```text
-Caption: developer route. Plan one mechanism, verify fresh evidence, then submit success only from green evidence.
+Caption: developer route. Plan one mechanism, verify fresh evidence, and run required RCA for every verification failure.
 
 handoff UUIDs
   -> [1 Read context]
   -> [2 Plan boundary]
-       | wrong owner / broad / blocked / budget risk -> request_replan
+       | wrong owner / broad / blocked / budget exhausted -> request_replan
   -> [3 Implement one mechanism]
   -> [4 Verify]
        | green + current + criteria met -> submit_task_success
-       ` red / absent / invalid -> [5 RCA]
-  -> [5 RCA]
-       | one scoped production defect + budget -> Stage 3
-       ` unclear / broad / stale / budget -> request_replan
+       ` red / absent / invalid
+   -> [Required RCA]
+       | one scoped production defect + budget remains -> Stage 3
+       ` unclear / broad / stale / budget exhausted -> request_replan
 ```
 
 | Stage | Gate |
@@ -30,9 +30,8 @@ handoff UUIDs
 | 1. Read context | Own task, parent, deps, and file notes are loaded first. |
 | 2. Plan boundary | Production owner, intended behavior, edit boundary, and verification are concrete. |
 | 3. Implement | One production mechanism is changed with Daytona mutation tools. |
-| 4. Verify | Edited-file diagnostics and direct runtime evidence are fresh. |
-| 5. RCA | Red evidence is traced to the first wrong production mechanism. |
-| 6. Submit | The terminal tool is the final action. |
+| 4. Verify | Edited-file diagnostics and direct runtime evidence are fresh; every red, absent, or invalid result must produce RCA before any edit or replan. |
+| 5. Submit | The terminal tool is the final action. |
 
 ## Tools
 
@@ -83,7 +82,7 @@ context
 | Behavior delta | Concrete wrong value, branch, import, config, state, output, or API behavior. |
 | Edit boundary | One mechanism; adjacent files only when live evidence couples them. |
 | Verification | Exact post-edit command plus diagnostics for edited files. |
-| Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or budget risk. |
+| Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or no budget for verification plus terminal. |
 
 Tests and benchmark ids are evidence, not edit surfaces, unless the original request assigns test repair. Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
 
@@ -102,7 +101,7 @@ bounded edit plan -> prove file/symbol/rename target -> one Daytona mutation -> 
 | Third outside-scope mutation, blocked move/delete, broad change, or unclear boundary | `request_replan` with `scope_expansion`. |
 | Test edit, dependency edit, environment edit, or verification rewrite | `request_replan` with the fitting trigger. |
 
-After a red command, write a compact value table before another edit:
+After a red command, write a compact value table, then complete Stage 4 RCA before another edit:
 
 | input/state | current | expected | production rule | next action |
 | --- | --- | --- | --- | --- |
@@ -110,12 +109,12 @@ After a red command, write a compact value table before another edit:
 ## 4. Verify
 
 ```text
-Caption: evidence gate. Diagnostics and the direct runtime command are both required before success.
+Caption: evidence gate. Diagnostics and the direct runtime command are both required; failed evidence must enter RCA.
 
 post-edit repo
   -> ci_diagnostics(each edited file)
   -> daytona_shell(exact runtime command)
-  -> green/current/criteria met ? success : Stage 5
+  -> green/current/criteria met ? submit_task_success : REQUIRED RCA
 ```
 
 | Evidence | Rule |
@@ -125,11 +124,15 @@ post-edit repo
 | Exit judgment | Use tool-reported exit code and failing ids. Collection/import/no-tests/skips/xfails/missing optional deps are red for named fail-to-pass targets. |
 | Missing verification | If the required command was not run after the final edit, including due to budget, request replan. |
 | Policy block | Use `unresolved_blocker` when no valid equivalent can preserve the required evidence. |
+| Verify failure | RCA is mandatory before the next edit, `submit_task_success`, or `request_replan`. |
 
-## 5. Root Cause Analysis
+### Required RCA For Verify Failure
+
+RCA is required after every red, absent, or invalid verification result before
+another edit or `request_replan`.
 
 ```text
-Caption: red evidence loop. Trace the first wrong production mechanism before another edit.
+Caption: mandatory red evidence loop. Trace the first wrong production mechanism before any edit or replan.
 
 failing command -> failing id/error -> expected vs actual
   -> production trace -> first wrong mechanism -> fix location
@@ -153,9 +156,9 @@ RCA packet:
 | --- | --- |
 | One assigned-scope or proven adjacent production defect and enough budget | Return to Stage 3. |
 | Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, repeated red command, or tool failure | `request_replan`. |
-| Budget warning before green verification | Next tool call is `request_replan` unless already green with clean diagnostics. |
+| Budget exhausted before green verification | Use `request_replan` unless already green with clean diagnostics. |
 
-## 6. Submit Terminal Summary
+## 5. Submit Terminal Summary
 
 ```text
 Caption: terminal gate. Success is only for current, direct, passing verification.
@@ -163,7 +166,8 @@ Caption: terminal gate. Success is only for current, direct, passing verificatio
 latest required verification passed + diagnostics clean + criteria met
   -> submit_task_success({ summary })
 
-red / absent / invalid / stale / partial / blocked / broad / wrong-owner / budget-risk
+red / absent / invalid / stale / partial after Stage 4 RCA
+  or blocked / broad / wrong-owner / budget exhausted
   -> request_replan({ reason })
 ```
 
@@ -183,14 +187,15 @@ Replan reason includes:
 | Part | Required content |
 | --- | --- |
 | Trigger | First line: `replan_trigger: <scope_expansion|wrong_owner_or_role|unresolved_blocker>`. |
-| Trace | Stage 5 RCA packet embedded verbatim. |
+| Trace | Stage 4 RCA packet embedded verbatim. |
 | Last evidence | Last command or diagnostic plus failing ids. |
 | Needed decision | Owner, scope, sequence, or code path for the replanner. |
+| Remaining contract | Uncompleted parts of this task: unmet acceptance criteria, unfinished scope paths, and behavior the replanner must continue covering beyond the blocker fix. |
 
 Trigger guide:
 
 | Trigger | Use when |
 | --- | --- |
-| `scope_expansion` | Next repair is outside this lane, broad, ambiguous, or requires multiple outside-scope mutations. |
+| `scope_expansion` | Next repair is broad, ambiguous, or requires multiple outside-scope mutations. |
 | `wrong_owner_or_role` | A dependency is not done or another owner/role must act. |
 | `unresolved_blocker` | Tooling, diagnostics, budget, verification, or trace evidence is blocked with no proven different owner. |

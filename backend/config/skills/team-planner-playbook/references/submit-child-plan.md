@@ -116,5 +116,5 @@ submit_plan({
 | 2 | `deps` resolve within this payload and express output order or validator coverage. |
 | 3 | Expandable slices use `team_planner` while depth remains. |
 | 4 | At max depth, split broad work by mechanism instead of one catch-all lane. |
-| 5 | Inherited test ids and benchmark targets stay verbatim in `spec`. |
+| 5 | Inherited tests/benchmark targets stay in `spec`; production/scout paths stay exact in `scope_paths`. |
 | 6 | The final assistant action is `submit_plan(...)` with no trailing prose. |

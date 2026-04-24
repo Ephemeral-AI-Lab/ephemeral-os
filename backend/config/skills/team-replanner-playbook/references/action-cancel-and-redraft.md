@@ -29,6 +29,7 @@ same parent
 | --- | --- |
 | Cancellation proof | Each `cancel_ids` item is non-terminal and has this replanner's `parent_id`. |
 | Replacement scope | Include cancelled sibling scope only when that sibling id is in `cancel_ids`. |
+| Original-contract coverage | Every uncompleted goal, acceptance criterion, and scope item from the failed developer/validator contract maps to a new recovery child or an explicitly preserved live owner; blocker-only repair is insufficient. |
 | Children | Add only `developer` repair/diagnostic tasks and optional `validator` tasks. |
 | Dependencies | Prefer local deps; existing deps need fresh schedulable graph proof. |
 | No stale sibling left | Switch to `action-add-tasks` and submit `cancel_ids=[]`. |

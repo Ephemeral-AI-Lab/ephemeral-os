@@ -18,7 +18,7 @@ payload -> [1 Notes] -> [2 Explore] -> [3 Exact-file completion?] -> [4 Submit n
 | 1. Notes | `read_file_note(file_paths=[all assigned target_paths])` as the first tool phase. |
 | 2. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps. |
 | 3. Exact-file completion | Load `completion-contract` only for a single file or short fixed file list. |
-| 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` covering every assigned path. |
+| 4. Submit notes | One `submit_file_notes({ prompt, scoped_paths })` using the assigned path keys. |
 
 The first tool phase contains only the required `read_file_note(...)` call. Do not batch CI, source reads, diagnostics, or structure queries with it.
 
@@ -51,7 +51,7 @@ Scope | Files mapped | Entry points | Owner seam | Suggested subdivisions | Gaps
 
 | Check | Expected result |
 | --- | --- |
-| Coverage | Every assigned target appears once in `scoped_paths`. |
+| Coverage | Every assigned target appears once in `scoped_paths`; directory targets stay directory keys and fixed-file targets stay exact files. |
 | Multi-path prompt | Path-labeled findings that stand alone when read back. |
 | Scope honesty | Missing/no-symbol/off-policy/adjacent hypotheses stay explicit. |
 | Terminal action | Exactly one `submit_file_notes(...)`; findings are not left only in prose. |

@@ -6,7 +6,8 @@ This guide governs `team-replanner-playbook` and its companion references under
 The replanner is the team harness recovery coordinator. It does not repair code
 directly. It reads the failed lane, preserves live work, cancels stale work only
 when justified, and submits the smallest corrective DAG that lets TaskCenter
-resume scheduling safely.
+resume scheduling safely while still covering the failed lane's original
+contract.
 
 ## Harness Role
 
@@ -41,6 +42,7 @@ TaskCoordinator
 | Preserve graph integrity | Treat TaskCenter as graph owner; submit only `submit_replan(...)`. |
 | Coordinate team work | Keep valid live siblings, cancel stale siblings, and add repair/validation lanes. |
 | Convert evidence to tasks | Turn failed summaries, root-cause traces, notes, and graph state into executable child tasks. |
+| Preserve original contract | Cover the failed developer/validator goal, criteria, and required evidence after the blocker is fixed. |
 | Avoid code repair | Diagnose only enough to plan recovery; do not patch files. |
 | Unblock dependents | Produce the recovery gate that downstream rewired tasks can wait on. |
 
@@ -97,6 +99,7 @@ state: what failed, what still matters, and what must not be disturbed.
 | --- | --- |
 | Own replanner task | Defines this recovery lane and prompt-provided ids. |
 | Failed task | Carries root-cause trace, failure reason, scope paths, and attempted verification. |
+| Original contract | The failed task's goal, detail, acceptance criteria, scope paths, and uncompleted work. |
 | Parent task | Defines sibling region and inherited objective. |
 | Dependencies | Reveal upstream work this recovery must preserve or depend on. |
 | Task graph | Shows live, terminal, stale, and downstream nodes. |
@@ -111,6 +114,7 @@ Caption: evidence ledger. Recovery plans should not treat gaps as facts.
 failed task
   |-- verified evidence: command, exit, trace, mechanism, fix location
   |-- unresolved gaps: owner, rule, value mapping, missing path
+  |-- original contract: assigned goal, criteria, scope, uncompleted work
   |-- live siblings: still useful or terminal work
   `-- stale siblings: superseded non-terminal work in cancellation region
 ```
@@ -196,12 +200,17 @@ same parent:
 ## Design Corrective DAG
 
 Corrective DAGs should be small, executable, and tied to the failed evidence.
+They are not blocker-only patches: because the failed origin remains terminal at
+`request_replan`, the new DAG must also own any uncompleted part of that
+origin's developer/validator contract unless a preserved live sibling already
+owns it.
 
 | Task shape | Use |
 | --- | --- |
 | Repair developer | One owner, one mechanism, clear scope, exact acceptance criteria. |
+| Continuation developer | Remaining original implementation work that becomes possible after the blocker repair. |
 | Diagnostic developer | A bounded production investigation that must produce a code repair or precise blocker. |
-| Validator | Same-payload verification of all recovery producers. |
+| Validator | Same-payload verification of all recovery producers and original failed-task criteria. |
 | Existing dependency | Only when the existing task is schedulable and does not already depend on the replanner/origin pair. |
 
 ```text
@@ -232,7 +241,7 @@ Task specs should include:
 | --- | --- |
 | `goal` | One clear recovery outcome. |
 | `detail` | Failed evidence, root-cause trace, owner boundary, scope, and preserved uncertainty. |
-| `acceptance_criteria` | Exact commands, diagnostics, and expected behavior. |
+| `acceptance_criteria` | Exact commands, diagnostics, expected behavior, and original-task criteria still requiring proof. |
 | `deps` | Local recovery ordering or valid existing schedulable dependency. |
 | `scope_paths` | Production owner paths, not benchmark/test ownership unless explicitly assigned. |
 
@@ -244,6 +253,7 @@ Before `submit_replan(...)`, load and apply the terminal contract reference.
 | --- | --- |
 | `new_tasks` | Non-empty, all direct recovery children of the replanner by runtime insertion. |
 | `agent` | Only `developer` or `validator`. |
+| Original-contract coverage | The blocker fix plus every uncompleted original criterion is owned by a new task or preserved live owner. |
 | `cancel_ids` | Only stale non-terminal direct siblings; never the failed origin or replanner. |
 | Dependencies | Local new-task ids or allowed existing schedulable ids only. |
 | Spec | Structured `goal`, `detail`, and `acceptance_criteria` are non-empty. |
@@ -272,5 +282,6 @@ stages, split it or move the shared rule back into the playbook body.
 | Diagnostics | Scout fanout answers trace gaps with objective-based prompts and bounded depth. |
 | Cancellation | `cancel_ids` can name only stale non-terminal direct siblings. |
 | Corrective DAG | New tasks are small recovery children using only `developer` and `validator`. |
+| Original contract | Replan output covers both blocker repair and uncompleted failed-task work. |
 | Reference files | Companion references are checked, updated, split, or deleted when behavior changes. |
 | Runtime contract | Terminal submission still uses exactly one `submit_replan(...)`. |

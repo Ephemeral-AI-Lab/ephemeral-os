@@ -25,6 +25,6 @@ For multiple scoped paths, make the prompt path-labeled. Suggested subdivisions 
 
 ## Submit Shape
 
-Use one non-empty `prompt` plus the exact assigned `scoped_paths`. Do not use the old per-item note shape and do not leave findings only in visible prose.
+Use one non-empty `prompt` plus the exact assigned `scoped_paths`; do not replace a directory target with discovered child files. Do not use the old per-item note shape or leave findings only in visible prose.
 
 If the tool returns and a final response is required, reply only `Posted.`

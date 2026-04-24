@@ -11,8 +11,8 @@ one traced mechanism, verify with fresh evidence, then choose exactly one
 terminal outcome.
 
 ```text
-Caption: developer route. Plan first, trace red evidence, then submit success
-only when the latest verification is green.
+Caption: developer route. Plan first, verify fresh evidence, and run required
+RCA for every verification failure.
 
 handoff + notes
   |
@@ -28,7 +28,7 @@ handoff + notes
   |-- green + current + criteria met ------> submit_task_success(...)
   |
   v
-[Root cause analysis]
+[Required RCA]
   |-- one scoped production defect --------> implement next bounded fix
   `-- unclear / broad / stale / budget ----> request_replan(...)
 ```
@@ -48,8 +48,9 @@ a compact checklist, not a long narrative.
 
 ## Root Cause Analysis
 
-RCA is required before another edit after red verification. The packet should be
-short enough for a replanner to act on if the lane exits.
+RCA is required after every red, absent, or invalid verification result before
+another edit or `request_replan`. The packet should be short enough for a
+replanner to act on if the lane exits.
 
 ```text
 Caption: RCA packet. Trace from command failure to the first wrong production
@@ -123,7 +124,7 @@ outside-scope change should replan.
 | Check | Expected result |
 | --- | --- |
 | Developer plan | Guidance requires a production owner, edit boundary, exact verification, and pre-edit replan check. |
-| Developer RCA | Red evidence is traced to the first wrong production mechanism before another edit or replan. |
+| Developer RCA | Every verification failure is traced to the first wrong production mechanism before another edit or replan. |
 | Replan path | Blockers, budget exhaustion, and broad scope changes exit through `request_replan`. |
 | Success path | `submit_task_success` requires current green verification and clean diagnostics. |
 | Reference files | Companion `references/` files are checked, updated, split, or deleted when playbook behavior changes. |

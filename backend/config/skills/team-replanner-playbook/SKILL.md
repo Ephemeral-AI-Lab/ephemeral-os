@@ -5,7 +5,7 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 # Team Replanner Playbook
 
-Produce the smallest corrective DAG justified by failed-task evidence. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
+Produce the smallest corrective DAG justified by failed-task evidence and the failed task's original contract. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
 
 Replanner-created tasks use only `developer` repair lanes and `validator` verification lanes. The replanner coordinates recovery; it does not patch code or create planner/scout/replanner children.
 
@@ -32,7 +32,7 @@ Caption: replanner recovery path. References load only inside the action or subm
 | --- | --- |
 | 1. Load recovery context | Failed-task evidence vs gaps, graph structure, sibling states. |
 | 2. Classify failure | `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>` plus diagnostics decision when needed. |
-| 3. Act | Corrective mapping and add-only vs cancel-redraft decision. |
+| 3. Act | Corrective mapping, original-contract coverage, and add-only vs cancel-redraft decision. |
 | 4. Submit | Schema-valid `submit_replan({ new_tasks, cancel_ids })`. |
 
 ## 1. Load Recovery Context
@@ -52,6 +52,7 @@ Caption: evidence ledger. Recovery plans should not treat gaps as facts.
 failed task
   |-- verified: command, exit, trace, mechanism, candidate fix
   |-- unresolved: owner, rule, value mapping, missing path
+  |-- original contract: assigned goal, criteria, scope, uncompleted work
   |-- live siblings: useful work to preserve
   `-- stale siblings: non-terminal direct siblings that may be cancelled
 ```
@@ -135,7 +136,7 @@ same parent:
 | Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, or outside the stale region. |
 | Preserve live useful work | Objective remains valid after corrective work. |
 
-Map every named failing variant to a repair/diagnostic task or an explicitly preserved live repair owner. Drop benchmark/test-edit, skip/xfail, pytest-config, doc-only, and value-rule contradiction candidates.
+Map every named failing variant to a repair/diagnostic task or an explicitly preserved live repair owner. Because the original task becomes terminal after `request_replan`, also map every uncompleted part of the failed developer/validator contract to a new recovery child or to an explicitly preserved live owner. A blocker-only fix is insufficient when it would leave the failed task's original goal, acceptance criteria, or validation evidence uncovered. Drop benchmark/test-edit, skip/xfail, pytest-config, doc-only, and value-rule contradiction candidates.
 
 ## 4. Submit
 

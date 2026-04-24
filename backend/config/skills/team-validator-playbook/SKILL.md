@@ -15,13 +15,13 @@ Caption: validator route. Direct evidence comes first; red evidence either gets 
 validation UUIDs
   -> [1 Read context]
   -> [2 Map criteria to evidence]
-       | invalid handoff / wrong owner / budget risk -> request_replan
+       | invalid handoff / wrong owner / budget exhausted -> request_replan
   -> [3 Run diagnostics + exact command]
        | green -> submit_task_success
        ` red / invalid / absent -> [4 Analyze red evidence]
   -> [4 Analyze red evidence]
        | obvious local correction -> [5 Apply one correction]
-       ` blocker / outside scope / broad / budget -> request_replan
+       ` blocker / broad / budget exhausted -> request_replan
   -> [5 Apply one correction] -> fresh Stage 3 evidence
 ```
 
@@ -42,7 +42,7 @@ validation UUIDs
 | Read file notes | `read_file_note(file_paths=[...])` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
 | Run verification | `daytona_shell(command="...")` |
-| Apply one correction | `daytona_edit_file(...)` or `daytona_write_file(...)` |
+| Apply one correction | `daytona_edit_file(...)`, `daytona_write_file(...)`, `daytona_delete_file(...)`, or `daytona_move_file(...)` |
 | Terminal success | `submit_task_success({ summary: string })` |
 | Terminal replan | `request_replan({ reason: string })` |
 
@@ -54,7 +54,7 @@ validation UUIDs
 | Verification integrity | Do not skip, xfail, rewrite verification, change pytest config, install packages, or use warning/plugin overrides to turn a command green. |
 | Test files | Treat tests as evidence unless this task explicitly owns a test-only bug. |
 | Evidence freshness | Stale, partial, indirect, duplicate-equivalent, wrapper, or missing evidence is red. |
-| Correction scope | One correction only; outside-scope, move/delete, multi-file, or repeated correction paths go to replan. |
+| Correction scope | One correction only; single light write/move/delete can continue, while broad or repeated correction paths go to replan. |
 
 ## 1. Read Context
 
@@ -81,7 +81,7 @@ criteria -> exact command first -> diagnostics -> optional public-surface guardr
 | Exact command | Run the required command before substitutes, broad suites, or narrowed confirmation. |
 | Diagnostics | Name owned or touched production files for `ci_diagnostics`. |
 | Guardrail | Add one nearby public-surface guardrail only when the touched surface affects public output. |
-| Replan check | Dependency not done, missing handoff, wrong owner, no valid evidence path, budget risk, or correction outside assigned surface. |
+| Replan check | Dependency not done, missing handoff, wrong owner, no valid evidence path, no budget for verification plus terminal, or broad correction. |
 
 Acceptance criteria and test outcomes do not expand `scope_paths` by themselves. A new production file is valid only when live production evidence proves the missing module, shim, bridge, serializer, or re-export and no worker owns it.
 
@@ -103,7 +103,7 @@ validation plan
 | Exact command | Use the raw required command first. Exit 4, zero collected items, missing named nodes, skips, xfails, imports, or missing optional deps are red for named targets. |
 | Invalid overrides | Warning suppression, plugin disabling, or pytest-config overrides are invalid unless this task owns pytest config. |
 | Policy block | Use `unresolved_blocker` when no valid equivalent preserves the evidence. |
-| Budget warning | The next tool call is terminal; choose success only if green evidence and diagnostics already exist. |
+| Budget exhausted | Use `request_replan` unless green evidence and diagnostics already exist. |
 
 ## 4. Analyze Red Evidence
 
@@ -132,7 +132,7 @@ Root-cause packet:
 | Boundary | Route |
 | --- | --- |
 | Obvious local defect in owned/touched production surface | Stage 5 correction. |
-| Outside scope, another role, broad design, missing handoff, ambiguous cause, tooling block, or budget warning without green evidence | `request_replan`. |
+| Broad outside scope, another role, broad design, missing handoff, ambiguous cause, tooling block, or exhausted budget without green evidence | `request_replan`. |
 | Same command stays red after one correction without a new local defect | `request_replan`. |
 
 ## 5. Apply One Scoped Correction
@@ -146,8 +146,8 @@ local correction -> allowed target? -> one Daytona mutation -> notes/diagnostics
 | Correction gate | Route |
 | --- | --- |
 | Existing file inside assigned `scope_paths` or dependency-touched production file | One `daytona_edit_file`. |
-| Proven new production file | One `daytona_write_file`. |
-| Existing-file outside scope, blocked expansion, move/delete, test edit, broad refactor, second correction, or multiple outside-scope edits | `request_replan` with `scope_expansion` or fitting trigger. |
+| Proven new production file, or one light outside-scope write/move/delete tied to the same mechanism | Apply once and record it in the terminal payload. |
+| Blocked expansion, test edit, broad refactor, second correction, or multiple outside-scope edits | `request_replan` with `scope_expansion` or fitting trigger. |
 
 ## 6. Submit Terminal Summary
 
@@ -157,7 +157,7 @@ Caption: terminal gate. Success is only for fresh green evidence mapped to every
 all criteria green + diagnostics clean
   -> submit_task_success({ summary })
 
-any red / invalid / missing / stale / partial / blocked / budget-risk
+any red / invalid / missing / stale / partial / blocked / budget exhausted
   -> request_replan({ reason })
 ```
 
@@ -183,11 +183,12 @@ Replan reason includes:
 | Failing ids | Test ids, diagnostic ids, or `none available`. |
 | Output snippet | Shortest useful output and minimal reproduction. |
 | Replanner decision | Owner, scope, sequence, budget, or design decision needed. |
+| Remaining contract | Acceptance criteria still unverified, owned/touched files still unchecked, and validation gaps the replanner must continue covering beyond the blocker fix. |
 
 Trigger guide:
 
 | Trigger | Use when |
 | --- | --- |
-| `scope_expansion` | Verified repair is outside assigned scope, broad, or requires multiple/out-of-scope edits. |
+| `scope_expansion` | Verified repair is broad, ambiguous, or requires multiple outside-scope mutations. |
 | `wrong_owner_or_role` | Another agent role, dependency, or production owner must act first. |
 | `unresolved_blocker` | Verification, diagnostics, tooling, budget, or root-cause tracing is blocked without proven different owner. |
