@@ -466,7 +466,7 @@ async def test_apply_replan_atomic_inserts_children_at_replanner_depth(monkeypat
         specs=[
             TaskDefinition(
                 id="same-depth-repair",
-                objective=_spec("Repair at replanner depth."),
+                spec=_spec("Repair at replanner depth."),
                 agent="developer",
                 description="repair",
                 scope_paths=["src/parser.py"],
@@ -503,7 +503,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
                 team_run_id="run-1",
                 agent_name="developer",
                 status=TaskStatus.REQUEST_REPLAN,
-                objective="1. Goal: Fix the parser.",
+                spec=_spec("Fix the parser."),
                 description="Original detailed task description.",
                 deps=["dep"],
                 scope_paths=["src/parser.py"],
@@ -517,7 +517,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
                 team_run_id="run-1",
                 agent_name="team_replanner",
                 status=TaskStatus.READY,
-                objective="Replan failed parser task.",
+                spec=_spec("Replan failed parser task."),
                 scope_paths=["src/parser.py"],
                 parent_id="parent",
                 root_id="root",
@@ -535,7 +535,7 @@ async def test_replanner_context_includes_root_cause_trace_and_rewired_dependent
 
     assert "## Replan root cause trace" in context
     assert "Original task: failed" in context
-    assert "1. Goal: Fix the parser." in context
+    assert "Fix the parser." in context
     assert "Original detailed task description." in context
     assert "replan_requested: parser failure" in context
     assert "downstream (pending); deps: replanner" in context
@@ -557,7 +557,7 @@ async def test_parent_summarizer_context_skips_replanner_failure_trace():
                 team_run_id="run-1",
                 agent_name="parent_summarizer",
                 status=TaskStatus.READY,
-                objective="Summarize parent task after children finish.",
+                spec=_spec("Summarize parent task after children finish."),
                 parent_id="parent",
                 root_id="root",
                 depth=1,

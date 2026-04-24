@@ -459,7 +459,14 @@ async def run_sweevo_team(
     await tr.start_with_team_definition(
         team_def,
         payload={
-            "objective": "Produce the initial root plan for this SWE-EVO benchmark instance.",
+            "spec": {
+                "goal": "Produce the initial root plan for this SWE-EVO benchmark instance.",
+                "detail": root_prompt,
+                "acceptance_criteria": (
+                    "Submit a valid child plan covering the benchmark instance "
+                    "repair and verification work."
+                ),
+            },
             "prompt": root_prompt,
             "instance_id": instance.instance_id, "repo": instance.repo,
             "repo_dir": repo_dir, "test_cmds": instance.test_cmds,

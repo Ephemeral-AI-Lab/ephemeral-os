@@ -48,7 +48,7 @@ _UNSUPPORTED_LEGACY_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
         "task",
         "text",
         "Legacy tasks.task columns are no longer auto-migrated. "
-        "Backfill objective/description and drop the legacy task column "
+        "Backfill spec/description and drop the legacy task column "
         "before starting EphemeralOS.",
     ),
 )

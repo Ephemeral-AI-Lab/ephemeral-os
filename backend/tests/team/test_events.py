@@ -14,7 +14,11 @@ def _task() -> Task:
         team_run_id="run-1",
         definition=TaskDefinition(
             id="task-1",
-            objective="repair shared import",
+            spec={
+                "goal": "repair shared import",
+                "detail": "Repair the shared import compatibility path.",
+                "acceptance_criteria": "Run the focused import tests.",
+            },
             agent="developer",
             deps=["dep-1"],
             scope_paths=["pkg/_compat.py"],
@@ -38,8 +42,8 @@ def test_task_serialization_round_trip_preserves_task_fields():
     assert restored.agent_run_id == "agent-run-1"
 
 
-def test_task_from_dict_requires_objective():
-    with pytest.raises(ValueError, match="Task payload requires a non-empty 'objective'"):
+def test_task_from_dict_requires_spec():
+    with pytest.raises(ValueError, match="Task payload requires a non-empty 'spec'"):
         task_from_dict(
             {
                 "id": "task-1",

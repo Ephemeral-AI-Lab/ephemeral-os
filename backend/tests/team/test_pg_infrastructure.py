@@ -20,6 +20,15 @@ from team.persistence.task_record import TaskRecord
 from team.runtime.task_queue import TaskQueue
 from team.task_center import TaskCenter
 
+
+def _spec(goal: str) -> dict[str, str]:
+    return {
+        "goal": goal,
+        "detail": f"Detail for {goal}",
+        "acceptance_criteria": f"Acceptance for {goal}",
+    }
+
+
 # ---------------------------------------------------------------------------
 # ltree_utils
 # ---------------------------------------------------------------------------
@@ -93,12 +102,12 @@ class TestTaskRecord:
 
     def test_explicit_status(self):
         r = TaskRecord(
-            id="t1", team_run_id="r1", agent_name="dev", objective="do stuff", status="pending"
+            id="t1", team_run_id="r1", agent_name="dev", spec=_spec("do stuff"), status="pending"
         )
         assert r.status == "pending"
 
     def test_explicit_deps(self):
-        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="x", deps=["a"])
+        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", spec=_spec("x"), deps=["a"])
         assert r.deps == ["a"]
 
     def test_status_column_is_unbounded_text(self):
@@ -232,14 +241,14 @@ def test_detached_expandable_parent_awaits_summary_instead_of_failing(
         team_run_id="run-1",
         agent_name="team_planner",
         status=TaskStatus.EXPANDED,
-        objective="parent",
+        spec=_spec("parent"),
     )
     child = Task(
         id="child",
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.CANCELLED,
-        objective="child",
+        spec=_spec("child"),
         parent_id="parent",
     )
     tc.store.graph = {"parent": parent, "child": child}

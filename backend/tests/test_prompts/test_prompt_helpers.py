@@ -34,6 +34,14 @@ from prompt.helpers import (  # noqa: E402
 from prompt.prompt_cli import _render_team_prompt_report  # noqa: E402
 
 
+def _spec(goal: str) -> dict[str, str]:
+    return {
+        "goal": goal,
+        "detail": f"Detail for {goal}",
+        "acceptance_criteria": f"Acceptance for {goal}",
+    }
+
+
 def test_build_team_user_prompt_report_uses_runtime_context_path(tmp_path: Path) -> None:
     register_builtins()
     team_def = TeamDefinition(
@@ -258,7 +266,7 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
         team_run_id="run-1",
         agent_name="team_planner",
         status=TaskStatus.DONE,
-        objective="Fix retry behavior.",
+        spec=_spec("Fix retry behavior."),
         root_id="root",
         depth=0,
     )
@@ -267,7 +275,7 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.READY,
-        objective="Implement the retry fix.",
+        spec=_spec("Implement the retry fix."),
         deps=["root"],
         scope_paths=["backend/src/retry.py"],
         parent_id="root",

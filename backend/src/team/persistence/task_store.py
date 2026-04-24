@@ -19,7 +19,6 @@ from team.models import (
     TaskSpec,
     TaskStatus,
     _utcnow,
-    render_task_spec,
 )
 from team.persistence import task_queries as q
 from team.persistence.ltree_utils import path_to_ltree
@@ -46,7 +45,7 @@ def record_to_task(rec: TaskRecord) -> Task:
         team_run_id=rec.team_run_id,
         definition=TaskDefinition(
             id=rec.id,
-            spec=rec.spec or TaskSpec.from_legacy_objective(rec.legacy_objective),
+            spec=rec.spec,
             agent=rec.agent_name,
             description=rec.description or "",
             deps=list(rec.deps) if rec.deps else [],
@@ -272,8 +271,13 @@ class TaskStore:
                 id=summary_id,
                 team_run_id=self._team_run_id,
                 agent_name=summarizer_agent,
-                spec=TaskSpec.from_legacy_objective(summary_prompt).to_dict(),
-                legacy_objective=summary_prompt,
+                spec=TaskSpec(
+                    goal=f"Summarize parent task {parent_task.id}.",
+                    detail=summary_prompt,
+                    acceptance_criteria=(
+                        "Submit a concise outcome summary for the parent task."
+                    ),
+                ).to_dict(),
                 status="ready",
                 deps=[],
                 scope_paths=scope_paths,
@@ -549,7 +553,6 @@ class TaskStore:
                 team_run_id=self._team_run_id,
                 agent_name=replanner_agent,
                 spec=replan_spec.to_dict(),
-                legacy_objective=render_task_spec(replan_spec),
                 status="ready",
                 deps=[],
                 scope_paths=scope_paths,

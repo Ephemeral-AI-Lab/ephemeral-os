@@ -17,7 +17,7 @@ def make_task(
         team_run_id="run-1",
         definition=TaskDefinition(
             id=task_id,
-            objective=f"task {task_id}",
+            spec=structured_spec(f"task {task_id}"),
             agent=agent_name,
             deps=deps or [],
         ),
@@ -37,7 +37,7 @@ def structured_spec(
     scope: str | None = None,
     context: str | None = None,
     acceptance: str = "Submit the appropriate terminal outcome.",
-) -> str:
+) -> dict[str, str]:
     if task_details is None:
         detail_parts = [
             environment or "Use the current repository workspace and configured team runtime.",
@@ -46,8 +46,8 @@ def structured_spec(
         if context:
             detail_parts.append(context)
         task_details = " ".join(detail_parts)
-    return (
-        f"1. Goal: {goal}\n"
-        f"2. Task Details: {task_details}\n"
-        f"3. Acceptance Criteria: {acceptance}"
-    )
+    return {
+        "goal": goal,
+        "detail": task_details,
+        "acceptance_criteria": acceptance,
+    }

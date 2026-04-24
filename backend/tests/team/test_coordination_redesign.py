@@ -40,7 +40,7 @@ def test_build_task_metadata_enables_team_runtime_flags():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PENDING,
-        objective="implement auth",
+        spec=_spec("implement auth"),
         deps=["dep-1", "dep-2"],
         scope_paths=["src/auth"],
         depth=2,
@@ -265,7 +265,7 @@ async def test_submit_replan_rejects_empty_new_tasks_with_deeper_diagnosis_promp
         team_run_id="run-1",
         agent_name="team_replanner",
         status=TaskStatus.RUNNING,
-        objective="recover failed work",
+        spec=_spec("recover failed work"),
         parent_id="root",
     )
     ctx = ToolExecutionContext(
@@ -391,7 +391,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
         "stale": Task(
@@ -399,7 +399,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
             team_run_id="run-1",
             agent_name="developer",
             status=TaskStatus.READY,
-            objective="stale work",
+            spec=_spec("stale work"),
             parent_id="parent",
         ),
         "survivor": Task(
@@ -407,7 +407,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
             team_run_id="run-1",
             agent_name="validator",
             status=TaskStatus.EXPANDED,
-            objective="validate",
+            spec=_spec("validate"),
             deps=[],
             parent_id="parent",
         ),
@@ -502,7 +502,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -545,7 +545,7 @@ async def test_submit_replan_rejects_planner_agent_targets():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -589,7 +589,7 @@ async def test_submit_replan_rejects_subagent_targets():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -632,7 +632,7 @@ async def test_submit_replan_requires_diagnostics_decision_for_unresolved_blocke
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -686,7 +686,7 @@ async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
             depth=1,
         ),
@@ -733,7 +733,7 @@ async def test_submit_replan_rejects_plan_size_overflow():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -782,7 +782,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
             team_run_id="run-1",
             agent_name="team_replanner",
             status=TaskStatus.READY,
-            objective="recover",
+            spec=_spec("recover"),
             parent_id="parent",
         ),
     }
@@ -828,7 +828,7 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
         team_run_id="run-1",
         agent_name="team_planner",
         status=TaskStatus.EXPANDED_AWAITING_SUMMARY,
-        objective="Plan retry work.",
+        spec=_spec("Plan retry work."),
         depth=0,
         root_id="planner-parent",
     )
@@ -837,7 +837,7 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.DONE,
-        objective=_spec("Repair retry owner."),
+        spec=_spec("Repair retry owner."),
         parent_id="planner-parent",
         root_id="planner-parent",
         depth=1,
@@ -867,7 +867,7 @@ async def test_build_query_context_planner_terminal_tools():
         team_run_id="run-1",
         agent_name="team_planner",
         status=TaskStatus.READY,
-        objective="plan work",
+        spec=_spec("plan work"),
     )
     task_center = _AsyncTaskCenterStub()
     team_run = SimpleNamespace(
@@ -900,7 +900,7 @@ async def test_build_query_context_parent_summarizer_terminal_tools():
         team_run_id="run-1",
         agent_name="parent_summarizer",
         status=TaskStatus.READY,
-        objective="summarize parent task",
+        spec=_spec("summarize parent task"),
         fired_by_task_id="planner-parent",
     )
     task_center = _AsyncTaskCenterStub()
@@ -940,7 +940,7 @@ async def test_build_query_context_uses_agent_terminal_tools_for_developer():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.READY,
-        objective="implement retry handling",
+        spec=_spec("implement retry handling"),
     )
     task_center = _AsyncTaskCenterStub()
     team_run = SimpleNamespace(
@@ -973,7 +973,7 @@ async def test_build_query_context_requires_agent_terminal_tools_without_role_fa
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.READY,
-        objective="implement retry handling",
+        spec=_spec("implement retry handling"),
     )
     task_center = _AsyncTaskCenterStub()
     team_run = SimpleNamespace(

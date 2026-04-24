@@ -96,10 +96,6 @@ class Note:
 # ---------------------------------------------------------------------------
 
 
-_LEGACY_SPEC_DEFAULT_DETAIL = "Legacy task detail was not provided."
-_LEGACY_SPEC_DEFAULT_ACCEPTANCE = "Legacy acceptance criteria were not provided."
-
-
 def _non_blank(value: object, *, field_name: str) -> str:
     text = str(value or "").strip()
     if not text:
@@ -132,57 +128,12 @@ class TaskSpec:
             acceptance_criteria=data.get("acceptance_criteria"),
         )
 
-    @classmethod
-    def from_legacy_objective(cls, objective: object) -> "TaskSpec":
-        text = str(objective or "").strip()
-        if not text:
-            raise ValueError("TaskSpec requires a non-empty 'goal'")
-        parsed = _parse_legacy_structured_spec(text)
-        if parsed is not None:
-            return parsed
-        return cls(
-            goal=text,
-            detail=_LEGACY_SPEC_DEFAULT_DETAIL,
-            acceptance_criteria=_LEGACY_SPEC_DEFAULT_ACCEPTANCE,
-        )
-
     def to_dict(self) -> dict[str, str]:
         return {
             "goal": self.goal,
             "detail": self.detail,
             "acceptance_criteria": self.acceptance_criteria,
         }
-
-
-def _parse_legacy_structured_spec(text: str) -> TaskSpec | None:
-    import re
-
-    label_re = re.compile(
-        r"^\s*(?:#+\s*)?(?:\d+[.)]\s*)?"
-        r"(Goal|Task Details|Detail|Acceptance Criteria)\s*:\s*(.*)$",
-        re.IGNORECASE,
-    )
-    sections: dict[str, list[str]] = {}
-    current: str | None = None
-    for line in text.splitlines():
-        match = label_re.match(line)
-        if match:
-            label = match.group(1).lower()
-            current = "detail" if label in {"task details", "detail"} else label.replace(" ", "_")
-            sections.setdefault(current, [])
-            first_line = match.group(2).strip()
-            if first_line:
-                sections[current].append(first_line)
-            continue
-        if current is not None:
-            sections.setdefault(current, []).append(line)
-
-    goal = "\n".join(sections.get("goal", [])).strip()
-    detail = "\n".join(sections.get("detail", [])).strip()
-    acceptance = "\n".join(sections.get("acceptance_criteria", [])).strip()
-    if not (goal and detail and acceptance):
-        return None
-    return TaskSpec(goal=goal, detail=detail, acceptance_criteria=acceptance)
 
 
 def render_task_spec(spec: TaskSpec, *, status_label: str | None = None) -> str:
@@ -415,9 +366,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'agent'")
     try:
         raw_spec = it.get("spec")
-        if raw_spec is None and it.get("objective") is not None:
-            spec = TaskSpec.from_legacy_objective(it.get("objective"))
-        elif isinstance(raw_spec, TaskSpec):
+        if isinstance(raw_spec, TaskSpec):
             spec = raw_spec
         elif isinstance(raw_spec, Mapping):
             spec = TaskSpec.from_mapping(raw_spec)

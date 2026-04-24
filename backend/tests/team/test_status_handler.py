@@ -33,12 +33,15 @@ def _task(
     agent_name: str = "developer",
     fired_by_task_id: str | None = None,
 ) -> Task:
+    spec = {
+        "goal": "do something",
+        "detail": "Do the assigned work.",
+        "acceptance_criteria": "Submit the terminal outcome.",
+    }
     return Task(
         id=task_id,
         team_run_id="run-1",
-        definition=TaskDefinition(
-            id=task_id, objective="do something", agent=agent_name
-        ),
+        definition=TaskDefinition(id=task_id, spec=spec, agent=agent_name),
         status=status,
         fired_by_task_id=fired_by_task_id,
     )
@@ -274,8 +277,24 @@ async def test_expanded_with_plan_calls_mark_expanded_and_enqueues_ready_childre
 
     plan = Plan(
         tasks=[
-            TaskDefinition(id=child_a, objective="task a", agent="developer"),
-            TaskDefinition(id=child_b, objective="task b", agent="developer"),
+            TaskDefinition(
+                id=child_a,
+                spec={
+                    "goal": "task a",
+                    "detail": "Do task a.",
+                    "acceptance_criteria": "Submit the terminal outcome.",
+                },
+                agent="developer",
+            ),
+            TaskDefinition(
+                id=child_b,
+                spec={
+                    "goal": "task b",
+                    "detail": "Do task b.",
+                    "acceptance_criteria": "Submit the terminal outcome.",
+                },
+                agent="developer",
+            ),
         ]
     )
 

@@ -13,6 +13,7 @@ from team.models import (
     SubmittedSummary,
     Task,
     TaskDefinition,
+    TaskSpec,
     TaskStatus,
     TaskStatusUpdate,
     TERMINAL_STATUSES,
@@ -23,6 +24,14 @@ from config.defaults import (
     DEFAULT_MAX_PLAN_SIZE,
     DEFAULT_MAX_REPLANS_PER_RUN,
 )
+
+
+def _spec(goal: str = "do work") -> dict[str, str]:
+    return {
+        "goal": goal,
+        "detail": f"Detail for {goal}",
+        "acceptance_criteria": f"Acceptance for {goal}",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -59,14 +68,21 @@ def test_note_defaults():
 
 
 def test_taskspec_creation_with_required_fields():
-    spec = TaskDefinition(id="t1", objective="do work", agent="developer")
-    assert spec.id == "t1"
-    assert spec.objective == "do work"
-    assert spec.agent == "developer"
+    spec = TaskSpec(goal="do work", detail="own src/app.py", acceptance_criteria="run tests")
+    assert spec.goal == "do work"
+    assert spec.detail == "own src/app.py"
+    assert spec.acceptance_criteria == "run tests"
+
+
+def test_task_definition_creation_with_required_fields():
+    task_def = TaskDefinition(id="t1", spec=_spec("do work"), agent="developer")
+    assert task_def.id == "t1"
+    assert task_def.spec.goal == "do work"
+    assert task_def.agent == "developer"
 
 
 def test_taskspec_defaults():
-    spec = TaskDefinition(id="t1", objective="do work", agent="developer")
+    spec = TaskDefinition(id="t1", spec=_spec("do work"), agent="developer")
     assert spec.deps == []
     assert spec.scope_paths == []
 
@@ -74,7 +90,7 @@ def test_taskspec_defaults():
 def test_taskspec_with_all_fields():
     spec = TaskDefinition(
         id="t2",
-        objective="verify",
+        spec=_spec("verify"),
         agent="validator",
         deps=["t1"],
         scope_paths=["src/auth/"],
@@ -88,8 +104,8 @@ def test_plan_from_dict_reports_invalid_task_index_for_missing_id():
         Plan.from_dict(
             {
                 "tasks": [
-                    {"id": "ok", "objective": "do work", "agent": "developer"},
-                    {"objective": "missing id", "agent": "developer"},
+                    {"id": "ok", "spec": _spec("do work"), "agent": "developer"},
+                    {"spec": _spec("missing id"), "agent": "developer"},
                 ]
             }
         )
@@ -100,17 +116,17 @@ def test_replan_from_dict_reports_non_object_index():
         ReplanPlan.from_dict(
             {
                 "add_tasks": [
-                    {"id": "ok", "objective": "do work", "agent": "developer"},
+                    {"id": "ok", "spec": _spec("do work"), "agent": "developer"},
                     "not-a-task",
                 ]
             }
         )
 
 
-def test_plan_from_dict_requires_objective():
+def test_plan_from_dict_requires_spec():
     with pytest.raises(
         ValueError,
-        match=r"tasks\[0\]: TaskDefinition 't1' requires a non-empty 'objective'",
+        match=r"tasks\[0\]: TaskDefinition 't1' requires a non-empty 'spec'",
     ):
         Plan.from_dict(
             {
@@ -130,21 +146,21 @@ def test_task_creation_with_required_fields():
     task = Task(
         id="x",
         team_run_id="run-1",
-        definition=TaskDefinition(id="x", objective="implement feature", agent="developer"),
+        definition=TaskDefinition(id="x", spec=_spec("implement feature"), agent="developer"),
         status=TaskStatus.PENDING,
     )
     assert task.id == "x"
     assert task.team_run_id == "run-1"
     assert task.definition.agent == "developer"
     assert task.status == TaskStatus.PENDING
-    assert task.definition.objective == "implement feature"
+    assert task.definition.spec.goal == "implement feature"
 
 
 def test_task_defaults():
     task = Task(
         id="x",
         team_run_id="run-1",
-        definition=TaskDefinition(id="x", objective="do it", agent="developer"),
+        definition=TaskDefinition(id="x", spec=_spec("do it"), agent="developer"),
         status=TaskStatus.PENDING,
     )
     assert task.definition.deps == []
@@ -206,14 +222,14 @@ def test_plan_from_dict_round_trip():
         "tasks": [
             {
                 "id": "t1",
-                "objective": "implement login",
+                "spec": _spec("implement login"),
                 "agent": "developer",
                 "deps": [],
                 "scope_paths": ["src/auth/"],
             },
             {
                 "id": "t2",
-                "objective": "verify login",
+                "spec": _spec("verify login"),
                 "agent": "validator",
                 "deps": ["t1"],
                 "scope_paths": [],
@@ -227,7 +243,7 @@ def test_plan_from_dict_round_trip():
 
     t1 = plan.tasks[0]
     assert t1.id == "t1"
-    assert t1.objective == "implement login"
+    assert t1.spec.goal == "implement login"
     assert t1.agent == "developer"
     assert t1.deps == []
     assert t1.scope_paths == ["src/auth/"]
@@ -249,7 +265,7 @@ def test_plan_from_dict_missing_tasks_key():
 
 
 def test_plan_from_dict_numeric_ids_coerced_to_str():
-    data = {"tasks": [{"id": 42, "objective": "do it", "agent": "developer"}]}
+    data = {"tasks": [{"id": 42, "spec": _spec("do it"), "agent": "developer"}]}
     plan = Plan.from_dict(data)
     assert plan.tasks[0].id == "42"
 
@@ -264,7 +280,7 @@ def test_replan_plan_from_dict_round_trip():
         "add_tasks": [
             {
                 "id": "fix1",
-                "objective": "fix the bug",
+                "spec": _spec("fix the bug"),
                 "agent": "developer",
                 "deps": [],
                 "scope_paths": ["src/"],
@@ -276,7 +292,7 @@ def test_replan_plan_from_dict_round_trip():
     replan = ReplanPlan.from_dict(data)
     assert len(replan.add_tasks) == 1
     assert replan.add_tasks[0].id == "fix1"
-    assert replan.add_tasks[0].objective == "fix the bug"
+    assert replan.add_tasks[0].spec.goal == "fix the bug"
     assert replan.cancel_ids == ["old-task-1", "old-task-2"]
 
 
@@ -287,7 +303,7 @@ def test_replan_plan_from_dict_empty():
 
 
 def test_replan_plan_from_dict_defaults():
-    data = {"add_tasks": [{"id": "x", "objective": "t", "agent": "developer"}]}
+    data = {"add_tasks": [{"id": "x", "spec": _spec("t"), "agent": "developer"}]}
     replan = ReplanPlan.from_dict(data)
     assert replan.add_tasks[0].deps == []
 

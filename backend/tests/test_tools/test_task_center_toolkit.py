@@ -23,6 +23,14 @@ def _ctx(metadata=None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
 
 
+def _spec(goal: str) -> dict[str, str]:
+    return {
+        "goal": goal,
+        "detail": f"Detail for {goal}",
+        "acceptance_criteria": f"Acceptance criteria for {goal}",
+    }
+
+
 def _task(
     task_id: str,
     *,
@@ -39,7 +47,7 @@ def _task(
         team_run_id="run-1",
         definition=TaskDefinition(
             id=task_id,
-            objective=f"Objective for {task_id}",
+            spec=_spec(f"Goal for {task_id}"),
             agent=agent,
             description=description,
             deps=list(deps or []),

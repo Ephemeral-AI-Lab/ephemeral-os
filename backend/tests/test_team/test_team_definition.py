@@ -19,6 +19,14 @@ from team.runtime.services import TeamRuntimeServices
 from team.runtime.team_run import TeamRun
 
 
+def _spec(goal: str) -> dict[str, str]:
+    return {
+        "goal": goal,
+        "detail": f"Detail for {goal}",
+        "acceptance_criteria": f"Acceptance for {goal}",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -319,7 +327,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
     try:
         await run.start_with_team_definition(
             team_def,
-            payload={"objective": "Plan the requested work", "scope_paths": ["src/app.py"]},
+            payload={"spec": _spec("Plan the requested work"), "scope_paths": ["src/app.py"]},
             executor_factory=_noop_executor_factory,
         )
         assert run.status == TeamRunStatus.RUNNING
@@ -327,7 +335,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         assert run.root_task_id is not None
         root = run.task_center.graph[run.root_task_id]
         assert root.agent_name == "my_planner"
-        assert root.objective == "Plan the requested work"
+        assert root.definition.spec.goal == "Plan the requested work"
         assert root.scope_paths == ["src/app.py"]
     finally:
         await _cleanup_run(run)
@@ -346,7 +354,7 @@ async def test_start_with_team_definition_rejects_legacy_task_payload(
         roster={"planner": ["my_planner"]},
     )
     run = TeamRun(session_id="s", user_request="do stuff", services=_fake_services())
-    with pytest.raises(ValueError, match="Root payload requires a non-empty 'objective'"):
+    with pytest.raises(ValueError, match="Root payload requires a non-empty 'spec'"):
         await run.start_with_team_definition(
             team_def,
             payload={"task": "legacy prompt"},

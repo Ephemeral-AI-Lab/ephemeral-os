@@ -81,7 +81,11 @@ def _make_task(
         team_run_id="test-run-001",
         agent_name="developer",
         status=TaskStatus(status),
-        objective="fix the bug",
+        spec={
+            "goal": "fix the bug",
+            "detail": "Fix the auth bug.",
+            "acceptance_criteria": "Run auth tests.",
+        },
         scope_paths=["src/auth/"],
         parent_id=parent_id,
         root_id="root-1",
@@ -115,7 +119,21 @@ def test_translate_request_replan():
 
 
 def test_translate_plan():
-    plan = Plan.from_dict({"tasks": [{"id": "a", "objective": "o", "agent": "developer"}]})
+    plan = Plan.from_dict(
+        {
+            "tasks": [
+                {
+                    "id": "a",
+                    "spec": {
+                        "goal": "o",
+                        "detail": "d",
+                        "acceptance_criteria": "a",
+                    },
+                    "agent": "developer",
+                }
+            ]
+        }
+    )
     ctx = TeamAgentContext(tool_metadata={"resolved_plan": plan, "plan_is_replan": False})
     update = translate_tool_metadata("t1", ctx)
     assert update.status is TaskStatus.EXPANDED
@@ -125,7 +143,20 @@ def test_translate_plan():
 
 def test_translate_replan():
     replan = ReplanPlan.from_dict(
-        {"add_tasks": [{"id": "a", "objective": "o", "agent": "developer"}], "cancel_ids": ["x"]}
+        {
+            "add_tasks": [
+                {
+                    "id": "a",
+                    "spec": {
+                        "goal": "o",
+                        "detail": "d",
+                        "acceptance_criteria": "a",
+                    },
+                    "agent": "developer",
+                }
+            ],
+            "cancel_ids": ["x"],
+        }
     )
     ctx = TeamAgentContext(tool_metadata={"resolved_plan": replan, "plan_is_replan": True})
     update = translate_tool_metadata("t1", ctx)

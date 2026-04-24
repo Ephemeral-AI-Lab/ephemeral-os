@@ -163,7 +163,7 @@ async def test_expander_replan_returns_typed_outcome_and_raises_invalid_plan():
             add_tasks=[
                 TaskDefinition(
                     id="bad-child",
-                    objective=_spec("Invalid repair under original failed task."),
+                    spec=_spec("Invalid repair under original failed task."),
                     agent="developer",
                     scope_paths=["src/repair.py"],
                     parent_id="failed",
@@ -339,7 +339,7 @@ async def test_replan_expander_allows_children_at_replanner_depth_limit():
         add_tasks=[
             TaskDefinition(
                 id="same-depth-repair",
-                objective=_spec("Repair at the replanner depth limit."),
+                spec=_spec("Repair at the replanner depth limit."),
                 agent="developer",
                 description="repair at depth limit",
                 scope_paths=["src/a.py"],
@@ -380,7 +380,7 @@ async def test_replan_expander_rejects_insertion_under_original_task():
             add_tasks=[
                 TaskDefinition(
                     id="bad-child",
-                    objective=_spec("Invalid repair under original failed task."),
+                    spec=_spec("Invalid repair under original failed task."),
                     agent="developer",
                     scope_paths=["src/repair.py"],
                     parent_id="failed",
@@ -416,7 +416,7 @@ async def test_replan_expander_applies_plan_policy_to_added_tasks():
             add_tasks=[
                 TaskDefinition(
                     id="bad-replanner",
-                    objective=_spec("Invalid replanner target."),
+                    spec=_spec("Invalid replanner target."),
                     agent="team_replanner",
                     description="invalid replanner target",
                     scope_paths=["src/a.py"],
@@ -458,7 +458,7 @@ async def test_replan_expander_rejects_dep_on_rewired_downstream_task():
             add_tasks=[
                 TaskDefinition(
                     id="repair",
-                    objective=_spec("Invalidly wait for downstream work blocked on R."),
+                    spec=_spec("Invalidly wait for downstream work blocked on R."),
                     agent="developer",
                     description="invalid downstream dependency",
                     deps=["downstream"],

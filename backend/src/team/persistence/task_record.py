@@ -29,12 +29,7 @@ class TaskRecord(Base):
     team_run_id: Mapped[str] = mapped_column(Text, primary_key=True)
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
-    spec: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    legacy_objective: Mapped[str | None] = mapped_column(
-        "objective",
-        Text,
-        nullable=True,
-    )
+    spec: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     deps: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list

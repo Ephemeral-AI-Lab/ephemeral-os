@@ -32,6 +32,8 @@ def get_repo_config_dir() -> Path:
     for candidate in candidates:
         if candidate.is_dir():
             return candidate
+    if not candidates:
+        return here.parent / _REPO_CONFIG_DIR_NAME
     return candidates[0]
 
 

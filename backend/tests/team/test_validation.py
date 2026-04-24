@@ -16,14 +16,18 @@ from team.planning.validation import validate_plan
 def _spec(
     id_: str,
     agent: str = "developer",
-    objective: str = "do work",
+    goal: str = "do work",
     deps: list[str] | None = None,
     scope_paths: list[str] | None = None,
     description: str = "test task",
 ) -> TaskDefinition:
     return TaskDefinition(
         id=id_,
-        objective=objective,
+        spec={
+            "goal": goal,
+            "detail": f"Detail for {goal}",
+            "acceptance_criteria": f"Acceptance for {goal}",
+        },
         agent=agent,
         description=description,
         deps=deps or [],
@@ -113,7 +117,7 @@ def test_duplicate_task_ids_fail():
 
 
 def test_missing_agent_name_fails():
-    spec = TaskDefinition(id="t1", objective="do work", agent="")
+    spec = TaskDefinition(id="t1", spec=_spec("template").spec, agent="")
     plan = _plan(spec)
     with patch(_AGENT_EXISTS_PATH, return_value=True), \
          patch(_HAS_ROLE_PATH, return_value=False), \
@@ -270,7 +274,11 @@ def test_validator_plan_passes_without_policy_field():
     dev = _spec("dev-1")
     val = TaskDefinition(
         id="val-root",
-        objective="validate",
+        spec={
+            "goal": "validate",
+            "detail": "Validate the upstream task.",
+            "acceptance_criteria": "Report pass/fail evidence.",
+        },
         agent="validator",
         deps=["dev-1"],
     )

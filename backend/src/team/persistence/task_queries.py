@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from team.errors import GraphInvariantViolation
-from team.models import TERMINAL_STATUSES, TaskDefinition, render_task_spec
+from team.models import TERMINAL_STATUSES, TaskDefinition
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_record import TaskRecord
 
@@ -380,7 +380,6 @@ async def insert_plan_records(
                 agent_name=spec.agent,
                 status=status,
                 spec=spec.spec.to_dict(),
-                legacy_objective=render_task_spec(spec.spec),
                 description=spec.description or "",
                 deps=list(spec.deps),
                 scope_paths=list(spec.scope_paths),

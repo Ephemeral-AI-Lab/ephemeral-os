@@ -189,13 +189,8 @@ def task_from_dict(data: dict[str, Any]) -> Any:
 
     task_id = data["id"]
     spec_payload = data.get("spec")
-    legacy_objective = data.get("objective")
-    if spec_payload is None and not str(legacy_objective or "").strip():
-        raise ValueError("Task payload requires a non-empty 'spec'")
     if spec_payload is None:
-        from team.models import TaskSpec
-
-        spec_payload = TaskSpec.from_legacy_objective(legacy_objective)
+        raise ValueError("Task payload requires a non-empty 'spec'")
     return Task(
         id=task_id,
         team_run_id=data["team_run_id"],
