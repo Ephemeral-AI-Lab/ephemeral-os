@@ -84,7 +84,10 @@ class NoteManager:
         """Filter and return notes by paths, keyword, timestamp, and last_n."""
         results = list(self._notes)
         if paths:
-            results = [n for n in results if ScopePath.matches_scopes(n.paths, paths)]
+            results = [
+                n for n in results
+                if n.paths and ScopePath.matches_scopes(n.paths, paths)
+            ]
         if keyword:
             keywords = [k.strip().lower() for k in keyword.split("|") if k.strip()]
             if keywords:
