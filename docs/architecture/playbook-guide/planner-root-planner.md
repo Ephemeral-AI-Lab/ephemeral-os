@@ -11,9 +11,9 @@ not need to fully explore every unresolved slice before submitting a plan.
 ```text
 Caption: planners split boundaries, then delegate depth.
 
-request slice
-  |-- exact owner + bounded mechanism ----------> developer
-  |-- broad / matrix / unresolved boundary -----> child team_planner
+task set
+  |-- trivial exact slice ----------------------> developer
+  |-- broad / matrix / unresolved slice --------> expandable team_planner
   |-- completed producer needs same-payload check -> validator
 ```
 
@@ -23,11 +23,11 @@ task split.
 
 | Situation | Preferred action |
 | --- | --- |
-| Atomic, live-proven owner | Assign a `developer` task. |
-| Expandable or ambiguous owner | Assign a child `team_planner` when depth allows. |
-| Broad failure matrix | Split by owner family or route to child planning. |
-| Scout would change routing | Launch a small scout wave, usually 1-3 owner families. |
-| Scout would only chase details | Preserve uncertainty in the child task spec. |
+| Trivial or atomic, live-proven owner | Assign a `developer` task. |
+| Expandable or ambiguous owner | Use scout evidence to split the boundary, then assign that slice as expandable `team_planner` work when depth allows. |
+| Broad failure matrix in a mixed set | Launch boundary-focused scouts, then split broad slices by owner family and preserve atomic siblings. |
+| Scout would change routing | Launch a small owner-family scout wave. |
+| Scout would only chase details | Preserve uncertainty in the expandable task spec. |
 
 ## DAG Level Size
 
@@ -39,13 +39,13 @@ many that each task is just a thin wrapper around one assertion or file.
 | --- | --- |
 | One owner, one mechanism, bounded verification | Atomic `developer` task. |
 | One completed producer needs independent evidence | Atomic `validator` task with deps. |
-| Several owners, a failure matrix, or unknown file boundary | Expandable child `team_planner`. |
-| Many tiny variants under one mechanism | One atomic task or one child planner, not many sibling tasks. |
-| Many unrelated owner families | Several siblings or child planners, grouped by boundary. |
+| Several owners, a failure matrix, or unknown file boundary | Expandable `team_planner` task for that boundary. |
+| Many tiny variants under one mechanism | One atomic task or one expandable task, not many sibling tasks. |
+| Many unrelated owner families | Several siblings or expandable tasks, grouped by boundary. |
 
-When a level feels crowded, group by owner family or mechanism and delegate the
-cluster to a child planner. When a level has only one broad developer task, check
-whether it should be a child planner instead.
+When a level feels crowded, run superficial scouts for owner families, group by
+family or mechanism, and assign expandable tasks for broad clusters. When a
+level has only one broad developer task, check whether it should be expandable.
 
 ```text
 Caption: parallel DAG example. Independent producers feed one validation lane.
@@ -93,7 +93,7 @@ route question
   |-- coupled files / call chain -----> deep scout(["pkg/a.py", "pkg/b.py"])
   |-- package/subsystem boundary -----> superficial scout(["pkg/subsystem"])
   |-- several unrelated candidates ---> parallel scouts, one per candidate group
-  `-- too broad to inspect -----------> child team_planner
+  `-- too broad for deep inspection --> superficial directory scouts -> boundary split
 ```
 
 ### Choose What To Scan
@@ -108,7 +108,7 @@ and likely runtime path before launching scouts.
 | Adapter plus registry/config are coupled | Multiple paths in one scout. |
 | Owner is likely a package, plugin family, or subsystem | Directory scout. |
 | Several candidate owner families compete | Parallel scouts, one per candidate group. |
-| Candidate groups are unrelated and numerous | Delegate to child planning instead of launching a large scout wave. |
+| Candidate groups are unrelated and numerous | Use superficial directory or multi-file scouts by boundary, then split into expandable tasks. |
 
 The planner does not need proof before launching a scout; a reasonable dependency
 guess is enough. Keep the guess visible in the scout prompt so the scout can
@@ -129,10 +129,10 @@ cli output family       -> scout(["pkg/cli"], objective="map owner")
 
 | Parallel shape | Use when |
 | --- | --- |
-| One scout per candidate owner family | The planner must choose separate developer or child-planner lanes. |
+| One scout per candidate owner family | The planner must choose separate developer or expandable lanes. |
 | One scout with multiple paths | The paths probably form one mechanism and should produce one ownership answer. |
 | One directory scout | Exact files are unknown, and a surface map is enough to route. |
-| No scout | The uncertainty can be preserved in a child planner spec. |
+| No scout | The uncertainty can be preserved in an expandable task spec. |
 
 Avoid both extremes: one scout per failing test is too small-grained, and one
 unrelated all-purpose scout is too broad.
@@ -148,7 +148,7 @@ specific seam.
 | Single file | Deep: symbols, entry points, invariants, nearby diagnostics, and concrete owner seam. |
 | Small coupled file set | Deep across the stated call chain or shared mechanism. |
 | Directory/package | Superficial: map subdivisions, entry points, candidate owners, and gaps; do not inspect every file. |
-| Broad subsystem | Superficial and boundary-focused, or delegate to child planning. |
+| Broad subsystem | Superficial and boundary-focused; split into expandable tasks if still broad. |
 
 ### Write Objective-Based Prompts
 
@@ -158,7 +158,7 @@ question, target paths, useful evidence, and desired routing output.
 ```text
 Caption: objective-based scout prompt shape.
 
-Objective: decide whether this package is one owner family or needs child planning.
+Objective: decide whether this package is one owner family or several expandable boundaries.
 Targets: ["pkg/storage"]
 Evidence: failing ids mention parquet and csv engines.
 Return: owner seams, likely developer lanes, expandable parts, and gaps.
@@ -186,7 +186,7 @@ Return: owner seams, likely developer lanes, expandable parts, and gaps.
 
 | Check | Expected result |
 | --- | --- |
-| DAG split | Each level is reasonably sized and separates atomic developer lanes from expandable child planning. |
+| DAG split | Each level is reasonably sized and separates atomic developer lanes from expandable planning. |
 | DAG examples | Parallel, sequential, and mixed patterns remain obvious from the guide. |
 | Scout scope | Multi-path or directory scouts follow a dependency/owner hypothesis. |
 | Simplification | The diff removes more ambiguity than it adds, preferably with negative net text. |

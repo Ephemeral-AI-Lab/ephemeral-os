@@ -9,13 +9,13 @@ Produce the top-level task DAG from the user request. Finish with exactly one `s
 
 | Route | Use when |
 | --- | --- |
-| `developer` | Exact, live-proven owner plus one bounded mechanism. |
-| `team_planner` | Broad, clustered, matrix-shaped, mixed, unresolved, or owner-family cluster. |
+| `developer` | Atomic slice: exact owner + one mechanism. Default for every atomic piece, even inside a broad request. |
+| `team_planner` | Clustered/complex/unresolved residue only. Never wrap an atomic slice or delegate the whole request. |
 | `validator` | Same-payload verification after producer lanes. |
 
 | Gate | Action |
 | --- | --- |
-| 1-3 owner questions change this DAG | Scout by production owner family. |
+| Owner questions change this DAG | Scout by production owner family. |
 | Several owner families | Fan out routing scouts by owner family; synthesize sibling lanes. |
 | Test or benchmark path | Keep as evidence in `spec`, not `target_paths`. |
 
@@ -33,7 +33,7 @@ user request
   | owner questions would change this level's routing?
   |-- yes --> [2 Scout] -> harvest notes -> update ledger
   |-- several rows -> [2 Scout] -> sibling lanes
-  |-- no / test-only -> carry uncertainty in child spec
+  |-- no / test-only -> carry uncertainty in expandable spec
   |
   v
 [3 Synthesize]
@@ -43,7 +43,7 @@ user request
 | Stage | Output |
 | --- | --- |
 | 1. Load context | Owner ledger: clear owners, scout candidates, unresolved clusters, verification evidence. |
-| 2. Scout | Broad, shallow routing wave; production `target_paths` only. |
+| 2. Scout | Superficial directory/multi-file maps or deep tight-seam checks; production `target_paths` only. |
 | 3. Synthesize | Top-level local DAG with `developer`, `team_planner`, and optional `validator` nodes. |
 
 ## 1. Load Context
@@ -69,7 +69,7 @@ Planner exploration stops at routing; use scouts for owner maps and preserve unc
 
 ## 2. Scout
 
-Use this stage for broad, shallow routing exploration when owner rows would change this DAG.
+Use this stage for route-changing exploration: superficial directory/multi-file maps for broad clusters, deep checks for single files or tight call chains.
 
 ```text
 Caption: scout fan-out supports the next sibling wave.
@@ -81,12 +81,12 @@ row: config seam    -> scout(["pkg/config", "pkg/options"])
 
 | Scout shape | Use when |
 | --- | --- |
-| Single path | One file or module is the likely owner. |
-| Multi-path | Paths form one dependency, entrypoint, adapter, or shared mechanism. |
-| Directory | Owner is a package/subsystem and exact files are unknown. |
-| Wave size | Roughly 2-5 owner rows for broad work; cluster variants by mechanism. |
+| Single path | Deep scout when one file or module is the likely owner. |
+| Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
+| Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
+| Wave size | Keep the wave route-changing; cluster variants by mechanism. |
 | Test path | Context only, never `target_paths`; commands go to child specs. |
-| No scout | Leaf discovery or unrelated candidates; route to `team_planner`. |
+| No scout | Leaf-only detail; preserve uncertainty in expandable task specs. |
 
 Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Launch before polling; missing notes become uncertainty for that path only.
 
@@ -97,14 +97,14 @@ Enter after the ledger is complete and scouts are done or intentionally skipped.
 ```text
 Caption: root routing during synthesis.
 
-atomic exact owner     -> developer
-owner-family cluster   -> team_planner sibling
+atomic slice          -> developer
+clustered residue     -> team_planner sibling
 same-payload evidence -> validator with deps=[verified producers]
 ```
 
 | Draft check | Expected result |
 | --- | --- |
-| Coverage | Every named cluster has a producer owner or sibling `team_planner`; avoid one catch-all child. |
+| Coverage | Every named cluster has a producer owner or sibling `team_planner`; trivial slices stay separate. |
 | Developer lanes | Exact owner and one mechanism; not a hidden broad cluster. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Depend on every same-payload producer they verify. |

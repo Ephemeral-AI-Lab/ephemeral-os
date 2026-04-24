@@ -8,16 +8,16 @@ Load this reference in Stage 3 only, after the owner ledger is complete and usef
 Caption: root planner routes owner-ledger rows without exploring every leaf.
 
 owner slice
-  |-- exact owner + one mechanism + focused verification -> developer
-  |-- broad / clustered / matrix / unresolved -----------> team_planner
+  |-- atomic + exact owner + one mechanism --------------> developer
+  |-- clustered / matrix / unresolved residue only ------> team_planner
   `-- same-payload verification after producers ---------> validator
 ```
 
 | Slice signal | Route |
 | --- | --- |
 | Live evidence names one owner file, symbol, or tight production surface | `developer` |
-| Several mechanisms, APIs, engines, formats, or public entry points | `team_planner` |
-| Benchmark, fail-to-pass, migration, compatibility, or unresolved owner | `team_planner` |
+| Several mechanisms, APIs, engines, formats, public entry points, or mixed broad/trivial work | Split: each atomic slice to its own `developer`; only the clustered remainder to `team_planner`. |
+| Benchmark, fail-to-pass, migration, compatibility, or unresolved owner | Peel atomic pieces to `developer` first; residual clustered/unresolved work to `team_planner`. |
 | Root-level evidence sweep after producers finish | `validator` with producer deps |
 
 ## Level Shape
@@ -25,10 +25,10 @@ owner slice
 | Situation | Action |
 | --- | --- |
 | Crowded level | Group by owner family or mechanism. |
-| One broad `developer` | Route to `team_planner` unless exact-owner evidence makes it atomic. |
-| More than 3 scout candidates | Route by child planner clusters instead of widening the scout wave. |
-| Many tiny variants under one mechanism | One task or one child planner, not many thin siblings. |
-| Unrelated owner families | Several siblings or child planners, grouped by boundary. |
+| One broad `developer` | Make it expandable (`team_planner`) unless exact-owner evidence makes it atomic. |
+| Many scout candidates | Scout superficially by boundary, then split into expandable tasks. |
+| Many tiny variants under one mechanism | One task or one expandable task, not many thin siblings. |
+| Unrelated owner families | Several siblings, grouped by boundary. |
 
 ## DAG Patterns
 
@@ -96,6 +96,6 @@ type NewTaskDefinition = {
 | 1 | Every task has `id`, `agent`, `spec`, `deps`, and `scope_paths`. |
 | 2 | `deps` resolve within this payload and express output order or validator coverage. |
 | 3 | Expandable or unresolved slices use `team_planner`. |
-| 4 | Named failing clusters have a producer owner or child planner. |
+| 4 | Named failing clusters have a producer owner or expandable owner. |
 | 5 | Tests and benchmark ids stay in `spec`; production/scout paths stay exact in `scope_paths`. |
 | 6 | The final assistant action is `submit_plan(...)` with no trailing prose. |

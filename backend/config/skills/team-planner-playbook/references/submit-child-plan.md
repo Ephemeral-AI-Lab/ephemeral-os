@@ -5,19 +5,19 @@ Load this reference in Stage 3 only, after task context is loaded, the owner led
 ## Routing Flow
 
 ```text
-Caption: child planner routes owner-ledger rows without exploring every leaf.
+Caption: planner routes owner-ledger rows without exploring every leaf.
 
 owner slice
-  |-- exact owner + one mechanism + focused verification -> developer
-  |-- expandable + grandchild_depth <= max_depth --------> team_planner
-  |-- expandable + grandchild_depth > max_depth ---------> developer/validator split
+  |-- atomic + exact owner + one mechanism --------------> developer (default for atomic work)
+  |-- clustered residue + grandchild_depth <= max_depth -> team_planner
+  |-- clustered residue + grandchild_depth > max_depth --> per-mechanism developer/validator split
   `-- same-layer verification after producers -----------> validator
 ```
 
 | Slice signal | Route |
 | --- | --- |
 | Live or inherited evidence names one owner file, symbol, or tight production surface | `developer` |
-| Several mechanisms, APIs, engines, formats, or public entry points and depth remains | child `team_planner` |
+| Several mechanisms, APIs, engines, formats, public entry points, or mixed broad/trivial work and depth remains | Split: each atomic slice to its own `developer`; only the clustered remainder to `team_planner`. |
 | Broad or unresolved at max depth | Direct per-mechanism `developer` tasks plus validation/diagnostic wording |
 | Same-layer evidence sweep after producers finish | `validator` with producer deps |
 
@@ -26,10 +26,10 @@ owner slice
 | Situation | Action |
 | --- | --- |
 | Crowded level | Group by owner family or mechanism. |
-| One broad `developer` | Route to child `team_planner` while depth remains. |
-| More than 3 scout candidates | Route by child planner clusters instead of widening the scout wave. |
-| Many tiny variants under one mechanism | One task or one child planner, not many thin siblings. |
-| Unrelated owner families | Several siblings or child planners, grouped by boundary. |
+| One broad `developer` | Make it expandable (`team_planner`) while depth remains. |
+| Many scout candidates | Scout superficially by boundary, then split into expandable tasks. |
+| Many tiny variants under one mechanism | One task or one expandable task, not many thin siblings. |
+| Unrelated owner families | Several siblings, grouped by boundary. |
 
 ## DAG Patterns
 

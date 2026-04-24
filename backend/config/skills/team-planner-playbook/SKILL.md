@@ -9,14 +9,14 @@ Produce a child task DAG from inherited Task Center context. Finish with exactly
 
 | Route | Use when |
 | --- | --- |
-| `developer` | Exact, live-proven owner plus one bounded mechanism. |
-| `team_planner` | Broad, clustered, matrix-shaped, mixed, unresolved, or owner-family cluster while depth remains. |
-| `developer` / `validator` fallback | Max depth is reached; split by mechanism and keep uncertainty in `spec.detail`. |
+| `developer` | Atomic slice: exact owner + one mechanism. Default for every atomic piece, even inside a broad task. |
+| `team_planner` | Clustered/complex/unresolved residue only, while depth remains. Never wrap an atomic slice or delegate the whole task. |
+| `developer` / `validator` fallback | Max depth reached; split by mechanism and keep uncertainty in `spec.detail`. |
 | `validator` | Same-layer verification after producer lanes. |
 
 | Gate | Action |
 | --- | --- |
-| 1-3 owner questions change this DAG | Scout by production owner family. |
+| Owner questions change this DAG | Scout by production owner family. |
 | Several owner families | Fan out routing scouts by owner family; synthesize sibling lanes. |
 | Test or benchmark path | Keep as evidence in `spec`, not `target_paths`. |
 
@@ -34,7 +34,7 @@ assigned planner task
   | owner questions would change this level's routing?
   |-- yes --> [2 Scout] -> harvest notes -> update ledger
   |-- several rows -> [2 Scout] -> sibling lanes
-  |-- no / test-only -> carry uncertainty in child spec
+  |-- no / test-only -> carry uncertainty in expandable spec
   |
   v
 [3 Synthesize]
@@ -44,7 +44,7 @@ assigned planner task
 | Stage | Output |
 | --- | --- |
 | 1. Load context | Owner ledger: inherited owners, scout candidates, unresolved clusters, deps, verification evidence. |
-| 2. Scout | Broad, shallow routing wave; production `target_paths` only. |
+| 2. Scout | Superficial directory/multi-file maps or deep tight-seam checks; production `target_paths` only. |
 | 3. Synthesize | Child local DAG with `developer`, `team_planner`, and optional `validator` nodes. |
 
 ## 1. Load Context
@@ -71,7 +71,7 @@ Planner exploration stops at routing; use scouts for owner maps and preserve unc
 
 ## 2. Scout
 
-Use this stage for broad, shallow routing exploration when owner rows would change this DAG.
+Use this stage for route-changing exploration: superficial directory/multi-file maps for broad clusters, deep checks for single files or tight call chains.
 
 ```text
 Caption: scout fan-out supports the next sibling wave.
@@ -83,12 +83,12 @@ row: prompt family  -> scout(["pkg/prompt"])
 
 | Scout shape | Use when |
 | --- | --- |
-| Single path | One file or module is the likely owner. |
-| Multi-path | Paths form one dependency, entrypoint, adapter, or shared mechanism. |
-| Directory | Owner is a package/subsystem and exact files are unknown. |
-| Wave size | Roughly 2-5 owner rows for broad work; cluster variants by mechanism. |
+| Single path | Deep scout when one file or module is the likely owner. |
+| Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
+| Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
+| Wave size | Keep the wave route-changing; cluster variants by mechanism. |
 | Test path | Context only, never `target_paths`; commands go to child specs. |
-| No scout | Leaf discovery or unrelated candidates; route to `team_planner` when depth allows. |
+| No scout | Leaf-only detail; preserve uncertainty in expandable task specs. |
 
 Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Launch before polling; missing notes, cold CI, canceled scouts, or disproved exact files become uncertainty for that path only.
 
@@ -99,15 +99,15 @@ Enter after context is loaded, the ledger is complete, and scouts are done or in
 ```text
 Caption: child routing with depth.
 
-atomic exact owner                         -> developer
-owner-family cluster + depth remains       -> team_planner sibling
-owner-family cluster + max depth reached   -> broader developer/validator split
-same-layer evidence                        -> validator with deps=[verified producers]
+atomic slice                         -> developer
+clustered residue + depth remains    -> team_planner sibling
+owner cluster + max depth reached    -> per-mechanism developer/validator split
+same-layer evidence                  -> validator with deps=[verified producers]
 ```
 
 | Draft check | Expected result |
 | --- | --- |
-| Coverage | Every inherited cluster has a producer owner or sibling `team_planner`; avoid one catch-all child. |
+| Coverage | Every inherited cluster has a producer owner or sibling `team_planner`; trivial slices stay separate. |
 | Developer lanes | Exact owner and one mechanism, unless this is a max-depth fallback. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Depend on every same-payload producer they verify. |
