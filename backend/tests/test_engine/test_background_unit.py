@@ -291,7 +291,7 @@ class TestWaitForBackgroundTaskExecute:
 
         assert "[NO TASKS RUNNING]" in result.output
         assert "the useful content is in file notes" in result.output
-        assert 'read_file_note(file_path="...")' in result.output
+        assert "read_file_note(file_paths=[...])" in result.output
         assert result.metadata["background_snapshot"]["kind"] == "wait_no_tasks"
 
 
@@ -326,7 +326,7 @@ class TestBackgroundSnapshotHelpers:
         assert output.startswith("[COMPLETED]\n[")
         assert "the useful content is in file notes" in output
         assert "Do not call `wait_for_background_task`" in output
-        assert 'read_file_note(file_path="...")' in output
+        assert "read_file_note(file_paths=[...])" in output
 
     def test_wait_timed_out_render_matches_tool_branch(self) -> None:
         statuses = [{"task_id": "bg_1", "status": "running", "output": "still"}]

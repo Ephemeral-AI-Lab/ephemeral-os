@@ -209,7 +209,7 @@ def test_record_tool_trace_dedupes_background_scout_launch_by_tool_use_id() -> N
 def test_record_tool_trace_counts_note_ci_and_daytona_reads() -> None:
     meta = ExecutionMetadata()
 
-    _record_tool_trace(meta, "read_file_note", {"file_path": "pkg/core.py"})
+    _record_tool_trace(meta, "read_file_note", {"file_paths": ["pkg/core.py"]})
     _record_tool_trace(meta, "ci_query_symbol", {"query": "Git"})
     _record_tool_trace(meta, "ci_workspace_structure", {"path": "pkg"})
     _record_tool_trace(meta, "ci_diagnostics", {"file_path": "pkg/core.py"})

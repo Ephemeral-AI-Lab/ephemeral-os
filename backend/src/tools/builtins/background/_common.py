@@ -32,7 +32,7 @@ POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "background status snapshot. Do not call `wait_for_background_task` or "
     "`check_background_progress` again for this delivered scout wave. In "
     "team-planner contexts, read scout findings with "
-    '`read_file_note(file_path="...")` for the scout target paths. Scouts and '
+    '`read_file_note(file_paths=[...])` for the scout target paths. Scouts and '
     "subagents are not Task Center tasks; do not use `read_task_graph()` or "
     "`read_task_details(...)` to retrieve scout results, and never pass `bg_*` "
     "background ids as task ids."

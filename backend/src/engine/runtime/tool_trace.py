@@ -102,7 +102,7 @@ def record_tool_trace(
         _append_trace_values(
             metadata,
             "_note_read_paths_this_turn",
-            _normalize_trace_paths(tool_input.get("file_path")),
+            _normalize_trace_paths(tool_input.get("file_paths")),
         )
         return
     if tool_name == "ci_query_symbol":

@@ -86,8 +86,9 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "prefer child planners even when the first-pass owner labels are clear" in defn.system_prompt
     assert "For clustering jobs, include at least one child `team_planner`" in defn.system_prompt
     assert "not multi-cluster benchmark repair" in defn.system_prompt
-    assert "exactly one production owner path in `target_paths`" in defn.system_prompt
-    assert "Never bundle two files/directories into one scout" in defn.system_prompt
+    assert "one production owner family in `target_paths`" in defn.system_prompt
+    assert "the read tool returns the latest note per path" in defn.system_prompt
+    assert "Never bundle unrelated files/directories into one scout" in defn.system_prompt
     assert 'load_skill(skill_name="team-root-planner-playbook")' in defn.system_prompt
     assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
     assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
@@ -110,7 +111,7 @@ def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
     assert 'load_skill(skill_name="team-scout-playbook")' in defn.system_prompt
     assert 'load_skill_reference(skill_name="team-scout-playbook", reference_name="completion-contract")' in defn.system_prompt
     assert "before your first Task Center or code-intelligence tool call" in defn.system_prompt
-    assert "first assistant message that calls tools may contain only `read_file_note" in defn.system_prompt
+    assert "first assistant message that calls tools may contain only one `read_file_note(file_paths=[...])` call" in defn.system_prompt
     assert "stop after exact-file CI evidence" in defn.system_prompt
     assert "Only `target_paths` authorize exploration" in defn.system_prompt
     assert "treat them as hypotheses to report under gaps" in defn.system_prompt

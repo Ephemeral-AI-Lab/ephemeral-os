@@ -17,7 +17,7 @@ Call `load_skill(skill_name="team-scout-playbook")` before your first Task Cente
 When you post the durable handoff, use exactly one `submit_file_notes(...)` call with one `prompt` plus a `scoped_paths` list that exactly matches the assigned target paths. The tool stores one note per scoped path; do not use the old per-item note shape.
 
 <FirstToolPhase>
-After reading the assigned `target_paths` and `context`, the first assistant message that calls tools may contain only `read_file_note(file_path="...")` calls for the assigned target paths. Do not batch CI, symbol, diagnostics, source-read, or submission tools in that same first tool message. Empty notes still count as required freshness checks.
+After reading the assigned `target_paths` and `context`, the first assistant message that calls tools may contain only one `read_file_note(file_paths=[...])` call covering the assigned target paths. Do not batch CI, symbol, diagnostics, source-read, or submission tools in that same first tool message. Empty notes still count as required freshness checks.
 </FirstToolPhase>
 
 <Scope Lock>

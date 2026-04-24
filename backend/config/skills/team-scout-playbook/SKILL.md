@@ -14,7 +14,7 @@ Read the following sections to scout the assigned `target_paths` and post a dura
 ## Tool rules
 
 - Must inspect only and use CI/Task Center tools only.
-- First tool phase after reading the assigned payload: call `read_file_note(file_path="...")` for each assigned target path, even when the result is empty. Do not call `ci_workspace_structure(...)`, `ci_query_symbol(...)`, `ci_diagnostics(...)`, or any source-read tool until every assigned target note has been read.
+- First tool phase after reading the assigned payload: call `read_file_note(file_paths=[...])` with every assigned target path, even when the result is empty. Do not call `ci_workspace_structure(...)`, `ci_query_symbol(...)`, `ci_diagnostics(...)`, or any source-read tool until every assigned target note has been read.
 - The first assistant message that calls tools may contain only the required `read_file_note(...)` calls. Do not batch a CI/query/source tool in the same first tool message as those note reads.
 - For a single-file or short fixed file-list scout, after the note reads use at most one file-path `ci_query_symbol(...)` per assigned path. If those queries return definitions for every assigned path, the next tool must be `submit_file_notes(...)`; do not call `ci_workspace_structure(...)` or extra symbol hunts unless a target stayed cold.
 - Missing exact-target gate: if an exact-file bootstrap query returns no definitions, or if bootstrap/structure evidence shows the assigned exact file is missing or replaced by a package/directory boundary, the next tool must be `submit_file_notes(...)`. Do not call `ci_workspace_structure(...)`, run `ci_query_symbol(...)` on nearby helper names, or inspect adjacent files/directories to discover a replacement owner in the same scout.

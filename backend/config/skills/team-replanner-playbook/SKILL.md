@@ -5,56 +5,49 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 # Team Replanner Playbook
 
-Produce the smallest corrective task DAG justified by the failed task evidence. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
+Produce the smallest corrective DAG justified by the failed task evidence. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
 
-Replanner-created tasks are limited to `developer` repair lanes and `validator` verification lanes. Do not create `team_planner`, `root_planner`, `team_replanner`, `scout`, or other agent roles in `new_tasks`; the replanner owns recovery synthesis.
+Replanner-created tasks use only `developer` repair lanes and `validator` verification lanes. The replanner owns recovery synthesis; it does not create planner, replanner, or scout tasks in `new_tasks`.
 
 ## Workflow Map
 
 | Stage | Output |
 | --- | --- |
 | 1. Load recovery context | Failed-task evidence vs gaps, graph structure, sibling states. |
-| 2. Classify Failure Mode | `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>` and, for unresolved blockers, one diagnostics decision. |
-| 3. Act | Corrective mapping, cancel-vs-add decision, matching action reference loaded. |
-| 4. Submit | `terminal-contract` loaded, payload self-checked, one `submit_replan({ new_tasks, cancel_ids })`. |
-
-Reference boundary: action references belong only to Stage 3, and `terminal-contract` belongs only to Stage 4. Do not call `load_skill_reference(...)` while the next action is still to read recovery context, classify the failure, decide diagnostics, run scouts, wait for scouts, or harvest scout notes.
-
-Decision flow:
+| 2. Classify failure mode | `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>` plus diagnostics decision when needed. |
+| 3. Act | Corrective mapping, cancel-vs-add decision, matching action reference read. |
+| 4. Submit | `terminal-contract` reference read, payload checked, one `submit_replan(...)`. |
 
 ```text
-load context -> classify failure
-  scope_expansion or wrong_owner_or_role -> Direct replan
-  unresolved_blocker + trivial_direct_replan -> Direct replan
-  unresolved_blocker + deep_diagnostics -> Diagnostics -> Direct replan
-Direct replan -> load action-add-tasks or action-cancel-and-redraft
-Submit -> load terminal-contract -> submit_replan(...)
+Caption: replanner recovery path. References are read at action and submit time.
+
+[1 Load recovery context]
+  |
+  v
+[2 Classify]
+  | scope_expansion
+  | wrong_owner_or_role
+  | unresolved_blocker + trivial_direct_replan
+  |--------------------------------------+
+  |                                      v
+  |                         [3 Act: direct replan]
+  |
+  | unresolved_blocker + deep_diagnostics
+  v
+[Diagnostics scouts / note harvest]
+  |
+  v
+[3 Act]
+  load action-add-tasks OR action-cancel-and-redraft
+  |
+  v
+[4 Submit]
+  load terminal-contract -> self-check -> submit_replan(...)
 ```
 
-Every branch must load the matching action reference and then `terminal-contract` before drafting the payload. Do not skip those loads because the failure seems obvious.
-
-## Reference Map
-
-Load references with `load_skill_reference(skill_name="team-replanner-playbook", reference_name="...")`.
-
-- `action-add-tasks`: use when the final payload has `cancel_ids=[]`.
-- `action-cancel-and-redraft`: use when a stale non-terminal direct sibling must be cancelled and replaced.
-- `terminal-contract`: use immediately before drafting and submitting the payload.
-
-Post-load rule: after `load_skill(...)`, load recovery context and classify before loading any reference. A `load_skill_reference(...)` call immediately after `load_skill(...)` is invalid unless a prior assistant action already completed Stage 1 context loading, Stage 2 classification, and any required diagnostics.
-
-Reference load gates: action reference trigger -> classification is final, diagnostics are complete or explicitly skipped, and the add-only vs cancel-and-redraft decision is final; `terminal-contract` trigger -> the matching action reference has been loaded and the corrective payload is ready for self-check. Failure signal -> `load_skill_reference(...)` appears before context reads, before the classification line, immediately after `load_skill(...)`, before diagnostics/scout harvesting finishes, or loads `terminal-contract` before the matching action reference.
+Every path loads one action reference in Stage 3 and `terminal-contract` in Stage 4. Skip reference reads until the current stage has the evidence it needs.
 
 ## Workflow Details
-
-| Section | Contract |
-| --- | --- |
-| Context | Read only live Task Center evidence needed to classify and preserve/cancel work. |
-| Classification | Convert evidence into one failure mode and, when needed, one diagnostics decision. |
-| Action | Create repair/verification work only after the failure mode and evidence justify it. |
-| Submission | Submit schema-valid corrective tasks; never submit an empty or no-op replan. |
-
-#### Steps
 
 ### 1. Load recovery context
 
@@ -65,9 +58,17 @@ Use exact UUIDs from the replanning header.
 3. Read sibling details only for siblings you may preserve, cancel, depend on, or avoid.
 4. Extract verified failed-task evidence separately from unresolved gaps: final summary, failure reason, root-cause trace, failing command, exit code, snippet, trace path, production mechanism, and candidate fix location.
 
-### 2. Classify Failure Mode
+```text
+Caption: preserve the failed evidence and the remaining gap separately.
 
-State exactly one line:
+failed task summary
+  |-- verified: command, exit code, trace path, mechanism, fix location
+  `-- unresolved: missing owner, missing rule, missing value mapping, unclear sibling
+```
+
+### 2. Classify failure mode
+
+State exactly one classification line:
 
 ```text
 Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>
@@ -75,11 +76,11 @@ Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>
 
 Use:
 
-- `scope_expansion` only when evidence proves the repair belongs to a different live production path outside assigned scope. Budget exhaustion or unfinished same-scope implementation is not scope expansion.
-- `wrong_owner_or_role` only when evidence proves a different owner or role must handle the repair.
-- `unresolved_blocker` when a concrete blocker remains as a production trace gap. If the fix target remains under any failed-task `scope_paths` entry, classify it as `unresolved_blocker`.
+- `scope_expansion` when evidence proves the repair belongs outside the failed task's assigned production scope.
+- `wrong_owner_or_role` when evidence proves a different owner or role must handle the repair.
+- `unresolved_blocker` when a concrete production trace gap remains. If the fix target remains under any failed-task `scope_paths` entry, use `unresolved_blocker`.
 
-For `unresolved_blocker`, also state one line:
+For `unresolved_blocker`, add one diagnostics line:
 
 ```text
 Diagnostics decision: trivial_direct_replan
@@ -93,13 +94,47 @@ Diagnostics decision: deep_diagnostics
 
 Choose `trivial_direct_replan` only when file notes and CI already name every failing production seam. Choose `deep_diagnostics` when any seam is still unresolved.
 
-Before choosing `trivial_direct_replan`, check it against every observed value in the same failing assertion. Value-rule trigger -> the failed task proposes a concrete one-line fix or value mapping; required action -> write a compact value table before the action reference with input path/state, observed value, expected value, proposed rule, and proposed result; failure signal -> a direct repair copies the proposed rule without that table, or any proposed result differs from the expected value. Example: OK `observed int64, expected uint64, proposed astype(original uint8) -> diagnostic`; wrong `trivial_direct_replan` with `astype(original uint8)`.
+Before `trivial_direct_replan`, check proposed one-line fixes against every observed value in the same failing assertion:
 
-Never treat another function, line range, or checklist item in the same owner file as scope expansion. A failed task's "test design issue" label does not drop a named fail-to-pass variant.
+```text
+Caption: value-rule sanity check.
+
+input/state | observed | expected | proposed rule | proposed result | decision
+------------+----------+----------+---------------+-----------------+---------
+int64 path  | int64    | uint64   | astype(uint8) | uint8           | diagnostic
+```
+
+A failed task's "test design issue" label does not drop a named fail-to-pass variant.
 
 ### 3. Act
 
-Enter this stage only after Stage 1 context is loaded, Stage 2 classification is written, and required diagnostics are complete or explicitly skipped. The action reference load is the stage transition; if the cancel-vs-add decision is not final, do not load it yet.
+Enter this stage only after classification is written and diagnostics are complete or explicitly skipped. Read exactly the action reference matching the final cancellation decision:
+
+```text
+# Add-only recovery
+load_skill_reference(
+  skill_name="team-replanner-playbook",
+  reference_name="action-add-tasks"
+)
+
+# Cancel stale sibling work and replace it
+load_skill_reference(
+  skill_name="team-replanner-playbook",
+  reference_name="action-cancel-and-redraft"
+)
+```
+
+```text
+Caption: cancellation boundary.
+
+same parent:
+  failed task A (request_replan)  -> never cancel
+  replanner R                    -> never cancel
+  stale sibling S (non-terminal) -> may appear in cancel_ids
+  terminal sibling T             -> preserve
+
+Cancel only stale non-terminal direct siblings; cascade handles their descendants.
+```
 
 #### Direct replan
 
@@ -107,28 +142,51 @@ Use for `scope_expansion`, `wrong_owner_or_role`, and `unresolved_blocker` with 
 
 1. Preserve valid live siblings and downstream validators.
 2. Drop test-edit, doc-only, benchmark-only, and value-table contradiction candidates.
-3. Ensure every named failing variant maps to a repair/diagnostic task or an explicitly preserved live repair owner. Do not submit an empty or no-op replan.
-4. Decide whether to add only or cancel-and-redraft.
-5. Load `action-add-tasks` if `cancel_ids=[]`; load `action-cancel-and-redraft` if a stale direct sibling must be cancelled.
+3. Map every named failing variant to a repair/diagnostic task or an explicitly preserved live repair owner.
+4. Decide add-only vs cancel-and-redraft, then load the matching action reference above.
 
-The failed/original request_replan task can appear as a same-parent sibling in `read_task_graph()`; it is never stale sibling work and must stay out of `cancel_ids`. If your draft `cancel_ids` contains the failed task id from the prompt, remove it before submission.
+The failed/original request_replan task can appear as a same-parent sibling in `read_task_graph()`; it is never stale sibling work and stays out of `cancel_ids`.
 
 #### Diagnostics
 
 Use for `unresolved_blocker` with `deep_diagnostics`.
 
+```text
+Caption: diagnostic scout fanout.
+
+trace gap triplet:
+  failing test/cluster + suspected production path + named symbol/seam
+      -> scout(target_paths=["scoped production path"])
+      -> read_file_note(file_paths=["scoped production path"])
+      -> repair mapping
+```
+
 1. Read existing file notes for suspected production paths; skip scouting when notes already contain root-cause-grade evidence.
-2. Enumerate distinct trace-gap triplets in visible reasoning before any scout call: one failing test id or cluster, one suspected production path, one named symbol or seam.
-3. Launch one scout per remaining triplet with `run_subagent(agent_name="scout", input={"target_paths": ["<one production path>"], "context": "Diagnostic for <triplet>; ..."})`. Keep failing tests in scout `context`, not `target_paths`.
+2. Enumerate distinct trace-gap triplets in visible reasoning before scout calls.
+3. Launch one scout per remaining triplet with `run_subagent(agent_name="scout", input={"target_paths": ["<one or more scoped production paths for that one triplet>"], "context": "Diagnostic for <triplet>; ..."})`. Use multiple paths only when they belong to the same triplet and each path needs its own durable note. Keep failing tests in scout `context`, not `target_paths`.
 4. Queue the scout wave before checking progress; then use `check_background_progress` / `wait_for_background_task`.
-5. Harvest notes with `read_file_note(file_path=...)`.
-6. Synthesize repair mapping yourself from confirmed, partial, and disproved findings. Do not delegate synthesis to a child planner.
-7. Load the action reference matching the final cancel-vs-add decision.
+5. Harvest notes with `read_file_note(file_paths=[...])` for every path in every launched scout's `target_paths`. Missing notes create uncertainty for that path only.
+6. Synthesize the repair mapping yourself from confirmed, partial, and disproved findings.
+7. Decide add-only vs cancel-and-redraft, then load the matching action reference above.
 
 ### 4. Submit
 
-Enter this stage only after the matching Stage 3 action reference has been loaded and the corrective mapping is ready to self-check.
+Enter this stage only after the matching Stage 3 action reference has been loaded and the corrective mapping is ready to check. Read the terminal contract here:
 
-1. Load `terminal-contract`.
-2. Self-check against its checklist: top-level keys are only `new_tasks` and `cancel_ids`; `new_tasks` is non-empty; every `agent` is `developer` or `validator`; every spec is a structured object with non-empty `goal`, `detail`, and `acceptance_criteria`; `cancel_ids` contains only stale non-terminal direct siblings; no `cancel_ids` entry equals the failed task id from the prompt.
-3. Emit exactly one `submit_replan({ new_tasks, cancel_ids })` call. Make no further tool calls.
+```text
+load_skill_reference(
+  skill_name="team-replanner-playbook",
+  reference_name="terminal-contract"
+)
+```
+
+Then self-check:
+
+- Top-level keys are only `new_tasks` and `cancel_ids`.
+- `new_tasks` is non-empty.
+- Every `agent` is `developer` or `validator`.
+- Every spec is a structured object with non-empty `goal`, `detail`, and `acceptance_criteria`.
+- `cancel_ids` contains only stale non-terminal direct siblings.
+- No `cancel_ids` entry equals the failed task id from the prompt.
+
+Emit exactly one `submit_replan({ new_tasks, cancel_ids })` call. Make no further tool calls.

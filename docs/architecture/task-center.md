@@ -61,7 +61,7 @@ After the replan:
 Notes are file scoped only. `NoteManager` owns append-only note state, posting,
 path-based reads, and scope filtering. Notes are not attached to task ids, do
 not form parent/child threads, and are not appended to `read_task_details`
-output. Agents use `read_file_note(file_path=...)` for file evidence instead of
+output. Agents use `read_file_note(file_paths=[...])` for file evidence instead of
 receiving task-scoped note context automatically.
 
 ## Resume

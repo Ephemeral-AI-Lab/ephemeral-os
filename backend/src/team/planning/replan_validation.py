@@ -39,42 +39,19 @@ class ReplanValidationResult:
     allowed_existing_dep_ids: set[str] = field(default_factory=set)
 
 
-def _active_tasks(graph: dict[str, Any]) -> dict[str, Any]:
-    return {
-        tid: t
-        for tid, t in graph.items()
-        if getattr(t, "status", None) not in TERMINAL_STATUSES
-    }
-
-
 def _cascade_ids_for_cancel_root(
     graph: dict[str, Any],
     cancel_root_id: str,
 ) -> set[str]:
-    active = _active_tasks(graph)
-    children_by_parent: dict[str, list[str]] = {}
-    dependents_by_task_id: dict[str, list[str]] = {}
-    for tid, task in active.items():
-        parent_id = getattr(task, "parent_id", None)
-        if parent_id:
-            children_by_parent.setdefault(str(parent_id), []).append(tid)
-        for dep_id in getattr(task, "deps", []) or []:
-            dependents_by_task_id.setdefault(str(dep_id), []).append(tid)
+    """Live descendants + dependents of ``cancel_root_id``.
 
-    cascaded: set[str] = set()
-    queue = [cancel_root_id]
-    while queue:
-        current = queue.pop(0)
-        for child_id in children_by_parent.get(current, []):
-            if child_id not in cascaded:
-                cascaded.add(child_id)
-                queue.append(child_id)
-        for dependent_id in dependents_by_task_id.get(current, []):
-            if dependent_id in active and dependent_id not in cascaded:
-                cascaded.add(dependent_id)
-                queue.append(dependent_id)
-    cascaded.discard(cancel_root_id)
-    return cascaded
+    Thin wrapper over :meth:`team.runtime.task_graph.TaskGraph.compute_cancel_cascade`
+    so pre-submission validation and at-apply cancellation traverse via the
+    same single-owner implementation.
+    """
+    from team.runtime.task_graph import TaskGraph
+
+    return TaskGraph(graph).compute_cancel_cascade(cancel_root_id)
 
 
 def _status_value(status: Any) -> Any:

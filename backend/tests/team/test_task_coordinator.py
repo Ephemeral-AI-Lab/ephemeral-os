@@ -1,4 +1,10 @@
-"""Unit tests for TaskCoordinator core match-block cases."""
+"""Unit tests for TaskCoordinator core match-block cases.
+
+Exercises the coordinator against a real ``TaskGraph`` + a tiny fake store
+that records ``persist`` calls. Tests assert on emitted events and final
+graph state — not SQL call sequences — so the shape of the persistence
+layer can evolve without churn here.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from agents.registry import get_definition
 from team.core.models import (
     BudgetConfig,
     BudgetState,
@@ -17,7 +24,14 @@ from team.core.models import (
     TaskStatus,
     TaskStatusUpdate,
 )
+from team.definitions import register_all as register_team_builtins
+from team.planning.expander import PlanExpansionOutcome, ReplanApplyOutcome
 from team.runtime.task_coordinator import TaskCoordinator
+from team.runtime.task_graph import GraphMutation, TaskGraph
+
+
+if get_definition("developer") is None:
+    register_team_builtins()
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +45,8 @@ def _task(
     status: TaskStatus = TaskStatus.READY,
     agent_name: str = "developer",
     fired_by_task_id: str | None = None,
+    parent_id: str | None = None,
+    deps: list[str] | None = None,
 ) -> Task:
     spec = {
         "goal": "do something",
@@ -43,47 +59,25 @@ def _task(
         spec=spec,
         agent=agent_name,
         status=status,
+        parent_id=parent_id,
+        deps=deps or [],
         fired_by_task_id=fired_by_task_id,
     )
 
 
 class FakeStore:
-    """In-memory fake that satisfies TaskCoordinator's store interface."""
+    """Captures every ``persist`` call; ``mark_running`` is DB-atomic so it
+    simply returns a SimpleNamespace mimicking a TaskRecord."""
 
     def __init__(self) -> None:
-        self.graph: dict[str, Task] = {}
+        self.persist_calls: list[GraphMutation] = []
+        self.mark_running = AsyncMock(return_value=None)
 
-        # Async methods with configurable return values
-        self.mark_done = AsyncMock(return_value=[])
-        self.mark_expanded = AsyncMock()
-        self.mark_failed = AsyncMock()
-        self.mark_terminal = AsyncMock()
-        self.refresh_graph = AsyncMock()
-        self.get_record = AsyncMock(return_value=None)
-        self.finalize_replanned_origin = AsyncMock(return_value=None)
-        self.request_replan = AsyncMock()
-        self.cascade_cancel_recursive = AsyncMock()
-        self.fetch_promotable_parent = AsyncMock(return_value=None)
-
-    def get_task(self, task_id: str) -> Task | None:
-        return self.graph.get(task_id)
-
-    def terminal_child_ids(self) -> list[str]:
-        return [
-            task.id
-            for task in self.graph.values()
-            if task.parent_id is not None and task.status in {
-                TaskStatus.DONE,
-                TaskStatus.FAILED,
-                TaskStatus.CANCELLED,
-                TaskStatus.REQUEST_REPLAN,
-            }
-        ]
+    async def persist(self, mutation: GraphMutation) -> None:
+        self.persist_calls.append(mutation)
 
 
 class FakeBudget:
-    """Minimal BudgetManager-like fake."""
-
     def __init__(self) -> None:
         self.budgets = BudgetConfig()
         self.budget_state = BudgetState()
@@ -99,19 +93,28 @@ class FakeBudget:
 
 
 class FakeExpander:
-    """Fake PlanExpander that records calls."""
+    def __init__(self, outcome: PlanExpansionOutcome | None = None) -> None:
+        self.expand_outcome = outcome or PlanExpansionOutcome(mutation=GraphMutation.empty())
+        self.replan_outcome: ReplanApplyOutcome | None = None
+        self.expand_calls: list[tuple[Task, object]] = []
+        self.replan_calls: list[dict[str, object]] = []
 
-    def __init__(self, new_tasks: list[Task] | None = None) -> None:
-        self._new_tasks = new_tasks or []
-        self.expand_submitted_plan = AsyncMock(
-            return_value=SimpleNamespace(new_items=self._new_tasks)
+    def expand_submitted_plan(self, task: Task, plan: object) -> PlanExpansionOutcome:
+        self.expand_calls.append((task, plan))
+        return self.expand_outcome
+
+    def apply_replan(
+        self, *, replan_task: Task, add_tasks: list, cancel_ids: list
+    ) -> ReplanApplyOutcome:
+        self.replan_calls.append(
+            {"replan_task": replan_task, "add_tasks": add_tasks, "cancel_ids": cancel_ids}
         )
-        self.apply_replan = AsyncMock()
+        if self.replan_outcome is None:
+            return ReplanApplyOutcome(mutation=GraphMutation.empty())
+        return self.replan_outcome
 
 
 class FakeQueue:
-    """Fake TaskQueue that records enqueue calls."""
-
     def __init__(self) -> None:
         self.enqueued: list[str] = []
 
@@ -119,23 +122,31 @@ class FakeQueue:
         self.enqueued.append(task_id)
 
 
-def _make_handler(
+def _make_coordinator(
+    graph: TaskGraph,
     store: FakeStore,
-    budget: FakeBudget,
-    expander: FakeExpander,
-    fail_fast: AsyncMock,
+    *,
+    budget: FakeBudget | None = None,
+    expander: FakeExpander | None = None,
+    fail_fast: AsyncMock | None = None,
     cancel_event: asyncio.Event | None = None,
-) -> TaskCoordinator:
-    handler = TaskCoordinator(
+    events: list | None = None,
+) -> tuple[TaskCoordinator, FakeQueue]:
+    if events is None:
+        events = []
+    coord = TaskCoordinator(
         team_run_id="run-1",
-        store=store,
-        budget=budget,
-        expander=expander,
-        emit_event=lambda e: None,
-        fail_fast=fail_fast,
+        graph=graph,
+        store=store,  # type: ignore[arg-type]
+        budget=budget or FakeBudget(),
+        expander=expander or FakeExpander(),  # type: ignore[arg-type]
+        emit_event=lambda e: events.append(e),
+        fail_fast=fail_fast or AsyncMock(),
         cancel_event=cancel_event,
     )
-    return handler
+    queue = FakeQueue()
+    coord.bind_queue(queue)  # type: ignore[arg-type]
+    return coord, queue
 
 
 # ---------------------------------------------------------------------------
@@ -145,232 +156,161 @@ def _make_handler(
 
 @pytest.mark.asyncio
 async def test_success_marks_done_and_enqueues_newly_ready_deps():
-    """DONE: dependent made READY by mark_done is pushed onto the queue."""
-    dep_id = "dep-task"
-    task_id = "main-task"
-
+    task = _task("main", status=TaskStatus.RUNNING)
+    dep = _task("dep-1", status=TaskStatus.PENDING, deps=["main"])
+    graph = TaskGraph({"main": task, "dep-1": dep})
     store = FakeStore()
-    task = _task(task_id, status=TaskStatus.RUNNING)
-    dep = _task(dep_id, status=TaskStatus.READY)
-    store.graph[task_id] = task
-    store.graph[dep_id] = dep
+    coord, queue = _make_coordinator(graph, store)
 
-    # mark_done returns the newly-ready dependent id
-    store.mark_done.return_value = [dep_id]
+    await coord.handle(TaskStatusUpdate(task_id="main", status=TaskStatus.DONE, summary="ok"))
 
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
-    handler.bind_queue(queue)
-
-    await handler.handle(TaskStatusUpdate(task_id=task_id, status=TaskStatus.DONE, summary="ok"))
-
-    store.mark_done.assert_awaited_once_with(task_id)
-    assert dep_id in queue.enqueued
+    assert task.status is TaskStatus.DONE
+    assert dep.status is TaskStatus.READY
+    assert "dep-1" in queue.enqueued
+    assert len(store.persist_calls) == 1
 
 
 @pytest.mark.asyncio
-async def test_success_promotes_parent_with_synthesized_child_summary(
-    monkeypatch,
-):
-    """DONE child of an expanded parent -> synthesized parent summary + DONE."""
-    parent_id = "parent-task"
-    child_id = "child-task"
-
+async def test_success_promotes_parent_with_synthesized_child_summary(monkeypatch):
     monkeypatch.setattr("agents.registry.has_role", lambda name, role: False)
 
-    store = FakeStore()
-    parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
+    parent = _task("parent", status=TaskStatus.EXPANDED, agent_name="team_planner")
     parent.plan = Plan()
-    child = _task(
-        child_id,
-        status=TaskStatus.RUNNING,
-        agent_name="developer",
-    )
-    child.parent_id = parent_id
-    store.graph[parent_id] = parent
-    store.graph[child_id] = child
+    child = _task("child", status=TaskStatus.RUNNING, parent_id="parent")
+    graph = TaskGraph({"parent": parent, "child": child})
+    store = FakeStore()
+    coord, _ = _make_coordinator(graph, store)
 
-    store.mark_done.return_value = []
-    store.fetch_promotable_parent.side_effect = [parent_id, None]
-
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
-    handler.bind_queue(queue)
-
-    await handler.handle(
-        TaskStatusUpdate(task_id=child_id, status=TaskStatus.DONE, summary="child delivered")
+    await coord.handle(
+        TaskStatusUpdate(task_id="child", status=TaskStatus.DONE, summary="child delivered")
     )
 
-    assert store.mark_done.await_args_list[0].args == (child_id,)
-    assert store.mark_done.await_args_list[1].args == (parent_id,)
+    assert child.status is TaskStatus.DONE
+    assert parent.status is TaskStatus.DONE
     assert parent.summary == "child delivered"
 
 
 @pytest.mark.asyncio
-async def test_synthesized_parent_summary_prefers_terminal_validator(
-    monkeypatch,
-):
-    """Parent summary uses the terminal validator when one exists."""
-    parent_id = "parent-task"
-    dev_id = "dev-task"
-    validator_id = "validator-task"
-
+async def test_synthesized_parent_summary_prefers_terminal_validator(monkeypatch):
     monkeypatch.setattr(
         "agents.registry.has_role",
         lambda name, role: name == "validator" and role == "reviewer",
     )
 
-    store = FakeStore()
-    parent = _task(parent_id, status=TaskStatus.EXPANDED, agent_name="team_planner")
-    dev = _task(dev_id, status=TaskStatus.DONE, agent_name="developer")
-    dev.parent_id = parent_id
+    parent = _task("parent", status=TaskStatus.EXPANDED, agent_name="team_planner")
+    dev = _task("dev", status=TaskStatus.DONE, agent_name="developer", parent_id="parent")
     dev.summary = "developer summary"
-    validator = _task(validator_id, status=TaskStatus.RUNNING, agent_name="validator")
-    validator.parent_id = parent_id
+    validator = _task(
+        "validator-task", status=TaskStatus.RUNNING, agent_name="validator", parent_id="parent"
+    )
     validator.summary = "validator summary"
-    store.graph[parent_id] = parent
-    store.graph[dev_id] = dev
-    store.graph[validator_id] = validator
-    store.mark_done.return_value = []
-    store.fetch_promotable_parent.side_effect = [parent_id, None]
-
-    cancel_event = asyncio.Event()
+    graph = TaskGraph({"parent": parent, "dev": dev, "validator-task": validator})
+    store = FakeStore()
     fail_fast = AsyncMock()
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), FakeExpander(), fail_fast, cancel_event)
-    handler.bind_queue(queue)
+    coord, _ = _make_coordinator(graph, store, fail_fast=fail_fast)
 
-    await handler.handle(
-        TaskStatusUpdate(task_id=validator_id, status=TaskStatus.DONE, summary="validator summary")
+    await coord.handle(
+        TaskStatusUpdate(
+            task_id="validator-task", status=TaskStatus.DONE, summary="validator summary"
+        )
     )
 
-    store.mark_failed.assert_not_awaited()
-    fail_fast.assert_not_awaited()
-    assert isinstance(parent.plan, Plan)
+    assert parent.status is TaskStatus.DONE
     assert parent.summary == "validator summary"
+    assert isinstance(parent.plan, Plan)
+    fail_fast.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_failed_marks_failed_and_calls_fail_fast_once():
-    """FAILED: mark_failed called, fail_fast called once; idempotent on second handle."""
-    task_id = "failing-task"
-
+    task = _task("failing", status=TaskStatus.RUNNING)
+    graph = TaskGraph({"failing": task})
     store = FakeStore()
-    store.graph[task_id] = _task(task_id, status=TaskStatus.RUNNING)
-
     cancel_event = asyncio.Event()
     fail_fast = AsyncMock()
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), FakeExpander(), fail_fast, cancel_event)
-    handler.bind_queue(queue)
+    coord, _ = _make_coordinator(graph, store, fail_fast=fail_fast, cancel_event=cancel_event)
 
-    await handler.handle(
-        TaskStatusUpdate(task_id=task_id, status=TaskStatus.FAILED, summary="boom")
+    await coord.handle(
+        TaskStatusUpdate(task_id="failing", status=TaskStatus.FAILED, summary="boom")
     )
 
-    store.mark_failed.assert_awaited_once_with(task_id, "boom")
+    assert task.status is TaskStatus.FAILED
+    assert task.failure_reason == "boom"
     fail_fast.assert_awaited_once_with("boom")
 
-    # Second call with cancel_event set — fail_fast must NOT be called again
     cancel_event.set()
-    await handler.handle(
-        TaskStatusUpdate(task_id=task_id, status=TaskStatus.FAILED, summary="boom")
+    await coord.handle(
+        TaskStatusUpdate(task_id="failing", status=TaskStatus.FAILED, summary="boom")
     )
-
+    # Still only the first call — second is idempotent under cancel_event.
     assert fail_fast.await_count == 1
 
 
 @pytest.mark.asyncio
-async def test_expanded_with_plan_calls_mark_expanded_and_enqueues_ready_children():
-    """EXPANDED: mark_expanded called; both READY children are enqueued."""
-    planner_id = "planner-task"
-    child_a = "child-a"
-    child_b = "child-b"
+async def test_expanded_with_plan_marks_parent_expanded_and_enqueues_ready_children():
+    planner = _task("planner", status=TaskStatus.RUNNING, agent_name="team_planner")
+    child_a = _task("child-a", status=TaskStatus.READY, parent_id="planner")
+    child_b = _task("child-b", status=TaskStatus.READY, parent_id="planner")
+    graph = TaskGraph({"planner": planner})  # children will be inserted by mutation
 
+    insert_mutation = GraphMutation(
+        inserts=(
+            __import__("team.runtime.task_graph", fromlist=["TaskInsert"]).TaskInsert(child_a),
+            __import__("team.runtime.task_graph", fromlist=["TaskInsert"]).TaskInsert(child_b),
+        )
+    )
     plan = Plan(
         tasks=[
             TaskDefinition(
-                id=child_a,
-                spec={
-                    "goal": "task a",
-                    "detail": "Do task a.",
-                    "acceptance_criteria": "Submit the terminal outcome.",
-                },
+                id="child-a",
+                spec={"goal": "a", "detail": "a", "acceptance_criteria": "submit"},
                 agent="developer",
             ),
             TaskDefinition(
-                id=child_b,
-                spec={
-                    "goal": "task b",
-                    "detail": "Do task b.",
-                    "acceptance_criteria": "Submit the terminal outcome.",
-                },
+                id="child-b",
+                spec={"goal": "b", "detail": "b", "acceptance_criteria": "submit"},
                 agent="developer",
             ),
         ]
     )
-
-    child_task_a = _task(child_a, status=TaskStatus.READY)
-    child_task_b = _task(child_b, status=TaskStatus.READY)
-
+    expander = FakeExpander(PlanExpansionOutcome(mutation=insert_mutation, new_tasks=(child_a, child_b)))
     store = FakeStore()
-    store.graph[planner_id] = _task(planner_id, status=TaskStatus.RUNNING)
-    store.graph[child_a] = child_task_a
-    store.graph[child_b] = child_task_b
-    # get_record needed by _on_expanded
-    store.get_record.return_value = SimpleNamespace(id=planner_id)
+    coord, queue = _make_coordinator(graph, store, expander=expander)
 
-    # expander returns the two children as new_items
-    expander = FakeExpander(new_tasks=[child_task_a, child_task_b])
-
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), expander, AsyncMock())
-    handler.bind_queue(queue)
-
-    await handler.handle(
-        TaskStatusUpdate(task_id=planner_id, status=TaskStatus.EXPANDED, plan=plan)
+    await coord.handle(
+        TaskStatusUpdate(task_id="planner", status=TaskStatus.EXPANDED, plan=plan)
     )
 
-    store.mark_expanded.assert_awaited_once_with(planner_id)
-    assert child_a in queue.enqueued
-    assert child_b in queue.enqueued
+    assert planner.status is TaskStatus.EXPANDED
+    assert graph.get("child-a") is child_a
+    assert "child-a" in queue.enqueued and "child-b" in queue.enqueued
 
 
 @pytest.mark.asyncio
 async def test_request_replan_spawns_replanner_and_enqueues_it(monkeypatch):
-    """REQUEST_REPLAN: request_replan called with reason+agent; replanner id enqueued."""
-    task_id = "broken-task"
-    replanner_id = "replanner-task-1"
-
     monkeypatch.setattr(
         "agents.registry.find_by_role",
-        lambda role: [SimpleNamespace(name="replanner_agent")] if role == "replanner" else [],
+        lambda role: [SimpleNamespace(name="team_replanner")] if role == "replanner" else [],
+    )
+    monkeypatch.setattr(
+        "team.runtime.task_graph._has_replanner_role", lambda name: name == "team_replanner"
     )
 
-    replanner_task = _task(replanner_id, status=TaskStatus.READY)
-    rec = SimpleNamespace(id=replanner_id)
-
+    origin = _task("broken", status=TaskStatus.RUNNING)
+    graph = TaskGraph({"broken": origin})
     store = FakeStore()
-    store.graph[task_id] = _task(task_id, status=TaskStatus.REQUEST_REPLAN)
-    store.request_replan.return_value = (rec, True)
+    coord, queue = _make_coordinator(graph, store)
 
-    # After request_replan, the replanner must be in graph for _enqueue to work
-    async def _fake_request_replan(tid, *, reason, suggestion, replanner_agent):
-        store.graph[replanner_id] = replanner_task
-        return (rec, True)
-
-    store.request_replan.side_effect = _fake_request_replan
-
-    queue = FakeQueue()
-    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
-    handler.bind_queue(queue)
-
-    await handler.handle(
-        TaskStatusUpdate(task_id=task_id, status=TaskStatus.REQUEST_REPLAN, summary="needs fixing")
+    await coord.handle(
+        TaskStatusUpdate(
+            task_id="broken", status=TaskStatus.REQUEST_REPLAN, summary="needs fixing"
+        )
     )
 
-    store.request_replan.assert_awaited_once()
-    call_kwargs = store.request_replan.call_args
-    assert call_kwargs.kwargs.get("reason") == "needs fixing"
-    assert call_kwargs.kwargs.get("replanner_agent") == "replanner_agent"
-    assert replanner_id in queue.enqueued
+    assert origin.status is TaskStatus.REQUEST_REPLAN
+    # A new replanner should be in the graph and enqueued.
+    replanners = [t for t in graph.tasks.values() if t.agent == "team_replanner"]
+    assert len(replanners) == 1
+    replanner = replanners[0]
+    assert replanner.fired_by_task_id == "broken"
+    assert replanner.id in queue.enqueued

@@ -1,9 +1,14 @@
-"""Task SQL — ORM model + query functions for ``tasks``. Caller owns the session,
-transaction, and in-memory graph (see :class:`team.persistence.task_store.TaskStore`)."""
+"""Task SQL — ORM model + raw query/mutation functions for ``tasks``.
+
+This module is the minimal CRUD surface used by
+:class:`team.persistence.task_store.TaskStore`. All mutation *rules*
+(dependent promotion, cascade, parent promotion, replanner spawning) live in
+:class:`team.runtime.task_graph.TaskGraph` and reach this layer as
+pre-computed ``GraphMutation`` fragments flushed via ``TaskStore.persist``.
+"""
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any, cast as type_cast
 
@@ -20,12 +25,11 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped, aliased, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
 from team.core.errors import GraphInvariantViolation
-from team.core.models import TERMINAL_STATUSES, TaskDefinition
-from team.persistence.ltree_utils import path_to_ltree
+from team.core.models import TERMINAL_STATUSES
 
 
 def _utcnow() -> datetime:
@@ -60,6 +64,9 @@ _TERMINAL = [s.value for s in TERMINAL_STATUSES]
 _TERMINAL_ON_SET = {"done", "failed", "cancelled", "request_replan"}
 
 
+# ---- reads --------------------------------------------------------------
+
+
 async def fetch_record(db: AsyncSession, team_run_id: str, task_id: str) -> TaskRecord | None:
     return (await db.execute(
         select(TaskRecord).where(
@@ -76,13 +83,6 @@ async def fetch_all_records(db: AsyncSession, team_run_id: str) -> list[TaskReco
     )).scalars().all())
 
 
-async def fetch_adjacency(db: AsyncSession, team_run_id: str) -> dict[str, list[str]]:
-    rows = (await db.execute(
-        select(TaskRecord.id, TaskRecord.deps).where(TaskRecord.team_run_id == team_run_id)
-    )).all()
-    return {r.id: list(r.deps) if r.deps else [] for r in rows}
-
-
 async def count_non_terminal(db: AsyncSession, team_run_id: str) -> int:
     return int((await db.execute(
         select(func.count()).where(
@@ -92,23 +92,15 @@ async def count_non_terminal(db: AsyncSession, team_run_id: str) -> int:
     )).scalar() or 0)
 
 
-async def fetch_pending_dependents_for_update(
-    db: AsyncSession, team_run_id: str, dep_id: str
-) -> list[TaskRecord]:
-    return list((await db.execute(
-        select(TaskRecord)
-        .where(
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.status == "pending",
-            TaskRecord.deps.contains([dep_id]),
-        )
-        .with_for_update()
-    )).scalars().all())
-
-
 async def fetch_unsatisfied_dep_ids(
     db: AsyncSession, team_run_id: str, dep_ids: list[str]
 ) -> list[str]:
+    """Return the subset of ``dep_ids`` whose rows are not yet DONE.
+
+    Called only by :func:`mark_running` to guard the lockless worker claim
+    against a dependency that flipped back to non-DONE between READY
+    promotion and claim time.
+    """
     if not dep_ids:
         return []
     rows = (await db.execute(
@@ -120,51 +112,7 @@ async def fetch_unsatisfied_dep_ids(
     return [d for d in dep_ids if statuses.get(d) != "done"]
 
 
-async def fetch_expanded_parent_candidate(
-    db: AsyncSession, team_run_id: str, current_id: str
-) -> str | None:
-    """Expanded parent of ``current_id`` whose non-detached children all resolved.
-
-    Failed/cancelled/request_replan children are detached and don't block promotion.
-    """
-    child = aliased(TaskRecord, name="child")
-    parent_sub = (
-        select(child.parent_id)
-        .where(child.id == current_id, child.team_run_id == team_run_id)
-        .scalar_subquery()
-    )
-    sibling = aliased(TaskRecord, name="sibling")
-    unresolved = (
-        select(1)
-        .where(
-            sibling.parent_id == TaskRecord.id,
-            sibling.team_run_id == team_run_id,
-            sibling.status.notin_(("done", "failed", "cancelled", "request_replan")),
-        )
-        .exists()
-    )
-    row = (await db.execute(
-        select(TaskRecord.id).where(
-            TaskRecord.id == parent_sub,
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.status == "expanded",
-            ~unresolved,
-        )
-    )).first()
-    return None if row is None else str(row.id)
-
-
-async def find_live_tasks_by_fired_origin(
-    db: AsyncSession, team_run_id: str, origin_task_id: str
-) -> list[TaskRecord]:
-    """Non-terminal tasks with ``fired_by_task_id == origin_task_id`` (callers filter by role)."""
-    return list((await db.execute(
-        select(TaskRecord).where(
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.fired_by_task_id == origin_task_id,
-            TaskRecord.status.notin_(_TERMINAL),
-        )
-    )).scalars().all())
+# ---- writes -------------------------------------------------------------
 
 
 async def set_status(
@@ -175,7 +123,8 @@ async def set_status(
     reason: str | None = None,
 ) -> None:
     """Transition to ``status``; terminal statuses stamp ``finished_at``,
-    ``reason`` populates ``failure_reason`` (prefixed for ``request_replan``)."""
+    ``reason`` populates ``failure_reason`` (prefixed for ``request_replan``
+    to match the in-memory ``TaskGraph.apply`` rendering)."""
     values: dict[str, Any] = {"status": status}
     if status in _TERMINAL_ON_SET:
         values["finished_at"] = func.now()
@@ -190,9 +139,28 @@ async def set_status(
     )
 
 
+async def set_failure_reason(
+    db: AsyncSession, team_run_id: str, task_id: str, failure_reason: str
+) -> None:
+    """Update ``failure_reason`` without touching status. Flushes
+    ``FailureReasonPatch`` mutations from ``TaskGraph.finalize_replanned_origin``."""
+    await db.execute(
+        update(TaskRecord)
+        .where(TaskRecord.team_run_id == team_run_id, TaskRecord.id == task_id)
+        .values(failure_reason=failure_reason)
+    )
+
+
 async def replace_dependency(
     db: AsyncSession, team_run_id: str, *, old_dep_id: str, new_dep_ids: list[str]
 ) -> list[str]:
+    """Rewire every task's deps from ``old_dep_id`` to ``new_dep_ids``.
+
+    Keeps the defense-in-depth invariant check (raises
+    ``GraphInvariantViolation`` if any dependent is non-pending) — the
+    ``TaskGraph`` has already enforced this in memory, but if graph and DB
+    have drifted, this surfaces the drift instead of silently corrupting state.
+    """
     violations = (await db.execute(
         select(TaskRecord.id, TaskRecord.status).where(
             TaskRecord.team_run_id == team_run_id,
@@ -223,99 +191,6 @@ async def replace_dependency(
     return [str(r.id) for r in result.fetchall()]
 
 
-async def insert_plan_records(
-    db: AsyncSession,
-    team_run_id: str,
-    specs: list[TaskDefinition],
-    parent_id: str | None,
-    parent_depth: int,
-    parent_root_id: str | None,
-    *,
-    child_depth: int | None = None,
-) -> list[TaskRecord]:
-    if not specs:
-        return []
-    all_deps = {d for s in specs for d in s.deps}
-    done_ids: set[str] = set()
-    if all_deps:
-        done_ids = {str(r) for r in (await db.execute(
-            select(TaskRecord.id).where(
-                TaskRecord.team_run_id == team_run_id,
-                TaskRecord.id.in_(all_deps),
-                TaskRecord.status == "done",
-            )
-        )).scalars().all()}
-    depth = child_depth if child_depth is not None else ((parent_depth + 1) if parent_id else 0)
-    records = [
-        TaskRecord(
-            id=spec.id,
-            team_run_id=team_run_id,
-            agent_name=spec.agent,
-            status="ready" if all(d in done_ids for d in spec.deps) else "pending",
-            spec=spec.spec.to_dict(),
-            deps=list(spec.deps),
-            scope_paths=list(spec.scope_paths),
-            scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],
-            parent_id=parent_id,
-            root_id=(parent_root_id if parent_id else spec.id) or "",
-            depth=depth,
-        )
-        for spec in specs
-    ]
-    db.add_all(records)
-    await db.flush()
-    return list((await db.execute(
-        select(TaskRecord)
-        .where(
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.id.in_([r.id for r in records]),
-        )
-        .order_by(TaskRecord.depth, TaskRecord.created_at)
-    )).scalars().all())
-
-
-async def cascade_cancel_recursive(
-    db: AsyncSession, team_run_id: str, root_task_id: str
-) -> list[str]:
-    rows = list((await db.execute(
-        select(TaskRecord).where(
-            TaskRecord.team_run_id == team_run_id, TaskRecord.status.notin_(_TERMINAL)
-        )
-    )).scalars().all())
-    if not rows:
-        return []
-    live_ids = {r.id for r in rows}
-    children: dict[str, list[str]] = defaultdict(list)
-    dependents: dict[str, list[str]] = defaultdict(list)
-    for r in rows:
-        if r.parent_id:
-            children[r.parent_id].append(r.id)
-        for dep in r.deps or []:
-            dependents[dep].append(r.id)
-    cancelled: set[str] = set()
-    queue: deque[str] = deque([root_task_id])
-    while queue:
-        current = queue.popleft()
-        for cid in children.get(current, []) + dependents.get(current, []):
-            if cid in live_ids and cid not in cancelled:
-                cancelled.add(cid)
-                queue.append(cid)
-    if not cancelled:
-        return []
-    result = await db.execute(
-        update(TaskRecord)
-        .where(TaskRecord.team_run_id == team_run_id, TaskRecord.id.in_(cancelled))
-        .values(
-            status="cancelled",
-            finished_at=func.now(),
-            failure_reason=f"cascaded from {root_task_id}",
-        )
-        .returning(TaskRecord.id)
-        .execution_options(synchronize_session=False)
-    )
-    return [r.id for r in result.fetchall()]
-
-
 async def bulk_cancel(
     db: AsyncSession,
     team_run_id: str,
@@ -343,7 +218,11 @@ async def bulk_cancel(
 async def mark_running(
     db: AsyncSession, team_run_id: str, task_id: str, agent_run_id: str
 ) -> TaskRecord | None:
-    """Atomically claim a READY task (or re-claim an already-RUNNING one)."""
+    """Atomically claim a READY task (or re-claim an already-RUNNING one).
+
+    This is the one lockless DB-atomic operation — multiple workers race
+    through this path and the DB UPDATE is the arbiter.
+    """
     return (await db.execute(
         update(TaskRecord)
         .where(
@@ -361,38 +240,6 @@ async def mark_running(
     )).scalar_one_or_none()
 
 
-async def finalize_replanned_origin(
-    db: AsyncSession, team_run_id: str, origin_id: str, replanner_task_id: str
-) -> int:
-    # REQUEST_REPLAN is terminal; origin stays at REQUEST_REPLAN. Record only
-    # the recovery linkage so failure_reason carries the replanner pointer.
-    result = await db.execute(
-        update(TaskRecord)
-        .where(
-            TaskRecord.team_run_id == team_run_id,
-            TaskRecord.id == origin_id,
-            TaskRecord.status == "request_replan",
-        )
-        .values(failure_reason=f"replanned_by:{replanner_task_id}")
-    )
-    return int(type_cast(CursorResult[Any], result).rowcount or 0)
-
-
 async def insert_task_record(db: AsyncSession, record: TaskRecord) -> None:
     db.add(record)
     await db.flush()
-
-
-async def set_failure_reason(
-    db: AsyncSession, team_run_id: str, task_id: str, failure_reason: str
-) -> None:
-    """Update ``failure_reason`` without touching status.
-
-    Used by ``TaskStore.persist`` to flush ``FailureReasonPatch`` mutations
-    produced by ``TaskGraph.finalize_replanned_origin``.
-    """
-    await db.execute(
-        update(TaskRecord)
-        .where(TaskRecord.team_run_id == team_run_id, TaskRecord.id == task_id)
-        .values(failure_reason=failure_reason)
-    )

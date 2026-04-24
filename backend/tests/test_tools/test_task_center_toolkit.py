@@ -17,11 +17,13 @@ from tools.task_center.tools import (
 )
 from tools.core.base import ToolExecutionContext, parse_tool_input
 from team.core.models import (
+    Note,
     Plan,
     Task,
     TaskDefinition,
     TaskStatus,
 )
+from team.task_center.notes import NoteManager
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -276,31 +278,79 @@ async def test_read_file_note_empty_path_read_reports_known_paths():
     ctx = _ctx({"task_center": SimpleNamespace(notes=_Notes())})
 
     result = await ReadFileNoteTool().execute(
-        ReadFileNoteTool.input_model(file_path="src/auth.py"),
+        ReadFileNoteTool.input_model(file_paths=["src/auth.py"]),
         ctx,
     )
 
     assert result.is_error is False
-    assert "No notes found for file_path" in result.output
+    assert "No notes found for file_paths" in result.output
     assert "src/other.py" in result.output
 
 
-def test_read_file_note_schema_requires_file_path_only():
+@pytest.mark.asyncio
+async def test_read_file_note_returns_latest_note_per_requested_path():
+    notes = NoteManager("run-1")
+    await notes.post(
+        Note(
+            id="old-auth",
+            agent_name="scout",
+            content="Old auth note.",
+            timestamp=1.0,
+            paths=["src/auth.py"],
+        )
+    )
+    await notes.post(
+        Note(
+            id="session",
+            agent_name="scout",
+            content="Latest session note.",
+            timestamp=2.0,
+            paths=["src/session.py"],
+        )
+    )
+    await notes.post(
+        Note(
+            id="new-auth",
+            agent_name="scout",
+            content="Latest auth note.",
+            timestamp=3.0,
+            paths=["src/auth.py"],
+        )
+    )
+    ctx = _ctx({"task_center": SimpleNamespace(notes=notes)})
+
+    result = await ReadFileNoteTool().execute(
+        ReadFileNoteTool.input_model(file_paths=["src/auth.py", "src/session.py"]),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert "Latest auth note." in result.output
+    assert "Latest session note." in result.output
+    assert "Old auth note." not in result.output
+    assert "[latest for: src/auth.py]" in result.output
+    assert "[latest for: src/session.py]" in result.output
+
+
+def test_read_file_note_schema_requires_file_paths_only():
     schema = ReadFileNoteTool().to_api_schema()["input_schema"]
 
-    assert schema["required"] == ["file_path"]
+    assert schema["required"] == ["file_paths"]
     assert "keyword" not in schema["properties"]
-    assert schema["properties"]["file_path"]["type"] == "string"
-    assert schema["properties"]["file_path"]["minLength"] == 1
-    assert "anyOf" not in schema["properties"]["file_path"]
-    assert "default" not in schema["properties"]["file_path"]
+    assert "last_n" not in schema["properties"]
+    assert "file_path" not in schema["properties"]
+    assert schema["properties"]["file_paths"]["type"] == "array"
+    assert schema["properties"]["file_paths"]["minItems"] == 1
+    assert schema["properties"]["file_paths"]["items"]["type"] == "string"
+    assert "anyOf" not in schema["properties"]["file_paths"]
+    assert "default" not in schema["properties"]["file_paths"]
     assert "free-form call context is not searched" in (
-        schema["properties"]["file_path"]["description"]
+        schema["properties"]["file_paths"]["description"]
     )
     assert schema["additionalProperties"] is False
 
 
-def test_read_file_note_parse_rejects_missing_file_path():
+def test_read_file_note_parse_rejects_missing_file_paths():
     tool = ReadFileNoteTool()
 
     result = parse_tool_input(
@@ -310,13 +360,13 @@ def test_read_file_note_parse_rejects_missing_file_path():
 
     assert result.is_error is True
     assert result.error is not None
-    assert "file_path" in result.error.output
+    assert "file_paths" in result.error.output
 
 
-def test_read_file_note_parse_rejects_keyword_even_with_file_path():
+def test_read_file_note_parse_rejects_keyword_even_with_file_paths():
     result = parse_tool_input(
         ReadFileNoteTool(),
-        {"file_path": "src/auth.py", "keyword": "token"},
+        {"file_paths": ["src/auth.py"], "keyword": "token"},
     )
 
     assert result.is_error is True

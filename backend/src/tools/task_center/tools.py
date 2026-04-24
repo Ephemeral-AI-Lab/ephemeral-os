@@ -350,26 +350,31 @@ class SubmitFileNotesTool(BaseTool):
 class ReadFileNoteInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    file_path: str = Field(
+    file_paths: list[str] = Field(
         ...,
         min_length=1,
         description=(
-            "REQUIRED. Path to a file or directory in the sandbox. Returns "
-            "notes whose attached paths overlap with this prefix. Put the "
-            "actual path here; free-form call context is not searched."
+            "REQUIRED. One or more file or directory paths in the sandbox. "
+            "Returns notes whose attached paths overlap any requested path. "
+            "Put actual paths here; free-form call context is not searched."
         ),
     )
-    last_n: int | None = Field(
-        default=None, description="Return only the N most recent matching notes."
-    )
+
+    @field_validator("file_paths")
+    @classmethod
+    def _paths_must_normalize(cls, value: list[str]) -> list[str]:
+        normalized = normalize_scope_paths(value)
+        if not normalized:
+            raise ValueError("file_paths must contain at least one normalized path")
+        return normalized
 
 
 class ReadFileNoteTool(BaseTool):
     name = "read_file_note"
     description = (
-        "Returns notes whose paths overlap the requested file or directory path."
+        "Returns notes whose paths overlap the requested file or directory paths."
     )
-    short_description = "Search notes by file path."
+    short_description = "Search notes by file paths."
     input_model = ReadFileNoteInput
     output_model = TextToolOutput
 
@@ -380,30 +385,43 @@ class ReadFileNoteTool(BaseTool):
         if tc is None:
             return ToolResult(output="Error: Task Center not available", is_error=True)
 
-        paths = [arguments.file_path]
+        paths = arguments.file_paths
 
-        matched = await tc.notes.read(paths=paths)
-        if not matched:
+        latest_by_path = []
+        missing_paths: list[str] = []
+        for path in paths:
+            matched = await tc.notes.read(paths=[path])
+            if not matched:
+                missing_paths.append(path)
+                continue
+            latest = max(
+                enumerate(matched),
+                key=lambda item: (float(getattr(item[1], "timestamp", 0.0) or 0.0), item[0]),
+            )[1]
+            latest_by_path.append((path, latest))
+
+        if not latest_by_path:
             known = tc.notes.known_paths()
             return ToolResult(
                 output=(
-                    f"No notes found for file_path: {arguments.file_path}. "
+                    f"No notes found for file_paths: {paths}. "
                     f"Known note paths: {known}"
                 ),
             )
 
-        notes = await tc.notes.read(
-            paths=paths,
-            last_n=arguments.last_n,
-        )
-
-        if not notes:
-            return ToolResult(output="No notes found.")
         lines: list[str] = []
-        for n in notes:
+        if missing_paths:
+            lines.extend(
+                [
+                    f"No notes found for requested file_paths: {missing_paths}.",
+                    "",
+                ]
+            )
+        for requested_path, n in latest_by_path:
             header = f"### {n.agent_name}"
             if n.paths:
                 header += f" [paths: {', '.join(n.paths)}]"
+            header += f" [latest for: {requested_path}]"
             lines.append(header)
             lines.append(n.content)
             lines.append("")
