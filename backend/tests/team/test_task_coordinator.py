@@ -27,7 +27,7 @@ from team.core.models import (
 from team.definitions import register_all as register_team_builtins
 from team.planning.expander import PlanExpansionOutcome, ReplanApplyOutcome
 from team.runtime.task_coordinator import TaskCoordinator
-from team.runtime.task_graph import GraphMutation, TaskGraph
+from team.runtime.task_graph import GraphMutation, TaskGraph, TaskInsert
 
 
 if get_definition("developer") is None:
@@ -254,10 +254,7 @@ async def test_expanded_with_plan_marks_parent_expanded_and_enqueues_ready_child
     graph = TaskGraph({"planner": planner})  # children will be inserted by mutation
 
     insert_mutation = GraphMutation(
-        inserts=(
-            __import__("team.runtime.task_graph", fromlist=["TaskInsert"]).TaskInsert(child_a),
-            __import__("team.runtime.task_graph", fromlist=["TaskInsert"]).TaskInsert(child_b),
-        )
+        inserts=(TaskInsert(child_a), TaskInsert(child_b)),
     )
     plan = Plan(
         tasks=[

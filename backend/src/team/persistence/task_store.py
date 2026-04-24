@@ -79,15 +79,13 @@ class TaskStore:
     # ---- hydration + persistence --------------------------------------
 
     async def load_graph(self) -> list[Task]:
-        """Read every task for this run as domain ``Task`` objects."""
+        """Read every task for this run as domain ``Task`` objects.
+
+        Callers (``TaskCenter``) hand the result to ``TaskGraph.replace_all``
+        to hydrate the in-memory graph at startup.
+        """
         records = await self.get_all_tasks()
         return [record_to_task(r) for r in records]
-
-    async def refresh_graph(self) -> dict[str, Task]:
-        """Reload in-memory graph from DB. Returns the live dict."""
-        tasks = await self.load_graph()
-        self._task_graph.replace_all(tasks)
-        return self._task_graph.tasks
 
     async def persist(self, mutation: GraphMutation) -> None:
         """Flush one ``GraphMutation`` to the database in a single transaction.

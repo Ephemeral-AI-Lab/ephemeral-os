@@ -12,7 +12,7 @@ import re
 
 from sqlalchemy import Text
 
-from team.core.models import BudgetConfig, BudgetState, TERMINAL_STATUSES, Task, TaskStatus
+from team.core.models import TERMINAL_STATUSES, TaskStatus
 from team.persistence.ltree_utils import _escape_char, path_to_ltree
 from team.persistence import tasks_sql as task_queries
 from team.persistence.tasks_sql import TaskRecord

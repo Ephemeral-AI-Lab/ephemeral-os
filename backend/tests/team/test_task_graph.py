@@ -17,7 +17,6 @@ from team.runtime.task_graph import (
     DepRewire,
     FailureReasonPatch,
     GraphMutation,
-    ReplanSpawn,
     StatusChange,
     TaskGraph,
     TaskInsert,

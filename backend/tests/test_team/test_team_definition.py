@@ -70,10 +70,12 @@ class _FakeStore:
 class _FakeTaskCenter:
     def __init__(self) -> None:
         from team.core.models import BudgetConfig, BudgetState
+        from team.runtime.task_graph import TaskGraph
 
         self.budgets = BudgetConfig()
         self.budget_state = BudgetState()
-        self.graph = {}
+        self.task_graph = TaskGraph()
+        self.graph = self.task_graph.tasks
         self._events = TeamRunStore()
         self.notes = []
         self.budget = None
