@@ -188,8 +188,6 @@ class LspBackendAdapter:
     def diagnostics(self, file_path: str) -> BackendQueryOutcome:
         try:
             results = self._lsp.diagnostics(file_path)
-            if not results:
-                return BackendQueryOutcome(status=QueryStatus.EMPTY)
             return BackendQueryOutcome(status=QueryStatus.SUCCESS, results=results)
         except Exception as e:
             return BackendQueryOutcome(status=QueryStatus.ERROR, error=str(e))

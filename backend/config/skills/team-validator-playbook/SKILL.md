@@ -50,7 +50,7 @@ validation UUIDs
 
 | Surface | Compact rule |
 | --- | --- |
-| Shell boundary | Run exact tests/probes only; reads, writes, deletes, redirects, cleanup, or wrapper checks are red evidence. |
+| Shell boundary | Prefer raw exact tests/probes; pipes, redirects, cleanup, or wrapper checks are RCA-only evidence. |
 | Verification integrity | Latest red raw command controls status; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
 | Evidence freshness | Stale, partial, indirect, wrapper, altered-command, or missing evidence is red. |
 | Correction scope | One correction only; a few light outside-scope ops can continue, while multiple files, broad, or repeated paths go to replan. |
@@ -144,9 +144,9 @@ local correction -> allowed target? -> one Daytona mutation -> notes/diagnostics
 
 | Correction gate | Route |
 | --- | --- |
-| Existing file inside assigned `scope_paths` or dependency-touched production file | One `daytona_edit_file`. |
-| Proven new production file, or a few light outside-scope ops tied to the same mechanism | Apply the correction and record it in the terminal payload. |
-| Multiple outside-scope files, repeated outside-scope mutation, blocked expansion, test edit, broad refactor, or second correction | `request_replan` with `scope_expansion` or fitting trigger. |
+| Existing file inside assigned `scope_paths` | One `daytona_edit_file`. |
+| One proven adjacent production file tied to the same mechanism | Apply and record it in the terminal payload. |
+| Multiple outside-scope files, repeated outside-scope mutation, policy/blocked expansion, test edit, broad refactor, or second correction | `request_replan` with `scope_expansion` or fitting trigger. |
 
 ## 6. Submit Terminal Summary
 

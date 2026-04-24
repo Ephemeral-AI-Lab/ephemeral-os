@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from code_intelligence._async_bridge import current_sandbox_io_loop
 from code_intelligence.lsp.client import LspClient
 from tools.ci_toolkit.lsp_tools import ci_diagnostics
 from tools.core.base import ToolExecutionContext
@@ -42,6 +43,36 @@ def test_diagnostics_clean():
     data = json.loads(result.output)
     assert data["clean"] is True
     assert data["diagnostics"] == []
+
+
+def test_diagnostics_runs_service_with_sandbox_io_loop():
+    class _Service:
+        def diagnostics(self, file_path: str):
+            assert file_path == "/f.py"
+            assert current_sandbox_io_loop() is not None
+            return []
+
+    ctx = _ctx({"ci_service": _Service(), "daytona_cwd": "/ws"})
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
+    )
+
+    assert not result.is_error
+    assert json.loads(result.output)["clean"] is True
+
+
+def test_diagnostics_backend_failure_returns_error_not_clean():
+    svc = MagicMock()
+    svc.diagnostics.side_effect = RuntimeError("transport unavailable")
+    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
+
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
+    )
+
+    assert result.is_error
+    assert "LSP diagnostics unavailable" in result.output
+    assert "transport unavailable" in result.output
 
 
 def test_diagnostics_with_errors():

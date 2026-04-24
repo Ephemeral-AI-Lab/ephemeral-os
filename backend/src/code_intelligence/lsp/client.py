@@ -664,9 +664,19 @@ class LspClient:
                 "else:\n"
                 "    print(json.dumps({'type': 'clean'}))\n"
             )
-            raw = self._decode_json(self._run_python_script(script))
-            if not isinstance(raw, dict) or raw.get("type") != "syntax_error":
+            output = self._run_python_script(script)
+            raw = self._decode_json(output)
+            if not isinstance(raw, dict):
+                raise RuntimeError(
+                    "LSP diagnostics unavailable: python query produced no JSON"
+                )
+            result_type = raw.get("type")
+            if result_type in {"clean", "missing"}:
                 return []
+            if result_type != "syntax_error":
+                raise RuntimeError(
+                    f"LSP diagnostics unavailable: unexpected result {result_type!r}"
+                )
             return [
                 Diagnostic(
                     file_path=file_path,

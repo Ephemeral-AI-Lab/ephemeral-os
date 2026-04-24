@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -64,7 +65,14 @@ async def ci_diagnostics(
     if svc is None:
         return ToolResult(output="LSP not available", is_error=True)
 
-    results = svc.diagnostics(file_path)
+    try:
+        with use_sandbox_io_loop():
+            results = await run_sync_in_executor(svc.diagnostics, file_path)
+    except Exception as exc:
+        return ToolResult(
+            output=f"LSP diagnostics unavailable: {exc}",
+            is_error=True,
+        )
     if not results:
         return ToolResult(
             output=json.dumps(

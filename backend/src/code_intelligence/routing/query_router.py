@@ -101,6 +101,7 @@ class IntelligenceQueryRouter:
 
     def diagnostics(self, file_path: str) -> list[Diagnostic]:
         """Get diagnostics, routing through backends."""
+        last_error: tuple[str, str] | None = None
         for backend in self._backends:
             if not backend.supports(file_path):
                 continue
@@ -108,8 +109,15 @@ class IntelligenceQueryRouter:
             if outcome.status in _FALLBACK_STATUSES:
                 if outcome.status == QueryStatus.ERROR:
                     logger.warning("Backend %s error (falling back): %s", backend.name, outcome.error)
+                    last_error = (backend.name, outcome.error)
                 continue
             return outcome.results or []
+        if last_error is not None:
+            backend_name, error = last_error
+            raise RuntimeError(
+                f"Diagnostic backend {backend_name} failed and no fallback "
+                f"diagnostic backend succeeded: {error}"
+            )
         return []
 
     def register_file_change(self, file_path: str) -> None:

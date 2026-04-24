@@ -10,6 +10,8 @@ import threading
 import time
 from types import SimpleNamespace
 
+import pytest
+
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.types import DiagnosticSeverity, SymbolKind
 
@@ -206,6 +208,20 @@ def test_sandbox_python_diagnostics_runs_inside_sandbox(monkeypatch) -> None:
     assert diagnostics[0].source == "python"
     assert captured_scripts
     assert "/workspace/dask/config.py" in captured_scripts[0]
+
+
+def test_sandbox_python_diagnostics_raises_when_query_transport_fails() -> None:
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            raise RuntimeError("Failed to execute command: ")
+
+    sandbox = SimpleNamespace(process=_SandboxProcess())
+    lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
+
+    with pytest.raises(RuntimeError, match="LSP diagnostics unavailable"):
+        lsp.diagnostics("pkg/mod.py")
+
+    assert lsp.telemetry.script_errors == 1
 
 
 def test_sandbox_exec_runs_script_with_base64_pipe() -> None:
