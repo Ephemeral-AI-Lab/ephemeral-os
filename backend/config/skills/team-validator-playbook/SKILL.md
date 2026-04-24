@@ -7,6 +7,10 @@ description: Authoritative playbook for the validator agent. Read task context, 
 
 Verify the assigned developer or child-planner outcome from live repo evidence. Finish with exactly one `submit_task_success(...)` or `request_replan(...)` call.
 
+<Forbid Rule>
+Never try to edit test files or test suites to pass acceptance criteria.
+</Forbid Rule>
+
 ## Stage Flow
 
 ```text
@@ -53,7 +57,7 @@ validation UUIDs
 | Shell boundary | Prefer raw exact tests/probes; pipes, redirects, cleanup, or wrapper checks are RCA-only evidence. |
 | Verification integrity | Latest red raw command controls status; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
 | Evidence freshness | Stale, partial, indirect, wrapper, altered-command, or missing evidence is red. |
-| Correction scope | One correction only; a few light outside-scope ops can continue, while multiple files, broad, or repeated paths go to replan. |
+| Correction scope | One correction only; a few light outside-scope ops can continue, while multiple files or broad changes replan. |
 
 ## 1. Read Context
 
@@ -146,7 +150,7 @@ local correction -> allowed target? -> one Daytona mutation -> notes/diagnostics
 | --- | --- |
 | Existing file inside assigned `scope_paths` | One `daytona_edit_file`. |
 | One proven adjacent production file tied to the same mechanism | Apply and record it in the terminal payload. |
-| Multiple outside-scope files, repeated outside-scope mutation, policy/blocked expansion, test edit, broad refactor, or second correction | `request_replan` with `scope_expansion` or fitting trigger. |
+| Multiple outside-scope files, policy/blocked expansion, test edit, broad refactor, or second correction | `request_replan` with `scope_expansion` or fitting trigger. |
 
 ## 6. Submit Terminal Summary
 

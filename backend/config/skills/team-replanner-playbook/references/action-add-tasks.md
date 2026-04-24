@@ -21,7 +21,7 @@ classification + root-cause trace
 | Same-scope continuation with no trace | Diagnose further before tasking. |
 | Work already owned by uncancelled live sibling | Preserve that sibling. |
 | Test, benchmark, skip/xfail, pytest-config, doc-only, or benchmark-harness change | Drop and assign production repair/diagnostic instead. |
-| Child planner, replanner, or scout | Drop; replanner children are only developers/validators. |
+| Planner, replanner, or scout | Drop; replanner children are only developers/validators. |
 
 ## Build
 

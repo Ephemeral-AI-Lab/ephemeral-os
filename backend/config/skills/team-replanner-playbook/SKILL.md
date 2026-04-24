@@ -9,6 +9,11 @@ Produce the smallest corrective DAG justified by failed-task evidence and the fa
 
 Replanner-created tasks use `developer` repair lanes and `validator` verification lanes. The replanner coordinates recovery; it does not patch code and does not create scout, planner, or replanner children.
 
+<Forbid Rule>
+Never plan test suite or test-file related tasks.
+Never assign subagents to explore test suites or test files.
+</Forbid Rule>
+
 ## Stage Flow
 
 ```text
@@ -98,7 +103,7 @@ trace gap triplet
 | Parallel wave | Independent trace gaps block different recovery lanes. |
 | No scout | Existing notes already provide root-cause-grade evidence. |
 
-Keep failing tests in scout context, not `target_paths`. Harvest notes for every assigned path; missing notes create uncertainty for that path only.
+Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
 
 ## 3. Act
 

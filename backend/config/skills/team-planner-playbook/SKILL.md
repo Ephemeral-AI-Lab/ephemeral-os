@@ -7,6 +7,11 @@ description: Playbook for the team_planner agent. Load inherited Task Center con
 
 Produce a child task DAG from inherited Task Center context. Finish with exactly one `submit_plan(...)` call.
 
+<Forbid Rule>
+Never plan test suite or test-file related tasks.
+Never assign subagents to explore test suites or test files.
+</Forbid Rule>
+
 | Route | Use when |
 | --- | --- |
 | `developer` | Atomic slice: exact owner + one mechanism. Default for every atomic piece, even inside a broad task. |
@@ -18,7 +23,6 @@ Produce a child task DAG from inherited Task Center context. Finish with exactly
 | --- | --- |
 | Owner questions change this DAG | Scout by production mechanism. |
 | Several owner/mechanism rows | Launch a scout row wave before local CI; synthesize sibling lanes. |
-| Test or benchmark path | Keep as evidence in `spec`, not `target_paths` or `scope_paths`. |
 
 ## Stage Flow
 
@@ -89,7 +93,7 @@ row: config/compat  -> scout(["pkg/config", "pkg/compat"])
 | Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
 | Wave size | Row-wave first: one scout per changelog/mechanism row; split large owners, avoid one-per-test. |
 
-Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Missing notes, cold CI, canceled scouts, or disproved exact files become uncertainty for that path only.
+Keep `target_paths` production-only: one directory or short file list. Put commands/repro steps in developer or validator specs. Missing/cold notes become uncertainty for that path only.
 
 ## 3. Synthesize
 

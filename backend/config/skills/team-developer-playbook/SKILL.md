@@ -7,6 +7,10 @@ description: Authoritative playbook for the developer agent. Read task context, 
 
 Complete one bounded coding task from the Task Center handoff. Finish with exactly one `submit_task_success(...)` or `request_replan(...)` call.
 
+<Forbid Rule>
+Never try to edit test files or test suites to pass acceptance criteria.
+</Forbid Rule>
+
 ## Stage Flow
 
 ```text
@@ -84,7 +88,7 @@ context
 | Verification | Exact post-edit command plus diagnostics for edited files. |
 | Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or fully spent budget with work incomplete. |
 
-Tests and benchmark ids are evidence, not edit surfaces. Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
+Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
 
 ## 3. Implement
 
@@ -97,8 +101,8 @@ bounded edit plan -> prove file/symbol/rename target -> one Daytona mutation -> 
 | Mutation check | Route |
 | --- | --- |
 | Assigned or proven adjacent production path | Edit with the narrowest Daytona mutation tool. |
-| A few light outside-scope operations tied to the same mechanism | Continue with evidence and record in the terminal payload. |
-| Multiple outside-scope files, blocked move/delete, broad change, or unclear boundary | `request_replan` with `scope_expansion`. |
+| A few light outside-scope operations tied to one mechanism | Continue with evidence and record them. |
+| Multiple outside-scope files or broad/unclear boundary | `request_replan` with `scope_expansion`. |
 | Test edit, dependency edit, environment edit, or verification rewrite | `request_replan` with the fitting trigger. |
 
 After a red command, write a compact value table, then complete Stage 4 RCA before another edit:
