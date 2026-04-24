@@ -7,7 +7,7 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 Produce the smallest corrective DAG justified by failed-task evidence and the failed task's original contract. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
 
-Replanner-created tasks use only `developer` repair lanes and `validator` verification lanes. The replanner coordinates recovery; it does not patch code or create planner/scout/replanner children.
+Replanner-created tasks use `developer` repair lanes, `validator` verification lanes, and — only when justified — `team_planner` redraft lanes. The replanner coordinates recovery; it does not patch code and does not create scout or replanner children.
 
 ## Stage Flow
 
@@ -23,7 +23,8 @@ Caption: replanner recovery path. References load only inside the action or subm
        ` unresolved_blocker + deep_diagnostics -> diagnostic scout wave
   -> [3 Act]
        | add-only -------------> load action-add-tasks
-       ` cancel-and-redraft ---> load action-cancel-and-redraft
+       | cancel-and-redraft ---> load action-cancel-and-redraft
+       ` redraft-via-planner --> load action-replan-via-planner
   -> [4 Submit]
        load terminal-contract -> checklist -> submit_replan(...)
 ```
@@ -54,7 +55,7 @@ failed task
   |-- unresolved: owner, rule, value mapping, missing path
   |-- original contract: assigned goal, criteria, scope, uncompleted work
   |-- live siblings: useful work to preserve
-  `-- stale siblings: non-terminal direct siblings that may be cancelled
+  `-- stale siblings: running/pending/ready direct siblings that may be cancelled
 ```
 
 ## 2. Classify Failure
@@ -103,7 +104,7 @@ Keep failing tests in scout context, not `target_paths`. Harvest notes for every
 ## 3. Act
 
 Enter after classification is written and diagnostics are complete or intentionally skipped.
-Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`.
+Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`; redraft-via-planner -> `action-replan-via-planner`.
 
 ```text
 Caption: cancellation boundary.
@@ -111,23 +112,24 @@ Caption: cancellation boundary.
 same parent:
   failed request_replan/origin -> preserve; never cancel
   this replanner     -> preserve
-  terminal sibling   -> preserve
+  terminal/validator -> preserve
   live useful sibling -> preserve
-  other stale live sibling -> may appear in cancel_ids
+  stale running/pending/ready sibling -> may appear in cancel_ids
 ```
 
 | Action | Use when |
 | --- | --- |
 | Add-only | Only new corrective work is needed, or the failed task itself is the only stale item. |
-| Cancel and redraft | Other non-terminal direct siblings are stale, duplicate, or depend on the failed assumption. |
-| Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, or outside the stale region. |
+| Cancel and redraft | Direct siblings in `running`, `pending`, or `ready` are stale, duplicate, or depend on the failed assumption. |
+| Redraft via team_planner | `scope_expansion` with a surface too wide for a bounded developer, or a stale `team_planner` sibling whose subtree must be re-authored with better dependency wiring. Spec must declare `Planner handoff: scope_expansion` or `Planner handoff: planner_redraft`. |
+| Preserve terminal work | Sibling is `done`, `failed`, `cancelled`, `request_replan`, outside the stale region, or a validator continuation. |
 | Preserve live useful work | Objective remains valid after corrective work. |
 
 | Coverage row | Action |
 | --- | --- |
 | Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
-| Uncompleted original goal, criterion, scope item, or validation evidence | Map to a recovery child or preserved live owner. |
-| Blocker-only fix leaves original contract uncovered | Add continuation or validator coverage. |
+| Validator-discovered child-owned suite or uncompleted criterion | Map to repair plus validator, or preserved live owner. |
+| Blocker-only fix leaves contract uncovered | Add continuation validator. |
 | Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, or contradictory value rule | Evidence only; add a production diagnostic or blocker task. |
 
 ## 4. Submit
@@ -138,9 +140,9 @@ Terminal reference: `terminal-contract`.
 | Submit check | Expected result |
 | --- | --- |
 | Top-level keys | Only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when add-only. |
-| New tasks | Non-empty direct recovery children; every `agent` is `developer` or `validator`. |
-| Specs | Structured `goal`, `detail`, and `acceptance_criteria`; unresolved blockers include diagnostics decision. |
+| New tasks | Direct repair children plus needed validator; agents are `developer`, `validator`, or `team_planner`. |
+| Specs | Structured `goal`, `detail`, and `acceptance_criteria`; unresolved blockers include diagnostics decision; `team_planner` tasks include `Planner handoff: scope_expansion` or `Planner handoff: planner_redraft`. |
 | Dependencies | Local recovery ids or freshly proven schedulable existing ids only. |
-| Cancellations | Only stale non-terminal direct siblings; never failed task, replanner, terminal tasks, or nested descendants. |
+| Cancellations | Only stale running/pending/ready direct siblings; never failed, replanner, terminal, descendant, or validator-continuation work. |
 
 Emit exactly one `submit_replan({ new_tasks, cancel_ids })` call. Make no further tool calls or prose.

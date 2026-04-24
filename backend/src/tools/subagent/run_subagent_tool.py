@@ -40,8 +40,8 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from token_tracker.runtime import persist_run_usage
 from team.core.scope import scope_paths_from_payload
+from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 
@@ -236,11 +236,9 @@ def _validate_run_subagent_request(
             is_error=True,
         )
 
-    subagent_scope_paths = scope_paths_from_payload(input)
-
     return _ValidatedRunSubagentRequest(
         sub_def=sub_def,
-        subagent_scope_paths=subagent_scope_paths,
+        subagent_scope_paths=scope_paths_from_payload(input),
     )
 
 
@@ -354,7 +352,6 @@ async def run_subagent(
     task_id = context.metadata.background_task_id
     parent_run_id = context.metadata.agent_run_id
     parent_task_id = task_id if isinstance(task_id, str) else None
-    parent_team_run_id = context.metadata.get("team_run_id")
 
     validation = _validate_run_subagent_request(
         agent_name=agent_name,
@@ -396,6 +393,7 @@ async def run_subagent(
             agent_def=sub_def,
             latest_user_prompt=final_prompt,
             sandbox_id=sandbox_id,
+            target_paths=list(subagent_scope_paths) or None,
         )
     except Exception as exc:
         logger.exception("run_subagent: spawn_agent failed")
@@ -410,21 +408,27 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: spawn failed: {exc}", is_error=True)
 
-    subagent_ctx = ToolExecutionContext(cwd=context.cwd, metadata=context.metadata.copy())
-    subagent_ctx.metadata["work_item_started_at"] = time.time()
-    if parent_team_run_id:
-        subagent_ctx.metadata.team_run_id = parent_team_run_id
-    if subagent_scope_paths:
-        subagent_ctx.metadata["write_scope"] = list(subagent_scope_paths)
-    if getattr(sub_def, "role", None):
-        subagent_ctx.metadata["role"] = sub_def.role
-
+    # The subagent is parameterized solely by `prompt` / `input`. Its
+    # `tool_metadata` is the fresh `ExecutionMetadata` that `spawn_agent`
+    # produced (session_config + sandbox_id). We deliberately do NOT
+    # inherit any parent metadata — the only child-defined values we add
+    # are the agent identity, the query-loop timing marker, and the
+    # child's declared role from its own AgentDefinition.
     qc = getattr(agent, "query_context", None)
-    if qc is not None:
-        merged = qc.tool_metadata.copy() if qc.tool_metadata is not None else subagent_ctx.metadata.copy()
-        merged.update(subagent_ctx.metadata)
-        merged.agent_name = sub_def.name
-        qc.tool_metadata = merged
+    if qc is not None and qc.tool_metadata is not None:
+        qc.tool_metadata.agent_name = sub_def.name
+        # `target_paths` carries the subagent's declared scope (derived from
+        # the caller's `input` payload via scope_paths_from_payload). This is
+        # deliberately distinct from `write_scope` — the latter is a
+        # team-worker write-permission key enforced by the daytona file
+        # tools. Subagents are read-oriented: they should not inherit
+        # ambient write rights, and coverage-style checks (e.g. scout's
+        # exact-file-note policy) read `target_paths` instead.
+        qc.tool_metadata["target_paths"] = list(subagent_scope_paths)
+        qc.tool_metadata["work_item_started_at"] = time.time()
+        sub_role = getattr(sub_def, "role", None)
+        if sub_role:
+            qc.tool_metadata["role"] = sub_role
 
     # Register the live-peek progress provider — closes over the inner agent's
     # _messages list, so each peek returns a fresh snapshot of the last N
@@ -496,8 +500,8 @@ async def run_subagent(
     final_text = _extract_final_text(agent.display_messages)
     # Tolerate test stubs that don't expose a query_context.
     api_snapshot = qc.api_messages_snapshot if qc is not None else None
-    run_meta = qc.tool_metadata if qc is not None and qc.tool_metadata is not None else subagent_ctx.metadata
-    if final_text:
+    run_meta = qc.tool_metadata if qc is not None and qc.tool_metadata is not None else None
+    if final_text and run_meta is not None:
         run_meta["work_result"] = final_text
     # Test stubs may not expose ``agent_name``/``model``/``total_usage`` —
     # skip usage persistence in that case instead of crashing the tool.

@@ -39,7 +39,7 @@ async def hook(
     if str(context.metadata.get("agent_name") or "").strip() != "scout":
         return PreHookOutcome()
 
-    assigned = _normalize_metadata_paths(context.metadata.get("write_scope"))
+    assigned = _normalize_metadata_paths(context.metadata.get("target_paths"))
     if not assigned:
         return PreHookOutcome()
 

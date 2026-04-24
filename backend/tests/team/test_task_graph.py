@@ -421,8 +421,8 @@ class TestPlanRequestReplan:
 
     def test_invariant_violation_when_dependent_is_not_pending(self):
         """The replace_dependency invariant: any task depending on the
-        failing origin must be PENDING. Running/ready/terminal dependents
-        indicate a data-race or upstream bug and must be surfaced."""
+        failing origin must be PENDING. Running/ready/done dependents indicate
+        a data-race or upstream bug and must be surfaced."""
         origin = _running("origin")
         running_dependent = _running("hot", deps=["origin"])
         graph = _graph(origin, running_dependent)
@@ -434,6 +434,23 @@ class TestPlanRequestReplan:
                 replanner_agent="team_replanner",
                 replanner_id_factory=_counter_ids(),
             )
+
+    def test_cancelled_dependent_is_ignored_during_replan_rewire(self):
+        origin = _running("origin")
+        cancelled_dependent = make_task(
+            "validator", status=TaskStatus.CANCELLED, deps=["origin"]
+        )
+        graph = _graph(origin, cancelled_dependent)
+
+        result = graph.plan_request_replan(
+            task_id="origin",
+            reason="broken",
+            replanner_agent="team_replanner",
+            replanner_id_factory=_counter_ids(),
+        )
+
+        assert result.is_new is True
+        assert result.mutation.rewires == ()
 
     def test_idempotent_reuse_when_live_replanner_exists(self):
         origin = make_task("origin", status=TaskStatus.REQUEST_REPLAN)

@@ -457,6 +457,120 @@ async def test_run_subagent_passes_payload_verbatim(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
+    """Subagent is parameterized solely by `prompt` / `input`; parent
+    metadata (write_scope, team_run_id, role) MUST NOT leak into the child's
+    tool_metadata. The child's tool_metadata is the fresh ExecutionMetadata
+    that `spawn_agent` produced — only `agent_name` and
+    `work_item_started_at` are added here."""
+    from tools.core.runtime import ExecutionMetadata
+
+    scripted = [
+        ConversationMessage(role="assistant", content=[TextBlock(text="DONE")]),
+    ]
+    stub_agent = _StubAgent(scripted)
+    # Mirror spawn_agent: child starts with a fresh ExecutionMetadata.
+    stub_agent.query_context = type(
+        "_QueryContext",
+        (),
+        {
+            "tool_metadata": ExecutionMetadata(),
+            "api_messages_snapshot": None,
+        },
+    )()
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent", lambda *a, **kw: stub_agent, raising=True
+    )
+
+    bg = _make_bg_manager("bg_scope")
+    ctx = _make_ctx(
+        bg=bg,
+        task_id="bg_scope",
+        extra_meta={
+            "write_scope": ["parent/scope.py"],
+            "team_run_id": "parent_team_run",
+            "role": "parent_role",
+        },
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", prompt="inspect child scope"),
+        ctx,
+    )
+
+    child_meta = stub_agent.query_context.tool_metadata
+    assert result.is_error is False
+    # Subagent never inherits the parent's `write_scope` — that key is
+    # reserved for team-worker write-permission enforcement (daytona file
+    # tools) and must not leak into a dispatchable subagent.
+    assert child_meta.get("write_scope") is None
+    # Prompt-only invocation → payload has no scope keys → child
+    # `target_paths` is explicitly empty (the scout coverage hook reads
+    # this key; empty means no coverage enforcement).
+    assert child_meta.get("target_paths") == []
+    assert child_meta.get("team_run_id") is None
+    # `role` comes from the child agent definition (sub_def.role), not from
+    # the parent metadata — scout's definition sets role="explorer".
+    assert child_meta.get("role") == "explorer"
+    assert child_meta.get("work_item_started_at") is not None
+
+
+@pytest.mark.asyncio
+async def test_input_subagent_derives_target_paths_from_payload(monkeypatch):
+    """Structured input derives the child's `target_paths` metadata from the
+    payload. The child must NOT carry a `write_scope` key — that's reserved
+    for the team-worker write-permission channel."""
+    from tools.core.runtime import ExecutionMetadata
+
+    scripted = [
+        ConversationMessage(role="assistant", content=[TextBlock(text="DONE")]),
+    ]
+    stub_agent = _StubAgent(scripted)
+    stub_agent.query_context = type(
+        "_QueryContext",
+        (),
+        {
+            "tool_metadata": ExecutionMetadata(),
+            "api_messages_snapshot": None,
+        },
+    )()
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent", lambda *a, **kw: stub_agent, raising=True
+    )
+
+    bg = _make_bg_manager("bg_scope_input")
+    ctx = _make_ctx(
+        bg=bg,
+        task_id="bg_scope_input",
+        extra_meta={"write_scope": ["parent/should_not_leak.py"]},
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={
+                "target_paths": [
+                    "dask/dataframe/utils.py",
+                    "dask/dataframe/_compat.py",
+                ]
+            },
+        ),
+        ctx,
+    )
+
+    child_meta = stub_agent.query_context.tool_metadata
+    assert result.is_error is False
+    assert child_meta.get("target_paths") == [
+        "dask/dataframe/_compat.py",
+        "dask/dataframe/utils.py",
+    ]
+    # Parent `write_scope` must never leak into the child.
+    assert child_meta.get("write_scope") is None
+
+
+@pytest.mark.asyncio
 async def test_run_subagent_missing_session_config_returns_error():
     ctx = ToolExecutionContext(cwd=Path("/tmp"), metadata={})
     result = await run_subagent.execute(

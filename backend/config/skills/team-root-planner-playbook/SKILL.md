@@ -15,8 +15,8 @@ Produce the top-level task DAG from the user request. Finish with exactly one `s
 
 | Gate | Action |
 | --- | --- |
-| Owner questions change this DAG | Scout by production owner family. |
-| Several owner families | Fan out routing scouts by owner family; synthesize sibling lanes. |
+| Owner questions change this DAG | Scout by production mechanism. |
+| Several owner/mechanism rows | Fan out routing scouts per row; synthesize sibling lanes. |
 | Test or benchmark path | Keep as evidence in `spec`, not `target_paths`. |
 
 ## Stage Flow
@@ -61,7 +61,7 @@ request
 | Check | Root-planner action |
 | --- | --- |
 | Intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
-| Clustering | Group many failures by owner family, mechanism, API, dtype, engine, or format. |
+| Clustering | Group many failures by changelog group, owner, mechanism, API, dtype, engine, or format. |
 | Benchmark evidence | Keep tests and ids as verification evidence, not owner proof. |
 | Boundary probe | Use at most one targeted CI structure/symbol query when it changes scout shape. |
 
@@ -74,8 +74,8 @@ Use this stage for route-changing exploration: superficial directory/multi-file 
 ```text
 Caption: scout fan-out supports the next sibling wave.
 
+row: HDF family     -> scout(["pkg/io/hdf"])     -> read_file_note(["pkg/io/hdf"])
 row: parquet family -> scout(["pkg/io/parquet"]) -> read_file_note(["pkg/io/parquet"])
-row: CLI family     -> scout(["pkg/cli"])        -> read_file_note(["pkg/cli"])
 row: config seam    -> scout(["pkg/config", "pkg/options"])
 ```
 
@@ -84,7 +84,7 @@ row: config seam    -> scout(["pkg/config", "pkg/options"])
 | Single path | Deep scout when one file or module is the likely owner. |
 | Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
 | Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
-| Wave size | Cluster by mechanism; avoid one-per-test and all-purpose scouts. |
+| Wave size | One scout per changelog/mechanism row; split large owners, avoid one-per-test. |
 | No scout | Leaf-only detail; preserve uncertainty in expandable task specs. |
 
 Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Launch before polling; missing notes become uncertainty for that path only.

@@ -309,7 +309,6 @@ _ACTIVE_CANCEL_TARGET_STATUSES = (
     TaskStatus.PENDING,
     TaskStatus.READY,
     TaskStatus.RUNNING,
-    TaskStatus.EXPANDED,
 )
 _GENERATED_STATUSES = (
     TaskStatus.PENDING,

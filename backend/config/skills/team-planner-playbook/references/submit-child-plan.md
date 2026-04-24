@@ -25,11 +25,11 @@ owner slice
 
 | Situation | Action |
 | --- | --- |
-| Crowded level | Group by owner family or mechanism. |
+| Crowded level | Group by changelog/mechanism row. |
 | One broad `developer` | Make it expandable (`team_planner`) while depth remains. |
 | Many scout candidates | Scout superficially by boundary, then split into expandable tasks. |
 | Many tiny variants under one mechanism | One task or one expandable task, not many thin siblings. |
-| Unrelated owner families | Several siblings, grouped by boundary. |
+| Unrelated mechanisms | Several siblings, grouped by boundary. |
 
 ## DAG Patterns
 

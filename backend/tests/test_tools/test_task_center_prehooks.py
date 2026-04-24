@@ -19,10 +19,10 @@ async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
     events.append(event)
 
 
-def _context(*, agent_name: str, write_scope: list[str] | None = None) -> ToolExecutionContext:
+def _context(*, agent_name: str, target_paths: list[str] | None = None) -> ToolExecutionContext:
     metadata = {"agent_name": agent_name}
-    if write_scope is not None:
-        metadata["write_scope"] = write_scope
+    if target_paths is not None:
+        metadata["target_paths"] = target_paths
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata)
 
 
@@ -50,7 +50,7 @@ async def test_scout_file_note_prehook_allows_exact_scope_coverage() -> None:
     )
 
     result = await _run_file_note_pre_hook(
-        _context(agent_name="scout", write_scope=["pkg/auth.py", "pkg/session.py"]),
+        _context(agent_name="scout", target_paths=["pkg/auth.py", "pkg/session.py"]),
         args,
     )
 
@@ -64,7 +64,7 @@ async def test_scout_file_note_prehook_rejects_missing_assigned_path() -> None:
     )
 
     result = await _run_file_note_pre_hook(
-        _context(agent_name="scout", write_scope=["pkg/auth.py", "pkg/session.py"]),
+        _context(agent_name="scout", target_paths=["pkg/auth.py", "pkg/session.py"]),
         args,
     )
 
@@ -81,7 +81,7 @@ async def test_scout_file_note_prehook_rejects_extra_unassigned_path() -> None:
     )
 
     result = await _run_file_note_pre_hook(
-        _context(agent_name="scout", write_scope=["pkg/auth.py"]),
+        _context(agent_name="scout", target_paths=["pkg/auth.py"]),
         args,
     )
 
@@ -95,7 +95,7 @@ async def test_scout_file_note_prehook_rejects_descendant_substitution_for_direc
     )
 
     result = await _run_file_note_pre_hook(
-        _context(agent_name="scout", write_scope=["pkg"]),
+        _context(agent_name="scout", target_paths=["pkg"]),
         args,
     )
 
@@ -111,7 +111,7 @@ async def test_non_scout_file_note_prehook_is_noop() -> None:
     )
 
     result = await _run_file_note_pre_hook(
-        _context(agent_name="developer", write_scope=["pkg/auth.py", "pkg/session.py"]),
+        _context(agent_name="developer", target_paths=["pkg/auth.py", "pkg/session.py"]),
         args,
     )
 

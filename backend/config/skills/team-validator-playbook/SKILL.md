@@ -15,7 +15,7 @@ Caption: validator route. Direct evidence comes first; red evidence either gets 
 validation UUIDs
   -> [1 Read context]
   -> [2 Map criteria to evidence]
-       | invalid handoff / wrong owner / budget spent + incomplete -> request_replan
+       | invalid handoff / child-owned red suite / budget spent + incomplete -> request_replan
   -> [3 Run diagnostics + exact command]
        | raw exact command green -> submit_task_success
        ` red / invalid / absent -> [4 Analyze red evidence]
@@ -80,7 +80,7 @@ criteria -> exact command first -> diagnostics -> optional public-surface guardr
 | Exact command | Run the required command before substitutes, broad suites, or narrowed confirmation. |
 | Diagnostics | Name owned or touched production files for `ci_diagnostics`. |
 | Guardrail | Add one nearby public-surface guardrail only when the touched surface affects public output. |
-| Replan check | Dependency not done, missing handoff, wrong owner, no valid evidence path, fully spent budget with work incomplete, or broad correction. |
+| Replan check | Dependency not done, child-owned suite red, wrong owner, no valid evidence path, spent budget incomplete, or broad correction. |
 
 Acceptance criteria and test outcomes do not expand `scope_paths` by themselves. A new production file is valid only when live production evidence proves the missing module, shim, bridge, serializer, or re-export and no worker owns it.
 
@@ -131,7 +131,7 @@ Root-cause packet:
 | Boundary | Route |
 | --- | --- |
 | Obvious local defect in owned/touched production surface | Stage 5 correction. |
-| Broad outside scope, another role, broad design, missing handoff, ambiguous cause, tooling block, or spent budget without green evidence | `request_replan`. |
+| Child-owned suite red, broad outside scope, another role, missing handoff, ambiguous cause, tooling block, or spent budget without green evidence | `request_replan`. |
 | Same command stays red after one correction without a new local defect | `request_replan`. |
 
 ## 5. Apply One Scoped Correction
@@ -189,5 +189,5 @@ Trigger guide:
 | Trigger | Use when |
 | --- | --- |
 | `scope_expansion` | Verified repair is broad, ambiguous, or requires multiple outside-scope mutations. |
-| `wrong_owner_or_role` | Another agent role, dependency, or production owner must act first. |
+| `wrong_owner_or_role` | Child-owned suite, dependency, role, or production owner must act first. |
 | `unresolved_blocker` | Verification, diagnostics, tooling, spent budget, or root-cause tracing is blocked without proven different owner. |

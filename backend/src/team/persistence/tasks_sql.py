@@ -166,6 +166,7 @@ async def replace_dependency(
             TaskRecord.team_run_id == team_run_id,
             TaskRecord.deps.contains([old_dep_id]),
             TaskRecord.status != "pending",
+            TaskRecord.status != "cancelled",
         )
     )).all()
     if violations:
@@ -183,6 +184,7 @@ async def replace_dependency(
         .where(
             TaskRecord.team_run_id == team_run_id,
             TaskRecord.deps.contains([old_dep_id]),
+            TaskRecord.status == "pending",
         )
         .values(deps=updated_deps, started_at=None, agent_run_id=None)
         .returning(TaskRecord.id)

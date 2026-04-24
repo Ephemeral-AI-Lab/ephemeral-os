@@ -49,6 +49,10 @@ _FULLY_TERMINAL = frozenset(
 """Statuses we treat as immovable. REQUEST_REPLAN is detached but still
 transition-able to FAILED (e.g., replanner-budget-exhausted path)."""
 
+_CANCELABLE_BY_REPLAN = frozenset(
+    {TaskStatus.RUNNING, TaskStatus.PENDING, TaskStatus.READY}
+)
+
 
 def _default_id_factory() -> str:
     return str(uuid.uuid4())
@@ -324,12 +328,14 @@ class TaskGraph:
                 mutation=GraphMutation.empty(), replanner_task=t, is_new=False
             )
 
-        # replace_dependency invariant: anyone depending on task_id must be
-        # PENDING. A running/ready/terminal dependent signals a bug, not a
-        # recoverable race.
+        # replace_dependency invariant: anyone still depending on task_id must
+        # be PENDING. A cancelled dependent may be residue from an earlier
+        # cancellation cascade and is already terminal, so it is not rewired.
         rewire_targets: list[str] = []
         for t in self._tasks.values():
             if task_id not in (t.deps or []):
+                continue
+            if t.status is TaskStatus.CANCELLED:
                 continue
             if t.status is not TaskStatus.PENDING:
                 raise GraphInvariantViolation(
@@ -410,7 +416,7 @@ class TaskGraph:
         status_changes: list[StatusChange] = []
         for cid in root_cancel_ids:
             target = self._tasks.get(cid)
-            if target is None or target.status in _FULLY_TERMINAL:
+            if target is None or target.status not in _CANCELABLE_BY_REPLAN:
                 continue
             if cid in cancelled:
                 continue

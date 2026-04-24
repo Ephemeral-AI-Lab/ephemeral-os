@@ -263,11 +263,27 @@ def _register_requested_tools(
             )
 
 
+def _format_target_paths_block(target_paths: list[str] | None) -> str:
+    """Render the assigned-target_paths system-prompt section.
+
+    Only fires when the caller supplies a non-empty list. The agent's own
+    system prompt (e.g. scout.md's Scope Lock) defines what "assigned"
+    actually means; this block just surfaces the concrete paths so the
+    model sees them at every turn (rather than only in the first user
+    message, which context compaction may evict)."""
+    if not target_paths:
+        return ""
+    lines = ["## Assigned target_paths"]
+    lines.extend(f"- {path}" for path in target_paths)
+    return "\n".join(lines)
+
+
 def _build_agent_system_prompt(
     config: SessionConfig,
     agent_def: AgentDefinition | None,
     settings: Settings,
     latest_user_prompt: str | None,
+    target_paths: list[str] | None = None,
 ) -> str:
     """Return the instruction-only system prompt for *agent_def*."""
     parts: list[str] = []
@@ -281,6 +297,9 @@ def _build_agent_system_prompt(
     if agent_def is not None:
         if agent_def.system_prompt:
             parts.append(agent_def.system_prompt)
+    scope_block = _format_target_paths_block(target_paths)
+    if scope_block:
+        parts.append(scope_block)
     return "\n\n".join(part for part in parts if part.strip())
 
 
@@ -293,6 +312,7 @@ def spawn_agent(
     session_state: SessionState | None = None,
     sandbox_id: str | None = None,
     terminal_tools: set[str] | list[str] | None = None,
+    target_paths: list[str] | None = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
@@ -319,7 +339,7 @@ def spawn_agent(
     )
 
     base_system_prompt = _build_agent_system_prompt(
-        config, agent_def, settings, latest_user_prompt
+        config, agent_def, settings, latest_user_prompt, target_paths=target_paths
     )
 
     can_spawn = agent_def.can_spawn_subagents if agent_def else True

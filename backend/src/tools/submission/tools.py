@@ -71,9 +71,9 @@ def _metadata_int(context: ToolExecutionContext, key: str, default: int = 0) -> 
 
 
 def _replan_agent_target_issues(tasks: list[Any]) -> list[dict[str, str]]:
-    """Restrict replanner-authored corrective children to terminal work lanes."""
+    """Restrict replanner-authored corrective children to recovery lanes."""
     issues: list[dict[str, str]] = []
-    allowed_roles = {"developer", "reviewer"}
+    allowed_roles = {"developer", "reviewer", "planner"}
     for idx, item in enumerate(tasks):
         agent = str(getattr(item, "agent", "") or "")
         agent_def = get_definition(agent)
@@ -83,8 +83,9 @@ def _replan_agent_target_issues(tasks: list[Any]) -> list[dict[str, str]]:
             {
                 "field": f"tasks[{idx}].agent",
                 "msg": (
-                    "submit_replan can only create developer or validator tasks; "
-                    f"task '{item.id}' resolved to {agent_def.role!r} agent '{agent}'"
+                    "submit_replan can only create developer, validator, or "
+                    f"team_planner tasks; task '{item.id}' resolved to "
+                    f"{agent_def.role!r} agent '{agent}'"
                 ),
             }
         )

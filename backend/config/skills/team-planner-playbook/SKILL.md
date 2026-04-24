@@ -16,8 +16,8 @@ Produce a child task DAG from inherited Task Center context. Finish with exactly
 
 | Gate | Action |
 | --- | --- |
-| Owner questions change this DAG | Scout by production owner family. |
-| Several owner families | Fan out routing scouts by owner family; synthesize sibling lanes. |
+| Owner questions change this DAG | Scout by production mechanism. |
+| Several owner/mechanism rows | Fan out routing scouts per row; synthesize sibling lanes. |
 | Test or benchmark path | Keep as evidence in `spec`, not `target_paths`. |
 
 ## Stage Flow
@@ -65,7 +65,7 @@ parent/deps/notes
 | Read context | Call `read_task_details(task_id=...)` for own task, parent, and each dep UUID. |
 | Inspect topology | Call `read_task_graph()` for dependency topology only. |
 | Classify intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
-| Build ledger | Group inherited owners, scout candidates, unresolved slices, dependency outputs, and evidence. |
+| Build ledger | Group inherited changelog rows, owners, mechanisms, deps, and evidence. |
 
 Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
 
@@ -76,9 +76,9 @@ Use this stage for route-changing exploration: superficial directory/multi-file 
 ```text
 Caption: scout fan-out supports the next sibling wave.
 
+row: HDF family     -> scout(["pkg/io/hdf"])     -> read_file_note(["pkg/io/hdf"])
 row: parquet family -> scout(["pkg/io/parquet"]) -> read_file_note(["pkg/io/parquet"])
 row: config seam    -> scout(["pkg/config", "pkg/options"])
-row: prompt family  -> scout(["pkg/prompt"])
 ```
 
 | Scout shape | Use when |
@@ -86,7 +86,7 @@ row: prompt family  -> scout(["pkg/prompt"])
 | Single path | Deep scout when one file or module is the likely owner. |
 | Multi-path | Deep scout when paths form one tight dependency, entrypoint, adapter, or shared mechanism. |
 | Directory | Superficial scout when owner is a package/subsystem and exact files are unknown. |
-| Wave size | Cluster by mechanism; avoid one-per-test and all-purpose scouts. |
+| Wave size | One scout per changelog/mechanism row; split large owners, avoid one-per-test. |
 | No scout | Leaf-only detail; preserve uncertainty in expandable task specs. |
 
 Keep `target_paths` production-only: one directory or short file list. Put tests, benchmark ids, optional-dependency signals, and hypotheses in scout context; put commands/repro steps in developer or validator specs. Launch before polling; missing notes, cold CI, canceled scouts, or disproved exact files become uncertainty for that path only.

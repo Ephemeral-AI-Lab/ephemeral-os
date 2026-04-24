@@ -174,6 +174,7 @@ async def test_submit_replan_rejects_self_original_and_terminal_cancel_ids():
                 fired_by_task_id="failed",
             ),
             "done": _task("done", status=TaskStatus.DONE),
+            "expanded": _task("expanded", status=TaskStatus.EXPANDED),
         },
     )
     ctx = ToolExecutionContext(
@@ -187,14 +188,17 @@ async def test_submit_replan_rejects_self_original_and_terminal_cancel_ids():
     )
 
     result = await SubmitReplanTool().execute(
-        SubmitReplanTool.input_model(cancel_ids=["replanner", "failed", "done"]),
+        SubmitReplanTool.input_model(
+            cancel_ids=["replanner", "failed", "done", "expanded"]
+        ),
         ctx,
     )
 
     assert result.is_error is True
     assert "replanner cannot cancel itself" in result.output
     assert "replanner cannot cancel the original request_replan task" in result.output
-    assert "cancel target 'done' is done; cannot cancel" in result.output
+    assert "cancel target 'done' is done; only running/pending/ready tasks" in result.output
+    assert "cancel target 'expanded' is expanded; only running/pending/ready tasks" in result.output
 
 
 @pytest.mark.asyncio

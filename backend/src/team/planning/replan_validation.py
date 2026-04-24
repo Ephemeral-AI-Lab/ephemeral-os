@@ -17,10 +17,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from team.core.models import TERMINAL_STATUSES, TaskSpec
+from agents.registry import has_role
+from team.core.models import TaskSpec
 from team.planning.validation import Issue
 
 ALLOWED_REPLAN_DEP_STATUSES = {"done", "ready", "pending"}
+CANCELABLE_REPLAN_STATUSES = {"running", "pending", "ready"}
 
 _UNRESOLVED_BLOCKER_RE = re.compile(
     r"(?i)\bClassification\s*:\s*unresolved_blocker\b"
@@ -28,6 +30,10 @@ _UNRESOLVED_BLOCKER_RE = re.compile(
 _DIAGNOSTICS_DECISION_RE = re.compile(
     r"(?i)\bDiagnostics decision\s*:\s*"
     r"(?:trivial_direct_replan|deep_diagnostics)\b"
+)
+_PLANNER_HANDOFF_RE = re.compile(
+    r"(?i)\bPlanner handoff\s*:\s*"
+    r"(?:scope_expansion|planner_redraft)\b"
 )
 
 
@@ -58,16 +64,27 @@ def _status_value(status: Any) -> Any:
     return getattr(status, "value", status)
 
 
-def _replan_spec_contract_errors(spec: TaskSpec) -> list[str]:
+def _replan_spec_contract_errors(spec: TaskSpec, agent_name: str) -> list[str]:
+    errors: list[str] = []
     if (
         _UNRESOLVED_BLOCKER_RE.search(spec.detail)
         and not _DIAGNOSTICS_DECISION_RE.search(spec.detail)
     ):
-        return [
+        errors.append(
             "unresolved_blocker requires Diagnostics decision: "
             "trivial_direct_replan or deep_diagnostics"
-        ]
-    return []
+        )
+    agent_def = get_definition(agent_name) if agent_name else None
+    if (
+        agent_def is not None
+        and agent_def.role == "planner"
+        and not _PLANNER_HANDOFF_RE.search(spec.detail)
+    ):
+        errors.append(
+            "team_planner replan children require Planner handoff: "
+            "scope_expansion or planner_redraft in spec.detail"
+        )
+    return errors
 
 
 def replan_spec_contract_issues(items: list[Any]) -> list[Issue]:
@@ -77,12 +94,13 @@ def replan_spec_contract_issues(items: list[Any]) -> list[Issue]:
         spec = getattr(item, "spec", None)
         if not isinstance(spec, TaskSpec):
             continue
+        agent_name = str(getattr(item, "agent", "") or "")
         issues.extend(
             {
                 "field": f"tasks[{idx}].spec.detail",
                 "msg": f"task '{getattr(item, 'id', '')}': {error}",
             }
-            for error in _replan_spec_contract_errors(spec)
+            for error in _replan_spec_contract_errors(spec, agent_name)
         )
     return issues
 
@@ -165,9 +183,10 @@ def validate_replan_rules(
                 f"cancel their direct siblings"
             )
         status = getattr(target, "status", None)
-        if status is not None and status in TERMINAL_STATUSES:
+        status_value = _status_value(status)
+        if status is not None and status_value not in CANCELABLE_REPLAN_STATUSES:
             result.errors.append(
-                f"cancel target '{cid}' is {_status_value(status)}; cannot cancel"
+                f"cancel target '{cid}' is {status_value}; only running/pending/ready tasks can be cancelled"
             )
         all_cancelled.update(_cascade_ids_for_cancel_root(graph, cid))
     result.all_cancelled_ids = all_cancelled
