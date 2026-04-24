@@ -10,8 +10,6 @@ interface AgentSummary {
   description: string
   source: string
   model: string
-  model_key: string
-  subagent_type: string
   background: boolean
 }
 
@@ -24,12 +22,10 @@ interface AgentDetail {
   effort: string | null
   tool_call_limit: number | null
   tools: string[] | null
-  blocked_tools: string[] | null
   skills: string[]
   hooks: Record<string, unknown> | null
   background: boolean
   initial_prompt: string | null
-  subagent_type: string
   version?: number
   is_active?: boolean
   tags?: string[] | null
@@ -203,9 +199,8 @@ function AgentCard({
       </div>
       <div className="mt-2 flex gap-2 text-xs text-zinc-600">
         <span className="rounded bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 text-zinc-400 font-mono">
-          {agent.model_key || agent.model}
+          {agent.model}
         </span>
-        <span>type: {agent.subagent_type}</span>
       </div>
     </div>
   )
@@ -223,11 +218,9 @@ interface FormData {
   effort: string
   tool_call_limit: string
   tools: string
-  blocked_tools: string
   skills: string
   background: boolean
   initial_prompt: string
-  subagent_type: string
   tags: string
 }
 
@@ -239,11 +232,9 @@ const EMPTY_FORM: FormData = {
   effort: '',
   tool_call_limit: '',
   tools: '',
-  blocked_tools: '',
   skills: '',
   background: false,
   initial_prompt: '',
-  subagent_type: '',
   tags: '',
 }
 
@@ -256,11 +247,9 @@ function agentToForm(agent: AgentDetail): FormData {
     effort: agent.effort ?? '',
     tool_call_limit: agent.tool_call_limit?.toString() ?? '',
     tools: agent.tools?.join(', ') ?? '',
-    blocked_tools: agent.blocked_tools?.join(', ') ?? '',
     skills: agent.skills?.join(', ') ?? '',
     background: agent.background,
     initial_prompt: agent.initial_prompt ?? '',
-    subagent_type: agent.subagent_type ?? '',
     tags: agent.tags?.join(', ') ?? '',
   }
 }
@@ -278,11 +267,9 @@ function formToPayload(form: FormData): Record<string, unknown> {
     effort: form.effort || null,
     tool_call_limit: form.tool_call_limit ? parseInt(form.tool_call_limit, 10) : null,
     tools: splitList(form.tools),
-    blocked_tools: splitList(form.blocked_tools),
     skills: splitList(form.skills) ?? [],
     background: form.background,
     initial_prompt: form.initial_prompt || null,
-    subagent_type: form.subagent_type || form.name,
     tags: splitList(form.tags),
   }
 }
@@ -428,10 +415,7 @@ function AgentBuilderForm({
       {/* Basic Info */}
       <section className="space-y-3">
         <SectionHeader>Basic Info</SectionHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <TextField label="Name" value={form.name} onChange={v => set('name', v)} placeholder="my-agent" />
-          <TextField label="Subagent Type" value={form.subagent_type} onChange={v => set('subagent_type', v)} placeholder="Defaults to name" />
-        </div>
+        <TextField label="Name" value={form.name} onChange={v => set('name', v)} placeholder="my-agent" />
         <TextField label="Description" value={form.description} onChange={v => set('description', v)} placeholder="When to use this agent..." multiline />
       </section>
 
@@ -475,7 +459,6 @@ function AgentBuilderForm({
             ))}
           </div>
         )}
-        <TextField label="Blocked Tools" value={form.blocked_tools} onChange={v => set('blocked_tools', v)} placeholder="daytona_delete_file, ci_status (comma-separated)" />
         <TextField label="Skills" value={form.skills} onChange={v => set('skills', v)} placeholder="skill-slug-1, skill-slug-2" />
       </section>
 
@@ -565,18 +548,14 @@ function AgentDetailView({
       <p className="text-sm text-zinc-400">{agent.description}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <DetailField label="Model Key" value={agent.model} />
+        <DetailField label="Model" value={agent.model} />
         {agent.effort && <DetailField label="Effort" value={agent.effort} />}
         {agent.tool_call_limit && <DetailField label="Tool Call Limit" value={String(agent.tool_call_limit)} />}
         <DetailField label="Background" value={agent.background ? 'Yes' : 'No'} />
-        <DetailField label="Type" value={agent.subagent_type} />
       </div>
 
       {agent.tools && (
         <TagSection label="Tools" items={agent.tools} />
-      )}
-      {agent.blocked_tools && (
-        <TagSection label="Blocked Tools" items={agent.blocked_tools} accent="text-red-400 border-red-800" />
       )}
       {agent.skills && agent.skills.length > 0 && (
         <TagSection label="Skills" items={agent.skills} accent="text-emerald-400 border-emerald-800" />

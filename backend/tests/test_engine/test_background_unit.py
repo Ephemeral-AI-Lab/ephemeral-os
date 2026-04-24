@@ -290,7 +290,7 @@ class TestWaitForBackgroundTaskExecute:
         )
 
         assert "[NO TASKS RUNNING]" in result.output
-        assert "the useful content is in Task Center notes" in result.output
+        assert "the useful content is in file notes" in result.output
         assert 'read_file_note(file_path="...")' in result.output
         assert result.metadata["background_snapshot"]["kind"] == "wait_no_tasks"
 
@@ -324,7 +324,7 @@ class TestBackgroundSnapshotHelpers:
         ]
         output = render_background_snapshot("wait_completed", statuses)
         assert output.startswith("[COMPLETED]\n[")
-        assert "the useful content is in Task Center notes" in output
+        assert "the useful content is in file notes" in output
         assert "Do not call `wait_for_background_task`" in output
         assert 'read_file_note(file_path="...")' in output
 

@@ -80,7 +80,6 @@ class TeamRun:
         self.status_handler = TaskStatusHandler(
             team_run_id=self.id,
             store=self.task_center.store,
-            notes=self.task_center.notes,
             budget=self.task_center.budget,
             expander=self.task_center.expander,
             emit_event=self.task_center.emit_event,

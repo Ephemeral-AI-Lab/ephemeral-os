@@ -444,7 +444,7 @@ class TestModelKeyIntegration:
         assert resp.status_code == 201
         assert resp.json()["model"] == "claude-sonnet"
 
-    def test_chat_uses_agent_model_key(self, app_client):
+    def test_chat_uses_agent_model(self, app_client):
         """When chatting with a named agent, the engine should use the agent's model."""
         client, mock_client = app_client
         client.post(

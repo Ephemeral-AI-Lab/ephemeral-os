@@ -9,7 +9,6 @@ Usage::
     agent = EvalAgent.create(
         system_prompt="You are a developer with sandbox access.",
         sandbox_id="sb-123",
-        enable_background_tasks=True,
     )
     result = await agent.invoke("Run tests in the sandbox")
     assert "daytona_shell" in result.tool_names
@@ -320,7 +319,6 @@ class EvalAgent:
         *,
         system_prompt: str | None = None,
         sandbox_id: str | None = None,
-        enable_background_tasks: bool = False,
         tool_call_limit: int | None = None,
         max_tokens: int | None = None,
         settings: Settings | None = None,
@@ -337,9 +335,6 @@ class EvalAgent:
         Args:
             system_prompt: Custom system prompt. If None, uses default.
             sandbox_id: Daytona sandbox ID for sandbox tools.
-            enable_background_tasks: Enable background task execution.
-                (Effectively derived from available tools; retained as a
-                no-op arg for API compatibility with older tests.)
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
@@ -349,8 +344,6 @@ class EvalAgent:
         Returns:
             Configured EvalAgent ready to invoke.
         """
-        del enable_background_tasks  # derived from registered tools
-
         if settings is None:
             settings = load_settings()
 
@@ -474,11 +467,6 @@ class EvalAgent:
                 )
         except Exception:
             logger.debug("[EvalAgent] session_store.upsert failed", exc_info=True)
-
-    @classmethod
-    def from_settings(cls, settings: Settings) -> EvalAgent:
-        """Construct from an explicit Settings object (backward compat)."""
-        return cls.create(settings=settings)
 
     # -- Invocation --
 

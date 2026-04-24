@@ -57,7 +57,6 @@ class TestPhysicalCancelKillsProcess:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps IN ORDER:\n"
@@ -136,7 +135,6 @@ class TestPhysicalCancelPidGone:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps IN ORDER:\n"

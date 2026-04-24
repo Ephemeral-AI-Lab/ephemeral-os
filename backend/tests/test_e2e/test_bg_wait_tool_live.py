@@ -64,7 +64,6 @@ class TestWaitForSingleTask:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -136,7 +135,6 @@ class TestWaitWithSpecificTaskId:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -208,7 +206,6 @@ class TestWaitForAllTasks:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -271,7 +268,6 @@ class TestWaitTimeout:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -328,7 +324,6 @@ class TestWaitAlreadyCompleted:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -375,7 +370,6 @@ class TestWaitNoBackgroundTasks:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -426,7 +420,6 @@ class TestCheckThenWaitOrdering:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps in EXACT order:\n"

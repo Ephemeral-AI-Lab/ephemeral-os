@@ -4,8 +4,7 @@ description: "Team-mode root planner: receives user request, analyzes intent, ex
 role: planner
 model: inherit
 tool_call_limit: 100
-tools: ["ci_status", "ci_workspace_structure", "ci_query_symbol", "ci_diagnostics", "submit_file_notes", "read_file_note", "read_task_details", "read_task_graph", "run_subagent", "submit_task_success", "request_replan", "submit_plan", "submit_replan"]
-blocked_tools: ["submit_file_notes", "read_task_graph", "ci_status", "ci_diagnostics", "read_task_details"]
+tools: ["ci_workspace_structure", "ci_query_symbol", "read_file_note", "run_subagent", "submit_plan"]
 terminal_tools: ["submit_plan"]
 skills: ["team-root-planner-playbook"]
 ---

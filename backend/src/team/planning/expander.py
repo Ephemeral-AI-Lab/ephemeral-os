@@ -170,20 +170,6 @@ class PlanExpander:
     ) -> ReplanApplyOutcome:
         graph = self._graph_getter()
         replanner = graph.get(replan_task_id)
-        misplaced = [
-            spec
-            for spec in add_tasks
-            if spec.parent_id != replan_task_id
-        ]
-        if misplaced:
-            raise InvalidPlan(
-                "replan add_tasks must be direct children of the replanner "
-                f"(parent_id={replan_task_id!r}); found "
-                + ", ".join(
-                    f"'{s.id}' parent_id={s.parent_id!r}" for s in misplaced
-                )
-            )
-
         result = validate_replan_rules(
             graph=graph,
             replan_task_id=replan_task_id,
@@ -214,7 +200,6 @@ class PlanExpander:
                     description=spec.description,
                     deps=[dep_id for dep_id in spec.deps if dep_id in local_ids],
                     scope_paths=list(spec.scope_paths),
-                    parent_id=spec.parent_id,
                 )
                 for spec in add_tasks
             ]
@@ -256,7 +241,6 @@ class PlanExpander:
                     description=spec.description or "",
                     deps=resolved_deps,
                     scope_paths=list(spec.scope_paths),
-                    parent_id=spec.parent_id,
                 )
             )
 

@@ -16,7 +16,7 @@ import logging
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents.registry import get_definition
 from team.planning.validation import validate_plan
@@ -115,25 +115,6 @@ def _replan_spec_contract_errors(spec_text: str) -> list[str]:
             "trivial_direct_replan or deep_diagnostics"
         ]
     return []
-
-
-def _task_spec_budget_issues(
-    tasks: list[dict[str, Any]],
-    *,
-    max_note_bytes: int | None,
-) -> list[str]:
-    if not max_note_bytes or max_note_bytes <= 0:
-        return []
-    issues: list[str] = []
-    for item in tasks:
-        task_id = str(item.get("id") or "<unknown>")
-        objective = str(item.get("objective") or "")
-        size = len(objective.encode("utf-8"))
-        if size > max_note_bytes:
-            issues.append(
-                f"task '{task_id}' spec is {size} bytes, exceeds max_note_bytes={max_note_bytes}"
-            )
-    return issues
 
 
 def _replan_agent_target_issues(tasks: list[Any]) -> list[dict[str, str]]:
@@ -301,7 +282,7 @@ class NewTaskSpec(BaseModel):
     scope_paths: list[str] = Field(
         default_factory=list,
         description=(
-            "File/dir hints for coordination and note scoping. For coding/planning lanes, "
+            "File/dir hints for coordination and file-note lookup. For coding/planning lanes, "
             "use repo-relative implementation owner paths, not `/testbed/...` "
             "prefixes. For validators, use the production paths being verified. "
             "Every task should provide at least one path. Keep verification-only "
@@ -309,14 +290,6 @@ class NewTaskSpec(BaseModel):
             "as scope_paths."
         ),
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _drop_legacy_description(cls, data: object) -> object:
-        if isinstance(data, dict) and "description" in data:
-            data = dict(data)
-            data.pop("description", None)
-        return data
 
 
 class ResolvedTaskOutput(BaseModel):
@@ -567,11 +540,6 @@ def _validate_submit_replan_input(
                 ),
             }
         )
-    spec_budget_issues = _task_spec_budget_issues(
-        resolved_tasks,
-        max_note_bytes=_metadata_int(context, "max_note_bytes"),
-    )
-    issues.extend({"field": "tasks", "msg": msg} for msg in spec_budget_issues)
     errors.extend(str(issue.get("msg") or "invalid replan") for issue in issues)
     return errors
 
@@ -665,12 +633,6 @@ class SubmitPlanTool(BaseTool):
                     ),
                 }
             )
-
-        spec_budget_issues = _task_spec_budget_issues(
-            resolved_tasks,
-            max_note_bytes=_metadata_int(context, "max_note_bytes"),
-        )
-        issues.extend({"field": "tasks", "msg": msg} for msg in spec_budget_issues)
 
         if issues:
             message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)

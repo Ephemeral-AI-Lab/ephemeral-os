@@ -50,27 +50,6 @@ class TestLoadSaveSettings:
         assert s.verbose is True
         assert s.fast_mode is True
 
-    def test_load_strips_legacy_model_fields(self, tmp_path: Path, monkeypatch):
-        """Legacy model/api_key/etc. in settings.json are silently dropped."""
-        monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-        path = tmp_path / "settings.json"
-        path.write_text(
-            json.dumps(
-                {
-                    "model": "legacy",
-                    "api_key": "legacy",
-                    "base_url": "legacy",
-                    "api_format": "legacy",
-                    "max_tokens": 999,
-                    "verbose": True,
-                }
-            )
-        )
-        s = load_settings(path)
-        assert s.verbose is True
-        assert not hasattr(s, "model")
-        assert not hasattr(s, "api_key")
-
     def test_save_and_load_roundtrip(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         path = tmp_path / "settings.json"

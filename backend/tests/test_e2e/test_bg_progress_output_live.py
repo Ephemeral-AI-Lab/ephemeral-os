@@ -69,7 +69,6 @@ class TestCheckProgressRunningStatus:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch this in background (background: true): "
@@ -132,7 +131,6 @@ class TestCheckProgressCompletedOutput:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 3 && echo \"LINE1\\nLINE2\\nLINE3\\nRESULT_OK\"' in background (background: true). "
@@ -175,7 +173,6 @@ class TestCheckProgressLastNLines:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch this command in background (background: true): "
@@ -223,7 +220,6 @@ class TestCheckProgressMultipleTasks:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 3 && echo TASK_A_RESULT' in background (background: true) AND "
@@ -278,7 +274,6 @@ class TestCheckProgressFilterByTaskId:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 3 && echo ALPHA_DONE' in background (background: true) AND "
@@ -330,7 +325,6 @@ class TestWaitLastNLinesOutput:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'for i in $(seq 1 100); do echo \"BUILD_LOG_$i\"; done' in background (background: true). "
@@ -380,7 +374,6 @@ class TestLiveTailAutonomousDecision:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch this exact bash command in BACKGROUND (background: true):\n\n"

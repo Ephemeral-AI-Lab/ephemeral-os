@@ -28,7 +28,7 @@ MIN_PER_ENTRY_CHARS = 200
 
 POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "For `run_subagent` results whose summary is `Posted.`, the useful content "
-    "is in Task Center notes or the referenced artifact, not in another "
+    "is in file notes or the referenced artifact, not in another "
     "background status snapshot. Do not call `wait_for_background_task` or "
     "`check_background_progress` again for this delivered scout wave. In "
     "team-planner contexts, read scout findings with "

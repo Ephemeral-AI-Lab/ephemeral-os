@@ -45,7 +45,6 @@ class TestLLMBackgroundDecision:
         return create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
 
     @pytest.mark.asyncio
@@ -104,7 +103,6 @@ class TestForegroundAndIdleWait:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Please do these tasks:\n"
@@ -149,7 +147,6 @@ class TestProactiveProgressCheck:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do the following:\n"
@@ -192,7 +189,6 @@ class TestCancelFailingTask:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do the following steps in order:\n"
@@ -240,7 +236,6 @@ class TestCancelHangingTask:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do the following steps:\n"

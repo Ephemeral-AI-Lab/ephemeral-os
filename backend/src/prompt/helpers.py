@@ -19,7 +19,6 @@ from skills.core.loader import load_skill_registry
 from team.models import (
     BudgetConfig,
     BudgetState,
-    Note,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -27,7 +26,6 @@ from team.models import (
 from team.persistence.events import TeamRunEvent, task_from_dict
 from team.persistence.run_store import TeamRunStore
 from team.task_center.context_builder import TaskContextBuilder
-from team.task_center.notes import NoteManager
 from team.builtins import register_all as register_team_builtins
 from team.models import TeamDefinition
 from team.registry import get_team_definition, list_team_definitions
@@ -73,7 +71,6 @@ def load_agent_definition(name: str, settings) -> AgentDefinition | None:
             tool_call_limit=record.tool_call_limit,
             tools=record.tools or [],
             skills=record.skills or [],
-            blocked_tools=record.blocked_tools or [],
             terminal_tools=record.terminal_tools or [],
             hooks=record.hooks,
             background=record.background,
@@ -120,7 +117,6 @@ def build_agent_system_prompt_text(
             tool_registry,
             system_prompt,
             can_spawn_subagents=agent_def.can_spawn_subagents,
-            blocked_tools=agent_def.blocked_tools,
             terminal_tools=terminal_tools,
         )
 
@@ -331,18 +327,13 @@ def _make_task_context(
     *,
     team_run_id: str,
     tasks: dict[str, Task],
-    notes: list[Note] | None = None,
 ) -> SimpleNamespace:
     async def _get_task(task_id: str) -> Task | None:
         return tasks.get(task_id)
 
-    note_manager = NoteManager(team_run_id=team_run_id)
-    if notes:
-        note_manager.restore(notes)
     task_store = SimpleNamespace(graph=tasks)
     task_context = TaskContextBuilder(
         team_run_id=team_run_id,
-        notes=note_manager,
         get_task_fn=_get_task,
         task_store=task_store,
     )
@@ -634,14 +625,6 @@ def _sort_tasks_for_prompt_report(tasks: dict[str, Task]) -> list[Task]:
     return sorted(tasks.values(), key=lambda task: (task.depth, task.created_at, task.id))
 
 
-def _normalize_task_event_payload(data: dict[str, object]) -> dict[str, object]:
-    """Accept legacy TeamRun event logs that stored task text under ``task``."""
-    payload = dict(data)
-    if not payload.get("objective") and payload.get("task"):
-        payload["objective"] = payload["task"]
-    return payload
-
-
 def _budget_config_from_event(meta: dict[str, object]) -> BudgetConfig:
     valid_keys = set(BudgetConfig.__dataclass_fields__.keys())
     return BudgetConfig(
@@ -653,20 +636,19 @@ def _replay_team_run_events(
     *,
     team_run_id: str,
     events: list[TeamRunEvent],
-) -> tuple[dict[str, Task], list[Note], dict[str, object], str]:
+) -> tuple[dict[str, Task], dict[str, object], str]:
     created = next((event for event in events if event.kind == "team_run_created"), None)
     if created is None:
         raise ValueError(f"event log for {team_run_id!r} missing team_run_created header")
 
     tasks: dict[str, Task] = {}
-    notes: list[Note] = []
     status = ""
     for event in events:
         if event.kind == "task_added":
             task_data = event.data["task"]
             if not isinstance(task_data, dict):
                 raise ValueError(f"task_added event {event.seq} contains invalid task payload")
-            task = task_from_dict(_normalize_task_event_payload(task_data))
+            task = task_from_dict(task_data)
             tasks[task.id] = task
             continue
         if event.kind == "task_status":
@@ -681,23 +663,10 @@ def _replay_team_run_events(
             if "fired_by_task_id" in event.data:
                 task.fired_by_task_id = event.data["fired_by_task_id"]
             continue
-        if event.kind == "note_posted":
-            content = str(event.data.get("content_preview") or "").strip()
-            if not content:
-                continue
-            notes.append(
-                Note(
-                    id=f"event-{event.seq}",
-                    agent_name=str(event.data.get("agent_name") or ""),
-                    content=content + "\n\n[preview from persisted event log]",
-                    paths=list(event.data.get("scope_paths") or []),
-                )
-            )
-            continue
         if event.kind == "team_run_status":
             status = str(event.data.get("status") or status)
 
-    return tasks, notes, dict(created.data), status
+    return tasks, dict(created.data), status
 
 
 async def build_team_run_user_prompt_report_text(
@@ -708,14 +677,14 @@ async def build_team_run_user_prompt_report_text(
     settings,
 ) -> tuple[str, list[str]]:
     """Build task user prompts from a persisted TeamRun event log."""
-    tasks, notes, meta, status = _replay_team_run_events(
+    tasks, meta, status = _replay_team_run_events(
         team_run_id=team_run_id,
         events=events,
     )
     if not tasks:
         raise ValueError(f"event log for {team_run_id!r} contains no tasks")
 
-    task_center = _make_task_context(team_run_id=team_run_id, tasks=tasks, notes=notes)
+    task_center = _make_task_context(team_run_id=team_run_id, tasks=tasks)
     root = next((task for task in tasks.values() if task.depth == 0), None)
     roster = meta.get("roster") if isinstance(meta.get("roster"), dict) else {}
     budgets = _budget_config_from_event(meta)
@@ -742,12 +711,10 @@ async def build_team_run_user_prompt_report_text(
         f"- Working directory: `{cwd}`",
         f"- Repo root: `{team_run.project_context.repo_root or '(unknown)'}`",
         f"- Task count: `{len(tasks)}`",
-        f"- Note previews restored: `{len(notes)}`",
         "",
         "This report replays the persisted TeamRun event log and renders each task "
-        "through `build_query_context`. Persisted note events contain previews, "
-        "so dependency context may be shorter than it was in the live run. "
-        "User prompt templates come from `backend/src/prompt/user_prompt/*.md`.",
+        "through `build_query_context`. User prompt templates come from "
+        "`backend/src/prompt/user_prompt/*.md`.",
         "",
     ]
     if team_run.user_request:

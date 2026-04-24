@@ -144,7 +144,7 @@ class TestAnthropicNativeModelSetup:
         active = resp.json()
         assert active["key"] == MODEL_KEY
 
-    def test_agent_created_with_model_key(self, client):
+    def test_agent_created_with_model(self, client):
         _register_model(client)
         agent = _create_agent(client)
         assert agent["model"] == MODEL_KEY

@@ -109,8 +109,6 @@ def _role_visibility_summary(
             registry,
             "",
             can_spawn_subagents=agent_def.can_spawn_subagents,
-            role=agent_def.role,
-            blocked_tools=agent_def.blocked_tools,
             terminal_tools=terminal_tools,
         )
         terminal_tool_names = set(terminal_tools)

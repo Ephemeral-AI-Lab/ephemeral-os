@@ -270,7 +270,6 @@ def _make_context_builders(
             "repo_root": repo_dir,
             "exec_cwd": repo_dir,
             "ci_workspace_root": repo_dir,
-            "require_declared_shell_outputs": True,
             "verification_surface_write_enforcement": "warn",
         })
         try:
@@ -426,7 +425,6 @@ async def run_sweevo_team(
     agent_run_log_dir = _agent_run_log_dir(tr.id)
     team_metrics["agent_run_log_dir"] = str(agent_run_log_dir)
     tr.coordination_metadata = {
-        "require_declared_shell_outputs": True,
         "verification_surface_write_enforcement": "warn",
         "prompt_report_messages_path": str(prompt_messages_path),
         "external_hook_emitter": _make_external_hook_emitter(

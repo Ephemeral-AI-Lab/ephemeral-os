@@ -41,7 +41,6 @@ class TestIdleTransitionFromFgToBgWait:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps in order:\n"
@@ -114,7 +113,6 @@ class TestIdlePeriodicPolling:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 30 && echo PERIODIC_DONE' in background. Do 'echo START'.\n"
@@ -171,7 +169,6 @@ class TestIdleNoFgWorkPureWait:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "There is NO foreground work. Only background monitoring. You MUST complete ALL 7 steps "
@@ -245,7 +242,6 @@ class TestIdleWaitThenResumeFg:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Phase 1 — Background + foreground:\n"
@@ -325,7 +321,6 @@ class TestIdleEscalatingTimeout:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 30 && echo ESCALATED_DONE' in background. Do 'echo MONITOR'.\n"
@@ -382,7 +377,6 @@ class TestIdleMultipleBgStaggeredWait:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 3 background tasks with staggered durations. For each launch, the tool result "

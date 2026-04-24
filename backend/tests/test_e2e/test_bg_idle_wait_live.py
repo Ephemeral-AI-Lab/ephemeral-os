@@ -42,7 +42,6 @@ class TestWaitForShortTask:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -102,7 +101,6 @@ class TestIdleAfterForegroundExhausted:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -173,7 +171,6 @@ class TestStaggeredCompletion:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -239,7 +236,6 @@ class TestPureBackgroundMonitoring:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch these background tasks and monitor them:\n"
@@ -306,7 +302,6 @@ class TestWaitThenAct:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"

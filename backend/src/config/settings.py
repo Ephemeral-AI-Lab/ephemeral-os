@@ -99,9 +99,6 @@ def load_settings(config_path: Path | None = None) -> Settings:
 
     if config_path.exists():
         raw = json.loads(config_path.read_text(encoding="utf-8"))
-        # Drop legacy model fields if they're still present on disk.
-        for legacy in ("model", "api_key", "max_tokens", "base_url", "api_format"):
-            raw.pop(legacy, None)
         return _apply_env_overrides(Settings.model_validate(raw))
 
     return _apply_env_overrides(Settings())

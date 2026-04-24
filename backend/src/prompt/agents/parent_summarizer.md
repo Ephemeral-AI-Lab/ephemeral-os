@@ -1,11 +1,10 @@
 ---
 name: parent_summarizer
-description: "Parent-summary sidecar: summarizes the outcome of an expandable (planner/replanner) task from its children's terminal states and notes."
+description: "Parent-summary sidecar: summarizes the outcome of an expandable (planner/replanner) task from its children's terminal states and summaries."
 role: parent_summarizer
 model: inherit
 tool_call_limit: 40
-tools: ["submit_file_notes", "read_file_note", "read_task_details", "read_task_graph", "submit_task_success", "request_replan", "submit_plan", "submit_replan"]
-blocked_tools: ["submit_plan", "submit_replan", "submit_file_notes"]
+tools: ["read_file_note", "read_task_details", "read_task_graph", "submit_task_success", "request_replan"]
 terminal_tools: ["submit_task_success", "request_replan"]
 include_skills: false
 ---

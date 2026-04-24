@@ -164,7 +164,6 @@ def _final_tool_names(name: str, tmp_path: Path) -> set[str]:
         registry,
         defn.system_prompt or "",
         can_spawn_subagents=defn.can_spawn_subagents,
-        blocked_tools=defn.blocked_tools,
         terminal_tools=resolve_terminal_tools(defn),
     )
     return {tool.name for tool in registry.list_tools()}
@@ -183,7 +182,6 @@ def _final_prompt(name: str, tmp_path: Path) -> str:
         registry,
         defn.system_prompt or "",
         can_spawn_subagents=defn.can_spawn_subagents,
-        blocked_tools=defn.blocked_tools,
         terminal_tools=resolve_terminal_tools(defn),
     )
     return prompt

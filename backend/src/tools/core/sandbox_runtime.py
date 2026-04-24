@@ -18,11 +18,6 @@ def get_daytona_cwd(context: ToolExecutionContext) -> str:
     return context.metadata.get("repo_root") or context.metadata.get("daytona_cwd") or ""
 
 
-def require_declared_shell_outputs(context: ToolExecutionContext) -> bool:
-    """Return True when mutating shell commands must predeclare output paths."""
-    return bool(context.metadata.get("require_declared_shell_outputs"))
-
-
 def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
     """Resolve *path* against the injected Daytona cwd."""
     if not path:
@@ -38,6 +33,5 @@ def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
 __all__ = [
     "get_daytona_cwd",
     "get_daytona_sandbox",
-    "require_declared_shell_outputs",
     "resolve_daytona_path",
 ]

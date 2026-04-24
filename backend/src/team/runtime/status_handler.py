@@ -37,7 +37,6 @@ from team.models import (
     TaskStatusUpdate,
 )
 from team.task_center.budget import BudgetManager
-from team.task_center.notes import NoteManager
 from team.persistence.events import (
     TeamRunEvent,
     make_replace_dependency,
@@ -69,7 +68,6 @@ class TaskStatusHandler:
         *,
         team_run_id: str,
         store: TaskStore,
-        notes: NoteManager,
         budget: BudgetManager,
         expander: PlanExpander,
         emit_event: Callable[[TeamRunEvent], None],
@@ -80,7 +78,6 @@ class TaskStatusHandler:
     ) -> None:
         self._team_run_id = team_run_id
         self._store = store
-        self._notes = notes
         self._budget = budget
         self._expander = expander
         self._emit = emit_event

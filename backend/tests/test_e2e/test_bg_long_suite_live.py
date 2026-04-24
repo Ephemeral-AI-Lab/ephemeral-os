@@ -240,7 +240,6 @@ class TestLongSuiteEarlyCancel:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
             tool_call_limit=400,
         )
         result = await agent.invoke(

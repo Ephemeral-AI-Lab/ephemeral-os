@@ -42,7 +42,6 @@ class TestTripleBackgroundConcurrency:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch THREE background tasks simultaneously:\n"
@@ -107,7 +106,6 @@ class TestInterleavedBgFg:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute these steps IN ORDER:\n"
@@ -170,7 +168,6 @@ class TestBgWithFileCreation:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do the following:\n"
@@ -237,7 +234,6 @@ class TestHighVolumeForegroundBurst:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         fg_steps = "\n".join(
             f"{i+3}. Run 'echo FG_STEP_{i+1}' in foreground"
@@ -304,7 +300,6 @@ class TestFourBackgroundMaxConcurrency:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute these steps:\n"

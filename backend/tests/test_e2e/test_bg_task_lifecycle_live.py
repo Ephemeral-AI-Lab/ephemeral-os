@@ -42,7 +42,6 @@ class TestRepeatedProgressChecks:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -110,7 +109,6 @@ class TestSelectiveCancellation:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -175,7 +173,6 @@ class TestBatchCancellation:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute these steps:\n"
@@ -242,7 +239,6 @@ class TestBackgroundCompletion:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -312,7 +308,6 @@ class TestProgressCheckRevealsError:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"

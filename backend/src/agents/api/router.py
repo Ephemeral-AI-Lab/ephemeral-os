@@ -52,7 +52,6 @@ def create_agents_router(
                 "description": d.description,
                 "source": d.source,
                 "model": d.model,
-                "model_key": d.model,
                 "background": d.background,
             }
             for d in defs

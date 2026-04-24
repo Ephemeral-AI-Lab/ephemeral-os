@@ -57,7 +57,6 @@ role: developer
 model: inherit
 tool_call_limit: 100
 tools: ["daytona_shell", "ci_query_symbol", "ci_diagnostics"]
-blocked_tools: []
 terminal_tools: ["submit_task_success", "request_replan"]
 ---
 # System Prompt (body of the file)
@@ -68,7 +67,7 @@ Execute one bounded coding task...
 - `name`, `description` (required)
 - `system_prompt` (optional; overridden by body text)
 - `model`, `effort`, `tool_call_limit`
-- `tools`, `skills`, `blocked_tools`, `terminal_tools`
+- `tools`, `skills`, `terminal_tools`
 - `background`, `role`, `agent_type` (agent | subagent)
 - `source` (builtin | user | plugin), capability flags
 
@@ -87,7 +86,6 @@ POST /api/agents
   "model": "claude-opus",
   "system_prompt": "...",
   "tools": ["search_web", "read_note"],
-  "blocked_tools": [],
   "terminal_tools": [],
   "effort": "high",
   "tool_call_limit": 50
@@ -182,7 +180,6 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  tool_call_limit     int            │
 │  skills              json           │
 │  tools               json           │
-│  blocked_tools       json           │
 │  hooks               json           │
 │  background          boolean        │
 │  role                string         │
@@ -398,7 +395,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
 | `effort` | Heuristic budget; low/medium/high | High = larger tool_call_limit |
 | `tool_call_limit` | Max tool calls before agent stops | 50, 100, unlimited (None) |
 | `tools` | Tool names to register for the agent | ["daytona_shell", "ci_query_symbol"] |
-| `blocked_tools` | Tool names to remove after assembly | [] |
 | `skills` | Skill playbooks to inject | ["team-developer-playbook"] |
 | `role` | Team dispatch label (planner, developer, reviewer) | "developer" |
 | `agent_type` | agent \| subagent (capability flag) | "agent" |

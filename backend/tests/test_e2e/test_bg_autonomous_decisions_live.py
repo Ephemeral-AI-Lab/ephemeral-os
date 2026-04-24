@@ -56,7 +56,6 @@ class TestDecisionCancelSlowAfterWaitTimeout:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 60 && echo SLOW_BUILD' in background (background: true). "
@@ -118,7 +117,6 @@ class TestDecisionActOnWaitResult:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 3 && echo BUILD_SUCCESS' in background (background: true). "
@@ -182,7 +180,6 @@ class TestDecisionSelectiveCancel:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 3 background tasks:\n"
@@ -246,7 +243,6 @@ class TestDecisionPeriodicCheckIn:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 8 && echo DEPLOY_DONE' in background (background: true). "
@@ -299,7 +295,6 @@ class TestDecisionChainedWorkflow:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute this pipeline:\n"
@@ -363,7 +358,6 @@ class TestDecisionFullPipeline:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Complete this pipeline:\n"

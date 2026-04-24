@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 from code_intelligence.editing.change_labels import change_actor_label
 from team._path_utils import ScopePath
 from team.models import Task
-from team.task_center.notes import NoteManager
 
 if TYPE_CHECKING:
     from team.persistence.task_store import TaskStore
@@ -35,13 +34,11 @@ class TaskContextBuilder:
         self,
         *,
         team_run_id: str,
-        notes: NoteManager,
         get_task_fn: Callable[[str], Awaitable[Task | None]] | None = None,
         task_store: "TaskStore | None" = None,
         arbiter: Any = None,
     ) -> None:
         self._team_run_id = team_run_id
-        self._notes = notes
         self._get_task_fn = get_task_fn
         self._task_store = task_store
         self._arbiter = arbiter

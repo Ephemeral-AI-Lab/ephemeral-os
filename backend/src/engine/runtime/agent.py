@@ -87,7 +87,6 @@ def finalize_tool_registry_and_prompt(
     system_prompt: str,
     *,
     can_spawn_subagents: bool = True,
-    blocked_tools: list[str] | None = None,
     terminal_tools: set[str] | list[str] | None = None,
 ) -> tuple[str, bool]:
     """Finalize runtime tool registry and append terminal-tool guidance.
@@ -102,9 +101,6 @@ def finalize_tool_registry_and_prompt(
             themselves) have the background management tools
             (check_background_progress / wait_for_background_task / cancel)
             withheld regardless of registry contents.
-        blocked_tools: Tool names that must be removed after tool registration,
-            including runtime-added tools such as background management,
-            have been registered.
         terminal_tools: Tools that terminate the run immediately when called.
 
     Returns:
@@ -138,9 +134,6 @@ def finalize_tool_registry_and_prompt(
         }
         if blocked_submission_tools:
             tool_registry.remove_tools(sorted(blocked_submission_tools))
-    if blocked_tools:
-        tool_registry.remove_tools(blocked_tools)
-
     termination_prompt = build_termination_condition_prompt(
         terminal_tools=terminal_tools,
     )
@@ -334,7 +327,6 @@ def spawn_agent(
         tool_registry,
         base_system_prompt,
         can_spawn_subagents=can_spawn,
-        blocked_tools=(agent_def.blocked_tools if agent_def else None),
         terminal_tools=terminal_tools,
     )
 

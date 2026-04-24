@@ -8,10 +8,9 @@ import pytest
 from agents.registry import get_definition
 from prompt.user_prompt_templates import render_user_prompt_template
 from team.builtins import register_all
-from team.models import BudgetConfig, Note, Task, TaskStatus
+from team.models import BudgetConfig, Task, TaskStatus
 from team.runtime.context_builder import build_query_context
 from team.task_center.context_builder import TaskContextBuilder
-from team.task_center.notes import NoteManager
 
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompt" / "user_prompt"
@@ -97,18 +96,12 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
 async def _make_task_center(
     team_run_id: str,
     tasks: dict[str, Task],
-    *,
-    notes: list[Note] | None = None,
 ) -> SimpleNamespace:
     async def _get_task(task_id: str) -> Task | None:
         return tasks.get(task_id)
 
-    note_manager = NoteManager(team_run_id=team_run_id)
-    if notes:
-        note_manager.restore(notes)
     context = TaskContextBuilder(
         team_run_id=team_run_id,
-        notes=note_manager,
         get_task_fn=_get_task,
         task_store=SimpleNamespace(graph=tasks),
     )

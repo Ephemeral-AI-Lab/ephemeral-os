@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 #: Valid effort level strings.
 EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
@@ -24,11 +24,7 @@ class AgentDefinition(BaseModel):
     system_prompt: str | None = None
 
     # --- model & effort ---
-    model: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("model", "model_key"),
-        serialization_alias="model_key",
-    )
+    model: str | None = None
     effort: str | int | None = None
 
     # --- agent loop control ---
@@ -36,24 +32,16 @@ class AgentDefinition(BaseModel):
     # Each ``EphemeralAgent`` spawn starts with a fresh counter, so
     # nested ``run_subagent`` calls have independent budgets and the
     # caller's counter is untouched.
-    tool_call_limit: int | None = Field(
-        default=None, validation_alias=AliasChoices("tool_call_limit", "toolCallLimit")
-    )
+    tool_call_limit: int | None = None
 
     # --- skills & tools ---
     skills: list[str] = Field(default_factory=list)
     tools: list[str] = Field(
         default_factory=list,
-        description="Tool names available to this agent before blocked_tools filtering.",
-    )
-    blocked_tools: list[str] = Field(
-        default_factory=list,
-        validation_alias=AliasChoices("blocked_tools", "blockedTools"),
-        description="Tool names to remove after tool registration. Use for role-based restrictions.",
+        description="Tool names available to this agent.",
     )
     terminal_tools: list[str] = Field(
         default_factory=list,
-        validation_alias=AliasChoices("terminal_tools", "terminalTools"),
         description="Tool names that end the agent's query loop when invoked.",
     )
 
@@ -62,9 +50,7 @@ class AgentDefinition(BaseModel):
 
     # --- lifecycle ---
     background: bool = False
-    initial_prompt: str | None = Field(
-        default=None, validation_alias=AliasChoices("initial_prompt", "initialPrompt")
-    )
+    initial_prompt: str | None = None
 
     # --- team role category ---
     # Freeform tag used by team-mode validation and dispatch instead of
@@ -73,10 +59,7 @@ class AgentDefinition(BaseModel):
     role: str | None = None
 
     # --- metadata ---
-    critical_system_reminder: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("critical_system_reminder", "criticalSystemReminder"),
-    )
+    critical_system_reminder: str | None = None
 
     # --- Python-specific ---
     permissions: list[str] = Field(default_factory=list)
@@ -118,7 +101,6 @@ class AgentDefinition(BaseModel):
         "skills",
         "permissions",
         "tools",
-        "blocked_tools",
         "terminal_tools",
         mode="before",
     )

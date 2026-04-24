@@ -49,7 +49,6 @@ class TestReminderDoesNotAccumulate:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Follow these steps exactly:\n"
@@ -106,7 +105,6 @@ class TestLargeOutputWithBackground:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Follow these steps:\n"
@@ -157,7 +155,6 @@ class TestSustainedBackgroundStress:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "This is a multi-step task. Follow ALL steps:\n\n"

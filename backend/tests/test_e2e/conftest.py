@@ -105,7 +105,6 @@ def create_eval_agent(
     *,
     system_prompt: str | None = None,
     sandbox_id: str | None = None,
-    enable_background_tasks: bool = False,
     **kwargs,
 ) -> EvalAgent:
     """Create an EvalAgent for e2e tests.
@@ -117,7 +116,6 @@ def create_eval_agent(
     return EvalAgent.create(
         system_prompt=system_prompt,
         sandbox_id=sandbox_id,
-        enable_background_tasks=enable_background_tasks,
         **kwargs,
     )
 

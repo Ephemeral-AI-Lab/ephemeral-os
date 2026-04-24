@@ -54,7 +54,6 @@ class TestCancelAndRelaunch:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Simulate a fix-and-retry workflow:\n"
@@ -106,7 +105,6 @@ class TestBgErrorFgRecovery:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -154,7 +152,6 @@ class TestFullPipelineSimulation:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Simulate a CI/CD pipeline:\n\n"
@@ -212,7 +209,6 @@ class TestRapidFireLifecycle:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute this rapid lifecycle:\n"
@@ -261,7 +257,6 @@ class TestNotificationDrivenWorkflow:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Execute this multi-phase workflow:\n\n"

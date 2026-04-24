@@ -53,7 +53,6 @@ class TestAutonomousProgressCheck:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "I need you to do two things:\n"
@@ -98,7 +97,6 @@ class TestAutonomousCancel:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Run 'sleep 120 && echo NEVER_FINISHES' in background.\n"
@@ -143,7 +141,6 @@ class TestAutonomousMultiTask:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "I need two things running in the background:\n"

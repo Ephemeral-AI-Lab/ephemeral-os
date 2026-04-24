@@ -50,6 +50,9 @@ def test_note_creation_with_all_fields():
 def test_note_defaults():
     note = Note(id="n2", agent_name="a", content="c", timestamp=0.0)
     assert note.paths == []
+    assert not hasattr(note, "task_id")
+    assert not hasattr(note, "tags")
+    assert not hasattr(note, "parent_note_id")
 
 
 # ---------------------------------------------------------------------------

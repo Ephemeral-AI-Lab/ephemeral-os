@@ -5,7 +5,7 @@ Tools exposed in the main loop:
 - read_task_details             — task spec, status, and terminal submission data
 - read_file_note                — search notes by file path
 
-Role-based restrictions are handled via ``blocked_tools`` in agent definitions.
+Role-specific visibility is handled by each agent definition's explicit tool list.
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ class SubmitFileNotesInput(BaseModel):
 
 
 class NoteOutput(BaseModel):
-    note_id: str = Field(..., description="Created Task Center note id.")
+    note_id: str = Field(..., description="Created file note id.")
     agent_name: str = Field(..., description="Runtime-stamped agent name that posted the note.")
     content: str = Field(..., description="Stored note content.")
     timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
@@ -178,7 +178,7 @@ class NoteOutput(BaseModel):
 
 
 class FileNoteItemOutput(BaseModel):
-    note_id: str = Field(..., description="Created Task Center note id.")
+    note_id: str = Field(..., description="Created file note id.")
     path: str = Field(..., description="Normalized file or directory path for this note.")
     content: str = Field(..., description="Stored note content.")
     timestamp: float = Field(..., description="Unix timestamp when the note was posted.")

@@ -44,7 +44,6 @@ class TestEphemeralBackgroundReminder:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Do these steps:\n"
@@ -110,7 +109,6 @@ class TestEphemeralBackgroundReminder:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Run 'echo NO_BACKGROUND_HERE' using daytona_shell. "

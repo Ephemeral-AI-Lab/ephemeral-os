@@ -417,7 +417,6 @@ class TestSupernovaLiveTail:
         agent = create_eval_agent(
             system_prompt=_LIVE_AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Run this exact bash command in BACKGROUND (set background=true):\n\n"

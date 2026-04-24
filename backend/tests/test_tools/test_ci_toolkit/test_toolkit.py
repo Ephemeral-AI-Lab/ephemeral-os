@@ -14,14 +14,13 @@ def test_ci_exports_all_tools():
     assert expected == names
 
 
-def test_ci_blocked_tools_handled_by_registry():
-    """Verify that ToolRegistry.remove_tools works for role-based restrictions."""
+def test_ci_tools_can_be_removed_from_registry():
+    """Verify that ToolRegistry.remove_tools removes named tools."""
     from tools.core.base import ToolRegistry
 
     registry = ToolRegistry()
     registry.register_many(make_code_intelligence_tools())
 
-    # Simulate planner blocklist
     registry.remove_tools(["ci_status"])
     remaining = {t.name for t in registry.list_tools()}
 

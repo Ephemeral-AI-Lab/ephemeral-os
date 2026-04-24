@@ -66,18 +66,15 @@ def _normalize_edits(
     old_text: str,
     new_text: str,
     edits: list[dict[str, Any]] | None,
-) -> tuple[list[SearchReplaceEdit], str | None, bool]:
-    """Turn tool input into search/replace edits.
-
-    The boolean is true when the caller used old_text/new_text mode.
-    """
+) -> tuple[list[SearchReplaceEdit], str | None]:
+    """Turn tool input into search/replace edits."""
     if edits is not None:
         if old_text or new_text:
-            return [], "Provide either `old_text`/`new_text` or `edits`, not both.", False
+            return [], "Provide either `old_text`/`new_text` or `edits`, not both."
         normalized: list[SearchReplaceEdit] = []
         for index, edit in enumerate(edits, start=1):
             if not isinstance(edit, dict):
-                return [], f"Edit {index}: each edit must be an object.", False
+                return [], f"Edit {index}: each edit must be an object."
             strategy = str(edit.get("strategy") or "").strip()
             if not strategy:
                 if {"old_text", "new_text", "old_string", "new_string", "search", "replace"} & set(edit):
@@ -87,26 +84,25 @@ def _normalize_edits(
                     f"Edit {index}: unknown strategy '{strategy}'. "
                     "Use `{\"strategy\": \"search_replace\", \"search\": \"...\", \"replace\": \"...\"}` "
                     "or top-level `old_text`/`new_text` for a single edit."
-                ), False
+                )
             search = edit.get("search") or edit.get("old_text") or edit.get("old_string")
             replace = edit.get("replace") or edit.get("new_text") or edit.get("new_string")
             if not isinstance(search, str) or not isinstance(replace, str):
                 return (
                     [],
                     f"Edit {index}: search_replace requires string `search` and `replace`.",
-                    False,
                 )
             normalized.append(SearchReplaceEdit(old_text=search, new_text=replace))
         if not normalized:
-            return [], "At least one edit is required.", False
-        return normalized, None, False
+            return [], "At least one edit is required."
+        return normalized, None
 
     if not old_text:
         return [], (
             "Provide `old_text` (text to find) and `new_text` (replacement), "
             "or use `edits` with strategy `search_replace`."
-        ), False
-    return [SearchReplaceEdit(old_text=old_text, new_text=new_text)], None, True
+        )
+    return [SearchReplaceEdit(old_text=old_text, new_text=new_text)], None
 
 
 @tool(
@@ -132,7 +128,7 @@ async def daytona_edit_file(
     file_path = _resolve_path(file_path, context)
     warnings: list[str] = []
 
-    normalized_edits, edit_error, legacy_single_edit = _normalize_edits(
+    normalized_edits, edit_error = _normalize_edits(
         old_text=old_text,
         new_text=new_text,
         edits=edits,
@@ -167,7 +163,6 @@ async def daytona_edit_file(
             change.raw,
             file_path=file_path,
             warnings=warnings,
-            legacy_single_edit=legacy_single_edit,
             metadata_extra=metadata_extra,
         )
 
@@ -193,19 +188,9 @@ def _edit_failure_result(
     *,
     file_path: str,
     warnings: list[str],
-    legacy_single_edit: bool,
     metadata_extra: dict[str, Any] | None = None,
 ) -> ToolResult:
     """Return the user-facing error for a failed edit."""
-    if (
-        legacy_single_edit
-        and result.conflict_reason == "patch_failed"
-    ):
-        return ToolResult(
-            output=f"Search text not found in {file_path}",
-            is_error=True,
-            metadata=dict(metadata_extra or {}),
-        )
     return operation_result_to_tool_result(
         result,
         tool_name="daytona_edit_file",

@@ -73,7 +73,6 @@ class TaskCenter:
         )
         self._context = TaskContextBuilder(
             team_run_id=team_run_id,
-            notes=self._notes,
             get_task_fn=lambda tid: self.get_task(tid),
             task_store=self._store,
             arbiter=arbiter,

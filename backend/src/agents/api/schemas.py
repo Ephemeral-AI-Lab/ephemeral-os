@@ -21,7 +21,6 @@ class AgentDefinitionCreate(BaseModel):
     tool_call_limit: int | None = Field(default=None, gt=0)
     tools: list[str] | None = None
     skills: list[str] = Field(default_factory=list)
-    blocked_tools: list[str] = Field(default_factory=list)
     hooks: dict[str, Any] | None = None
     background: bool = False
     initial_prompt: str | None = None
@@ -45,7 +44,6 @@ class AgentDefinitionUpdate(BaseModel):
     tool_call_limit: int | None = Field(default=None, gt=0)
     tools: list[str] | None = None
     skills: list[str] | None = None
-    blocked_tools: list[str] | None = None
     hooks: dict[str, Any] | None = None
     background: bool | None = None
     initial_prompt: str | None = None
@@ -72,7 +70,6 @@ class AgentDefinitionResponse(BaseModel):
     tool_call_limit: int | None = None
     tools: list[str] | None = None
     skills: list[str] = Field(default_factory=list)
-    blocked_tools: list[str] = Field(default_factory=list)
     hooks: dict[str, Any] | None = None
     background: bool = False
     initial_prompt: str | None = None

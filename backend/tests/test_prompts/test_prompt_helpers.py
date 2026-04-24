@@ -14,7 +14,7 @@ from config.settings import Settings
 from team.persistence.model import TeamDefinitionRecord
 from team.persistence.store import TeamDefinitionStore
 from team.models import BudgetConfig, Task, TaskStatus, TeamDefinition
-from team.persistence.events import make_note_posted, make_task_added, make_team_run_created, task_to_dict
+from team.persistence.events import make_task_added, make_team_run_created, task_to_dict
 _ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS_DIR = _ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -289,15 +289,6 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
         ),
         make_task_added("run-1", task_to_dict(root)),
         make_task_added("run-1", task_to_dict(dev)),
-        make_note_posted(
-            "run-1",
-            task_id="root",
-            agent_name="team_planner",
-            auto=False,
-            scope_paths=["backend/src/retry.py"],
-            content_preview="Planner assigned retry implementation.",
-            content_bytes=39,
-        ),
     ]
 
     report, missing = build_team_run_user_prompt_report_text_sync(
@@ -310,46 +301,8 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
     assert missing == []
     assert "# Team Run User Prompts: run-1" in report
     assert "- Task count: `2`" in report
-    assert "- Note previews restored: `1`" in report
     assert "### Task: dev-1" in report
     assert "Implement the retry fix." in report
-
-
-def test_build_team_run_user_prompt_report_replays_legacy_task_field(tmp_path: Path) -> None:
-    register_builtins()
-    root = Task(
-        id="root",
-        team_run_id="run-legacy",
-        agent_name="team_planner",
-        status=TaskStatus.DONE,
-        objective="Fix retry behavior.",
-        root_id="root",
-        depth=0,
-    )
-    payload = task_to_dict(root)
-    payload["task"] = payload.pop("objective")
-    events = [
-        make_team_run_created(
-            "run-legacy",
-            session_id="session-1",
-            user_request="Fix retry behavior.",
-            goal=None,
-            repo_root=str(tmp_path),
-            budgets=BudgetConfig().__dict__,
-            roster={"planner": ["team_planner"]},
-        ),
-        make_task_added("run-legacy", payload),
-    ]
-
-    report, missing = build_team_run_user_prompt_report_text_sync(
-        team_run_id="run-legacy",
-        events=events,
-        cwd=str(tmp_path),
-        settings=Settings(),
-    )
-
-    assert missing == []
-    assert "Fix retry behavior." in report
 
 
 def test_default_team_run_prompt_report_path_uses_run_prefix() -> None:

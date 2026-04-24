@@ -40,7 +40,6 @@ class TestParallelBgWithFgInterleaving:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 3 independent background tasks simultaneously:\n"
@@ -108,7 +107,6 @@ class TestParallelBgStaggeredFinish:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch these background tasks:\n"
@@ -181,7 +179,6 @@ class TestParallelFgBgMix:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 'sleep 8 && echo BG_BUILD_COMPLETE' in background (background: true). "
@@ -244,7 +241,6 @@ class TestParallelBgSameCommand:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 4 background tasks that simulate parallel test shards:\n"
@@ -308,7 +304,6 @@ class TestParallelBgOneFailsOthersSucceed:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 3 background tasks:\n"
@@ -370,7 +365,6 @@ class TestParallelBgCancelAllRemaining:
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
         )
         result = await agent.invoke(
             "Launch 4 background tasks:\n"

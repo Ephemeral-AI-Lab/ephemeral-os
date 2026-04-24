@@ -195,7 +195,7 @@ def _sandbox_module_fixture(label: str):
 
 sandbox_for_agent = _sandbox_module_fixture("agent-chat")
 sandbox_for_complex = _sandbox_module_fixture("complex-task")
-sandbox_for_model_key = _sandbox_module_fixture("model-key-multi-tool")
+sandbox_for_model = _sandbox_module_fixture("model-multi-tool")
 
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
@@ -383,10 +383,10 @@ MULTI_TOOL_WRITE_PROMPT = (
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
-async def test_live_multiple_tools_with_model_key(sandbox_for_model_key):
-    """Create an agent with model_key and verify it calls multiple tools."""
+async def test_live_multiple_tools_with_model(sandbox_for_model):
+    """Create an agent with a model and verify it calls multiple tools."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_for_model_key,
+        sandbox_id=sandbox_for_model,
         system_prompt=MULTI_TOOL_WRITE_PROMPT,
     )
 
@@ -421,10 +421,10 @@ async def test_live_multiple_tools_with_model_key(sandbox_for_model_key):
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
-async def test_live_tool_call_chain_with_model_key(sandbox_for_model_key):
-    """Verify the same model_key can drive a short chain of 3 tool calls."""
+async def test_live_tool_call_chain_with_model(sandbox_for_model):
+    """Verify the same model can drive a short chain of 3 tool calls."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_for_model_key,
+        sandbox_id=sandbox_for_model,
         system_prompt=(
             "Complete every requested step using tools and do not stop early. "
             "Use shell or file tools as appropriate."
@@ -472,10 +472,10 @@ async def test_live_tool_call_chain_with_model_key(sandbox_for_model_key):
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
-async def test_live_parallel_tool_calls_with_model_key(sandbox_for_model_key):
+async def test_live_parallel_tool_calls_with_model(sandbox_for_model):
     """Create multiple files in parallel calls using the real MiniMax model key."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_for_model_key,
+        sandbox_id=sandbox_for_model,
         system_prompt=(
             "You have access to a remote sandbox. "
             "Use daytona_write_file and do not combine commands. "
@@ -500,10 +500,10 @@ async def test_live_parallel_tool_calls_with_model_key(sandbox_for_model_key):
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
-async def test_live_parallel_tool_batch_bash_and_write_with_model_key(sandbox_for_model_key):
+async def test_live_parallel_tool_batch_bash_and_write_with_model(sandbox_for_model):
     """Request a mixed batch of write/bash tool calls and verify parallel-style scheduling."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_for_model_key,
+        sandbox_id=sandbox_for_model,
         system_prompt=(
             "You are a developer with sandbox tools. "
             "When given multiple explicit actions, issue tool calls directly. "

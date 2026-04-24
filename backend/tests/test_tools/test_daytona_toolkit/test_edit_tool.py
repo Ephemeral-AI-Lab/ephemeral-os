@@ -2,8 +2,7 @@
 
 The tool now delegates to ``svc.edit_file`` directly, so these tests
 mock the service instead of framing a shell payload. Behaviour checked:
-input normalization, OCC failure translation, and legacy "search text not
-found" error-text preservation.
+input normalization and structured OCC failure translation.
 """
 
 from __future__ import annotations
@@ -194,8 +193,7 @@ def test_aborted_version_is_surfaced_to_caller() -> None:
     assert payload["conflict_file"] == "/ws/file.py"
 
 
-def test_patch_failed_in_single_edit_mode_returns_legacy_error_text() -> None:
-    """A single top-level old_text/new_text edit keeps the historical message."""
+def test_patch_failed_in_single_edit_mode_uses_structured_payload() -> None:
     svc = _svc(
         _failed_op("/ws/file.py", status="failed", conflict_reason="patch_failed"),
     )
@@ -207,7 +205,9 @@ def test_patch_failed_in_single_edit_mode_returns_legacy_error_text() -> None:
     )
 
     assert result.is_error
-    assert "Search text not found in /ws/file.py" in result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "failed"
+    assert payload["conflict_reason"] == "patch_failed"
 
 
 def test_patch_failed_in_batch_mode_uses_structured_payload() -> None:

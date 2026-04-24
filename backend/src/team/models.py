@@ -321,6 +321,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
     task_id = str(it.get("id") or "")
     objective = str(it.get("objective") or "")
     agent = str(it.get("agent") or "")
+    parent_id = it.get("parent_id")
     if not task_id:
         raise ValueError("TaskDefinition requires a non-empty 'id'")
     if not objective:
@@ -334,7 +335,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
-        parent_id=it.get("parent_id"),
+        parent_id=str(parent_id) if parent_id is not None else None,
     )
 
 

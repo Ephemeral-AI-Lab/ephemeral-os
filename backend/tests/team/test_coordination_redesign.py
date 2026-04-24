@@ -49,7 +49,7 @@ def test_build_task_metadata_enables_team_runtime_flags():
         id="run-1",
         sandbox_id="sbx-1",
         project_context=SimpleNamespace(repo_root="/repo"),
-        coordination_metadata={"require_declared_shell_outputs": True},
+        coordination_metadata={},
         task_center=object(),
         arbiter=None,
         budgets=BudgetConfig(max_tasks=12, max_depth=4, max_plan_size=6, max_note_bytes=2048),
@@ -98,14 +98,12 @@ async def test_submit_plan_resolves_roster_role_hints():
             new_tasks=[
                 {
                     "id": "impl",
-                    "description": "Implement API",
                     "spec": _spec("Implement the API."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "review",
-                    "description": "Validate API changes",
                     "spec": _spec("Validate the API changes."),
                     "name": "reviewer",
                     "deps": ["impl"],
@@ -220,7 +218,6 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
         new_tasks=[
             {
                 "id": "dev-owner",
-                "description": "Repair owner",
                 "name": "developer",
                 "spec": _spec("Repair the production owner."),
                 "scope_paths": ["pkg/owner.py"],
@@ -268,7 +265,6 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
             new_tasks=[
                 {
                     "id": "repair-owner",
-                    "description": "Repair owner",
                     "name": "developer",
                     "spec": _spec("Repair the production owner."),
                     "deps": [],
@@ -311,19 +307,8 @@ async def test_submit_replan_rejects_empty_new_tasks_with_deeper_diagnosis_promp
     assert task_center.posted == []
 
 
-@pytest.mark.asyncio
-async def test_submit_plan_ignores_legacy_description_field():
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "task_center": _AsyncTaskCenterStub(),
-            "work_item_id": "planner-task",
-            "agent_name": "team_planner",
-            "max_plan_size": 8,
-        },
-    )
-
-    result = await SubmitPlanTool().execute(
+def test_submit_plan_rejects_legacy_description_field():
+    with pytest.raises(ValidationError):
         SubmitPlanTool.input_model(
             new_tasks=[
                 {
@@ -337,16 +322,11 @@ async def test_submit_plan_ignores_legacy_description_field():
                     "scope_paths": ["src/api.py"],
                 }
             ],
-        ),
-        ctx,
-    )
-
-    assert result.is_error is False, result.output
-    assert "description" not in json.loads(result.output)["new_tasks"][0]
+        )
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_oversize_task_payloads():
+async def test_submit_plan_does_not_apply_file_note_budget_to_task_specs():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -369,7 +349,6 @@ async def test_submit_plan_rejects_oversize_task_payloads():
             new_tasks=[
                 {
                     "id": "oversize",
-                    "description": "Oversize API note",
                     "spec": _spec(
                         "This task description is intentionally too large.",
                         environment="This environment text is also intentionally long.",
@@ -382,8 +361,10 @@ async def test_submit_plan_rejects_oversize_task_payloads():
         ctx,
     )
 
-    assert result.is_error is True
-    assert "max_note_bytes" in result.output
+    assert result.is_error is False, result.output
+    payload = json.loads(result.output)
+    assert payload["new_tasks"][0]["id"] == "oversize"
+    assert "max_note_bytes" not in result.output
     assert task_center.posted == []
 
 
@@ -406,7 +387,6 @@ async def test_submit_plan_rejects_malformed_spec_sections():
             new_tasks=[
                 {
                     "id": "bad-spec",
-                    "description": "Malformed API spec",
                     "spec": "Goal: Implement the API.\nScope: src/api.py",
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
@@ -468,14 +448,12 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
             new_tasks=[
                 {
                     "id": "repair",
-                    "description": "Repair implementation",
                     "spec": _spec("Repair the stale implementation path."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "followup",
-                    "description": "Follow up repair",
                     "spec": _spec("Follow-up owned by the replanner."),
                     "name": "developer",
                     "deps": ["repair"],
@@ -497,15 +475,7 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
         "replanner-task",
         "replanner-task",
     ]
-    audit_notes = [
-        n for n in task_center.posted if "Corrective tasks:" in n.content
-    ]
-    assert len(audit_notes) == 1
-    assert "Corrective tasks:" in audit_notes[0].content
-    assert "- repair (developer): scope=src/api.py" in (
-        audit_notes[0].content
-    )
-    assert "Cancelled siblings: stale" in audit_notes[0].content
+    assert task_center.posted == []
 
 
 def test_submit_replan_rejects_removed_sibling_arguments():
@@ -520,7 +490,6 @@ def test_submit_replan_rejects_removed_sibling_arguments():
             new_tasks=[
                 {
                     "id": "legacy-parent",
-                    "description": "Legacy parent placement",
                     "spec": _spec("Legacy parent placement is rejected."),
                     "name": "developer",
                     "parent_id": "parent",
@@ -535,7 +504,6 @@ def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
             new_tasks=[
                 {
                     "id": "legacy-parent",
-                    "description": "Legacy parent placement",
                     "spec": _spec("Planner parent placement is rejected."),
                     "name": "developer",
                     "parent_id": "parent",
@@ -573,7 +541,6 @@ async def test_submit_replan_rejects_replanner_agent_targets():
             new_tasks=[
                 {
                     "id": "bad-replanner",
-                    "description": "Spawn replanner",
                     "spec": _spec("Try to spawn another replanner."),
                     "name": "team_replanner",
                     "scope_paths": ["src/api.py"],
@@ -617,7 +584,6 @@ async def test_submit_replan_rejects_planner_agent_targets():
             new_tasks=[
                 {
                     "id": "bad-planner",
-                    "description": "Spawn planner",
                     "spec": _spec("Try to delegate replanning to a planner."),
                     "name": "team_planner",
                     "scope_paths": ["src/api.py"],
@@ -662,7 +628,6 @@ async def test_submit_replan_rejects_subagent_targets():
             new_tasks=[
                 {
                     "id": "bad-subagent",
-                    "description": "Target subagent",
                     "spec": _spec("Try to target a subagent directly."),
                     "name": "scout",
                     "scope_paths": ["src/api.py"],
@@ -706,7 +671,6 @@ async def test_submit_replan_requires_diagnostics_decision_for_unresolved_blocke
             new_tasks=[
                 {
                     "id": "missing-decision",
-                    "description": "Repair unresolved blocker",
                     "spec": _spec(
                         "Repair unresolved blocker evidence.",
                         task_details=(
@@ -763,7 +727,6 @@ async def test_submit_replan_accepts_repair_at_replanner_depth_limit():
             new_tasks=[
                 {
                     "id": "same-depth-repair",
-                    "description": "Repair at limit",
                     "spec": _spec("Repair at the replanner depth limit."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
@@ -809,14 +772,12 @@ async def test_submit_replan_rejects_plan_size_overflow():
             new_tasks=[
                 {
                     "id": "repair-a",
-                    "description": "Repair first path",
                     "spec": _spec("Repair one path."),
                     "name": "developer",
                     "scope_paths": ["src/a.py"],
                 },
                 {
                     "id": "repair-b",
-                    "description": "Repair second path",
                     "spec": _spec("Repair another path."),
                     "name": "developer",
                     "scope_paths": ["src/b.py"],
@@ -861,7 +822,6 @@ async def test_submit_replan_rejects_task_budget_overflow():
             new_tasks=[
                 {
                     "id": "repair",
-                    "description": "Repair over budget",
                     "spec": _spec("Repair over the task budget."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
@@ -916,7 +876,7 @@ def test_parent_summary_prompt_lists_completed_children_to_read_first():
     assert "`request_replan(reason=...)`" in prompt
     assert "This terminal submission is the completion signal for the parent task" in prompt
     assert "## Direct child task details" not in prompt
-    assert "## Child terminal notes" not in prompt
+    assert "## Child terminal summaries" not in prompt
 
 
 @pytest.mark.asyncio

@@ -97,10 +97,6 @@ class FakeExpander:
         self.apply_replan = AsyncMock()
 
 
-class FakeNoteManager:
-    """Placeholder NoteManager; status handling no longer writes task notes."""
-
-
 class FakeQueue:
     """Fake TaskQueue that records enqueue calls."""
 
@@ -113,7 +109,6 @@ class FakeQueue:
 
 def _make_handler(
     store: FakeStore,
-    notes: FakeNoteManager,
     budget: FakeBudget,
     expander: FakeExpander,
     fail_fast: AsyncMock,
@@ -122,7 +117,6 @@ def _make_handler(
     handler = TaskStatusHandler(
         team_run_id="run-1",
         store=store,
-        notes=notes,
         budget=budget,
         expander=expander,
         emit_event=lambda e: None,
@@ -153,7 +147,7 @@ async def test_success_marks_done_and_enqueues_newly_ready_deps():
     store.mark_done.return_value = [dep_id]
 
     queue = FakeQueue()
-    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), FakeExpander(), AsyncMock())
+    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(TaskStatusUpdate(task_id=task_id, status=TaskStatus.DONE, summary="ok"))
@@ -192,7 +186,7 @@ async def test_success_on_parent_summary_sidecar_with_summary_finalizes_eas_pare
     store.finalize_parent_summary.return_value = []
 
     queue = FakeQueue()
-    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), FakeExpander(), AsyncMock())
+    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(
@@ -228,9 +222,8 @@ async def test_success_on_parent_summary_sidecar_empty_summary_fails_parent_and_
 
     cancel_event = asyncio.Event()
     fail_fast = AsyncMock()
-    notes = FakeNoteManager()
     queue = FakeQueue()
-    handler = _make_handler(store, notes, FakeBudget(), FakeExpander(), fail_fast, cancel_event)
+    handler = _make_handler(store, FakeBudget(), FakeExpander(), fail_fast, cancel_event)
     handler.bind_queue(queue)
 
     await handler.handle(
@@ -252,7 +245,7 @@ async def test_failed_marks_failed_and_calls_fail_fast_once():
     cancel_event = asyncio.Event()
     fail_fast = AsyncMock()
     queue = FakeQueue()
-    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), FakeExpander(), fail_fast, cancel_event)
+    handler = _make_handler(store, FakeBudget(), FakeExpander(), fail_fast, cancel_event)
     handler.bind_queue(queue)
 
     await handler.handle(
@@ -299,7 +292,7 @@ async def test_expanded_with_plan_calls_mark_expanded_and_enqueues_ready_childre
     expander = FakeExpander(new_tasks=[child_task_a, child_task_b])
 
     queue = FakeQueue()
-    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), expander, AsyncMock())
+    handler = _make_handler(store, FakeBudget(), expander, AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(
@@ -337,7 +330,7 @@ async def test_request_replan_spawns_replanner_and_enqueues_it(monkeypatch):
     store.request_replan.side_effect = _fake_request_replan
 
     queue = FakeQueue()
-    handler = _make_handler(store, FakeNoteManager(), FakeBudget(), FakeExpander(), AsyncMock())
+    handler = _make_handler(store, FakeBudget(), FakeExpander(), AsyncMock())
     handler.bind_queue(queue)
 
     await handler.handle(

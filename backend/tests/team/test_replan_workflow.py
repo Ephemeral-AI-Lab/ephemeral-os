@@ -72,14 +72,12 @@ async def test_submit_replan_inserts_new_tasks_as_replanner_children():
                 {
                     "id": "repair",
                     "name": "developer",
-                    "description": "Repair under replanner",
                     "spec": _spec("Repair under the replanner."),
                     "scope_paths": ["src/b.py"],
                 },
                 {
                     "id": "child",
                     "name": "developer",
-                    "description": "Child repair",
                     "spec": _spec("Repair under the replanner."),
                     "scope_paths": ["src/a.py"],
                 },
@@ -237,7 +235,6 @@ async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
                 {
                     "id": "repair",
                     "name": "developer",
-                    "description": "Invalid downstream dep",
                     "spec": _spec("Invalidly wait for downstream work blocked on R."),
                     "deps": ["downstream"],
                     "scope_paths": ["src/a.py"],
