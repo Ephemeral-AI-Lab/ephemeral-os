@@ -37,7 +37,6 @@ class BudgetManager:
             make_budget_update(
                 self._team_run_id,
                 tasks_used=self.budget_state.tasks_used,
-                note_bytes_used=self.budget_state.note_bytes_used,
                 replans_used=self.budget_state.replans_used,
             )
         )

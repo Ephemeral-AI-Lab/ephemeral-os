@@ -342,7 +342,8 @@ def decorate_schemas_for_background(
                 "type": "boolean",
                 "description": (
                     "Set to true to run this tool asynchronously in the background. "
-                    "Use for long-running operations (builds, test suites, installs)."
+                    "This supports long-running operations such as builds, test suites, "
+                    "and installs."
                 ),
             }
     return schemas

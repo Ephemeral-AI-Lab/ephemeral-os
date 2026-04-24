@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -256,67 +255,6 @@ async def test_post_dispatch_calls_after_dispatch_hook():
     await executor.post_dispatch(update)
 
     assert captured == [(task, update)]
-
-
-# ---------------------------------------------------------------------------
-# Scope-change warning injection + context builder
-# ---------------------------------------------------------------------------
-
-
-def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
-    created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
-    external_change = SimpleNamespace(
-        file_path="src/auth/session.py",
-        edit_type="edit",
-        agent_run_id="other-run",
-        task_id="task-other",
-        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-    )
-    own_change = SimpleNamespace(
-        file_path="src/auth/local.py",
-        edit_type="edit",
-        agent_run_id="agent-run-1",
-        task_id="task-1",
-        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-    )
-    arbiter = SimpleNamespace(
-        initialized=True,
-        changes_since=lambda since, team_run_id=None: [external_change, own_change],
-    )
-
-    tc = FakeTaskCenter()
-    team_run = FakeTeamRun(task_center=tc, arbiter=arbiter)
-    executor = Executor(
-        team_run=team_run,
-        runner=AsyncMock(),
-        agent_lookup=lambda name: FakeDefn(),
-    )
-    task = _make_task()
-    task.created_at = created_at
-
-    asyncio.run(executor.scope_notifier.inject_warning(task))
-
-    assert len(tc.notes) == 1
-    assert "src/auth/session.py" in tc.notes[0].content
-    assert "src/auth/local.py" not in tc.notes[0].content
-
-
-def test_inject_scope_warnings_skips_when_store_not_initialized():
-    arbiter = SimpleNamespace(
-        initialized=False,
-        changes_since=lambda since, team_run_id=None: pytest.fail("should not be called"),
-    )
-    tc = FakeTaskCenter()
-    team_run = FakeTeamRun(task_center=tc, arbiter=arbiter)
-    executor = Executor(
-        team_run=team_run,
-        runner=AsyncMock(),
-        agent_lookup=lambda name: FakeDefn(),
-    )
-
-    asyncio.run(executor.scope_notifier.inject_warning(_make_task()))
-
-    assert tc.notes == []
 
 
 def test_build_context_uses_override_when_provided():

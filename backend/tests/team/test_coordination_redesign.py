@@ -31,7 +31,7 @@ class _AsyncTaskCenterStub:
         self.posted.append(note)
 
     async def context_for(self, task: Task) -> str:
-        return f"## Task\n{task.objective}"
+        return f"## Task\n{task.definition.objective}"
 
 
 def test_build_task_metadata_enables_team_runtime_flags():
@@ -52,8 +52,8 @@ def test_build_task_metadata_enables_team_runtime_flags():
         coordination_metadata={},
         task_center=object(),
         arbiter=None,
-        budgets=BudgetConfig(max_tasks=12, max_depth=4, max_plan_size=6, max_note_bytes=2048),
-        budget_state=BudgetState(tasks_used=3, note_bytes_used=128, replans_used=1),
+        budgets=BudgetConfig(max_tasks=12, max_depth=4, max_plan_size=6),
+        budget_state=BudgetState(tasks_used=3, replans_used=1),
         root_task_id="root-1",
         roster={"developer": ["developer"]},
     )
@@ -67,9 +67,7 @@ def test_build_task_metadata_enables_team_runtime_flags():
     assert meta["max_plan_size"] == 6
     assert meta["max_tasks"] == 12
     assert meta["max_depth"] == 4
-    assert meta["max_note_bytes"] == 2048
     assert meta["tasks_used"] == 3
-    assert meta["note_bytes_used"] == 128
     assert meta["replans_used"] == 1
 
 
@@ -88,7 +86,6 @@ async def test_submit_plan_resolves_roster_role_hints():
             "tasks_used": 1,
             "max_depth": 4,
             "task_depth": 0,
-            "max_note_bytes": 10_000,
         },
     )
 
@@ -129,7 +126,7 @@ async def test_submit_plan_resolves_roster_role_hints():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_empty_plan_with_arbiter_scope_change_context():
+async def test_submit_plan_rejects_empty_plan():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -137,18 +134,6 @@ async def test_submit_plan_rejects_empty_plan_with_arbiter_scope_change_context(
             "task_center": task_center,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
-            "work_item_started_at": 1.0,
-            "agent_run_id": "run-1",
-            "write_scope": ["src/auth/"],
-            "arbiter": SimpleNamespace(
-                initialized=True,
-                changes_since=lambda _since, team_run_id=None: [
-                    SimpleNamespace(
-                        file_path="src/auth/session.py",
-                        agent_run_id="run-2",
-                    )
-                ],
-            ),
         },
     )
 
@@ -188,12 +173,10 @@ def test_submit_plan_schema_keeps_new_tasks_and_drops_prose_fields():
     tool = SubmitPlanTool()
     schema = tool.to_api_schema()
 
-    assert "Use when a planner has finished decomposing its assigned work" in schema[
-        "description"
-    ]
-    assert "initial child task DAG" in schema["description"]
-    assert "distinct verification lanes" in schema["description"]
-    assert "terminal action" in schema["description"]
+    assert "Submits initial child tasks" in schema["description"]
+    assert "current planner" in schema["description"]
+    assert "planner loop" in schema["description"]
+    assert "Use when" not in schema["description"]
     assert "new_tasks" in schema["input_schema"]["properties"]
     assert "output" not in schema["input_schema"]["properties"]
     assert "summary" not in schema["input_schema"]["properties"]
@@ -233,10 +216,10 @@ def test_submit_replan_schema_keeps_new_tasks_and_drops_prose_fields():
 
     assert "new_tasks" in schema["input_schema"]["properties"]
     assert "cancel_ids" in schema["input_schema"]["required"]
-    assert "Use when a replanner has diagnosed a failed task" in schema["description"]
-    assert "corrective repair or verification tasks" in schema["description"]
-    assert "stale direct siblings" in schema["description"]
-    assert "terminal action" in schema["description"]
+    assert "Submits corrective child tasks" in schema["description"]
+    assert "sibling cancellations" in schema["description"]
+    assert "current replanner" in schema["description"]
+    assert "Use when" not in schema["description"]
     new_tasks_desc = schema["input_schema"]["properties"]["new_tasks"]["description"]
     assert "Non-empty structured JSON array" in new_tasks_desc
     assert "non-empty repo-relative scope_paths" in new_tasks_desc
@@ -326,7 +309,7 @@ def test_submit_plan_rejects_legacy_description_field():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_does_not_apply_file_note_budget_to_task_specs():
+async def test_submit_plan_accepts_large_task_specs_within_plan_limits():
     task_center = _AsyncTaskCenterStub()
     ctx = ToolExecutionContext(
         cwd="/tmp",
@@ -339,7 +322,6 @@ async def test_submit_plan_does_not_apply_file_note_budget_to_task_specs():
             "tasks_used": 1,
             "max_depth": 4,
             "task_depth": 0,
-            "max_note_bytes": 16,
         },
     )
 
@@ -364,7 +346,6 @@ async def test_submit_plan_does_not_apply_file_note_budget_to_task_specs():
     assert result.is_error is False, result.output
     payload = json.loads(result.output)
     assert payload["new_tasks"][0]["id"] == "oversize"
-    assert "max_note_bytes" not in result.output
     assert task_center.posted == []
 
 

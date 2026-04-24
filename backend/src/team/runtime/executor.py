@@ -25,7 +25,6 @@ from team.models import (
 )
 from team.persistence.events import make_task_status
 from team.runtime.context_builder import TeamAgentContext
-from team.runtime.scope_change_notifier import ScopeChangeNotifier
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
@@ -97,7 +96,6 @@ class Executor:
         self.agent_lookup = agent_lookup
         self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
-        self.scope_notifier = ScopeChangeNotifier(team_run)
 
     async def run(self, task_id: str) -> TaskStatusUpdate:
         """Claim and run one task; return the outcome update (no handler call)."""
@@ -136,7 +134,6 @@ class Executor:
                 summary=f"unknown_agent: {agent_name}",
             )
 
-        await self.scope_notifier.inject_warning(task)
         ctx = await self._build_context(defn, task)
 
         runner_task: asyncio.Task[object] = asyncio.create_task(self.runner(defn, ctx))

@@ -16,7 +16,7 @@ from tools.task_center.tools import (
     SubmitFileNotesTool,
 )
 from tools.core.base import ToolExecutionContext, parse_tool_input
-from team.models import Note, Task, TaskStatus
+from team.models import Note, Task, TaskDefinition, TaskStatus
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -37,12 +37,15 @@ def _task(
     return Task(
         id=task_id,
         team_run_id="run-1",
-        agent_name=agent,
+        definition=TaskDefinition(
+            id=task_id,
+            objective=f"Objective for {task_id}",
+            agent=agent,
+            description=description,
+            deps=list(deps or []),
+            scope_paths=list(scope_paths or []),
+        ),
         status=status,
-        objective=f"Objective for {task_id}",
-        description=description,
-        deps=list(deps or []),
-        scope_paths=list(scope_paths or []),
         parent_id=parent_id,
         failure_reason=failure_reason,
     )
@@ -162,7 +165,8 @@ def test_submit_note_schemas_are_pydantic_native():
     assert "path" in note_item_schema["properties"]
     assert "content" in note_item_schema["properties"]
     assert note_item_schema["additionalProperties"] is False
-    assert "Use for scout discoveries" in file_schema["description"]
+    assert "Posts append-only file or directory notes" in file_schema["description"]
+    assert "Use for" not in file_schema["description"]
     assert "notes" in file_schema["output_schema"]["properties"]
     item_output = file_schema["output_schema"]["$defs"][
         file_schema["output_schema"]["properties"]["notes"]["items"]["$ref"].split("/")[-1]
@@ -328,8 +332,9 @@ def test_read_task_details_schema_requires_single_task_id():
 def test_read_task_details_description_orders_header_reads_before_graph():
     description = ReadTaskDetailsTool().to_api_schema()["description"]
 
-    assert "use this for prompt-header tasks" in description
-    assert "before broader graph orientation" in description
+    assert "Returns one Task Center task's spec" in description
+    assert "submission details" in description
+    assert "Use to" not in description
     assert "may use read_task_graph first" not in description
 
 

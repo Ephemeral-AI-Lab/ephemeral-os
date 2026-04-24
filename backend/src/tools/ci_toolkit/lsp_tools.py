@@ -49,7 +49,7 @@ class CiDiagnosticsOutput(BaseModel):
 
 @tool(
     name="ci_diagnostics",
-    description="Check a file for syntax errors, import errors, undefined names, and type warnings. Developers MUST call this on every edited file before signaling completion — a single unresolved NameError in a shared file cascades to every downstream test. Validators MUST call this on each scope_paths file before the full test suite.",
+    description="Returns syntax, import, name, and type diagnostics for one file.",
     short_description="Check a file for diagnostics.",
     input_model=CiDiagnosticsInput,
     output_model=CiDiagnosticsOutput,

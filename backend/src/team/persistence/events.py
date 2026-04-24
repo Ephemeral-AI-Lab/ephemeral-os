@@ -138,7 +138,6 @@ def make_budget_update(
     team_run_id: str,
     *,
     tasks_used: int,
-    note_bytes_used: int,
     replans_used: int = 0,
 ) -> TeamRunEvent:
     return TeamRunEvent(
@@ -146,7 +145,6 @@ def make_budget_update(
         kind="budget_update",
         data={
             "tasks_used": tasks_used,
-            "note_bytes_used": note_bytes_used,
             "replans_used": replans_used,
         },
     )

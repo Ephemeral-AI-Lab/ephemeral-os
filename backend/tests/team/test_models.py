@@ -22,8 +22,6 @@ from config.defaults import (
     DEFAULT_MAX_DEPTH,
     DEFAULT_MAX_PLAN_SIZE,
     DEFAULT_MAX_REPLANS_PER_RUN,
-    DEFAULT_MAX_NOTE_BYTES,
-    DEFAULT_MAX_TOTAL_NOTE_BYTES,
 )
 
 
@@ -132,27 +130,25 @@ def test_task_creation_with_required_fields():
     task = Task(
         id="x",
         team_run_id="run-1",
-        agent_name="developer",
+        definition=TaskDefinition(id="x", objective="implement feature", agent="developer"),
         status=TaskStatus.PENDING,
-        objective="implement feature",
     )
     assert task.id == "x"
     assert task.team_run_id == "run-1"
-    assert task.agent_name == "developer"
+    assert task.definition.agent == "developer"
     assert task.status == TaskStatus.PENDING
-    assert task.objective == "implement feature"
+    assert task.definition.objective == "implement feature"
 
 
 def test_task_defaults():
     task = Task(
         id="x",
         team_run_id="run-1",
-        agent_name="developer",
+        definition=TaskDefinition(id="x", objective="do it", agent="developer"),
         status=TaskStatus.PENDING,
-        objective="do it",
     )
-    assert task.deps == []
-    assert task.scope_paths == []
+    assert task.definition.deps == []
+    assert task.definition.scope_paths == []
     assert task.parent_id is None
     assert task.root_id == ""
     assert task.depth == 0
@@ -281,7 +277,6 @@ def test_replan_plan_from_dict_round_trip():
     assert len(replan.add_tasks) == 1
     assert replan.add_tasks[0].id == "fix1"
     assert replan.add_tasks[0].objective == "fix the bug"
-    assert replan.add_tasks[0].parent_id == "parent-task"
     assert replan.cancel_ids == ["old-task-1", "old-task-2"]
 
 
@@ -308,8 +303,6 @@ def test_budget_config_defaults():
     assert bc.max_depth == DEFAULT_MAX_DEPTH
     assert bc.max_plan_size == DEFAULT_MAX_PLAN_SIZE
     assert bc.max_replans_per_run == DEFAULT_MAX_REPLANS_PER_RUN
-    assert bc.max_note_bytes == DEFAULT_MAX_NOTE_BYTES
-    assert bc.max_total_note_bytes == DEFAULT_MAX_TOTAL_NOTE_BYTES
 
 
 def test_budget_config_matches_known_values():
@@ -332,7 +325,6 @@ def test_budget_config_override():
 def test_budget_state_initial_values():
     bs = BudgetState()
     assert bs.tasks_used == 0
-    assert bs.note_bytes_used == 0
     assert bs.replans_used == 0
 
 
@@ -344,7 +336,7 @@ def test_budget_state_initial_values():
 def test_submitted_summary_creation():
     s = SubmittedSummary(summary="all tests passed")
     assert s.summary == "all tests passed"
-    assert s.submission_kind == "summary"
+    assert s.artifact is None
 
 
 # ---------------------------------------------------------------------------

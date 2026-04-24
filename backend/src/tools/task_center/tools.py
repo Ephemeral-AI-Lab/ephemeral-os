@@ -271,9 +271,7 @@ async def _post_file_notes(
 class SubmitFileNotesTool(BaseTool):
     name = "submit_file_notes"
     description = (
-        "Use for scout discoveries and durable observations about file "
-        "surfaces that are not tied to a specific Task Center task. Notes "
-        "are append-only and later surface through file-based lookups."
+        "Posts append-only file or directory notes for later path lookups."
     )
     short_description = "Post batched file-scoped notes."
     input_model = SubmitFileNotesInput
@@ -312,10 +310,7 @@ class ReadFileNoteInput(BaseModel):
 class ReadFileNoteTool(BaseTool):
     name = "read_file_note"
     description = (
-        "Use to search file notes for a file or directory path. "
-        "Developers and validators use this before reading or editing files "
-        "that may have notes; planners use it after scouts post findings or "
-        "when the prompt names a known note path."
+        "Returns notes whose paths overlap the requested file or directory path."
     )
     short_description = "Search notes by file path."
     input_model = ReadFileNoteInput
@@ -380,10 +375,8 @@ class ReadTaskDetailsInput(BaseModel):
 class ReadTaskDetailsTool(BaseTool):
     name = "read_task_details"
     description = (
-        "Use to inspect one known Task Center task, including its spec, deps, "
-        "status, scope paths, and failure reason. Non-entry developers, "
-        "validators, child planners, and replanners use this for prompt-header "
-        "tasks before broader graph orientation."
+        "Returns one Task Center task's spec, status, deps, scope paths, "
+        "and submission details."
     )
     short_description = "Read one task's details by ID."
     input_model = ReadTaskDetailsInput
@@ -446,10 +439,8 @@ class ReadTaskGraphInput(BaseModel):
 class ReadTaskGraphTool(BaseTool):
     name = "read_task_graph"
     description = (
-        "Use to inspect the Task Center DAG when child planners or replanners "
-        "need same-parent peer context, sibling enumeration, or dependency "
-        "orientation. Entry/root planners have no parent, deps, or siblings "
-        "and should not use this as initial setup."
+        "Returns the Task Center DAG, or the current task's sibling subtree, "
+        "as JSON."
     )
     short_description = "Read the task graph as JSON."
     input_model = ReadTaskGraphInput

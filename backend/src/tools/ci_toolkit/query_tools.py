@@ -915,14 +915,8 @@ def _file_query_symbols(
 @tool(
     name="ci_query_symbol",
     description=(
-        "Find where a symbol is defined across the codebase, and optionally trace all its "
-        "callers and import sites. Returns file path, line number, kind, and signature for each "
-        "definition. With references=true, also returns every usage site via LSP — essential "
-        "before patching to see the full blast radius. Pass bare symbol names like `Git` or "
-        "`_fill_stage_outputs`, not snippets like `def Git` or `class Git`. If you only know "
-        "an exact file path, one file-path query returns the indexed definitions in that file "
-        "so you can continue with real symbol names. ALWAYS prefer this over daytona_read_file "
-        "and daytona_grep — it is cheaper, faster, and returns structured data."
+        "Returns matching symbol definitions and optional reference sites from "
+        "code intelligence."
     ),
     short_description="Find symbol definitions and references.",
     input_model=CiQuerySymbolInput,

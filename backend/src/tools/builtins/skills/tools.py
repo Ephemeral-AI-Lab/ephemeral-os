@@ -156,7 +156,7 @@ def make_skills_tools(
 
     @tool(
         name="load_skill",
-        description="Load the full instructions for a skill. Call this when a task matches a skill's description.",
+        description="Returns the full instruction document for a named skill.",
         short_description="Load a skill's instructions.",
         input_model=LoadSkillInput,
         output_model=TextToolOutput,
@@ -189,11 +189,7 @@ def make_skills_tools(
 
     @tool(
         name="load_skill_reference",
-        description=(
-            "Load a named reference document from a skill. Use only exact "
-            "reference names listed in the skill catalog or skill instructions; "
-            "there is no default reference."
-        ),
+        description="Returns one named reference document from a skill.",
         short_description="Load a skill reference.",
         input_model=LoadSkillReferenceInput,
         output_model=TextToolOutput,

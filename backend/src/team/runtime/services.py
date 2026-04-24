@@ -60,7 +60,6 @@ def build_team_runtime_services(
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
-        arbiter=arbiter,
         event_store=store,
     )
 

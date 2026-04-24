@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from team.models import Task, TaskStatus
+from team.models import Task, TaskDefinition, TaskStatus
 from team.persistence.events import task_from_dict, task_to_dict
 
 
@@ -12,11 +12,14 @@ def _task() -> Task:
     return Task(
         id="task-1",
         team_run_id="run-1",
-        agent_name="developer",
+        definition=TaskDefinition(
+            id="task-1",
+            objective="repair shared import",
+            agent="developer",
+            deps=["dep-1"],
+            scope_paths=["pkg/_compat.py"],
+        ),
         status=TaskStatus.RUNNING,
-        objective="repair shared import",
-        deps=["dep-1"],
-        scope_paths=["pkg/_compat.py"],
         agent_run_id="agent-run-1",
         created_at=datetime(2026, 4, 14, tzinfo=timezone.utc),
     )
@@ -24,14 +27,14 @@ def _task() -> Task:
 
 def test_task_serialization_round_trip_preserves_task_fields():
     original = _task()
-    original.description = "Repair shared import label"
+    original.definition.description = "Repair shared import label"
 
     payload = task_to_dict(original)
     restored = task_from_dict(payload)
 
-    assert restored.description == "Repair shared import label"
-    assert restored.deps == ["dep-1"]
-    assert restored.scope_paths == ["pkg/_compat.py"]
+    assert restored.definition.description == "Repair shared import label"
+    assert restored.definition.deps == ["dep-1"]
+    assert restored.definition.scope_paths == ["pkg/_compat.py"]
     assert restored.agent_run_id == "agent-run-1"
 
 

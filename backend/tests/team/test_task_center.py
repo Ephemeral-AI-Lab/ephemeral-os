@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
-from types import SimpleNamespace
 
-from team.models import BudgetConfig, BudgetState, Note, Task, TaskStatus
+from team.models import BudgetConfig, BudgetState, Note, Task, TaskDefinition, TaskStatus
 from team.task_center import TaskCenter
 
 
@@ -85,11 +83,14 @@ def _task(
     return Task(
         id=id_,
         team_run_id="run-1",
-        agent_name="developer",
+        definition=TaskDefinition(
+            id=id_,
+            objective=objective,
+            agent="developer",
+            deps=deps or [],
+            scope_paths=scope_paths or [],
+        ),
         status=TaskStatus.PENDING,
-        objective=objective,
-        deps=deps or [],
-        scope_paths=scope_paths or [],
         parent_id=parent_id,
     )
 
@@ -429,85 +430,6 @@ def test_context_for_task_section_never_trimmed():
     task = _task("work-1", objective="important task description", deps=["dep-task"])
     ctx = _run(tc.context.context_for(task, max_context_bytes=100))
     assert "important task description" in ctx
-
-
-def test_context_for_includes_recent_scope_changes_from_arbiter():
-    arbiter = SimpleNamespace(
-        initialized=True,
-        changes_since=lambda since, team_run_id=None: [
-            SimpleNamespace(
-                file_path="src/auth/session.py",
-                edit_type="edit",
-                task_id="task-review-auth",
-                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-            ),
-            SimpleNamespace(
-                file_path="src/billing/invoice.py",
-                edit_type="edit",
-                task_id="task-review-billing",
-                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-            ),
-        ],
-    )
-    tc = _tc(arbiter=arbiter)
-    task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
-    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
-
-    ctx = _run(tc.context.context_for(task))
-
-    assert "## Recent changes in your scope" in ctx
-    assert "src/auth/session.py" in ctx
-    assert "src/billing/invoice.py" not in ctx
-
-
-def test_context_for_recent_scope_changes_respects_path_boundaries():
-    arbiter = SimpleNamespace(
-        initialized=True,
-        changes_since=lambda since, team_run_id=None: [
-            SimpleNamespace(
-                file_path="src/auth/session.py",
-                edit_type="edit",
-                task_id="task-review-auth",
-                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-            ),
-            SimpleNamespace(
-                file_path="src/authz.py",
-                edit_type="edit",
-                task_id="task-review-authz",
-                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-            ),
-        ],
-    )
-    tc = _tc(arbiter=arbiter)
-    task = _task("work-1", objective="do auth", scope_paths=["src/auth"])
-    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
-
-    ctx = _run(tc.context.context_for(task))
-
-    assert "src/auth/session.py" in ctx
-    assert "src/authz.py" not in ctx
-
-
-def test_recent_changes_section_falls_back_to_agent_run_id_label():
-    arbiter = SimpleNamespace(
-        initialized=True,
-        changes_since=lambda since, team_run_id=None: [
-            SimpleNamespace(
-                file_path="src/auth/session.py",
-                edit_type="edit",
-                task_id="",
-                agent_run_id="agent-run-auth",
-                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
-            ),
-        ],
-    )
-    tc = _tc(arbiter=arbiter)
-    task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
-    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
-
-    ctx = _run(tc.context.context_for(task))
-
-    assert "agent-run-auth" in ctx
 
 
 # ---------------------------------------------------------------------------

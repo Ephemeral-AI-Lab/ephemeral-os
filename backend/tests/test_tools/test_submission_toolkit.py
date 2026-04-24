@@ -46,6 +46,8 @@ def test_submit_plan_schema_requests_concrete_acceptance_evidence():
         "description"
     ]
 
-    assert "Use when a planner has finished decomposing its assigned work" in description
+    assert "Submits initial child tasks" in description
+    assert "planner loop" in description
+    assert "Use when" not in description
     assert "should name concrete commands" in spec_desc
     assert "expected evidence" in spec_desc

@@ -19,8 +19,6 @@ DEFAULT_MAX_TASKS: int = 50
 DEFAULT_MAX_DEPTH: int = 6
 DEFAULT_MAX_PLAN_SIZE: int = 50
 DEFAULT_MAX_REPLANS_PER_RUN: int = 25
-DEFAULT_MAX_NOTE_BYTES: int = 100_000
-DEFAULT_MAX_TOTAL_NOTE_BYTES: int = 5_000_000
 
 # Agent names that use team-safe (daytona_shell) execution instead of raw bash
 DEFAULT_TEAM_SAFE_AGENT_NAMES: frozenset[str] = frozenset({"developer", "validator"})

@@ -78,12 +78,9 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
         meta["max_depth"] = budgets.max_depth
         meta["max_plan_size"] = budgets.max_plan_size
         meta["max_replans_per_run"] = budgets.max_replans_per_run
-        meta["max_note_bytes"] = budgets.max_note_bytes
-        meta["max_total_note_bytes"] = budgets.max_total_note_bytes
     budget_state = getattr(team_run, "budget_state", None)
     if budget_state is not None:
         meta["tasks_used"] = budget_state.tasks_used
-        meta["note_bytes_used"] = budget_state.note_bytes_used
         meta["replans_used"] = budget_state.replans_used
 
     _populate_plan_submission_context(meta, team_run, task)
@@ -228,7 +225,6 @@ async def _render_template_user_message(
     variables: dict[str, object] = {
         "task_spec": parts.task_spec,
         "scope_paths": parts.scope_paths,
-        "recent_scope_changes": parts.recent_scope_changes,
         "user_request": str(getattr(team_run, "user_request", "") or task_def.objective).strip(),
         "benchmark_targets": _format_benchmark_targets(team_run),
         "terminal_tools": _format_terminal_tools(terminal_tools),

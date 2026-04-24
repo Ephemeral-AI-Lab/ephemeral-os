@@ -13,7 +13,6 @@ through ``task_center.store.mark_running`` from the executor.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -47,7 +46,6 @@ class TaskCenter:
         team_run_id: str,
         budgets: BudgetConfig,
         budget_state: BudgetState,
-        arbiter: Any = None,
         event_store: TeamRunStore | None = None,
     ) -> None:
         self._team_run_id = team_run_id
@@ -75,7 +73,6 @@ class TaskCenter:
             team_run_id=team_run_id,
             get_task_fn=lambda tid: self.get_task(tid),
             task_store=self._store,
-            arbiter=arbiter,
         )
 
     # ---- manager access (public) ---------------------------------------

@@ -329,21 +329,8 @@ def _clear_current_task_cancellation() -> None:
 @tool(
     name="run_subagent",
     description=(
-        "Spawn a named dispatchable subagent as a background task. "
-        "Returns a background task_id immediately. Continue foreground work "
-        "when useful; join with wait_for_background_task(task_id=...) when "
-        "blocked on the result. Call check_background_progress(task_id=...) "
-        "only when live status changes the next action; stop stale work with "
-        "cancel_background_task(task_id=...). Pass exactly one of ``prompt`` "
-        "(free-form text) or ``input`` (structured payload). Only agents "
-        "marked dispatchable via ``run_subagent`` may be dispatched here; "
-        "the ``input`` shape is defined by the target subagent's own "
-        "contract — consult the agent's description and playbook. Emit "
-        "multiple disjoint calls in one turn only when live scope status "
-        "still admits parallel fan-out. Subagents are not Task Center "
-        "tasks; do not use task graph/detail tools or ``bg_*`` ids to "
-        "retrieve their results. Later background status calls only repeat "
-        "the delivery envelope."
+        "Starts a dispatchable subagent as a background task and returns its "
+        "background task id."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,

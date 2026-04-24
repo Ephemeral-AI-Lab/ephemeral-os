@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from team.models import Task, TaskStatus
+from team.models import Task, TaskDefinition, TaskStatus
 
 
 def make_task(
@@ -15,10 +15,13 @@ def make_task(
     return Task(
         id=task_id,
         team_run_id="run-1",
-        agent_name=agent_name,
+        definition=TaskDefinition(
+            id=task_id,
+            objective=f"task {task_id}",
+            agent=agent_name,
+            deps=deps or [],
+        ),
         status=status,
-        objective=f"task {task_id}",
-        deps=deps or [],
         parent_id=parent_id,
         root_id="root",
         depth=1 if parent_id else 0,

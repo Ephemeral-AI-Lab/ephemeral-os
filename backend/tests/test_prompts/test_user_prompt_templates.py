@@ -15,7 +15,7 @@ from team.task_center.context_builder import TaskContextBuilder
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompt" / "user_prompt"
 _SUBMIT_PLAN_SCHEMA_SNIPPET = (
-    "ready to commit the initial child task DAG as its terminal action"
+    "Submits initial child tasks for the current planner"
 )
 
 
@@ -37,7 +37,6 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
         {
             "task_spec": "Goal\nImplement retry handling.",
             "scope_paths": "- backend/src/retry.py",
-            "recent_scope_changes": "",
             "terminal_tools": "- submit_task_success: Submit task outcome.",
             "your_task_id": "dev-uuid-1234",
             "your_deps_ids": "`dep-a`, `dep-b`",
@@ -88,7 +87,6 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "compatibility shim, re-export, bridge, test edit, or other unassigned path outside `scope_paths`" not in rendered
     assert 'request_replan(, content=...)' not in rendered
     assert "## Context from dependencies" not in rendered
-    assert "## Recent changes in your scope" not in rendered
     assert "## Parent context" not in rendered
     assert "Tool-name contract" not in rendered
     assert "Run daytona_shell commands directly from repo root" not in rendered
@@ -193,7 +191,6 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "compatibility shim, re-export, bridge, test edit, or other unassigned path outside `scope_paths`" not in ctx.user_message
     assert "observability evidence" not in ctx.user_message
     assert "## Context from dependencies" not in ctx.user_message
-    assert "## Recent changes in your scope" not in ctx.user_message
     assert "## Parent context" not in ctx.user_message
 
 
@@ -264,7 +261,6 @@ async def test_build_query_context_uses_validator_markdown_template_with_task_id
     assert "## Assigned validation task" in ctx.user_message
     assert "Validate retry handling." in ctx.user_message
     assert "## Context from dependencies" not in ctx.user_message
-    assert "## Recent changes in your scope" not in ctx.user_message
     assert "## Parent context" not in ctx.user_message
 
 
@@ -436,7 +432,6 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
     assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
     assert "## Context from dependencies" not in ctx.user_message
-    assert "## Recent changes in your scope" not in ctx.user_message
     assert "## Parent context" not in ctx.user_message
 
 
@@ -520,7 +515,6 @@ async def test_build_query_context_uses_replanner_template_with_task_ids() -> No
     assert "Original task: failed-1" not in ctx.user_message
     assert "Failed reason: unit test still fails" not in ctx.user_message
     assert "## Context from dependencies" not in ctx.user_message
-    assert "## Recent changes in your scope" not in ctx.user_message
     assert "## Parent context" not in ctx.user_message
 
 

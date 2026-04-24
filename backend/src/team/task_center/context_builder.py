@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import logging
-import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from code_intelligence.editing.change_labels import change_actor_label
-from team._path_utils import ScopePath
 from team.models import Task
 
 if TYPE_CHECKING:
@@ -24,7 +21,6 @@ class UserPromptContextParts:
 
     task_spec: str
     scope_paths: str = ""
-    recent_scope_changes: str = ""
 
 
 class TaskContextBuilder:
@@ -36,12 +32,10 @@ class TaskContextBuilder:
         team_run_id: str,
         get_task_fn: Callable[[str], Awaitable[Task | None]] | None = None,
         task_store: "TaskStore | None" = None,
-        arbiter: Any = None,
     ) -> None:
         self._team_run_id = team_run_id
         self._get_task_fn = get_task_fn
         self._task_store = task_store
-        self._arbiter = arbiter
 
     @staticmethod
     def _is_replanner_task(task: Task) -> bool:
@@ -154,12 +148,8 @@ class TaskContextBuilder:
         task: Task,
         *,
         max_context_bytes: int = 200_000,
-        arbiter: Any = None,
     ) -> str:
         """Build the injected context string for a task."""
-        if arbiter is None:
-            arbiter = self._arbiter
-
         budget = max_context_bytes
         sections: list[str] = []
         defn = task.definition
@@ -184,33 +174,6 @@ class TaskContextBuilder:
                     )
                     budget = 0
 
-        history = arbiter
-        if (
-            history is not None
-            and getattr(history, "initialized", False)
-            and budget > 0
-            and defn.scope_paths
-        ):
-            created_ts = task.created_at.timestamp() if task.created_at else 0.0
-            changes = history.changes_since(created_ts, team_run_id=self._team_run_id)
-            scoped = [
-                e
-                for e in changes
-                if ScopePath.matches_scopes([str(e.file_path)], defn.scope_paths)
-            ]
-            if scoped:
-                now = time.time()
-                lines = [
-                    f"- {e.file_path} ({e.edit_type} by {change_actor_label(e)}, "
-                    f"{int(now - e.created_at.timestamp())}s ago)"
-                    for e in scoped
-                ]
-                sec = "## Recent changes in your scope\n" + "\n".join(lines)
-                b = len(sec.encode())
-                if b <= budget:
-                    sections.append(sec)
-                    budget -= b
-
         return "\n\n".join(sections)
 
     async def template_context_for(
@@ -218,12 +181,8 @@ class TaskContextBuilder:
         task: Task,
         *,
         max_context_bytes: int = 200_000,
-        arbiter: Any = None,
     ) -> UserPromptContextParts:
         """Build context fragments for markdown-backed user prompt templates."""
-        if arbiter is None:
-            arbiter = self._arbiter
-
         budget = max_context_bytes
         defn = task.definition
         task_spec = defn.objective.strip()
@@ -232,35 +191,7 @@ class TaskContextBuilder:
         scope_paths = "\n".join(f"- {path}" for path in defn.scope_paths)
         budget -= len(scope_paths.encode())
 
-        recent_scope_changes = ""
-        history = arbiter
-        if (
-            history is not None
-            and getattr(history, "initialized", False)
-            and budget > 0
-            and defn.scope_paths
-        ):
-            created_ts = task.created_at.timestamp() if task.created_at else 0.0
-            changes = history.changes_since(created_ts, team_run_id=self._team_run_id)
-            scoped = [
-                e
-                for e in changes
-                if ScopePath.matches_scopes([str(e.file_path)], defn.scope_paths)
-            ]
-            if scoped:
-                now = time.time()
-                lines = [
-                    f"- {e.file_path} ({e.edit_type} by {change_actor_label(e)}, "
-                    f"{int(now - e.created_at.timestamp())}s ago)"
-                    for e in scoped
-                ]
-                sec = "\n".join(lines)
-                if len(sec.encode()) <= budget:
-                    recent_scope_changes = sec
-                    budget -= len(sec.encode())
-
         return UserPromptContextParts(
             task_spec=task_spec,
             scope_paths=scope_paths,
-            recent_scope_changes=recent_scope_changes,
         )

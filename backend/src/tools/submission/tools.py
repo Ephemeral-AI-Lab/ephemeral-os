@@ -174,10 +174,8 @@ class SubmitTaskSuccessOutput(BaseModel):
 class SubmitTaskSuccessTool(BaseTool):
     name = "submit_task_success"
     description = (
-        "Use when a developer, validator, or parent_summarizer task has "
-        "successfully completed and all assigned acceptance criteria are "
-        "satisfied by live evidence. This is terminal: the agent loop ends "
-        "after this call."
+        "Submits a terminal success summary for the current task and ends "
+        "the agent loop."
     )
     short_description = "Report task success."
     input_model = SubmitTaskSuccessInput
@@ -227,9 +225,8 @@ class RequestReplanOutput(BaseModel):
 class RequestReplanTool(BaseTool):
     name = "request_replan"
     description = (
-        "Use when the task is blocked, still red, assigned to the wrong "
-        "owner, or needs a different scope or sequence before work can "
-        "continue. This is terminal: the agent loop ends after this call."
+        "Submits a terminal replan request for the current task and ends "
+        "the agent loop."
     )
     short_description = "Request a replan."
     input_model = RequestReplanInput
@@ -575,10 +572,8 @@ def _resolved_task_payloads(
 class SubmitPlanTool(BaseTool):
     name = "submit_plan"
     description = (
-        "Use when a planner has finished decomposing its assigned work and is "
-        "ready to commit the initial child task DAG as its terminal action. "
-        "This is for planner-authored implementation, delegation, and distinct "
-        "verification lanes that should run under the current planning task."
+        "Submits initial child tasks for the current planner and ends the "
+        "planner loop."
     )
     short_description = "Submit a child plan."
     input_model = SubmitPlanInput
@@ -658,10 +653,8 @@ class SubmitPlanTool(BaseTool):
 class SubmitReplanTool(BaseTool):
     name = "submit_replan"
     description = (
-        "Use when a replanner has diagnosed a failed task and is ready to "
-        "commit corrective repair or verification tasks, optionally cancelling "
-        "stale direct siblings whose subtrees should no longer run. This is "
-        "the replanner's terminal action."
+        "Submits corrective child tasks and sibling cancellations for the "
+        "current replanner."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput

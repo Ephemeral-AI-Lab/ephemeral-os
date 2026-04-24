@@ -10,11 +10,9 @@ from typing import Any
 
 from config.defaults import (
     DEFAULT_MAX_DEPTH,
-    DEFAULT_MAX_NOTE_BYTES,
     DEFAULT_MAX_PLAN_SIZE,
     DEFAULT_MAX_REPLANS_PER_RUN,
     DEFAULT_MAX_TASKS,
-    DEFAULT_MAX_TOTAL_NOTE_BYTES,
 )
 
 
@@ -100,12 +98,7 @@ class Note:
 
 @dataclass
 class TaskDefinition:
-    """What defines a task: which agent, and what to do.
-
-    ``parent_id`` is normally runtime-assigned on ``Task``. Replan validation
-    also stamps it on transient child definitions before insertion so the
-    expander can keep parent ownership explicit while rewriting local ids.
-    """
+    """What defines a task: which agent, and what to do."""
 
     id: str
     objective: str
@@ -125,11 +118,9 @@ class TaskDefinition:
 class Task:
     """A task is (1) a ``TaskDefinition`` and (2) a ``TaskSubmission``.
 
-    Non-planner agents emit a single ``LeafSubmission``. Planners emit a
-    two-stage ``PlannerSubmission``: stage 1 (the plan) at ``EXPANDED``, stage
-    2 (the summary) when the parent-summarizer sidecar succeeds.
-
-    ``submission`` is in-memory only — it is not persisted across restart.
+    Non-planner agents emit a ``LeafSubmission``. Planners emit a two-stage
+    ``PlannerSubmission``: stage 1 (the plan) at ``EXPANDED``, stage 2 (the
+    summary) when the parent-summarizer sidecar succeeds.
     """
 
     id: str
@@ -175,25 +166,13 @@ class Task:
                 id=id,
                 objective=objective or "",
                 agent=agent_name or "",
-                description=description or "",
+                description=description,
                 deps=list(deps or []),
                 scope_paths=list(scope_paths or []),
                 parent_id=parent_id,
             )
-        else:
-            if agent_name is not None:
-                definition.agent = agent_name
-            if objective is not None:
-                definition.objective = objective
-            if description:
-                definition.description = description
-            if deps is not None:
-                definition.deps = list(deps)
-            if scope_paths is not None:
-                definition.scope_paths = list(scope_paths)
-            if definition.parent_id is None:
-                definition.parent_id = parent_id
-
+        elif definition.parent_id is None:
+            definition.parent_id = parent_id
         self.id = id
         self.team_run_id = team_run_id
         self.definition = definition
@@ -213,41 +192,21 @@ class Task:
     def agent_name(self) -> str:
         return self.definition.agent
 
-    @agent_name.setter
-    def agent_name(self, value: str) -> None:
-        self.definition.agent = value
-
     @property
     def objective(self) -> str:
         return self.definition.objective
-
-    @objective.setter
-    def objective(self, value: str) -> None:
-        self.definition.objective = value
 
     @property
     def description(self) -> str:
         return self.definition.description
 
-    @description.setter
-    def description(self, value: str) -> None:
-        self.definition.description = value
-
     @property
     def deps(self) -> list[str]:
         return self.definition.deps
 
-    @deps.setter
-    def deps(self, value: list[str]) -> None:
-        self.definition.deps = list(value)
-
     @property
     def scope_paths(self) -> list[str]:
         return self.definition.scope_paths
-
-    @scope_paths.setter
-    def scope_paths(self, value: list[str]) -> None:
-        self.definition.scope_paths = list(value)
 
     @property
     def detached(self) -> bool:
@@ -349,7 +308,6 @@ class SubmittedSummary:
 
     summary: str
     artifact: dict[str, Any] | None = None
-    submission_kind: str = field(default="summary", init=False, repr=False)
 
 
 @dataclass
@@ -357,21 +315,18 @@ class LeafSubmission:
     """Submission from a non-planner agent — a single summary."""
 
     summary: SubmittedSummary
-    kind: str = field(default="summary", init=False, repr=False)
 
 
 @dataclass
 class PlannerSubmission:
-    """Two-stage submission from a planner/replanner agent.
+    """Two-stage submission from a planner/replanner.
 
-    Stage 1 (``plan``) lands at ``EXPANDED`` when the planner emits children.
-    Stage 2 (``summary``) lands when the parent-summarizer sidecar succeeds
-    and its summary is copied onto the parent planner.
+    Stage 1 is the plan emitted at ``EXPANDED``. Stage 2 is the summary
+    copied from the parent-summarizer sidecar when all children resolve.
     """
 
     plan: "Plan | ReplanPlan"
     summary: SubmittedSummary | None = None
-    kind: str = field(default="planner", init=False, repr=False)
 
 
 TaskSubmission = LeafSubmission | PlannerSubmission
@@ -410,14 +365,11 @@ class BudgetConfig:
     max_depth: int = DEFAULT_MAX_DEPTH
     max_plan_size: int = DEFAULT_MAX_PLAN_SIZE
     max_replans_per_run: int = DEFAULT_MAX_REPLANS_PER_RUN
-    max_note_bytes: int = DEFAULT_MAX_NOTE_BYTES
-    max_total_note_bytes: int = DEFAULT_MAX_TOTAL_NOTE_BYTES
 
 
 @dataclass
 class BudgetState:
     tasks_used: int = 0
-    note_bytes_used: int = 0
     replans_used: int = 0
 
 
