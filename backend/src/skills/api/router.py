@@ -7,18 +7,17 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, Field
 
-from config.paths import get_builtin_skills_dir
+from config.paths import get_config_skills_dir
 from skills.bundled import get_bundled_skills
 
-# Packaged skills directory — read-only skill content shipped with the codebase
-_PACKAGED_SKILLS_DIR = get_builtin_skills_dir()
+# Config skills directory — read-only skill content shipped with the codebase
+_CONFIG_SKILLS_DIR = get_config_skills_dir()
 
 
-def _resolve_packaged_skill_dir(name: str) -> Path | None:
-    """Find the on-disk directory for a packaged skill by name."""
-    candidate = _PACKAGED_SKILLS_DIR / name
+def _resolve_config_skill_dir(name: str) -> Path | None:
+    """Find the on-disk directory for a config-backed skill by name."""
+    candidate = _CONFIG_SKILLS_DIR / name
     if candidate.is_dir():
         return candidate
     return None
@@ -48,22 +47,6 @@ def _build_file_tree(root: Path, base: Path | None = None) -> list[dict[str, Any
                 "size": item.stat().st_size,
             })
     return entries
-
-
-# ---------------------------------------------------------------------------
-# Request / response schemas
-# ---------------------------------------------------------------------------
-
-
-class SkillCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=128)
-    description: str = Field(min_length=1)
-    content: str = Field(min_length=1)
-
-
-class SkillUpdate(BaseModel):
-    description: str | None = None
-    content: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -102,11 +85,11 @@ def create_skills_router() -> APIRouter:
         }
 
     @router.post("/", status_code=201)
-    async def create_skill(body: SkillCreate) -> dict[str, str]:
+    async def create_skill() -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.put("/{name}")
-    async def update_skill(name: str, body: SkillUpdate) -> dict[str, str]:
+    async def update_skill(name: str) -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.delete("/{name}")
@@ -114,19 +97,19 @@ def create_skills_router() -> APIRouter:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.get("/{name}/files")
-    async def list_packaged_skill_files(name: str) -> dict[str, Any]:
-        """Return the file tree for a packaged skill's on-disk directory."""
-        skill_dir = _resolve_packaged_skill_dir(name)
+    async def list_config_skill_files(name: str) -> dict[str, Any]:
+        """Return the file tree for a config-backed skill's on-disk directory."""
+        skill_dir = _resolve_config_skill_dir(name)
         if skill_dir is None:
             return {"name": name, "tree": []}
         return {"name": name, "tree": _build_file_tree(skill_dir)}
 
     @router.get("/{name}/files/{file_path:path}")
-    async def get_packaged_skill_file(name: str, file_path: str) -> PlainTextResponse:
-        """Serve a specific file from a packaged skill's directory."""
-        skill_dir = _resolve_packaged_skill_dir(name)
+    async def get_config_skill_file(name: str, file_path: str) -> PlainTextResponse:
+        """Serve a specific file from a config-backed skill directory."""
+        skill_dir = _resolve_config_skill_dir(name)
         if skill_dir is None:
-            raise HTTPException(status_code=404, detail=f"Packaged skill directory for '{name}' not found")
+            raise HTTPException(status_code=404, detail=f"Config skill directory for '{name}' not found")
 
         target = (skill_dir / file_path).resolve()
         # Prevent path traversal

@@ -69,6 +69,5 @@ receiving task-scoped note context automatically.
 ## Resume
 
 TaskCenter no longer exposes a user-facing checkpoint or rollback API. Crash
-recovery rebuilds the task graph from the event log, primes resume-only state,
-and `prepare_for_resume()` restores the replayed task snapshot into the store
-before recovering `running` tasks back to `ready`.
+recovery rebuilds the task graph from persistence and recovers `running` tasks
+back to `ready` using the persistent task graph directly.

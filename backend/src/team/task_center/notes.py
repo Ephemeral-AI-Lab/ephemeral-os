@@ -40,14 +40,6 @@ class NoteManager:
         self._event_store_cb = event_store_cb
         self._note_posted_cb = note_posted_cb
 
-    def snapshot(self) -> list[Note]:
-        """Return a copy of all notes."""
-        return list(self._notes)
-
-    def restore(self, notes: list[Note]) -> None:
-        """Replace in-memory notes with the given list."""
-        self._notes = list(notes)
-
     async def post(self, note: Note) -> None:
         """Append a note and emit the posted event."""
         self._notes.append(note)

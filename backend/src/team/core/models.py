@@ -30,9 +30,6 @@ class TaskStatus(str, Enum):
     READY = "ready"
     RUNNING = "running"
     EXPANDED = "expanded"  # planner submitted children, waiting for them to finish
-    # All children terminal; waiting for a parent-summary sidecar to finalize
-    # the task. This is NOT a terminal status.
-    EXPANDED_AWAITING_SUMMARY = "expanded_awaiting_summary"
     REQUEST_REPLAN = "request_replan"
     DONE = "done"
     FAILED = "failed"
@@ -123,9 +120,12 @@ class TaskSpec:
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> "TaskSpec":
         return cls(
-            goal=data.get("goal"),
-            detail=data.get("detail"),
-            acceptance_criteria=data.get("acceptance_criteria"),
+            goal=_non_blank(data.get("goal"), field_name="goal"),
+            detail=_non_blank(data.get("detail"), field_name="detail"),
+            acceptance_criteria=_non_blank(
+                data.get("acceptance_criteria"),
+                field_name="acceptance_criteria",
+            ),
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -203,9 +203,9 @@ class TaskDefinition:
 class Task:
     """A task is (1) a ``TaskDefinition`` and (2) a ``TaskSubmission``.
 
-    Non-planner agents emit a ``LeafSubmission``. Planners emit a two-stage
-    ``PlannerSubmission``: stage 1 (the plan) at ``EXPANDED``, stage 2 (the
-    summary) when the parent-summarizer sidecar succeeds.
+    Non-planner agents emit a ``LeafSubmission``. Planners emit a
+    ``PlannerSubmission`` whose ``summary`` is synthesized from children when
+    all children resolve.
     """
 
     id: str
@@ -318,7 +318,7 @@ class Plan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Plan:
-        tasks = _taskspec_list_from_field(data, field_name="tasks")
+        tasks = _task_definition_list_from_field(data, field_name="tasks")
         return cls(tasks=tasks, rationale=data.get("rationale"))
 
 
@@ -329,14 +329,14 @@ class ReplanPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReplanPlan:
-        add_tasks = _taskspec_list_from_field(data, field_name="add_tasks")
+        add_tasks = _task_definition_list_from_field(data, field_name="add_tasks")
         return cls(
             add_tasks=add_tasks,
             cancel_ids=list(data.get("cancel_ids") or []),
         )
 
 
-def _taskspec_list_from_field(
+def _task_definition_list_from_field(
     data: dict[str, Any],
     *,
     field_name: str,
@@ -350,13 +350,13 @@ def _taskspec_list_from_field(
         if not isinstance(item, dict):
             raise ValueError(f"{field_name}[{index}] must be an object")
         try:
-            items.append(_taskspec_from_dict(item))
+            items.append(_task_definition_from_dict(item))
         except ValueError as exc:
             raise ValueError(f"{field_name}[{index}]: {exc}") from exc
     return items
 
 
-def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
+def _task_definition_from_dict(it: dict[str, Any]) -> TaskDefinition:
     """Build a TaskDefinition from a dict, raising ValueError on missing required fields."""
     task_id = str(it.get("id") or "")
     agent = str(it.get("agent") or "")
@@ -412,10 +412,11 @@ class LeafSubmission:
 
 @dataclass
 class PlannerSubmission:
-    """Two-stage submission from a planner/replanner.
+    """Submission from a planner/replanner.
 
-    Stage 1 is the plan emitted at ``EXPANDED``. Stage 2 is the summary
-    copied from the parent-summarizer sidecar when all children resolve.
+    ``plan`` is emitted at ``EXPANDED``. ``summary`` is synthesized from
+    children (terminal validator if present, else concatenated non-validator
+    leaves) when all children resolve and the parent transitions to DONE.
     """
 
     plan: "Plan | ReplanPlan"
@@ -484,13 +485,3 @@ class TeamDefinition:
     description: str
     entry_planner: str
     roster: dict[str, list[str]] = field(default_factory=dict)
-
-
-@dataclass
-class ProjectContext:
-    """Minimal project-level context for a TeamRun."""
-
-    goal: str = ""
-    user_request: str = ""
-    project_key: str = ""
-    repo_root: str = ""

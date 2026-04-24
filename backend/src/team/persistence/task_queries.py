@@ -125,12 +125,12 @@ async def assert_deps_satisfied(
 
 async def fetch_expanded_parent_candidate(
     db: AsyncSession, team_run_id: str, current_id: str
-) -> Row[Any] | None:
-    """Return an expanded parent of ``current_id`` if live children are resolved.
+) -> str | None:
+    """Return an expanded parent of ``current_id`` if all children resolved.
 
-    Failed, cancelled, and ``request_replan`` children are detached from
-    promotion readiness. They do not synthesize parent failure; the caller
-    resolves expandable parents through the normal summary/finalization path.
+    Failed, cancelled, and ``request_replan`` children are detached — they
+    don't block promotion readiness. Callers synthesize the parent summary
+    from children before marking the parent DONE.
     """
     child = aliased(TaskRecord, name="child")
     parent_id_sub = (
@@ -156,7 +156,8 @@ async def fetch_expanded_parent_candidate(
         TaskRecord.status == "expanded",
         ~non_detached_unresolved,
     )
-    return (await db.execute(stmt)).first()
+    row = (await db.execute(stmt)).first()
+    return None if row is None else str(row.id)
 
 
 async def fetch_replan_origin(
@@ -265,33 +266,6 @@ async def set_status_expanded(
         )
         .values(status="expanded")
     )
-
-
-async def set_status_expanded_awaiting_summary(
-    db: AsyncSession, team_run_id: str, task_id: str
-) -> None:
-    await db.execute(
-        update(TaskRecord)
-        .where(
-            TaskRecord.id == task_id,
-            TaskRecord.team_run_id == team_run_id,
-        )
-        .values(status="expanded_awaiting_summary")
-    )
-
-
-async def fetch_awaiting_summary_ids(
-    db: AsyncSession, team_run_id: str
-) -> list[str]:
-    rows = (
-        await db.execute(
-            select(TaskRecord.id).where(
-                TaskRecord.team_run_id == team_run_id,
-                TaskRecord.status == "expanded_awaiting_summary",
-            )
-        )
-    ).scalars().all()
-    return [str(r) for r in rows]
 
 
 async def set_status_terminal(

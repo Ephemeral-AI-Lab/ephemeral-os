@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from config.paths import get_builtin_skills_dir
-from skills import get_user_skills_dir, load_skill_registry
+from config.paths import get_config_skills_dir
+from skills import get_config_skills_dir as get_loaded_config_skills_dir, load_skill_registry
 
 _BACKEND_SRC_DIR = Path(__file__).resolve().parents[2] / "src"
-_BUNDLED_SKILLS_DIR = get_builtin_skills_dir()
+_CONFIG_SKILLS_DIR = get_config_skills_dir()
 
 
 def _read_bundled_skill(skill_name: str) -> str:
-    return (_BUNDLED_SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
+    return (_CONFIG_SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
 
 
 def _read_bundled_reference(skill_name: str, reference_name: str) -> str:
     return (
-        _BUNDLED_SKILLS_DIR / skill_name / "references" / reference_name
+        _CONFIG_SKILLS_DIR / skill_name / "references" / reference_name
     ).read_text(encoding="utf-8")
 
 
@@ -44,15 +44,15 @@ def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):
 def test_skill_root_is_backend_config(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("EPHEMERALOS_CONFIG_DIR", str(tmp_path / "config"))
 
-    assert get_user_skills_dir() == get_builtin_skills_dir()
+    assert get_loaded_config_skills_dir() == get_config_skills_dir()
 
 
 def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-replanner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-replanner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     contract = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-replanner-playbook"
         / "references"
         / "terminal-contract.md"
@@ -64,20 +64,20 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
         / "task_replanner.md"
     ).read_text(encoding="utf-8")
     action_add = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-replanner-playbook"
         / "references"
         / "action-add-tasks.md"
     ).read_text(encoding="utf-8")
     action_cancel = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-replanner-playbook"
         / "references"
         / "action-cancel-and-redraft.md"
     ).read_text(encoding="utf-8")
     reference_names = {
         path.name
-        for path in (_BUNDLED_SKILLS_DIR / "team-replanner-playbook" / "references").glob("*.md")
+        for path in (_CONFIG_SKILLS_DIR / "team-replanner-playbook" / "references").glob("*.md")
     }
 
     assert reference_names == {
@@ -139,11 +139,11 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "## Examples" in contract
     assert "## Final Checklist" in contract
     assert (
-        "If `Task Details` uses `Classification: unresolved_blocker`, it must also include the exact field `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`"
+        "If `detail` uses `Classification: unresolved_blocker`, it must also include the exact field `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`"
         in contract
     )
     assert (
-        "Every spec with `Classification: unresolved_blocker` also includes `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics` inside `2. Task Details:`."
+        "Every spec with `Classification: unresolved_blocker` also includes `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics` inside `detail`."
         in contract
     )
     assert (
@@ -202,8 +202,8 @@ def test_team_replanner_playbook_uses_planner_style_contract() -> None:
     assert "loaded the action reference matching your cancellation decision" in prompt
     assert "if a validation error still rejects `cancel_ids`" in prompt
 
-    assert "2. Task Details:" in skill
-    assert "2. Task Details:" in contract
+    assert "goal`, `detail`, and `acceptance_criteria`" in skill
+    assert "`spec.detail`" in contract
     assert "2. Task Detail:" not in skill
     assert "2. Task Detail:" not in contract
     assert "Valid replan trigger" not in skill
@@ -225,41 +225,41 @@ def test_team_replanner_playbook_defers_references_until_action_and_submit_stage
     assert "The action reference load is the stage transition" in skill
 
 
-def test_team_planner_playbook_uses_plural_task_details_label() -> None:
+def test_team_planner_playbook_uses_structured_spec_fields() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
-    assert "2. Task Details:" in skill
+    assert "structured `spec` with non-empty `goal`, `detail`, and `acceptance_criteria`" in skill
     assert "2. Task Detail:" not in skill
-    assert "`Task Details`" in skill
+    assert "`spec.detail`" in skill
     assert "`Task Detail`" not in skill
 
 
-def test_team_root_planner_playbook_uses_plural_task_details_label() -> None:
+def test_team_root_planner_playbook_uses_structured_spec_fields() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     reference = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-root-planner-playbook"
         / "references"
         / "synthesize-and-submit.md"
     ).read_text(encoding="utf-8")
     content = f"{skill}\n{reference}"
 
-    assert "2. Task Details:" in content
+    assert "structured `spec` containing non-empty `goal`, `detail`, and `acceptance_criteria`" in content
     assert "2. Task Detail:" not in content
-    assert "`Task Details`" in content
+    assert "`spec.detail`" in content
     assert "`Task Detail`" not in content
 
 
 def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     reference = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-root-planner-playbook"
         / "references"
         / "synthesize-and-submit.md"
@@ -267,8 +267,8 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
     content = f"{skill}\n{reference}"
 
     assert "Put benchmark tests and verification commands in `spec`, not `scope_paths`" in content
-    assert "Acceptance Criteria` must be test-suite focused with concrete commands" in content
-    assert "Every `Acceptance Criteria` is test-suite focused" in content
+    assert "acceptance_criteria` must be test-suite focused with concrete commands" in content
+    assert "Every `acceptance_criteria` is test-suite focused" in content
     assert (
         "No fail-to-pass acceptance criterion treats skipped tests, expected failures, clear `ImportError`, or missing optional dependencies as passing closure"
         in content
@@ -287,7 +287,7 @@ def test_team_root_planner_playbook_keeps_acceptance_criteria_evidence_focused()
 
 def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     reference = _read_bundled_reference(
         "team-root-planner-playbook", "synthesize-and-submit.md"
@@ -326,7 +326,7 @@ def test_team_root_planner_playbook_requires_parallel_scout_fanout() -> None:
 
 def test_team_planner_playbook_requires_scout_required_fanout() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     reference = _read_bundled_reference(
         "team-planner-playbook", "submit-child-plan.md"
@@ -346,7 +346,7 @@ def test_team_planner_playbook_requires_scout_required_fanout() -> None:
 
 def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "Stage boundary: `load_skill_reference(...)` belongs only to Stage 3" in skill
@@ -365,7 +365,7 @@ def test_team_root_planner_playbook_defers_synthesis_reference_until_stage_three
 
 def test_team_planner_playbook_defers_submit_child_reference_until_stage_three() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "Stage boundary: `load_skill_reference(...)` belongs only to Stage 3" in skill
@@ -381,7 +381,7 @@ def test_team_planner_playbook_defers_submit_child_reference_until_stage_three()
 
 
 def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
-    skill_dir = _BUNDLED_SKILLS_DIR / "team-root-planner-playbook"
+    skill_dir = _CONFIG_SKILLS_DIR / "team-root-planner-playbook"
     skill = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
     reference = (skill_dir / "references" / "synthesize-and-submit.md").read_text(
         encoding="utf-8"
@@ -414,7 +414,7 @@ def test_team_root_planner_playbook_loads_synthesize_submit_reference() -> None:
     assert 'summary: "I made a plan."' in reference
     assert 'parent_id: "root"' in reference
     assert 'scope_paths: ["backend/tests/team/test_task_center.py"]' in reference
-    assert 'spec: { goal: "Repair the owner."' in reference
+    assert 'goal: "Repair the owner."' in reference
     assert 'id: "val-root"' in reference
     assert 'description: "Validate the owner"' not in reference
     assert "validator tasks must depend on at least one upstream sibling" in reference
@@ -485,9 +485,9 @@ def test_team_root_planner_playbook_prefers_top_down_decomposition() -> None:
             "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
             "one `developer` lane that says it will fix each mechanism independently across those methods",
             'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
-            "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
+            "one `developer` `spec.goal` says to repair all failures in a file while `spec.detail` enumerates many operations",
             "Multi-API family gate: trigger -> the request or scout notes for one family list multiple public APIs",
-            "a `developer` spec calls the family coherent while its `Task Details` lists those APIs or surfaces",
+            "a `developer` spec calls the family coherent while its `spec.detail` lists those APIs or surfaces",
             "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
             "name the single internal helper, invariant, or adapter boundary proven by scout evidence",
             "Self-consistency gate: trigger -> your synthesis notes call any slice expandable",
@@ -556,7 +556,7 @@ def test_team_planner_playbook_prefers_recursive_decomposition() -> None:
             "Mechanism contradiction gate: trigger -> a drafted `developer` spec names two or more independent failure mechanisms",
             "one `developer` task details names multiple mechanisms and justifies the bundle with shared scope",
             'Same-file catch-all gate: trigger -> a drafted `developer` spec says "all failing tests" for one file',
-            "one `developer` goal says to repair all failures in a file while `Task Details` enumerates many operations",
+            "one `developer` `spec.goal` says to repair all failures in a file while `spec.detail` enumerates many operations",
             "Multi-API family gate: trigger -> inherited evidence or scout notes for one family list multiple public APIs",
             "classify the family as expandable and use `team_planner` while `grandchild_depth <= max_depth`",
             "Shared-cause proof gate: trigger -> you want to call a multi-API or all-failures slice atomic",
@@ -585,7 +585,7 @@ def test_planner_playbooks_lock_expandable_slices_out_of_developer_lanes() -> No
             "Name-field lock",
             "if your synthesis calls a slice expandable",
             'the task\'s `name` must be `team_planner`, never `developer`',
-            "Do not create a `developer` task whose own `Goal`, `Task Details`, notes, or checklist rationale calls the same slice expandable",
+            "Do not create a `developer` task whose own `spec.goal`, `spec.detail`, notes, or checklist rationale calls the same slice expandable",
             '`developer` means the slice passed every atomic test and no expandable signal fired',
             'cannot have `name: "developer"`',
         ),
@@ -648,7 +648,7 @@ def test_team_planner_playbook_preserves_exact_inherited_pytest_ids() -> None:
 
 def test_team_developer_playbook_requires_exact_in_scope_fix_before_replan() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert (
@@ -660,30 +660,30 @@ def test_team_developer_playbook_requires_exact_in_scope_fix_before_replan() -> 
 
 def test_planner_and_scout_playbooks_keep_benchmark_tests_as_evidence() -> None:
     planner_skill = (
-        _BUNDLED_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     planner_reference = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-planner-playbook"
         / "references"
         / "submit-child-plan.md"
     ).read_text(encoding="utf-8")
     planner_content = f"{planner_skill}\n{planner_reference}"
     root_planner_skill = (
-        _BUNDLED_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-root-planner-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     root_planner_reference = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-root-planner-playbook"
         / "references"
         / "synthesize-and-submit.md"
     ).read_text(encoding="utf-8")
     root_planner_content = f"{root_planner_skill}\n{root_planner_reference}"
     scout_skill = (
-        _BUNDLED_SKILLS_DIR / "team-scout-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-scout-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
     scout_contract = (
-        _BUNDLED_SKILLS_DIR
+        _CONFIG_SKILLS_DIR
         / "team-scout-playbook"
         / "references"
         / "completion-contract.md"
@@ -777,7 +777,7 @@ def test_team_planner_reference_requires_live_proof_for_scope_paths() -> None:
 
 
 def test_team_validator_playbook_uses_root_planner_style_contract() -> None:
-    validator_dir = _BUNDLED_SKILLS_DIR / "team-validator-playbook"
+    validator_dir = _CONFIG_SKILLS_DIR / "team-validator-playbook"
     skill = (validator_dir / "SKILL.md").read_text(encoding="utf-8")
     reference_files = list((validator_dir / "references").glob("*.md"))
 
@@ -802,7 +802,7 @@ def test_team_validator_playbook_uses_root_planner_style_contract() -> None:
 
 def test_team_developer_playbook_uses_root_planner_style_contract() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "## Workflow Map" in skill
@@ -826,7 +826,7 @@ def test_team_developer_playbook_uses_root_planner_style_contract() -> None:
 
 def test_developer_and_validator_playbooks_do_not_include_depth_gate_policy() -> None:
     for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
-        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+        skill = (_CONFIG_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -840,7 +840,7 @@ def test_developer_and_validator_playbooks_do_not_include_depth_gate_policy() ->
 
 def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
     for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
-        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+        skill = (_CONFIG_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -850,7 +850,7 @@ def test_terminal_summary_playbooks_require_explicit_residual_risk() -> None:
 
 def test_developer_playbook_rejects_success_without_runtime_verification() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "Clean diagnostics are not acceptance verification" in skill
@@ -865,7 +865,7 @@ def test_developer_playbook_rejects_success_without_runtime_verification() -> No
 
 def test_developer_playbook_rejects_wrapped_or_suppressed_verification() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "Do not wrap required pytest/build verification" in skill
@@ -883,7 +883,7 @@ def test_developer_playbook_rejects_wrapped_or_suppressed_verification() -> None
 
 def test_validator_playbook_rejects_pytest_config_override_evidence() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-validator-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-validator-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "Do not suppress or alter pytest configuration" in skill
@@ -894,7 +894,7 @@ def test_validator_playbook_rejects_pytest_config_override_evidence() -> None:
 
 def test_developer_playbook_keeps_parametrized_f2p_variants_as_evidence() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert (
@@ -929,7 +929,7 @@ def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
         "`none`",
     }
     for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
-        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+        skill = (_CONFIG_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -941,7 +941,7 @@ def test_terminal_summary_playbooks_use_shared_replan_taxonomy() -> None:
 
 def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-developer-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "`scope_paths` are the primary ownership surface, not a hard mutation sandbox" in skill
@@ -987,7 +987,7 @@ def test_developer_playbook_allows_advisory_out_of_scope_production_edits() -> N
 
 def test_developer_and_validator_playbooks_keep_shell_api_boundary() -> None:
     for playbook_name in ("team-developer-playbook", "team-validator-playbook"):
-        skill = (_BUNDLED_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
+        skill = (_CONFIG_SKILLS_DIR / playbook_name / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -1001,7 +1001,7 @@ def test_developer_and_validator_playbooks_keep_shell_api_boundary() -> None:
 
 def test_validator_playbook_routes_out_of_scope_corrections_to_replan() -> None:
     skill = (
-        _BUNDLED_SKILLS_DIR / "team-validator-playbook" / "SKILL.md"
+        _CONFIG_SKILLS_DIR / "team-validator-playbook" / "SKILL.md"
     ).read_text(encoding="utf-8")
 
     assert "The only apparent correction would edit, move, rename, or delete an existing file" in skill

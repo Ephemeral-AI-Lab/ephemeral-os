@@ -178,7 +178,7 @@ the replanner's allowed region.
 
 ## Related code
 
-- `backend/src/team/models.py` — `Task`, `TaskStatus`, `TaskDefinition`,
+- `backend/src/team/core/models.py` — `Task`, `TaskStatus`, `TaskDefinition`,
   `Plan`, `ReplanPlan`.
 - `backend/src/team/planning/expander.py` — `expand_submitted_plan`,
   `apply_replan`.

@@ -53,9 +53,3 @@ class TaskRecord(Base):
     )
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     fired_by_task_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    def __repr__(self) -> str:
-        return (
-            f"<TaskRecord id={self.id!r} agent={self.agent_name!r} "
-            f"status={self.status!r}>"
-        )

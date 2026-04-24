@@ -224,9 +224,9 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         await _session.initialize(config)
         configure_runtime_logging(verbose=_session.current_settings().verbose)
 
-        from team.definitions import register_all as register_team_builtins
+        from team.definitions import register_all as register_config_definitions
 
-        register_team_builtins()
+        register_config_definitions()
         _initialize_runtime_stores()
 
         yield

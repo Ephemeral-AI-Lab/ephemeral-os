@@ -38,7 +38,6 @@ class TeamRun:
         session_id: str,
         user_request: str,
         budgets: BudgetConfig | None = None,
-        goal: str | None = None,
         sandbox_id: str | None = None,
         repo_root: str | None = None,
         team_run_id: str | None = None,
@@ -57,8 +56,6 @@ class TeamRun:
             team_run_id=self.id,
             budgets=self.budgets,
             budget_state=self.budget_state,
-            user_request=user_request,
-            goal=goal,
             repo_root=repo_root,
             event_store=event_store,
         )
@@ -66,10 +63,8 @@ class TeamRun:
         self.task_center = runtime_services.task_center
         self.budgets = self.task_center.budgets
         self.budget_state = self.task_center.budget_state
-        self.project_context = runtime_services.project_context
-        self.event_store: TeamRunStore = getattr(
-            runtime_services, "event_store", TeamRunStore()
-        )
+        self.repo_root = runtime_services.repo_root
+        self.event_store: TeamRunStore = runtime_services.event_store
         self.cancel_event = asyncio.Event()
         self.root_task_id: str | None = None
         self._num_executors: int = _default_num_executors()
@@ -141,8 +136,7 @@ class TeamRun:
                 self.id,
                 session_id=self.session_id,
                 user_request=self.user_request,
-                goal=None,
-                repo_root=self.project_context.repo_root,
+                repo_root=self.repo_root,
                 sandbox_id=self.sandbox_id,
                 budgets=asdict(self.budgets),
                 roster=dict(self.roster) if self.roster else None,

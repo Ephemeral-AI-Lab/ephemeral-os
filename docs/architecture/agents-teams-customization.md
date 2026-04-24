@@ -57,7 +57,7 @@ Execute one bounded coding task...
 - `model`, `effort`, `tool_call_limit`
 - `tools`, `skills`, `terminal_tools`
 - `background`, `role`, `agent_type` (agent | subagent)
-- `source` (builtin | user | plugin), capability flags
+- capability flags such as `can_spawn_subagents`, `require_fresh_client`, and `include_skills`
 
 `terminal_tools` is the runtime source of truth for tools that may end the
 agent's loop. For team-mode agents it also determines which submission tools
@@ -88,7 +88,7 @@ Three distinct layers orchestrate the transition from config files to runtime ex
 │  │  backend/config/agents │  │ backend/config/teams │   │
 │  └───────────┬────────────┘  └──────────┬───────────┘   │
 └──────────────┼───────────────────────────┼──────────────┘
-               │ _parse_frontmatter        │ _parse_frontmatter
+               │ parse_markdown_frontmatter│ parse_markdown_frontmatter
                ▼                           ▼
 ┌─────────────────────────────────────────────────────────┐
 │  Load Phase                                             │
@@ -116,7 +116,7 @@ Three distinct layers orchestrate the transition from config files to runtime ex
 
 **Key components:**
 
-- **`AgentLoader`** (`backend/src/agents/loader.py`): Parses Markdown frontmatter via `_parse_frontmatter()` and calls `load_agents_dir()` to scan `backend/config/agents`.
+- **`AgentLoader`** (`backend/src/agents/loader.py`): Parses Markdown frontmatter via `config.markdown.parse_markdown_frontmatter()` and calls `load_agents_dir()` to scan `backend/config/agents`.
 
 - **`AgentRegistry`** (`backend/src/agents/registry.py`): Single in-memory `_DEFINITIONS` dict holding registered `AgentDefinition` objects from config files. Provides lookup functions: `get_definition(name)`, `find_by_role(role)`, `has_role(agent_name, role)`.
 
@@ -204,8 +204,8 @@ backend/config/skills/*/SKILL.md
 Sequence showing a team run from start through task dispatch to completion, integrating loader, registry, and persistence:
 
 ```
-  User      /api/teams/runs   TeamLoader       TaskStore        Runner        PostgreSQL
-             Start Run       +AgentRegistry   Persistence    Dispatch Loop
+  User      /api/teams/runs   TeamDefs        TaskStore        Runner        PostgreSQL
+             Start Run       +AgentRegistry  Persistence    Dispatch Loop
     │              │               │               │               │               │               │
     │─POST /teams/─▶               │               │               │               │               │
     │  runs         │               │               │               │               │               │
@@ -222,9 +222,8 @@ Sequence showing a team run from start through task dispatch to completion, inte
     │              │───────────────────────────────────────────────create(team_run_id)             │
     │              │               │               │               │  Init task    │               │
     │              │               │               │               │  graph        │               │
-    │              │───────────────────────────────restore()───────│               │               │
-    │              │               │               │  Load active  │               │               │
-    │              │               │               │  task graph   │               │               │
+    │              │               │               │  Task graph   │               │               │
+    │              │               │               │  persisted    │               │               │
     │              │───────────────────────────────────────────────────────────────start_run()     │
     │              │               │               │               │               │               │
     │              │               │               │               │               │─spawn_ephemeral│
@@ -244,7 +243,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
     │              │               │               │     │  ──UPDATE tasks SET status='running'──▶│
     │              │               │               │     │                                     │  │
     │              │               │               │     │  [if task succeeds]                 │  │
-    │              │               │               │     │  ──register_snapshot(task_id, msgs)─▶  │
     │              │               │               │     │  ──UPDATE tasks SET status='done'─────▶│
     │              │               │               │     │                                     │  │
     │              │               │               │     │  [if replan triggered]              │  │
@@ -259,7 +257,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
     │◀─200 OK───────               │               │               │               │               │
     │  TeamRunResponse             │               │               │               │               │
 
-  NOTE: Registry lookup is O(1) after lazy load.
+  NOTE: Registry lookup is O(1) after startup registration.
   NOTE: In-memory task graph syncs from DB on each iteration.
   NOTE: All state writes go through persistence layer.
 ```
@@ -267,7 +265,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
 **Key interactions:**
 
 - **Loader** resolves team roster by looking up each agent in `AgentRegistry`.
-- **AgentRegistry** is lazily populated from disk (Markdown) and DB on first access.
+- **AgentRegistry** is populated from `backend/config/agents` during runtime startup.
 - **TaskStore** maintains in-memory task graph synced from DB via `refresh_graph()`.
 - **Runner** dispatches tasks via `spawn_ephemeral_agent()`, updating DB after each step.
 - **AgentRunTracker** creates/finishes agent run records for every agent execution.
@@ -280,7 +278,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
 
 | Field | Impact | Example |
 |-------|--------|---------|
-| `system_prompt` | Core behavioral instruction | Markdown body or API field |
+| `system_prompt` | Core behavioral instruction | Markdown body |
 | `model` | LLM selection; "inherit" uses default | "claude-opus-4", "inherit" |
 | `effort` | Heuristic budget; low/medium/high | High = larger tool_call_limit |
 | `tool_call_limit` | Max tool calls before agent stops | 50, 100, unlimited (None) |
@@ -326,14 +324,14 @@ This team coordinates...
 - **`AgentDefinition`** (`types.py`): Full runtime agent config (Pydantic model).
 - **`AgentLoader`** (`loader.py`): Parses Markdown, loads from disk.
 - **`AgentRegistry`** (`registry.py`): In-memory lookup map.
+- **`AgentDefinitionValidator`** (`validation.py`): Validates config references without persisting definitions.
 - **`AgentRunTracker`** (`run_tracker.py`): Wraps agent execution lifecycle.
 
 ### Teams Module
 
-- **`TeamDefinition`** (`models.py`): Roster + entry planner.
-- **`TeamLoader`** (`loader.py`): Parses Markdown, loads team definitions.
-- **`TeamRegistry`** (`registry.py`): In-memory lookup.
-- **`Task`** / **`TaskSpec`** (`models.py`): Execution units and plan items.
+- **`TeamDefinition`** (`core/models.py`): Roster + entry planner.
+- **`team.definitions`** (`definitions.py`): Parses Markdown, registers config-backed team definitions, and provides in-memory lookup.
+- **`Task`** / **`TaskSpec`** (`core/models.py`): Execution units and plan items.
 - **`TaskStore`** (`persistence/task_store.py`): SQL persistence for task queue.
 - **`TeamRun`** (`runtime/team_run.py`): Orchestrates a single team execution.
 
@@ -341,7 +339,7 @@ This team coordinates...
 
 ## 9. Configuration Directories
 
-Builtin agent, team, and skill definitions live in:
+Config-backed agent, team, and skill definitions live in:
 
 ```
 backend/config/agents/

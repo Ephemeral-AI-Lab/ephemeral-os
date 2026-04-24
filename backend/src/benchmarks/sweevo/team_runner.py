@@ -163,8 +163,11 @@ def _derive_execution_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]
 
 
 def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
-    """Minimal instance-specific prompt — agent skills/system prompts (from DB)
-    carry the detailed workflow policy."""
+    """Minimal instance-specific prompt.
+
+    Config-backed agent skills and system prompts carry the detailed workflow
+    policy.
+    """
     return (
         f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
         f"Repository: {instance.repo}\n"
@@ -233,7 +236,7 @@ def _make_context_builders(
     SWE-EVO sandbox.
 
     Agent role, terminal tools, and user prompt templates are supplied by the
-    default builder; the sweevo team definition loaded from the DB carries
+    default builder; the sweevo team definition loaded from config carries
     everything else.
     """
     from team.runtime.agent_context import build_query_context as _default_ctx

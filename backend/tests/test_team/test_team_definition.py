@@ -91,11 +91,9 @@ class _FakeTaskCenter:
         return self.graph.get(task_id)
 
 def _fake_services() -> TeamRuntimeServices:
-    from team.core.models import ProjectContext
-
     tc = _FakeTaskCenter()
     return TeamRuntimeServices(
-        project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
+        repo_root="",
         task_center=tc,  # type: ignore[arg-type]
         event_store=TeamRunStore(),
     )

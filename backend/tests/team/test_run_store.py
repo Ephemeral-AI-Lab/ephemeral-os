@@ -20,7 +20,6 @@ def test_team_run_store_without_base_dir_is_noop() -> None:
 
     assert event.seq == 0
     assert store.load_run("run-1") == []
-    assert store.list_runs() == []
 
 
 def test_team_run_store_persists_events_when_configured(tmp_path) -> None:
@@ -33,7 +32,6 @@ def test_team_run_store_persists_events_when_configured(tmp_path) -> None:
 
     assert [event.seq for event in loaded] == [1, 2]
     assert [event.data["status"] for event in loaded] == ["running", "done"]
-    assert store.list_runs() == ["run-1"]
 
 
 def test_team_run_store_from_env_uses_env_dir(monkeypatch, tmp_path) -> None:
@@ -42,4 +40,4 @@ def test_team_run_store_from_env_uses_env_dir(monkeypatch, tmp_path) -> None:
 
     store.append(_event("run-2", "running"))
 
-    assert store.list_runs() == ["run-2"]
+    assert [e.data["status"] for e in store.load_run("run-2")] == ["running"]

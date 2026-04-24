@@ -9,7 +9,7 @@ final status computation sees the root task in `failed`.
 
 | Category | Condition | Run result | Notes |
 | --- | --- | --- | --- |
-| Fatal invariant | `GraphInvariantViolation` during ready dispatch, running transition, replan dependency rewiring, snapshot restore, or failure cleanup | `failed` immediately | The executor calls `TeamRun.fail_fast("graph_invariant_violation: ...")` because the task graph is no longer schedulable with confidence. |
+| Fatal invariant | `GraphInvariantViolation` during ready dispatch, running transition, replan dependency rewiring, or failure cleanup | `failed` immediately | The executor calls `TeamRun.fail_fast("graph_invariant_violation: ...")` because the task graph is no longer schedulable with confidence. |
 | Fatal budget | `BudgetExceeded` while expanding a submitted plan, creating a replanner, or applying a replan during execution | `failed` immediately | Task budget and replan budget are run-level guarantees, not task-local failures. |
 | Root task terminal failure | Root task reaches `failed` | `failed` at `TeamRun.wait()` finalization | The final status reflects the root task outcome unless an earlier fatal failure reason exists. |
 | Root task direct execution failure | Root agent is unknown, the root runner crashes, context construction raises, or root cleanup fails into task failure | Usually `failed` | These first mark the root task failed or request replanning. The run fails if recovery does not produce a successful root outcome. |

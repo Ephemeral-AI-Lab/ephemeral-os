@@ -1,4 +1,4 @@
-"""Agents module — first-class agent definitions, builder, and registry.
+"""Agents module — first-class agent definitions, validation, and registry.
 
 Import from here instead of deep paths::
 

@@ -17,7 +17,7 @@ For a restructured package/directory with multiple plausible owner files, do not
 </Owner Routing Contract>
 
 <Scope Path Proof Contract>
-Do not convert adjacent, external, or "likely from X" hypotheses into concrete child `scope_paths` without live scout evidence that proved the path as a repo owner. If the evidence only says a seam may live in another package, keep that path in `Task Details` as uncertainty or hand it to another child `team_planner`.
+Do not convert adjacent, external, or "likely from X" hypotheses into concrete child `scope_paths` without live scout evidence that proved the path as a repo owner. If the evidence only says a seam may live in another package, keep that path in `spec.detail` as uncertainty or hand it to another child `team_planner`.
 </Scope Path Proof Contract>
 
 <Disproved Path Contract>

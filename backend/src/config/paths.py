@@ -37,18 +37,18 @@ def get_repo_config_dir() -> Path:
     return candidates[0]
 
 
-def get_builtin_agents_dir() -> Path:
-    """Return the bundled agent-definition directory."""
+def get_config_agents_dir() -> Path:
+    """Return the repository config agent-definition directory."""
     return get_repo_config_dir() / "agents"
 
 
-def get_builtin_teams_dir() -> Path:
-    """Return the bundled team-definition directory."""
+def get_config_teams_dir() -> Path:
+    """Return the repository config team-definition directory."""
     return get_repo_config_dir() / "teams"
 
 
-def get_builtin_skills_dir() -> Path:
-    """Return the bundled skill-definition directory."""
+def get_config_skills_dir() -> Path:
+    """Return the repository config skill-definition directory."""
     return get_repo_config_dir() / "skills"
 
 
@@ -113,8 +113,6 @@ def get_feedback_dir() -> Path:
     feedback_dir = get_data_dir() / "feedback"
     feedback_dir.mkdir(parents=True, exist_ok=True)
     return feedback_dir
-
-
 
 
 def get_project_config_dir(cwd: str | Path) -> Path:

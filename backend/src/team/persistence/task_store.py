@@ -32,12 +32,6 @@ def _has_replanner_role(agent_name: str) -> bool:
     return get_role(agent_name) == "replanner"
 
 
-def _has_parent_summarizer_role(agent_name: str) -> bool:
-    from agents.registry import get_role
-
-    return get_role(agent_name) == "parent_summarizer"
-
-
 def record_to_task(rec: TaskRecord) -> Task:
     """Convert a TaskRecord ORM row to a domain Task."""
     return Task(
@@ -92,10 +86,6 @@ class TaskStore:
     @property
     def ready_queue_order(self) -> list[str]:
         return list(self._tg.ready_order)
-
-    @ready_queue_order.setter
-    def ready_queue_order(self, value: list[str]) -> None:
-        self._tg.ready_order = list(value)
 
     def get_task(self, task_id: str) -> Task | None:
         """Fast in-memory lookup — no DB call."""
@@ -417,16 +407,6 @@ class TaskStore:
         async with self._sf() as db:
             count = await q.cancel_statuses(
                 db, self._team_run_id, ("running",), reason
-            )
-            await db.commit()
-            return count
-
-    async def cancel_by_ids(self, task_ids: list[str], reason: str) -> int:
-        if not task_ids:
-            return 0
-        async with self._sf() as db:
-            count = await q.cancel_by_ids(
-                db, self._team_run_id, task_ids, reason
             )
             await db.commit()
             return count

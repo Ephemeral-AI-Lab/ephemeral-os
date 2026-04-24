@@ -745,37 +745,6 @@ def _print_sse_events(events: list[dict]) -> None:
             print("    [assistant_complete]", flush=True)
 
 
-def create_test_agent(
-    client,
-    name: str,
-    *,
-    tools: list[str] | None = None,
-    skills: list[str] | None = None,
-    system_prompt: str | None = None,
-    model: str | None = None,
-) -> dict:
-    """Create an agent and return its data (compat)."""
-    payload: dict[str, Any] = {
-        "name": name,
-        "description": f"E2E test agent: {name}",
-        "model": model or MINIMAX_MODEL,
-    }
-    if tools:
-        payload["tools"] = tools
-    if skills:
-        payload["skills"] = skills
-    if system_prompt:
-        payload["system_prompt"] = system_prompt
-
-    resp = client.post("/api/agents/", json=payload)
-    if resp.status_code == 201:
-        return resp.json()
-    get_resp = client.get(f"/api/agents/{name}")
-    if get_resp.status_code == 200:
-        return get_resp.json()
-    assert False, f"Failed to create or get agent '{name}': {resp.status_code} {resp.text}"
-
-
 # ---------------------------------------------------------------------------
 # Mock LLM client
 # ---------------------------------------------------------------------------

@@ -164,7 +164,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
                 ),
                 budgets=None,
                 budget_state=None,
-                project_context=SimpleNamespace(repo_root="/testbed"),
+                repo_root="/testbed",
             coordination_metadata={},
             user_request="Fix it",
             arbiter=None,
@@ -192,7 +192,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
 
 def test_root_prompt_includes_instance_essentials():
     """Root prompt carries only instance-specific info — agent skills/system
-    prompts (loaded from DB) supply the rest of the workflow policy."""
+    prompts loaded from config supply the rest of the workflow policy."""
     instance = _pydantic_instance()
 
     prompt = _build_root_prompt(instance, "/repo")
@@ -292,7 +292,7 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
                 ),
                 budgets=None,
                 budget_state=None,
-                project_context=SimpleNamespace(repo_root="/testbed"),
+                repo_root="/testbed",
             coordination_metadata={},
             arbiter=None,
         ),

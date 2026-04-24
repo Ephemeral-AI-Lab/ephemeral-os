@@ -57,7 +57,7 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     meta["task_deps"] = list(defn.deps)
     meta["task_parent_id"] = task.parent_id
     meta["task_depth"] = task.depth
-    repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
+    repo_root = str(getattr(team_run, "repo_root", "") or "")
     if repo_root:
         meta["repo_root"] = repo_root
         meta["exec_cwd"] = repo_root

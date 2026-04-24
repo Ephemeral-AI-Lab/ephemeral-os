@@ -65,11 +65,6 @@ class TaskGraph:
         if task is not None:
             task.status = TaskStatus.EXPANDED
 
-    def mark_expanded_awaiting_summary(self, task_id: str) -> None:
-        task = self.tasks.get(task_id)
-        if task is not None:
-            task.status = TaskStatus.EXPANDED_AWAITING_SUMMARY
-
     def mark_terminal(self, task_id: str, status: str, reason: str) -> None:
         task = self.tasks.get(task_id)
         if task is not None:

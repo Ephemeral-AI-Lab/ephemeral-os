@@ -48,7 +48,7 @@ def test_build_task_metadata_enables_team_runtime_flags():
     team_run = SimpleNamespace(
         id="run-1",
         sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
+        repo_root="/repo",
         coordination_metadata={},
         task_center=object(),
         arbiter=None,
@@ -856,7 +856,7 @@ async def test_build_query_context_planner_terminal_tools():
     team_run = SimpleNamespace(
         id="run-1",
         sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
+        repo_root="/repo",
         coordination_metadata={},
         task_center=task_center,
         arbiter=None,
@@ -890,7 +890,7 @@ async def test_build_query_context_parent_summarizer_terminal_tools():
     team_run = SimpleNamespace(
         id="run-1",
         sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
+        repo_root="/repo",
         coordination_metadata={},
         task_center=task_center,
         arbiter=None,
@@ -929,7 +929,7 @@ async def test_build_query_context_uses_agent_terminal_tools_for_developer():
     team_run = SimpleNamespace(
         id="run-1",
         sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
+        repo_root="/repo",
         coordination_metadata={},
         task_center=task_center,
         arbiter=None,
@@ -962,7 +962,7 @@ async def test_build_query_context_requires_agent_terminal_tools_without_role_fa
     team_run = SimpleNamespace(
         id="run-1",
         sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
+        repo_root="/repo",
         coordination_metadata={},
         task_center=task_center,
         arbiter=None,

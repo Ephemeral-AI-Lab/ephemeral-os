@@ -3,7 +3,7 @@
 
 Tests the complete pipeline using the new AnthropicClient:
 - Model registration with api_format="anthropic"
-- Agent creation referencing the registered model
+- Config-backed agent definition API boundaries
 - Tool invocation through Anthropic-native streaming
 - Mid-stream tool event ordering
 
@@ -37,17 +37,6 @@ MINIMAX_ANTHROPIC_BASE_URL = "https://api.minimax.io/anthropic"
 MINIMAX_ANTHROPIC_FORMAT = "anthropic"
 
 MODEL_KEY = "minimax-anthropic-native"
-AGENT_NAME = "test-anthropic-native-agent"
-AGENT_TOOLS = [
-    "daytona_grep",
-    "daytona_glob",
-    "daytona_read_file",
-    "daytona_write_file",
-    "daytona_edit_file",
-    "daytona_delete_file",
-    "daytona_move_file",
-    "daytona_shell",
-]
 AGENT_PROMPT = (
     "You are test-anthropic-native-agent, a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
@@ -58,7 +47,7 @@ AGENT_PROMPT = (
 
 
 # ---------------------------------------------------------------------------
-# Helpers (kept for TestAnthropicNativeModelSetup HTTP API tests)
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -82,35 +71,13 @@ def _register_model(client) -> dict:
     assert resp.status_code == 200, f"Model registration failed: {resp.status_code} {resp.text}"
     return resp.json()
 
-
-def _create_agent(client, name: str = AGENT_NAME) -> dict:
-    """Create an agent tied to the registered model."""
-    resp = client.post(
-        "/api/agents/",
-        json={
-            "name": name,
-            "description": f"E2E test: Anthropic-native agent ({name})",
-            "model": MODEL_KEY,
-            "tools": AGENT_TOOLS,
-            "system_prompt": AGENT_PROMPT,
-        },
-    )
-    if resp.status_code == 201:
-        return resp.json()
-    # May already exist
-    get_resp = client.get(f"/api/agents/{name}")
-    if get_resp.status_code == 200:
-        return get_resp.json()
-    assert False, f"Failed to create agent '{name}': {resp.status_code} {resp.text}"
-
-
 # ===========================================================================
-# Test: Model Registration & Agent Creation (HTTP API — unchanged)
+# Test: Model Registration and Config-backed Agent API
 # ===========================================================================
 
 
 class TestAnthropicNativeModelSetup:
-    """Tests that the model is registered and agent created correctly."""
+    """Tests model registration with config-backed agent definitions."""
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
@@ -144,10 +111,21 @@ class TestAnthropicNativeModelSetup:
         active = resp.json()
         assert active["key"] == MODEL_KEY
 
-    def test_agent_created_with_model(self, client):
+    def test_agent_definition_api_rejects_model_specific_creation(self, client):
         _register_model(client)
-        agent = _create_agent(client)
-        assert agent["model"] == MODEL_KEY
+        resp = client.post(
+            "/api/agents/",
+            json={
+                "name": "test-anthropic-native-agent",
+                "description": "E2E test Anthropic-native agent",
+                "model": MODEL_KEY,
+                "tools": ["daytona_shell"],
+                "system_prompt": AGENT_PROMPT,
+            },
+        )
+
+        assert resp.status_code == 405
+        assert "file-backed under backend/config/agents" in resp.json()["detail"]
 
 
 # ===========================================================================

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from code_intelligence.editing.arbiter import Arbiter
-from team.core.models import ProjectContext
 from team.core.models import BudgetConfig, BudgetState
 from team.persistence.run_store import TeamRunStore
 
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class TeamRuntimeServices:
-    project_context: ProjectContext
+    repo_root: str
     task_center: "TaskCenter"
     event_store: TeamRunStore
     arbiter: Arbiter | None = None
@@ -26,8 +25,6 @@ def build_team_runtime_services(
     team_run_id: str,
     budgets: BudgetConfig,
     budget_state: BudgetState,
-    user_request: str,
-    goal: str | None = None,
     repo_root: str | None = None,
     event_store: TeamRunStore | None = None,
     session_factory: "async_sessionmaker[AsyncSession] | None" = None,
@@ -35,12 +32,7 @@ def build_team_runtime_services(
     from team.persistence.team_engine import create_team_engine
     from team.task_center import TaskCenter
 
-    project_context = ProjectContext(
-        goal=goal or user_request,
-        user_request=user_request,
-        repo_root=repo_root or "",
-        project_key=repo_root or "",
-    )
+    resolved_root = repo_root or ""
     store = event_store if event_store is not None else TeamRunStore.from_env()
 
     task_session_factory = session_factory
@@ -53,7 +45,7 @@ def build_team_runtime_services(
                 "Set EPHEMERALOS_DATABASE_URL or pass session_factory explicitly."
             ) from exc
 
-    arbiter: Any = Arbiter(workspace_root=repo_root or "")
+    arbiter: Any = Arbiter(workspace_root=resolved_root)
 
     task_center = TaskCenter(
         session_factory=task_session_factory,
@@ -64,7 +56,7 @@ def build_team_runtime_services(
     )
 
     return TeamRuntimeServices(
-        project_context=project_context,
+        repo_root=resolved_root,
         task_center=task_center,
         event_store=store,
         arbiter=arbiter,

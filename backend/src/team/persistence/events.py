@@ -56,7 +56,6 @@ def make_team_run_created(
     *,
     session_id: str,
     user_request: str,
-    goal: str | None,
     repo_root: str | None,
     sandbox_id: str | None = None,
     budgets: dict[str, Any],
@@ -65,7 +64,6 @@ def make_team_run_created(
     data: dict[str, Any] = {
         "session_id": session_id,
         "user_request": user_request,
-        "goal": goal,
         "repo_root": repo_root,
         "sandbox_id": sandbox_id,
         "budgets": budgets,

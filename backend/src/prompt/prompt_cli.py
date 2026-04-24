@@ -145,7 +145,7 @@ def dump_team_system_prompts_main() -> int:
     )
     parser.add_argument(
         "team_id",
-        help="Team definition id to resolve from the DB. Falls back to team name if no id match is found.",
+        help="Team definition id from backend/config. Falls back to team name if no id match is found.",
     )
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory used for prompt assembly")
     parser.add_argument("--sandbox-id", default="", help="Sandbox ID passed to tool setup")
@@ -199,7 +199,7 @@ def dump_team_user_prompts_main() -> int:
     parser.add_argument(
         "team_id",
         nargs="?",
-        help="Team definition id to resolve from the DB. Falls back to team name if no id match is found.",
+        help="Team definition id from backend/config. Falls back to team name if no id match is found.",
     )
     parser.add_argument(
         "--team-run-id",

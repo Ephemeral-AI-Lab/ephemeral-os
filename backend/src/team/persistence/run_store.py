@@ -97,11 +97,3 @@ class TeamRunStore:
                     logger.warning("skipping malformed event in %s: %s", path, exc)
         out.sort(key=lambda e: e.seq)
         return out
-
-    def list_runs(self) -> list[str]:
-        if self._base is None or not self._base.exists():
-            return []
-        return sorted(
-            p.name for p in self._base.iterdir()
-            if p.is_dir() and (p / "events.jsonl").exists()
-        )

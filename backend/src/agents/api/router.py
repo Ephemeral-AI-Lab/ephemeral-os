@@ -7,16 +7,10 @@ from typing import TYPE_CHECKING, Any
 from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
 
 from agents.registry import get_definition, list_definitions
-from agents.api.schemas import (
-    AgentDefinitionCreate,
-    AgentDefinitionUpdate,
-    AgentValidationResult,
-    CloneRequest,
-)
-from agents.builder.validation import AgentDefinitionValidator
+from agents.api.schemas import AgentValidationRequest
+from agents.validation import AgentDefinitionValidator, AgentValidationResult
 from tools.core.catalog import collect_tool_catalog
 
 if TYPE_CHECKING:
@@ -65,23 +59,23 @@ def create_agents_router(
         return defn.model_dump()
 
     @router.post("/", status_code=201)
-    async def create_agent(body: AgentDefinitionCreate) -> dict[str, str]:
+    async def create_agent() -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.put("/{name}")
-    async def update_agent(name: str, body: AgentDefinitionUpdate) -> dict[str, str]:
+    async def update_agent(name: str) -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.delete("/{name}")
-    async def delete_agent(name: str) -> JSONResponse:
+    async def delete_agent(name: str) -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.post("/{name}/clone", status_code=201)
-    async def clone_agent(name: str, body: CloneRequest) -> dict[str, str]:
+    async def clone_agent(name: str) -> dict[str, str]:
         raise HTTPException(status_code=405, detail=_READ_ONLY_DETAIL)
 
     @router.post("/validate", response_model=AgentValidationResult)
-    async def validate_agent(body: AgentDefinitionCreate) -> AgentValidationResult:
+    async def validate_agent(body: AgentValidationRequest) -> AgentValidationResult:
         return AgentDefinitionValidator(get_tool_registry()).validate(body)
 
     return router

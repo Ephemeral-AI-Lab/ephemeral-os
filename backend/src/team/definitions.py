@@ -6,10 +6,15 @@ import logging
 import uuid
 from pathlib import Path
 
-from agents.loader import _parse_frontmatter, load_agents_dir
-from agents.registry import register_definition
+from agents.loader import load_agents_dir
+from agents.registry import (
+    RESERVED_BUILTIN_AGENT_NAMES,
+    register_definition,
+    unregister_definition,
+)
 from agents.types import AgentDefinition
-from config.paths import get_builtin_agents_dir, get_builtin_teams_dir
+from config.markdown import parse_markdown_frontmatter
+from config.paths import get_config_agents_dir, get_config_teams_dir
 from team.core.models import TeamDefinition
 
 logger = logging.getLogger(__name__)
@@ -25,11 +30,11 @@ SCOUT = "scout"
 TEAM_REPLANNER = "team_replanner"
 PARENT_SUMMARIZER = "parent_summarizer"
 
-_EXPECTED_BUILTIN_COUNT = 7
-_EXPECTED_BUILTIN_TEAM_COUNT = 1
+_EXPECTED_CONFIG_AGENT_COUNT = 7
+_EXPECTED_CONFIG_TEAM_COUNT = 1
 
-_BUILTINS_DIR = get_builtin_agents_dir()
-_TEAMS_BUILTIN_DIR = get_builtin_teams_dir()
+_AGENTS_CONFIG_DIR = get_config_agents_dir()
+_TEAMS_CONFIG_DIR = get_config_teams_dir()
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +43,8 @@ _TEAMS_BUILTIN_DIR = get_builtin_teams_dir()
 
 
 _DEFINITIONS: dict[str, TeamDefinition] = {}
+_REGISTERED_CONFIG_AGENT_NAMES: set[str] = set()
+_REGISTERED_CONFIG_TEAM_NAMES: set[str] = set()
 
 
 def register_team_definition(defn: TeamDefinition) -> None:
@@ -72,7 +79,7 @@ def load_teams_dir(directory: Path) -> list[TeamDefinition]:
     teams: list[TeamDefinition] = []
     for path in sorted(directory.glob("*.md")):
         try:
-            fm, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+            fm, body = parse_markdown_frontmatter(path.read_text(encoding="utf-8"))
             name = str(fm.get("name") or path.stem)
             entry_planner = str(fm.get("entry_planner") or "")
             if not entry_planner:
@@ -107,47 +114,55 @@ def load_teams_dir(directory: Path) -> list[TeamDefinition]:
 # ---------------------------------------------------------------------------
 
 
-def _load_builtin_agent_definitions() -> list[AgentDefinition]:
-    defs = load_agents_dir(_BUILTINS_DIR)
+def _load_config_agent_definitions() -> list[AgentDefinition]:
+    defs = load_agents_dir(_AGENTS_CONFIG_DIR)
     for d in defs:
         d.source = "builtin"
-    if len(defs) != _EXPECTED_BUILTIN_COUNT:
+    if len(defs) != _EXPECTED_CONFIG_AGENT_COUNT:
         logger.error(
-            "Expected %d builtin agents but loaded %d from %s — check seed files",
-            _EXPECTED_BUILTIN_COUNT,
+            "Expected %d config agents but loaded %d from %s — check config files",
+            _EXPECTED_CONFIG_AGENT_COUNT,
             len(defs),
-            _BUILTINS_DIR,
+            _AGENTS_CONFIG_DIR,
         )
     return defs
 
 
-def _load_builtin_team_definitions() -> list[TeamDefinition]:
-    defs = load_teams_dir(_TEAMS_BUILTIN_DIR)
-    if len(defs) != _EXPECTED_BUILTIN_TEAM_COUNT:
+def _load_config_team_definitions() -> list[TeamDefinition]:
+    defs = load_teams_dir(_TEAMS_CONFIG_DIR)
+    if len(defs) != _EXPECTED_CONFIG_TEAM_COUNT:
         logger.error(
-            "Expected %d builtin teams but loaded %d from %s — check seed files",
-            _EXPECTED_BUILTIN_TEAM_COUNT,
+            "Expected %d config teams but loaded %d from %s — check config files",
+            _EXPECTED_CONFIG_TEAM_COUNT,
             len(defs),
-            _TEAMS_BUILTIN_DIR,
+            _TEAMS_CONFIG_DIR,
         )
     return defs
 
 
 def register_all() -> None:
-    """Register all builtin team agents and team definitions.
+    """Register all config-backed team agents and team definitions.
 
     Definition files under ``backend/config`` are the source of truth.
     """
-    agents = _load_builtin_agent_definitions()
+    for name in RESERVED_BUILTIN_AGENT_NAMES | _REGISTERED_CONFIG_AGENT_NAMES:
+        unregister_definition(name)
+    _REGISTERED_CONFIG_AGENT_NAMES.clear()
+    agents = _load_config_agent_definitions()
     for defn in agents:
         register_definition(defn)
+        _REGISTERED_CONFIG_AGENT_NAMES.add(defn.name)
 
-    teams = _load_builtin_team_definitions()
+    for name in tuple(_REGISTERED_CONFIG_TEAM_NAMES):
+        unregister_team_definition(name)
+    _REGISTERED_CONFIG_TEAM_NAMES.clear()
+    teams = _load_config_team_definitions()
     for tdefn in teams:
         register_team_definition(tdefn)
+        _REGISTERED_CONFIG_TEAM_NAMES.add(tdefn.name)
 
     logger.info(
-        "team builtins registered from backend/config (%d agents, %d teams)",
+        "team definitions registered from backend/config (%d agents, %d teams)",
         len(agents),
         len(teams),
     )

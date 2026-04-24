@@ -278,7 +278,6 @@ def test_build_team_run_user_prompt_report_replays_persisted_tasks(tmp_path: Pat
             "run-1",
             session_id="session-1",
             user_request="Fix retry behavior.",
-            goal=None,
             repo_root=str(tmp_path),
             budgets=BudgetConfig().__dict__,
             roster={

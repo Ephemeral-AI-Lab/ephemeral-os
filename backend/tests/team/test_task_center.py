@@ -437,59 +437,13 @@ def test_context_for_task_section_never_trimmed():
 
 
 # ---------------------------------------------------------------------------
-# snapshot / restore
-# ---------------------------------------------------------------------------
-
-
-def test_snapshot_returns_copy_of_notes():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1")))
-    _run(tc.notes.post(_note("n2")))
-
-    snap = tc.notes.snapshot()
-    assert len(snap) == 2
-    assert snap is not tc._notes
-
-
-def test_snapshot_copy_is_independent():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1")))
-    snap = tc.notes.snapshot()
-    _run(tc.notes.post(_note("n2")))
-    assert len(snap) == 1
-    assert len(_run(tc.notes.read())) == 2
-
-
-def test_restore_replaces_notes():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1")))
-    _run(tc.notes.post(_note("n2")))
-
-    backup = tc.notes.snapshot()
-    _run(tc.notes.post(_note("n3")))
-    assert len(_run(tc.notes.read())) == 3
-
-    tc.notes.restore(backup)
-    assert len(_run(tc.notes.read())) == 2
-    assert _run(tc.notes.read())[0].id == "n1"
-    assert _run(tc.notes.read())[1].id == "n2"
-
-
-def test_restore_empty_list_clears_notes():
-    tc = _tc()
-    _run(tc.notes.post(_note("n1")))
-    tc.notes.restore([])
-    assert _run(tc.notes.read()) == []
-
-
-# ---------------------------------------------------------------------------
 # TaskCenter initialization
 # ---------------------------------------------------------------------------
 
 
 def test_ready_queue_order_returns_copy():
     tc = _tc()
-    tc.store.ready_queue_order = ["task-1"]
+    tc.store._tg.add_ready("task-1")
 
     observed = tc.ready_queue_order
     observed.append("task-2")

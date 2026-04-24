@@ -6,10 +6,11 @@ file with optional YAML frontmatter (``name``, ``description``).
 
 from __future__ import annotations
 
-from config.paths import get_builtin_skills_dir
+from config.markdown import parse_markdown_frontmatter
+from config.paths import get_config_skills_dir
 from skills.core.types import SkillDefinition
 
-_CONTENT_DIR = get_builtin_skills_dir()
+_CONTENT_DIR = get_config_skills_dir()
 
 
 def get_bundled_skills() -> list[SkillDefinition]:
@@ -24,7 +25,7 @@ def get_bundled_skills() -> list[SkillDefinition]:
             skill_md = skill_dir / "SKILL.md"
             if skill_md.exists():
                 content = skill_md.read_text(encoding="utf-8")
-                name, description = _parse_frontmatter(skill_dir.name, content)
+                name, description = _parse_skill_metadata(skill_dir.name, content)
                 # Discover reference files in references/ subdirectory
                 references: dict[str, str] = {}
                 refs_dir = skill_dir / "references"
@@ -45,32 +46,15 @@ def get_bundled_skills() -> list[SkillDefinition]:
     return skills
 
 
-def _parse_frontmatter(default_name: str, content: str) -> tuple[str, str]:
+def _parse_skill_metadata(default_name: str, content: str) -> tuple[str, str]:
     """Extract name and description from a skill markdown file with YAML frontmatter."""
-    name = default_name
-    description = ""
-
-    lines = content.splitlines()
-
-    # Try YAML frontmatter (--- ... ---)
-    if lines and lines[0].strip() == "---":
-        for i, line in enumerate(lines[1:], 1):
-            if line.strip() == "---":
-                for fm_line in lines[1:i]:
-                    fm_stripped = fm_line.strip()
-                    if fm_stripped.startswith("name:"):
-                        val = fm_stripped[5:].strip().strip("'\"")
-                        if val:
-                            name = val
-                    elif fm_stripped.startswith("description:"):
-                        val = fm_stripped[12:].strip().strip("'\"")
-                        if val:
-                            description = val
-                break
+    frontmatter, _body = parse_markdown_frontmatter(content)
+    name = str(frontmatter.get("name") or default_name)
+    description = str(frontmatter.get("description") or "")
 
     # Fallback: heading + first paragraph
     if not description:
-        for line in lines:
+        for line in content.splitlines():
             stripped = line.strip()
             if stripped.startswith("# "):
                 if not name or name == default_name:
