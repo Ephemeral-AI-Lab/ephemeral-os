@@ -130,22 +130,12 @@ class TaskStore:
                     dep.status = "ready"
                     promoted_ids.append(dep.id)
             await db.commit()
-        task = self._tasks.get(task_id)
-        if task is not None:
-            task.status = TaskStatus.DONE
-        for pid in promoted_ids:
-            promoted = self._tasks.get(pid)
-            if promoted is not None:
-                promoted.status = TaskStatus.READY
         return promoted_ids
 
     async def mark_expanded(self, task_id: str) -> None:
         async with self._sf() as db:
             await q.set_status(db, self._team_run_id, task_id, "expanded")
             await db.commit()
-        task = self._tasks.get(task_id)
-        if task is not None:
-            task.status = TaskStatus.EXPANDED
 
     async def fetch_promotable_parent(self, child_id: str) -> str | None:
         """Return the id of an EXPANDED parent of ``child_id`` ready to promote.
@@ -176,10 +166,6 @@ class TaskStore:
         async with self._sf() as db:
             await q.set_status(db, self._team_run_id, task_id, status, reason)
             await db.commit()
-        task = self._tasks.get(task_id)
-        if task is not None:
-            task.status = TaskStatus.of(status, default=TaskStatus.FAILED)
-            task.failure_reason = reason
 
     async def insert_plan(
         self,
@@ -209,10 +195,6 @@ class TaskStore:
                 db, self._team_run_id, root_task_id
             )
             await db.commit()
-        for cid in cancelled:
-            task = self._tasks.get(cid)
-            if task is not None:
-                task.status = TaskStatus.CANCELLED
         return cancelled
 
     async def finalize_replanned_origin(
@@ -245,10 +227,10 @@ class TaskStore:
         """
         async with self._sf() as db:
             rec = await q.fetch_record(db, self._team_run_id, task_id)
-        status = rec.status if rec else None
-        if status is None or status in ("done", "failed", "cancelled"):
-            return
-        await self.mark_terminal(task_id, "failed", reason)
+            if rec is None or rec.status in ("done", "failed", "cancelled"):
+                return
+            await q.set_status(db, self._team_run_id, task_id, "failed", reason)
+            await db.commit()
 
     async def cancel_all_pending(self) -> int:
         async with self._sf() as db:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from tools.core.hooks import ToolHookRegistry
 from tools.daytona_toolkit.hooks.posthook import (
-    ambient_change_warning,
     audited_write_policy,
     move_extend_scope,
     write_extend_scope,
@@ -12,7 +11,6 @@ from tools.daytona_toolkit.hooks.posthook import (
 
 _MODULES = (
     audited_write_policy,
-    ambient_change_warning,
     move_extend_scope,
     write_extend_scope,
 )

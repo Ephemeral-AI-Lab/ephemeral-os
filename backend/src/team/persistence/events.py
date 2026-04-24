@@ -26,6 +26,10 @@ def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _event(team_run_id: str, kind: EventKind, **data: Any) -> "TeamRunEvent":
+    return TeamRunEvent(team_run_id=team_run_id, kind=kind, data=data)
+
+
 @dataclass
 class TeamRunEvent:
     team_run_id: str
@@ -70,17 +74,15 @@ def make_team_run_created(
     }
     if roster:
         data["roster"] = roster
-    return TeamRunEvent(team_run_id=team_run_id, kind="team_run_created", data=data)
+    return _event(team_run_id, "team_run_created", **data)
 
 
 def make_team_run_status(team_run_id: str, status: str, **fields: Any) -> TeamRunEvent:
-    payload: dict[str, Any] = {"status": status}
-    payload.update(fields)
-    return TeamRunEvent(team_run_id=team_run_id, kind="team_run_status", data=payload)
+    return _event(team_run_id, "team_run_status", status=status, **fields)
 
 
 def make_task_added(team_run_id: str, task: dict[str, Any]) -> TeamRunEvent:
-    return TeamRunEvent(team_run_id=team_run_id, kind="task_added", data={"task": task})
+    return _event(team_run_id, "task_added", task=task)
 
 
 def make_replace_dependency(
@@ -90,14 +92,12 @@ def make_replace_dependency(
     new_dep_ids: list[str],
     task_ids: list[str],
 ) -> TeamRunEvent:
-    return TeamRunEvent(
-        team_run_id=team_run_id,
-        kind="replace_dependency",
-        data={
-            "old_dep_id": old_dep_id,
-            "new_dep_ids": list(new_dep_ids),
-            "task_ids": list(task_ids),
-        },
+    return _event(
+        team_run_id,
+        "replace_dependency",
+        old_dep_id=old_dep_id,
+        new_dep_ids=list(new_dep_ids),
+        task_ids=list(task_ids),
     )
 
 
@@ -107,9 +107,7 @@ def make_task_status(
     status: str,
     **fields: Any,
 ) -> TeamRunEvent:
-    payload: dict[str, Any] = {"task_id": task_id, "status": status}
-    payload.update(fields)
-    return TeamRunEvent(team_run_id=team_run_id, kind="task_status", data=payload)
+    return _event(team_run_id, "task_status", task_id=task_id, status=status, **fields)
 
 
 def make_note_posted(
@@ -120,15 +118,13 @@ def make_note_posted(
     content_preview: str,
     content_bytes: int,
 ) -> TeamRunEvent:
-    return TeamRunEvent(
-        team_run_id=team_run_id,
-        kind="note_posted",
-        data={
-            "agent_name": agent_name,
-            "scope_paths": list(scope_paths or []),
-            "content_preview": content_preview,
-            "content_bytes": content_bytes,
-        },
+    return _event(
+        team_run_id,
+        "note_posted",
+        agent_name=agent_name,
+        scope_paths=list(scope_paths or []),
+        content_preview=content_preview,
+        content_bytes=content_bytes,
     )
 
 
@@ -138,13 +134,11 @@ def make_budget_update(
     tasks_used: int,
     replans_used: int = 0,
 ) -> TeamRunEvent:
-    return TeamRunEvent(
-        team_run_id=team_run_id,
-        kind="budget_update",
-        data={
-            "tasks_used": tasks_used,
-            "replans_used": replans_used,
-        },
+    return _event(
+        team_run_id,
+        "budget_update",
+        tasks_used=tasks_used,
+        replans_used=replans_used,
     )
 
 

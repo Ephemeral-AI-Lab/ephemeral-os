@@ -679,21 +679,14 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
         }
     )
 
-    result, events = await _run_with_events(
-        daytona_shell,
-        {"command": "python -c 'print(\"ujson ok\")'"},
+    result = await daytona_shell.execute(
+        daytona_shell.input_model(command="python -c 'print(\"ujson ok\")'"),
         ctx,
     )
 
     data = _assert_ok(result)
     assert data["files_written"] == 0
     assert result.metadata.get("ambient_changed_paths") == ["/testbed/dask/_compatibility.py"]
-    # Ambient paths surface through a user-only post-hook advisory; the tool
-    # output JSON no longer embeds the warning text directly.
-    assert any("ambient concurrent edits" in text for text in _notification_texts(events))
-    # ``audited_write_policy`` only fires on ``changed_paths``, and ambient-only
-    # responses leave that empty — so the absence of an "outside write_scope"
-    # advisory is expected and not a negative-signal regression.
 
 
 

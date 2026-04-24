@@ -426,7 +426,6 @@ backend/src/tools/daytona_toolkit/hooks/
   posthook/
     __init__.py
     audited_write_policy.py
-    ambient_change_warning.py
 ```
 
 The `prehook` and `posthook` package initializers may import and register every
@@ -545,15 +544,13 @@ Post-hooks should live in `tools.daytona_toolkit.hooks.posthook`.
 | Module | Phase | Tools | Purpose |
 | --- | --- | --- | --- |
 | `audited_write_policy.py` | post | `daytona_shell` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
-| `ambient_change_warning.py` | post | `daytona_shell` | Emits a user-only advisory when the shell command touched paths outside its declared write set. |
 | `move_extend_scope.py` | post | `daytona_move_file` | Extends in-memory write scope to the move destination after a successful owned-source move. |
 | `write_extend_scope.py` | post | `daytona_write_file` | Extends in-memory write scope to a successful write target. |
 
-These post-hooks read from ``result.metadata["changed_paths"]`` /
-``ambient_changed_paths``, which the ``tools.daytona_toolkit._commit`` façade
-writes uniformly for every OCC-gated tool. The shared audit primitive lives in
-``tools.daytona_toolkit._audit`` and accepts ``tool_name`` so the same helper
-can back multiple registrations.
+These post-hooks read from ``result.metadata["changed_paths"]``, which the
+``tools.daytona_toolkit._commit`` façade writes uniformly for every OCC-gated
+tool. The shared audit primitive lives in ``tools.daytona_toolkit._audit`` and
+accepts ``tool_name`` so the same helper can back multiple registrations.
 
 ``audited_write_policy`` is registered only on ``daytona_shell`` by design.
 Codeact commits paths its input does not name (shell side effects, ambient
@@ -966,7 +963,6 @@ backend/src/tools/daytona_toolkit/hooks/prehook/shell_stderr_suppression_policy.
 backend/src/tools/daytona_toolkit/hooks/prehook/shell_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py
-backend/src/tools/daytona_toolkit/hooks/posthook/ambient_change_warning.py
 backend/src/tools/daytona_toolkit/hooks/posthook/move_extend_scope.py
 backend/src/tools/daytona_toolkit/hooks/posthook/write_extend_scope.py
 backend/src/tools/daytona_toolkit/_commit.py

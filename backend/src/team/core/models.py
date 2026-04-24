@@ -152,42 +152,41 @@ def render_task_spec(spec: TaskSpec, *, status_label: str | None = None) -> str:
     )
 
 
-def _coerce_task_spec(
-    spec: TaskSpec | Mapping[str, Any] | None,
-    *,
-    task_id: str,
-) -> TaskSpec:
-    if isinstance(spec, TaskSpec):
-        return spec
-    if isinstance(spec, Mapping):
-        return TaskSpec.from_mapping(spec)
-    if spec is None:
-        raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'spec'")
-    raise ValueError(
-        f"TaskSpec for task '{task_id}' must be an object with "
-        "goal, detail, and acceptance_criteria"
-    )
-
-
-@dataclass
+@dataclass(init=False)
 class TaskDefinition:
-    """What defines a task: which agent, and what to do."""
+    """Submission form — what planners send in ``Plan.tasks`` / ``ReplanPlan.add_tasks``."""
 
     id: str
-    spec: TaskSpec | Mapping[str, Any]
+    spec: TaskSpec
     agent: str
-    description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
     parent_id: str | None = None
 
-    def __post_init__(self) -> None:
-        self.id = str(self.id)
-        self.spec = _coerce_task_spec(self.spec, task_id=self.id)
-        self.agent = str(self.agent)
-        self.description = str(self.description or "")
-        self.deps = list(self.deps or [])
-        self.scope_paths = list(self.scope_paths or [])
+    def __init__(
+        self,
+        *,
+        id: str,
+        spec: TaskSpec | Mapping[str, Any],
+        agent: str,
+        deps: list[str] | None = None,
+        scope_paths: list[str] | None = None,
+        parent_id: str | None = None,
+    ) -> None:
+        self.id = str(id)
+        if isinstance(spec, TaskSpec):
+            self.spec = spec
+        elif isinstance(spec, Mapping):
+            self.spec = TaskSpec.from_mapping(spec)
+        else:
+            raise ValueError(
+                f"TaskDefinition '{self.id}' requires a spec object with "
+                "goal, detail, and acceptance_criteria"
+            )
+        self.agent = str(agent)
+        self.deps = list(deps or [])
+        self.scope_paths = list(scope_paths or [])
+        self.parent_id = parent_id
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +196,14 @@ class TaskDefinition:
 
 @dataclass(init=False)
 class Task:
-    """Runtime task state plus its durable task definition."""
+    """Runtime task — submission fields + mutable state, stored flat."""
 
     id: str
     team_run_id: str
-    definition: "TaskDefinition"
+    spec: TaskSpec
+    agent: str
+    deps: list[str]
+    scope_paths: list[str]
     status: TaskStatus
     summary: str = ""
     plan: "Plan | ReplanPlan | None" = None
@@ -220,11 +222,9 @@ class Task:
         *,
         id: str,
         team_run_id: str,
+        spec: TaskSpec | Mapping[str, Any],
+        agent: str,
         status: TaskStatus,
-        definition: "TaskDefinition | None" = None,
-        agent_name: str | None = None,
-        spec: TaskSpec | Mapping[str, Any] | None = None,
-        description: str = "",
         deps: list[str] | None = None,
         scope_paths: list[str] | None = None,
         summary: str = "",
@@ -239,21 +239,20 @@ class Task:
         failure_reason: str | None = None,
         fired_by_task_id: str | None = None,
     ) -> None:
-        if definition is None:
-            definition = TaskDefinition(
-                id=id,
-                spec=spec,
-                agent=agent_name or "",
-                description=description,
-                deps=list(deps or []),
-                scope_paths=list(scope_paths or []),
-                parent_id=parent_id,
-            )
-        elif definition.parent_id is None:
-            definition.parent_id = parent_id
-        self.id = id
+        self.id = str(id)
         self.team_run_id = team_run_id
-        self.definition = definition
+        if isinstance(spec, TaskSpec):
+            self.spec = spec
+        elif isinstance(spec, Mapping):
+            self.spec = TaskSpec.from_mapping(spec)
+        else:
+            raise ValueError(
+                f"Task '{self.id}' requires a spec object with "
+                "goal, detail, and acceptance_criteria"
+            )
+        self.agent = str(agent)
+        self.deps = list(deps or [])
+        self.scope_paths = list(scope_paths or [])
         self.status = status
         self.summary = summary
         self.plan = plan
@@ -266,39 +265,6 @@ class Task:
         self.finished_at = finished_at
         self.failure_reason = failure_reason
         self.fired_by_task_id = fired_by_task_id
-
-    @property
-    def agent_name(self) -> str:
-        return self.definition.agent
-
-    @property
-    def description(self) -> str:
-        return self.definition.description
-
-    @property
-    def deps(self) -> list[str]:
-        return self.definition.deps
-
-    @property
-    def scope_paths(self) -> list[str]:
-        return self.definition.scope_paths
-
-    @property
-    def detached(self) -> bool:
-        """True when this task no longer contributes to its parent's success.
-
-        A task is detached once it has terminated without producing a `done`
-        outcome — i.e. `failed`, `cancelled`, or `request_replan` (A is
-        terminal at REQUEST_REPLAN; recovery lives on R under the parent).
-        Parents treat detached children as resolved-but-skipped when deciding
-        promotion (see ``fetch_expanded_parent_candidate``).
-        """
-        return self.status in (
-            TaskStatus.FAILED,
-            TaskStatus.CANCELLED,
-            TaskStatus.REQUEST_REPLAN,
-        )
-
 
 # ---------------------------------------------------------------------------
 # Plan types
@@ -377,7 +343,6 @@ def _task_definition_from_dict(it: dict[str, Any]) -> TaskDefinition:
         id=task_id,
         spec=spec,
         agent=agent,
-        description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
         parent_id=it.get("parent_id"),
