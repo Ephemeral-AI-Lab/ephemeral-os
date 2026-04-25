@@ -65,7 +65,7 @@ request
 | Check | Root-planner action |
 | --- | --- |
 | Intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
-| Clustering | Group many failures by changelog group, owner, mechanism, API, dtype, engine, or format. |
+| Clustering | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
 | Benchmark evidence | Keep tests and ids in evidence/spec, not workspace or scout targets. |
 | Boundary probe | Use a targeted production structure/symbol query when it changes scout shape. |
 
@@ -74,7 +74,7 @@ Planner exploration stops at routing; use scouts for owner maps and preserve unc
 ## 2. Scout
 
 ```text
-Caption: scout fan-out follows owner-family rows, not individual tests.
+Caption: scout fan-out by cluster shape — trivial rows go deep on targeted files, complex rows take a superficial directory map.
 
 owner ledger
   |-- exact file/symbol row ------> one deep single/multi-path scout
@@ -93,7 +93,7 @@ Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep path
 
 ## 3. Synthesize
 
-Enter after scout/no-scout closure. Load the Stage 3 reference first; use it for synthesis, not scout decisions.
+Enter after scout/no-scout closure. Load the Stage 3 reference; synthesize scout findings into the DAG — it need not mirror Stage 1 clustering.
 
 ```text
 Caption: root routing during synthesis.

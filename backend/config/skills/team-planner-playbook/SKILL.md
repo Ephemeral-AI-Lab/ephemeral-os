@@ -69,14 +69,14 @@ parent/deps/notes
 | Read context | Call `read_task_details(task_id=...)` for own task, parent, and each dep UUID. |
 | Inspect topology | Call `read_task_graph()` for dependency topology only. |
 | Classify intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
-| Build ledger | Group inherited owners, mechanisms, deps, and evidence; keep tests in spec context. |
+| Build ledger | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes; keep tests in spec context. |
 
 Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
 
 ## 2. Scout
 
 ```text
-Caption: scout fan-out follows owner-family rows, not individual tests.
+Caption: scout fan-out by cluster shape — trivial rows go deep on targeted files, complex rows take a superficial directory map.
 
 owner ledger
   |-- exact file/symbol row ------> one deep single/multi-path scout
@@ -95,7 +95,7 @@ Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep path
 
 ## 3. Synthesize
 
-Enter after context and scout/no-scout closure. Load the Stage 3 reference first; use it for synthesis, not scout decisions.
+Enter after context and scout/no-scout closure. Load the Stage 3 reference; synthesize scout findings into the DAG — it need not mirror Stage 1 clustering.
 
 ```text
 Caption: child routing with depth.
