@@ -123,6 +123,7 @@ def load_sweevo_dataset(
                 start_version=row.get("start_version", ""),
                 end_version=row.get("end_version", ""),
                 instance_id_swe=row.get("instance_id_swe", ""),
+                pr_description=row.get("pr_description", ""),
             )
         )
 

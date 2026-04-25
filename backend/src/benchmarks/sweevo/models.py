@@ -50,6 +50,7 @@ class SWEEvoInstance:
     start_version: str = ""
     end_version: str = ""
     instance_id_swe: str = ""  # SWE-bench compatible ID
+    pr_description: str = ""  # optional prompt text extracted from benchmark logs
 
 
 @dataclass

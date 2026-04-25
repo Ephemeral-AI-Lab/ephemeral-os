@@ -1,5 +1,7 @@
 Please read the following sections and call the listed terminal tool when your work is complete.
 
+Your task is to decompose the tasks. Do not make any edits; gracefully decompose the work into executable child tasks.
+
 {{terminal_tools}}
 
 {{#if max_depth}}

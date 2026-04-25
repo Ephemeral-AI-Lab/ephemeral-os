@@ -83,6 +83,11 @@ async def run_sweevo_with_agent(
                     f"size={summary['size']} bullets={summary['bullet_count']}"
                 ),
             )
+            srs_text = (instance.problem_statement or "").strip() or "(no changelog provided)"
+            _emit_progress(printer, "[srs] ----- SRS / Release Notes -----")
+            for line in srs_text.splitlines() or [""]:
+                _emit_progress(printer, f"[srs] {line}")
+            _emit_progress(printer, "[srs] ----- end SRS -----")
 
         if printer is not None:
             _emit_progress(

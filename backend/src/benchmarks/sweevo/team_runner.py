@@ -11,10 +11,16 @@ prepared by :func:`benchmarks.sweevo.sandbox.create_sweevo_test_sandbox`.
 
 from __future__ import annotations
 
+import csv
+import functools
 import json
 import logging
+import os
+import re
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from agents.registry import get_definition
 from config.paths import get_project_config_dir
@@ -64,6 +70,15 @@ _DEFAULT_NUM_EXECUTORS = 8
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 _SWEEVO_TEAM_NAME = "sweevo_benchmark"
+_PR_REF_RE = re.compile(r":pr:`(\d+)`")
+_PR_CONTEXT_TIMEOUT_S = 3
+_PR_CONTEXT_MAX_PRS = 20
+_PR_CONTEXT_MAX_BODY_CHARS = 900
+_PR_CONTEXT_MAX_TOTAL_CHARS = 30000
+_PR_DESCRIPTION_CSV_ENV = "SWEEVO_PR_DESCRIPTIONS_CSV"
+_PR_DESCRIPTION_CSV_PATH = (
+    _PROJECT_ROOT / "backend" / "config" / "benchmarks" / "sweevo_gpt5_2025_08_07_pr_descriptions.csv"
+)
 
 
 def _prompt_report_messages_path(team_run_id: str) -> Path:
@@ -110,6 +125,164 @@ def _build_benchmark_event_store() -> Any:
 # ---------------------------------------------------------------------------
 # Prompt construction
 # ---------------------------------------------------------------------------
+
+
+def _extract_problem_statement_pr_numbers(problem_statement: str) -> list[int]:
+    """Return unique PR numbers referenced by a SWE-EVO changelog."""
+    seen: set[int] = set()
+    numbers: list[int] = []
+    for match in _PR_REF_RE.finditer(problem_statement or ""):
+        number = int(match.group(1))
+        if number in seen:
+            continue
+        seen.add(number)
+        numbers.append(number)
+    return numbers
+
+
+def _pr_context_cache_dir(repo: str) -> Path:
+    safe_repo = re.sub(r"[^A-Za-z0-9_.-]+", "__", repo.strip())
+    return get_project_config_dir(_PROJECT_ROOT) / "sweevo-pr-context" / safe_repo
+
+
+def _load_github_pr_metadata(repo: str, number: int) -> dict[str, Any] | None:
+    """Load PR title/body metadata from GitHub with a project-local cache.
+
+    PR text is public specification context referenced by the changelog. The
+    loader never touches SWE-EVO patches or test patches.
+    """
+    if not repo or "/" not in repo:
+        return None
+
+    cache_dir = _pr_context_cache_dir(repo)
+    cache_path = cache_dir / f"{number}.json"
+    if cache_path.exists():
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            if isinstance(cached, dict):
+                return cached
+        except (OSError, json.JSONDecodeError):
+            logger.debug("Ignoring unreadable SWE-EVO PR cache %s", cache_path, exc_info=True)
+
+    url = f"https://api.github.com/repos/{repo}/pulls/{number}"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "EphemeralOS-SWE-EVO",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    request = Request(url, headers=headers)
+    try:
+        with urlopen(request, timeout=_PR_CONTEXT_TIMEOUT_S) as response:
+            raw = response.read().decode("utf-8")
+    except (HTTPError, URLError, TimeoutError, OSError):
+        logger.debug("Unable to fetch SWE-EVO PR context for %s#%s", repo, number, exc_info=True)
+        return None
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        logger.debug("Invalid SWE-EVO PR context response for %s#%s", repo, number, exc_info=True)
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    metadata = {
+        "number": number,
+        "title": str(payload.get("title") or "").strip(),
+        "body": str(payload.get("body") or "").strip(),
+        "html_url": str(payload.get("html_url") or "").strip(),
+    }
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+    except OSError:
+        logger.debug("Unable to write SWE-EVO PR cache %s", cache_path, exc_info=True)
+    return metadata
+
+
+def _truncate_prompt_text(text: str, *, limit: int) -> str:
+    compact = re.sub(r"\s+", " ", (text or "").strip())
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[: max(0, limit - 15)].rstrip()} ... [truncated]"
+
+
+def _build_pr_context(instance: SWEEvoInstance) -> str:
+    numbers = _extract_problem_statement_pr_numbers(instance.problem_statement)
+    if not numbers:
+        return ""
+
+    lines = [
+        "## Related PR Context",
+        "Public PR descriptions referenced by the changelog. Treat these as specification context; fail-to-pass test bodies remain hidden.",
+    ]
+    total_chars = sum(len(line) + 1 for line in lines)
+    loaded = 0
+    omitted = len(numbers) > _PR_CONTEXT_MAX_PRS
+    for number in numbers[:_PR_CONTEXT_MAX_PRS]:
+        metadata = _load_github_pr_metadata(instance.repo, number)
+        if not metadata:
+            continue
+        title = _truncate_prompt_text(str(metadata.get("title") or ""), limit=220)
+        body = _truncate_prompt_text(
+            str(metadata.get("body") or ""),
+            limit=_PR_CONTEXT_MAX_BODY_CHARS,
+        )
+        if not title and not body:
+            continue
+        item = f"- PR #{number}: {title or '(no title)'}"
+        if body:
+            item = f"{item}\n  Description: {body}"
+        if total_chars + len(item) + 1 > _PR_CONTEXT_MAX_TOTAL_CHARS:
+            lines.append("- Additional PR descriptions omitted to keep the prompt bounded.")
+            omitted = False
+            break
+        lines.append(item)
+        total_chars += len(item) + 1
+        loaded += 1
+
+    if loaded == 0:
+        return ""
+    if omitted:
+        lines.append("- Additional PR descriptions omitted to keep the prompt bounded.")
+    return "\n".join(lines)
+
+
+@functools.lru_cache(maxsize=8)
+def _load_pr_description_overrides(csv_path: str) -> dict[str, str]:
+    path = Path(csv_path)
+    if not path.exists():
+        return {}
+
+    descriptions: dict[str, str] = {}
+    try:
+        with path.open(encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f):
+                instance_id = str(row.get("test_folder") or "").strip()
+                if not instance_id:
+                    continue
+                descriptions[instance_id] = str(row.get("pr_description") or "")
+    except OSError:
+        logger.debug("Unable to load SWE-EVO PR descriptions from %s", path, exc_info=True)
+        return {}
+    return descriptions
+
+
+def _pr_description_for_instance(instance: SWEEvoInstance) -> str:
+    explicit = getattr(instance, "pr_description", "")
+    if explicit:
+        return explicit
+
+    csv_path = os.environ.get(_PR_DESCRIPTION_CSV_ENV) or str(_PR_DESCRIPTION_CSV_PATH)
+    overrides = _load_pr_description_overrides(csv_path)
+    for instance_id in (instance.instance_id, instance.instance_id_swe):
+        if instance_id in overrides:
+            return overrides[instance_id]
+    return instance.problem_statement
 
 
 def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
@@ -163,24 +336,24 @@ def _derive_execution_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]
 
 
 def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
-    """Minimal instance-specific prompt.
-
-    Config-backed agent skills and system prompts carry the detailed workflow
-    policy.
-    """
+    """Return the SWE-agent-style benchmark prompt for one instance."""
+    pr_description = _pr_description_for_instance(instance).strip()
     return (
-        f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
-        f"Repository: {instance.repo}\n"
-        f"Working directory inside the sandbox: {repo_dir}\n"
-        f"Base commit (already checked out): {instance.base_commit}\n\n"
-        f"Test command: {instance.test_cmds}\n\n"
-        f"## Changelog / Release Notes\n"
-        f"{instance.problem_statement.strip() or '(no changelog provided)'}\n\n"
-        f"## Objective\n"
-        f"Make the grading command pass by fixing the repository so the fail-to-pass "
-        f"tests turn green without regressing the pass-to-pass coverage.\n\n"
-        f"## Fail-To-Pass Targets\n{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
-        f"Stay inside {repo_dir}."
+        f"<Workspace Root>\n"
+        f"{repo_dir}\n"
+        f"<Workspace Root>\n\n"
+        f"I've uploaded a python code repository in the directory {repo_dir}. "
+        f"Consider the following PR description:\n"
+        f"<pr_description>\n"
+        f"{pr_description}\n"
+        f"</pr_description>\n\n"
+        f"Can you help me implement the necessary changes to the repository so that "
+        f"the requirements specified in the <pr_description> are met?\n"
+        f"I've already taken care of all changes to any of the test files described "
+        f"in the <pr_description>. This means you DON'T have to modify the testing "
+        f"logic or any of the tests in any way!\n"
+        f"Your task is to make the minimal changes to non-tests files in the "
+        f"{repo_dir} directory to ensure the <pr_description> is satisfied."
     )
 
 

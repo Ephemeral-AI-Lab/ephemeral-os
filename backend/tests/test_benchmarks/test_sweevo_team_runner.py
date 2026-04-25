@@ -18,6 +18,8 @@ from benchmarks.sweevo.team_runner import (
     _build_root_prompt,
     _derive_planner_runtime_limits,
     _emit_dispatcher_dag,
+    _extract_problem_statement_pr_numbers,
+    _load_pr_description_overrides,
     _make_context_builders,
     _make_runner,
 )
@@ -191,20 +193,77 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
 
 
 def test_root_prompt_includes_instance_essentials():
-    """Root prompt carries only instance-specific info — agent skills/system
-    prompts loaded from config supply the rest of the workflow policy."""
-    instance = _pydantic_instance()
+    """Root prompt mirrors the SWE-agent benchmark task wording."""
+    instance = _pydantic_instance(instance_id="local-instance", instance_id_swe="local-instance")
+
+    prompt = _build_root_prompt(instance, "/testbed")
+
+    assert prompt.startswith("<Workspace Root>\n/testbed\n<Workspace Root>\n\n")
+    assert "I've uploaded a python code repository in the directory /testbed." in prompt
+    assert "<pr_description>" in prompt
+    assert instance.problem_statement.strip() in prompt
+    assert "</pr_description>" in prompt
+    assert "you DON'T have to modify the testing logic or any of the tests" in prompt
+    assert "minimal changes to non-tests files in the /testbed directory" in prompt
+    assert instance.repo not in prompt
+    assert instance.base_commit not in prompt
+    assert instance.test_cmds not in prompt
+    assert json.dumps(instance.fail_to_pass, indent=2) not in prompt
+    assert json.dumps(instance.pass_to_pass, indent=2) not in prompt
+
+
+def test_root_prompt_uses_csv_pr_description_override(monkeypatch, tmp_path):
+    csv_path = tmp_path / "pr_descriptions.csv"
+    csv_path.write_text(
+        "test_folder,info_log_path,pr_description\n"
+        'csv-instance,SWE-agent/run/csv-instance.info.log,"CSV PR description"\n',
+        encoding="utf-8",
+    )
+    _load_pr_description_overrides.cache_clear()
+    monkeypatch.setenv("SWEEVO_PR_DESCRIPTIONS_CSV", str(csv_path))
+    instance = _pydantic_instance(
+        instance_id="csv-instance",
+        instance_id_swe="csv-instance",
+        problem_statement="Dataset problem statement",
+    )
+
+    prompt = _build_root_prompt(instance, "/testbed")
+
+    assert "CSV PR description" in prompt
+    assert "Dataset problem statement" not in prompt
+
+
+def test_extract_problem_statement_pr_numbers_preserves_unique_order():
+    text = "- Fix A (:pr:`10159`)\n- Fix B (:pr:`9947`)\n- Repeat (:pr:`10159`)"
+
+    assert _extract_problem_statement_pr_numbers(text) == [10159, 9947]
+
+
+def test_root_prompt_includes_related_pr_context(monkeypatch):
+    instance = _pydantic_instance(
+        instance_id="dask-context-instance",
+        instance_id_swe="dask-context-instance",
+        repo="dask/dask",
+        problem_statement="- Handle string engine (:pr:`9947`) `Maintainer`_",
+    )
+
+    def load_pr(repo: str, number: int) -> dict[str, object]:
+        assert repo == "dask/dask"
+        assert number == 9947
+        return {
+            "number": number,
+            "title": "Handle string-based engine argument to read_json",
+            "body": "This PR accepts engine names and routes them through the existing JSON reader.",
+        }
+
+    monkeypatch.setattr(sweevo_team_runner, "_load_github_pr_metadata", load_pr)
 
     prompt = _build_root_prompt(instance, "/repo")
 
-    assert instance.repo in prompt
-    assert instance.base_commit in prompt
-    assert instance.test_cmds in prompt
-    assert "## Changelog / Release Notes" in prompt
-    assert instance.problem_statement.strip() in prompt
-    assert "fail-to-pass" in prompt.lower()
-    assert json.dumps(instance.fail_to_pass, indent=2) in prompt
-    assert "/repo" in prompt
+    assert "## Related PR Context" not in prompt
+    assert "PR #9947: Handle string-based engine argument to read_json" not in prompt
+    assert "This PR accepts engine names" not in prompt
+    assert "- Handle string engine (:pr:`9947`) `Maintainer`_" in prompt
 
 
 def test_root_prompt_stays_compact_for_large_pass_to_pass():
@@ -216,6 +275,7 @@ def test_root_prompt_stays_compact_for_large_pass_to_pass():
 
     assert len(prompt.encode()) < 20000
     assert "Pass-To-Pass count" not in prompt
+    assert "tests/test_guard.py::test_case_0" not in prompt
 
 
 def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
@@ -309,6 +369,8 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
     )
 
     assert ctx.user_message.startswith("Please read the following sections")
+    assert "Your task is to decompose the tasks." in ctx.user_message
+    assert "Do not make any edits; gracefully decompose" in ctx.user_message
     assert "- submit_plan:" in ctx.user_message
     assert "## Available Agents" not in ctx.user_message
     assert ctx.user_message.count("Root plan the repo.") == 1
