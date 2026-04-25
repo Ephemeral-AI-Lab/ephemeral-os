@@ -923,8 +923,6 @@ backend/src/tools/daytona_toolkit/hooks/prehook/shell_stderr_suppression_policy.
 backend/src/tools/daytona_toolkit/hooks/prehook/shell_file_edit_policy.py
 backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/posthook/audited_write_policy.py
-backend/src/tools/daytona_toolkit/hooks/posthook/move_extend_scope.py
-backend/src/tools/daytona_toolkit/hooks/posthook/write_extend_scope.py
 backend/src/tools/daytona_toolkit/_commit.py
 backend/src/tools/daytona_toolkit/_audit.py
 backend/tests/test_tools/test_hooks/__init__.py
