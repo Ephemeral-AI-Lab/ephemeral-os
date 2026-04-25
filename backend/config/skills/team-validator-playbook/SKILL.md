@@ -68,7 +68,7 @@ own task -> parent task -> dependency tasks -> touched/owned file notes
   -> criteria + handoff evidence + scope paths + freshness gaps
 ```
 
-Use exact UUIDs from the prompt header. Treat dependency details as implementation handoff. Missing, stale, boilerplate, or evidence-free dependency summaries are validation gaps.
+Use exact UUIDs from the prompt header. Treat dependency details as implementation handoff. Call `read_file_note(file_paths=[...])` for every assigned scope path and every file you intend to inspect with `daytona_read_file`; empty notes are valid but the call is mandatory before the first source read. Missing, stale, boilerplate, or evidence-free dependency summaries are validation gaps.
 
 ## 2. Build Validation Plan
 
@@ -117,7 +117,7 @@ red evidence -> failure + exit + ids + snippet
   -> boundary: local | handoff | outside scope | tooling | unclear
 ```
 
-Root-cause packet:
+After every red verification, emit this packet as a fenced ```json block in your next assistant message before any `daytona_*`, `submit_task_success`, or `request_replan` call. Free-form prose explaining the failure does not satisfy this gate; the named keys must be present.
 
 ```json
 {
@@ -164,6 +164,10 @@ any red / invalid / missing / stale / partial / blocked / budget fully spent + i
   -> request_replan({ reason })
 ```
 
+The "raw green evidence" must come from the unmodified required pytest command: no `-c`, `-p no:`, `-W`, `--noconftest`, no piping, and `rootdir`/`configfile` in the captured output must match the project's real config (not `/dev` or `null`). Wrappered, filtered, or override-poisoned green output counts as red; re-run the raw command or `request_replan`.
+
+`submit_task_success` is forbidden if the summary admits any acceptance criterion is unmet, partial, deferred, or "out of scope". Phrases like "remaining tests fail", "still failing", "out of scope for this fix", or "not implemented" mean `request_replan` instead.
+
 Success summary includes:
 
 | Line | Content |
@@ -192,6 +196,6 @@ Trigger guide:
 
 | Trigger | Use when |
 | --- | --- |
-| `scope_expansion` | Verified repair is broad, ambiguous, or requires multiple outside-scope mutations. |
+| `scope_expansion` | Verified repair is broad, ambiguous, or requires multiple outside-scope production mutations. Never used to justify editing tests, benchmarks, pytest config, or fixtures. |
 | `wrong_owner_or_role` | Child-owned suite, dependency, role, or production owner must act first. |
-| `unresolved_blocker` | Verification, diagnostics, tooling, fully spent budget, or root-cause tracing is blocked without proven different owner. |
+| `unresolved_blocker` | Verification, diagnostics, tooling, fully spent budget, or root-cause tracing is blocked without proven different owner. Also used when the only remaining work would require editing tests/benchmarks/pytest config — the production seam needs to be redesigned, not the test. |

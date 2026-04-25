@@ -68,7 +68,7 @@ own task -> parent task -> dependency tasks -> file notes
    -> goal + criteria + scope paths + dependency status + freshness
 ```
 
-Use exact UUIDs from the prompt header. Treat task and dependency details as the handoff. Read each expected file note once; empty notes are valid.
+Use exact UUIDs from the prompt header. Treat task and dependency details as the handoff. Call `read_file_note(file_paths=[...])` for every assigned scope path and every file you intend to inspect with `daytona_read_file`; empty notes are valid but the call is mandatory before the first source read.
 
 ## 2. Plan Boundary
 
@@ -105,10 +105,7 @@ bounded edit plan -> prove file/symbol/rename target -> one Daytona mutation -> 
 | Multiple outside-scope files or broad/unclear boundary | `request_replan` with `scope_expansion`. |
 | Test edit, dependency edit, environment edit, or verification rewrite | `request_replan` with the fitting trigger. |
 
-After a red command, write a compact value table, then complete Stage 4 RCA before another edit:
-
-| input/state | current | expected | production rule | next action |
-| --- | --- | --- | --- | --- |
+After a red command, do not edit again until Stage 4 RCA is emitted (see below).
 
 ## 4. Verify
 
@@ -132,8 +129,7 @@ post-edit repo
 
 ### Required RCA For Verify Failure
 
-RCA is required after every red, absent, or invalid verification result before
-another edit or `request_replan`.
+After every red, absent, or invalid verification, emit the RCA packet below as a fenced ```json block in your next assistant message before any further `daytona_*`, `submit_task_success`, or `request_replan` call. Free-form prose explaining the failure does not satisfy this gate; the named keys must be present.
 
 ```text
 Caption: mandatory red evidence loop. Trace the first wrong production mechanism before any edit or replan.
@@ -141,8 +137,6 @@ Caption: mandatory red evidence loop. Trace the first wrong production mechanism
 failing command -> failing id/error -> expected vs actual
   -> production trace -> first wrong mechanism -> fix location
 ```
-
-RCA packet:
 
 ```json
 {
@@ -158,9 +152,10 @@ RCA packet:
 
 | RCA decision | Route |
 | --- | --- |
-| One assigned-scope or proven adjacent production defect and enough budget | Return to Stage 3. |
-| Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, repeated red command, or tool failure | `request_replan`. |
-| Budget fully spent before green verification | Use `request_replan` unless already green with clean diagnostics. |
+| One assigned-scope or proven adjacent production defect, new mechanism since last RCA, and enough budget | Return to Stage 3 for one more bounded fix. |
+| Same target test/diagnostic stays red across two consecutive RCAs without a new local defect named in `root_cause` | `request_replan` with `unresolved_blocker`. |
+| Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, or tool failure | `request_replan`. |
+| Budget fully spent before green verification | `request_replan` unless already green with clean diagnostics. |
 
 ## 5. Submit Terminal Summary
 
@@ -174,6 +169,10 @@ red / absent / invalid / stale / partial after Stage 4 RCA
   or blocked / broad / wrong-owner / budget fully spent + incomplete
   -> request_replan({ reason })
 ```
+
+The "latest required verification" must be the unmodified required pytest command: no `-c`, `-p no:`, `-W`, `--noconftest`, no piping, and `rootdir`/`configfile` in the captured output must match the project's real config (not `/dev` or `null`). If the green evidence came from any wrappered, filtered, or override-poisoned command, treat it as red and either re-run the raw command or `request_replan`.
+
+`submit_task_success` is forbidden if the summary admits any acceptance criterion is unmet, partial, deferred, or "out of scope". Phrases like "remaining tests fail", "still failing", "out of scope for this fix", "fundamental test/implementation mismatch", or "not implemented" mean `request_replan` instead — partial coverage is not success.
 
 Success summary includes:
 
@@ -200,6 +199,6 @@ Trigger guide:
 
 | Trigger | Use when |
 | --- | --- |
-| `scope_expansion` | Next repair is broad, ambiguous, or requires multiple outside-scope files. |
+| `scope_expansion` | Next repair is broad, ambiguous, or requires multiple outside-scope production files. Never used to justify editing tests, benchmarks, pytest config, or fixtures. |
 | `wrong_owner_or_role` | A dependency is not done or another owner/role must act. |
-| `unresolved_blocker` | Tooling, diagnostics, spent budget, verification, or trace evidence is blocked with no proven different owner. |
+| `unresolved_blocker` | Tooling, diagnostics, spent budget, verification, or trace evidence is blocked with no proven different owner. Also used when the only remaining work would require editing tests/benchmarks/pytest config — the production seam needs to be redesigned, not the test. |
