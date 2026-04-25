@@ -86,7 +86,7 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "prefer child planners even when the first-pass owner labels are clear" in defn.system_prompt
     assert "For clustering jobs, include at least one child `team_planner`" in defn.system_prompt
     assert "not multi-cluster benchmark repair" in defn.system_prompt
-    assert "one production owner family in `target_paths`" in defn.system_prompt
+    assert "one production owner row in `target_paths`" in defn.system_prompt
     assert "the read tool returns the latest note per path" in defn.system_prompt
     assert "Never bundle unrelated files/directories into one scout" in defn.system_prompt
     assert 'load_skill(skill_name="team-root-planner-playbook")' in defn.system_prompt

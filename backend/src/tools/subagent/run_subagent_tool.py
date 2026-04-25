@@ -83,6 +83,12 @@ def _forbidden_scout_target_paths(paths: list[str]) -> list[str]:
     return [path for path in paths if is_test_scope_path(path)]
 
 
+def _invalid_scout_multi_target_paths(paths: list[str]) -> list[str]:
+    if len(paths) <= 1:
+        return []
+    return paths
+
+
 class RunSubagentInput(BaseModel):
     """Runtime input model for run_subagent.
 
@@ -251,6 +257,21 @@ def _validate_run_subagent_request(
                     "Keep test files and test directories in context/spec text "
                     "instead of dispatching scouts to them. "
                     f"Offending target_paths:\n  - {rendered}"
+                ),
+                is_error=True,
+            )
+        multi_target_paths = _invalid_scout_multi_target_paths(subagent_scope_paths)
+        if multi_target_paths:
+            rendered = "\n  - ".join(multi_target_paths)
+            return ToolResult(
+                output=(
+                    "run_subagent: scout target_paths must describe one production "
+                    "owner row. Received multiple paths in one scout. Launch "
+                    "separate scouts in the same parallel wave, or use one "
+                    "package/directory path for a broad row; do not batch sibling "
+                    "owners such as HDF+JSON/parquet, groupby+utils, or "
+                    "cli/config/compat. Offending target_paths:\n  - "
+                    f"{rendered}"
                 ),
                 is_error=True,
             )
