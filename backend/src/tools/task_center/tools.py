@@ -11,7 +11,6 @@ Role-specific visibility is handled by each agent definition's explicit tool lis
 from __future__ import annotations
 
 import json
-import re
 import time
 import uuid
 
@@ -22,41 +21,13 @@ from team.core.models import (
     TaskSpec,
     TaskStatus,
 )
-from team.core.scope import normalize_scope_paths, scope_paths_overlap
+from team.core.scope import normalize_scope_paths
 from tools.core.base import (
     BaseTool,
     TextToolOutput,
     ToolExecutionContext,
     ToolResult,
 )
-
-_BACKTICK_PATH_RE = re.compile(r"`([^`\n]+)`")
-
-
-def _scout_scope_repair_paths(content: str, note_paths: list[str]) -> list[str]:
-    if "does not exist" not in content.lower():
-        return []
-    leaked: list[str] = []
-    for token in _BACKTICK_PATH_RE.findall(content):
-        candidate = token.strip().replace("\\", "/").rstrip("/")
-        if "/" not in candidate or " " in candidate:
-            continue
-        if any(scope_paths_overlap(candidate, allowed) for allowed in note_paths):
-            continue
-        leaked.append(candidate)
-    return normalize_scope_paths(leaked)
-
-
-def _sanitize_scout_gap_paths(content: str, note_paths: list[str]) -> str:
-    leaked = set(_scout_scope_repair_paths(content, note_paths))
-    if not leaked:
-        return content
-
-    def _rewrite(match: re.Match[str]) -> str:
-        token = match.group(1).strip().replace("\\", "/").rstrip("/")
-        return token if token in leaked else match.group(0)
-
-    return _BACKTICK_PATH_RE.sub(_rewrite, content)
 
 
 def _task_definition_payload(task_def: object) -> dict[str, object]:
@@ -220,9 +191,6 @@ async def _create_note_output(
         raise _TaskCenterUnavailable("Task Center not available")
 
     note_paths = normalize_scope_paths(paths)
-    if str(context.metadata.get("agent_name") or "").strip() == "scout" and note_paths:
-        if "intended path" not in content.lower() and "correct path" not in content.lower():
-            content = _sanitize_scout_gap_paths(content, note_paths)
 
     note = Note(
         id=str(uuid.uuid4()),

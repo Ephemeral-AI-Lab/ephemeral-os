@@ -7,7 +7,7 @@ Use only in the exact-file completion stage when the prompt names a single file 
 ```text
 Caption: exact-file scout completion keeps the handed scope as the deliverable.
 
-notes read
+named paths
   -> one file-path ci_query_symbol per named path
   -> definitions found? submit notes
   -> missing/no-symbol/replaced by directory? submit notes with gap

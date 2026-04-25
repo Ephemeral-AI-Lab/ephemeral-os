@@ -8,19 +8,18 @@ description: Authoritative playbook for the scout subagent. Performs evidence-on
 Scout only the paths named in the prompt, post durable notes via `submit_file_note(...)`, then stop.
 
 ```text
-Caption: scout route. Notes first, then exploration, then exact-file completion when needed.
+Caption: scout route. Explore the named paths, then exact-file completion when needed, then submit.
 
-prompt -> [1 Notes] -> [2 Explore] -> [3 Load completion-contract if exact-file] -> [4 Submit notes]
+prompt -> [1 Explore] -> [2 Load completion-contract if exact-file] -> [3 Submit notes]
 ```
 
 | Stage | Output |
 | --- | --- |
-| 1. Notes | `read_file_note(file_paths=[all named target paths])` as the first tool phase. |
-| 2. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps. |
-| 3. Exact-file completion | Load `completion-contract` only after notes and exploration. |
-| 4. Submit notes | `submit_file_note({ paths: [...], content: "..." })` calls covering the named paths. Group related paths into one note where they share findings; one path per note is also fine. Then stop. |
+| 1. Explore | Evidence-only map of scope, entry points, owner seam, subdivisions, and gaps for the named paths. |
+| 2. Exact-file completion | Load `completion-contract` only after exploration, when the prompt named a single file or short fixed file list. |
+| 3. Submit notes | `submit_file_note({ paths: [...], content: "..." })` calls covering the named paths. Group related paths into one note where they share findings; one path per note is also fine. Then stop. |
 
-## 2. Explore
+## 1. Explore
 
 | Target shape | Exploration |
 | --- | --- |
