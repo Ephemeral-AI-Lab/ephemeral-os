@@ -1,7 +1,7 @@
 """Task Center tools — notes + task graph reads.
 
 Tools exposed in the main loop:
-- submit_file_notes             — post batched file-scoped notes
+- submit_file_note              — post one note over one or more file/dir paths
 - read_task_details             — task spec, status, and terminal submission data
 - read_file_note                — search notes by file path
 
@@ -15,7 +15,7 @@ import re
 import time
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from team.core.models import (
     ReplanPlan,
@@ -151,7 +151,7 @@ def _append_submission_details(
         lines.extend(["", reason_heading, "", failure_reason])
 
 # ---------------------------------------------------------------------------
-# SubmitFileNotesTool
+# SubmitFileNoteTool
 # ---------------------------------------------------------------------------
 
 
@@ -161,22 +161,15 @@ def _non_blank_content(value: str) -> str:
     return value
 
 
-def _normalize_single_path(value: str) -> str:
-    normalized = normalize_scope_paths([value])
-    if len(normalized) != 1:
-        raise ValueError("path must resolve to exactly one normalized path")
-    return normalized[0]
-
-
-class FileNoteInput(BaseModel):
+class SubmitFileNoteInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    path: str = Field(
+    paths: list[str] = Field(
         ...,
         min_length=1,
         description=(
-            "REQUIRED. One file or directory path this note is about. Use exactly "
-            "one path per note item."
+            "REQUIRED. One or more file or directory paths this note covers. "
+            "All paths are normalized; one note may attach to multiple paths."
         ),
     )
     content: str = Field(
@@ -188,10 +181,13 @@ class FileNoteInput(BaseModel):
         min_length=1,
     )
 
-    @field_validator("path")
+    @field_validator("paths")
     @classmethod
-    def _path_must_normalize_to_one_path(cls, value: str) -> str:
-        return _normalize_single_path(value)
+    def _paths_must_normalize(cls, value: list[str]) -> list[str]:
+        normalized = normalize_scope_paths(value)
+        if not normalized:
+            raise ValueError("paths must contain at least one normalized path")
+        return normalized
 
     @field_validator("content")
     @classmethod
@@ -199,52 +195,12 @@ class FileNoteInput(BaseModel):
         return _non_blank_content(value)
 
 
-class SubmitFileNotesInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    notes: list[FileNoteInput] = Field(
-        ...,
-        min_length=1,
-        description=(
-            "REQUIRED. Batched file or directory notes to post. Each item must "
-            "contain exactly one normalized `path` and non-empty `content`."
-        ),
-    )
-
-    @model_validator(mode="after")
-    def _reject_duplicate_paths(self) -> "SubmitFileNotesInput":
-        seen: set[str] = set()
-        duplicates: list[str] = []
-        for note in self.notes:
-            if note.path in seen and note.path not in duplicates:
-                duplicates.append(note.path)
-            seen.add(note.path)
-        if duplicates:
-            dupes = ", ".join(sorted(duplicates))
-            raise ValueError(f"notes contains duplicate normalized paths: {dupes}")
-        return self
-
-
-class NoteOutput(BaseModel):
+class FileNoteOutput(BaseModel):
     note_id: str = Field(..., description="Created file note id.")
     agent_name: str = Field(..., description="Runtime-stamped agent name that posted the note.")
     content: str = Field(..., description="Stored note content.")
     timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
     paths: list[str] = Field(default_factory=list, description="Scope paths attached to the note.")
-
-
-class FileNoteItemOutput(BaseModel):
-    note_id: str = Field(..., description="Created file note id.")
-    path: str = Field(..., description="Normalized file or directory path for this note.")
-    content: str = Field(..., description="Stored note content.")
-    timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
-
-
-class FileNotesOutput(BaseModel):
-    notes: list[FileNoteItemOutput] = Field(
-        default_factory=list,
-        description="Created file-scoped notes in the same order they were submitted.",
-    )
 
 
 class _TaskCenterUnavailable(RuntimeError):
@@ -256,7 +212,7 @@ async def _create_note_output(
     content: str,
     paths: list[str],
     context: ToolExecutionContext,
-) -> NoteOutput:
+) -> FileNoteOutput:
     from team.core.models import Note
 
     tc = context.metadata.get("task_center")
@@ -276,7 +232,7 @@ async def _create_note_output(
         paths=note_paths,
     )
     await tc.notes.post(note)
-    return NoteOutput(
+    return FileNoteOutput(
         note_id=note.id,
         agent_name=note.agent_name,
         content=note.content,
@@ -285,61 +241,26 @@ async def _create_note_output(
     )
 
 
-async def _create_file_note_output(
-    *,
-    content: str,
-    path: str,
-    context: ToolExecutionContext,
-) -> FileNoteItemOutput:
-    note = await _create_note_output(
-        content=content,
-        paths=[path],
-        context=context,
-    )
-    return FileNoteItemOutput(
-        note_id=note.note_id,
-        path=note.paths[0] if note.paths else "",
-        content=note.content,
-        timestamp=note.timestamp,
-    )
-
-
-async def _post_file_notes(
-    *,
-    notes: list[FileNoteInput],
-    context: ToolExecutionContext,
-) -> ToolResult:
-    posted: list[FileNoteItemOutput] = []
-    try:
-        for entry in notes:
-            posted.append(
-                await _create_file_note_output(
-                    content=entry.content,
-                    path=entry.path,
-                    context=context,
-                )
-            )
-    except _TaskCenterUnavailable as exc:
-        return ToolResult(output=f"Error: {exc}", is_error=True)
-    payload = FileNotesOutput(notes=posted)
-    return ToolResult(output=payload.model_dump_json())
-
-
-class SubmitFileNotesTool(BaseTool):
-    name = "submit_file_notes"
+class SubmitFileNoteTool(BaseTool):
+    name = "submit_file_note"
     description = (
-        "Posts append-only file or directory notes for later path lookups."
+        "Posts an append-only file or directory note covering one or more paths."
     )
-    short_description = "Post batched file-scoped notes."
-    input_model = SubmitFileNotesInput
-    output_model = FileNotesOutput
+    short_description = "Post one multi-path file note."
+    input_model = SubmitFileNoteInput
+    output_model = FileNoteOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, SubmitFileNotesInput)
-        return await _post_file_notes(
-            notes=arguments.notes,
-            context=context,
-        )
+        assert isinstance(arguments, SubmitFileNoteInput)
+        try:
+            note = await _create_note_output(
+                content=arguments.content,
+                paths=arguments.paths,
+                context=context,
+            )
+        except _TaskCenterUnavailable as exc:
+            return ToolResult(output=f"Error: {exc}", is_error=True)
+        return ToolResult(output=note.model_dump_json())
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +512,7 @@ class ReadTaskGraphTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 TASK_CENTER_TOOLS: list[BaseTool] = [
-    SubmitFileNotesTool(),
+    SubmitFileNoteTool(),
     ReadFileNoteTool(),
     ReadTaskDetailsTool(),
     ReadTaskGraphTool(),

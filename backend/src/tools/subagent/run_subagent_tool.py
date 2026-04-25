@@ -30,7 +30,6 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-from pydantic.json_schema import GenerateJsonSchema
 
 from agents.run_tracker import AgentRunTracker
 from message.messages import (
@@ -40,7 +39,6 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from team.core.scope import is_test_scope_path, scope_paths_from_payload
 from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
@@ -61,7 +59,6 @@ _PEEK_TOTAL_CHAR_CAP = 2048
 @dataclass
 class _ValidatedRunSubagentRequest:
     sub_def: Any
-    subagent_scope_paths: list[str]
 
 
 def _truncate(s: str) -> str:
@@ -79,79 +76,22 @@ def _compact_args(inp: Any) -> str:
     return _truncate(s)
 
 
-def _forbidden_scout_target_paths(paths: list[str]) -> list[str]:
-    return [path for path in paths if is_test_scope_path(path)]
-
-
 class RunSubagentInput(BaseModel):
-    """Runtime input model for run_subagent.
-
-    Runtime parsing remains permissive so existing internal callers can omit
-    one side of the prompt/input pair and let validation return a tool error.
-    The published JSON schema is stricter because models tend to emit explicit
-    JSON nulls for optional fields, which violates the tool's XOR contract.
-    """
+    """Runtime input model for run_subagent."""
 
     agent_name: str = Field(
         ...,
         description="Name of a registered dispatchable subagent.",
     )
-    prompt: str | None = Field(
-        default=None,
-        description="Free-form subagent task prompt. Mutually exclusive with input.",
-    )
-    input: dict[str, Any] | None = Field(
-        default=None,
+    prompt: str = Field(
+        ...,
+        min_length=1,
         description=(
-            "Structured subagent payload. The shape is defined by the target "
-            "subagent's own contract (see the agent's description and "
-            "playbook). Mutually exclusive with prompt."
+            "Free-form, fully descriptive task prompt. Include any target "
+            "paths, context, and required actions inline — this is the only "
+            "channel the subagent receives."
         ),
     )
-
-    @classmethod
-    def model_json_schema(
-        cls,
-        by_alias: bool = True,
-        ref_template: str = "#/$defs/{model}",
-        schema_generator: type[GenerateJsonSchema] = GenerateJsonSchema,
-        mode: str = "validation",
-    ) -> dict[str, Any]:
-        schema = super().model_json_schema(
-            by_alias=by_alias,
-            ref_template=ref_template,
-            schema_generator=schema_generator,
-            mode=mode,
-        )
-        props = schema.get("properties", {})
-
-        def _strip_null_variant(name: str, expected_type: str) -> None:
-            prop = props.get(name)
-            if not isinstance(prop, dict):
-                return
-            cleaned: dict[str, Any] | None = None
-            for variant in prop.get("anyOf", []):
-                if isinstance(variant, dict) and variant.get("type") == expected_type:
-                    cleaned = dict(variant)
-                    break
-            if cleaned is None:
-                return
-            if "title" in prop:
-                cleaned["title"] = prop["title"]
-            if "description" in prop:
-                cleaned["description"] = prop["description"]
-            cleaned.pop("default", None)
-            if expected_type == "string":
-                cleaned["minLength"] = max(int(cleaned.get("minLength", 1) or 1), 1)
-            props[name] = cleaned
-
-        _strip_null_variant("prompt", "string")
-        _strip_null_variant("input", "object")
-        schema["oneOf"] = [
-            {"required": ["prompt"]},
-            {"required": ["input"]},
-        ]
-        return schema
 
 
 class RunSubagentOutput(BaseModel):
@@ -189,7 +129,6 @@ def _validate_run_subagent_request(
     *,
     agent_name: str,
     prompt: str | None,
-    input: dict[str, Any] | None,
     context: ToolExecutionContext,
 ) -> ToolResult | _ValidatedRunSubagentRequest:
     from agents import get_definition
@@ -201,13 +140,9 @@ def _validate_run_subagent_request(
             is_error=True,
         )
 
-    # XOR validation: exactly one of prompt / input must be supplied.
-    if (prompt is None) == (input is None):
+    if not isinstance(prompt, str) or not prompt.strip():
         return ToolResult(
-            output=(
-                "run_subagent: must supply exactly one of `prompt` (str) or "
-                "`input` (dict); do not retry with both set or both null."
-            ),
+            output="run_subagent: `prompt` must be a non-empty string.",
             is_error=True,
         )
 
@@ -240,25 +175,7 @@ def _validate_run_subagent_request(
             is_error=True,
         )
 
-    subagent_scope_paths = scope_paths_from_payload(input)
-    if sub_def.name == "scout":
-        forbidden_targets = _forbidden_scout_target_paths(subagent_scope_paths)
-        if forbidden_targets:
-            rendered = "\n  - ".join(forbidden_targets)
-            return ToolResult(
-                output=(
-                    "run_subagent: scout target_paths must be production paths. "
-                    "Keep test files and test directories in context/spec text "
-                    "instead of dispatching scouts to them. "
-                    f"Offending target_paths:\n  - {rendered}"
-                ),
-                is_error=True,
-            )
-
-    return _ValidatedRunSubagentRequest(
-        sub_def=sub_def,
-        subagent_scope_paths=subagent_scope_paths,
-    )
+    return _ValidatedRunSubagentRequest(sub_def=sub_def)
 
 
 def _render_block(block: Any) -> str:
@@ -346,8 +263,10 @@ def _clear_current_task_cancellation() -> None:
 @tool(
     name="run_subagent",
     description=(
-        "Starts a dispatchable subagent as a background task using exactly one "
-        "of `prompt` or `input`, and returns its background task id."
+        "Starts a dispatchable subagent as a background task with a free-form "
+        "`prompt`, and returns its background task id. The prompt is the only "
+        "channel: include target paths, context, and the required terminal "
+        "action inline."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
@@ -357,8 +276,7 @@ def _clear_current_task_cancellation() -> None:
 )
 async def run_subagent(
     agent_name: str,
-    prompt: str | None = None,
-    input: dict[str, Any] | None = None,
+    prompt: str,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
@@ -375,15 +293,13 @@ async def run_subagent(
     validation = _validate_run_subagent_request(
         agent_name=agent_name,
         prompt=prompt,
-        input=input,
         context=context,
     )
     if isinstance(validation, ToolResult):
         return validation
     sub_def = validation.sub_def
-    subagent_scope_paths = validation.subagent_scope_paths
 
-    final_prompt = prompt if prompt is not None else json.dumps(input, separators=(",", ":"), default=str)
+    final_prompt = prompt
 
     # Persist a subagent run record FIRST, before spawn_agent — so spawn
     # failures still leave an audit trail that the parent can list / inspect
@@ -412,7 +328,6 @@ async def run_subagent(
             agent_def=sub_def,
             latest_user_prompt=final_prompt,
             sandbox_id=sandbox_id,
-            target_paths=list(subagent_scope_paths) or None,
         )
     except Exception as exc:
         logger.exception("run_subagent: spawn_agent failed")
@@ -427,12 +342,12 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: spawn failed: {exc}", is_error=True)
 
-    # The subagent is parameterized solely by `prompt` / `input`. Its
-    # `tool_metadata` is the fresh `ExecutionMetadata` that `spawn_agent`
-    # produced (session_config + sandbox_id). We deliberately do NOT
-    # inherit any parent metadata — the only child-defined values we add
-    # are the agent identity, the query-loop timing marker, and the
-    # child's declared role from its own AgentDefinition.
+    # The subagent is parameterized solely by `prompt`. Its `tool_metadata` is
+    # the fresh `ExecutionMetadata` that `spawn_agent` produced
+    # (session_config + sandbox_id). We deliberately do NOT inherit any
+    # parent metadata — the only child-defined values we add are the agent
+    # identity, the query-loop timing marker, and the child's declared role
+    # from its own AgentDefinition.
     qc = getattr(agent, "query_context", None)
     if qc is not None and qc.tool_metadata is not None:
         qc.tool_metadata.agent_name = sub_def.name
@@ -441,14 +356,6 @@ async def run_subagent(
             # Dispatchable scouts are not Task Center tasks, but their note
             # tools must read from and post to the parent run's note store.
             qc.tool_metadata["task_center"] = task_center
-        # `target_paths` carries the subagent's declared scope (derived from
-        # the caller's `input` payload via scope_paths_from_payload). This is
-        # deliberately distinct from `write_scope` — the latter is a
-        # team-worker write-permission key enforced by the daytona file
-        # tools. Subagents are read-oriented: they should not inherit
-        # ambient write rights, and coverage-style checks (e.g. scout's
-        # exact-file-note policy) read `target_paths` instead.
-        qc.tool_metadata["target_paths"] = list(subagent_scope_paths)
         qc.tool_metadata["work_item_started_at"] = time.time()
         sub_role = getattr(sub_def, "role", None)
         if sub_role:
@@ -595,7 +502,6 @@ def _run_subagent_background_preflight(arguments: Any, context: ToolExecutionCon
     validation = _validate_run_subagent_request(
         agent_name=str(getattr(arguments, "agent_name", "")),
         prompt=getattr(arguments, "prompt", None),
-        input=getattr(arguments, "input", None),
         context=context,
     )
     if isinstance(validation, ToolResult):

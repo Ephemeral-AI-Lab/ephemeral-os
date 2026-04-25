@@ -13,7 +13,7 @@ from tools.task_center.tools import (
     ReadFileNoteTool,
     ReadTaskDetailsTool,
     ReadTaskGraphTool,
-    SubmitFileNotesTool,
+    SubmitFileNoteTool,
 )
 from tools.core.base import ToolExecutionContext, parse_tool_input
 from team.core.models import (
@@ -62,7 +62,7 @@ def _task(
 
 
 @pytest.mark.asyncio
-async def test_submit_file_notes_store_one_note_per_item():
+async def test_submit_file_note_stores_one_note_with_multiple_paths():
     class _Notes:
         def __init__(self) -> None:
             self.posted = []
@@ -79,33 +79,26 @@ async def test_submit_file_notes_store_one_note_per_item():
         }
     )
 
-    tool = SubmitFileNotesTool()
+    tool = SubmitFileNoteTool()
     result = await tool.execute(
         tool.input_model(
-            notes=[
-                {"path": "./src/auth.py/", "content": "Mapped auth surface."},
-                {"path": "src/session.py", "content": "Mapped session surface."},
-            ],
+            paths=["./src/auth.py/", "src/session.py"],
+            content="Mapped auth + session surface.",
         ),
         ctx,
     )
 
     assert result.is_error is False
     payload = json.loads(result.output)
-    assert [item["path"] for item in payload["notes"]] == ["src/auth.py", "src/session.py"]
-    assert [item["content"] for item in payload["notes"]] == [
-        "Mapped auth surface.",
-        "Mapped session surface.",
-    ]
-    assert len(notes.posted) == 2
-    assert notes.posted[0].paths == ["src/auth.py"]
-    assert notes.posted[1].paths == ["src/session.py"]
-    assert notes.posted[0].id == payload["notes"][0]["note_id"]
-    assert notes.posted[1].id == payload["notes"][1]["note_id"]
+    assert payload["paths"] == ["src/auth.py", "src/session.py"]
+    assert payload["content"] == "Mapped auth + session surface."
+    assert len(notes.posted) == 1
+    assert notes.posted[0].paths == ["src/auth.py", "src/session.py"]
+    assert notes.posted[0].id == payload["note_id"]
 
 
 @pytest.mark.asyncio
-async def test_submit_file_notes_preserve_order_and_allow_scout_correct_path_content():
+async def test_submit_file_note_allows_scout_correct_path_content():
     class _Notes:
         def __init__(self) -> None:
             self.posted = []
@@ -121,68 +114,58 @@ async def test_submit_file_notes_preserve_order_and_allow_scout_correct_path_con
         }
     )
 
-    tool = SubmitFileNotesTool()
+    tool = SubmitFileNoteTool()
     result = await tool.execute(
         tool.input_model(
-            notes=[
-                {"path": "src/auth.py", "content": "Mapped auth surface first."},
-                {
-                    "path": "src/missing.py",
-                    "content": "Missing target; correct path appears to be src/session.py.",
-                },
-            ],
+            paths=["src/missing.py"],
+            content="Missing target; correct path appears to be src/session.py.",
         ),
         ctx,
     )
 
     assert result.is_error is False
     payload = json.loads(result.output)
-    assert [item["path"] for item in payload["notes"]] == ["src/auth.py", "src/missing.py"]
-    assert notes.posted[0].content == "Mapped auth surface first."
-    assert notes.posted[1].content == "Missing target; correct path appears to be src/session.py."
+    assert payload["paths"] == ["src/missing.py"]
+    assert (
+        notes.posted[0].content
+        == "Missing target; correct path appears to be src/session.py."
+    )
 
 
-def test_submit_file_notes_reject_whitespace_only_content():
+def test_submit_file_note_rejects_whitespace_only_content():
     with pytest.raises(ValidationError, match="content must contain non-whitespace text"):
-        SubmitFileNotesTool.input_model(
-            notes=[{"path": "src/a.py", "content": " \n\t"}],
-        )
+        SubmitFileNoteTool.input_model(paths=["src/a.py"], content=" \n\t")
 
 
-def test_submit_file_notes_reject_empty_batch():
+def test_submit_file_note_rejects_empty_paths():
     with pytest.raises(ValidationError):
-        SubmitFileNotesTool.input_model(notes=[])
+        SubmitFileNoteTool.input_model(paths=[], content="x")
 
 
-def test_submit_file_notes_reject_duplicate_normalized_paths():
-    with pytest.raises(ValidationError, match="duplicate normalized paths"):
-        SubmitFileNotesTool.input_model(
-            notes=[
-                {"path": "./src/a.py", "content": "first"},
-                {"path": "src/a.py/", "content": "second"},
-            ],
-        )
+def test_submit_file_note_dedupes_normalized_paths():
+    args = SubmitFileNoteTool.input_model(
+        paths=["./src/a.py", "src/a.py/"],
+        content="first",
+    )
+    assert args.paths == ["src/a.py"]
 
-def test_submit_note_schemas_are_pydantic_native():
-    file_schema = SubmitFileNotesTool().to_api_schema()
 
-    assert "notes" in file_schema["input_schema"]["properties"]
+def test_submit_file_note_schema_is_pydantic_native():
+    file_schema = SubmitFileNoteTool().to_api_schema()
+
+    assert "paths" in file_schema["input_schema"]["properties"]
+    assert "content" in file_schema["input_schema"]["properties"]
     assert file_schema["input_schema"]["additionalProperties"] is False
-    assert file_schema["input_schema"]["required"] == ["notes"]
-    note_item_schema = file_schema["input_schema"]["$defs"][
-        file_schema["input_schema"]["properties"]["notes"]["items"]["$ref"].split("/")[-1]
-    ]
-    assert "path" in note_item_schema["properties"]
-    assert "content" in note_item_schema["properties"]
-    assert note_item_schema["additionalProperties"] is False
-    assert "Posts append-only file or directory notes" in file_schema["description"]
-    assert "Use for" not in file_schema["description"]
-    assert "notes" in file_schema["output_schema"]["properties"]
-    item_output = file_schema["output_schema"]["$defs"][
-        file_schema["output_schema"]["properties"]["notes"]["items"]["$ref"].split("/")[-1]
-    ]
-    assert "path" in item_output["properties"]
-    assert "paths" not in item_output["properties"]
+    assert sorted(file_schema["input_schema"]["required"]) == ["content", "paths"]
+    paths_schema = file_schema["input_schema"]["properties"]["paths"]
+    assert paths_schema["type"] == "array"
+    assert paths_schema["items"]["type"] == "string"
+    assert paths_schema["minItems"] == 1
+    assert "Posts an append-only file or directory note" in file_schema["description"]
+    output_props = file_schema["output_schema"]["properties"]
+    assert "paths" in output_props
+    assert "note_id" in output_props
+    assert "notes" not in output_props
 
 
 @pytest.mark.asyncio

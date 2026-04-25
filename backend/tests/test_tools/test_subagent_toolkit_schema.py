@@ -38,22 +38,19 @@ class _StubConfig:
     session_id = "session_abc"
 
 
-def _assert_run_subagent_payload_schema_matches_runtime_xor(
+def _assert_run_subagent_payload_schema_is_prompt_only(
     schema: dict[str, object],
 ) -> None:
     props = schema["properties"]  # type: ignore[index]
-    assert schema["oneOf"] == [{"required": ["prompt"]}, {"required": ["input"]}]
+    assert sorted(schema["required"]) == ["agent_name", "prompt"]
+    assert "input" not in props
+    assert "oneOf" not in schema
 
     prompt_schema = props["prompt"]  # type: ignore[index]
     assert prompt_schema["type"] == "string"
     assert prompt_schema["minLength"] == 1
     assert "anyOf" not in prompt_schema
     assert "default" not in prompt_schema
-
-    input_schema = props["input"]  # type: ignore[index]
-    assert input_schema["type"] == "object"
-    assert "anyOf" not in input_schema
-    assert "default" not in input_schema
 
 
 @pytest.mark.asyncio
@@ -73,10 +70,10 @@ async def test_run_subagent_rejects_non_subagent_team_role_targets():
     assert "is not a subagent" in result.output
 
 
-def test_run_subagent_api_schema_requires_one_of_prompt_or_input():
+def test_run_subagent_api_schema_is_prompt_only():
     schema = run_subagent.to_api_schema()["input_schema"]
 
-    _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
+    _assert_run_subagent_payload_schema_is_prompt_only(schema)
 
 
 def test_subagent_tool_schema_limits_planner_to_scout():
@@ -88,7 +85,7 @@ def test_subagent_tool_schema_limits_planner_to_scout():
     enum = schema["properties"]["agent_name"]["enum"]
 
     assert enum == ["scout"]
-    _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
+    _assert_run_subagent_payload_schema_is_prompt_only(schema)
 
 
 def test_subagent_tool_schema_limits_replanner_to_scout():

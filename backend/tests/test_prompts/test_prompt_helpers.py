@@ -106,7 +106,7 @@ def test_team_system_prompts_include_only_terminal_guidance(tmp_path: Path) -> N
     assert "submit_plan" not in replanner
 
     assert "<Termination Condition>" not in scout
-    assert "submit_file_notes" in scout
+    assert "submit_file_note" in scout
     assert "submit_task_success" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout
@@ -150,11 +150,11 @@ def test_config_registered_custom_team_system_prompts_hide_forbidden_tools(
         AgentDefinition(
             name="config_scout",
             description="Config scout",
-            system_prompt="Explore without editing and post `submit_file_notes(...)`.",
+            system_prompt="Explore without editing and post `submit_file_note(...)`.",
             role="explorer",
             model="inherit",
             agent_type="subagent",
-            tools=["ci_query_symbol", "submit_file_notes"],
+            tools=["ci_query_symbol", "submit_file_note"],
             include_skills=False,
         ),
         AgentDefinition(
@@ -226,7 +226,7 @@ def test_config_registered_custom_team_system_prompts_hide_forbidden_tools(
     assert "submit_task_success" not in replanner
     assert "submit_plan" not in replanner
 
-    assert "submit_file_notes" in scout
+    assert "submit_file_note" in scout
     assert "submit_task_success" not in scout
     assert "submit_plan" not in scout
     assert "submit_replan" not in scout

@@ -41,16 +41,6 @@ def test_team_planner_prompt_loads_playbook_before_planning_tools() -> None:
     assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
     assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
     assert "Use that playbook to choose and order references" in defn.system_prompt
-    assert "restructured package/directory with multiple plausible owner files" in defn.system_prompt
-    assert "do not route sibling ownership from failing test names" in defn.system_prompt
-    assert "concrete pytest ids or test files" in defn.system_prompt
-    assert "Do not substitute sibling or similarly named test modules" in defn.system_prompt
-    assert "Do not convert adjacent, external, or \"likely from X\" hypotheses" in defn.system_prompt
-    assert "without live scout evidence that proved the path as a repo owner" in defn.system_prompt
-    assert "If a launched scout shows that an inherited exact file is missing" in defn.system_prompt
-    assert "only live scout evidence may prove the replacement `scope_paths`" in defn.system_prompt
-    assert "Do not ask a single-file scout to inspect additional files or directories" in defn.system_prompt
-    assert "launch a separate scout for that path or carry it as uncertainty" in defn.system_prompt
 
 
 def test_developer_prompt_requires_live_path_proof_for_new_modules() -> None:
@@ -86,9 +76,6 @@ def test_root_planner_prompt_emphasizes_top_down_decomposition() -> None:
     assert "prefer child planners even when the first-pass owner labels are clear" in defn.system_prompt
     assert "For clustering jobs, include at least one child `team_planner`" in defn.system_prompt
     assert "not multi-cluster benchmark repair" in defn.system_prompt
-    assert "one production owner family in `target_paths`" in defn.system_prompt
-    assert "the read tool returns the latest note per path" in defn.system_prompt
-    assert "Never bundle unrelated files/directories into one scout" in defn.system_prompt
     assert 'load_skill(skill_name="team-root-planner-playbook")' in defn.system_prompt
     assert "Your first assistant action must contain exactly one tool call" in defn.system_prompt
     assert "Do not batch that first playbook load with any other tool call" in defn.system_prompt
@@ -113,12 +100,12 @@ def test_scout_prompt_loads_playbook_before_exploration_tools() -> None:
     assert "before your first Task Center or code-intelligence tool call" in defn.system_prompt
     assert "first assistant message that calls tools may contain only one `read_file_note(file_paths=[...])` call" in defn.system_prompt
     assert "stop after exact-file CI evidence" in defn.system_prompt
-    assert "Only `target_paths` authorize exploration" in defn.system_prompt
+    assert "Only the paths named in the prompt authorize exploration" in defn.system_prompt
     assert "treat them as hypotheses to report under gaps" in defn.system_prompt
-    assert 'notes=[{"path": "...", "content": "..."}]' in defn.system_prompt
-    assert "one note item per assigned target path" in defn.system_prompt
+    assert "submit_file_note(paths=[...], content=\"...\")" in defn.system_prompt
+    assert "one note may cover multiple related paths" in defn.system_prompt
     assert "scoped_paths" not in defn.system_prompt
-    assert "If an assigned exact file is missing, CI-cold, or disproved by a package/directory boundary" in defn.system_prompt
+    assert "If a named exact file is missing, CI-cold, or disproved by a package/directory boundary" in defn.system_prompt
     assert "Do not search sibling modules, package structure, or helper-symbol names" in defn.system_prompt
 
 
@@ -212,7 +199,7 @@ def test_planner_and_replanner_do_not_expose_sandbox_tools(tmp_path: Path) -> No
 def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> None:
     tool_names = _final_tool_names(SCOUT, tmp_path)
 
-    assert "submit_file_notes" in tool_names
+    assert "submit_file_note" in tool_names
     for name in (
         "daytona_grep",
         "daytona_glob",

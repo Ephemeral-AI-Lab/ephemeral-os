@@ -46,9 +46,9 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "Tool: ci_query_symbol" in summary
     assert "      - definitions: list[CiSymbolDefinitionOutput] [default []]" in summary
 
-    assert "Tool: submit_file_notes" in summary
-    assert "      - notes: list[FileNoteInput] [required]" in summary
-    assert "      - notes: list[FileNoteItemOutput] [default []]" in summary
+    assert "Tool: submit_file_note" in summary
+    assert "      - paths: list[str] [required]" in summary
+    assert "      - content: str [required]" in summary
 
     assert "Tool: submit_task_success" in summary
     assert "      - summary: str [required]" in summary

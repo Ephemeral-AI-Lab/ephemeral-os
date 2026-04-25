@@ -191,18 +191,17 @@ def test_record_tool_trace_dedupes_background_scout_launch_by_tool_use_id() -> N
     _record_tool_trace(
         meta,
         "run_subagent",
-        {"agent_name": "scout", "input": {"target_paths": ["pkg/core.py"]}},
+        {"agent_name": "scout", "prompt": "explore pkg/core.py"},
         tool_use_id="toolu_1",
     )
     _record_tool_trace(
         meta,
         "run_subagent",
-        {"agent_name": "scout", "input": {"target_paths": ["pkg/core.py"]}},
+        {"agent_name": "scout", "prompt": "explore pkg/core.py"},
         tool_use_id="toolu_1",
     )
 
     assert meta["_scout_launches_this_turn"] == 1
-    assert meta["_scout_target_paths_this_turn"] == ["pkg/core.py"]
     assert meta["_scout_launch_order_by_tool_use_id"] == {"toolu_1": 1}
 
 

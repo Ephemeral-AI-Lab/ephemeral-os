@@ -340,7 +340,7 @@ async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
 @pytest.mark.parametrize(
     "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
 )
-def test_validate_run_subagent_allows_planner_scout_bundle(
+def test_validate_run_subagent_allows_planner_scout_prompt(
     parent_agent_name: str,
 ):
     ctx = ToolExecutionContext(
@@ -350,41 +350,12 @@ def test_validate_run_subagent_allows_planner_scout_bundle(
 
     result = _validate_run_subagent_request(
         agent_name="scout",
-        prompt=None,
-        input={"target_paths": ["dask/dataframe/utils.py", "dask/dataframe/_compat.py"]},
+        prompt="explore dask/dataframe/utils.py and dask/dataframe/_compat.py",
         context=ctx,
     )
 
     assert not isinstance(result, ToolResult)
     assert result.sub_def.name == "scout"
-    assert result.subagent_scope_paths == [
-        "dask/dataframe/_compat.py",
-        "dask/dataframe/utils.py",
-    ]
-
-
-def test_validate_run_subagent_rejects_scout_test_target_paths():
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={"session_config": _StubCfg(), "agent_name": "root_planner"},
-    )
-
-    result = _validate_run_subagent_request(
-        agent_name="scout",
-        prompt=None,
-        input={
-            "target_paths": [
-                "/testbed/dask/dataframe/io/hdf.py",
-                "/testbed/dask/tests/test_cli.py",
-            ]
-        },
-        context=ctx,
-    )
-
-    assert isinstance(result, ToolResult)
-    assert result.is_error is True
-    assert "scout target_paths must be production paths" in result.output
-    assert "/testbed/dask/tests/test_cli.py" in result.output
 
 
 def test_run_subagent_schema_is_agent_agnostic():
@@ -394,10 +365,12 @@ def test_run_subagent_schema_is_agent_agnostic():
 
     description = schema["description"]
     assert "dispatchable subagent" in description
-    assert "prompt" in description and "input" in description
+    assert "prompt" in description
 
-    input_description = schema["input_schema"]["properties"]["input"]["description"]
-    assert "subagent's own contract" in input_description
+    props = schema["input_schema"]["properties"]
+    assert "prompt" in props
+    assert "input" not in props
+    assert sorted(schema["input_schema"]["required"]) == ["agent_name", "prompt"]
 
 
 @pytest.mark.asyncio
@@ -446,12 +419,9 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_run_subagent_passes_payload_verbatim(monkeypatch):
-    """The dispatcher must pass the caller's payload through verbatim;
-    agent-specific rules belong to the subagent's own playbook, not to
-    ``run_subagent``."""
-    import json
-
+async def test_run_subagent_passes_prompt_verbatim(monkeypatch):
+    """The dispatcher must pass the caller's prompt through verbatim as the
+    subagent's first user message."""
     scripted = [
         ConversationMessage(role="assistant", content=[TextBlock(text="DONE: scoped read complete")]),
     ]
@@ -469,23 +439,22 @@ async def test_run_subagent_passes_payload_verbatim(monkeypatch):
     bg = _make_bg_manager("bg_no_preamble")
     ctx = _make_ctx(bg=bg, task_id="bg_no_preamble")
 
-    payload = {"task": "inspect pkg/config.py"}
+    prompt = "inspect pkg/config.py and pkg/cli.py; submit one file note per file."
     result = await run_subagent.execute(
-        run_subagent.input_model(agent_name="scout", input=payload),
+        run_subagent.input_model(agent_name="scout", prompt=prompt),
         ctx,
     )
 
     assert result.is_error is False
-    expected = json.dumps(payload, separators=(",", ":"), default=str)
-    assert captured["prompt"] == expected
+    assert captured["prompt"] == prompt
 
 
 @pytest.mark.asyncio
-async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
-    """Subagent is parameterized solely by `prompt` / `input`; parent
-    metadata (write_scope, team_run_id, role) MUST NOT leak into the child's
-    tool_metadata. The child keeps only the minimal coordination channel that
-    scout note tools need."""
+async def test_subagent_does_not_inherit_parent_metadata(monkeypatch):
+    """Subagent is parameterized solely by `prompt`; parent metadata
+    (write_scope, team_run_id, role, target_paths) MUST NOT leak into the
+    child's tool_metadata. The child keeps only the minimal coordination
+    channel that scout note tools need."""
     from tools.core.runtime import ExecutionMetadata
 
     scripted = [
@@ -514,6 +483,7 @@ async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
             "write_scope": ["parent/scope.py"],
             "team_run_id": "parent_team_run",
             "role": "parent_role",
+            "target_paths": ["parent/should_not_leak.py"],
             "task_center": object(),
         },
     )
@@ -529,70 +499,14 @@ async def test_prompt_subagent_does_not_inherit_parent_metadata(monkeypatch):
     # reserved for team-worker write-permission enforcement (daytona file
     # tools) and must not leak into a dispatchable subagent.
     assert child_meta.get("write_scope") is None
-    # Prompt-only invocation → payload has no scope keys → child
-    # `target_paths` is explicitly empty (the scout coverage hook reads
-    # this key; empty means no coverage enforcement).
-    assert child_meta.get("target_paths") == []
+    # `target_paths` is no longer a metadata channel for run_subagent.
+    assert child_meta.get("target_paths") is None
     assert child_meta.get("team_run_id") is None
     assert child_meta.get("task_center") is ctx.metadata["task_center"]
     # `role` comes from the child agent definition (sub_def.role), not from
     # the parent metadata — scout's definition sets role="explorer".
     assert child_meta.get("role") == "explorer"
     assert child_meta.get("work_item_started_at") is not None
-
-
-@pytest.mark.asyncio
-async def test_input_subagent_derives_target_paths_from_payload(monkeypatch):
-    """Structured input derives the child's `target_paths` metadata from the
-    payload. The child must NOT carry a `write_scope` key — that's reserved
-    for the team-worker write-permission channel."""
-    from tools.core.runtime import ExecutionMetadata
-
-    scripted = [
-        ConversationMessage(role="assistant", content=[TextBlock(text="DONE")]),
-    ]
-    stub_agent = _StubAgent(scripted)
-    stub_agent.query_context = type(
-        "_QueryContext",
-        (),
-        {
-            "tool_metadata": ExecutionMetadata(),
-            "api_messages_snapshot": None,
-        },
-    )()
-
-    monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent", lambda *a, **kw: stub_agent, raising=True
-    )
-
-    bg = _make_bg_manager("bg_scope_input")
-    ctx = _make_ctx(
-        bg=bg,
-        task_id="bg_scope_input",
-        extra_meta={"write_scope": ["parent/should_not_leak.py"]},
-    )
-
-    result = await run_subagent.execute(
-        run_subagent.input_model(
-            agent_name="scout",
-            input={
-                "target_paths": [
-                    "dask/dataframe/utils.py",
-                    "dask/dataframe/_compat.py",
-                ]
-            },
-        ),
-        ctx,
-    )
-
-    child_meta = stub_agent.query_context.tool_metadata
-    assert result.is_error is False
-    assert child_meta.get("target_paths") == [
-        "dask/dataframe/_compat.py",
-        "dask/dataframe/utils.py",
-    ]
-    # Parent `write_scope` must never leak into the child.
-    assert child_meta.get("write_scope") is None
 
 
 @pytest.mark.asyncio

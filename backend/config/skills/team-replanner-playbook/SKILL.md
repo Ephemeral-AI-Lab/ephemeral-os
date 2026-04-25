@@ -14,35 +14,40 @@ Never plan test suite or test-file related tasks.
 Never assign subagents to explore test suites or test files.
 </Forbid Rule>
 
-## Stage Flow
+| Recovery role | Use when |
+| --- | --- |
+| `developer` repair child | Concrete, owner-scoped fix justified by verified failed-task evidence. |
+| `validator` continuation | Same-payload verification or carrying uncompleted acceptance criteria forward. |
+| `team_planner` redraft | Recovery surface is still broad/unresolved after diagnostics. |
+
+## Overall Stage Flow
 
 ```text
-Caption: replanner recovery path. References load only inside the action or submit stage.
+Caption: replanner recovery path. Stages run in order; references load only at the stage that uses them.
 
-[1 Load recovery context]
-  -> failed evidence vs gaps + graph/sibling ledger
-  -> [2 Classify]
-       | scope_expansion
-       | wrong_owner_or_role
-       | unresolved_blocker + trivial_direct_replan
-       ` unresolved_blocker + deep_diagnostics -> diagnostic scout wave
-  -> [3 Act]
-       | add-only -------------> load action-add-tasks
-       | cancel-and-redraft ---> load action-cancel-and-redraft
-  -> [4 Submit]
-       load terminal-contract -> checklist -> submit_replan(...)
+  +---------------------+    +-----------+    +---------+    +----------------+
+  |  load recovery ctx  | -> |  classify | -> |   act   | -> |  submit_replan |
+  +---------------------+    +-----------+    +---------+    +----------------+
+            |                      |              |                  |
+     evidence ledger          classification   corrective       submit_replan(...)
+     (verified vs gaps)       + diagnostics    mapping
+            |                      |              |                  |
+       exit: ledger        exit: line written  exit: action     exit: one tool
+       complete + graph    + scouts done if    reference        call, no prose
+       read                deep_diagnostics    loaded + lanes
+                                               drafted
 ```
 
-| Stage | Output |
-| --- | --- |
-| 1. Load recovery context | Failed-task evidence vs gaps, graph structure, sibling states. |
-| 2. Classify failure | `Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>` plus diagnostics decision when needed. |
-| 3. Act | Corrective mapping, original-contract coverage, and add-only vs cancel-redraft decision. |
-| 4. Submit | Schema-valid `submit_replan({ new_tasks, cancel_ids })`. |
+| # | Stage | Input | Exit gate | Reference |
+| --- | --- | --- | --- | --- |
+| 1 | load recovery context | Replanning header (failed/own/parent/dep UUIDs) | Evidence ledger built; graph topology read; relevant siblings classified. | none |
+| 2 | classify | Evidence ledger | Single `Classification:` line written. For `unresolved_blocker`, single `Diagnostics decision:` line written; for `deep_diagnostics`, scout wave returned with notes. | none |
+| 3 | act | Classification + diagnostics output | Action reference loaded, corrective mapping covers original contract. | `load_skill_reference(skill_name="team-replanner-playbook", reference_name="action-add-tasks")` (add-only) **or** `load_skill_reference(skill_name="team-replanner-playbook", reference_name="action-cancel-and-redraft")` (cancel-redraft). |
+| 4 | submit_replan | Drafted recovery lanes | Exactly one `submit_replan({ new_tasks, cancel_ids })` call, no later tool calls or prose. | `load_skill_reference(skill_name="team-replanner-playbook", reference_name="terminal-contract")` — load before drafting the payload. |
 
 ## 1. Load Recovery Context
 
-Use exact UUIDs from the replanning header.
+Enter from the replanning header. Use exact UUIDs; do not classify, scout, or load references yet.
 
 | Context item | Action |
 | --- | --- |
@@ -62,9 +67,11 @@ failed task
   `-- stale siblings: running/pending/ready direct siblings that may be cancelled
 ```
 
+**Exit:** evidence ledger complete; graph topology read; relevant siblings classified into preserve/stale/avoid.
+
 ## 2. Classify Failure
 
-State exactly one classification line:
+Enter after the evidence ledger is complete. State exactly one classification line:
 
 ```text
 Classification: <scope_expansion|wrong_owner_or_role|unresolved_blocker>
@@ -89,6 +96,10 @@ Diagnostics decision: <trivial_direct_replan|deep_diagnostics>
 
 A rich-looking RCA from a developer who repeatedly hit the same red is a symptom, not proof; default to `deep_diagnostics` whenever the failure is chained or the same scope has been touched by a prior failed sibling.
 
+### Diagnostic Scout Fanout
+
+Only enter when `Diagnostics decision: deep_diagnostics` was written.
+
 ```text
 Caption: deep_diagnostics scout fanout — one scout per unresolved seam, all in parallel.
 
@@ -103,32 +114,44 @@ unresolved seams (S1, S2, ..., Sn)
 | Two coupled files (engine + adapter, producer + consumer) | One multi-path scout for that pair. |
 | Whole subsystem / package boundary unclear | One directory scout for the package. |
 | Multiple independent unresolved seams | One scout per seam, dispatched as one parallel wave. |
+| No scout | Existing notes already provide root-cause-grade evidence for that seam. |
 
-## Diagnostic Scouts
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. Production paths only; never name a test path in a scout prompt and never call workspace/scout tools on tests. Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
+
+### Scout Prompt Format
+
+Every diagnostic scout prompt uses these three sections, in order:
 
 ```text
-Caption: each scout answers one missing recovery decision.
+## Task
+<one-line recovery question this scout answers>
 
-trace gap triplet
-  -> scout(target_paths=["scoped production path"])
-  -> read_file_note(file_paths=["scoped production path"])
-  -> corrective mapping
+## Exploration Path
+<production path 1>
+<production path 2>
+
+## Terminal Contract
+submit_file_note(paths=[<exploration_paths>], content="<finding>")
 ```
 
-| Scout shape | Use when |
+| Section | Contains |
 | --- | --- |
-| Single path | One file is the likely seam. |
-| Multi-path | A small coupled call chain forms one triplet. |
-| Directory | Exact files are unknown inside a package/subsystem. |
-| Parallel wave | Independent trace gaps block different recovery lanes. |
-| No scout | Existing notes already provide root-cause-grade evidence. |
+| `## Task` | The single recovery question this scout answers (one unresolved seam, one tight coupled pair, or one directory). |
+| `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
+| `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
-Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
+**Exit:** classification line written. For `unresolved_blocker` + `deep_diagnostics`, the parallel scout wave has returned and notes are harvested.
 
 ## 3. Act
 
 Enter after classification is written and diagnostics are complete or intentionally skipped.
-Action references: add-only -> `action-add-tasks`; cancel-redraft -> `action-cancel-and-redraft`.
+
+**Required first action this stage — before drafting any corrective lane:** load the action reference matching your decision.
+
+| Decision | Required reference |
+| --- | --- |
+| Add-only | `load_skill_reference(skill_name="team-replanner-playbook", reference_name="action-add-tasks")` |
+| Cancel-and-redraft | `load_skill_reference(skill_name="team-replanner-playbook", reference_name="action-cancel-and-redraft")` |
 
 ```text
 Caption: cancellation boundary.
@@ -155,10 +178,17 @@ same parent:
 | Blocker-only fix leaves the failed task's goal/criteria/F2P ids uncovered | **Required**: add a continuation `developer` (or `team_planner` for broad rows) with `deps=[<repair_child_id>]`, carrying every uncompleted goal, acceptance criterion, F2P id, and production scope from the failed contract. Shipping repair-only without the continuation child is a hard defect. |
 | Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, contradictory value rule, or failed dev's claim that F2P ids are "unfixable"/"benchmark-authored"/"cannot be edited" | Evidence only; never silently drop F2P ids — emit a production diagnostic or `wrong_owner_or_role` escalation that carries every dropped id forward. |
 
-## 4. Submit
+**Exit:** action reference is loaded; corrective mapping covers every coverage row above.
+
+## 4. submit_replan
 
 Enter after the Stage 3 reference has shaped the corrective mapping.
-Terminal reference: `terminal-contract`.
+
+**Required first action this stage — before drafting the payload:**
+
+```text
+load_skill_reference(skill_name="team-replanner-playbook", reference_name="terminal-contract")
+```
 
 | Submit check | Expected result |
 | --- | --- |
@@ -180,4 +210,12 @@ Terminal reference: `terminal-contract`.
 
 When in doubt, ship `cancel_ids: []` — add-only replans are always valid.
 
-Emit exactly one `submit_replan({ new_tasks, cancel_ids })` call. Make no further tool calls or prose.
+```text
+Caption: terminal contract.
+
+drafted recovery lanes
+  -> submit_replan({ new_tasks, cancel_ids })
+  -> end (no further tool calls, no trailing prose)
+```
+
+**Exit:** one `submit_replan` tool call emitted; no summary, output, parent ids, trailing prose, or later tool calls.

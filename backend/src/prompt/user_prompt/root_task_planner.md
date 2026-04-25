@@ -29,5 +29,5 @@ For broad benchmark, fail-to-pass, migration, compatibility, or other clustering
 ```markdown
 {{benchmark_targets}}
 ```
-Benchmark targets are verification evidence only. Do not inspect or scout `*/tests/*`, `test_*.py`, or benchmark test paths; scout live production owner rows and mention tests in scout input context or child specs.
+Benchmark targets are verification evidence only. Do not inspect or scout `*/tests/*`, `test_*.py`, or benchmark test paths; scout live production owner rows and mention tests as context inside the scout prompt or in child specs.
 {{/if}}
