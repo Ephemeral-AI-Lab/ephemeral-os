@@ -37,7 +37,7 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 
 `spec.detail` names classification, diagnostics decision for `unresolved_blocker`, Planner handoff for broad `team_planner` redrafts, root-cause mechanism or gap, production scope, original-contract coverage, sibling/cancel handling, dependency context, evidence, and uncertainty.
 
-`spec.acceptance_criteria` names concrete commands or pytest ids and asks for command output, exit codes, changed behavior, and residual risk. Named fail-to-pass variants stay owned by a repair/diagnostic task or preserved live owner; validator-only closure is not enough.
+`spec.acceptance_criteria` names concrete commands or pytest ids and asks for command output, exit codes, changed behavior, and residual risk. Named acceptance criteria from the failed task stay owned by a repair/diagnostic task or preserved live owner; validator-only closure is not enough.
 
 ## Final Checklist
 
@@ -50,7 +50,7 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 | 5 | Local deps name another task in this payload; existing deps are freshly proven schedulable. |
 | 6 | Every task has non-empty production `scope_paths`. |
 | 7 | Every unresolved-blocker spec includes `Diagnostics decision: trivial_direct_replan` or `Diagnostics decision: deep_diagnostics`. |
-| 8 | Named fail-to-pass variants and uncompleted original task criteria are not dropped as unsupported, test design, residual risk, or validator-only coverage. |
+| 8 | Uncompleted original task acceptance criteria are not dropped as unsupported, test design, residual risk, or validator-only coverage. |
 | 9 | Test/benchmark/pytest-config restore/edit stays evidence; no child task owns it. |
 | 10 | `cancel_ids` contains only stale running/pending/ready direct siblings and no failed, terminal, replanner, descendant, `request_replan`, or validator-continuation work. |
 | 11 | Blocker-only repairs have a continuation `developer` or `team_planner` child with `deps=[repair_id]` carrying the original failed contract. |

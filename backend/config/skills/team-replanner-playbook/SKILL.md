@@ -7,18 +7,28 @@ description: Playbook for the team_replanner agent. Load recovery context, class
 
 Produce the smallest corrective DAG justified by failed-task evidence and the failed task's original contract. Finish with exactly one `submit_replan(...)` call and make no later tool calls.
 
-Replanner-created tasks use `developer` repairs, `validator` checks, or a `team_planner` redraft only when recovery is still broad. The replanner coordinates recovery; it does not patch code and does not create scout or replanner children.
+Replanner-created tasks use `developer` repairs, `validator` checks, or a `team_planner` redraft when recovery is still broad. The replanner coordinates recovery; it does not patch code and does not create scout or replanner children.
 
 <Forbid Rule>
-Never plan test suite or test-file related tasks.
-Never assign subagents to explore test suites or test files.
+Never plan test suite or test-file related tasks for `developer` or `validator` lanes — agents do not own test files. `scope_paths` must be production paths only.
+Scouts MAY inspect test files when reading them helps confirm production ownership; do not put test paths in lane `scope_paths` or assign test-editing work to any agent.
 </Forbid Rule>
+
+## Recursive Recovery Principle
+
+The replanner is one node in a recursive planner tree. When the failed task's recovery surface is multi-owner, multi-mechanism, or still ambiguous after shallow diagnostics, prefer a `team_planner` redraft (recursive subdivision) over a single broad `developer` repair. Diagnostic scouts are **shallow** — they confirm the next layer of ownership; deeper RCA belongs to the redrafted child planner or its developers.
+
+| Principle | What it means here |
+| --- | --- |
+| Shallow diagnostics | `deep_diagnostics` scouts default to `directory_superficial` / `bundled_superficial` for unresolved seams; their job is to confirm the production owner directory or coupled-pair, not to fully trace the bug. |
+| Recursive redraft | Multi-owner / multi-mechanism recovery → one or more `team_planner` redrafts with `Planner handoff: planner_redraft` (or `scope_expansion`) in `spec.detail`, scoped to the confirmed owner directory. |
+| Atomic repair | Use `developer` only when failed-task evidence + shallow diagnostics already name one owner file + likely edit seam. |
 
 | Recovery role | Use when |
 | --- | --- |
-| `developer` repair child | Concrete, owner-scoped fix justified by verified failed-task evidence. |
+| `developer` repair child | Concrete, owner-scoped fix justified by verified failed-task evidence (or by shallow diagnostics naming one owner + seam). |
 | `validator` continuation | Same-payload verification or carrying uncompleted acceptance criteria forward. |
-| `team_planner` redraft | Recovery surface is still broad/unresolved after diagnostics. |
+| `team_planner` redraft | **Default when recovery surface is still broad/multi-owner/unresolved after shallow diagnostics.** Hand the cluster down rather than collapsing it into one wide developer repair. |
 
 ## Overall Stage Flow
 
@@ -108,15 +118,18 @@ unresolved seams (S1, S2, ..., Sn)
   -> harvest notes -> recovery children mapped 1:1 to seam findings
 ```
 
+**Default scout shape: shallow** (`directory_superficial` / `bundled_superficial`). Confirm the production owner directory or coupled-pair; do not request leaf-level RCA. If the recovery surface stays broad after one shallow wave, route to `team_planner` redraft rather than re-scouting.
+
 | Seam shape in failed RCA | Scout to spawn |
 | --- | --- |
 | Single named file with unclear callers | One proven exact production file scout + `ci_query_symbol` on each suspect symbol. Guessed or test-derived filenames use the package/directory row. |
-| Two coupled files (engine + adapter, producer + consumer) | One multi-path scout for that pair. |
-| Whole subsystem / package boundary unclear | One directory scout for the package. |
-| Multiple independent unresolved seams | One scout per seam, dispatched as one parallel wave. |
+| Two coupled files (engine + adapter, producer + consumer) | One bundled-superficial scout for that pair: relationship map and handoff seams only. |
+| Whole subsystem / package boundary unclear | One directory-superficial scout for the package; the redraft `team_planner` does the deeper subdivision. |
+| Multiple independent unresolved seams | One shallow scout per seam, dispatched as one parallel wave. |
 | No scout | Existing notes already provide root-cause-grade evidence for that seam. |
+| Budget | One shallow scout per unresolved seam, one wave. Do not re-scout the same seam this turn. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. Production paths only; never name test paths, test ids, benchmark filenames, F2P/P2P ids, or failing-test labels in a scout prompt, and never call workspace/scout tools on tests. Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. The scout's job is to identify the production owner driving the failure; test paths may appear in the prompt as triangulation hints when they help find that owner. Harvest notes for every assigned path; missing notes create uncertainty for that path only.
 
 ### Scout Prompt Format
 
@@ -129,6 +142,7 @@ Every diagnostic scout prompt uses these three sections, in order:
 ## Exploration Path
 <production path 1>
 <production path 2>
+[<test path>]   # optional: include only when reading the test helps confirm production ownership
 
 ## Terminal Contract
 submit_file_note(paths=[<exploration_paths>], content="<finding>")
@@ -136,8 +150,8 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 | Section | Contains |
 | --- | --- |
-| `## Task` | The single recovery question this scout answers; no test path, test id, F2P/P2P id, benchmark file name, or failing-test label. |
-| `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
+| `## Task` | The single recovery question this scout answers; the goal is identifying the production owner, not editing tests. |
+| `## Exploration Path` | Repo-relative paths the scout should read. Production paths are required; test paths may be added as triangulation hints — no globs, no parent-dir batching. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
 **Exit:** classification line written. For `unresolved_blocker` + `deep_diagnostics`, the parallel scout wave has returned and notes are harvested.
@@ -175,8 +189,8 @@ same parent:
 | --- | --- |
 | Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
 | Validator-discovered child-owned suite or uncompleted criterion | Map to repair plus validator, or preserved live owner. |
-| Blocker-only fix leaves the failed task's goal/criteria/F2P ids uncovered | **Required**: add a continuation `developer` (or `team_planner` for broad rows) with `deps=[<repair_child_id>]`, carrying every uncompleted goal, acceptance criterion, F2P id, and production scope from the failed contract. Shipping repair-only without the continuation child is a hard defect. |
-| Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, contradictory value rule, or failed dev's claim that F2P ids are "unfixable"/"benchmark-authored"/"cannot be edited" | Evidence only; never silently drop F2P ids — emit a production diagnostic or `wrong_owner_or_role` escalation that carries every dropped id forward. |
+| Blocker-only fix leaves the failed task's goal/criteria uncovered | **Required**: add a continuation `developer` (or `team_planner` for broad rows) with `deps=[<repair_child_id>]`, carrying every uncompleted goal, acceptance criterion, and production scope from the failed contract. Shipping repair-only without the continuation child is a hard defect. |
+| Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, contradictory value rule, or failed dev's claim that work is "unfixable"/"benchmark-authored"/"cannot be edited" | Evidence only; never silently drop the failed task's acceptance criteria — emit a production diagnostic or `wrong_owner_or_role` escalation that carries every dropped requirement forward. |
 
 **Exit:** action reference is loaded; corrective mapping covers every coverage row above.
 

@@ -14,12 +14,15 @@ note ledger
   `-- same-layer verification after producers --> validator
 ```
 
+**Default while depth remains: `team_planner`.** Recursive subdivision is the routing default. `developer` is used when this level's notes already prove an exact owner + edit seam.
+
 | Slice signal | Route |
 | --- | --- |
 | Verified notes name one owner file/symbol plus likely edit seam | `developer` |
+| Notes confirm an owner directory / mechanism but not the edit seam, and depth remains | `team_planner` (default) |
 | Notes only map relationships, package boundaries, or unresolved ownership and depth remains | `team_planner` |
-| Notes rely on test paths, test labels, or benchmark ids as proof | Keep production facts only; route the unresolved gap to `team_planner` while depth remains. |
-| Notes reveal several mechanisms, APIs, engines, formats, or public entry points | Split by note-backed seams; do not mirror Stage-2 clusters. |
+| Notes only point at tests without naming a production owner | Route the unresolved gap to `team_planner` while depth remains. |
+| Notes reveal several mechanisms, APIs, engines, formats, or public entry points and depth remains | One `team_planner` lane per note-backed mechanism; deeper splits happen inside the next-level child planner. |
 | Broad or unresolved at max depth | Direct per-mechanism `developer` tasks plus validation/diagnostic wording |
 | Same-layer evidence sweep after producers finish | `validator` with producer deps |
 

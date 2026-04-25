@@ -13,12 +13,16 @@ note ledger
   `-- same-payload verification after producers ---> validator
 ```
 
+**Default at root depth: `team_planner`.** Recursive subdivision is the routing default. `developer` is the exception, used only when a shallow scout already proved an exact owner + edit seam at this level.
+
 | Slice signal | Route |
 | --- | --- |
-| Verified notes name one owner file/symbol plus likely edit seam | `developer` |
+| Verified shallow-scout notes name one owner file/symbol plus likely edit seam | `developer` (rare at root) |
+| Notes confirm an owner directory / package / PR cluster but not the edit seam | `team_planner` (default) |
 | Notes only map relationships, package boundaries, or unresolved ownership | `team_planner` |
-| Notes rely on test paths, test labels, or benchmark ids as proof | Keep production facts only; route the unresolved gap to `team_planner`. |
-| Notes reveal several mechanisms, APIs, engines, formats, or public entry points | Split by note-backed seams; do not mirror Stage-2 clusters. |
+| Notes only point at tests without naming a production owner | Route the unresolved gap to `team_planner`. |
+| Multi-PR / changelog input — many owner clusters | One `team_planner` lane per PR cluster / subsystem family; do not flatten into root-level developer tasks. |
+| Notes reveal several mechanisms, APIs, engines, formats, or public entry points | One `team_planner` lane per note-backed mechanism; deeper splits happen inside the child planner. |
 | Root-level evidence sweep after producers finish | `validator` with producer deps |
 
 ## Level Shape

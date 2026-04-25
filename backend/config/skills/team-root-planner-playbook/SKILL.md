@@ -8,14 +8,38 @@ description: Playbook for the root_planner agent. Analyze, cluster, scout owner 
 Produce the top-level task DAG from the user request. Finish with exactly one `submit_plan(...)` call.
 
 <Forbid Rule>
-Never plan test suite or test-file related tasks.
-Never assign subagents to explore test suites or test files.
+Never plan test suite or test-file related tasks for `developer` or `validator` lanes — agents do not own test files. `scope_paths` must be production paths only.
+Scouts MAY inspect test files when reading them helps confirm production ownership; do not put test paths in lane `scope_paths` or assign test-editing work to any agent.
 </Forbid Rule>
+
+## Recursive Exploration Principle
+
+You are the **top of a recursive planner tree**, not a single planner that must reach atomic owners. Explore only enough to *group* the request into owner families and confirm each group has a real production directory; defer leaf-level RCA to child `team_planner` lanes.
+
+```text
+Caption: each planner level does partial exploration; child planners deepen.
+
+root_planner (this agent)
+  -> coarse cluster (PR / changelog section / subsystem family)
+  -> shallow scout wave (confirm directory + owner family per row)
+  -> route: team_planner (default) | developer (only if scout proved exact owner + seam) | validator
+                                |
+                                v
+                        team_planner (child, recursive)
+                          -> finer cluster, shallow scout, route deeper or to developer
+```
+
+| Principle | What it means at this level |
+| --- | --- |
+| Shallow scouting | At least one scout wave is required; default mode is `directory_superficial`. The scout's job is to *confirm the owner directory/family exists*, not to find the edit seam. |
+| Recursive subdivision | The default lane is `team_planner`. A row only becomes a `developer` here when one shallow scout already proved exact owner file + likely edit seam. |
+| No exhaustive exploration | For large multi-PR inputs (e.g. changelog bundles with many PR sections), cluster by PR / changelog axis / subsystem and let each cluster recurse — do not try to scout every PR's owner from the root. |
+| Budget | Cap scouts to one per coarse cluster row in one parallel wave. If a cluster has unclear shape after one shallow scout, route it to `team_planner`; do not re-scout from root. |
 
 | Route | Use when |
 | --- | --- |
-| `developer` | Atomic slice: exact owner + one mechanism + small failure surface. |
-| `team_planner` | Broad, matrix, clustered, complex, or unresolved row. |
+| `developer` | Atomic slice already proven by this level's shallow scout: exact owner + one mechanism + small failure surface. |
+| `team_planner` | **Default** for any broad, matrix, clustered, multi-PR, or unresolved-after-shallow-scout row — defer deeper exploration to the child planner. |
 | `validator` | Same-payload verification after producer lanes. |
 
 ## Overall Stage Flow
@@ -58,9 +82,9 @@ request
 
 | Check | Action |
 | --- | --- |
-| Test/benchmark evidence | Keep paths, ids, and failing-test labels in evidence only; never copy them into owner-row names, `scope_paths`, scout prompts, or scout targets. |
+| Test/benchmark evidence | Keep paths and failing-test labels out of owner-row names and `scope_paths`. Scouts may reference test paths when triangulating production owners; lanes (developer/validator) own production paths only. |
 | Production clues | Tag each as exact file/symbol, broad family, or guess. |
-| Forbid | Never inspect, scout, or assign test paths. |
+| Agent ownership | No `developer` or `validator` lane owns or edits test files. Production-only `scope_paths`; tests live as evidence in `spec.detail` / `spec.acceptance_criteria`. |
 
 **Exit:** request facts are split from test/benchmark evidence and production clues.
 
@@ -80,8 +104,10 @@ production clues
 
 | Check | Root-planner action |
 | --- | --- |
-| Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids cannot join rows. |
-| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
+| Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). |
+| Multi-PR / changelog input | When the request bundles many PRs (e.g. a release changelog with multiple PR sections), cluster at the **PR or changelog-section axis** first. One row per PR cluster (or per tightly coupled PR group within the same subsystem) is the correct coarse grouping at root depth — do not pre-atomize across all PRs. |
+| Coarse-grouping bias | Prefer fewer, broader rows that each become a `team_planner` lane over many thin rows. Granular owner rows are the child planner's job. |
+| Cluster name | One row = one owner family or one coherent PR cluster. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
 | Mixed support rows | Entrypoints, config loaders, compatibility helpers, dataframe utilities, and storage formats are separate rows unless live evidence proves one tight pair. Three or more files are never one bundled row. |
 | Benchmark evidence | Exact means explicit production path/symbol from user/notes or `ci_workspace_structure` on the parent dir. Before scouting or scoping a test-derived filename, verify it; if absent or replaced by a package directory, use the directory row. |
 
@@ -104,14 +130,17 @@ owner ledger
   `-- still broad after map ------> team_planner handoff
 ```
 
+**Default at root depth: `directory_superficial`.** The scout's only job is to *confirm the owner directory/family exists* and to map the production paths inside it. Do not ask root-level scouts to find the edit seam — that is the child planner's job.
+
 | Scout shape | Use when |
 | --- | --- |
-| Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. Guessed or test-derived filenames do not qualify. |
+| Directory superficial (default) | Package, subsystem, engine matrix, PR cluster, or package-like import path; map files and relationships without deep leaf RCA. |
 | Bundled superficial | Several paths in one owner family or exactly one tight pair; same parent directory, call chain, or "small row" status is not enough. Ask only for relationship map and handoff seams. |
-| Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
+| Trivial deep | Rare at root. Reserve for one proven exact file/symbol where the user or inherited evidence already names the owner; ask for line-level functions, likely edit seam, and concrete gaps. Guessed or test-derived filenames do not qualify. |
 | Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch unrelated owner families, and split any 3+ path idea before dispatch. |
+| Budget | Cap at one scout per coarse cluster row, one wave. If a row stays broad after its shallow scout, accept it and route to `team_planner`; do not re-scout from root. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only: strip test paths, pytest ids, parametrized case labels, benchmark filenames, F2P/P2P ids, target counts, and failing-test labels before dispatch.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. The scout's job is to identify the *production owner*; test paths may appear in the prompt as triangulation hints when they help find that owner.
 
 ### Scout Prompt Format
 
@@ -122,6 +151,7 @@ Mode: <trivial_deep | bundled_superficial | directory_superficial>. <one product
 ## Exploration Path
 <production path 1>
 <production path 2>
+[<test path>]   # optional: include only when reading the test helps confirm production ownership
 
 ## Terminal Contract
 submit_file_note(paths=[<exploration_paths>], content="<finding>")
@@ -129,8 +159,8 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 | Section | Contains |
 | --- | --- |
-| `## Task` | One production routing question; no test path, test id, F2P/P2P id, benchmark file name, or failing-test label. |
-| `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
+| `## Task` | One production routing question; the goal is identifying the production owner, not editing tests. |
+| `## Exploration Path` | Repo-relative paths the scout should read. Production paths are required; test paths may be added as triangulation hints — no globs, no parent-dir batching. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
 **Exit:** the scout wave returns, or every broad row has a documented reason for skipping scout.
@@ -158,10 +188,11 @@ same-payload evidence ---------------> validator
 
 | Draft check | Expected result |
 | --- | --- |
-| Coverage | Every note-backed owner or unresolved gap has a lane; Stage-2 clusters are not lane templates. |
-| Note quality | Notes that use test paths, test labels, or benchmark ids as proof are contaminated; keep only production facts and route the remaining gap to `team_planner`. |
-| Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` force a `team_planner` lane instead — a call chain across unrelated owners is not "one mechanism". |
-| Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
+| Coverage | Every note-backed owner family or PR cluster has a lane; unresolved gaps still get a lane (as `team_planner`). Stage-2 cluster rows map roughly 1:1 to lanes — coarse stays coarse. |
+| Default route | At root depth, `team_planner` is the default lane type. Use `developer` only when a shallow scout already proved exact owner file + likely edit seam; otherwise hand the cluster to `team_planner` for recursive subdivision. |
+| Note quality | Notes must name a production owner (file/directory/symbol). Test paths cited as triangulation hints are fine; if a note only points at tests with no production owner identified, route the gap to `team_planner`. |
+| Developer lanes (rare at root) | Exactly one production owner file (or one tight coupled pair within one mechanism), proven by this turn's scout; ≥2 unrelated owner files in `scope_paths` force a `team_planner` lane instead — a call chain across unrelated owners is not "one mechanism". |
+| Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. Each `team_planner` lane carries one PR cluster / owner family with its scout-confirmed production directory in `scope_paths`. |
 | Validators | Required when any producer lane writes a same-payload suite; depend on every such producer; `scope_paths` are production surfaces. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
 
