@@ -23,11 +23,12 @@ prompt -> [1 Explore] -> [2 Load completion-contract if exact-file] -> [3 Submit
 
 | Target shape | Exploration |
 | --- | --- |
-| Single file / short fixed file list | Use at most one file-path `ci_query_symbol(...)` per named path, then Stage 3. |
+| Single file / short fixed file list | Use at most one file-path `ci_query_symbol(...)` per named path, then Stage 3. Do not query test labels. |
 | Directory/package | Use CI tools to map subdivisions, entry points, owner seam, and gaps. |
-| Benchmark/test path | Record off-policy evidence only; do not widen into production mapping. |
+| Benchmark/test path | Record off-policy evidence only; do not query or read it, and do not widen into production mapping. |
 | Missing exact target | Record zero coverage and do not hunt nearby replacements. |
 | Adjacent files | Mention inside note content, not as submitted paths. |
+| Prompt leakage | Ignore any test path, test id, F2P/P2P id, benchmark filename, or failing-test label when choosing CI queries. |
 
 Keep the prompt-named paths as the exploration boundary. Prefer notes and CI before raw source reads. No sandbox, edit, command, pytest, or runtime execution tools.
 

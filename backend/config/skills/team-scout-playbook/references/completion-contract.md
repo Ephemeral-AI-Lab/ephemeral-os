@@ -13,6 +13,8 @@ named paths
   -> missing/no-symbol/replaced by directory? submit notes with gap
 ```
 
+Exact-file completion queries only the named production paths. Do not query test labels, test file paths, benchmark filenames, or F2P/P2P ids even if they appear in the prompt.
+
 | Situation | Note outcome |
 | --- | --- |
 | Exact definitions exist | Record scope, entry points, owner seam, subdivisions, and gaps. |

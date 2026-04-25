@@ -22,7 +22,7 @@ Never assign subagents to explore test suites or test files.
 ## Overall Stage Flow
 
 ```text
-Caption: child planner stage machine. Stages run in order; references load only inside the stage that needs them.
+Caption: child planner stage machine. Stages run in order; each has its own entry gate, exit gate, and (optional) reference.
 
   +-----------+    +-----------+    +-----------+    +-------------+    +---------------+
   |  analyze  | -> |  cluster  | -> |   scout   | -> |  synthesize | -> |  submit_plan  |
@@ -36,13 +36,13 @@ Caption: child planner stage machine. Stages run in order; references load only 
     notes read       per row          skip justified   checklist
 ```
 
-| # | Stage | Input | Exit gate |
-| --- | --- | --- | --- |
-| 1 | analyze | Assigned planner task + inherited Task Center context | Own/parent/dep details + graph topology read; tests split from production clues. |
-| 2 | cluster | Analyze output | Every owner row carries one owner family + changelog axes. |
-| 3 | scout | Cluster ledger | Notes harvested for every scouted production path, or the row is marked unresolved. |
-| 4 | synthesize | Scout findings | Stage-local reference loaded; no new scouts or note reads; lanes drafted and checklist passes. |
-| 5 | submit_plan | Drafted lanes | Exactly one `submit_plan({ "new_tasks": [...] })` call, no later tool calls or prose. |
+| # | Stage | Input | Exit gate | Reference |
+| --- | --- | --- | --- | --- |
+| 1 | analyze | Assigned planner task + inherited Task Center context | Own/parent/dep details + graph topology read; tests split from production clues. | none |
+| 2 | cluster | Analyze output | Every owner row carries one owner family + changelog axes. | none |
+| 3 | scout | Cluster ledger | Notes harvested for every scouted production path, or the row is marked unresolved. | none |
+| 4 | synthesize | Scout findings | Reference loaded; no new scouts or note reads; lanes drafted and checklist passes. | `load_skill_reference(skill_name="team-planner-playbook", reference_name="submit-child-plan")` — load before drafting any lane. |
+| 5 | submit_plan | Drafted lanes | Exactly one `submit_plan({ "new_tasks": [...] })` call, no later tool calls or prose. | none |
 
 ## 1. Analyze
 
@@ -65,6 +65,7 @@ parent / deps / notes
 | Inspect topology | Call `read_task_graph()` for dependency topology only. |
 | Classify intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
 | Tag clues | Tag each production clue as exact file/symbol, broad family, or guess. |
+| Evidence boundary | Keep test paths, ids, and failing-test labels in spec context only; never copy them into owner-row names, scout prompts, `scope_paths`, or scout targets. |
 | Forbid | Never inspect, scout, or assign test paths. |
 
 **Exit:** own/parent/dep details and graph topology are read; production clues are split from test/benchmark evidence.
@@ -85,8 +86,8 @@ clues
 
 | Check | Planner action |
 | --- | --- |
-| Clustering axes | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids and test buckets are acceptance criteria, not grouping axes. |
-| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. Use production-axis labels, not test labels. |
+| Clustering axes | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
+| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
 | Inherited evidence | Keep tests and ids in spec context. Never invent `<test-stem>.py`; package/engine clues stay directory rows until proven exact. |
 
 Planner exploration stops at owner rows; unrelated concerns remain separate unless live evidence proves a tight producer-consumer pair.
@@ -110,10 +111,10 @@ owner ledger
 
 | Scout shape | Use when |
 | --- | --- |
-| Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. |
+| Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. Guessed or test-derived filenames do not qualify. |
 | Bundled superficial | Several paths in one owner family or tight pair; ask only for relationship map, ownership boundaries, and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; dispatch separate scouts in one wave. An entrypoint, config loader, and compatibility adapter remain separate rows unless a scout note already proves one shared owner. |
+| Row wave | Independent families; dispatch separate scouts in one wave. Never batch unrelated owner families. |
 | No scout | Inherited notes already provide root-cause-grade evidence for this row. |
 
 Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Never name test paths, test ids, benchmark filenames, F2P/P2P ids, or failing-test labels anywhere in the prompt.
@@ -135,7 +136,7 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 | Section | Contains |
 | --- | --- |
 | `## Task` | One production routing question; no test path, test id, F2P/P2P id, benchmark file name, or failing-test label. |
-| `## Exploration Path` | Repo-relative production paths only; multiple paths must be one owner family or one tight pair. |
+| `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
 **Exit:** the scout wave returns, or every broad row has a documented reason for skipping scout.

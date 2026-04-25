@@ -110,13 +110,13 @@ unresolved seams (S1, S2, ..., Sn)
 
 | Seam shape in failed RCA | Scout to spawn |
 | --- | --- |
-| Single named file with unclear callers | One single-path scout + `ci_query_symbol` on each suspect symbol. |
+| Single named file with unclear callers | One proven exact production file scout + `ci_query_symbol` on each suspect symbol. Guessed or test-derived filenames use the package/directory row. |
 | Two coupled files (engine + adapter, producer + consumer) | One multi-path scout for that pair. |
 | Whole subsystem / package boundary unclear | One directory scout for the package. |
 | Multiple independent unresolved seams | One scout per seam, dispatched as one parallel wave. |
 | No scout | Existing notes already provide root-cause-grade evidence for that seam. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. Production paths only; never name a test path in a scout prompt and never call workspace/scout tools on tests. Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. Production paths only; never name test paths, test ids, benchmark filenames, F2P/P2P ids, or failing-test labels in a scout prompt, and never call workspace/scout tools on tests. Harvest notes for every assigned production path; missing notes create uncertainty for that path only.
 
 ### Scout Prompt Format
 
@@ -136,7 +136,7 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 | Section | Contains |
 | --- | --- |
-| `## Task` | The single recovery question this scout answers (one unresolved seam, one tight coupled pair, or one directory). |
+| `## Task` | The single recovery question this scout answers; no test path, test id, F2P/P2P id, benchmark file name, or failing-test label. |
 | `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
