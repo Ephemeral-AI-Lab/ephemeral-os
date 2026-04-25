@@ -32,10 +32,8 @@ POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "background status snapshot. Do not call `wait_for_background_task` or "
     "`check_background_progress` again for this delivered subagent result. "
     "When file notes are referenced, read them with "
-    "`read_file_note(file_paths=[...])`. Subagents are not Task Center tasks; "
-    "do not use `read_task_graph()` or `read_task_details(...)` to retrieve "
-    "subagent results, and never pass `bg_*` "
-    "background ids as task ids."
+    "`read_file_note(file_paths=[...])`. Never pass `bg_*` background ids "
+    "as file-note or tool ids."
 )
 
 

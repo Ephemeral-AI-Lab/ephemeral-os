@@ -514,7 +514,7 @@ async def ensure_sweevo_test_patch(
     sandbox_id: str,
     repo_dir: str = _REPO_DIR,
 ) -> None:
-    """Apply the SWE-EVO test patch so planner, workers, and grader share one test surface."""
+    """Apply the SWE-EVO test patch so the grader uses the expected test surface."""
     test_patch = instance.test_patch
     if not test_patch:
         logger.warning(

@@ -107,18 +107,16 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 </td>
 <td width="20%" align="center" style="vertical-align: top; padding: 15px;">
 
-<h3>🤝 Swarm Coordination</h3>
+<h3>🤝 Background Agents</h3>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Multi--Agent-EC4899?style=for-the-badge&logo=network&logoColor=white" alt="Swarm" />
+  <img src="https://img.shields.io/badge/Subagents-EC4899?style=for-the-badge&logo=network&logoColor=white" alt="Subagents" />
 </div>
 
 <img src="assets/scene-swarm.png" width="140">
 
 <p align="center"><strong>• Subagent Spawning & Delegation</strong></p>
-<p align="center"><strong>• Team Registry & Task Management</strong></p>
 <p align="center"><strong>• Background Task Lifecycle</strong></p>
-<p align="center"><strong>• <a href="https://github.com/HKUDS/ClawTeam">ClawTeam</a> Integration (Roadmap)</strong></p>
 
 </td>
 </tr>
@@ -262,25 +260,17 @@ backend/src/
   tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent
   skills/          # 📚 Skill loading, registry, DB store, and API
   agents/          # 🤖 Agent definition loading, builder, registry, CRUD API
-  team/            # 🤝 Task Center, dispatcher, persistence, planner runtime
   server/          # 🌐 FastAPI app, SSE protocol, state snapshots
   sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
   prompts/         # 📝 Runtime/system prompt assembly and capability awareness
   config/          # ⚙️ Settings, model resolution, paths
 backend/config/
   agents/          # 🤖 Optional local agent definitions (empty by default)
-  teams/           # 🤝 Bundled team rosters
   skills/          # 📚 Optional local markdown skills (empty by default)
 frontend/
   web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
   terminal/        # 💬 Terminal UI components and backend session hooks
 ```
-
-Detailed team-runtime notes: [`team-coordination`](docs/architecture/team-coordination.md),
-[`task-center`](docs/architecture/task-center.md),
-[`team-failure-conditions`](docs/architecture/team-failure-conditions.md),
-[`terminal-submission`](docs/architecture/terminal-submission.md),
-and [`replan-workflow-sequence-diagrams`](docs/architecture/replan-workflow-sequence-diagrams.md).
 
 ### The Agent Loop
 
@@ -374,7 +364,7 @@ EphemeralOS is useful as a lightweight harness layer around Claude-style tooling
 
 - **OpenClaw-oriented workflows** can reuse Markdown-first knowledge and command-driven collaboration patterns.
 - **Claude-style plugins and skills** stay portable because EphemeralOS keeps those formats familiar.
-- **ClawTeam-style multi-agent work** maps well onto the built-in team, task, and background execution primitives.
+- **Background subagent work** maps onto the built-in subagent and background execution primitives.
 
 For concrete usage ideas instead of generic claims, see [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
 
@@ -528,7 +518,7 @@ EphemeralOS is a **community-driven research project**. We welcome contributions
 | **Skills** | Domain knowledge `.md` files (finance, science, DevOps...) |
 | **Plugins** | Workflow plugins with commands, hooks, agents |
 | **Providers** | Support for more LLM backends (OpenAI, Ollama, etc.) |
-| **Multi-Agent** | Coordination protocols, team patterns |
+| **Agents** | Subagent workflows and background execution |
 | **Testing** | E2E scenarios, edge cases, benchmarks |
 | **Documentation** | Architecture guides, tutorials, translations |
 

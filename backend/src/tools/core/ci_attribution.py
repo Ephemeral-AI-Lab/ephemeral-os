@@ -1,9 +1,9 @@
 """Resolve CI attribution metadata from a :class:`ToolExecutionContext`.
 
 Tools that dispatch through the code-intelligence service (``svc.cmd``,
-``svc.edit_file``, etc.) need agent / team / task identifiers so the
-arbiter ledger records who did what. Those four fields are read from the
-same metadata slots in every caller, so the extraction lives here.
+``svc.edit_file``, etc.) need stable actor/run identifiers so the arbiter
+ledger records who did what. Those fields are read from the same metadata
+slots in every caller, so the extraction lives here.
 """
 
 from __future__ import annotations
@@ -81,5 +81,5 @@ def agent_attribution_from_context(
         agent_id=resolved_agent_id(context, preferred=preferred_agent_id),
         run_id=str(context.metadata.get("run_id") or ""),
         agent_run_id=str(context.metadata.get("agent_run_id") or ""),
-        task_id=str(context.metadata.get("work_item_id") or ""),
+        task_id=str(context.metadata.get("task_id") or ""),
     )

@@ -158,7 +158,7 @@ def _validate_run_subagent_request(
                 f"run_subagent: agent '{agent_name}' is not a subagent "
                 f"(agent_type={sub_def.agent_type!r}); "
                 "only subagent-typed agents may be dispatched here. "
-                "This is terminal evidence for planners: do not retry or wait "
+                "This is terminal evidence for the caller: do not retry or wait "
                 "on this background task. If you need coding, validation, or "
                 "runtime test evidence, emit `developer` / `validator` "
                 "tasks in the plan instead of calling `run_subagent`."
@@ -351,11 +351,6 @@ async def run_subagent(
     qc = getattr(agent, "query_context", None)
     if qc is not None and qc.tool_metadata is not None:
         qc.tool_metadata.agent_name = sub_def.name
-        task_center = context.metadata.get("task_center")
-        if task_center is not None:
-            # Dispatchable subagents are not Task Center tasks, but tools
-            # that need the parent run's note store can use this channel.
-            qc.tool_metadata["task_center"] = task_center
         qc.tool_metadata["work_item_started_at"] = time.time()
         sub_role = getattr(sub_def, "role", None)
         if sub_role:
