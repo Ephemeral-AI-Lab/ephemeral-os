@@ -89,7 +89,7 @@ owner ledger
 | Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
 | Row wave | Independent production families; separate scouts, then stop after the first routing-changing wave. |
 
-Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
+Multi-path `target_paths` in one scout must share one owner family (sibling files in the same package serving the same mechanism) or be a single coupled pair (engine + adapter, producer + consumer). Unrelated owner families — e.g. `dask/cli.py` + `dask/config.py` + `dask/compatibility.py`, or HDF + parquet + groupby — go in **separate scouts dispatched as one parallel wave**, never one batched call. Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
 
 ## 3. Synthesize
 
@@ -106,9 +106,9 @@ same-payload evidence  -> validator with production scopes
 | Draft check | Expected result |
 | --- | --- |
 | Coverage | Every named cluster has a producer owner or sibling `team_planner`; tiny slices stay separate. |
-| Developer lanes | Exact owner, one mechanism, small failure surface. |
+| Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` force a `team_planner` lane instead. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
-| Validators | Depend on every same-payload producer they verify; `scope_paths` are production surfaces. |
+| Validators | Required when any producer lane writes a same-payload suite; depend on every such producer; `scope_paths` are production surfaces. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
 
 Run this checklist, then make `submit_plan({ "new_tasks": [...] })` the final assistant action: no summary, output, parent ids, trailing prose, or later tool calls.

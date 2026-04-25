@@ -28,7 +28,7 @@ classification + root-cause trace
 | Check | Rule |
 | --- | --- |
 | Failure coverage | Every named variant maps to a repair/diagnostic task or preserved live owner. |
-| Original-contract coverage | Every uncompleted goal, acceptance criterion, and scope item from the failed developer/validator contract maps to a new recovery child or an explicitly preserved live owner; blocker-only repair is insufficient. |
+| Original-contract coverage | **Hard rule**: every uncompleted goal, acceptance criterion, F2P/P2P id, and scope item from the failed developer/validator contract maps to a new recovery child or an explicitly preserved live owner. When the repair child only unblocks (e.g. creates a stub, restores an import, fixes config), add a continuation child with `deps=[<repair_child_id>]` carrying the failed contract; shipping repair-only is rejected. |
 | Dependencies | Use local deps only for real output ordering; overlapping scopes alone are fine. |
 | Scope | Production paths only; put tests in specs. |
 | Moves/removals | Name `daytona_move_file` or `daytona_delete_file` when that is the production repair. |

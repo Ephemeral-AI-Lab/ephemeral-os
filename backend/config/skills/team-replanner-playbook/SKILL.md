@@ -152,7 +152,7 @@ same parent:
 | --- | --- |
 | Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
 | Validator-discovered child-owned suite or uncompleted criterion | Map to repair plus validator, or preserved live owner. |
-| Blocker-only fix leaves contract uncovered | Add continuation validator. |
+| Blocker-only fix leaves the failed task's goal/criteria/F2P ids uncovered | **Required**: add a continuation `developer` (or `team_planner` for broad rows) with `deps=[<repair_child_id>]`, carrying every uncompleted goal, acceptance criterion, F2P id, and production scope from the failed contract. Shipping repair-only without the continuation child is a hard defect. |
 | Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, or contradictory value rule | Evidence only; add a production diagnostic or blocker task. |
 
 ## 4. Submit
