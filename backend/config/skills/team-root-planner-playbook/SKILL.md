@@ -21,7 +21,7 @@ Never assign subagents to explore test suites or test files.
 ## Overall Stage Flow
 
 ```text
-Caption: root planner stage machine. Stages run in order; each has its own entry gate, exit gate, and (optional) reference.
+Caption: root planner stage machine. Stages run in order; references load only inside the stage that needs them.
 
   +-----------+    +-----------+    +-----------+    +-------------+    +---------------+
   |  analyze  | -> |  cluster  | -> |   scout   | -> |  synthesize | -> |  submit_plan  |
@@ -34,13 +34,13 @@ Caption: root planner stage machine. Stages run in order; each has its own entry
     split            per row          skip justified   checklist
 ```
 
-| # | Stage | Input | Exit gate | Reference |
-| --- | --- | --- | --- | --- |
-| 1 | analyze | User request | Request facts split from test/benchmark evidence and production clues. | none |
-| 2 | cluster | Analyze output | Every owner row carries one owner family + changelog axes. | none |
-| 3 | scout | Cluster ledger | Notes harvested for every scouted production path, or the row is marked unresolved. | none |
-| 4 | synthesize | Scout findings | Reference loaded; no new scouts or note reads; lanes drafted and checklist passes. | `load_skill_reference(skill_name="team-root-planner-playbook", reference_name="synthesize-and-submit")` — load before drafting any lane. |
-| 5 | submit_plan | Drafted lanes | Exactly one `submit_plan({ "new_tasks": [...] })` call, no later tool calls or prose. | none |
+| # | Stage | Input | Exit gate |
+| --- | --- | --- | --- |
+| 1 | analyze | User request | Request facts split from test/benchmark evidence and production clues. |
+| 2 | cluster | Analyze output | Every owner row carries one owner family + changelog axes. |
+| 3 | scout | Cluster ledger | Notes harvested for every scouted production path, or the row is marked unresolved. |
+| 4 | synthesize | Scout findings | Stage-local reference loaded; no new scouts or note reads; lanes drafted and checklist passes. |
+| 5 | submit_plan | Drafted lanes | Exactly one `submit_plan({ "new_tasks": [...] })` call, no later tool calls or prose. |
 
 ## 1. Analyze
 
@@ -58,7 +58,7 @@ request
 
 | Check | Action |
 | --- | --- |
-| Test/benchmark ids | Keep in evidence; never copy into `scope_paths` or scout targets. |
+| Test/benchmark ids | Keep in evidence; never copy into `scope_paths`, owner-row names, or scout prompts. |
 | Production clues | Tag each as exact file/symbol, broad family, or guess. |
 | Forbid | Never inspect, scout, or assign test paths. |
 
@@ -80,8 +80,8 @@ production clues
 
 | Check | Root-planner action |
 | --- | --- |
-| Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids cannot join rows. |
-| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
+| Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids and test buckets cannot join rows. |
+| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. Use production-axis labels, not test labels. |
 | Benchmark evidence | Exact means explicit production path/symbol from user/notes or `ci_workspace_structure` on the parent dir. Before scouting or scoping a test-derived filename, verify it; if absent or replaced by a package directory, use the directory row. |
 
 Routing stops at owner rows; unrelated concerns remain separate unless live evidence proves one tight producer-consumer pair. If several appear in one row, split it.
@@ -108,9 +108,9 @@ owner ledger
 | Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. |
 | Bundled superficial | Several paths in one owner family or one tight pair; same parent directory or call chain alone is not enough. Ask only for relationship map and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch unrelated owner families. |
+| Row wave | Independent families; issue one `run_subagent` per row in one wave. An entrypoint, config loader, and compatibility adapter remain separate rows unless a scout note already proves one shared owner. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only; test paths, benchmark filenames, and F2P/P2P ids stay out.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only; test paths, test ids, benchmark filenames, F2P/P2P ids, and failing-test labels stay out.
 
 ### Scout Prompt Format
 
@@ -128,8 +128,8 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 | Section | Contains |
 | --- | --- |
-| `## Task` | One production routing question; no test path, F2P id, or benchmark file name. |
-| `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
+| `## Task` | One production routing question; no test path, test id, F2P/P2P id, benchmark file name, or failing-test label. |
+| `## Exploration Path` | Repo-relative production paths only; multiple paths must be one owner family or one tight pair. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
 **Exit:** the scout wave returns, or every broad row has a documented reason for skipping scout.

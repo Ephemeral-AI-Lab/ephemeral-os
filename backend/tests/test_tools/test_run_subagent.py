@@ -358,6 +358,90 @@ def test_validate_run_subagent_allows_planner_scout_prompt(
     assert result.sub_def.name == "scout"
 
 
+@pytest.mark.parametrize(
+    ("prompt", "expected"),
+    [
+        ("explore dask/tests/test_cli.py", "test path"),
+        ("explore dask/dataframe/io/tests/test_hdf.py", "test path"),
+        ("find seam for test_valid_divisions[divisions4-True]", "test id"),
+        ("map evidence for F2P-12", "F2P/P2P id"),
+        ("inspect benchmarks/sweevo/cases.json", "benchmark path"),
+    ],
+)
+def test_validate_run_subagent_rejects_scout_prompt_test_evidence(
+    prompt: str,
+    expected: str,
+):
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg(), "agent_name": "root_planner"},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=prompt,
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert expected in result.output
+    assert "production-only" in result.output
+
+
+def test_validate_run_subagent_rejects_scout_prompt_missing_terminal_path():
+    prompt = """## Task
+Mode: bundled_superficial. Map the dataframe storage engine relationship.
+
+## Exploration Path
+pkg/io/arrow.py
+pkg/io/core.py
+
+## Terminal Contract
+submit_file_note(paths=["pkg/io/arrow.py"], content="<finding>")
+"""
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg(), "agent_name": "root_planner"},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=prompt,
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "pkg/io/core.py" in result.output
+
+
+def test_validate_run_subagent_allows_complete_scout_prompt_contract():
+    prompt = """## Task
+Mode: bundled_superficial. Map the dataframe storage engine relationship.
+
+## Exploration Path
+pkg/io/arrow.py
+pkg/io/core.py
+
+## Terminal Contract
+submit_file_note(paths=["pkg/io/arrow.py", "pkg/io/core.py"], content="<finding>")
+"""
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg(), "agent_name": "team_planner"},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=prompt,
+        context=ctx,
+    )
+
+    assert not isinstance(result, ToolResult)
+    assert result.sub_def.name == "scout"
+
+
 def test_run_subagent_schema_is_agent_agnostic():
     """The tool schema must stay generic — each dispatchable subagent owns
     its own contract documentation."""
