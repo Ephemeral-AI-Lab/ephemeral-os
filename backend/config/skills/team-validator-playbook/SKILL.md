@@ -45,6 +45,7 @@ validation UUIDs
 | Read task context | `read_task_details(task_id="<uuid>")` |
 | Read file notes | `read_file_note(file_paths=[...])` |
 | Diagnose one file | `ci_diagnostics(file_path="...")` |
+| Query a symbol's definition + callers + cross-file usage | `ci_query_symbol(name="...", file_path="...")` |
 | Run verification | `daytona_shell(command="...")` |
 | Apply one correction | `daytona_edit_file(...)`, `daytona_write_file(...)`, `daytona_delete_file(...)`, or `daytona_move_file(...)` |
 | Terminal success | `submit_task_success({ summary: string })` |
@@ -55,6 +56,7 @@ validation UUIDs
 | Surface | Compact rule |
 | --- | --- |
 | Shell boundary | Prefer raw exact tests/probes; pipes, redirects, cleanup, or wrapper checks are RCA-only evidence. |
+| Mutation channel | Source corrections MUST go through `daytona_edit_file` / `daytona_write_file` / `daytona_delete_file` / `daytona_move_file`. Writing a helper script (`edit_*.py`, `apply_fix.py`, etc.) and running it via `daytona_shell` to mutate source is a forbidden bypass; if the failed task's developer used this pattern, treat the work as unverified and `request_replan` with `unresolved_blocker`. |
 | Verification integrity | Latest red raw command controls status; skips, xfails, pytest config, warnings/plugins, wrappers, or installs are RCA-only. |
 | Evidence freshness | Stale, partial, indirect, wrapper, altered-command, or missing evidence is red. |
 | Correction scope | One correction only; a few light outside-scope ops can continue, while multiple files or broad changes replan. |
@@ -69,6 +71,8 @@ own task -> parent task -> dependency tasks -> touched/owned file notes
 ```
 
 Use exact UUIDs from the prompt header. Treat dependency details as implementation handoff. Call `read_file_note(file_paths=[...])` for every assigned scope path and every file you intend to inspect with `daytona_read_file`; empty notes are valid but the call is mandatory before the first source read. Missing, stale, boilerplate, or evidence-free dependency summaries are validation gaps.
+
+Prefer `ci_query_symbol(name=..., file_path=...)` over wide `daytona_read_file` ranges to map a symbol's definition, callers, and cross-file usage in one call; reach for it whenever the trace, owner, or call site is unclear.
 
 ## 2. Build Validation Plan
 
@@ -134,6 +138,7 @@ After every red verification, emit this packet as a fenced ```json block in your
 
 | Boundary | Route |
 | --- | --- |
+| `trace`/`hypothesized_root_cause`/`candidate_fix` cites an unfamiliar symbol or unclear caller chain | Run `ci_query_symbol` on the symbol before any further edit, then refresh the packet. |
 | Obvious local defect in owned/touched production surface | Stage 5 correction. |
 | Child-owned suite red, broad outside scope, another role, missing handoff, ambiguous cause, tooling block, or fully spent budget without green evidence | `request_replan`. |
 | Same command stays red after one correction without a new local defect | `request_replan`. |
@@ -166,7 +171,7 @@ any red / invalid / missing / stale / partial / blocked / budget fully spent + i
 
 The "raw green evidence" must come from the unmodified required pytest command: no `-c`, `-p no:`, `-W`, `--noconftest`, no piping, and `rootdir`/`configfile` in the captured output must match the project's real config (not `/dev` or `null`). Wrappered, filtered, or override-poisoned green output counts as red; re-run the raw command or `request_replan`.
 
-`submit_task_success` is forbidden if the summary admits any acceptance criterion is unmet, partial, deferred, or "out of scope". Phrases like "remaining tests fail", "still failing", "out of scope for this fix", or "not implemented" mean `request_replan` instead.
+`submit_task_success` is forbidden if the summary admits any acceptance criterion is unmet, partial, deferred, blocked, out-of-scope, environmental, infrastructural, or pre-existing. Any phrase that excuses missing green evidence — e.g. "remaining tests fail", "still failing", "out of scope for this fix", "Out-of-Scope", "not implemented", "blocked by pre-existing", "blocked by unrelated", "verification blocked", "infrastructure problem", "infrastructure issue", "environment issue", "tooling problem" — means `request_replan` with `unresolved_blocker` instead. Partial, indirect, or workaround verification (running tests via `python -c "from … import test_x; test_x()"` instead of the required pytest command) is not success.
 
 Success summary includes:
 

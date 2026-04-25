@@ -15,6 +15,7 @@ from tools.daytona_toolkit.delete_move_tool import (
 from tools.daytona_toolkit.hooks.prehook import (
     shell_destructive_git,
     shell_package_mutation_policy,
+    shell_pytest_override_policy,
     shell_stderr_suppression_policy,
     move_src_scope_deny,
     repo_operation_guard,
@@ -250,6 +251,48 @@ def test_shell_package_mutation_policy_allows_read_only_or_quoted_mentions() -> 
         assert outcome.has_error is False, command
 
 
+def test_shell_pytest_override_policy_blocks_flag_pipe_and_redirect_forms() -> None:
+    ctx = _ctx()
+    commands = [
+        "pytest -q -c alt.ini",
+        "pytest --noconftest tests/team/test_task_graph.py",
+        "pytest -p no:faulthandler",
+        "pytest -p=no:warnings",
+        "pytest -W error::DeprecationWarning",
+        "pytest --pythonwarnings=error",
+        "python -m pytest backend/tests | tail -20",
+        "uv run pytest -q > /tmp/pytest.log",
+    ]
+
+    for command in commands:
+        args = DaytonaShellInput(command=command)
+        outcome = _run(
+            shell_pytest_override_policy.hook("daytona_shell", args, ctx)
+        )
+        assert outcome.has_error is True, command
+        assert "pytest verification commands must not override" in (
+            outcome.error_message or ""
+        )
+
+
+def test_shell_pytest_override_policy_allows_raw_pytest_commands() -> None:
+    ctx = _ctx()
+    commands = [
+        "pytest -q backend/tests/team/test_task_graph.py",
+        "python -m pytest backend/tests/team/test_task_graph.py -k replan",
+        "uv run pytest backend/tests/test_tools/test_daytona_toolkit/test_shell_tool.py",
+        "pytest 2>&1",
+        "python -c \"print('pytest -q -c alt.ini')\"",
+    ]
+
+    for command in commands:
+        args = DaytonaShellInput(command=command)
+        outcome = _run(
+            shell_pytest_override_policy.hook("daytona_shell", args, ctx)
+        )
+        assert outcome.has_error is False, command
+
+
 def test_shell_destructive_git_allows_clean_dry_run() -> None:
     for command in ("git clean -ndf", "git clean --dry-run -xdf"):
         assert shell_destructive_git.destructive_git_command_error(command) is None
@@ -310,9 +353,11 @@ def test_new_pre_hooks_register_once() -> None:
     repo_operation_guard.register(registry)
     shell_package_mutation_policy.register(registry)
     shell_package_mutation_policy.register(registry)
+    shell_pytest_override_policy.register(registry)
+    shell_pytest_override_policy.register(registry)
     shell_stderr_suppression_policy.register(registry)
     shell_stderr_suppression_policy.register(registry)
 
     assert len(registry.matching("daytona_delete_file", "pre")) == 1
     assert len(registry.matching("daytona_move_file", "pre")) == 1
-    assert len(registry.matching("daytona_shell", "pre")) == 2
+    assert len(registry.matching("daytona_shell", "pre")) == 3

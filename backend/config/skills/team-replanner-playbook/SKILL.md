@@ -82,7 +82,27 @@ For `unresolved_blocker`, add one line:
 Diagnostics decision: <trivial_direct_replan|deep_diagnostics>
 ```
 
-Choose `trivial_direct_replan` only when task details, notes, and CI already name every production seam. Choose `deep_diagnostics` when owner, path, rule, value mapping, or production seam remains unresolved.
+| Diagnostics route | Use when |
+| --- | --- |
+| `trivial_direct_replan` | Failed task names every production seam, **and** no prior sibling/ancestor already failed on the same scope, **and** rich RCA traces a single defect. |
+| `deep_diagnostics` (default for chained or repeated failures) | Owner, path, rule, value mapping, or production seam remains unresolved; **or** a prior task in the same lineage already filed `request_replan` on the same scope; **or** the failed task admitted partial/out-of-scope/blocked-by-pre-existing in its summary. **Fan out a parallel scout wave** plus `ci_query_symbol` on each unfamiliar seam **before** drafting recovery children. |
+
+A rich-looking RCA from a developer who repeatedly hit the same red is a symptom, not proof; default to `deep_diagnostics` whenever the failure is chained or the same scope has been touched by a prior failed sibling.
+
+```text
+Caption: deep_diagnostics scout fanout — one scout per unresolved seam, all in parallel.
+
+unresolved seams (S1, S2, ..., Sn)
+  -> parallel wave: scout(S1), scout(S2), ..., scout(Sn) + ci_query_symbol(unclear callers)
+  -> harvest notes -> recovery children mapped 1:1 to seam findings
+```
+
+| Seam shape in failed RCA | Scout to spawn |
+| --- | --- |
+| Single named file with unclear callers | One single-path scout + `ci_query_symbol` on each suspect symbol. |
+| Two coupled files (engine + adapter, producer + consumer) | One multi-path scout for that pair. |
+| Whole subsystem / package boundary unclear | One directory scout for the package. |
+| Multiple independent unresolved seams | One scout per seam, dispatched as one parallel wave. |
 
 ## Diagnostic Scouts
 
@@ -142,10 +162,22 @@ Terminal reference: `terminal-contract`.
 
 | Submit check | Expected result |
 | --- | --- |
-| Top-level keys | Only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when add-only. |
+| Top-level keys | Only `new_tasks` and `cancel_ids`; **default `cancel_ids: []`**. Add an id only after confirming it is a stale running/pending/ready direct sibling per the matrix below. |
 | New tasks | Direct repair/check children or Planner handoff redraft; agents are `developer`, `validator`, or `team_planner`. |
 | Specs | Structured `goal`, `detail`, and `acceptance_criteria`; unresolved blockers include diagnostics decision and planner redrafts include Planner handoff. |
 | Dependencies | Local recovery ids or freshly proven schedulable existing ids only. |
-| Cancellations | Only stale running/pending/ready direct siblings; never failed, replanner, terminal, descendant, or validator-continuation work. |
+
+`cancel_ids` membership matrix — id is **forbidden** if any row matches; the runtime returns `Validation failed: replanner cannot cancel ...` and the retry must remove the id, never re-add it.
+
+| Forbidden id type | Why |
+| --- | --- |
+| The failed task that triggered this replan (status `request_replan` or `failed`) | Immutable evidence; runtime finalizes it. |
+| Any other task already in `request_replan`, `failed`, `done`, or `cancelled` | Terminal — cannot re-cancel. |
+| The replanner's own task id or any of its descendants | A replanner cannot cancel itself or its placeholder subtree. |
+| Any `team_replanner` task | Replanners coordinate recovery; they are never cancelled here. |
+| Any validator-continuation task that already has live dependencies pointing at the new repair children | Preserves §2b fix-then-continue edges. |
+| Anything outside the failed task's direct sibling set | Out-of-region cancels corrupt the parent DAG. |
+
+When in doubt, ship `cancel_ids: []` — add-only replans are always valid.
 
 Emit exactly one `submit_replan({ new_tasks, cancel_ids })` call. Make no further tool calls or prose.

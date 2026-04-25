@@ -43,6 +43,35 @@ class ReplanValidationResult:
     origin_task_id: str | None = None
     all_cancelled_ids: set[str] = field(default_factory=set)
     allowed_existing_dep_ids: set[str] = field(default_factory=set)
+    allowed_cancel_ids: set[str] = field(default_factory=set)
+
+
+def _compute_allowed_cancel_ids(
+    graph: dict[str, Any],
+    *,
+    replanner_parent_id: Any,
+    replan_task_id: str,
+    origin_task_id: str | None,
+) -> set[str]:
+    """Direct siblings of the replanner that the runtime will accept as cancel targets.
+
+    Filters: same parent as replanner; status in CANCELABLE_REPLAN_STATUSES; not
+    the replanner itself, not the origin failed task, not another team_replanner.
+    """
+    allowed: set[str] = set()
+    for tid, task in graph.items():
+        if tid == replan_task_id or tid == origin_task_id:
+            continue
+        if getattr(task, "parent_id", None) != replanner_parent_id:
+            continue
+        status_value = _status_value(getattr(task, "status", None))
+        if status_value not in CANCELABLE_REPLAN_STATUSES:
+            continue
+        agent_name = str(getattr(task, "agent", "") or "")
+        if agent_name == "team_replanner":
+            continue
+        allowed.add(tid)
+    return allowed
 
 
 def _cascade_ids_for_cancel_root(
@@ -156,6 +185,13 @@ def validate_replan_rules(
     cancel_id_list = list(cancel_ids)
     cancel_id_set = set(cancel_id_list)
 
+    result.allowed_cancel_ids = _compute_allowed_cancel_ids(
+        graph,
+        replanner_parent_id=replanner_parent_id,
+        replan_task_id=replan_task_id,
+        origin_task_id=origin_task_id,
+    )
+
     if replan_task_id in cancel_id_set:
         result.errors.append("replanner cannot cancel itself")
     if origin_task_id and origin_task_id in cancel_id_set:
@@ -185,6 +221,20 @@ def validate_replan_rules(
             )
         all_cancelled.update(_cascade_ids_for_cancel_root(graph, cid))
     result.all_cancelled_ids = all_cancelled
+
+    if result.errors:
+        if result.allowed_cancel_ids:
+            allowed_list = ", ".join(sorted(result.allowed_cancel_ids))
+            result.errors.append(
+                "You are only allowed to cancel these tasks, but consider carefully "
+                f"before adding any (default `cancel_ids: []` is always valid): {allowed_list}"
+            )
+        else:
+            result.errors.append(
+                "You are only allowed to cancel these tasks, but consider carefully "
+                "before adding any (default `cancel_ids: []` is always valid): "
+                "<no cancellable siblings — ship cancel_ids: []>"
+            )
 
     excluded_dep_ids: set[str] = {replan_task_id}
     if origin_task_id:

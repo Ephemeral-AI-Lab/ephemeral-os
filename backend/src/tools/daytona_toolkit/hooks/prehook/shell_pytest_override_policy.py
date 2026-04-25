@@ -12,18 +12,24 @@ from tools.daytona_toolkit.hooks.prehook._shell_common import shell_commands
 
 PYTEST_OVERRIDE_POLICY_MESSAGE = (
     "daytona_shell policy error: pytest verification commands must not override "
-    "config, plugins, or warning filters, and must not pipe stdout through "
-    "head/tail/grep/awk/sed/wc/sort/uniq or redirect stdout to a file. Drop "
-    "`-c <path>`, `--noconftest`, `-p no:<plugin>`, `-p=no:<plugin>`, "
-    "`-W <filter>`/`--pythonwarnings`, and any `pytest ... | <filter>` or "
-    "`pytest ... > file` wrappers. Run the raw exact command; overrides and "
-    "output filters are RCA-only and cannot make success."
+    "config, plugins, conftest discovery, ini settings, or warning filters, and "
+    "must not pipe stdout through head/tail/grep/awk/sed/wc/sort/uniq or redirect "
+    "stdout to a file. Drop `-c <path>`, `--noconftest`, `--confcutdir <path>`, "
+    "`--rootdir <path>`, `-o <name=value>`, `--override-ini <name=value>`, "
+    "`-p no:<plugin>`, `-p=no:<plugin>`, `-W <filter>`/`--pythonwarnings`, and "
+    "any `pytest ... | <filter>` or `pytest ... > file` wrappers. Run the raw "
+    "exact command; overrides and output filters are RCA-only and cannot make "
+    "success."
 )
 
 _PYTEST_INVOCATION = re.compile(r"(?:^|[\s/])(?:py\.test|pytest)\b|-m\s+pytest\b")
 _FORBIDDEN_FLAGS = (
     re.compile(r"(?:^|\s)-c(?:\s+|=)\S+"),
     re.compile(r"(?:^|\s)--noconftest\b"),
+    re.compile(r"(?:^|\s)--confcutdir(?:\s+|=)\S+"),
+    re.compile(r"(?:^|\s)--rootdir(?:\s+|=)\S+"),
+    re.compile(r"(?:^|\s)-o(?:\s+|=)\S+"),
+    re.compile(r"(?:^|\s)--override-ini(?:\s+|=)\S+"),
     re.compile(r"(?:^|\s)-p(?:\s+|=)['\"]?no:\S+"),
     re.compile(r"(?:^|\s)-W(?:\s+|=)\S+"),
     re.compile(r"(?:^|\s)--pythonwarnings(?:\s+|=)\S+"),

@@ -428,9 +428,13 @@ def _is_test_file_path(rel_path: str) -> bool:
     if lowered_parts & _TEST_PATH_COMPONENTS:
         return True
     basename = parts[-1].lower()
+    # Repo-root conftest.py is the project's pytest configuration owner,
+    # not a test file. Only treat conftest.py as a test file when it sits
+    # inside a tests/ directory (already caught by the parts check above).
+    if basename == "conftest.py":
+        return False
     return (
-        basename == "conftest.py"
-        or basename.startswith("test_")
+        basename.startswith("test_")
         or basename.startswith("test-")
         or basename.endswith(_TEST_FILE_SUFFIXES)
         or ".test." in basename
