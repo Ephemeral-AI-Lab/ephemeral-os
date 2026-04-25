@@ -1,6 +1,6 @@
 ---
 name: team-root-planner-playbook
-description: Playbook for the root_planner agent. Analyze the user request, optionally scout routing-changing production ownership, then submit a schema-valid root plan with submit_plan(...).
+description: Playbook for the root_planner agent. Analyze, cluster, scout owner rows, synthesize, then submit a schema-valid root DAG with submit_plan(...).
 ---
 
 # Team Root Planner Playbook
@@ -20,79 +20,74 @@ Never assign subagents to explore test suites or test files.
 
 | Gate | Action |
 | --- | --- |
-| Owner questions change this DAG | Scout one production owner-family row or small independent wave. |
-| Test-only evidence | Keep in request/spec context, not workspace or scout targets. |
+| Every owner row in the cluster ledger | Dispatch one production scout per row (deep file or directory map); unrelated rows use separate parallel scouts. |
+| Test-only evidence | Keep in request/spec context; do not inspect, scout, or assign test paths. |
 
 ## Stage Flow
 
 ```text
-Caption: root planner stage machine. Each reference is loaded only at the stage that uses it.
+Caption: root planner stage machine. References load only at the stage that uses them.
 
 user request
   |
   v
-[1 Load context]
-  | request evidence -> owner ledger
-  |
-  | owner questions would change this level's routing?
-  |-- yes --> [2 Scout row wave] -> harvest notes -> update ledger
-  |-- several rows -> [2 Scout row wave] -> sibling lanes
-  |-- no / test-only -> carry uncertainty in expandable spec
-  |
-  v
-[3 Synthesize]
-  Stage 2 closed -> load synthesize-and-submit -> submit_plan(...)
+analyze -> cluster -> scout -> synthesize -> DAG
+  |         |          |        |             |
+request   owner rows  notes    draft lanes   submit_plan(...)
 ```
 
 | Stage | Output |
 | --- | --- |
-| 1. Load context | Owner ledger: clear owners, scout candidates, unresolved clusters, verification evidence. |
-| 2. Scout | Superficial directory/multi-file maps or deep tight-seam checks; production `target_paths` only. |
-| 3. Synthesize | After scouts or no-scout decision, load reference and emit local DAG. |
+| Analyze | Split request facts from test/benchmark evidence and production clues. |
+| Cluster | Owner ledger grouped by changelog axes: owner, mechanism, API, engine, format. |
+| Scout | One production row per scout; unrelated rows go in one parallel wave. |
+| Synthesize | After the scout wave returns, load reference and draft lanes. |
+| DAG | Submit the schema-valid task graph. |
 
-## 1. Load Context
+## 1-2. Analyze + Cluster
 
 ```text
-Caption: split evidence from ownership before making lanes.
+Caption: every owner row is a scout target until a scout returns. Pre-scout, all production claims are guesses from test names.
 
 request
-  |-- commands / benchmark ids / failing tests -> evidence
-  |-- exact production file or symbol ---------> clear owner
-  |-- broad family / matrix / migration -------> scout candidate
-  `-- guessed or test-derived owner -----------> unresolved
+  |-- commands / benchmark ids / failing tests -> evidence (spec only)
+  |-- exact production file or symbol ---------> scout target (deep)
+  |-- broad family / matrix / migration -------> scout target (directory)
+  `-- guessed or test-derived owner -----------> scout target (directory)
 ```
 
 | Check | Root-planner action |
 | --- | --- |
 | Clustering | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
+| Cluster name | One cluster = one owner family. Multi-owner names like "CLI/Config/Compat" or "Storage I/O" are defects — split before scout. |
 | Benchmark evidence | Keep tests and ids in evidence/spec, not workspace or scout targets. |
 
-Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
+Routing stops at owner rows; HDF, JSON, parquet, groupby, utils, CLI, config, and compatibility are separate rows unless live evidence proves a tight producer-consumer pair.
 
 ## 2. Scout
 
 ```text
-Caption: scout fan-out by cluster shape — trivial rows go deep on targeted files, complex rows take a superficial directory map.
+Caption: scout fan-out is proportional: one row per call, package maps for broad rows, no parent-dir batching.
 
 owner ledger
-  |-- exact file/symbol row ------> one deep single/multi-path scout
+  |-- exact file/symbol row ------> one deep single-path scout
   |-- package/engine row ---------> one superficial directory scout
-  |-- unrelated rows -------------> separate scouts or handoff
+  |-- unrelated rows -------------> separate scouts in one parallel wave
   `-- still broad after map ------> team_planner handoff
 ```
 
 | Scout shape | Use when |
 | --- | --- |
-| Single/multi-path | One owner or one coupled pair (engine+adapter, producer+consumer); same mechanism. |
+| Single/multi-path | One owner row or one tight coupled pair (engine+adapter, producer+consumer); same parent directory is insufficient. |
 | Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
 | Row wave | Independent production families; separate scouts in one parallel wave, never one batched call. |
-| Forbidden batch | ≥2 unrelated owners (e.g. `cli.py`+`config.py`+`compat.py`, HDF+parquet+groupby) → use Row wave. |
+| Forbidden batch | Split `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, groupby+utils, and HDF+parquet+groupby into separate row scouts. |
 
-Use `input.target_paths` (not `prompt`); production paths only; missing/disproved → directory scout or handoff.
+Use `input.target_paths` (not `prompt`); production paths only; missing/disproved → directory scout or handoff. Never call workspace/scout tools on test paths.
 
-## 3. Synthesize
+## 4-5. Synthesize + DAG
 
-Enter after scout/no-scout closure. Load the Stage 3 reference; synthesize scout findings into the DAG — it need not mirror Stage 1 clustering.
+Enter after the scout wave returns. Load the synthesize reference; synthesize scout findings into the DAG — it need not mirror clustering.
 
 ```text
 Caption: root routing during synthesis.

@@ -1,6 +1,6 @@
 ---
 name: team-planner-playbook
-description: Playbook for the team_planner agent. Load inherited Task Center context, optionally scout routing-changing production ownership, and submit a schema-valid child plan with submit_plan(...).
+description: Playbook for the team_planner agent. Analyze inherited context, cluster owner rows, scout, synthesize, and submit a schema-valid child DAG with submit_plan(...).
 ---
 
 # Team Planner Playbook
@@ -21,40 +21,34 @@ Never assign subagents to explore test suites or test files.
 
 | Gate | Action |
 | --- | --- |
-| Owner questions change this DAG | Scout one production owner-family row or small independent wave. |
-| Test-only evidence | Keep in task/spec context, not workspace or scout targets. |
+| Owner questions change this DAG | Scout one production owner row or small independent row wave. |
+| Test-only evidence | Keep in task/spec context; do not inspect, scout, or assign test paths. |
 
 ## Stage Flow
 
 ```text
-Caption: child planner stage machine. Each reference is loaded only at the stage that uses it.
+Caption: child planner stage machine. Each reference loads only at the stage that uses it.
 
 assigned planner task
   |
   v
-[1 Load context]
-  | task + parent + deps + graph topology -> owner ledger
-  |
-  | owner questions would change this level's routing?
-  |-- yes --> [2 Scout row wave] -> harvest notes -> update ledger
-  |-- several rows -> [2 Scout row wave] -> sibling lanes
-  |-- no / test-only -> carry uncertainty in expandable spec
-  |
-  v
-[3 Synthesize]
-  Stage 2 closed -> load submit-child-plan -> submit_plan(...)
+analyze -> cluster -> scout -> synthesize -> DAG
+  |         |          |        |             |
+context   owner rows  notes    draft lanes   submit_plan(...)
 ```
 
 | Stage | Output |
 | --- | --- |
-| 1. Load context | Owner ledger: inherited owners, scout candidates, unresolved clusters, deps, verification evidence. |
-| 2. Scout | Superficial directory/multi-file maps or deep tight-seam checks; production `target_paths` only. |
-| 3. Synthesize | After scouts or no-scout decision, load reference and emit local DAG. |
+| Analyze | Read own, parent, deps, notes, and topology; split tests from production clues. |
+| Cluster | Owner ledger grouped by owner, mechanism, API, engine, and format. |
+| Scout | One production row per scout; unrelated rows use a small parallel wave. |
+| Synthesize | After scout/no-scout closure, load reference and draft lanes. |
+| DAG | Submit the schema-valid child task graph. |
 
-## 1. Load Context
+## 1-2. Analyze + Cluster
 
 ```text
-Caption: inherited context becomes routing rows.
+Caption: inherited context becomes routing rows; parent directories are not grouping keys.
 
 parent/deps/notes
   |-- proven owner + mechanism -----------> inherited owner
@@ -71,15 +65,15 @@ parent/deps/notes
 | Classify intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
 | Build ledger | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes; keep tests in spec context. |
 
-Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
+Planner exploration stops at routing; HDF, JSON, parquet, groupby, utils, CLI, config, and compatibility remain separate rows unless live evidence proves a tight producer-consumer pair.
 
 ## 2. Scout
 
 ```text
-Caption: scout fan-out by cluster shape — trivial rows go deep on targeted files, complex rows take a superficial directory map.
+Caption: scout fan-out by cluster shape: one row per call, package maps for broad rows, no parent-dir batching.
 
 owner ledger
-  |-- exact file/symbol row ------> one deep single/multi-path scout
+  |-- exact file/symbol row ------> one deep single-path scout
   |-- package/engine row ---------> one superficial directory scout
   |-- unrelated rows -------------> separate scouts or handoff
   `-- still broad after map ------> team_planner handoff
@@ -87,15 +81,15 @@ owner ledger
 
 | Scout shape | Use when |
 | --- | --- |
-| Single/multi-path | One likely production owner, tight dependency, entrypoint, adapter, or shared mechanism. |
+| Single/multi-path | One owner row or one tight coupled pair (engine+adapter, producer+consumer); same parent directory is insufficient. |
 | Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
-| Row wave | Independent production families; separate scouts, then stop after the first routing-changing wave. |
+| Row wave | Independent production families; split `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, and groupby+utils into separate scouts. |
 
-Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
+Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only; never call workspace/scout tools on tests. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
 
-## 3. Synthesize
+## 4-5. Synthesize + DAG
 
-Enter after context and scout/no-scout closure. Load the Stage 3 reference; synthesize scout findings into the DAG — it need not mirror Stage 1 clustering.
+Enter after context and scout/no-scout closure. Load the synthesize reference; synthesize scout findings into the DAG — it need not mirror clustering.
 
 ```text
 Caption: child routing with depth.

@@ -1,6 +1,6 @@
 # Root Planner Submit Plan Reference
 
-Load this reference at Stage 3 before drafting; do not use it to decide whether to scout.
+Load this reference in the synthesize stage before drafting; do not use it to decide whether to scout.
 
 ## Routing Flow
 
