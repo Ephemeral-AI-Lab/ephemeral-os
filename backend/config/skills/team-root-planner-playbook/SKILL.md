@@ -38,8 +38,8 @@ Caption: root planner stage machine. Stages run in order; each has its own entry
 | --- | --- | --- | --- | --- |
 | 1 | analyze | User request | Request facts split from test/benchmark evidence and production clues. | none |
 | 2 | cluster | Analyze output | Every owner row carries one owner family + changelog axes. | none |
-| 3 | scout | Cluster ledger | Scout wave returns, or every broad row has a documented "no scout" reason. | none |
-| 4 | synthesize | Scout findings | Reference loaded, lanes drafted, draft checklist passes. | `load_skill_reference(skill_name="team-root-planner-playbook", reference_name="synthesize-and-submit")` — load before drafting any lane. |
+| 3 | scout | Cluster ledger | Notes harvested for every scouted production path, or the row is marked unresolved. | none |
+| 4 | synthesize | Scout findings | Reference loaded; no new scouts or note reads; lanes drafted and checklist passes. | `load_skill_reference(skill_name="team-root-planner-playbook", reference_name="synthesize-and-submit")` — load before drafting any lane. |
 | 5 | submit_plan | Drafted lanes | Exactly one `submit_plan({ "new_tasks": [...] })` call, no later tool calls or prose. | none |
 
 ## 1. Analyze
@@ -72,7 +72,7 @@ Enter after Analyze. Build the owner ledger; do not scout yet.
 Caption: every owner row is a scout target until a scout returns. Pre-scout, all production claims are guesses from test names.
 
 production clues
-  |-- exact file or symbol -----------> atomic owner row
+  |-- proven exact file or symbol ----> atomic owner row
   |-- mechanism / engine / format ----> mechanism owner row
   |-- package / subsystem ------------> directory owner row
   `-- guess / test-derived -----------> unresolved owner row
@@ -81,8 +81,8 @@ production clues
 | Check | Root-planner action |
 | --- | --- |
 | Clustering axes | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
-| Cluster name | One cluster = one owner family. Multi-owner names like "CLI/Config/Compat" or "Storage I/O" are defects — split before scout. |
-| Benchmark evidence | Keep tests and ids in evidence/spec, not workspace or scout targets. |
+| Cluster name | One row = one owner family. Slash/plus names like "CLI/Config/Compat" or "Storage I/O" signal unrelated owners; split now. |
+| Benchmark evidence | Keep tests and ids in evidence/spec. Never invent `<test-stem>.py`; package/engine clues such as parquet stay directory rows until proven exact. |
 
 Routing stops at owner rows; HDF, JSON, parquet, groupby, utils, CLI, config, and compatibility are separate rows unless live evidence proves a tight producer-consumer pair.
 
@@ -93,31 +93,30 @@ Routing stops at owner rows; HDF, JSON, parquet, groupby, utils, CLI, config, an
 Enter after Cluster. One scout per row; unrelated rows go in one parallel wave.
 
 ```text
-Caption: scout fan-out is proportional: one row per call, package maps for broad rows, no parent-dir batching.
+Caption: scout mode is proportional to certainty: trivial exact files get depth; bundles/directories get relationship maps.
 
 owner ledger
-  |-- exact file/symbol row ------> one deep single-path scout
-  |-- package/engine row ---------> one superficial directory scout
-  |-- unrelated rows -------------> separate scouts in one parallel wave
+  |-- proven exact file/symbol ---> deep single-path scout
+  |-- package/engine row ---------> superficial directory scout
+  |-- tight same-owner bundle ----> superficial relationship scout
+  |-- unrelated rows -------------> separate scouts in one wave
   `-- still broad after map ------> team_planner handoff
 ```
 
 | Scout shape | Use when |
 | --- | --- |
-| Single/multi-path | One owner row or one tight coupled pair (engine+adapter, producer+consumer); same parent directory is insufficient. |
-| Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
-| Row wave | Independent production families; separate scouts in one parallel wave, never one batched call. |
-| Forbidden batch | Split `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, groupby+utils, and HDF+parquet+groupby into separate row scouts. |
+| Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. |
+| Bundled superficial | Several paths in one owner family or tight pair; ask only for relationship map, ownership boundaries, and handoff seams. |
+| Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
+| Row wave | Independent families; dispatch separate scouts in one wave. Never batch `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, groupby+utils, or HDF+parquet+groupby. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")` — `prompt` is the only channel; production paths must be named inline. Production paths only; missing/disproved → directory scout or handoff. Never call workspace/scout tools on test paths and never name a test path in a scout prompt.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Never name test paths or ids anywhere in the prompt.
 
 ### Scout Prompt Format
 
-Every scout prompt uses these three sections, in order:
-
 ```text
 ## Task
-<one-line routing question this scout answers>
+Mode: <trivial_deep | bundled_superficial | directory_superficial>. <one production routing question>
 
 ## Exploration Path
 <production path 1>
@@ -129,7 +128,7 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 | Section | Contains |
 | --- | --- |
-| `## Task` | The single routing question this scout answers (one owner row, one tight coupled pair, or one directory). |
+| `## Task` | One production routing question; no test path, F2P id, or benchmark file name. |
 | `## Exploration Path` | Repo-relative production paths only — no test paths, no globs, no parent-dir batching. |
 | `## Terminal Contract` | Literal `submit_file_note(paths=[...], content="...")` call template. Every path in `## Exploration Path` must appear in the `paths` argument of at least one submitted note. |
 
@@ -137,7 +136,7 @@ submit_file_note(paths=[<exploration_paths>], content="<finding>")
 
 ## 4. Synthesize
 
-Enter after the scout wave returns (or every broad row has a documented skip reason).
+Enter after the scout wave returns and notes are read. Do not backtrack to scout after loading the reference.
 
 **Required first action this stage — before drafting any lane:**
 
@@ -145,19 +144,20 @@ Enter after the scout wave returns (or every broad row has a documented skip rea
 load_skill_reference(skill_name="team-root-planner-playbook", reference_name="synthesize-and-submit")
 ```
 
-Synthesize scout findings into lanes; the DAG need not mirror clustering.
+Synthesize from the exploration-note ledger, not the Stage-2 cluster ledger. Missing notes or guessed root causes stay unresolved and route to `team_planner`, not `developer`.
 
 ```text
 Caption: root routing during synthesis.
 
-atomic + small surface -> developer
-broad / matrix cluster -> team_planner sibling
-same-payload evidence  -> validator with production scopes
+note proves exact owner + edit seam -> developer
+note maps relationship / unresolved gap -> team_planner
+notes reveal shared dispatch file ----> collapse or chain deps
+same-payload evidence ---------------> validator
 ```
 
 | Draft check | Expected result |
 | --- | --- |
-| Coverage | Every named cluster has a producer owner or sibling `team_planner`; tiny slices stay separate. |
+| Coverage | Every note-backed owner or unresolved gap has a lane; Stage-2 clusters are not lane templates. |
 | Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` (e.g. `cli.py`+`config.py`+`compat.py`, HDF+parquet+groupby) force a `team_planner` lane instead — a CLI→config→compat call chain is not "one mechanism". |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Required when any producer lane writes a same-payload suite; depend on every such producer; `scope_paths` are production surfaces. |

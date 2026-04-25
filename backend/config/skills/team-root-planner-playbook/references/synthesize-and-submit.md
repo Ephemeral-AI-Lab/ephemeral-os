@@ -5,19 +5,19 @@ Load this reference in the synthesize stage before drafting; do not use it to de
 ## Routing Flow
 
 ```text
-Caption: root planner routes owner-ledger rows without exploring every leaf.
+Caption: root planner routes exploration-note facts, not Stage-2 rows.
 
-owner slice
-  |-- atomic + exact owner + small surface --------> developer
-  |-- broad / matrix / unresolved row -------------> team_planner
+note ledger
+  |-- exact owner + edit seam ---------------------> developer
+  |-- relationship map / missing note / package ---> team_planner
   `-- same-payload verification after producers ---> validator
 ```
 
 | Slice signal | Route |
 | --- | --- |
-| Live evidence names one owner file, symbol, or tight small surface | `developer` |
-| Several mechanisms, APIs, engines, formats, matrices, public entry points, or mixed broad/trivial work | Split exact slices to `developer`; clustered row to `team_planner`. |
-| Benchmark, fail-to-pass, migration, compatibility, or unresolved owner | Peel exact slices to `developer`; residual clustered/unresolved work to `team_planner`. |
+| Verified notes name one owner file/symbol plus likely edit seam | `developer` |
+| Notes only map relationships, package boundaries, or unresolved ownership | `team_planner` |
+| Notes reveal several mechanisms, APIs, engines, formats, or public entry points | Split by note-backed seams; do not mirror Stage-2 clusters. |
 | Root-level evidence sweep after producers finish | `validator` with producer deps |
 
 ## Level Shape
@@ -25,10 +25,9 @@ owner slice
 | Situation | Action |
 | --- | --- |
 | Crowded level | Group by changelog/mechanism row. |
-| One broad `developer` | Make it expandable (`team_planner`) unless exact-owner evidence makes it atomic. |
-| Many scout candidates or package row | One superficial boundary scout, then split into expandable tasks. |
+| One broad `developer` | Make it expandable (`team_planner`) unless note evidence makes it atomic. |
+| Missing note, package row, or unresolved owner | `team_planner`; do not reopen scouting in synthesize. |
 | Many tiny variants under one mechanism | One task or one expandable task, not many thin siblings. |
-| Unrelated mechanisms | Several siblings, grouped by boundary. |
 
 ## DAG Patterns
 
@@ -57,7 +56,7 @@ storage-engine-planning (team_planner) --------> root-output-validator (validato
 | Output dependency | Add an edge only when one task consumes another task's output. |
 | Validator coverage | A validator depends on every producer it verifies. |
 | Related files | Shared directories alone do not create `deps`. |
-| Uncertainty | Put uncertain ownership in `spec.detail`, not in fake ordering. |
+| Uncertainty | Put uncertain ownership in `spec.detail`; do not assert root cause. |
 
 ## Payload Shape
 
@@ -97,5 +96,5 @@ type NewTaskDefinition = {
 | 2 | `deps` resolve within this payload and express output order or validator coverage. |
 | 3 | Expandable or unresolved slices use `team_planner`. |
 | 4 | Named failing clusters have a producer owner or expandable owner. |
-| 5 | Tests and benchmark ids stay in `spec`; production/scout paths stay exact in `scope_paths`. |
+| 5 | Tests stay in `spec`; unresolved or missing-note rows use production directories in `scope_paths`. |
 | 6 | The final assistant action is `submit_plan(...)` with no trailing prose. |
