@@ -56,7 +56,7 @@ handoff UUIDs
 | --- | --- |
 | Shared sandbox | Treat it as shared evidence; avoid setup or cleanup churn. |
 | Dependency/env mutation | Do not mutate packages, interpreters, lockfiles, virtualenvs, site-packages, OS packages, global tooling, generated caches, tests, pytest config, or verification itself. |
-| Shell boundary | Use `daytona_shell` for tests/probes from sandbox cwd; avoid host paths, reads/writes, redirects, cleanup. |
+| Shell boundary | Use `daytona_shell` for tests/probes from sandbox cwd; avoid host paths, reads/writes, redirects, cleanup. Python one-liners are probes only, never pytest substitutes. |
 | Mutation channel | Production source mutations MUST go through `daytona_edit_file` / `daytona_write_file` / `daytona_delete_file` / `daytona_move_file`. Writing a helper script (`edit_*.py`, `apply_fix.py`, `hack_*.py`, etc.) and running it via `daytona_shell` to mutate source — directly or via `Path.write_text`, `open(..., 'w')`, `sed -i`, `tee`, or `>` redirects — is a forbidden bypass even if the script itself is in-scope. |
 | Verification integrity | Latest red raw command controls status; pytest overrides, wrappers, filters, or inner-exit-code tricks are RCA-only. |
 | Graph reads | Developers work from prompt UUIDs and task details, not `read_task_graph()`. |
@@ -92,7 +92,7 @@ context
 | Verification | Exact post-edit command plus diagnostics for edited files. |
 | Replan check | Wrong owner, broad scope, missing proof, invalid verification, dependency/env mutation, or fully spent budget with work incomplete. |
 
-Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior.
+Missing optional deps, older versions, and unavailable engines are not final blockers when a production guard, fallback, compatibility error, bridge, adapter, or wrapper path can satisfy expected behavior. Never repair missing packages by installing them; prove a production seam or request `unresolved_blocker` after RCA.
 
 ## 3. Implement
 
@@ -128,7 +128,7 @@ post-edit repo
 | Runtime command | Run the narrowest required command after each edit; keep the original failing surface until it passes or blocks. |
 | Exit judgment | Use tool-reported exit code and failing ids. Collection/import/no-tests/skips/xfails/missing optional deps are red for named fail-to-pass targets. |
 | Missing verification | If the required command was not run after the final edit, including fully spent budget, request replan. |
-| Policy block | Use `unresolved_blocker` when no valid equivalent can preserve the required evidence. |
+| Policy block | Treat a blocked command or forbidden action as red evidence. Emit the RCA packet next; use `unresolved_blocker` when no valid equivalent can preserve the required evidence. |
 | Verify failure | RCA is mandatory before the next edit, `submit_task_success`, or `request_replan`. |
 
 ### Required RCA For Verify Failure
@@ -159,7 +159,7 @@ failing command -> failing id/error -> expected vs actual
 | `trace`/`root_cause`/`fix_location` cites an unfamiliar symbol or unclear caller chain | Run `ci_query_symbol` on the symbol before any further edit, then refresh the packet. |
 | One assigned-scope or proven adjacent production defect, new mechanism since last RCA, and enough budget | Return to Stage 3 for one more bounded fix. |
 | Same target test/diagnostic stays red across two consecutive RCAs without a new local defect named in `root_cause` | `request_replan` with `unresolved_blocker`. |
-| Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, or tool failure | `request_replan`. |
+| Wrong owner/role, broad change, test-only path, dependency/env mismatch with no production seam, ambiguous cause, policy block, or tool failure | `request_replan`. |
 | Budget fully spent before green verification | `request_replan` unless already green with clean diagnostics. |
 
 ## 5. Submit Terminal Summary
@@ -199,6 +199,8 @@ Replan reason includes:
 | Last evidence | Last command or diagnostic plus failing ids. |
 | Needed decision | Owner, scope, sequence, or code path for the replanner. |
 | Remaining contract | Uncompleted parts of this task: unmet acceptance criteria, unfinished scope paths, and behavior the replanner must continue covering beyond the blocker fix. |
+
+If evidence appears to implicate a test, benchmark, fixture, or pytest config file, do not label the work "test fix needed" and stop. Name the production import/API/compatibility seam that must satisfy the contract, or state that the production seam is unresolved, and carry every target id and acceptance criterion forward.
 
 Trigger guide:
 

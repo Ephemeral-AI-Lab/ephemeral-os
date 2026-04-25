@@ -610,7 +610,6 @@ async def create_sweevo_test_sandbox(
                 existing.get("id", ""),
             )
             await setup_sweevo_sandbox(instance, existing["id"], repo_dir)
-            await ensure_sweevo_test_patch(instance, existing["id"], repo_dir)
             return {
                 "sandbox_id": existing["id"],
                 "sandbox": existing,
@@ -682,7 +681,6 @@ async def create_sweevo_test_sandbox(
                 fresh.get("id", ""),
             )
             await setup_sweevo_sandbox(instance, fresh["id"], repo_dir)
-            await ensure_sweevo_test_patch(instance, fresh["id"], repo_dir)
             recover_reason = "fresh_create_recovered_started_sandbox"
             if fallback_reason:
                 recover_reason = f"{fallback_reason};{recover_reason}"
@@ -698,7 +696,6 @@ async def create_sweevo_test_sandbox(
         raise
     sandbox_id = result["id"]
     await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
-    await ensure_sweevo_test_patch(instance, sandbox_id, repo_dir)
     sandbox_info = service.get_sandbox(sandbox_id)
     return {
         "sandbox_id": sandbox_id,

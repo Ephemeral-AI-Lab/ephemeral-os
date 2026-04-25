@@ -82,6 +82,7 @@ production clues
 | --- | --- |
 | Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids cannot join rows. |
 | Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
+| Mixed support rows | Entrypoints, config loaders, compatibility helpers, dataframe utilities, and storage formats are separate rows unless live evidence proves one tight pair. Three or more files are never one bundled row. |
 | Benchmark evidence | Exact means explicit production path/symbol from user/notes or `ci_workspace_structure` on the parent dir. Before scouting or scoping a test-derived filename, verify it; if absent or replaced by a package directory, use the directory row. |
 
 Routing stops at owner rows; unrelated concerns remain separate unless live evidence proves one tight producer-consumer pair. If several appear in one row, split it.
@@ -106,11 +107,11 @@ owner ledger
 | Scout shape | Use when |
 | --- | --- |
 | Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. Guessed or test-derived filenames do not qualify. |
-| Bundled superficial | Several paths in one owner family or one tight pair; same parent directory or call chain alone is not enough. Ask only for relationship map and handoff seams. |
+| Bundled superficial | Several paths in one owner family or exactly one tight pair; same parent directory, call chain, or "small row" status is not enough. Ask only for relationship map and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch unrelated owner families. |
+| Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch unrelated owner families, and split any 3+ path idea before dispatch. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only; test paths, test ids, benchmark filenames, F2P/P2P ids, and failing-test labels stay out.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only: strip test paths, pytest ids, parametrized case labels, benchmark filenames, F2P/P2P ids, target counts, and failing-test labels before dispatch.
 
 ### Scout Prompt Format
 
@@ -158,6 +159,7 @@ same-payload evidence ---------------> validator
 | Draft check | Expected result |
 | --- | --- |
 | Coverage | Every note-backed owner or unresolved gap has a lane; Stage-2 clusters are not lane templates. |
+| Note quality | Notes that use test paths, test labels, or benchmark ids as proof are contaminated; keep only production facts and route the remaining gap to `team_planner`. |
 | Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` force a `team_planner` lane instead — a call chain across unrelated owners is not "one mechanism". |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Required when any producer lane writes a same-payload suite; depend on every such producer; `scope_paths` are production surfaces. |

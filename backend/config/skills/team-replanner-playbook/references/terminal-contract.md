@@ -53,4 +53,5 @@ Top-level input has only `new_tasks` and `cancel_ids`; use `cancel_ids: []` when
 | 8 | Named fail-to-pass variants and uncompleted original task criteria are not dropped as unsupported, test design, residual risk, or validator-only coverage. |
 | 9 | Test/benchmark/pytest-config restore/edit stays evidence; no child task owns it. |
 | 10 | `cancel_ids` contains only stale running/pending/ready direct siblings and no failed, terminal, replanner, descendant, `request_replan`, or validator-continuation work. |
-| 11 | The final assistant action is the `submit_replan(...)` tool call, not prose. |
+| 11 | Blocker-only repairs have a continuation `developer` or `team_planner` child with `deps=[repair_id]` carrying the original failed contract. |
+| 12 | The final assistant action is the `submit_replan(...)` tool call, not prose. |

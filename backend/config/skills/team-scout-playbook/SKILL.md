@@ -32,7 +32,7 @@ prompt -> [1 Explore] -> [2 Load completion-contract if exact-file] -> [3 Submit
 
 Keep the prompt-named paths as the exploration boundary. Prefer notes and CI before raw source reads. No sandbox, edit, command, pytest, or runtime execution tools.
 
-If exact-path symbol queries returned definitions, submit notes next. If a target is missing, no-symbol, or replaced by a package boundary, submit notes with that gap instead of widening exploration.
+If exact-path symbol queries returned definitions, submit notes next. If CI returns test references, discard them from the handoff; production definitions and production callers are the only routing evidence. If a target is missing, no-symbol, or replaced by a package boundary, submit notes with that gap instead of widening exploration.
 
 ```text
 Caption: durable handoff sections.
@@ -45,6 +45,7 @@ Scope | Files mapped | Entry points | Owner seam | Suggested subdivisions | Gaps
 | Coverage | Each named target appears in at least one submitted note's `paths`; no discovered extras. |
 | Multi-path notes | When one note covers several paths, its content stands alone for each path it claims. |
 | Scope honesty | Missing/no-symbol/adjacent evidence stays explicit in the note covering that path. |
+| Production-only content | Do not cite test files, test labels, benchmark ids, or F2P/P2P ids as proof; if only test evidence exists, record an unresolved production gap. |
 | Terminal action | Successful `submit_file_note(...)` is the last tool action. |
 
 After a successful submit, reply only `Posted.` if asked for final text.

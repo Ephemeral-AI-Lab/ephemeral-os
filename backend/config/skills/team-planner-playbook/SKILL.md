@@ -88,6 +88,7 @@ clues
 | --- | --- |
 | Clustering axes | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
 | Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
+| Mixed support rows | Entrypoints, config loaders, compatibility helpers, dataframe utilities, and storage formats are separate rows unless live evidence proves one tight pair. Three or more files are never one bundled row. |
 | Inherited evidence | Keep tests and ids in spec context. Never invent `<test-stem>.py`; package/engine clues stay directory rows until proven exact. |
 
 Planner exploration stops at owner rows; unrelated concerns remain separate unless live evidence proves a tight producer-consumer pair.
@@ -112,12 +113,12 @@ owner ledger
 | Scout shape | Use when |
 | --- | --- |
 | Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. Guessed or test-derived filenames do not qualify. |
-| Bundled superficial | Several paths in one owner family or tight pair; ask only for relationship map, ownership boundaries, and handoff seams. |
+| Bundled superficial | Several paths in one owner family or exactly one tight pair; same parent directory, call chain, or "small row" status is not enough. Ask only for relationship map, ownership boundaries, and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; dispatch separate scouts in one wave. Never batch unrelated owner families. |
+| Row wave | Independent families; dispatch separate scouts in one wave. Never batch unrelated owner families, and split any 3+ path idea before dispatch. |
 | No scout | Inherited notes already provide root-cause-grade evidence for this row. |
 
-Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Never name test paths, test ids, benchmark filenames, F2P/P2P ids, or failing-test labels anywhere in the prompt.
+Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Strip test paths, pytest ids, parametrized case labels, benchmark filenames, F2P/P2P ids, target counts, and failing-test labels before dispatch.
 
 ### Scout Prompt Format
 
@@ -165,6 +166,7 @@ same-layer evidence ----------------> validator
 | Draft check | Expected result |
 | --- | --- |
 | Coverage | Every note-backed owner or unresolved gap has a lane; Stage-2 clusters are not lane templates. |
+| Note quality | Notes that use test paths, test labels, or benchmark ids as proof are contaminated; keep only production facts and route the remaining gap to `team_planner` while depth remains. |
 | Developer lanes | Exact owner, one mechanism, small failure surface unless max-depth fallback; sibling lanes converging on a shared dispatch file (e.g. engine selector, adapter registry) collapse into one lane or chain via deps, never run as parallel siblings. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Max-depth fallback | At max depth, replace planner nodes with focused per-mechanism `developer` (and `validator`) tasks; preserve uncertainty in `spec.detail`. |

@@ -50,3 +50,25 @@ async def test_ensure_sweevo_test_patch_uploads_bytes_before_path(
         'base64 -d > /tmp/sweevo_test.patch' in call.args[1]
         for call in exec_mock.await_args_list
     )
+
+
+@pytest.mark.asyncio
+async def test_create_sweevo_test_sandbox_does_not_apply_test_patch_before_agents(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = SimpleNamespace(
+        create_sandbox=lambda **_: {"id": "sbx-1"},
+        get_sandbox=lambda _sandbox_id: {"id": "sbx-1"},
+    )
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", AsyncMock(return_value="/testbed"))
+    ensure_mock = AsyncMock()
+    monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", ensure_mock)
+
+    result = await sweevo_sandbox.create_sweevo_test_sandbox(
+        _instance(),
+        register_snapshot=False,
+    )
+
+    assert result["sandbox_id"] == "sbx-1"
+    ensure_mock.assert_not_awaited()

@@ -200,6 +200,8 @@ def test_root_prompt_includes_instance_essentials():
     assert instance.repo in prompt
     assert instance.base_commit in prompt
     assert instance.test_cmds in prompt
+    assert "## Changelog / Release Notes" in prompt
+    assert instance.problem_statement.strip() in prompt
     assert "fail-to-pass" in prompt.lower()
     assert json.dumps(instance.fail_to_pass, indent=2) in prompt
     assert "/repo" in prompt
@@ -213,7 +215,7 @@ def test_root_prompt_stays_compact_for_large_pass_to_pass():
     prompt = _build_root_prompt(instance, "/repo")
 
     assert len(prompt.encode()) < 20000
-    assert "Pass-To-Pass count: 5000" in prompt
+    assert "Pass-To-Pass count" not in prompt
 
 
 def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):

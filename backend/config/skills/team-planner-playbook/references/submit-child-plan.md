@@ -18,6 +18,7 @@ note ledger
 | --- | --- |
 | Verified notes name one owner file/symbol plus likely edit seam | `developer` |
 | Notes only map relationships, package boundaries, or unresolved ownership and depth remains | `team_planner` |
+| Notes rely on test paths, test labels, or benchmark ids as proof | Keep production facts only; route the unresolved gap to `team_planner` while depth remains. |
 | Notes reveal several mechanisms, APIs, engines, formats, or public entry points | Split by note-backed seams; do not mirror Stage-2 clusters. |
 | Broad or unresolved at max depth | Direct per-mechanism `developer` tasks plus validation/diagnostic wording |
 | Same-layer evidence sweep after producers finish | `validator` with producer deps |
@@ -98,5 +99,5 @@ type NewTaskDefinition = {
 | 2 | `deps` resolve within this payload and express output order or validator coverage. |
 | 3 | Expandable slices use `team_planner` while depth remains. |
 | 4 | At max depth, split broad work by mechanism instead of one catch-all lane. |
-| 5 | Tests stay in `spec`; unresolved or missing-note rows use production directories in `scope_paths`. |
+| 5 | Tests stay in `spec`; unresolved, contaminated-note, or missing-note rows use production directories in `scope_paths`. |
 | 6 | The final assistant action is `submit_plan(...)` with no trailing prose. |
