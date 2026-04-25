@@ -6,7 +6,8 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+from collections.abc import Mapping
 
 
 def _json_default(value: Any) -> Any:

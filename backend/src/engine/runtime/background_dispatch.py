@@ -19,7 +19,7 @@ from message.stream_events import (
 )
 from providers.types import UsageSnapshot
 from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
-from tools.core.runtime import ExecutionMetadata, merge_runtime_metadata
+from tools.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
     from engine.core.query import QueryContext
@@ -38,53 +38,41 @@ def run_background_preflight(
     tool_def: BaseTool,
     tool_use_id: str,
     clean_input: dict[str, object],
-) -> tuple[ToolResult | None, ExecutionMetadata]:
+) -> ToolResult | None:
     metadata = tool_metadata.copy() if tool_metadata is not None else ExecutionMetadata()
     metadata.tool_registry = tool_registry
     metadata.tool_id = tool_use_id
 
     preflight = getattr(tool_def, "background_preflight", None)
     if not callable(preflight):
-        return None, metadata
+        return None
     try:
         parsed_input = tool_def.input_model.model_validate(clean_input)
     except ValidationError as exc:
         errors = "; ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
-        return (
-            ToolResult(
-                output=(
-                    f"Invalid input for {tool_def.name}: {errors}. "
-                    "Please retry the tool call with valid arguments."
-                ),
-                is_error=True,
+        return ToolResult(
+            output=(
+                f"Invalid input for {tool_def.name}: {errors}. "
+                "Please retry the tool call with valid arguments."
             ),
-            metadata,
+            is_error=True,
         )
     except Exception as exc:
-        return (
-            ToolResult(
-                output=f"Invalid input for {tool_def.name}: {exc}",
-                is_error=True,
-            ),
-            metadata,
+        return ToolResult(
+            output=f"Invalid input for {tool_def.name}: {exc}",
+            is_error=True,
         )
     try:
-        return (
-            preflight(
-                parsed_input,
-                ToolExecutionContext(cwd=cwd, metadata=metadata),
-            ),
-            metadata,
+        return preflight(
+            parsed_input,
+            ToolExecutionContext(cwd=cwd, metadata=metadata),
         )
     except Exception as exc:
-        return (
-            ToolResult(
-                output=f"Tool background preflight failed: {exc}",
-                is_error=True,
-            ),
-            metadata,
+        return ToolResult(
+            output=f"Tool background preflight failed: {exc}",
+            is_error=True,
         )
 
 
@@ -110,7 +98,7 @@ def launch_background_tool(
         )
 
     kill_callback = None
-    preflight_result, preflight_metadata = run_background_preflight(
+    preflight_result = run_background_preflight(
         cwd=cwd,
         tool_registry=tool_registry,
         tool_metadata=tool_metadata,
@@ -119,11 +107,6 @@ def launch_background_tool(
         clean_input=clean_input,
     )
     if preflight_result is not None:
-        merge_runtime_metadata(
-            original=tool_metadata,
-            updated=preflight_metadata,
-            result_metadata=preflight_result.metadata,
-        )
         return (
             ToolResultBlock(
                 tool_use_id=tool_use.id,

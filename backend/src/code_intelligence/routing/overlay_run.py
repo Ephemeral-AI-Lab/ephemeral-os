@@ -54,7 +54,8 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any
+from collections.abc import Callable, Iterable, Iterator
 
 
 # ---------------------------------------------------------------------------

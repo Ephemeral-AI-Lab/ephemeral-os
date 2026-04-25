@@ -398,7 +398,7 @@ Responsibilities:
 
 Policy hooks should live with the tool folder that owns the policy. They are hook
 modules, not tools. The generic framework belongs in `tools.core.hooks`; Daytona
-write-scope and daytona_shell policy belongs in `tools.daytona_toolkit.hooks`.
+repository-operation and daytona_shell policy belongs in `tools.daytona_toolkit.hooks`.
 
 Current Daytona layout:
 
@@ -410,12 +410,7 @@ backend/src/tools/daytona_toolkit/hooks/
   prehook/
     __init__.py
     _shell_common.py
-    write_scope_hard_block.py
-    write_scope_advisory.py
-    write_scope_deny.py
     move_src_hard_block.py
-    move_src_scope_deny.py
-    move_dst_scope_advisory.py
     shell_destructive_git.py
     shell_destructive_shell.py
     shell_stderr_suppression_policy.py
@@ -445,14 +440,10 @@ fresh `ToolHookRegistry` instance.
 
 - Module filename: `{policy_area}_{detail}.py`, snake_case, one policy per
   file. Include a tool-family prefix only when it disambiguates otherwise
-  identical policy names across tools that share the package (for example
-  `move_src_hard_block.py` vs `write_scope_hard_block.py`).
+  identical policy names across tools that share the package.
 - Registration name: `{tool_name}:{policy_suffix}`. The suffix should drop
   redundant tool-family prefixes already implied by the tool name (for example
-  `daytona_move_file:src_hard_block`, `daytona_shell:destructive_shell`)
-  but keep policy-area prefixes that are not redundant (for example
-  `daytona_write_file:write_scope_hard_block` — `write_scope_` is the policy
-  area, not a rename of the tool).
+  `daytona_move_file:src_hard_block`, `daytona_shell:destructive_shell`).
 
 ### Priority Convention
 
@@ -464,9 +455,7 @@ Guidelines:
 
 - `0–9`: argument mutation / normalization. Must run before any policy that
   reads the final args.
-- `10–19`: default-bucket blocks, denials, and write-scope policies keyed on a
-  single argument (examples: `daytona_write_file:write_scope_hard_block` at 10,
-  `daytona_delete_file:write_scope_deny` at 15).
+- `10–19`: default-bucket blocks and denials keyed on a single argument.
 - `20+`: later blocks that depend on earlier blocks not having fired, or
   advisories that should only emit when the call has already survived earlier
   hard blocks. Do not assume "advisory only" at any range — check the policy,
@@ -488,8 +477,8 @@ from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
 
 
 PRIORITY = 10
-TOOL_GLOB = "daytona_write_file"
-NAME = "daytona_write_file:write_scope_hard_block"
+TOOL_GLOB = "daytona_delete_file"
+NAME = "daytona_delete_file:repo_operation_guard"
 
 
 async def hook(tool_name, args, context) -> PreHookOutcome:
@@ -518,22 +507,11 @@ The initial Daytona pre-hook set should be split into one module per policy:
 | Module | Phase | Tools | Purpose |
 | --- | --- | --- | --- |
 | `repo_operation_guard.py` | pre | `daytona_delete_file`, `daytona_move_file` | Blocks repo-root, outside-repo, and invalid self/nested move operations before destructive tool bodies run. |
-| `write_scope_hard_block.py` | pre | `daytona_write_file`, `daytona_edit_file`, `daytona_delete_file` | Blocks unauthorized test-file edits in coordinated team lanes. |
-| `write_scope_advisory.py` | pre | `daytona_edit_file` | Emits outside-scope edit advisories without blocking. |
-| `write_scope_deny.py` | pre | `daytona_delete_file` | Blocks delete operations outside write scope, including enumerated folder members. |
-| `move_src_hard_block.py` | pre | `daytona_move_file` | Applies test-file hard-block policy to the move source. |
-| `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope, including enumerated folder members. |
-| `move_dst_scope_advisory.py` | pre | `daytona_move_file` | Emits advisory for destination outside write scope when policy allows the move. |
-| `shell_destructive_git.py` | pre | `daytona_shell` | Blocks destructive git commands and other git metadata/worktree mutation commands that bypass OCC/write-scope audit. |
+| `shell_destructive_git.py` | pre | `daytona_shell` | Blocks destructive git commands and other git metadata/worktree mutation commands that bypass OCC audit. |
 | `shell_destructive_shell.py` | pre | `daytona_shell` | Blocks destructive shell commands against workspace roots and dangerous devices. |
 | `shell_stderr_suppression_policy.py` | pre | `daytona_shell` | Blocks shell commands that suppress stderr with `/dev/null`. |
 | `shell_file_edit_policy.py` | pre | `daytona_shell` | Blocks shell file-edit side channels (`sed -i`, `tee`, redirect writes) when `daytona_shell` edit policy is active. |
 | `shell_package_mutation_policy.py` | pre | `daytona_shell` | Blocks package or environment mutation commands (`pip install`, `uv sync`, `npm install`, etc.) on coordinated lanes. |
-
-The move hooks are intentionally split by source and destination behavior. The
-destination advisory has different semantics from source denial because a move
-from an already-owned source can be a rename-like operation that extends scope
-on success.
 
 ## Daytona Post-Hook Inventory
 
@@ -542,8 +520,6 @@ Post-hooks should live in `tools.daytona_toolkit.hooks.posthook`.
 | Module | Phase | Tools | Purpose |
 | --- | --- | --- | --- |
 | `audited_write_policy.py` | post | `daytona_shell` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
-| `move_extend_scope.py` | post | `daytona_move_file` | Extends in-memory write scope to the move destination after a successful owned-source move. |
-| `write_extend_scope.py` | post | `daytona_write_file` | Extends in-memory write scope to a successful write target. |
 
 These post-hooks read from ``result.metadata["changed_paths"]``, which the
 ``tools.daytona_toolkit._commit`` façade writes uniformly for every OCC-gated
@@ -553,16 +529,7 @@ accepts ``tool_name`` so the same helper can back multiple registrations.
 ``audited_write_policy`` is registered only on ``daytona_shell`` by design.
 Codeact commits paths its input does not name (shell side effects, ambient
 edits), so a post-commit audit is the only layer that can see the actual
-changed set. The pure OCC tools
-(``daytona_write_file``, ``daytona_edit_file``, ``daytona_delete_file``,
-``daytona_move_file``) preserve path identity between input and commit — see
-``code_intelligence/routing/service.py::_write_spec_to_change`` and
-``editing/write_coordinator.py`` — so the pre-hook ``write_scope_advisory``
-already surfaces the same paths a post-hook audit would for edit operations,
-and adding a post-hook audit registration would duplicate the signal. For
-``daytona_write_file``, outside-scope advisory registration is intentionally
-omitted; a successful committed write instead widens the lane's in-memory
-``write_scope`` through ``write_extend_scope``.
+changed set.
 
 These policies are post-hook-only because they depend on the tool result and
 committed path set. They must not be forced into the pre-hook package.
@@ -949,12 +916,7 @@ backend/src/tools/daytona_toolkit/hooks/__init__.py
 backend/src/tools/daytona_toolkit/hooks/_common.py
 backend/src/tools/daytona_toolkit/hooks/prehook/__init__.py
 backend/src/tools/daytona_toolkit/hooks/prehook/_shell_common.py
-backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_hard_block.py
-backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_advisory.py
-backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_deny.py
 backend/src/tools/daytona_toolkit/hooks/prehook/move_src_hard_block.py
-backend/src/tools/daytona_toolkit/hooks/prehook/move_src_scope_deny.py
-backend/src/tools/daytona_toolkit/hooks/prehook/move_dst_scope_advisory.py
 backend/src/tools/daytona_toolkit/hooks/prehook/shell_destructive_git.py
 backend/src/tools/daytona_toolkit/hooks/prehook/shell_destructive_shell.py
 backend/src/tools/daytona_toolkit/hooks/prehook/shell_stderr_suppression_policy.py
@@ -1227,9 +1189,6 @@ Exit criteria:
 - Existing Daytona write-scope behavior is unchanged.
 - daytona_shell destructive command and file-edit side-channel policy hooks still run.
 - Re-importing Daytona hook packages does not duplicate registry entries.
-- Existing coordination-warning side effects remain correct where they are still
-  part of product behavior.
-
 Suggested tests:
 
 ```text
@@ -1237,7 +1196,6 @@ backend/tests/test_tools/test_daytona_toolkit/test_edit_tool.py
 backend/tests/test_tools/test_daytona_toolkit/test_tools_execution.py
 backend/tests/test_tools/test_daytona_toolkit/test_delete_move_tool.py
 backend/tests/test_tools/test_daytona_toolkit/test_shell_tool.py
-backend/tests/test_tools/test_daytona_toolkit/test_write_scope_advisory.py
 ```
 
 ### Phase 8: Remove Legacy Hook Bus
@@ -1282,7 +1240,7 @@ uv run pytest backend/tests/test_engine/test_tool_call_loop.py backend/tests/tes
 uv run pytest backend/tests/test_engine/test_background_tasks.py -q
 uv run pytest backend/tests/test_tools/test_daytona_toolkit -q
 uv run ruff check backend/src backend/tests
-uv run mypy --config-file backend/mypy.ini backend/src/team backend/src/agents
+uv run mypy --config-file backend/mypy.ini backend/src/agents
 ```
 
 ## Open Decisions

@@ -159,9 +159,8 @@ def _validate_run_subagent_request(
                 f"(agent_type={sub_def.agent_type!r}); "
                 "only subagent-typed agents may be dispatched here. "
                 "This is terminal evidence for the caller: do not retry or wait "
-                "on this background task. If you need coding, validation, or "
-                "runtime test evidence, emit `developer` / `validator` "
-                "tasks in the plan instead of calling `run_subagent`."
+                "on this background task. Use a registered subagent for "
+                "delegated background work."
             ),
             is_error=True,
         )
@@ -170,7 +169,7 @@ def _validate_run_subagent_request(
             output=(
                 f"run_subagent: agent '{agent_name}' is an internal subagent and "
                 "may not be dispatched via `run_subagent`. Use a dispatchable "
-                "worker subagent, or emit a regular team work item instead."
+                "worker subagent instead."
             ),
             is_error=True,
         )
@@ -326,7 +325,6 @@ async def run_subagent(
             parent_cfg,
             messages=[],
             agent_def=sub_def,
-            latest_user_prompt=final_prompt,
             sandbox_id=sandbox_id,
         )
     except Exception as exc:

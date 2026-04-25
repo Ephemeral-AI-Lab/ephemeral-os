@@ -6,7 +6,8 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
+from collections.abc import Iterable
 
 from pydantic import BaseModel, Field, RootModel, ValidationError
 

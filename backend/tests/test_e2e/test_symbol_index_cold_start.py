@@ -1,7 +1,7 @@
 # ruff: noqa
 """E2E: Symbol index cold start — verify the index is built before CI tools run.
 
-Exercises the full cold-start flow that team_planner hits:
+Exercises the full cold-start flow that analysis_agent hits:
   1. inject_code_intelligence with an async sandbox (no sync handle)
   2. ci_workspace_structure — should wait for the index and return indexed paths
   3. ci_query_symbol — should find symbols from the indexed workspace
@@ -242,7 +242,7 @@ class TestSymbolIndexColdStart:
     def test_full_cold_start_pipeline(self):
         """End-to-end: inject → workspace_structure → query_symbols.
 
-        Simulates the exact team_planner cold-start sequence.
+        Simulates the exact analysis_agent cold-start sequence.
         """
         from sandbox.workspace import inject_code_intelligence
         from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbol
@@ -257,7 +257,7 @@ class TestSymbolIndexColdStart:
 
         svc = context.metadata["ci_service"]
 
-        # Step 2: ci_workspace_structure (first tool call by team_planner)
+        # Step 2: ci_workspace_structure (first tool call by analysis_agent)
         tool_ctx = _ctx({
             "ci_service": svc,
             "daytona_sandbox": sandbox,

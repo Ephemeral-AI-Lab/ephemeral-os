@@ -57,10 +57,8 @@ def build_runtime_system_prompt(
     settings: Settings,
     *,
     cwd: str | Path,
-    latest_user_prompt: str | None = None,
 ) -> str:
     """Build the runtime instruction prompt for an agent run."""
-    del latest_user_prompt
     variables = {
         "base_prompt": build_system_prompt(agent_system_prompt=settings.system_prompt),
         "fast_mode": settings.fast_mode,

@@ -84,7 +84,7 @@ class TestCIQueryReferencesSymbolIndex:
             "ci_service": svc,
             "sandbox_id": "sb-planner",
             "daytona_cwd": "/testbed",
-            "agent_name": "team_planner",
+            "agent_name": "analysis_agent",
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
@@ -111,7 +111,7 @@ class TestCIQueryReferencesSymbolIndex:
             "ci_service": svc,
             "sandbox_id": "sb-planner",
             "daytona_cwd": "/testbed",
-            "agent_name": "team_planner",
+            "agent_name": "analysis_agent",
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
@@ -237,7 +237,7 @@ class TestLiveSymbolIndexReferences:
             "ci_service": ci_svc,
             "sandbox_id": live_sandbox_id,
             "daytona_cwd": workspace_root,
-            "agent_name": "team_planner",
+            "agent_name": "analysis_agent",
         })
 
         result = await ci_query_symbol.execute(

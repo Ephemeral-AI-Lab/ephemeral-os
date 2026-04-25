@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import UnionType
-from typing import Any, Literal, Sequence, get_args, get_origin
+from typing import Any, Literal, get_args, get_origin
+from collections.abc import Sequence
 
 from pydantic import BaseModel, RootModel
 from pydantic_core import PydanticUndefined

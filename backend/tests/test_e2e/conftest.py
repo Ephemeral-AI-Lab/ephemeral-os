@@ -264,7 +264,6 @@ def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | N
                 system_prompt=build_runtime_system_prompt(
                     agent.settings,
                     cwd=getattr(session_config, "cwd", "."),
-                    latest_user_prompt=prompt,
                 ),
                 messages=[m.model_dump(mode="json") for m in display_messages] or None,
                 full_messages=full_history or None,

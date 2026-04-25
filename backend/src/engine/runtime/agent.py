@@ -247,14 +247,12 @@ def _build_agent_system_prompt(
     config: SessionConfig,
     agent_def: AgentDefinition | None,
     settings: Settings,
-    latest_user_prompt: str | None,
 ) -> str:
     """Return the instruction-only system prompt for *agent_def*."""
     parts: list[str] = []
     base = build_runtime_system_prompt(
         settings,
         cwd=config.cwd,
-        latest_user_prompt=latest_user_prompt,
     )
     if base:
         parts.append(base)
@@ -269,7 +267,6 @@ def spawn_agent(
     messages: list[ConversationMessage],
     *,
     agent_def: AgentDefinition | None = None,
-    latest_user_prompt: str | None = None,
     session_state: SessionState | None = None,
     sandbox_id: str | None = None,
     terminal_tools: set[str] | list[str] | None = None,
@@ -298,9 +295,7 @@ def spawn_agent(
         config, agent_def, sandbox_id, agent_name
     )
 
-    base_system_prompt = _build_agent_system_prompt(
-        config, agent_def, settings, latest_user_prompt
-    )
+    base_system_prompt = _build_agent_system_prompt(config, agent_def, settings)
 
     can_spawn = agent_def.can_spawn_subagents if agent_def else True
     system_prompt, has_background_tools = finalize_tool_registry_and_prompt(

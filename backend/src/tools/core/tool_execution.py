@@ -8,7 +8,6 @@ from message.messages import ToolResultBlock
 from message.stream_events import StreamEvent
 from tools.core.base import ExecutionMetadata, ToolExecutionContext
 from tools.core.hooks.execution import execute_tool_with_hooks
-from tools.core.runtime import merge_runtime_metadata
 
 if TYPE_CHECKING:
     from engine.core.query import QueryContext
@@ -133,9 +132,6 @@ async def execute_tool_call_streaming(
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
         emit=emit,
         emit_started=emit_started,
-    )
-    merge_runtime_metadata(
-        original=context.tool_metadata, updated=metadata, result_metadata=result.metadata
     )
     if not result.is_error:
         from engine.runtime.tool_trace import record_tool_trace

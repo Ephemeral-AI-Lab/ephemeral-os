@@ -249,9 +249,8 @@ class MultiAgentEventPrinter:
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_truncate(event.reason, 240)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
-            # run_subagent is a regular background tool — the only thing that
-            # makes it a "spawn" is its name. Treat it specially so the printed
-            # log reads as team coordination rather than generic bg plumbing.
+            # run_subagent is a regular background tool. Treat it specially so
+            # the printed log highlights delegated background work.
             if event.tool_name == "run_subagent":
                 totals.subagents_spawned += 1
                 child = str(event.tool_input.get("agent_name") or "subagent")

@@ -111,7 +111,7 @@ class TestConfigBackedAgentApi:
         resp = client.post(
             "/api/agents/validate",
             json={
-                "name": "team_planner",
+                "name": "analysis_agent",
                 "description": "reserved",
                 "model": "inherit",
                 "tools": ["ci_query_symbol"],

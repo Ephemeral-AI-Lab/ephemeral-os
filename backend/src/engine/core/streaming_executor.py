@@ -21,7 +21,6 @@ from tools.core.base import (
     ToolResult,
 )
 from tools.core.hooks.execution import execute_tool_with_hooks
-from tools.core.runtime import merge_runtime_metadata
 
 if TYPE_CHECKING:
     from providers.types import ApiToolUseDeltaEvent
@@ -247,11 +246,6 @@ class StreamingToolExecutor:
                 tool.input,
                 context_with_id,
                 emit=self._emit_event,
-            )
-            merge_runtime_metadata(
-                original=self._context.metadata,
-                updated=context_with_id.metadata,
-                result_metadata=tool.result.metadata if tool.result is not None else None,
             )
             logger.debug(
                 "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",

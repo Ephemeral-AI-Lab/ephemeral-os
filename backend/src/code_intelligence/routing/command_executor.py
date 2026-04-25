@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from code_intelligence.routing.overlay_auditor import OverlayAuditor
 

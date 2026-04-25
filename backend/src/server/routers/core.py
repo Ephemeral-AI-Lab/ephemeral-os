@@ -88,7 +88,6 @@ async def execute_ephemeral_agent_run(
         config,
         messages,
         agent_def=agent_def,
-        latest_user_prompt=input_message,
         session_state=session_state,
         sandbox_id=sandbox_id,
     )

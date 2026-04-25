@@ -47,8 +47,6 @@ LIVE_TESTS=(
     test_live_agent_react_landing.py    # React page agent
     test_live_nextjs_sandbox.py         # Next.js sandbox agent
     test_live_minimax_comprehensive.py  # MiniMax comprehensive tests
-    test_live_codeact_edge_cases.py     # CodeAct: pip install, CWD, team constraints
-    test_live_codeact_occ_transactions.py # Direct CodeAct OCC transaction tool tests
     test_live_daytona_tool_occ_calls.py # Direct daytona_write_file/edit_file/codeact OCC tests
 )
 

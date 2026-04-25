@@ -36,7 +36,7 @@ class _SyntheticTool(BaseTool):
 
 
 def test_schema_summary_prints_live_input_and_output_models(tmp_path):
-    tools = collect_schema_tools(cwd=tmp_path, caller_agent="team_planner")
+    tools = collect_schema_tools(cwd=tmp_path, caller_agent="analysis_agent")
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 

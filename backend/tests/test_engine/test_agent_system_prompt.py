@@ -17,7 +17,6 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
         SimpleNamespace(cwd="/tmp"),
         AgentDefinition(name="planner", description="d", system_prompt="base prompt"),
         settings=None,
-        latest_user_prompt=None,
     )
 
     assert prompt.startswith("runtime base")
@@ -47,8 +46,6 @@ def test_agent_system_prompt_ignores_declared_skills(monkeypatch) -> None:
         SimpleNamespace(cwd="/tmp"),
         agent,
         settings=None,
-        latest_user_prompt=None,
     )
 
     assert prompt == "agent body"
-

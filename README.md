@@ -1,6 +1,6 @@
 <h1 align="center"><img src="assets/logo.png" alt="EphemeralOS" width="64" style="vertical-align: middle;">&nbsp; <code>oh</code> — EphemeralOS: Open Agent Harness</h1>
 
-**EphemeralOS** delivers core lightweight agent infrastructure: tool-use, skills, memory, and multi-agent coordination.
+**EphemeralOS** delivers core lightweight agent infrastructure: tool-use, skills, memory, and background subagents.
 
 **Join the community**: contribute **Harness** for open agent development.
 
@@ -135,7 +135,7 @@ An **Agent Harness** is the complete infrastructure that wraps around an LLM to 
 EphemeralOS is an open-source Python implementation designed for **researchers, builders, and the community**:
 
 - **Understand** how production AI agents work under the hood
-- **Experiment** with cutting-edge tools, skills, and agent coordination patterns
+- **Experiment** with cutting-edge tools, skills, and agent runtime patterns
 - **Extend** the harness with custom plugins, providers, and domain knowledge
 - **Build** specialized agents on top of proven architecture
 

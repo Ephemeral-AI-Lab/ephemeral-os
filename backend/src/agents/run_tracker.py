@@ -3,8 +3,7 @@
 Three call sites historically wrote the same create/finish pattern for
 ``agent_run_store``: the production router, the eval harness, and the
 subagent tool. :class:`AgentRunTracker` collapses that into one helper
-so a future fourth call site (e.g. team runs) can reuse the same
-lifecycle instead of copy-pasting a fourth version.
+instead of copy-pasting the same lifecycle code.
 
 Lifecycle:
 

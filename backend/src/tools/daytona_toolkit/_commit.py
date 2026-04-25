@@ -7,7 +7,8 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Generic, Literal, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from collections.abc import Sequence
 
 from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from tools.core.ci_attribution import (

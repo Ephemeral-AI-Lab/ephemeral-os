@@ -80,7 +80,6 @@ the owner module below rather than growing `routing/service.py`.
 - `routing/rename_planner.py`: rename planning, dry-run preview, and rename fast paths
 - `routing/mutation_service.py`: typed write/edit/delete/move and rename-plan commits
 - `routing/command_executor.py`: `svc.cmd(...)` Git workspace audit execution
-- `routing/scope_status.py`: live scope coordination packet generation
 - `routing/telemetry.py`: status and telemetry response shaping
 
 **Key Methods:**

@@ -34,18 +34,18 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ThinkingDelta(text="working", agent_name="team_planner", work_id="b88848c71234425a")
+        ThinkingDelta(text="working", agent_name="analysis_agent", work_id="b88848c71234425a")
     )
     printer.emit(
         AssistantTurnComplete(
             message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
-            agent_name="team_planner",
+            agent_name="analysis_agent",
             work_id="b88848c71234425a",
         )
     )
 
-    assert lines == ["[team_planner  ] [b88848c71234425a] [thinking] working"]
+    assert lines == ["[analysis_agent] [b88848c71234425a] [thinking] working"]
 
 
 def test_printer_renders_structured_shell_error_detail() -> None:
@@ -160,24 +160,24 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
         SystemNotification(
             text=long_text,
             category="background_progress",
-            agent_name="team_planner",
+            agent_name="analysis_agent",
             work_id="1a0578d4c4dd7f1f14dd",
         )
     )
 
     expected = [
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] "
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] "
         '[system:background_progress] Background task_id="bg_1" status="running" source="engine_progress"',
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Note: Inspect pydantic/networks.py to understand URL and network type implementations",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Run ID: 84a5dde276554528",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Running for 19s",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ No new output in the last 7s",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Keep working on any other ready analysis or tool tasks first. Only wait when this background task is the remaining blocker.",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ ",
-        '[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Background task_id="bg_2" status="running" source="engine_progress"',
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
-        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Note: Second task still visible at the end of the notification.",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Note: Inspect pydantic/networks.py to understand URL and network type implementations",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Run ID: 84a5dde276554528",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Running for 19s",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ No new output in the last 7s",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Keep working on any other ready analysis or tool tasks first. Only wait when this background task is the remaining blocker.",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ ",
+        '[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Background task_id="bg_2" status="running" source="engine_progress"',
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Note: Second task still visible at the end of the notification.",
     ]
 
     assert lines == expected

@@ -56,9 +56,6 @@ def record_tool_trace(
 ) -> None:
     if metadata is None:
         return
-    if tool_name == "read_task_details":
-        _increment_trace_counter(metadata, "_read_task_details_calls")
-        return
     if tool_name == "read_file_note":
         _increment_trace_counter(metadata, "_read_file_note_calls")
         _append_trace_values(
