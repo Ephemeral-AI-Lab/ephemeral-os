@@ -340,7 +340,7 @@ async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
 @pytest.mark.parametrize(
     "parent_agent_name", ["root_planner", "team_planner", "team_replanner"]
 )
-def test_validate_run_subagent_allows_single_planner_scout_target(
+def test_validate_run_subagent_allows_planner_scout_bundle(
     parent_agent_name: str,
 ):
     ctx = ToolExecutionContext(
@@ -351,42 +351,16 @@ def test_validate_run_subagent_allows_single_planner_scout_target(
     result = _validate_run_subagent_request(
         agent_name="scout",
         prompt=None,
-        input={"target_paths": ["dask/dataframe/utils.py"]},
+        input={"target_paths": ["dask/dataframe/utils.py", "dask/dataframe/_compat.py"]},
         context=ctx,
     )
 
     assert not isinstance(result, ToolResult)
     assert result.sub_def.name == "scout"
-    assert result.subagent_scope_paths == ["dask/dataframe/utils.py"]
-
-
-@pytest.mark.parametrize(
-    "target_paths",
-    [
-        ["dask/dataframe/io/json.py", "dask/dataframe/io/parquet.py"],
-        ["dask/dataframe/groupby.py", "dask/dataframe/utils.py"],
-        ["dask/cli.py", "dask/config.py", "dask/compatibility.py"],
-    ],
-)
-def test_validate_run_subagent_rejects_multi_path_scout_batches(
-    target_paths: list[str],
-):
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={"session_config": _StubCfg(), "agent_name": "root_planner"},
-    )
-
-    result = _validate_run_subagent_request(
-        agent_name="scout",
-        prompt=None,
-        input={"target_paths": target_paths},
-        context=ctx,
-    )
-
-    assert isinstance(result, ToolResult)
-    assert result.is_error is True
-    assert "one production owner row" in result.output
-    assert "Launch separate scouts" in result.output
+    assert result.subagent_scope_paths == [
+        "dask/dataframe/_compat.py",
+        "dask/dataframe/utils.py",
+    ]
 
 
 def test_validate_run_subagent_rejects_scout_test_target_paths():
@@ -602,7 +576,10 @@ async def test_input_subagent_derives_target_paths_from_payload(monkeypatch):
         run_subagent.input_model(
             agent_name="scout",
             input={
-                "target_paths": ["dask/dataframe/utils.py"]
+                "target_paths": [
+                    "dask/dataframe/utils.py",
+                    "dask/dataframe/_compat.py",
+                ]
             },
         ),
         ctx,
@@ -610,7 +587,10 @@ async def test_input_subagent_derives_target_paths_from_payload(monkeypatch):
 
     child_meta = stub_agent.query_context.tool_metadata
     assert result.is_error is False
-    assert child_meta.get("target_paths") == ["dask/dataframe/utils.py"]
+    assert child_meta.get("target_paths") == [
+        "dask/dataframe/_compat.py",
+        "dask/dataframe/utils.py",
+    ]
     # Parent `write_scope` must never leak into the child.
     assert child_meta.get("write_scope") is None
 
