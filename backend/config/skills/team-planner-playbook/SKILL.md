@@ -109,7 +109,7 @@ same-layer evidence                  -> validator with production scopes
 | Draft check | Expected result |
 | --- | --- |
 | Coverage | Every inherited cluster has a producer owner or sibling `team_planner`; tiny slices stay separate. |
-| Developer lanes | Exact owner, one mechanism, small failure surface unless max-depth fallback. |
+| Developer lanes | Exact owner, one mechanism, small failure surface unless max-depth fallback; sibling lanes converging on a shared dispatch file (e.g. engine selector, adapter registry) collapse into one lane or chain via deps, never run as parallel siblings. |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Depend on every same-layer producer they verify; `scope_paths` are production surfaces. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |

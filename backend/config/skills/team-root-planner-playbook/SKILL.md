@@ -64,10 +64,8 @@ request
 
 | Check | Root-planner action |
 | --- | --- |
-| Intent | Mark bugfix, refactor, feature, migration, benchmark, or mixed. |
 | Clustering | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
 | Benchmark evidence | Keep tests and ids in evidence/spec, not workspace or scout targets. |
-| Boundary probe | Use a targeted production structure/symbol query when it changes scout shape. |
 
 Planner exploration stops at routing; use scouts for owner maps and preserve uncertainty instead of proving leaves.
 
@@ -85,11 +83,12 @@ owner ledger
 
 | Scout shape | Use when |
 | --- | --- |
-| Single/multi-path | One likely production owner, tight dependency, entrypoint, adapter, or shared mechanism. |
+| Single/multi-path | One owner or one coupled pair (engine+adapter, producer+consumer); same mechanism. |
 | Directory | Package, subsystem, engine matrix, or package-like import path; keep superficial. |
-| Row wave | Independent production families; separate scouts, then stop after the first routing-changing wave. |
+| Row wave | Independent production families; separate scouts in one parallel wave, never one batched call. |
+| Forbidden batch | ≥2 unrelated owners (e.g. `cli.py`+`config.py`+`compat.py`, HDF+parquet+groupby) → use Row wave. |
 
-Multi-path `target_paths` in one scout must share one owner family (sibling files in the same package serving the same mechanism) or be a single coupled pair (engine + adapter, producer + consumer). Unrelated owner families — e.g. `dask/cli.py` + `dask/config.py` + `dask/compatibility.py`, or HDF + parquet + groupby — go in **separate scouts dispatched as one parallel wave**, never one batched call. Use `input`, not `prompt`, so assigned `target_paths` reach the scout. Keep paths production-only; tests stay context only. Missing or disproved targets become a superficial directory scout or expandable handoff, not ad hoc replacement searching.
+Use `input.target_paths` (not `prompt`); production paths only; missing/disproved → directory scout or handoff.
 
 ## 3. Synthesize
 

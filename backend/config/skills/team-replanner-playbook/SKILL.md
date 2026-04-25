@@ -85,7 +85,7 @@ Diagnostics decision: <trivial_direct_replan|deep_diagnostics>
 | Diagnostics route | Use when |
 | --- | --- |
 | `trivial_direct_replan` | Failed task names every production seam, **and** no prior sibling/ancestor already failed on the same scope, **and** rich RCA traces a single defect. |
-| `deep_diagnostics` (default for chained or repeated failures) | Owner, path, rule, value mapping, or production seam remains unresolved; **or** a prior task in the same lineage already filed `request_replan` on the same scope; **or** the failed task admitted partial/out-of-scope/blocked-by-pre-existing in its summary. **Fan out a parallel scout wave** plus `ci_query_symbol` on each unfamiliar seam **before** drafting recovery children. |
+| `deep_diagnostics` (default for chained or repeated failures) | Owner, path, rule, value mapping, or production seam remains unresolved; **or** a prior task in the same lineage already filed `request_replan` on the same scope; **or** the failed task admitted partial/out-of-scope/blocked-by-pre-existing/unfixable in its summary. **Fan out a parallel scout wave** plus `ci_query_symbol` on each unfamiliar seam **before** drafting recovery children; submitting `submit_replan` after a `deep_diagnostics` decision without at least one scout/`ci_query_symbol` call this turn is a hard defect. |
 
 A rich-looking RCA from a developer who repeatedly hit the same red is a symptom, not proof; default to `deep_diagnostics` whenever the failure is chained or the same scope has been touched by a prior failed sibling.
 
@@ -153,7 +153,7 @@ same parent:
 | Named failing variant | Map to a repair/diagnostic child or preserved live repair owner. |
 | Validator-discovered child-owned suite or uncompleted criterion | Map to repair plus validator, or preserved live owner. |
 | Blocker-only fix leaves the failed task's goal/criteria/F2P ids uncovered | **Required**: add a continuation `developer` (or `team_planner` for broad rows) with `deps=[<repair_child_id>]`, carrying every uncompleted goal, acceptance criterion, F2P id, and production scope from the failed contract. Shipping repair-only without the continuation child is a hard defect. |
-| Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, or contradictory value rule | Evidence only; add a production diagnostic or blocker task. |
+| Test/benchmark/pytest-config restore/edit, skip/xfail, doc-only, contradictory value rule, or failed dev's claim that F2P ids are "unfixable"/"benchmark-authored"/"cannot be edited" | Evidence only; never silently drop F2P ids — emit a production diagnostic or `wrong_owner_or_role` escalation that carries every dropped id forward. |
 
 ## 4. Submit
 
