@@ -86,10 +86,10 @@ clues
 | Check | Planner action |
 | --- | --- |
 | Clustering axes | Group by changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids are acceptance criteria, not grouping axes. |
-| Cluster name | One row = one owner family. Slash/plus names like "CLI/Config/Compat" or "Storage I/O" signal unrelated owners; split now. |
-| Inherited evidence | Keep tests and ids in spec context. Never invent `<test-stem>.py`; package/engine clues such as parquet stay directory rows until proven exact. |
+| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
+| Inherited evidence | Keep tests and ids in spec context. Never invent `<test-stem>.py`; package/engine clues stay directory rows until proven exact. |
 
-Planner exploration stops at owner rows; HDF, JSON, parquet, groupby, utils, CLI, config, and compatibility remain separate rows unless live evidence proves a tight producer-consumer pair.
+Planner exploration stops at owner rows; unrelated concerns remain separate unless live evidence proves a tight producer-consumer pair.
 
 **Exit:** every owner row has a single owner family and recorded changelog axes.
 
@@ -113,7 +113,7 @@ owner ledger
 | Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. |
 | Bundled superficial | Several paths in one owner family or tight pair; ask only for relationship map, ownership boundaries, and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; dispatch separate scouts in one wave. Never batch `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, groupby+utils, or HDF+parquet+groupby. |
+| Row wave | Independent families; dispatch separate scouts in one wave. Never batch unrelated owner families. |
 | No scout | Inherited notes already provide root-cause-grade evidence for this row. |
 
 Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Never name test paths or ids anywhere in the prompt.

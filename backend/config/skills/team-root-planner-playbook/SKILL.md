@@ -81,10 +81,10 @@ production clues
 | Check | Root-planner action |
 | --- | --- |
 | Clustering axes | Make one row per owner family, then tag changelog axes (owner, mechanism, API, engine, format). F2P/P2P ids cannot join rows. |
-| Cluster name | One row = one owner family. Slash/plus names like "CLI/Config/Compat" or "Storage I/O" signal unrelated owners; split now. |
+| Cluster name | One row = one owner family. Slash/plus names that combine unrelated concerns signal unrelated owners; split now. |
 | Benchmark evidence | Exact means explicit production path/symbol from user/notes or `ci_workspace_structure` on the parent dir. Before scouting or scoping a test-derived filename, verify it; if absent or replaced by a package directory, use the directory row. |
 
-Routing stops at owner rows; HDF, JSON, parquet, groupby, utils, CLI, config, and compatibility are separate rows unless live evidence proves one tight producer-consumer pair. If several appear in one row, split it.
+Routing stops at owner rows; unrelated concerns remain separate unless live evidence proves one tight producer-consumer pair. If several appear in one row, split it.
 
 **Exit:** every owner row has a single owner family and recorded changelog axes.
 
@@ -108,7 +108,7 @@ owner ledger
 | Trivial deep | One proven exact file/symbol; ask for line-level functions, likely edit seam, and concrete gaps. |
 | Bundled superficial | Several paths in one owner family or one tight pair; same parent directory or call chain alone is not enough. Ask only for relationship map and handoff seams. |
 | Directory superficial | Package, subsystem, engine matrix, or package-like import path; map files and relationships without deep leaf RCA. |
-| Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch `cli.py`+`config.py`+`compat.py`, HDF+JSON/parquet, groupby+utils, or HDF+parquet+groupby. |
+| Row wave | Independent families; issue one `run_subagent` per row in one wave. Never batch unrelated owner families. |
 
 Dispatch each scout with `run_subagent(agent_name="scout", prompt="<scout prompt>")`; `prompt` is the only channel. State the scout mode in `## Task`. Missing/disproved exact targets become directory scouts in Stage 3 or unresolved handoff. Rewrite every scout prompt as production-only; test paths, benchmark filenames, and F2P/P2P ids stay out.
 
@@ -158,7 +158,7 @@ same-payload evidence ---------------> validator
 | Draft check | Expected result |
 | --- | --- |
 | Coverage | Every note-backed owner or unresolved gap has a lane; Stage-2 clusters are not lane templates. |
-| Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` (e.g. `cli.py`+`config.py`+`compat.py`, HDF+parquet+groupby) force a `team_planner` lane instead — a CLI→config→compat call chain is not "one mechanism". |
+| Developer lanes | Exactly one production owner file (or one tight coupled pair within one mechanism); ≥2 unrelated owner files in `scope_paths` force a `team_planner` lane instead — a call chain across unrelated owners is not "one mechanism". |
 | Planner lanes | Preserve uncertainty and evidence without leaf-level overexploration. |
 | Validators | Required when any producer lane writes a same-payload suite; depend on every such producer; `scope_paths` are production surfaces. |
 | Payload | `id`, `agent`, `spec`, `deps`, and `scope_paths` only. |
