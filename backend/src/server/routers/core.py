@@ -349,24 +349,50 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                     if backend_event is not None:
                         await session.emit(backend_event)
 
-                # Resolve agent definition if requested
-                agent_def = None
-                if req.agent_name:
-                    from agents.registry import get_definition
-
-                    agent_def = get_definition(req.agent_name)
-                    if agent_def is None:
-                        await _on_system_notification(
-                            f"Agent '{req.agent_name}' not found — using default"
+                # Route every user query through the per-session TaskCenter
+                # (US-009 — the new phased executor-evaluator tree). The
+                # TaskCenter spawns a root executor for the user's prompt,
+                # drives any phased subtasks it submits, and runs an evaluator
+                # before closing the root.
+                if session.task_center is not None:
+                    session.task_center.set_event_callback(_on_agent_event)
+                    try:
+                        root = await session.task_center.run_query(req.line)
+                    finally:
+                        session.task_center.set_event_callback(None)
+                    # Surface the final root summary as a transcript item so
+                    # the user sees the closure text even if no child emitted
+                    # it as an AssistantTurnComplete with the same content.
+                    if root.summary:
+                        await session.emit(
+                            BackendEvent(
+                                type="transcript_item",
+                                item=TranscriptItem(
+                                    role="assistant",
+                                    text=root.summary,
+                                ),
+                            )
                         )
+                else:
+                    # Legacy fallback when TaskCenter is unavailable (tests,
+                    # uninitialized sessions). Kept so existing chat tests
+                    # don't break before they're rewritten.
+                    agent_def = None
+                    if req.agent_name:
+                        from agents.registry import get_definition
 
-                await execute_ephemeral_agent_run(
-                    config,
-                    req.line,
-                    on_agent_event=_on_agent_event,
-                    agent_def=agent_def,
-                    sandbox_id=req.sandbox_id,
-                )
+                        agent_def = get_definition(req.agent_name)
+                        if agent_def is None:
+                            await _on_system_notification(
+                                f"Agent '{req.agent_name}' not found — using default"
+                            )
+                    await execute_ephemeral_agent_run(
+                        config,
+                        req.line,
+                        on_agent_event=_on_agent_event,
+                        agent_def=agent_def,
+                        sandbox_id=req.sandbox_id,
+                    )
                 await session.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
                 await session.emit(BackendEvent(type="error", message=f"Processing error: {exc}"))

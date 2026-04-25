@@ -103,6 +103,10 @@ class SessionState:
         self._busy_lock = asyncio.Lock()
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
         self._tool_registry: ToolRegistry | None = None
+        # Per-session TaskCenter — built by initialize() once SessionConfig
+        # is available. All user queries route through this orchestrator.
+        from task_center.center import TaskCenter
+        self.task_center: TaskCenter | None = None
 
     async def initialize(self, host_config: BackendHostConfig) -> None:
         self.config = build_session_config(
@@ -114,6 +118,30 @@ class SessionState:
         from tools import create_default_tool_registry
 
         self._tool_registry = create_default_tool_registry()
+
+        # Seed the agent registry from backend/config/agents/ so the
+        # executor/evaluator definitions are available when TaskCenter
+        # spawns agents. The legacy team-runtime cleanup removed the prior
+        # seed; this restores it for the new arch.
+        from agents.loader import load_agents_dir
+        from agents.registry import register_definition
+        from pathlib import Path as _P
+
+        agents_dir = (
+            _P(__file__).resolve().parent.parent.parent.parent
+            / "backend" / "config" / "agents"
+        )
+        for defn in load_agents_dir(agents_dir):
+            register_definition(defn)
+            logger.info("Registered agent definition %r", defn.name)
+
+        # Build the per-session TaskCenter with a production spawn function
+        # that drives a real EphemeralAgent for each task.
+        from task_center.center import TaskCenter
+        from task_center.production_spawn import make_production_spawn
+
+        spawn_fn = make_production_spawn(self.config)
+        self.task_center = TaskCenter(self.config, spawn_func=spawn_fn)
 
     @property
     def session_id(self) -> str:
