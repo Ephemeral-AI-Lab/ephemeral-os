@@ -24,7 +24,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -62,17 +61,6 @@ class _ValidatedRunSubagentRequest:
     sub_def: Any
 
 
-_TEST_PATH_RE = re.compile(
-    r"(?i)(?:^|[\s`\"'(<])(?:\.?/)?[\w./-]*tests?[/\\][^\s`\"')>]*"
-)
-_TEST_FILE_RE = re.compile(
-    r"(?i)(?:^|[\s`\"'(<:/\\])[\w./-]*(?:test_[\w.-]+|[\w.-]+_test)\.py\b"
-)
-_PYTEST_ID_RE = re.compile(r"\btest_[A-Za-z0-9_]+(?:\[[^\]\n]+\])?")
-_BENCHMARK_PATH_RE = re.compile(r"(?i)\bbenchmarks?[/\\][^\s`\"')>]+")
-_F2P_P2P_RE = re.compile(r"\b(?:F2P|P2P)\b", re.IGNORECASE)
-
-
 def _truncate(s: str) -> str:
     s = s.replace("\n", " ").strip()
     if len(s) > _PEEK_BLOCK_CHAR_CAP:
@@ -86,56 +74,6 @@ def _compact_args(inp: Any) -> str:
     except Exception:
         s = str(inp)
     return _truncate(s)
-
-
-def _scout_prompt_policy_error(prompt: str) -> str | None:
-    """Return a planner-facing error when a scout prompt violates invariants."""
-
-    checks = (
-        ("test path", _TEST_PATH_RE),
-        ("test file", _TEST_FILE_RE),
-        ("test id", _PYTEST_ID_RE),
-        ("benchmark path", _BENCHMARK_PATH_RE),
-        ("F2P/P2P id", _F2P_P2P_RE),
-    )
-    for label, pattern in checks:
-        if pattern.search(prompt):
-            return f"contains {label} evidence"
-
-    exploration_paths = _extract_prompt_section(prompt, "Exploration Path")
-    terminal_contract_lines = _extract_prompt_section(prompt, "Terminal Contract")
-    if exploration_paths and terminal_contract_lines:
-        terminal_contract = "\n".join(terminal_contract_lines)
-        missing = [
-            path
-            for path in exploration_paths
-            if path and path not in terminal_contract
-        ]
-        if missing:
-            return (
-                "omits exploration path from Terminal Contract: "
-                + ", ".join(missing[:3])
-            )
-    return None
-
-
-def _extract_prompt_section(prompt: str, heading: str) -> list[str]:
-    pattern = re.compile(
-        rf"(?ims)^##\s+{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^##\s+|\Z)"
-    )
-    match = pattern.search(prompt)
-    if match is None:
-        return []
-    lines: list[str] = []
-    for raw_line in match.group("body").splitlines():
-        line = raw_line.strip().strip("`")
-        if not line or line.startswith("#"):
-            continue
-        if heading == "Exploration Path":
-            lines.append(line)
-        else:
-            lines.append(raw_line)
-    return lines
 
 
 class RunSubagentInput(BaseModel):
@@ -207,20 +145,6 @@ def _validate_run_subagent_request(
             output="run_subagent: `prompt` must be a non-empty string.",
             is_error=True,
         )
-    if agent_name == "scout":
-        scout_policy_error = _scout_prompt_policy_error(prompt)
-        if scout_policy_error is not None:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout prompt rejected because it "
-                    f"{scout_policy_error}. Rewrite the scout prompt as "
-                    "production-only; keep tests, benchmark paths, and F2P/P2P "
-                    "ids in task specs or acceptance criteria, not scout prompts. "
-                    "This is terminal evidence for planners: do not wait on or "
-                    "retry this background task with the same prompt shape."
-                ),
-                is_error=True,
-            )
 
     sub_def = get_definition(agent_name)
     if sub_def is None:
