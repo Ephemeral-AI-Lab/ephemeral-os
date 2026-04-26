@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "web" / "dist"
 
 if TYPE_CHECKING:
-    from task_center.orchestrator import TaskCenter
+    from task_center.runtime import TaskCenter
 
 TaskCenterSpawnFunc = Callable[[str, "TaskCenter", str | None], Awaitable[None]]
 
@@ -140,9 +140,9 @@ class RuntimeState:
 
         # Build the TaskCenter spawn function once; each /chat request gets a
         # fresh TaskCenter with its own graph and event callback.
-        from task_center.agent_spawn import make_production_spawn
+        from task_center.runtime import build_production_spawn
 
-        self._task_center_spawn_func = make_production_spawn(self.config)
+        self._task_center_spawn_func = build_production_spawn(self.config)
 
     def create_task_center(
         self,
@@ -154,7 +154,7 @@ class RuntimeState:
         if self.config is None or self._task_center_spawn_func is None:
             raise RuntimeError("RuntimeState not initialised")
 
-        from task_center.orchestrator import TaskCenter
+        from task_center.runtime import TaskCenter
         from uuid import uuid4
 
         request_id = uuid4().hex[:12]

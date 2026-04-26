@@ -26,8 +26,8 @@ from message.stream_events import (
 )
 from notification.events import SystemNotification
 from server.protocol import BackendEvent, TranscriptItem
-from task_center.summary import latest_summary_text
-from task_center.task import Task
+from task_center.model import Task
+from task_center.summaries import latest_summary_text
 from tools.core.base import ExecutionMetadata
 
 if TYPE_CHECKING:

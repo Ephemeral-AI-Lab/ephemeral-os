@@ -6,9 +6,9 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from task_center.task_graph import TaskGraph
-from task_center.summary import child_summary_groups
-from task_center.task import Status, Task, TaskSummary
+from task_center.graph import TaskGraph
+from task_center.model import Status, Task, TaskSummary
+from task_center.summaries import child_summary_groups
 
 
 def build_task_prompt(task: Task, graph: TaskGraph) -> str:

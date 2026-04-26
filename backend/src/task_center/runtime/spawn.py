@@ -1,6 +1,6 @@
 """TaskCenter ``SpawnFunc`` adapter that drives a real EphemeralAgent per task.
 
-The dispatcher in :mod:`task_center.orchestrator` calls
+The dispatcher in :mod:`task_center.runtime.orchestrator` calls
 ``spawn_func(task_id, tc, sandbox_id)`` for each ``READY`` task. In production
 this needs to:
 
@@ -19,12 +19,12 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from task_center.orchestrator import TaskCenter
+    from task_center.runtime.orchestrator import TaskCenter
 
 logger = logging.getLogger(__name__)
 
 
-def make_production_spawn(
+def build_production_spawn(
     runtime_config: Any,
 ) -> Callable[[str, "TaskCenter", str | None], Awaitable[None]]:
     """Build a ``SpawnFunc`` bound to runtime config and optional sandbox."""
@@ -32,8 +32,8 @@ def make_production_spawn(
     async def spawn(task_id: str, tc: "TaskCenter", sandbox_id: str | None) -> None:
         from agents.registry import get_definition
         from server.routers.core import execute_ephemeral_agent_run
-        from task_center.context import build_task_prompt
         from task_center.errors import TaskCenterError
+        from task_center.prompts import build_task_prompt
         from tools.core.base import ExecutionMetadata
 
         task = tc.graph.get(task_id)

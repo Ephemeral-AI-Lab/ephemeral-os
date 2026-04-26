@@ -1,8 +1,9 @@
-"""Summary helpers shared by TaskCenter graph closure and prompt context."""
+"""Summary helpers shared by graph closure and prompt context."""
 
 from __future__ import annotations
 
-from task_center.task import Task, TaskSummary
+from task_center.model import Task, TaskSummary
+
 
 COMPLETED_CHILD_SUMMARY_KINDS = frozenset({"success", "child_success"})
 FAILED_CHILD_SUMMARY_KINDS = frozenset({"failure", "child_failure"})

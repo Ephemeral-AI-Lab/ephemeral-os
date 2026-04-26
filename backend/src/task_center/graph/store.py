@@ -1,18 +1,16 @@
 """TaskGraph — in-memory container for tasks and harness graphs.
 
-Holds the ``{task_id: Task}`` and ``{graph_id: TaskCenterHarnessGraph}`` maps
-plus the orchestrator-facing operations: insertion, lookup, readiness, and
-status transitions.
+Holds the ``{task_id: Task}`` and ``{graph_id: HarnessGraph}`` maps plus the
+orchestrator-facing operations: insertion, lookup, readiness, and status
+transitions.
 """
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 
 from task_center.errors import TaskCenterError
-from task_center.harness import TaskCenterHarnessGraph
-from task_center.task import HarnessGraphId, Status, Task, TaskId
+from task_center.model import HarnessGraph, HarnessGraphId, Status, Task, TaskId
 
 
 _ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
@@ -30,10 +28,7 @@ class TaskGraph:
     """Request-scoped tasks plus harness graphs."""
 
     tasks: dict[TaskId, Task] = field(default_factory=dict)
-    harness_graphs: dict[HarnessGraphId, TaskCenterHarnessGraph] = field(
-        default_factory=dict
-    )
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    harness_graphs: dict[HarnessGraphId, HarnessGraph] = field(default_factory=dict)
 
     def add(self, task: Task) -> None:
         if task.id in self.tasks:
@@ -46,12 +41,12 @@ class TaskGraph:
             raise TaskCenterError(f"task id {task_id!r} not in graph")
         return task
 
-    def add_harness_graph(self, graph: TaskCenterHarnessGraph) -> None:
+    def add_harness_graph(self, graph: HarnessGraph) -> None:
         if graph.id in self.harness_graphs:
             raise TaskCenterError(f"harness graph id {graph.id!r} already in graph")
         self.harness_graphs[graph.id] = graph
 
-    def get_harness_graph(self, graph_id: HarnessGraphId) -> TaskCenterHarnessGraph:
+    def get_harness_graph(self, graph_id: HarnessGraphId) -> HarnessGraph:
         graph = self.harness_graphs.get(graph_id)
         if graph is None:
             raise TaskCenterError(f"harness graph id {graph_id!r} not in graph")

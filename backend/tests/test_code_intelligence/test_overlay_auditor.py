@@ -455,7 +455,10 @@ def test_overlay_runtime_bundle_contains_executable_facade_and_runtime_package(
     raw = overlay_auditor_module._overlay_runtime_bundle_bytes()
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
-        tar.extractall(tmp_path)
+        try:
+            tar.extractall(tmp_path, filter="data")
+        except TypeError:
+            tar.extractall(tmp_path)
 
     assert "overlay_run.py" in names
     assert "overlay_runtime/__init__.py" in names

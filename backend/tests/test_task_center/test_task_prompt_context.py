@@ -1,10 +1,10 @@
-"""Tests for ``task_center.context.task_prompt.build_task_prompt``."""
+"""Tests for ``task_center.prompts.task_prompt.build_task_prompt``."""
 
 from __future__ import annotations
 
-from task_center import Status, Task, TaskCenterHarnessGraph, TaskSummary
-from task_center.context import build_task_prompt
-from task_center.task_graph import TaskGraph
+from task_center import HarnessGraph, Status, Task, TaskSummary
+from task_center.graph import TaskGraph
+from task_center.prompts import build_task_prompt
 
 
 def test_root_task_prompt_is_original_input() -> None:
@@ -75,7 +75,7 @@ def test_evaluator_prompt_includes_parent_goal_and_child_summaries() -> None:
     )
     graph.add(evaluator)
     graph.add_harness_graph(
-        TaskCenterHarnessGraph(
+        HarnessGraph(
             id="g1",
             run_id="r",
             parent_task_id="p",
@@ -142,7 +142,7 @@ def test_evaluator_prompt_includes_nested_child_closure_summaries() -> None:
     )
     graph.add(evaluator)
     graph.add_harness_graph(
-        TaskCenterHarnessGraph(
+        HarnessGraph(
             id="g1",
             run_id="r",
             parent_task_id="p",

@@ -1,8 +1,7 @@
 # Code Intelligence
 
 The Code Intelligence subsystem provides Python-focused code querying, safe file
-mutation, semantic rename planning, and audited shell command execution for local
-and sandbox workspaces.
+mutation, and audited shell command execution for local and sandbox workspaces.
 
 Current supported semantic language: Python.
 
@@ -19,8 +18,7 @@ Client tools
 CodeIntelligenceService
   |-- SymbolIndex           Python AST symbol index
   |-- LspClient             Python/Jedi semantic queries
-  |-- RenamePlanner         semantic rename plans and preview cache
-  |-- MutationService       write/edit/delete/move and rename-plan commits
+  |-- MutationService       write/edit/delete/move commits
   |-- WriteCoordinator      OCC, locks, merge, rollback, refresh
   |-- ContentManager        local/sandbox file I/O
   `-- AuditedCommandExecutor -> OverlayAuditor -> overlay/run.py
@@ -40,10 +38,7 @@ live in one of the owner modules above rather than growing
   methods, and assignments.
 - `language_server/client.py`: Python/Jedi subprocess queries, readiness checks, caching,
   and diagnostics.
-- `mutations/rename_planner.py`: rename plan construction, fast reference
-  replacement paths, and dry-run preview caching.
-- `mutations/mutation_service.py`: typed write/edit/delete/move APIs and
-  previously computed rename-plan commits.
+- `mutations/mutation_service.py`: typed write/edit/delete/move APIs.
 - `mutations/write_coordinator.py`: operation-level OCC, sorted per-file locking,
   stale-edit merge fallback, rollback, index refresh, and LSP invalidation.
 - `mutations/content_manager.py`: workspace-scoped local and sandbox file I/O.
@@ -68,7 +63,6 @@ Write-capable tools call typed service APIs directly:
 - `svc.edit_file(specs)`
 - `svc.delete_file(paths)`
 - `svc.move_file(specs)`
-- `svc.rename_symbol(...)`
 - `svc.cmd(sandbox, command, ...)`
 
 Each typed mutation call is one OCC boundary. Shell-style commands run through
@@ -105,8 +99,6 @@ The index intentionally ignores non-Python files.
 - `goto_definition(file_path, line, character)`
 - `find_references(file_path, line, character)`
 - `find_references_many(requests)`
-- `rename_symbol(file_path, line, character, new_name)`
-- `rename_symbols(requests)`
 - `hover(file_path, line, character)`
 - `diagnostics(file_path)`
 - `ensure_ready(install_missing=False, languages=("python",))`
@@ -122,21 +114,6 @@ The client keeps:
 - a small line cache used to adjust column `0` to the actual symbol name on
   `def` and `class` lines,
 - readiness state for the Python/Jedi backend.
-
-## Rename Planning
-
-`RenamePlanner` builds `SemanticRenamePlan` objects without writing files.
-
-Fast paths:
-
-- Same-file module symbol rename when AST/token guards prove there is one
-  origin binding and no workspace-wide external occurrence.
-- Batched reference replacement when LSP references point exactly at the old
-  identifier spans.
-- Cached dry-run preview snapshots keyed by file, position, arbiter generation,
-  symbol-index generation, and sandbox identity.
-
-If a fast path is uncertain, planning falls back to Jedi's rename engine.
 
 ## Mutation Workflow
 

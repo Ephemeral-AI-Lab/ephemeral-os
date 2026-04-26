@@ -1,9 +1,9 @@
 """Task and Status — the core data model for the GAN-style task graph.
 
 Each task is a node owned by an executor, planner, or evaluator. Tasks belong
-to at most one ``TaskCenterHarnessGraph`` via ``task_center_harness_graph_id``;
-only the root executor has no harness graph. Dependencies between executor
-tasks are represented by ``needs``.
+to at most one ``HarnessGraph`` via ``task_center_harness_graph_id``; only the
+root executor has no harness graph. Dependencies between executor tasks are
+represented by ``needs``.
 """
 
 from __future__ import annotations

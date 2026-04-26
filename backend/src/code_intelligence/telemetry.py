@@ -69,8 +69,6 @@ def build_status(
     symbol_index: Any,
     arbiter: Any,
     lsp_client: Any,
-    rename_cache_stats: dict[str, int],
-    rename_preview_fast_fallbacks: int,
 ) -> dict[str, Any]:
     """Return service status summary."""
     lsp = lsp_telemetry_fields(lsp_client)
@@ -90,8 +88,6 @@ def build_status(
             "entries": arbiter.metrics.total_edits,
             "generation": arbiter.generation,
         },
-        "rename_preview_cache": rename_cache_stats,
-        "rename_preview_fast_fallbacks": rename_preview_fast_fallbacks,
         "lsp": lsp,
         "overlay": overlay.__dict__,
     }

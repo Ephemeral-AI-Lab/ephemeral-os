@@ -19,7 +19,6 @@ from code_intelligence.core.types import (
     OperationChange,
     OperationResult,
     SemanticFileChange,
-    SemanticRenamePlan,
     WriteSpec,
 )
 
@@ -39,21 +38,6 @@ class _CommitSpecRequest:
     ) -> None:
         self.op = op
         self.specs = specs
-        self.agent_id = agent_id
-        self.description = description
-
-
-class _RenameCommitRequest:
-    """Normalized internal attributed rename plan commit."""
-
-    def __init__(
-        self,
-        *,
-        plan: SemanticRenamePlan,
-        agent_id: str = "",
-        description: str = "",
-    ) -> None:
-        self.plan = plan
         self.agent_id = agent_id
         self.description = description
 
@@ -244,65 +228,6 @@ class MutationService:
             edit_type="edit_file",
             description=description,
         )
-
-    def commit_rename_plan(
-        self,
-        plan: SemanticRenamePlan,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        """Commit a previously computed rename plan without recomputing Jedi rename."""
-        if not plan.changes:
-            return OperationResult(
-                success=True,
-                status="committed",
-                files=(),
-                conflict_file=None,
-                conflict_reason="",
-                timings={},
-            )
-        return self._write_coordinator.commit_operation_against_base(
-            list(plan.changes),
-            agent_id=agent_id,
-            edit_type="rename_symbol",
-            description=description or f"rename to {plan.new_name}",
-        )
-
-    def commit_rename_plans_many(
-        self,
-        requests: Sequence[dict[str, Any]],
-    ) -> list[OperationResult]:
-        """Commit many already-computed rename plans with batched sandbox I/O."""
-        normalized = [
-            _RenameCommitRequest(
-                plan=req["plan"],
-                agent_id=str(req.get("agent_id") or ""),
-                description=str(req.get("description") or ""),
-            )
-            for req in requests
-        ]
-        if not normalized:
-            return []
-        if len(normalized) == 1:
-            req = normalized[0]
-            return [
-                self.commit_rename_plan(
-                    req.plan,
-                    agent_id=req.agent_id,
-                    description=req.description,
-                )
-            ]
-        operations = [
-            CommitOperation(
-                changes=tuple(req.plan.changes),
-                agent_id=req.agent_id,
-                edit_type="rename_symbol",
-                description=req.description or f"rename to {req.plan.new_name}",
-            )
-            for req in normalized
-        ]
-        return self._write_coordinator.commit_many_operations_against_base(operations)
 
     def delete_file(
         self,

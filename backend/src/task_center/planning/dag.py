@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from task_center.errors import PlanValidationError
+from task_center.planning.errors import PlanValidationError
 
 
 def compile_dag(

@@ -1,11 +1,11 @@
-"""Unit tests for ``task_center.task_graph.TaskGraph``."""
+"""Unit tests for ``task_center.graph.TaskGraph``."""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center import Status, Task, TaskCenterError, TaskCenterHarnessGraph
-from task_center.task_graph import TaskGraph
+from task_center import HarnessGraph, Status, Task, TaskCenterError
+from task_center.graph import TaskGraph
 
 
 def _t(
@@ -99,7 +99,7 @@ def test_transition_rejects_done_to_anything() -> None:
 
 def test_harness_graph_storage() -> None:
     g = TaskGraph()
-    harness = TaskCenterHarnessGraph(
+    harness = HarnessGraph(
         id="g1",
         run_id="r1",
         parent_task_id="caller",
@@ -111,7 +111,7 @@ def test_harness_graph_storage() -> None:
 
 def test_add_harness_graph_duplicate_raises() -> None:
     g = TaskGraph()
-    h = TaskCenterHarnessGraph(
+    h = HarnessGraph(
         id="g1", run_id="r", parent_task_id="p", planner_task_id="pl"
     )
     g.add_harness_graph(h)

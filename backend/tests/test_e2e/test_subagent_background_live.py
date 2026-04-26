@@ -91,9 +91,8 @@ async def _run_executor_with_debug(
     from config.settings import load_settings
     from message.event_printer import MultiAgentEventPrinter
     from server.app_factory import RuntimeConfig
-    from task_center.agent_spawn import make_production_spawn
-    from task_center.orchestrator import TaskCenter
-    from task_center.summary import latest_summary_text
+    from task_center.runtime import TaskCenter, build_production_spawn
+    from task_center.summaries import latest_summary_text
 
     settings = load_settings()
     EvalAgent._ensure_db_ready(settings)
@@ -125,7 +124,7 @@ async def _run_executor_with_debug(
 
     task_center = TaskCenter(
         runtime_config,
-        spawn_func=make_production_spawn(runtime_config),
+        spawn_func=build_production_spawn(runtime_config),
         on_event=_on_event,
     )
 

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class CodeIntelligenceTuning:
-    rename_preview_cache_max: int = 32
     scope_recent_seconds: float = 300.0
     shell_default_timeout: int = 900
     shell_write_timeout: int = 5

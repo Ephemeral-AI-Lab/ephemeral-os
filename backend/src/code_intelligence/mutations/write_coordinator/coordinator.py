@@ -11,20 +11,24 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from typing import Any
 
 from code_intelligence.core.hashing import content_hash
 from code_intelligence.mutations.arbiter import Arbiter
-from code_intelligence.mutations.merge import (
-    detect_edit_window,
-    merge_non_overlapping_edit,
-)
 from code_intelligence.mutations.patcher import Patcher
 from code_intelligence.mutations.time_machine import TimeMachine
 from code_intelligence.mutations.content_manager import (
     CheckedApplyChange,
     ContentManager,
+)
+from code_intelligence.mutations.write_coordinator.models import (
+    CommitOperation,
+    ResolvedChange,
+)
+from code_intelligence.mutations.write_coordinator.resolver import ChangeResolver
+from code_intelligence.mutations.write_coordinator.results import (
+    edit_result,
+    operation_abort,
 )
 from code_intelligence.core.types import (
     EditResult,
@@ -33,48 +37,6 @@ from code_intelligence.core.types import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class CommitOperation:
-    """One attributed semantic operation inside a batched commit."""
-
-    changes: tuple[OperationChange, ...]
-    agent_id: str = ""
-    edit_type: str = "edit"
-    description: str = ""
-
-
-@dataclass(frozen=True)
-class ResolvedChange:
-    """A planned change resolved against the current locked file state."""
-
-    change: OperationChange
-    current_content: str
-    final_content: str | None
-    current_hash: str
-    existed: bool
-
-
-def _result(
-    file_path: str,
-    message: str,
-    *,
-    success: bool = False,
-    conflict: bool = False,
-    conflict_reason: str = "",
-    snapshot_id: str = "",
-    timings: dict[str, float] | None = None,
-) -> EditResult:
-    return EditResult(
-        success=success,
-        file_path=file_path,
-        message=message,
-        conflict=conflict,
-        conflict_reason=conflict_reason,
-        snapshot_id=snapshot_id,
-        timings=dict(timings or {}),
-    )
 
 
 class WriteCoordinator:
@@ -96,6 +58,7 @@ class WriteCoordinator:
         self._symbol_index = symbol_index
         self._lsp_client = lsp_client
         self._content = content
+        self._resolver = ChangeResolver()
 
     # -- Semantic operation primitives ---------------------------------------
 
@@ -150,7 +113,7 @@ class WriteCoordinator:
         timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
         if lock_conflict is not None:
             timings["total"] = round(time.perf_counter() - started, 6)
-            return self._operation_abort(
+            return operation_abort(
                 changes,
                 status="aborted_lock",
                 conflict_file=lock_conflict,
@@ -188,7 +151,7 @@ class WriteCoordinator:
                     timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                     timings["resolve_read"] = round(resolve_read_s, 6)
                     timings["total"] = round(time.perf_counter() - started, 6)
-                    return self._operation_abort(
+                    return operation_abort(
                         changes,
                         status="failed",
                         conflict_file=change.file_path,
@@ -197,7 +160,7 @@ class WriteCoordinator:
                     )
                 resolve_read_s += time.perf_counter() - read_started
 
-                resolved_change, conflict = self._resolve_change(
+                resolved_change, conflict = self._resolver.resolve_change(
                     change,
                     current_now,
                     existed_now,
@@ -207,7 +170,7 @@ class WriteCoordinator:
                     self._arbiter.record_conflict(status)
                     timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                     timings["total"] = round(time.perf_counter() - started, 6)
-                    return self._operation_abort(
+                    return operation_abort(
                         changes,
                         status=status,
                         conflict_file=change.file_path,
@@ -270,7 +233,7 @@ class WriteCoordinator:
                         success=False,
                         status="failed",
                         files=tuple(
-                            _result(c.file_path, f"operation failed on {change.file_path}: {exc}")
+                            edit_result(c.file_path, f"operation failed on {change.file_path}: {exc}")
                             for c in sorted_changes
                         ),
                         conflict_file=change.file_path,
@@ -298,7 +261,7 @@ class WriteCoordinator:
                 apply_invalidate_s += time.perf_counter() - invalidate_started
                 per_timings["total"] = round(time.perf_counter() - per_started, 6)
                 commit_results.append(
-                    _result(
+                    edit_result(
                         change.file_path,
                         "Wrote file",
                         success=True,
@@ -371,7 +334,7 @@ class WriteCoordinator:
                 success=False,
                 status="failed",
                 files=tuple(
-                    _result(c.file_path, f"checked operation failed: {exc}") for c in changes
+                    edit_result(c.file_path, f"checked operation failed: {exc}") for c in changes
                 ),
                 conflict_file=None,
                 conflict_reason=f"write failed: {exc}",
@@ -409,7 +372,7 @@ class WriteCoordinator:
                 timings["resolve"] = 0.0
                 timings["resolve_read"] = 0.0
                 timings["total"] = round(time.perf_counter() - started, 6)
-                return self._operation_abort(
+                return operation_abort(
                     changes,
                     status="aborted_version",
                     conflict_file=apply_result.conflict_path,
@@ -421,7 +384,7 @@ class WriteCoordinator:
                 success=False,
                 status="failed",
                 files=tuple(
-                    _result(
+                    edit_result(
                         c.file_path,
                         apply_result.message or "checked operation failed",
                     )
@@ -457,7 +420,7 @@ class WriteCoordinator:
             self._symbol_index.refresh(change.file_path, change.final_content)
             self._lsp_client.invalidate(change.file_path)
             commit_results.append(
-                _result(
+                edit_result(
                     change.file_path,
                     "Wrote file",
                     success=True,
@@ -520,7 +483,7 @@ class WriteCoordinator:
         if lock_conflict is not None:
             timings["total"] = round(time.perf_counter() - started, 6)
             return [
-                self._operation_abort(
+                operation_abort(
                     op.changes,
                     status="aborted_lock",
                     conflict_file=(
@@ -558,7 +521,7 @@ class WriteCoordinator:
                         change.file_path,
                         ("", False),
                     )
-                    resolved_change, conflict = self._resolve_change(
+                    resolved_change, conflict = self._resolver.resolve_change(
                         change,
                         current_now,
                         existed_now,
@@ -566,7 +529,7 @@ class WriteCoordinator:
                     if conflict is not None:
                         status, reason = conflict
                         self._arbiter.record_conflict(status)
-                        results[idx] = self._operation_abort(
+                        results[idx] = operation_abort(
                             op.changes,
                             status=status,
                             conflict_file=change.file_path,
@@ -612,7 +575,7 @@ class WriteCoordinator:
                             success=False,
                             status="failed",
                             files=tuple(
-                                _result(c.file_path, f"batch operation failed: {exc}")
+                                edit_result(c.file_path, f"batch operation failed: {exc}")
                                 for c in op.changes
                             ),
                             conflict_file=None,
@@ -646,7 +609,7 @@ class WriteCoordinator:
                     self._symbol_index.refresh(change.file_path, item.final_content)
                     self._lsp_client.invalidate(change.file_path)
                     commit_results.append(
-                        _result(
+                        edit_result(
                             change.file_path,
                             "Wrote file",
                             success=True,
@@ -723,7 +686,7 @@ class WriteCoordinator:
                     success=False,
                     status="failed",
                     files=tuple(
-                        _result(c.file_path, f"checked batch operation failed: {exc}")
+                        edit_result(c.file_path, f"checked batch operation failed: {exc}")
                         for c in op.changes
                     ),
                     conflict_file=None,
@@ -743,7 +706,7 @@ class WriteCoordinator:
                     success=False,
                     status="failed",
                     files=tuple(
-                        _result(
+                        edit_result(
                             c.file_path,
                             apply_result.message or "checked batch operation failed",
                         )
@@ -783,7 +746,7 @@ class WriteCoordinator:
                 self._symbol_index.refresh(change.file_path, change.final_content)
                 self._lsp_client.invalidate(change.file_path)
                 commit_results.append(
-                    _result(
+                    edit_result(
                         change.file_path,
                         "Wrote file",
                         success=True,
@@ -822,190 +785,18 @@ class WriteCoordinator:
             held.append(file_path)
         return held, None
 
-    def _resolve_change(
-        self,
-        change: OperationChange,
-        current_now: str,
-        existed_now: bool,
-    ) -> tuple[ResolvedChange | None, tuple[str, str] | None]:
-        """Resolve one change against the current locked file state."""
-        current_hash = content_hash(current_now) if existed_now else ""
-
-        if change.final_content is None:
-            if not existed_now or current_hash != change.base_hash:
-                return None, ("aborted_version", "file content changed before delete")
-            return (
-                ResolvedChange(
-                    change=change,
-                    current_content=current_now,
-                    final_content=None,
-                    current_hash=current_hash,
-                    existed=existed_now,
-                ),
-                None,
-            )
-
-        if not change.base_existed:
-            if existed_now:
-                return None, (
-                    "aborted_version",
-                    "file already exists; base said it did not",
-                )
-            return (
-                ResolvedChange(
-                    change=change,
-                    current_content=current_now,
-                    final_content=change.final_content,
-                    current_hash="",
-                    existed=False,
-                ),
-                None,
-            )
-
-        if existed_now and current_hash == change.base_hash:
-            return (
-                ResolvedChange(
-                    change=change,
-                    current_content=current_now,
-                    final_content=change.final_content,
-                    current_hash=current_hash,
-                    existed=existed_now,
-                ),
-                None,
-            )
-
-        if change.strict_base:
-            return None, (
-                "aborted_version",
-                "file content changed since base was captured (strict_base=True)",
-            )
-
-        resolved_content, conflict = self._resolve_semantic_change(
-            change,
-            current_now,
-            existed_now,
-        )
-        if conflict is not None:
-            return None, conflict
-        return (
-            ResolvedChange(
-                change=change,
-                current_content=current_now,
-                final_content=resolved_content,
-                current_hash=current_hash,
-                existed=existed_now,
-            ),
-            None,
-        )
-
-    @staticmethod
-    def _merge_against_base(
-        base_content: str | None,
-        final_content: str,
-        current_content: str | None,
-    ) -> tuple[str | None, str]:
-        """Attempt a non-overlapping merge of *final_content* onto *current_content*.
-
-        Returns ``(merged, reason_kind)`` where *reason_kind* is one of:
-
-        * ``""``            — success; *merged* is the resulting content.
-        * ``"missing"``     — base or current is ``None``; cannot merge.
-        * ``"unwindowable"``— ``detect_edit_window`` returned no window.
-        * ``"overlap"``     — ``merge_non_overlapping_edit`` returned ``None``.
-        """
-        if base_content is None or current_content is None:
-            return None, "missing"
-        line_start, line_end, op = detect_edit_window(base_content, final_content)
-        if line_start is None:
-            return None, "unwindowable"
-        merged = merge_non_overlapping_edit(
-            original_content=base_content,
-            new_content=final_content,
-            current_content=current_content,
-            line_start=line_start,
-            line_end=line_end,
-            operation_type=op,
-        )
-        if merged is None:
-            return None, "overlap"
-        return merged, ""
-
-    def _resolve_semantic_change(
-        self,
-        change: OperationChange,
-        current_now: str,
-        existed_now: bool,
-    ) -> tuple[str, tuple[str, str] | None]:
-        """Resolve one file's final content against a possibly-changed base.
-
-        Returns ``(resolved_content, None)`` on success or
-        ``("", (status, reason))`` describing the abort class.
-        """
-        if not existed_now:
-            return "", (
-                "aborted_version",
-                "file was deleted since rename plan was built",
-            )
-        assert change.final_content is not None  # modify branch only
-        merged, reason_kind = self._merge_against_base(
-            change.base_content,
-            change.final_content,
-            current_now,
-        )
-        if reason_kind == "":
-            assert merged is not None
-            return merged, None
-        if reason_kind == "overlap":
-            return "", (
-                "aborted_overlap",
-                "concurrent edit overlaps the rename window",
-            )
-        # "missing" or "unwindowable"
-        return "", (
-            "aborted_version",
-            "base content changed and rewrite is whole-file / un-windowable",
-        )
-
-    @staticmethod
-    def _operation_abort(
-        changes: Sequence[OperationChange],
-        *,
-        status: str,
-        conflict_file: str | None,
-        conflict_reason: str,
-        timings: dict[str, float],
-    ) -> OperationResult:
-        is_conflict = status.startswith("aborted")
-        files = tuple(
-            _result(
-                c.file_path,
-                conflict_reason,
-                conflict=is_conflict,
-                conflict_reason=status if is_conflict else "",
-            )
-            for c in changes
-        )
-        return OperationResult(
-            success=False,
-            status=status,  # type: ignore[arg-type]
-            files=files,
-            conflict_file=conflict_file,
-            conflict_reason=conflict_reason,
-            timings=dict(timings),
-        )
-
     def undo_last_edit(self, file_path: str) -> EditResult:
         """Undo the last edit to *file_path* via TimeMachine."""
         snapshot = self._time_machine.rollback(file_path)
         if snapshot is None:
-            return _result(file_path, "No snapshot available for undo")
+            return edit_result(file_path, "No snapshot available for undo")
         try:
             if snapshot.existed:
                 self._content.write(file_path, snapshot.content)
             else:
                 self._content.delete(file_path)
         except Exception as exc:
-            return _result(file_path, f"Undo write failed: {exc}")
+            return edit_result(file_path, f"Undo write failed: {exc}")
         self._symbol_index.refresh(file_path, snapshot.content if snapshot.existed else None)
         self._lsp_client.invalidate(file_path)
-        return _result(file_path, "Reverted to previous snapshot", success=True)
+        return edit_result(file_path, "Reverted to previous snapshot", success=True)

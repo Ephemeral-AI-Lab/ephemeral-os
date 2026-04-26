@@ -177,15 +177,6 @@ class MoveSpec:
     is_folder: bool = False
 
 
-@dataclass(frozen=True)
-class SemanticRenamePlan:
-    """Output of a rename plan: what the semantic tool saw and produced."""
-
-    new_name: str
-    origin: tuple[str, int, int]
-    changes: tuple[SemanticFileChange, ...]
-
-
 OperationStatus = Literal[
     "committed",
     "aborted_version",

@@ -6,6 +6,12 @@ Each user query routes through a fresh ``TaskCenter.run_query``. The class owns:
 - the five mode-tool entry points (called from ``tools.mode_tool``)
 - a wakeup event that the submission methods set after every state change
 - a dispatcher loop that spawns one agent coroutine per ready task
+
+Pure read-only queries over the graph live in :mod:`task_center.graph.queries`
+and :mod:`task_center.graph.readiness`; the planner-input builder lives in
+:mod:`task_center.planning.context_builder`. Thin method wrappers on
+``TaskCenter`` delegate to those free functions so callers can keep using
+``tc.parent_goal(...)``-style attribute access.
 """
 
 from __future__ import annotations
@@ -16,19 +22,27 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
-from task_center.plan import compile_dag
 from task_center.errors import TaskCenterError
-from task_center.task_graph import TaskGraph
-from task_center.harness import TaskCenterHarnessGraph
-from task_center.planner_context import PlannerLaunchContext
-from task_center.summary import child_summary_groups, latest_summary_text
-from task_center.task import (
+from task_center.graph import (
+    TaskGraph,
+    dependency_blocked_descendants as _q_dependency_blocked_descendants,
+    is_harness_graph_ready_for_evaluation as _q_is_harness_graph_ready_for_evaluation,
+    parent_goal as _q_parent_goal,
+    planner_handoff as _q_planner_handoff,
+)
+from task_center.model import (
+    HarnessGraph,
     HarnessGraphId,
     Status,
     Task,
     TaskId,
     TaskSummary,
 )
+from task_center.planning import (
+    build_planner_launch_context,
+    compile_dag,
+)
+from task_center.summaries import latest_summary_text
 
 if TYPE_CHECKING:
     from db.stores.task_center_store import TaskCenterStore
@@ -122,7 +136,7 @@ class TaskCenter:
             ),
         )
 
-    def _persist_harness_graph(self, graph: TaskCenterHarnessGraph) -> None:
+    def _persist_harness_graph(self, graph: HarnessGraph) -> None:
         if self._task_center_store is None or self.run_id is None:
             return
         self._task_center_store.upsert_harness_graph(
@@ -170,106 +184,20 @@ class TaskCenter:
         return task
 
     # ------------------------------------------------------------------ #
-    # Graph helpers                                                      #
+    # Graph queries — thin wrappers over task_center.graph.queries       #
     # ------------------------------------------------------------------ #
 
     def parent_goal(self, task_id: TaskId) -> str | None:
-        task = self._graph.get(task_id)
-        if task.task_center_harness_graph_id is None:
-            return None
-        graph = self._graph.get_harness_graph(task.task_center_harness_graph_id)
-        return self._graph.get(graph.parent_task_id).input
+        return _q_parent_goal(self._graph, task_id)
 
     def planner_handoff(self, task_id: TaskId) -> list[TaskSummary]:
-        task = self._graph.get(task_id)
-        if task.task_center_harness_graph_id is None:
-            return []
-        graph = self._graph.get_harness_graph(task.task_center_harness_graph_id)
-        planner = self._graph.get(graph.planner_task_id)
-        return [s for s in planner.summaries if s.kind == "handoff"]
-
-    def completed_dependencies(self, task_id: TaskId) -> list[Task]:
-        task = self._graph.get(task_id)
-        return [
-            self._graph.get(dep_id)
-            for dep_id in sorted(task.needs)
-            if self._graph.get(dep_id).status is Status.DONE
-        ]
-
-    def failed_dependencies(self, task_id: TaskId) -> list[Task]:
-        task = self._graph.get(task_id)
-        return [
-            self._graph.get(dep_id)
-            for dep_id in sorted(task.needs)
-            if self._graph.get(dep_id).status is Status.FAILED
-        ]
+        return _q_planner_handoff(self._graph, task_id)
 
     def dependency_blocked_descendants(self, task_id: TaskId) -> list[Task]:
-        """Return non-terminal executor tasks whose dependency path now contains ``task_id``.
-
-        Evaluators are excluded — they dispatch via harness graph readiness and
-        must see FAILED sibling executors instead of being short-circuited.
-        """
-        out: list[Task] = []
-        seen: set[TaskId] = set()
-        frontier: list[TaskId] = [task_id]
-        while frontier:
-            current = frontier.pop()
-            for candidate in self._graph.tasks.values():
-                if candidate.id in seen or candidate.id == task_id:
-                    continue
-                if candidate.role != "executor":
-                    continue
-                if current in candidate.needs and candidate.status not in _TERMINAL_STATUSES:
-                    seen.add(candidate.id)
-                    out.append(candidate)
-                    frontier.append(candidate.id)
-        return out
+        return _q_dependency_blocked_descendants(self._graph, task_id)
 
     def is_harness_graph_ready_for_evaluation(self, graph_id: HarnessGraphId) -> bool:
-        graph = self._graph.get_harness_graph(graph_id)
-        if graph.evaluator_task_id is None:
-            return False
-        for tid in graph.executor_task_ids:
-            if self._graph.get(tid).status not in _TERMINAL_STATUSES:
-                return False
-        return True
-
-    def _build_planner_launch_context(
-        self, caller: Task, task_detail: str
-    ) -> PlannerLaunchContext:
-        upstream: list[TaskSummary] = []
-        prior_handoff: list[TaskSummary] = []
-        completed: list[TaskSummary] = []
-        failed: list[TaskSummary] = []
-        blocked: list[TaskSummary] = []
-        requested_goal = caller.input
-
-        if caller.task_center_harness_graph_id is not None:
-            graph = self._graph.get_harness_graph(caller.task_center_harness_graph_id)
-            requested_goal = self._graph.get(graph.parent_task_id).input
-            outer_planner = self._graph.get(graph.planner_task_id)
-            upstream = [s for s in outer_planner.summaries if s.kind == "handoff"]
-            prior_handoff = list(upstream)
-            for tid in graph.executor_task_ids:
-                child = self._graph.get(tid)
-                child_completed, child_failed, child_blocked = child_summary_groups(child)
-                completed.extend(child_completed)
-                failed.extend(child_failed)
-                blocked.extend(child_blocked)
-
-        return PlannerLaunchContext(
-            task_detail=task_detail,
-            caller_task_id=caller.id,
-            caller_role=caller.role,
-            caller_input=caller.input,
-            requested_goal=requested_goal,
-            upstream_handoff_summaries=upstream,
-            prior_planner_handoff=prior_handoff,
-            completed_child_summaries=completed,
-            failed_child_summaries=failed,
-            dependency_blocked_summaries=blocked,
-        )
+        return _q_is_harness_graph_ready_for_evaluation(self._graph, graph_id)
 
     # ------------------------------------------------------------------ #
     # Mode-tool entry points                                             #
@@ -286,7 +214,7 @@ class TaskCenter:
         )
         self._mark_terminal(task, Status.DONE)
         if task.role == "executor":
-            self._notify_child_terminal_changed(task.task_center_harness_graph_id)
+            self._notify_child_terminal_changed()
         else:
             assert task.task_center_harness_graph_id is not None
             self._close_harness_graph_success(task.task_center_harness_graph_id, task_id)
@@ -312,7 +240,7 @@ class TaskCenter:
                 )
             )
             self._mark_terminal(descendant, Status.FAILED)
-        self._notify_child_terminal_changed(task.task_center_harness_graph_id)
+        self._notify_child_terminal_changed()
         self._persist_all()
         self._wakeup.set()
 
@@ -344,7 +272,7 @@ class TaskCenter:
 
         graph_id = self._new_graph_id()
         planner_id = self._new_id()
-        context = self._build_planner_launch_context(caller, task_detail)
+        context = build_planner_launch_context(self._graph, caller, task_detail)
         planner = Task(
             id=planner_id,
             role="planner",
@@ -352,7 +280,7 @@ class TaskCenter:
             status=Status.READY,
             task_center_harness_graph_id=graph_id,
         )
-        graph = TaskCenterHarnessGraph(
+        graph = HarnessGraph(
             id=graph_id,
             run_id=self.run_id or "",
             parent_task_id=caller.id,
@@ -480,14 +408,11 @@ class TaskCenter:
                     parent.task_center_harness_graph_id, parent.id
                 )
         else:
-            self._notify_child_terminal_changed(parent.task_center_harness_graph_id)
+            self._notify_child_terminal_changed()
 
-    def _notify_child_terminal_changed(
-        self, graph_id: HarnessGraphId | None
-    ) -> None:
+    def _notify_child_terminal_changed(self) -> None:
         # The dispatcher polls is_harness_graph_ready_for_evaluation each tick,
         # so it picks up the evaluator promotion. Just wake the loop here.
-        del graph_id
         self._wakeup.set()
 
     def _mark_terminal(self, task: Task, terminal: Status) -> None:

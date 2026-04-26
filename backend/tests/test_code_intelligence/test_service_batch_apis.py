@@ -1,11 +1,11 @@
 """Tests for the typed batch mutation APIs on :class:`CodeIntelligenceService`.
 
-These exercise the shape contract (single tool call → one OCC batch →
+These exercise the shape contract (single tool call -> one OCC batch ->
 one :class:`OperationResult`) for ``svc.write_file``, ``svc.edit_file``,
-``svc.rename_symbol``, and the broadened ``svc.delete_file`` /
-``svc.move_file``. Low-level commit semantics (drift, strict-base,
-sorted locking) stay covered by ``test_write_coordinator_batch.py``;
-here we check how the service layer feeds the coordinator.
+and the broadened ``svc.delete_file`` / ``svc.move_file``. Low-level commit
+semantics (drift, strict-base, sorted locking) stay covered by
+``test_write_coordinator_batch.py``; here we check how the service layer feeds
+the coordinator.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from code_intelligence.core.types import (
     EditRequest,
     EditSpec,
     MoveSpec,
-    ReferenceInfo,
     WriteSpec,
 )
 
@@ -450,216 +449,6 @@ def test_move_file_folder_spec_rejects_regular_file(tmp_path) -> None:
     assert result.conflict_reason == "not_a_directory"
     assert src.exists()
     assert not dst.exists()
-
-
-# ---------------------------------------------------------------------------
-# rename_symbol (service-level wrapper)
-# ---------------------------------------------------------------------------
-
-
-def test_rename_symbol_returns_empty_committed_when_plan_has_no_changes(
-    tmp_path,
-    monkeypatch,
-) -> None:
-    svc = _svc(tmp_path)
-    from code_intelligence.core.types import SemanticRenamePlan
-
-    empty_plan = SemanticRenamePlan(
-        new_name="new",
-        origin=(str(tmp_path / "f.py"), 1, 0),
-        changes=(),
-    )
-    monkeypatch.setattr(svc, "rename_symbol_plan", lambda *a, **k: empty_plan)
-
-    result = svc.rename_symbol(str(tmp_path / "f.py"), 1, 0, "new")
-
-    assert result.success
-    assert result.status == "committed"
-    assert result.files == ()
-
-
-def test_rename_symbol_submits_plan_changes_as_one_batch(tmp_path, monkeypatch) -> None:
-    svc = _svc(tmp_path)
-    from code_intelligence.core.hashing import content_hash
-    from code_intelligence.core.types import (
-        SemanticFileChange,
-        SemanticRenamePlan,
-    )
-
-    a = tmp_path / "a.py"
-    b = tmp_path / "b.py"
-    a.write_text("use foo()\n", encoding="utf-8")
-    b.write_text("def foo(): pass\n", encoding="utf-8")
-
-    plan = SemanticRenamePlan(
-        new_name="bar",
-        origin=(str(b), 1, 4),
-        changes=(
-            SemanticFileChange(
-                file_path=str(a),
-                base_content="use foo()\n",
-                base_hash=content_hash("use foo()\n"),
-                final_content="use bar()\n",
-            ),
-            SemanticFileChange(
-                file_path=str(b),
-                base_content="def foo(): pass\n",
-                base_hash=content_hash("def foo(): pass\n"),
-                final_content="def bar(): pass\n",
-            ),
-        ),
-    )
-    monkeypatch.setattr(svc, "rename_symbol_plan", lambda *a, **k: plan)
-
-    result = svc.rename_symbol(str(b), 1, 4, "bar")
-
-    assert result.success
-    assert result.status == "committed"
-    assert a.read_text(encoding="utf-8") == "use bar()\n"
-    assert b.read_text(encoding="utf-8") == "def bar(): pass\n"
-
-
-def test_commit_rename_plan_does_not_recompute_jedi_plan(tmp_path, monkeypatch) -> None:
-    svc = _svc(tmp_path)
-    from code_intelligence.core.hashing import content_hash
-    from code_intelligence.core.types import SemanticFileChange, SemanticRenamePlan
-
-    target = tmp_path / "rename.py"
-    target.write_text("def old(): pass\n", encoding="utf-8")
-    plan = SemanticRenamePlan(
-        new_name="new",
-        origin=(str(target), 1, 4),
-        changes=(
-            SemanticFileChange(
-                file_path=str(target),
-                base_content="def old(): pass\n",
-                base_hash=content_hash("def old(): pass\n"),
-                final_content="def new(): pass\n",
-            ),
-        ),
-    )
-    monkeypatch.setattr(
-        svc,
-        "rename_symbol_plan",
-        lambda *a, **k: pytest.fail("rename plan should not be recomputed"),
-    )
-
-    result = svc.commit_rename_plan(plan)
-
-    assert result.success
-    assert target.read_text(encoding="utf-8") == "def new(): pass\n"
-
-
-def test_rename_symbol_plans_many_uses_same_file_fast_path(
-    tmp_path,
-    monkeypatch,
-) -> None:
-    one = tmp_path / "one.py"
-    two = tmp_path / "two.py"
-    one.write_text(
-        "def alpha(value):\n    return alpha(value - 1)\n",
-        encoding="utf-8",
-    )
-    two.write_text(
-        "def beta(value):\n    return beta(value - 1)\n",
-        encoding="utf-8",
-    )
-    svc = _svc(tmp_path)
-    monkeypatch.setattr(
-        svc.lsp_client,
-        "find_references_many",
-        lambda requests: pytest.fail("reference query should not run"),
-    )
-    monkeypatch.setattr(
-        svc.lsp_client,
-        "rename_symbols",
-        lambda requests: pytest.fail("full Jedi rename should not run"),
-    )
-
-    plans = svc.rename_symbol_plans_many(
-        [
-            {
-                "file_path": str(one),
-                "line": 1,
-                "character": 4,
-                "new_name": "renamed_alpha",
-            },
-            {
-                "file_path": str(two),
-                "line": 1,
-                "character": 4,
-                "new_name": "renamed_beta",
-            },
-        ]
-    )
-
-    assert len(plans) == 2
-    assert plans[0].changes[0].final_content == (
-        "def renamed_alpha(value):\n    return renamed_alpha(value - 1)\n"
-    )
-    assert plans[1].changes[0].final_content == (
-        "def renamed_beta(value):\n    return renamed_beta(value - 1)\n"
-    )
-
-
-def test_rename_symbol_plans_many_falls_back_when_reference_leaves_file(
-    tmp_path,
-    monkeypatch,
-) -> None:
-    core = tmp_path / "core.py"
-    use = tmp_path / "use.py"
-    local = tmp_path / "local.py"
-    core.write_text("def alpha(value):\n    return value\n", encoding="utf-8")
-    use.write_text("from core import alpha\nresult = alpha(1)\n", encoding="utf-8")
-    local.write_text("def beta(value):\n    return beta(value - 1)\n", encoding="utf-8")
-    svc = _svc(tmp_path)
-    monkeypatch.setattr(
-        svc.lsp_client,
-        "find_references_many",
-        lambda requests: [
-            [
-                ReferenceInfo(file_path=str(core), line=1, character=4),
-                ReferenceInfo(file_path=str(use), line=1, character=17),
-                ReferenceInfo(file_path=str(use), line=2, character=9),
-            ],
-            [
-                ReferenceInfo(file_path=str(local), line=1, character=4),
-                ReferenceInfo(file_path=str(local), line=2, character=11),
-            ],
-        ],
-    )
-    monkeypatch.setattr(
-        svc.lsp_client,
-        "rename_symbols",
-        lambda requests: pytest.fail("full Jedi rename should not run"),
-    )
-
-    plans = svc.rename_symbol_plans_many(
-        [
-            {
-                "file_path": str(core),
-                "line": 1,
-                "character": 4,
-                "new_name": "renamed_alpha",
-            },
-            {
-                "file_path": str(local),
-                "line": 1,
-                "character": 4,
-                "new_name": "renamed_beta",
-            },
-        ]
-    )
-
-    assert len(plans) == 2
-    final_by_path = {change.file_path: change.final_content for change in plans[0].changes}
-    assert final_by_path[str(core)] == "def renamed_alpha(value):\n    return value\n"
-    assert final_by_path[str(use)] == (
-        "from core import renamed_alpha\nresult = renamed_alpha(1)\n"
-    )
-    assert plans[1].changes[0].final_content == (
-        "def renamed_beta(value):\n    return renamed_beta(value - 1)\n"
-    )
 
 
 def test_commit_specs_many_batches_mixed_disjoint_ops(tmp_path) -> None:

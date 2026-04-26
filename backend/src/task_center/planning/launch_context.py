@@ -1,8 +1,7 @@
 """PlannerLaunchContext — the structured input passed to a new planner task.
 
-Built by ``TaskCenter.launch_plan_handoff`` from graph topology. Every caller
-gets the same context shape: local caller detail plus enclosing graph evidence
-when the caller already belongs to a harness graph.
+Every caller gets the same context shape: local caller detail plus enclosing
+graph evidence when the caller already belongs to a harness graph.
 """
 
 from __future__ import annotations
@@ -11,7 +10,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
-from task_center.task import TaskId, TaskSummary
+from task_center.model import TaskId, TaskSummary
 
 
 @dataclass

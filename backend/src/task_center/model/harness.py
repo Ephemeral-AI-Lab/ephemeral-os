@@ -1,14 +1,14 @@
-"""TaskCenterHarnessGraph — the planner/executor/evaluator decomposition unit."""
+"""HarnessGraph — the planner/executor/evaluator decomposition unit."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from task_center.task import HarnessGraphId, TaskId
+from task_center.model.task import HarnessGraphId, TaskId
 
 
 @dataclass
-class TaskCenterHarnessGraph:
+class HarnessGraph:
     """One planner-led decomposition: planner + executor children + evaluator.
 
     The graph's ``parent_task_id`` points at the executor or evaluator that

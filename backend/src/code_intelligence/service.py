@@ -29,7 +29,6 @@ from code_intelligence.registry import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
-from code_intelligence.mutations.rename_planner import RenamePlanner
 from code_intelligence.telemetry import build_status, build_telemetry
 from code_intelligence.core.types import (
     CITelemetry,
@@ -43,7 +42,6 @@ from code_intelligence.core.types import (
     OperationChange,
     OperationResult,
     ReferenceInfo,
-    SemanticRenamePlan,
     SymbolInfo,
     WriteSpec,
 )
@@ -93,14 +91,6 @@ class CodeIntelligenceService:
             symbol_index=self.symbol_index,
             lsp_client=self.lsp_client,
             content=self._content,
-        )
-        self._rename_planner = RenamePlanner(
-            workspace_root=workspace_root,
-            sandbox=sandbox,
-            content=self._content,
-            lsp_client=self.lsp_client,
-            arbiter=self.arbiter,
-            symbol_index=self.symbol_index,
         )
         self._mutations = MutationService(
             content=self._content,
@@ -155,9 +145,7 @@ class CodeIntelligenceService:
         self.lsp_client._sandbox = sandbox
         if old_sandbox is not sandbox:
             self.lsp_client.reset_backend_availability()
-            self._rename_planner.clear_cache()
         self._content.bind_sandbox(sandbox)
-        self._rename_planner.bind_sandbox(sandbox)
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
@@ -226,21 +214,6 @@ class CodeIntelligenceService:
     def query_symbols(self, query: str) -> list[SymbolInfo]:
         return self.symbol_index.find(query)
 
-    def rename_symbol_plan(
-        self,
-        file_path: str,
-        line: int,
-        character: int,
-        new_name: str,
-    ) -> SemanticRenamePlan:
-        return self._rename_planner.rename_symbol_plan(file_path, line, character, new_name)
-
-    def rename_symbol_plans_many(
-        self,
-        requests: Sequence[dict[str, Any]],
-    ) -> list[SemanticRenamePlan]:
-        return self._rename_planner.rename_symbol_plans_many(requests)
-
     def apply_edit(self, request: EditRequest) -> EditResult:
         return self._mutations.apply_edit(request)
 
@@ -286,34 +259,6 @@ class CodeIntelligenceService:
     ) -> OperationResult:
         return self._mutations.edit_file(specs, agent_id=agent_id, description=description)
 
-    def rename_symbol(
-        self,
-        file_path: str,
-        line: int,
-        character: int,
-        new_name: str,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        plan = self.rename_symbol_plan(file_path, line, character, new_name)
-        return self.commit_rename_plan(plan, agent_id=agent_id, description=description)
-
-    def commit_rename_plan(
-        self,
-        plan: SemanticRenamePlan,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._mutations.commit_rename_plan(plan, agent_id=agent_id, description=description)
-
-    def commit_rename_plans_many(
-        self,
-        requests: Sequence[dict[str, Any]],
-    ) -> list[OperationResult]:
-        return self._mutations.commit_rename_plans_many(requests)
-
     def delete_file(
         self,
         paths: Sequence[str | DeleteSpec],
@@ -343,8 +288,6 @@ class CodeIntelligenceService:
             symbol_index=self.symbol_index,
             arbiter=self.arbiter,
             lsp_client=self.lsp_client,
-            rename_cache_stats=self._rename_planner.cache_stats(),
-            rename_preview_fast_fallbacks=self._rename_planner.fast_fallbacks,
         )
 
     def get_telemetry(self) -> CITelemetry:

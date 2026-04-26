@@ -246,7 +246,9 @@ class OverlayAuditor:
                 "root=pathlib.Path(sys.argv[1]); "
                 "root.mkdir(parents=True, exist_ok=True); "
                 "data=base64.b64decode(sys.argv[2]); "
-                "tarfile.open(fileobj=io.BytesIO(data), mode='r:gz').extractall(root)"
+                "tar=tarfile.open(fileobj=io.BytesIO(data), mode='r:gz'); "
+                "\ntry:\n tar.extractall(root, filter='data')"
+                "\nexcept TypeError:\n tar.extractall(root)"
             )
             setup_cmd = (
                 f"mkdir -p {shlex.quote(_RUN_DIR_PREFIX)} && "

@@ -1,4 +1,4 @@
-"""End-to-end tests for ``task_center.orchestrator.TaskCenter``.
+"""End-to-end tests for ``task_center.runtime.TaskCenter``.
 
 Covers the verification scenarios in docs/architecture/gan-task-graph-v1.md.
 """
@@ -11,8 +11,8 @@ from collections.abc import Awaitable, Callable
 import pytest
 
 from task_center import Status, TaskCenterError, TaskSummary
-from task_center.orchestrator import TaskCenter
-from task_center.context import build_task_prompt
+from task_center.prompts import build_task_prompt
+from task_center.runtime import TaskCenter
 
 
 Action = Callable[[TaskCenter, str], Awaitable[None]]

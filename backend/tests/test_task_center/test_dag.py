@@ -1,11 +1,11 @@
-"""Unit tests for ``task_center.plan.compile_dag``."""
+"""Unit tests for ``task_center.planning.compile_dag``."""
 
 from __future__ import annotations
 
 import pytest
 
 from task_center import PlanValidationError
-from task_center.plan import compile_dag
+from task_center.planning import compile_dag
 
 
 def _specs(*ids: str) -> dict[str, str]:

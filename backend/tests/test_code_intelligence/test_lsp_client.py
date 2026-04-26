@@ -130,30 +130,6 @@ def test_find_references_many_skips_unsupported_files(monkeypatch) -> None:
     assert results[2] == []
 
 
-def test_rename_symbols_skips_unsupported_files(monkeypatch) -> None:
-    lsp = LspClient(workspace_root="/workspace")
-
-    def _batch(requests):
-        assert requests == [("/workspace/pkg/core.py", 1, 4, "new_name")]
-        return [{"/workspace/pkg/core.py": "def new_name(): pass\n"}]
-
-    monkeypatch.setattr(lsp, "_python_rename_many", _batch)
-
-    results = lsp.rename_symbols(
-        [
-            ("/workspace/web/app.ts", 1, 0, "renamed"),
-            ("pkg/core.py", 1, 4, "new_name"),
-            ("/workspace/web/view.jsx", 2, 3, "renamed"),
-        ]
-    )
-
-    assert results == [
-        {},
-        {"/workspace/pkg/core.py": "def new_name(): pass\n"},
-        {},
-    ]
-
-
 def test_sandbox_read_line_caches_until_invalidate() -> None:
     calls: list[str] = []
 
