@@ -322,7 +322,7 @@ class EvalAgent:
         tool_call_limit: int | None = None,
         max_tokens: int | None = None,
         settings: Settings | None = None,
-        tools: list[str] | None = None,
+        allowed_tools: list[str] | None = None,
     ) -> EvalAgent:
         """Create a configured EvalAgent.
 
@@ -338,8 +338,8 @@ class EvalAgent:
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
-            tools: List of tool names to register. Defaults to Daytona sandbox
-                tools plus ``run_subagent``.
+            allowed_tools: Tool names allowed in the direct phase. Defaults to
+                Daytona sandbox tools plus ``run_subagent``.
 
         Returns:
             Configured EvalAgent ready to invoke.
@@ -378,8 +378,8 @@ class EvalAgent:
         # Tune the AgentDefinition so spawn_agent produces the same tool
         # surface EvalAgent historically exposed: Daytona + subagent, no
         # auto-loaded skills, the raw test system prompt.
-        if tools is None:
-            tools = [
+        if allowed_tools is None:
+            allowed_tools = [
                 "daytona_grep",
                 "daytona_glob",
                 "daytona_read_file",
@@ -390,11 +390,20 @@ class EvalAgent:
                 "daytona_shell",
                 "run_subagent",
             ]
+        from agents.types import ModeDefinition
+
         agent_def = AgentDefinition(
             name="eval_agent",
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
-            tools=tools,
+            modes=[
+                ModeDefinition(
+                    name="direct",
+                    is_default=True,
+                    allowed_tools=allowed_tools,
+                    terminals=["submit_task_completion"],
+                )
+            ],
             tool_call_limit=tool_call_limit,
         )
 

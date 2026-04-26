@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agents.types import AgentDefinition
+from agents.types import AgentDefinition, ModeDefinition
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.core.factory import (
@@ -66,10 +66,18 @@ def _make_config(cwd: str = "/tmp/project") -> SimpleNamespace:
 
 
 def _make_agent_def(**overrides: Any) -> AgentDefinition:
+    allowed_tools = overrides.pop("allowed_tools", [])
     data: dict[str, Any] = {
         "name": "agent",
         "description": "Agent",
-        "tools": [],
+        "modes": [
+            ModeDefinition(
+                name="direct",
+                is_default=True,
+                allowed_tools=allowed_tools,
+                terminals=["submit_task_completion"],
+            )
+        ],
     }
     data.update(overrides)
     return AgentDefinition(**data)
@@ -96,7 +104,7 @@ def test_tool_factory_creates_named_tool() -> None:
 
 def test_build_agent_tool_registry_registers_explicit_tools() -> None:
     register_tool_factory("dummy_tool", lambda ctx: _DummyTool())
-    agent_def = _make_agent_def(tools=["dummy_tool"])
+    agent_def = _make_agent_def(allowed_tools=["dummy_tool"])
 
     registry = _build_agent_tool_registry(_make_config(), agent_def, None, "agent")
 
@@ -112,7 +120,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
     agent_def = _make_agent_def(
         name="my-agent",
         role="developer",
-        tools=["capturing_tool"],
+        allowed_tools=["capturing_tool"],
     )
 
     _build_agent_tool_registry(
@@ -131,7 +139,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
 
 
 def test_build_agent_tool_registry_skips_unknown_tools() -> None:
-    agent_def = _make_agent_def(tools=["missing_tool"])
+    agent_def = _make_agent_def(allowed_tools=["missing_tool"])
 
     registry = _build_agent_tool_registry(_make_config(), agent_def, None, "agent")
 
@@ -153,6 +161,26 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     assert has_background is True
     assert registry.get("wait_background_tasks") is not None
     assert registry.get("cancel_background_task") is not None
+
+
+def test_run_subagent_factory_preserves_always_background_policy() -> None:
+    tool = create_tool("run_subagent", ToolFactoryContext())
+
+    assert tool.background == "always"
+    assert tool.task_type == "subagent"
+
+    registry = ToolRegistry()
+    registry.register(tool)
+
+    _, has_background = finalize_tool_registry_and_prompt(
+        registry,
+        "base",
+        agent_type="agent",
+    )
+
+    assert has_background is True
+    assert registry.get("wait_background_tasks") is not None
+    assert registry.get("check_background_task_result") is not None
 
 
 def test_finalize_skips_background_management_tools_for_subagent() -> None:

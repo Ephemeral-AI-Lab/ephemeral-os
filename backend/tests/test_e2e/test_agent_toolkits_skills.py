@@ -99,7 +99,14 @@ class TestConfigBackedAgentApi:
                 "name": "ignored",
                 "description": "ignored",
                 "model": "minimax",
-                "tools": sorted(SANDBOX_TOOLS),
+                "modes": [
+                    {
+                        "name": "direct",
+                        "is_default": True,
+                        "allowed_tools": sorted(SANDBOX_TOOLS),
+                        "terminals": ["submit_task_completion"],
+                    }
+                ],
             },
         )
 
@@ -114,7 +121,14 @@ class TestConfigBackedAgentApi:
                 "name": "analysis_agent",
                 "description": "reserved",
                 "model": "inherit",
-                "tools": ["ci_query_symbol"],
+                "modes": [
+                    {
+                        "name": "direct",
+                        "is_default": True,
+                        "allowed_tools": ["ci_query_symbol"],
+                        "terminals": ["submit_task_completion"],
+                    }
+                ],
             },
         )
 
@@ -131,7 +145,14 @@ class TestConfigBackedAgentApi:
                 "name": "custom_agent",
                 "description": "custom",
                 "model": "inherit",
-                "tools": ["does_not_exist"],
+                "modes": [
+                    {
+                        "name": "direct",
+                        "is_default": True,
+                        "allowed_tools": ["does_not_exist"],
+                        "terminals": ["submit_task_completion"],
+                    }
+                ],
             },
         )
 

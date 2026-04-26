@@ -38,6 +38,25 @@ _READ_ONLY_INVESTIGATION_TOOLS: list[str] = [
     "ci_workspace_structure",
 ]
 
+_DIRECT_WORK_TOOLS: list[str] = [
+    "daytona_grep",
+    "daytona_glob",
+    "daytona_read_file",
+    "daytona_write_file",
+    "daytona_edit_file",
+    "daytona_delete_file",
+    "daytona_move_file",
+    "daytona_shell",
+    "ci_status",
+    "ci_query_symbol",
+    "ci_diagnostics",
+    "ci_workspace_structure",
+    "run_subagent",
+    "cancel_background_task",
+    "check_background_task_result",
+    "wait_background_tasks",
+]
+
 # ---------------------------------------------------------------------------
 # Executor
 # ---------------------------------------------------------------------------
@@ -75,18 +94,10 @@ EXECUTOR = AgentDefinition(
     tool_call_limit=100,
     system_prompt=_EXECUTOR_SYSTEM_PROMPT,
     modes=[
-        # Direct mode is the open toolset: anything in the agent's runtime
-        # registry is allowed except the entries/terminals that belong to
-        # other modes (those presume a commitment that has not been made).
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=None,
-            disallowed_tools=[
-                "submit_plan_handoff",
-                "submit_continue_to_work",
-                "enter_prepare_continue_to_work",
-            ],
+            allowed_tools=[*_DIRECT_WORK_TOOLS, "enter_plan_for_handoff"],
             terminals=["submit_task_completion"],
         ),
         ModeDefinition(
@@ -141,12 +152,7 @@ EVALUATOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=None,
-            disallowed_tools=[
-                "submit_plan_handoff",
-                "enter_plan_for_handoff",
-                "submit_continue_to_work",
-            ],
+            allowed_tools=[*_DIRECT_WORK_TOOLS, "enter_prepare_continue_to_work"],
             terminals=["submit_task_completion"],
         ),
         ModeDefinition(

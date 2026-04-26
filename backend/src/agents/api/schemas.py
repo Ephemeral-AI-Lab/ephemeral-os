@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from agents.types import ModeDefinition
+
 
 class AgentValidationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -17,7 +19,7 @@ class AgentValidationRequest(BaseModel):
         min_length=1, description="Model key — each agent must be tied to a registered model key"
     )
     tool_call_limit: int | None = Field(default=None, gt=0)
-    tools: list[str] | None = None
+    modes: list[ModeDefinition] = Field(min_length=1)
     skills: list[str] = Field(default_factory=list)
     background: bool = False
     tags: list[str] | None = None

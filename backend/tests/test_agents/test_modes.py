@@ -43,7 +43,7 @@ def test_modes_by_name_indexes_each_mode() -> None:
     assert a.modes_by_name == {"direct": direct, "plan": plan}
 
 
-def test_tool_universe_is_union_across_modes() -> None:
+def test_mode_allowed_tools_are_explicit_lists() -> None:
     direct = ModeDefinition(
         name="direct",
         is_default=True,
@@ -58,28 +58,8 @@ def test_tool_universe_is_union_across_modes() -> None:
         briefing="brief",
     )
     a = AgentDefinition(name="x", description="d", modes=[direct, plan])
-    assert a.tool_universe == frozenset(
-        {
-            "read",
-            "write",
-            "grep",
-            "submit_task_completion",
-            "submit_plan_handoff",
-            "enter_plan_for_handoff",
-        }
-    )
-
-
-def test_tool_universe_skips_open_toolset_allowed_tools() -> None:
-    """``allowed_tools=None`` is the open toolset; it cannot be enumerated."""
-    direct = ModeDefinition(
-        name="direct",
-        is_default=True,
-        allowed_tools=None,
-        terminals=["submit_task_completion"],
-    )
-    a = AgentDefinition(name="x", description="d", modes=[direct])
-    assert a.tool_universe == frozenset({"submit_task_completion"})
+    assert a.default_mode.allowed_tools == ["read", "write"]
+    assert a.modes_by_name["plan"].allowed_tools == ["read", "grep"]
 
 
 # --------------------------------------------------------------------------- #
@@ -235,45 +215,24 @@ def test_validator_rejects_duplicate_entry_tools() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Legacy YAML ``tools:`` synthesis                                            #
+# Default mode synthesis                                                      #
 # --------------------------------------------------------------------------- #
 
 
-def test_legacy_tools_synthesizes_default_mode() -> None:
-    a = AgentDefinition(
-        name="legacy",
-        description="d",
-        tools=["read", "grep"],  # type: ignore[call-arg]
-    )
-    assert a.default_mode.name == "direct"
-    assert a.default_mode.allowed_tools == ["read", "grep"]
-    assert a.default_mode.terminals == ["submit_task_completion"]
-
-
-def test_legacy_tools_csv_string_is_parsed() -> None:
-    """The pre-modes loader split CSV strings; preserve that path for tools."""
-    a = AgentDefinition(
-        name="legacy",
-        description="d",
-        tools="read, grep",  # type: ignore[call-arg]
-    )
-    assert a.default_mode.allowed_tools == ["read", "grep"]
-
-
 def test_no_modes_no_tools_synthesizes_empty_default() -> None:
-    """Agents that supply neither ``modes`` nor ``tools`` get a usable shell."""
+    """Agents that omit ``modes`` get an empty direct phase."""
     a = AgentDefinition(name="bare", description="d")
     assert a.default_mode.name == "direct"
     assert a.default_mode.allowed_tools == []
     assert a.default_mode.terminals == ["submit_task_completion"]
 
 
-def test_explicit_modes_ignore_legacy_tools_field() -> None:
+def test_flat_tools_field_is_rejected() -> None:
     direct = ModeDefinition(name="direct", is_default=True, terminals=["t1"])
-    a = AgentDefinition(
-        name="x",
-        description="d",
-        modes=[direct],
-        tools=["ignored"],  # type: ignore[call-arg]
-    )
-    assert a.modes == [direct]
+    with pytest.raises(ValidationError):
+        AgentDefinition(
+            name="x",
+            description="d",
+            modes=[direct],
+            tools=["ignored"],  # type: ignore[call-arg]
+        )

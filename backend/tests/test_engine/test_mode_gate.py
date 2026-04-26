@@ -37,18 +37,6 @@ def test_gate_allows_when_active_mode_is_none() -> None:
     assert evaluate_mode_gate(None, "anything", "id-1") is None
 
 
-def test_gate_denylist_wins_over_allowlist() -> None:
-    direct = ModeDefinition(
-        name="direct",
-        is_default=True,
-        allowed_tools=["foo"],  # foo is on the allowlist...
-        disallowed_tools=["foo"],  # ... but also denied
-        terminals=["submit_task_completion"],
-    )
-    deny = evaluate_mode_gate(direct, "foo", "id-1")
-    assert deny is not None and deny.is_error
-
-
 def test_gate_terminal_always_allowed() -> None:
     plan = ModeDefinition(
         name="plan",
@@ -60,7 +48,7 @@ def test_gate_terminal_always_allowed() -> None:
     assert evaluate_mode_gate(plan, "submit_plan_handoff", "id-1") is None
 
 
-def test_gate_entry_tool_always_allowed() -> None:
+def test_gate_entry_tool_must_be_allowed_in_active_phase() -> None:
     plan = ModeDefinition(
         name="plan",
         allowed_tools=[],
@@ -68,18 +56,16 @@ def test_gate_entry_tool_always_allowed() -> None:
         entry_tool="enter_plan",
         briefing="b",
     )
-    assert evaluate_mode_gate(plan, "enter_plan", "id-1") is None
+    deny = evaluate_mode_gate(plan, "enter_plan", "id-1")
+    assert deny is not None and deny.is_error
 
-
-def test_gate_open_toolset_when_allowed_is_none() -> None:
     direct = ModeDefinition(
         name="direct",
         is_default=True,
-        allowed_tools=None,
+        allowed_tools=["enter_plan"],
         terminals=["submit_task_completion"],
     )
-    assert evaluate_mode_gate(direct, "anything", "id-1") is None
-    assert evaluate_mode_gate(direct, "ANYTHING_ELSE", "id-2") is None
+    assert evaluate_mode_gate(direct, "enter_plan", "id-2") is None
 
 
 def test_gate_allowed_tools_list_gates_unknown() -> None:
@@ -99,8 +85,7 @@ def test_gate_deny_payload_format() -> None:
     direct = ModeDefinition(
         name="direct",
         is_default=True,
-        allowed_tools=None,
-        disallowed_tools=["submit_plan_handoff"],
+        allowed_tools=[],
         terminals=["submit_task_completion"],
     )
     deny = evaluate_mode_gate(direct, "submit_plan_handoff", "id-1")
@@ -234,7 +219,7 @@ def test_mode_transition_signal_updates_active_mode() -> None:
     direct = ModeDefinition(
         name="direct",
         is_default=True,
-        allowed_tools=None,
+        allowed_tools=["enter_plan_for_handoff"],
         terminals=["submit_task_completion"],
     )
     plan = ModeDefinition(

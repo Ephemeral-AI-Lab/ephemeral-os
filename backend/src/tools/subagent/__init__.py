@@ -61,6 +61,7 @@ class RestrictedRunSubagentTool(BaseTool):
         self.short_description = run_subagent.short_description
         self.input_model = _build_restricted_input_model(allowed_agent_names)
         self.output_model = run_subagent.output_model
+        self.background = run_subagent.background
         self.task_type = run_subagent.task_type
 
     async def execute(self, arguments, context: ToolExecutionContext) -> ToolResult:  # type: ignore[override]

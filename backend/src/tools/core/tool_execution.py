@@ -76,24 +76,15 @@ def evaluate_mode_gate(
     body matches the format described in
     ``docs/architecture/agent-mode-system-v1.md`` §Authorization gate.
 
-    Decision order (denylist wins, then allowlist, then terminal/entry):
+    Decision order:
         - active_mode is None         → allow (gating disabled)
-        - tool in disallowed_tools    → deny
         - tool in terminals           → allow
-        - tool == entry_tool          → allow (idempotency handled by tool body)
-        - allowed_tools is None       → allow (default-mode "open toolset")
         - tool in allowed_tools       → allow
         - else                        → deny
     """
     if active_mode is None:
         return None
-    if tool_name in active_mode.disallowed_tools:
-        return _build_mode_deny(tool_name, tool_use_id, active_mode)
     if tool_name in active_mode.terminals:
-        return None
-    if active_mode.entry_tool is not None and tool_name == active_mode.entry_tool:
-        return None
-    if active_mode.allowed_tools is None:
         return None
     if tool_name in active_mode.allowed_tools:
         return None

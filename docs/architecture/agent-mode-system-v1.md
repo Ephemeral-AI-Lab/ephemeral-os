@@ -44,8 +44,7 @@ list, a role label, and a mode registry lookup) into one data structure.
 class ModeDefinition(BaseModel):
     name: str                                   # e.g. "direct", "plan_for_handoff"
     is_default: bool = False                    # exactly one per agent
-    allowed_tools: list[str] | None = None      # None = "all not in disallowed"
-    disallowed_tools: list[str] = []            # explicit denylist; always wins
+    allowed_tools: list[str] = []               # explicit per-mode allowlist
     terminals: list[str] = []                   # terminal tool name(s)
     entry_tool: str | None = None               # None for the default mode
     briefing: str | None = None                 # required iff entry_tool is set
@@ -77,15 +76,13 @@ class AgentDefinition(BaseModel):
     def default_mode(self) -> ModeDefinition: ...        # the unique is_default=True
     @computed_field
     def modes_by_name(self) -> dict[str, ModeDefinition]: ...
-    @computed_field
-    def tool_universe(self) -> frozenset[str]: ...       # union of all mode surfaces
 ```
 
 ### What changes vs. today
 
 | Field | Before | After |
 |---|---|---|
-| `tools: list[str]` | Flat allowlist; the only tool gate. | **Removed.** Mode-scoped surfaces replace it. The agent's overall tool universe is derived from `modes`. |
+| `tools: list[str]` | Flat allowlist; the only tool gate. | **Removed.** Mode-scoped `allowed_tools` replace it. |
 | Mode metadata | Lived in a global `MODE_REGISTRY[role, mode]` keyed by a freeform `role` label. | Lives inline on the agent as `modes: list[ModeDefinition]`. The `role` field stays as a freeform UI label only. |
 | Entry tool / terminal binding | Looked up by role at dispatch time. | Resolved through `agent_def.modes_by_name[task.mode]`. |
 | Default mode | Implicit. | Explicit: exactly one `ModeDefinition` per agent has `is_default=True`. |
@@ -102,8 +99,9 @@ class AgentDefinition(BaseModel):
    `submit_*`).
 5. Mode names are unique within the agent.
 6. `entry_tool` names are unique across the agent's modes.
-7. `tool_universe` membership is verified against the global tool registry
-   at agent-load time. Unknown tool names are a load-time error.
+7. Each mode's `allowed_tools`, `terminals`, and `entry_tool` names are
+   verified against the global tool registry at agent-load time. Unknown tool
+   names are a load-time error.
 
 ### Worked example: executor and evaluator
 
@@ -116,11 +114,9 @@ EXECUTOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=None,                    # open toolset
-            disallowed_tools=[
-                "submit_plan_handoff",
-                "submit_continue_to_work",
-                "enter_prepare_continue_to_work",
+            allowed_tools=[
+                "read", "write", "bash",
+                "enter_plan_for_handoff",
             ],
             terminals=["submit_task_completion"],
         ),
@@ -146,11 +142,9 @@ EVALUATOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=None,
-            disallowed_tools=[
-                "submit_plan_handoff",
-                "enter_plan_for_handoff",
-                "submit_continue_to_work",
+            allowed_tools=[
+                "read", "write", "bash",
+                "enter_prepare_continue_to_work",
             ],
             terminals=["submit_task_completion"],
         ),
@@ -165,13 +159,11 @@ EVALUATOR = AgentDefinition(
 )
 ```
 
-**Why default modes use `allowed_tools=None` + denylist.** The executor in
-`direct` mode needs write/edit/bash and dozens of other tools; enumerating
-them in the agent definition would bind it to the full tool catalog and
-break every time a new tool ships. The denylist captures the only
-constraint that actually matters in `direct`: terminals and entry tools
-that belong to *other* modes are off-limits, because they presume a
-commitment that has not been made.
+**Default modes are explicit.** The executor in `direct` mode names its normal
+working tools and the one secondary-mode entry tool it may call. Secondary
+terminals are not included in `direct.allowed_tools`, so a terminal from an
+unentered mode remains unavailable until the entry tool moves the task into
+that mode.
 
 **Symmetry note.** Each agent has exactly one default terminal
 (`submit_task_completion`) and one secondary mode whose terminal is
@@ -213,21 +205,15 @@ The `ModeDefinition` is stashed on the context as `context.active_mode`.
 The dispatcher does not call back into TaskCenter or the agent registry
 mid-turn — everything it needs is on the context.
 
-**Decision order** (denylist wins, then allowlist, then terminal/entry):
+**Decision order**:
 
 ```
 mode = context.active_mode
 if mode is None:
     allow                                     # mode gating disabled (e.g. some subagents)
 
-if tool_name in mode.disallowed_tools:
-    deny                                      # explicit denylist always wins
 if tool_name in mode.terminals:
     allow
-if tool_name == mode.entry_tool:
-    allow                                     # the tool itself handles idempotency
-if mode.allowed_tools is None:
-    allow                                     # default-mode "open toolset"
 if tool_name in mode.allowed_tools:
     allow
 deny
@@ -241,11 +227,11 @@ deny
  Use read/search/explore tools or call a terminal."
 ```
 
-**Budget interaction.** Disallowed-in-mode rejections do **not** consume
+**Budget interaction.** Not-allowed-in-mode rejections do **not** consume
 tool-call budget. The gate runs after the budget check returns "allow" but
 before the budget counter is incremented; on deny, the counter is rolled
 back (or, equivalently, the gate runs first and the budget check only
-fires on allowed calls). Rationale: model drift into a disallowed tool
+fires on allowed calls). Rationale: model drift into an unavailable tool
 should not silently shorten a run.
 
 The deny message is the in-band reminder. It fires only on violation, so
@@ -275,7 +261,7 @@ context cost scales with drift, not with turn count.
                                      │                           ▼
                                      │              ┌────────────────────────┐
                                      │              │ EXECUTOR: plan mode    │
-                                     │  read/search │ (one-way)              │── disallowed tool
+                                     │  read/search │ (one-way)              │── unavailable tool
                                      │  /ask (loop) ├──────────────────────┐ │   → deny message
                                      │              └─────────┬────────────┘ │   (loop back)
                                      │                        │              │
@@ -319,7 +305,7 @@ context cost scales with drift, not with turn count.
                                      │                           ▼
                                      │              ┌────────────────────────┐
                                      │              │ EVALUATOR: prepare     │
-                                     │  read/search │ mode (one-way)         │── disallowed tool
+                                     │  read/search │ mode (one-way)         │── unavailable tool
                                      │  /ask (loop) ├──────────────────────┐ │   → deny message
                                      │              └─────────┬────────────┘ │   (loop back)
                                      │                        │              │
@@ -346,7 +332,7 @@ that mode. The briefing covers:
 - Explicit statement that the mode is one-way.
 
 The briefing lives in conversation history. It is **not** re-injected per
-turn. When the agent later attempts a disallowed tool, the gate's deny
+turn. When the agent later attempts an unavailable tool, the gate's deny
 message provides a focused reminder of just the relevant constraints.
 
 This separates two concerns:
@@ -366,7 +352,7 @@ This separates two concerns:
 4. The set of tools the dispatcher will dispatch on a given turn is
    determined by `agent_def.modes_by_name[task.mode]` resolved at
    `QueryContext` construction and stashed as `context.active_mode`.
-   Whether the *model* sees a disallowed tool in its tool list (i.e.
+   Whether the *model* sees an unavailable tool in its tool list (i.e.
    whether tool filtering also happens at `QueryContext` construction in
    addition to the dispatcher gate) is an engine concern; the dispatcher
    gate is the authoritative enforcement point either way.
@@ -420,7 +406,7 @@ AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=["read", "write", "bash", ...],   # or None for open
+            allowed_tools=["read", "write", "bash", ...],
             terminals=["submit_task_completion"],
         ),
     ],

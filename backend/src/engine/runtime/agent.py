@@ -34,6 +34,14 @@ from tools.core.factory import (
 
 logger = logging.getLogger(__name__)
 
+_BACKGROUND_CONTROL_TOOL_NAMES = frozenset(
+    {
+        "cancel_background_task",
+        "check_background_task_result",
+        "wait_background_tasks",
+    }
+)
+
 
 @dataclass
 class EphemeralAgent:
@@ -190,24 +198,10 @@ def _build_agent_tool_registry(
             "sandbox_id": sandbox_id or "",
         },
     )
-    if agent_def and any(m.allowed_tools is None for m in agent_def.modes):
-        # The agent has a mode whose ``allowed_tools=None`` means "anything in
-        # the runtime registry except the denylist". The registry must be
-        # populated with the standard open surface so the gate has things to
-        # allow; ``tool_universe`` alone would only carry the secondary modes'
-        # explicit lists plus terminals + entry tools.
-        _register_open_agent_surface(tool_registry, sandbox_id, tool_ctx, agent_name)
-        if agent_def.tool_universe:
-            _register_requested_tools(
-                tool_registry,
-                sorted(agent_def.tool_universe),
-                tool_ctx,
-                agent_name,
-            )
-    elif agent_def and agent_def.tool_universe:
+    if agent_def:
         _register_requested_tools(
             tool_registry,
-            sorted(agent_def.tool_universe),
+            _collect_agent_phase_tools(agent_def),
             tool_ctx,
             agent_name,
         )
@@ -220,39 +214,15 @@ def _build_agent_tool_registry(
     return tool_registry
 
 
-def _register_open_agent_surface(
-    tool_registry: ToolRegistry,
-    sandbox_id: str | None,
-    tool_ctx: ToolFactoryContext,
-    agent_name: str,
-) -> None:
-    """Populate the runtime registry for an agent with an open default mode.
-
-    Open modes (``allowed_tools=None``) admit anything not on the denylist, so
-    the registry must carry the agent's full working surface. This is the
-    curated "agent toolkit" — daytona sandbox tools, code-intelligence tools,
-    and the run_subagent dispatch — chosen to match the surface the legacy
-    flat ``tools: [...]`` list used to enumerate per agent.
-    """
-    from tools.ci_toolkit import make_code_intelligence_tools
-
-    if sandbox_id:
-        from tools.daytona_toolkit import make_daytona_tools
-
-        tool_registry.register_many(make_daytona_tools())
-        logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
-
-    tool_registry.register_many(make_code_intelligence_tools())
-
-    if has_tool("run_subagent"):
-        try:
-            tool_registry.register(create_tool("run_subagent", tool_ctx))
-        except Exception:
-            logger.warning(
-                "Failed to register run_subagent for agent %r",
-                agent_name,
-                exc_info=True,
-            )
+def _collect_agent_phase_tools(agent_def: AgentDefinition) -> list[str]:
+    """Return explicit tool names required by the agent's modes."""
+    names: set[str] = set()
+    for mode in agent_def.modes:
+        names.update(mode.allowed_tools)
+        names.update(mode.terminals)
+        if mode.entry_tool:
+            names.add(mode.entry_tool)
+    return sorted(names)
 
 
 def _register_requested_tools(
@@ -265,6 +235,11 @@ def _register_requested_tools(
     for name in tool_names:
         clean_name = str(name).strip()
         if not clean_name or tool_registry.get(clean_name) is not None:
+            continue
+        if clean_name in _BACKGROUND_CONTROL_TOOL_NAMES:
+            # These are synthesized by finalize_tool_registry_and_prompt when
+            # the registered phase tools include at least one background-capable
+            # tool. They are not ordinary tool factories.
             continue
         if not has_tool(clean_name):
             logger.warning("No tool factory for %r requested by agent %r", clean_name, agent_name)
@@ -313,7 +288,7 @@ def spawn_agent(
     If *agent_def* is provided, its fields customize the session defaults:
     - ``model`` overrides the session model
     - ``system_prompt`` is appended after the session system prompt
-    - ``tools`` names the available tool surface
+    - ``modes`` declare per-phase tool allowlists
     - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """
     from pathlib import Path

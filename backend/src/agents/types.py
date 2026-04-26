@@ -20,18 +20,15 @@ class ModeDefinition(BaseModel):
     """One typestate of an agent — bounds the tools it may call.
 
     A mode encodes commitment: while a task sits in this mode, the dispatcher
-    refuses any tool not on the mode's surface. The default mode is the
-    "direct" entrypoint with an open toolset; secondary modes are entered
-    by an explicit ``entry_tool`` and exited only via their ``terminals``.
+    refuses any tool not on the mode's explicit allowlist. Secondary modes are
+    entered by an explicit ``entry_tool`` and exited only via their
+    ``terminals``.
     See ``docs/architecture/agent-mode-system-v1.md`` for the full spec.
     """
 
     name: str
     is_default: bool = False
-    # ``None`` means "anything not in disallowed_tools" (open toolset for the
-    # default mode). A list — even an empty one — is an explicit allowlist.
-    allowed_tools: list[str] | None = None
-    disallowed_tools: list[str] = Field(default_factory=list)
+    allowed_tools: list[str] = Field(default_factory=list)
     terminals: list[str] = Field(default_factory=list)
     entry_tool: str | None = None
     briefing: str | None = None
@@ -75,9 +72,8 @@ class AgentDefinition(BaseModel):
     # --- agent type: regular agent or subagent (worker) ---
     agent_type: AgentType = "agent"
 
-    # --- mode-aware tool surface ---
-    # The full tool surface is the union of every mode's surface; per-mode
-    # gating happens at dispatch time via :class:`ModeDefinition`.
+    # --- phase-aware tool surface ---
+    # Tool access is declared per mode/phase via ModeDefinition.allowed_tools.
     modes: list[ModeDefinition]
 
     model_config = ConfigDict(
@@ -99,33 +95,17 @@ class AgentDefinition(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _legacy_tools_to_default_mode(cls, data: Any) -> Any:
-        """Synthesize a single default mode when ``modes`` is not given.
-
-        User-defined agents loaded from YAML may still declare a flat
-        ``tools: [...]`` list and have no ``modes`` block; older test
-        fixtures may pass neither. Both cases collapse to a single
-        ``ModeDefinition(name="direct", is_default=True, ...,
-        terminals=["submit_task_completion"])`` so callers don't have to
-        re-spell the boilerplate. When ``modes`` is supplied, ``tools`` is
-        ignored — agents that need richer mode-aware surfaces declare
-        ``modes`` directly.
-        """
+    def _synthesize_default_mode(cls, data: Any) -> Any:
+        """Synthesize a single empty default mode when ``modes`` is omitted."""
         if not isinstance(data, dict):
             return data
         if "modes" in data:
-            # Caller supplied modes (possibly empty — let the field validator
-            # reject that). Drop any legacy ``tools`` to avoid mixing shapes.
-            data.pop("tools", None)
             return data
-        legacy_tools = data.pop("tools", None)
-        if isinstance(legacy_tools, str):
-            legacy_tools = [s.strip() for s in legacy_tools.split(",") if s.strip()]
         data["modes"] = [
             {
                 "name": "direct",
                 "is_default": True,
-                "allowed_tools": list(legacy_tools) if legacy_tools else [],
+                "allowed_tools": [],
                 "terminals": ["submit_task_completion"],
             }
         ]
@@ -209,22 +189,3 @@ class AgentDefinition(BaseModel):
     def modes_by_name(self) -> dict[str, ModeDefinition]:
         """Lookup table from mode name to definition."""
         return {mode.name: mode for mode in self.modes}
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def tool_universe(self) -> frozenset[str]:
-        """Union of every mode's reachable tool surface.
-
-        Used at agent-load time to build the runtime tool registry. Per-mode
-        gating still happens at dispatch via :class:`ModeDefinition`. The
-        universe excludes ``None`` allow-lists (default-mode "open toolset"
-        can't be enumerated here — it relies on the global registry).
-        """
-        names: set[str] = set()
-        for mode in self.modes:
-            if mode.allowed_tools is not None:
-                names.update(mode.allowed_tools)
-            names.update(mode.terminals)
-            if mode.entry_tool:
-                names.add(mode.entry_tool)
-        return frozenset(names)
