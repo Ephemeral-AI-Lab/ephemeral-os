@@ -27,7 +27,6 @@ class _SandboxContext(Protocol):
 # Constants
 # ---------------------------------------------------------------------------
 
-_DEFAULT_TIMEOUT = 120
 _EXIT_MARKER = "__CODEX_EXIT_CODE__="
 _SANDBOX_RECOVERY_KEY = "daytona_recovery_attempts"
 _SANDBOX_RECOVERY_PATTERNS = (
@@ -35,7 +34,6 @@ _SANDBOX_RECOVERY_PATTERNS = (
     "container not found",
     "sandbox container not found",
 )
-_VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
 _PYTHON3_SHIM = (
@@ -43,14 +41,6 @@ _PYTHON3_SHIM = (
     'then python() { command python3 "$@"; }; fi'
 )
 _TRAILING_TERM_NOISE_RE = re.compile(r"(?:\x1b\[[0-9;]*[A-Za-z]|TERM environment variable not set\.)+\s*$")
-_TEST_PATH_COMPONENTS = {"test", "tests", "__tests__"}
-_TEST_FILE_ALLOW_METADATA_KEYS = ("allow_test_file_edits", "allow_test_file_writes")
-_TEST_FILE_SUFFIXES = (
-    "_test.py",
-    "_spec.py",
-    "-test.py",
-    "-spec.py",
-)
 _REMOTE_WRITE_CHUNK_BYTES = 24 * 1024
 
 
@@ -210,14 +200,6 @@ def _get_repo_root(context: _SandboxContext) -> str | None:
     return context.get("repo_root")
 
 
-def _get_exec_cwd(context: _SandboxContext) -> str | None:
-    """Return the working directory for shell execution."""
-    return (
-        context.get("exec_cwd")
-        or _get_repo_root(context)
-    )
-
-
 def _resolve_path(path: str, context: _SandboxContext) -> str:
     """Resolve a relative path against the sandbox repo root."""
     if path.startswith("/"):
@@ -245,116 +227,6 @@ async def _run_with_recovery(
         return await operation(sandbox)
     except Exception as exc:
         return await operation(await _recover_sandbox(context, exc))
-
-
-def _normalize_repo_relative_path(path: Any, repo_root: str) -> str | None:
-    if not isinstance(path, str):
-        return None
-    cleaned = path.strip().replace("\\", "/")
-    if not cleaned:
-        return None
-    while cleaned.startswith("./"):
-        cleaned = cleaned[2:]
-    cleaned = cleaned.rstrip("/")
-    if not cleaned:
-        return None
-    if not cleaned.startswith("/"):
-        return cleaned
-    root = repo_root.rstrip("/")
-    if root and cleaned.startswith(root + "/"):
-        rel = cleaned[len(root) + 1 :].strip().rstrip("/")
-        return rel or None
-    return None
-
-
-def _normalize_string_list(value: Any, repo_root: str) -> list[str]:
-    if isinstance(value, str):
-        values = [value]
-    elif isinstance(value, list):
-        values = [item for item in value if isinstance(item, str)]
-    else:
-        return []
-    out: list[str] = []
-    for item in values:
-        normalized = _normalize_repo_relative_path(item, repo_root)
-        if normalized:
-            out.append(normalized)
-    return out
-
-
-def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
-    if isinstance(value, str):
-        candidates = [value]
-    elif isinstance(value, list):
-        candidates = [item for item in value if isinstance(item, str)]
-    else:
-        return []
-    out: list[str] = []
-    for item in candidates:
-        stripped = item.strip()
-        if not stripped:
-            continue
-        if stripped.endswith(".py") or "::" in stripped:
-            normalized = _normalize_repo_relative_path(stripped.split("::", 1)[0], repo_root)
-            if normalized:
-                out.append(normalized)
-        for match in _VERIFY_PATH_RE.findall(stripped):
-            normalized = _normalize_repo_relative_path(match.split("::", 1)[0], repo_root)
-            if normalized:
-                out.append(normalized)
-    return out
-
-
-def _verification_surface_enforcement_mode(context: _SandboxContext) -> str:
-    raw = (
-        str(
-            context.get("verification_surface_write_enforcement")
-            or context.get("verification_surface_policy")
-            or ""
-        )
-        .strip()
-        .lower()
-    )
-    if raw in {"warn", "warning", "soft", "advisory"}:
-        return "warn"
-    return "error"
-
-
-def _metadata_flag_enabled(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
-
-
-def _test_file_edits_allowed(context: _SandboxContext) -> bool:
-    return any(
-        _metadata_flag_enabled(context.get(key))
-        for key in _TEST_FILE_ALLOW_METADATA_KEYS
-    )
-
-
-def _is_test_file_path(rel_path: str) -> bool:
-    parts = [part for part in rel_path.replace("\\", "/").split("/") if part]
-    if not parts:
-        return False
-    lowered_parts = {part.lower() for part in parts[:-1]}
-    if lowered_parts & _TEST_PATH_COMPONENTS:
-        return True
-    basename = parts[-1].lower()
-    # Repo-root conftest.py is the project's pytest configuration owner,
-    # not a test file. Only treat conftest.py as a test file when it sits
-    # inside a tests/ directory (already caught by the parts check above).
-    if basename == "conftest.py":
-        return False
-    return (
-        basename.startswith("test_")
-        or basename.startswith("test-")
-        or basename.endswith(_TEST_FILE_SUFFIXES)
-        or ".test." in basename
-        or ".spec." in basename
-    )
 
 
 def _supports_exec_transport(sandbox: Any) -> bool:

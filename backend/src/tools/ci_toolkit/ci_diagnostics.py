@@ -8,7 +8,7 @@ from code_intelligence.core.async_bridge import run_sync_in_executor, use_sandbo
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.ci_runtime import get_ci_service
+from tools.core.ci_adapter import get_ci_service
 from tools.core.decorator import tool
 
 

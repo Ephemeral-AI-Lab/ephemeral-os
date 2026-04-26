@@ -27,8 +27,8 @@ from code_intelligence.indexing.file_discovery import (
     collect_remote_files,
 )
 from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.ci_runtime import get_ci_service, resolve_sandbox
-from tools.core.sandbox_runtime import resolve_daytona_path
+from tools.core.ci_adapter import get_ci_service
+from tools.core.sandbox_runtime import resolve_daytona_path, resolve_sandbox
 from sandbox.daytona_utils import _exec_command
 
 logger = logging.getLogger(__name__)

@@ -51,10 +51,6 @@ class WriteFileOutput(BaseModel):
     bytes_written: int = Field(..., description="Number of UTF-8 bytes written.")
     ci_sync: bool = Field(..., description="Whether code intelligence saw the write.")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal write warnings.")
-    timings: dict[str, Any] | None = Field(
-        default=None,
-        description="Optional write timing metadata.",
-    )
 
 
 class GrepInput(BaseModel):

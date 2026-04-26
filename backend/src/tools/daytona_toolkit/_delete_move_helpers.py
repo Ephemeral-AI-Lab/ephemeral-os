@@ -54,18 +54,7 @@ def move_payload(
     return json.dumps(payload)
 
 
-def failure_status(result: Any, *, move: bool) -> tuple[str, str]:
-    status = str(getattr(result, "status", "") or "failed")
-    conflict_reason = str(getattr(result, "conflict_reason", "") or "")
-    if conflict_reason == "not_found":
-        return "not_found", "not_found"
-    if move and conflict_reason == "dst_exists":
-        return "dst_exists", "dst_exists"
-    return status, conflict_reason or status
-
-
 __all__ = [
-    "failure_status",
     "move_payload",
     "operation_payload",
 ]

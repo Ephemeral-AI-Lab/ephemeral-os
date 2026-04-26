@@ -7,9 +7,8 @@ from tools.core.decorator import tool
 from sandbox.daytona_utils import (
     _path_error,
     _read_text_file_via_exec,
-    _recover_sandbox,
-    _require_sandbox,
     _resolve_path,
+    _run_with_recovery,
 )
 from tools.daytona_toolkit._file_tool_helpers import (
     ReadFileInput,
@@ -35,12 +34,10 @@ async def read_file(
     """Read a file."""
     file_path = _resolve_path(file_path, context)
     try:
-        sandbox = await _require_sandbox(context)
-        try:
-            content, _ = await _read_text_file_via_exec(sandbox, file_path)
-        except Exception as exc:
-            sandbox = await _recover_sandbox(context, exc)
-            content, _ = await _read_text_file_via_exec(sandbox, file_path)
+        content, _ = await _run_with_recovery(
+            context,
+            lambda sandbox: _read_text_file_via_exec(sandbox, file_path),
+        )
         return build_read_file_result(
             context=context,
             file_path=file_path,

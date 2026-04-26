@@ -210,7 +210,7 @@ async def submit_commit(
     description: str,
 ) -> FileChangeResult["OperationResult"]:
     """Submit one write/edit/delete/move commit through the CI service."""
-    from tools.core.ci_runtime import get_ci_service
+    from tools.core.ci_adapter import get_ci_service
 
     svc = get_ci_service(context)
     if svc is None:
@@ -248,7 +248,7 @@ async def submit_shell_cmd(
     on_progress_line: Callable[[str], None] | None = None,
 ) -> FileChangeResult[SimpleNamespace]:
     """Run a shell command through the CI service."""
-    from tools.core.ci_runtime import get_ci_service
+    from tools.core.ci_adapter import get_ci_service
 
     svc = get_ci_service(context)
     if svc is None:
@@ -297,9 +297,32 @@ async def submit_shell_cmd(
     )
 
 
+def commit_metadata(change: Any, paths: list[str] | None = None) -> dict[str, Any]:
+    """Return common metadata for file commit results."""
+    changed_paths = list(change.changed_paths if paths is None else paths)
+    return {
+        "changed_paths": changed_paths,
+        "ambient_changed_paths": list(change.ambient_changed_paths),
+        "conflict_reason": change.conflict_reason,
+    }
+
+
+def failure_status(result: Any, *, move: bool) -> tuple[str, str]:
+    """Map a sandbox commit failure into a (status, conflict_reason) pair."""
+    status = str(getattr(result, "status", "") or "failed")
+    conflict_reason = str(getattr(result, "conflict_reason", "") or "")
+    if conflict_reason == "not_found":
+        return "not_found", "not_found"
+    if move and conflict_reason == "dst_exists":
+        return "dst_exists", "dst_exists"
+    return status, conflict_reason or status
+
+
 __all__ = [
     "CommitOp",
     "FileChangeResult",
+    "commit_metadata",
+    "failure_status",
     "submit_shell_cmd",
     "submit_commit",
 ]

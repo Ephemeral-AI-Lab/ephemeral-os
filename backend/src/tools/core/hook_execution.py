@@ -146,7 +146,10 @@ class ToolHookExecutionHelper:
                 )
             next_value = current if outcome.value is None else outcome.value
             if not isinstance(next_value, ToolResult):
-                reason = f"{hook_name(hook)} returned {type(next_value).__name__}; expected ToolResult."
+                reason = (
+                    f"{hook_name(hook)} returned {type(next_value).__name__}; "
+                    "expected ToolResult."
+                )
                 return self._build_hook_failure_result(
                     phase="post",
                     hook=hook,
@@ -253,7 +256,9 @@ class ToolHookExecutionHelper:
         if not self._system_notification_service.has_registered_agent_run:
             notifications = self._system_notification_service.pop_pending_notifications()
             if notifications:
-                metadata[SYSTEM_NOTIFICATIONS_METADATA_KEY] = serialize_system_notifications(notifications)
+                metadata[SYSTEM_NOTIFICATIONS_METADATA_KEY] = (
+                    serialize_system_notifications(notifications)
+                )
         return metadata
 
     def _with_hook_details(
