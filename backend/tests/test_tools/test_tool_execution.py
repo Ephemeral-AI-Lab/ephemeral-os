@@ -13,7 +13,12 @@ from engine.core.query import QueryContext, run_query
 from engine.core.streaming_executor import StreamingToolExecutor
 from engine.runtime.background_dispatch import launch_background_tool
 from engine.runtime.background_tasks import BackgroundTaskManager
-from message.messages import ConversationMessage, ToolUseBlock
+from message.messages import (
+    ConversationMessage,
+    SystemReminderBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from notification.events import SystemNotification
 from providers.types import (
@@ -65,6 +70,14 @@ class _PreparedContextTool(_EchoTool):
     async def execute(self, arguments: _Args, context: ToolExecutionContextService) -> ToolResult:
         del arguments
         return ToolResult(output=str(context.get("prepared_by_test", "")))
+
+
+class _ToolNotifyTool(_EchoTool):
+    name = "tool_notify"
+
+    async def execute(self, arguments: _Args, context: ToolExecutionContextService) -> ToolResult:
+        await context.notify_system("tool note", category="tool_test")
+        return await super().execute(arguments, context)
 
 
 class _FailingTool(BaseTool):
@@ -525,6 +538,87 @@ async def test_query_loop_appends_hook_notification_as_system_reminder() -> None
     assert len(client.requests) == 2
     assert any(
         message.system_reminder_text == "hook note"
+        for message in client.requests[1].messages
+    )
+    provider_history = client.requests[1].messages
+    assistant_tool_idx = next(
+        idx
+        for idx, message in enumerate(provider_history)
+        if any(
+            isinstance(block, ToolUseBlock) and block.id == "toolu_notify"
+            for block in message.content
+        )
+    )
+    tool_result_idx = next(
+        idx
+        for idx, message in enumerate(provider_history)
+        if any(
+            isinstance(block, ToolResultBlock) and block.tool_use_id == "toolu_notify"
+            for block in message.content
+        )
+    )
+    reminder_idx = next(
+        idx
+        for idx, message in enumerate(provider_history)
+        if any(isinstance(block, SystemReminderBlock) for block in message.content)
+    )
+    assert assistant_tool_idx < tool_result_idx < reminder_idx
+
+
+async def test_query_loop_registers_run_notification_service_for_tool_body() -> None:
+    class _ToolNotificationClient(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def stream_message(self, request):
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_body_notify",
+                                name="tool_notify",
+                                input={"value": "hi"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                )
+            else:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(role="assistant", content=[]),
+                    usage=UsageSnapshot(),
+                )
+
+    tool = _ToolNotifyTool()
+    registry = ToolRegistry()
+    registry.register(tool)
+    client = _ToolNotificationClient()
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+
+    messages, stream = await run_query(context, [])
+    events = []
+    async for event, _usage in stream:
+        events.append(event)
+
+    assert tool.seen == ["hi"]
+    assert any(
+        isinstance(event, SystemNotification) and event.text == "tool note"
+        for event in events
+    )
+    assert any(message.system_reminder_text == "tool note" for message in messages)
+    assert len(client.requests) == 2
+    assert any(
+        message.system_reminder_text == "tool note"
         for message in client.requests[1].messages
     )
 

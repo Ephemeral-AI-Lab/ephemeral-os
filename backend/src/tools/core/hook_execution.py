@@ -193,11 +193,10 @@ class ToolHookExecutionHelper:
     ) -> SystemNotificationService:
         existing = context.get("system_notification_service")
         if isinstance(existing, SystemNotificationService):
-            if existing.emit is not None:
-                return existing
-            service = SystemNotificationService(emit=emit)
-        else:
-            service = SystemNotificationService(emit=emit)
+            if not existing.has_registered_messages and existing.emit is None:
+                existing.emit = emit
+            return existing
+        service = SystemNotificationService(emit=emit)
         context.update_services(system_notification_service=service)
         return service
 
@@ -253,9 +252,10 @@ class ToolHookExecutionHelper:
                 metadata["hook_trace"] = self._hook_trace
         if effective_input is not None and self._hook_trace:
             metadata["effective_tool_input"] = effective_input.model_dump(mode="json")
-        reminders = self._system_notification_service.drain_reminders()
-        if reminders:
-            metadata[SYSTEM_REMINDERS_METADATA_KEY] = serialize_system_reminders(reminders)
+        if not self._system_notification_service.has_registered_messages:
+            reminders = self._system_notification_service.drain_reminders()
+            if reminders:
+                metadata[SYSTEM_REMINDERS_METADATA_KEY] = serialize_system_reminders(reminders)
         return metadata
 
     def _with_hook_details(

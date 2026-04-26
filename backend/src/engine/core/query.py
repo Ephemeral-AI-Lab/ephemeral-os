@@ -35,7 +35,12 @@ from engine.core.tool_results import (
     append_tool_result_history,
     apply_mode_transitions,
 )
-from engine.core.turn_request import build_query_turn_request, record_assistant_turn
+from engine.core.turn_request import (
+    QueryTurnRequest,
+    build_query_turn_request,
+    record_assistant_turn,
+    record_system_notification_message,
+)
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.background_tasks import (
     append_background_reminder,
@@ -43,6 +48,7 @@ from engine.runtime.background_tasks import (
 )
 from engine.runtime.tool_context import prepare_tool_execution_context
 from notification.budget import build_budget_warning
+from notification.service import SystemNotificationService
 from prompt.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
     ExecutionMetadata,
@@ -125,6 +131,34 @@ def _should_defer_stream_tool_dispatch(
 
     return _defer
 
+
+def _ensure_system_notification_service(
+    context: QueryContext,
+    messages: list[ConversationMessage],
+) -> SystemNotificationService:
+    service = (
+        context.tool_metadata.system_notification_service
+        if context.tool_metadata is not None
+        else None
+    )
+    if not isinstance(service, SystemNotificationService):
+        service = SystemNotificationService()
+        if context.tool_metadata is not None:
+            context.tool_metadata.system_notification_service = service
+    service.register_messages(messages)
+    return service
+
+
+def _flush_system_notifications(
+    service: SystemNotificationService,
+    *,
+    turn: QueryTurnRequest | None = None,
+) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+    message, events = service.flush_to_messages()
+    if message is not None and turn is not None:
+        record_system_notification_message(turn, message)
+    return [(event, None) for event in events]
+
 # ---------------------------------------------------------------------------
 # Query loop
 # ---------------------------------------------------------------------------
@@ -140,6 +174,7 @@ async def _run_query_loop(
         coerced = ExecutionMetadata()
         coerced.update(context.tool_metadata)
         context.tool_metadata = coerced
+    notification_service = _ensure_system_notification_service(context, messages)
 
     background_manager: BackgroundTaskManager | None = None
     if context.enable_background_tasks:
@@ -179,6 +214,9 @@ async def _run_query_loop(
                 context.on_turn(messages)
             except Exception:
                 logger.debug("on_turn callback failed", exc_info=True)
+
+        for event in _flush_system_notifications(notification_service):
+            yield event
 
         execution_context = ToolExecutionContextService(
             cwd=context.cwd,
@@ -292,6 +330,8 @@ async def _run_query_loop(
             )
             for event, event_usage in outcome.events:
                 yield event, event_usage
+            for event in _flush_system_notifications(notification_service, turn=turn):
+                yield event
             if outcome.exit_text_response:
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 return
@@ -310,6 +350,8 @@ async def _run_query_loop(
 
         tool_results = dispatch.tool_results
         append_tool_result_history(messages, tool_results, turn=turn)
+        for event in _flush_system_notifications(notification_service, turn=turn):
+            yield event
         apply_mode_transitions(context, tool_results)
 
         # Check for a successful terminal tool. A rejected terminal call
@@ -333,6 +375,8 @@ async def _run_query_loop(
                 ),
                 None,
             )
+            for event in _flush_system_notifications(notification_service, turn=turn):
+                yield event
             return
 
 

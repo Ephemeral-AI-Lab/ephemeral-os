@@ -132,6 +132,19 @@ def record_tool_result_message(
     )
 
 
+def record_system_notification_message(
+    turn: QueryTurnRequest,
+    message: ConversationMessage,
+) -> None:
+    turn.prompt_report.record(
+        {
+            "event": "system_notification",
+            "seq": turn.prompt_report.next_seq(),
+            "message": message.model_dump(mode="json"),
+        }
+    )
+
+
 def record_hook_system_reminder(
     turn: QueryTurnRequest,
     message: ConversationMessage,
