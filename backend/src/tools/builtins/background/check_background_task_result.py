@@ -28,21 +28,16 @@ def _peek_messages(tracked, n: int = 5) -> str:
         return f"[progress provider error: {exc}]"
 
 
-def _subagent_findings(tracked) -> str | None:
-    """Return findings from the run_subagent envelope, if present."""
+def _subagent_terminal_called(tracked) -> bool:
+    """Whether the subagent finished by calling its terminal tool.
+
+    The flag is stamped by ``run_subagent`` on its returned ToolResult's
+    metadata; the bg manager preserves the ToolResult on tracked.result.
+    """
     if tracked.result is None:
-        return None
-    try:
-        envelope = json.loads(tracked.result.output)
-    except (TypeError, ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(envelope, dict):
-        return None
-    payload = envelope.get("payload")
-    if not isinstance(payload, dict):
-        return None
-    findings = payload.get("findings")
-    return findings if isinstance(findings, str) and findings else None
+        return False
+    meta = tracked.result.metadata or {}
+    return bool(meta.get("subagent_terminal_called"))
 
 
 def _build_subagent_result(tracked, raw_status: str) -> tuple[str, str]:
@@ -50,9 +45,8 @@ def _build_subagent_result(tracked, raw_status: str) -> tuple[str, str]:
     if raw_status == "running":
         return "running", _peek_messages(tracked, 5)
 
-    findings = _subagent_findings(tracked)
-    if raw_status in ("completed", "delivered") and findings is not None:
-        return "finished", findings
+    if raw_status in ("completed", "delivered") and _subagent_terminal_called(tracked):
+        return "finished", tracked.result.output if tracked.result else ""
 
     # Either crashed/cancelled, or completed without calling the terminal
     # tool — surface as failed and include the last 5 messages so the parent

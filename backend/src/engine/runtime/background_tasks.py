@@ -12,7 +12,7 @@ from typing import Any
 
 from tools.core.base import ToolResult
 from message.messages import BackgroundTaskStateBlock, ConversationMessage
-from message.stream_events import BackgroundTaskCompleted, BackgroundTaskStarted, SystemNotification
+from message.stream_events import BackgroundTaskCompleted, BackgroundTaskStarted
 
 MAX_OUTPUT_LENGTH: int = 2000
 
@@ -555,21 +555,16 @@ def build_background_reminder(
     return ConversationMessage(role="user", content=content)
 
 
-def append_and_emit_reminder(
+def append_background_reminder(
     background_manager: BackgroundTaskManager,
     display_messages: list[ConversationMessage],
-) -> SystemNotification | None:
-    """Append a background reminder message and return the matching event.
+) -> bool:
+    """Append a background reminder message to history.
 
-    Returns ``None`` when no reminder is produced (no running tasks).
-    The append + yield pairing is packaged here so the caller cannot
-    drift the two sides apart.
+    Returns ``False`` when no reminder is produced (no running tasks).
     """
     reminder_msg = build_background_reminder(background_manager)
     if reminder_msg is None:
-        return None
+        return False
     display_messages.append(reminder_msg)
-    return SystemNotification(
-        text=reminder_msg.background_task_state_text,
-        category="background_progress",
-    )
+    return True

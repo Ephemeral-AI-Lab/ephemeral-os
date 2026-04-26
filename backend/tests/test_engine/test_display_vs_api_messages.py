@@ -258,7 +258,7 @@ class TestCompactForApiPurity:
     ) -> None:
         messages = [
             _user("older context"),
-            _tool_use("toolu_pair", "wait_for_background_task", {"task_id": "bg_1"}),
+            _tool_use("toolu_pair", "wait_background_tasks", {"task_id": "bg_1"}),
             _tool_result("toolu_pair", "background snapshot"),
             _user("newer context"),
         ]
@@ -663,7 +663,7 @@ class TestCompactForApiState:
 
     def test_reduce_for_api_drops_stale_snapshot_pairs_but_not_display_history(self) -> None:
         display = [
-            _tool_use("toolu_1", "wait_for_background_task", {"task_id": "all"}),
+            _tool_use("toolu_1", "wait_background_tasks", {"task_id": "all"}),
             ConversationMessage(
                 role="user",
                 content=[
@@ -711,7 +711,7 @@ class TestCompactForApiState:
             }
         ]
         display = [
-            _tool_use("toolu_wait", "wait_for_background_task", {"task_id": "all"}),
+            _tool_use("toolu_wait", "wait_background_tasks", {"task_id": "all"}),
             ConversationMessage(
                 role="user",
                 content=[
@@ -749,7 +749,7 @@ class TestCompactForApiState:
             for block in msg.content
             if isinstance(block, ToolResultBlock)
         ]
-        assert any("[NO TASKS RUNNING]" in content for content in result_contents)
+        assert any("[NO TASKS]" in content for content in result_contents)
         assert all(
             not any(
                 isinstance(block, BackgroundTaskStateBlock)

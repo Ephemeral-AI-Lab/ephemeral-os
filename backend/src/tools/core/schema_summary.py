@@ -11,7 +11,6 @@ from collections.abc import Sequence
 from pydantic import BaseModel, RootModel
 from pydantic_core import PydanticUndefined
 
-from skills.core.loader import load_skill_registry
 from tools.core.base import BaseTool
 from tools.core.factory import ToolFactoryContext, create_tool, list_available_tools
 
@@ -32,8 +31,6 @@ def collect_schema_tools(
     tools = [create_tool(name, ctx) for name in sorted(list_available_tools())]
 
     from tools.builtins.background import make_background_tools
-    from tools.builtins.skills import make_skills_tools
-
     background_tool_names = sorted(
         {
             tool.name
@@ -43,8 +40,6 @@ def collect_schema_tools(
     )
     if background_tool_names:
         tools.extend(make_background_tools(background_tool_names))
-
-    tools.extend(make_skills_tools(load_skill_registry(cwd)))
 
     return _dedupe_tools(tools)
 

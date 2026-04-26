@@ -228,14 +228,13 @@ class TestRequestCapture:
         assert isinstance(mock.last_request.system_prompt, str)
 
     def test_tools_passed_to_api(self, app_client):
-        """Default agent has no configured tools, but skills tools are always registered."""
+        """Default agent has no configured tools."""
         client, mock = app_client
         client.post("/api/chat", json={"line": "test"})
 
         assert mock.last_request is not None
         assert mock.last_request.tools is not None
-        # Default agent gets skills tools (load_skill, load_skill_reference)
-        assert len(mock.last_request.tools) == 2
+        assert mock.last_request.tools == []
 
     def test_user_message_in_request(self, app_client):
         client, mock = app_client

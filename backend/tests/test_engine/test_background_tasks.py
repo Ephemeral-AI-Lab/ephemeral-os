@@ -10,18 +10,9 @@ from typing import Any
 from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
-from tools.builtins.background._common import (
-    MAX_TOTAL_OUTPUT_CHARS,
-    MIN_PER_ENTRY_CHARS,
-    apply_last_n_lines,
-)
 from tools.builtins.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
-)
-from tools.builtins.background.wait_for_background_task import (
-    WaitForBackgroundTaskInput,
-    WaitForBackgroundTaskTool,
 )
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.runtime import ExecutionMetadata
@@ -426,14 +417,7 @@ async def test_get_status_by_id() -> None:
 
 
 async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
-    """Manager returns the raw output verbatim.
-
-    Trimming (line-tail then char-cap) is the responsibility of the tool
-    wrapper via ``apply_last_n_lines``, applied AFTER the manager hands
-    the snapshot back. This guarantees `last_n_lines` always yields the
-    requested trailing lines instead of being silently capped by an
-    earlier head-truncation.
-    """
+    """Manager returns the raw output verbatim — trimming lives at the tool layer."""
     mgr = BackgroundTaskManager()
     long_output = "x" * 5000
     _launch(mgr, output=long_output)
@@ -442,13 +426,6 @@ async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
     statuses = mgr.get_status()
     assert len(statuses) == 1
     assert statuses[0]["output"] == long_output
-
-    # Tool-layer trim is what bounds context: verify the helper caps it.
-    apply_last_n_lines(statuses, last_n_lines=20)
-    # Single-entry case: per-entry budget == total budget.
-    assert len(statuses[0]["output"]) <= MAX_TOTAL_OUTPUT_CHARS + len(
-        "... (head truncated)\n"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -738,66 +715,6 @@ async def test_done_callback_handles_asyncio_cancel_without_loop_error() -> None
 
 
 # ---------------------------------------------------------------------------
-# 28-30. apply_last_n_lines: line trim + char-cap + budget split
-# ---------------------------------------------------------------------------
-
-
-def test_apply_last_n_lines_keeps_tail() -> None:
-    entries = [{"output": "\n".join(f"line{i}" for i in range(50))}]
-    apply_last_n_lines(entries, last_n_lines=5)
-    assert entries[0]["output"].splitlines() == [
-        "line45", "line46", "line47", "line48", "line49",
-    ]
-
-
-def test_apply_last_n_lines_char_cap_with_marker() -> None:
-    entries = [{"output": "x" * (MAX_TOTAL_OUTPUT_CHARS * 2)}]
-    apply_last_n_lines(entries, last_n_lines=100)
-    out = entries[0]["output"]
-    assert out.startswith("... (head truncated)\n")
-    body = out[len("... (head truncated)\n"):]
-    assert len(body) <= MAX_TOTAL_OUTPUT_CHARS
-
-
-def test_apply_last_n_lines_drops_leading_partial_line() -> None:
-    big_line = "A" * 500
-    text = "\n".join([big_line] * 20)
-    entries = [{"output": text}]
-    apply_last_n_lines(entries, last_n_lines=20)
-    out = entries[0]["output"]
-    assert out.startswith("... (head truncated)\n")
-    body = out[len("... (head truncated)\n"):]
-    first_line = body.split("\n", 1)[0]
-    assert first_line == big_line, (
-        "first line of body must be a complete `big_line`, not a partial"
-    )
-    assert len(body) <= MAX_TOTAL_OUTPUT_CHARS
-
-
-def test_apply_last_n_lines_budget_split_across_entries() -> None:
-    entries = [{"output": "y" * (MAX_TOTAL_OUTPUT_CHARS * 2)} for _ in range(4)]
-    apply_last_n_lines(entries, last_n_lines=1000)
-
-    expected_per_entry = max(MIN_PER_ENTRY_CHARS, MAX_TOTAL_OUTPUT_CHARS // 4)
-    for e in entries:
-        assert e["output"].startswith("... (head truncated)\n")
-        body = e["output"][len("... (head truncated)\n"):]
-        assert len(body) <= expected_per_entry
-
-
-def test_apply_last_n_lines_floor_per_entry() -> None:
-    """With many entries, the per-entry floor (MIN_PER_ENTRY_CHARS) must hold."""
-    entries = [{"output": "z" * 5000} for _ in range(100)]
-    apply_last_n_lines(entries, last_n_lines=1000)
-    for e in entries:
-        body = (
-            e["output"][len("... (head truncated)\n"):]
-            if e["output"].startswith("... (head truncated)\n")
-            else e["output"]
-        )
-        assert len(body) <= MIN_PER_ENTRY_CHARS
-
-
 # ---------------------------------------------------------------------------
 # 31. cancel_background_task tool rejects task_id="all"
 # ---------------------------------------------------------------------------
@@ -817,77 +734,3 @@ async def test_cancel_tool_rejects_all_sentinel() -> None:
     await mgr.cancel("bg_1")
 
 
-# ---------------------------------------------------------------------------
-# 32. wait_for_background_task tool: specific already-completed task
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_tool_already_completed_returns_stale_notice() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="bg_1", tool_name="t", output="finished")
-    await asyncio.sleep(0.01)
-
-    tool = WaitForBackgroundTaskTool()
-    args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=5)
-    result = await tool.execute(args, _make_ctx(mgr))
-    assert result.is_error is False
-    assert "ALREADY_COMPLETED" in result.output
-    assert "do not poll or wait on this task id again" in result.output
-
-
-async def test_wait_tool_allows_immediate_join_on_fresh_subagent() -> None:
-    mgr = BackgroundTaskManager()
-    _launch_subagent(mgr, task_id="bg_1")
-
-    ctx = _make_ctx(mgr)
-    tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
-    assert result.is_error is False
-    assert "TIMED_OUT" in result.output
-
-    await mgr.cancel("bg_1")
-
-
-async def test_wait_tool_allows_wait_all_for_only_fresh_subagents() -> None:
-    mgr = BackgroundTaskManager()
-    _launch_subagent(mgr, task_id="bg_1")
-    _launch_subagent(mgr, task_id="bg_2")
-
-    ctx = _make_ctx(mgr)
-    tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=1), ctx)
-    assert result.is_error is False
-    assert "TIMED_OUT" in result.output
-
-    await mgr.cancel_all()
-
-
-async def test_wait_tool_allows_subagent_join_without_progress_check() -> None:
-    mgr = BackgroundTaskManager()
-    _launch_subagent(mgr, task_id="bg_1")
-
-    ctx = _make_ctx(mgr)
-    tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
-    assert result.is_error is False
-    assert "TIMED_OUT" in result.output
-
-    await mgr.cancel("bg_1")
-
-
-async def test_wait_tool_allows_immediate_join_for_non_subagent_task() -> None:
-    mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="daytona_shell",
-        tool_input={"command": "sleep 1"},
-        coro=_make_tool_coro(delay=10),
-        task_type="agent",
-    )
-
-    tool = WaitForBackgroundTaskTool()
-    args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=1)
-    result = await tool.execute(args, _make_ctx(mgr))
-    assert result.is_error is False
-
-    await mgr.cancel("bg_1")

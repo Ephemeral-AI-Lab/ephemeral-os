@@ -1,30 +1,35 @@
 """Unit tests for background-task tool plumbing.
 
-Covers two layers, all offline (no sandbox, no LLM):
+Covers, all offline (no sandbox, no LLM):
 
-    1. `_common.apply_last_n_lines` — line trim, char cap, total budget.
-    2. `WaitForBackgroundTask` / `CancelBackgroundTask` schemas and
-       `execute` branches that don't require a running loop to assert.
+    1. `WaitBackgroundTasks` / `CheckBackgroundTaskResult` /
+       `CancelBackgroundTask` schemas and ``execute`` branches that don't
+       require a running loop to assert.
+    2. `BackgroundTaskManager` extras and live-progress tail behaviour.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from pathlib import Path
 from pydantic import ValidationError
 
 from tools.builtins.background._common import (
-    MAX_TOTAL_OUTPUT_CHARS,
-    MIN_PER_ENTRY_CHARS,
-    apply_last_n_lines,
     build_background_snapshot_metadata,
+    normalize_status,
     render_background_snapshot,
+    render_tool_command,
 )
-from tools.builtins.background.wait_for_background_task import (
-    WaitForBackgroundTaskInput,
-    WaitForBackgroundTaskTool,
+from tools.builtins.background.wait_background_tasks import (
+    WaitBackgroundTasksInput,
+    WaitBackgroundTasksTool,
+)
+from tools.builtins.background.check_background_task_result import (
+    CheckBackgroundTaskResultInput,
+    CheckBackgroundTaskResultTool,
 )
 from tools.builtins.background.cancel_background_task import (
     CancelBackgroundTaskInput,
@@ -35,93 +40,7 @@ from engine.runtime.background_tasks import BackgroundTaskManager
 
 
 # ---------------------------------------------------------------------------
-# apply_last_n_lines
-# ---------------------------------------------------------------------------
-
-
-class TestApplyLastNLines:
-    def test_line_trim_keeps_last_n(self) -> None:
-        status = [{"output": "\n".join(str(i) for i in range(10))}]
-        apply_last_n_lines(status, last_n_lines=3)
-        assert status[0]["output"] == "7\n8\n9"
-
-    def test_no_trim_when_under_limit(self) -> None:
-        status = [{"output": "a\nb"}]
-        apply_last_n_lines(status, last_n_lines=5)
-        assert status[0]["output"] == "a\nb"
-
-    def test_non_string_output_untouched(self) -> None:
-        status = [{"output": None}, {"output": 123}, {"other": "x"}]
-        apply_last_n_lines(status, last_n_lines=3)
-        assert status == [{"output": None}, {"output": 123}, {"other": "x"}]
-
-    def test_char_cap_prepends_marker_and_drops_partial_line(self) -> None:
-        # One very long entry — line trim keeps it (one line), char cap slices.
-        blob = "HEAD" + "x" * 5000 + "\nLINE_A\nLINE_B\nTAIL_END"
-        status = [{"output": blob}]
-        apply_last_n_lines(status, last_n_lines=100)
-        out = status[0]["output"]
-        assert out.startswith("... (head truncated)\n")
-        # Partial-line drop means the first kept line must be whole
-        # (i.e. not a fragment of the giant leading "HEAD..." line).
-        kept = out.split("\n", 1)[1]  # after the marker
-        first_line = kept.split("\n", 1)[0]
-        assert first_line in ("LINE_A", "LINE_B", "TAIL_END")
-        assert "TAIL_END" in out
-
-    def test_total_budget_split_across_entries(self) -> None:
-        # 10 entries each with 2000 chars → per-entry budget = 4000/10 = 400,
-        # but floor MIN_PER_ENTRY_CHARS=200 kicks in via max(), so 400.
-        big = "x" * 2000
-        status = [{"output": big} for _ in range(10)]
-        apply_last_n_lines(status, last_n_lines=1000)
-        per_entry = MAX_TOTAL_OUTPUT_CHARS // 10
-        assert per_entry >= MIN_PER_ENTRY_CHARS
-        for entry in status:
-            # marker prefix + (tail up to per_entry) minus partial line drop
-            assert entry["output"].startswith("... (head truncated)\n")
-            assert len(entry["output"]) <= per_entry + len("... (head truncated)\n") + 1
-
-    def test_min_per_entry_floor(self) -> None:
-        # 100 entries → 4000/100 = 40, below floor → floor used = 200
-        status = [{"output": "x" * 1000} for _ in range(100)]
-        apply_last_n_lines(status, last_n_lines=1000)
-        for entry in status:
-            assert entry["output"].startswith("... (head truncated)\n")
-
-    def test_empty_list_noop(self) -> None:
-        status: list[dict] = []
-        apply_last_n_lines(status, last_n_lines=5)
-        assert status == []
-
-
-# ---------------------------------------------------------------------------
-# Pydantic schemas — task_id validation now lives on the Field itself
-# (TASK_ID_FIELD with min_length=1), exercised end-to-end below.
-# ---------------------------------------------------------------------------
-
-
-class TestSchemas:
-    def test_wait_requires_task_id(self) -> None:
-        with pytest.raises(ValidationError):
-            WaitForBackgroundTaskInput()  # type: ignore[call-arg]
-
-    @pytest.mark.parametrize("bad_timeout", [0, 0.5, 301, 1000])
-    def test_wait_rejects_out_of_range_timeout(self, bad_timeout: float) -> None:
-        with pytest.raises(ValidationError):
-            WaitForBackgroundTaskInput(task_id="bg_1", timeout=bad_timeout)
-
-    def test_wait_rejects_last_n_lines_zero(self) -> None:
-        with pytest.raises(ValidationError):
-            WaitForBackgroundTaskInput(task_id="bg_1", last_n_lines=0)
-
-    def test_cancel_requires_task_id(self) -> None:
-        with pytest.raises(ValidationError):
-            CancelBackgroundTaskInput()  # type: ignore[call-arg]
-
-
-# ---------------------------------------------------------------------------
-# Tool.execute branches
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -130,113 +49,242 @@ def _ctx(manager: BackgroundTaskManager | None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata)
 
 
-class TestWaitForBackgroundTaskExecute:
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
+
+class TestSchemas:
+    @pytest.mark.parametrize("bad_timeout", [0, 0.5, 301, 1000])
+    def test_wait_rejects_out_of_range_timeout(self, bad_timeout: float) -> None:
+        with pytest.raises(ValidationError):
+            WaitBackgroundTasksInput(timeout=bad_timeout)
+
+    def test_wait_accepts_default_timeout(self) -> None:
+        args = WaitBackgroundTasksInput()
+        assert args.timeout == 30
+
+    def test_check_requires_task_id(self) -> None:
+        with pytest.raises(ValidationError):
+            CheckBackgroundTaskResultInput()  # type: ignore[call-arg]
+
+    def test_cancel_requires_task_id(self) -> None:
+        with pytest.raises(ValidationError):
+            CancelBackgroundTaskInput()  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# render_tool_command / normalize_status
+# ---------------------------------------------------------------------------
+
+
+class TestCommonHelpers:
+    def test_render_tool_command_joins_values(self) -> None:
+        out = render_tool_command("run_subagent", {"agent_name": "explorer", "prompt": "hi"})
+        assert out == "run_subagent(explorer, hi)"
+
+    def test_render_tool_command_no_args(self) -> None:
+        assert render_tool_command("noop", {}) == "noop()"
+
+    @pytest.mark.parametrize("raw,expected", [
+        ("running", "running"),
+        ("completed", "finished"),
+        ("delivered", "finished"),
+        ("failed", "failed"),
+        ("cancelled", "failed"),
+    ])
+    def test_normalize_status(self, raw: str, expected: str) -> None:
+        assert normalize_status(raw) == expected
+
+
+# ---------------------------------------------------------------------------
+# WaitBackgroundTasksTool branches
+# ---------------------------------------------------------------------------
+
+
+class TestWaitBackgroundTasksExecute:
     async def test_no_manager_returns_error(self) -> None:
-        tool = WaitForBackgroundTaskTool()
-        args = WaitForBackgroundTaskInput(task_id="all", timeout=1)
-        result = await tool.execute(args, _ctx(None))
+        tool = WaitBackgroundTasksTool()
+        result = await tool.execute(WaitBackgroundTasksInput(timeout=1), _ctx(None))
         assert result.is_error
 
-    async def test_all_with_no_tasks_ever(self) -> None:
-        tool = WaitForBackgroundTaskTool()
+    async def test_no_tasks_ever(self) -> None:
+        tool = WaitBackgroundTasksTool()
         mgr = BackgroundTaskManager()
-        args = WaitForBackgroundTaskInput(task_id="all", timeout=1)
-        result = await tool.execute(args, _ctx(mgr))
+        result = await tool.execute(WaitBackgroundTasksInput(timeout=1), _ctx(mgr))
         assert not result.is_error
-        assert "[NO TASKS RUNNING]" in result.output
+        assert "[NO TASKS]" in result.output
+        assert result.metadata["background_snapshot"]["kind"] == "wait_no_tasks"
 
-    async def test_unknown_specific_id(self) -> None:
-        tool = WaitForBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
-        args = WaitForBackgroundTaskInput(task_id="bg_nope", timeout=1)
-        result = await tool.execute(args, _ctx(mgr))
-        assert result.is_error
-        assert "bg_nope" in result.output
-
-    async def test_all_prefers_fresh_completions_over_delivered_history(self) -> None:
-        tool = WaitForBackgroundTaskTool()
+    async def test_completed_tasks_appear_in_snapshot(self) -> None:
+        tool = WaitBackgroundTasksTool()
         mgr = BackgroundTaskManager()
 
         async def fast(output: str) -> ToolResult:
             return ToolResult(output=output)
 
-        mgr.launch("bg_old", "t", {}, fast("old"))
-        await asyncio.sleep(0.01)
-        mgr.collect_completed()
-
-        mgr.launch("bg_new", "t", {}, fast("new"))
+        mgr.launch("bg_1", "noop", {"q": "ping"}, fast("hi"))
         await asyncio.sleep(0.01)
 
-        result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=1), _ctx(mgr))
-        assert result.is_error is False
+        result = await tool.execute(WaitBackgroundTasksInput(timeout=1), _ctx(mgr))
         assert "[COMPLETED]" in result.output
-        assert '"task_id": "bg_new"' in result.output
-        assert '"task_id": "bg_old"' not in result.output
-        assert result.metadata["background_snapshot"]["kind"] == "wait_completed"
+        snap = result.metadata["background_snapshot"]
+        assert snap["kind"] == "wait_completed"
+        assert snap["statuses"] == [
+            {"task_id": "bg_1", "status": "finished", "tool_command": "noop(ping)"},
+        ]
 
-    async def test_wait_timeout_returns_snapshot_metadata(self) -> None:
-        tool = WaitForBackgroundTaskTool()
+    async def test_timeout_returns_timed_out(self) -> None:
+        tool = WaitBackgroundTasksTool()
         mgr = BackgroundTaskManager()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
             return ToolResult(output="done")
 
-        mgr.launch("bg_run", "t", {}, slow())
+        mgr.launch("bg_run", "noop", {}, slow())
         try:
-            result = await tool.execute(
-                WaitForBackgroundTaskInput(task_id="bg_run", timeout=1),
-                _ctx(mgr),
-            )
+            result = await tool.execute(WaitBackgroundTasksInput(timeout=1), _ctx(mgr))
             assert "[TIMED_OUT" in result.output
             assert result.metadata["background_snapshot"]["kind"] == "wait_timed_out"
-            assert result.metadata["background_snapshot"]["scope"] == "bg_run"
         finally:
             await mgr.cancel("bg_run")
 
-    async def test_wait_no_tasks_returns_snapshot_metadata(self) -> None:
-        tool = WaitForBackgroundTaskTool()
+
+# ---------------------------------------------------------------------------
+# CheckBackgroundTaskResultTool branches
+# ---------------------------------------------------------------------------
+
+
+class TestCheckBackgroundTaskResultExecute:
+    async def test_no_manager_returns_error(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
+        result = await tool.execute(CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(None))
+        assert result.is_error
+
+    async def test_unknown_task_id(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
+        mgr = BackgroundTaskManager()
+        result = await tool.execute(CheckBackgroundTaskResultInput(task_id="bg_x"), _ctx(mgr))
+        assert result.is_error
+        assert "bg_x" in result.output
+
+    async def test_running_generic_tool_returns_progress_lines(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
         mgr = BackgroundTaskManager()
 
+        async def slow() -> ToolResult:
+            await asyncio.sleep(5)
+            return ToolResult(output="done")
+
+        mgr.launch("bg_1", "daytona_shell", {"cmd": "ls"}, slow())
+        try:
+            mgr.append_progress("bg_1", "line-a")
+            result = await tool.execute(
+                CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
+            )
+            payload = json.loads(result.output)
+            assert payload["id"] == "bg_1"
+            assert payload["status"] == "running"
+            assert payload["tool_command"] == "daytona_shell(ls)"
+            assert "line-a" in payload["result"]
+        finally:
+            await mgr.cancel("bg_1")
+
+    async def test_finished_generic_tool_returns_full_output(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
+        mgr = BackgroundTaskManager()
+
+        async def fast() -> ToolResult:
+            return ToolResult(output="x" * 5000)
+
+        mgr.launch("bg_1", "daytona_shell", {"cmd": "ls"}, fast())
+        await asyncio.sleep(0.01)
+
         result = await tool.execute(
-            WaitForBackgroundTaskInput(task_id="all", timeout=1),
-            _ctx(mgr),
+            CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
         )
-        assert result.metadata["background_snapshot"]["kind"] == "wait_no_tasks"
-        assert result.metadata["background_snapshot"]["statuses"] == []
+        payload = json.loads(result.output)
+        assert payload["status"] == "finished"
+        # No truncation for daytona_shell.
+        assert payload["result"] == "x" * 5000
+
+    async def test_subagent_finished_with_terminal_returns_findings(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
+        mgr = BackgroundTaskManager()
+
+        async def sub() -> ToolResult:
+            return ToolResult(
+                output="my findings",
+                metadata={"subagent_terminal_called": True},
+            )
+
+        mgr.launch("bg_1", "run_subagent", {"agent_name": "x", "prompt": "p"}, sub(),
+                   task_type="subagent")
+        await asyncio.sleep(0.01)
+
+        result = await tool.execute(
+            CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
+        )
+        payload = json.loads(result.output)
+        assert payload["status"] == "finished"
+        assert payload["result"] == "my findings"
+        assert payload["tool_command"] == "run_subagent(x, p)"
+
+    async def test_subagent_finished_without_terminal_marked_failed(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
+        mgr = BackgroundTaskManager()
+
+        async def sub() -> ToolResult:
+            return ToolResult(
+                output="ran out of nudges",
+                is_error=True,
+                metadata={"subagent_terminal_called": False},
+            )
+
+        mgr.launch("bg_1", "run_subagent", {"agent_name": "x", "prompt": "p"}, sub(),
+                   task_type="subagent")
+        await asyncio.sleep(0.01)
+
+        # Register a peek provider so the failed branch has something to show.
+        mgr.set_progress_provider("bg_1", lambda n: "peek-snapshot")
+
+        result = await tool.execute(
+            CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
+        )
+        payload = json.loads(result.output)
+        assert payload["status"] == "failed"
+        assert payload["result"] == "peek-snapshot"
+
+
+# ---------------------------------------------------------------------------
+# Snapshot rendering helpers
+# ---------------------------------------------------------------------------
+
 
 class TestBackgroundSnapshotHelpers:
-    def test_progress_render_matches_metadata_shape(self) -> None:
+    def test_progress_passthrough_for_compactor(self) -> None:
         statuses = [{"task_id": "bg_1", "status": "running", "output": "hello"}]
         output = render_background_snapshot("progress", statuses)
         metadata = build_background_snapshot_metadata("progress", "all", statuses)
-        assert (
-            output
-            == '[\n  {\n    "task_id": "bg_1",\n    "status": "running",\n    "output": "hello"\n  }\n]'
-        )
-        assert metadata["background_snapshot"]["scope"] == "all"
+        assert json.loads(output) == statuses
+        assert metadata["background_snapshot"]["kind"] == "progress"
 
-    def test_wait_completed_render_matches_tool_branch(self) -> None:
-        statuses = [{"task_id": "bg_1", "status": "completed", "output": "done"}]
+    def test_wait_completed_render(self) -> None:
+        statuses = [{"task_id": "bg_1", "status": "finished", "tool_command": "noop()"}]
         output = render_background_snapshot("wait_completed", statuses)
         assert output.startswith("[COMPLETED]\n[")
-        assert "posted subagent" not in output
 
-    def test_wait_timed_out_render_matches_tool_branch(self) -> None:
-        statuses = [{"task_id": "bg_1", "status": "running", "output": "still"}]
+    def test_wait_timed_out_render(self) -> None:
+        statuses = [{"task_id": "bg_1", "status": "running", "tool_command": "noop()"}]
         output = render_background_snapshot("wait_timed_out", statuses, elapsed_seconds=2.5)
         assert "[TIMED_OUT after 2.5s]" in output
-        assert output.endswith(
-            "Call wait_for_background_task again to continue waiting, or cancel_background_task to stop."
-        )
+        assert "wait_background_tasks" in output
+        assert "cancel_background_task" in output
 
-    def test_wait_no_tasks_render_matches_tool_branch(self) -> None:
+    def test_wait_no_tasks_render(self) -> None:
         output = render_background_snapshot("wait_no_tasks", [])
-        assert output == (
-            "[NO TASKS RUNNING] 0 background tasks are pending and "
-            "none have ever been launched in this session. Do not poll "
-            "or wait unless you launch new background work."
-        )
+        assert output.startswith("[NO TASKS]")
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +359,6 @@ class TestBackgroundTaskManagerExtras:
 
         alias = mgr.next_alias()
         mgr.launch(alias, "noop", {}, quick())
-        # Let the asyncio task settle.
         await asyncio.sleep(0)
         await asyncio.sleep(0)
         tracked = await mgr.wait_for(alias, timeout=1)
@@ -378,10 +425,7 @@ class TestLiveProgressTail:
         alias = mgr.next_alias()
         mgr.launch(alias, "noop", {}, slow())
         try:
-            # The manager stamps a "[started: ...]" line at launch time, so
-            # tail-only lines appended via append_progress live after that.
             mgr.append_progress(alias, "first")
-            # Multi-line chunk should be split.
             mgr.append_progress(alias, "second\nthird")
             tail = mgr._tasks[alias].progress_lines[-3:]
             assert tail == ["first", "second", "third"]
@@ -437,16 +481,11 @@ class TestLiveProgressTail:
             mgr.append_progress(alias, "live-2")
             snap = mgr.get_status(alias)
             assert snap and snap[0]["status"] == "running"
-            # The manager prepends a "[started: ...]" stamp at launch; the
-            # appended lines must appear at the tail.
             assert snap[0]["output"].endswith("live-1\nlive-2")
         finally:
             await mgr.cancel(alias, "")
 
     async def test_get_status_running_task_carries_start_stamp(self) -> None:
-        """Running tasks always carry an `[started: ...]` stamp in output even
-        before any progress lines are appended, so wait_for_background_task
-        always has something to surface."""
         mgr = BackgroundTaskManager()
 
         async def slow() -> ToolResult:

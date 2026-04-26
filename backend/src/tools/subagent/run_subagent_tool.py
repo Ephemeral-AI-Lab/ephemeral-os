@@ -1,10 +1,15 @@
-"""run_subagent — spawn a focused worker subagent and run it to completion.
+"""run_subagent — spawn a focused worker subagent as a background task.
 
-Synchronous from the parent's POV: the parent's tool call awaits the
-subagent's full lifecycle and receives the subagent's terminal-tool output
-as its own ``ToolResult``. The subagent must terminate via a registered
-terminal tool (typically ``submit_exploration_result``); the engine's
-terminal-nudge cycle in ``run_query`` enforces this.
+Backgrounded by the engine (``background="always"``) so the parent can keep
+working while the subagent runs. Peek progress with
+``check_background_task_result(task_id)``; block on completion with
+``wait_background_tasks()``.
+
+The subagent must terminate via a registered terminal tool (typically
+``submit_exploration_result``); whatever ``ToolResult`` the engine stamps
+with ``does_terminate=True`` becomes this tool's output. If the subagent
+exits without calling a terminal tool, the bg task is marked failed and
+``check_background_task_result`` falls back to the message peek.
 
 Subagents cannot spawn further subagents — recursion is rejected at
 validation time so the focused-worker contract holds.
@@ -12,21 +17,84 @@ validation time so the focused-worker contract holds.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
 
+from message.messages import (
+    ConversationMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 from tools.core.base import ExecutionMetadata, TextToolOutput, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 
 
+# Hard upper bound on the peek window — even if a caller requests more,
+# the subagent peek clamps to this so the parent's peek response stays bounded.
+PEEK_MESSAGE_MAX = 10
+_PEEK_BLOCK_CHAR_CAP = 200
+_PEEK_TOTAL_CHAR_CAP = 2048
+
+
 @dataclass
 class _ValidatedRunSubagentRequest:
     sub_def: Any
+
+
+def _truncate(s: str) -> str:
+    s = s.replace("\n", " ").strip()
+    if len(s) > _PEEK_BLOCK_CHAR_CAP:
+        return s[: _PEEK_BLOCK_CHAR_CAP - 1] + "…"
+    return s
+
+
+def _compact_args(inp: Any) -> str:
+    try:
+        s = json.dumps(inp, separators=(",", ":"), default=str)
+    except Exception:
+        s = str(inp)
+    return _truncate(s)
+
+
+def _render_block(block: Any) -> str:
+    if isinstance(block, TextBlock):
+        return f"[text] {_truncate(block.text)}"
+    if isinstance(block, ThinkingBlock):
+        return f"[think] {_truncate(block.text)}"
+    if isinstance(block, ToolUseBlock):
+        return f"[tool] {block.name}({_compact_args(block.input)})"
+    if isinstance(block, ToolResultBlock):
+        return f"[result] {_truncate(str(block.content))}"
+    return ""
+
+
+def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
+    """Render the last *n* messages of a subagent for the parent's peek view."""
+    if not messages:
+        return "(no messages yet)"
+    n = min(n, PEEK_MESSAGE_MAX)
+    tail = messages[-n:]
+    rendered: list[str] = []
+    for msg in tail:
+        prefix = "U:" if msg.role == "user" else "A:"
+        for block in msg.content:
+            line = _render_block(block)
+            if line:
+                rendered.append(f"{prefix} {line}")
+    if not rendered:
+        return "(no renderable content yet)"
+    out = "\n".join(rendered)
+    if len(out) > _PEEK_TOTAL_CHAR_CAP:
+        out = "…" + out[-(_PEEK_TOTAL_CHAR_CAP - 1):]
+    return out
 
 
 class RunSubagentInput(BaseModel):
@@ -68,17 +136,13 @@ def _validate_run_subagent_request(
             is_error=True,
         )
 
-    # Recursion gate — subagents are focused workers and may not spawn
-    # further subagents. (Today the gate is implicit because background
-    # tools are stripped for ``agent_type=="subagent"``; with run_subagent
-    # now synchronous we enforce it explicitly.)
     caller_agent_type = context.metadata.get("agent_type")
     if caller_agent_type == "subagent":
         return ToolResult(
             output=(
                 "run_subagent: subagents may not spawn further subagents. "
                 "This is a hard contract — handle the work directly or "
-                "submit your findings via submit_exploration_result."
+                "submit your findings via the terminal tool."
             ),
             is_error=True,
         )
@@ -104,14 +168,17 @@ def _validate_run_subagent_request(
 @tool(
     name="run_subagent",
     description=(
-        "Run a registered subagent to completion and return its findings. "
-        "The subagent receives `prompt` as its only input and must finish "
-        "by calling its terminal tool (typically submit_exploration_result); "
-        "that tool's text output is returned as this tool's result."
+        "Spawns a registered subagent as a background task. The subagent "
+        "receives `prompt` as its only input and must finish by calling its "
+        "terminal tool (typically submit_exploration_result); that tool's "
+        "text output is delivered as this tool's result. Use "
+        "check_background_task_result(task_id) to peek progress or fetch "
+        "the finished result."
     ),
-    short_description="Run a subagent and return its findings.",
+    short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
+    background="always",
     task_type="subagent",
 )
 async def run_subagent(
@@ -120,7 +187,7 @@ async def run_subagent(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Spawn a named subagent synchronously and forward its terminal result."""
+    """Spawn a named subagent and rejoin via the background-task lifecycle."""
     from engine.runtime.lifecycle import run_ephemeral_agent
 
     validation = _validate_run_subagent_request(
@@ -136,14 +203,24 @@ async def run_subagent(
     sandbox_id = context.metadata.sandbox_id or None
     parent_run_id = context.metadata.agent_run_id
     parent_task_id = context.metadata.get("task_id")
+    bg_manager = context.metadata.background_task_manager
+    bg_task_id = context.metadata.background_task_id
 
-    # Tag the spawned subagent's metadata so the recursion gate above and
-    # any other agent_type-aware checks see the correct caller type when
-    # the subagent itself dispatches tools.
     sub_meta = ExecutionMetadata()
     sub_meta["agent_type"] = "subagent"
     if sub_def.role:
         sub_meta["role"] = sub_def.role
+
+    def _on_spawned(agent: Any) -> None:
+        # Register the live-peek provider so check_background_task_result
+        # can render the inner agent's last N messages while it's running
+        # (and after, if the terminal tool was never called).
+        if bg_manager is None or not isinstance(bg_task_id, str):
+            return
+        bg_manager.set_progress_provider(
+            bg_task_id,
+            lambda last_n: format_last_n_messages(agent.display_messages, last_n),
+        )
 
     result = await run_ephemeral_agent(
         parent_cfg,
@@ -154,21 +231,30 @@ async def run_subagent(
         parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
         parent_task_id=parent_task_id if isinstance(parent_task_id, str) else None,
         extra_tool_metadata=sub_meta,
+        on_agent_spawned=_on_spawned,
     )
 
+    # Stamp the metadata flag check_background_task_result uses to
+    # distinguish "finished with terminal result" from "finished without
+    # calling the terminal tool" (which we want to report as failed).
     if result.status == "failed":
         return ToolResult(
             output=f"run_subagent: subagent crashed: {result.error}",
             is_error=True,
+            metadata={"subagent_terminal_called": False},
         )
     if result.terminal_result is None:
         return ToolResult(
             output=(
-                "run_subagent: subagent exited without calling a terminal tool "
-                "(e.g. submit_exploration_result). The findings were not delivered."
+                "run_subagent: subagent exited without calling a terminal tool. "
+                "The findings were not delivered."
             ),
             is_error=True,
+            metadata={"subagent_terminal_called": False},
         )
-    # Forward the terminal tool's ToolResult verbatim — the parent receives
-    # whatever findings text the subagent submitted.
-    return result.terminal_result
+    terminal = result.terminal_result
+    return ToolResult(
+        output=terminal.output,
+        is_error=terminal.is_error,
+        metadata={**(terminal.metadata or {}), "subagent_terminal_called": True},
+    )

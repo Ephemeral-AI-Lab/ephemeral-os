@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.runtime.background_tasks import BackgroundTaskManager, append_background_reminder
 from tools.core.base import ToolResult
 
 
@@ -35,5 +35,20 @@ async def test_get_reminder_diff_uses_progress_provider_deltas() -> None:
         idx = 1
         second_lines, _ = mgr.get_reminder_diff(task_id)
         assert second_lines == ["A: [text] second"]
+    finally:
+        await mgr.cancel(task_id, "")
+
+
+async def test_append_background_reminder_only_updates_history() -> None:
+    mgr = BackgroundTaskManager()
+    task_id = mgr.next_alias()
+    display_messages = []
+    mgr.launch(task_id, "run_subagent", {}, _slow_tool())
+
+    try:
+        appended = append_background_reminder(mgr, display_messages)
+        assert appended is True
+        assert len(display_messages) == 1
+        assert display_messages[0].background_task_states[0].task_id == task_id
     finally:
         await mgr.cancel(task_id, "")

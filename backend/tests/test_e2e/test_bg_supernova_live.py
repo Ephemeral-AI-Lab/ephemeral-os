@@ -439,7 +439,7 @@ class TestSupernovaCascadingBugs(_SupernovaBase):
                 "4. Re-run the tests and wait for results\n"
                 "5. Repeat until ALL tests pass\n\n"
                 "The test suite takes ~20 seconds to run. Use background execution "
-                "and wait_for_background_task."
+                "and wait_background_tasks."
             ),
             log_label="cascading_bugs",
             verify_command="cd /home/daytona/project && python3 test_calc.py",
@@ -528,7 +528,7 @@ class TestSupernovaConfigTuning(_SupernovaBase):
                 "why each test fails, update config.json to fix the issue, and re-run.\n"
                 "Keep iterating until all 4 tests pass.\n\n"
                 "The test suite takes ~12 seconds per run. Use background execution "
-                "and wait_for_background_task."
+                "and wait_background_tasks."
             ),
             log_label="config_tuning",
             verify_command="cd /home/daytona/flaky && python3 run_tests.py",

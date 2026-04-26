@@ -139,6 +139,11 @@ async def run_ephemeral_agent(
         session_state=session_state,
         sandbox_id=sandbox_id,
     )
+    if on_agent_spawned is not None:
+        try:
+            on_agent_spawned(agent)
+        except Exception:
+            logger.debug("on_agent_spawned hook raised", exc_info=True)
     logger.info(
         "Spawned agent %r (model=%s, session=%s, parent_run=%s, parent_task=%s)",
         agent.agent_name,

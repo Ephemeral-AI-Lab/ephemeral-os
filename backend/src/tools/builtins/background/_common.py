@@ -47,6 +47,11 @@ def render_background_snapshot(
     elapsed_seconds: float | None = None,
 ) -> str:
     """Render a background status snapshot exactly as the tools return it."""
+    # "progress" is no longer emitted by any tool, but the compactor must
+    # still rebuild historical blocks from saved sessions.
+    if kind == "progress":
+        return json.dumps(statuses, indent=2)
+
     if kind == "wait_completed":
         return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
 

@@ -47,7 +47,7 @@ def test_subagent_tools_expose_run_subagent_without_instruction_block():
     tools = make_subagent_tools()
 
     assert [tool.name for tool in tools] == ["run_subagent"]
-    assert tools[0].short_description == "Run a subagent and return its findings."
+    assert tools[0].short_description == "Spawn a subagent in the background."
 
 
 def test_background_tools_expose_management_tools_without_instruction_block():
@@ -55,7 +55,8 @@ def test_background_tools_expose_management_tools_without_instruction_block():
 
     assert [tool.name for tool in tools] == [
         "cancel_background_task",
-        "wait_for_background_task",
+        "check_background_task_result",
+        "wait_background_tasks",
     ]
 
 

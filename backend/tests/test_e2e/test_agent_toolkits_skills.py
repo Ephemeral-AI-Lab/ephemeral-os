@@ -42,8 +42,8 @@ class TestInfrastructure:
         assert "submit_replan" not in tool_names
         assert "submit_task_plan" not in tool_names
         assert "declare_blocker" not in tool_names
-        assert "load_skill" in tool_names
-        assert "wait_for_background_task" in tool_names
+        assert "load_skill" not in tool_names
+        assert "wait_background_tasks" in tool_names
 
 
 class TestConfigBackedAgentApi:
@@ -73,8 +73,8 @@ class TestConfigBackedAgentApi:
         assert "submit_replan" not in tools
         assert "submit_task_success" not in tools
         assert "request_replan" not in tools
-        assert "load_skill" in tools
-        assert "wait_for_background_task" in tools
+        assert "load_skill" not in tools
+        assert "wait_background_tasks" in tools
 
     @pytest.mark.parametrize(
         ("method", "path"),

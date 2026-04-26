@@ -151,7 +151,7 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     )
 
     assert has_background is True
-    assert registry.get("wait_for_background_task") is not None
+    assert registry.get("wait_background_tasks") is not None
     assert registry.get("cancel_background_task") is not None
 
 
@@ -166,7 +166,7 @@ def test_finalize_skips_background_management_tools_for_subagent() -> None:
     )
 
     assert has_background is False
-    assert registry.get("wait_for_background_task") is None
+    assert registry.get("wait_background_tasks") is None
     assert registry.get("cancel_background_task") is None
 
 
@@ -185,7 +185,7 @@ def test_finalize_derives_terminal_tool_guidance_from_registry() -> None:
     assert "- `terminal_tool`" in prompt
 
 
-def test_build_agent_tool_registry_registers_skill_tools_only_when_declared(monkeypatch) -> None:
+def test_build_agent_tool_registry_does_not_register_skill_tools(monkeypatch) -> None:
     calls: list[list[str] | None] = []
 
     monkeypatch.setattr(
@@ -216,8 +216,8 @@ def test_build_agent_tool_registry_registers_skill_tools_only_when_declared(monk
     )
 
     assert no_skills_registry.get("dummy_tool") is None
-    assert declared_skills_registry.get("dummy_tool") is not None
-    assert calls == [["demo-skill"]]
+    assert declared_skills_registry.get("dummy_tool") is None
+    assert calls == []
 
 
 def test_default_sandbox_agent_registers_daytona_tools() -> None:

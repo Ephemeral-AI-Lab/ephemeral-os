@@ -54,12 +54,7 @@ def collect_tool_catalog(
         _merge_tool(tool)
 
     if include_runtime_tools:
-        from skills.core.loader import load_skill_registry
         from tools.builtins.background import make_background_tools
-        from tools.builtins.skills import make_skills_tools
-
-        for tool in make_skills_tools(load_skill_registry(cwd)):
-            _merge_tool(tool)
 
         background_tool_names = _background_tool_names()
         if background_tool_names:

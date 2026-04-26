@@ -37,7 +37,7 @@ from engine.core.streaming_executor import StreamingToolExecutor, defer_backgrou
 from engine.runtime.background_dispatch import launch_and_collect_bg_events
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.background_tasks import (
-    append_and_emit_reminder,
+    append_background_reminder,
     deliver_completed_background_task,
 )
 from prompt.prompt_report_recorder import PromptReportRecorder
@@ -221,9 +221,7 @@ async def _run_query_loop(
                 yield event, None
 
             if background_manager.has_pending():
-                reminder_event = append_and_emit_reminder(background_manager, display_messages)
-                if reminder_event is not None:
-                    yield reminder_event, None
+                append_background_reminder(background_manager, display_messages)
 
         if context.on_turn is not None:
             try:
@@ -446,9 +444,7 @@ async def _run_query_loop(
                 event = deliver_completed_background_task(completed_task, display_messages)
                 yield event, None
             else:
-                reminder_event = append_and_emit_reminder(background_manager, display_messages)
-                if reminder_event is not None:
-                    yield reminder_event, None
+                append_background_reminder(background_manager, display_messages)
             continue
 
         tool_results: list[ToolResultBlock] = list(streamed_rejections)

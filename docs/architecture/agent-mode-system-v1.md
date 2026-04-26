@@ -61,9 +61,6 @@ class AgentDefinition(BaseModel):
     model: str | None = None
     tool_call_limit: int | None = None
 
-    # --- skills ---
-    skills: list[str] = []
-
     # --- lifecycle ---
     background: bool = False
 
@@ -138,7 +135,7 @@ EXECUTOR = AgentDefinition(
             briefing="...",                        # inline; see Briefing Mechanism
         ),
     ],
-    # ... system_prompt, model, skills, etc.
+    # ... system_prompt, model, etc.
 )
 
 EVALUATOR = AgentDefinition(

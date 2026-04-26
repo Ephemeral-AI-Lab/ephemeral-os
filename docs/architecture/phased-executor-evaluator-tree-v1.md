@@ -186,10 +186,10 @@ reading typed summaries.
 - The "blackboard" is the `summary` field on each task, plus the
   `acceptance_criteria` and `handoff_note` fields wired through the
   evaluator.
-- The summary's *shape* is not a schema — it is **skill-guided**.
-  Agents emit prose; the skill prompt for each role conditions that
-  prose to be consistently shaped without crystallizing a typed
-  contract. This trades programmatic accessors for migration freedom.
+- The summary's *shape* is not a schema. Agents emit prose conditioned
+  by their role prompt, which keeps summaries consistently shaped without
+  crystallizing a typed contract. This trades programmatic accessors for
+  migration freedom.
 - When a leaf calls `submit_task_completion(summary)`, the summary
   propagates up the `closes_for` chain — leaf → evaluator → parent —
   all transitioning to `DONE`. This is invariant 14: `AWAITING →
@@ -202,7 +202,7 @@ reading typed summaries.
 
 This is a *structured* blackboard for verification — write-once-per-task,
 propagation-routed — combined with a *free-form* shared workspace for
-collaboration. It trades schema rigor for skill-driven evolution and a
+collaboration. It trades schema rigor for prompt-level evolution and a
 clean audit trail.
 
 ---
@@ -407,7 +407,7 @@ ones:
   parent decides to call a reviewer" — it is graph topology.
 - **OMC = 4 on long-horizon continuation**: `/ralph` is a real
   primitive, not just a prose loop. Knocked from 5 because the
-  termination criterion is verifier-defined per skill, not
+  termination criterion is verifier-defined by prompt, not
   structurally tied to acceptance criteria the way v1's evaluator is.
 - **v1 = 2 on operator ergonomics**: writing `acceptance_criteria` +
   a flat task plan up front is friction. v2 should consider letting
@@ -442,7 +442,7 @@ To keep the design defensible:
   is the *only* iteration primitive, and it always extends — never
   rewrites.
 - **No typed artifact schema.** The shape of `summary` is guided by
-  per-role skills, not by a Pydantic-style contract. This trades
+  per-role prompts, not by a Pydantic-style contract. This trades
   programmatic accessors for prompt-level evolution; new task types
   do not require schema migrations.
 - **No cross-task summary references.** Siblings do not read each
@@ -498,7 +498,7 @@ To keep the design defensible:
 v1 = **DAG inside a phase** (parallelism) + **evaluator at every
 sink** (verification gate, single-shot) + **one shared workspace
 with per-tool-call OCC** (so siblings can see each other's work
-without tearing it) + **skill-guided summary propagation**
+without tearing it) + **prompt-guided summary propagation**
 (auditable verification channel).
 
 The two-channel split is the design center: the **workspace is the

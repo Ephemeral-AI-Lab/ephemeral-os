@@ -1,6 +1,6 @@
 <h1 align="center"><img src="assets/logo.png" alt="EphemeralOS" width="64" style="vertical-align: middle;">&nbsp; <code>oh</code> — EphemeralOS: Open Agent Harness</h1>
 
-**EphemeralOS** delivers core lightweight agent infrastructure: tool-use, skills, memory, and background subagents.
+**EphemeralOS** delivers core lightweight agent infrastructure: tool-use, memory, and background subagents.
 
 **Join the community**: contribute **Harness** for open agent development.
 
@@ -67,10 +67,8 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 <img src="assets/scene-tools.png" width="140">
 
 <p align="center"><strong>• 36 built-in tools in one flat registry</strong></p>
-<p align="center"><strong>• Runtime adds `skills` and `background` tools</strong></p>
-<p align="center"><strong>• On-Demand Skill Loading (.md)</strong></p>
-<p align="center"><strong>• Plugin Ecosystem (Skills + Hooks + Agents)</strong></p>
-<p align="center"><strong>• Compatible with anthropics/skills & plugins</strong></p>
+<p align="center"><strong>• Runtime adds background task tools as needed</strong></p>
+<p align="center"><strong>• Plugin Ecosystem (Hooks + Agents)</strong></p>
 
 </td>
 <td width="20%" align="center" style="vertical-align: top; padding: 15px;">
@@ -135,7 +133,7 @@ An **Agent Harness** is the complete infrastructure that wraps around an LLM to 
 EphemeralOS is an open-source Python implementation designed for **researchers, builders, and the community**:
 
 - **Understand** how production AI agents work under the hood
-- **Experiment** with cutting-edge tools, skills, and agent runtime patterns
+- **Experiment** with cutting-edge tools and agent runtime patterns
 - **Extend** the harness with custom plugins, providers, and domain knowledge
 - **Build** specialized agents on top of proven architecture
 
@@ -258,7 +256,7 @@ EphemeralOS implements the core Agent Harness pattern across the live backend an
 backend/src/
   engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
   tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent
-  skills/          # 📚 Skill loading, registry, DB store, and API
+  skills/          # 📚 Skill registry internals and read-only API
   agents/          # 🤖 Agent definition loading, builder, registry, CRUD API
   server/          # 🌐 FastAPI app, SSE protocol, state snapshots
   sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
@@ -266,7 +264,7 @@ backend/src/
   config/          # ⚙️ Settings, model resolution, paths
 backend/config/
   agents/          # 🤖 Optional local agent definitions (empty by default)
-  skills/          # 📚 Optional local markdown skills (empty by default)
+  skills/          # 📚 Skill API and registry internals
 frontend/
   web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
   terminal/        # 💬 Terminal UI components and backend session hooks
@@ -322,7 +320,6 @@ Current runtime inventory:
 | `context_read` / `context_write` | 3 / 4 | File notes plus scope and staleness checks |
 | `memory` | 3 | Exploration cache reuse and edit-history conflict prediction |
 | `subagent` | 1 | `run_subagent` for bounded configured subagent work |
-| Runtime `skills` | 2 | `load_skill`, `load_skill_reference` |
 | Runtime `background` | 3 | `check_background_progress`, `wait_for_background_task`, `cancel_background_task` |
 
 Every tool has:
@@ -333,10 +330,8 @@ Every tool has:
 
 ### 📚 Skills System
 
-Skills are **on-demand knowledge** — loaded only when the model needs them:
-
-The repo no longer ships built-in agent playbook skills under `backend/config/skills/`.
-User-defined markdown skills are loaded from `~/.ephemeralos/skills/`, and the lazy `skills` tools load them only when an agent asks for them.
+Agents are not equipped with skill-loading tools by default, and the repo does
+not ship built-in `SKILL.md` playbooks under `backend/config/skills/`.
 
 ### 🔌 Plugin System
 
@@ -363,7 +358,7 @@ oh plugin enable <name>
 EphemeralOS is useful as a lightweight harness layer around Claude-style tooling conventions:
 
 - **OpenClaw-oriented workflows** can reuse Markdown-first knowledge and command-driven collaboration patterns.
-- **Claude-style plugins and skills** stay portable because EphemeralOS keeps those formats familiar.
+- **Claude-style plugins** stay portable because EphemeralOS keeps those formats familiar.
 - **Background subagent work** maps onto the built-in subagent and background execution primitives.
 
 For concrete usage ideas instead of generic claims, see [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
@@ -423,10 +418,10 @@ Subcommands: oh mcp | oh plugin | oh auth
 |-------|-------|--------|
 | Unit + Integration | 114 | ✅ All passing |
 | CLI Flags E2E | 6 | ✅ Real model calls |
-| Harness Features E2E | 9 | ✅ Retry, skills, parallel, permissions |
+| Harness Features E2E | 9 | ✅ Retry, parallel, permissions |
 | React TUI E2E | 3 | ✅ Welcome, conversation, status |
 | TUI Interactions E2E | 4 | ✅ Commands, permissions, shortcuts |
-| Real Skills + Plugins | 12 | ✅ anthropics/skills + claude-code/plugins |
+| Real Plugins | 12 | ✅ claude-code/plugins |
 
 ```bash
 # Run all tests
@@ -457,27 +452,6 @@ class MyTool(BaseTool):
         return ToolResult(output=f"Result for: {arguments.query}")
 ```
 
-### Add a Custom Skill
-
-Create `~/.ephemeralos/skills/my-skill.md`:
-
-```markdown
----
-name: my-skill
-description: Expert guidance for my specific domain
----
-
-# My Skill
-
-## When to use
-Use when the user asks about [your domain].
-
-## Workflow
-1. Step one
-2. Step two
-...
-```
-
 ### Add a Plugin
 
 Create `.ephemeralos/plugins/my-plugin/.claude-plugin/plugin.json`:
@@ -500,7 +474,7 @@ EphemeralOS is most useful when treated as a small, inspectable harness you can 
 
 - **Repo coding assistant** for reading code, patching files, and running checks locally.
 - **Headless scripting tool** for `json` and `stream-json` output in automation flows.
-- **Plugin and skill testbed** for experimenting with Claude-style extensions.
+- **Plugin testbed** for experimenting with Claude-style extensions.
 - **Multi-agent prototype harness** for task delegation and background execution.
 - **Provider comparison sandbox** across Anthropic-compatible backends.
 
@@ -515,7 +489,6 @@ EphemeralOS is a **community-driven research project**. We welcome contributions
 | Area | Examples |
 |------|---------|
 | **Tools** | New tool implementations for specific domains |
-| **Skills** | Domain knowledge `.md` files (finance, science, DevOps...) |
 | **Plugins** | Workflow plugins with commands, hooks, agents |
 | **Providers** | Support for more LLM backends (OpenAI, Ollama, etc.) |
 | **Agents** | Subagent workflows and background execution |

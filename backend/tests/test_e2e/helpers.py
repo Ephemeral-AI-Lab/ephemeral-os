@@ -32,7 +32,7 @@ def log_result(result, label: str, *, extra_fields: dict[str, int] | None = None
     """
     bg_started = result.background_started()
     bg_completed = result.background_completed()
-    waits = result.tool_count("wait_for_background_task")
+    waits = result.tool_count("wait_background_tasks")
     cancels = result.tool_count("cancel_background_task")
 
     lines = [
@@ -64,7 +64,7 @@ def assert_fg_during_bg(result, min_fg: int = 1) -> None:
 
     Verifies that at least *min_fg* foreground ``daytona_shell`` / ``daytona_write_file``
     calls occurred between the first background launch and the first
-    ``wait_for_background_task`` or ``cancel_background_task`` call.
+    ``wait_background_tasks`` or ``cancel_background_task`` call.
     This proves true fg+bg concurrency.
     """
     bg_start_indices = [
@@ -75,7 +75,7 @@ def assert_fg_during_bg(result, min_fg: int = 1) -> None:
     lifecycle_indices = [
         i
         for i, tc in enumerate(result.tool_calls)
-        if tc.name in ("wait_for_background_task", "cancel_background_task")
+        if tc.name in ("wait_background_tasks", "cancel_background_task")
     ]
     assert bg_start_indices, "No background launches found"
     assert lifecycle_indices, "No check/cancel calls found"

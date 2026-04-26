@@ -177,9 +177,8 @@ def _build_agent_tool_registry(
 ) -> ToolRegistry:
     """Build the tool registry for a spawning agent.
 
-    Registers tools requested by *agent_def*, Daytona sandbox tools when
-    a sandbox is selected for a default agent, and skill loading tools when
-    skills are declared or no agent definition is supplied.
+    Registers tools requested by *agent_def* and Daytona sandbox tools when
+    a sandbox is selected for a default agent.
     """
     tool_registry = create_default_tool_registry()
 
@@ -217,21 +216,6 @@ def _build_agent_tool_registry(
 
         tool_registry.register_many(make_daytona_tools())
         logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
-
-    if agent_def is None or agent_def.skills:
-        from skills.core.loader import load_skill_registry
-        from tools.builtins.skills import make_skills_tools
-
-        skill_filter = agent_def.skills if agent_def and agent_def.skills else None
-        skill_registry = load_skill_registry(config.cwd)
-        skill_tools = make_skills_tools(skill_registry, skill_filter)
-        if skill_tools:
-            tool_registry.register_many(skill_tools)
-            logger.info(
-                "Registered %d skill loading tools for agent %r",
-                len(skill_tools),
-                agent_name,
-            )
 
     return tool_registry
 

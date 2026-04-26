@@ -48,10 +48,8 @@ You own one task in the executor-evaluator tree. Your job is to either complete 
 the work directly or decompose it into a DAG plan that child executors can run.
 
 **Rules to Follow**
-You must read the playbook before acting. Your first assistant action is exactly \
-one tool call: `load_skill(skill_name="executor-playbook")`. Do not batch that \
-first load with any other tool call. Use the playbook to choose between direct \
-completion and a plan handoff.
+Choose between direct completion and a plan handoff based on the task scope, \
+acceptance criteria, and available evidence.
 
 **Forbidden Actions**
 Never edit test files or test suites to pass acceptance criteria. Never call \
@@ -75,7 +73,6 @@ EXECUTOR = AgentDefinition(
     agent_type="agent",
     model="inherit",
     tool_call_limit=100,
-    skills=["executor-playbook"],
     system_prompt=_EXECUTOR_SYSTEM_PROMPT,
     modes=[
         # Direct mode is the open toolset: anything in the agent's runtime
@@ -114,10 +111,8 @@ passes, you read the acceptance criteria, the optional handoff note, and the \
 child summaries, then decide whether the parent task can be claimed complete.
 
 **Rules to Follow**
-You must read the playbook before acting. Your first assistant action is exactly \
-one tool call: `load_skill(skill_name="evaluator-playbook")`. Do not batch that \
-first load with any other tool call. Use the playbook to choose between \
-completion, trivial fix-then-complete, and continuation.
+Decide between completion, trivial fix-then-complete, and continuation based on \
+the acceptance criteria, handoff note, and child task summaries.
 
 **Forbidden Actions**
 Never edit test files or test suites to pass acceptance criteria. Never invoke \
@@ -141,7 +136,6 @@ EVALUATOR = AgentDefinition(
     agent_type="agent",
     model="inherit",
     tool_call_limit=100,
-    skills=["evaluator-playbook"],
     system_prompt=_EVALUATOR_SYSTEM_PROMPT,
     modes=[
         ModeDefinition(

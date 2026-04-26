@@ -24,7 +24,7 @@ IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
 - Use daytona_shell to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
-- Use wait_for_background_task to wait on background tasks.
+- Use wait_background_tasks to wait on background tasks.
 - Use cancel_background_task to cancel running background tasks.
 
 Always be concise. Execute tools, don't just describe them.
@@ -63,7 +63,7 @@ class TestPhysicalCancelKillsProcess:
             "1. Run this command in background (background: true):\n"
             "   sleep 15 && echo MARKER > /tmp/cancel_test_marker.txt\n"
             "2. Run 'echo READY' in foreground\n"
-            "3. Briefly poll the background task using wait_for_background_task with a short timeout\n"
+            "3. Briefly poll the background task using wait_background_tasks with a short timeout\n"
             "4. Cancel the background task using cancel_background_task "
             "with reason: 'Testing physical cancel'\n"
             "5. Wait 3 seconds: run 'sleep 3 && echo WAITED' in foreground\n"
@@ -140,7 +140,7 @@ class TestPhysicalCancelPidGone:
             "Do these steps IN ORDER:\n"
             "1. Run 'sleep 300' in background (background: true)\n"
             "2. Run 'echo FOREGROUND_OK' in foreground\n"
-            "3. Briefly poll the background task using wait_for_background_task with a short timeout\n"
+            "3. Briefly poll the background task using wait_background_tasks with a short timeout\n"
             "4. Cancel the background task using cancel_background_task "
             "with reason: 'PID test cancel'\n"
             "5. Wait briefly: run 'sleep 2 && echo WAIT_DONE' in foreground\n"
