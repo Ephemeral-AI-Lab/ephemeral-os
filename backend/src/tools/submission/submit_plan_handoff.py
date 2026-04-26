@@ -22,7 +22,10 @@ class PlanHandoffInput(BaseModel):
     )
     task_specs: dict[str, TaskSpec] = Field(
         ...,
-        description="Map of task id -> {title, spec}. Every entry id must be a key here.",
+        description=(
+            "Map of task id -> {title, task_input}. Every entry id must be a key here. "
+            "The legacy {title, spec} shape is still accepted."
+        ),
     )
     acceptance_criteria: str = Field(
         ...,

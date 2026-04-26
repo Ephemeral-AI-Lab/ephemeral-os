@@ -152,7 +152,7 @@ async def test_prepare_entry_happy_path_mutates_mode() -> None:
     assert not res.is_error
     assert res.mode_transition == "prepare_continue_to_work"
     assert "You have entered prepare_continue_to_work mode" in res.output
-    assert "submit_continue_to_work with a gap summary" in res.output
+    assert "submit_continue_to_work with continuation input" in res.output
     assert task.mode == "prepare_continue_to_work"
 
 

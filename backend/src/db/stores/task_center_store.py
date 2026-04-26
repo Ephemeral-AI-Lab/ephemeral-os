@@ -46,7 +46,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict:
         "run_id": record.run_id,
         "role": record.role,
         "title": record.title,
-        "spec": record.spec,
+        "task_input": record.task_input,
         "status": record.status,
         "summary": record.summary,
         "created_at": record.created_at.isoformat() if record.created_at else None,
@@ -162,7 +162,7 @@ class TaskCenterStore(SyncStoreMixin):
         run_id: str,
         role: str,
         title: str,
-        spec: str,
+        task_input: str,
         status: str,
         summary: str | None,
     ) -> None:
@@ -175,7 +175,7 @@ class TaskCenterStore(SyncStoreMixin):
                     run_id=run_id,
                     role=role,
                     title=title,
-                    spec=spec,
+                    task_input=task_input,
                     status=status,
                     summary=summary,
                     created_at=now,
@@ -185,7 +185,7 @@ class TaskCenterStore(SyncStoreMixin):
             else:
                 record.role = role
                 record.title = title
-                record.spec = spec
+                record.task_input = task_input
                 record.status = status
                 record.summary = summary
                 record.updated_at = now

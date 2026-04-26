@@ -98,7 +98,7 @@ class TaskCenter:
             run_id=self.run_id,
             role=task.role,
             title=task.title,
-            spec=task.spec,
+            task_input=task.spec,
             status=task.status.value,
             summary=task.summary,
         )
@@ -191,13 +191,18 @@ class TaskCenter:
         # immediately; the rest stay PENDING until their direct deps are DONE.
         for entry in tasks:
             tid = entry["id"]
-            spec = task_specs[tid]
+            task_spec = task_specs[tid]
+            task_input = task_spec.get("task_input", task_spec.get("spec"))
+            if not isinstance(task_input, str) or not task_input:
+                raise TaskCenterError(
+                    f"submit_plan_handoff: task_specs[{tid!r}] missing task_input"
+                )
             child_status = Status.READY if not deps[tid] else Status.PENDING
             child = Task(
                 id=tid,
                 role="executor",
-                title=spec["title"],
-                spec=spec["spec"],
+                title=task_spec["title"],
+                spec=task_input,
                 status=child_status,
                 parent_id=executor_id,
                 needs=deps[tid],
@@ -212,7 +217,7 @@ class TaskCenter:
         self._persist_task(parent)
         self._wakeup.set()
 
-    def submit_continue_to_work(self, evaluator_id: TaskId, summary: str) -> None:
+    def submit_continue_to_work(self, evaluator_id: TaskId, task_input: str) -> None:
         """Spawn a continuation executor under the evaluator; evaluator -> AWAITING."""
         evaluator = self._graph.get(evaluator_id)
         if evaluator.role != "evaluator":
@@ -227,7 +232,7 @@ class TaskCenter:
             title=f"Continuation under {evaluator_id}",
             spec=(
                 "Continue the parent task and address the evaluator's gap.\n\n"
-                f"Continuation summary:\n{summary}"
+                f"Continuation input:\n{task_input}"
             ),
             status=Status.READY,
             parent_id=evaluator_id,

@@ -51,7 +51,7 @@ Terminal tool
 
 Required fields on submit_plan_handoff
   - tasks: flat DAG entries {id, deps}; transitive deps are implicit.
-  - task_specs: map of id -> {title, spec} for every task above.
+  - task_specs: map of id -> {title, task_input} for every task above.
   - acceptance_criteria: the closure contract the evaluator will check.
   - handoff_note: articulate what the plan covers, what risks remain, and
     which acceptance_criteria items are most fragile. The evaluator reads

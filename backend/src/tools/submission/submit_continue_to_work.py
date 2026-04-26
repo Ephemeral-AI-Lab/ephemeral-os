@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
@@ -10,13 +10,14 @@ from tools.submission._models import SubmissionOutput
 
 
 class ContinueToWorkInput(BaseModel):
-    summary: str = Field(
+    task_input: str = Field(
         ...,
         min_length=1,
+        validation_alias=AliasChoices("task_input", "summary"),
         description=(
-            "Why continuation is needed: which acceptance_criteria are not yet "
-            "satisfied, what gap remains, and what the continuation executor "
-            "should focus on."
+            "Input for the continuation executor: which acceptance_criteria are "
+            "not yet satisfied, what gap remains, and what to focus on. The "
+            "legacy 'summary' key is accepted."
         ),
     )
 
@@ -33,7 +34,7 @@ class ContinueToWorkInput(BaseModel):
     is_terminal_tool=True,
 )
 async def submit_continue_to_work(
-    summary: str,
+    task_input: str,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
@@ -54,5 +55,5 @@ async def submit_continue_to_work(
             output="submit_continue_to_work: missing task_center or task_id in metadata",
             is_error=True,
         )
-    tc.submit_continue_to_work(task_id, summary)
+    tc.submit_continue_to_work(task_id, task_input)
     return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

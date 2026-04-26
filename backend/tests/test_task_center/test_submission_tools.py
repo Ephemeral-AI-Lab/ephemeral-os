@@ -150,7 +150,7 @@ async def test_plan_handoff_rejects_cycle() -> None:
 @pytest.mark.asyncio
 async def test_continue_rejects_executor_role() -> None:
     tc = _FakeTC()
-    arg = ContinueToWorkInput(summary="gap")
+    arg = ContinueToWorkInput(task_input="gap")
     res = await submit_continue_to_work.execute(
         arg, _ctx(tc, task_id="x", role="executor")
     )
@@ -162,7 +162,7 @@ async def test_continue_rejects_executor_role() -> None:
 @pytest.mark.asyncio
 async def test_continue_accepts_evaluator_role() -> None:
     tc = _FakeTC()
-    arg = ContinueToWorkInput(summary="gap")
+    arg = ContinueToWorkInput(task_input="gap")
     res = await submit_continue_to_work.execute(
         arg, _ctx(tc, task_id="ev", role="evaluator")
     )

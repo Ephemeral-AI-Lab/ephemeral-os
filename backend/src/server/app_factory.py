@@ -25,7 +25,7 @@ load_dotenv()
 
 from config import Settings, load_settings
 from db.engine import get_session_factory, initialize_db
-from db.stores import AgentRunStore, ModelStore, TaskCenterStore, UsageStore
+from db.stores import AgentRunStore, ModelStore, TaskCenterStore
 from server.protocol import BackendEvent, BackendHostConfig, ToolSnapshot
 from server.logging_config import configure_runtime_logging
 from providers.types import SupportsStreamingMessages
@@ -227,7 +227,6 @@ _runtime: RuntimeState | None = None
 # Database stores — module-level singletons, initialised during lifespan
 task_center_store = TaskCenterStore()
 agent_run_store = AgentRunStore()
-usage_store = UsageStore()
 model_store = ModelStore()
 
 
@@ -252,8 +251,6 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
         task_center_store.initialize(sf)
     if not agent_run_store.is_ready:
         agent_run_store.initialize(sf)
-    if not usage_store.is_ready:
-        usage_store.initialize(sf)
     if not model_store.is_available:
         model_store.initialize(sf)
 

@@ -19,7 +19,6 @@ import time
 import traceback
 from collections.abc import Callable
 from typing import Any
-from uuid import uuid4
 
 import pytest
 
@@ -91,7 +90,7 @@ async def _run_executor_with_debug(
     from config.model_config import NoActiveModelError, try_get_active_model_kwargs
     from config.settings import load_settings
     from message.event_printer import MultiAgentEventPrinter
-    from server.app_factory import SessionConfig
+    from server.app_factory import RuntimeConfig
     from task_center.agent_spawn import make_production_spawn
     from task_center.center import TaskCenter
 
@@ -104,8 +103,7 @@ async def _run_executor_with_debug(
     if not model:
         raise RuntimeError("Active model registration has no 'model' id")
 
-    session_config = SessionConfig(cwd=".", session_id=uuid4().hex[:12])
-    EvalAgent._ensure_parent_session_row(session_config, model)
+    runtime_config = RuntimeConfig(cwd=".")
 
     events: list[Any] = []
     printer = MultiAgentEventPrinter(color=False, sink=lambda msg: print(msg, flush=True))
@@ -125,8 +123,8 @@ async def _run_executor_with_debug(
             closed_by_harness = True
 
     task_center = TaskCenter(
-        session_config,
-        spawn_func=make_production_spawn(session_config),
+        runtime_config,
+        spawn_func=make_production_spawn(runtime_config),
         on_event=_on_event,
     )
 

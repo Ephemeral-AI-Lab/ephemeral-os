@@ -98,8 +98,12 @@ async def test_task_center_persists_request_run_tasks_and_graph() -> None:
 
     tasks = {task["id"]: task for task in store.list_tasks_for_run("run1")}
     assert tasks["run1:t1"]["status"] == "done"
+    assert tasks["run1:t1"]["task_input"] == "do the work"
+    assert "spec" not in tasks["run1:t1"]
+    assert tasks["run1:child"]["task_input"] == "child spec"
     assert tasks["run1:child"]["summary"] == "child done"
     assert tasks["run1:t1-eval"]["role"] == "evaluator"
+    assert tasks["run1:t1-eval"]["task_input"].startswith("Validate the parent task")
 
     graph = {node["task_id"]: node for node in store.list_graph_for_run("run1")}
     assert graph["run1:t1"]["children_ids"] == ["run1:child", "run1:t1-eval"]
@@ -122,7 +126,7 @@ def test_agent_run_is_one_to_one_with_task() -> None:
         run_id="run1",
         role="executor",
         title="Root",
-        spec="prompt",
+        task_input="prompt",
         status="running",
         summary=None,
     )

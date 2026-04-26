@@ -8,7 +8,6 @@ from db.models.task_center import (
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
 )
-from token_tracker.models import TokenUsageRecord
 
 __all__ = [
     "AgentRunRecord",
@@ -17,5 +16,4 @@ __all__ = [
     "TaskCenterRequestRecord",
     "TaskCenterRunRecord",
     "TaskCenterTaskRecord",
-    "TokenUsageRecord",
 ]

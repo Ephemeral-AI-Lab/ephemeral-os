@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class TaskDependencyEntry(BaseModel):
@@ -22,7 +22,12 @@ class TaskSpec(BaseModel):
     """The descriptive part of a child task."""
 
     title: str = Field(..., min_length=1, description="Short title shown in UIs.")
-    spec: str = Field(..., min_length=1, description="What the child must accomplish.")
+    task_input: str = Field(
+        ...,
+        min_length=1,
+        validation_alias=AliasChoices("task_input", "spec"),
+        description="Input prompt for the child task. The legacy 'spec' key is accepted.",
+    )
 
 
 class SubmissionOutput(BaseModel):

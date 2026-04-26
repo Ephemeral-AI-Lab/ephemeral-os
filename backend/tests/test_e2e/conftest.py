@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import time
 import types
 from pathlib import Path
 from typing import Any, AsyncIterator
@@ -75,8 +74,6 @@ from providers import (
     ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
-from prompt import build_runtime_system_prompt
-from token_tracker.runtime import persist_run_usage
 
 logger = logging.getLogger(__name__)
 
@@ -120,358 +117,20 @@ def create_eval_agent(
     )
 
 
-def _ensure_eval_agent_db_ready(settings) -> None:
-    """Initialise all DB-backed stores the live eval harness depends on."""
-    try:
-        from db.engine import initialize_db
-        from server.app_factory import (
-            agent_run_store,
-            model_store,
-            session_store,
-            usage_store,
-        )
-
-        needs_init = (
-            not model_store.is_available
-            or any(
-                not store.is_ready
-                for store in (agent_run_store, session_store)
-            )
-            or not _usage_store_ready(usage_store)
-        )
-        if not needs_init or not settings.database.url:
-            return
-
-        sf = initialize_db(settings.database)
-        if sf is None:
-            return
-
-        if not model_store.is_available:
-            model_store.initialize(sf)
-        if not agent_run_store.is_ready:
-            agent_run_store.initialize(sf)
-        if not session_store.is_ready:
-            session_store.initialize(sf)
-        if not _usage_store_ready(usage_store):
-            usage_store.initialize(sf)
-    except Exception as exc:
-        logger.debug("[tests.test_e2e] EvalAgent DB bootstrap unavailable: %s", exc)
-
-
-def _extract_new_messages(display_messages, prompt: str) -> list[dict[str, Any]]:
-    for i in range(len(display_messages) - 1, -1, -1):
-        msg = display_messages[i]
-        if msg.role == "user" and msg.text.strip() == prompt.strip():
-            return [m.model_dump(mode="json") for m in display_messages[i:]]
-    return [m.model_dump(mode="json") for m in display_messages]
-
-
-def _usage_store_ready(store: Any) -> bool:
-    return getattr(store, "_session_factory", None) is not None
-
-
 def _reset_runtime_store_singletons() -> None:
     """Detach server store singletons from per-test DB schemas."""
     try:
         from server import app_factory as _af
 
         for store in (
-            _af.session_store,
+            _af.task_center_store,
             _af.agent_run_store,
-            _af.usage_store,
             _af.model_store,
         ):
             if hasattr(store, "_session_factory"):
                 store._session_factory = None
     except Exception:
         pass
-
-
-def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | None = None) -> None:
-    """Mirror the server router's post-run persistence for live eval runs."""
-    try:
-        from server.app_factory import agent_run_store, session_store, usage_store
-    except Exception:
-        return
-
-    session_config = getattr(agent, "_session_config", None)
-    if session_config is None:
-        return
-
-    display_messages = list(getattr(agent, "_display_messages", []) or [])
-    session_id = getattr(session_config, "session_id", None)
-    if not session_id:
-        return
-
-    full_history = list(getattr(agent, "_e2e_full_history", []) or [])
-    if not full_history and session_store.is_ready:
-        try:
-            record = session_store.get(session_id)
-            if record and record.full_message_history:
-                full_history = list(record.full_message_history)
-        except Exception:
-            logger.debug("[tests.test_e2e] Failed to bootstrap full history", exc_info=True)
-
-    new_messages = _extract_new_messages(display_messages, prompt)
-    if new_messages:
-        full_history.extend(new_messages)
-    setattr(agent, "_e2e_full_history", full_history)
-
-    tool_metadata = getattr(agent._query_context, "tool_metadata", None)
-    run_id = getattr(tool_metadata, "agent_run_id", None)
-
-    if run_id and agent_run_store.is_ready:
-        record = agent_run_store.get_run(run_id)
-        event_count = getattr(record, "event_count", 0) if record else 0
-        status = getattr(record, "status", "completed") if record else "completed"
-        error = getattr(record, "error", None) if record else None
-        cancellation_reason = getattr(record, "cancellation_reason", None) if record else None
-        agent_name = getattr(getattr(agent, "_agent", None), "agent_name", "eval_agent")
-        agent_run_store.finish_run(
-            run_id,
-            status=status,
-            response=new_messages or None,
-            message_history=[m.model_dump(mode="json") for m in display_messages] or None,
-            reasoning=(
-                getattr(result, "thinking_text", "") or getattr(agent, "_e2e_reasoning", None)
-            ),
-            error=error,
-            event_count=event_count,
-            cancellation_reason=cancellation_reason,
-        )
-
-        usage = getattr(agent, "_e2e_total_usage", None) or getattr(
-            getattr(agent, "_agent", None), "total_usage", None
-        )
-        if _usage_store_ready(usage_store) and usage_store.get_run_usage(run_id) is None:
-            persist_run_usage(
-                usage_store=usage_store,
-                session_id=session_id,
-                run_id=run_id,
-                agent_name=agent_name,
-                model_id=agent.model,
-                usage=usage,
-            )
-
-    if session_store.is_ready:
-        try:
-            session_store.upsert(
-                session_id=session_id,
-                cwd=getattr(session_config, "cwd", "."),
-                model=agent.model,
-                system_prompt=build_runtime_system_prompt(
-                    agent.settings,
-                    cwd=getattr(session_config, "cwd", "."),
-                ),
-                messages=[m.model_dump(mode="json") for m in display_messages] or None,
-                full_messages=full_history or None,
-                usage=(
-                    usage.model_dump()
-                    if usage is not None
-                    else None
-                ),
-                summary=next(
-                    (
-                        m.text.strip()[:80]
-                        for m in display_messages
-                        if m.role == "user" and m.text.strip()
-                    ),
-                    "",
-                ),
-                message_count=len(display_messages),
-            )
-        except Exception:
-            logger.debug("[tests.test_e2e] Failed to persist session artifacts", exc_info=True)
-
-
-def get_eval_persistence(agent: EvalAgent) -> dict[str, Any]:
-    """Return the persisted run/session/usage state for the given eval agent."""
-    from server.app_factory import agent_run_store, session_store, usage_store
-
-    session_config = getattr(agent, "_session_config", None)
-    session_id = getattr(session_config, "session_id", None) if session_config else None
-    tool_metadata = getattr(agent._query_context, "tool_metadata", None)
-    run_id = getattr(tool_metadata, "agent_run_id", None)
-
-    run = agent_run_store.get_run(run_id) if run_id and agent_run_store.is_ready else None
-    subagent_runs = (
-        agent_run_store.list_subagent_runs(run_id)
-        if run_id and agent_run_store.is_ready
-        else []
-    )
-    run_usage = (
-        usage_store.get_run_usage(run_id)
-        if run_id and _usage_store_ready(usage_store)
-        else None
-    )
-    child_usage = (
-        usage_store.get_usage_for_runs([child["id"] for child in subagent_runs])
-        if subagent_runs and _usage_store_ready(usage_store)
-        else {}
-    )
-    for child in subagent_runs:
-        child["usage"] = child_usage.get(child["id"])
-
-    parent_total_tokens = (run_usage or {}).get("total_tokens", 0)
-    subagent_total_tokens = sum(
-        (child.get("usage") or {}).get("total_tokens", 0)
-        for child in subagent_runs
-    )
-
-    return {
-        "session_id": session_id,
-        "session": session_store.get(session_id) if session_id and session_store.is_ready else None,
-        "session_usage": usage_store.get_session_usage(session_id)
-        if session_id and _usage_store_ready(usage_store)
-        else None,
-        "run_id": run_id,
-        "run": run,
-        "run_usage": run_usage,
-        "subagent_runs": subagent_runs,
-        "parent_total_tokens": parent_total_tokens,
-        "subagent_total_tokens": subagent_total_tokens,
-        "run_tree_total_tokens": parent_total_tokens + subagent_total_tokens,
-    }
-
-
-if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
-    EvalAgent._original_invoke = EvalAgent.invoke
-    EvalAgent._ensure_db_ready = staticmethod(_ensure_eval_agent_db_ready)
-
-    async def _invoke_with_persistence(self, prompt: str, verbose: bool = True):
-        from agents.run_tracker import AgentRunTracker
-        from engine.core.query import run_query
-        from engine.testing.eval_agent import (
-            EvalResult,
-            ToolCallResult,
-            _truncate,
-        )
-        from message.stream_events import (
-            AssistantTurnComplete,
-            ThinkingDelta,
-        )
-        from message.event_printer import MultiAgentEventPrinter
-        from tools.core.base import ExecutionMetadata
-
-        self._display_messages.clear()
-        self._display_messages.append(ConversationMessage.from_user_text(prompt))
-        start = time.monotonic()
-        events: list[Any] = []
-        tool_calls: list[ToolCallResult] = []
-        reasoning_parts: list[str] = []
-
-        def _out(msg: str) -> None:
-            if verbose:
-                print(msg, flush=True)
-
-        # Shared printer — same file used by the sweevo CLI so single-agent
-        # and multi-agent runs produce the same visual format. ``sink=_out``
-        # routes through the existing verbose gate.
-        printer = MultiAgentEventPrinter(
-            color=sys.stdout.isatty(),
-            sink=_out,
-        )
-
-        _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
-
-        total_usage = UsageSnapshot()
-
-        tracker = AgentRunTracker.create(
-            session_id=getattr(self._session_config, "session_id", None),
-            agent_name="eval_agent",
-            input_query=prompt,
-        )
-        run_id = tracker.run_id
-        if run_id is not None:
-            if self._query_context.tool_metadata is None:
-                self._query_context.tool_metadata = ExecutionMetadata()
-            self._query_context.tool_metadata.agent_run_id = run_id
-
-        run_error: str | None = None
-        pending_exc: Exception | None = None
-
-        try:
-            messages, event_iter = await run_query(self._query_context, self._display_messages)
-            self._display_messages = messages
-            async for event, usage in event_iter:
-                events.append(event)
-                if usage:
-                    total_usage.input_tokens += usage.input_tokens
-                    total_usage.output_tokens += usage.output_tokens
-
-                # Reasoning trace persistence lives outside the printer so
-                # it's available even when verbose=False.
-                if isinstance(event, ThinkingDelta):
-                    reasoning_parts.append(event.text)
-
-                # tool_calls must be captured for EvalResult regardless of
-                # whether the printer silences the structural event.
-                if isinstance(event, AssistantTurnComplete):
-                    for tb in event.message.tool_uses:
-                        tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
-
-                if verbose:
-                    printer.emit(event)
-        except Exception as exc:
-            run_error = str(exc)
-            pending_exc = exc
-        finally:
-            if verbose:
-                printer.flush()
-
-            self._e2e_total_usage = total_usage
-            self._e2e_reasoning = "".join(reasoning_parts) if reasoning_parts else None
-
-            tracker.finish(
-                status="failed" if run_error else "completed",
-                display_messages=list(self._display_messages),
-                response=_extract_new_messages(self._display_messages, prompt) or None,
-                reasoning=self._e2e_reasoning,
-                error=run_error,
-                event_count=len(events),
-            )
-
-            try:
-                _persist_eval_agent_artifacts(self, prompt, result=None)
-            except Exception:
-                logger.debug(
-                    "[tests.test_e2e] Failed to persist eval artifacts after invoke",
-                    exc_info=True,
-                )
-
-        if pending_exc is not None:
-            raise pending_exc
-
-        latency_ms = (time.monotonic() - start) * 1000
-        usage_note = ""
-        try:
-            persisted = get_eval_persistence(self)
-            parent_tokens = persisted["parent_total_tokens"] or total_usage.total_tokens
-            child_tokens = persisted["subagent_total_tokens"]
-            if child_tokens:
-                usage_note = (
-                    f", subagent_tokens={child_tokens}, "
-                    f"run_tree_total={persisted['run_tree_total_tokens'] or parent_tokens + child_tokens}"
-                )
-        except Exception:
-            logger.debug("[tests.test_e2e] Failed to load run usage for eval summary", exc_info=True)
-        _out(
-            f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
-            f"{latency_ms:.0f}ms, "
-            f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
-            f"total={total_usage.total_tokens}"
-            f"{usage_note}"
-        )
-
-        result = EvalResult(
-            events=events,
-            tool_calls=tool_calls,
-            latency_ms=latency_ms,
-        )
-        return result
-
-    EvalAgent.invoke = _invoke_with_persistence
-    EvalAgent._tests_e2e_persistence_patched = True
 
 
 # ---------------------------------------------------------------------------
@@ -498,27 +157,21 @@ try:
         from server.app_factory import (
             agent_run_store as _ars,
             model_store as _ms,
-            session_store as _ss,
-            usage_store as _us,
+            task_center_store as _tcs,
         )
 
         # Initialise *all* DB-backed singletons up front so EvalAgent-driven
         # tests (and the local factories that bypass EvalAgent.create()) get
         # the same persistence setup the production server bootstrap provides.
-        # Without this, run_subagent usage and session artifacts can
-        # be dropped because the corresponding stores are unready at tool-call
-        # or post-run persistence time.
-        if not _ms.is_available or not _ars.is_ready or not _ss.is_ready or not _usage_store_ready(_us):
+        if not _ms.is_available or not _ars.is_ready or not _tcs.is_ready:
             _sf = _idb(_s.database)
             if _sf:
                 if not _ms.is_available:
                     _ms.initialize(_sf)
                 if not _ars.is_ready:
                     _ars.initialize(_sf)
-                if not _ss.is_ready:
-                    _ss.initialize(_sf)
-                if not _usage_store_ready(_us):
-                    _us.initialize(_sf)
+                if not _tcs.is_ready:
+                    _tcs.initialize(_sf)
         if _ms.is_available:
             _active = _ms.get_active_resolved()
             if _active:
@@ -582,9 +235,8 @@ def _patch_server_database(monkeypatch, session_factory) -> None:
         from server import app_factory as _af
 
         for store in (
-            _af.session_store,
+            _af.task_center_store,
             _af.agent_run_store,
-            _af.usage_store,
             _af.model_store,
         ):
             store.initialize(session_factory)

@@ -11,8 +11,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Engine, Index, create_engine, inspect, text
-from sqlalchemy.schema import CreateIndex
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.base import Base
@@ -27,14 +26,6 @@ _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
 _async_engine: "AsyncEngine | None" = None
 _async_session_factory: "async_sessionmaker[AsyncSession] | None" = None
-
-_INDEX_DDL: tuple[tuple[str, str, str], ...] = (
-    (
-        "token_usage",
-        "ix_token_usage_run_id",
-        'CREATE INDEX IF NOT EXISTS "ix_token_usage_run_id" ON "token_usage" ("run_id")',
-    ),
-)
 
 
 def get_engine() -> Engine | None:
@@ -72,65 +63,15 @@ def _add_missing_columns(engine: Engine) -> None:
                     conn.execute(
                         text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}')
                     )
-
-
-def _archive_legacy_task_center_tables(engine: Engine) -> None:
-    """Move incompatible pre-TaskCenter tables aside before create_all().
-
-    The new TaskCenter schema intentionally replaces the old conversation
-    ``sessions`` table and greatly simplifies ``agent_runs``. Existing rows
-    cannot be losslessly mapped into the new graph model, so preserve them as
-    ``legacy_*`` tables and let SQLAlchemy create the new target tables.
-    """
-    insp = inspect(engine)
-
-    if insp.has_table("agent_runs"):
-        columns = {col["name"] for col in insp.get_columns("agent_runs")}
-        if "task_id" not in columns and not insp.has_table("legacy_agent_runs"):
-            logger.info("Archiving legacy agent_runs table as legacy_agent_runs")
-            with engine.begin() as conn:
-                conn.execute(text('ALTER TABLE "agent_runs" RENAME TO "legacy_agent_runs"'))
-            insp = inspect(engine)
-
-    if insp.has_table("sessions") and not insp.has_table("legacy_sessions"):
-        logger.info("Archiving legacy sessions table as legacy_sessions")
-        with engine.begin() as conn:
-            conn.execute(text('ALTER TABLE "sessions" RENAME TO "legacy_sessions"'))
-
-    insp = inspect(engine)
-    if insp.has_table("token_usage"):
-        columns = {col["name"] for col in insp.get_columns("token_usage")}
-        if "request_id" not in columns and not insp.has_table("legacy_token_usage"):
-            logger.info("Archiving legacy token_usage table as legacy_token_usage")
-            with engine.begin() as conn:
-                conn.execute(text('ALTER TABLE "token_usage" RENAME TO "legacy_token_usage"'))
-
-
-def _ensure_indexes(engine: Engine) -> None:
-    """Create indexes that may be missing on upgraded databases."""
-    import re
-
-    insp = inspect(engine)
-    for table_name, index_name, ddl in _INDEX_DDL:
-        if not insp.has_table(table_name):
-            continue
-        existing = {idx["name"] for idx in insp.get_indexes(table_name)}
-        if index_name in existing:
-            continue
-        logger.info("Adding missing index %s on %s", index_name, table_name)
-        table = Base.metadata.tables.get(table_name)
-        if table is None:
-            continue
-        # Extract column name from DDL: ON "table" ("column")
-        m = re.search(r'ON\s+"[^"]+"\s*\("([^"]+)"\)', ddl)
-        if m is None:
-            continue
-        col_name = m.group(1)
-        col = table.c.get(col_name)
-        if col is None:
-            continue
-        with engine.begin() as conn:
-            conn.execute(CreateIndex(Index(index_name, col)).compile(dialect=engine.dialect))
+                    if table.name == "task_center_tasks" and col.name == "task_input":
+                        if "spec" in existing:
+                            conn.execute(
+                                text(
+                                    'UPDATE "task_center_tasks" '
+                                    'SET "task_input" = "spec" '
+                                    'WHERE "task_input" IS NULL'
+                                )
+                            )
 
 
 def _async_database_url(url: str) -> Any:
@@ -189,12 +130,10 @@ def initialize_db(
     # Import models so Base.metadata knows about all tables
     import db.models  # noqa: F401
 
-    _archive_legacy_task_center_tables(_engine)
     Base.metadata.create_all(_engine)
 
     # Patch existing tables with columns added after initial creation.
     _add_missing_columns(_engine)
-    _ensure_indexes(_engine)
 
     logger.info("Database tables created / verified")
 

@@ -12,7 +12,7 @@ from task_center.task import Status, Task
 def build_task_prompt(task: Task, graph: TaskGraph) -> str:
     """Return the user/task prompt with stable TaskCenter context injected.
 
-    The task's own ``spec`` remains the task prompt. For child/evaluator tasks,
+    The task's own input remains the task prompt. For child/evaluator tasks,
     prepend only the blackboard context they are allowed to see: parent
     acceptance information and completed direct dependencies.
     """
@@ -52,7 +52,7 @@ def _completed_dependencies(task: Task, graph: TaskGraph) -> list[dict[str, str 
         dependencies.append(
             {
                 "id": dep.id,
-                "spec": dep.spec,
+                "task_input": dep.spec,
                 "summary": dep.summary,
             }
         )

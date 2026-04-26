@@ -77,7 +77,7 @@ def test_child_task_prompt_includes_parent_and_completed_dependencies() -> None:
         "dependencies": [
             {
                 "id": "dep_done",
-                "spec": "Dependency spec",
+                "task_input": "Dependency spec",
                 "summary": "Dependency summary",
             }
         ],

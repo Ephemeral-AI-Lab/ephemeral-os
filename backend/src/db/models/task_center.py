@@ -90,7 +90,7 @@ class TaskCenterTaskRecord(Base):
     )
     role: Mapped[str] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(255))
-    spec: Mapped[str] = mapped_column(Text)
+    task_input: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
