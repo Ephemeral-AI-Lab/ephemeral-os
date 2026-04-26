@@ -396,7 +396,7 @@ class EvalAgent:
                     name="direct",
                     is_default=True,
                     allowed_tools=allowed_tools,
-                    terminals=["submit_task_completion"],
+                    terminals=["submit_task_success"],
                 )
             ],
             tool_call_limit=tool_call_limit,

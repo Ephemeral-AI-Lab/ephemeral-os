@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from task_center import (
     PlanValidationError,
     Status,
     Task,
     TaskCenterError,
+    TaskSummary,
 )
 
 
@@ -27,85 +26,37 @@ def test_task_constructs_with_minimum_fields() -> None:
     task = Task(
         id="t1",
         role="executor",
-        title="Trivial",
-        spec="Do the thing.",
+        input="Do the thing.",
         status=Status.READY,
     )
     assert task.id == "t1"
     assert task.role == "executor"
     assert task.status is Status.READY
-    assert task.parent_id is None
-    assert task.closes_for is None
+    assert task.task_center_harness_graph_id is None
     assert task.needs == frozenset()
-    assert task.acceptance_criteria is None
-    assert task.handoff_note is None
-    assert task.summary is None
-    assert task.children == []
-    assert task.evaluator_id is None
+    assert task.summaries == []
     assert isinstance(task.created_at, float)
 
 
-def test_task_mutable_defaults_are_independent() -> None:
-    a = Task(id="a", role="executor", title="A", spec="...", status=Status.PENDING)
-    b = Task(id="b", role="executor", title="B", spec="...", status=Status.PENDING)
-    a.children.append("child-of-a")
-    assert b.children == []
-    assert a.children == ["child-of-a"]
+def test_task_summaries_are_independent_per_instance() -> None:
+    a = Task(id="a", role="executor", input="...", status=Status.PENDING)
+    b = Task(id="b", role="executor", input="...", status=Status.PENDING)
+    a.summaries.append(TaskSummary(kind="success", text="ok", source_task_id="a"))
+    assert b.summaries == []
+    assert a.summaries[0].text == "ok"
 
 
-def test_closes_for_is_set_once_at_creation_to_none() -> None:
-    task = Task(
-        id="t",
-        role="evaluator",
-        title="Eval",
-        spec="...",
-        status=Status.PENDING,
-        closes_for=None,
-    )
-    with pytest.raises(AttributeError, match="closes_for"):
-        task.closes_for = "some-other-id"
+def test_task_role_widens_to_planner() -> None:
+    planner = Task(id="p", role="planner", input="...", status=Status.READY)
+    assert planner.role == "planner"
 
 
-def test_closes_for_is_set_once_at_creation_to_value() -> None:
-    task = Task(
-        id="t",
-        role="evaluator",
-        title="Eval",
-        spec="...",
-        status=Status.PENDING,
-        closes_for="parent",
-    )
-    with pytest.raises(AttributeError, match="closes_for"):
-        task.closes_for = "different-parent"
-
-
-def test_closes_for_self_assign_is_a_no_op() -> None:
-    task = Task(
-        id="t",
-        role="evaluator",
-        title="Eval",
-        spec="...",
-        status=Status.PENDING,
-        closes_for="parent",
-    )
-    task.closes_for = "parent"
-    assert task.closes_for == "parent"
-
-
-def test_other_fields_remain_mutable() -> None:
-    task = Task(
-        id="t",
-        role="executor",
-        title="T",
-        spec="...",
-        status=Status.PENDING,
-    )
-    task.status = Status.READY
-    task.summary = "done"
-    task.children.append("c1")
-    assert task.status is Status.READY
-    assert task.summary == "done"
-    assert task.children == ["c1"]
+def test_task_summary_holds_kind_text_source() -> None:
+    summary = TaskSummary(kind="failure", text="boom", source_task_id="t")
+    assert summary.kind == "failure"
+    assert summary.text == "boom"
+    assert summary.source_task_id == "t"
+    assert isinstance(summary.created_at, float)
 
 
 def test_error_hierarchy() -> None:

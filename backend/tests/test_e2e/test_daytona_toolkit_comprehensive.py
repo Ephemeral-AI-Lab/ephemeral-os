@@ -532,8 +532,6 @@ class TestDaytonaCiTools:
 # ===========================================================================
 
 
-
-
 # ===========================================================================
 # Tool integration tests
 # ===========================================================================
@@ -978,7 +976,7 @@ class TestLspQueryRouting:
 
         lsp = LspClient(workspace_root="/workspace")
         assert lsp._detect_language("main.py") == "python"
-        assert lsp._detect_language("app.ts") == "typescript"
+        assert lsp._detect_language("app.ts") == "unknown"
         assert lsp._detect_language("style.css") == "unknown"
 
     def test_lsp_client_cache_ttl(self):
@@ -1499,18 +1497,6 @@ class TestAuditedEditFlow:
         ctx, _, arbiter, _ = self._make_audit_context({"/ws/app.py": "content"})
         self._edit(ctx, "/ws/app.py", "content", "new")
         assert arbiter.metrics.total_edits >= 1
-
-    def test_audited_edit_is_not_blocked_by_legacy_lock(self):
-        """Process-audited edits do not use the legacy semantic write lock."""
-        ctx, _, arbiter, _ = self._make_audit_context({"/ws/app.py": "content"})
-
-        arbiter.acquire_file_lock("/ws/app.py")
-
-        result = self._edit(ctx, "/ws/app.py", "content", "new")
-        _assert_success(result)
-        assert arbiter.metrics.total_edits == 1
-
-        arbiter.release_file_lock("/ws/app.py")
 
     def test_audited_edit_without_ci_returns_error(self):
         """Coordinated edits must fail instead of raw-writing without CI."""

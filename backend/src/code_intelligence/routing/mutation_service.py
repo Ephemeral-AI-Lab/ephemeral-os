@@ -192,7 +192,11 @@ class MutationService:
         none land — any slot's ``aborted_version`` aborts the whole batch.
         """
         normalized = [specs] if isinstance(specs, WriteSpec) else list(specs)
-        changes = [self._write_spec_to_change(spec) for spec in normalized]
+        base_by_path = self._content.read_many(
+            [str(spec.file_path) for spec in normalized],
+            allow_missing=True,
+        )
+        changes = self._write_specs_to_changes_from_base(normalized, base_by_path)
         return self._write_coordinator.commit_operation_against_base(
             changes,
             agent_id=agent_id,
@@ -216,7 +220,14 @@ class MutationService:
         without touching disk.
         """
         normalized = [specs] if isinstance(specs, EditSpec) else list(specs)
-        changes, early_failure = self._edit_specs_to_changes(normalized)
+        base_by_path = self._content.read_many(
+            [str(spec.file_path) for spec in normalized],
+            allow_missing=True,
+        )
+        changes, early_failure = self._edit_specs_to_changes_from_base(
+            normalized,
+            base_by_path,
+        )
         if early_failure is not None:
             return early_failure
         return self._write_coordinator.commit_operation_against_base(
@@ -350,20 +361,13 @@ class MutationService:
             else:
                 resolved_paths.append(str(item))
 
-        changes: list[OperationChange] = []
-        for path in resolved_paths:
-            current, existed = self._content.read(path, allow_missing=True)
-            if not existed:
-                return _not_found_result(path)
-            changes.append(
-                OperationChange(
-                    file_path=path,
-                    base_content=current,
-                    base_hash=content_hash(current),
-                    final_content=None,
-                    base_existed=True,
-                )
-            )
+        base_by_path = self._content.read_many(resolved_paths, allow_missing=True)
+        changes, early_failure = self._delete_paths_to_changes_from_base(
+            resolved_paths,
+            base_by_path,
+        )
+        if early_failure is not None:
+            return early_failure
         return self._write_coordinator.commit_operation_against_base(
             changes,
             agent_id=agent_id,
@@ -406,50 +410,18 @@ class MutationService:
                 )
                 for member in members
             )
-        changes: list[OperationChange] = []
+        read_paths: list[str] = []
         for spec in normalized:
             if spec.src_path == spec.dst_path:
                 return _identical_paths_result(spec.src_path)
-            src_content, src_existed = self._content.read(
-                spec.src_path, allow_missing=True,
-            )
-            if not src_existed:
-                return _not_found_result(spec.src_path)
-            dst_content, dst_existed = self._content.read(
-                spec.dst_path, allow_missing=True,
-            )
-            if dst_existed and not spec.overwrite:
-                return _dst_exists_result(spec.dst_path)
-            changes.append(
-                OperationChange(
-                    file_path=spec.src_path,
-                    base_content=src_content,
-                    base_hash=content_hash(src_content),
-                    final_content=None,
-                    base_existed=True,
-                )
-            )
-            if dst_existed:
-                changes.append(
-                    OperationChange(
-                        file_path=spec.dst_path,
-                        base_content=dst_content,
-                        base_hash=content_hash(dst_content),
-                        final_content=src_content,
-                        base_existed=True,
-                        strict_base=True,
-                    )
-                )
-            else:
-                changes.append(
-                    OperationChange(
-                        file_path=spec.dst_path,
-                        base_content="",
-                        base_hash="",
-                        final_content=src_content,
-                        base_existed=False,
-                    )
-                )
+            read_paths.extend((str(spec.src_path), str(spec.dst_path)))
+        base_by_path = self._content.read_many(read_paths, allow_missing=True)
+        changes, early_failure = self._move_specs_to_changes_from_base(
+            normalized,
+            base_by_path,
+        )
+        if early_failure is not None:
+            return early_failure
         return self._write_coordinator.commit_operation_against_base(
             changes,
             agent_id=agent_id,
@@ -654,48 +626,6 @@ class MutationService:
                         base_existed=False,
                     )
                 )
-        return changes, None
-
-    def _write_spec_to_change(self, spec: WriteSpec) -> OperationChange:
-        current, existed = self._content.read(spec.file_path, allow_missing=True)
-        if spec.overwrite:
-            return OperationChange(
-                file_path=spec.file_path,
-                base_content=current,
-                base_hash=content_hash(current) if existed else "",
-                final_content=spec.content,
-                base_existed=existed,
-                strict_base=True,
-            )
-        return OperationChange(
-            file_path=spec.file_path,
-            base_content="",
-            base_hash="",
-            final_content=spec.content,
-            base_existed=False,
-        )
-
-    def _edit_specs_to_changes(
-        self,
-        specs: Sequence[EditSpec],
-    ) -> tuple[list[OperationChange], OperationResult | None]:
-        changes: list[OperationChange] = []
-        for spec in specs:
-            current, existed = self._content.read(spec.file_path, allow_missing=True)
-            if not existed:
-                return [], _not_found_result(spec.file_path)
-            patch = self.patcher.apply_edits(current, list(spec.edits))
-            if not patch.success:
-                return [], _patch_failed_result(spec.file_path, patch.errors)
-            changes.append(
-                OperationChange(
-                    file_path=spec.file_path,
-                    base_content=current,
-                    base_hash=content_hash(current),
-                    final_content=patch.content,
-                    base_existed=True,
-                )
-            )
         return changes, None
 
     def undo_last_edit(self, file_path: str) -> EditResult:

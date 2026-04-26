@@ -105,7 +105,11 @@ class RenamePlanner:
         return self._rename_preview_fast_fallbacks
 
     def rename_symbol_plan(
-        self, file_path: str, line: int, character: int, new_name: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
     ) -> SemanticRenamePlan:
         """Build a :class:`SemanticRenamePlan` for a semantic rename operation.
 
@@ -126,7 +130,10 @@ class RenamePlanner:
             return fast_plan
 
         final_by_path = self.lsp_client.rename_symbol(
-            file_path, int(line), int(character), new_name,
+            file_path,
+            int(line),
+            int(character),
+            new_name,
         )
         changes: list[SemanticFileChange] = []
         try:
@@ -196,10 +203,7 @@ class RenamePlanner:
             return fast_plans
 
         final_maps = self.lsp_client.rename_symbols(
-            [
-                (req.file_path, req.line, req.character, req.new_name)
-                for req in normalized
-            ]
+            [(req.file_path, req.line, req.character, req.new_name) for req in normalized]
         )
         all_paths: list[str] = []
         for final_by_path in final_maps:
@@ -395,9 +399,7 @@ print(json.dumps({"ok": True, "results": results}))
             f"{shlex.quote(self.workspace_root)} {shlex.quote(payload)}"
         )
         try:
-            response = run_sync(
-                getattr(self._sandbox.process, "exec")(command, timeout=30)
-            )
+            response = run_sync(getattr(self._sandbox.process, "exec")(command, timeout=30))
         except Exception:
             return None
         stdout, exit_code = _extract_exit_code(
@@ -630,19 +632,6 @@ print(json.dumps({"ok": True, "results": results}))
             self._rename_preview_cache.clear()
             self._rename_preview_inflight.clear()
 
-    def _rename_preview_cache_stats(self) -> dict[str, int]:
-        with self._rename_preview_cache_lock:
-            return {
-                "size": len(self._rename_preview_cache),
-                "inflight": len(self._rename_preview_inflight),
-                "fast_fallbacks": self._rename_preview_fast_fallbacks,
-            }
-
-    def _clear_rename_preview_cache(self) -> None:
-        with self._rename_preview_cache_lock:
-            self._rename_preview_cache.clear()
-            self._rename_preview_inflight.clear()
-
 
 def _identifier_at_position(content: str, line: int, character: int) -> str:
     """Return the identifier at or immediately after a 1-indexed position."""
@@ -683,12 +672,14 @@ def _same_file_identifier_rename(
         tokens = tokenize.generate_tokens(io.StringIO(content).readline)
         for token in tokens:
             if token.type == tokenize.NAME and token.string == old_name:
-                replacements.append((
-                    token.start[0],
-                    token.start[1],
-                    token.end[0],
-                    token.end[1],
-                ))
+                replacements.append(
+                    (
+                        token.start[0],
+                        token.start[1],
+                        token.end[0],
+                        token.end[1],
+                    )
+                )
     except tokenize.TokenError:
         return None
     if not replacements:

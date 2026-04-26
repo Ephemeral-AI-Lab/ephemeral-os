@@ -58,6 +58,21 @@ def test_read_many_reads_local_files(tmp_path: Path) -> None:
     assert result[str(missing)] == ("", False)
 
 
+def test_relative_local_paths_resolve_under_workspace_root(tmp_path: Path) -> None:
+    target = tmp_path / "pkg" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    content = ContentManager(str(tmp_path))
+
+    assert content.read("pkg/mod.py") == ("VALUE = 1\n", True)
+
+    content.write("pkg/new.py", "CREATED = True\n")
+    assert (tmp_path / "pkg" / "new.py").read_text(encoding="utf-8") == ("CREATED = True\n")
+
+    content.delete("pkg/new.py")
+    assert not (tmp_path / "pkg" / "new.py").exists()
+
+
 def test_read_many_prefers_real_daytona_batch_download(
     tmp_path: Path,
     monkeypatch,
@@ -116,6 +131,70 @@ def test_read_many_allows_missing_remote_files(tmp_path: Path) -> None:
 
     assert result[str(a)] == ("A = 1\n", True)
     assert result[str(missing)] == ("", False)
+
+
+def test_read_many_falls_back_to_fs_when_remote_batch_is_not_json(
+    tmp_path: Path,
+) -> None:
+    class _MockProcess:
+        def exec(self, command: str):
+            return SimpleNamespace(result=f"mock output for: {command}", exit_code=0)
+
+    class _AsyncFs:
+        async def download_file(self, path: str) -> bytes:
+            if path == str(tmp_path / "a.py"):
+                return b"A = 1\n"
+            raise FileNotFoundError(path)
+
+    sandbox = SimpleNamespace(fs=_AsyncFs(), process=_MockProcess())
+    content = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    result = content.read_many([str(tmp_path / "a.py")], allow_missing=False)
+
+    assert result[str(tmp_path / "a.py")] == ("A = 1\n", True)
+
+
+def test_read_falls_back_to_fs_when_process_read_is_not_json(tmp_path: Path) -> None:
+    class _MockProcess:
+        def exec(self, command: str):
+            return SimpleNamespace(result=f"mock output for: {command}", exit_code=0)
+
+    class _AsyncFs:
+        async def download_file(self, path: str) -> bytes:
+            if path == str(tmp_path / "a.py"):
+                return b"A = 1\n"
+            raise FileNotFoundError(path)
+
+    sandbox = SimpleNamespace(fs=_AsyncFs(), process=_MockProcess())
+    content = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    assert content.read(str(tmp_path / "a.py")) == ("A = 1\n", True)
+
+
+def test_fs_only_sandbox_accepts_async_fs_methods(tmp_path: Path) -> None:
+    class _AsyncFs:
+        def __init__(self) -> None:
+            self.files: dict[str, bytes] = {}
+
+        async def download_file(self, path: str) -> bytes:
+            return self.files[path]
+
+        async def upload_file(self, content: bytes, path: str) -> None:
+            self.files[path] = content
+
+        async def delete_file(self, path: str) -> None:
+            self.files.pop(path, None)
+
+    fs = _AsyncFs()
+    sandbox = SimpleNamespace(fs=fs, process=None)
+    manager = ContentManager(str(tmp_path), sandbox=sandbox)
+    target = str(tmp_path / "async.py")
+
+    manager.write(target, "value = 1\n")
+    assert manager.read(target) == ("value = 1\n", True)
+
+    manager.delete(target)
+    assert target not in fs.files
 
 
 def test_write_remote_chunks_large_file_payload(tmp_path: Path) -> None:

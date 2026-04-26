@@ -1,11 +1,11 @@
-"""TaskCenter request/run/task/graph persistence store."""
+"""TaskCenter request/run/task/harness-graph persistence store."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
 from db.models.task_center import (
-    TaskCenterGraphRecord,
+    TaskCenterHarnessGraphRecord,
     TaskCenterRequestRecord,
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
@@ -14,7 +14,6 @@ from db.stores.base import SyncStoreMixin
 
 
 def persisted_task_id(run_id: str, task_id: str) -> str:
-    """Return the globally unique persisted id for an in-memory task id."""
     return f"{run_id}:{task_id}"
 
 
@@ -45,24 +44,24 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict:
         "id": record.id,
         "run_id": record.run_id,
         "role": record.role,
-        "title": record.title,
         "task_input": record.task_input,
         "status": record.status,
-        "summary": record.summary,
+        "summaries": record.summaries or [],
+        "needs": record.needs or [],
+        "task_center_harness_graph_id": record.task_center_harness_graph_id,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
 
 
-def _serialize_graph(record: TaskCenterGraphRecord) -> dict:
+def _serialize_harness_graph(record: TaskCenterHarnessGraphRecord) -> dict:
     return {
+        "id": record.id,
         "run_id": record.run_id,
-        "task_id": record.task_id,
         "parent_task_id": record.parent_task_id,
-        "children_ids": record.children_ids or [],
-        "evaluator_id": record.evaluator_id,
-        "acceptance_criteria": record.acceptance_criteria,
-        "handoff_note": record.handoff_note,
+        "planner_task_id": record.planner_task_id,
+        "evaluator_task_id": record.evaluator_task_id,
+        "executor_task_ids": record.executor_task_ids or [],
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -161,10 +160,11 @@ class TaskCenterStore(SyncStoreMixin):
         task_id: str,
         run_id: str,
         role: str,
-        title: str,
         task_input: str,
         status: str,
-        summary: str | None,
+        summaries: list[dict],
+        needs: list[str],
+        task_center_harness_graph_id: str | None,
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -174,56 +174,55 @@ class TaskCenterStore(SyncStoreMixin):
                     id=task_id,
                     run_id=run_id,
                     role=role,
-                    title=title,
                     task_input=task_input,
                     status=status,
-                    summary=summary,
+                    summaries=summaries,
+                    needs=needs,
+                    task_center_harness_graph_id=task_center_harness_graph_id,
                     created_at=now,
                     updated_at=now,
                 )
                 db.add(record)
             else:
                 record.role = role
-                record.title = title
                 record.task_input = task_input
                 record.status = status
-                record.summary = summary
+                record.summaries = summaries
+                record.needs = needs
+                record.task_center_harness_graph_id = task_center_harness_graph_id
                 record.updated_at = now
             db.commit()
 
-    def upsert_graph_node(
+    def upsert_harness_graph(
         self,
         *,
+        graph_id: str,
         run_id: str,
-        task_id: str,
-        parent_task_id: str | None,
-        children_ids: list[str],
-        evaluator_id: str | None,
-        acceptance_criteria: str | None,
-        handoff_note: str | None,
+        parent_task_id: str,
+        planner_task_id: str,
+        evaluator_task_id: str | None,
+        executor_task_ids: list[str],
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
-            record = db.get(TaskCenterGraphRecord, task_id)
+            record = db.get(TaskCenterHarnessGraphRecord, graph_id)
             if record is None:
-                record = TaskCenterGraphRecord(
+                record = TaskCenterHarnessGraphRecord(
+                    id=graph_id,
                     run_id=run_id,
-                    task_id=task_id,
                     parent_task_id=parent_task_id,
-                    children_ids=children_ids,
-                    evaluator_id=evaluator_id,
-                    acceptance_criteria=acceptance_criteria,
-                    handoff_note=handoff_note,
+                    planner_task_id=planner_task_id,
+                    evaluator_task_id=evaluator_task_id,
+                    executor_task_ids=executor_task_ids,
                     created_at=now,
                     updated_at=now,
                 )
                 db.add(record)
             else:
                 record.parent_task_id = parent_task_id
-                record.children_ids = children_ids
-                record.evaluator_id = evaluator_id
-                record.acceptance_criteria = acceptance_criteria
-                record.handoff_note = handoff_note
+                record.planner_task_id = planner_task_id
+                record.evaluator_task_id = evaluator_task_id
+                record.executor_task_ids = executor_task_ids
                 record.updated_at = now
             db.commit()
 
@@ -236,11 +235,11 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_graph_for_run(self, run_id: str) -> list[dict]:
+    def list_harness_graphs_for_run(self, run_id: str) -> list[dict]:
         with self._sf() as db:
             q = (
-                db.query(TaskCenterGraphRecord)
-                .filter(TaskCenterGraphRecord.run_id == run_id)
-                .order_by(TaskCenterGraphRecord.created_at.asc())
+                db.query(TaskCenterHarnessGraphRecord)
+                .filter(TaskCenterHarnessGraphRecord.run_id == run_id)
+                .order_by(TaskCenterHarnessGraphRecord.created_at.asc())
             )
-            return [_serialize_graph(record) for record in q.all()]
+            return [_serialize_harness_graph(record) for record in q.all()]

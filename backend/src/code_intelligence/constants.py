@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-# Tree cache
-TREE_CACHE_MAX_FILES = 500
-TREE_CACHE_MAX_FILE_SIZE = 1_000_000  # 1 MB
-
 # Symbol index
 SYMBOL_INDEX_MAX_FILES = 10_000
 SYMBOL_INDEX_BATCH_SIZE = 50
@@ -44,30 +40,5 @@ SKIP_DIRECTORIES = frozenset(
 SUPPORTED_EXTENSIONS = frozenset(
     {
         ".py",
-        ".js",
-        ".ts",
-        ".jsx",
-        ".tsx",
-        ".java",
-        ".go",
-        ".rs",
-        ".rb",
-        ".php",
-        ".c",
-        ".cpp",
-        ".h",
-        ".hpp",
-        ".cs",
-        ".swift",
-        ".kt",
-        ".scala",
-        ".sh",
-        ".json",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".md",
-        ".txt",
-        ".sql",
     }
 )

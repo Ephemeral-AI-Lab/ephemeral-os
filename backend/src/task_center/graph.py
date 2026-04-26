@@ -1,7 +1,8 @@
-"""TaskGraph — in-memory container for the request-scoped task tree.
+"""TaskGraph — in-memory container for tasks and harness graphs.
 
-Holds the ``{task_id: Task}`` map and exposes the orchestrator-facing
-operations: insertion, lookup, readiness check, and status transitions.
+Holds the ``{task_id: Task}`` and ``{graph_id: TaskCenterHarnessGraph}`` maps
+plus the orchestrator-facing operations: insertion, lookup, readiness, and
+status transitions.
 """
 
 from __future__ import annotations
@@ -10,17 +11,15 @@ import asyncio
 from dataclasses import dataclass, field
 
 from task_center.errors import TaskCenterError
-from task_center.task import Status, Task, TaskId
+from task_center.harness_graph import TaskCenterHarnessGraph
+from task_center.task import HarnessGraphId, Status, Task, TaskId
 
 
-# Allowed status transitions. HANDOFF -> DONE is intentionally absent
-# (invariant 14: handoff tasks can only close via summary propagation, which
-# bypasses transition() and writes status directly).
 _ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
     Status.PENDING: {Status.READY, Status.FAILED},
     Status.READY: {Status.RUNNING, Status.FAILED},
     Status.RUNNING: {Status.HANDOFF, Status.DONE, Status.FAILED},
-    Status.HANDOFF: {Status.FAILED},
+    Status.HANDOFF: {Status.DONE, Status.FAILED},
     Status.DONE: set(),
     Status.FAILED: set(),
 }
@@ -28,14 +27,13 @@ _ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
 
 @dataclass
 class TaskGraph:
-    """Request-scoped task graph."""
+    """Request-scoped tasks plus harness graphs."""
 
     tasks: dict[TaskId, Task] = field(default_factory=dict)
+    harness_graphs: dict[HarnessGraphId, TaskCenterHarnessGraph] = field(
+        default_factory=dict
+    )
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    # ------------------------------------------------------------------ #
-    # Insertion / lookup                                                 #
-    # ------------------------------------------------------------------ #
 
     def add(self, task: Task) -> None:
         if task.id in self.tasks:
@@ -48,17 +46,23 @@ class TaskGraph:
             raise TaskCenterError(f"task id {task_id!r} not in graph")
         return task
 
-    # ------------------------------------------------------------------ #
-    # Readiness                                                          #
-    # ------------------------------------------------------------------ #
+    def add_harness_graph(self, graph: TaskCenterHarnessGraph) -> None:
+        if graph.id in self.harness_graphs:
+            raise TaskCenterError(f"harness graph id {graph.id!r} already in graph")
+        self.harness_graphs[graph.id] = graph
+
+    def get_harness_graph(self, graph_id: HarnessGraphId) -> TaskCenterHarnessGraph:
+        graph = self.harness_graphs.get(graph_id)
+        if graph is None:
+            raise TaskCenterError(f"harness graph id {graph_id!r} not in graph")
+        return graph
 
     def ready_tasks(self) -> list[Task]:
-        """Tasks eligible to be picked up by the dispatcher.
+        """Return tasks eligible for dispatch.
 
-        Returns tasks where status is :attr:`Status.READY`, OR status is
-        :attr:`Status.PENDING` with every ``needs`` id present in the graph
-        and at status :attr:`Status.DONE`. The dispatcher promotes the
-        latter (PENDING -> READY) before launching them.
+        A READY task is dispatched. A PENDING task is promoted to READY when
+        every direct dependency in ``needs`` is DONE (or absent — needs can
+        only reference tasks in the same harness graph that are present).
         """
         out: list[Task] = []
         for task in self.tasks.values():
@@ -72,12 +76,7 @@ class TaskGraph:
                 out.append(task)
         return out
 
-    # ------------------------------------------------------------------ #
-    # Status transitions                                                 #
-    # ------------------------------------------------------------------ #
-
     def transition(self, task_id: TaskId, new_status: Status) -> None:
-        """Move ``task_id`` to ``new_status`` if the move is allowed."""
         task = self.get(task_id)
         allowed = _ALLOWED_TRANSITIONS[task.status]
         if new_status not in allowed:

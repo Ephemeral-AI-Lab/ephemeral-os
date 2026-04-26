@@ -1,4 +1,4 @@
-"""TaskCenter request, run, task, and graph persistence models."""
+"""TaskCenter request/run/task/harness-graph persistence models."""
 
 from __future__ import annotations
 
@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
 
 class TaskCenterRequestRecord(Base):
-    """A single user request envelope handled by TaskCenter."""
-
     __tablename__ = "task_center_requests"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -44,8 +42,6 @@ class TaskCenterRequestRecord(Base):
 
 
 class TaskCenterRunRecord(Base):
-    """One TaskCenter.run_query lifecycle for a request."""
-
     __tablename__ = "task_center_runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -67,8 +63,8 @@ class TaskCenterRunRecord(Base):
         back_populates="run",
         cascade="all, delete-orphan",
     )
-    graph_nodes: Mapped[list["TaskCenterGraphRecord"]] = relationship(
-        "TaskCenterGraphRecord",
+    harness_graphs: Mapped[list["TaskCenterHarnessGraphRecord"]] = relationship(
+        "TaskCenterHarnessGraphRecord",
         back_populates="run",
         cascade="all, delete-orphan",
     )
@@ -78,8 +74,6 @@ class TaskCenterRunRecord(Base):
 
 
 class TaskCenterTaskRecord(Base):
-    """Minimal persisted task execution record."""
-
     __tablename__ = "task_center_tasks"
 
     id: Mapped[str] = mapped_column(String(96), primary_key=True)
@@ -89,10 +83,13 @@ class TaskCenterTaskRecord(Base):
         index=True,
     )
     role: Mapped[str] = mapped_column(String(32))
-    title: Mapped[str] = mapped_column(String(255))
     task_input: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
-    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    needs: Mapped[list[str]] = mapped_column(JSON, default=list)
+    task_center_harness_graph_id: Mapped[str | None] = mapped_column(
+        String(96), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -103,13 +100,6 @@ class TaskCenterTaskRecord(Base):
     )
 
     run: Mapped[TaskCenterRunRecord] = relationship(back_populates="tasks")
-    graph_node: Mapped["TaskCenterGraphRecord | None"] = relationship(
-        "TaskCenterGraphRecord",
-        back_populates="task",
-        uselist=False,
-        cascade="all, delete-orphan",
-        foreign_keys="TaskCenterGraphRecord.task_id",
-    )
     agent_run: Mapped["AgentRunRecord | None"] = relationship(
         "AgentRunRecord",
         back_populates="task",
@@ -120,34 +110,21 @@ class TaskCenterTaskRecord(Base):
         return f"<TaskCenterTaskRecord id={self.id!r} status={self.status!r}>"
 
 
-class TaskCenterGraphRecord(Base):
-    """Persisted graph topology and handoff/evaluation context for one task."""
+class TaskCenterHarnessGraphRecord(Base):
+    """Persisted harness graph (planner + executor children + evaluator)."""
 
-    __tablename__ = "task_center_graph"
+    __tablename__ = "task_center_harness_graph"
 
-    task_id: Mapped[str] = mapped_column(
-        String(96),
-        ForeignKey("task_center_tasks.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
     run_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("task_center_runs.id", ondelete="CASCADE"),
         index=True,
     )
-    parent_task_id: Mapped[str | None] = mapped_column(
-        String(96),
-        ForeignKey("task_center_tasks.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    children_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    evaluator_id: Mapped[str | None] = mapped_column(
-        String(96),
-        ForeignKey("task_center_tasks.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    acceptance_criteria: Mapped[str | None] = mapped_column(Text, nullable=True)
-    handoff_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_task_id: Mapped[str] = mapped_column(String(96))
+    planner_task_id: Mapped[str] = mapped_column(String(96))
+    evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    executor_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -157,11 +134,7 @@ class TaskCenterGraphRecord(Base):
         onupdate=lambda: datetime.now(UTC),
     )
 
-    run: Mapped[TaskCenterRunRecord] = relationship(back_populates="graph_nodes")
-    task: Mapped[TaskCenterTaskRecord] = relationship(
-        back_populates="graph_node",
-        foreign_keys=[task_id],
-    )
+    run: Mapped[TaskCenterRunRecord] = relationship(back_populates="harness_graphs")
 
     def __repr__(self) -> str:
-        return f"<TaskCenterGraphRecord task_id={self.task_id!r}>"
+        return f"<TaskCenterHarnessGraphRecord id={self.id!r}>"

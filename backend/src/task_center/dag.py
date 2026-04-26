@@ -1,7 +1,8 @@
 """DAG plan compiler — validate and compile a flat task list into a dep map.
 
-A plan is a flat list of ``{id, deps}`` entries. Each entry's ``deps`` lists
-its DIRECT dependencies; transitive deps are implicit via the graph.
+A plan is a flat list of ``{id, deps}`` entries plus a mapping from id to
+input string. Each entry's ``deps`` lists its DIRECT dependencies; transitive
+deps are implicit via the graph.
 """
 
 from __future__ import annotations
@@ -13,18 +14,18 @@ from task_center.errors import PlanValidationError
 
 def compile_dag(
     tasks: list[dict[str, Any]],
-    task_specs: dict[str, dict[str, Any]],
+    task_inputs: dict[str, str],
 ) -> dict[str, frozenset[str]]:
     """Validate a flat DAG plan and compile it into a direct-dep map.
 
     Validations: non-empty inputs; entry shape; ids unique and present in
-    ``task_specs``; deps reference known ids, no self-dep, no duplicates;
+    ``task_inputs``; deps reference known ids, no self-dep, no duplicates;
     no cycles.
     """
     if not isinstance(tasks, list) or len(tasks) == 0:
         raise PlanValidationError("tasks must be a non-empty list")
-    if not isinstance(task_specs, dict) or len(task_specs) == 0:
-        raise PlanValidationError("task_specs must be a non-empty dict")
+    if not isinstance(task_inputs, dict) or len(task_inputs) == 0:
+        raise PlanValidationError("task_inputs must be a non-empty dict")
 
     deps: dict[str, frozenset[str]] = {}
 
@@ -42,9 +43,9 @@ def compile_dag(
             )
         if task_id in deps:
             raise PlanValidationError(f"duplicate task id {task_id!r}")
-        if task_id not in task_specs:
+        if task_id not in task_inputs:
             raise PlanValidationError(
-                f"task id {task_id!r} is not a key in task_specs"
+                f"task id {task_id!r} is not a key in task_inputs"
             )
 
         raw_deps = entry.get("deps", [])
@@ -67,13 +68,22 @@ def compile_dag(
                 )
         deps[task_id] = frozenset(raw_deps)
 
-    # All deps must reference ids that appear as task entries.
     for task_id, dep_set in deps.items():
         for dep_id in dep_set:
             if dep_id not in deps:
                 raise PlanValidationError(
                     f"task {task_id!r}: 'deps' references unknown id {dep_id!r}"
                 )
+
+    for task_id, task_input in task_inputs.items():
+        if task_id not in deps:
+            raise PlanValidationError(
+                f"task_inputs key {task_id!r} has no matching tasks entry"
+            )
+        if not isinstance(task_input, str) or not task_input:
+            raise PlanValidationError(
+                f"task_inputs[{task_id!r}] must be a non-empty string"
+            )
 
     _check_no_cycles(deps)
     return deps

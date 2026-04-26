@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from code_intelligence.lsp.client import LspClient
-from code_intelligence.types import DiagnosticSeverity, SymbolKind
+from code_intelligence.types import DiagnosticSeverity, ReferenceInfo, SymbolKind
 
 
 def _decode_sandbox_python_payload(command: str) -> str:
@@ -83,12 +83,10 @@ def test_python_definitions_follows_imports_in_subprocess_path(monkeypatch) -> N
 def test_reset_backend_availability_clears_cached_readiness() -> None:
     lsp = LspClient(workspace_root="/workspace")
     lsp._py_available = False
-    lsp._ts_available = True
 
     lsp.reset_backend_availability()
 
     assert lsp._py_available is None
-    assert lsp._ts_available is None
 
 
 def test_cached_query_singleflights_concurrent_misses() -> None:
@@ -104,12 +102,56 @@ def test_cached_query_singleflights_concurrent_misses() -> None:
         return "resolved"
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(
-            executor.map(lambda _: lsp._run_cached_query("same-key", loader), range(8))
-        )
+        results = list(executor.map(lambda _: lsp._run_cached_query("same-key", loader), range(8)))
 
     assert results == ["resolved"] * 8
     assert calls == 1
+
+
+def test_find_references_many_skips_unsupported_files(monkeypatch) -> None:
+    lsp = LspClient(workspace_root="/workspace")
+
+    def _batch(requests):
+        assert requests == [("/workspace/pkg/core.py", 1, 4)]
+        return [[ReferenceInfo(file_path="/workspace/pkg/core.py", line=1, character=4)]]
+
+    monkeypatch.setattr(lsp, "_python_references_many", _batch)
+
+    results = lsp.find_references_many(
+        [
+            ("/workspace/web/app.ts", 1, 0),
+            ("pkg/core.py", 1, 4),
+            ("/workspace/web/view.jsx", 2, 3),
+        ]
+    )
+
+    assert results[0] == []
+    assert results[1] == [ReferenceInfo(file_path="/workspace/pkg/core.py", line=1, character=4)]
+    assert results[2] == []
+
+
+def test_rename_symbols_skips_unsupported_files(monkeypatch) -> None:
+    lsp = LspClient(workspace_root="/workspace")
+
+    def _batch(requests):
+        assert requests == [("/workspace/pkg/core.py", 1, 4, "new_name")]
+        return [{"/workspace/pkg/core.py": "def new_name(): pass\n"}]
+
+    monkeypatch.setattr(lsp, "_python_rename_many", _batch)
+
+    results = lsp.rename_symbols(
+        [
+            ("/workspace/web/app.ts", 1, 0, "renamed"),
+            ("pkg/core.py", 1, 4, "new_name"),
+            ("/workspace/web/view.jsx", 2, 3, "renamed"),
+        ]
+    )
+
+    assert results == [
+        {},
+        {"/workspace/pkg/core.py": "def new_name(): pass\n"},
+        {},
+    ]
 
 
 def test_sandbox_read_line_caches_until_invalidate() -> None:
@@ -192,10 +234,7 @@ def test_sandbox_python_diagnostics_runs_inside_sandbox(monkeypatch) -> None:
 
     def _capture(script: str) -> str:
         captured_scripts.append(script)
-        return (
-            '{"type":"syntax_error","line":1,"character":11,'
-            '"message":"invalid syntax"}'
-        )
+        return '{"type":"syntax_error","line":1,"character":11,"message":"invalid syntax"}'
 
     monkeypatch.setattr(lsp, "_run_python_script", _capture)
 
@@ -257,10 +296,7 @@ def test_sandbox_exec_logs_empty_daytona_exception_context(caplog) -> None:
     assert lsp._run_python_script("print('hello')") == ""
 
     assert lsp.telemetry.script_errors == 1
-    assert (
-        "Failed to execute command: (no additional detail from Daytona SDK)"
-        in caplog.text
-    )
+    assert "Failed to execute command: (no additional detail from Daytona SDK)" in caplog.text
     assert "[exception_type=RuntimeError]" in caplog.text
     assert "operation=python lsp query" in caplog.text
     assert "workspace_root='/testbed'" in caplog.text
@@ -302,13 +338,13 @@ def test_ensure_ready_can_probe_only_python_backend() -> None:
 
     readiness = lsp.ensure_ready(languages=("python",))
 
-    assert readiness == {"python": True, "typescript": False}
+    assert readiness == {"python": True}
     assert len(process.calls) == 1
     assert "import jedi" in process.calls[0]
     assert "__CODEX_EXIT_CODE__" in process.calls[0]
 
 
-def test_connected_does_not_probe_typescript_backend() -> None:
+def test_connected_only_probes_python_backend() -> None:
     class _SandboxProcess:
         def __init__(self) -> None:
             self.calls: list[str] = []
@@ -355,13 +391,7 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
             self.calls.append(command)
             if "import jedi" in command:
                 return _sandbox_exit_result(1)
-            if "npx tsc --version" in command:
-                return _sandbox_exit_result(1)
             if "python3 -m pip install --quiet --no-cache-dir jedi" in command:
-                return _sandbox_exit_result(0)
-            if "node -e \"require('typescript')\"" in command:
-                return SimpleNamespace(exit_code=0, result="missing\n")
-            if "npm install --global --quiet typescript" in command:
                 return _sandbox_exit_result(0)
             raise AssertionError(f"unexpected command: {command}")
 
@@ -374,9 +404,10 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
 
     readiness = lsp.ensure_ready(install_missing=True)
 
-    assert readiness == {"python": True, "typescript": True}
+    assert readiness == {"python": True}
     assert any(
         "python3 -m pip install --quiet --no-cache-dir jedi" in command
         and "__CODEX_EXIT_CODE__" in command
         for command in sandbox.process.calls
     )
+    assert not any("npm install" in command for command in sandbox.process.calls)

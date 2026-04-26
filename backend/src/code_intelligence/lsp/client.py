@@ -50,10 +50,6 @@ def _format_transport_exception(exc: Exception) -> str:
 
 _LANGUAGE_BY_EXTENSION = {
     ".py": "python",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".ts": "typescript",
-    ".tsx": "typescript",
 }
 
 
@@ -111,12 +107,14 @@ class LspClient:
         self._line_cache: OrderedDict[tuple[str, int], str | None] = OrderedDict()
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
-        self._ts_available: bool | None = None
 
     # -- Public query methods -------------------------------------------------
 
     def goto_definition(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> list[SymbolInfo]:
         """Find symbol definitions at position."""
         language = self._detect_language(file_path)
@@ -126,7 +124,10 @@ class LspClient:
         )
 
     def find_references(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> list[ReferenceInfo]:
         """Find all references to symbol at position."""
         language = self._detect_language(file_path)
@@ -140,27 +141,37 @@ class LspClient:
         requests: Sequence[tuple[str, int, int]],
     ) -> list[list[ReferenceInfo]]:
         """Batch Python reference queries into one backend process."""
-        normalized: list[tuple[str, int, int]] = []
-        for file_path, line, character in requests:
+        results: list[list[ReferenceInfo]] = [[] for _ in requests]
+        python_indexes: list[int] = []
+        python_requests: list[tuple[str, int, int]] = []
+        for index, (file_path, line, character) in enumerate(requests):
             if self._detect_language(file_path) != "python":
-                normalized.append((file_path, int(line), int(character)))
                 continue
-            normalized.append(
+            python_indexes.append(index)
+            python_requests.append(
                 (
                     self._resolve_path(file_path),
                     int(line),
                     int(self._resolve_column(file_path, int(line), int(character))),
                 )
             )
-        if not normalized:
-            return []
-        if len(normalized) == 1:
-            file_path, line, character = normalized[0]
-            return [self.find_references(file_path, line, character)]
-        return self._python_references_many(normalized)
+        if not python_requests:
+            return results
+        if len(requests) == 1 and len(python_requests) == 1:
+            file_path, line, character = python_requests[0]
+            python_results = [self.find_references(file_path, line, character)]
+        else:
+            python_results = self._python_references_many(python_requests)
+        for index, refs in zip(python_indexes, python_results, strict=False):
+            results[index] = refs
+        return results
 
     def rename_symbol(
-        self, file_path: str, line: int, character: int, new_name: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
     ) -> dict[str, str]:
         """Return {absolute_path: new_content} for every file affected by the rename.
 
@@ -177,12 +188,14 @@ class LspClient:
         requests: Sequence[tuple[str, int, int, str]],
     ) -> list[dict[str, str]]:
         """Batch Python renames into one backend process."""
-        normalized: list[tuple[str, int, int, str]] = []
-        for file_path, line, character, new_name in requests:
+        results: list[dict[str, str]] = [{} for _ in requests]
+        python_indexes: list[int] = []
+        python_requests: list[tuple[str, int, int, str]] = []
+        for index, (file_path, line, character, new_name) in enumerate(requests):
             if self._detect_language(file_path) != "python":
-                normalized.append((file_path, line, character, new_name))
                 continue
-            normalized.append(
+            python_indexes.append(index)
+            python_requests.append(
                 (
                     self._resolve_path(file_path),
                     int(line),
@@ -190,15 +203,22 @@ class LspClient:
                     str(new_name),
                 )
             )
-        if not normalized:
-            return []
-        if len(normalized) == 1:
-            file_path, line, character, new_name = normalized[0]
-            return [self.rename_symbol(file_path, line, character, new_name)]
-        return self._python_rename_many(normalized)
+        if not python_requests:
+            return results
+        if len(requests) == 1 and len(python_requests) == 1:
+            file_path, line, character, new_name = python_requests[0]
+            python_results = [self.rename_symbol(file_path, line, character, new_name)]
+        else:
+            python_results = self._python_rename_many(python_requests)
+        for index, rename in zip(python_indexes, python_results, strict=False):
+            results[index] = rename
+        return results
 
     def hover(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> HoverResult | None:
         """Get hover information at position."""
         language = self._detect_language(file_path)
@@ -256,25 +276,19 @@ class LspClient:
 
         When attached to a sandbox, optionally install bounded missing
         dependencies so CI can recover from a cold image. ``languages``
-        scopes the probe so Python-only CI flows do not pay for unrelated
-        TypeScript process startup.
+        scopes the probe to supported Python backends.
         """
         targets = _readiness_targets(languages)
         if "python" in targets and self._py_available is None:
             self._py_available = self._check_python_backend()
-        if "typescript" in targets and self._ts_available is None:
-            self._ts_available = self._check_typescript_backend()
         if install_missing and self._sandbox:
             if "python" in targets and not self._py_available:
                 self._py_available = self._install_python_backend()
-            if "typescript" in targets and not self._ts_available:
-                self._ts_available = self._install_typescript_backend()
-        return {"python": self._py_available or False, "typescript": self._ts_available or False}
+        return {"python": self._py_available or False} if "python" in targets else {}
 
     def reset_backend_availability(self) -> None:
         """Forget cached backend readiness so the next probe can re-check."""
         self._py_available = None
-        self._ts_available = None
 
     @property
     def telemetry(self) -> LspTelemetry:
@@ -293,12 +307,16 @@ class LspClient:
     def connected(self) -> bool:
         """Whether at least one language backend is available."""
         status = self.ensure_ready(languages=("python",))
-        return bool(status.get("python")) or bool(self._ts_available)
+        return bool(status.get("python"))
 
     # -- Language-specific queries --------------------------------------------
 
     def _query_definitions(
-        self, file_path: str, line: int, character: int, language: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        language: str,
     ) -> list[SymbolInfo]:
         """Query definitions using language-specific backend."""
         self._record_query()
@@ -307,7 +325,11 @@ class LspClient:
         return []
 
     def _query_references(
-        self, file_path: str, line: int, character: int, language: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        language: str,
     ) -> list[ReferenceInfo]:
         self._record_query()
         if language == "python":
@@ -315,7 +337,11 @@ class LspClient:
         return []
 
     def _query_hover(
-        self, file_path: str, line: int, character: int, language: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        language: str,
     ) -> HoverResult | None:
         self._record_query()
         if language == "python":
@@ -323,7 +349,9 @@ class LspClient:
         return None
 
     def _query_diagnostics(
-        self, file_path: str, language: str,
+        self,
+        file_path: str,
+        language: str,
     ) -> list[Diagnostic]:
         self._record_query()
         if language == "python":
@@ -340,6 +368,7 @@ class LspClient:
         return str(p)
 
     _DEF_CLASS_RE = re.compile(r"^(\s*(?:async\s+)?(?:def|class)\s+)")
+
     def _resolve_column(self, file_path: str, line: int, character: int) -> int:
         """When character is 0, advance to the actual symbol name column.
 
@@ -410,7 +439,10 @@ class LspClient:
             return None
 
     def _python_definitions(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> list[SymbolInfo]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
@@ -441,7 +473,10 @@ class LspClient:
         ]
 
     def _python_references(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> list[ReferenceInfo]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
@@ -524,7 +559,11 @@ class LspClient:
         return results
 
     def _python_rename(
-        self, file_path: str, line: int, character: int, new_name: str,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
     ) -> dict[str, str]:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
@@ -610,7 +649,10 @@ class LspClient:
         return results
 
     def _python_hover(
-        self, file_path: str, line: int, character: int,
+        self,
+        file_path: str,
+        line: int,
+        character: int,
     ) -> HoverResult | None:
         character = self._resolve_column(file_path, line, character)
         resolved_path = self._resolve_path(file_path)
@@ -667,9 +709,7 @@ class LspClient:
             output = self._run_python_script(script)
             raw = self._decode_json(output)
             if not isinstance(raw, dict):
-                raise RuntimeError(
-                    "LSP diagnostics unavailable: python query produced no JSON"
-                )
+                raise RuntimeError("LSP diagnostics unavailable: python query produced no JSON")
             result_type = raw.get("type")
             if result_type in {"clean", "missing"}:
                 return []
@@ -764,12 +804,6 @@ class LspClient:
             sandbox_cmd="python3 -c 'import jedi'",
         )
 
-    def _check_typescript_backend(self) -> bool:
-        return self._check_backend(
-            local_cmd=["npx", "tsc", "--version"],
-            sandbox_cmd="npx tsc --version",
-        )
-
     def _check_backend(self, *, local_cmd: list[str], sandbox_cmd: str) -> bool:
         try:
             if self._sandbox:
@@ -777,7 +811,8 @@ class LspClient:
                 return exit_code == 0
             proc = subprocess.run(
                 local_cmd,
-                capture_output=True, timeout=10,
+                capture_output=True,
+                timeout=10,
             )
             return proc.returncode == 0
         except Exception:
@@ -788,25 +823,6 @@ class LspClient:
             return False
         return self._run_sandbox_install(
             "python3 -m pip install --quiet --no-cache-dir jedi",
-        )
-
-    def _install_typescript_backend(self) -> bool:
-        if not self._sandbox:
-            return False
-        try:
-            check = run_sync(
-                self._sandbox.process.exec(
-                    "node -e \"require('typescript')\" 2>/dev/null && echo ok || echo missing",
-                    timeout=15,
-                )
-            )
-            result = str(getattr(check, "result", "") or "")
-            if "missing" not in result:
-                return True
-        except Exception:
-            logger.debug("LSP TypeScript preinstall check failed", exc_info=True)
-        return self._run_sandbox_install(
-            "npm install --global --quiet typescript",
         )
 
     def _run_sandbox_install(self, command: str) -> bool:
@@ -937,8 +953,12 @@ class LspClient:
 
 def _readiness_targets(languages: Sequence[str] | None) -> set[str]:
     if languages is None:
-        return {"python", "typescript"}
-    return {str(language).strip().lower() for language in languages if str(language).strip()}
+        return {"python"}
+    return {
+        str(language).strip().lower()
+        for language in languages
+        if str(language).strip().lower() == "python"
+    }
 
 
 def _coerce_symbol_kind(raw_kind: Any) -> SymbolKind:

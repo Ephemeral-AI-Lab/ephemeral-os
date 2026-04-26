@@ -46,7 +46,7 @@ def test_collect_remote_files_uses_documented_search_wildcard() -> None:
 
     files = collect_remote_files(SimpleNamespace(fs=fs), "/repo", max_files=10)
 
-    assert files == ["/repo/pkg/app.py", "/repo/pkg/view.tsx"]
+    assert files == ["/repo/pkg/app.py"]
     assert fs.search_calls == [("/repo", "*")]
     assert fs.list_calls == []
 

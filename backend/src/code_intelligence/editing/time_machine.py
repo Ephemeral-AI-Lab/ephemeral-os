@@ -29,6 +29,7 @@ class SnapshotEntry:
     content: str
     content_hash: str
     timestamp: float
+    existed: bool = True
 
 
 class TimeMachine:
@@ -49,13 +50,14 @@ class TimeMachine:
         self._stacks: OrderedDict[str, list[SnapshotEntry]] = OrderedDict()
         self._total_bytes = 0
 
-    def save(self, file_path: str, content: str) -> str:
+    def save(self, file_path: str, content: str, *, existed: bool = True) -> str:
         """Save a snapshot before editing. Returns the snapshot_id."""
         snapshot = SnapshotEntry(
             snapshot_id=uuid.uuid4().hex[:12],
             content=content,
             content_hash=_content_hash(content),
             timestamp=time.time(),
+            existed=existed,
         )
         content_size = len(content.encode("utf-8"))
 
@@ -117,4 +119,3 @@ class TimeMachine:
             else:
                 self._stacks.clear()
                 self._total_bytes = 0
-

@@ -82,14 +82,14 @@ def create_persistence_router(
         )
 
     @router.get("/task-center-runs/{run_id}/graph")
-    async def list_task_center_graph(run_id: str):
+    async def list_task_center_harness_graph(run_id: str):
         if not _db_available():
             return JSONResponse(
                 status_code=503,
                 content={"error": "Database not configured"},
             )
-        graph = task_center_store.list_graph_for_run(run_id)
-        return JSONResponse(content={"graph": graph})
+        harness_graphs = task_center_store.list_harness_graphs_for_run(run_id)
+        return JSONResponse(content={"harness_graphs": harness_graphs})
 
     @router.get("/agent-runs/{agent_run_id}")
     async def get_agent_run(agent_run_id: str):

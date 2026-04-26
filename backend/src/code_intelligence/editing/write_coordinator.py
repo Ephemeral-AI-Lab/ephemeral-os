@@ -1,4 +1,4 @@
-"""Legacy semantic write pipeline: resolve, commit, refresh, abort.
+"""Semantic write pipeline: resolve, commit, refresh, abort.
 
 The coordinator owns service-level semantic writes for a single
 :class:`CodeIntelligenceService` sandbox. Daytona write tools no longer call
@@ -66,32 +66,8 @@ def _result(
     )
 
 
-def _record_timing(timings: dict[str, float], key: str, started_at: float) -> None:
-    timings[key] = round(time.perf_counter() - started_at, 6)
-
-
-def _conflict_result(
-    arbiter: Arbiter,
-    file_path: str,
-    message: str,
-    *,
-    conflict_reason: str,
-    snapshot_id: str = "",
-    timings: dict[str, float] | None = None,
-) -> EditResult:
-    arbiter.record_conflict(conflict_reason)
-    return _result(
-        file_path,
-        message,
-        conflict=True,
-        conflict_reason=conflict_reason,
-        snapshot_id=snapshot_id,
-        timings=timings,
-    )
-
-
 class WriteCoordinator:
-    """Encapsulates the legacy semantic write pipeline for one sandbox."""
+    """Encapsulates the semantic write pipeline for one sandbox."""
 
     def __init__(
         self,
@@ -199,7 +175,8 @@ class WriteCoordinator:
                 read_started = time.perf_counter()
                 try:
                     current_now, existed_now = self._content.read(
-                        change.file_path, allow_missing=True,
+                        change.file_path,
+                        allow_missing=True,
                     )
                 except Exception as exc:  # pragma: no cover - defensive I/O
                     resolve_read_s += time.perf_counter() - read_started
@@ -261,14 +238,15 @@ class WriteCoordinator:
                         status="aborted_version",
                         conflict_file=change.file_path,
                         conflict_reason=(
-                            "file content changed since base was captured "
-                            "(strict_base=True)"
+                            "file content changed since base was captured (strict_base=True)"
                         ),
                         timings=timings,
                     )
                 else:
                     resolved_content, conflict = self._resolve_semantic_change(
-                        change, current_now, existed_now,
+                        change,
+                        current_now,
+                        existed_now,
                     )
                     if conflict is not None:
                         status, reason = conflict
@@ -302,7 +280,11 @@ class WriteCoordinator:
                 per_timings: dict[str, float] = {}
                 per_started = time.perf_counter()
                 snapshot_started = time.perf_counter()
-                self._time_machine.save(change.file_path, current_now)
+                self._time_machine.save(
+                    change.file_path,
+                    current_now,
+                    existed=existed_now,
+                )
                 apply_snapshot_s += time.perf_counter() - snapshot_started
                 write_started = time.perf_counter()
                 try:
@@ -317,7 +299,10 @@ class WriteCoordinator:
                         if snap is None:
                             continue
                         try:
-                            self._content.write(fp, snap.content)
+                            if snap.existed:
+                                self._content.write(fp, snap.content)
+                            else:
+                                self._content.delete(fp)
                         except Exception:  # pragma: no cover - best effort
                             logger.exception("rollback failed for %s", fp)
                     timings["apply"] = round(time.perf_counter() - apply_started, 6)
@@ -352,7 +337,7 @@ class WriteCoordinator:
                 )
                 apply_record_s += time.perf_counter() - record_started
                 refresh_started = time.perf_counter()
-                self._symbol_index.refresh(change.file_path, resolved_content or "")
+                self._symbol_index.refresh(change.file_path, resolved_content)
                 apply_refresh_s += time.perf_counter() - refresh_started
                 invalidate_started = time.perf_counter()
                 self._lsp_client.invalidate(change.file_path)
@@ -399,10 +384,10 @@ class WriteCoordinator:
         """Commit exact-base single operations without a separate read round trip."""
         if not changes:
             return None
+        if any(change.final_content is None and not change.base_existed for change in changes):
+            return None
         if any(
-            (not change.strict_base)
-            and change.final_content is not None
-            and change.base_existed
+            (not change.strict_base) and change.final_content is not None and change.base_existed
             for change in changes
         ):
             return None
@@ -432,8 +417,7 @@ class WriteCoordinator:
                 success=False,
                 status="failed",
                 files=tuple(
-                    _result(c.file_path, f"checked operation failed: {exc}")
-                    for c in changes
+                    _result(c.file_path, f"checked operation failed: {exc}") for c in changes
                 ),
                 conflict_file=None,
                 conflict_reason=f"write failed: {exc}",
@@ -458,20 +442,15 @@ class WriteCoordinator:
                 )
                 if conflict_change is not None and conflict_change.final_content is None:
                     conflict_message = "file content changed before delete"
-                elif (
-                    conflict_change is not None
-                    and not conflict_change.base_existed
-                ):
+                elif conflict_change is not None and not conflict_change.base_existed:
                     conflict_message = "file already exists; base said it did not"
                 elif conflict_change is not None and conflict_change.strict_base:
                     conflict_message = (
-                        "file content changed since base was captured "
-                        "(strict_base=True)"
+                        "file content changed since base was captured (strict_base=True)"
                     )
                 else:
                     conflict_message = (
-                        apply_result.message
-                        or "file content changed before checked apply"
+                        apply_result.message or "file content changed before checked apply"
                     )
                 timings["resolve"] = 0.0
                 timings["resolve_read"] = 0.0
@@ -506,9 +485,7 @@ class WriteCoordinator:
         for change in changes:
             current_hash = change.base_hash if change.base_existed else ""
             new_hash = (
-                content_hash(change.final_content)
-                if change.final_content is not None
-                else ""
+                content_hash(change.final_content) if change.final_content is not None else ""
             )
             gen = self._arbiter.record_edit(
                 file_path=change.file_path,
@@ -521,8 +498,9 @@ class WriteCoordinator:
             self._time_machine.save(
                 change.file_path,
                 change.base_content if change.base_existed else "",
+                existed=change.base_existed,
             )
-            self._symbol_index.refresh(change.file_path, change.final_content or "")
+            self._symbol_index.refresh(change.file_path, change.final_content)
             self._lsp_client.invalidate(change.file_path)
             commit_results.append(
                 _result(
@@ -596,9 +574,7 @@ class WriteCoordinator:
                         op.changes,
                         status="aborted_lock",
                         conflict_file=(
-                            file_path
-                            if any(c.file_path == file_path for c in op.changes)
-                            else None
+                            file_path if any(c.file_path == file_path for c in op.changes) else None
                         ),
                         conflict_reason="could not acquire file lock (timeout)",
                         timings=timings,
@@ -631,7 +607,8 @@ class WriteCoordinator:
                 aborted = False
                 for change in op.changes:
                     current_now, existed_now = current_by_path.get(
-                        change.file_path, ("", False),
+                        change.file_path,
+                        ("", False),
                     )
                     current_hash = content_hash(current_now) if existed_now else ""
                     if change.final_content is None:
@@ -671,8 +648,7 @@ class WriteCoordinator:
                             status="aborted_version",
                             conflict_file=change.file_path,
                             conflict_reason=(
-                                "file content changed since base was captured "
-                                "(strict_base=True)"
+                                "file content changed since base was captured (strict_base=True)"
                             ),
                             timings=timings,
                         )
@@ -680,7 +656,9 @@ class WriteCoordinator:
                         break
                     else:
                         resolved_content, conflict = self._resolve_semantic_change(
-                            change, current_now, existed_now,
+                            change,
+                            current_now,
+                            existed_now,
                         )
                         if conflict is not None:
                             status, reason = conflict
@@ -706,7 +684,11 @@ class WriteCoordinator:
                 if resolved is None:
                     continue
                 for change, current_now, resolved_content, _, existed_now in resolved:
-                    self._time_machine.save(change.file_path, current_now)
+                    self._time_machine.save(
+                        change.file_path,
+                        current_now,
+                        existed=existed_now,
+                    )
                     apply_items.append((change.file_path, resolved_content))
                     rollback_items.append(
                         (change.file_path, current_now if existed_now else None),
@@ -748,9 +730,7 @@ class WriteCoordinator:
                 commit_results: list[EditResult] = []
                 for change, current_now, resolved_content, current_hash, existed_now in resolved:
                     new_hash = (
-                        content_hash(resolved_content)
-                        if resolved_content is not None
-                        else ""
+                        content_hash(resolved_content) if resolved_content is not None else ""
                     )
                     gen = self._arbiter.record_edit(
                         file_path=change.file_path,
@@ -760,7 +740,7 @@ class WriteCoordinator:
                         new_hash=new_hash,
                         description=op.description,
                     )
-                    self._symbol_index.refresh(change.file_path, resolved_content or "")
+                    self._symbol_index.refresh(change.file_path, resolved_content)
                     self._lsp_client.invalidate(change.file_path)
                     commit_results.append(
                         _result(
@@ -882,9 +862,7 @@ class WriteCoordinator:
             for change in op.changes:
                 current_hash = change.base_hash if change.base_existed else ""
                 new_hash = (
-                    content_hash(change.final_content)
-                    if change.final_content is not None
-                    else ""
+                    content_hash(change.final_content) if change.final_content is not None else ""
                 )
                 gen = self._arbiter.record_edit(
                     file_path=change.file_path,
@@ -897,8 +875,9 @@ class WriteCoordinator:
                 self._time_machine.save(
                     change.file_path,
                     change.base_content if change.base_existed else "",
+                    existed=change.base_existed,
                 )
-                self._symbol_index.refresh(change.file_path, change.final_content or "")
+                self._symbol_index.refresh(change.file_path, change.final_content)
                 self._lsp_client.invalidate(change.file_path)
                 commit_results.append(
                     _result(
@@ -974,7 +953,9 @@ class WriteCoordinator:
             )
         assert change.final_content is not None  # modify branch only
         merged, reason_kind = self._merge_against_base(
-            change.base_content, change.final_content, current_now,
+            change.base_content,
+            change.final_content,
+            current_now,
         )
         if reason_kind == "":
             assert merged is not None
@@ -1024,9 +1005,12 @@ class WriteCoordinator:
         if snapshot is None:
             return _result(file_path, "No snapshot available for undo")
         try:
-            self._content.write(file_path, snapshot.content)
+            if snapshot.existed:
+                self._content.write(file_path, snapshot.content)
+            else:
+                self._content.delete(file_path)
         except Exception as exc:
             return _result(file_path, f"Undo write failed: {exc}")
-        self._symbol_index.refresh(file_path, snapshot.content)
+        self._symbol_index.refresh(file_path, snapshot.content if snapshot.existed else None)
         self._lsp_client.invalidate(file_path)
         return _result(file_path, "Reverted to previous snapshot", success=True)

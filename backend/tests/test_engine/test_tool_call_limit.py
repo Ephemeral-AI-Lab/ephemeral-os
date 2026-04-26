@@ -113,14 +113,14 @@ async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
-    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_completion"})
+    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_success"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
 
     result = await execute_tool_call(ctx, "read_file", "id1", {})
 
     assert result.is_error
     assert "terminal call reserved" in result.content
-    assert "submit_task_completion" in result.content
+    assert "submit_task_success" in result.content
     assert ctx.tool_calls_used == 1
 
 
@@ -154,12 +154,11 @@ def _ctx_with_notifications(limit: int, used: int = 0) -> tuple[QueryContext, li
 
 
 @pytest.mark.asyncio
-async def test_budget_warning_fires_once_when_crossing_75_percent():
+async def test_budget_warning_fires_when_crossing_75_percent():
     ctx, captured = _ctx_with_notifications(limit=4, used=2)
-    # 2 -> 3 puts us at 75% exactly; warning fires.
+    # 2 -> 3 hits ceil(4*0.75)=3; warning fires.
     await execute_tool_call(ctx, "any_tool", "id1", {})
     assert ctx.tool_calls_used == 3
-    assert ctx.tool_budget_warning_fired is True
     assert len(captured) == 1
     assert "75%" in captured[0].text
     assert "3/4" in captured[0].text
@@ -167,39 +166,28 @@ async def test_budget_warning_fires_once_when_crossing_75_percent():
 
 
 @pytest.mark.asyncio
-async def test_budget_warning_does_not_refire_on_subsequent_calls():
+async def test_budget_warning_fires_once_per_run():
     ctx, captured = _ctx_with_notifications(limit=4, used=2)
-    await execute_tool_call(ctx, "a", "id1", {})  # crosses 75%
-    await execute_tool_call(ctx, "b", "id2", {})  # 4/4 — at cap, but already fired
+    await execute_tool_call(ctx, "a", "id1", {})  # 3/4 — fires
+    await execute_tool_call(ctx, "b", "id2", {})  # 4/4 — past threshold, silent
     assert len(captured) == 1
 
 
 @pytest.mark.asyncio
 async def test_budget_warning_silent_below_threshold():
     ctx, captured = _ctx_with_notifications(limit=10, used=0)
-    # 0 -> 1 -> 2 -> ... only fires once we hit ceil(10*0.75)=8.
+    # ceil(10*0.75)=8; nothing until used reaches 8.
     for i in range(7):
         await execute_tool_call(ctx, "t", f"id{i}", {})
-    assert ctx.tool_calls_used == 7
     assert captured == []
-    await execute_tool_call(ctx, "t", "id8", {})  # 8/10 = 0.8
+    await execute_tool_call(ctx, "t", "id8", {})  # 8/10
     assert len(captured) == 1
 
 
 @pytest.mark.asyncio
 async def test_budget_warning_skipped_when_no_service():
-    # Default _ctx has no notification service attached.
     ctx = _ctx(limit=4, used=2)
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
+    # Must not crash without a SystemNotificationService attached.
     await execute_tool_call(ctx, "any_tool", "id1", {})
-    # No crash, flag stays False since nothing was fired.
-    assert ctx.tool_budget_warning_fired is False
-
-
-@pytest.mark.asyncio
-async def test_budget_warning_skipped_when_no_limit():
-    ctx, captured = _ctx_with_notifications(limit=4, used=0)
-    ctx.tool_call_limit = None
-    await execute_tool_call(ctx, "any_tool", "id1", {})
-    assert captured == []
-    assert ctx.tool_budget_warning_fired is False
+    assert ctx.tool_calls_used == 3

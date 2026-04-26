@@ -52,12 +52,10 @@ class SymbolIndex:
         workspace_root: str,
         max_files: int = SYMBOL_INDEX_MAX_FILES,
         sandbox: Any = None,
-        tree_cache: Any | None = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._max_files = max_files
         self._sandbox = sandbox
-        self._tree_cache = tree_cache
 
         self._lock = threading.Lock()
         self._symbols: dict[str, _FileSymbols] = {}
@@ -65,9 +63,7 @@ class SymbolIndex:
         self._building = False
         self._build_event = threading.Event()
         self._generation = 0
-        self._file_events: dict[str, threading.Event] = {}
         self._build_thread: threading.Thread | None = None
-        self._pending_rebuild = False
 
     # -- Public API -----------------------------------------------------------
 
@@ -89,8 +85,8 @@ class SymbolIndex:
         if content is None:
             content = read_file_content(file_path, self._sandbox)
             if content is None:
-                return self._generation
-        symbols = extract_symbols(file_path, content, self._tree_cache)
+                return self.remove(file_path)
+        symbols = extract_symbols(file_path, content)
         with self._lock:
             self._generation += 1
             gen = self._generation
@@ -100,10 +96,16 @@ class SymbolIndex:
                 generation=gen,
                 indexed_at=time.time(),
             )
-            evt = self._file_events.get(file_path)
-            if evt:
-                evt.set()
         return gen
+
+    def remove(self, file_path: str) -> int:
+        """Remove a file from the index. Returns the new generation."""
+        with self._lock:
+            if file_path not in self._symbols:
+                return self._generation
+            self._generation += 1
+            del self._symbols[file_path]
+            return self._generation
 
     def find(self, query: str, kind: SymbolKind | None = None) -> list[SymbolInfo]:
         """Find symbols matching a query string (case-insensitive substring)."""
@@ -212,13 +214,6 @@ class SymbolIndex:
                 self.size,
             )
 
-            with self._lock:
-                if self._pending_rebuild:
-                    self._pending_rebuild = False
-                    self._built = False
-                    self._build_event.clear()
-                    self._start_build()
-
         except Exception:
             logger.exception("Symbol index build failed")
             self._finish_build(built=False)
@@ -242,7 +237,7 @@ class SymbolIndex:
             content = read_file_content(file_path, self._sandbox)
             if content is None:
                 continue
-            batch.append((file_path, extract_symbols(file_path, content, self._tree_cache)))
+            batch.append((file_path, extract_symbols(file_path, content)))
             if len(batch) >= SYMBOL_INDEX_BATCH_SIZE:
                 self._commit_batch(batch)
                 batch.clear()
@@ -257,9 +252,7 @@ class SymbolIndex:
             if downloaded is None:
                 self._build_remote_individual(chunk)
                 continue
-            commit = [
-                (fp, extract_symbols(fp, content, self._tree_cache)) for fp, content in downloaded
-            ]
+            commit = [(fp, extract_symbols(fp, content)) for fp, content in downloaded]
             if commit:
                 self._commit_batch(commit)
 
@@ -268,7 +261,7 @@ class SymbolIndex:
 
         def _download_and_extract(fp: str) -> tuple[str, list[SymbolInfo]]:
             content = read_file_content(fp, self._sandbox)
-            symbols = extract_symbols(fp, content, self._tree_cache) if content else []
+            symbols = extract_symbols(fp, content) if content else []
             return fp, symbols
 
         batch: list[tuple[str, list[SymbolInfo]]] = []

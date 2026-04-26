@@ -35,7 +35,7 @@ def test_gate_allowed_tools_list_gates_unknown() -> None:
         name="direct",
         is_default=True,
         allowed_tools=["read"],
-        terminals=["submit_task_completion"],
+        terminals=["submit_task_success"],
     )
 
     assert evaluate_mode_gate(surface, "read", "id-1") is None
@@ -48,14 +48,14 @@ def test_gate_deny_payload_format() -> None:
         name="direct",
         is_default=True,
         allowed_tools=[],
-        terminals=["submit_task_completion"],
+        terminals=["submit_task_success"],
     )
     deny = evaluate_mode_gate(surface, "submit_plan_handoff", "id-1")
 
     assert deny is not None
     assert "submit_plan_handoff" in deny.content
     assert "direct" in deny.content
-    assert "submit_task_completion" in deny.content
+    assert "submit_task_success" in deny.content
     assert deny.is_error
     assert deny.tool_use_id == "id-1"
 
@@ -81,7 +81,6 @@ class _StubContext:
     cwd: Path
     tool_call_limit: int | None
     tool_calls_used: int = 0
-    tool_budget_warning_fired: bool = False
     terminal_tools: set = None  # type: ignore[assignment]
     tool_metadata: ExecutionMetadata = None  # type: ignore[assignment]
     active_mode: ModeDefinition | None = None
@@ -134,7 +133,7 @@ async def test_allowed_tool_consumes_budget() -> None:
         name="direct",
         is_default=True,
         allowed_tools=["allowed_tool"],
-        terminals=["submit_task_completion"],
+        terminals=["submit_task_success"],
     )
     registry = ToolRegistry()
     registry.register(_AllowedTool())

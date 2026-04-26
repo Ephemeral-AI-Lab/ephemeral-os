@@ -86,7 +86,6 @@ class QueryContext:
     run_id: str = ""
     tool_call_limit: int | None = None
     tool_calls_used: int = 0
-    tool_budget_warning_fired: bool = False
     tool_metadata: ExecutionMetadata | None = None
     enable_background_tasks: bool = False
     terminal_tools: set[str] = field(default_factory=set)

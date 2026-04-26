@@ -104,7 +104,7 @@ class TestConfigBackedAgentApi:
                         "name": "direct",
                         "is_default": True,
                         "allowed_tools": sorted(SANDBOX_TOOLS),
-                        "terminals": ["submit_task_completion"],
+                        "terminals": ["submit_task_success"],
                     }
                 ],
             },
@@ -126,7 +126,7 @@ class TestConfigBackedAgentApi:
                         "name": "direct",
                         "is_default": True,
                         "allowed_tools": ["ci_query_symbol"],
-                        "terminals": ["submit_task_completion"],
+                        "terminals": ["submit_task_success"],
                     }
                 ],
             },
@@ -150,7 +150,7 @@ class TestConfigBackedAgentApi:
                         "name": "direct",
                         "is_default": True,
                         "allowed_tools": ["does_not_exist"],
-                        "terminals": ["submit_task_completion"],
+                        "terminals": ["submit_task_success"],
                     }
                 ],
             },

@@ -48,8 +48,13 @@ def get_async_session_factory() -> "async_sessionmaker[AsyncSession] | None":
     return _async_session_factory
 
 
+_DROPPED_COLUMNS: dict[str, set[str]] = {
+    "task_center_tasks": {"title", "summary"},
+}
+
+
 def _add_missing_columns(engine: Engine) -> None:
-    """Add columns that exist in ORM models but not yet in the database."""
+    """Add columns from the ORM, drop columns no longer in the model."""
     insp = inspect(engine)
     for table in Base.metadata.sorted_tables:
         if not insp.has_table(table.name):
@@ -72,6 +77,12 @@ def _add_missing_columns(engine: Engine) -> None:
                                     'WHERE "task_input" IS NULL'
                                 )
                             )
+        for stale in _DROPPED_COLUMNS.get(table.name, set()) & existing:
+            logger.info("Dropping obsolete column %s.%s", table.name, stale)
+            with engine.begin() as conn:
+                conn.execute(
+                    text(f'ALTER TABLE "{table.name}" DROP COLUMN IF EXISTS "{stale}"')
+                )
 
 
 def _async_database_url(url: str) -> Any:

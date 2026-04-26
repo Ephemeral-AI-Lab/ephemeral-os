@@ -58,9 +58,7 @@ def record_overlay_op(**fields: int) -> None:
     with _OVERLAY_LOCK:
         for key, value in fields.items():
             if hasattr(_OVERLAY_COUNTERS, key):
-                setattr(
-                    _OVERLAY_COUNTERS, key, getattr(_OVERLAY_COUNTERS, key) + int(value)
-                )
+                setattr(_OVERLAY_COUNTERS, key, getattr(_OVERLAY_COUNTERS, key) + int(value))
 
 
 def build_status(
@@ -70,7 +68,6 @@ def build_status(
     initialized: bool,
     symbol_index: Any,
     arbiter: Any,
-    tree_cache: Any,
     lsp_client: Any,
     rename_cache_stats: dict[str, int],
     rename_preview_fast_fallbacks: int,
@@ -93,7 +90,6 @@ def build_status(
             "entries": arbiter.metrics.total_edits,
             "generation": arbiter.generation,
         },
-        "tree_cache": tree_cache.stats,
         "rename_preview_cache": rename_cache_stats,
         "rename_preview_fast_fallbacks": rename_preview_fast_fallbacks,
         "lsp": lsp,

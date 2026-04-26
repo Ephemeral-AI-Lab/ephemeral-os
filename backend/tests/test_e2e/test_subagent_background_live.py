@@ -119,7 +119,7 @@ async def _run_executor_with_debug(
             return
         interim = _result_from_events(events, start)
         if stop_when(interim):
-            task_center.submit_task_completion("t1", f"{label}: live evidence satisfied")
+            task_center.submit_task_success("t1", f"{label}: live evidence satisfied")
             closed_by_harness = True
 
     task_center = TaskCenter(
@@ -233,7 +233,7 @@ async def test_executor_launches_multiple_subagents_waits_and_checks(sandbox):
             "Complete this directly as the root executor.\n"
             "Strict tool budget: exactly 2 run_subagent calls, exactly 1 "
             "check_background_task_result before waiting, exactly 1 wait_background_tasks "
-            "call, then exactly 1 submit_task_completion call. Never repeat a successful "
+            "call, then exactly 1 submit_task_success call. Never repeat a successful "
             "wait_background_tasks call; [COMPLETED] means proceed to completion.\n"
             "Follow these steps exactly, using tools:\n"
             "1. Launch explorer subagent A with run_subagent. Its prompt must be: "
@@ -245,7 +245,7 @@ async def test_executor_launches_multiple_subagents_waits_and_checks(sandbox):
             "3. Before waiting, call check_background_task_result for the first task id.\n"
             "4. Call wait_background_tasks with timeout 120.\n"
             "5. Final response: include ALPHA_SUBAGENT_OK and BETA_SUBAGENT_OK.\n"
-            "6. Call submit_task_completion with a concise summary.\n"
+            "6. Call submit_task_success with a concise summary.\n"
             "Do not use read_file in the parent agent."
         ),
         "multi_subagent_wait_check",
@@ -286,7 +286,7 @@ async def test_executor_can_cancel_launched_subagent_task(sandbox):
             "Complete this directly as the root executor.\n"
             "Strict tool budget: exactly 1 run_subagent call, exactly 1 "
             "cancel_background_task call, exactly 1 wait_background_tasks call, "
-            "then exactly 1 submit_task_completion call. Never repeat a successful wait.\n"
+            "then exactly 1 submit_task_success call. Never repeat a successful wait.\n"
             "Follow these steps exactly, using tools:\n"
             "1. Launch one explorer subagent with run_subagent. Its prompt must be: "
             "'Read each file /home/daytona/subagent_live/cancel_payload_00.txt through "
@@ -296,7 +296,7 @@ async def test_executor_can_cancel_launched_subagent_task(sandbox):
             "with reason 'live subagent cancellation test'. Do not wait before cancelling.\n"
             "3. Call wait_background_tasks with timeout 20 so the cancellation can settle.\n"
             "4. Final response: include CANCEL_SUBAGENT_TEST_DONE.\n"
-            "5. Call submit_task_completion with a concise summary.\n"
+            "5. Call submit_task_success with a concise summary.\n"
             "Do not use read_file in the parent agent."
         ),
         "cancel_subagent",

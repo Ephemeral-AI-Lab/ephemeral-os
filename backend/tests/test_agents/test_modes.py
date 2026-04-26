@@ -12,7 +12,7 @@ def test_default_mode_returns_unique_default() -> None:
     direct = ModeDefinition(
         name="direct",
         is_default=True,
-        terminals=["submit_task_completion"],
+        terminals=["submit_task_success"],
     )
     agent = AgentDefinition(name="ex", description="d", modes=[direct])
 
@@ -24,13 +24,13 @@ def test_mode_allowed_tools_are_explicit_lists() -> None:
         name="direct",
         is_default=True,
         allowed_tools=["read", "write"],
-        terminals=["submit_task_completion", "submit_plan_handoff"],
+        terminals=["submit_task_success", "submit_plan_handoff"],
     )
     agent = AgentDefinition(name="x", description="d", modes=[direct])
 
     assert agent.default_mode.allowed_tools == ["read", "write"]
     assert agent.default_mode.terminals == [
-        "submit_task_completion",
+        "submit_task_success",
         "submit_plan_handoff",
     ]
 
@@ -84,7 +84,7 @@ def test_no_modes_no_tools_synthesizes_empty_default() -> None:
 
     assert agent.default_mode.name == "direct"
     assert agent.default_mode.allowed_tools == []
-    assert agent.default_mode.terminals == ["submit_task_completion"]
+    assert agent.default_mode.terminals == ["submit_task_success"]
 
 
 def test_flat_tools_field_is_rejected() -> None:

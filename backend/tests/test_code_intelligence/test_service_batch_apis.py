@@ -16,7 +16,14 @@ from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import DeleteSpec, EditSpec, MoveSpec, ReferenceInfo, WriteSpec
+from code_intelligence.types import (
+    DeleteSpec,
+    EditRequest,
+    EditSpec,
+    MoveSpec,
+    ReferenceInfo,
+    WriteSpec,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -49,6 +56,20 @@ def test_write_file_creates_new_file(tmp_path) -> None:
     assert result.success
     assert result.status == "committed"
     assert target.read_text(encoding="utf-8") == "x = 1\n"
+
+
+def test_undo_create_removes_created_file(tmp_path) -> None:
+    target = tmp_path / "new.py"
+    svc = _svc(tmp_path)
+
+    result = svc.write_file(
+        [WriteSpec(file_path=str(target), content="x = 1\n", overwrite=False)],
+    )
+    undo = svc.undo_last_edit(str(target))
+
+    assert result.success
+    assert undo.success
+    assert not target.exists()
 
 
 def test_write_file_refuses_to_clobber_when_overwrite_false(tmp_path) -> None:
@@ -128,6 +149,23 @@ def test_edit_file_applies_search_replace(tmp_path) -> None:
                 edits=[SearchReplaceEdit(old_text="False", new_text="True")],
             ),
         ],
+    )
+
+    assert result.success
+    assert target.read_text(encoding="utf-8") == "debug = True\n"
+
+
+def test_apply_edit_resolves_relative_path_under_workspace_root(tmp_path) -> None:
+    target = tmp_path / "config.py"
+    target.write_text("debug = False\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.apply_edit(
+        EditRequest(
+            file_path="config.py",
+            old_text="False",
+            new_text="True",
+        )
     )
 
     assert result.success
@@ -384,10 +422,12 @@ def test_commit_specs_many_move_folder_spec_expands_members(tmp_path) -> None:
     svc = _svc(tmp_path)
 
     results = svc.commit_specs_many(
-        [{
-            "op": "move",
-            "specs": [MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True)],
-        }],
+        [
+            {
+                "op": "move",
+                "specs": [MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True)],
+            }
+        ],
     )
 
     assert len(results) == 1

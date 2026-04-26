@@ -41,7 +41,7 @@ def make_production_spawn(
         if agent_def is None:
             raise TaskCenterError(
                 f"production spawn: no agent definition registered for role "
-                f"{task.role!r} (expected 'executor' or 'evaluator')"
+                f"{task.role!r} (expected 'executor', 'planner', or 'evaluator')"
             )
 
         meta = ExecutionMetadata()

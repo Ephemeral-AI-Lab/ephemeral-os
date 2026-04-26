@@ -246,7 +246,6 @@ def _indexed_workspace_paths(
     return rendered
 
 
-
 def _render_workspace_paths(paths: list[str]) -> str:
     return "\n".join(paths)
 
@@ -292,9 +291,7 @@ def _maybe_warm_service(context: ToolExecutionContextService, svc: Any, *, label
             try:
                 si.ensure_built(wait=True, timeout=60.0)
             except Exception:
-                logger.debug(
-                    "%s remote symbol index warmup failed", label, exc_info=True
-                )
+                logger.debug("%s remote symbol index warmup failed", label, exc_info=True)
         return
     try:
         svc.ensure_initialized(wait=True)
@@ -344,7 +341,10 @@ def _run_rg_local(pattern: str, root: str) -> tuple[int, str] | None:
     try:
         response = subprocess.run(
             ["rg", "-n", "--no-heading", "--color", "never", "-e", pattern, root],
-            capture_output=True, text=True, timeout=30, check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -355,7 +355,10 @@ def _run_rg_local(pattern: str, root: str) -> tuple[int, str] | None:
 
 
 async def _run_rg_remote(
-    context: ToolExecutionContextService, pattern: str, target: str, label: str,
+    context: ToolExecutionContextService,
+    pattern: str,
+    target: str,
+    label: str,
 ) -> tuple[int, str] | None:
     """Run ripgrep on the remote sandbox, return (exit_code, stdout) or None."""
     command = f"rg -n --no-heading --color never -e {shlex.quote(pattern)} {shlex.quote(target)}"
@@ -383,7 +386,10 @@ def _fallback_query_symbols(
 
 
 def _local_query_symbols(
-    *, workspace_root: str, query: str, kind: str = "",
+    *,
+    workspace_root: str,
+    query: str,
+    kind: str = "",
 ) -> list[dict[str, Any]] | None:
     """Search the local workspace when the symbol index is cold or incomplete."""
     root = Path(workspace_root)
@@ -400,7 +406,6 @@ def _local_query_symbols(
     if python_matches:
         collected.extend(python_matches)
     return _dedupe_matches(collected) or None
-
 
 
 def _local_workspace_structure(
@@ -521,7 +526,10 @@ def _svc_or_error(context: ToolExecutionContextService) -> tuple[Any | None, Too
 
 
 async def _remote_query_symbols(
-    context: ToolExecutionContextService, *, query: str, kind: str = "",
+    context: ToolExecutionContextService,
+    *,
+    query: str,
+    kind: str = "",
 ) -> list[dict[str, Any]] | None:
     """Best-effort remote fallback for symbol search on cold starts."""
     target = resolve_daytona_path("", context)
@@ -533,7 +541,6 @@ async def _remote_query_symbols(
     if any(r is None for r in rg_results):
         return None
     return _dedupe_matches(_fallback_query_symbols(rg_results, specs, query)) or None
-
 
 
 async def run_ci_status(
@@ -647,8 +654,7 @@ async def run_ci_workspace_structure(
         source="none",
         status="empty",
         message=(
-            "No files indexed yet. Use `glob` for file discovery when "
-            "the symbol index is cold."
+            "No files indexed yet. Use `glob` for file discovery when the symbol index is cold."
         ),
     )
 
@@ -660,9 +666,7 @@ def _reference_definition_priority(workspace_root: str, definition: Any) -> tupl
     """Prefer production definitions over test or package-init stubs."""
     fp = str(getattr(definition, "file_path", "") or "").lower()
     basename = os.path.basename(fp)
-    is_test = int(
-        "/tests/" in fp or basename.startswith("test_") or basename.endswith("_test.py")
-    )
+    is_test = int("/tests/" in fp or basename.startswith("test_") or basename.endswith("_test.py"))
     is_init = int(basename == "__init__.py")
     return (is_test, is_init, len(fp))
 
@@ -717,38 +721,15 @@ def _prioritize_symbol_matches(
 def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str) -> int:
     """Best-effort 0-based column for *symbol_name* on *line*.
 
-    Uses the tree cache when available, otherwise falls back to
-    the LSP client's ``_read_line`` helper.
+    Uses the LSP client's ``_read_line`` helper when available.
     """
-    tree_cache = getattr(svc, "tree_cache", None)
-    content: bytes = b""
-    if tree_cache is not None:
-        get_entry = getattr(tree_cache, "get_entry", None)
-        entry = get_entry(file_path) if callable(get_entry) else None
-        content = getattr(entry, "content", b"") if entry is not None else b""
-
-    source: str | None = None
-    if content:
-        try:
-            source = content.decode("utf-8")
-        except UnicodeDecodeError:
-            source = content.decode("utf-8", errors="ignore")
-    else:
-        lsp = getattr(svc, "lsp_client", None)
-        read_line = getattr(lsp, "_read_line", None)
-        if callable(read_line):
-            line_text = read_line(file_path, line)
-            if line_text is not None:
-                idx = line_text.find(symbol_name)
-                return idx if idx >= 0 else 0
+    lsp = getattr(svc, "lsp_client", None)
+    read_line = getattr(lsp, "_read_line", None)
+    if not callable(read_line):
         return 0
-
-    if source is None:
+    line_text = read_line(file_path, line)
+    if line_text is None:
         return 0
-    lines = source.splitlines()
-    if line <= 0 or line > len(lines):
-        return 0
-    line_text = lines[line - 1]
     idx = line_text.find(symbol_name)
     return idx if idx >= 0 else 0
 
@@ -883,9 +864,7 @@ def _file_query_symbols(
     definitions = [
         {
             "name": symbol.name,
-            "kind": (
-                symbol.kind.value if hasattr(symbol.kind, "value") else str(symbol.kind)
-            ),
+            "kind": (symbol.kind.value if hasattr(symbol.kind, "value") else str(symbol.kind)),
             "file": symbol.file_path,
             "line": symbol.line,
             "signature": symbol.signature,
@@ -972,8 +951,8 @@ async def run_ci_query_symbol(
         results,
         query,
         get_name=lambda s: str(s.name or ""),
-        get_kind=lambda s: getattr(getattr(s, "kind", None), "value", None) or str(
-            getattr(s, "kind", "")
+        get_kind=lambda s: (
+            getattr(getattr(s, "kind", None), "value", None) or str(getattr(s, "kind", ""))
         ),
     )
 
@@ -1044,10 +1023,16 @@ async def run_ci_query_symbol(
         for defn in sorted_defs:
             try:
                 col = _resolve_symbol_column(
-                    svc, defn.file_path, defn.line, defn.name,
+                    svc,
+                    defn.file_path,
+                    defn.line,
+                    defn.name,
                 )
                 lsp_refs = svc.find_references(
-                    defn.file_path, defn.name, defn.line, col,
+                    defn.file_path,
+                    defn.name,
+                    defn.line,
+                    col,
                 )
                 if lsp_refs:
                     used_lsp = True

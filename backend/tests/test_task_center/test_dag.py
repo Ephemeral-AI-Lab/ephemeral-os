@@ -8,8 +8,8 @@ from task_center import PlanValidationError
 from task_center.dag import compile_dag
 
 
-def _specs(*ids: str) -> dict[str, dict[str, str]]:
-    return {tid: {"title": tid, "task_input": "..."} for tid in ids}
+def _specs(*ids: str) -> dict[str, str]:
+    return {tid: "..." for tid in ids}
 
 
 def test_rejects_bare_strings() -> None:
@@ -18,7 +18,7 @@ def test_rejects_bare_strings() -> None:
 
 
 def test_rejects_unknown_id() -> None:
-    with pytest.raises(PlanValidationError, match="not a key in task_specs"):
+    with pytest.raises(PlanValidationError, match="not a key in task_inputs"):
         compile_dag([{"id": "X"}], _specs("A"))
 
 
@@ -32,8 +32,8 @@ def test_rejects_empty_tasks_list() -> None:
         compile_dag([], _specs("A"))
 
 
-def test_rejects_empty_task_specs() -> None:
-    with pytest.raises(PlanValidationError, match="task_specs must be a non-empty dict"):
+def test_rejects_empty_task_inputs() -> None:
+    with pytest.raises(PlanValidationError, match="task_inputs must be a non-empty dict"):
         compile_dag([{"id": "A"}], {})
 
 

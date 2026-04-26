@@ -46,18 +46,19 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "Tool: ci_query_symbol" in summary
     assert "      - definitions: list[CiSymbolDefinitionOutput] [default []]" in summary
 
-    assert "Tool: submit_task_success" not in summary
+    assert "Tool: submit_task_completion" not in summary
+    assert "Tool: submit_continue_work_handoff" not in summary
     assert "Tool: request_replan" not in summary
     assert "Tool: submit_replan" not in summary
-    # ``submit_plan_handoff`` is the consolidated tool (US-006); the legacy
-    # ``submit_full_plan_handoff`` and ``submit_partial_plan_handoff`` are gone.
     assert "Tool: submit_full_plan_handoff" not in summary
     assert "Tool: submit_partial_plan_handoff" not in summary
 
-    # Executor-evaluator tree terminal tools.
-    assert "Tool: submit_task_completion" in summary
+    # GAN-style task graph terminal tools.
+    assert "Tool: submit_task_success" in summary
+    assert "Tool: submit_task_failure" in summary
+    assert "Tool: submit_evaluation_failure" in summary
+    assert "Tool: launch_plan_handoff" in summary
     assert "Tool: submit_plan_handoff" in summary
-    assert "Tool: submit_continue_work_handoff" in summary
     assert "Tool: enter_plan_for_handoff" not in summary
     assert "Tool: enter_prepare_continue_to_work" not in summary
 

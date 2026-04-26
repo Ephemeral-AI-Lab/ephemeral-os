@@ -57,7 +57,7 @@ class ContentManager:
     """Read and write file content, routing to a sandbox when one is bound."""
 
     def __init__(self, workspace_root: str, sandbox: Any = None) -> None:
-        del workspace_root
+        self._workspace_root = str(workspace_root or "")
         self._sandbox = sandbox
 
     def bind_sandbox(self, sandbox: Any) -> None:
@@ -66,14 +66,22 @@ class ContentManager:
 
     def read(self, file_path: str, *, allow_missing: bool = False) -> FileReadResult:
         """Read *file_path* returning ``(content, existed)``."""
+        resolved_path = self._resolve_path(file_path)
         if self._sandbox is None:
-            return self._read_local(file_path, allow_missing=allow_missing)
+            return self._read_local(resolved_path, allow_missing=allow_missing)
         if getattr(self._sandbox, "process", None) is None:
             fs = getattr(self._sandbox, "fs", None)
             if fs is not None and callable(getattr(fs, "download_file", None)):
-                return self._read_fs(file_path, allow_missing=allow_missing)
-            return self._read_local(file_path, allow_missing=allow_missing)
-        return self._read_remote(file_path, allow_missing=allow_missing)
+                return self._read_fs(resolved_path, allow_missing=allow_missing)
+            return self._read_local(resolved_path, allow_missing=allow_missing)
+        try:
+            return self._read_remote(resolved_path, allow_missing=allow_missing)
+        except json.JSONDecodeError:
+            logger.debug("Process read returned non-JSON output", exc_info=True)
+            fs = getattr(self._sandbox, "fs", None)
+            if fs is None or not callable(getattr(fs, "download_file", None)):
+                raise
+            return self._read_fs(resolved_path, allow_missing=allow_missing)
 
     def read_many(
         self,
@@ -85,54 +93,67 @@ class ContentManager:
         unique_paths = list(dict.fromkeys(file_paths))
         if not unique_paths:
             return {}
+        resolved_by_path = {path: self._resolve_path(path) for path in unique_paths}
         if self._sandbox is None:
             return {
-                path: self._read_local(path, allow_missing=allow_missing)
+                path: self._read_local(resolved_by_path[path], allow_missing=allow_missing)
                 for path in unique_paths
             }
         if getattr(self._sandbox, "process", None) is None:
+            return {path: self.read(path, allow_missing=allow_missing) for path in unique_paths}
+        resolved_paths = list(dict.fromkeys(resolved_by_path.values()))
+        via_fs = self._read_fs_batch(resolved_paths, allow_missing=allow_missing)
+        if via_fs is not None:
+            return {path: via_fs[resolved_by_path[path]] for path in unique_paths}
+        try:
+            remote = self._read_remote_batch(resolved_paths, allow_missing=allow_missing)
+        except json.JSONDecodeError:
+            logger.debug("Batch process read returned non-JSON output", exc_info=True)
+            fs = getattr(self._sandbox, "fs", None)
+            if fs is None or not callable(getattr(fs, "download_file", None)):
+                raise
             return {
-                path: self.read(path, allow_missing=allow_missing)
+                path: self._read_fs(resolved_by_path[path], allow_missing=allow_missing)
                 for path in unique_paths
             }
-        via_fs = self._read_fs_batch(unique_paths, allow_missing=allow_missing)
-        if via_fs is not None:
-            return via_fs
-        return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
+        return {path: remote[resolved_by_path[path]] for path in unique_paths}
 
     def list_folder_files(self, folder: str) -> list[str]:
         """Return every regular file under *folder* as absolute paths."""
+        resolved_folder = self._resolve_path(folder)
         if self._sandbox is None or getattr(self._sandbox, "process", None) is None:
-            root = Path(folder)
+            root = Path(resolved_folder)
             if not root.exists():
                 raise FileNotFoundError(folder)
             if not root.is_dir():
                 raise NotADirectoryError(folder)
             return sorted(str(path) for path in root.rglob("*") if path.is_file())
-        return self._list_remote_folder_files(folder)
+        return self._list_remote_folder_files(resolved_folder)
 
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
+        resolved_path = self._resolve_path(file_path)
         if self._sandbox is None:
-            path = Path(file_path)
+            path = Path(resolved_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
             return
         if getattr(self._sandbox, "process", None) is None:
             fs = getattr(self._sandbox, "fs", None)
             if fs is not None and callable(getattr(fs, "upload_file", None)):
-                fs.upload_file(content.encode("utf-8"), file_path)
+                run_sync(fs.upload_file(content.encode("utf-8"), resolved_path))
                 return
-            path = Path(file_path)
+            path = Path(resolved_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
             return
-        self._write_remote(file_path, content.encode("utf-8"))
+        self._write_remote(resolved_path, content.encode("utf-8"))
 
     def delete(self, file_path: str) -> None:
         """Delete *file_path*, preferring the sandbox when one is bound."""
+        resolved_path = self._resolve_path(file_path)
         if self._sandbox is None:
-            path = Path(file_path)
+            path = Path(resolved_path)
             try:
                 path.unlink()
             except FileNotFoundError:
@@ -142,15 +163,15 @@ class ContentManager:
             fs = getattr(self._sandbox, "fs", None)
             delete_fn = getattr(fs, "delete_file", None) if fs is not None else None
             if callable(delete_fn):
-                delete_fn(file_path)
+                run_sync(delete_fn(resolved_path))
                 return
-            path = Path(file_path)
+            path = Path(resolved_path)
             try:
                 path.unlink()
             except FileNotFoundError:
                 return
             return
-        self._delete_remote(file_path)
+        self._delete_remote(resolved_path)
 
     def apply_many(self, changes: list[tuple[str, str | None]]) -> None:
         """Apply many writes/deletes through one sandbox round trip when possible."""
@@ -196,6 +217,12 @@ class ContentManager:
 
     # -- Private --------------------------------------------------------------
 
+    def _resolve_path(self, file_path: str) -> str:
+        path = Path(str(file_path))
+        if path.is_absolute() or not self._workspace_root:
+            return str(path)
+        return str(Path(self._workspace_root) / path)
+
     @staticmethod
     def _read_local(file_path: str, *, allow_missing: bool) -> FileReadResult:
         path = Path(file_path)
@@ -208,7 +235,7 @@ class ContentManager:
     def _read_fs(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
         fs = self._sandbox.fs
         try:
-            payload = fs.download_file(file_path)
+            payload = run_sync(fs.download_file(file_path))
         except FileNotFoundError:
             if allow_missing:
                 return "", False
@@ -304,9 +331,8 @@ for raw_path in sys.argv[1:]:
         files[raw_path] = {"exists": True, "content": content}
 print(json.dumps(files))
 """
-        command = (
-            f"python3 -c {shlex.quote(script)} "
-            + " ".join(shlex.quote(path) for path in file_paths)
+        command = f"python3 -c {shlex.quote(script)} " + " ".join(
+            shlex.quote(path) for path in file_paths
         )
         response = run_sync(process.exec(_wrap_bash_command(command)))
         cleaned, exit_code = _extract_exit_code(
@@ -364,9 +390,7 @@ print(json.dumps(files))
         except Exception:
             if tmp_path:
                 try:
-                    run_sync(
-                        process.exec(_wrap_bash_command(_build_remove_file_command(tmp_path)))
-                    )
+                    run_sync(process.exec(_wrap_bash_command(_build_remove_file_command(tmp_path))))
                 except Exception:
                     logger.debug("remote temp cleanup failed for %s", tmp_path, exc_info=True)
             raise
@@ -385,7 +409,7 @@ print(json.dumps(files))
         process = getattr(self._sandbox, "process", None)
         payload = [
             {
-                "path": path,
+                "path": self._resolve_path(path),
                 "content_b64": (
                     None
                     if content is None
@@ -422,13 +446,20 @@ for item in ops:
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or "batch apply failed")
 
-    @staticmethod
     def _apply_local_batch_checked(
+        self,
         changes: list[CheckedApplyChange],
     ) -> CheckedApplyResult:
         backups: list[tuple[Path, bool, str]] = []
         for change in changes:
-            path = Path(change.file_path)
+            if change.final_content is None and not change.base_existed:
+                return CheckedApplyResult(
+                    success=False,
+                    conflict_path=change.file_path,
+                    conflict_reason="base_mismatch",
+                    message="file content changed before delete",
+                )
+            path = Path(self._resolve_path(change.file_path))
             try:
                 current = path.read_text(encoding="utf-8")
             except FileNotFoundError:
@@ -457,7 +488,7 @@ for item in ops:
 
         try:
             for change in changes:
-                path = Path(change.file_path)
+                path = Path(self._resolve_path(change.file_path))
                 if change.final_content is None:
                     try:
                         path.unlink()
@@ -490,7 +521,8 @@ for item in ops:
         process = getattr(self._sandbox, "process", None)
         payload = [
             {
-                "path": change.file_path,
+                "original_path": change.file_path,
+                "path": self._resolve_path(change.file_path),
                 "base_hash": change.base_hash,
                 "base_existed": change.base_existed,
                 "content_b64": (
@@ -514,6 +546,15 @@ ops = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
 backups = []
 for item in ops:
     path = pathlib.Path(item["path"])
+    original_path = item.get("original_path") or item["path"]
+    if item.get("content_b64") is None and not item.get("base_existed"):
+        print(json.dumps({{
+            "ok": False,
+            "reason": "base_mismatch",
+            "path": original_path,
+            "message": "file content changed before delete",
+        }}))
+        raise SystemExit(0)
     try:
         current = path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -533,7 +574,7 @@ for item in ops:
             print(json.dumps({{
                 "ok": False,
                 "reason": "base_mismatch",
-                "path": item["path"],
+                "path": original_path,
                 "message": "file content changed before checked apply",
             }}))
             raise SystemExit(0)
@@ -541,7 +582,7 @@ for item in ops:
         print(json.dumps({{
             "ok": False,
             "reason": "base_mismatch",
-            "path": item["path"],
+            "path": original_path,
             "message": "file already exists; base said it did not",
         }}))
         raise SystemExit(0)

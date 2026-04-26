@@ -119,12 +119,8 @@ def test_lsp_invalidate_and_symbol_index_refresh_per_committed_path(tmp_path) ->
         edit_type="rename",
     )
     assert result.success
-    invalidated = sorted(
-        call.args[0] for call in svc.lsp_client.invalidate.call_args_list
-    )
-    refreshed = sorted(
-        call.args[0] for call in svc.symbol_index.refresh.call_args_list
-    )
+    invalidated = sorted(call.args[0] for call in svc.lsp_client.invalidate.call_args_list)
+    refreshed = sorted(call.args[0] for call in svc.symbol_index.refresh.call_args_list)
     assert invalidated == sorted([str(a), str(b)])
     assert refreshed == sorted([str(a), str(b)])
 
@@ -253,6 +249,42 @@ def test_delete_conflicts_on_base_mismatch_no_merge(tmp_path) -> None:
     assert "changed before delete" in result.conflict_reason
     # File must still exist
     assert a.exists()
+
+
+def test_delete_create_shape_aborts_in_single_fast_path(tmp_path) -> None:
+    target = tmp_path / "missing.py"
+    svc = _svc(tmp_path)
+
+    result = svc.commit_operation_against_base(
+        [
+            OperationChange(
+                file_path=str(target),
+                base_content="",
+                base_hash="",
+                final_content=None,
+                base_existed=False,
+            )
+        ],
+        edit_type="delete",
+    )
+
+    assert not result.success
+    assert result.status == "aborted_version"
+    assert not target.exists()
+
+
+def test_delete_removes_file_from_symbol_index(tmp_path) -> None:
+    target = tmp_path / "indexed.py"
+    target.write_text("def doomed():\n    return 1\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+    svc.symbol_index.refresh(str(target))
+    assert svc.symbol_index.indexed_files == 1
+
+    result = svc.delete_file([str(target)])
+
+    assert result.success
+    assert svc.symbol_index.indexed_files == 0
+    assert svc.symbol_index.file_symbols(str(target)) == []
 
 
 def test_mixed_modify_create_delete_operation(tmp_path) -> None:
@@ -614,37 +646,28 @@ def test_move_file_overwrite_aborts_on_dst_drift(tmp_path) -> None:
     dst.write_text("two\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    # Read base content (what move_file will capture internally), then drift the dst.
-    # Use a ContentManager-style read to grab the same snapshot semantics.
-    # We inject drift by making the read happen first then corrupting dst.
-    import code_intelligence.routing.service as service_mod
+    original_read_many = svc._content.read_many
 
-    original_read = svc._content.read
-
-    reads: list[str] = []
-
-    def _drift_read(file_path: str, *, allow_missing: bool = False):
-        result = original_read(file_path, allow_missing=allow_missing)
-        reads.append(file_path)
-        # After the move_file helper reads dst, corrupt it before commit acquires locks
-        if file_path == str(dst):
+    def _drift_read_many(paths, *, allow_missing: bool = False):
+        result = original_read_many(paths, allow_missing=allow_missing)
+        # After move_file captures dst, corrupt it before commit acquires locks.
+        if str(dst) in paths:
             dst.write_text("drift!\n", encoding="utf-8")
         return result
 
-    svc._content.read = _drift_read  # type: ignore[assignment]
+    svc._content.read_many = _drift_read_many  # type: ignore[assignment]
     try:
         result = svc.move_file(
             [MoveSpec(src_path=str(src), dst_path=str(dst), overwrite=True)],
         )
     finally:
-        svc._content.read = original_read  # type: ignore[assignment]
+        svc._content.read_many = original_read_many  # type: ignore[assignment]
 
     assert result.success is False
     assert result.status == "aborted_version"
     # Neither src nor dst mutated: src preserved, dst has the drifted content.
     assert src.read_text(encoding="utf-8") == "one\n"
     assert dst.read_text(encoding="utf-8") == "drift!\n"
-    del service_mod  # silence unused import linter if any
 
 
 def test_move_file_identical_paths_rejected(tmp_path) -> None:
