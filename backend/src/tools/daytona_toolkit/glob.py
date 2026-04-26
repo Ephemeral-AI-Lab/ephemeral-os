@@ -8,13 +8,13 @@ from sandbox.daytona_utils import (
     _exec_command,
     _get_repo_root,
     _path_error,
+    _run_with_recovery,
     _resolve_path,
 )
 from tools.daytona_toolkit._file_tool_helpers import (
     GlobInput,
     GlobOutput,
     build_glob_result,
-    run_with_recovery,
 )
 from sandbox.search_commands import build_glob_command
 
@@ -40,7 +40,7 @@ async def glob(
             root=path,
             pattern=pattern,
         )
-        resp = await run_with_recovery(
+        resp = await _run_with_recovery(
             context,
             lambda sandbox: _exec_command(
                 sandbox,

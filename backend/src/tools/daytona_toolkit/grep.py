@@ -11,6 +11,7 @@ from sandbox.daytona_utils import (
     _extract_exit_code,
     _get_repo_root,
     _path_error,
+    _run_with_recovery,
     _resolve_path,
     _wrap_bash_command,
 )
@@ -18,7 +19,6 @@ from tools.daytona_toolkit._file_tool_helpers import (
     GrepInput,
     GrepOutput,
     build_find_result,
-    run_with_recovery,
 )
 from sandbox.search_commands import build_grep_command
 
@@ -43,7 +43,7 @@ async def grep(
         command = _wrap_bash_command(
             build_grep_command(root=path, pattern=pattern)
         )
-        response = await run_with_recovery(
+        response = await _run_with_recovery(
             context,
             lambda sandbox: _exec_command(
                 sandbox,

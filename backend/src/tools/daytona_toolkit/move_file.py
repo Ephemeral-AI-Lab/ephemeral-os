@@ -9,11 +9,10 @@ from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from sandbox.commit import submit_commit
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard, commit_metadata
-from sandbox.daytona_utils import _resolve_path
+from sandbox.daytona_utils import _normalized_path, _resolve_path
 from tools.daytona_toolkit._delete_move_helpers import (
     failure_status,
     move_payload,
-    normalized_path,
 )
 
 
@@ -77,8 +76,8 @@ async def move_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Move a file or folder."""
-    src_resolved = normalized_path(_resolve_path(src_path, context))
-    dst_resolved = normalized_path(_resolve_path(target_path, context))
+    src_resolved = _normalized_path(_resolve_path(src_path, context))
+    dst_resolved = _normalized_path(_resolve_path(target_path, context))
     warnings: list[str] = []
 
     if guard := ci_write_guard(context, tool_name="move_file", path=src_resolved):

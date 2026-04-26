@@ -9,10 +9,9 @@ from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from sandbox.commit import submit_commit
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard, commit_metadata
-from sandbox.daytona_utils import _resolve_path
+from sandbox.daytona_utils import _normalized_path, _resolve_path
 from tools.daytona_toolkit._delete_move_helpers import (
     failure_status,
-    normalized_path,
     operation_payload,
 )
 
@@ -66,7 +65,7 @@ async def delete_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Delete a file or folder."""
-    resolved = normalized_path(_resolve_path(path, context))
+    resolved = _normalized_path(_resolve_path(path, context))
     warnings: list[str] = []
 
     if guard := ci_write_guard(context, tool_name="delete_file", path=resolved):

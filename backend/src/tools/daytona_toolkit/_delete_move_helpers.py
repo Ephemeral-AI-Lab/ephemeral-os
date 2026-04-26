@@ -54,12 +54,6 @@ def move_payload(
     return json.dumps(payload)
 
 
-def normalized_path(path: str) -> str:
-    if path == "/":
-        return path
-    return path.rstrip("/") or path
-
-
 def failure_status(result: Any, *, move: bool) -> tuple[str, str]:
     status = str(getattr(result, "status", "") or "failed")
     conflict_reason = str(getattr(result, "conflict_reason", "") or "")
@@ -73,6 +67,5 @@ def failure_status(result: Any, *, move: bool) -> tuple[str, str]:
 __all__ = [
     "failure_status",
     "move_payload",
-    "normalized_path",
     "operation_payload",
 ]

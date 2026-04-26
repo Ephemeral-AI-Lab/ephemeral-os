@@ -12,7 +12,9 @@ from tools.daytona_toolkit._file_tool_helpers import (
 )
 from sandbox.daytona_utils import (
     _get_repo_root,
+    _normalized_path,
     _path_error,
+    _run_with_recovery,
     _resolve_path,
 )
 from tools.daytona_toolkit.shell import _build_tool_output
@@ -148,3 +150,60 @@ def test_resolve_path_relative_joins_cwd():
 
 def test_resolve_path_relative_no_cwd_unchanged():
     assert _resolve_path("bare_file.py", _ctx()) == "bare_file.py"
+
+
+# ---------------------------------------------------------------------------
+# _normalized_path
+# ---------------------------------------------------------------------------
+
+
+def test_normalized_path_preserves_root():
+    assert _normalized_path("/") == "/"
+
+
+def test_normalized_path_strips_trailing_separators():
+    assert _normalized_path("/workspace/src/") == "/workspace/src"
+    assert _normalized_path("relative/path///") == "relative/path"
+
+
+# ---------------------------------------------------------------------------
+# _run_with_recovery
+# ---------------------------------------------------------------------------
+
+
+async def test_run_with_recovery_uses_context_sandbox():
+    sandbox = object()
+    seen: list[object] = []
+
+    async def operation(candidate: object) -> str:
+        seen.append(candidate)
+        return "ok"
+
+    result = await _run_with_recovery(_ctx({"daytona_sandbox": sandbox}), operation)
+
+    assert result == "ok"
+    assert seen == [sandbox]
+
+
+async def test_run_with_recovery_retries_with_recovered_sandbox(monkeypatch):
+    original = object()
+    recovered = object()
+    seen: list[object] = []
+
+    async def fake_recover_sandbox(context, exc):
+        assert context["daytona_sandbox"] is original
+        assert str(exc) == "container not found"
+        return recovered
+
+    async def operation(candidate: object) -> str:
+        seen.append(candidate)
+        if candidate is original:
+            raise RuntimeError("container not found")
+        return "ok"
+
+    monkeypatch.setattr("sandbox.daytona_utils._recover_sandbox", fake_recover_sandbox)
+
+    result = await _run_with_recovery(_ctx({"daytona_sandbox": original}), operation)
+
+    assert result == "ok"
+    assert seen == [original, recovered]

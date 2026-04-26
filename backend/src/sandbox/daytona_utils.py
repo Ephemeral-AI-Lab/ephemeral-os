@@ -10,6 +10,7 @@ import logging
 import re
 import shlex
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
@@ -225,6 +226,25 @@ def _resolve_path(path: str, context: _SandboxContext) -> str:
     if repo_root:
         return f"{repo_root}/{path}"
     return path
+
+
+def _normalized_path(path: str) -> str:
+    """Return a stable absolute-or-relative path without trailing separators."""
+    if path == "/":
+        return path
+    return path.rstrip("/") or path
+
+
+async def _run_with_recovery(
+    context: _SandboxContext,
+    operation: Callable[[Any], Awaitable[Any]],
+) -> Any:
+    """Run a sandbox operation once, then retry after sandbox recovery."""
+    sandbox = await _require_sandbox(context)
+    try:
+        return await operation(sandbox)
+    except Exception as exc:
+        return await operation(await _recover_sandbox(context, exc))
 
 
 def _normalize_repo_relative_path(path: Any, repo_root: str) -> str | None:

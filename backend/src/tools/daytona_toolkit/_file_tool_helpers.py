@@ -8,11 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona_utils import (
-    _get_repo_root,
-    _recover_sandbox,
-    _require_sandbox,
-)
+from sandbox.daytona_utils import _get_repo_root
 
 
 class ReadFileInput(BaseModel):
@@ -100,18 +96,6 @@ class GlobOutput(BaseModel):
     path: str = Field(..., description="Search root path.")
     files: list[str] = Field(default_factory=list, description="Matching file paths.")
     total_files: int = Field(..., description="Total number of matching files.")
-
-
-async def run_with_recovery(
-    context: ToolExecutionContextService,
-    operation: Any,
-) -> Any:
-    """Run an operation once, then retry after sandbox recovery."""
-    sandbox = await _require_sandbox(context)
-    try:
-        return await operation(sandbox)
-    except Exception as exc:
-        return await operation(await _recover_sandbox(context, exc))
 
 
 def build_read_file_result(
@@ -203,5 +187,4 @@ __all__ = [
     "build_find_result",
     "build_glob_result",
     "build_read_file_result",
-    "run_with_recovery",
 ]
