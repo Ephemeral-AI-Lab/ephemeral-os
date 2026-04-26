@@ -9,7 +9,7 @@ from agents.types import AgentDefinition
 # ---------------------------------------------------------------------------
 
 # No repository-bundled agent names are reserved by default.
-RESERVED_BUILTIN_AGENT_NAMES = frozenset()
+RESERVED_BUILTIN_AGENT_NAMES: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -34,12 +34,9 @@ def get_definition(name: str) -> AgentDefinition | None:
     return _DEFINITIONS.get(name)
 
 
-def list_definitions(source: str | None = None) -> list[AgentDefinition]:
-    """List all registered definitions, optionally filtered by source."""
-    defs = list(_DEFINITIONS.values())
-    if source:
-        defs = [d for d in defs if d.source == source]
-    return defs
+def list_definitions() -> list[AgentDefinition]:
+    """List all registered definitions."""
+    return list(_DEFINITIONS.values())
 
 
 def get_role(agent_name: str) -> str | None:
@@ -64,5 +61,4 @@ def list_dispatchable_subagent_names() -> list[str]:
         defn.name
         for defn in _DEFINITIONS.values()
         if defn.agent_type == "subagent"
-        and defn.dispatchable_via_run_subagent
     )

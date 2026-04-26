@@ -65,6 +65,7 @@ class ToolExecutionCompleted:
     is_error: bool = False
     tool_id: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+    does_terminate: bool = False
     agent_name: str = ""
     work_id: str = ""
 

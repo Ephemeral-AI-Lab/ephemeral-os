@@ -30,6 +30,7 @@ class TaskCompletionInput(BaseModel):
     ),
     input_model=TaskCompletionInput,
     output_model=SubmissionOutput,
+    is_terminal_tool=True,
 )
 async def submit_task_completion(
     summary: str,

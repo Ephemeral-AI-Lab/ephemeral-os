@@ -56,7 +56,6 @@ def make_production_spawn(
                 on_agent_event=tc._emit_event,
                 agent_def=agent_def,
                 sandbox_id=sandbox_id,
-                terminal_tools=set(agent_def.terminal_tools),
                 extra_tool_metadata=meta,
             )
         except Exception:

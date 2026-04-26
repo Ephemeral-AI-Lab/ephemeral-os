@@ -61,6 +61,11 @@ class ToolResult:
     output: str
     is_error: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Set by ``execute_tool_with_hooks`` when a successful invocation of a
+    # tool with ``is_terminal_tool=True`` has completed. The query loop reads
+    # this on the resulting ToolResultBlock to decide whether to exit with
+    # QueryExitReason.TOOL_STOP.
+    does_terminate: bool = False
 
 
 class TextToolOutput(RootModel[str]):
@@ -106,6 +111,10 @@ class BaseTool(ABC):
     # "agent" is the default for ordinary background tools; tools that spawn a
     # nested agent (e.g. run_subagent) override it to "subagent".
     task_type: str = "agent"
+    # When True, a successful invocation ends the agent's query loop. The
+    # engine stamps does_terminate=True on the resulting ToolResult and the
+    # query loop exits with TOOL_STOP after the turn completes.
+    is_terminal_tool: bool = False
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:

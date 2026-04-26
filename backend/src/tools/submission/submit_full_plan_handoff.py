@@ -44,6 +44,7 @@ class FullPlanHandoffInput(BaseModel):
     ),
     input_model=FullPlanHandoffInput,
     output_model=SubmissionOutput,
+    is_terminal_tool=True,
 )
 async def submit_full_plan_handoff(
     tasks: list[dict[str, Any]],

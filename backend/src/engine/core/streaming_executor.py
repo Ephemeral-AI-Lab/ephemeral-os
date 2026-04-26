@@ -206,6 +206,7 @@ class StreamingToolExecutor:
                             is_error=tool.result.is_error,
                             tool_id=tool.id,
                             metadata=dict(tool.result.metadata or {}),
+                            does_terminate=tool.result.does_terminate,
                         )
                     )
                 tool.status = "yielded"

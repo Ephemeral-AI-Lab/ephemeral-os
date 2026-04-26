@@ -11,10 +11,9 @@ from agents.registry import (
     register_definition,
     unregister_definition,
 )
-from agents.types import EFFORT_LEVELS, AgentDefinition
+from agents.types import AgentDefinition
 
 __all__ = [
-    "EFFORT_LEVELS",
     "AgentDefinition",
     "get_definition",
     "list_definitions",

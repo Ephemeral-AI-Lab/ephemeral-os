@@ -86,22 +86,20 @@ def finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
     *,
-    can_spawn_subagents: bool = True,
-    terminal_tools: set[str] | list[str] | None = None,
+    agent_type: str = "agent",
 ) -> tuple[str, bool]:
     """Finalize runtime tool registry and append terminal-tool guidance.
 
     This is the shared setup logic used by both spawn_agent() and EvalAgent.
+    Terminal tool names are derived from the registry — any tool whose class
+    sets ``is_terminal_tool=True`` ends the query loop on success.
 
     Args:
         tool_registry: The tool registry (mutated in-place to add background tools).
         system_prompt: The base system prompt.
-        can_spawn_subagents: Whether this agent is allowed to launch background
-            tasks and spawn subagents. Agents that cannot (e.g. subagents
-            themselves) have the background management tools
-            (check_background_progress / wait_for_background_task / cancel)
-            withheld regardless of registry contents.
-        terminal_tools: Tools that terminate the run immediately when called.
+        agent_type: Type label for the agent. Subagents cannot launch
+            background tasks or spawn further subagents, so background
+            management tools are withheld for ``agent_type="subagent"``.
 
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
@@ -114,12 +112,17 @@ def finalize_tool_registry_and_prompt(
         for t in tool_registry.list_tools()
         if getattr(t, "background", "forbidden") != "forbidden"
     ]
-    has_background_tools = bool(bg_tool_names) and can_spawn_subagents
+    has_background_tools = bool(bg_tool_names) and agent_type != "subagent"
     if has_background_tools:
         tool_registry.register_many(make_background_tools(bg_tool_names))
 
+    terminal_tool_names = [
+        t.name
+        for t in tool_registry.list_tools()
+        if getattr(t, "is_terminal_tool", False)
+    ]
     termination_prompt = build_termination_condition_prompt(
-        terminal_tools=terminal_tools,
+        terminal_tools=terminal_tool_names,
     )
     if termination_prompt:
         system_prompt = system_prompt + "\n\n" + termination_prompt
@@ -156,10 +159,9 @@ def _resolve_agent_identity(
         raise RuntimeError("Active model registration has no 'model' id")
     agent_name = agent_def.name if agent_def else resolved_model
 
-    # Agents flagged ``require_fresh_client`` (currently: subagents) get
-    # their own httpx pool so concurrent workers don't contend over a
-    # shared connection pool.
-    needs_fresh_client = bool(agent_def and agent_def.require_fresh_client)
+    # Subagents get their own httpx pool so concurrent workers do not
+    # contend over a shared connection pool.
+    needs_fresh_client = bool(agent_def and agent_def.agent_type == "subagent")
     api_client = make_api_client(
         None if needs_fresh_client else config.external_api_client,
         db_kwargs=db_kwargs,
@@ -176,8 +178,8 @@ def _build_agent_tool_registry(
     """Build the tool registry for a spawning agent.
 
     Registers tools requested by *agent_def*, Daytona sandbox tools when
-    a sandbox is selected for a default agent, and skill loading tools unless
-    the agent opts out.
+    a sandbox is selected for a default agent, and skill loading tools when
+    skills are declared or no agent definition is supplied.
     """
     tool_registry = create_default_tool_registry()
 
@@ -197,9 +199,7 @@ def _build_agent_tool_registry(
         tool_registry.register_many(make_daytona_tools())
         logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
 
-    # Skill loading tools — opt-out via ``include_skills=False``.
-    include_skills = agent_def.include_skills if agent_def else True
-    if include_skills:
+    if agent_def is None or agent_def.skills:
         from skills.core.loader import load_skill_registry
         from tools.builtins.skills import make_skills_tools
 
@@ -269,7 +269,6 @@ def spawn_agent(
     agent_def: AgentDefinition | None = None,
     session_state: SessionState | None = None,
     sandbox_id: str | None = None,
-    terminal_tools: set[str] | list[str] | None = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
@@ -297,12 +296,10 @@ def spawn_agent(
 
     base_system_prompt = _build_agent_system_prompt(config, agent_def, settings)
 
-    can_spawn = agent_def.can_spawn_subagents if agent_def else True
     system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
         tool_registry,
         base_system_prompt,
-        can_spawn_subagents=can_spawn,
-        terminal_tools=terminal_tools,
+        agent_type=agent_def.agent_type if agent_def else "agent",
     )
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None

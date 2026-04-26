@@ -36,19 +36,20 @@ The goal is to make the design choices defensible, not to declare a winner.
                                   evaluator → root → DONE
 
 
-═════════════════ WORKSPACE LAYER (OCC controlled sharing) ═════════════════
+═════════════════ WORKSPACE LAYER (OCC per tool call) ═════════════════
 
-   ┌─ A overlay ─┐ ┌─ B overlay ─┐ ┌─ C overlay ─┐ ┌─ D overlay ─┐
-   │ buffered    │ │ buffered    │ │ buffered    │ │ buffered    │
-   │ writes      │ │ writes      │ │ writes      │ │ writes      │
-   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-          │ commit at     │ commit        │ commit        │
-          │ terminal-tool │               │               │
-          ▼ boundary      ▼               ▼               ▼
+   exec A tool call    exec B tool call    exec C tool call   exec D tool call
+   ┌─ overlay ──┐     ┌─ overlay ──┐     ┌─ overlay ──┐    ┌─ overlay ──┐
+   │ buffered   │     │ buffered   │     │ buffered   │    │ buffered   │
+   │ writes     │     │ writes     │     │ writes     │    │ writes     │
+   └─────┬──────┘     └─────┬──────┘     └─────┬──────┘    └─────┬──────┘
+         │ commit when      │ commit           │ commit          │
+         │ this tool call   │                  │                 │
+         ▼ ends             ▼                  ▼                 ▼
    ┌─────────────────────────────────────────────────────────────────┐
-   │              CANONICAL SANDBOX (shared filesystem)              │
-   │  reads from overlay fall through here                           │
-   │  siblings see each other's committed edits on next read         │
+   │           CANONICAL SANDBOX (one shared filesystem)              │
+   │  agent's next tool call sees all sibling commits since last read │
+   │  conflict = two tool calls wrote same region in the same instant │
    └─────────────────────────────────────────────────────────────────┘
 
 
@@ -64,10 +65,13 @@ The goal is to make the design choices defensible, not to declare a winner.
 
 Two channels: the **task graph** carries planning + verification (typed
 `needs`, sink-bound evaluator, summary propagation). The **workspace
-layer** carries collaboration (OCC overlays committing to a shared
-sandbox at terminal-tool boundaries). They are orthogonal but
-co-designed: parallel siblings in the DAG only run safely because
-OCC keeps their writes structured.
+layer** carries collaboration (one shared sandbox; OCC opens a
+short-lived overlay around every tool call so concurrent tool calls
+don't tear each other's writes). They are orthogonal: the DAG knows
+nothing about the workspace, and OCC knows nothing about tasks. The
+DAG provides parallelism with verification gates; OCC provides
+per-tool-call atomicity so siblings can edit the same codebase
+without coordinating manually.
 
 ## Comparison at a glance
 
@@ -76,8 +80,8 @@ OCC keeps their writes structured.
 | Concurrency unit | Sibling executors in DAG phase | `Agent()`-spawned subagents | Role-specialized agents | tmux panes / worker pool |
 | Dependency model | Typed `needs` (validated DAG) | None — strings returned to parent | Implicit via roles | Task-list ordering |
 | Verification gate | Sink-bound evaluator (single-shot) | Parent's prose check | Reviewer role | `/ralph` loop / operator |
-| Workspace sharing | OCC overlays, **terminal-tool granularity** | Worktrees, **session granularity** | Shared FS (uncontrolled) | Shared repo, operator-disciplined |
-| Cross-sibling visibility | Committed edits visible at next read | None (worktree-isolated) | Yes, but racy | Yes, but racy |
+| Workspace sharing | One shared sandbox; OCC overlay per tool call | Worktree per agent (session-isolated) | Shared FS (uncontrolled) | Shared repo, operator-disciplined |
+| Cross-sibling visibility | Next tool call sees all prior sibling commits | None (worktree-isolated) | Yes, but racy | Yes, but racy |
 | Iteration primitive | `submit_continue_to_work` (typed) | Re-spawn from parent | Reviewer round-trip | Self-loop until verifier passes |
 | Failure mode | Typed `FAILED`, propagates to root | Parent gets error string | Reviewer rejects | Loop guard / cancel |
 | Audit trail | Closure chain + summaries (reconstructible) | Parent's transcript | Operator-driven | Task list + git history |
@@ -122,42 +126,52 @@ This is the "tree" in the name: it is a tree of DAGs, not a tree of tasks.
 The DAG layer gives parallelism inside a phase; the tree layer gives
 phase-by-phase verification via evaluators.
 
-### 1.2 OCC as the controlled-sharing primitive
+### 1.2 OCC as per-tool-call atomicity over a shared workspace
 
 Implemented in `backend/src/code_intelligence/routing/` (overlay_run,
 mutation_service, overlay_command_committer, overlay_auditor) and the
 daytona overlay sandbox.
 
-The thesis: **OCC is not an isolation primitive — it is a controlled
-sharing primitive at terminal-tool granularity.** The point is not to
-keep agents apart; it is to let them see each other's work at the
-finest granularity that still composes with LLM reasoning.
+The thesis: **OCC is per-tool-call concurrency control over a single
+shared workspace.** Each tool call is a short-lived transaction; the
+overlay is its working set; the commit is its write phase. The point
+is not to isolate executors from each other — there is no per-executor
+isolation — but to make every tool invocation atomic against
+concurrent invocations from sibling agents.
 
-| Model | Sibling visibility | Failure mode |
-|---|---|---|
-| Worktree isolation (Claude-team-style) | per-session — agents fly blind until merge | merge conflicts at handoff time, out-of-band |
-| Raw shared FS | per-syscall — visible everywhere | races, undefined ordering, silent corruption |
-| **v1 OCC overlays** | **per-terminal-tool-call** | typed `FAILED` at commit when same region touched |
+| Model | Conflict unit | Sibling visibility | Failure mode |
+|---|---|---|---|
+| Worktree isolation (Claude-team-style) | per-session merge | per-session — agents fly blind until merge | git merge conflicts, out-of-band |
+| Raw shared FS | per-syscall | per-syscall — instantly visible | races, torn writes, silent corruption |
+| **v1 OCC overlays** | **per tool call** | **as fast as the other agent's next tool call commits** | typed FAILED at commit; two tool calls wrote the same region in the same instant |
 
 How it works in v1:
 
-- Each executor runs against an **overlay snapshot** of the project
-  workspace; reads fall through overlay → canonical sandbox.
-- Writes are buffered in the overlay; at the terminal-tool boundary
-  the overlay is **committed** back to the canonical sandbox via the
-  arbiter (`code_intelligence/editing/arbiter.py`) and the overlay
-  command committer.
-- Sibling B reading a file *after* sibling A commits sees A's edits.
-  Reading *during* A's run does not. The visibility unit is the
-  agent's reasoning unit, by construction.
-- Conflicts (two executors editing the same region) are detected at
-  commit time and surfaced as a typed task failure — not silently
-  merged. The conflict is a structural signal that the planner
-  should have made the two siblings dependent, not parallel.
+- All executors share **one canonical sandbox** — there is no
+  per-executor isolation layer.
+- Every tool call (`Edit`, `Write`, `Bash`, etc.) opens an **overlay**
+  for its own execution. Reads fall through overlay → sandbox. Writes
+  are buffered.
+- When the tool call finishes, the overlay command committer flushes
+  the overlay back to the sandbox via the arbiter
+  (`code_intelligence/editing/arbiter.py`).
+- If two tool calls running at the same instant wrote overlapping
+  regions, the second commit is rejected as a typed conflict — the
+  failing tool call surfaces it; the agent retries or reports.
+- Outside the tool call, the agent has no overlay. Between tool calls
+  it sees the canonical sandbox state, which already includes every
+  sibling's committed edits.
 
-This is the property that makes v1 viable for long-horizon work:
-agents collaborate on a shared codebase without being either blind
-(worktrees) or chaotic (raw FS).
+So the visibility loop is: agent A's tool call commits → sandbox
+updated → agent B's next read (inside its next tool call's overlay)
+sees A's edits. The granularity of "when can B observe A's work" is
+**A's tool-call duration**, not A's task duration. There is no
+per-task fence.
+
+This is what makes shared-workspace collaboration safe: every write
+goes through a transaction, conflicts are typed at the tool-call
+layer, and the rest of the architecture (DAG, evaluator, summary
+propagation) does not have to reason about workspace state at all.
 
 ### 1.3 Blackboard via summary propagation
 
@@ -211,13 +225,15 @@ summaries of its `needs`; the evaluator is the explicit reconciliation
 point that runs *after* every sink, so siblings are checked against
 the parent's `acceptance_criteria` before any further work is allowed.
 
-OCC addresses (3) *and* contributes to (2): siblings can run in
-parallel without corrupting the workspace, and crucially they can
-*see each other's committed work at terminal-tool granularity* —
-they are not flying blind, the way worktree-isolated agents would
-be. Conflicts are typed `FAILED` signals, not silent merges, and
-their existence is a planner-quality signal (those siblings should
-have been dependent).
+OCC addresses (3) *and* contributes to (2): siblings share one
+sandbox without corrupting it, because every tool call is wrapped in
+its own overlay — concurrent tool calls cannot tear each other's
+writes. Crucially, siblings *do* see each other's work: as soon as
+agent A's tool call commits, agent B's next tool call reads the new
+state. They are not flying blind the way worktree-isolated agents
+would be. A conflict (two tool calls writing the same region in the
+same instant) surfaces as a typed failure on the losing tool call,
+not as silent corruption.
 
 The summary-propagation blackboard lets evaluators reason without
 re-reading every child's full transcript: it caps the cost of
@@ -236,7 +252,7 @@ the prose below justifies the cells.
 | Primary unit of parallelism | Sibling tasks in a DAG phase | Spawned subagents | Expert roles | tmux panes / worker pool |
 | Decomposition shape | Flat DAG per phase, recursive | Coordinator → leaf subagents | Role specialization | Flat task list per run |
 | Synchronization point | Sink-bound evaluator | Coordinator awaits subagent return | Coordinator polling/merge | Quality gate / loop check |
-| Workspace sharing model | OCC overlays per executor (terminal-tool granularity) | Worktree isolation (session granularity) | Shared workspace (per docs) | Shared repo + tmux discipline |
+| Workspace sharing model | One shared sandbox; OCC overlay per tool call | Worktree isolation (per session) | Shared workspace (per docs) | Shared repo + tmux discipline |
 | Long-horizon mechanism | Continuation under evaluator | Re-spawn from coordinator | Round-trip with reviewer | `/ralph` self-referential loop |
 | State sharing | Typed summary blackboard | Subagent returns final string | Implicit via shared FS | Shared task list + filesystem |
 | Failure containment | Per-task `FAILED`, root fails | Subagent error returned | Reviewer can reject | Loop guard / cancel |
@@ -434,9 +450,17 @@ To keep the design defensible:
   workspace (§1.2). The summary blackboard is for evaluator
   verification, not for inter-sibling communication.
 - **No live cross-sibling tool-call streaming.** Siblings see each
-  other's *committed* edits in the workspace, not their in-flight
-  tool calls or scratch state. The terminal-tool boundary is the
-  visibility boundary, by design.
+  other's *committed* tool-call results in the workspace, not the
+  in-flight overlay state of a tool call still running. The
+  per-tool-call commit is the visibility boundary, by design.
+- **No workspace isolation between agents.** No worktrees, no
+  per-agent FS sandbox. All executors share one filesystem because
+  *agents knowing what other agents are doing is part of the design*
+  — isolation would force coordination through prose summaries
+  alone, which is exactly the failure mode (coordination drift)
+  this architecture exists to avoid. OCC's job is to make sharing
+  safe at the tool-call level; visibility is a feature, not a
+  side-effect.
 
 ---
 
@@ -449,17 +473,18 @@ To keep the design defensible:
   partially-completed subtree the evaluator cannot fully judge until
   it closes. Open: should evaluator-on-partial-failure be allowed to
   fail the subtree fast, or always wait for sinks?
-- **OCC conflict surface to the evaluator.** Today, conflicts at
-  commit fail the executor with a generic `FAILED`. Should the
-  evaluator see a typed `conflict_with: [task_id]` field so a
-  continuation can re-plan around the contention rather than retry
-  blindly?
-- **Throughput ceiling under shared OCC.** Empirically, how many
-  concurrent executors per session before commit-conflict rate
-  dominates parallelism gain? Needs a load test analogous to the
-  100-load number cited for git-workspace. The OCC-as-collaboration
-  thesis (§1.2) predicts conflict rate is a *planner-quality* metric,
-  not a system limit — measure to confirm.
+- **OCC conflict surface to the evaluator.** A per-tool-call
+  conflict today fails the tool call locally; the executor sees it
+  and decides what to do. Most of the time that is the right scope,
+  but high-frequency conflicts on the same region across siblings
+  are a structural signal worth surfacing further up — possibly
+  through the summary, possibly to the evaluator. Open: do we need
+  a typed conflict-stat channel, or is per-tool-call retry enough?
+- **Throughput ceiling.** Empirically, how does per-tool-call
+  conflict rate scale with concurrent executors per session?
+  Conflict density is a function of *tool-call concurrency* on
+  overlapping regions, not of executor count directly. Needs a load
+  test analogous to the 100-load number cited for git-workspace.
 - **Rubric-form acceptance criteria.** Acceptance is currently prose
   judged by the evaluator. Replacing it with a typed rubric (list of
   pass/fail checks) would reduce LLM-as-judge variance without
@@ -471,24 +496,25 @@ To keep the design defensible:
 ## 6. TL;DR
 
 v1 = **DAG inside a phase** (parallelism) + **evaluator at every
-sink** (verification gate, single-shot) + **OCC as controlled
-sharing** (collaboration at terminal-tool granularity) +
-**skill-guided summary propagation** (auditable verification
-channel).
+sink** (verification gate, single-shot) + **one shared workspace
+with per-tool-call OCC** (so siblings can see each other's work
+without tearing it) + **skill-guided summary propagation**
+(auditable verification channel).
 
-Two channel split is the design center: the **workspace is the
-collaboration channel** (siblings see each other's committed edits
-via OCC); the **summary chain is the verification channel**
-(evaluators read typed summaries, not transcripts). Continuation
+The two-channel split is the design center: the **workspace is the
+collaboration channel** — one sandbox, no isolation, agents are
+*meant* to see each other's committed edits, with OCC making each
+tool call atomic. The **summary chain is the verification channel**
+— evaluators read typed summaries, not transcripts. Continuation
 under an evaluator is the only iteration primitive; closed tasks are
 facts, never revised.
 
-Claude teams give you worktree isolation but not in-phase
-collaboration or phase gates. Qoder gives you roles but not
-structural parallelism or controlled sharing. OMC gives you
-operator-driven concurrency but no programmatic conflict story. v1
-is the bet that *long-horizon, unattended, multi-agent runs need
-DAG parallelism, sink-bound gates, and terminal-tool-granularity
-sharing all at once* — and that the cost is paid back by the
-evaluator reasoning in O(direct children) over typed summaries
-while siblings collaborate live in the shared workspace.
+Claude teams give you worktree isolation but agents fly blind to
+each other's work and there are no phase gates. Qoder gives you
+roles but no structural parallelism. OMC gives you operator-driven
+concurrency but no programmatic conflict story. v1 is the bet that
+*long-horizon unattended multi-agent runs need DAG parallelism,
+sink-bound verification gates, and a shared workspace where
+visibility is intentional* — and that the cost is paid back by
+evaluators reasoning in O(direct children) over typed summaries
+while siblings collaborate live on a single filesystem.

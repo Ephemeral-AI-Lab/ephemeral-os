@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 
 from agents.registry import get_definition, list_definitions
 from agents.api.schemas import AgentValidationRequest
@@ -15,8 +14,6 @@ from tools.core.catalog import collect_tool_catalog
 
 if TYPE_CHECKING:
     from tools.core.base import ToolRegistry
-
-logger = logging.getLogger(__name__)
 
 _READ_ONLY_DETAIL = "Agent definitions are file-backed under backend/config/agents."
 
@@ -28,15 +25,12 @@ def create_agents_router(
 
     @router.get("")
     @router.get("/")
-    async def list_agents(
-        source: str | None = Query(default=None),
-    ) -> list[dict[str, Any]]:
-        defs = list_definitions(source=source)
+    async def list_agents() -> list[dict[str, Any]]:
+        defs = list_definitions()
         return [
             {
                 "name": d.name,
                 "description": d.description,
-                "source": d.source,
                 "model": d.model,
                 "background": d.background,
             }

@@ -71,6 +71,13 @@ def test_agent_definition_rejects_zero_and_negative():
     assert a.tool_call_limit is None
 
 
+def test_agent_definition_rejects_removed_legacy_fields():
+    with pytest.raises(ValueError):
+        AgentDefinition.model_validate(
+            {"name": "x", "description": "y", "effort": "high"}
+        )
+
+
 # ---------- build_budget_warning ---------------------------------------------
 
 

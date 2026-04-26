@@ -39,6 +39,10 @@ class ToolResultBlock(BaseModel):
     content: str
     is_error: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # Engine-level marker stamped when a successful terminal tool returned.
+    # Consumed by the query loop to exit with TOOL_STOP. Wire-irrelevant —
+    # never serialized to the provider.
+    does_terminate: bool = False
 
 
 class SystemReminderBlock(BaseModel):

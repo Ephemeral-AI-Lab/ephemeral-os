@@ -60,7 +60,6 @@ def _make_agent_def(**overrides: Any) -> AgentDefinition:
         "name": "agent",
         "description": "Agent",
         "tools": [],
-        "include_skills": False,
     }
     data.update(overrides)
     return AgentDefinition(**data)
@@ -138,7 +137,7 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     _, has_background = finalize_tool_registry_and_prompt(
         registry,
         "base",
-        can_spawn_subagents=True,
+        agent_type="agent",
     )
 
     assert has_background is True

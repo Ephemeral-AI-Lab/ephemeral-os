@@ -39,7 +39,6 @@ def test_agent_system_prompt_ignores_declared_skills(monkeypatch) -> None:
         description="d",
         system_prompt="agent body",
         skills=["demo-skill"],
-        include_skills=True,
     )
 
     prompt = runtime_agent._build_agent_system_prompt(

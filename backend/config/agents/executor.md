@@ -6,7 +6,6 @@ agent_type: agent
 model: inherit
 tool_call_limit: 100
 tools: ["daytona_grep", "daytona_glob", "daytona_read_file", "daytona_write_file", "daytona_edit_file", "daytona_delete_file", "daytona_move_file", "daytona_shell", "ci_query_symbol", "ci_diagnostics", "ci_workspace_structure", "submit_task_completion", "submit_full_plan_handoff", "submit_partial_plan_handoff"]
-terminal_tools: ["submit_task_completion", "submit_full_plan_handoff", "submit_partial_plan_handoff"]
 skills: ["executor-playbook"]
 ---
 **Role**

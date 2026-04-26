@@ -102,7 +102,6 @@ async def test_subagent_peek_returns_live_snapshot(monkeypatch) -> None:
                 name="test_subagent",
                 description="test subagent",
                 agent_type="subagent",
-                include_skills=False,
             )
         )
         registered_test_subagent = True

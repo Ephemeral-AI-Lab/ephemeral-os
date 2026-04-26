@@ -396,8 +396,6 @@ class EvalAgent:
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
             tools=tools,
             tool_call_limit=tool_call_limit,
-            include_skills=False,
-            source="builtin",
         )
 
         ephemeral = spawn_agent(

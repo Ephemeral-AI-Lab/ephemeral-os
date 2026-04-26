@@ -27,7 +27,6 @@ def load_agents_dir(directory: Path) -> list[AgentDefinition]:
             data["description"] = description.replace("\\n", "\n")
             if body:
                 data["system_prompt"] = body
-            data["source"] = "user"
             agents.append(AgentDefinition.model_validate(data))
         except ValidationError:
             logger.debug("Invalid agent definition in %s", path, exc_info=True)

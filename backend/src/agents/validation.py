@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Protocol
 from pydantic import BaseModel, Field
 
 from agents.registry import RESERVED_BUILTIN_AGENT_NAMES
-from agents.types import EFFORT_LEVELS
 
 if TYPE_CHECKING:
     from tools.core.base import ToolRegistry
@@ -17,7 +16,6 @@ class AgentValidationInput(Protocol):
     """Definition fields required by ``AgentDefinitionValidator``."""
 
     name: str
-    effort: str | None
     tools: list[str] | None
 
 
@@ -45,9 +43,6 @@ class AgentDefinitionValidator:
             unknown_tools = sorted(set(defn.tools) - known_tools)
             for tool_name in unknown_tools:
                 errors.append(f"Unknown tool: {tool_name}")
-
-        if defn.effort is not None and defn.effort not in EFFORT_LEVELS:
-            errors.append(f"Invalid effort: {defn.effort}")
 
         return AgentValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
 

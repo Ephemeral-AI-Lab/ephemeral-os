@@ -66,7 +66,6 @@ async def execute_ephemeral_agent_run(
     on_agent_event: AgentStreamEmitter,
     agent_def: AgentDefinition | None = None,
     sandbox_id: str | None = None,
-    terminal_tools: set[str] | list[str] | None = None,
     extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> bool:
     """Spawn an ephemeral agent, run it, let it die.
@@ -93,7 +92,6 @@ async def execute_ephemeral_agent_run(
         agent_def=agent_def,
         session_state=session_state,
         sandbox_id=sandbox_id,
-        terminal_tools=terminal_tools,
     )
     logger.info(
         "Spawned agent %r (model=%s, session=%s)", agent.agent_name, agent.model, config.session_id

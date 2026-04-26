@@ -8,8 +8,9 @@ import pytest
 from pydantic import BaseModel, RootModel
 
 from engine.core.query import QueryContext
+from engine.core.streaming_executor import StreamingToolExecutor
 from message.stream_events import StreamEvent, SystemNotification, ToolExecutionStarted
-from providers.types import SupportsStreamingMessages
+from providers.types import ApiToolUseDeltaEvent, SupportsStreamingMessages
 from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.core.hooks import PostHookOutcome, PreHookOutcome, default_registry
 from tools.core.hooks.execution import execute_tool_with_hooks
@@ -186,3 +187,85 @@ async def test_execute_tool_call_streaming_returns_one_tool_result_block() -> No
     assert result.content == "hi"
     assert result.is_error is False
     assert [type(event) for event in events] == [ToolExecutionStarted]
+
+
+class _TerminalEchoTool(_EchoTool):
+    name = "terminal_echo"
+    is_terminal_tool = True
+
+
+class _TerminalFailingTool(_FailingTool):
+    name = "terminal_failing"
+    is_terminal_tool = True
+
+
+async def test_execute_tool_with_hooks_stamps_does_terminate_on_terminal_success() -> None:
+    tool = _TerminalEchoTool()
+    result = await execute_tool_with_hooks(
+        tool,
+        {"value": "hi"},
+        _context(),
+        emit=lambda event: _capture_emit([], event),
+    )
+    assert result.is_error is False
+    assert result.does_terminate is True
+
+
+async def test_execute_tool_with_hooks_skips_does_terminate_on_terminal_error() -> None:
+    tool = _TerminalFailingTool()
+    result = await execute_tool_with_hooks(
+        tool,
+        {"value": "hi"},
+        _context(),
+        emit=lambda event: _capture_emit([], event),
+    )
+    assert result.is_error is True
+    assert result.does_terminate is False
+
+
+async def test_execute_tool_with_hooks_skips_does_terminate_for_non_terminal_tool() -> None:
+    tool = _EchoTool()
+    result = await execute_tool_with_hooks(
+        tool,
+        {"value": "hi"},
+        _context(),
+        emit=lambda event: _capture_emit([], event),
+    )
+    assert result.is_error is False
+    assert result.does_terminate is False
+
+
+async def test_execute_tool_call_streaming_propagates_does_terminate_to_block() -> None:
+    tool = _TerminalEchoTool()
+    context = _query_context(tool)
+    result = await execute_tool_call_streaming(
+        context,
+        "terminal_echo",
+        "toolu_term",
+        {"value": "bye"},
+        emit=lambda event: _capture_emit([], event),
+    )
+    assert result.is_error is False
+    assert result.does_terminate is True
+
+
+async def test_streaming_executor_propagates_terminal_completion_marker() -> None:
+    registry = ToolRegistry()
+    registry.register(_TerminalEchoTool())
+    executor = StreamingToolExecutor(
+        registry,
+        ToolExecutionContext(cwd=Path("/tmp")),
+    )
+
+    executor.add_tool(
+        ApiToolUseDeltaEvent(
+            id="toolu_streamed_terminal",
+            name="terminal_echo",
+            input={"value": "done"},
+        )
+    )
+
+    results = await executor.get_remaining()
+
+    assert len(results) == 1
+    assert results[0].does_terminate is True

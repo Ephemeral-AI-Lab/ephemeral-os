@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from message.stream_events import ToolExecutionStarted
@@ -62,4 +63,6 @@ async def execute_tool_with_hooks(
                 "original_tool_is_error": validated.is_error,
             },
         )
+    if tool.is_terminal_tool and not validated.is_error:
+        return replace(validated, does_terminate=True)
     return validated

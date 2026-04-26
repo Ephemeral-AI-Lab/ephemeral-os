@@ -30,6 +30,7 @@ class ContinueToWorkInput(BaseModel):
     ),
     input_model=ContinueToWorkInput,
     output_model=SubmissionOutput,
+    is_terminal_tool=True,
 )
 async def submit_continue_to_work(
     summary: str,

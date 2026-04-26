@@ -154,25 +154,14 @@ def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
     return context.prompt_report_recorder
 
 
-def _successful_terminal_tool_called(
-    terminal_tools: set[str],
-    tool_uses: list[Any],
-    tool_results: list[ToolResultBlock],
-) -> bool:
-    if not terminal_tools:
-        return False
-    results_by_id = {
-        result.tool_use_id: result
-        for result in tool_results
-        if result.tool_use_id
-    }
-    for tool_use in tool_uses:
-        if tool_use.name not in terminal_tools:
-            continue
-        result = results_by_id.get(tool_use.id)
-        if result is not None and not result.is_error:
-            return True
-    return False
+def _any_terminal_result(tool_results: list[ToolResultBlock]) -> bool:
+    """True if any tool result in this turn carries does_terminate=True.
+
+    The flag is stamped by ``execute_tool_with_hooks`` when a tool with
+    ``is_terminal_tool=True`` returned a non-error result, so the query loop
+    no longer needs to re-derive that decision from tool names.
+    """
+    return any(result.does_terminate for result in tool_results)
 
 
 async def _run_query_loop(
@@ -193,6 +182,18 @@ async def _run_query_loop(
     if context.enable_background_tasks:
         background_manager = BackgroundTaskManager()
         context.tool_metadata.background_task_manager = background_manager
+
+    # Derive terminal tool names from the registry. Tools self-annotate via
+    # ``is_terminal_tool=True``. The ``not pre-set`` guard lets test fixtures
+    # construct ``QueryContext(terminal_tools={...})`` directly without
+    # registering full tool implementations; in production this set is always
+    # empty at this point and gets populated here.
+    if not context.terminal_tools:
+        context.terminal_tools = {
+            tool.name
+            for tool in context.tool_registry.list_tools()
+            if getattr(tool, "is_terminal_tool", False)
+        }
 
     while True:
         streamed_rejections: list[ToolResultBlock] = []
@@ -433,6 +434,7 @@ async def _run_query_loop(
                         content=completed.output,
                         is_error=completed.is_error,
                         metadata=dict(completed.metadata or {}),
+                        does_terminate=completed.does_terminate,
                     )
                 )
                 yield completed, None
@@ -594,11 +596,7 @@ async def _run_query_loop(
 
         # Check for a successful terminal tool. A rejected terminal call
         # is feedback for the next model turn, not a completed terminal result.
-        if _successful_terminal_tool_called(
-            context.terminal_tools,
-            final_message.tool_uses,
-            tool_results,
-        ):
+        if _any_terminal_result(tool_results):
             context.exit_reason = QueryExitReason.TOOL_STOP
             return
 

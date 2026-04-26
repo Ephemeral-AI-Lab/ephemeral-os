@@ -148,5 +148,6 @@ async def execute_tool_call_streaming(
         content=result.output,
         is_error=result.is_error,
         metadata=result.metadata,
+        does_terminate=result.does_terminate,
     )
     return tool_result

@@ -164,16 +164,6 @@ def _validate_run_subagent_request(
             ),
             is_error=True,
         )
-    if not bool(getattr(sub_def, "dispatchable_via_run_subagent", False)):
-        return ToolResult(
-            output=(
-                f"run_subagent: agent '{agent_name}' is an internal subagent and "
-                "may not be dispatched via `run_subagent`. Use a dispatchable "
-                "worker subagent instead."
-            ),
-            is_error=True,
-        )
-
     return _ValidatedRunSubagentRequest(sub_def=sub_def)
 
 
