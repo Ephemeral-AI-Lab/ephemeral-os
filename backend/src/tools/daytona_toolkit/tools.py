@@ -18,7 +18,7 @@ from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit._daytona_utils import (
     _exec_command,
     _extract_exit_code,
-    _get_cwd,
+    _get_repo_root,
     _path_error,
     _read_text_file_via_exec,
     _recover_sandbox,
@@ -151,7 +151,7 @@ def _build_read_file_result(
     return ToolResult(
         output=json.dumps(
             {
-                "cwd": _get_cwd(context) or "",
+                "cwd": _get_repo_root(context) or "",
                 "file_path": file_path,
                 "total_lines": total,
                 "start_line": start,
@@ -300,7 +300,7 @@ async def daytona_write_file(
         primary_paths=[file_path],
         warnings=warnings,
         success_extra={
-            "cwd": _get_cwd(context) or "",
+            "cwd": _get_repo_root(context) or "",
             "file_path": file_path,
             "bytes_written": len(content.encode("utf-8")),
             "ci_sync": True,
@@ -331,7 +331,7 @@ async def daytona_grep(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    cwd = _get_cwd(context) or ""
+    cwd = _get_repo_root(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
         command = _wrap_bash_command(
@@ -395,7 +395,7 @@ async def daytona_glob(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    cwd = _get_cwd(context) or ""
+    cwd = _get_repo_root(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
         command = build_glob_command(

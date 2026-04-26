@@ -1,6 +1,6 @@
 # Query Engine
 
-The core loop that streams LLM responses, executes tools mid-stream, manages background tasks, and compacts conversation history for API submissions.
+The core loop that streams LLM responses, executes tools mid-stream, manages background tasks, and prepares provider-safe conversation history for API submissions.
 
 ## Overall Architecture
 
@@ -21,12 +21,13 @@ The query engine consists of three layers: the `EphemeralAgent` runtime wrapper,
              │               │   _run_query_loop()     │
              │               │   (infinite while True) │
              │               └───────────┬────────────┘
-             │                           │ compacts history
+             │                           │ prepares provider history
              │                           ▼
              │               ┌────────────────────────┐
-             │               │   compact_for_api()    │
+             │               │ prepare_provider_      │
+             │               │ messages()             │
              │               └───────────┬────────────┘
-             │                           │ builds api_messages
+             │                           │ builds provider_messages
              │                           ▼
              │               ┌────────────────────────┐
              │               │   ApiMessageRequest    │
@@ -111,10 +112,10 @@ Each turn produces a sequence of `StreamEvent` objects flowing from the LLM stre
       │                 │                    │                    │   │grows with  │
       │                 │                    │                    │   │tool results│
       │                 │                    │                    │   └────────────┤
-      │──compact_for_api(display_messages)──▶│                    │                │
-      │◀──[api_messages...]─────────────────│                    │                │
+      │──prepare_provider_messages(display_messages)──────────────▶│                │
+      │◀──[provider_messages...]─────────────────│                    │                │
       │                 │                    │                    │                │
-      │  (next iteration uses compacted history)                  │                │
+      │  (next iteration uses provider-safe history)              │                │
 ```
 
 ## Tool Execution Dispatch
@@ -186,7 +187,7 @@ When the LLM sends tool calls, the loop must decide: execute immediately in the 
        │ after stream ends (Background Dispatch Path)
        ▼
 ┌─────────────────────────────┐
-│ background_preflight check  │
+│ background input validation │
 └────────┬────────────────────┘
   fails  │  passes
     ▼    │     ▼
@@ -299,9 +300,9 @@ The query loop exits when: (1) the LLM sends no tool calls and no background tas
          (END)
 ```
 
-## Integration Points: Platform Hooks And Snapshots
+## Integration Points: Tool Events And Prompt Reports
 
-The query loop integrates with external systems via platform-owned tool hooks, `on_turn` callbacks for live progress, and `api_messages_snapshot` for compaction state inspection. Pre-hooks run after input validation and before `ToolExecutionStarted`; they may mutate parsed args, emit user-visible `SystemNotification` advisories, or return a failed tool result. Post-hooks run after the tool body and can emit advisories or replace the final tool result with an error. Terminal submission (for example `submit_task_success` or `request_replan`) is now a regular in-loop tool governed by `QueryContext.terminal_tools`; the legacy post-run submission phase has been removed.
+The query loop integrates with external systems via `on_turn` callbacks for live progress and prompt-report records for provider request inspection. Tool calls run through direct input validation, a `ToolExecutionStarted` event, tool execution, and output validation. Terminal submission (for example `submit_task_success` or `request_replan`) is now a regular in-loop tool governed by `QueryContext.terminal_tools`; the legacy post-run submission phase has been removed.
 
 ```
                         ┌─────────────────────────────┐
@@ -322,23 +323,23 @@ The query loop integrates with external systems via platform-owned tool hooks, `
  │ e.g. UI streaming      │    │      │  │ agent pools            │
  └────────────────────────┘    │      │  │ multi-agent coord.     │
                                 │      │  └────────────────────────┘
-              platform hooks    │      │ snapshots
+              tool execution    │      │ prompt reports
                     ▼           │      ▼
          ┌──────────────────┐   │  ┌──────────────────────────────┐
-         │ tools.core.hooks │   │  │ context.api_messages_        │
-         │ pre/post chain   │   │  │ snapshot                     │
-         │ per tool call    │   │  │ (before each LLM call)       │
+         │ tools.core       │   │  │ prompt_report_recorder       │
+         │ direct validate, │   │  │ captures provider request    │
+         │ run, validate    │   │  │ before each LLM call         │
          └────────┬─────────┘   │  └───────────────┬──────────────┘
-                  │             │                   │ compact_for_api
+                  │             │                   │ provider history prep
                   ▼             │                   ▼
     ┌─────────────────────────┐ │  ┌──────────────────────────────┐
-    │ Post-run submission     │ │  │ SessionState tracking        │
-    │ phase (outside query    │ │  │ (compaction module)          │
+    │ Post-run submission     │ │  │ Provider request record      │
+    │ phase (outside query    │ │  │ for inspection               │
     │ loop)                   │ │  └───────────────┬──────────────┘
     └────────────┬────────────┘ │                  │ auditing
                  │              │                  ▼
                  ▼              │  ┌──────────────────────────────┐
-    ┌────────────────────────┐  │  │ Message compaction history   │
+    ┌────────────────────────┐  │  │ Provider request history     │
     │ External tool backends │  │  │ token usage tracking         │
     │ e.g. file operations   │  │  └──────────────────────────────┘
     └────────────────────────┘  │
@@ -346,7 +347,7 @@ The query loop integrates with external systems via platform-owned tool hooks, `
 
 ## Conversation State and Streaming
 
-The `display_messages` list is the source of truth for conversation history. Each `ConversationMessage` contains a role (assistant or user) and content blocks: text, tool uses (from LLM), or tool results (execution feedback). Streaming compaction happens before each API call to manage token budgets.
+The `display_messages` list is the source of truth for conversation history. Each `ConversationMessage` contains a role (assistant or user) and content blocks: text, tool uses (from LLM), or tool results (execution feedback). Before each API call, `prepare_provider_messages()` builds a fresh provider view that preserves the transcript while dropping stale background task snapshots and malformed historical tool pairs.
 
 ```
  display_messages (Append-Only)
@@ -385,15 +386,15 @@ The `display_messages` list is the source of truth for conversation history. Eac
                            │ passed to
                            ▼
               ┌────────────────────────────┐
-              │ compact_for_api()          │
-              │ applies SessionState       │
-              │ summarization rules        │
+              │ prepare_provider_messages() │
+              │ applies provider-history   │
+              │ cleanup rules              │
               └─────────────┬──────────────┘
                             │
                             ▼
               ┌────────────────────────────┐
-              │ api_messages               │
-              │ (compacted copy)           │
+              │ provider_messages          │
+              │ (provider-safe copy)       │
               └─────────────┬──────────────┘
                             │ sent to
                             ▼
@@ -414,8 +415,7 @@ The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the que
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  spawn_agent(config, messages, agent_def,                │
-│              session_state, sandbox_id)                  │
+│  spawn_agent(config, messages, agent_def, sandbox_id)    │
 └──────┬───────────────┬──────────────────┬────────────────┘
        │               │                  │
        ▼               ▼                  ▼

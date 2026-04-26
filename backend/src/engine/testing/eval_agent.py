@@ -249,7 +249,7 @@ class EvalAgent:
         settings: Settings,
         model: str,
         api_client: SupportsStreamingMessages,
-        session_config: Any = None,
+        runtime_config: Any = None,
     ) -> None:
         self._agent = ephemeral_agent
         self._query_context = ephemeral_agent.query_context
@@ -257,7 +257,7 @@ class EvalAgent:
         self._model = model
         self._api_client_ref = api_client
         self._display_messages: list[ConversationMessage] = []
-        self._session_config = session_config
+        self._runtime_config = runtime_config
 
     # -- Static helpers for credential checks --
 
@@ -366,14 +366,10 @@ class EvalAgent:
         if db_kwargs:
             logger.info("[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?"))
 
-        # Build a real SessionConfig so subagents persist agent_run rows
-        # with a valid parent session_id.
-        from uuid import uuid4
+        # Build the same runtime config shape the server uses.
+        from server.app_factory import RuntimeConfig
 
-        from server.app_factory import SessionConfig
-
-        session_config = SessionConfig(cwd=".", session_id=uuid4().hex[:12])
-        cls._ensure_parent_session_row(session_config, resolved_model)
+        runtime_config = RuntimeConfig(cwd=".")
 
         # Tune the AgentDefinition so spawn_agent produces the same tool
         # surface EvalAgent historically exposed: Daytona + subagent, no
@@ -408,7 +404,7 @@ class EvalAgent:
         )
 
         ephemeral = spawn_agent(
-            session_config,
+            runtime_config,
             messages=[],
             agent_def=agent_def,
             sandbox_id=sandbox_id,
@@ -426,22 +422,22 @@ class EvalAgent:
             settings=settings,
             model=resolved_model,
             api_client=api_client,
-            session_config=session_config,
+            runtime_config=runtime_config,
         )
 
     @staticmethod
     def _ensure_db_ready(settings: Settings) -> None:
-        """Initialise agent_run_store + session_store + model_store if configured.
+        """Initialise agent_run_store + task_center_store + model_store if configured.
 
         Safe no-op when the DB URL is missing or stores are already ready.
         Swallows errors — the eval harness tolerates an unavailable DB and
         simply skips persistence.
         """
         try:
-            from server.app_factory import agent_run_store, model_store, session_store
+            from server.app_factory import agent_run_store, model_store, task_center_store
 
             needs_init = (
-                any(not store.is_ready for store in (agent_run_store, session_store))
+                any(not store.is_ready for store in (agent_run_store, task_center_store))
                 or not model_store.is_available
             )
 
@@ -454,26 +450,10 @@ class EvalAgent:
                         model_store.initialize(sf)
                     if not agent_run_store.is_ready:
                         agent_run_store.initialize(sf)
-                    if not session_store.is_ready:
-                        session_store.initialize(sf)
+                    if not task_center_store.is_ready:
+                        task_center_store.initialize(sf)
         except Exception as exc:
             logger.debug("[EvalAgent] DB persistence unavailable: %s", exc)
-
-    @staticmethod
-    def _ensure_parent_session_row(session_config: Any, model: str) -> None:
-        """Insert the parent sessions row so the agent_runs FK can resolve."""
-        try:
-            from server.app_factory import session_store
-
-            if session_store.is_ready:
-                session_store.upsert(
-                    session_id=session_config.session_id,
-                    cwd=session_config.cwd,
-                    model=model,
-                    message_count=0,
-                )
-        except Exception:
-            logger.debug("[EvalAgent] session_store.upsert failed", exc_info=True)
 
     # -- Invocation --
 
@@ -510,17 +490,13 @@ class EvalAgent:
         _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
 
         total_usage = UsageSnapshot()
-        compacted_before: int | None = None
-        if self._query_context.session_state is not None:
-            compacted_before = int(self._query_context.session_state.compacted)
 
-        # Create a top-level agent_run row for this invocation so tools that
-        # spawn nested runs (e.g. run_subagent) can attribute themselves to a
-        # parent_run_id — mirrors server.routers.core.execute_ephemeral_agent_run.
+        # EvalAgent invocations are not TaskCenter tasks, so they are not
+        # persisted into the minimal agent_runs table.
         from agents.run_tracker import AgentRunTracker
 
         tracker = AgentRunTracker.create(
-            session_id=getattr(self._session_config, "session_id", None),
+            task_id=None,
             agent_name="eval_agent",
             input_query=prompt,
         )
@@ -581,20 +557,11 @@ class EvalAgent:
 
         latency_ms = (time.monotonic() - start) * 1000
 
-        compaction_note = ""
-        st = self._query_context.session_state
-        if st is not None and compacted_before is not None:
-            new_compactions = int(st.compacted) - compacted_before
-            compaction_note = (
-                f", compactions={'+1' if new_compactions > 0 else '0'} (compacted={st.compacted})"
-            )
         _out(
             f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
             f"{latency_ms:.0f}ms, "
             f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
-            f"total={total_usage.total_tokens}, "
-            f"final_context={_estimate_final_context(self._query_context.api_messages_snapshot)}"
-            f"{compaction_note}"
+            f"total={total_usage.total_tokens}"
         )
 
         return EvalResult(
@@ -615,23 +582,6 @@ class EvalAgent:
 
     async def __aexit__(self, *exc: object) -> None:
         await self.close()
-
-
-def _estimate_final_context(messages: list[ConversationMessage] | None) -> int:
-    """Estimate the context size (tokens) of the final compacted message list.
-
-    Mirrors the token count that ``compact_for_api`` uses when deciding
-    whether to auto-compact, so it reflects what would be sent to the
-    provider on the next turn.
-    """
-    if not messages:
-        return 0
-    try:
-        from compaction import estimate_message_tokens
-
-        return estimate_message_tokens(messages)
-    except Exception:
-        return 0
 
 
 def _truncate(s: str, max_len: int, /) -> str:

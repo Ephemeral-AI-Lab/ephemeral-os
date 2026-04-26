@@ -263,7 +263,7 @@ class TestCheckBackgroundTaskResultExecute:
 
 
 class TestBackgroundSnapshotHelpers:
-    def test_progress_passthrough_for_compactor(self) -> None:
+    def test_progress_passthrough_for_provider_history(self) -> None:
         statuses = [{"task_id": "bg_1", "status": "running", "output": "hello"}]
         output = render_background_snapshot("progress", statuses)
         metadata = build_background_snapshot_metadata("progress", "all", statuses)
@@ -274,6 +274,7 @@ class TestBackgroundSnapshotHelpers:
         statuses = [{"task_id": "bg_1", "status": "finished", "tool_command": "noop()"}]
         output = render_background_snapshot("wait_completed", statuses)
         assert output.startswith("[COMPLETED]\n[")
+        assert "Do not call wait_background_tasks again" in output
 
     def test_wait_timed_out_render(self) -> None:
         statuses = [{"task_id": "bg_1", "status": "running", "tool_command": "noop()"}]

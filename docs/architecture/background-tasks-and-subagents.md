@@ -24,7 +24,7 @@ When an agent calls a tool marked with `background="always"`, the engine dispatc
        │                 │                      │                      │                    │
        │           ┌─────┴──────────────────────┴─────┐               │                    │
        │           │      launch_background_tool       │               │                    │
-       │           │  run background_preflight()       │               │                    │
+       │           │  validate background input        │               │                    │
        │           │  launch(task_id, tool_name, input)│               │                    │
        │           │  create TrackedBackgroundTask     │               │                    │
        │           │  + asyncio.Task                   │               │                    │
@@ -72,7 +72,7 @@ When an agent calls a tool marked with `background="always"`, the engine dispatc
 
 **`launch_background_tool()`** (background_dispatch.py)
 - Validates tool supports `background` mode (checks tool definition)
-- Runs optional `background_preflight()` hook (e.g. input validation)
+- Validates background tool input before spawning the task
 - Wraps the tool execution in a coroutine with progress callbacks
 - Dispatches via `asyncio.create_task()` (not `await`)
 

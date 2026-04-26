@@ -83,7 +83,7 @@ class TestCIQueryReferencesSymbolIndex:
         ctx = _ctx({
             "ci_service": svc,
             "sandbox_id": "sb-planner",
-            "daytona_cwd": "/testbed",
+            "repo_root": "/testbed",
             "agent_name": "analysis_agent",
         })
 
@@ -110,7 +110,7 @@ class TestCIQueryReferencesSymbolIndex:
         ctx = _ctx({
             "ci_service": svc,
             "sandbox_id": "sb-planner",
-            "daytona_cwd": "/testbed",
+            "repo_root": "/testbed",
             "agent_name": "analysis_agent",
         })
 
@@ -133,7 +133,7 @@ class TestCIQueryReferencesSymbolIndex:
         ctx = _ctx({
             "ci_service": svc,
             "sandbox_id": "sb-planner",
-            "daytona_cwd": "/testbed",
+            "repo_root": "/testbed",
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
@@ -148,7 +148,7 @@ class TestCIQueryReferencesSymbolIndex:
         """When CI service is not available, returns unavailable status."""
         ctx = _ctx({
             "sandbox_id": "sb-planner",
-            "daytona_cwd": "/testbed",
+            "repo_root": "/testbed",
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
@@ -171,7 +171,7 @@ class TestCIQueryReferencesSymbolIndex:
         ctx = _ctx({
             "ci_service": svc,
             "sandbox_id": "sb-planner",
-            "daytona_cwd": "/testbed",
+            "repo_root": "/testbed",
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
@@ -236,7 +236,7 @@ class TestLiveSymbolIndexReferences:
         planner_ctx = _ctx({
             "ci_service": ci_svc,
             "sandbox_id": live_sandbox_id,
-            "daytona_cwd": workspace_root,
+            "repo_root": workspace_root,
             "agent_name": "analysis_agent",
         })
 

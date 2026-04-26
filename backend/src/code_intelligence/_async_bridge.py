@@ -38,7 +38,6 @@ import contextlib
 import contextvars
 import inspect
 import logging
-from collections.abc import Iterator
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -234,27 +233,12 @@ def configure_default_executor(
     return pool
 
 
-@contextlib.contextmanager
-def running_on_sandbox_io_loop(
-    loop: asyncio.AbstractEventLoop,
-) -> Iterator[None]:
-    """Backwards-compatible alias for :func:`use_sandbox_io_loop`.
-
-    Useful where older call sites imported ``running_on_sandbox_io_loop``
-    as a plain context manager. New code should prefer
-    :func:`use_sandbox_io_loop`.
-    """
-    with _SandboxIoLoopScope(loop):
-        yield
-
-
 __all__ = [
     "DEFAULT_RUN_SYNC_TIMEOUT_SECONDS",
     "configure_default_executor",
     "current_sandbox_io_loop",
     "run_sync",
     "run_sync_in_executor",
-    "running_on_sandbox_io_loop",
     "sandbox_io_loop",
     "use_sandbox_io_loop",
 ]

@@ -1,6 +1,6 @@
-"""TaskCenter — per-session orchestrator for the executor-evaluator tree.
+"""TaskCenter — request-scoped orchestrator for the executor-evaluator tree.
 
-All user queries route through ``TaskCenter.run_query``. The class owns:
+Each user query routes through a fresh ``TaskCenter.run_query``. The class owns:
 
 - :class:`TaskGraph` — the in-memory task tree
 - the four submission-tool entry points (called from ``tools.submission``)
@@ -14,13 +14,16 @@ import asyncio
 import itertools
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from task_center.dag import compile_dag
 from task_center.errors import TaskCenterError
 from task_center.graph import TaskGraph
 from task_center.propagation import close_with_summary
 from task_center.task import Status, Task, TaskId
+
+if TYPE_CHECKING:
+    from db.stores.task_center_store import TaskCenterStore
 
 logger = logging.getLogger(__name__)
 
@@ -36,23 +39,29 @@ _TERMINAL_STATUSES: frozenset[Status] = frozenset({Status.DONE, Status.FAILED})
 
 
 class TaskCenter:
-    """Per-session orchestrator. Held on :class:`SessionState`."""
+    """Request-scoped orchestrator created by the server runtime."""
 
     def __init__(
         self,
-        session_config: Any = None,
+        runtime_config: Any = None,
         *,
         spawn_func: SpawnFunc | None = None,
         id_prefix: str = "t",
         on_event: "Callable[[Any], Awaitable[None]] | None" = None,
+        request_id: str | None = None,
+        run_id: str | None = None,
+        task_center_store: "TaskCenterStore | None" = None,
     ) -> None:
         self._graph: TaskGraph = TaskGraph()
-        self._session_config = session_config
+        self._runtime_config = runtime_config
         self._spawn_func: SpawnFunc | None = spawn_func
         self._wakeup: asyncio.Event = asyncio.Event()
         self._counter = itertools.count(1)
         self._id_prefix = id_prefix
         self._on_event: "Callable[[Any], Awaitable[None]] | None" = on_event
+        self.request_id = request_id
+        self.run_id = run_id
+        self._task_center_store = task_center_store
 
     def set_event_callback(self, on_event: "Callable[[Any], Awaitable[None]] | None") -> None:
         """Replace the event callback. Each /chat invocation sets its own."""
@@ -74,6 +83,56 @@ class TaskCenter:
     def _new_id(self) -> TaskId:
         return f"{self._id_prefix}{next(self._counter)}"
 
+    def persisted_task_id(self, task_id: TaskId) -> str:
+        """Return the persisted task id for an in-memory TaskCenter id."""
+        if self.run_id is None:
+            return task_id
+        return f"{self.run_id}:{task_id}"
+
+    def _persist_task(self, task: Task) -> None:
+        if self._task_center_store is None or self.run_id is None:
+            return
+        persisted_id = self.persisted_task_id(task.id)
+        self._task_center_store.upsert_task(
+            task_id=persisted_id,
+            run_id=self.run_id,
+            role=task.role,
+            title=task.title,
+            spec=task.spec,
+            status=task.status.value,
+            summary=task.summary,
+        )
+        self._task_center_store.upsert_graph_node(
+            run_id=self.run_id,
+            task_id=persisted_id,
+            parent_task_id=(
+                self.persisted_task_id(task.parent_id)
+                if task.parent_id is not None
+                else None
+            ),
+            children_ids=[self.persisted_task_id(child_id) for child_id in task.children],
+            evaluator_id=(
+                self.persisted_task_id(task.evaluator_id)
+                if task.evaluator_id is not None
+                else None
+            ),
+            acceptance_criteria=task.acceptance_criteria,
+            handoff_note=task.handoff_note,
+        )
+
+    def _persist_tasks(self, *tasks: Task) -> None:
+        for task in tasks:
+            self._persist_task(task)
+
+    def _persist_all_tasks(self) -> None:
+        for task in self._graph.tasks.values():
+            self._persist_task(task)
+
+    def _finish_persisted_run(self, status: str) -> None:
+        if self._task_center_store is None or self.run_id is None:
+            return
+        self._task_center_store.finish_run(self.run_id, status)
+
     # ------------------------------------------------------------------ #
     # Root creation                                                      #
     # ------------------------------------------------------------------ #
@@ -88,6 +147,9 @@ class TaskCenter:
             closes_for=None,
         )
         self._graph.add(task)
+        if self._task_center_store is not None and self.run_id is not None:
+            self._task_center_store.set_run_root(self.run_id, self.persisted_task_id(task.id))
+        self._persist_task(task)
         return task
 
     # ------------------------------------------------------------------ #
@@ -100,6 +162,7 @@ class TaskCenter:
         # guards) — required because AWAITING -> DONE only happens via
         # propagation, not via the transition() method (invariant 14).
         close_with_summary(self._graph.tasks, task_id, summary)
+        self._persist_all_tasks()
         self._wakeup.set()
 
     def submit_plan_handoff(
@@ -142,9 +205,11 @@ class TaskCenter:
             )
             self._graph.add(child)
             parent.children.append(tid)
+            self._persist_task(child)
 
         # Parent transitions RUNNING -> AWAITING.
         self._graph.transition(executor_id, Status.AWAITING)
+        self._persist_task(parent)
         self._wakeup.set()
 
     def submit_continue_to_work(self, evaluator_id: TaskId, summary: str) -> None:
@@ -171,9 +236,11 @@ class TaskCenter:
         )
         self._graph.add(cont)
         evaluator.children.append(cont_id)
+        self._persist_task(cont)
 
         # Evaluator was RUNNING; now AWAITING continuation closure.
         self._graph.transition(evaluator_id, Status.AWAITING)
+        self._persist_task(evaluator)
         self._wakeup.set()
 
     # ------------------------------------------------------------------ #
@@ -218,6 +285,7 @@ class TaskCenter:
             self._graph.add(evaluator)
             parent.children.append(eval_id)
             parent.evaluator_id = eval_id
+            self._persist_tasks(parent, evaluator)
 
     # ------------------------------------------------------------------ #
     # Dispatcher loop                                                    #
@@ -247,10 +315,13 @@ class TaskCenter:
                     continue
                 if task.status is Status.PENDING:
                     self._graph.transition(task.id, Status.READY)
+                    self._persist_task(task)
                 self._graph.transition(task.id, Status.RUNNING)
+                self._persist_task(task)
                 coro = self._run_one(task.id, root.id, sandbox_id)
                 running[task.id] = asyncio.create_task(coro)
 
+        final_status = "cancelled"
         try:
             _spawn_for_ready()
             while self._graph.get(root.id).status not in _TERMINAL_STATUSES:
@@ -269,11 +340,14 @@ class TaskCenter:
                     if t.done():
                         running.pop(tid)
                 _spawn_for_ready()
+            final_status = self._graph.get(root.id).status.value
         finally:
             # Cancel any still-running agents on exit.
             for t in running.values():
                 if not t.done():
                     t.cancel()
+            self._persist_all_tasks()
+            self._finish_persisted_run(final_status)
 
         return self._graph.get(root.id)
 
@@ -292,6 +366,7 @@ class TaskCenter:
         else:
             root.summary = f"team run failed because task {failed_task_id!r} failed: {reason}"
         self._graph.transition(root_id, Status.FAILED)
+        self._persist_task(root)
         self._wakeup.set()
 
     async def _run_one(
@@ -310,6 +385,7 @@ class TaskCenter:
             if task.status is Status.RUNNING:
                 self._graph.transition(task.id, Status.FAILED)
                 task.summary = "agent crashed"
+                self._persist_task(task)
             self._fail_team_run(root_id, task_id, "agent crashed")
             return
         # If the agent returned without calling a terminal tool, mark FAILED.
@@ -317,4 +393,5 @@ class TaskCenter:
         if task.status is Status.RUNNING:
             self._graph.transition(task.id, Status.FAILED)
             task.summary = "agent exited without a terminal tool call"
+            self._persist_task(task)
             self._fail_team_run(root_id, task_id, task.summary)

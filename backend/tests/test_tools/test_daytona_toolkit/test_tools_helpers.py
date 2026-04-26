@@ -7,12 +7,12 @@ from pathlib import Path
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import (
     _format_shell_stdout,
+    _get_repo_root,
     _truncate,
     _truncate_tail,
 )
 from tools.daytona_toolkit.tools import (
     _path_error,
-    _get_cwd,
     _resolve_path,
 )
 
@@ -107,17 +107,17 @@ def test_path_error_sdk_prefix_without_trailing_colon():
 
 
 # ---------------------------------------------------------------------------
-# _get_cwd
+# _get_repo_root
 # ---------------------------------------------------------------------------
 
 
-def test_get_cwd_returns_value():
-    ctx = _ctx({"daytona_cwd": "/workspace/project"})
-    assert _get_cwd(ctx) == "/workspace/project"
+def test_get_repo_root_returns_value():
+    ctx = _ctx({"repo_root": "/workspace/project"})
+    assert _get_repo_root(ctx) == "/workspace/project"
 
 
-def test_get_cwd_returns_none_when_missing():
-    assert _get_cwd(_ctx()) is None
+def test_get_repo_root_returns_none_when_missing():
+    assert _get_repo_root(_ctx()) is None
 
 
 # ---------------------------------------------------------------------------
@@ -126,12 +126,12 @@ def test_get_cwd_returns_none_when_missing():
 
 
 def test_resolve_path_absolute_unchanged():
-    ctx = _ctx({"daytona_cwd": "/workspace"})
+    ctx = _ctx({"repo_root": "/workspace"})
     assert _resolve_path("/abs/path", ctx) == "/abs/path"
 
 
 def test_resolve_path_relative_joins_cwd():
-    ctx = _ctx({"daytona_cwd": "/workspace"})
+    ctx = _ctx({"repo_root": "/workspace"})
     assert _resolve_path("relative/file.py", ctx) == "/workspace/relative/file.py"
 
 

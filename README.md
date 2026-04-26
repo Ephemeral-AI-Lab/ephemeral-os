@@ -82,9 +82,9 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 <img src="assets/scene-context.png" width="140">
 
 <p align="center"><strong>• CLAUDE.md Discovery & Injection</strong></p>
-<p align="center"><strong>• Context Compression (Auto-Compact)</strong></p>
-<p align="center"><strong>• MEMORY.md Persistent Memory</strong></p>
 <p align="center"><strong>• Session Resume & History</strong></p>
+<p align="center"><strong>• MEMORY.md Persistent Memory</strong></p>
+<p align="center"><strong>• Runtime Context Injection</strong></p>
 
 </td>
 <td width="20%" align="center" style="vertical-align: top; padding: 15px;">
@@ -99,7 +99,6 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 
 <p align="center"><strong>• Multi-Level Permission Modes</strong></p>
 <p align="center"><strong>• Path-Level & Command Rules</strong></p>
-<p align="center"><strong>• PreToolUse / PostToolUse Hooks</strong></p>
 <p align="center"><strong>• Interactive Approval Dialogs</strong></p>
 
 </td>
@@ -267,7 +266,7 @@ backend/config/
   skills/          # 📚 Skill API and registry internals
 frontend/
   web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
-  terminal/        # 💬 Terminal UI components and backend session hooks
+  terminal/        # 💬 Terminal UI components and backend session controls
 ```
 
 ### The Agent Loop
@@ -326,7 +325,6 @@ Every tool has:
 - **Pydantic input validation** — structured, type-safe inputs
 - **Self-describing JSON Schema** — models understand tools automatically
 - **Permission integration** — checked before every execution
-- **Hook support** — PreToolUse/PostToolUse lifecycle events
 
 ### 📚 Skills System
 
@@ -340,8 +338,6 @@ not ship built-in `SKILL.md` playbooks under `backend/config/skills/`.
 | Plugin | Type | What it does |
 |--------|------|-------------|
 | `commit-commands` | Commands | Git commit, push, PR workflows |
-| `security-guidance` | Hooks | Security warnings on file edits |
-| `hookify` | Commands + Agents | Create custom behavior hooks |
 | `feature-dev` | Commands | Feature development workflow |
 | `code-review` | Agents | Multi-agent PR review |
 | `pr-review-agents` | Agents | Specialized PR review agents |
@@ -464,7 +460,7 @@ Create `.ephemeralos/plugins/my-plugin/.claude-plugin/plugin.json`:
 }
 ```
 
-Add commands in `commands/*.md`, hooks in `hooks/hooks.json`, agents in `agents/*.md`.
+Add commands in `commands/*.md` and agents in `agents/*.md`.
 
 ---
 
@@ -489,7 +485,7 @@ EphemeralOS is a **community-driven research project**. We welcome contributions
 | Area | Examples |
 |------|---------|
 | **Tools** | New tool implementations for specific domains |
-| **Plugins** | Workflow plugins with commands, hooks, agents |
+| **Plugins** | Workflow plugins with commands and agents |
 | **Providers** | Support for more LLM backends (OpenAI, Ollama, etc.) |
 | **Agents** | Subagent workflows and background execution |
 | **Testing** | E2E scenarios, edge cases, benchmarks |

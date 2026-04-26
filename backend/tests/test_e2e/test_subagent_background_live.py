@@ -1,11 +1,12 @@
 # ruff: noqa
-"""Live E2E: EvalAgent subagent background workflow.
+"""Live E2E: production executor subagent background workflow.
 
 Validates the real live stack for:
 - launching multiple explorer subagents via run_subagent
 - checking in-flight/final background task results
 - waiting for background tasks to finish
 - cancelling a launched background task
+- closing the actual TaskCenter root task after live tool evidence is observed
 
 Run with:
     uv run pytest backend/tests/test_e2e/test_subagent_background_live.py -v -s --log-cli-level=INFO
@@ -13,15 +14,18 @@ Run with:
 
 from __future__ import annotations
 
-import json
 import logging
+import time
 import traceback
+from collections.abc import Callable
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
-from engine.testing.eval_agent import EvalAgent, EvalResult
-from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from engine.testing.eval_agent import EvalAgent, EvalResult, ToolCallResult
+from message.stream_events import AssistantTurnComplete
+from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
 from tests.test_e2e.daytona_exec_io import write_text_via_exec
 from tests.test_e2e.helpers import log_result
 
@@ -33,20 +37,6 @@ pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required"),
 ]
-
-
-AGENT_PROMPT = """\
-You are subagent-background-live-eval, a test harness agent with a Daytona sandbox.
-
-Rules:
-- Use tools for every operational step.
-- Use run_subagent with agent_name="explorer" when asked to delegate exploration.
-- run_subagent is asynchronous and returns a background task id immediately.
-- Copy exact task_id values from tool results into check_background_task_result,
-  wait_background_tasks, and cancel_background_task.
-- Do not read delegated files yourself when the prompt asks you to use subagents.
-- Keep final text brief and include the marker strings you observed.
-"""
 
 
 def _seed_sandbox(sandbox: dict[str, Any]) -> None:
@@ -90,19 +80,96 @@ def _truncate(value: str, limit: int = 1000) -> str:
     return value[: limit - 1] + "…"
 
 
-async def _invoke_with_debug(agent: EvalAgent, prompt: str, label: str) -> EvalResult:
-    """Run EvalAgent with live event output and explicit traceback logging."""
+async def _run_executor_with_debug(
+    sandbox: dict[str, Any],
+    prompt: str,
+    label: str,
+    *,
+    stop_when: Callable[[EvalResult], bool],
+) -> EvalResult:
+    """Run the production TaskCenter executor and return EvalResult-shaped data."""
+    from config.model_config import NoActiveModelError, try_get_active_model_kwargs
+    from config.settings import load_settings
+    from message.event_printer import MultiAgentEventPrinter
+    from server.app_factory import SessionConfig
+    from task_center.agent_spawn import make_production_spawn
+    from task_center.center import TaskCenter
+
+    settings = load_settings()
+    EvalAgent._ensure_db_ready(settings)
+    db_kwargs = try_get_active_model_kwargs() or {}
+    if not db_kwargs:
+        raise NoActiveModelError("production executor live test requires an active model")
+    model = db_kwargs.get("model")
+    if not model:
+        raise RuntimeError("Active model registration has no 'model' id")
+
+    session_config = SessionConfig(cwd=".", session_id=uuid4().hex[:12])
+    EvalAgent._ensure_parent_session_row(session_config, model)
+
+    events: list[Any] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lambda msg: print(msg, flush=True))
+
+    task_center: TaskCenter
+    closed_by_harness = False
+
+    async def _on_event(event: Any) -> None:
+        nonlocal closed_by_harness
+        events.append(event)
+        printer.emit(event)
+        if closed_by_harness:
+            return
+        interim = _result_from_events(events, start)
+        if stop_when(interim):
+            task_center.submit_task_completion("t1", f"{label}: live evidence satisfied")
+            closed_by_harness = True
+
+    task_center = TaskCenter(
+        session_config,
+        spawn_func=make_production_spawn(session_config),
+        on_event=_on_event,
+    )
+
+    print(f"  [TaskCenter] prompt: {_truncate(prompt, 120)}", flush=True)
+    start = time.monotonic()
     try:
-        result = await agent.invoke(prompt, verbose=True)
+        root = await task_center.run_query(prompt, sandbox_id=sandbox["id"])
     except Exception:
         tb = traceback.format_exc()
-        logger.error("[%s] EvalAgent invocation traceback:\n%s", label, tb)
-        print(f"\n[{label}] EvalAgent invocation traceback:\n{tb}", flush=True)
+        logger.error("[%s] production executor traceback:\n%s", label, tb)
+        print(f"\n[{label}] production executor traceback:\n{tb}", flush=True)
         raise
+    finally:
+        printer.flush()
 
+    result = _result_from_events(events, start)
+    result.metadata.update({
+        "root_task_id": root.id,
+        "root_status": root.status.value,
+        "root_summary": root.summary or "",
+        "closed_by_harness": closed_by_harness,
+    })
+    print(
+        f"  [TaskCenter] done: root={root.id} status={root.status} "
+        f"summary={_truncate(root.summary or '', 500)}",
+        flush=True,
+    )
     log_result(result, label)
     _log_tool_trace(result, label)
     return result
+
+
+def _result_from_events(events: list[Any], start: float) -> EvalResult:
+    tool_calls: list[ToolCallResult] = []
+    for event in events:
+        if isinstance(event, AssistantTurnComplete):
+            for tool_use in event.message.tool_uses:
+                tool_calls.append(ToolCallResult(name=tool_use.name, input=tool_use.input))
+    return EvalResult(
+        events=list(events),
+        tool_calls=tool_calls,
+        latency_ms=(time.monotonic() - start) * 1000,
+    )
 
 
 def _log_tool_trace(result: EvalResult, label: str) -> None:
@@ -132,34 +199,44 @@ def _log_tool_trace(result: EvalResult, label: str) -> None:
     print("\n".join(lines), flush=True)
 
 
-def _json_outputs(result: EvalResult, tool_name: str) -> list[dict[str, Any]]:
-    payloads: list[dict[str, Any]] = []
-    for event in result.tools_completed():
-        if event.tool_name != tool_name:
-            continue
-        try:
-            payload = json.loads(event.output)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict):
-            payloads.append(payload)
-    return payloads
-
-
 def _tool_outputs(result: EvalResult, tool_name: str) -> list[str]:
     return [event.output for event in result.tools_completed() if event.tool_name == tool_name]
 
 
-async def test_eval_agent_launches_multiple_subagents_waits_and_checks(sandbox):
-    agent = create_eval_agent(
-        system_prompt=AGENT_PROMPT,
-        sandbox_id=sandbox["id"],
-        tool_call_limit=40,
-    )
+def _multi_subagent_evidence_ready(result: EvalResult) -> bool:
+    if result.tool_count("run_subagent") < 2:
+        return False
+    if result.tool_count("wait_background_tasks") < 1:
+        return False
+    if result.tool_count("check_background_task_result") < 1:
+        return False
+    wait_outputs = "\n".join(_tool_outputs(result, "wait_background_tasks"))
+    return "finished" in wait_outputs and "bg_1" in wait_outputs and "bg_2" in wait_outputs
 
-    result = await _invoke_with_debug(
-        agent,
+
+def _cancel_evidence_ready(result: EvalResult) -> bool:
+    if result.tool_count("run_subagent") < 1:
+        return False
+    if result.tool_count("cancel_background_task") < 1:
+        return False
+    if result.tool_count("wait_background_tasks") < 1:
+        return False
+    cancel_outputs = "\n".join(_tool_outputs(result, "cancel_background_task")).lower()
+    wait_outputs = "\n".join(_tool_outputs(result, "wait_background_tasks")).lower()
+    return (
+        "early-stop requested" in cancel_outputs or "cancelled" in cancel_outputs
+    ) and ("finished" in wait_outputs or "failed" in wait_outputs)
+
+
+async def test_executor_launches_multiple_subagents_waits_and_checks(sandbox):
+    result = await _run_executor_with_debug(
+        sandbox,
         (
+            "Complete this directly as the root executor; do not enter plan_for_handoff.\n"
+            "Strict tool budget: exactly 2 run_subagent calls, exactly 1 "
+            "check_background_task_result before waiting, exactly 1 wait_background_tasks "
+            "call, then exactly 1 submit_task_completion call. Never repeat a successful "
+            "wait_background_tasks call; [COMPLETED] means proceed to completion.\n"
             "Follow these steps exactly, using tools:\n"
             "1. Launch explorer subagent A with run_subagent. Its prompt must be: "
             "'Use daytona_read_file to read /home/daytona/subagent_live/alpha.txt. "
@@ -169,11 +246,12 @@ async def test_eval_agent_launches_multiple_subagents_waits_and_checks(sandbox):
             "Return findings containing the exact marker BETA_SUBAGENT_OK.'\n"
             "3. Before waiting, call check_background_task_result for the first task id.\n"
             "4. Call wait_background_tasks with timeout 120.\n"
-            "5. Call check_background_task_result for both task ids after the wait.\n"
-            "6. Final response: include ALPHA_SUBAGENT_OK and BETA_SUBAGENT_OK.\n"
+            "5. Final response: include ALPHA_SUBAGENT_OK and BETA_SUBAGENT_OK.\n"
+            "6. Call submit_task_completion with a concise summary.\n"
             "Do not use daytona_read_file in the parent agent."
         ),
         "multi_subagent_wait_check",
+        stop_when=_multi_subagent_evidence_ready,
     )
 
     assert result.tool_count("run_subagent") >= 2, (
@@ -185,39 +263,32 @@ async def test_eval_agent_launches_multiple_subagents_waits_and_checks(sandbox):
     assert result.tool_count("wait_background_tasks") >= 1, (
         f"Expected wait_background_tasks. Trace: {result.tool_names}"
     )
-    assert result.tool_count("check_background_task_result") >= 2, (
-        f"Expected check_background_task_result for task results. Trace: {result.tool_names}"
-    )
-
-    checked = _json_outputs(result, "check_background_task_result")
-    checked_text = "\n".join(json.dumps(payload, sort_keys=True) for payload in checked)
-    assert "ALPHA_SUBAGENT_OK" in checked_text, (
-        f"Missing alpha marker from checked background results. Payloads:\n{checked_text}"
-    )
-    assert "BETA_SUBAGENT_OK" in checked_text, (
-        f"Missing beta marker from checked background results. Payloads:\n{checked_text}"
-    )
-    assert any(payload.get("status") == "finished" for payload in checked), (
-        f"Expected at least one finished checked payload. Payloads:\n{checked_text}"
+    assert result.tool_count("check_background_task_result") >= 1, (
+        f"Expected check_background_task_result. Trace: {result.tool_names}"
     )
 
     wait_outputs = "\n".join(_tool_outputs(result, "wait_background_tasks"))
     assert "finished" in wait_outputs, f"Expected finished status in wait output:\n{wait_outputs}"
+    assert "bg_1" in wait_outputs and "bg_2" in wait_outputs, (
+        f"Expected both launched subagent ids in wait output:\n{wait_outputs}"
+    )
+    assert result.metadata["root_status"] == "done", (
+        f"Expected root executor task to be closed after live evidence. "
+        f"Metadata: {result.metadata}"
+    )
     assert not result.has_unrecovered_errors, (
         f"Unexpected unrecovered errors: {[e.output[:500] for e in result.unrecovered_error_events]}"
     )
 
 
-async def test_eval_agent_can_cancel_launched_subagent_task(sandbox):
-    agent = create_eval_agent(
-        system_prompt=AGENT_PROMPT,
-        sandbox_id=sandbox["id"],
-        tool_call_limit=30,
-    )
-
-    result = await _invoke_with_debug(
-        agent,
+async def test_executor_can_cancel_launched_subagent_task(sandbox):
+    result = await _run_executor_with_debug(
+        sandbox,
         (
+            "Complete this directly as the root executor; do not enter plan_for_handoff.\n"
+            "Strict tool budget: exactly 1 run_subagent call, exactly 1 "
+            "cancel_background_task call, exactly 1 wait_background_tasks call, "
+            "then exactly 1 submit_task_completion call. Never repeat a successful wait.\n"
             "Follow these steps exactly, using tools:\n"
             "1. Launch one explorer subagent with run_subagent. Its prompt must be: "
             "'Read each file /home/daytona/subagent_live/cancel_payload_00.txt through "
@@ -226,11 +297,12 @@ async def test_eval_agent_can_cancel_launched_subagent_task(sandbox):
             "2. Immediately cancel that background task using cancel_background_task "
             "with reason 'live subagent cancellation test'. Do not wait before cancelling.\n"
             "3. Call wait_background_tasks with timeout 20 so the cancellation can settle.\n"
-            "4. Call check_background_task_result for the cancelled task id.\n"
-            "5. Final response: include CANCEL_SUBAGENT_TEST_DONE.\n"
+            "4. Final response: include CANCEL_SUBAGENT_TEST_DONE.\n"
+            "5. Call submit_task_completion with a concise summary.\n"
             "Do not use daytona_read_file in the parent agent."
         ),
         "cancel_subagent",
+        stop_when=_cancel_evidence_ready,
     )
 
     assert result.tool_count("run_subagent") >= 1, (
@@ -245,19 +317,18 @@ async def test_eval_agent_can_cancel_launched_subagent_task(sandbox):
     assert result.tool_count("wait_background_tasks") >= 1, (
         f"Expected wait_background_tasks after cancel. Trace: {result.tool_names}"
     )
-    assert result.tool_count("check_background_task_result") >= 1, (
-        f"Expected check_background_task_result after cancel. Trace: {result.tool_names}"
-    )
 
     cancel_outputs = "\n".join(_tool_outputs(result, "cancel_background_task")).lower()
     assert "early-stop requested" in cancel_outputs or "cancelled" in cancel_outputs, (
         f"Cancel tool did not report a successful cancellation:\n{cancel_outputs}"
     )
-
-    checked = _json_outputs(result, "check_background_task_result")
-    checked_text = "\n".join(json.dumps(payload, sort_keys=True) for payload in checked)
-    assert any(payload.get("status") in {"failed", "finished"} for payload in checked), (
-        f"Expected terminal checked payload after cancel. Payloads:\n{checked_text}"
+    wait_outputs = "\n".join(_tool_outputs(result, "wait_background_tasks")).lower()
+    assert "finished" in wait_outputs or "failed" in wait_outputs, (
+        f"Expected terminal wait output after cancel:\n{wait_outputs}"
+    )
+    assert result.metadata["root_status"] == "done", (
+        f"Expected root executor task to be closed after live evidence. "
+        f"Metadata: {result.metadata}"
     )
     assert not result.has_non_cancel_errors, (
         f"Unexpected non-cancel errors: {[e.output[:500] for e in result.non_cancel_error_events]}"

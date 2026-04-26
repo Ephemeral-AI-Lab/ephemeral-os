@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def persist_run_usage(
     *,
     usage_store: "UsageStore",
-    session_id: str | None,
+    request_id: str | None,
     run_id: str | None,
     agent_name: str,
     model_id: str,
@@ -24,7 +24,7 @@ def persist_run_usage(
 ) -> None:
     """Persist run-linked usage when all required data is available."""
     if (
-        not session_id
+        not request_id
         or not run_id
         or usage is None
         or not (usage.input_tokens or usage.output_tokens)
@@ -33,7 +33,7 @@ def persist_run_usage(
 
     try:
         usage_store.record(
-            session_id=session_id,
+            request_id=request_id,
             run_id=run_id,
             agent_name=agent_name,
             model_id=model_id,

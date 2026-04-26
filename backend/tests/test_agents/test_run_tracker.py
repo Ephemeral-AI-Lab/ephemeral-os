@@ -31,7 +31,7 @@ def test_create_retries_on_duplicate_auto_run_id(monkeypatch):
     monkeypatch.setattr("agents.run_tracker.uuid4", lambda: next(ids))
 
     tracker = AgentRunTracker.create(
-        session_id="s1",
+        task_id="run-1:t1",
         agent_name="developer",
         input_query="payload",
     )

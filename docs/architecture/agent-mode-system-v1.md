@@ -375,10 +375,6 @@ This separates two concerns:
 
 ## Out of Scope
 
-- **Mode-aware compaction.** When conversation history is compacted, the
-  one-shot briefing tool_result must not be evicted before the run
-  terminates. Compaction policy needs a "preserve briefing" rule, but this
-  is orthogonal to the registry design.
 - **Engine-level continuation on turn-budget exhaustion.** If a secondary
   mode runs out of turns, the engine needs a recovery path (resummarize and
   re-spawn). The mode system itself does not dictate this policy.

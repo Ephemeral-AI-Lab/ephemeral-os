@@ -16,7 +16,7 @@ class TokenUsageRecord(Base):
     __tablename__ = "token_usage"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    session_id: Mapped[str] = mapped_column(String(36), index=True)
+    request_id: Mapped[str] = mapped_column(String(36), index=True)
     run_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     agent_name: Mapped[str] = mapped_column(String(128))
     model_id: Mapped[str] = mapped_column(String(128))

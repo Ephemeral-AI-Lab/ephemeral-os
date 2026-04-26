@@ -26,8 +26,8 @@ class ExecutionMetadata:
     interface.
     """
 
-    # Session/agent context plumbed at spawn time.
-    session_config: Any | None = None
+    # Runtime/agent context plumbed at spawn time.
+    runtime_config: Any | None = None
     sandbox_id: str = ""
     agent_run_id: str | None = None
     agent_name: str = ""
@@ -48,9 +48,6 @@ class ExecutionMetadata:
 
     # Daytona sandbox plumbing, injected by Daytona context preparation.
     daytona_sandbox: Any | None = None
-    # Deprecated compatibility alias for older callers. New code should use
-    # ``repo_root`` and ``exec_cwd`` instead.
-    daytona_cwd: str | None = None
     ci_service: Any | None = None
     arbiter: Any | None = None
 
@@ -65,7 +62,7 @@ class ExecutionMetadata:
 
     _TYPED_FIELDS: ClassVar[frozenset[str]] = frozenset(
         {
-            "session_config",
+            "runtime_config",
             "sandbox_id",
             "agent_run_id",
             "agent_name",
@@ -77,7 +74,6 @@ class ExecutionMetadata:
             "background_task_id",
             "on_progress_line",
             "daytona_sandbox",
-            "daytona_cwd",
             "ci_service",
             "arbiter",
             "tool_id",

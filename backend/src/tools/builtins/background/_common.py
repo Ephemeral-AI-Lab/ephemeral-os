@@ -47,13 +47,18 @@ def render_background_snapshot(
     elapsed_seconds: float | None = None,
 ) -> str:
     """Render a background status snapshot exactly as the tools return it."""
-    # "progress" is no longer emitted by any tool, but the compactor must
-    # still rebuild historical blocks from saved sessions.
+    # "progress" is no longer emitted by any tool, but provider-history
+    # preparation must still rebuild historical blocks from saved requests.
     if kind == "progress":
         return json.dumps(statuses, indent=2)
 
     if kind == "wait_completed":
-        return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
+        hint = (
+            "All background tasks are terminal. Do not call "
+            "wait_background_tasks again; use check_background_task_result "
+            "for any task_id whose result you need."
+        )
+        return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}\n{hint}"
 
     if kind == "wait_timed_out":
         elapsed = elapsed_seconds or 0.0
@@ -70,7 +75,7 @@ def render_background_snapshot(
     if kind == "wait_no_tasks":
         return (
             "[NO TASKS] No background tasks have been launched in this "
-            "session, or all are already delivered. Do not poll again."
+            "request, or all are already delivered. Do not poll again."
         )
 
     raise ValueError(f"Unknown background snapshot kind: {kind}")

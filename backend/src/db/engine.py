@@ -74,6 +74,38 @@ def _add_missing_columns(engine: Engine) -> None:
                     )
 
 
+def _archive_legacy_task_center_tables(engine: Engine) -> None:
+    """Move incompatible pre-TaskCenter tables aside before create_all().
+
+    The new TaskCenter schema intentionally replaces the old conversation
+    ``sessions`` table and greatly simplifies ``agent_runs``. Existing rows
+    cannot be losslessly mapped into the new graph model, so preserve them as
+    ``legacy_*`` tables and let SQLAlchemy create the new target tables.
+    """
+    insp = inspect(engine)
+
+    if insp.has_table("agent_runs"):
+        columns = {col["name"] for col in insp.get_columns("agent_runs")}
+        if "task_id" not in columns and not insp.has_table("legacy_agent_runs"):
+            logger.info("Archiving legacy agent_runs table as legacy_agent_runs")
+            with engine.begin() as conn:
+                conn.execute(text('ALTER TABLE "agent_runs" RENAME TO "legacy_agent_runs"'))
+            insp = inspect(engine)
+
+    if insp.has_table("sessions") and not insp.has_table("legacy_sessions"):
+        logger.info("Archiving legacy sessions table as legacy_sessions")
+        with engine.begin() as conn:
+            conn.execute(text('ALTER TABLE "sessions" RENAME TO "legacy_sessions"'))
+
+    insp = inspect(engine)
+    if insp.has_table("token_usage"):
+        columns = {col["name"] for col in insp.get_columns("token_usage")}
+        if "request_id" not in columns and not insp.has_table("legacy_token_usage"):
+            logger.info("Archiving legacy token_usage table as legacy_token_usage")
+            with engine.begin() as conn:
+                conn.execute(text('ALTER TABLE "token_usage" RENAME TO "legacy_token_usage"'))
+
+
 def _ensure_indexes(engine: Engine) -> None:
     """Create indexes that may be missing on upgraded databases."""
     import re
@@ -157,6 +189,7 @@ def initialize_db(
     # Import models so Base.metadata knows about all tables
     import db.models  # noqa: F401
 
+    _archive_legacy_task_center_tables(_engine)
     Base.metadata.create_all(_engine)
 
     # Patch existing tables with columns added after initial creation.

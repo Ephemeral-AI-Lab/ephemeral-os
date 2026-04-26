@@ -515,7 +515,7 @@ def build_background_reminder(
 
     Returns ``None`` if no tasks are running. The returned message is a
     regular ``ConversationMessage`` and is appended to *display_messages*
-    so the user (and subsequent compaction passes) can see it. It is NOT
+    so the user and subsequent provider-history preparation can see it. It is NOT
     a separate ephemeral concept — once appended, it lives in history.
 
     Calling this advances the per-task reminder cursor via

@@ -10,7 +10,7 @@ from message.messages import ConversationMessage
 # Identity fields carried by every StreamEvent:
 #   agent_name — short label of the emitting agent ("coordinator",
 #                "developer-1", "eval_agent", ...). Empty string for
-#                legacy/single-agent callers.
+#                standalone single-agent callers.
 #   work_id    — stable identifier for the unit of work that produced the
 #                event. For a coordinator's own turn this is its run_id;
 #                for a dispatched subagent it is the subagent's run_id

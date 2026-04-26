@@ -141,7 +141,7 @@ class LiveToolEnv:
             cwd=Path(self.home),
             metadata={
                 "daytona_sandbox": self.async_sandbox,
-                "daytona_cwd": self.home,
+                "repo_root": self.home,
                 "ci_service": ci_service,
                 "agent_run_id": agent_run_id,
             },

@@ -1,13 +1,12 @@
 # ruff: noqa
 """Comprehensive MiniMax live E2E tests — real API keys + real Daytona sandbox.
 
-Covers six critical areas:
+Covers five critical areas:
 1. Tool calling & skill loading in Daytona sandbox environment
 2. Multi-turn conversation capability
 3. Reasoning/thinking block streaming
-4. Text compaction system
-5. Complex long tasks with multiple tool calls
-6. Code intelligence system integration
+4. Complex long tasks with multiple tool calls
+5. Code intelligence system integration
 
 Run with: pytest tests/test_e2e/test_live_minimax_comprehensive.py -m live -v
 """
@@ -351,222 +350,7 @@ class TestThinkingBlockStreaming:
 
 
 # ===========================================================================
-# AREA 4: Text Compaction System
-# ===========================================================================
-
-
-class TestCompactionSystem:
-    """Test text compaction — microcompact, full compact, auto-compact.
-
-    These tests do NOT require live API keys (unit-level).
-    """
-
-    def _build_long_conversation(self, num_tool_turns: int = 15) -> list:
-        """Build a conversation with many tool calls to trigger compaction."""
-        from message import ConversationMessage, TextBlock, ToolUseBlock, ToolResultBlock
-
-        messages = []
-        for i in range(num_tool_turns):
-            tool_id = f"toolu_comp_{i:04d}"
-            messages.append(
-                ConversationMessage(
-                    role="assistant",
-                    content=[
-                        TextBlock(text=f"Reading file {i}..."),
-                        ToolUseBlock(id=tool_id, name="read_file", input={"path": f"/file{i}.py"}),
-                    ],
-                )
-            )
-            messages.append(
-                ConversationMessage(
-                    role="user",
-                    content=[
-                        ToolResultBlock(
-                            tool_use_id=tool_id,
-                            content=f"# File {i} content\n" + ("def func():\n    pass\n" * 50),
-                            is_error=False,
-                        ),
-                    ],
-                )
-            )
-        return messages
-
-    def test_microcompact_clears_old_results(self):
-        """Microcompact should clear old tool results, preserving recent ones."""
-        from compaction import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
-        from message import ToolResultBlock
-
-        messages = self._build_long_conversation(12)
-        result, tokens_saved = microcompact_messages(messages, keep_recent=3)
-
-        cleared = sum(
-            1
-            for msg in result
-            for block in msg.content
-            if isinstance(block, ToolResultBlock) and block.content == TIME_BASED_MC_CLEARED_MESSAGE
-        )
-        preserved = sum(
-            1
-            for msg in result
-            for block in msg.content
-            if isinstance(block, ToolResultBlock) and block.content != TIME_BASED_MC_CLEARED_MESSAGE
-        )
-        assert cleared == 9, f"Should clear 9 old results, cleared {cleared}"
-        assert preserved == 3, f"Should preserve 3 recent, preserved {preserved}"
-        assert tokens_saved > 0
-
-    def test_microcompact_idempotent(self):
-        """Running microcompact twice should not change the result."""
-        from compaction import microcompact_messages
-
-        messages = self._build_long_conversation(10)
-        result1, saved1 = microcompact_messages(messages, keep_recent=3)
-        result2, saved2 = microcompact_messages(result1, keep_recent=3)
-        assert saved2 == 0, "Second microcompact should save zero additional tokens"
-
-    def test_microcompact_skips_non_compactable_tools(self):
-        """Non-compactable tool results should never be cleared."""
-        from message import ConversationMessage, ToolUseBlock, ToolResultBlock
-        from compaction import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
-
-        messages = [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="toolu_custom", name="custom_analysis", input={}),
-                ],
-            ),
-            ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(
-                        tool_use_id="toolu_custom", content="important analysis " * 100
-                    ),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="toolu_read", name="read_file", input={"path": "/a.txt"}),
-                ],
-            ),
-            ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(tool_use_id="toolu_read", content="file data " * 100),
-                ],
-            ),
-        ]
-
-        result, _ = microcompact_messages(messages, keep_recent=1)
-        for msg in result:
-            for block in msg.content:
-                if isinstance(block, ToolResultBlock) and block.tool_use_id == "toolu_custom":
-                    assert block.content != TIME_BASED_MC_CLEARED_MESSAGE
-
-    def test_compact_prompt_has_all_sections(self):
-        """Compact prompt should include all required analysis sections."""
-        from compaction import get_compact_prompt
-
-        prompt = get_compact_prompt()
-        required_sections = [
-            "Primary Request",
-            "Key Technical Concepts",
-            "Files and Code",
-            "Errors and Fixes",
-            "Pending Tasks",
-            "Current Work",
-        ]
-        for section in required_sections:
-            assert section in prompt, f"Missing section: {section}"
-
-    def test_compact_prompt_no_tool_warnings(self):
-        """Compact prompt should forbid tool usage."""
-        from compaction import get_compact_prompt
-
-        prompt = get_compact_prompt()
-        assert "Do NOT call any tools" in prompt
-        assert "CRITICAL" in prompt
-
-    def test_format_compact_summary_strips_analysis(self):
-        """format_compact_summary should remove <analysis> and extract <summary>."""
-        from compaction import format_compact_summary
-
-        raw = (
-            "<analysis>Internal reasoning here...</analysis>\n"
-            "<summary>\n"
-            "## Primary Request\nUser wanted X.\n"
-            "## Files\n/foo/bar.py\n"
-            "</summary>"
-        )
-        formatted = format_compact_summary(raw)
-        assert "Internal reasoning" not in formatted
-        assert "Primary Request" in formatted
-        assert "/foo/bar.py" in formatted
-
-    def test_build_compact_summary_message_variants(self):
-        """Test different build_compact_summary_message configurations."""
-        from compaction import build_compact_summary_message
-
-        # With follow-up suppression
-        msg1 = build_compact_summary_message("<summary>Test</summary>", suppress_follow_up=True)
-        assert "continued from a previous conversation" in msg1
-        assert "Continue the conversation" in msg1
-
-        # Without follow-up suppression
-        msg2 = build_compact_summary_message("<summary>Test</summary>", suppress_follow_up=False)
-        assert "Continue the conversation" not in msg2
-
-        # With recent preserved flag
-        msg3 = build_compact_summary_message("<summary>Test</summary>", recent_preserved=True)
-        assert "Recent messages are preserved" in msg3
-
-    def test_autocompact_threshold_calculation(self):
-        """Auto-compact threshold should be within expected range."""
-        from compaction import get_autocompact_threshold, AUTOCOMPACT_BUFFER_TOKENS
-
-        threshold = get_autocompact_threshold("any-model")
-        # 200k context - 20k reserved - 13k buffer = 167k
-        expected = 200_000 - 20_000 - AUTOCOMPACT_BUFFER_TOKENS
-        assert threshold == expected
-
-    def test_should_autocompact_respects_failure_limit(self):
-        """Auto-compact should stop after max consecutive failures."""
-        from compaction import should_autocompact, SessionState
-        from message import ConversationMessage
-
-        # Build a huge conversation
-        big_messages = [ConversationMessage.from_user_text("x" * 100_000) for _ in range(50)]
-
-        state_ok = SessionState(consecutive_failures=0)
-        assert should_autocompact(big_messages, "test-model", state_ok)
-
-        state_failed = SessionState(consecutive_failures=3)
-        assert not should_autocompact(big_messages, "test-model", state_failed)
-
-    def test_session_state_roundtrip(self):
-        """SessionState should survive serialization roundtrip."""
-        from compaction import SessionState
-
-        original = SessionState(compacted=True, turn_counter=5, consecutive_failures=1)
-        restored = SessionState.from_dict(original.to_dict())
-        assert restored.compacted == original.compacted
-        assert restored.turn_counter == original.turn_counter
-        assert restored.consecutive_failures == original.consecutive_failures
-
-    def test_token_estimation_grows_with_content(self):
-        """Token estimates should increase with message content."""
-        from compaction import estimate_message_tokens
-        from message import ConversationMessage, TextBlock
-
-        short = [ConversationMessage.from_user_text("Hi")]
-        long = [ConversationMessage.from_user_text("x" * 10_000)]
-
-        assert estimate_message_tokens(long) > estimate_message_tokens(short)
-
-
-# ===========================================================================
-# AREA 5: Complex Long Tasks with Multiple Tool Calls
+# AREA 4: Complex Long Tasks with Multiple Tool Calls
 # ===========================================================================
 
 
@@ -656,7 +440,7 @@ class TestComplexLongTasks:
 
 
 # ===========================================================================
-# AREA 6: Code Intelligence System
+# AREA 5: Code Intelligence System
 # ===========================================================================
 
 

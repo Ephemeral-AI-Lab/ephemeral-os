@@ -17,7 +17,6 @@ def _ci_cwd(context: ToolExecutionContext) -> str | None:
     return str(
         context.metadata.get("repo_root")
         or context.metadata.get("ci_workspace_root")
-        or context.metadata.get("daytona_cwd")
         or context.cwd
         or ""
     ).strip() or None

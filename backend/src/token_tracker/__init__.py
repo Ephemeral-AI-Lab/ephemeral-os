@@ -26,11 +26,6 @@ class TokenTracker:
     def __init__(self) -> None:
         self._store = import_module("token_tracker.store").UsageStore()
 
-    @property
-    def store(self) -> "UsageStore":
-        """Direct access to underlying UsageStore for compatibility."""
-        return self._store
-
     def initialize(self, session_factory) -> None:
         """Initialize the underlying store with a session factory."""
         self._store.initialize(session_factory)
@@ -38,7 +33,7 @@ class TokenTracker:
     def record(
         self,
         *,
-        session_id: str,
+        request_id: str,
         run_id: str | None = None,
         agent_name: str,
         model_id: str,
@@ -47,7 +42,7 @@ class TokenTracker:
     ) -> "TokenUsageRecord":
         """Record token usage for an agent call."""
         return self._store.record(
-            session_id=session_id,
+            request_id=request_id,
             run_id=run_id,
             agent_name=agent_name,
             model_id=model_id,
@@ -55,13 +50,13 @@ class TokenTracker:
             completion_tokens=completion_tokens,
         )
 
-    def get_session_usage(self, session_id: str) -> dict:
-        """Get aggregated usage for a session."""
-        return self._store.get_session_usage(session_id)
+    def get_request_usage(self, request_id: str) -> dict:
+        """Get aggregated usage for a request."""
+        return self._store.get_request_usage(request_id)
 
-    def get_usage_by_model(self, session_id: str | None = None) -> list[dict]:
-        """Get usage breakdown by model, optionally filtered by session."""
-        return self._store.get_usage_by_model(session_id)
+    def get_usage_by_model(self, request_id: str | None = None) -> list[dict]:
+        """Get usage breakdown by model, optionally filtered by request."""
+        return self._store.get_usage_by_model(request_id)
 
     def get_run_usage(self, run_id: str) -> dict | None:
         """Get aggregated usage for a single run."""

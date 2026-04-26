@@ -226,10 +226,7 @@ def _path_error(exc: Exception, path: str) -> str | None:
 
 def _get_repo_root(context: ToolExecutionContext) -> str | None:
     """Return the canonical sandbox repo root for file-oriented tools."""
-    return (
-        context.metadata.get("repo_root")
-        or context.metadata.get("daytona_cwd")
-    )
+    return context.metadata.get("repo_root")
 
 
 def _get_exec_cwd(context: ToolExecutionContext) -> str | None:
@@ -238,11 +235,6 @@ def _get_exec_cwd(context: ToolExecutionContext) -> str | None:
         context.metadata.get("exec_cwd")
         or _get_repo_root(context)
     )
-
-
-def _get_cwd(context: ToolExecutionContext) -> str | None:
-    """Backward-compatible alias for callers that still expect sandbox cwd."""
-    return _get_repo_root(context)
 
 
 def _resolve_path(path: str, context: ToolExecutionContext) -> str:

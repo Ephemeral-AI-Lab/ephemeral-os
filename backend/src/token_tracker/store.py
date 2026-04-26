@@ -19,7 +19,7 @@ class UsageStore(SyncStoreMixin):
     def record(
         self,
         *,
-        session_id: str,
+        request_id: str,
         run_id: str | None = None,
         agent_name: str,
         model_id: str,
@@ -28,7 +28,7 @@ class UsageStore(SyncStoreMixin):
     ) -> TokenUsageRecord:
         with self._sf() as db:
             rec = TokenUsageRecord(
-                session_id=session_id,
+                request_id=request_id,
                 run_id=run_id,
                 agent_name=agent_name,
                 model_id=model_id,
@@ -41,8 +41,8 @@ class UsageStore(SyncStoreMixin):
             db.refresh(rec)
             return rec
 
-    def get_session_usage(self, session_id: str) -> dict:
-        """Aggregate token usage for a session."""
+    def get_request_usage(self, request_id: str) -> dict:
+        """Aggregate token usage for a request."""
         with self._sf() as db:
             row = (
                 db.query(
@@ -51,11 +51,11 @@ class UsageStore(SyncStoreMixin):
                     func.coalesce(func.sum(TokenUsageRecord.total_tokens), 0),
                     func.count(TokenUsageRecord.id),
                 )
-                .filter(TokenUsageRecord.session_id == session_id)
+                .filter(TokenUsageRecord.request_id == request_id)
                 .one()
             )
             return {
-                "session_id": session_id,
+                "request_id": request_id,
                 "prompt_tokens": row[0],
                 "completion_tokens": row[1],
                 "total_tokens": row[2],
@@ -63,8 +63,8 @@ class UsageStore(SyncStoreMixin):
                 "call_count": row[3],
             }
 
-    def get_usage_by_model(self, session_id: str | None = None) -> list[dict]:
-        """Break down usage by model, optionally filtered by session."""
+    def get_usage_by_model(self, request_id: str | None = None) -> list[dict]:
+        """Break down usage by model, optionally filtered by request."""
         with self._sf() as db:
             q = db.query(
                 TokenUsageRecord.model_id,
@@ -73,8 +73,8 @@ class UsageStore(SyncStoreMixin):
                 func.sum(TokenUsageRecord.total_tokens),
                 func.count(TokenUsageRecord.id),
             ).group_by(TokenUsageRecord.model_id)
-            if session_id:
-                q = q.filter(TokenUsageRecord.session_id == session_id)
+            if request_id:
+                q = q.filter(TokenUsageRecord.request_id == request_id)
             return [
                 {
                     "model_id": row[0],

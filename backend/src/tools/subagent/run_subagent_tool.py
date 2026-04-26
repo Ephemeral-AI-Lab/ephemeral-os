@@ -123,10 +123,10 @@ def _validate_run_subagent_request(
 ) -> ToolResult | _ValidatedRunSubagentRequest:
     from agents import get_definition
 
-    parent_cfg = context.metadata.session_config
+    parent_cfg = context.metadata.runtime_config
     if parent_cfg is None:
         return ToolResult(
-            output="run_subagent: missing session_config in execution context",
+            output="run_subagent: missing runtime_config in execution context",
             is_error=True,
         )
 
@@ -199,7 +199,7 @@ async def run_subagent(
         return validation
     sub_def = validation.sub_def
 
-    parent_cfg = context.metadata.session_config
+    parent_cfg = context.metadata.runtime_config
     sandbox_id = context.metadata.sandbox_id or None
     parent_run_id = context.metadata.agent_run_id
     parent_task_id = context.metadata.get("task_id")
@@ -227,7 +227,7 @@ async def run_subagent(
         prompt,
         agent_def=sub_def,
         sandbox_id=sandbox_id,
-        persist_session=False,
+        persist_agent_run=False,
         parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
         parent_task_id=parent_task_id if isinstance(parent_task_id, str) else None,
         extra_tool_metadata=sub_meta,

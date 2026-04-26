@@ -55,4 +55,4 @@ async def submit_continue_to_work(
             is_error=True,
         )
     tc.submit_continue_to_work(task_id, summary)
-    return ToolResult(output="accepted")
+    return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

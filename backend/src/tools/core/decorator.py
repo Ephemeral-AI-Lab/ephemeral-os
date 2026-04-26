@@ -85,16 +85,6 @@ def tool(
                 else:
                     return func(**kwargs)
 
-            def background_preflight(
-                self,
-                arguments: BaseModel,
-                context: ToolExecutionContext,
-            ) -> ToolResult | None:
-                hook = getattr(self, "_background_preflight", None)
-                if callable(hook):
-                    return hook(arguments, context)
-                return None
-
         instance = FunctionTool()
         instance.name = tool_name
         instance.description = tool_description

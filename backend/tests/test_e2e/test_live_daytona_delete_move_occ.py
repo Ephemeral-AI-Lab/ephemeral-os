@@ -163,7 +163,6 @@ class LiveEnv:
     ) -> ToolExecutionContext:
         metadata: dict[str, Any] = {
             "daytona_sandbox": self.async_sandbox,
-            "daytona_cwd": self.repo_root,
             "repo_root": self.repo_root,
             "exec_cwd": self.repo_root,
             "ci_service": ci_service,
@@ -418,10 +417,10 @@ def test_live_concurrent_move_disjoint_all_succeed(live_env: LiveEnv):
 
 @pytest.mark.skip(
     reason="overwrite semantics are enforced before the tool body; "
-    "live coverage for that pre-hook path is deferred."
+    "live coverage for that validation path is deferred."
 )
 def test_live_move_overwrite_replaces_existing_destination(live_env: LiveEnv):
-    """Overwrite semantics are enforced by the platform pre-hook."""
+    """Overwrite semantics are enforced before the move body."""
 
 
 # ---------------------------------------------------------------------------

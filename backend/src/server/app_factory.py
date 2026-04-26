@@ -1,6 +1,6 @@
 """FastAPI-based web server for the EphemeralOS web frontend.
 
-Thin app factory that assembles routers and manages the session lifecycle.
+Thin app factory that assembles routers and manages the runtime lifecycle.
 Route implementations live in ``server.routers.*``.
 """
 
@@ -11,9 +11,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import mimetypes
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -23,7 +25,7 @@ load_dotenv()
 
 from config import Settings, load_settings
 from db.engine import get_session_factory, initialize_db
-from db.stores import AgentRunStore, ModelStore, SessionStore, UsageStore
+from db.stores import AgentRunStore, ModelStore, TaskCenterStore, UsageStore
 from server.protocol import BackendEvent, BackendHostConfig, ToolSnapshot
 from server.logging_config import configure_runtime_logging
 from providers.types import SupportsStreamingMessages
@@ -41,22 +43,26 @@ logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "web" / "dist"
 
+if TYPE_CHECKING:
+    from task_center.center import TaskCenter
+
+TaskCenterSpawnFunc = Callable[[str, "TaskCenter", str | None], Awaitable[None]]
+
 
 # ---------------------------------------------------------------------------
-# SessionConfig — durable configuration that survives across requests
+# RuntimeConfig — durable process configuration
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class SessionConfig:
-    """Durable session configuration — persists across ephemeral agents."""
+class RuntimeConfig:
+    """Durable runtime configuration shared by request-scoped agents."""
 
     cwd: str
-    session_id: str
     system_prompt_override: str | None = None
     # If an external API client was injected, store it for reuse
     external_api_client: SupportsStreamingMessages | None = None
-    # Messages to restore on first spawn (from session restore)
+    # Messages to restore on first spawn when bootstrapping from saved state.
     _initial_messages: list[dict] | None = field(default=None, repr=False)
 
     def resolve_settings(self) -> Settings:
@@ -66,18 +72,15 @@ class SessionConfig:
         )
 
 
-def build_session_config(
+def build_runtime_config(
     *,
     system_prompt: str | None = None,
     api_client: SupportsStreamingMessages | None = None,
     restore_messages: list[dict] | None = None,
-) -> SessionConfig:
-    """Build durable session config. Called once at server startup."""
-    from uuid import uuid4
-
-    return SessionConfig(
+) -> RuntimeConfig:
+    """Build process-level runtime config. Called once at server startup."""
+    return RuntimeConfig(
         cwd=str(Path.cwd()),
-        session_id=uuid4().hex[:12],
         system_prompt_override=system_prompt,
         external_api_client=api_client,
         _initial_messages=restore_messages,
@@ -85,31 +88,27 @@ def build_session_config(
 
 
 # ---------------------------------------------------------------------------
-# Session state — single active session per server
+# Runtime state — single active server runtime
 # ---------------------------------------------------------------------------
 
 
-class SessionState:
-    """Manages the single active session and its event routing.
+class RuntimeState:
+    """Manages process-level runtime dependencies and event routing.
 
-    The session holds only durable config — no engine or API client lives
-    between requests.  Each request spawns an ephemeral agent via
-    ``handle_line``.
+    Request identity and task state live in TaskCenter persistence. This class
+    only keeps process-level dependencies shared across requests.
     """
 
     def __init__(self) -> None:
-        self.config: SessionConfig | None = None
+        self.config: RuntimeConfig | None = None
         self.busy = False
         self._busy_lock = asyncio.Lock()
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
         self._tool_registry: ToolRegistry | None = None
-        # Per-session TaskCenter — built by initialize() once SessionConfig
-        # is available. All user queries route through this orchestrator.
-        from task_center.center import TaskCenter
-        self.task_center: TaskCenter | None = None
+        self._task_center_spawn_func: TaskCenterSpawnFunc | None = None
 
     async def initialize(self, host_config: BackendHostConfig) -> None:
-        self.config = build_session_config(
+        self.config = build_runtime_config(
             system_prompt=host_config.system_prompt,
             api_client=host_config.api_client,
             restore_messages=host_config.restore_messages,
@@ -139,24 +138,49 @@ class SessionState:
             register_definition(defn)
             logger.info("Registered agent definition %r", defn.name)
 
-        # Build the per-session TaskCenter with a spawn function that drives a
-        # real EphemeralAgent for each task.
-        from task_center.center import TaskCenter
+        # Build the TaskCenter spawn function once; each /chat request gets a
+        # fresh TaskCenter with its own graph and event callback.
         from task_center.agent_spawn import make_production_spawn
 
-        spawn_fn = make_production_spawn(self.config)
-        self.task_center = TaskCenter(self.config, spawn_func=spawn_fn)
+        self._task_center_spawn_func = make_production_spawn(self.config)
 
-    @property
-    def session_id(self) -> str:
-        if self.config is None:
-            raise RuntimeError("SessionState not initialised")
-        return self.config.session_id
+    def create_task_center(
+        self,
+        *,
+        request_prompt: str,
+        sandbox_id: str | None,
+    ) -> TaskCenter:
+        """Create a request-scoped TaskCenter for one user query."""
+        if self.config is None or self._task_center_spawn_func is None:
+            raise RuntimeError("RuntimeState not initialised")
+
+        from task_center.center import TaskCenter
+        from uuid import uuid4
+
+        request_id = uuid4().hex[:12]
+        run_id = uuid4().hex[:12]
+        store = task_center_store if task_center_store.is_ready else None
+        if store is not None:
+            store.create_request(
+                request_id=request_id,
+                cwd=self.config.cwd,
+                sandbox_id=sandbox_id,
+                request_prompt=request_prompt,
+            )
+            store.create_run(run_id=run_id, request_id=request_id)
+
+        return TaskCenter(
+            self.config,
+            spawn_func=self._task_center_spawn_func,
+            request_id=request_id,
+            run_id=run_id,
+            task_center_store=store,
+        )
 
     @property
     def cwd(self) -> str:
         if self.config is None:
-            raise RuntimeError("SessionState not initialised")
+            raise RuntimeError("RuntimeState not initialised")
         return self.config.cwd
 
     @property
@@ -167,7 +191,7 @@ class SessionState:
 
     def current_settings(self) -> Settings:
         if self.config is None:
-            raise RuntimeError("SessionState not initialised")
+            raise RuntimeError("RuntimeState not initialised")
         return self.config.resolve_settings()
 
     async def emit(self, event: BackendEvent) -> None:
@@ -198,10 +222,10 @@ class SessionState:
 # App factory
 # ---------------------------------------------------------------------------
 
-_session: SessionState | None = None
+_runtime: RuntimeState | None = None
 
 # Database stores — module-level singletons, initialised during lifespan
-session_store = SessionStore()
+task_center_store = TaskCenterStore()
 agent_run_store = AgentRunStore()
 usage_store = UsageStore()
 model_store = ModelStore()
@@ -224,8 +248,8 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
         logger.info("Running without database — file-based persistence only")
         return None
 
-    if not session_store.is_ready:
-        session_store.initialize(sf)
+    if not task_center_store.is_ready:
+        task_center_store.initialize(sf)
     if not agent_run_store.is_ready:
         agent_run_store.initialize(sf)
     if not usage_store.is_ready:
@@ -247,37 +271,37 @@ def _initialize_runtime_stores() -> None:
 
 
 def create_app(config: BackendHostConfig) -> FastAPI:
-    """Create the FastAPI application with session lifecycle."""
+    """Create the FastAPI application with runtime lifecycle."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        global _session
-        _session = SessionState()
-        await _session.initialize(config)
-        configure_runtime_logging(verbose=_session.current_settings().verbose)
+        global _runtime
+        _runtime = RuntimeState()
+        await _runtime.initialize(config)
+        configure_runtime_logging(verbose=_runtime.current_settings().verbose)
 
         _initialize_runtime_stores()
 
         yield
         # Close any externally-injected API client to avoid "Event loop is
         # closed" errors from orphaned httpx transports during GC.
-        if _session and _session.config and _session.config.external_api_client:
-            client = _session.config.external_api_client
+        if _runtime and _runtime.config and _runtime.config.external_api_client:
+            client = _runtime.config.external_api_client
             if hasattr(client, "aclose"):
                 await client.aclose()
-        _session = None
+        _runtime = None
 
     app = FastAPI(title="EphemeralOS", lifespan=lifespan)
 
     # Register routers
-    app.include_router(create_core_router(_get_session))
-    app.include_router(create_persistence_router(session_store, agent_run_store, usage_store))
+    app.include_router(create_core_router(_get_runtime))
+    app.include_router(create_persistence_router(task_center_store, agent_run_store))
     app.include_router(create_sandbox_router())
     app.include_router(ci_router)
     app.include_router(create_models_router(model_store))
     app.include_router(
         create_agents_router(
-            get_tool_registry=lambda: _session._tool_registry if _session else None,
+            get_tool_registry=lambda: _runtime._tool_registry if _runtime else None,
         )
     )
 
@@ -308,10 +332,10 @@ def create_app(config: BackendHostConfig) -> FastAPI:
     return app
 
 
-def _get_session() -> SessionState:
-    if _session is None:
-        raise RuntimeError("Session not initialized")
-    return _session
+def _get_runtime() -> RuntimeState:
+    if _runtime is None:
+        raise RuntimeError("Runtime not initialized")
+    return _runtime
 
 
 # ---------------------------------------------------------------------------
@@ -370,4 +394,4 @@ def create_default_app() -> FastAPI:
     return create_app(BackendHostConfig())
 
 
-__all__ = ["SessionState", "WebServer", "create_app", "create_default_app"]
+__all__ = ["RuntimeConfig", "RuntimeState", "WebServer", "create_app", "create_default_app"]

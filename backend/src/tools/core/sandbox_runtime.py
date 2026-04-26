@@ -13,25 +13,23 @@ def get_daytona_sandbox(context: ToolExecutionContext) -> Any | None:
     return context.metadata.get("daytona_sandbox")
 
 
-def get_daytona_cwd(context: ToolExecutionContext) -> str:
-    """Backward-compatible alias for the injected sandbox repo root."""
-    return context.metadata.get("repo_root") or context.metadata.get("daytona_cwd") or ""
+def _sandbox_repo_root(context: ToolExecutionContext) -> str:
+    return context.metadata.get("repo_root") or ""
 
 
 def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
-    """Resolve *path* against the injected Daytona cwd."""
+    """Resolve *path* against the injected sandbox repo root."""
     if not path:
-        return get_daytona_cwd(context) or "."
+        return _sandbox_repo_root(context) or "."
     if path.startswith("/"):
         return path
-    cwd = get_daytona_cwd(context)
+    cwd = _sandbox_repo_root(context)
     if not cwd:
         return path
     return os.path.normpath(f"{cwd}/{path}")
 
 
 __all__ = [
-    "get_daytona_cwd",
     "get_daytona_sandbox",
     "resolve_daytona_path",
 ]

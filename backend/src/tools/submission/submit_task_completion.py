@@ -45,4 +45,4 @@ async def submit_task_completion(
             is_error=True,
         )
     tc.submit_task_completion(task_id, summary)
-    return ToolResult(output="accepted")
+    return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

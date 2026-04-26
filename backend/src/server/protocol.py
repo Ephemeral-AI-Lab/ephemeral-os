@@ -12,7 +12,7 @@ from providers.types import SupportsStreamingMessages
 
 @dataclass(frozen=True)
 class BackendHostConfig:
-    """Configuration for one backend host session."""
+    """Configuration for one backend host runtime."""
 
     system_prompt: str | None = None
     api_client: SupportsStreamingMessages | None = None
@@ -22,7 +22,7 @@ class BackendHostConfig:
 class FrontendRequest(BaseModel):
     """One request sent from the React frontend to the Python backend."""
 
-    type: Literal["submit_line", "list_sessions", "update_config", "shutdown"]
+    type: Literal["submit_line", "list_task_center_requests", "update_config", "shutdown"]
     line: str | None = None
     config: dict[str, Any] | None = None
 

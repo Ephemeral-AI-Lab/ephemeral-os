@@ -59,7 +59,6 @@ class LiveCiDiagnosticsEnv:
             metadata={
                 "sandbox_id": self.sandbox_id,
                 "repo_root": self.root_dir,
-                "daytona_cwd": self.root_dir,
                 "ci_sandbox": self.raw_sandbox,
                 "ci_service": ci_service,
                 "agent_run_id": f"ci-diagnostics-{uuid.uuid4().hex[:8]}",

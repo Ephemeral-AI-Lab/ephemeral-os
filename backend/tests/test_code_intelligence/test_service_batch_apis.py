@@ -197,7 +197,7 @@ def test_edit_file_batch_is_atomic_across_specs(tmp_path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# delete_file (batch + legacy shim)
+# delete_file
 # ---------------------------------------------------------------------------
 
 
@@ -286,18 +286,18 @@ def test_delete_file_folder_spec_rejects_regular_file(tmp_path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# move_file (batch + legacy shim)
+# move_file
 # ---------------------------------------------------------------------------
 
 
-def test_move_file_single_spec(tmp_path) -> None:
-    """A single :class:`MoveSpec` is accepted without wrapping in a list."""
+def test_move_file_single_item_list(tmp_path) -> None:
+    """Single-item list is the canonical shape for one-file move."""
     src = tmp_path / "src.py"
     dst = tmp_path / "dst.py"
     src.write_text("content\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.move_file(MoveSpec(src_path=str(src), dst_path=str(dst)))
+    result = svc.move_file([MoveSpec(src_path=str(src), dst_path=str(dst))])
 
     assert result.success
     assert not src.exists()
@@ -365,7 +365,7 @@ def test_move_file_folder_spec_expands_members_in_service(tmp_path) -> None:
     svc = _svc(tmp_path)
 
     result = svc.move_file(
-        MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True),
+        [MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True)],
     )
 
     assert result.success
@@ -403,7 +403,7 @@ def test_move_file_folder_spec_rejects_regular_file(tmp_path) -> None:
     svc = _svc(tmp_path)
 
     result = svc.move_file(
-        MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True),
+        [MoveSpec(src_path=str(src), dst_path=str(dst), is_folder=True)],
     )
 
     assert not result.success

@@ -88,7 +88,7 @@ async def test_registered_write_capable_tools_require_ci_service():
     }
 
     for tool_name, tool_input in write_inputs.items():
-        ctx = _ctx({"daytona_sandbox": _sandbox_with_noop_io(), "daytona_cwd": "/repo"})
+        ctx = _ctx({"daytona_sandbox": _sandbox_with_noop_io(), "repo_root": "/repo"})
         tool = tools_by_name[tool_name]
         result = await tool.execute(tool.input_model(**tool_input), ctx)
 

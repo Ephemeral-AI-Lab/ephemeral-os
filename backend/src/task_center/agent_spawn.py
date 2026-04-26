@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 def make_production_spawn(
-    session_config: Any,
+    runtime_config: Any,
 ) -> Callable[[str, "TaskCenter", str | None], Awaitable[None]]:
-    """Build a ``SpawnFunc`` bound to a session config and optional sandbox."""
+    """Build a ``SpawnFunc`` bound to runtime config and optional sandbox."""
 
     async def spawn(task_id: str, tc: "TaskCenter", sandbox_id: str | None) -> None:
         from agents.registry import get_definition
@@ -47,6 +47,11 @@ def make_production_spawn(
         meta = ExecutionMetadata()
         meta["task_center"] = tc
         meta["task_id"] = task_id
+        meta["persisted_task_id"] = tc.persisted_task_id(task_id)
+        if tc.request_id is not None:
+            meta["request_id"] = tc.request_id
+        if tc.run_id is not None:
+            meta["task_center_run_id"] = tc.run_id
         meta["role"] = task.role
         meta["agent_type"] = agent_def.agent_type
         # Mode-entry tools' cross-secondary deny payload names the current
@@ -55,11 +60,12 @@ def make_production_spawn(
 
         try:
             await execute_ephemeral_agent_run(
-                session_config,
+                runtime_config,
                 build_task_prompt(task, tc.graph),
                 on_agent_event=tc._emit_event,
                 agent_def=agent_def,
                 sandbox_id=sandbox_id,
+                task_id=tc.persisted_task_id(task_id),
                 extra_tool_metadata=meta,
             )
         except Exception:

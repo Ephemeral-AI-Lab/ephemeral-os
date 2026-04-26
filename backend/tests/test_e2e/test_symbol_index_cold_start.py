@@ -218,7 +218,7 @@ class TestSymbolIndexColdStart:
         ctx = _ctx({
             "ci_service": svc,
             "daytona_sandbox": sandbox,
-            "daytona_cwd": "/workspace",
+            "repo_root": "/workspace",
         })
 
         loop = asyncio.new_event_loop()
@@ -261,7 +261,7 @@ class TestSymbolIndexColdStart:
         tool_ctx = _ctx({
             "ci_service": svc,
             "daytona_sandbox": sandbox,
-            "daytona_cwd": "/workspace",
+            "repo_root": "/workspace",
         })
 
         loop = asyncio.new_event_loop()
@@ -361,7 +361,7 @@ class TestLiveColdStart:
         tool_ctx = _ctx({
             "ci_service": ci_svc,
             "daytona_sandbox": sandbox,
-            "daytona_cwd": workspace_root,
+            "repo_root": workspace_root,
         })
 
         ws_result = await ci_workspace_structure.execute(

@@ -437,7 +437,7 @@ Overlay may also include additive metadata fields on the raw response:
 
 For downstream compatibility, `changed_paths` remains the committed gitinclude
 path set. Gitignored dependency/cache paths stay out of `changed_paths` so
-existing write-scope hooks do not treat runtime artifacts as source edits.
+downstream write-scope consumers do not treat runtime artifacts as source edits.
 
 ---
 
@@ -759,7 +759,7 @@ Acceptance:
   per-prefix coordination are introduced; serialization, if required, is the
   caller's responsibility.
 - Does not change LSP / symbol-index refresh. `ambient_changed_paths`
-  flows through the same hook as before.
+  flows through the same downstream refresh path as before.
 - Does not touch the Daytona base image. If the probe regresses,
   Phase 1 stops the rollout and we escalate for a base-image change —
   there is no fallback to git-workspace after PR 3.

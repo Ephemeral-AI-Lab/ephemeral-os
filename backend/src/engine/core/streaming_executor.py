@@ -20,7 +20,7 @@ from tools.core.base import (
     ToolRegistry,
     ToolResult,
 )
-from tools.core.hooks.execution import execute_tool_with_hooks
+from tools.core.tool_execution import execute_tool_once
 
 if TYPE_CHECKING:
     from providers.types import ApiToolUseDeltaEvent
@@ -103,9 +103,8 @@ class StreamingToolExecutor:
     def add_tool(self, event: ApiToolUseDeltaEvent) -> None:
         """Add a tool to execute as it arrives mid-stream.
 
-        Hook-aware execution emits ``ToolExecutionStarted`` after pre-hooks
-        complete, so callers should read started/advisory events through
-        :meth:`get_events`.
+        Execution emits ``ToolExecutionStarted`` after input validation, so
+        callers should read lifecycle events through :meth:`get_events`.
         """
         tool_def = self._tool_registry.get(event.name)
 
@@ -138,7 +137,7 @@ class StreamingToolExecutor:
         return
 
     def get_events(self) -> list[StreamEvent]:
-        """Return and clear hook/tool lifecycle events emitted by running tools."""
+        """Return and clear tool lifecycle events emitted by running tools."""
         events = list(self._events)
         self._events.clear()
         return events
@@ -243,7 +242,7 @@ class StreamingToolExecutor:
                 metadata=self._context.metadata.with_overrides(tool_id=tool.id),
             )
 
-            tool.result = await execute_tool_with_hooks(
+            tool.result = await execute_tool_once(
                 tool_def,
                 tool.input,
                 context_with_id,

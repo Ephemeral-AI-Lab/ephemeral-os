@@ -373,7 +373,7 @@ class MutationService:
 
     def move_file(
         self,
-        specs: Sequence[MoveSpec] | MoveSpec,
+        specs: Sequence[MoveSpec],
         *,
         agent_id: str = "",
         description: str = "",
@@ -386,9 +386,8 @@ class MutationService:
         and TimeMachine rollback make the moves atomic across every
         spec in the batch.
         """
-        raw_specs = [specs] if isinstance(specs, MoveSpec) else list(specs)
         normalized: list[MoveSpec] = []
-        for spec in raw_specs:
+        for spec in specs:
             if not spec.is_folder:
                 normalized.append(spec)
                 continue

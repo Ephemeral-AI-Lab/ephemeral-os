@@ -95,7 +95,7 @@ async def test_live_daytona_grep_and_glob_direct_tools() -> None:
             metadata={
                 "sandbox_id": sandbox_id,
                 "daytona_sandbox": async_sandbox,
-                "daytona_cwd": cwd,
+                "repo_root": cwd,
             },
         )
 

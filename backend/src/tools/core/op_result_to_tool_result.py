@@ -40,8 +40,8 @@ def operation_result_to_tool_result(
 
     ``metadata_extra`` is merged into ``ToolResult.metadata`` on both branches
     so callers that funnel through :mod:`tools.daytona_toolkit._commit` can
-    inject the uniform ``changed_paths`` / ``ambient_changed_paths`` /
-    ``conflict_reason`` keys that post-hooks consume.
+    inject uniform ``changed_paths`` / ``ambient_changed_paths`` /
+    ``conflict_reason`` keys for downstream consumers.
     """
     paths = _paths_from_result(result, primary_paths)
     warnings_list = list(warnings or [])

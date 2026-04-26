@@ -1,7 +1,7 @@
 """Sandbox service — Daytona sandbox lifecycle management.
 
 Wraps the Daytona SDK to provide create/start/stop/delete/list operations
-with error handling, git bootstrapping, and optional CI warmup hooks.
+with error handling, git bootstrapping, and optional CI warmup paths.
 
 Modeled after the synthetic-os sandbox_service for API compatibility.
 """

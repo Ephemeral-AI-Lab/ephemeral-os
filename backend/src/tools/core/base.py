@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal
 from collections.abc import Iterable
@@ -61,9 +61,9 @@ class ToolResult:
     output: str
     is_error: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
-    # Set by ``execute_tool_with_hooks`` when a successful invocation of a
-    # tool with ``is_terminal_tool=True`` has completed. The query loop reads
-    # this on the resulting ToolResultBlock to decide whether to exit with
+    # Set by tool execution helpers when a successful invocation of a tool with
+    # ``is_terminal_tool=True`` has completed. The query loop reads this on the
+    # resulting ToolResultBlock to decide whether to exit with
     # QueryExitReason.TOOL_STOP.
     does_terminate: bool = False
     # Set by mode-entry tools when they flip the agent's typestate. The
@@ -129,15 +129,6 @@ class BaseTool(ABC):
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         """Execute the tool."""
-
-    def background_preflight(
-        self,
-        arguments: BaseModel,
-        context: ToolExecutionContext,
-    ) -> ToolResult | None:
-        """Optionally reject a background launch before the task is spawned."""
-        del arguments, context
-        return None
 
     def output_schema(self) -> dict[str, Any]:
         """Return the output JSON Schema for successful tool output."""
@@ -208,24 +199,17 @@ async def run_tool_safely(
     so validation and error framing stay consistent across the engine's
     tool invocation sites. ``asyncio.CancelledError`` is intentionally
     not caught — callers decide how to handle cancellation.
-
-    Platform hooks run after pydantic input validation and after tool output.
-    A hook registry with no matches makes this path a no-op. This function is
-    intentionally non-streaming; production query paths should prefer the
-    hook-aware execution primitive in :mod:`tools.core.tool_execution`.
     """
-    from tools.core.hooks.execution import execute_tool_with_hooks
+    parsed = parse_tool_input(tool, raw_input)
+    if parsed.error is not None:
+        return parsed.error
+    assert parsed.args is not None
 
-    async def _noop_emit(event: object) -> None:
-        del event
-
-    return await execute_tool_with_hooks(
-        tool,
-        raw_input,
-        context,
-        emit=_noop_emit,
-        emit_started=False,
-    )
+    result = await execute_tool_body(tool, parsed.args, context)
+    validated = validate_tool_output(tool, result)
+    if tool.is_terminal_tool and not validated.is_error:
+        return replace(validated, does_terminate=True)
+    return validated
 
 
 def parse_tool_input(

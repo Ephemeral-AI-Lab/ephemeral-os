@@ -1,4 +1,4 @@
-"""Per-session task graph orchestrator for the executor-evaluator tree.
+"""Request-scoped task graph orchestrator for the executor-evaluator tree.
 
 Public surface:
 

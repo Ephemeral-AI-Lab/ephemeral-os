@@ -1,4 +1,4 @@
-"""TaskGraph — in-memory container for the per-session task tree.
+"""TaskGraph — in-memory container for the request-scoped task tree.
 
 Holds the ``{task_id: Task}`` map and exposes the orchestrator-facing
 operations: insertion, lookup, readiness check, and status transitions.
@@ -28,7 +28,7 @@ _ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
 
 @dataclass
 class TaskGraph:
-    """Per-session task graph."""
+    """Request-scoped task graph."""
 
     tasks: dict[TaskId, Task] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)

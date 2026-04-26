@@ -2,7 +2,7 @@
 
 Each agent has an identity, its own API client, tool registry, and query engine.
 In a relay model, different agents can
-serve successive turns within the same session.
+serve successive turns within the same request-scoped runtime.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING, Any
 from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
-    from server.app_factory import SessionConfig
-    from compaction import SessionState
+    from server.app_factory import RuntimeConfig
     from engine.core.query import QueryContext
     from tools.core.base import ToolRegistry
 
@@ -139,7 +138,7 @@ def finalize_tool_registry_and_prompt(
 
 
 def _resolve_agent_identity(
-    config: SessionConfig,
+    config: RuntimeConfig,
     agent_def: AgentDefinition | None,
     settings: Settings,
 ) -> tuple[str, str, Any, dict | None]:
@@ -158,7 +157,7 @@ def _resolve_agent_identity(
         ) from exc
 
     # ``model`` on the agent_def can be an explicit id, an ``"inherit"``
-    # sentinel meaning "use the session's active model", or absent.
+    # sentinel meaning "use the active runtime model", or absent.
     agent_model = agent_def.model if agent_def else None
     if agent_model and agent_model.strip().lower() == "inherit":
         agent_model = None
@@ -178,7 +177,7 @@ def _resolve_agent_identity(
 
 
 def _build_agent_tool_registry(
-    config: SessionConfig,
+    config: RuntimeConfig,
     agent_def: AgentDefinition | None,
     sandbox_id: str | None,
     agent_name: str,
@@ -257,7 +256,7 @@ def _register_requested_tools(
 
 
 def _build_agent_system_prompt(
-    config: SessionConfig,
+    config: RuntimeConfig,
     agent_def: AgentDefinition | None,
     settings: Settings,
 ) -> str:
@@ -276,18 +275,17 @@ def _build_agent_system_prompt(
 
 
 def spawn_agent(
-    config: SessionConfig,
+    config: RuntimeConfig,
     messages: list[ConversationMessage],
     *,
     agent_def: AgentDefinition | None = None,
-    session_state: SessionState | None = None,
     sandbox_id: str | None = None,
 ) -> EphemeralAgent:
-    """Spawn a fresh ephemeral agent with the given session history.
+    """Spawn a fresh ephemeral agent with the given message history.
 
-    If *agent_def* is provided, its fields customize the session defaults:
-    - ``model`` overrides the session model
-    - ``system_prompt`` is appended after the session system prompt
+    If *agent_def* is provided, its fields customize the runtime defaults:
+    - ``model`` overrides the active model
+    - ``system_prompt`` is appended after the runtime system prompt
     - ``modes`` declare per-phase tool allowlists
     - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """
@@ -317,10 +315,10 @@ def spawn_agent(
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None
 
-    # Plumb session_config through tool_metadata so tools (e.g. run_subagent)
+    # Plumb runtime_config through tool_metadata so tools (e.g. run_subagent)
     # that need to spawn nested agents can reach it without a Protocol layer.
     initial_tool_metadata = ExecutionMetadata(
-        session_config=config,
+        runtime_config=config,
         sandbox_id=sandbox_id or "",
     )
 
@@ -333,7 +331,6 @@ def spawn_agent(
         max_tokens=max_tokens,
         tool_call_limit=tool_call_limit,
         tool_metadata=initial_tool_metadata,
-        session_state=session_state,
         enable_background_tasks=has_background_tools,
         user_context_message=build_runtime_context_message(cwd=config.cwd),
         agent_name=agent_name,

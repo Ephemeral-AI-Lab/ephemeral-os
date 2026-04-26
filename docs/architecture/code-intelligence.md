@@ -123,8 +123,7 @@ Callers may discover `repo_root` differently: sync context preparation uses
 `discover_workspace(...)`, async context preparation uses
 `discover_workspace_async(...)`, and lazy tool attach may resolve the sandbox on
 first use. After discovery, all callers delegate metadata seeding and CI service
-attachment to the shared helper. `daytona_cwd` remains a deprecated compatibility
-alias for older tool contexts; new code should read `repo_root` and `exec_cwd`.
+attachment to the shared helper. Tool contexts use `repo_root` and `exec_cwd`.
 
 ### Symbol Indexing (SymbolIndex)
 

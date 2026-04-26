@@ -148,7 +148,7 @@ class _OpaqueEnv:
             cwd=Path(self.workspace_root),
             metadata={
                 "daytona_sandbox": self.async_sandbox,
-                "daytona_cwd": self.workspace_root,
+                "repo_root": self.workspace_root,
                 "ci_service": ci_service,
                 "agent_run_id": agent_run_id,
             },

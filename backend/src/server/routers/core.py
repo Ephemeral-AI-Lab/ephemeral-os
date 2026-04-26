@@ -1,4 +1,4 @@
-"""Core API routes — health, state, chat, config, sessions."""
+"""Core API routes — health, state, chat, config, TaskCenter requests."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from server.protocol import BackendEvent, TranscriptItem
 from tools.core.base import ExecutionMetadata
 
 if TYPE_CHECKING:
-    from server.app_factory import SessionConfig, SessionState
+    from server.app_factory import RuntimeConfig, RuntimeState
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
 
 class ChatRequest(BaseModel):
     line: str
-    agent_name: str | None = None
     sandbox_id: str | None = None
 
 
@@ -58,15 +57,16 @@ class ConfigRequest(BaseModel):
 
 
 async def execute_ephemeral_agent_run(
-    config: SessionConfig,
+    config: RuntimeConfig,
     input_message: str,
     *,
     on_agent_event: AgentStreamEmitter,
     agent_def: AgentDefinition | None = None,
     sandbox_id: str | None = None,
+    task_id: str | None = None,
     extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> bool:
-    """Spawn an ephemeral agent, run it, persist its run + session, let it die.
+    """Spawn an ephemeral agent, run it, persist its task run, let it die.
 
     Thin wrapper around :func:`engine.runtime.lifecycle.run_ephemeral_agent`
     that re-raises run errors to preserve the existing chat-route contract.
@@ -78,7 +78,8 @@ async def execute_ephemeral_agent_run(
         input_message,
         agent_def=agent_def,
         sandbox_id=sandbox_id,
-        persist_session=True,
+        persist_agent_run=True,
+        task_id=task_id,
         on_event=on_agent_event,
         extra_tool_metadata=extra_tool_metadata,
     )
@@ -94,11 +95,11 @@ async def execute_ephemeral_agent_run(
 
 
 # ---------------------------------------------------------------------------
-# Router factory — receives get_session callable from web_server
+# Router factory — receives get_runtime callable from app_factory
 # ---------------------------------------------------------------------------
 
 
-def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
+def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
     """Build the core API router."""
     router = APIRouter(prefix="/api")
 
@@ -108,17 +109,17 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
 
     @router.get("/state")
     async def get_state():
-        session = get_session()
-        if session.config is None:
-            raise HTTPException(status_code=503, detail="Session not ready")
-        settings = session.current_settings()
+        runtime = get_runtime()
+        if runtime.config is None:
+            raise HTTPException(status_code=503, detail="Runtime not ready")
+        settings = runtime.current_settings()
         from config.model_config import try_get_active_model_kwargs
 
         active_kwargs = try_get_active_model_kwargs() or {}
         provider_info = detect_provider()
         app_state = {
             "model": active_kwargs.get("model", ""),
-            "cwd": session.cwd,
+            "cwd": runtime.cwd,
             "provider": provider_info.name,
             "auth_status": "authorized",
             "base_url": active_kwargs.get("base_url") or "",
@@ -130,36 +131,32 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
             "fast_mode": settings.fast_mode,
             "effort": settings.effort,
             "passes": settings.passes,
-            "bridge_sessions": 0,
+            "bridge_requests": 0,
             "output_style": "verbose" if settings.verbose else "normal",
         }
         ready = BackendEvent.ready(
-            tools=session._tool_snapshots(),
+            tools=runtime._tool_snapshots(),
             state=app_state,
         )
         return JSONResponse(content=json.loads(ready.model_dump_json()))
 
     @router.post("/chat")
     async def chat(req: ChatRequest):
-        session = get_session()
-        if session.config is None:
-            raise HTTPException(status_code=503, detail="Session not ready")
+        runtime = get_runtime()
+        if runtime.config is None:
+            raise HTTPException(status_code=503, detail="Runtime not ready")
 
-        async with session._busy_lock:
-            if session.busy:
-                return JSONResponse(status_code=409, content={"error": "Session is busy"})
-            session.busy = True
+        async with runtime._busy_lock:
+            if runtime.busy:
+                return JSONResponse(status_code=409, content={"error": "Runtime is busy"})
+            runtime.busy = True
 
         queue: asyncio.Queue[BackendEvent | None] = asyncio.Queue()
-        session.set_event_queue(queue)
+        runtime.set_event_queue(queue)
 
         async def process() -> None:
             try:
-                config = session.config
-                if config is None:
-                    raise RuntimeError("Session not ready")
-
-                await session.emit(
+                await runtime.emit(
                     BackendEvent(
                         type="transcript_item",
                         item=TranscriptItem(role="user", text=req.line),
@@ -167,7 +164,7 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                 )
 
                 async def _on_system_notification(message: str) -> None:
-                    await session.emit(
+                    await runtime.emit(
                         BackendEvent(
                             type="transcript_item",
                             item=TranscriptItem(role="system", text=message),
@@ -231,62 +228,42 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                         return
                     backend_event = _stream_event_to_backend(event)
                     if backend_event is not None:
-                        await session.emit(backend_event)
+                        await runtime.emit(backend_event)
 
-                # Route every user query through the per-session TaskCenter
+                # Route every user query through a request-scoped TaskCenter
                 # (US-009 — the new phased executor-evaluator tree). The
                 # TaskCenter spawns a root executor for the user's prompt,
                 # drives any phased subtasks it submits, and runs an evaluator
                 # before closing the root.
-                if session.task_center is not None:
-                    session.task_center.set_event_callback(_on_agent_event)
-                    try:
-                        root = await session.task_center.run_query(
-                            req.line,
-                            sandbox_id=req.sandbox_id,
+                task_center = runtime.create_task_center(
+                    request_prompt=req.line,
+                    sandbox_id=req.sandbox_id,
+                )
+                task_center.set_event_callback(_on_agent_event)
+                try:
+                    root = await task_center.run_query(req.line, sandbox_id=req.sandbox_id)
+                finally:
+                    task_center.set_event_callback(None)
+                # Surface the final root summary as a transcript item so
+                # the user sees the closure text even if no child emitted
+                # it as an AssistantTurnComplete with the same content.
+                if root.summary:
+                    await runtime.emit(
+                        BackendEvent(
+                            type="transcript_item",
+                            item=TranscriptItem(
+                                role="assistant",
+                                text=root.summary,
+                            ),
                         )
-                    finally:
-                        session.task_center.set_event_callback(None)
-                    # Surface the final root summary as a transcript item so
-                    # the user sees the closure text even if no child emitted
-                    # it as an AssistantTurnComplete with the same content.
-                    if root.summary:
-                        await session.emit(
-                            BackendEvent(
-                                type="transcript_item",
-                                item=TranscriptItem(
-                                    role="assistant",
-                                    text=root.summary,
-                                ),
-                            )
-                        )
-                else:
-                    # Legacy fallback when TaskCenter is unavailable (tests,
-                    # uninitialized sessions). Kept so existing chat tests
-                    # don't break before they're rewritten.
-                    agent_def = None
-                    if req.agent_name:
-                        from agents.registry import get_definition
-
-                        agent_def = get_definition(req.agent_name)
-                        if agent_def is None:
-                            await _on_system_notification(
-                                f"Agent '{req.agent_name}' not found — using default"
-                            )
-                    await execute_ephemeral_agent_run(
-                        config,
-                        req.line,
-                        on_agent_event=_on_agent_event,
-                        agent_def=agent_def,
-                        sandbox_id=req.sandbox_id,
                     )
-                await session.emit(BackendEvent(type="line_complete"))
+                await runtime.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
-                await session.emit(BackendEvent(type="error", message=f"Processing error: {exc}"))
+                await runtime.emit(BackendEvent(type="error", message=f"Processing error: {exc}"))
             finally:
                 await queue.put(None)
-                session.busy = False
-                session.set_event_queue(None)
+                runtime.busy = False
+                runtime.set_event_queue(None)
 
         task = asyncio.create_task(process())
 
@@ -313,9 +290,9 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
 
     @router.post("/config")
     async def update_config(req: ConfigRequest):
-        session = get_session()
-        if session.config is None:
-            raise HTTPException(status_code=503, detail="Session not ready")
+        runtime = get_runtime()
+        if runtime.config is None:
+            raise HTTPException(status_code=503, detail="Runtime not ready")
 
         from server.app_factory import model_store
 
@@ -363,28 +340,34 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
             }
         )
 
-    @router.get("/sessions")
-    async def list_sessions():
-        session = get_session()
-        if session.config is None:
-            raise HTTPException(status_code=503, detail="Session not ready")
-        from server.app_factory import session_store
+    @router.get("/task-center-requests")
+    async def list_task_center_requests():
+        runtime = get_runtime()
+        if runtime.config is None:
+            raise HTTPException(status_code=503, detail="Runtime not ready")
+        from server.app_factory import task_center_store
         import time as _time
 
-        if session_store._session_factory is None:
-            return JSONResponse(content={"sessions": []})
+        if task_center_store._session_factory is None:
+            return JSONResponse(content={"task_center_requests": []})
 
-        snapshots = session_store.list_sessions(cwd=session.cwd, limit=10)
+        snapshots = task_center_store.list_requests(cwd=runtime.cwd, limit=10)
         options = []
-        for s in snapshots:
-            ts = _time.strftime("%m/%d %H:%M", _time.localtime(s["created_at"]))
-            summary = s.get("summary", "")[:50] or "(no summary)"
+        for request in snapshots:
+            ts_value = request.get("created_at")
+            if isinstance(ts_value, str):
+                from datetime import datetime
+
+                ts = datetime.fromisoformat(ts_value).strftime("%m/%d %H:%M")
+            else:
+                ts = _time.strftime("%m/%d %H:%M", _time.localtime(0))
+            summary = request.get("request_prompt", "")[:50] or "(no prompt)"
             options.append(
                 {
-                    "value": s["session_id"],
-                    "label": f"{ts}  {s['message_count']}msg  {summary}",
+                    "value": request["id"],
+                    "label": f"{ts}  {summary}",
                 }
             )
-        return JSONResponse(content={"sessions": options})
+        return JSONResponse(content={"task_center_requests": options})
 
     return router

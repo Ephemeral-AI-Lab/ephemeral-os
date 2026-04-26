@@ -15,7 +15,7 @@ from tools.daytona_toolkit._commit import submit_shell_cmd
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _format_shell_stdout,
-    _get_cwd,
+    _get_repo_root,
     _recover_sandbox,
     _require_sandbox,
     _wrap_bash_command,
@@ -238,7 +238,7 @@ def _build_tool_output(
     return ToolResult(
         output=json.dumps(
             {
-                "cwd": _get_cwd(context) or "",
+                "cwd": _get_repo_root(context) or "",
                 "status": status,
                 "files_written": files_written,
                 "shells_run": len(shells),
@@ -302,7 +302,7 @@ async def daytona_shell(
     if not command or not command.strip():
         return ToolResult(output="`command` must be a non-empty string.", is_error=True)
 
-    repo_cwd = _get_cwd(context)
+    repo_cwd = _get_repo_root(context)
 
     try:
         sandbox = await _require_sandbox(context)

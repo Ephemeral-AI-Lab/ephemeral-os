@@ -18,7 +18,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
 )
 from providers.types import UsageSnapshot
-from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, ToolRegistry, ToolResult
 from tools.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -30,24 +30,13 @@ ToolCallExecutor = Callable[
 ]
 
 
-def run_background_preflight(
-    *,
-    cwd: Path,
-    tool_registry: ToolRegistry,
-    tool_metadata: ExecutionMetadata | None,
+def validate_background_input(
     tool_def: BaseTool,
-    tool_use_id: str,
     clean_input: dict[str, object],
 ) -> ToolResult | None:
-    metadata = tool_metadata.copy() if tool_metadata is not None else ExecutionMetadata()
-    metadata.tool_registry = tool_registry
-    metadata.tool_id = tool_use_id
-
-    preflight = getattr(tool_def, "background_preflight", None)
-    if not callable(preflight):
-        return None
+    """Validate a background launch before spawning the async task."""
     try:
-        parsed_input = tool_def.input_model.model_validate(clean_input)
+        tool_def.input_model.model_validate(clean_input)
     except ValidationError as exc:
         errors = "; ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
@@ -64,16 +53,7 @@ def run_background_preflight(
             output=f"Invalid input for {tool_def.name}: {exc}",
             is_error=True,
         )
-    try:
-        return preflight(
-            parsed_input,
-            ToolExecutionContext(cwd=cwd, metadata=metadata),
-        )
-    except Exception as exc:
-        return ToolResult(
-            output=f"Tool background preflight failed: {exc}",
-            is_error=True,
-        )
+    return None
 
 
 def launch_background_tool(
@@ -98,29 +78,25 @@ def launch_background_tool(
         )
 
     kill_callback = None
-    preflight_result = run_background_preflight(
-        cwd=cwd,
-        tool_registry=tool_registry,
-        tool_metadata=tool_metadata,
+    validation_result = validate_background_input(
         tool_def=tool_def,
-        tool_use_id=tool_use.id,
         clean_input=clean_input,
     )
-    if preflight_result is not None:
+    if validation_result is not None:
         return (
             ToolResultBlock(
                 tool_use_id=tool_use.id,
-                content=preflight_result.output,
-                is_error=preflight_result.is_error,
-                metadata=preflight_result.metadata,
+                content=validation_result.output,
+                is_error=validation_result.is_error,
+                metadata=validation_result.metadata,
             ),
             None,
             ToolExecutionCompleted(
                 tool_name=tool_use.name,
-                output=preflight_result.output,
-                is_error=preflight_result.is_error,
+                output=validation_result.output,
+                is_error=validation_result.is_error,
                 tool_id=tool_use.id,
-                metadata=dict(preflight_result.metadata or {}),
+                metadata=dict(validation_result.metadata or {}),
             ),
         )
 

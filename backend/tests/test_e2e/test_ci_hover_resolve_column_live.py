@@ -132,7 +132,7 @@ def _build_ci_context(sandbox_id: str) -> tuple[Any, ToolExecutionContext]:
     tool_ctx = _ctx({
         "ci_service": ci_svc,
         "sandbox_id": sandbox_id,
-        "daytona_cwd": workspace_root,
+        "repo_root": workspace_root,
         "daytona_sandbox": sandbox,
     })
     return ci_svc, tool_ctx

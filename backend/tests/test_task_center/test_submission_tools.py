@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,6 +69,7 @@ async def test_completion_calls_task_center() -> None:
     res = await submit_task_completion.execute(arg, _ctx(tc, task_id="t1"))
     assert isinstance(res, ToolResult)
     assert res.is_error is False
+    assert json.loads(res.output)["status"] == "accepted"
     assert tc.calls == [("complete", "t1", "all good")]
 
 
@@ -100,6 +102,7 @@ async def test_plan_handoff_happy_path() -> None:
     )
     res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="parent"))
     assert res.is_error is False
+    assert json.loads(res.output)["status"] == "accepted"
     assert tc.calls[0][0] == "handoff"
     assert tc.calls[0][1] == "parent"
     assert tc.calls[0][-1] == "A then B; risk: B depends on A's wiring."
@@ -164,4 +167,5 @@ async def test_continue_accepts_evaluator_role() -> None:
         arg, _ctx(tc, task_id="ev", role="evaluator")
     )
     assert res.is_error is False
+    assert json.loads(res.output)["status"] == "accepted"
     assert tc.calls == [("continue", "ev", "gap")]

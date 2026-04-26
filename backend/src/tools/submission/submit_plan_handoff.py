@@ -79,4 +79,4 @@ async def submit_plan_handoff(
         )
     except PlanValidationError as exc:
         return ToolResult(output=f"plan rejected: {exc}", is_error=True)
-    return ToolResult(output="accepted")
+    return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

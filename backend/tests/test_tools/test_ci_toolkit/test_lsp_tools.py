@@ -35,7 +35,7 @@ def test_diagnostics_no_service_returns_error():
 def test_diagnostics_clean():
     svc = MagicMock()
     svc.diagnostics.return_value = []
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
+    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
@@ -52,7 +52,7 @@ def test_diagnostics_runs_service_with_sandbox_io_loop():
             assert current_sandbox_io_loop() is not None
             return []
 
-    ctx = _ctx({"ci_service": _Service(), "daytona_cwd": "/ws"})
+    ctx = _ctx({"ci_service": _Service(), "repo_root": "/ws"})
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
@@ -64,7 +64,7 @@ def test_diagnostics_runs_service_with_sandbox_io_loop():
 def test_diagnostics_backend_failure_returns_error_not_clean():
     svc = MagicMock()
     svc.diagnostics.side_effect = RuntimeError("transport unavailable")
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
+    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
 
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
@@ -84,7 +84,7 @@ def test_diagnostics_with_errors():
     diag.source = "pyright"
     svc = MagicMock()
     svc.diagnostics.return_value = [diag]
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
+    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )

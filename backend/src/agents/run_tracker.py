@@ -1,26 +1,23 @@
 """Centralised agent_run persistence.
 
 Three call sites historically wrote the same create/finish pattern for
-``agent_run_store``: the production router, the eval harness, and the
-subagent tool. :class:`AgentRunTracker` collapses that into one helper
+``agent_run_store``. :class:`AgentRunTracker` collapses that into one helper
 instead of copy-pasting the same lifecycle code.
 
 Lifecycle:
 
     tracker = AgentRunTracker.create(
-        session_id=..., agent_name=..., input_query=...,
-        parent_run_id=..., parent_task_id=...,
+        task_id=..., agent_name=...,
     )
     ... run the agent, stream events ...
     tracker.finish(
         status="completed",
         display_messages=...,
-        api_messages_snapshot=...,
         final_text=...,
     )
 
-When persistence is unavailable (store not ready, session_id missing, or
-an exception during create), :attr:`run_id` is ``None`` and every
+When persistence is unavailable (store not ready, task_id missing, or an
+exception during create), :attr:`run_id` is ``None`` and every
 subsequent call on the tracker is a no-op.
 """
 
@@ -35,7 +32,6 @@ from message.messages import ConversationMessage
 
 logger = logging.getLogger(__name__)
 
-_MAX_INPUT_QUERY_CHARS = 2000
 _AUTO_RUN_ID_HEX_LEN = 16
 _AUTO_RUN_ID_RETRIES = 5
 
@@ -69,9 +65,9 @@ class AgentRunTracker:
     def create(
         cls,
         *,
-        session_id: str | None,
+        task_id: str | None,
         agent_name: str,
-        input_query: str,
+        input_query: str = "",
         run_id: str | None = None,
         parent_run_id: str | None = None,
         parent_task_id: str | None = None,
@@ -79,28 +75,23 @@ class AgentRunTracker:
         """Create a persisted run row and return a tracker wrapping it.
 
         Returns a no-op tracker (``run_id=None``) if the store is not
-        ready, the session_id is missing, or the create call raises.
+        ready, the task_id is missing, or the create call raises.
         """
-        if not session_id:
+        del input_query
+        if not task_id:
             if parent_task_id or parent_run_id:
                 logger.warning(
-                    "AgentRunTracker.create: skipping persistence — session_id missing "
+                    "AgentRunTracker.create: skipping persistence — task_id missing "
                     "(parent_task_id=%s, agent=%s)",
                     parent_task_id,
                     agent_name,
                 )
             return cls(run_id=None, agent_name=agent_name)
+        del parent_run_id, parent_task_id
 
         store = _get_agent_run_store()
         if store is None:
             return cls(run_id=None, agent_name=agent_name)
-
-        if len(input_query) > _MAX_INPUT_QUERY_CHARS:
-            logger.info(
-                "AgentRunTracker.create: input_query truncated from %d to %d chars for persistence",
-                len(input_query),
-                _MAX_INPUT_QUERY_CHARS,
-            )
 
         retries = 1 if run_id else _AUTO_RUN_ID_RETRIES
         for attempt in range(retries):
@@ -108,11 +99,8 @@ class AgentRunTracker:
             try:
                 store.create_run(
                     run_id=resolved_run_id,
-                    session_id=session_id,
+                    task_id=task_id,
                     agent_name=agent_name,
-                    input_query=input_query[:_MAX_INPUT_QUERY_CHARS],
-                    parent_run_id=parent_run_id,
-                    parent_task_id=parent_task_id,
                 )
             except Exception as exc:
                 if run_id is None and _is_duplicate_key_error(exc) and attempt + 1 < retries:
@@ -134,8 +122,9 @@ class AgentRunTracker:
         *,
         status: str,
         display_messages: list[ConversationMessage] | None = None,
-        api_messages_snapshot: list[ConversationMessage] | None = None,
         response: Any | None = None,
+        terminal_tool_result: dict[str, Any] | None = None,
+        token_count: int = 0,
         reasoning: str | None = None,
         error: str | None = None,
         final_text: str = "",
@@ -143,6 +132,7 @@ class AgentRunTracker:
         event_count: int | None = None,
     ) -> None:
         """Finalise the run row. No-op when persistence is unavailable."""
+        del reasoning
         if self.run_id is None or self._finished:
             return
         store = _get_agent_run_store()
@@ -152,10 +142,6 @@ class AgentRunTracker:
             message_history: list[dict[str, Any]] | None = None
             if display_messages is not None:
                 message_history = [m.model_dump(mode="json") for m in display_messages]
-
-            compacted: list[dict[str, Any]] | None = None
-            if api_messages_snapshot is not None:
-                compacted = [m.model_dump(mode="json") for m in api_messages_snapshot]
 
             if response is None and final_text:
                 response = {"final_text": final_text}
@@ -169,10 +155,9 @@ class AgentRunTracker:
             store.finish_run(
                 self.run_id,
                 status=status,
-                response=response,
                 message_history=message_history,
-                compacted_history=compacted,
-                reasoning=reasoning,
+                terminal_tool_result=terminal_tool_result or response,
+                token_count=token_count,
                 error=error,
                 event_count=resolved_event_count,
                 cancellation_reason=cancellation_reason,

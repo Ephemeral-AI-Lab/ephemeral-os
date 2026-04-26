@@ -53,13 +53,13 @@ class SystemReminderBlock(BaseModel):
     """Engine-generated nudge for the model wrapped in <system-reminder> tags.
 
     This is a first-class content block — distinct from a user-authored
-    TextBlock — so the engine, UI, and compaction layers can treat it
+    TextBlock — so the engine and UI can treat it
     specially:
 
     - The display layer can render it differently (greyed-out, icon,
       collapsible) instead of mixing it with real user text.
-    - :func:`compact_for_api` can filter or dedupe stale reminders before
-      they reach the LLM summarizer.
+    - Provider-history preparation can filter or dedupe stale reminders before
+      they reach the model.
     - Audit / persistence can count reminders separately from real user
       messages.
 

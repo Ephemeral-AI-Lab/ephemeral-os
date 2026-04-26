@@ -32,6 +32,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
 )
 from engine.core.notifications import build_budget_warning
+from engine.core.provider_history import prepare_provider_messages
 from engine.core.tool_batch import validate_tool_batch
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
 from engine.runtime.background_dispatch import launch_and_collect_bg_events
@@ -81,11 +82,9 @@ class QueryContext:
     tool_calls_used: int = 0
     last_budget_warning_remaining: int | None = None
     tool_metadata: ExecutionMetadata | None = None
-    session_state: Any = None
     enable_background_tasks: bool = False
     user_context_message: str | None = None
     on_turn: Callable[[list[ConversationMessage]], None] | None = None
-    api_messages_snapshot: list[ConversationMessage] | None = None
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
@@ -169,9 +168,9 @@ def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
 def _any_terminal_result(tool_results: list[ToolResultBlock]) -> bool:
     """True if any tool result in this turn carries does_terminate=True.
 
-    The flag is stamped by ``execute_tool_with_hooks`` when a tool with
-    ``is_terminal_tool=True`` returned a non-error result, so the query loop
-    no longer needs to re-derive that decision from tool names.
+    The flag is stamped by tool execution when a tool with
+    ``is_terminal_tool=True`` returned a non-error result, so the query loop no
+    longer needs to re-derive that decision from tool names.
     """
     return any(result.does_terminate for result in tool_results)
 
@@ -180,9 +179,6 @@ async def _run_query_loop(
     context: QueryContext,
     display_messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    from compaction import SessionState, compact_for_api
-
-    compact_state = context.session_state or SessionState()
     if context.tool_metadata is None:
         context.tool_metadata = ExecutionMetadata()
     elif not isinstance(context.tool_metadata, ExecutionMetadata):
@@ -270,29 +266,13 @@ async def _run_query_loop(
         pending_cancel: dict[str, str] = {}
         streamed_tool_use_ids: set[str] = set()
 
-        api_messages = await compact_for_api(
-            display_messages,
-            api_client=context.api_client,
-            model=context.model,
-            system_prompt=context.system_prompt,
-            state=compact_state,
-        )
-        provider_messages = list(api_messages)
+        provider_messages = prepare_provider_messages(display_messages)
         context_message = (context.user_context_message or "").strip()
         if context_message:
             provider_messages = [
                 ConversationMessage.from_user_text(context_message),
                 *provider_messages,
             ]
-        context.api_messages_snapshot = [
-            ConversationMessage.from_user_text(context.system_prompt),
-            *(
-                [ConversationMessage.from_user_text(context_message)]
-                if context_message
-                else []
-            ),
-            *api_messages,
-        ]
         prompt_report = _prompt_report_recorder(context)
         prompt_report_seq = prompt_report.next_seq()
         tool_schemas = context.tool_registry.to_api_schema()

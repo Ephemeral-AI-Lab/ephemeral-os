@@ -199,7 +199,6 @@ def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | N
         return
 
     display_messages = list(getattr(agent, "_display_messages", []) or [])
-    api_messages = list(agent._query_context.api_messages_snapshot or [])
     session_id = getattr(session_config, "session_id", None)
     if not session_id:
         return
@@ -233,7 +232,6 @@ def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | N
             status=status,
             response=new_messages or None,
             message_history=[m.model_dump(mode="json") for m in display_messages] or None,
-            compacted_history=[m.model_dump(mode="json") for m in api_messages] or None,
             reasoning=(
                 getattr(result, "thinking_text", "") or getattr(agent, "_e2e_reasoning", None)
             ),
@@ -272,9 +270,6 @@ def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | N
                     if usage is not None
                     else None
                 ),
-                session_state=agent._query_context.session_state.to_dict()
-                if agent._query_context.session_state
-                else None,
                 summary=next(
                     (
                         m.text.strip()[:80]
@@ -349,7 +344,6 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
         from engine.testing.eval_agent import (
             EvalResult,
             ToolCallResult,
-            _estimate_final_context,
             _truncate,
         )
         from message.stream_events import (
@@ -381,9 +375,6 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
         _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
 
         total_usage = UsageSnapshot()
-        compacted_before: int | None = None
-        if self._query_context.session_state is not None:
-            compacted_before = int(self._query_context.session_state.compacted)
 
         tracker = AgentRunTracker.create(
             session_id=getattr(self._session_config, "session_id", None),
@@ -434,7 +425,6 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
             tracker.finish(
                 status="failed" if run_error else "completed",
                 display_messages=list(self._display_messages),
-                api_messages_snapshot=self._query_context.api_messages_snapshot,
                 response=_extract_new_messages(self._display_messages, prompt) or None,
                 reasoning=self._e2e_reasoning,
                 error=run_error,
@@ -453,14 +443,6 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
             raise pending_exc
 
         latency_ms = (time.monotonic() - start) * 1000
-        compaction_note = ""
-        st = self._query_context.session_state
-        if st is not None and compacted_before is not None:
-            new_compactions = int(st.compacted) - compacted_before
-            compaction_note = (
-                f", compactions={'+1' if new_compactions > 0 else '0'}"
-                f" (compacted={st.compacted})"
-            )
         usage_note = ""
         try:
             persisted = get_eval_persistence(self)
@@ -477,9 +459,8 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
             f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
             f"{latency_ms:.0f}ms, "
             f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
-            f"total={total_usage.total_tokens}, "
-            f"final_context={_estimate_final_context(self._query_context.api_messages_snapshot)}"
-            f"{compaction_note}{usage_note}"
+            f"total={total_usage.total_tokens}"
+            f"{usage_note}"
         )
 
         result = EvalResult(
@@ -524,7 +505,7 @@ try:
         # Initialise *all* DB-backed singletons up front so EvalAgent-driven
         # tests (and the local factories that bypass EvalAgent.create()) get
         # the same persistence setup the production server bootstrap provides.
-        # Without this, run_subagent usage and compacted session artifacts can
+        # Without this, run_subagent usage and session artifacts can
         # be dropped because the corresponding stores are unready at tool-call
         # or post-run persistence time.
         if not _ms.is_available or not _ars.is_ready or not _ss.is_ready or not _usage_store_ready(_us):
@@ -693,15 +674,12 @@ def send_chat(
     client,
     line: str,
     *,
-    agent_name: str | None = None,
     sandbox_id: str | None = None,
     timeout: int = 180,
     verbose: bool = True,
 ) -> list[dict]:
     """Send a chat message and return parsed SSE events (compat)."""
     payload: dict[str, Any] = {"line": line}
-    if agent_name:
-        payload["agent_name"] = agent_name
     if sandbox_id:
         payload["sandbox_id"] = sandbox_id
 
@@ -832,23 +810,6 @@ def mock_api_client():
         )
     )
     return client
-
-
-@pytest.fixture()
-def override_compaction_threshold(monkeypatch):
-    """Temporarily override the auto-compaction threshold for targeted tests."""
-
-    def _apply(threshold: int) -> None:
-        monkeypatch.setattr(
-            "compaction.compactor.get_autocompact_threshold",
-            lambda _model: threshold,
-        )
-        monkeypatch.setattr(
-            "compaction.get_autocompact_threshold",
-            lambda _model: threshold,
-        )
-
-    return _apply
 
 
 # ---------------------------------------------------------------------------

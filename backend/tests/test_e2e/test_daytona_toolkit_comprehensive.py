@@ -237,7 +237,7 @@ def _make_context(
     """Create a ToolExecutionContext with sandbox injected."""
     metadata: dict[str, Any] = {
         "daytona_sandbox": sandbox,
-        "daytona_cwd": cwd,
+        "repo_root": cwd,
     }
     if ci_service is not None:
         metadata["ci_service"] = ci_service
@@ -689,7 +689,7 @@ class TestDaytonaToolLive:
             cwd=Path("/workspace"),
             metadata={
                 "daytona_sandbox": sandbox,
-                "daytona_cwd": cwd,
+                "repo_root": cwd,
                 "ci_service": CodeIntelligenceService(
                     sandbox_id=str(live_sandbox["info"]["id"]),
                     workspace_root=cwd,

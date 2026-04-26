@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from message.messages import ToolResultBlock
-from message.stream_events import StreamEvent
-from tools.core.base import ExecutionMetadata, ToolExecutionContext
-from tools.core.hooks.execution import execute_tool_with_hooks
+from message.stream_events import StreamEvent, ToolExecutionStarted
+from tools.core.base import (
+    BaseTool,
+    ExecutionMetadata,
+    ToolExecutionContext,
+    ToolResult,
+    execute_tool_body,
+    parse_tool_input,
+    validate_tool_output,
+)
 
 if TYPE_CHECKING:
     from agents.types import ModeDefinition
     from engine.core.query import QueryContext
-    from tools.core.hooks import EmitStreamEvent
+
+
+EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
 def _build_budget_exceeded_error(
@@ -148,7 +159,7 @@ async def execute_tool_call_streaming(
     consume_budget: bool = True,
     emit_started: bool = True,
 ) -> ToolResultBlock:
-    """Execute one tool call through the platform hook pipeline."""
+    """Execute one tool call and emit lifecycle events for the active stream."""
     # Mode gate runs before budget consumption so denied calls never burn
     # the agent's tool-call quota — see docs/architecture/agent-mode-system-v1.md.
     mode_rejection = evaluate_mode_gate(context.active_mode, tool_name, tool_use_id)
@@ -175,7 +186,7 @@ async def execute_tool_call_streaming(
     if extra_metadata:
         metadata.update(extra_metadata)
 
-    result = await execute_tool_with_hooks(
+    result = await execute_tool_once(
         tool,
         tool_input,
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
@@ -201,3 +212,32 @@ async def execute_tool_call_streaming(
         mode_transition=result.mode_transition,
     )
     return tool_result
+
+
+async def execute_tool_once(
+    tool: BaseTool,
+    raw_input: dict[str, Any],
+    context: ToolExecutionContext,
+    *,
+    emit: EmitStreamEvent,
+    emit_started: bool = True,
+) -> ToolResult:
+    """Validate input, emit start, execute the tool, and validate output."""
+    parsed = parse_tool_input(tool, raw_input)
+    if parsed.error is not None:
+        return parsed.error
+    assert parsed.args is not None
+
+    if emit_started:
+        await emit(
+            ToolExecutionStarted(
+                tool_name=tool.name,
+                tool_input=parsed.args.model_dump(mode="json"),
+            )
+        )
+
+    result = await execute_tool_body(tool, parsed.args, context)
+    validated = validate_tool_output(tool, result)
+    if tool.is_terminal_tool and not validated.is_error:
+        return replace(validated, does_terminate=True)
+    return validated

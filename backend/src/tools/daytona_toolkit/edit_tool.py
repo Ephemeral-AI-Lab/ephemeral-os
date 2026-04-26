@@ -15,8 +15,8 @@ from tools.core.ci_runtime import ci_write_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
 from tools.daytona_toolkit._commit import submit_commit
-from tools.daytona_toolkit.tools import (
-    _get_cwd,
+from tools.daytona_toolkit._daytona_utils import (
+    _get_repo_root,
     _resolve_path,
 )
 
@@ -174,7 +174,7 @@ async def daytona_edit_file(
         primary_paths=[file_path],
         warnings=warnings,
         success_extra={
-            "cwd": _get_cwd(context) or "",
+            "cwd": _get_repo_root(context) or "",
             "file_path": file_path,
             "applied_edits": len(normalized_edits),
             "timings": {"tool": tool_timings},

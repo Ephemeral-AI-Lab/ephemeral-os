@@ -62,9 +62,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
         monkeypatch.setattr(EvalAgent, "invoke", EvalAgent._original_invoke)
 
     query_context = SimpleNamespace(
-        session_state=None,
         tool_metadata=None,
-        api_messages_snapshot=[],
         agent_name="eval_agent",
         run_id="",
     )
@@ -74,7 +72,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
         settings=SimpleNamespace(),
         model="test-model",
         api_client=_DummyClient(),
-        session_config=SimpleNamespace(session_id="sess-1"),
+        runtime_config=SimpleNamespace(),
     )
 
     asyncio.run(agent.invoke("benchmark prompt", verbose=True))
