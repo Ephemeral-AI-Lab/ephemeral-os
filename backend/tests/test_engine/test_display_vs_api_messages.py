@@ -750,7 +750,6 @@ class TestCompactForApiState:
             if isinstance(block, ToolResultBlock)
         ]
         assert any("[NO TASKS RUNNING]" in content for content in result_contents)
-        assert any("read_file_note" in content for content in result_contents)
         assert all(
             not any(
                 isinstance(block, BackgroundTaskStateBlock)

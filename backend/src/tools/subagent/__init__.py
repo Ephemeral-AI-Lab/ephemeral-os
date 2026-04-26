@@ -61,14 +61,10 @@ class RestrictedRunSubagentTool(BaseTool):
         self.short_description = run_subagent.short_description
         self.input_model = _build_restricted_input_model(allowed_agent_names)
         self.output_model = run_subagent.output_model
-        self.background = run_subagent.background
         self.task_type = run_subagent.task_type
 
     async def execute(self, arguments, context: ToolExecutionContext) -> ToolResult:  # type: ignore[override]
         return await self._delegate.execute(arguments, context)
-
-    def background_preflight(self, arguments, context: ToolExecutionContext) -> ToolResult | None:  # type: ignore[override]
-        return self._delegate.background_preflight(arguments, context)
 
 
 def make_subagent_tools(*, caller_agent: str = "") -> list[BaseTool]:

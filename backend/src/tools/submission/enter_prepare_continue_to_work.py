@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from agents.briefings import PREPARE_CONTINUE_TO_WORK_BRIEFING
+from agents.builtins import PREPARE_CONTINUE_TO_WORK_BRIEFING
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from tools.submission._mode_entry import enter_secondary_mode

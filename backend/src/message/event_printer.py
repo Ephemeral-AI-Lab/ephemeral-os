@@ -249,63 +249,29 @@ class MultiAgentEventPrinter:
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_truncate(event.reason, 240)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
-            # run_subagent is a regular background tool. Treat it specially so
-            # the printed log highlights delegated background work.
-            if event.tool_name == "run_subagent":
-                totals.subagents_spawned += 1
-                child = str(event.tool_input.get("agent_name") or "subagent")
-                raw_task = event.tool_input.get("prompt") or event.tool_input.get("input") or ""
-                if isinstance(raw_task, str):
-                    task_text = raw_task
-                else:
-                    task_text = json.dumps(raw_task, separators=(",", ":"), default=str)
-                # Record lineage so the child's own events indent one level
-                # deeper when they arrive (keyed on bg task_id = child work_id).
-                parent_depth = self._depth.get(work_id, 0) if work_id else 0
-                self._depth[event.task_id] = parent_depth + 1
-                self._work_to_agent[event.task_id] = child
-                self._line(
-                    agent,
-                    work_id,
-                    f"{self._c('magenta', '~> spawn:')}      {self._c('bold', child)} "
-                    f"task_id={event.task_id} task={task_text}",
-                )
-            else:
-                self._line(
-                    agent,
-                    work_id,
-                    f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}",
-                )
+            self._line(
+                agent,
+                work_id,
+                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}",
+            )
         elif isinstance(event, BackgroundTaskCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
             if self._truncate_n is None:
                 limit = None
             else:
                 limit = 500 if event.is_error else 120
-            if event.tool_name == "run_subagent":
-                child = self._work_to_agent.get(event.task_id, "subagent")
-                self._line(
-                    agent,
-                    work_id,
-                    f"{self._c('magenta', '<~ return:')}     {self._c('bold', child)} "
-                    f"task_id={event.task_id} [{status}] "
-                    f"{_truncate(event.output, limit)}",
-                )
-                for extra in _subagent_completion_detail_lines(event.output):
-                    self._line(agent, work_id, extra)
-            else:
-                output = _format_tool_completion_output(
-                    tool_name=event.tool_name,
-                    output=event.output,
-                    is_error=event.is_error,
-                    limit=limit,
-                )
-                self._line(
-                    agent,
-                    work_id,
-                    f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}]"
-                    f"{output}",
-                )
+            output = _format_tool_completion_output(
+                tool_name=event.tool_name,
+                output=event.output,
+                is_error=event.is_error,
+                limit=limit,
+            )
+            self._line(
+                agent,
+                work_id,
+                f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}]"
+                f"{output}",
+            )
         elif isinstance(event, AssistantTurnComplete):
             # Print full thinking/text blocks once per completed turn.
             self._flush_buffers(agent, work_id)

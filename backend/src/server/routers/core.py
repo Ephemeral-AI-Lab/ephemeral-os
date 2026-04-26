@@ -15,7 +15,6 @@ from pydantic import BaseModel
 
 from agents.types import AgentDefinition
 from providers.provider import detect_provider, auth_status
-from engine import spawn_agent
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -27,7 +26,6 @@ from message.stream_events import (
     ToolExecutionStarted,
 )
 from server.protocol import BackendEvent, TranscriptItem
-from token_tracker.runtime import persist_run_usage
 from tools.core.base import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -68,146 +66,30 @@ async def execute_ephemeral_agent_run(
     sandbox_id: str | None = None,
     extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> bool:
-    """Spawn an ephemeral agent, run it, let it die.
+    """Spawn an ephemeral agent, run it, persist its run + session, let it die.
 
-    1. Load conversation history from persistence
-    2. Spawn a fresh agent (optionally configured by *agent_def*)
-    3. Execute the user's request (full tool-call loop)
-    4. Record the agent run + token usage to DB
-    5. Save updated history back to DB
-    6. Agent goes out of scope — dies
+    Thin wrapper around :func:`engine.runtime.lifecycle.run_ephemeral_agent`
+    that re-raises run errors to preserve the existing chat-route contract.
     """
-    from agents.run_tracker import AgentRunTracker
-    from server.app_factory import agent_run_store, session_store, usage_store
+    from engine.runtime.lifecycle import run_ephemeral_agent
 
-    db_available = agent_run_store.is_ready
-
-    # 1. Load history + session context + full audit history from DB
-    messages, session_state, full_history = session_store.load_session_state(config)
-
-    # 2. Spawn ephemeral agent (inherits session state)
-    agent = spawn_agent(
+    result = await run_ephemeral_agent(
         config,
-        messages,
+        input_message,
         agent_def=agent_def,
-        session_state=session_state,
         sandbox_id=sandbox_id,
+        persist_session=True,
+        on_event=on_agent_event,
+        extra_tool_metadata=extra_tool_metadata,
     )
-    logger.info(
-        "Spawned agent %r (model=%s, session=%s)", agent.agent_name, agent.model, config.session_id
-    )
-
-    # 3. Ensure session record exists (agent_runs FK requires it)
-    if db_available:
-        try:
-            session_store.upsert(
-                session_id=config.session_id,
-                cwd=config.cwd,
-                model=agent.model,
-                message_count=0,
-            )
-        except Exception:
-            logger.debug("Failed to ensure session record", exc_info=True)
-
-    # 4. Create agent run record via the shared tracker.
-    tracker = AgentRunTracker.create(
-        session_id=config.session_id,
-        agent_name=agent.agent_name,
-        input_query=input_message,
-    )
-    run_id = tracker.run_id
-
-    # Plumb the parent run id into tool_metadata so subagent dispatches
-    # (and any other tool that wants attribution) can persist themselves
-    # under this run as their parent.
-    if agent.query_context.tool_metadata is None:
-        agent.query_context.tool_metadata = ExecutionMetadata()
-    if extra_tool_metadata:
-        agent.query_context.tool_metadata.update(extra_tool_metadata)
-    if run_id is not None:
-        agent.query_context.tool_metadata.agent_run_id = run_id
-
-    # 5. Run the agent
-    event_count = 0
-    run_error: str | None = None
-    reasoning_parts: list[str] = []
-
-    try:
-        async for event in agent.run(input_message):
-            event_count += 1
-            if isinstance(event, ThinkingDelta):
-                reasoning_parts.append(event.text)
-            await on_agent_event(event)
-    except Exception as exc:
-        run_error = str(exc)
-        raise
-    finally:
-        # Finish the agent run row. The tracker short-circuits when
-        # persistence is unavailable, so we don't need the db_available
-        # guard here.
-        run_response = [
-            m.model_dump(mode="json")
-            for m in agent._display_messages[len(messages):]
-        ]
-        tracker.finish(
-            status="failed" if run_error else "completed",
-            response=run_response,
-            display_messages=list(agent._display_messages),
-            api_messages_snapshot=agent.query_context.api_messages_snapshot,
-            reasoning="".join(reasoning_parts) if reasoning_parts else None,
-            error=run_error,
-            event_count=event_count,
-        )
-
-        if db_available:
-            persist_run_usage(
-                usage_store=usage_store,
-                session_id=config.session_id,
-                run_id=run_id,
-                agent_name=agent.agent_name,
-                model_id=agent.model,
-                usage=agent.total_usage,
-            )
-
-    # 6. Extract new messages for the full (uncompacted) audit log
-    new_messages: list[dict] = []
-    engine_msgs = agent._display_messages
-    for i in range(len(engine_msgs) - 1, -1, -1):
-        msg = engine_msgs[i]
-        if msg.role == "user" and msg.text.strip() == input_message.strip():
-            new_messages = [m.model_dump(mode="json") for m in engine_msgs[i:]]
-            break
-    if new_messages:
-        full_history.extend(new_messages)
-
-    # 7. Save updated history to DB
-    if db_available:
-        try:
-            session_store.upsert(
-                session_id=config.session_id,
-                cwd=config.cwd,
-                model=agent.model,
-                system_prompt=agent.query_context.system_prompt,
-                messages=[m.model_dump(mode="json") for m in agent._display_messages],
-                full_messages=full_history,
-                usage=agent.total_usage.model_dump() if agent.total_usage else {},
-                session_state=agent.query_context.session_state.to_dict()
-                if agent.query_context.session_state
-                else None,
-                summary=input_message.strip()[:80],
-                message_count=len(agent._display_messages),
-            )
-        except Exception:
-            logger.debug("Failed to save session to DB", exc_info=True)
-
     logger.info(
         "Agent %r finished (events=%d, status=%s)",
-        agent.agent_name,
-        event_count,
-        "failed" if run_error else "completed",
+        result.agent_name,
+        result.event_count,
+        result.status,
     )
-
-    # 8. Agent goes out of scope — ephemeral lifecycle complete
+    if result.status == "failed" and result.error:
+        raise RuntimeError(result.error)
     return True
 
 

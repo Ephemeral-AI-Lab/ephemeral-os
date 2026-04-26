@@ -191,7 +191,21 @@ def _build_agent_tool_registry(
             "sandbox_id": sandbox_id or "",
         },
     )
-    if agent_def and agent_def.tool_universe:
+    if agent_def and any(m.allowed_tools is None for m in agent_def.modes):
+        # The agent has a mode whose ``allowed_tools=None`` means "anything in
+        # the runtime registry except the denylist". The registry must be
+        # populated with the standard open surface so the gate has things to
+        # allow; ``tool_universe`` alone would only carry the secondary modes'
+        # explicit lists plus terminals + entry tools.
+        _register_open_agent_surface(tool_registry, sandbox_id, tool_ctx, agent_name)
+        if agent_def.tool_universe:
+            _register_requested_tools(
+                tool_registry,
+                sorted(agent_def.tool_universe),
+                tool_ctx,
+                agent_name,
+            )
+    elif agent_def and agent_def.tool_universe:
         _register_requested_tools(
             tool_registry,
             sorted(agent_def.tool_universe),
@@ -220,6 +234,41 @@ def _build_agent_tool_registry(
             )
 
     return tool_registry
+
+
+def _register_open_agent_surface(
+    tool_registry: ToolRegistry,
+    sandbox_id: str | None,
+    tool_ctx: ToolFactoryContext,
+    agent_name: str,
+) -> None:
+    """Populate the runtime registry for an agent with an open default mode.
+
+    Open modes (``allowed_tools=None``) admit anything not on the denylist, so
+    the registry must carry the agent's full working surface. This is the
+    curated "agent toolkit" — daytona sandbox tools, code-intelligence tools,
+    and the run_subagent dispatch — chosen to match the surface the legacy
+    flat ``tools: [...]`` list used to enumerate per agent.
+    """
+    from tools.ci_toolkit import make_code_intelligence_tools
+
+    if sandbox_id:
+        from tools.daytona_toolkit import make_daytona_tools
+
+        tool_registry.register_many(make_daytona_tools())
+        logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
+
+    tool_registry.register_many(make_code_intelligence_tools())
+
+    if has_tool("run_subagent"):
+        try:
+            tool_registry.register(create_tool("run_subagent", tool_ctx))
+        except Exception:
+            logger.warning(
+                "Failed to register run_subagent for agent %r",
+                agent_name,
+                exc_info=True,
+            )
 
 
 def _register_requested_tools(

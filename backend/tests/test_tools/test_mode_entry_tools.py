@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from agents.briefings import (
+from agents.builtins import (
     PLAN_FOR_HANDOFF_BRIEFING,
     PREPARE_CONTINUE_TO_WORK_BRIEFING,
 )

@@ -26,17 +26,6 @@ MAX_TOTAL_OUTPUT_CHARS = 4000
 # entry with enough tail to be useful.
 MIN_PER_ENTRY_CHARS = 200
 
-POSTED_SUBAGENT_RESULT_GUIDANCE = (
-    "For `run_subagent` results whose summary is `Posted.`, the useful content "
-    "is in file notes or the referenced artifact, not in another "
-    "background status snapshot. Do not call `wait_for_background_task` "
-    "again for this delivered subagent result. "
-    "When file notes are referenced, read them with "
-    "`read_file_note(file_paths=[...])`. Never pass `bg_*` background ids "
-    "as file-note or tool ids."
-)
-
-
 def apply_last_n_lines(status: list[dict[str, Any]], last_n_lines: int) -> None:
     """Trim 'output' field in each status entry, in-place.
 
@@ -83,39 +72,6 @@ def apply_last_n_lines(status: list[dict[str, Any]], last_n_lines: int) -> None:
         entry["output"] = "... (head truncated)\n" + tail
 
 
-def _output_summary_is_posted(output: Any) -> bool:
-    if not isinstance(output, str):
-        return False
-    try:
-        payload = json.loads(output)
-    except json.JSONDecodeError:
-        return '"summary": "Posted."' in output or '"summary":"Posted."' in output
-
-    if not isinstance(payload, dict):
-        return False
-    if payload.get("summary") == "Posted.":
-        return True
-    nested_payload = payload.get("payload")
-    return isinstance(nested_payload, dict) and nested_payload.get("final_text") == "Posted."
-
-
-def _has_posted_subagent_result(statuses: list[dict[str, Any]]) -> bool:
-    return any(
-        (
-            entry.get("tool_name") == "run_subagent"
-            or entry.get("task_type") == "subagent"
-        )
-        and _output_summary_is_posted(entry.get("output"))
-        for entry in statuses
-    )
-
-
-def _posted_subagent_guidance_suffix(statuses: list[dict[str, Any]]) -> str:
-    if not _has_posted_subagent_result(statuses):
-        return ""
-    return f"\n{POSTED_SUBAGENT_RESULT_GUIDANCE}"
-
-
 def render_background_snapshot(
     kind: str,
     statuses: list[dict[str, Any]],
@@ -127,10 +83,7 @@ def render_background_snapshot(
         return json.dumps(statuses, indent=2)
 
     if kind == "wait_completed":
-        return (
-            f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
-            f"{_posted_subagent_guidance_suffix(statuses)}"
-        )
+        return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
 
     if kind == "wait_timed_out":
         elapsed = elapsed_seconds or 0.0
@@ -146,15 +99,13 @@ def render_background_snapshot(
 
     if kind == "wait_no_tasks":
         if statuses:
-            guidance = _posted_subagent_guidance_suffix(statuses)
             return (
                 "[NO TASKS RUNNING] 0 background tasks are pending. "
                 "All previously launched tasks have already finished; "
                 "their results were (or will be) delivered as "
                 "[BACKGROUND <task_id> COMPLETED] messages. Do not poll "
                 "or wait on those task ids again; act on the delivered "
-                "results instead."
-                f"{guidance}\n"
+                "results instead.\n"
                 f"{json.dumps(statuses, indent=2)}"
             )
         return (

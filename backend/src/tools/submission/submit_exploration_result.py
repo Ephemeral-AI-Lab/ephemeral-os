@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.base import TextToolOutput, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 
 
@@ -20,10 +20,6 @@ class ExplorationResultInput(BaseModel):
     )
 
 
-class ExplorationResultOutput(BaseModel):
-    findings: str = Field(..., description="The findings echoed back to the parent.")
-
-
 @tool(
     name="submit_exploration_result",
     description=(
@@ -32,7 +28,7 @@ class ExplorationResultOutput(BaseModel):
         "this exactly once when your work is complete."
     ),
     input_model=ExplorationResultInput,
-    output_model=ExplorationResultOutput,
+    output_model=TextToolOutput,
     is_terminal_tool=True,
 )
 async def submit_exploration_result(

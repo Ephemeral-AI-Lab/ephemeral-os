@@ -45,6 +45,11 @@ class _TerminalTool(_DummyTool):
     is_terminal_tool = True
 
 
+class _BackgroundCapableTool(_DummyTool):
+    name = "bg_capable_tool"
+    background = "optional"
+
+
 @pytest.fixture(autouse=True)
 def _isolate_tool_factories():
     original = dict(_factories)
@@ -136,10 +141,8 @@ def test_build_agent_tool_registry_skips_unknown_tools() -> None:
 
 
 def test_finalize_adds_background_management_tools_for_background_capable_tool() -> None:
-    from tools.subagent.run_subagent_tool import run_subagent
-
     registry = ToolRegistry()
-    registry.register(run_subagent)
+    registry.register(_BackgroundCapableTool())
 
     _, has_background = finalize_tool_registry_and_prompt(
         registry,
@@ -153,10 +156,8 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
 
 
 def test_finalize_skips_background_management_tools_for_subagent() -> None:
-    from tools.subagent.run_subagent_tool import run_subagent
-
     registry = ToolRegistry()
-    registry.register(run_subagent)
+    registry.register(_BackgroundCapableTool())
 
     _, has_background = finalize_tool_registry_and_prompt(
         registry,

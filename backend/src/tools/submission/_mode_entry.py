@@ -56,14 +56,34 @@ def enter_secondary_mode(
         # Idempotent: re-deliver the briefing without flipping anything.
         return ToolResult(output=briefing, mode_transition=target_mode)
     if task.mode != "direct":
+        terminals = _terminals_for_mode(context, task.mode)
+        terminals_text = ", ".join(terminals) if terminals else "(none registered)"
         return ToolResult(
             output=(
                 f"{tool_name}: rejected — task is already in mode "
                 f"{task.mode!r}; cross-secondary transitions are not allowed. "
-                f"Exit the current mode via its terminal tool first."
+                f"Allowed terminals for {task.mode!r}: {terminals_text}. "
+                "Exit the current mode via one of those terminals first."
             ),
             is_error=True,
         )
 
     task.mode = target_mode
     return ToolResult(output=briefing, mode_transition=target_mode)
+
+
+def _terminals_for_mode(context: ToolExecutionContext, mode_name: str) -> list[str]:
+    """Best-effort lookup of *mode_name*'s terminals via the agent definition.
+
+    The deny payload for cross-secondary attempts must name the current mode's
+    terminals so the agent knows the exact escape hatch (spec §Failure Modes).
+    Falls back to an empty list when the metadata is incomplete — the caller
+    formats a generic "(none registered)" string in that case.
+    """
+    agent_def = context.metadata.get("agent_def")
+    if agent_def is None:
+        return []
+    try:
+        return list(agent_def.modes_by_name[mode_name].terminals)
+    except (AttributeError, KeyError):
+        return []

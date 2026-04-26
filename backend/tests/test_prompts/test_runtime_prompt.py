@@ -47,7 +47,7 @@ def test_subagent_tools_expose_run_subagent_without_instruction_block():
     tools = make_subagent_tools()
 
     assert [tool.name for tool in tools] == ["run_subagent"]
-    assert tools[0].short_description == "Spawn a subagent in the background."
+    assert tools[0].short_description == "Run a subagent and return its findings."
 
 
 def test_background_tools_expose_management_tools_without_instruction_block():

@@ -49,6 +49,9 @@ def make_production_spawn(
         meta["task_id"] = task_id
         meta["role"] = task.role
         meta["agent_type"] = agent_def.agent_type
+        # Mode-entry tools' cross-secondary deny payload names the current
+        # mode's terminals; that requires the agent definition at tool time.
+        meta["agent_def"] = agent_def
 
         try:
             await execute_ephemeral_agent_run(

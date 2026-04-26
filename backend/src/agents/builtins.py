@@ -2,8 +2,8 @@
 
 These two agents have secondary modes (plan_for_handoff, prepare_continue_to_work)
 whose tool surfaces and briefings are too rich to express comfortably as YAML
-frontmatter. They live as Python literals so the briefings can be plain strings
-and the tool lists can be derived from named constants.
+frontmatter. They live as Python literals so the tool lists can be derived from
+named constants.
 
 The legacy ``backend/config/agents/executor.md`` and ``evaluator.md`` were
 removed when this module was introduced; user-defined agents continue to load
@@ -14,42 +14,80 @@ See ``docs/architecture/agent-mode-system-v1.md``.
 
 from __future__ import annotations
 
-from agents.briefings import (
-    PLAN_FOR_HANDOFF_BRIEFING,
-    PREPARE_CONTINUE_TO_WORK_BRIEFING,
-)
 from agents.types import AgentDefinition, ModeDefinition
 
 # ---------------------------------------------------------------------------
 # Tool surfaces
 # ---------------------------------------------------------------------------
 
-# Tools both agents may call directly to read the workspace and reason about
-# the codebase. Keep this list small — it is the surface that secondary modes
-# will allow alongside their terminal.
-_READ_AND_SEARCH_TOOLS: list[str] = [
+# Read-only tools available inside the secondary modes. The list intentionally
+# excludes ``daytona_shell`` (which can run arbitrary writes) and any
+# subagent-spawning tool — secondary modes are deliberately read-only.
+_READ_ONLY_INVESTIGATION_TOOLS: list[str] = [
     "daytona_grep",
     "daytona_glob",
     "daytona_read_file",
-    "daytona_shell",
     "ci_query_symbol",
     "ci_diagnostics",
     "ci_workspace_structure",
 ]
 
-# Executor write/edit surface — only valid in the executor's direct mode.
-_EXECUTOR_WRITE_TOOLS: list[str] = [
-    "daytona_write_file",
-    "daytona_edit_file",
-    "daytona_delete_file",
-    "daytona_move_file",
-]
+PLAN_FOR_HANDOFF_BRIEFING = """\
+You have entered plan_for_handoff mode. This is a one-way commitment: the only
+way out is to call submit_plan_handoff with a complete DAG plan.
 
-# Evaluator write surface — small fix-then-complete capability.
-_EVALUATOR_WRITE_TOOLS: list[str] = [
-    "daytona_write_file",
-    "daytona_edit_file",
-]
+Purpose
+  Decompose the task into a DAG of child executors. Your output is the plan
+  itself — the evaluator will validate the children's combined work against
+  the acceptance_criteria you submit.
+
+Allowed tools (read-only investigation)
+  - daytona_read_file, daytona_grep, daytona_glob
+  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
+
+Terminal tool
+  - submit_plan_handoff — submit the DAG plan and exit this mode.
+
+Required fields on submit_plan_handoff
+  - tasks: flat DAG entries {id, deps}; transitive deps are implicit.
+  - task_specs: map of id -> {title, spec} for every task above.
+  - acceptance_criteria: the closure contract the evaluator will check.
+  - handoff_note: articulate what the plan covers, what risks remain, and
+    which acceptance_criteria items are most fragile. The evaluator reads
+    this before validating child outputs.
+
+You cannot edit, write, run shell commands, spawn subagents, or call any
+other terminal in this mode. The dispatcher will reject any tool that is
+not in the allowed list above. To leave this mode, call
+submit_plan_handoff with a well-formed plan.
+"""
+
+
+PREPARE_CONTINUE_TO_WORK_BRIEFING = """\
+You have entered prepare_continue_to_work mode. This is a one-way commitment:
+the only way out is to call submit_continue_to_work with a gap summary.
+
+Purpose
+  You have judged the parent task's acceptance_criteria as not yet satisfied.
+  Prepare the gap analysis that will drive the continuation executor — your
+  summary is its input.
+
+Allowed tools (read-only investigation)
+  - daytona_read_file, daytona_grep, daytona_glob
+  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
+
+Terminal tool
+  - submit_continue_to_work — submit the gap summary and exit this mode.
+
+Required field on submit_continue_to_work
+  - summary: which acceptance_criteria items remain unmet, what evidence
+    proves the gap, and what the continuation executor should focus on.
+
+You cannot edit, write, run shell commands, spawn subagents, or call any
+other terminal in this mode. The dispatcher will reject any tool that is
+not in the allowed list above. To leave this mode, call
+submit_continue_to_work with a gap summary.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -92,15 +130,13 @@ EXECUTOR = AgentDefinition(
     skills=["executor-playbook"],
     system_prompt=_EXECUTOR_SYSTEM_PROMPT,
     modes=[
+        # Direct mode is the open toolset: anything in the agent's runtime
+        # registry is allowed except the entries/terminals that belong to
+        # other modes (those presume a commitment that has not been made).
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=[
-                *_READ_AND_SEARCH_TOOLS,
-                *_EXECUTOR_WRITE_TOOLS,
-                "enter_plan_for_handoff",
-                "submit_task_completion",
-            ],
+            allowed_tools=None,
             disallowed_tools=[
                 "submit_plan_handoff",
                 "submit_continue_to_work",
@@ -110,10 +146,7 @@ EXECUTOR = AgentDefinition(
         ),
         ModeDefinition(
             name="plan_for_handoff",
-            allowed_tools=[
-                *_READ_AND_SEARCH_TOOLS,
-                "ask_user",
-            ],
+            allowed_tools=list(_READ_ONLY_INVESTIGATION_TOOLS),
             terminals=["submit_plan_handoff"],
             entry_tool="enter_plan_for_handoff",
             briefing=PLAN_FOR_HANDOFF_BRIEFING,
@@ -166,12 +199,7 @@ EVALUATOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=[
-                *_READ_AND_SEARCH_TOOLS,
-                *_EVALUATOR_WRITE_TOOLS,
-                "enter_prepare_continue_to_work",
-                "submit_task_completion",
-            ],
+            allowed_tools=None,
             disallowed_tools=[
                 "submit_plan_handoff",
                 "enter_plan_for_handoff",
@@ -181,10 +209,7 @@ EVALUATOR = AgentDefinition(
         ),
         ModeDefinition(
             name="prepare_continue_to_work",
-            allowed_tools=[
-                *_READ_AND_SEARCH_TOOLS,
-                "ask_user",
-            ],
+            allowed_tools=list(_READ_ONLY_INVESTIGATION_TOOLS),
             terminals=["submit_continue_to_work"],
             entry_tool="enter_prepare_continue_to_work",
             briefing=PREPARE_CONTINUE_TO_WORK_BRIEFING,
@@ -217,5 +242,7 @@ __all__ = [
     "BUILTIN_AGENTS",
     "EVALUATOR",
     "EXECUTOR",
+    "PLAN_FOR_HANDOFF_BRIEFING",
+    "PREPARE_CONTINUE_TO_WORK_BRIEFING",
     "register_builtin_agents",
 ]

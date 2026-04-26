@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from tools.core.base import BaseTool, TextToolOutput, ToolExecutionContext, ToolResult
 
 from ._common import (
-    POSTED_SUBAGENT_RESULT_GUIDANCE,
     TASK_ID_FIELD,
     apply_last_n_lines,
     build_background_snapshot_metadata,
@@ -124,8 +123,7 @@ class WaitForBackgroundTaskTool(BaseTool):
                     "before this wait call was issued — no waiting occurred. "
                     "Your assumption that it was still running is stale; update "
                     "your mental model from the status payload below and do "
-                    "not poll or wait on this task id again. "
-                    f"{POSTED_SUBAGENT_RESULT_GUIDANCE}"
+                    "not poll or wait on this task id again."
                 )
                 return ToolResult(
                     output=f"{notice}\n{render_background_snapshot('progress', task_statuses)}",
