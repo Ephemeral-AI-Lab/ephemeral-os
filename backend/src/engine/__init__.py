@@ -15,11 +15,13 @@ if TYPE_CHECKING:  # pragma: no cover
     )
 
     from message.stream_events import (
+        AssistantMessageComplete,
         AssistantTextDelta,
         AssistantTurnComplete,
         BackgroundTaskCompleted,
         BackgroundTaskStarted,
         StreamEvent,
+        ThinkingDelta,
         ToolExecutionCancelled,
         ToolExecutionCompleted,
         ToolExecutionProgress,
@@ -30,6 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
 
 __all__ = [
+    "AssistantMessageComplete",
     "AssistantTextDelta",
     "AssistantTurnComplete",
     "BackgroundTaskCompleted",
@@ -42,6 +45,7 @@ __all__ = [
     "StreamingToolExecutor",
     "TextBlock",
     "ThinkingBlock",
+    "ThinkingDelta",
     "ToolExecutionCancelled",
     "ToolExecutionCompleted",
     "ToolExecutionProgress",
@@ -64,11 +68,13 @@ _SUBMODULES = {
     "ThinkingBlock": ("message.messages", "ThinkingBlock"),
     "ToolResultBlock": ("message.messages", "ToolResultBlock"),
     "ToolUseBlock": ("message.messages", "ToolUseBlock"),
+    "AssistantMessageComplete": ("message.stream_events", "AssistantMessageComplete"),
     "AssistantTextDelta": ("message.stream_events", "AssistantTextDelta"),
     "AssistantTurnComplete": ("message.stream_events", "AssistantTurnComplete"),
     "BackgroundTaskCompleted": ("message.stream_events", "BackgroundTaskCompleted"),
     "BackgroundTaskStarted": ("message.stream_events", "BackgroundTaskStarted"),
     "StreamEvent": ("message.stream_events", "StreamEvent"),
+    "ThinkingDelta": ("message.stream_events", "ThinkingDelta"),
     "ToolExecutionCancelled": ("message.stream_events", "ToolExecutionCancelled"),
     "ToolExecutionCompleted": ("message.stream_events", "ToolExecutionCompleted"),
     "ToolExecutionProgress": ("message.stream_events", "ToolExecutionProgress"),

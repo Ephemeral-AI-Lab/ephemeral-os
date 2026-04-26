@@ -7,11 +7,10 @@ interleaving mid-sentence.
 
 Key ideas:
 
-- **Per-agent turn buffers.** ``AssistantTextDelta`` events from different
-  agents are buffered independently and printed once per completed assistant
-  turn, so two workers streaming at once don't clobber each other's prose and
-  the console shows full blocks. Thinking is printed from the completed
-  assistant message.
+- **Per-agent message buffers.** ``ThinkingDelta`` / ``AssistantTextDelta``
+  events from different agents are buffered independently and printed
+  once per completed assistant message, so two workers streaming at once
+  don't clobber each other's prose and the console shows full blocks.
 - **Lineage via bg task_id.** A ``BackgroundTaskStarted`` whose
   ``tool_name == "run_subagent"`` is treated as a spawn; its
   ``task_id`` becomes the child's run_id so the child's own events
@@ -30,11 +29,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from message.stream_events import (
+    AssistantMessageComplete,
     AssistantTextDelta,
-    AssistantTurnComplete,
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionProgress,
@@ -154,6 +154,7 @@ class _AgentTotals:
 
 @dataclass
 class _LaneState:
+    thinking_buf: list[str] = field(default_factory=list)
     text_buf: list[str] = field(default_factory=list)
 
 
@@ -162,7 +163,7 @@ class MultiAgentEventPrinter:
 
     Pass the result of a ``run_query`` stream into :meth:`emit` per event.
     Buffers thinking/text deltas per-agent and prints them once when
-    that same agent completes an assistant turn.
+    that same agent completes an assistant message.
     """
 
     def __init__(
@@ -196,7 +197,10 @@ class MultiAgentEventPrinter:
         totals = self._agent_totals_for(agent)
         lane = self._lane_for(agent, run_id)
 
-        # Stream text deltas into per-agent buffers; do not print yet.
+        # Stream deltas into per-agent buffers; do not print yet.
+        if isinstance(event, ThinkingDelta):
+            lane.thinking_buf.append(event.text)
+            return
         if isinstance(event, AssistantTextDelta):
             lane.text_buf.append(event.text)
             return
@@ -253,11 +257,8 @@ class MultiAgentEventPrinter:
                 f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}]"
                 f"{output}",
             )
-        elif isinstance(event, AssistantTurnComplete):
-            # Print full thinking/text blocks once per completed turn.
-            thinking = event.message.thinking
-            if thinking:
-                self._line(agent, run_id, f"[thinking] {_full_text(thinking)}")
+        elif isinstance(event, AssistantMessageComplete):
+            # Print full thinking/text blocks once per completed message.
             self._flush_buffers(agent, run_id)
         elif isinstance(event, SystemNotification):
             tag = f"[system{':' + event.category if event.category else ''}]"
@@ -320,6 +321,13 @@ class MultiAgentEventPrinter:
         lane = self._lanes.get((agent, run_id or ""))
         if lane is None:
             return
+        if lane.thinking_buf:
+            self._line(
+                agent,
+                run_id,
+                f"[thinking] {_full_text(''.join(lane.thinking_buf))}",
+            )
+            lane.thinking_buf.clear()
         if lane.text_buf:
             self._line(
                 agent,

@@ -2,12 +2,13 @@ from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
     AssistantTurnComplete,
     BackgroundTaskCompleted,
+    ThinkingDelta,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
 from notification.events import SystemNotification
 from providers.types import UsageSnapshot
-from message.messages import ConversationMessage, TextBlock, ThinkingBlock
+from message.messages import ConversationMessage, TextBlock
 
 
 def test_printer_includes_run_id_in_prefix() -> None:
@@ -28,16 +29,16 @@ def test_printer_includes_run_id_in_prefix() -> None:
     ]
 
 
-def test_printer_keeps_run_id_for_completed_thinking() -> None:
+def test_printer_keeps_run_id_for_flushed_thinking() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
+        ThinkingDelta(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
+    )
+    printer.emit(
         AssistantTurnComplete(
-            message=ConversationMessage(
-                role="assistant",
-                content=[ThinkingBlock(text="working"), TextBlock(text="done")],
-            ),
+            message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="analysis_agent",
             run_id="b88848c71234425a",

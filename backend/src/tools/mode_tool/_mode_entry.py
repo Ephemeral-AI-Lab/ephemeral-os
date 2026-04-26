@@ -21,7 +21,7 @@ def enter_secondary_mode(
     On success — including the idempotent "already in target mode" case — the
     returned ToolResult carries the mode briefing as ``output`` and
     ``mode_transition=target_mode``. The dispatcher reads the latter to update
-    ``QueryContext.active_mode`` after the turn.
+    ``QueryContext.active_mode`` after the response.
     """
     if context.get("agent_type") == "subagent":
         return ToolResult(

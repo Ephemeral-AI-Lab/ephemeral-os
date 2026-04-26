@@ -1,4 +1,4 @@
-"""Provider request construction and prompt-report recording for query turns."""
+"""Provider request construction and prompt-report recording for agent runs."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from engine.core.provider_history import prepare_provider_messages
-from message.messages import ConversationMessage
+from message.messages import ConversationMessage, ToolResultBlock
 from prompt.prompt_report_recorder import PromptReportRecorder
 from providers.types import ApiMessageRequest, UsageSnapshot
 from tools.core.base import decorate_schemas_for_background
@@ -16,11 +16,10 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class QueryTurnRequest:
+class QueryRunRequest:
     request: ApiMessageRequest
     prompt_report: PromptReportRecorder
     prompt_report_seq: int
-    context_message: str
 
 
 def prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
@@ -42,18 +41,11 @@ def prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
     return context.prompt_report_recorder
 
 
-def build_query_turn_request(
+def build_query_run_request(
     context: QueryContext,
     messages: list[ConversationMessage],
-) -> QueryTurnRequest:
+) -> QueryRunRequest:
     provider_messages = prepare_provider_messages(messages)
-    context_message = (context.user_context_message or "").strip()
-    if context_message:
-        provider_messages = [
-            ConversationMessage.from_user_text(context_message),
-            *provider_messages,
-        ]
-
     prompt_report = prompt_report_recorder(context)
     prompt_report_seq = prompt_report.next_seq()
     tool_schemas = context.tool_registry.to_api_schema()
@@ -69,13 +61,12 @@ def build_query_turn_request(
             "event": "llm_request",
             "seq": prompt_report_seq,
             "system_prompt": context.system_prompt,
-            "user_context_message": context_message,
             "messages": [m.model_dump(mode="json") for m in provider_messages],
             "tools": tool_schemas,
         }
     )
 
-    return QueryTurnRequest(
+    return QueryRunRequest(
         request=ApiMessageRequest(
             model=context.model,
             messages=provider_messages,
@@ -85,74 +76,34 @@ def build_query_turn_request(
         ),
         prompt_report=prompt_report,
         prompt_report_seq=prompt_report_seq,
-        context_message=context_message,
     )
 
 
-def record_assistant_turn(
-    turn: QueryTurnRequest,
+def record_assistant_message(
+    run_request: QueryRunRequest,
     message: ConversationMessage,
     usage: UsageSnapshot,
 ) -> None:
-    turn.prompt_report.record(
+    run_request.prompt_report.record(
         {
             "event": "assistant",
-            "seq": turn.prompt_report_seq,
+            "seq": run_request.prompt_report_seq,
             "message": message.model_dump(mode="json"),
             "usage": usage.model_dump(mode="json"),
         }
     )
 
 
-def record_terminal_nudge(
-    turn: QueryTurnRequest,
-    attempt: int,
-    message: ConversationMessage,
+def record_tool_results(
+    run_request: QueryRunRequest,
+    tool_results: list[ToolResultBlock],
 ) -> None:
-    turn.prompt_report.record(
+    run_request.prompt_report.record(
         {
-            "event": "terminal_nudge",
-            "seq": turn.prompt_report.next_seq(),
-            "attempt": attempt,
-            "message": message.model_dump(mode="json"),
-        }
-    )
-
-
-def record_tool_result_message(
-    turn: QueryTurnRequest,
-    message: ConversationMessage,
-) -> None:
-    turn.prompt_report.record(
-        {
-            "event": "tool_result",
-            "seq": turn.prompt_report_seq,
-            "message": message.model_dump(mode="json"),
-        }
-    )
-
-
-def record_system_notification_message(
-    turn: QueryTurnRequest,
-    message: ConversationMessage,
-) -> None:
-    turn.prompt_report.record(
-        {
-            "event": "system_notification",
-            "seq": turn.prompt_report.next_seq(),
-            "message": message.model_dump(mode="json"),
-        }
-    )
-
-
-def record_hook_system_reminder(
-    turn: QueryTurnRequest,
-    message: ConversationMessage,
-) -> None:
-    turn.prompt_report.record(
-        {
-            "event": "hook_system_reminder",
-            "seq": turn.prompt_report.next_seq(),
-            "message": message.model_dump(mode="json"),
+            "event": "tool_results",
+            "seq": run_request.prompt_report_seq,
+            "tool_results": [
+                result.model_dump(mode="json") for result in tool_results
+            ],
         }
     )

@@ -1,4 +1,4 @@
-"""Tool dispatch coordination for query turns."""
+"""Tool dispatch coordination for assistant responses."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def _assign_missing_tool_result_ids(
             result.tool_use_id = unassigned_ids.pop(0)
 
 
-async def dispatch_tool_turn(
+async def dispatch_assistant_tools(
     context: QueryContext,
     final_message: ConversationMessage,
     executor: StreamingToolExecutor,
@@ -137,7 +137,10 @@ async def _dispatch_deferred_tool_calls(
                         tool_name=tc.name,
                         output=result.content,
                         is_error=result.is_error,
+                        tool_id=tc.id,
                         metadata=dict(result.metadata or {}),
+                        does_terminate=result.does_terminate,
+                        mode_transition=result.mode_transition,
                     ),
                     None,
                 )
@@ -218,7 +221,10 @@ async def _dispatch_single_foreground_tool(
                 tool_name=tc.name,
                 output=result.content,
                 is_error=result.is_error,
+                tool_id=tc.id,
                 metadata=dict(result.metadata or {}),
+                does_terminate=result.does_terminate,
+                mode_transition=result.mode_transition,
             ),
             None,
         )
@@ -276,7 +282,10 @@ async def _dispatch_many_foreground_tools(
                         tool_name=tc.name,
                         output=result.content,
                         is_error=result.is_error,
+                        tool_id=tc.id,
                         metadata=dict(result.metadata or {}),
+                        does_terminate=result.does_terminate,
+                        mode_transition=result.mode_transition,
                     ),
                     None,
                 )

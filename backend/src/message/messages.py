@@ -44,13 +44,13 @@ class ToolResultBlock(BaseModel):
     # never serialized to the provider.
     does_terminate: bool = False
     # Engine-level marker stamped when a successful mode-entry tool returned.
-    # Names the mode the dispatcher should activate after this turn. Wire-
+    # Names the mode the dispatcher should activate after this response. Wire-
     # irrelevant — never serialised to the provider.
     mode_transition: str | None = None
 
 
-class SystemReminderBlock(BaseModel):
-    """Engine-generated nudge for the model wrapped in <system-reminder> tags.
+class SystemNotificationBlock(BaseModel):
+    """Engine-generated notification for the model wrapped in tags.
 
     This is a first-class content block — distinct from a user-authored
     TextBlock — so the engine and UI can treat it
@@ -58,22 +58,22 @@ class SystemReminderBlock(BaseModel):
 
     - The display layer can render it differently (greyed-out, icon,
       collapsible) instead of mixing it with real user text.
-    - Provider-history preparation can filter or dedupe stale reminders before
+    - Provider-history preparation can filter or dedupe stale notifications before
       they reach the model.
-    - Audit / persistence can count reminders separately from real user
+    - Audit / persistence can count notifications separately from real user
       messages.
 
     On the wire (Anthropic and other providers that only accept ``text``
     blocks mid-conversation), this block is serialized as a ``text`` block
-    whose body is wrapped in ``<system-reminder>...</system-reminder>``
+    whose body is wrapped in ``<system-notification>...</system-notification>``
     tags. See :func:`serialize_content_block`. The role of the parent
     :class:`ConversationMessage` should be ``"user"`` because Anthropic's
     API does not accept arbitrary roles in the messages array.
     """
 
-    type: Literal["system_reminder"] = "system_reminder"
+    type: Literal["system_notification"] = "system_notification"
     text: str
-    # Free-form category so the UI / filters can group reminders.
+    # Free-form category so the UI / filters can group notifications.
     # Examples: "background_progress", "task_warning", "context_update".
     category: str = ""
 
@@ -98,7 +98,7 @@ ContentBlock = Annotated[
     | ThinkingBlock
     | ToolUseBlock
     | ToolResultBlock
-    | SystemReminderBlock
+    | SystemNotificationBlock
     | BackgroundTaskStateBlock,
     Field(discriminator="type"),
 ]
@@ -140,20 +140,20 @@ class ConversationMessage(BaseModel):
 
     @property
     def text(self) -> str:
-        """Return concatenated text blocks (excludes thinking and reminders)."""
+        """Return concatenated text blocks (excludes thinking and notifications)."""
         return "".join(
             block.text for block in self.content if isinstance(block, TextBlock)
         )
 
     @property
-    def system_reminders(self) -> list[SystemReminderBlock]:
-        """Return all system-reminder blocks contained in this message."""
-        return [b for b in self.content if isinstance(b, SystemReminderBlock)]
+    def system_notifications(self) -> list[SystemNotificationBlock]:
+        """Return all system-notification blocks contained in this message."""
+        return [b for b in self.content if isinstance(b, SystemNotificationBlock)]
 
     @property
-    def system_reminder_text(self) -> str:
-        """Concatenated text of all system-reminder blocks (no tags)."""
-        return "\n".join(b.text for b in self.system_reminders)
+    def system_notification_text(self) -> str:
+        """Concatenated text of all system-notification blocks (no tags)."""
+        return "\n".join(b.text for b in self.system_notifications)
 
     @property
     def background_task_states(self) -> list[BackgroundTaskStateBlock]:
@@ -203,14 +203,14 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     if isinstance(block, ThinkingBlock):
         return {"type": "thinking", "text": block.text}
 
-    if isinstance(block, SystemReminderBlock):
+    if isinstance(block, SystemNotificationBlock):
         # Anthropic and most providers do not accept arbitrary block types
         # mid-conversation. Flatten to a text block whose body is wrapped
-        # in <system-reminder> tags so the model recognises it as engine-
+        # in <system-notification> tags so the model recognises it as engine-
         # generated guidance rather than user input.
         return {
             "type": "text",
-            "text": f"<system-reminder>\n{block.text}\n</system-reminder>",
+            "text": f"<system-notification>\n{block.text}\n</system-notification>",
         }
 
     if isinstance(block, BackgroundTaskStateBlock):

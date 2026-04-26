@@ -1,8 +1,8 @@
 """Ephemeral agent — short-lived runtime for one user request.
 
 Each agent has an identity, its own API client, tool registry, and query engine.
-In a relay model, different agents can
-serve successive turns within the same request-scoped runtime.
+Every run is one provider request shaped as system prompt, user prompt, and
+assistant response.
 """
 
 from __future__ import annotations
@@ -55,21 +55,20 @@ class EphemeralAgent:
 
     @property
     def messages(self) -> list[ConversationMessage]:
-        """Live view of the agent's append-only message history.
+        """Live view of the agent's run transcript.
 
-        The list is owned by the agent and grows as ``run`` drives turns —
-        callers may read it (e.g. for live progress peeks) but must treat it
-        as read-only.
+        The list is owned by the agent. A run starts with exactly one user
+        message, then appends the assistant response.
         """
         return self._messages
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
-        """Execute one complete tool-call loop for the given prompt."""
+        """Execute one provider request for the given prompt."""
         from engine.core.query import run_query
 
         self.total_usage = UsageSnapshot()
         try:
-            self._messages.append(ConversationMessage.from_user_text(prompt))
+            self._messages = [ConversationMessage.from_user_text(prompt)]
             messages, event_iter = await run_query(
                 self.query_context, self._messages
             )
@@ -332,6 +331,11 @@ def spawn_agent(
     )
 
     base_system_prompt = _build_agent_system_prompt(config, agent_def, settings)
+    runtime_context = build_runtime_context_message(cwd=config.cwd)
+    if runtime_context:
+        base_system_prompt = "\n\n".join(
+            part for part in (base_system_prompt, runtime_context) if part.strip()
+        )
 
     system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
         tool_registry,
@@ -359,7 +363,6 @@ def spawn_agent(
         tool_call_limit=tool_call_limit,
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
-        user_context_message=build_runtime_context_message(cwd=config.cwd),
         agent_name=agent_name,
         agent_def=agent_def,
         active_mode=agent_def.default_mode if agent_def else None,

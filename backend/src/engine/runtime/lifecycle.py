@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from agents.types import AgentDefinition
 from message.messages import ConversationMessage, ToolResultBlock
-from message.stream_events import StreamEvent
+from message.stream_events import StreamEvent, ToolExecutionCompleted
 from tools.core.base import ExecutionMetadata, ToolResult
 
 if TYPE_CHECKING:
@@ -54,8 +54,7 @@ def _last_terminal_tool_result(
     a ``is_terminal_tool=True`` tool returned non-error. Returns the
     corresponding :class:`ToolResult` (with
     ``output``, ``metadata``, etc.) or ``None`` if the loop exited without a
-    terminal call (e.g. nudge retries exhausted, resource limit, or a plain
-    text response).
+    terminal call (e.g. resource limit or a plain text response).
     """
     for msg in reversed(messages):
         if msg.role != "user":
@@ -92,8 +91,8 @@ async def run_ephemeral_agent(
     ``task_center_tasks`` row. Subagent dispatches omit ``task_id`` and remain
     transient background work.
 
-    Terminal-tool enforcement and the ``MAX_TERMINAL_NUDGE_RETRIES`` cycle
-    live in ``run_query`` and apply identically to every caller.
+    Terminal tools end the run immediately. There is no same-run retry loop;
+    callers that need recovery must spawn a fresh agent run with a new prompt.
     """
     from agents.run_tracker import AgentRunTracker
     from engine.runtime.agent import spawn_agent
@@ -141,21 +140,35 @@ async def run_ephemeral_agent(
 
     event_count = 0
     run_error: str | None = None
+    terminal_result: ToolResult | None = None
 
     try:
         async for event in agent.run(prompt):
             event_count += 1
+            if (
+                isinstance(event, ToolExecutionCompleted)
+                and event.does_terminate
+                and not event.is_error
+            ):
+                terminal_result = ToolResult(
+                    output=event.output,
+                    is_error=event.is_error,
+                    metadata=dict(event.metadata or {}),
+                    does_terminate=True,
+                    mode_transition=event.mode_transition,
+                )
             if on_event is not None:
                 await on_event(event)
     except Exception as exc:
         run_error = str(exc)
         logger.exception("run_ephemeral_agent: agent run crashed")
 
-    terminal_result = (
-        _last_terminal_tool_result(agent._messages)
-        if not run_error
-        else None
-    )
+    if not run_error and terminal_result is None:
+        terminal_result = agent.query_context.terminal_result or _last_terminal_tool_result(
+            agent._messages
+        )
+    if run_error:
+        terminal_result = None
     terminal_payload = (
         {
             "output": terminal_result.output,

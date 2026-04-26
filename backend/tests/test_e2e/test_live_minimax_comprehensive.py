@@ -4,7 +4,7 @@
 Covers five critical areas:
 1. Tool calling & skill loading in Daytona sandbox environment
 2. Multi-turn conversation capability
-3. Reasoning/thinking blocks on completed messages
+3. Reasoning/thinking block streaming
 4. Complex long tasks with multiple tool calls
 5. Code intelligence system integration
 
@@ -259,8 +259,8 @@ class TestMultiTurnConversation:
 
 
 @pytest.mark.skipif(not EvalAgent.has_credentials(), reason="API credentials not configured")
-class TestThinkingBlocksOnCompletedMessages:
-    """Test reasoning/thinking blocks from real MiniMax API."""
+class TestThinkingBlockStreaming:
+    """Test reasoning/thinking block streaming from real MiniMax API."""
 
     @pytest.mark.asyncio
     async def test_thinking_block_on_math_reasoning(self):
@@ -280,19 +280,27 @@ class TestThinkingBlocksOnCompletedMessages:
             assert len(thinking_text) > 0, "Thinking text should have content"
 
     @pytest.mark.asyncio
-    async def test_thinking_is_available_on_completed_turns(self):
-        """If thinking exists, it should come from AssistantTurnComplete messages."""
+    async def test_thinking_before_text_ordering(self):
+        """If thinking events exist, they should precede text events."""
         agent = create_eval_agent()
 
         result = await agent.invoke(
             "Carefully reason: is 97 a prime number? Think before answering."
         )
 
-        assert len(result.assistant_turns()) >= 1
-        if result.thinking_text:
-            assert result.thinking_text == "".join(
-                turn.message.thinking for turn in result.assistant_turns()
+        from message.stream_events import ThinkingDelta, AssistantTextDelta
+
+        thinking = [e for e in result.events if isinstance(e, ThinkingDelta)]
+        text_deltas = [e for e in result.events if isinstance(e, AssistantTextDelta)]
+
+        if thinking and text_deltas:
+            first_thinking = next(
+                i for i, e in enumerate(result.events) if isinstance(e, ThinkingDelta)
             )
+            first_text = next(
+                i for i, e in enumerate(result.events) if isinstance(e, AssistantTextDelta)
+            )
+            assert first_thinking < first_text, "Thinking should precede text deltas"
 
     def test_thinking_block_message_model(self):
         """ThinkingBlock should integrate correctly in ConversationMessage."""
@@ -325,8 +333,8 @@ class TestThinkingBlocksOnCompletedMessages:
         assert len(text) > 50, "Complex reasoning should produce substantial output"
 
     @pytest.mark.asyncio
-    async def test_completed_turn_thinking_structure(self):
-        """Verify completed turns expose thinking through their message when present."""
+    async def test_thinking_delta_event_structure(self):
+        """Verify thinking_delta events have expected fields when present."""
         agent = create_eval_agent()
 
         result = await agent.invoke("Step by step, calculate 8! (8 factorial).")
@@ -334,8 +342,11 @@ class TestThinkingBlocksOnCompletedMessages:
         # Model may format with commas (40,320) or plain (40320)
         assert "40320" in text.replace(",", ""), f"8! = 40320. Got: {text}"
 
-        for turn in result.assistant_turns():
-            assert hasattr(turn.message, "thinking")
+        from message.stream_events import ThinkingDelta
+
+        for ev in result.events:
+            if isinstance(ev, ThinkingDelta):
+                assert hasattr(ev, "text")
 
 
 # ===========================================================================

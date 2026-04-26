@@ -100,7 +100,7 @@ def _format_environment_context(env: EnvironmentInfo) -> str:
 
 
 def build_runtime_context_message(*, cwd: str | Path) -> str:
-    """Build runtime context to send as a user-role message."""
+    """Build runtime context to append to the system prompt."""
     sections = [_format_environment_context(get_environment_info(cwd=str(cwd)))]
 
     for title, path in (

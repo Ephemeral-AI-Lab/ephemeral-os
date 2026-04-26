@@ -96,7 +96,7 @@ class BackgroundTaskManager:
     def next_alias(self) -> str:
         """Return a short mnemonic task_id like 'bg_1', 'bg_2', ...
 
-        These are easier for the LLM to retain across turns than opaque
+        These are easier for the LLM to retain in tool outputs than opaque
         tool_use_ids and are what the agent sees as ``task_id`` everywhere.
         """
         self._alias_counter += 1

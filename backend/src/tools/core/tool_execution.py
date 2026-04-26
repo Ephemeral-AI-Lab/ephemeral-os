@@ -36,7 +36,7 @@ def _build_budget_exceeded_error(
         content=(
             f"tool_call_limit exceeded: {tool_call_limit} tool "
             f"calls already used. The agent run will terminate after "
-            f"this turn — wrap up and summarize your progress now to "
+            f"this response — wrap up and summarize your progress now to "
             f"preserve partial work."
         ),
         is_error=True,

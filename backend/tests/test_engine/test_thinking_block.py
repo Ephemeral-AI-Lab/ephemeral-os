@@ -16,6 +16,9 @@ from message import (
 from providers.types import (
     ApiThinkingDeltaEvent,
 )
+from message.stream_events import (
+    ThinkingDelta,
+)
 # ---------------------------------------------------------------------------
 # ThinkingBlock model tests
 # ---------------------------------------------------------------------------
@@ -262,8 +265,12 @@ class TestAssistantMessageFromApiThinking:
 # ---------------------------------------------------------------------------
 
 
-class TestThinkingProviderEvents:
-    """Test provider-level thinking events."""
+class TestThinkingStreamEvents:
+    """Test ThinkingDelta and ApiThinkingDeltaEvent."""
+
+    def test_thinking_delta_event(self):
+        event = ThinkingDelta(text="reasoning step")
+        assert event.text == "reasoning step"
 
     def test_api_thinking_delta_event(self):
         event = ApiThinkingDeltaEvent(text="api reasoning")

@@ -9,17 +9,20 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, RootModel
 
-from engine.core.query import QueryContext, run_query
+from engine.core.query import QueryContext, QueryExitReason, run_query
 from engine.core.streaming_executor import StreamingToolExecutor
 from engine.runtime.background_dispatch import launch_background_tool
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
-    SystemReminderBlock,
-    ToolResultBlock,
+    SystemNotificationBlock,
     ToolUseBlock,
 )
-from message.stream_events import StreamEvent, ToolExecutionStarted
+from message.stream_events import (
+    StreamEvent,
+    ToolExecutionCompleted,
+    ToolExecutionStarted,
+)
 from notification.events import SystemNotification
 from providers.types import (
     ApiMessageCompleteEvent,
@@ -403,7 +406,7 @@ async def test_hook_exception_becomes_hook_failure() -> None:
     assert tool.seen == []
 
 
-async def test_hook_notification_uses_fallback_service_and_records_reminder() -> None:
+async def test_hook_notification_uses_fallback_service_and_records_notification() -> None:
     tool = _EchoTool()
     tool.pre_hooks = (_NotifyPreHook(),)
     events: list[StreamEvent] = []
@@ -420,7 +423,7 @@ async def test_hook_notification_uses_fallback_service_and_records_reminder() ->
     assert len(notifications) == 1
     assert notifications[0].text == "hook note"
     assert notifications[0].category == "hook_test"
-    assert result.metadata["system_reminders"][0]["text"] == "hook note"
+    assert result.metadata["system_notifications"][0]["text"] == "hook note"
 
 
 async def test_decorator_attaches_tool_hooks() -> None:
@@ -481,7 +484,7 @@ async def test_execute_tool_call_streaming_returns_one_tool_result_block() -> No
     assert [type(event) for event in events] == [ToolExecutionStarted]
 
 
-async def test_query_loop_appends_hook_notification_as_system_reminder() -> None:
+async def test_query_loop_appends_hook_notification_to_history() -> None:
     class _HookNotificationClient(SupportsStreamingMessages):
         def __init__(self) -> None:
             self.requests = []
@@ -531,38 +534,15 @@ async def test_query_loop_appends_hook_notification_as_system_reminder() -> None
         isinstance(event, SystemNotification) and event.text == "hook note"
         for event in events
     )
-    assert any(
-        message.system_reminder_text == "hook note"
+    assert len(client.requests) == 1
+    notification_messages = [
+        message
         for message in messages
-    )
-    assert len(client.requests) == 2
-    assert any(
-        message.system_reminder_text == "hook note"
-        for message in client.requests[1].messages
-    )
-    provider_history = client.requests[1].messages
-    assistant_tool_idx = next(
-        idx
-        for idx, message in enumerate(provider_history)
-        if any(
-            isinstance(block, ToolUseBlock) and block.id == "toolu_notify"
-            for block in message.content
-        )
-    )
-    tool_result_idx = next(
-        idx
-        for idx, message in enumerate(provider_history)
-        if any(
-            isinstance(block, ToolResultBlock) and block.tool_use_id == "toolu_notify"
-            for block in message.content
-        )
-    )
-    reminder_idx = next(
-        idx
-        for idx, message in enumerate(provider_history)
-        if any(isinstance(block, SystemReminderBlock) for block in message.content)
-    )
-    assert assistant_tool_idx < tool_result_idx < reminder_idx
+        if any(isinstance(block, SystemNotificationBlock) for block in message.content)
+    ]
+    assert len(notification_messages) == 1
+    assert notification_messages[0].role == "user"
+    assert notification_messages[0].system_notification_text == "hook note"
 
 
 async def test_query_loop_registers_run_notification_service_for_tool_body() -> None:
@@ -615,12 +595,15 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
         isinstance(event, SystemNotification) and event.text == "tool note"
         for event in events
     )
-    assert any(message.system_reminder_text == "tool note" for message in messages)
-    assert len(client.requests) == 2
-    assert any(
-        message.system_reminder_text == "tool note"
-        for message in client.requests[1].messages
-    )
+    assert len(client.requests) == 1
+    notification_messages = [
+        message
+        for message in messages
+        if any(isinstance(block, SystemNotificationBlock) for block in message.content)
+    ]
+    assert len(notification_messages) == 1
+    assert notification_messages[0].role == "user"
+    assert notification_messages[0].system_notification_text == "tool note"
 
 
 async def test_query_loop_runs_generic_context_preparers() -> None:
@@ -667,16 +650,17 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
         tool_metadata=metadata,
     )
 
-    messages, stream = await run_query(context, [])
-    async for _event, _usage in stream:
-        pass
+    _messages, stream = await run_query(context, [])
+    stream_events: list[StreamEvent] = []
+    async for event, _usage in stream:
+        stream_events.append(event)
 
-    tool_result_messages = [
-        message
-        for message in messages
-        if message.role == "user" and message.content and not isinstance(message.content, str)
+    completed = [
+        event
+        for event in stream_events
+        if isinstance(event, ToolExecutionCompleted)
     ]
-    assert tool_result_messages[-1].content[0].content == "prepared"
+    assert completed[-1].output == "prepared"
     assert context.tool_metadata is metadata
     assert context.tool_metadata.get("prepared_by_test") == "prepared"
 
@@ -729,6 +713,44 @@ async def test_execute_tool_call_streaming_propagates_does_terminate_to_block() 
     )
     assert result.is_error is False
     assert result.does_terminate is True
+
+
+async def test_query_loop_captures_terminal_result_without_tool_result_prompt() -> None:
+    class _TerminalClient(SupportsStreamingMessages):
+        async def stream_message(self, request):
+            yield ApiMessageCompleteEvent(
+                message=ConversationMessage(
+                    role="assistant",
+                    content=[
+                        ToolUseBlock(
+                            id="toolu_term",
+                            name="terminal_echo",
+                            input={"value": "done"},
+                        )
+                    ],
+                ),
+                usage=UsageSnapshot(),
+            )
+
+    registry = ToolRegistry()
+    registry.register(_TerminalEchoTool())
+    context = QueryContext(
+        api_client=_TerminalClient(),
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+
+    messages, stream = await run_query(context, [])
+    async for _event, _usage in stream:
+        pass
+
+    assert context.exit_reason is QueryExitReason.TOOL_STOP
+    assert context.terminal_result is not None
+    assert context.terminal_result.output == "done"
+    assert [message.role for message in messages] == ["assistant"]
 
 
 async def test_streaming_executor_propagates_terminal_completion_marker() -> None:

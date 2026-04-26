@@ -1,5 +1,5 @@
 # ruff: noqa
-"""E2E tests for the chat SSE stream — text, completed thinking, and tool calls."""
+"""E2E tests for the chat SSE stream — text, thinking, and tool calls."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ class TestSimpleChatFlow:
 
 
 class TestChatWithThinking:
-    """Test that thinking is attached to completed assistant messages."""
+    """Test that thinking_delta events are streamed when the model reasons."""
 
     @pytest.fixture(autouse=True)
     def _setup_thinking_response(self, mock_api_client):
@@ -77,25 +77,29 @@ class TestChatWithThinking:
             )
         )
 
-    def test_completed_assistant_message_includes_thinking(self, app_client):
+    def test_thinking_delta_events_streamed(self, app_client):
+        client, _ = app_client
+        resp = client.post("/api/chat", json={"line": "Think about this"})
+        events = parse_sse_events(resp.text)
+
+        thinking_events = events_of_type(events, "thinking_delta")
+        assert len(thinking_events) >= 1
+        assert thinking_events[0]["message"] == "Let me reason step by step..."
+
+    def test_assistant_text_follows_thinking(self, app_client):
         client, _ = app_client
         resp = client.post("/api/chat", json={"line": "Think about this"})
         events = parse_sse_events(resp.text)
 
         types = [e["type"] for e in events]
-        assert "thinking_delta" not in types
-
-        completes = events_of_type(events, "assistant_complete")
-        assert completes[0]["thinking"] == "Let me reason step by step..."
-
-    def test_assistant_complete_keeps_visible_text_separate(self, app_client):
-        client, _ = app_client
-        resp = client.post("/api/chat", json={"line": "Think about this"})
-        events = parse_sse_events(resp.text)
+        # thinking_delta should come before assistant_delta
+        if "thinking_delta" in types and "assistant_delta" in types:
+            think_idx = types.index("thinking_delta")
+            text_idx = types.index("assistant_delta")
+            assert think_idx < text_idx
 
         completes = events_of_type(events, "assistant_complete")
         assert completes[0]["message"] == "The answer is 42."
-        assert completes[0]["thinking"] == "Let me reason step by step..."
 
 
 # ---------------------------------------------------------------------------
@@ -200,11 +204,7 @@ class TestChatThinkingAndTools:
         events = parse_sse_events(resp.text)
 
         types = [e["type"] for e in events]
-        assert "thinking_delta" not in types
-        assert any(
-            event.get("thinking") == "I need to check the filesystem."
-            for event in events_of_type(events, "assistant_complete")
-        )
+        assert "thinking_delta" in types
         # Tool is unknown (no tool named "list_directory" is registered),
         # so tool_started may not appear but tool_completed will (with error)
         assert "tool_completed" in types

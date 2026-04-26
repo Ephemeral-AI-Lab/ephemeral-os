@@ -7,7 +7,7 @@ may call and which terminal tools end the run. Modes encode commitment: by
 entering a secondary mode, the agent declares an intent that is enforced at
 the schema level rather than relied upon as a soft prompt instruction.
 
-This system replaces ad-hoc prompt nudges (e.g. system-reminder injections
+This system replaces ad-hoc prompt nudges (e.g. system-notification injections
 about "you should plan first") with a registry-driven state machine where:
 
 1. Mode is a single field on the Task: `Task.mode`.

@@ -33,11 +33,12 @@ from config.settings import Settings, load_settings
 from engine.core.query import run_query
 from message.messages import ConversationMessage
 from message.stream_events import (
+    AssistantMessageComplete,
     AssistantTextDelta,
-    AssistantTurnComplete,
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -79,12 +80,12 @@ class EvalResult:
 
     @property
     def text(self) -> str:
-        """Concatenated assistant text from all turns, with thinking stripped."""
+        """Concatenated assistant text, with thinking stripped."""
         from message import TextBlock
 
         parts: list[str] = []
         for event in self.events:
-            if isinstance(event, AssistantTurnComplete):
+            if isinstance(event, AssistantMessageComplete):
                 for block in event.message.content:
                     if isinstance(block, TextBlock):
                         parts.append(block.text)
@@ -94,11 +95,7 @@ class EvalResult:
     @property
     def thinking_text(self) -> str:
         """Concatenated thinking/reasoning text."""
-        return "".join(
-            event.message.thinking
-            for event in self.events
-            if isinstance(event, AssistantTurnComplete)
-        )
+        return "".join(e.text for e in self.events if isinstance(e, ThinkingDelta))
 
     # -- Tool helpers --
 
@@ -143,8 +140,11 @@ class EvalResult:
     def system_notifications(self) -> list[SystemNotification]:
         return self._of_type(SystemNotification)
 
-    def assistant_turns(self) -> list[AssistantTurnComplete]:
-        return self._of_type(AssistantTurnComplete)
+    def assistant_messages(self) -> list[AssistantMessageComplete]:
+        return self._of_type(AssistantMessageComplete)
+
+    def assistant_turns(self) -> list[AssistantMessageComplete]:
+        return self.assistant_messages()
 
     def text_deltas(self) -> list[AssistantTextDelta]:
         return self._of_type(AssistantTextDelta)
@@ -482,6 +482,7 @@ class EvalAgent:
         start = time.monotonic()
         events: list[StreamEvent] = []
         tool_calls: list[ToolCallResult] = []
+        thinking_buf: list[str] = []
         text_buf: list[str] = []
 
         def _out(msg: str) -> None:
@@ -500,10 +501,16 @@ class EvalAgent:
                 total_usage.input_tokens += usage.input_tokens
                 total_usage.output_tokens += usage.output_tokens
 
-            if isinstance(event, AssistantTextDelta):
+            if isinstance(event, ThinkingDelta):
+                thinking_buf.append(event.text)
+                continue
+            elif isinstance(event, AssistantTextDelta):
                 text_buf.append(event.text)
                 continue
 
+            if thinking_buf:
+                _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
+                thinking_buf.clear()
             if text_buf:
                 _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
                 text_buf.clear()
@@ -515,9 +522,7 @@ class EvalAgent:
             elif isinstance(event, ToolExecutionCompleted):
                 status = "ERROR" if event.is_error else "ok"
                 _out(f"    <- tool_done:  {event.tool_name} [{status}] {event.output}")
-            elif isinstance(event, AssistantTurnComplete):
-                if event.message.thinking:
-                    _out(f"    [thinking] {_truncate(event.message.thinking, 500)}")
+            elif isinstance(event, AssistantMessageComplete):
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
             elif isinstance(event, BackgroundTaskStarted):
@@ -527,6 +532,8 @@ class EvalAgent:
             elif isinstance(event, SystemNotification):
                 _out(f"    [system] {event.text}")
 
+        if thinking_buf:
+            _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
         if text_buf:
             _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
 

@@ -13,10 +13,20 @@ from notification.events import SystemNotification
 #                "developer-1", "eval_agent", ...). Empty string for
 #                standalone single-agent callers.
 #   run_id    — stable identifier for the unit of work that produced the
-#                event. For a coordinator's own turn this is its run_id;
+#                event. For a coordinator's own response this is its run_id;
 #                for a dispatched subagent it is the subagent's run_id
 #                (distinct from the parent). Lets printers group and
 #                indent events by work unit even when agents interleave.
+
+
+@dataclass(frozen=True)
+class ThinkingDelta:
+    """Incremental thinking/reasoning content from the model."""
+
+    text: str
+    agent_name: str = ""
+    run_id: str = ""
+
 
 @dataclass(frozen=True)
 class AssistantTextDelta:
@@ -28,13 +38,16 @@ class AssistantTextDelta:
 
 
 @dataclass(frozen=True)
-class AssistantTurnComplete:
-    """Completed assistant turn."""
+class AssistantMessageComplete:
+    """Completed assistant message."""
 
     message: ConversationMessage
     usage: UsageSnapshot
     agent_name: str = ""
     run_id: str = ""
+
+
+AssistantTurnComplete = AssistantMessageComplete
 
 
 @dataclass(frozen=True)
@@ -113,8 +126,9 @@ class BackgroundTaskCompleted:
 
 
 StreamEvent = (
-    AssistantTextDelta
-    | AssistantTurnComplete
+    ThinkingDelta
+    | AssistantTextDelta
+    | AssistantMessageComplete
     | ToolExecutionStarted
     | ToolExecutionCompleted
     | ToolExecutionProgress

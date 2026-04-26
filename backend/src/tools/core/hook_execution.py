@@ -10,9 +10,9 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from message.stream_events import StreamEvent
-from notification.reminders import (
-    SYSTEM_REMINDERS_METADATA_KEY,
-    serialize_system_reminders,
+from notification.notifications import (
+    SYSTEM_NOTIFICATIONS_METADATA_KEY,
+    serialize_system_notifications,
 )
 from notification.service import SystemNotificationService
 from tools.core.base import (
@@ -253,9 +253,9 @@ class ToolHookExecutionHelper:
         if effective_input is not None and self._hook_trace:
             metadata["effective_tool_input"] = effective_input.model_dump(mode="json")
         if not self._system_notification_service.has_registered_messages:
-            reminders = self._system_notification_service.drain_reminders()
-            if reminders:
-                metadata[SYSTEM_REMINDERS_METADATA_KEY] = serialize_system_reminders(reminders)
+            notifications = self._system_notification_service.pop_pending_notifications()
+            if notifications:
+                metadata[SYSTEM_NOTIFICATIONS_METADATA_KEY] = serialize_system_notifications(notifications)
         return metadata
 
     def _with_hook_details(

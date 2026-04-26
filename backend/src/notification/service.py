@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
-from message.messages import ConversationMessage, SystemReminderBlock
+from message.messages import ConversationMessage, SystemNotificationBlock
 from notification.events import SystemNotification
 
 
@@ -13,15 +13,15 @@ from notification.events import SystemNotification
 class SystemNotificationService:
     """Run-scoped notification sink for hooks, tools, and runtime code.
 
-    Notifications are retained as ``SystemReminderBlock`` objects so the query
+    Notifications are retained as ``SystemNotificationBlock`` objects so the query
     loop can append them to the durable message list at provider-safe points.
-    Standalone tool executions can still pass ``emit`` and drain reminders into
+    Standalone tool executions can still pass ``emit`` and drain notifications into
     tool metadata for backwards compatibility.
     """
 
     emit: Callable[[SystemNotification], Awaitable[None]] | None = None
     _messages: list[ConversationMessage] | None = field(default=None, init=False, repr=False)
-    _reminders: list[SystemReminderBlock] = field(default_factory=list, repr=False)
+    _notifications: list[SystemNotificationBlock] = field(default_factory=list, repr=False)
     _events: list[SystemNotification] = field(default_factory=list, init=False, repr=False)
 
     @property
@@ -37,7 +37,7 @@ class SystemNotificationService:
         if not text:
             return
         event = SystemNotification(text=text, category=category)
-        self._reminders.append(SystemReminderBlock(text=text, category=category))
+        self._notifications.append(SystemNotificationBlock(text=text, category=category))
         if self.emit is not None:
             await self.emit(event)
         else:
@@ -52,19 +52,31 @@ class SystemNotificationService:
         Returns the appended message and any notification events that were not
         already emitted through ``emit``.
         """
-        if not self._reminders:
+        if not self._notifications:
             return None, []
-        reminders = list(self._reminders)
+        notifications = list(self._notifications)
         events = list(self._events)
-        self._reminders.clear()
+        self._notifications.clear()
         self._events.clear()
-        message = ConversationMessage(role="user", content=reminders)
+        message = ConversationMessage(role="user", content=notifications)
         if self._messages is not None:
             self._messages.append(message)
         return message, events
 
-    def drain_reminders(self) -> list[SystemReminderBlock]:
-        reminders = list(self._reminders)
-        self._reminders.clear()
+    def flush_events(self) -> list[SystemNotification]:
+        """Return pending notifications without appending transcript messages."""
+        events = list(self._events)
+        if not events and self._notifications:
+            events = [
+                SystemNotification(text=notification.text, category=notification.category)
+                for notification in self._notifications
+            ]
+        self._notifications.clear()
         self._events.clear()
-        return reminders
+        return events
+
+    def pop_pending_notifications(self) -> list[SystemNotificationBlock]:
+        notifications = list(self._notifications)
+        self._notifications.clear()
+        self._events.clear()
+        return notifications

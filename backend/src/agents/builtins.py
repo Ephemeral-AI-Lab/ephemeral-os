@@ -75,10 +75,9 @@ Never edit test files or test suites to pass acceptance criteria. Never call \
 `submit_continue_work_handoff` — that is evaluator-only.
 
 **Task Completion**
-End your turn with exactly one terminal tool call. In the default `direct` mode, \
-that is `submit_task_completion` (when you can finish the work yourself). When \
-the task needs decomposition, call `enter_plan_for_handoff` to switch into \
-planning mode; from planning mode the only exit is `submit_plan_handoff`.
+End your response with exactly one terminal tool call: `submit_task_completion` \
+when you can finish the work yourself, or `submit_plan_handoff` when the task \
+needs decomposition into a DAG plan.
 """
 
 
@@ -97,15 +96,8 @@ EXECUTOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=[*_DIRECT_WORK_TOOLS, "enter_plan_for_handoff"],
-            terminals=["submit_task_completion"],
-        ),
-        ModeDefinition(
-            name="plan_for_handoff",
-            allowed_tools=list(_READ_ONLY_INVESTIGATION_TOOLS),
-            terminals=["submit_plan_handoff"],
-            entry_tool="enter_plan_for_handoff",
-            briefing=PLAN_FOR_HANDOFF_BRIEFING,
+            allowed_tools=list(_DIRECT_WORK_TOOLS),
+            terminals=["submit_task_completion", "submit_plan_handoff"],
         ),
     ],
 )
@@ -130,10 +122,9 @@ Never edit test files or test suites to pass acceptance criteria. Never invoke \
 the executor's handoff tools — those are executor-only.
 
 **Task Completion**
-End your turn with exactly one terminal tool call. In the default `direct` mode, \
-that is `submit_task_completion` (criteria satisfied). When a gap remains, call \
-`enter_prepare_continue_to_work` to switch into preparation mode; from \
-preparation mode the only exit is `submit_continue_work_handoff`.
+End your response with exactly one terminal tool call: `submit_task_completion` \
+when the criteria are satisfied, or `submit_continue_work_handoff` when a gap \
+remains and another executor pass is required.
 """
 
 
@@ -152,15 +143,8 @@ EVALUATOR = AgentDefinition(
         ModeDefinition(
             name="direct",
             is_default=True,
-            allowed_tools=[*_DIRECT_WORK_TOOLS, "enter_prepare_continue_to_work"],
-            terminals=["submit_task_completion"],
-        ),
-        ModeDefinition(
-            name="prepare_continue_to_work",
-            allowed_tools=list(_READ_ONLY_INVESTIGATION_TOOLS),
-            terminals=["submit_continue_work_handoff"],
-            entry_tool="enter_prepare_continue_to_work",
-            briefing=PREPARE_CONTINUE_TO_WORK_BRIEFING,
+            allowed_tools=list(_DIRECT_WORK_TOOLS),
+            terminals=["submit_task_completion", "submit_continue_work_handoff"],
         ),
     ],
 )
@@ -182,7 +166,7 @@ spawn further agents. Investigate as deeply as the prompt requires, then \
 deliver one clear result.
 
 **Task Completion**
-End your turn with exactly one terminal tool call: `submit_exploration_result` \
+End your response with exactly one terminal tool call: `submit_exploration_result` \
 with your `findings` as a free-form text payload. The parent receives that \
 text verbatim as the result of its `run_subagent` call. Do not call any other \
 terminal tool.

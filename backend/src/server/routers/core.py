@@ -17,8 +17,9 @@ from agents.types import AgentDefinition
 from providers.provider import detect_provider, auth_status
 from message.stream_events import (
     AssistantTextDelta,
-    AssistantTurnComplete,
+    AssistantMessageComplete,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -171,14 +172,15 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     )
 
                 def _stream_event_to_backend(event: StreamEvent) -> BackendEvent | None:
+                    if isinstance(event, ThinkingDelta):
+                        return BackendEvent(type="thinking_delta", message=event.text)
                     if isinstance(event, AssistantTextDelta):
                         return BackendEvent(type="assistant_delta", message=event.text)
-                    if isinstance(event, AssistantTurnComplete):
+                    if isinstance(event, AssistantMessageComplete):
                         text = event.message.text.strip()
                         return BackendEvent(
                             type="assistant_complete",
                             message=text,
-                            thinking=event.message.thinking or None,
                             item=TranscriptItem(role="assistant", text=text),
                         )
                     if isinstance(event, ToolExecutionStarted):
@@ -244,7 +246,7 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     task_center.set_event_callback(None)
                 # Surface the final root summary as a transcript item so
                 # the user sees the closure text even if no child emitted
-                # it as an AssistantTurnComplete with the same content.
+                # it as an AssistantMessageComplete with the same content.
                 if root.summary:
                     await runtime.emit(
                         BackendEvent(

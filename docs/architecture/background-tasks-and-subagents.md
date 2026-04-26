@@ -89,7 +89,7 @@ When an agent calls a tool marked with `background="always"`, the engine dispatc
 2. **Poll**: Agent calls `check_background_progress(task_id)` to peek at live output
 3. **Join**: Agent calls `wait_for_background_task(task_id)` to block until completion
 4. **Cancel**: Agent calls `cancel_background_task(task_id, reason)` to stop stale work
-5. **Auto-deliver**: Engine calls `collect_completed()` each query turn to yield finished tasks back to the agent as a system message
+5. **No auto-delivery**: the engine no longer creates follow-up model requests, so completed background tasks are not injected back into the same agent run as synthetic user/system messages
 
 ---
 
@@ -98,7 +98,7 @@ When an agent calls a tool marked with `background="always"`, the engine dispatc
 ### Architecture
 
 `run_subagent` is a special background tool that spawns a **full nested agent** with its own:
-- Query loop and message history
+- Query loop and request-local message history
 - Tool registry
 - LLM API client (dedicated pool to avoid contention)
 - System prompt and capabilities
@@ -229,18 +229,15 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 2. **Dispatch**: `launch_background_tool()` wraps it and calls `asyncio.create_task()`
 3. **Immediate return**: Parent gets task_id and system message `[BACKGROUND LAUNCHED] task_id="bg_2"`
 4. **Execution**: Subagent runs its own query loop asynchronously
-   - Subagent calls tools, iterates, eventually submits or exits
-   - Each subagent iteration appends to its own messages list
+   - Subagent streams one assistant response, executes requested tools, then submits or exits
+   - The subagent message list contains its user prompt and assistant response
 5. **Parent polling** (optional): Parent calls `check_background_progress(task_id="bg_2")` which calls the progress_provider callback:
    - Provider reads the subagent's live messages
    - Returns formatted snapshot of last N messages (clamped to PEEK_MESSAGE_MAX=10)
 6. **Parent blocking** (optional): Parent calls `wait_for_background_task(task_id="bg_2")`
    - Query loop blocks on `asyncio.wait()` until subagent completes
    - Returns final envelope with submission and run_id
-7. **Auto-delivery**: Engine's query loop calls `collect_completed()` each turn
-   - Finds subagent task with status=COMPLETED
-   - Appends system message with BackgroundTaskCompleted event
-   - Agent sees `[BACKGROUND bg_2 COMPLETED]` and the result
+7. **Run exit**: pending background tasks are cancelled when the parent run exits unless the parent explicitly waits or checks them within the same assistant response
 
 ### Cancellation & Early Stop
 

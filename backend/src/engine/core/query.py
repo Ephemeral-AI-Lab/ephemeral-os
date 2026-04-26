@@ -22,40 +22,38 @@ from providers.types import (
 )
 from message.messages import ConversationMessage, ToolResultBlock
 from message.stream_events import (
+    AssistantMessageComplete,
     AssistantTextDelta,
-    AssistantTurnComplete,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCompleted,
 )
-from engine.core.no_tool_policy import handle_no_tool_turn
+from engine.core.no_tool_policy import handle_no_tool_response
 from engine.core.notifications import (
     ensure_system_notification_service,
     flush_system_notifications,
 )
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
-from engine.core.tool_dispatch import dispatch_tool_turn
+from engine.core.tool_dispatch import dispatch_assistant_tools
 from engine.core.tool_results import (
     any_terminal_result,
-    append_tool_result_history,
     apply_mode_transitions,
+    terminal_result_from_tool_results,
 )
-from engine.core.turn_request import (
-    QueryTurnRequest,
-    build_query_turn_request,
-    record_assistant_turn,
+from engine.core.run_request import (
+    QueryRunRequest,
+    build_query_run_request,
+    record_assistant_message,
+    record_tool_results,
 )
 from engine.runtime.background_tasks import BackgroundTaskManager
-from engine.runtime.background_tasks import (
-    append_background_reminder,
-    deliver_completed_background_task,
-)
 from engine.runtime.tool_context import prepare_tool_execution_context
-from notification.budget import build_budget_warning
 from notification.service import SystemNotificationService
 from prompt.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
     BaseTool,
     ExecutionMetadata,
+    ToolResult,
     ToolExecutionContextService,
     ToolRegistry,
 )
@@ -93,13 +91,10 @@ class QueryContext:
     last_budget_warning_remaining: int | None = None
     tool_metadata: ExecutionMetadata | None = None
     enable_background_tasks: bool = False
-    user_context_message: str | None = None
-    on_turn: Callable[[list[ConversationMessage]], None] | None = None
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
+    terminal_result: ToolResult | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
-    terminal_nudge_retries_used: int = 0
-    terminal_nudge_budget_extended: bool = False
     # Agent mode typestate (see docs/architecture/agent-mode-system-v1.md).
     # ``agent_def`` is the bound AgentDefinition; ``active_mode`` is the
     # currently-active ModeDefinition. Both are populated at spawn time when
@@ -118,7 +113,7 @@ def _make_stream_dispatch_deferrer(
 
     Stateful: once an exclusive (terminal or mode-entry) tool is observed,
     every subsequent call returns True for the rest of the stream. Construct
-    a fresh predicate per turn — do not cache across streams.
+    a fresh predicate for each provider stream.
     """
     exclusive_batch_seen = False
 
@@ -149,8 +144,8 @@ def _make_stream_dispatch_deferrer(
 
 
 @dataclass
-class _StreamTurnState:
-    """Mutable accumulator for a single provider streaming turn."""
+class _StreamRunState:
+    """Mutable accumulator for one provider stream."""
 
     final_message: ConversationMessage | None = None
     usage: UsageSnapshot = field(default_factory=UsageSnapshot)
@@ -163,7 +158,7 @@ def _initialize_loop_state(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> tuple[BackgroundTaskManager | None, SystemNotificationService]:
-    """One-time setup before entering the query loop."""
+    """One-time setup before issuing the provider request."""
     if context.tool_metadata is None:
         context.tool_metadata = ExecutionMetadata()
     elif not isinstance(context.tool_metadata, ExecutionMetadata):
@@ -171,7 +166,7 @@ def _initialize_loop_state(
         coerced.update(context.tool_metadata)
         context.tool_metadata = coerced
 
-    notification_service = ensure_system_notification_service(context, messages)
+    notification_service = ensure_system_notification_service(context.tool_metadata, messages)
 
     background_manager: BackgroundTaskManager | None = None
     if context.enable_background_tasks:
@@ -193,42 +188,11 @@ def _initialize_loop_state(
     return background_manager, notification_service
 
 
-async def _emit_turn_prelude(
-    context: QueryContext,
-    messages: list[ConversationMessage],
-    background_manager: BackgroundTaskManager | None,
-    notification_service: SystemNotificationService,
-) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Per-turn housekeeping before issuing a provider request."""
-    budget_warning = build_budget_warning(context)
-    if budget_warning is not None:
-        history_msg, warning_event = budget_warning
-        messages.append(history_msg)
-        yield warning_event, None
-
-    if background_manager is not None:
-        for completed_task in background_manager.collect_completed():
-            event = deliver_completed_background_task(completed_task, messages)
-            yield event, None
-
-        if background_manager.has_pending():
-            append_background_reminder(background_manager, messages)
-
-    if context.on_turn is not None:
-        try:
-            context.on_turn(messages)
-        except Exception:
-            logger.debug("on_turn callback failed", exc_info=True)
-
-    for event in flush_system_notifications(notification_service):
-        yield event
-
-
-async def _build_turn_executor(
+async def _build_stream_executor(
     context: QueryContext,
     background_manager: BackgroundTaskManager | None,
 ) -> StreamingToolExecutor:
-    """Build the streaming tool executor for the upcoming turn."""
+    """Build the streaming tool executor for this provider request."""
     execution_context = ToolExecutionContextService(
         cwd=context.cwd,
         services=context.tool_metadata,
@@ -248,14 +212,13 @@ async def _build_turn_executor(
 async def _consume_provider_stream(
     context: QueryContext,
     executor: StreamingToolExecutor,
-    turn: QueryTurnRequest,
-    state: _StreamTurnState,
+    run_request: QueryRunRequest,
+    state: _StreamRunState,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Consume one provider streaming turn, populating ``state`` along the way."""
-    async for event in context.api_client.stream_message(turn.request):
+    """Consume the provider stream, populating ``state`` along the way."""
+    async for event in context.api_client.stream_message(run_request.request):
         if isinstance(event, ApiThinkingDeltaEvent):
-            # Provider thinking arrives incrementally, but the engine exposes
-            # it only on the completed assistant message.
+            yield ThinkingDelta(text=event.text), None
             continue
 
         if isinstance(event, ApiTextDeltaEvent):
@@ -325,7 +288,7 @@ async def _consume_provider_stream(
 
 async def _drain_executor_after_stream(
     executor: StreamingToolExecutor,
-    state: _StreamTurnState,
+    state: _StreamRunState,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     """Apply LLM-issued cancels and drain final executor events."""
     for tool_id, reason in state.pending_cancel.items():
@@ -336,42 +299,20 @@ async def _drain_executor_after_stream(
         yield emitted, None
 
 
-async def _handle_no_tool_branch(
-    context: QueryContext,
-    messages: list[ConversationMessage],
-    turn: QueryTurnRequest,
-    background_manager: BackgroundTaskManager | None,
-    notification_service: SystemNotificationService,
-) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Run no-tool policy; sets ``context.exit_reason`` on text-response exit."""
-    outcome = await handle_no_tool_turn(
-        context,
-        messages,
-        background_manager=background_manager,
-        turn=turn,
-    )
-    for event, event_usage in outcome.events:
-        yield event, event_usage
-    for event in flush_system_notifications(notification_service, turn=turn):
-        yield event
-    if outcome.exit_text_response:
-        context.exit_reason = QueryExitReason.TEXT_RESPONSE
-
-
 async def _handle_tool_dispatch_branch(
     context: QueryContext,
     messages: list[ConversationMessage],
     executor: StreamingToolExecutor,
-    turn: QueryTurnRequest,
-    state: _StreamTurnState,
+    run_request: QueryRunRequest,
+    state: _StreamRunState,
     background_manager: BackgroundTaskManager | None,
     notification_service: SystemNotificationService,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Dispatch tool calls and signal exit via ``context.exit_reason`` on terminal/limit."""
+    """Dispatch tool calls from the assistant message and end the run."""
     final_message = state.final_message
     assert final_message is not None  # narrowed by _consume_provider_stream
 
-    dispatch = await dispatch_tool_turn(
+    dispatch = await dispatch_assistant_tools(
         context,
         final_message,
         executor,
@@ -383,14 +324,13 @@ async def _handle_tool_dispatch_branch(
         yield event, event_usage
 
     tool_results = dispatch.tool_results
-    append_tool_result_history(messages, tool_results, turn=turn)
-    for event in flush_system_notifications(notification_service, turn=turn):
+    record_tool_results(run_request, tool_results)
+    for event in flush_system_notifications(notification_service):
         yield event
     apply_mode_transitions(context, tool_results)
 
-    # Check for a successful terminal tool. A rejected terminal call
-    # is feedback for the next model turn, not a completed terminal result.
     if any_terminal_result(tool_results):
+        context.terminal_result = terminal_result_from_tool_results(tool_results)
         context.exit_reason = QueryExitReason.TOOL_STOP
         return
 
@@ -407,10 +347,15 @@ async def _handle_tool_dispatch_branch(
                 output=f"Agent stopped: tool_call_limit ({context.tool_call_limit}) exceeded.",
                 is_error=True,
             ),
-            None,
-        )
-        for event in flush_system_notifications(notification_service, turn=turn):
+                None,
+            )
+        for event in flush_system_notifications(notification_service):
             yield event
+        return
+
+    if background_manager is not None:
+        await background_manager.cancel_all()
+    context.exit_reason = QueryExitReason.TEXT_RESPONSE
 
 
 async def _run_query_loop(
@@ -419,51 +364,43 @@ async def _run_query_loop(
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     background_manager, notification_service = _initialize_loop_state(context, messages)
 
-    while True:
-        async for event, event_usage in _emit_turn_prelude(
-            context, messages, background_manager, notification_service
-        ):
-            yield event, event_usage
+    executor = await _build_stream_executor(context, background_manager)
 
-        executor = await _build_turn_executor(context, background_manager)
+    state = _StreamRunState()
+    run_request = build_query_run_request(context, messages)
+    async for event, event_usage in _consume_provider_stream(
+        context, executor, run_request, state
+    ):
+        yield event, event_usage
 
-        state = _StreamTurnState()
-        turn = build_query_turn_request(context, messages)
-        async for event, event_usage in _consume_provider_stream(
-            context, executor, turn, state
-        ):
-            yield event, event_usage
+    async for event, event_usage in _drain_executor_after_stream(executor, state):
+        yield event, event_usage
 
-        async for event, event_usage in _drain_executor_after_stream(executor, state):
-            yield event, event_usage
+    final_message = state.final_message
+    assert final_message is not None  # narrowed by _consume_provider_stream
+    messages.append(final_message)
+    record_assistant_message(run_request, final_message, state.usage)
+    yield AssistantMessageComplete(message=final_message, usage=state.usage), state.usage
 
-        final_message = state.final_message
-        assert final_message is not None  # narrowed by _consume_provider_stream
-        messages.append(final_message)
-        record_assistant_turn(turn, final_message, state.usage)
-        yield AssistantTurnComplete(message=final_message, usage=state.usage), state.usage
-
-        if not final_message.tool_uses:
-            async for event, event_usage in _handle_no_tool_branch(
-                context, messages, turn, background_manager, notification_service
-            ):
-                yield event, event_usage
-            if context.exit_reason is not None:
-                return
-            continue
-
+    if final_message.tool_uses:
         async for event, event_usage in _handle_tool_dispatch_branch(
             context,
             messages,
             executor,
-            turn,
+            run_request,
             state,
             background_manager,
             notification_service,
         ):
             yield event, event_usage
-        if context.exit_reason is not None:
-            return
+    else:
+        for event, event_usage in flush_system_notifications(notification_service):
+            yield event, event_usage
+        if handle_no_tool_response().exit_text_response:
+            context.exit_reason = QueryExitReason.TEXT_RESPONSE
+
+    if background_manager is not None and background_manager.has_pending():
+        await background_manager.cancel_all()
 
 
 async def run_query(

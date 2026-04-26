@@ -16,7 +16,7 @@ from engine.runtime.background_tasks import BackgroundTaskManager, build_backgro
 from message.messages import (
     BackgroundTaskStateBlock,
     ConversationMessage,
-    SystemReminderBlock,
+    SystemNotificationBlock,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -305,48 +305,48 @@ class TestBuildBackgroundReminder:
         await mgr.cancel_all()
 
 
-class TestSystemReminderBlock:
-    """SystemReminderBlock must round-trip and serialize as provider text."""
+class TestSystemNotificationBlock:
+    """SystemNotificationBlock must round-trip and serialize as provider text."""
 
     def test_block_construction_and_defaults(self) -> None:
-        block = SystemReminderBlock(text="hello")
-        assert block.type == "system_reminder"
+        block = SystemNotificationBlock(text="hello")
+        assert block.type == "system_notification"
         assert block.text == "hello"
         assert block.category == ""
 
-        categorized = SystemReminderBlock(text="x", category="background_progress")
+        categorized = SystemNotificationBlock(text="x", category="background_progress")
         assert categorized.category == "background_progress"
 
-    def test_message_with_reminder_text_excludes_reminder(self) -> None:
+    def test_message_with_notification_text_excludes_notification(self) -> None:
         msg = ConversationMessage(
             role="user",
             content=[
                 TextBlock(text="hi"),
-                SystemReminderBlock(text="background bg_1 still running"),
+                SystemNotificationBlock(text="background bg_1 still running"),
             ],
         )
         assert msg.text == "hi"
-        assert msg.system_reminder_text == "background bg_1 still running"
-        assert len(msg.system_reminders) == 1
+        assert msg.system_notification_text == "background bg_1 still running"
+        assert len(msg.system_notifications) == 1
 
     def test_to_api_param_wraps_in_tags(self) -> None:
         msg = ConversationMessage(
             role="user",
-            content=[SystemReminderBlock(text="bg_1 done", category="x")],
+            content=[SystemNotificationBlock(text="bg_1 done", category="x")],
         )
         api = msg.to_api_param()
         assert api["role"] == "user"
         assert len(api["content"]) == 1
         block = api["content"][0]
         assert block["type"] == "text"
-        assert block["text"] == "<system-reminder>\nbg_1 done\n</system-reminder>"
+        assert block["text"] == "<system-notification>\nbg_1 done\n</system-notification>"
 
     def test_to_api_param_mixed_content_preserves_order(self) -> None:
         msg = ConversationMessage(
             role="user",
             content=[
                 TextBlock(text="user said"),
-                SystemReminderBlock(text="reminder"),
+                SystemNotificationBlock(text="notification"),
                 TextBlock(text="more"),
             ],
         )
@@ -354,40 +354,40 @@ class TestSystemReminderBlock:
         types = [block["type"] for block in api["content"]]
         assert types == ["text", "text", "text"]
         assert api["content"][0]["text"] == "user said"
-        assert "<system-reminder>" in api["content"][1]["text"]
+        assert "<system-notification>" in api["content"][1]["text"]
         assert api["content"][2]["text"] == "more"
 
     def test_pydantic_round_trip(self) -> None:
         original = ConversationMessage(
             role="user",
             content=[
-                SystemReminderBlock(text="hi", category="background_progress"),
+                SystemNotificationBlock(text="hi", category="background_progress"),
             ],
         )
         dumped = original.model_dump()
         restored = ConversationMessage.model_validate(dumped)
         assert len(restored.content) == 1
         block = restored.content[0]
-        assert isinstance(block, SystemReminderBlock)
+        assert isinstance(block, SystemNotificationBlock)
         assert block.text == "hi"
         assert block.category == "background_progress"
 
-    def test_empty_reminder_text(self) -> None:
-        block = SystemReminderBlock(text="")
+    def test_empty_notification_text(self) -> None:
+        block = SystemNotificationBlock(text="")
         msg = ConversationMessage(role="user", content=[block])
         api = msg.to_api_param()
-        assert api["content"][0]["text"] == "<system-reminder>\n\n</system-reminder>"
+        assert api["content"][0]["text"] == "<system-notification>\n\n</system-notification>"
 
-    def test_multiple_reminders_in_one_message(self) -> None:
+    def test_multiple_notifications_in_one_message(self) -> None:
         msg = ConversationMessage(
             role="user",
             content=[
-                SystemReminderBlock(text="first", category="bg"),
-                SystemReminderBlock(text="second", category="warn"),
+                SystemNotificationBlock(text="first", category="bg"),
+                SystemNotificationBlock(text="second", category="warn"),
             ],
         )
-        assert len(msg.system_reminders) == 2
-        assert msg.system_reminder_text == "first\nsecond"
+        assert len(msg.system_notifications) == 2
+        assert msg.system_notification_text == "first\nsecond"
         api = msg.to_api_param()
         assert len(api["content"]) == 2
         assert "first" in api["content"][0]["text"]
@@ -446,7 +446,7 @@ class TestBuildReminderEdgeCases:
 
 
 class TestConversationMessageMixed:
-    """SystemReminderBlock must not interfere with other block accessors."""
+    """SystemNotificationBlock must not interfere with other block accessors."""
 
     def test_text_property_only_returns_text_blocks(self) -> None:
         msg = ConversationMessage(
@@ -458,29 +458,29 @@ class TestConversationMessageMixed:
             ],
         )
         assert msg.text == "hello world"
-        assert msg.system_reminder_text == ""
-        assert msg.system_reminders == []
+        assert msg.system_notification_text == ""
+        assert msg.system_notifications == []
 
     def test_tool_uses_property_unaffected(self) -> None:
         msg = ConversationMessage(
             role="assistant",
             content=[
                 ToolUseBlock(id="t1", name="bash", input={"cmd": "ls"}),
-                SystemReminderBlock(text="ignore me"),
+                SystemNotificationBlock(text="ignore me"),
             ],
         )
         assert len(msg.tool_uses) == 1
         assert msg.tool_uses[0].name == "bash"
 
-    def test_pydantic_discriminator_distinguishes_text_vs_reminder(self) -> None:
+    def test_pydantic_discriminator_distinguishes_text_vs_notification(self) -> None:
         original = ConversationMessage(
             role="user",
             content=[
                 TextBlock(text="real user input"),
-                SystemReminderBlock(text="engine note"),
+                SystemNotificationBlock(text="engine note"),
             ],
         )
         dumped = original.model_dump()
         restored = ConversationMessage.model_validate(dumped)
         assert isinstance(restored.content[0], TextBlock)
-        assert isinstance(restored.content[1], SystemReminderBlock)
+        assert isinstance(restored.content[1], SystemNotificationBlock)

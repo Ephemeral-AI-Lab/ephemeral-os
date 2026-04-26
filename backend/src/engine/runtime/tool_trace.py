@@ -1,4 +1,4 @@
-"""Per-turn tool trace bookkeeping used by the query loop."""
+"""Per-response tool trace bookkeeping used by the query loop."""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def record_tool_trace(
         _increment_trace_counter(metadata, "_read_file_note_calls")
         _append_trace_values(
             metadata,
-            "_note_read_paths_this_turn",
+            "_note_read_paths_this_response",
             _normalize_trace_paths(tool_input.get("file_paths")),
         )
         return
@@ -83,7 +83,7 @@ def record_tool_trace(
         _increment_trace_counter(metadata, "_read_file_calls")
         _append_trace_values(
             metadata,
-            "_read_paths_this_turn",
+            "_read_paths_this_response",
             _normalize_trace_paths(tool_input.get("file_path")),
         )
         return
