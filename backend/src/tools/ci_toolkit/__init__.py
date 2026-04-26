@@ -5,6 +5,7 @@ from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
 from tools.ci_toolkit.ci_status import ci_status
 from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure
 from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
+from tools.core.context_requirements import SANDBOX_CONTEXT
 
 CODE_INTELLIGENCE_TOOLS: list[BaseTool] = [
     ci_status,
@@ -12,6 +13,8 @@ CODE_INTELLIGENCE_TOOLS: list[BaseTool] = [
     ci_query_symbol,
     ci_diagnostics,
 ]
+for _tool in CODE_INTELLIGENCE_TOOLS:
+    _tool.context_requirements = (SANDBOX_CONTEXT,)
 
 
 def make_code_intelligence_tools() -> list[BaseTool]:

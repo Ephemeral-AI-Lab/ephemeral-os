@@ -39,6 +39,10 @@ class ExecutionMetadata:
     # broader tool surface, e.g. skills that can call sibling tools).
     tool_registry: Any | None = None
 
+    # Runtime context preparation hooks invoked by the query loop before tool
+    # dispatch. Tool/runtime assembly owns provider-specific preparer choice.
+    context_preparers: list[Any] = field(default_factory=list)
+
     # Background task plumbing, injected by the engine for background
     # dispatch. Running tools read ``on_progress_line`` to stream live
     # output back into the manager.
@@ -73,6 +77,7 @@ class ExecutionMetadata:
             "repo_root",
             "exec_cwd",
             "tool_registry",
+            "context_preparers",
             "background_task_manager",
             "background_task_id",
             "on_progress_line",
@@ -85,16 +90,26 @@ class ExecutionMetadata:
 
     # -- Mapping-style interface ------------------------------------------------
 
+    @staticmethod
+    def _has_value(value: Any) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, str) and value == "":
+            return False
+        if isinstance(value, (list, tuple)) and not value:
+            return False
+        return True
+
     def get(self, key: str, default: Any = None) -> Any:
         if key in self._TYPED_FIELDS:
             value = getattr(self, key)
-            return value if value not in (None, "") else default
+            return value if self._has_value(value) else default
         return self.extras.get(key, default)
 
     def __getitem__(self, key: str) -> Any:
         if key in self._TYPED_FIELDS:
             value = getattr(self, key)
-            if value in (None, ""):
+            if not self._has_value(value):
                 raise KeyError(key)
             return value
         return self.extras[key]
@@ -110,13 +125,13 @@ class ExecutionMetadata:
             return False
         if key in self._TYPED_FIELDS:
             value = getattr(self, key)
-            return value not in (None, "")
+            return self._has_value(value)
         return key in self.extras
 
     def __iter__(self) -> Iterator[str]:
         for name in self._TYPED_FIELDS:
             value = getattr(self, name)
-            if value not in (None, ""):
+            if self._has_value(value):
                 yield name
         yield from self.extras
 
@@ -141,7 +156,7 @@ class ExecutionMetadata:
             if isinstance(other, ExecutionMetadata):
                 for name in self._TYPED_FIELDS:
                     value = getattr(other, name)
-                    if value not in (None, ""):
+                    if self._has_value(value):
                         setattr(self, name, value)
                 self.extras.update(other.extras)
             else:

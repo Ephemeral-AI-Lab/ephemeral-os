@@ -38,7 +38,6 @@ from message.stream_events import (
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
-    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -95,7 +94,11 @@ class EvalResult:
     @property
     def thinking_text(self) -> str:
         """Concatenated thinking/reasoning text."""
-        return "".join(e.text for e in self.events if isinstance(e, ThinkingDelta))
+        return "".join(
+            event.message.thinking
+            for event in self.events
+            if isinstance(event, AssistantTurnComplete)
+        )
 
     # -- Tool helpers --
 
@@ -255,7 +258,7 @@ class EvalAgent:
         self._settings = settings
         self._model = model
         self._api_client_ref = api_client
-        self._display_messages: list[ConversationMessage] = []
+        self._messages: list[ConversationMessage] = []
         self._runtime_config = runtime_config
 
     # -- Static helpers for credential checks --
@@ -474,12 +477,11 @@ class EvalAgent:
                      text, tool calls). If False, suppress output.
             metadata: Optional dict of custom metadata to include in result.
         """
-        self._display_messages.clear()
-        self._display_messages.append(ConversationMessage.from_user_text(prompt))
+        self._messages.clear()
+        self._messages.append(ConversationMessage.from_user_text(prompt))
         start = time.monotonic()
         events: list[StreamEvent] = []
         tool_calls: list[ToolCallResult] = []
-        thinking_buf: list[str] = []
         text_buf: list[str] = []
 
         def _out(msg: str) -> None:
@@ -490,24 +492,18 @@ class EvalAgent:
 
         total_usage = UsageSnapshot()
 
-        messages, event_iter = await run_query(self._query_context, self._display_messages)
-        self._display_messages = messages
+        messages, event_iter = await run_query(self._query_context, self._messages)
+        self._messages = messages
         async for event, usage in event_iter:
             events.append(event)
             if usage:
                 total_usage.input_tokens += usage.input_tokens
                 total_usage.output_tokens += usage.output_tokens
 
-            if isinstance(event, ThinkingDelta):
-                thinking_buf.append(event.text)
-                continue
-            elif isinstance(event, AssistantTextDelta):
+            if isinstance(event, AssistantTextDelta):
                 text_buf.append(event.text)
                 continue
 
-            if thinking_buf:
-                _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
-                thinking_buf.clear()
             if text_buf:
                 _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
                 text_buf.clear()
@@ -520,6 +516,8 @@ class EvalAgent:
                 status = "ERROR" if event.is_error else "ok"
                 _out(f"    <- tool_done:  {event.tool_name} [{status}] {event.output}")
             elif isinstance(event, AssistantTurnComplete):
+                if event.message.thinking:
+                    _out(f"    [thinking] {_truncate(event.message.thinking, 500)}")
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
             elif isinstance(event, BackgroundTaskStarted):
@@ -529,8 +527,6 @@ class EvalAgent:
             elif isinstance(event, SystemNotification):
                 _out(f"    [system] {event.text}")
 
-        if thinking_buf:
-            _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
         if text_buf:
             _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
 

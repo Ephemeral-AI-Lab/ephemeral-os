@@ -42,13 +42,13 @@ async def test_get_reminder_diff_uses_progress_provider_deltas() -> None:
 async def test_append_background_reminder_only_updates_history() -> None:
     mgr = BackgroundTaskManager()
     task_id = mgr.next_alias()
-    display_messages = []
+    messages = []
     mgr.launch(task_id, "run_subagent", {}, _slow_tool())
 
     try:
-        appended = append_background_reminder(mgr, display_messages)
+        appended = append_background_reminder(mgr, messages)
         assert appended is True
-        assert len(display_messages) == 1
-        assert display_messages[0].background_task_states[0].task_id == task_id
+        assert len(messages) == 1
+        assert messages[0].background_task_states[0].task_id == task_id
     finally:
         await mgr.cancel(task_id, "")

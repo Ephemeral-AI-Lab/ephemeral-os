@@ -52,6 +52,7 @@ def tool(
     task_type: str = "agent",
     is_terminal_tool: bool = False,
     is_mode_entry_tool: bool = False,
+    context_requirements: list[str] | tuple[str, ...] = (),
     pre_hooks: list[object] | tuple[object, ...] = (),
     post_hooks: list[object] | tuple[object, ...] = (),
 ) -> Callable[[Callable[..., Any]], BaseTool]:
@@ -59,6 +60,7 @@ def tool(
 
     def decorator(func: Callable[..., Any]) -> BaseTool:
         tool_name = name or func.__name__
+        normalized_context_requirements = tuple(context_requirements)
         normalized_pre_hooks = tuple(pre_hooks)
         normalized_post_hooks = tuple(post_hooks)
         validate_hook_targets(
@@ -107,6 +109,7 @@ def tool(
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool
         instance.is_mode_entry_tool = is_mode_entry_tool
+        instance.context_requirements = normalized_context_requirements
         instance.pre_hooks = normalized_pre_hooks
         instance.post_hooks = normalized_post_hooks
         # Preserve the original function for testing/introspection

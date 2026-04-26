@@ -10,8 +10,13 @@ import pytest
 from pydantic import BaseModel
 
 from agents.types import AgentDefinition, ModeDefinition
-from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
+from engine.runtime.agent import (
+    _build_agent_tool_registry,
+    _build_context_preparers,
+    finalize_tool_registry_and_prompt,
+)
 from tools.core.base import BaseTool, ToolExecutionContextService, ToolRegistry, ToolResult
+from tools.core.context_requirements import SANDBOX_CONTEXT
 from tools.core.factory import (
     ToolFactoryContext,
     _factories,
@@ -48,6 +53,11 @@ class _TerminalTool(_DummyTool):
 class _BackgroundCapableTool(_DummyTool):
     name = "bg_capable_tool"
     background = "optional"
+
+
+class _SandboxContextTool(_DummyTool):
+    name = "sandbox_context_tool"
+    context_requirements = (SANDBOX_CONTEXT,)
 
 
 @pytest.fixture(autouse=True)
@@ -258,3 +268,36 @@ def test_default_sandbox_agent_registers_daytona_tools() -> None:
 
     assert registry.get("read_file") is not None
     assert registry.get("shell") is not None
+
+
+def test_default_sandbox_agent_builds_daytona_context_preparer() -> None:
+    registry = _build_agent_tool_registry(
+        _make_config(cwd=str(Path("/tmp/project"))),
+        None,
+        "sb-123",
+        "default",
+    )
+
+    preparers = _build_context_preparers(registry, "sb-123")
+
+    assert [type(preparer).__name__ for preparer in preparers] == [
+        "DaytonaContextPreparer"
+    ]
+    assert preparers[0].sandbox_id == "sb-123"
+
+
+def test_context_preparers_not_added_without_declared_requirement() -> None:
+    registry = ToolRegistry()
+    registry.register(_DummyTool())
+
+    assert _build_context_preparers(registry, "sb-123") == []
+
+
+def test_context_preparers_follow_tool_declared_requirement() -> None:
+    registry = ToolRegistry()
+    registry.register(_SandboxContextTool())
+
+    preparers = _build_context_preparers(registry, "sb-123")
+
+    assert len(preparers) == 1
+    assert type(preparers[0]).__name__ == "DaytonaContextPreparer"

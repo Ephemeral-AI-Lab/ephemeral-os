@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from agents.types import AgentDefinition
 from message.messages import ConversationMessage, ToolResultBlock
-from message.stream_events import StreamEvent, ThinkingDelta
-from providers.types import UsageSnapshot
+from message.stream_events import StreamEvent
 from tools.core.base import ExecutionMetadata, ToolResult
 
 if TYPE_CHECKING:
@@ -39,22 +38,17 @@ EphemeralRunStatus = Literal["completed", "failed"]
 class EphemeralRunResult:
     """Outcome of one :func:`run_ephemeral_agent` invocation."""
 
-    run_id: str | None
     status: EphemeralRunStatus
     error: str | None
     terminal_result: ToolResult | None
-    display_messages: list[ConversationMessage]
-    usage: UsageSnapshot | None
     agent_name: str
-    model: str
-    reasoning: str | None
     event_count: int
 
 
 def _last_terminal_tool_result(
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> ToolResult | None:
-    """Walk *display_messages* backwards for the last terminating tool result.
+    """Walk *messages* backwards for the last terminating tool result.
 
     Identifies the result the engine stamped with ``does_terminate=True`` when
     a ``is_terminal_tool=True`` tool returned non-error. Returns the
@@ -63,7 +57,7 @@ def _last_terminal_tool_result(
     terminal call (e.g. nudge retries exhausted, resource limit, or a plain
     text response).
     """
-    for msg in reversed(display_messages):
+    for msg in reversed(messages):
         if msg.role != "user":
             continue
         for block in reversed(msg.content):
@@ -147,22 +141,18 @@ async def run_ephemeral_agent(
 
     event_count = 0
     run_error: str | None = None
-    reasoning_parts: list[str] = []
 
     try:
         async for event in agent.run(prompt):
             event_count += 1
-            if isinstance(event, ThinkingDelta):
-                reasoning_parts.append(event.text)
             if on_event is not None:
                 await on_event(event)
     except Exception as exc:
         run_error = str(exc)
         logger.exception("run_ephemeral_agent: agent run crashed")
 
-    reasoning = "".join(reasoning_parts) if reasoning_parts else None
     terminal_result = (
-        _last_terminal_tool_result(agent._display_messages)
+        _last_terminal_tool_result(agent._messages)
         if not run_error
         else None
     )
@@ -182,21 +172,16 @@ async def run_ephemeral_agent(
         token_count = agent.total_usage.input_tokens + agent.total_usage.output_tokens
 
     tracker.finish(
-        display_messages=list(agent._display_messages),
+        messages=list(agent._messages),
         terminal_tool_result=terminal_payload,
         token_count=token_count,
         error=run_error,
     )
 
     return EphemeralRunResult(
-        run_id=run_id,
         status="failed" if run_error else "completed",
         error=run_error,
         terminal_result=terminal_result,
-        display_messages=list(agent._display_messages),
-        usage=agent.total_usage,
         agent_name=agent.agent_name,
-        model=agent.model,
-        reasoning=reasoning,
         event_count=event_count,
     )

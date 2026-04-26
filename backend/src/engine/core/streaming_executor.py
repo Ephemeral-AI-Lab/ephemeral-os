@@ -100,6 +100,11 @@ class StreamingToolExecutor:
         """IDs of tool_uses the caller asked us to defer (not execute)."""
         return self._deferred
 
+    @property
+    def context(self) -> ToolExecutionContextService:
+        """Tool execution context used by this executor."""
+        return self._context
+
     def add_tool(self, event: ApiToolUseDeltaEvent) -> None:
         """Add a tool to execute as it arrives mid-stream.
 

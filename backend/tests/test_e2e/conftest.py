@@ -352,11 +352,7 @@ def _print_sse_events(events: list[dict]) -> None:
     """Print parsed SSE events for real-time test visibility."""
     for evt in events:
         etype = evt.get("type", "")
-        if etype == "thinking_delta":
-            text = evt.get("text", "")
-            if text:
-                print(f"    [thinking] {text[:500]}", flush=True)
-        elif etype == "assistant_delta":
+        if etype == "assistant_delta":
             text = evt.get("message", evt.get("text", ""))
             if text:
                 print(f"    [text] {text}", flush=True)
@@ -371,6 +367,9 @@ def _print_sse_events(events: list[dict]) -> None:
             status = "ERROR" if is_err else "ok"
             print(f"    <- tool_done:  {name} [{status}] {output}", flush=True)
         elif etype == "assistant_complete":
+            thinking = evt.get("thinking", "")
+            if thinking:
+                print(f"    [thinking] {thinking[:500]}", flush=True)
             print("    [assistant_complete]", flush=True)
 
 

@@ -11,7 +11,7 @@ Lifecycle:
     )
     ... run the agent, stream events ...
     tracker.finish(
-        display_messages=...,
+        messages=...,
         terminal_tool_result=...,
         token_count=...,
         error=...,
@@ -97,7 +97,7 @@ class AgentRunTracker:
     def finish(
         self,
         *,
-        display_messages: list[ConversationMessage] | None = None,
+        messages: list[ConversationMessage] | None = None,
         terminal_tool_result: dict[str, Any] | None = None,
         token_count: int = 0,
         error: str | None = None,
@@ -110,8 +110,8 @@ class AgentRunTracker:
             return
         try:
             message_history: list[dict[str, Any]] | None = None
-            if display_messages is not None:
-                message_history = [m.model_dump(mode="json") for m in display_messages]
+            if messages is not None:
+                message_history = [m.model_dump(mode="json") for m in messages]
 
             store.finish_run(
                 self.run_id,

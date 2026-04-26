@@ -13,7 +13,7 @@ The query engine consists of three layers: the `EphemeralAgent` runtime wrapper,
              │ appends user message        │ passes to
              ▼                             ▼
 ┌────────────────────────┐    ┌────────────────────────┐
-│   display_messages     │    │      run_query()        │
+│   messages             │    │      run_query()        │
 │   (mutable list)       │    └───────────┬────────────┘
 └────────────────────────┘                │ creates stamped event iterator
              ▲                            ▼
@@ -85,10 +85,10 @@ The query engine consists of three layers: the `EphemeralAgent` runtime wrapper,
 
 ## Message and Tool Result Flow
 
-Each turn produces a sequence of `StreamEvent` objects flowing from the LLM stream through execution, collection, and finally into `display_messages` for the next cycle. Tools yield intermediate progress, completion, or cancellation events that structure the conversation state.
+Each turn produces a sequence of `StreamEvent` objects flowing from the LLM stream through execution, collection, and finally into `messages` for the next cycle. Tools yield intermediate progress, completion, or cancellation events that structure the conversation state.
 
 ```
-  Query Loop        API Stream      StreamingToolExecutor   Tool Execution   display_messages
+  Query Loop        API Stream      StreamingToolExecutor   Tool Execution   messages
       │                 │                    │                    │                │
       │─stream_message(ApiMessageRequest)───▶│                    │                │
       │                 │                    │                    │                │
@@ -112,7 +112,7 @@ Each turn produces a sequence of `StreamEvent` objects flowing from the LLM stre
       │                 │                    │                    │   │grows with  │
       │                 │                    │                    │   │tool results│
       │                 │                    │                    │   └────────────┤
-      │──prepare_provider_messages(display_messages)──────────────▶│                │
+      │──prepare_provider_messages(messages)───────────────▶│                │
       │◀──[provider_messages...]─────────────────│                    │                │
       │                 │                    │                    │                │
       │  (next iteration uses provider-safe history)              │                │
@@ -347,10 +347,10 @@ The query loop integrates with external systems via `on_turn` callbacks for live
 
 ## Conversation State and Streaming
 
-The `display_messages` list is the source of truth for conversation history. Each `ConversationMessage` contains a role (assistant or user) and content blocks: text, tool uses (from LLM), or tool results (execution feedback). Before each API call, `prepare_provider_messages()` builds a fresh provider view that preserves the transcript while dropping stale background task snapshots and malformed historical tool pairs.
+The `messages` list is the source of truth for conversation history. Each `ConversationMessage` contains a role (assistant or user) and content blocks: text, tool uses (from LLM), or tool results (execution feedback). Before each API call, `prepare_provider_messages()` builds a fresh provider view that preserves the transcript while dropping stale background task snapshots and malformed historical tool pairs.
 
 ```
- display_messages (Append-Only)
+ messages (Append-Only)
 ┌────────────────────────────────────────────────────────────┐
 │                                                            │
 │  ┌──────────────────────────┐                             │
@@ -406,12 +406,12 @@ The `display_messages` list is the source of truth for conversation history. Eac
               ┌────────────────────────────┐
               │ final_message              │
               └────────────────────────────┘
-                (appended back to display_messages)
+                (appended back to messages)
 ```
 
 ## Agent Runtime Wrapper
 
-The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the query loop with agent-specific config: model, tools, system prompt, and budget. It owns the mutable `display_messages` list and exposes a read-only `display_messages` property to callers.
+The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the query loop with agent-specific config: model, tools, system prompt, and budget. It owns the mutable `messages` list and exposes a read-only `messages` property to callers.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -450,20 +450,20 @@ The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the que
            ┌────────────────────────────────┐
            │ EphemeralAgent                 │
            │ (agent_name, query_context,    │
-           │  _display_messages=[...])      │
+           │  _messages=[...])              │
            └──────────┬───────────┬─────────┘
                       │           │
          expose       ▼           ▼  async method
          property  ┌──────┐   ┌────────────────────────┐
-                   │ dis- │   │ run(prompt)            │
-                   │ play_│   │ -> AsyncIterator       │
-                   │ mess-│   │    [StreamEvent]       │
-                   │ ages │   └──────────┬─────────────┘
+                   │ mess-│   │ run(prompt)            │
+                   │ ages │   │ -> AsyncIterator       │
+                   │      │   │    [StreamEvent]       │
+                   │      │   └──────────┬─────────────┘
                    │ (r/o)│             │ calls
                    └──────┘             ▼
                               ┌──────────────────────────┐
                               │ run_query(context,       │
-                              │ display_messages)        │
+                              │ messages)                │
                               └──────────┬───────────────┘
                                          │ stamped events
                                          ▼

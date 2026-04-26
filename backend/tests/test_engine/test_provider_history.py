@@ -1,4 +1,4 @@
-"""Unit tests for durable display history vs provider message views."""
+"""Unit tests for durable message history vs provider message views."""
 
 from __future__ import annotations
 
@@ -247,7 +247,7 @@ class TestPrepareProviderMessages:
 
 
 class TestBuildBackgroundReminder:
-    """The reminder is a regular ConversationMessage in display history."""
+    """The reminder is a regular ConversationMessage in message history."""
 
     def test_returns_none_when_no_pending_tasks(self) -> None:
         mgr = BackgroundTaskManager()
@@ -288,7 +288,7 @@ class TestBuildBackgroundReminder:
         await mgr.cancel_all()
 
     @pytest.mark.asyncio
-    async def test_appendable_to_display_messages_list(self) -> None:
+    async def test_appendable_to_messages_list(self) -> None:
         mgr = BackgroundTaskManager()
         mgr.launch("bg_1", "tool", {}, _slow_coro())
         display: list[ConversationMessage] = [_user("hi")]

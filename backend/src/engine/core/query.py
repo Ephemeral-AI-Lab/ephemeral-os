@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
-from collections.abc import AsyncIterator, Callable, Iterable
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -15,44 +14,44 @@ from agents.types import AgentDefinition, ModeDefinition
 from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
-    ApiMessageRequest,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
     ApiToolUseDeltaEvent,
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
+from message.messages import ConversationMessage, ToolResultBlock
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
-    ThinkingDelta,
-    ToolExecutionCancelled,
     ToolExecutionCompleted,
 )
-from engine.core.provider_history import prepare_provider_messages
-from engine.core.tool_batch import validate_tool_batch
+from engine.core.no_tool_policy import handle_no_tool_turn
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
-from engine.runtime.background_dispatch import launch_and_collect_bg_events
+from engine.core.tool_dispatch import dispatch_tool_turn
+from engine.core.tool_results import (
+    any_terminal_result,
+    append_tool_result_history,
+    apply_mode_transitions,
+)
+from engine.core.turn_request import build_query_turn_request, record_assistant_turn
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.background_tasks import (
     append_background_reminder,
     deliver_completed_background_task,
 )
+from engine.runtime.tool_context import prepare_tool_execution_context
 from notification.budget import build_budget_warning
-from notification.reminders import system_reminders_from_metadata
 from prompt.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContextService,
     ToolRegistry,
-    decorate_schemas_for_background,
 )
 from tools.core.tool_execution import (
     _consume_tool_budget_or_reject,
     evaluate_mode_gate,
-    execute_tool_call_streaming,
 )
 
 
@@ -101,22 +100,6 @@ class QueryContext:
     active_mode: ModeDefinition | None = None
 
 
-MAX_TERMINAL_NUDGE_RETRIES = 3
-TERMINAL_NUDGE_BUDGET_BONUS = 10
-
-
-def build_terminal_nudge_text(terminal_tools: Iterable[str], attempt: int) -> str:
-    tool_list = ", ".join(sorted(terminal_tools))
-    return (
-        "[terminal-tool reminder] Your previous turn ended without a terminal tool. "
-        "Your next assistant message must contain exactly one terminal "
-        f"tool call: {tool_list}. Do not call non-terminal tools or add narration. "
-        "If a terminal payload was rejected, fix only the reported schema issue "
-        "and resubmit. "
-        f"(nudge {attempt}/{MAX_TERMINAL_NUDGE_RETRIES})"
-    )
-
-
 def _should_defer_stream_tool_dispatch(
     context: QueryContext,
     background_manager: BackgroundTaskManager | None,
@@ -147,38 +130,9 @@ def _should_defer_stream_tool_dispatch(
 # ---------------------------------------------------------------------------
 
 
-def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
-    if context.prompt_report_recorder is not None:
-        return context.prompt_report_recorder
-    metadata = context.tool_metadata
-    context.prompt_report_recorder = PromptReportRecorder(
-        metadata.get("prompt_report_messages_path") if metadata is not None else None,
-        base_event=(
-            {
-                "agent_run_id": metadata.get("agent_run_id"),
-                "agent": context.agent_name or metadata.get("agent_name"),
-                "model": context.model,
-            }
-            if metadata is not None
-            else {"agent": context.agent_name, "model": context.model}
-        ),
-    )
-    return context.prompt_report_recorder
-
-
-def _any_terminal_result(tool_results: list[ToolResultBlock]) -> bool:
-    """True if any tool result in this turn carries does_terminate=True.
-
-    The flag is stamped by tool execution when a tool with
-    ``is_terminal_tool=True`` returned a non-error result, so the query loop no
-    longer needs to re-derive that decision from tool names.
-    """
-    return any(result.does_terminate for result in tool_results)
-
-
 async def _run_query_loop(
     context: QueryContext,
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     if context.tool_metadata is None:
         context.tool_metadata = ExecutionMetadata()
@@ -209,113 +163,48 @@ async def _run_query_loop(
         budget_warning = build_budget_warning(context)
         if budget_warning is not None:
             history_msg, warning_event = budget_warning
-            display_messages.append(history_msg)
+            messages.append(history_msg)
             yield warning_event, None
 
         if background_manager is not None:
             for completed_task in background_manager.collect_completed():
-                event = deliver_completed_background_task(completed_task, display_messages)
+                event = deliver_completed_background_task(completed_task, messages)
                 yield event, None
 
             if background_manager.has_pending():
-                append_background_reminder(background_manager, display_messages)
+                append_background_reminder(background_manager, messages)
 
         if context.on_turn is not None:
             try:
-                context.on_turn(display_messages)
+                context.on_turn(messages)
             except Exception:
                 logger.debug("on_turn callback failed", exc_info=True)
 
+        execution_context = ToolExecutionContextService(
+            cwd=context.cwd,
+            services=context.tool_metadata,
+        )
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
-            context=ToolExecutionContextService(
-                cwd=context.cwd,
-                services=context.tool_metadata,
-            ),
+            context=execution_context,
             should_defer=_should_defer_stream_tool_dispatch(
                 context,
                 background_manager=background_manager,
             ),
         )
 
-        registered_tool_names = {tool.name for tool in context.tool_registry.list_tools()}
-        sandbox_tool_names = {
-            "delete_file",
-            "edit_file",
-            "glob",
-            "grep",
-            "move_file",
-            "read_file",
-            "shell",
-            "write_file",
-        }
-        needs_sandbox_context = any(
-            name in sandbox_tool_names or name.startswith("ci_")
-            for name in registered_tool_names
-        )
-        if (
-            context.tool_metadata is not None
-            and context.tool_metadata.sandbox_id
-            and needs_sandbox_context
-        ):
-            try:
-                from tools.daytona_toolkit import DaytonaContextPreparer
-
-                preparer = DaytonaContextPreparer(context.tool_metadata.sandbox_id)
-                await preparer.prepare_context_async(executor._context)
-                if context.tool_metadata is None:
-                    context.tool_metadata = ExecutionMetadata()
-                context.tool_metadata.update(executor._context.services_copy())
-            except Exception as exc:
-                logger.debug(
-                    "Sandbox context injection skipped (sandbox may not be configured): %s",
-                    exc,
-                )
+        await prepare_tool_execution_context(context, execution_context)
 
         final_message: ConversationMessage | None = None
         usage = UsageSnapshot()
         pending_cancel: dict[str, str] = {}
         streamed_tool_use_ids: set[str] = set()
 
-        provider_messages = prepare_provider_messages(display_messages)
-        context_message = (context.user_context_message or "").strip()
-        if context_message:
-            provider_messages = [
-                ConversationMessage.from_user_text(context_message),
-                *provider_messages,
-            ]
-        prompt_report = _prompt_report_recorder(context)
-        prompt_report_seq = prompt_report.next_seq()
-        tool_schemas = context.tool_registry.to_api_schema()
-        if context.enable_background_tasks:
-            tool_schemas = decorate_schemas_for_background(
-                context.tool_registry,
-                tool_schemas,
-                terminal_tools=context.terminal_tools,
-            )
-
-        prompt_report.record(
-            {
-                "event": "llm_request",
-                "seq": prompt_report_seq,
-                "system_prompt": context.system_prompt,
-                "user_context_message": context_message,
-                "messages": [m.model_dump(mode="json") for m in provider_messages],
-                "tools": tool_schemas,
-            }
-        )
-
-        async for event in context.api_client.stream_message(
-            ApiMessageRequest(
-                model=context.model,
-                messages=provider_messages,
-                system_prompt=context.system_prompt,
-                max_tokens=context.max_tokens,
-                tools=tool_schemas,
-            )
-        ):
+        turn = build_query_turn_request(context, messages)
+        async for event in context.api_client.stream_message(turn.request):
             if isinstance(event, ApiThinkingDeltaEvent):
-                yield ThinkingDelta(text=event.text), None
+                # Provider thinking arrives incrementally, but the engine exposes
+                # it only on the completed assistant message.
                 continue
 
             if isinstance(event, ApiTextDeltaEvent):
@@ -390,253 +279,42 @@ async def _run_query_loop(
         for emitted in executor.get_events():
             yield emitted, None
 
-        display_messages.append(final_message)
-        prompt_report.record(
-            {
-                "event": "assistant",
-                "seq": prompt_report_seq,
-                "message": final_message.model_dump(mode="json"),
-                "usage": usage.model_dump(mode="json"),
-            }
-        )
+        messages.append(final_message)
+        record_assistant_turn(turn, final_message, usage)
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
-            if (
-                context.terminal_tools
-                and context.terminal_nudge_retries_used < MAX_TERMINAL_NUDGE_RETRIES
-            ):
-                context.terminal_nudge_retries_used += 1
-                if (
-                    context.tool_call_limit is not None
-                    and not context.terminal_nudge_budget_extended
-                ):
-                    context.tool_call_limit += TERMINAL_NUDGE_BUDGET_BONUS
-                    context.terminal_nudge_budget_extended = True
-                attempt = context.terminal_nudge_retries_used
-                nudge_text = build_terminal_nudge_text(context.terminal_tools, attempt)
-                nudge_message = ConversationMessage.from_user_text(nudge_text)
-                display_messages.append(nudge_message)
-                prompt_report.record(
-                    {
-                        "event": "terminal_nudge",
-                        "seq": prompt_report.next_seq(),
-                        "attempt": attempt,
-                        "message": nudge_message.model_dump(mode="json"),
-                    }
-                )
-                continue
-            if background_manager is None or not background_manager.has_pending():
+            outcome = await handle_no_tool_turn(
+                context,
+                messages,
+                background_manager=background_manager,
+                turn=turn,
+            )
+            for event, event_usage in outcome.events:
+                yield event, event_usage
+            if outcome.exit_text_response:
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 return
-
-            completed_task = await background_manager.wait_any(timeout=30)
-            if completed_task is not None:
-                event = deliver_completed_background_task(completed_task, display_messages)
-                yield event, None
-            else:
-                append_background_reminder(background_manager, display_messages)
             continue
 
-        tool_results: list[ToolResultBlock] = list(streamed_rejections)
-        remaining_events = await executor.get_remaining()
-        for emitted in executor.get_events():
-            yield emitted, None
-        for completed in remaining_events:
-            if isinstance(completed, ToolExecutionCompleted):
-                tool_results.append(
-                    ToolResultBlock(
-                        tool_use_id=completed.tool_id,
-                        content=completed.output,
-                        is_error=completed.is_error,
-                        metadata=dict(completed.metadata or {}),
-                        does_terminate=completed.does_terminate,
-                        mode_transition=completed.mode_transition,
-                    )
-                )
-                yield completed, None
-            elif isinstance(completed, ToolExecutionCancelled):
-                tool_results.append(
-                    ToolResultBlock(
-                        tool_use_id=completed.tool_id,
-                        content=f"[CANCELLED] {completed.reason}",
-                        is_error=True,
-                    )
-                )
-                yield completed, None
-
-        deferred_bg = executor.deferred_dispatch_ids
-        if deferred_bg and background_manager is not None:
-            for tc in final_message.tool_uses:
-                if tc.id not in deferred_bg:
-                    continue
-                tool_def_for_check = context.tool_registry.get(tc.name)
-                if not defer_background_dispatch(tool_def_for_check, tc.input):
-                    continue
-                for ev in launch_and_collect_bg_events(
-                    context, background_manager, tc, tool_results
-                ):
-                    yield ev
-
-        if not tool_results:
-            executor.cancel_all()
-
-            tool_calls = final_message.tool_uses
-            batch_rejection = validate_tool_batch(context, tool_calls)
-            if batch_rejection is not None:
-                tool_results.extend(batch_rejection)
-                for tc, result in zip(tool_calls, batch_rejection, strict=True):
-                    yield (
-                        ToolExecutionCompleted(
-                            tool_name=tc.name,
-                            output=result.content,
-                            is_error=result.is_error,
-                            metadata=dict(result.metadata or {}),
-                        ),
-                        None,
-                    )
-            else:
-                foreground_calls = []
-
-                for tc in tool_calls:
-                    tool_def_for_check = context.tool_registry.get(tc.name)
-                    force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
-                    is_background = (
-                        (tc.input.get("background", False) or force_bg)
-                        if background_manager
-                        else False
-                    )
-
-                    if is_background:
-                        assert background_manager is not None
-                        for ev in launch_and_collect_bg_events(
-                            context, background_manager, tc, tool_results
-                        ):
-                            yield ev
-                    else:
-                        foreground_calls.append(tc)
-
-                if len(foreground_calls) == 1:
-                    tc = foreground_calls[0]
-                    emitted_events: list[StreamEvent] = []
-
-                    async def emit(event: StreamEvent) -> None:
-                        emitted_events.append(event)
-
-                    result = await execute_tool_call_streaming(
-                        context,
-                        tc.name,
-                        tc.id,
-                        tc.input,
-                        emit=emit,
-                        consume_budget=tc.id not in streamed_tool_use_ids,
-                    )
-                    tool_results.append(result)
-                    for emitted in emitted_events:
-                        yield emitted, None
-                    yield (
-                        ToolExecutionCompleted(
-                            tool_name=tc.name,
-                            output=result.content,
-                            is_error=result.is_error,
-                            metadata=dict(result.metadata or {}),
-                        ),
-                        None,
-                    )
-                elif foreground_calls:
-                    queue: asyncio.Queue[StreamEvent | tuple[ToolUseBlock, ToolResultBlock]] = (
-                        asyncio.Queue()
-                    )
-
-                    async def run_foreground(tc: ToolUseBlock) -> None:
-                        async def emit(event: StreamEvent) -> None:
-                            await queue.put(event)
-
-                        try:
-                            result = await execute_tool_call_streaming(
-                                context,
-                                tc.name,
-                                tc.id,
-                                tc.input,
-                                emit=emit,
-                                consume_budget=tc.id not in streamed_tool_use_ids,
-                            )
-                        except Exception as exc:
-                            logger.exception(
-                                "Foreground tool dispatch failed: tool_id=%s tool_name=%s",
-                                tc.id,
-                                tc.name,
-                            )
-                            result = ToolResultBlock(
-                                tool_use_id=tc.id,
-                                content=f"Tool execution failed: {exc}",
-                                is_error=True,
-                            )
-                        await queue.put((tc, result))
-
-                    tasks = [asyncio.create_task(run_foreground(tc)) for tc in foreground_calls]
-                    remaining = len(tasks)
-                    while remaining:
-                        item = await queue.get()
-                        if isinstance(item, tuple):
-                            tc, result = item
-                            tool_results.append(result)
-                            remaining -= 1
-                            yield (
-                                ToolExecutionCompleted(
-                                    tool_name=tc.name,
-                                    output=result.content,
-                                    is_error=result.is_error,
-                                    metadata=dict(result.metadata or {}),
-                                ),
-                                None,
-                            )
-                        else:
-                            yield item, None
-                    await asyncio.gather(*tasks)
-
-        assigned_ids: set[str] = {tr.tool_use_id for tr in tool_results if tr.tool_use_id}
-        unassigned_ids = [tu.id for tu in final_message.tool_uses if tu.id not in assigned_ids]
-        for tr in tool_results:
-            if not tr.tool_use_id and unassigned_ids:
-                tr.tool_use_id = unassigned_ids.pop(0)
-
-        tool_result_message = ConversationMessage(role="user", content=tool_results)
-        display_messages.append(tool_result_message)
-        prompt_report.record(
-            {
-                "event": "tool_result",
-                "seq": prompt_report_seq,
-                "message": tool_result_message.model_dump(mode="json"),
-            }
+        dispatch = await dispatch_tool_turn(
+            context,
+            final_message,
+            executor,
+            streamed_rejections=streamed_rejections,
+            streamed_tool_use_ids=streamed_tool_use_ids,
+            background_manager=background_manager,
         )
-        system_reminders = []
-        for result in tool_results:
-            system_reminders.extend(system_reminders_from_metadata(dict(result.metadata or {})))
-        if system_reminders:
-            reminder_message = ConversationMessage(role="user", content=system_reminders)
-            display_messages.append(reminder_message)
-            prompt_report.record(
-                {
-                    "event": "hook_system_reminder",
-                    "seq": prompt_report.next_seq(),
-                    "message": reminder_message.model_dump(mode="json"),
-                }
-            )
+        for event, event_usage in dispatch.events:
+            yield event, event_usage
 
-        # Apply any mode transition reported by a mode-entry tool this turn.
-        # Entry tools are batch-exclusive (validate_tool_batch enforces it),
-        # so at most one transition fires per turn — the loop is defensive.
-        if context.agent_def is not None:
-            for tr in tool_results:
-                if tr.mode_transition:
-                    next_mode = context.agent_def.modes_by_name.get(tr.mode_transition)
-                    if next_mode is not None:
-                        context.active_mode = next_mode
+        tool_results = dispatch.tool_results
+        append_tool_result_history(messages, tool_results, turn=turn)
+        apply_mode_transitions(context, tool_results)
 
         # Check for a successful terminal tool. A rejected terminal call
         # is feedback for the next model turn, not a completed terminal result.
-        if _any_terminal_result(tool_results):
+        if any_terminal_result(tool_results):
             context.exit_reason = QueryExitReason.TOOL_STOP
             return
 
@@ -660,7 +338,7 @@ async def _run_query_loop(
 
 async def run_query(
     context: QueryContext,
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> tuple[list[ConversationMessage], AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]]:
     from dataclasses import fields, is_dataclass, replace
 
@@ -690,4 +368,4 @@ async def run_query(
         async for event, usage in inner:
             yield _stamp(event), usage
 
-    return display_messages, _stamped(_run_query_loop(context, display_messages))
+    return messages, _stamped(_run_query_loop(context, messages))

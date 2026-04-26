@@ -18,16 +18,6 @@ from notification.events import SystemNotification
 #                (distinct from the parent). Lets printers group and
 #                indent events by work unit even when agents interleave.
 
-
-@dataclass(frozen=True)
-class ThinkingDelta:
-    """Incremental thinking/reasoning content from the model."""
-
-    text: str
-    agent_name: str = ""
-    run_id: str = ""
-
-
 @dataclass(frozen=True)
 class AssistantTextDelta:
     """Incremental assistant text."""
@@ -123,8 +113,7 @@ class BackgroundTaskCompleted:
 
 
 StreamEvent = (
-    ThinkingDelta
-    | AssistantTextDelta
+    AssistantTextDelta
     | AssistantTurnComplete
     | ToolExecutionStarted
     | ToolExecutionCompleted

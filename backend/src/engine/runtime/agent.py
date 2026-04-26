@@ -50,18 +50,18 @@ class EphemeralAgent:
     query_context: QueryContext
     settings: Settings
     model: str
-    _display_messages: list[ConversationMessage]
+    _messages: list[ConversationMessage]
     total_usage: UsageSnapshot | None = None
 
     @property
-    def display_messages(self) -> list[ConversationMessage]:
-        """Live view of the agent's append-only display history.
+    def messages(self) -> list[ConversationMessage]:
+        """Live view of the agent's append-only message history.
 
         The list is owned by the agent and grows as ``run`` drives turns —
         callers may read it (e.g. for live progress peeks) but must treat it
         as read-only.
         """
-        return self._display_messages
+        return self._messages
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
         """Execute one complete tool-call loop for the given prompt."""
@@ -69,11 +69,11 @@ class EphemeralAgent:
 
         self.total_usage = UsageSnapshot()
         try:
-            self._display_messages.append(ConversationMessage.from_user_text(prompt))
-            display_messages, event_iter = await run_query(
-                self.query_context, self._display_messages
+            self._messages.append(ConversationMessage.from_user_text(prompt))
+            messages, event_iter = await run_query(
+                self.query_context, self._messages
             )
-            self._display_messages = display_messages
+            self._messages = messages
             async for event, usage in event_iter:
                 if usage:
                     self.total_usage.input_tokens += usage.input_tokens
@@ -255,6 +255,32 @@ def _register_requested_tools(
             )
 
 
+def _tool_registry_context_requirements(tool_registry: ToolRegistry) -> set[str]:
+    """Return runtime context requirements declared by registered tools."""
+    requirements: set[str] = set()
+    for tool in tool_registry.list_tools():
+        requirements.update(getattr(tool, "context_requirements", ()))
+    return requirements
+
+
+def _build_context_preparers(
+    tool_registry: ToolRegistry,
+    sandbox_id: str | None,
+) -> list[Any]:
+    """Build provider/toolkit-specific context hooks for registered tools."""
+    if not sandbox_id:
+        return []
+    from tools.core.context_requirements import SANDBOX_CONTEXT
+
+    requirements = _tool_registry_context_requirements(tool_registry)
+    if SANDBOX_CONTEXT not in requirements:
+        return []
+
+    from tools.daytona_toolkit import DaytonaContextPreparer
+
+    return [DaytonaContextPreparer(sandbox_id)]
+
+
 def _build_agent_system_prompt(
     config: RuntimeConfig,
     agent_def: AgentDefinition | None,
@@ -320,6 +346,7 @@ def spawn_agent(
     initial_tool_metadata = ExecutionMetadata(
         runtime_config=config,
         sandbox_id=sandbox_id or "",
+        context_preparers=_build_context_preparers(tool_registry, sandbox_id),
     )
 
     query_context = QueryContext(
@@ -343,5 +370,5 @@ def spawn_agent(
         query_context=query_context,
         settings=settings,
         model=resolved_model,
-        _display_messages=messages if messages else [],
+        _messages=messages if messages else [],
     )

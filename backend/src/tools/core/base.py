@@ -202,6 +202,10 @@ class BaseTool(ABC):
     # not affect the LLM-facing schema.
     pre_hooks: tuple[Any, ...] = ()
     post_hooks: tuple[Any, ...] = ()
+    # Runtime context dependencies declared by tools. Runtime assembly uses
+    # these markers to attach provider-specific context preparers without the
+    # core query loop sniffing tool names.
+    context_requirements: tuple[str, ...] = ()
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContextService) -> ToolResult:

@@ -28,20 +28,20 @@ _REDUCIBLE_STATUSES: frozenset[str] = (
 
 
 def prepare_provider_messages(
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> list[ConversationMessage]:
-    """Return a provider-safe copy of the durable display history.
+    """Return a provider-safe copy of the durable message history.
 
-    The query loop keeps ``display_messages`` as the append-only transcript.
+    The query loop keeps ``messages`` as the append-only transcript.
     Providers receive a separate deep-copied view so stale background task
     snapshots and malformed historical tool pairs cannot leak into the next
-    request. This function never mutates ``display_messages``.
+    request. This function never mutates ``messages``.
     """
-    return sanitize_tool_sequence(reduce_background_task_history(display_messages))
+    return sanitize_tool_sequence(reduce_background_task_history(messages))
 
 
 def reduce_background_task_history(
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> list[ConversationMessage]:
     """Keep only the latest provider-visible state for each background task."""
     tool_use_map: dict[str, tuple[int, int, str]] = {}
@@ -49,14 +49,14 @@ def reduce_background_task_history(
     _WinnerKey = tuple[bool, int, int, int, tuple[int, int] | None, str | None, int | None]
     winners: dict[str, _WinnerKey] = {}
 
-    for msg_idx, msg in enumerate(display_messages):
+    for msg_idx, msg in enumerate(messages):
         if msg.role != "assistant":
             continue
         for block_idx, block in enumerate(msg.content):
             if isinstance(block, ToolUseBlock):
                 tool_use_map[block.id] = (msg_idx, block_idx, block.name)
 
-    for msg_idx, msg in enumerate(display_messages):
+    for msg_idx, msg in enumerate(messages):
         for block_idx, block in enumerate(msg.content):
             if isinstance(block, BackgroundTaskStateBlock) and block.status in _REDUCIBLE_STATUSES:
                 is_terminal = block.status in _REDUCIBLE_TERMINAL_STATUSES
@@ -110,7 +110,7 @@ def reduce_background_task_history(
     drop_tool_use_ids = snapshot_tool_use_ids - keep_snapshot_statuses.keys()
 
     reduced: list[ConversationMessage] = []
-    for msg_idx, msg in enumerate(display_messages):
+    for msg_idx, msg in enumerate(messages):
         new_content: list[ContentBlock] = []
         for block_idx, block in enumerate(msg.content):
             if isinstance(block, BackgroundTaskStateBlock):

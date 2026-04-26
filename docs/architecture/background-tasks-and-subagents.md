@@ -145,7 +145,7 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
        │             ║                       ║           ║            │  tool calls →    │                 │                  │
        │             ║                       ║           ║            │  iterate         │                 │                  │
        │             ║                       ║           ║            │  append to       │                 │                  │
-       │             ║                       ║           ║            │  display_messages│                 │                  │
+       │             ║                       ║           ║            │  messages        │                 │                  │
        │             ╠═══════════════════════╣           ║            │                  │                 │                  │
        │             ║  Parent Polling       ║           ║            │                  │                 │                  │
        │ check_background_progress(task_id)  ║           ║            │                  │                 │                  │
@@ -153,13 +153,13 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
        │             ║ invoke provider(last_n)           ║            │                  │                 │                  │
        │             ║──────────────────────────────────────────────────────────────────────────────────────────────────────▶│
        │             ║                       ║           ║            │ read             │                 │                  │
-       │             ║                       ║           ║            │ display_messages[-n:]             │                  │
+       │             ║                       ║           ║            │ messages[-n:]   │                  │
        │             ║◀──────────────────────────────────────────────────────────────────────────────────────── snapshot ───│
        │ peek response                       ║           ║            │                  │                 │                  │
        │◀────────────║                       ║           ║            │                  │                 │                  │
        │             ╚════════════╤══════════╝           ║            │                  │                 │                  │
        │                         │                      │            │                  │                 │                  │
-       │                         │◀─ display_messages finalized ─────│                  │                 │                  │
+       │                         │◀─ messages finalized ──────│                  │                 │                  │
        │                         │                      │            │                  │                 │                  │
        │                         │              extract final_text   │                  │                 │                  │
        │                         │              build envelope       │                  │                 │                  │
@@ -194,7 +194,7 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 |--------|-----------------|----------|-----------------|
 | **Lifecycle** | One-shot snapshot, frozen after run | Full task loop; iterates until submit or timeout | Fire-and-forget tool call |
 | **Spawning** | Top-level entry (via /api/run or relay) | Spawned by `run_subagent` tool (nested) | Called by agent; no nested spawning |
-| **Message History** | Appended only during run; accessible only after | Live display_messages list; readable during execution | Not applicable (tool output only) |
+| **Message History** | Appended only during run; accessible only after | Live messages list; readable during execution | Not applicable (tool output only) |
 | **Progress Access** | None (awaited to completion) | Via `check_background_progress` + progress_provider callback | Via `check_background_progress` + progress_lines buffer |
 | **Background Tools** | Registered (has background management tools) | NOT registered (subagents cannot spawn subagents) | N/A |
 | **API Client** | Session's shared client pool | Fresh dedicated client (no contention) | Inherits parent's execution context |
@@ -230,9 +230,9 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 3. **Immediate return**: Parent gets task_id and system message `[BACKGROUND LAUNCHED] task_id="bg_2"`
 4. **Execution**: Subagent runs its own query loop asynchronously
    - Subagent calls tools, iterates, eventually submits or exits
-   - Each subagent iteration appends to its own display_messages list
+   - Each subagent iteration appends to its own messages list
 5. **Parent polling** (optional): Parent calls `check_background_progress(task_id="bg_2")` which calls the progress_provider callback:
-   - Provider reads the subagent's live display_messages
+   - Provider reads the subagent's live messages
    - Returns formatted snapshot of last N messages (clamped to PEEK_MESSAGE_MAX=10)
 6. **Parent blocking** (optional): Parent calls `wait_for_background_task(task_id="bg_2")`
    - Query loop blocks on `asyncio.wait()` until subagent completes
@@ -283,7 +283,7 @@ Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loo
 
 **`BackgroundTaskManager.set_progress_provider(task_id, callable)`**
 - Registers a pull callback that returns a fresh progress snapshot on demand
-- Used by run_subagent to expose subagent.display_messages[-n:]
+- Used by run_subagent to expose subagent.messages[-n:]
 - Manager calls it synchronously during get_status() calls
 
 **`BackgroundTaskManager.append_progress(task_id, line)`**

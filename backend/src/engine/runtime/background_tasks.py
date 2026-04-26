@@ -465,9 +465,9 @@ class BackgroundTaskManager:
 
 def deliver_completed_background_task(
     task: TrackedBackgroundTask,
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> BackgroundTaskCompleted:
-    """Append a completion message to *display_messages* and return the event."""
+    """Append a completion message to *messages* and return the event."""
     output = task.result.output if task.result else "No output"
     terminal_status = (
         "cancelled"
@@ -476,7 +476,7 @@ def deliver_completed_background_task(
         if str(task.status) == "failed"
         else "completed"
     )
-    display_messages.append(
+    messages.append(
         ConversationMessage(
             role="user",
             content=[
@@ -508,7 +508,7 @@ def build_background_reminder(
     """Build a single durable user message summarising live background tasks.
 
     Returns ``None`` if no tasks are running. The returned message is a
-    regular ``ConversationMessage`` and is appended to *display_messages*
+    regular ``ConversationMessage`` and is appended to *messages*
     so the user and subsequent provider-history preparation can see it. It is NOT
     a separate ephemeral concept — once appended, it lives in history.
 
@@ -551,7 +551,7 @@ def build_background_reminder(
 
 def append_background_reminder(
     background_manager: BackgroundTaskManager,
-    display_messages: list[ConversationMessage],
+    messages: list[ConversationMessage],
 ) -> bool:
     """Append a background reminder message to history.
 
@@ -560,5 +560,5 @@ def append_background_reminder(
     reminder_msg = build_background_reminder(background_manager)
     if reminder_msg is None:
         return False
-    display_messages.append(reminder_msg)
+    messages.append(reminder_msg)
     return True

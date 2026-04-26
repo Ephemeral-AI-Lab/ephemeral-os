@@ -19,7 +19,6 @@ from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
-    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -172,8 +171,6 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     )
 
                 def _stream_event_to_backend(event: StreamEvent) -> BackendEvent | None:
-                    if isinstance(event, ThinkingDelta):
-                        return BackendEvent(type="thinking_delta", message=event.text)
                     if isinstance(event, AssistantTextDelta):
                         return BackendEvent(type="assistant_delta", message=event.text)
                     if isinstance(event, AssistantTurnComplete):
@@ -181,6 +178,7 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                         return BackendEvent(
                             type="assistant_complete",
                             message=text,
+                            thinking=event.message.thinking or None,
                             item=TranscriptItem(role="assistant", text=text),
                         )
                     if isinstance(event, ToolExecutionStarted):

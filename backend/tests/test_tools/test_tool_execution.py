@@ -30,6 +30,7 @@ from tools.core.base import (
 )
 from tools.core.decorator import tool
 from tools.core.hooks import HookResult
+from tools.core.runtime import ExecutionMetadata
 from tools.core.tool_execution import execute_tool_call_streaming, execute_tool_once
 
 pytestmark = pytest.mark.asyncio
@@ -56,6 +57,14 @@ class _EchoTool(BaseTool):
         del context
         self.seen.append(arguments.value)
         return ToolResult(output=arguments.value)
+
+
+class _PreparedContextTool(_EchoTool):
+    name = "prepared_context_tool"
+
+    async def execute(self, arguments: _Args, context: ToolExecutionContextService) -> ToolResult:
+        del arguments
+        return ToolResult(output=str(context.get("prepared_by_test", "")))
 
 
 class _FailingTool(BaseTool):
@@ -500,7 +509,7 @@ async def test_query_loop_appends_hook_notification_as_system_reminder() -> None
         max_tokens=100,
     )
 
-    display_messages, stream = await run_query(context, [])
+    messages, stream = await run_query(context, [])
     events = []
     async for event, _usage in stream:
         events.append(event)
@@ -511,13 +520,71 @@ async def test_query_loop_appends_hook_notification_as_system_reminder() -> None
     )
     assert any(
         message.system_reminder_text == "hook note"
-        for message in display_messages
+        for message in messages
     )
     assert len(client.requests) == 2
     assert any(
         message.system_reminder_text == "hook note"
         for message in client.requests[1].messages
     )
+
+
+async def test_query_loop_runs_generic_context_preparers() -> None:
+    class _Preparer:
+        async def prepare_context_async(self, context: ToolExecutionContextService) -> None:
+            context["prepared_by_test"] = "prepared"
+
+    class _Client(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def stream_message(self, request):
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_prepared",
+                                name="prepared_context_tool",
+                                input={"value": "ignored"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                )
+            else:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(role="assistant", content=[]),
+                    usage=UsageSnapshot(),
+                )
+
+    registry = ToolRegistry()
+    registry.register(_PreparedContextTool())
+    metadata = ExecutionMetadata(context_preparers=[_Preparer()])
+    context = QueryContext(
+        api_client=_Client(),
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+        tool_metadata=metadata,
+    )
+
+    messages, stream = await run_query(context, [])
+    async for _event, _usage in stream:
+        pass
+
+    tool_result_messages = [
+        message
+        for message in messages
+        if message.role == "user" and message.content and not isinstance(message.content, str)
+    ]
+    assert tool_result_messages[-1].content[0].content == "prepared"
+    assert context.tool_metadata is metadata
+    assert context.tool_metadata.get("prepared_by_test") == "prepared"
 
 
 async def test_execute_tool_once_stamps_does_terminate_on_terminal_success() -> None:

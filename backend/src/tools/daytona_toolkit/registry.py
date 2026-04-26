@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from tools.core.base import BaseTool
+from tools.core.context_requirements import SANDBOX_CONTEXT
 
 from tools.daytona_toolkit.delete_file import delete_file
 from tools.daytona_toolkit.edit_file import edit_file
@@ -27,4 +28,6 @@ def make_daytona_tools(*, include_shell: bool = True) -> list[BaseTool]:
     ]
     if include_shell:
         tools.append(shell)
+    for tool in tools:
+        tool.context_requirements = (SANDBOX_CONTEXT,)
     return tools

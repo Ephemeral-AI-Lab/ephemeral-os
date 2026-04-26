@@ -208,7 +208,7 @@ async def run_subagent(
             return
         bg_manager.set_progress_provider(
             bg_task_id,
-            lambda last_n: format_last_n_messages(agent.display_messages, last_n),
+            lambda last_n: format_last_n_messages(agent.messages, last_n),
         )
 
     result = await run_ephemeral_agent(

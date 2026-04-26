@@ -7,10 +7,11 @@ interleaving mid-sentence.
 
 Key ideas:
 
-- **Per-agent turn buffers.** ``ThinkingDelta`` / ``AssistantTextDelta``
-  events from different agents are buffered independently and printed
-  once per completed assistant turn, so two workers streaming at once
-  don't clobber each other's prose and the console shows full blocks.
+- **Per-agent turn buffers.** ``AssistantTextDelta`` events from different
+  agents are buffered independently and printed once per completed assistant
+  turn, so two workers streaming at once don't clobber each other's prose and
+  the console shows full blocks. Thinking is printed from the completed
+  assistant message.
 - **Lineage via bg task_id.** A ``BackgroundTaskStarted`` whose
   ``tool_name == "run_subagent"`` is treated as a spawn; its
   ``task_id`` becomes the child's run_id so the child's own events
@@ -34,7 +35,6 @@ from message.stream_events import (
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
-    ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionProgress,
@@ -154,7 +154,6 @@ class _AgentTotals:
 
 @dataclass
 class _LaneState:
-    thinking_buf: list[str] = field(default_factory=list)
     text_buf: list[str] = field(default_factory=list)
 
 
@@ -197,10 +196,7 @@ class MultiAgentEventPrinter:
         totals = self._agent_totals_for(agent)
         lane = self._lane_for(agent, run_id)
 
-        # Stream deltas into per-agent buffers; do not print yet.
-        if isinstance(event, ThinkingDelta):
-            lane.thinking_buf.append(event.text)
-            return
+        # Stream text deltas into per-agent buffers; do not print yet.
         if isinstance(event, AssistantTextDelta):
             lane.text_buf.append(event.text)
             return
@@ -259,6 +255,9 @@ class MultiAgentEventPrinter:
             )
         elif isinstance(event, AssistantTurnComplete):
             # Print full thinking/text blocks once per completed turn.
+            thinking = event.message.thinking
+            if thinking:
+                self._line(agent, run_id, f"[thinking] {_full_text(thinking)}")
             self._flush_buffers(agent, run_id)
         elif isinstance(event, SystemNotification):
             tag = f"[system{':' + event.category if event.category else ''}]"
@@ -321,13 +320,6 @@ class MultiAgentEventPrinter:
         lane = self._lanes.get((agent, run_id or ""))
         if lane is None:
             return
-        if lane.thinking_buf:
-            self._line(
-                agent,
-                run_id,
-                f"[thinking] {_full_text(''.join(lane.thinking_buf))}",
-            )
-            lane.thinking_buf.clear()
         if lane.text_buf:
             self._line(
                 agent,
