@@ -1,8 +1,8 @@
-"""Shared pydantic models for the submission tools."""
+"""Shared pydantic models for the mode tools."""
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class TaskDependencyEntry(BaseModel):
@@ -25,13 +25,12 @@ class TaskSpec(BaseModel):
     task_input: str = Field(
         ...,
         min_length=1,
-        validation_alias=AliasChoices("task_input", "spec"),
-        description="Input prompt for the child task. The legacy 'spec' key is accepted.",
+        description="Input prompt for the child task.",
     )
 
 
 class SubmissionOutput(BaseModel):
-    """Generic output for the four submission tools."""
+    """Generic output for mode-entry and terminal tools."""
 
     status: str = Field(..., description="'accepted' on success, 'rejected' on validation failure.")
     detail: str | None = Field(default=None, description="Optional explanatory message.")

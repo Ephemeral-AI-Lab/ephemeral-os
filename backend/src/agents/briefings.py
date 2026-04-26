@@ -27,7 +27,7 @@ Purpose
   the acceptance_criteria you submit.
 
 Allowed tools (read-only investigation)
-  - daytona_read_file, daytona_grep, daytona_glob
+  - read_file, grep, glob
   - ci_query_symbol, ci_diagnostics, ci_workspace_structure
 
 Terminal tool
@@ -57,7 +57,7 @@ Purpose
   Prepare the gap analysis that will drive the continuation executor.
 
 Allowed tools (read-only investigation)
-  - daytona_read_file, daytona_grep, daytona_glob
+  - read_file, grep, glob
   - ci_query_symbol, ci_diagnostics, ci_workspace_structure
 
 Terminal tool

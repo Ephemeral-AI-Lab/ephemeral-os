@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from tools.submission._models import SubmissionOutput
+from tools.mode_tool._models import SubmissionOutput
 
 
 class TaskCompletionInput(BaseModel):

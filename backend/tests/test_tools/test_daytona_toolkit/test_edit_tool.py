@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 
 from code_intelligence.types import EditSpec, EditResult, OperationResult
 from tools.core.base import ToolExecutionContext, run_tool_safely
-from tools.daytona_toolkit.edit_tool import daytona_edit_file
+from tools.daytona_toolkit.edit_tool import edit_file
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -63,7 +63,7 @@ def _svc(result: OperationResult | None = None) -> SimpleNamespace:
 
 
 def _run(args: dict, ctx: ToolExecutionContext):
-    return asyncio.run(run_tool_safely(daytona_edit_file, args, context=ctx))
+    return asyncio.run(run_tool_safely(edit_file, args, context=ctx))
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ def test_missing_ci_service_returns_write_required_error() -> None:
 
 
 def test_edits_schema_is_not_exposed() -> None:
-    schema = daytona_edit_file.to_api_schema()["input_schema"]
+    schema = edit_file.to_api_schema()["input_schema"]
 
     assert "edits" not in schema.get("properties", {})
 
@@ -101,7 +101,7 @@ def test_extra_edits_input_does_not_create_batch_edit() -> None:
     )
 
     assert result.is_error
-    assert "Invalid input for daytona_edit_file" in result.output
+    assert "Invalid input for edit_file" in result.output
     assert "edits" in result.output
     svc.edit_file.assert_not_called()
 

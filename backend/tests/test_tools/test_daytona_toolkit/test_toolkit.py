@@ -48,14 +48,14 @@ def test_context_preparer_instantiation():
 def test_daytona_exports_expected_tools():
     names = {tool.name for tool in make_daytona_tools()}
     expected = {
-        "daytona_shell",
-        "daytona_read_file",
-        "daytona_write_file",
-        "daytona_grep",
-        "daytona_glob",
-        "daytona_edit_file",
-        "daytona_delete_file",
-        "daytona_move_file",
+        "shell",
+        "read_file",
+        "write_file",
+        "grep",
+        "glob",
+        "edit_file",
+        "delete_file",
+        "move_file",
     }
     assert names == expected
     assert not any(name.startswith("daytona_lsp_") for name in names)
@@ -66,15 +66,15 @@ async def test_registered_write_capable_tools_require_ci_service():
     registry.register_many(make_daytona_tools())
     tools_by_name = {tool.name: tool for tool in registry.list_tools()}
     write_inputs = {
-        "daytona_write_file": {"file_path": "/repo/new.txt", "content": "hello"},
-        "daytona_edit_file": {
+        "write_file": {"file_path": "/repo/new.txt", "content": "hello"},
+        "edit_file": {
             "file_path": "/repo/app.py",
             "old_text": "old",
             "new_text": "new",
         },
-        "daytona_shell": {"command": "echo hi"},
-        "daytona_delete_file": {"path": "/repo/app.py"},
-        "daytona_move_file": {
+        "shell": {"command": "echo hi"},
+        "delete_file": {"path": "/repo/app.py"},
+        "move_file": {
             "src_path": "/repo/src.py",
             "target_path": "/repo/dst.py",
         },
@@ -82,9 +82,9 @@ async def test_registered_write_capable_tools_require_ci_service():
 
     assert set(write_inputs).issubset(tools_by_name)
     assert set(tools_by_name) - set(write_inputs) == {
-        "daytona_read_file",
-        "daytona_grep",
-        "daytona_glob",
+        "read_file",
+        "grep",
+        "glob",
     }
 
     for tool_name, tool_input in write_inputs.items():
@@ -100,21 +100,21 @@ async def test_registered_write_capable_tools_require_ci_service():
 def test_make_daytona_tools_includes_shell():
     names = {tool.name for tool in make_daytona_tools()}
 
-    assert "daytona_shell" in names
-    assert "daytona_edit_file" in names
+    assert "shell" in names
+    assert "edit_file" in names
     assert "daytona_list_files" not in names
 
 
 def test_get_daytona_tool_by_name():
     tools = {tool.name: tool for tool in make_daytona_tools()}
-    tool = tools.get("daytona_shell")
+    tool = tools.get("shell")
     assert tool is not None
-    assert tool.name == "daytona_shell"
+    assert tool.name == "shell"
 
 
 def test_shell_schema_describes_command():
     tools = {tool.name: tool for tool in make_daytona_tools()}
-    tool = tools.get("daytona_shell")
+    tool = tools.get("shell")
     assert tool is not None
 
     schema = tool.to_api_schema()["input_schema"]

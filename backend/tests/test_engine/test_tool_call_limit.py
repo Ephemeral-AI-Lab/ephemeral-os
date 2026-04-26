@@ -192,7 +192,7 @@ async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
     ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_success"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
 
-    result = await execute_tool_call(ctx, "daytona_read_file", "id1", {})
+    result = await execute_tool_call(ctx, "read_file", "id1", {})
 
     assert result.is_error
     assert "terminal call reserved" in result.content

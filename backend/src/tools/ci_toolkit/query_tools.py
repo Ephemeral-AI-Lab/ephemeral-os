@@ -23,7 +23,6 @@ from code_intelligence.query_helpers import (
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import get_ci_service
 from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
-from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import _exec_command
 
 logger = logging.getLogger(__name__)
@@ -553,17 +552,7 @@ async def _remote_query_symbols(
 
 
 
-# -- CI Status ----------------------------------------------------------------
-
-
-@tool(
-    name="ci_status",
-    description="Check code intelligence readiness: cache, index, LSP, and optional edit hotspot activity.",
-    short_description="Check code intelligence status.",
-    input_model=CiStatusInput,
-    output_model=CiStatusOutput,
-)
-async def ci_status(
+async def run_ci_status(
     include_edit_hotspots: bool = True,
     hotspot_limit: int = 10,
     hotspot_cross_run: bool = False,
@@ -585,17 +574,7 @@ async def ci_status(
     return ToolResult(output=json.dumps(status, indent=2, default=str))
 
 
-# -- Workspace Structure ------------------------------------------------------
-
-
-@tool(
-    name="ci_workspace_structure",
-    description="List files and directories in the workspace, sorted by path.",
-    short_description="List workspace files and directories.",
-    input_model=CiWorkspaceStructureInput,
-    output_model=CiWorkspaceStructureOutput,
-)
-async def ci_workspace_structure(
+async def run_ci_workspace_structure(
     path: str = "",
     max_depth: int = 3,
     *,
@@ -684,7 +663,7 @@ async def ci_workspace_structure(
         source="none",
         status="empty",
         message=(
-            "No files indexed yet. Use `daytona_glob` for file discovery when "
+            "No files indexed yet. Use `glob` for file discovery when "
             "the symbol index is cold."
         ),
     )
@@ -938,17 +917,7 @@ def _file_query_symbols(
     return matched_path, definitions
 
 
-@tool(
-    name="ci_query_symbol",
-    description=(
-        "Returns matching symbol definitions and optional reference sites from "
-        "code intelligence."
-    ),
-    short_description="Find symbol definitions and references.",
-    input_model=CiQuerySymbolInput,
-    output_model=CiQuerySymbolOutput,
-)
-async def ci_query_symbol(
+async def run_ci_query_symbol(
     query: str,
     kind: str = "",
     references: bool = False,
@@ -1195,3 +1164,16 @@ def _edit_hotspots_payload(
 
     items = [{"file": fp, "edit_count": count} for fp, count in hotspots]
     return {"hotspots": items[:limit]}
+
+
+__all__ = [
+    "CiQuerySymbolInput",
+    "CiQuerySymbolOutput",
+    "CiStatusInput",
+    "CiStatusOutput",
+    "CiWorkspaceStructureInput",
+    "CiWorkspaceStructureOutput",
+    "run_ci_query_symbol",
+    "run_ci_status",
+    "run_ci_workspace_structure",
+]

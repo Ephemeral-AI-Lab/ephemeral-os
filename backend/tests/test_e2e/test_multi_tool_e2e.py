@@ -56,9 +56,9 @@ async def test_agent_makes_multiple_tool_calls(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    daytona_calls = [n for n in tool_names if n.startswith("daytona_")]
-    assert len(daytona_calls) >= 2, (
-        f"Should make at least 2 tool calls. Got {len(daytona_calls)}: {daytona_calls}"
+    sandbox_calls = [n for n in tool_names if n in {"write_file", "read_file", "shell"}]
+    assert len(sandbox_calls) >= 2, (
+        f"Should make at least 2 tool calls. Got {len(sandbox_calls)}: {sandbox_calls}"
     )
 
 
@@ -79,16 +79,16 @@ async def test_write_then_bash_sequential(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    has_write = "daytona_write_file" in tool_names
-    has_bash = "daytona_shell" in tool_names
+    has_write = "write_file" in tool_names
+    has_bash = "shell" in tool_names
 
     assert has_write or has_bash, (
-        f"Should use daytona_write_file or daytona_shell. Tools: {tool_names}"
+        f"Should use write_file or shell. Tools: {tool_names}"
     )
 
     if has_write and has_bash:
-        write_idx = tool_names.index("daytona_write_file")
-        bash_idx = tool_names.index("daytona_shell")
+        write_idx = tool_names.index("write_file")
+        bash_idx = tool_names.index("shell")
         assert write_idx < bash_idx, f"Write should come before bash. Order: {tool_names}"
 
 
@@ -108,9 +108,9 @@ async def test_multiple_bash_commands(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    daytona_shell_count = tool_names.count("daytona_shell")
-    assert daytona_shell_count >= 2, (
-        f"Should have at least 2 bash calls. Got {daytona_shell_count}. Tools: {tool_names}"
+    shell_count = tool_names.count("shell")
+    assert shell_count >= 2, (
+        f"Should have at least 2 bash calls. Got {shell_count}. Tools: {tool_names}"
     )
 
 
@@ -206,8 +206,8 @@ async def test_build_python_script_workflow(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    assert "daytona_write_file" in tool_names, f"Should write files. Tools: {tool_names}"
-    assert "daytona_shell" in tool_names, f"Should run scripts. Tools: {tool_names}"
+    assert "write_file" in tool_names, f"Should write files. Tools: {tool_names}"
+    assert "shell" in tool_names, f"Should run scripts. Tools: {tool_names}"
     assert len(result.assistant_turns()) > 0, "Should complete"
 
     text = result.text
@@ -238,7 +238,7 @@ async def test_multi_file_project_workflow(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    write_calls = [e for e in tool_started if e.tool_name == "daytona_write_file"]
+    write_calls = [e for e in tool_started if e.tool_name == "write_file"]
     assert len(write_calls) >= 3, (
         f"Should create 3 files. Got {len(write_calls)}. Tools: {tool_names}"
     )
@@ -269,8 +269,8 @@ async def test_data_processing_workflow(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    assert "daytona_write_file" in tool_names, f"Should write file. Tools: {tool_names}"
-    assert "daytona_shell" in tool_names, f"Should run commands. Tools: {tool_names}"
+    assert "write_file" in tool_names, f"Should write file. Tools: {tool_names}"
+    assert "shell" in tool_names, f"Should run commands. Tools: {tool_names}"
     assert len(result.assistant_turns()) > 0, "Should complete"
 
     text = result.text.lower()
@@ -302,7 +302,7 @@ async def test_error_recovery_workflow(sandbox_id):
     tool_started = result.tools_started()
     tool_names = [e.tool_name for e in tool_started]
 
-    assert "daytona_write_file" in tool_names, f"Should write file. Tools: {tool_names}"
-    has_bash_or_read = "daytona_shell" in tool_names or "daytona_read_file" in tool_names
+    assert "write_file" in tool_names, f"Should write file. Tools: {tool_names}"
+    has_bash_or_read = "shell" in tool_names or "read_file" in tool_names
     assert has_bash_or_read, f"Should attempt bash or read commands. Tools: {tool_names}"
     assert len(result.assistant_turns()) > 0, "Should complete even with errors"

@@ -80,7 +80,7 @@ def _parse_shell_structured_error(
     output: str,
     is_error: bool,
 ) -> dict[str, Any] | None:
-    if tool_name != "daytona_shell" or not is_error:
+    if tool_name != "shell" or not is_error:
         return None
     try:
         payload = json.loads(output)

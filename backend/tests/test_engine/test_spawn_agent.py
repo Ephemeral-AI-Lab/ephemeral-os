@@ -256,5 +256,5 @@ def test_default_sandbox_agent_registers_daytona_tools() -> None:
         "default",
     )
 
-    assert registry.get("daytona_read_file") is not None
-    assert registry.get("daytona_shell") is not None
+    assert registry.get("read_file") is not None
+    assert registry.get("shell") is not None

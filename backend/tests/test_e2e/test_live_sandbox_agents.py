@@ -29,19 +29,19 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 # Helpers
 # ---------------------------------------------------------------------------
 
-KNOWN_DAYTONA_TOOLS = {
-    "daytona_shell", "daytona_read_file", "daytona_write_file",
-    "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "ci_query_symbol",
+KNOWN_SANDBOX_TOOLS = {
+    "shell", "read_file", "write_file",
+    "grep", "glob",
+    "edit_file", "ci_query_symbol",
     "ci_diagnostics",
 }
 
 AGENT_PROMPT = (
     "You are a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
-    "Use daytona_write_file to create files, daytona_shell to run commands, "
-    "daytona_read_file to read files, "
-    "daytona_grep to search content, daytona_glob to find files. "
+    "Use write_file to create files, shell to run commands, "
+    "read_file to read files, "
+    "grep to search content, glob to find files. "
     "Always execute every step using tools. Be concise."
 )
 
@@ -65,14 +65,14 @@ def agent(sandbox_id):
 
 
 # ===========================================================================
-# AREA 1: Single-Agent — Daytona Tool Invocation
+# AREA 1: Single-Agent — Sandbox Tool Invocation
 # ===========================================================================
 
 
 async def test_bash_tool_invocation(agent):
-    """Agent invokes daytona_shell and tool events contain correct structure."""
+    """Agent invokes shell and tool events contain correct structure."""
     result = await agent.invoke(
-        "Use daytona_shell to run 'echo SINGLE_AGENT_BASH_OK' in the sandbox."
+        "Use shell to run 'echo SINGLE_AGENT_BASH_OK' in the sandbox."
     )
     assert len(result.assistant_turns()) > 0, "No assistant turns produced"
 
@@ -80,7 +80,7 @@ async def test_bash_tool_invocation(agent):
     assert len(started) >= 1, f"No tool_started events. Tool names: {result.tool_names}"
 
     for ev in started:
-        assert ev.tool_name in KNOWN_DAYTONA_TOOLS, f"Unknown tool '{ev.tool_name}'"
+        assert ev.tool_name in KNOWN_SANDBOX_TOOLS, f"Unknown tool '{ev.tool_name}'"
         assert isinstance(ev.tool_input, dict), f"tool_input should be dict: {ev.tool_input}"
 
     completed = result.tools_completed()
@@ -90,27 +90,27 @@ async def test_bash_tool_invocation(agent):
 
 
 async def test_write_file_tool(agent):
-    """Agent uses daytona_write_file to create a file in the sandbox."""
+    """Agent uses write_file to create a file in the sandbox."""
     result = await agent.invoke(
-        "Use daytona_write_file to write 'WRITE_TOOL_MARKER' to /workspace/write_test.txt"
+        "Use write_file to write 'WRITE_TOOL_MARKER' to /workspace/write_test.txt"
     )
     started = result.tools_started()
     assert len(started) >= 1, f"No tools used. Tool names: {result.tool_names}"
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_write_file", "daytona_shell") for n in tool_names), (
+    assert any(n in ("write_file", "shell") for n in tool_names), (
         f"Expected write tool, got: {tool_names}"
     )
 
 
 async def test_list_files_tool(agent):
-    """Agent uses daytona_shell to list a directory."""
+    """Agent uses shell to list a directory."""
     # First create a file so there's something to list
     await agent.invoke(
-        "Use daytona_shell to run 'touch /workspace/listable.txt'"
+        "Use shell to run 'touch /workspace/listable.txt'"
     )
     result = await agent.invoke(
-        "Use daytona_shell to run 'ls /workspace'."
+        "Use shell to run 'ls /workspace'."
     )
     started = result.tools_started()
     assert len(started) >= 1, f"No tools used. Tool names: {result.tool_names}"
@@ -121,8 +121,8 @@ async def test_file_roundtrip_write_read(agent):
     marker = f"ROUNDTRIP_{uuid.uuid4().hex[:8]}"
     result = await agent.invoke(
         f"Do these two steps in the sandbox using tools:\n"
-        f"1. Use daytona_write_file to write '{marker}' to /workspace/roundtrip.txt\n"
-        f"2. Use daytona_shell to run 'cat /workspace/roundtrip.txt'\n"
+        f"1. Use write_file to write '{marker}' to /workspace/roundtrip.txt\n"
+        f"2. Use shell to run 'cat /workspace/roundtrip.txt'\n"
         f"Do both steps."
     )
     started = result.tools_started()
@@ -133,7 +133,7 @@ async def test_file_roundtrip_write_read(agent):
     text = result.text
     has_marker = marker in all_outputs or marker in text
     has_write_tool = any(
-        e.tool_name in ("daytona_write_file", "daytona_shell")
+        e.tool_name in ("write_file", "shell")
         for e in started
     )
     assert has_marker or has_write_tool, (
@@ -144,31 +144,31 @@ async def test_file_roundtrip_write_read(agent):
 
 
 async def test_grep_search_tool(agent):
-    """Agent uses daytona_grep to search file content."""
+    """Agent uses grep to search file content."""
     # Seed a file first
     await agent.invoke(
-        "Use daytona_shell to run: echo 'GREP_TARGET_XYZ' > /workspace/searchable.txt"
+        "Use shell to run: echo 'GREP_TARGET_XYZ' > /workspace/searchable.txt"
     )
     result = await agent.invoke(
-        "Use daytona_grep to search for 'GREP_TARGET' in /workspace/"
+        "Use grep to search for 'GREP_TARGET' in /workspace/"
     )
     started = result.tools_started()
     assert len(started) >= 1, f"No tools used. Tool names: {result.tool_names}"
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_grep", "daytona_shell") for n in tool_names), (
+    assert any(n in ("grep", "shell") for n in tool_names), (
         f"Expected grep or bash tool, got: {tool_names}"
     )
 
 
 async def test_glob_search_tool(agent):
-    """Agent uses daytona_glob to find files by pattern."""
+    """Agent uses glob to find files by pattern."""
     # Seed files
     await agent.invoke(
-        "Use daytona_shell to run: touch /workspace/glob_a.py /workspace/glob_b.py"
+        "Use shell to run: touch /workspace/glob_a.py /workspace/glob_b.py"
     )
     result = await agent.invoke(
-        "Use daytona_glob to find all .py files in /workspace/"
+        "Use glob to find all .py files in /workspace/"
     )
     started = result.tools_started()
     assert len(started) >= 1, f"No tools used. Tool names: {result.tool_names}"
@@ -185,7 +185,7 @@ async def test_create_then_verify_file(agent):
 
     # Turn 1: Create
     result1 = await agent.invoke(
-        f"Use daytona_write_file to create /workspace/chain.txt with content '{marker}'"
+        f"Use write_file to create /workspace/chain.txt with content '{marker}'"
     )
     assert len(result1.assistant_turns()) > 0
     t1_tools = result1.tools_started()
@@ -193,7 +193,7 @@ async def test_create_then_verify_file(agent):
 
     # Turn 2: Verify (self-contained prompt — no conversation memory)
     result2 = await agent.invoke(
-        "Use daytona_shell to run 'cat /workspace/chain.txt' and tell me the content."
+        "Use shell to run 'cat /workspace/chain.txt' and tell me the content."
     )
     assert len(result2.assistant_turns()) > 0
     text2 = result2.text
@@ -209,19 +209,19 @@ async def test_create_then_verify_file(agent):
 async def test_three_turn_create_read_modify(agent):
     """3-turn chain: create -> read -> modify. All turns use tools. Sandbox state persists."""
     result1 = await agent.invoke(
-        "Use daytona_shell to run: echo 'V1_CONTENT' > /workspace/evolve.txt"
+        "Use shell to run: echo 'V1_CONTENT' > /workspace/evolve.txt"
     )
     t1 = result1.tools_started()
     assert len(t1) >= 1
 
     result2 = await agent.invoke(
-        "Use daytona_shell to run: cat /workspace/evolve.txt"
+        "Use shell to run: cat /workspace/evolve.txt"
     )
     t2 = result2.tools_started()
     assert len(t2) >= 1
 
     result3 = await agent.invoke(
-        "Use daytona_shell to run: echo 'V2_CONTENT' >> /workspace/evolve.txt"
+        "Use shell to run: echo 'V2_CONTENT' >> /workspace/evolve.txt"
     )
     t3 = result3.tools_started()
     assert len(t3) >= 1
@@ -234,16 +234,16 @@ async def test_complex_multi_step_task(agent):
     """Agent performs create-file -> execute -> capture-output in one turn."""
     result = await agent.invoke(
         "Do these steps in the sandbox:\n"
-        "1. Use daytona_write_file to create /workspace/hello.py with: print('HELLO_FROM_E2E')\n"
-        "2. Use daytona_shell to run: python3 /workspace/hello.py\n"
+        "1. Use write_file to create /workspace/hello.py with: print('HELLO_FROM_E2E')\n"
+        "2. Use shell to run: python3 /workspace/hello.py\n"
         "3. Report the output."
     )
     assert len(result.assistant_turns()) > 0
 
     started = result.tools_started()
     if started:
-        daytona_tools = [e for e in started if e.tool_name.startswith("daytona_")]
-        assert len(daytona_tools) >= 1, f"Expected daytona tools: {[e.tool_name for e in started]}"
+        sandbox_tools = [e for e in started if e.tool_name in {"write_file", "read_file", "shell"}]
+        assert len(sandbox_tools) >= 1, f"Expected sandbox tools: {[e.tool_name for e in started]}"
 
     # Check if the output contains our marker
     completed = result.tools_completed()
@@ -265,7 +265,7 @@ async def test_complex_multi_step_task(agent):
 async def test_tool_started_contains_tool_input_dict(agent):
     """tool_started events must have tool_input as a dict with expected keys."""
     result = await agent.invoke(
-        "Use daytona_shell to run 'echo INPUT_STRUCTURE_OK'"
+        "Use shell to run 'echo INPUT_STRUCTURE_OK'"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -274,19 +274,19 @@ async def test_tool_started_contains_tool_input_dict(agent):
         assert ev.tool_input is not None, f"tool_started missing tool_input: {ev}"
         assert isinstance(ev.tool_input, dict), f"tool_input should be dict: {type(ev.tool_input)}"
 
-        if ev.tool_name == "daytona_shell":
-            assert "command" in ev.tool_input, f"daytona_shell missing 'command': {ev.tool_input}"
-        elif ev.tool_name == "daytona_write_file":
+        if ev.tool_name == "shell":
+            assert "command" in ev.tool_input, f"shell missing 'command': {ev.tool_input}"
+        elif ev.tool_name == "write_file":
             assert "file_path" in ev.tool_input
             assert "content" in ev.tool_input
-        elif ev.tool_name == "daytona_read_file":
+        elif ev.tool_name == "read_file":
             assert "file_path" in ev.tool_input
 
 
 async def test_tool_completed_has_nonempty_output(agent):
     """Successful tool_completed events must have non-empty output."""
     result = await agent.invoke(
-        "Use daytona_shell to run 'echo OUTPUT_CHECK_OK'"
+        "Use shell to run 'echo OUTPUT_CHECK_OK'"
     )
     completed = result.tools_completed()
     if completed:
@@ -298,7 +298,7 @@ async def test_tool_completed_has_nonempty_output(agent):
 async def test_full_event_lifecycle(agent):
     """A tool-using chat must produce assistant turns and matching tool started/completed pairs."""
     result = await agent.invoke(
-        "Use daytona_shell to run 'echo LIFECYCLE_OK'"
+        "Use shell to run 'echo LIFECYCLE_OK'"
     )
     assert len(result.assistant_turns()) > 0, "No assistant turns produced"
 

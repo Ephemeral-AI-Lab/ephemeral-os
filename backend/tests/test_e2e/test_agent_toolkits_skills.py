@@ -7,14 +7,14 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 SANDBOX_TOOLS = {
-    "daytona_grep",
-    "daytona_glob",
-    "daytona_read_file",
-    "daytona_write_file",
-    "daytona_edit_file",
-    "daytona_delete_file",
-    "daytona_move_file",
-    "daytona_shell",
+    "grep",
+    "glob",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "delete_file",
+    "move_file",
+    "shell",
 }
 
 
@@ -68,7 +68,7 @@ class TestConfigBackedAgentApi:
 
         assert resp.status_code == 200
         tools = {entry["name"] for entry in resp.json()}
-        assert "daytona_shell" in tools
+        assert "shell" in tools
         assert "submit_plan" not in tools
         assert "submit_replan" not in tools
         assert "submit_task_success" not in tools

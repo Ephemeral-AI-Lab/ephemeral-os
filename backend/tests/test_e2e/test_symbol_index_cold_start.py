@@ -178,7 +178,7 @@ class TestSymbolIndexColdStart:
 
     def test_ci_workspace_structure_waits_for_building_index(self):
         """ci_workspace_structure should wait for the index and return paths."""
-        from tools.ci_toolkit.query_tools import ci_workspace_structure
+        from tools.ci_toolkit.ci_workspace_structure_tool import ci_workspace_structure
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         svc = self._create_ci_service(sandbox)
@@ -207,7 +207,7 @@ class TestSymbolIndexColdStart:
 
     def test_ci_query_symbol_waits_on_remote_cold_start(self):
         """ci_query_symbol should wait for remote symbol index and find symbols."""
-        from tools.ci_toolkit.query_tools import ci_query_symbol
+        from tools.ci_toolkit.ci_query_symbol_tool import ci_query_symbol
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         svc = self._create_ci_service(sandbox)
@@ -245,7 +245,8 @@ class TestSymbolIndexColdStart:
         Simulates the exact analysis_agent cold-start sequence.
         """
         from sandbox.workspace import inject_code_intelligence
-        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbol
+        from tools.ci_toolkit.ci_query_symbol_tool import ci_query_symbol
+        from tools.ci_toolkit.ci_workspace_structure_tool import ci_workspace_structure
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         context = MagicMock()
@@ -337,7 +338,8 @@ class TestLiveColdStart:
         """Inject CI into a live sandbox and verify ci_query_symbol works."""
         from sandbox.service import SandboxService
         from sandbox.workspace import discover_workspace, inject_code_intelligence
-        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbol
+        from tools.ci_toolkit.ci_query_symbol_tool import ci_query_symbol
+        from tools.ci_toolkit.ci_workspace_structure_tool import ci_workspace_structure
 
         svc = SandboxService()
         sandbox = svc.get_sandbox_object(live_sandbox_id)
@@ -394,7 +396,7 @@ class TestLiveColdStart:
             system_prompt=(
                 "You have a remote sandbox with Python files in the src/ directory. "
                 "When asked to find symbols, you MUST use the ci_query_symbol tool. "
-                "Do NOT use daytona_grep or any other tool. "
+                "Do NOT use grep or any other tool. "
                 "ONLY use ci_query_symbol. Be concise."
             ),
         )

@@ -59,8 +59,8 @@ def _print_result(result) -> None:
 AGENT_PROMPT = (
     "You are a senior fullstack developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
-    "Use daytona_write_file to create files, daytona_shell to run commands, "
-    "daytona_read_file to read files. Always execute every step using tools. "
+    "Use write_file to create files, shell to run commands, "
+    "read_file to read files. Always execute every step using tools. "
     "Be concise in your text responses."
 )
 
@@ -232,7 +232,7 @@ async def test_phase1_scaffold_project(agent):
     # Step 1: Create directory structure
     print("\n--- Step 1: Create directory structure ---")
     result = await agent.invoke(
-        "Use daytona_shell to create these directories:\n"
+        "Use shell to create these directories:\n"
         "mkdir -p /workspace/fullrun/src/app/api/health\n"
         "mkdir -p /workspace/fullrun/src/lib\n"
         "mkdir -p /workspace/fullrun/src/components"
@@ -249,7 +249,7 @@ async def test_phase1_scaffold_project(agent):
         filename = path.split("/")[-1]
         print(f"\n--- Step {i}: Create {filename} ---")
         result = await agent.invoke(
-            f"Use daytona_write_file to create {path} with this exact content:\n```\n{content}\n```"
+            f"Use write_file to create {path} with this exact content:\n```\n{content}\n```"
         )
         _print_result(result)
         all_started.extend(result.tools_started())
@@ -284,7 +284,7 @@ async def test_phase2_verify_files_exist(agent):
     """Verify all project files were created with correct content."""
     print("\n--- Phase 2: Verify files exist ---")
     result = await agent.invoke(
-        "Use daytona_shell to run this command and show the output:\n"
+        "Use shell to run this command and show the output:\n"
         "find /workspace/fullrun -type f \\( -name '*.ts' -o -name '*.tsx' -o -name '*.json' \\) | sort"
     )
     _print_result(result)
@@ -331,7 +331,7 @@ async def test_phase3_content_verification(agent):
     results = {}
     for marker, desc in markers:
         result = await agent.invoke(
-            f"Use daytona_grep to search for '{marker}' in /workspace/fullrun/src/"
+            f"Use grep to search for '{marker}' in /workspace/fullrun/src/"
         )
         found = marker in _all_output(result)
         results[marker] = found
@@ -354,7 +354,7 @@ async def test_phase3_content_verification(agent):
 async def test_phase4_read_and_verify_page(agent):
     """Read page.tsx back and verify its structure."""
     print("\n--- Phase 4: Read page.tsx ---")
-    result = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/app/page.tsx")
+    result = await agent.invoke("Use read_file to read /workspace/fullrun/src/app/page.tsx")
     _print_result(result)
 
     assert len(result.tools_started()) >= 1
@@ -538,7 +538,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
 
     # Turn 1: Read utils.ts
     print("\n  Turn 1: Read utils.ts")
-    r1 = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/lib/utils.ts")
+    r1 = await agent.invoke("Use read_file to read /workspace/fullrun/src/lib/utils.ts")
     _print_result(r1)
     assert len(r1.tools_started()) >= 1
     print(f"  Streamed text: {(r1.thinking_text + r1.text)[:400]}")
@@ -546,7 +546,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     # Turn 2: Append a new function
     print("\n  Turn 2: Append function")
     r2 = await agent.invoke(
-        "Use daytona_shell to append this to /workspace/fullrun/src/lib/utils.ts:\n"
+        "Use shell to append this to /workspace/fullrun/src/lib/utils.ts:\n"
         "echo '' >> /workspace/fullrun/src/lib/utils.ts && "
         "echo 'export function slugify(str: string): string {' >> /workspace/fullrun/src/lib/utils.ts && "
         'echo \'  return str.toLowerCase().replace(/\\\\s+/g, "-").replace(/[^a-z0-9-]/g, "");\' >> /workspace/fullrun/src/lib/utils.ts && '
@@ -558,7 +558,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     # Turn 3: Verify the new function exists
     print("\n  Turn 3: Verify slugify exists")
     r3 = await agent.invoke(
-        "Use daytona_grep to search for 'slugify' in /workspace/fullrun/src/lib/utils.ts"
+        "Use grep to search for 'slugify' in /workspace/fullrun/src/lib/utils.ts"
     )
     _print_result(r3)
     assert len(r3.tools_started()) >= 1
@@ -586,7 +586,7 @@ async def test_phase9_final_summary(agent):
     """Final summary: list all files, print streaming, report results."""
     print("\n--- Phase 9: Final Project Summary ---")
     result = await agent.invoke(
-        "Use daytona_shell to run: "
+        "Use shell to run: "
         "echo '=== Project Files ===' && "
         "find /workspace/fullrun -type f | sort && "
         "echo '=== Line Counts ===' && "

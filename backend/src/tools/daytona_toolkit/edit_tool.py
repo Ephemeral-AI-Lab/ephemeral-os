@@ -1,4 +1,4 @@
-"""Daytona edit tool."""
+"""Edit file tool."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from tools.daytona_toolkit._daytona_utils import (
 logger = logging.getLogger(__name__)
 
 
-class DaytonaEditFileInput(BaseModel):
+class EditFileInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     file_path: str = Field(..., description="Repo-relative or sandbox-root file path.")
@@ -41,7 +41,7 @@ class DaytonaEditFileInput(BaseModel):
     )
 
 
-class DaytonaEditFileOutput(BaseModel):
+class EditFileOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     file_path: str = Field(..., description="Resolved file path that was edited.")
     status: str = Field(..., description="Edit result: edited, aborted_version, or failed.")
@@ -68,13 +68,13 @@ def _normalize_edits(
 
 
 @tool(
-    name="daytona_edit_file",
+    name="edit_file",
     description="Edit a sandbox file with exact search/replace.",
     short_description="Apply atomic file edits.",
-    input_model=DaytonaEditFileInput,
-    output_model=DaytonaEditFileOutput,
+    input_model=EditFileInput,
+    output_model=EditFileOutput,
 )
-async def daytona_edit_file(
+async def edit_file(
     file_path: str,
     old_text: str = "",
     new_text: str = "",
@@ -100,7 +100,7 @@ async def daytona_edit_file(
         return ToolResult(output=body, is_error=True)
 
     if get_ci_service(context) is None:
-        return ci_write_required_result("daytona_edit_file", file_path)
+        return ci_write_required_result("edit_file", file_path)
 
     commit_started = time.perf_counter()
     change = await submit_commit(
@@ -129,7 +129,7 @@ async def daytona_edit_file(
     tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
     return operation_result_to_tool_result(
         change.raw,
-        tool_name="daytona_edit_file",
+        tool_name="edit_file",
         success_status="edited",
         primary_paths=[file_path],
         warnings=warnings,
@@ -153,7 +153,7 @@ def _edit_failure_result(
     """Return the user-facing error for a failed edit."""
     return operation_result_to_tool_result(
         result,
-        tool_name="daytona_edit_file",
+        tool_name="edit_file",
         success_status="edited",
         primary_paths=[file_path],
         warnings=warnings,

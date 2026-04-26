@@ -41,12 +41,12 @@ def sandbox_id():
 
 @pytest.mark.asyncio
 async def test_correct_tool_selected_for_file_write(sandbox_id):
-    """Agent should use daytona_write_file, not daytona_shell, for file creation."""
+    """Agent should use write_file, not shell, for file creation."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt=(
-            "You have sandbox access via daytona_write_file and daytona_shell. "
-            "When asked to create a file, ALWAYS use daytona_write_file."
+            "You have sandbox access via write_file and shell. "
+            "When asked to create a file, ALWAYS use write_file."
         ),
     )
 
@@ -54,27 +54,27 @@ async def test_correct_tool_selected_for_file_write(sandbox_id):
         "Create a file /workspace/e2e_accuracy.txt with content: TOOL_ACCURACY_TEST_PASS"
     )
 
-    # Should use daytona_write_file for file creation
-    assert "daytona_write_file" in result.tool_names, (
-        f"Should use daytona_write_file for file creation. Tools used: {result.tool_names}"
+    # Should use write_file for file creation
+    assert "write_file" in result.tool_names, (
+        f"Should use write_file for file creation. Tools used: {result.tool_names}"
     )
-    # Should NOT use daytona_shell for file creation (wrong tool)
+    # Should NOT use shell for file creation (wrong tool)
     bash_for_write = [
         ts
         for ts in result.tools_started()
-        if ts.tool_name == "daytona_shell" and "write" in str(ts.tool_input).lower()
+        if ts.tool_name == "shell" and "write" in str(ts.tool_input).lower()
     ]
-    assert not bash_for_write, "Should not use daytona_shell for file write operations"
+    assert not bash_for_write, "Should not use shell for file write operations"
 
 
 @pytest.mark.asyncio
 async def test_correct_tool_selected_for_command_execution(sandbox_id):
-    """Agent should use daytona_shell, not daytona_write_file, for command execution."""
+    """Agent should use shell, not write_file, for command execution."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt=(
-            "You have sandbox access. Use daytona_shell for running commands. "
-            "Use daytona_write_file only for creating files."
+            "You have sandbox access. Use shell for running commands. "
+            "Use write_file only for creating files."
         ),
     )
 
@@ -82,9 +82,9 @@ async def test_correct_tool_selected_for_command_execution(sandbox_id):
         "Run this command in the sandbox: echo 'CORRECT_TOOL_BASH'"
     )
 
-    # Should use daytona_shell for command execution
-    assert "daytona_shell" in result.tool_names, (
-        f"Should use daytona_shell for commands. Tools used: {result.tool_names}"
+    # Should use shell for command execution
+    assert "shell" in result.tool_names, (
+        f"Should use shell for commands. Tools used: {result.tool_names}"
     )
 
 
@@ -93,17 +93,17 @@ async def test_tool_input_parameters_correct(sandbox_id):
     """Verify tool is called with the exact parameters specified."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
-        system_prompt="Use daytona_write_file with EXACTLY the path and content provided.",
+        system_prompt="Use write_file with EXACTLY the path and content provided.",
     )
 
     result = await agent.invoke(
         "Write to /workspace/params_test.txt with content: PARAM_TEST_CONTENT"
     )
 
-    write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
+    write_calls = [tc for tc in result.tool_calls if tc.name == "write_file"]
 
     assert write_calls, (
-        f"No daytona_write_file calls found. Tools: {result.tool_names}"
+        f"No write_file calls found. Tools: {result.tool_names}"
     )
 
     # Verify exact path
@@ -135,16 +135,16 @@ async def test_multiple_tools_different_purposes(sandbox_id):
     )
 
     # Should have BOTH write and bash (read) tools
-    assert "daytona_write_file" in result.tool_names, (
+    assert "write_file" in result.tool_names, (
         f"Missing write tool. Tools: {result.tool_names}"
     )
-    assert "daytona_shell" in result.tool_names, (
+    assert "shell" in result.tool_names, (
         f"Missing bash tool. Tools: {result.tool_names}"
     )
 
     # Verify sequence: write should come before bash
-    write_idx = result.tool_names.index("daytona_write_file")
-    bash_idx = result.tool_names.index("daytona_shell")
+    write_idx = result.tool_names.index("write_file")
+    bash_idx = result.tool_names.index("shell")
     assert write_idx < bash_idx, f"Write should come before bash. Order: {result.tool_names}"
 
 
@@ -219,7 +219,7 @@ async def test_skill_not_loaded_when_not_needed(sandbox_id):
     """Verify agent does not use unnecessary tools for a simple task.
 
     Adapted: since load_skill is not registered, we verify the agent only
-    uses daytona_shell (the minimal required tool) for a simple echo.
+    uses shell (the minimal required tool) for a simple echo.
     """
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
@@ -230,9 +230,9 @@ async def test_skill_not_loaded_when_not_needed(sandbox_id):
         "Simply run: echo 'NO_SKILL_NEEDED' and tell me the result."
     )
 
-    # Should only use daytona_shell for simple echo command
-    assert "daytona_shell" in result.tool_names, (
-        f"Should use daytona_shell for echo. Tools used: {result.tool_names}"
+    # Should only use shell for simple echo command
+    assert "shell" in result.tool_names, (
+        f"Should use shell for echo. Tools used: {result.tool_names}"
     )
 
 
@@ -250,8 +250,8 @@ async def test_five_step_task_completes_all_steps(sandbox_id):
             "Execute ALL steps in sequence. Do NOT skip any steps. "
             "Report completion of EACH step. "
             "Continue working — do not stop to summarize results unless the task is done. "
-            "You MUST use daytona_write_file for EACH file creation step - "
-            "do NOT use daytona_shell to create files."
+            "You MUST use write_file for EACH file creation step - "
+            "do NOT use shell to create files."
         ),
         tool_call_limit=200,
     )
@@ -266,8 +266,8 @@ async def test_five_step_task_completes_all_steps(sandbox_id):
         "After completing all steps, list all 5 filenames you created."
     )
 
-    # Count daytona_write_file calls - should be exactly 5 (one per step)
-    write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
+    # Count write_file calls - should be exactly 5 (one per step)
+    write_calls = [tc for tc in result.tool_calls if tc.name == "write_file"]
     assert len(write_calls) >= 5, (
         f"Expected at least 5 write operations (one per step). Got {len(write_calls)}. "
         f"Tools: {result.tool_names}"
@@ -300,9 +300,9 @@ async def test_agent_continues_after_tool_error(sandbox_id):
     result = await agent.invoke(
         "Use your tools to complete these steps. "
         "You MUST call a tool for EACH step — do not skip any.\n"
-        "Step 1: Use daytona_write_file to create /workspace/recover1.txt with content 'RECOVER1'\n"
-        "Step 2: Use daytona_shell to run: cat /nonexistent/file.txt (expect error)\n"
-        "Step 3: Use daytona_write_file to create /workspace/recover3.txt with content 'RECOVER3'\n"
+        "Step 1: Use write_file to create /workspace/recover1.txt with content 'RECOVER1'\n"
+        "Step 2: Use shell to run: cat /nonexistent/file.txt (expect error)\n"
+        "Step 3: Use write_file to create /workspace/recover3.txt with content 'RECOVER3'\n"
         "Report what happened at each step."
     )
 
@@ -310,12 +310,12 @@ async def test_agent_continues_after_tool_error(sandbox_id):
     tool_names = [ts.tool_name for ts in tool_started]
 
     # Should have write for step 1
-    assert "daytona_write_file" in tool_names, (
+    assert "write_file" in tool_names, (
         f"Should attempt step 1 write. Tools: {tool_names}"
     )
 
     # Should have tried to read nonexistent file (step 2)
-    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_shell"]
+    bash_calls = [ts for ts in tool_started if ts.tool_name == "shell"]
     assert bash_calls, f"Should attempt step 2 (read nonexistent file). Tools: {tool_names}"
 
     # Should have write for step 3 (continued after error)
@@ -323,7 +323,7 @@ async def test_agent_continues_after_tool_error(sandbox_id):
     write_calls_after_bash = [
         ts
         for i, ts in enumerate(tool_started)
-        if ts.tool_name == "daytona_write_file" and i > first_bash_idx
+        if ts.tool_name == "write_file" and i > first_bash_idx
     ]
     assert write_calls_after_bash, (
         f"Should continue with step 3 after error. Tools: {tool_names}"
@@ -389,8 +389,8 @@ async def test_no_early_stop_verification(sandbox_id):
     tool_names = [ts.tool_name for ts in tool_started]
 
     # Should have a listing/verification step (step 4) — model may use
-    # daytona_shell with ls/cat to verify.
-    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_shell"]
+    # shell with ls/cat to verify.
+    bash_calls = [ts for ts in tool_started if ts.tool_name == "shell"]
 
     has_verification_step = bool(bash_calls)
     assert has_verification_step, (
@@ -418,7 +418,7 @@ async def test_agent_completes_without_summarizing_early(sandbox_id):
     )
 
     # Should actually perform writes, not just describe
-    write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
+    write_calls = [tc for tc in result.tool_calls if tc.name == "write_file"]
     assert len(write_calls) >= 2, (
         f"Should perform 2 write actions. Got {len(write_calls)}. Tools: {result.tool_names}"
     )

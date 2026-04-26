@@ -238,14 +238,24 @@ async def _run_query_loop(
         )
 
         registered_tool_names = {tool.name for tool in context.tool_registry.list_tools()}
-        needs_daytona_context = any(
-            name.startswith("daytona_") or name.startswith("ci_")
+        sandbox_tool_names = {
+            "delete_file",
+            "edit_file",
+            "glob",
+            "grep",
+            "move_file",
+            "read_file",
+            "shell",
+            "write_file",
+        }
+        needs_sandbox_context = any(
+            name in sandbox_tool_names or name.startswith("ci_")
             for name in registered_tool_names
         )
         if (
             context.tool_metadata is not None
             and context.tool_metadata.sandbox_id
-            and needs_daytona_context
+            and needs_sandbox_context
         ):
             try:
                 from tools.daytona_toolkit import DaytonaContextPreparer

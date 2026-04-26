@@ -30,13 +30,13 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # Helpers
 # ---------------------------------------------------------------------------
 
-KNOWN_DAYTONA_TOOLS = {
-    "daytona_shell",
-    "daytona_read_file",
-    "daytona_write_file",
-    "daytona_grep",
-    "daytona_glob",
-    "daytona_edit_file",
+KNOWN_SANDBOX_TOOLS = {
+    "shell",
+    "read_file",
+    "write_file",
+    "grep",
+    "glob",
+    "edit_file",
     "ci_query_symbol",
     "ci_diagnostics",
 }
@@ -44,8 +44,8 @@ KNOWN_DAYTONA_TOOLS = {
 NEXTJS_AGENT_PROMPT = (
     "You are a senior fullstack developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
-    "Use daytona_write_file to create files, daytona_shell to run commands, "
-    "daytona_read_file to read files. "
+    "Use write_file to create files, shell to run commands, "
+    "read_file to read files. "
     "You specialize in Next.js, React, and TypeScript projects. "
     "Always execute every step using tools. Be concise."
 )
@@ -129,7 +129,7 @@ async def test_create_package_json(sandbox_id):
     """Agent creates package.json with Next.js dependencies."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_write_file to create /workspace/nextjs-app/package.json with this content:\n"
+        "Use write_file to create /workspace/nextjs-app/package.json with this content:\n"
         '{"name": "nextjs-e2e", "version": "1.0.0", "private": true, '
         '"scripts": {"dev": "next dev", "build": "next build", "start": "next start"}, '
         '"dependencies": {"next": "14.0.0", "react": "18.2.0", "react-dom": "18.2.0"}, '
@@ -139,7 +139,7 @@ async def test_create_package_json(sandbox_id):
     assert len(started) >= 1, f"Should use tool. Tool names: {result.tool_names}"
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_write_file", "daytona_shell") for n in tool_names), (
+    assert any(n in ("write_file", "shell") for n in tool_names), (
         f"Should use write tool: {tool_names}"
     )
 
@@ -149,7 +149,7 @@ async def test_create_tsconfig(sandbox_id):
     """Agent creates tsconfig.json for TypeScript support."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_write_file to create /workspace/nextjs-app/tsconfig.json with:\n"
+        "Use write_file to create /workspace/nextjs-app/tsconfig.json with:\n"
         '{"compilerOptions": {"target": "es5", "lib": ["dom", "dom.iterable", "esnext"], '
         '"allowJs": true, "skipLibCheck": true, "strict": true, "noEmit": true, '
         '"esModuleInterop": true, "module": "esnext", "moduleResolution": "bundler", '
@@ -195,9 +195,9 @@ export default function HomePage(): React.ReactElement {
 }"""
 
     result = await agent.invoke(
-        "Use daytona_shell to run these commands:\n"
+        "Use shell to run these commands:\n"
         "mkdir -p /workspace/nextjs-app/src/app\n"
-        "Then use daytona_write_file to create /workspace/nextjs-app/src/app/page.tsx "
+        "Then use write_file to create /workspace/nextjs-app/src/app/page.tsx "
         f"with this exact content:\n```\n{page_content}\n```"
     )
     started = result.tools_started()
@@ -205,7 +205,7 @@ export default function HomePage(): React.ReactElement {
 
     # Verify file was created
     result_verify = await agent.invoke(
-        "Use daytona_shell to run: cat /workspace/nextjs-app/src/app/page.tsx | head -5"
+        "Use shell to run: cat /workspace/nextjs-app/src/app/page.tsx | head -5"
     )
     completed = result_verify.tools_completed()
     outputs = " ".join(e.output for e in completed)
@@ -240,7 +240,7 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
 }"""
 
     result = await agent.invoke(
-        f"Use daytona_write_file to create /workspace/nextjs-app/src/app/layout.tsx with:\n```\n{layout_content}\n```"
+        f"Use write_file to create /workspace/nextjs-app/src/app/layout.tsx with:\n```\n{layout_content}\n```"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -270,8 +270,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
 
     result = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_shell to run: mkdir -p /workspace/nextjs-app/src/app/api/health\n"
-        f"2. Use daytona_write_file to create /workspace/nextjs-app/src/app/api/health/route.ts with:\n```\n{api_content}\n```"
+        "1. Use shell to run: mkdir -p /workspace/nextjs-app/src/app/api/health\n"
+        f"2. Use write_file to create /workspace/nextjs-app/src/app/api/health/route.ts with:\n```\n{api_content}\n```"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -284,10 +284,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
 
 @pytest.mark.asyncio
 async def test_list_project_structure(sandbox_id):
-    """daytona_shell can show the project directory structure."""
+    """shell can show the project directory structure."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_shell to run: find /workspace/nextjs-app -maxdepth 4 | sort"
+        "Use shell to run: find /workspace/nextjs-app -maxdepth 4 | sort"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -313,10 +313,10 @@ async def test_list_project_structure(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_glob_find_tsx_files(sandbox_id):
-    """daytona_glob finds all .tsx files in the project."""
+    """glob finds all .tsx files in the project."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_glob to find all *.tsx files under /workspace/nextjs-app/"
+        "Use glob to find all *.tsx files under /workspace/nextjs-app/"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -330,26 +330,26 @@ async def test_glob_find_tsx_files(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_grep_find_react_imports(sandbox_id):
-    """daytona_grep finds React imports across project files."""
+    """grep finds React imports across project files."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_grep to search for 'import React' in /workspace/nextjs-app/src/"
+        "Use grep to search for 'import React' in /workspace/nextjs-app/src/"
     )
     started = result.tools_started()
     assert len(started) >= 1
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_grep", "daytona_shell") for n in tool_names), (
+    assert any(n in ("grep", "shell") for n in tool_names), (
         f"Should use grep or bash: {tool_names}"
     )
 
 
 @pytest.mark.asyncio
 async def test_read_page_component(sandbox_id):
-    """daytona_read_file reads back the page component with correct content."""
+    """read_file reads back the page component with correct content."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_read_file to read /workspace/nextjs-app/src/app/page.tsx"
+        "Use read_file to read /workspace/nextjs-app/src/app/page.tsx"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -528,14 +528,14 @@ export const APP_NAME = "EphemeralOS";"""
     # Turn 1: Create
     result1 = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_shell to run: mkdir -p /workspace/nextjs-app/src/lib\n"
-        f"2. Use daytona_write_file to create /workspace/nextjs-app/src/lib/utils.ts with:\n```\n{util_content}\n```"
+        "1. Use shell to run: mkdir -p /workspace/nextjs-app/src/lib\n"
+        f"2. Use write_file to create /workspace/nextjs-app/src/lib/utils.ts with:\n```\n{util_content}\n```"
     )
     assert len(result1.tools_started()) >= 1
 
     # Turn 2: Verify
     result2 = await agent.invoke(
-        "Use daytona_read_file to read /workspace/nextjs-app/src/lib/utils.ts and confirm it has formatDate and capitalize exports."
+        "Use read_file to read /workspace/nextjs-app/src/lib/utils.ts and confirm it has formatDate and capitalize exports."
     )
     assert len(result2.tools_started()) >= 1
 
@@ -573,14 +573,14 @@ export function FeatureCard({ name, description }: FeatureCardProps) {
     # Create component
     result1 = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_shell to run: mkdir -p /workspace/nextjs-app/src/components\n"
-        f"2. Use daytona_write_file to create /workspace/nextjs-app/src/components/FeatureCard.tsx with:\n```\n{component_content}\n```"
+        "1. Use shell to run: mkdir -p /workspace/nextjs-app/src/components\n"
+        f"2. Use write_file to create /workspace/nextjs-app/src/components/FeatureCard.tsx with:\n```\n{component_content}\n```"
     )
     assert len(result1.tools_started()) >= 1
 
     # Verify cross-file import with grep
     result2 = await agent.invoke(
-        "Use daytona_grep to search for 'APP_NAME' across all files in /workspace/nextjs-app/src/"
+        "Use grep to search for 'APP_NAME' across all files in /workspace/nextjs-app/src/"
     )
     assert len(result2.tools_started()) >= 1
 
@@ -606,7 +606,7 @@ async def test_full_component_lifecycle(sandbox_id):
 
     # Step 1: Create a TypeScript module
     result1 = await agent.invoke(
-        "Use daytona_write_file to create /workspace/nextjs-app/src/lib/api-client.ts with:\n"
+        "Use write_file to create /workspace/nextjs-app/src/lib/api-client.ts with:\n"
         "```\n"
         "const API_BASE = '/api';\n"
         "\n"
@@ -620,7 +620,7 @@ async def test_full_component_lifecycle(sandbox_id):
 
     # Step 2: Read it back
     result2 = await agent.invoke(
-        "Use daytona_read_file to read /workspace/nextjs-app/src/lib/api-client.ts"
+        "Use read_file to read /workspace/nextjs-app/src/lib/api-client.ts"
     )
     assert len(result2.tools_started()) >= 1
 
@@ -631,7 +631,7 @@ async def test_full_component_lifecycle(sandbox_id):
 
     # Step 3: Append a new function
     result3 = await agent.invoke(
-        "Use daytona_shell to append this to /workspace/nextjs-app/src/lib/api-client.ts:\n"
+        "Use shell to append this to /workspace/nextjs-app/src/lib/api-client.ts:\n"
         "echo '' >> /workspace/nextjs-app/src/lib/api-client.ts && "
         "echo 'export async function fetchVersion(): Promise<string> {' >> /workspace/nextjs-app/src/lib/api-client.ts && "
         "echo '  const res = await fetch(`${API_BASE}/health`);' >> /workspace/nextjs-app/src/lib/api-client.ts && "
@@ -643,7 +643,7 @@ async def test_full_component_lifecycle(sandbox_id):
 
     # Step 4: Verify both functions exist
     result4 = await agent.invoke(
-        "Use daytona_grep to search for 'export async function' in /workspace/nextjs-app/src/lib/api-client.ts"
+        "Use grep to search for 'export async function' in /workspace/nextjs-app/src/lib/api-client.ts"
     )
     assert len(result4.tools_started()) >= 1
 
@@ -661,7 +661,7 @@ async def test_final_project_structure_summary(sandbox_id):
     """Verify the final project has all expected files."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_shell to run: find /workspace/nextjs-app -type f -name '*.ts' -o -name '*.tsx' -o -name '*.json' | sort"
+        "Use shell to run: find /workspace/nextjs-app -type f -name '*.ts' -o -name '*.tsx' -o -name '*.json' | sort"
     )
     started = result.tools_started()
     assert len(started) >= 1

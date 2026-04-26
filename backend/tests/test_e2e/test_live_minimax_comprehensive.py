@@ -55,12 +55,12 @@ async def _invoke_with_sandbox_agent(
     return result
 
 
-def _assert_daytona_tools_used(result) -> None:
-    """If any tools were called, assert at least one is a daytona_ tool."""
+def _assert_sandbox_tools_used(result) -> None:
+    """If any tools were called, assert at least one sandbox tool was used."""
     tool_started = result.tools_started()
     if tool_started:
-        daytona_tools = [t for t in result.tool_names if t.startswith("daytona_")]
-        assert len(daytona_tools) >= 1, f"Expected at least one daytona tool, got: {result.tool_names}"
+        sandbox_tools = [t for t in result.tool_names if t in {"write_file", "read_file", "shell"}]
+        assert len(sandbox_tools) >= 1, f"Expected at least one sandbox tool, got: {result.tool_names}"
 
 
 # ===========================================================================
@@ -81,16 +81,16 @@ class TestToolCallingAndSkillLoading:
     # -- 1a: Sandbox tool execution --
 
     @pytest.mark.asyncio
-    async def test_daytona_shell_tool_executes(self, sandbox):
-        """Model should invoke daytona_shell and return real output."""
+    async def test_shell_tool_executes(self, sandbox):
+        """Model should invoke shell and return real output."""
         result = await _invoke_with_sandbox_agent(
             sandbox,
-            system_prompt="You have a remote sandbox. Use daytona_shell to run commands. Always use tools.",
+            system_prompt="You have a remote sandbox. Use shell to run commands. Always use tools.",
             message="Run this exact command in the sandbox: echo 'TOOL_CALL_E2E_PASS'",
         )
         # Check tool events — tool may or may not be used depending on model behavior
         if result.tools_started():
-            assert any("daytona" in t for t in result.tool_names), f"No daytona tool used: {result.tool_names}"
+            assert any(t in {"write_file", "read_file", "shell"} for t in result.tool_names), f"No sandbox tool used: {result.tool_names}"
 
     @pytest.mark.asyncio
     async def test_daytona_write_and_read_file(self, sandbox):
@@ -98,12 +98,12 @@ class TestToolCallingAndSkillLoading:
         result = await _invoke_with_sandbox_agent(
             sandbox,
             system_prompt=(
-                "You have sandbox access via daytona_write_file and daytona_read_file. "
+                "You have sandbox access via write_file and read_file. "
                 "Always use the tools, never simulate."
             ),
             message="Write the text 'E2E_FILE_TEST' to /workspace/e2e_check.txt, then read it back and tell me the content.",
         )
-        _assert_daytona_tools_used(result)
+        _assert_sandbox_tools_used(result)
 
     # -- 1b: Skill loading --
 
@@ -144,7 +144,7 @@ class TestToolCallingAndSkillLoading:
         """Model should handle multiple tool calls in a single turn."""
         result = await _invoke_with_sandbox_agent(
             sandbox,
-            system_prompt="Use daytona_shell for all commands. Execute every step.",
+            system_prompt="Use shell for all commands. Execute every step.",
             message="Run these two commands in the sandbox: 'echo FIRST' and then 'echo SECOND'",
         )
         # Model should have at least attempted tool calls
@@ -370,8 +370,8 @@ class TestComplexLongTasks:
         result = await _invoke_with_sandbox_agent(
             sandbox,
             system_prompt=(
-                "You have sandbox access. Use daytona_write_file to write files and "
-                "daytona_shell to run them. Execute ALL requested steps using tools."
+                "You have sandbox access. Use write_file to write files and "
+                "shell to run them. Execute ALL requested steps using tools."
             ),
             message=(
                 "Do these steps in the sandbox:\n"
@@ -380,7 +380,7 @@ class TestComplexLongTasks:
                 "3. Tell me the output"
             ),
         )
-        _assert_daytona_tools_used(result)
+        _assert_sandbox_tools_used(result)
 
     @pytest.mark.asyncio
     async def test_multi_step_file_pipeline(self, sandbox):
@@ -388,8 +388,8 @@ class TestComplexLongTasks:
         await _invoke_with_sandbox_agent(
             sandbox,
             system_prompt=(
-                "You are a coding assistant with sandbox access. Use daytona_shell, "
-                "daytona_write_file, and daytona_read_file tools. Execute every step."
+                "You are a coding assistant with sandbox access. Use shell, "
+                "write_file, and read_file tools. Execute every step."
             ),
             message=(
                 "In the sandbox:\n"
@@ -403,7 +403,7 @@ class TestComplexLongTasks:
     async def test_tool_error_handling(self, sandbox):
         """Model should handle tool errors gracefully."""
         agent = create_eval_agent(
-            system_prompt="Use daytona_shell for commands. If a command fails, explain the error.",
+            system_prompt="Use shell for commands. If a command fails, explain the error.",
             sandbox_id=sandbox["id"],
         )
         result = await agent.invoke(
@@ -420,7 +420,7 @@ class TestComplexLongTasks:
         """Sequential tool calls should see each other's results in the sandbox."""
         await _invoke_with_sandbox_agent(
             sandbox,
-            system_prompt="Use daytona_shell for all commands.",
+            system_prompt="Use shell for all commands.",
             message=(
                 "In the sandbox, run these commands one after another:\n"
                 "1. echo 'STATE_TEST' > /workspace/state_test.txt\n"
@@ -434,7 +434,7 @@ class TestComplexLongTasks:
         """Model should handle large tool output without crashing."""
         await _invoke_with_sandbox_agent(
             sandbox,
-            system_prompt="Use daytona_shell for commands.",
+            system_prompt="Use shell for commands.",
             message="Run in the sandbox: seq 1 200",
         )
 

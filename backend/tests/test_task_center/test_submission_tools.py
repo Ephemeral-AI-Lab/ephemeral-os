@@ -1,4 +1,4 @@
-"""Unit tests for the submission tools."""
+"""Unit tests for the mode tools."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ import pytest
 from task_center.graph import TaskGraph
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.runtime import ExecutionMetadata
-from tools.submission.submit_continue_to_work import (
+from tools.mode_tool.submit_continue_to_work import (
     ContinueToWorkInput,
     submit_continue_to_work,
 )
-from tools.submission.submit_plan_handoff import (
+from tools.mode_tool.submit_plan_handoff import (
     PlanHandoffInput,
     submit_plan_handoff,
 )
-from tools.submission.submit_task_completion import (
+from tools.mode_tool.submit_task_completion import (
     TaskCompletionInput,
     submit_task_completion,
 )
@@ -94,8 +94,8 @@ async def test_plan_handoff_happy_path() -> None:
     arg = PlanHandoffInput(
         tasks=[{"id": "A"}, {"id": "B", "deps": ["A"]}],
         task_specs={
-            "A": {"title": "A", "spec": "..."},
-            "B": {"title": "B", "spec": "..."},
+            "A": {"title": "A", "task_input": "..."},
+            "B": {"title": "B", "task_input": "..."},
         },
         acceptance_criteria="Both A and B complete.",
         handoff_note="A then B; risk: B depends on A's wiring.",
@@ -114,7 +114,7 @@ async def test_plan_handoff_requires_non_empty_note() -> None:
     with pytest.raises(ValidationError):
         PlanHandoffInput(
             tasks=[{"id": "A"}],
-            task_specs={"A": {"title": "A", "spec": "..."}},
+            task_specs={"A": {"title": "A", "task_input": "..."}},
             acceptance_criteria="x",
             handoff_note="",
         )
@@ -130,8 +130,8 @@ async def test_plan_handoff_rejects_cycle() -> None:
             {"id": "B", "deps": ["A"]},
         ],
         task_specs={
-            "A": {"title": "A", "spec": "..."},
-            "B": {"title": "B", "spec": "..."},
+            "A": {"title": "A", "task_input": "..."},
+            "B": {"title": "B", "task_input": "..."},
         },
         acceptance_criteria="x",
         handoff_note="cycle test",

@@ -1,4 +1,4 @@
-"""Live process-audited tests for daytona_delete_file and daytona_move_file.
+"""Live process-audited tests for delete_file and move_file.
 
 Spawns a single Daytona sandbox, a single CI service, and drives delete/move
 tools under concurrency to verify the audited exec workflow:
@@ -37,10 +37,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.delete_move_tool import (
-    daytona_delete_file,
-    daytona_move_file,
-)
+from tools.daytona_toolkit.delete_file_tool import delete_file
+from tools.daytona_toolkit.move_file_tool import move_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -278,7 +276,7 @@ async def _run_mixed_many(
 
 
 # ---------------------------------------------------------------------------
-# daytona_delete_file
+# delete_file
 # ---------------------------------------------------------------------------
 
 
@@ -292,7 +290,7 @@ def test_live_concurrent_delete_same_file_leaves_path_absent(live_env: LiveEnv):
     call_kwargs = [{"path": target} for _ in range(12)]
 
     results = asyncio.run(
-        _run_many(env, svc, daytona_delete_file, call_kwargs, concurrency=12, timeout_s=180)
+        _run_many(env, svc, delete_file, call_kwargs, concurrency=12, timeout_s=180)
     )
 
     successes = [
@@ -331,7 +329,7 @@ def test_live_concurrent_delete_disjoint_all_succeed(live_env: LiveEnv):
         {"path": f"{env.repo_root}/disjoint/del_{i}.txt"} for i in range(N)
     ]
     results = asyncio.run(
-        _run_many(env, svc, daytona_delete_file, call_kwargs, concurrency=20, timeout_s=180)
+        _run_many(env, svc, delete_file, call_kwargs, concurrency=20, timeout_s=180)
     )
 
     successes = sum(1 for r in results if not r["is_error"] and r["payload"].get("status") == "deleted")
@@ -341,7 +339,7 @@ def test_live_concurrent_delete_disjoint_all_succeed(live_env: LiveEnv):
 
 
 # ---------------------------------------------------------------------------
-# daytona_move_file
+# move_file
 # ---------------------------------------------------------------------------
 
 
@@ -357,7 +355,7 @@ def test_live_concurrent_move_same_src_exactly_one_winner(live_env: LiveEnv):
         for i in range(10)
     ]
     results = asyncio.run(
-        _run_many(env, svc, daytona_move_file, call_kwargs, concurrency=10, timeout_s=180)
+        _run_many(env, svc, move_file, call_kwargs, concurrency=10, timeout_s=180)
     )
 
     successes = [r for r in results if not r["is_error"] and r["payload"].get("status") == "moved"]
@@ -401,7 +399,7 @@ def test_live_concurrent_move_disjoint_all_succeed(live_env: LiveEnv):
         for i in range(N)
     ]
     results = asyncio.run(
-        _run_many(env, svc, daytona_move_file, call_kwargs, concurrency=15, timeout_s=180)
+        _run_many(env, svc, move_file, call_kwargs, concurrency=15, timeout_s=180)
     )
 
     successes = sum(
@@ -445,12 +443,12 @@ def test_live_delete_and_move_race_on_same_source(live_env: LiveEnv):
         ctx1 = env.make_ctx(svc, agent_run_id="delete-race")
         ctx2 = env.make_ctx(svc, agent_run_id="move-race")
         delete_task = _invoke(
-            daytona_delete_file,
+            delete_file,
             {"path": f"{env.repo_root}/race/payload.txt"},
             ctx1,
         )
         move_task = _invoke(
-            daytona_move_file,
+            move_file,
             {
                 "src_path": f"{env.repo_root}/race/payload.txt",
                 "target_path": f"{env.repo_root}/race/moved.txt",
@@ -526,7 +524,7 @@ PY
         calls.append(
             (
                 "dir_move",
-                daytona_move_file,
+                move_file,
                 {
                     "src_path": f"{env.repo_root}/mixed/move_src/tree_{i}",
                     "target_path": f"{env.repo_root}/mixed/move_dst/tree_{i}",
@@ -538,7 +536,7 @@ PY
         calls.append(
             (
                 "dir_delete",
-                daytona_delete_file,
+                delete_file,
                 {
                     "path": f"{env.repo_root}/mixed/delete_src/tree_{i}",
                     "is_folder": True,
@@ -549,7 +547,7 @@ PY
         calls.append(
             (
                 "file_move",
-                daytona_move_file,
+                move_file,
                 {
                     "src_path": f"{env.repo_root}/mixed/file_move_src/file_{i}.txt",
                     "target_path": f"{env.repo_root}/mixed/file_move_dst/file_{i}.txt",
@@ -560,7 +558,7 @@ PY
         calls.append(
             (
                 "file_delete",
-                daytona_delete_file,
+                delete_file,
                 {"path": f"{env.repo_root}/mixed/file_delete_src/file_{i}.txt"},
             )
         )

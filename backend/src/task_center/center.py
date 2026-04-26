@@ -3,7 +3,7 @@
 Each user query routes through a fresh ``TaskCenter.run_query``. The class owns:
 
 - :class:`TaskGraph` — the in-memory task tree
-- the four submission-tool entry points (called from ``tools.submission``)
+- the four mode-tool entry points (called from ``tools.mode_tool``)
 - a wakeup event that the submission methods set after every state change
 - a dispatcher loop that spawns one agent coroutine per ready task
 """
@@ -153,7 +153,7 @@ class TaskCenter:
         return task
 
     # ------------------------------------------------------------------ #
-    # Submission entry points (called from submission tools)             #
+    # Mode tool entry points (called from mode tools)             #
     # ------------------------------------------------------------------ #
 
     def submit_task_completion(self, task_id: TaskId, summary: str) -> None:
@@ -192,7 +192,7 @@ class TaskCenter:
         for entry in tasks:
             tid = entry["id"]
             task_spec = task_specs[tid]
-            task_input = task_spec.get("task_input", task_spec.get("spec"))
+            task_input = task_spec.get("task_input")
             if not isinstance(task_input, str) or not task_input:
                 raise TaskCenterError(
                     f"submit_plan_handoff: task_specs[{tid!r}] missing task_input"

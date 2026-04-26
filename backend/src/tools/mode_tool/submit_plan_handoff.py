@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from task_center.errors import PlanValidationError
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from tools.submission._models import SubmissionOutput, TaskDependencyEntry, TaskSpec
+from tools.mode_tool._models import SubmissionOutput, TaskDependencyEntry, TaskSpec
 
 
 class PlanHandoffInput(BaseModel):
@@ -23,8 +23,7 @@ class PlanHandoffInput(BaseModel):
     task_specs: dict[str, TaskSpec] = Field(
         ...,
         description=(
-            "Map of task id -> {title, task_input}. Every entry id must be a key here. "
-            "The legacy {title, spec} shape is still accepted."
+            "Map of task id -> {title, task_input}. Every entry id must be a key here."
         ),
     )
     acceptance_criteria: str = Field(

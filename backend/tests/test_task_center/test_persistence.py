@@ -54,7 +54,7 @@ async def test_task_center_persists_request_run_tasks_and_graph() -> None:
         tc.submit_plan_handoff(
             task_id,
             [{"id": "child"}],
-            {"child": {"title": "Child", "spec": "child spec"}},
+            {"child": {"title": "Child", "task_input": "child spec"}},
             "child must pass",
             "handoff context",
         )

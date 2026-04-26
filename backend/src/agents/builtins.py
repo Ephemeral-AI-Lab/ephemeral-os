@@ -27,26 +27,26 @@ from agents.types import AgentDefinition, ModeDefinition
 # ---------------------------------------------------------------------------
 
 # Read-only tools available inside the secondary modes. The list intentionally
-# excludes ``daytona_shell`` (which can run arbitrary writes) and any
+# excludes ``shell`` (which can run arbitrary writes) and any
 # subagent-spawning tool — secondary modes are deliberately read-only.
 _READ_ONLY_INVESTIGATION_TOOLS: list[str] = [
-    "daytona_grep",
-    "daytona_glob",
-    "daytona_read_file",
+    "grep",
+    "glob",
+    "read_file",
     "ci_query_symbol",
     "ci_diagnostics",
     "ci_workspace_structure",
 ]
 
 _DIRECT_WORK_TOOLS: list[str] = [
-    "daytona_grep",
-    "daytona_glob",
-    "daytona_read_file",
-    "daytona_write_file",
-    "daytona_edit_file",
-    "daytona_delete_file",
-    "daytona_move_file",
-    "daytona_shell",
+    "grep",
+    "glob",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "delete_file",
+    "move_file",
+    "shell",
     "ci_status",
     "ci_query_symbol",
     "ci_diagnostics",

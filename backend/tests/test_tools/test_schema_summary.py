@@ -92,14 +92,15 @@ def test_schema_summary_omits_instruction_blocks(tmp_path):
     assert "  instructions:" not in summary
 
 
-def test_daytona_summary_lists_prefixed_tools_without_instruction_block(tmp_path):
+def test_sandbox_summary_lists_unprefixed_tools_without_instruction_block(tmp_path):
     tools = collect_schema_tools(cwd=tmp_path)
 
     summary = format_tool_schema_summary(tools, include_descriptions=True)
 
-    assert "Tool: daytona_write_file" in summary
-    assert "Tool: daytona_shell" in summary
-    assert "Tool: write_file\n" not in summary
+    assert "Tool: write_file" in summary
+    assert "Tool: shell" in summary
+    assert "Tool: daytona_write_file" not in summary
+    assert "  instructions:" not in summary
 
 
 def test_schema_summary_formats_literals_defaults_and_root_models():

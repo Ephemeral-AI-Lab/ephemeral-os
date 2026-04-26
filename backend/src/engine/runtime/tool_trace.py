@@ -76,11 +76,11 @@ def record_tool_trace(
         _increment_trace_counter(metadata, "_ci_context_calls")
         _increment_trace_counter(metadata, "_ci_diagnostics_calls")
         return
-    if tool_name == "daytona_shell":
-        _increment_trace_counter(metadata, "_daytona_shell_calls")
+    if tool_name == "shell":
+        _increment_trace_counter(metadata, "_shell_calls")
         return
-    if tool_name == "daytona_read_file":
-        _increment_trace_counter(metadata, "_daytona_read_file_calls")
+    if tool_name == "read_file":
+        _increment_trace_counter(metadata, "_read_file_calls")
         _append_trace_values(
             metadata,
             "_read_paths_this_turn",

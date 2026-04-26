@@ -11,7 +11,7 @@ Usage::
         sandbox_id="sb-123",
     )
     result = await agent.invoke("Run tests in the sandbox")
-    assert "daytona_shell" in result.tool_names
+    assert "shell" in result.tool_names
 
     # For raw client access (streaming protocol tests):
     client = agent.api_client
@@ -375,14 +375,14 @@ class EvalAgent:
         # auto-loaded skills, the raw test system prompt.
         if allowed_tools is None:
             allowed_tools = [
-                "daytona_grep",
-                "daytona_glob",
-                "daytona_read_file",
-                "daytona_write_file",
-                "daytona_edit_file",
-                "daytona_delete_file",
-                "daytona_move_file",
-                "daytona_shell",
+                "grep",
+                "glob",
+                "read_file",
+                "write_file",
+                "edit_file",
+                "delete_file",
+                "move_file",
+                "shell",
                 "run_subagent",
             ]
         from agents.types import ModeDefinition

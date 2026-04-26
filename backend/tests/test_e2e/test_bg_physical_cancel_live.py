@@ -22,7 +22,7 @@ You are test-cancel-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_shell to run commands, daytona_write_file to create files.
+- Use shell to run commands, write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use wait_background_tasks to wait on background tasks.
 - Use cancel_background_task to cancel running background tasks.
@@ -77,8 +77,8 @@ class TestPhysicalCancelKillsProcess:
         # --- Assertions ---
 
         # 1. Background task was launched
-        assert result.has_tool_with_background("daytona_shell"), \
-            f"Expected daytona_shell with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("shell"), \
+            f"Expected shell with background: true. Got: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got: {result.tool_names}"
 
@@ -154,8 +154,8 @@ class TestPhysicalCancelPidGone:
         # --- Assertions ---
 
         # 1. Background task was launched and cancelled
-        assert result.has_tool_with_background("daytona_shell"), \
-            f"Expected daytona_shell with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("shell"), \
+            f"Expected shell with background: true. Got: {result.tool_calls}"
         cancel_calls = [tc for tc in result.tool_calls if tc.name == "cancel_background_task"]
         assert len(cancel_calls) >= 1, \
             f"Expected cancel_background_task. Got: {result.tool_names}"

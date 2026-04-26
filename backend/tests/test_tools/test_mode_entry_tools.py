@@ -23,8 +23,8 @@ from message.messages import ToolUseBlock
 from task_center.task import Status, Task
 from tools.core.base import ToolExecutionContext, ToolRegistry
 from tools.core.runtime import ExecutionMetadata
-from tools.submission.enter_plan_for_handoff import enter_plan_for_handoff
-from tools.submission.enter_prepare_continue_to_work import (
+from tools.mode_tool.enter_plan_for_handoff import enter_plan_for_handoff
+from tools.mode_tool.enter_prepare_continue_to_work import (
     enter_prepare_continue_to_work,
 )
 

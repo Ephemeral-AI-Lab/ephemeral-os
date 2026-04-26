@@ -1,4 +1,4 @@
-"""Sandbox search command builders for Daytona file tools."""
+"""Sandbox search command builders for file tools."""
 
 from __future__ import annotations
 

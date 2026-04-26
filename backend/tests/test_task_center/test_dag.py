@@ -9,7 +9,7 @@ from task_center.dag import compile_dag
 
 
 def _specs(*ids: str) -> dict[str, dict[str, str]]:
-    return {tid: {"title": tid, "spec": "..."} for tid in ids}
+    return {tid: {"title": tid, "task_input": "..."} for tid in ids}
 
 
 def test_rejects_bare_strings() -> None:

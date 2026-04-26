@@ -7,7 +7,7 @@ this needs to:
 1. Look up the agent definition by ``task.role`` (executor / evaluator).
 2. Spawn/run via the server's ``execute_ephemeral_agent_run`` wrapper.
 3. Inject ``task_center``, ``task_id``, ``role`` into the agent's tool
-   metadata so the submission tools can call back into TaskCenter.
+   metadata so the mode tools can call back into TaskCenter.
 4. Forward events to the TaskCenter-owned callback (which the chat router
    connects to its SSE stream).
 """

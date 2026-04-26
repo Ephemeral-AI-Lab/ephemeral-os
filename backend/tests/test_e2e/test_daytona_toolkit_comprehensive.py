@@ -2,9 +2,9 @@
 """Comprehensive sandbox and CI tool tests — audited edits, LSP, CI, conflict resolution.
 
 Covers sandbox and CI concerns:
-  Audited Editing:     daytona_edit_file with Arbiter ledger/lock/conflict
+  Audited Editing:     edit_file with Arbiter ledger/lock/conflict
   CI tools:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
-  daytona_shell:             daytona_shell multi-step execution
+  shell:             shell multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
   Conflict Resolution: Arbiter, TimeMachine, Ledger, audited edit flow
@@ -305,12 +305,12 @@ def _assert_success(result) -> None:
 
 
 class TestDaytonaEditTool:
-    """Test daytona_edit_file: audited search-and-replace."""
+    """Test edit_file: audited search-and-replace."""
 
     def _tool(self):
-        from tools.daytona_toolkit.edit_tool import daytona_edit_file
+        from tools.daytona_toolkit.edit_tool import edit_file
 
-        return daytona_edit_file
+        return edit_file
 
     def test_edit_basic_replace(self):
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "def foo():\n    return 1"})
@@ -528,7 +528,7 @@ class TestDaytonaCiTools:
 
 
 # ===========================================================================
-# 12. DaytonaShellTool
+# 12. ShellTool
 # ===========================================================================
 
 
@@ -554,14 +554,14 @@ class TestDaytonaToolIntegration:
         assert len(tools) == 8, f"Expected 8 tools, got {len(tools)}: {names}"
 
         expected = {
-            "daytona_shell",
-            "daytona_read_file",
-            "daytona_write_file",
-            "daytona_grep",
-            "daytona_glob",
-            "daytona_edit_file",
-            "daytona_delete_file",
-            "daytona_move_file",
+            "shell",
+            "read_file",
+            "write_file",
+            "grep",
+            "glob",
+            "edit_file",
+            "delete_file",
+            "move_file",
         }
         assert set(names) == expected, (
             f"Missing: {expected - set(names)}, Extra: {set(names) - expected}"
@@ -576,7 +576,7 @@ class TestDaytonaToolIntegration:
 
     def test_get_tool_by_name(self):
         by_name = {tool.name: tool for tool in self._tools()}
-        for name in ["daytona_shell", "daytona_edit_file"]:
+        for name in ["shell", "edit_file"]:
             tool = by_name.get(name)
             assert tool is not None, f"Tool {name} not found"
             assert tool.name == name
@@ -596,8 +596,8 @@ class TestDaytonaToolIntegration:
         registry = ToolRegistry()
         registry.register_many(self._tools())
 
-        assert registry.get("daytona_shell") is not None
-        assert registry.get("daytona_shell") is not None
+        assert registry.get("shell") is not None
+        assert registry.get("shell") is not None
         assert len(registry.to_api_schema()) == 8
 
     def test_restrict_preserves_sandbox_tools(self):
@@ -606,10 +606,10 @@ class TestDaytonaToolIntegration:
 
         registry = ToolRegistry()
         registry.register_many(self._tools())
-        registry.restrict_to_tools(["daytona_shell", "daytona_read_file"])
+        registry.restrict_to_tools(["shell", "read_file"])
 
         assert len(registry.list_tools()) == 2
-        assert registry.get("daytona_shell") is not None
+        assert registry.get("shell") is not None
 
 
 # ===========================================================================
@@ -644,7 +644,7 @@ class TestCIIntegrationHelpers:
     def test_ci_write_required_result_marks_disabled_write(self):
         from tools.core.ci_runtime import ci_write_required_result
 
-        result = ci_write_required_result("daytona_edit_file", "/test.py")
+        result = ci_write_required_result("edit_file", "/test.py")
         assert result.is_error
         assert result.metadata["ci_required"] is True
         assert "Direct sandbox write fallback is disabled" in result.output
@@ -701,7 +701,7 @@ class TestDaytonaToolLive:
     # -- Live bash --
 
     def test_live_bash_echo(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -710,7 +710,7 @@ class TestDaytonaToolLive:
         assert "LIVE_BASH_OK" in result.output
 
     def test_live_bash_python_version(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -719,7 +719,7 @@ class TestDaytonaToolLive:
         assert "Python" in result.output
 
     def test_live_bash_nonzero_exit(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -733,7 +733,7 @@ class TestDaytonaToolLive:
     # so we use bash for write+read in a single call where needed.
 
     def test_live_write_then_read(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -754,7 +754,7 @@ class TestDaytonaToolLive:
     # -- Live list files --
 
     def test_live_list_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         tool = DaytonaBashTool
@@ -764,7 +764,7 @@ class TestDaytonaToolLive:
     # -- Live grep --
 
     def test_live_grep_etc(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -783,7 +783,7 @@ class TestDaytonaToolLive:
     # -- Live glob --
 
     def test_live_glob_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -803,7 +803,7 @@ class TestDaytonaToolLive:
     # -- Live edit --
 
     def test_live_edit_file(self, live_sandbox):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaBashTool
+        from tools.daytona_toolkit.shell_tool import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -835,12 +835,12 @@ class TestToolSelectionAndOrdering:
     """
 
     EXPECTED_TOOLS = {
-        "daytona_shell",
-        "daytona_read_file",
-        "daytona_write_file",
-        "daytona_grep",
-        "daytona_glob",
-        "daytona_edit_file",
+        "shell",
+        "read_file",
+        "write_file",
+        "grep",
+        "glob",
+        "edit_file",
     }
 
     def _get_tools(self):
@@ -871,16 +871,16 @@ class TestToolSelectionAndOrdering:
 
     def test_read_file_before_write_file(self):
         names = self._get_tool_names()
-        assert names.index("daytona_read_file") < names.index("daytona_write_file")
+        assert names.index("read_file") < names.index("write_file")
 
     def test_grep_before_write(self):
         names = self._get_tool_names()
-        assert names.index("daytona_grep") < names.index("daytona_write_file")
+        assert names.index("grep") < names.index("write_file")
 
     def test_bash_is_last(self):
         """Shell execution should be the last tool (most dangerous)."""
         names = self._get_tool_names()
-        assert names[-1] == "daytona_shell"
+        assert names[-1] == "shell"
 
     # -- Schema validation --
 
@@ -899,28 +899,28 @@ class TestToolSelectionAndOrdering:
             )
 
     def test_shell_exposes_non_null_command_schema(self):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaShellTool
+        from tools.daytona_toolkit.shell_tool import shell as ShellTool
 
-        schema = DaytonaShellTool.to_api_schema()["input_schema"]
+        schema = ShellTool.to_api_schema()["input_schema"]
         assert schema["properties"]["command"]["type"] == "string"
         assert schema["properties"]["command"]["minLength"] == 1
 
     def test_read_file_requires_file_path(self):
-        from tools.daytona_toolkit.tools import daytona_read_file as DaytonaFileReadTool
+        from tools.daytona_toolkit.read_file_tool import read_file as FileReadTool
 
-        schema = DaytonaFileReadTool.to_api_schema()["input_schema"]
+        schema = FileReadTool.to_api_schema()["input_schema"]
         assert "file_path" in schema.get("required", [])
 
     def test_write_file_requires_file_path_and_content(self):
-        from tools.daytona_toolkit.tools import daytona_write_file as DaytonaFileWriteTool
+        from tools.daytona_toolkit.write_file_tool import write_file as FileWriteTool
 
-        schema = DaytonaFileWriteTool.to_api_schema()["input_schema"]
+        schema = FileWriteTool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
         assert "content" in required
 
     def test_edit_requires_file_path_old_text_new_text(self):
-        from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+        from tools.daytona_toolkit.edit_tool import edit_file as _edit_tool
 
         schema = _edit_tool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
@@ -929,7 +929,7 @@ class TestToolSelectionAndOrdering:
         assert "new_text" in schema.get("properties", {})
 
     def test_ci_query_symbol_requires_query(self):
-        from tools.ci_toolkit.query_tools import ci_query_symbol
+        from tools.ci_toolkit.ci_query_symbol_tool import ci_query_symbol
 
         schema = ci_query_symbol.to_api_schema()["input_schema"]
         required = schema.get("required", [])
@@ -944,9 +944,9 @@ class TestToolSelectionAndOrdering:
         assert "line" not in required
 
     def test_shell_requires_command(self):
-        from tools.daytona_toolkit.shell_tool import daytona_shell as DaytonaShellTool
+        from tools.daytona_toolkit.shell_tool import shell as ShellTool
 
-        schema = DaytonaShellTool.to_api_schema()["input_schema"]
+        schema = ShellTool.to_api_schema()["input_schema"]
         assert schema["oneOf"] == [{"required": ["command"]}, {"required": ["code"]}]
 
 
@@ -1464,7 +1464,7 @@ class TestAuditedEditFlow:
         return ctx, sandbox, ci_service.arbiter, ci_service.time_machine
 
     def _edit(self, ctx, file_path, old_text, new_text, **kwargs):
-        from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+        from tools.daytona_toolkit.edit_tool import edit_file as _edit_tool
 
         return _run(
             _edit_tool.execute(
@@ -1514,7 +1514,7 @@ class TestAuditedEditFlow:
 
     def test_audited_edit_without_ci_returns_error(self):
         """Coordinated edits must fail instead of raw-writing without CI."""
-        from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+        from tools.daytona_toolkit.edit_tool import edit_file as _edit_tool
 
         sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
         ctx = _make_context(sandbox)  # no ci_service

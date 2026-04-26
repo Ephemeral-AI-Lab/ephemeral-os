@@ -1,4 +1,4 @@
-"""Shared commit helpers for Daytona write tools."""
+"""Shared commit helpers for sandbox write tools."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ _BATCHERS: dict[tuple[int, int], "_CommitBatcher"] = {}
 
 @dataclass(frozen=True, kw_only=True)
 class FileChangeResult(Generic[T]):
-    """Normalized result for Daytona file-changing tools."""
+    """Normalized result for file-changing tools."""
 
     success: bool
     changed_paths: tuple[str, ...]
@@ -248,7 +248,7 @@ async def submit_shell_cmd(
     attribute_changes: bool = True,
     on_progress_line: Callable[[str], None] | None = None,
 ) -> FileChangeResult[SimpleNamespace]:
-    """Run a daytona_shell command through the CI service."""
+    """Run a shell command through the CI service."""
     from tools.core.ci_runtime import get_ci_service
 
     svc = get_ci_service(context)

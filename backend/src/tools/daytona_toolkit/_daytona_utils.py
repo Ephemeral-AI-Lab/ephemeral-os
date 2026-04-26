@@ -1,4 +1,4 @@
-"""Shared utilities for Daytona sandbox tools — extracted from tools.py to reduce duplication."""
+"""Shared utilities for sandbox tools."""
 
 from __future__ import annotations
 
@@ -127,8 +127,8 @@ def _extract_exit_code(
 
 def _sandbox_context_error(detail: str | None = None) -> str:
     base = (
-        "No Daytona sandbox in context. "
-        "Ensure Daytona context was initialized with a valid sandbox_id."
+        "No sandbox in context. "
+        "Ensure tool context was initialized with a valid sandbox_id."
     )
     if detail:
         return f"{base} Last recovery error: {detail}"
@@ -191,7 +191,7 @@ async def _recover_sandbox(context: ToolExecutionContext, exc: Exception) -> Any
         raise exc
     context.metadata[_SANDBOX_RECOVERY_KEY] = attempts + 1
     logger.warning(
-        "Recovering Daytona sandbox %s after tool failure: %s",
+        "Recovering sandbox %s after tool failure: %s",
         sandbox_id,
         exc,
     )
@@ -203,7 +203,7 @@ async def _recover_sandbox(context: ToolExecutionContext, exc: Exception) -> Any
         context.metadata["daytona_sandbox"] = None
         context.metadata["ci_service"] = None
     recovered = await _attach_sandbox_to_context(context)
-    logger.warning("Recovered Daytona sandbox %s and retrying tool once", sandbox_id)
+    logger.warning("Recovered sandbox %s and retrying tool once", sandbox_id)
     return recovered
 
 
@@ -217,7 +217,7 @@ def _path_error(exc: Exception, path: str) -> str | None:
     msg = str(exc)
     if isinstance(exc, FileNotFoundError) or "No such file or directory" in msg:
         return f"Path does not exist: {path}"
-    # Daytona SDK wraps errors and may lose the inner message
+    # The sandbox SDK wraps errors and may lose the inner message.
     _sdk_prefixes = ("Failed to list files", "Failed to upload files", "Failed to download")
     if any(msg.startswith(p) for p in _sdk_prefixes) and msg.rstrip().endswith(":"):
         return f"Path does not exist: {path}"

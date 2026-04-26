@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from tools.submission._models import SubmissionOutput
+from tools.mode_tool._models import SubmissionOutput
 
 
 class ContinueToWorkInput(BaseModel):
     task_input: str = Field(
         ...,
         min_length=1,
-        validation_alias=AliasChoices("task_input", "summary"),
         description=(
             "Input for the continuation executor: which acceptance_criteria are "
-            "not yet satisfied, what gap remains, and what to focus on. The "
-            "legacy 'summary' key is accepted."
+            "not yet satisfied, what gap remains, and what to focus on."
         ),
     )
 

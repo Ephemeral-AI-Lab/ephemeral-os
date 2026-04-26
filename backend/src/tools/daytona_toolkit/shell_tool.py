@@ -1,4 +1,4 @@
-"""Daytona shell tool."""
+"""Shell tool."""
 
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from tools.daytona_toolkit._daytona_utils import (
 _SHELL_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.shell_default_timeout
 
 
-class DaytonaShellInput(BaseModel):
-    """Input for daytona_shell."""
+class ShellInput(BaseModel):
+    """Input for shell."""
 
     command: str = Field(
         ...,
@@ -38,14 +38,14 @@ class DaytonaShellInput(BaseModel):
     )
 
 
-class DaytonaShellCommandOutput(BaseModel):
+class ShellCommandOutput(BaseModel):
     command: str = Field(..., description="Shell command that was run.")
     exit_code: int | str = Field(..., description="Command exit code.")
     stdout: str = Field(..., description="Captured stdout.")
     stderr: str = Field(..., description="Captured stderr.")
 
 
-class DaytonaShellOutput(BaseModel):
+class ShellOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     status: str = Field(..., description="Execution status: ok or error.")
     files_written: int = Field(
@@ -57,7 +57,7 @@ class DaytonaShellOutput(BaseModel):
         default_factory=list,
         description="Compact summaries of the shell command.",
     )
-    shell_outputs: list[DaytonaShellCommandOutput] = Field(
+    shell_outputs: list[ShellCommandOutput] = Field(
         default_factory=list,
         description="Captured output for the shell command.",
     )
@@ -70,7 +70,7 @@ def _format_transport_exception(exc: Exception) -> str:
     if not detail:
         detail = repr(exc)
     if detail.rstrip().endswith(":"):
-        detail = f"{detail} (no additional detail from Daytona SDK)"
+        detail = f"{detail} (no additional detail from sandbox SDK)"
     return f"{detail} [exception_type={type(exc).__name__}]"
 
 
@@ -116,7 +116,7 @@ async def _exec_shell_command(
     change = await submit_shell_cmd(
         context,
         command=_wrap_bash_command(command, cwd=cwd),
-        description="daytona_shell",
+        description="shell",
         timeout=timeout,
         sandbox=sandbox,
         attribute_changes=attribute_changes,
@@ -186,7 +186,7 @@ async def _run_shell_with_recovery(
                 ToolResult(
                     output=_format_execution_failure(
                         recovery_exc,
-                        operation="daytona_shell",
+                        operation="shell",
                         command=command,
                         timeout=timeout,
                     ),
@@ -261,7 +261,7 @@ def _build_tool_output(
 
 def _ci_required_result() -> ToolResult:
     return ci_required_result(
-        "daytona_shell",
+        "shell",
         "Shell command execution is disabled without CI service.",
     )
 
@@ -285,14 +285,14 @@ def _ambient_changed_paths_from_shell(shell_result: dict[str, object]) -> list[s
 
 
 @tool(
-    name="daytona_shell",
+    name="shell",
     description="Run a shell command in the sandbox.",
     short_description="Run a shell command from the repo root.",
-    input_model=DaytonaShellInput,
-    output_model=DaytonaShellOutput,
+    input_model=ShellInput,
+    output_model=ShellOutput,
     background="optional",
 )
-async def daytona_shell(
+async def shell(
     command: str,
     timeout: int = _SHELL_DEFAULT_TIMEOUT,
     *,

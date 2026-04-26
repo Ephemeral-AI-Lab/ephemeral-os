@@ -247,8 +247,8 @@ def test_plan_handoff_persists_children_acceptance_criteria_and_note() -> None:
         root.id,
         [{"id": "left"}, {"id": "right", "deps": ["left"]}],
         {
-            "left": {"title": "Left", "spec": "left work"},
-            "right": {"title": "Right", "spec": "right work"},
+            "left": {"title": "Left", "task_input": "left work"},
+            "right": {"title": "Right", "task_input": "right work"},
         },
         "children pass",
         "handoff note",
@@ -299,8 +299,8 @@ async def test_dispatcher_adds_evaluator_after_direct_children_finish() -> None:
             task_id,
             [{"id": "left"}, {"id": "right"}],
             {
-                "left": {"title": "Left", "spec": "left work"},
-                "right": {"title": "Right", "spec": "right work"},
+                "left": {"title": "Left", "task_input": "left work"},
+                "right": {"title": "Right", "task_input": "right work"},
             },
             "children pass",
             "handoff note",
@@ -390,8 +390,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
             task_id,
             [{"id": "discovery"}, {"id": "delivery", "deps": ["discovery"]}],
             {
-                "discovery": {"title": "Discovery", "spec": "discover"},
-                "delivery": {"title": "Delivery", "spec": "deliver"},
+                "discovery": {"title": "Discovery", "task_input": "discover"},
+                "delivery": {"title": "Delivery", "task_input": "deliver"},
             },
             "root accepted",
             "root handoff",
@@ -402,8 +402,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
             task_id,
             [{"id": "scan"}, {"id": "synthesize", "deps": ["scan"]}],
             {
-                "scan": {"title": "Scan", "spec": "scan"},
-                "synthesize": {"title": "Synthesize", "spec": "synthesize"},
+                "scan": {"title": "Scan", "task_input": "scan"},
+                "synthesize": {"title": "Synthesize", "task_input": "synthesize"},
             },
             "discovery accepted",
             "discovery handoff",
@@ -417,8 +417,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
                 {"id": "synthesize-review", "deps": ["synthesize-draft"]},
             ],
             {
-                "synthesize-draft": {"title": "Draft", "spec": "draft"},
-                "synthesize-review": {"title": "Review", "spec": "review"},
+                "synthesize-draft": {"title": "Draft", "task_input": "draft"},
+                "synthesize-review": {"title": "Review", "task_input": "review"},
             },
             "synthesis accepted",
             "synthesis handoff",
@@ -429,8 +429,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
             task_id,
             [{"id": "draft-outline"}, {"id": "draft-body", "deps": ["draft-outline"]}],
             {
-                "draft-outline": {"title": "Draft outline", "spec": "outline"},
-                "draft-body": {"title": "Draft body", "spec": "body"},
+                "draft-outline": {"title": "Draft outline", "task_input": "outline"},
+                "draft-body": {"title": "Draft body", "task_input": "body"},
             },
             "draft accepted",
             "draft handoff",
@@ -444,8 +444,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
                 {"id": "body-section-b", "deps": ["body-section-a"]},
             ],
             {
-                "body-section-a": {"title": "Body section A", "spec": "section a"},
-                "body-section-b": {"title": "Body section B", "spec": "section b"},
+                "body-section-a": {"title": "Body section A", "task_input": "section a"},
+                "body-section-b": {"title": "Body section B", "task_input": "section b"},
             },
             "body accepted",
             "body handoff",
@@ -458,7 +458,7 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
             {
                 "body-final-copy": {
                     "title": "Body final copy",
-                    "spec": "final copy",
+                    "task_input": "final copy",
                 },
             },
             "final body accepted",
@@ -473,8 +473,8 @@ async def test_nested_plan_handoffs_persist_deep_task_graph() -> None:
                 {"id": "verification", "deps": ["implementation"]},
             ],
             {
-                "implementation": {"title": "Implementation", "spec": "build"},
-                "verification": {"title": "Verification", "spec": "verify"},
+                "implementation": {"title": "Implementation", "task_input": "build"},
+                "verification": {"title": "Verification", "task_input": "verify"},
             },
             "delivery accepted",
             "delivery handoff",

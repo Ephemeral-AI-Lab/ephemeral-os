@@ -61,9 +61,9 @@ async def test_full_handoff_happy_path() -> None:
         {"id": "p2", "deps": ["p1a", "p1b"]},
     ]
     specs = {
-        "p1a": {"title": "P1A", "spec": "..."},
-        "p1b": {"title": "P1B", "spec": "..."},
-        "p2": {"title": "P2", "spec": "..."},
+        "p1a": {"title": "P1A", "task_input": "..."},
+        "p1b": {"title": "P1B", "task_input": "..."},
+        "p2": {"title": "P2", "task_input": "..."},
     }
 
     async def root_action(tc, tid):
@@ -104,7 +104,7 @@ async def test_continue_to_work_propagates_through_evaluator() -> None:
     """Evaluator calls submit_continue_to_work; continuation closes the chain."""
 
     tasks = [{"id": "p1"}]
-    specs = {"p1": {"title": "P1", "spec": "..."}}
+    specs = {"p1": {"title": "P1", "task_input": "..."}}
 
     async def root_action(tc, tid):
         tc.submit_plan_handoff(tid, tasks, specs, "ac", "note")
@@ -150,11 +150,11 @@ async def test_recursive_opacity_parent_only_sees_direct_children() -> None:
 
     tasks_root = [{"id": "a"}, {"id": "b"}]
     specs_root = {
-        "a": {"title": "A", "spec": "..."},
-        "b": {"title": "B", "spec": "..."},
+        "a": {"title": "A", "task_input": "..."},
+        "b": {"title": "B", "task_input": "..."},
     }
     tasks_a = [{"id": "a1"}]
-    specs_a = {"a1": {"title": "A1", "spec": "..."}}
+    specs_a = {"a1": {"title": "A1", "task_input": "..."}}
 
     async def root_action(tc, tid):
         tc.submit_plan_handoff(tid, tasks_root, specs_root, "ac", "note")
@@ -208,7 +208,7 @@ async def test_dag_pipelining_launches_unblocked_task_while_sibling_runs() -> No
         {"id": "c", "deps": ["a", "b"]},
         {"id": "d", "deps": ["a"]},
     ]
-    specs = {tid: {"title": tid, "spec": "..."} for tid in ("a", "b", "c", "d")}
+    specs = {tid: {"title": tid, "task_input": "..."} for tid in ("a", "b", "c", "d")}
 
     b_can_finish = asyncio.Event()
     c_can_finish = asyncio.Event()
@@ -287,7 +287,7 @@ async def test_child_failure_fails_whole_team_run() -> None:
     """Any child failure closes the active root as FAILED instead of hanging."""
 
     tasks = [{"id": "child"}]
-    specs = {"child": {"title": "Child", "spec": "..."}}
+    specs = {"child": {"title": "Child", "task_input": "..."}}
 
     async def root_action(tc, tid):
         tc.submit_plan_handoff(tid, tasks, specs, "child must succeed", "note")
@@ -331,7 +331,7 @@ async def test_run_query_passes_sandbox_id_to_spawned_tasks() -> None:
 @pytest.mark.asyncio
 async def test_each_query_gets_fresh_graph_for_agent_supplied_child_ids() -> None:
     tasks = [{"id": "a"}]
-    specs = {"a": {"title": "A", "spec": "..."}}
+    specs = {"a": {"title": "A", "task_input": "..."}}
 
     async def root_action(tc, tid):
         tc.submit_plan_handoff(tid, tasks, specs, "a completes", "note")
@@ -372,7 +372,7 @@ async def test_plan_handoff_records_handoff_note_on_parent_and_evaluator() -> No
     """submit_plan_handoff always sets parent.handoff_note; the evaluator
     materialized after children finish inherits it."""
     tasks = [{"id": "p1"}]
-    specs = {"p1": {"title": "P1", "spec": "..."}}
+    specs = {"p1": {"title": "P1", "task_input": "..."}}
 
     async def root_action(tc, tid):
         tc.submit_plan_handoff(

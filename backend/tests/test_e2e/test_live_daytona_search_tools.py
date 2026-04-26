@@ -23,7 +23,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _build_write_text_file_command,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.tools import daytona_glob, daytona_grep
+from tools.daytona_toolkit.glob_tool import glob
+from tools.daytona_toolkit.grep_tool import grep
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -54,7 +55,7 @@ async def _exec_checked(async_sandbox: Any, command: str, *, timeout: int = 30) 
 
 @pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona credentials not configured")
 @pytest.mark.asyncio
-async def test_live_daytona_grep_and_glob_direct_tools() -> None:
+async def test_live_grep_and_glob_direct_tools() -> None:
     info = create_test_sandbox(name="search-tools-live")
     sandbox_id = info["id"]
     try:
@@ -99,8 +100,8 @@ async def test_live_daytona_grep_and_glob_direct_tools() -> None:
             },
         )
 
-        grep_result = await daytona_grep.execute(
-            daytona_grep.input_model(pattern="MARKER_ALPHA", path=root),
+        grep_result = await grep.execute(
+            grep.input_model(pattern="MARKER_ALPHA", path=root),
             ctx,
         )
         assert not grep_result.is_error, grep_result.output
@@ -110,16 +111,16 @@ async def test_live_daytona_grep_and_glob_direct_tools() -> None:
         assert f"{root}/src/other.txt" in grep_files
         assert all("node_modules" not in path and "/.git/" not in path for path in grep_files)
 
-        py_glob_result = await daytona_glob.execute(
-            daytona_glob.input_model(pattern="**/*.py", path=root),
+        py_glob_result = await glob.execute(
+            glob.input_model(pattern="**/*.py", path=root),
             ctx,
         )
         assert not py_glob_result.is_error, py_glob_result.output
         py_glob_payload = json.loads(py_glob_result.output)
         assert py_glob_payload["files"] == [f"{root}/src/app.py"]
 
-        tsx_glob_result = await daytona_glob.execute(
-            daytona_glob.input_model(pattern="**/*.tsx", path=root),
+        tsx_glob_result = await glob.execute(
+            glob.input_model(pattern="**/*.tsx", path=root),
             ctx,
         )
         assert not tsx_glob_result.is_error, tsx_glob_result.output

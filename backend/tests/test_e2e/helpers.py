@@ -62,7 +62,7 @@ def log_result(result, label: str, *, extra_fields: dict[str, int] | None = None
 def assert_fg_during_bg(result, min_fg: int = 1) -> None:
     """Assert that foreground tool calls happened WHILE background tasks were running.
 
-    Verifies that at least *min_fg* foreground ``daytona_shell`` / ``daytona_write_file``
+    Verifies that at least *min_fg* foreground ``shell`` / ``write_file``
     calls occurred between the first background launch and the first
     ``wait_background_tasks`` or ``cancel_background_task`` call.
     This proves true fg+bg concurrency.
@@ -70,7 +70,7 @@ def assert_fg_during_bg(result, min_fg: int = 1) -> None:
     bg_start_indices = [
         i
         for i, tc in enumerate(result.tool_calls)
-        if tc.name == "daytona_shell" and tc.input.get("background") is True
+        if tc.name == "shell" and tc.input.get("background") is True
     ]
     lifecycle_indices = [
         i
@@ -87,7 +87,7 @@ def assert_fg_during_bg(result, min_fg: int = 1) -> None:
         tc
         for i, tc in enumerate(result.tool_calls)
         if first_bg < i < first_lifecycle
-        and tc.name in ("daytona_shell", "daytona_write_file")
+        and tc.name in ("shell", "write_file")
         and not tc.input.get("background")
     ]
     assert len(fg_during_bg) >= min_fg, (

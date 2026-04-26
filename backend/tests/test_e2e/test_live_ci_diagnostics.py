@@ -20,7 +20,7 @@ from engine.testing.eval_agent import EvalAgent
 from tools.ci_toolkit.lsp_tools import ci_diagnostics
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
-from tools.daytona_toolkit.tools import daytona_write_file
+from tools.daytona_toolkit.write_file_tool import write_file
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
@@ -149,8 +149,8 @@ async def _write_file(
     file_path: str,
     content: str,
 ) -> dict[str, Any]:
-    result = await daytona_write_file.execute(
-        daytona_write_file.input_model(file_path=file_path, content=content),
+    result = await write_file.execute(
+        write_file.input_model(file_path=file_path, content=content),
         ctx,
     )
     return _json_output(result)

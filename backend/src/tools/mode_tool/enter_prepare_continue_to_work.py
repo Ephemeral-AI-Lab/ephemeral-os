@@ -6,8 +6,8 @@ from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from tools.submission._mode_entry import enter_secondary_mode
-from tools.submission._models import SubmissionOutput
+from tools.mode_tool._mode_entry import enter_secondary_mode
+from tools.mode_tool._models import SubmissionOutput
 
 
 class EnterPrepareContinueToWorkInput(BaseModel):
@@ -47,7 +47,7 @@ Purpose
   summary is its input.
 
 Allowed tools (read-only investigation)
-  - daytona_read_file, daytona_grep, daytona_glob
+  - read_file, grep, glob
   - ci_query_symbol, ci_diagnostics, ci_workspace_structure
 
 Terminal tool

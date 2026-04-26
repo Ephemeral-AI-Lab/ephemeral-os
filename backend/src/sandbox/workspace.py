@@ -35,7 +35,7 @@ def _sandbox_exec_is_async(sandbox: Any) -> bool:
 
     Async sandbox warmup must stay lazy. Eager CI/LSP warmup against an async
     sandbox can corrupt the shared aiohttp client across loop boundaries,
-    which then breaks later ``daytona_*`` tool calls with
+    which then breaks later sandbox tool calls with
     ``RuntimeError('Event loop is closed')``.
     """
     process = getattr(sandbox, "process", None)

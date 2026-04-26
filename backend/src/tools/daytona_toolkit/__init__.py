@@ -1,4 +1,4 @@
-"""Daytona tool package."""
+"""Sandbox tool package."""
 
 from __future__ import annotations
 

@@ -1,0 +1,66 @@
+"""Write file tool."""
+
+from __future__ import annotations
+
+from code_intelligence.types import WriteSpec
+from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.ci_runtime import ci_write_required_result, get_ci_service
+from tools.core.decorator import tool
+from tools.core.op_result_to_tool_result import operation_result_to_tool_result
+from tools.daytona_toolkit._commit import submit_commit
+from tools.daytona_toolkit._daytona_utils import _get_repo_root, _resolve_path
+from tools.daytona_toolkit._file_tool_helpers import (
+    WriteFileInput,
+    WriteFileOutput,
+)
+
+
+@tool(
+    name="write_file",
+    description="Create or overwrite a sandbox file.",
+    short_description="Create or overwrite a file.",
+    input_model=WriteFileInput,
+    output_model=WriteFileOutput,
+)
+async def write_file(
+    file_path: str,
+    content: str,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Create or overwrite a file."""
+    file_path = _resolve_path(file_path, context)
+    warnings: list[str] = []
+
+    if get_ci_service(context) is None:
+        return ci_write_required_result("write_file", file_path)
+
+    change = await submit_commit(
+        context,
+        op="write",
+        specs=[WriteSpec(file_path=file_path, content=content, overwrite=True)],
+        fallback_paths=[file_path],
+        description=f"write {file_path}",
+    )
+
+    return operation_result_to_tool_result(
+        change.raw,
+        tool_name="write_file",
+        success_status="written",
+        primary_paths=[file_path],
+        warnings=warnings,
+        success_extra={
+            "cwd": _get_repo_root(context) or "",
+            "file_path": file_path,
+            "bytes_written": len(content.encode("utf-8")),
+            "ci_sync": True,
+        },
+        metadata_extra={
+            "changed_paths": list(change.changed_paths),
+            "ambient_changed_paths": list(change.ambient_changed_paths),
+            "conflict_reason": change.conflict_reason,
+        },
+    )
+
+
+__all__ = ["write_file"]

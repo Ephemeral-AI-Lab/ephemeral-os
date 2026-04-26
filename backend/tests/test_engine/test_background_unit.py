@@ -177,7 +177,7 @@ class TestCheckBackgroundTaskResultExecute:
             await asyncio.sleep(5)
             return ToolResult(output="done")
 
-        mgr.launch("bg_1", "daytona_shell", {"cmd": "ls"}, slow())
+        mgr.launch("bg_1", "shell", {"cmd": "ls"}, slow())
         try:
             mgr.append_progress("bg_1", "line-a")
             result = await tool.execute(
@@ -186,7 +186,7 @@ class TestCheckBackgroundTaskResultExecute:
             payload = json.loads(result.output)
             assert payload["id"] == "bg_1"
             assert payload["status"] == "running"
-            assert payload["tool_command"] == "daytona_shell(ls)"
+            assert payload["tool_command"] == "shell(ls)"
             assert "line-a" in payload["result"]
         finally:
             await mgr.cancel("bg_1")
@@ -198,7 +198,7 @@ class TestCheckBackgroundTaskResultExecute:
         async def fast() -> ToolResult:
             return ToolResult(output="x" * 5000)
 
-        mgr.launch("bg_1", "daytona_shell", {"cmd": "ls"}, fast())
+        mgr.launch("bg_1", "shell", {"cmd": "ls"}, fast())
         await asyncio.sleep(0.01)
 
         result = await tool.execute(
@@ -206,7 +206,7 @@ class TestCheckBackgroundTaskResultExecute:
         )
         payload = json.loads(result.output)
         assert payload["status"] == "finished"
-        # No truncation for daytona_shell.
+        # No truncation for shell.
         assert payload["result"] == "x" * 5000
 
     async def test_subagent_finished_with_terminal_returns_findings(self) -> None:

@@ -237,16 +237,16 @@ async def test_executor_launches_multiple_subagents_waits_and_checks(sandbox):
             "wait_background_tasks call; [COMPLETED] means proceed to completion.\n"
             "Follow these steps exactly, using tools:\n"
             "1. Launch explorer subagent A with run_subagent. Its prompt must be: "
-            "'Use daytona_read_file to read /home/daytona/subagent_live/alpha.txt. "
+            "'Use read_file to read /home/daytona/subagent_live/alpha.txt. "
             "Return findings containing the exact marker ALPHA_SUBAGENT_OK.'\n"
             "2. Launch explorer subagent B with run_subagent. Its prompt must be: "
-            "'Use daytona_read_file to read /home/daytona/subagent_live/beta.txt. "
+            "'Use read_file to read /home/daytona/subagent_live/beta.txt. "
             "Return findings containing the exact marker BETA_SUBAGENT_OK.'\n"
             "3. Before waiting, call check_background_task_result for the first task id.\n"
             "4. Call wait_background_tasks with timeout 120.\n"
             "5. Final response: include ALPHA_SUBAGENT_OK and BETA_SUBAGENT_OK.\n"
             "6. Call submit_task_completion with a concise summary.\n"
-            "Do not use daytona_read_file in the parent agent."
+            "Do not use read_file in the parent agent."
         ),
         "multi_subagent_wait_check",
         stop_when=_multi_subagent_evidence_ready,
@@ -291,13 +291,13 @@ async def test_executor_can_cancel_launched_subagent_task(sandbox):
             "1. Launch one explorer subagent with run_subagent. Its prompt must be: "
             "'Read each file /home/daytona/subagent_live/cancel_payload_00.txt through "
             "/home/daytona/subagent_live/cancel_payload_11.txt individually using "
-            "daytona_read_file before submitting findings.'\n"
+            "read_file before submitting findings.'\n"
             "2. Immediately cancel that background task using cancel_background_task "
             "with reason 'live subagent cancellation test'. Do not wait before cancelling.\n"
             "3. Call wait_background_tasks with timeout 20 so the cancellation can settle.\n"
             "4. Final response: include CANCEL_SUBAGENT_TEST_DONE.\n"
             "5. Call submit_task_completion with a concise summary.\n"
-            "Do not use daytona_read_file in the parent agent."
+            "Do not use read_file in the parent agent."
         ),
         "cancel_subagent",
         stop_when=_cancel_evidence_ready,

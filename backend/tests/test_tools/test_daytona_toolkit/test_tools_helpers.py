@@ -1,4 +1,4 @@
-"""Tests for pure helpers in tools.daytona_toolkit.tools."""
+"""Tests for pure helpers in tools.daytona_toolkit._daytona_utils."""
 
 from __future__ import annotations
 
@@ -8,12 +8,10 @@ from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import (
     _format_shell_stdout,
     _get_repo_root,
-    _truncate,
-    _truncate_tail,
-)
-from tools.daytona_toolkit.tools import (
     _path_error,
     _resolve_path,
+    _truncate,
+    _truncate_tail,
 )
 
 

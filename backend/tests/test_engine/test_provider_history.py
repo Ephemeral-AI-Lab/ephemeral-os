@@ -258,7 +258,7 @@ class TestBuildBackgroundReminder:
         mgr = BackgroundTaskManager()
         mgr.launch(
             "bg_1",
-            "daytona_shell",
+            "shell",
             {"command": "sleep 10"},
             _slow_coro(),
         )

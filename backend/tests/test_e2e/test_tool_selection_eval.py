@@ -50,58 +50,58 @@ EVAL_CASES = [
     EvalCase(
         name="list_directory",
         prompt="Show me what files are in the src directory.",
-        expected_tools=["daytona_shell"],
-        required_params={"daytona_shell": ["command"]},
+        expected_tools=["shell"],
+        required_params={"shell": ["command"]},
     ),
     EvalCase(
         name="read_file",
         prompt="Read the contents of src/main.py",
-        expected_tools=["daytona_read_file"],
-        required_params={"daytona_read_file": ["file_path"]},
+        expected_tools=["read_file"],
+        required_params={"read_file": ["file_path"]},
     ),
     EvalCase(
         name="read_file_range",
         prompt="Show me lines 10 through 25 of src/utils.py",
-        expected_tools=["daytona_read_file"],
-        required_params={"daytona_read_file": ["file_path"]},
+        expected_tools=["read_file"],
+        required_params={"read_file": ["file_path"]},
     ),
     EvalCase(
         name="write_file",
         prompt="Create a new file at src/config.py with the content:\n\nDEBUG = True\nPORT = 8080",
-        expected_tools=["daytona_write_file"],
-        required_params={"daytona_write_file": ["file_path", "content"]},
+        expected_tools=["write_file"],
+        required_params={"write_file": ["file_path", "content"]},
     ),
     EvalCase(
         name="edit_file",
         prompt="In src/main.py, replace 'DEBUG = False' with 'DEBUG = True'",
-        expected_tools=["daytona_edit_file", "daytona_read_file"],
+        expected_tools=["edit_file", "read_file"],
         required_params={},
     ),
     # -- Search operations --
     EvalCase(
         name="grep_search",
         prompt="Search for all occurrences of 'TODO' in the src directory.",
-        expected_tools=["daytona_grep"],
-        required_params={"daytona_grep": ["pattern"]},
+        expected_tools=["grep"],
+        required_params={"grep": ["pattern"]},
     ),
     EvalCase(
         name="glob_search",
         prompt="Find all Python files in the workspace.",
-        expected_tools=["daytona_glob"],
-        required_params={"daytona_glob": ["pattern"]},
+        expected_tools=["glob"],
+        required_params={"glob": ["pattern"]},
     ),
     # -- Shell execution --
     EvalCase(
         name="run_command",
         prompt="Run 'python -m pytest tests/ -v' in the sandbox.",
-        expected_tools=["daytona_shell"],
-        required_params={"daytona_shell": ["command"]},
+        expected_tools=["shell"],
+        required_params={"shell": ["command"]},
     ),
     EvalCase(
         name="install_package",
         prompt="Install the requests library using pip.",
-        expected_tools=["daytona_shell"],
-        required_params={"daytona_shell": ["command"]},
+        expected_tools=["shell"],
+        required_params={"shell": ["command"]},
     ),
     # -- Code intelligence operations --
     EvalCase(
@@ -113,7 +113,7 @@ EVAL_CASES = [
     EvalCase(
         name="goto_definition",
         prompt="Find the definition of build_app in src/app.py",
-        expected_tools=["ci_query_symbol", "daytona_read_file"],
+        expected_tools=["ci_query_symbol", "read_file"],
         required_params={"ci_query_symbol": ["query"]},
     ),
     EvalCase(
@@ -132,8 +132,8 @@ EVAL_CASES = [
     EvalCase(
         name="read_before_edit",
         prompt="I need to understand how the login function works in src/auth.py before I modify it. Read the file first.",
-        expected_tools=["daytona_read_file"],
-        required_params={"daytona_read_file": ["file_path"]},
+        expected_tools=["read_file"],
+        required_params={"read_file": ["file_path"]},
     ),
 ]
 

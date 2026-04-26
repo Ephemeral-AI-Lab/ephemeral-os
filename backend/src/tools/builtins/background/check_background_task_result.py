@@ -55,9 +55,9 @@ def _build_subagent_result(tracked, raw_status: str) -> tuple[str, str]:
 
 
 def _build_generic_result(tracked, raw_status: str) -> str:
-    """Return result text for non-subagent tools (e.g. daytona_shell).
+    """Return result text for non-subagent tools (e.g. shell).
 
-    No truncation — daytona_shell output is returned verbatim.
+    No truncation — shell output is returned verbatim.
     """
     if raw_status == "running":
         if tracked.progress_lines:
@@ -81,7 +81,7 @@ class CheckBackgroundTaskResultTool(BaseTool):
         "{id, status (running|finished|failed), tool_command, result}. "
         "For run_subagent: result is the submit_exploration_result findings "
         "if finished, or the last 5 messages otherwise. For other tools "
-        "(e.g. daytona_shell): result is the full output."
+        "(e.g. shell): result is the full output."
     )
     short_description: str = "Check a background task's result."
     input_model: type[BaseModel] = CheckBackgroundTaskResultInput

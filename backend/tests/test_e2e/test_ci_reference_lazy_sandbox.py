@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.query_tools import ci_query_symbol
+from tools.ci_toolkit.ci_query_symbol_tool import ci_query_symbol
 
 pytestmark = [pytest.mark.e2e]
 

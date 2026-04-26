@@ -2,9 +2,9 @@
 
 This suite exercises the actual tool implementations, not just CI service
 helpers:
-  1. `daytona_write_file` seeds live files in a real Daytona sandbox.
-  2. `daytona_edit_file` performs concurrent same-file search/replace edits.
-  3. `daytona_shell` verifies final on-disk state via real sandbox commands.
+  1. `write_file` seeds live files in a real Daytona sandbox.
+  2. `edit_file` performs concurrent same-file search/replace edits.
+  3. `shell` verifies final on-disk state via real sandbox commands.
 
 Run with:
     .venv/bin/python -m pytest backend/tests/test_e2e/test_live_daytona_tool_occ_calls.py -m live -v -s
@@ -32,9 +32,9 @@ from dotenv import load_dotenv
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
-from tools.daytona_toolkit.shell_tool import daytona_shell
-from tools.daytona_toolkit.edit_tool import daytona_edit_file
-from tools.daytona_toolkit.tools import daytona_write_file
+from tools.daytona_toolkit.shell_tool import shell
+from tools.daytona_toolkit.edit_tool import edit_file
+from tools.daytona_toolkit.write_file_tool import write_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -187,8 +187,8 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
 
     write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"write-{uuid.uuid4().hex[:8]}")
     write_result = asyncio.run(
-        daytona_write_file.execute(
-            daytona_write_file.input_model(
+        write_file.execute(
+            write_file.input_model(
                 file_path=file_path,
                 content="VALUE = 'base'\n",
             ),
@@ -200,8 +200,8 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
 
     edit_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"edit-{uuid.uuid4().hex[:8]}")
     edit_result = asyncio.run(
-        daytona_edit_file.execute(
-            daytona_edit_file.input_model(
+        edit_file.execute(
+            edit_file.input_model(
                 file_path=file_path,
                 old_text="VALUE = 'base'",
                 new_text="VALUE = 'edited'",
@@ -214,8 +214,8 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
 
     shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     shell_result = asyncio.run(
-        daytona_shell.execute(
-            daytona_shell.input_model(command=f"cat {shlex.quote(file_path)}"),
+        shell.execute(
+            shell.input_model(command=f"cat {shlex.quote(file_path)}"),
             shell_ctx,
         )
     )
@@ -240,8 +240,8 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
 
     write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
     seed_result = asyncio.run(
-        daytona_write_file.execute(
-            daytona_write_file.input_model(file_path=file_path, content=original),
+        write_file.execute(
+            write_file.input_model(file_path=file_path, content=original),
             write_ctx,
         )
     )
@@ -262,8 +262,8 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
                 "Two-writer live overlap barrier broke before both writers started"
             ) from exc
         return asyncio.run(
-            daytona_edit_file.execute(
-                daytona_edit_file.input_model(
+            edit_file.execute(
+                edit_file.input_model(
                     file_path=file_path,
                     old_text=search,
                     new_text=replace,
@@ -297,8 +297,8 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
 
     shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     verify_result = asyncio.run(
-        daytona_shell.execute(
-            daytona_shell.input_model(command=f"cat {shlex.quote(file_path)}"),
+        shell.execute(
+            shell.input_model(command=f"cat {shlex.quote(file_path)}"),
             shell_ctx,
         )
     )
@@ -327,8 +327,8 @@ def test_live_five_concurrent_same_file_edit_tool_calls(live_tool_env: LiveToolE
 
     write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
     seed_result = asyncio.run(
-        daytona_write_file.execute(
-            daytona_write_file.input_model(file_path=file_path, content=original),
+        write_file.execute(
+            write_file.input_model(file_path=file_path, content=original),
             write_ctx,
         )
     )
@@ -351,8 +351,8 @@ def test_live_five_concurrent_same_file_edit_tool_calls(live_tool_env: LiveToolE
         except threading.BrokenBarrierError as exc:  # pragma: no cover - defensive
             raise AssertionError("Live concurrent edit barrier broke before all writers started") from exc
         return asyncio.run(
-            daytona_edit_file.execute(
-                daytona_edit_file.input_model(
+            edit_file.execute(
+                edit_file.input_model(
                     file_path=file_path,
                     old_text=search,
                     new_text=replace,
@@ -398,8 +398,8 @@ def test_live_five_concurrent_same_file_edit_tool_calls(live_tool_env: LiveToolE
 
     shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     verify_result = asyncio.run(
-        daytona_shell.execute(
-            daytona_shell.input_model(
+        shell.execute(
+            shell.input_model(
                 command=(
                     f"python3 -m py_compile {shlex.quote(file_path)} && "
                     f"cat {shlex.quote(file_path)}"

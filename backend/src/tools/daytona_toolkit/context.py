@@ -1,4 +1,4 @@
-"""Daytona execution-context preparation."""
+"""Sandbox execution-context preparation."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class DaytonaContextPreparer:
-    """Inject sandbox and code-intelligence runtime state for Daytona-backed tools."""
+    """Inject sandbox and code-intelligence runtime state for sandbox tools."""
 
     def __init__(self, sandbox_id: str) -> None:
         self.sandbox_id = sandbox_id
@@ -21,11 +21,11 @@ class DaytonaContextPreparer:
         if self._sandbox is not None:
             return self._sandbox
         if not self.sandbox_id:
-            raise RuntimeError("No sandbox_id configured for Daytona tool context.")
+            raise RuntimeError("No sandbox_id configured for tool context.")
         from sandbox import fetch_sandbox as get_sandbox
 
         self._sandbox = get_sandbox(self.sandbox_id)
-        logger.debug("Daytona sandbox fetched: %s", self.sandbox_id)
+        logger.debug("Sandbox fetched: %s", self.sandbox_id)
         return self._sandbox
 
     async def _get_sandbox_async(self) -> Any:
@@ -38,12 +38,12 @@ class DaytonaContextPreparer:
         self._sandbox = None
         self._sandbox_loop_id = None
         if not self.sandbox_id:
-            raise RuntimeError("No sandbox_id configured for Daytona tool context.")
+            raise RuntimeError("No sandbox_id configured for tool context.")
         from sandbox.async_client import get_async_sandbox
 
         self._sandbox = await get_async_sandbox(self.sandbox_id)
         self._sandbox_loop_id = loop_id
-        logger.debug("Async Daytona sandbox fetched: %s", self.sandbox_id)
+        logger.debug("Async sandbox fetched: %s", self.sandbox_id)
         return self._sandbox
 
     @staticmethod

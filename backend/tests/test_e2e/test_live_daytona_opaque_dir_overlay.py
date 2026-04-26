@@ -3,7 +3,7 @@
 Regression coverage for the `overlay_unsupported_opaque_dir` bug where
 directory-replacement workloads (pytest cache invalidation, pip install
 upgrade, Python bytecode recreation) tripped the overlay kind-gate and
-aborted the daytona_shell commit.
+aborted the shell commit.
 
 Scenarios:
 
@@ -42,7 +42,7 @@ from dotenv import load_dotenv
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
-from tools.daytona_toolkit.shell_tool import daytona_shell
+from tools.daytona_toolkit.shell_tool import shell
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -236,8 +236,8 @@ def _assert_shell_succeeded(result, *, scenario: str) -> dict[str, Any]:
 async def _run_shell(env: _OpaqueEnv, command: str, *, scenario: str) -> dict[str, Any]:
     svc = env.make_ci_service()
     ctx = env.make_ctx(svc, agent_run_id=f"{scenario}-{uuid.uuid4().hex[:8]}")
-    result = await daytona_shell.execute(
-        daytona_shell.input_model(command=command),
+    result = await shell.execute(
+        shell.input_model(command=command),
         ctx,
     )
     return _assert_shell_succeeded(result, scenario=scenario)
@@ -388,6 +388,6 @@ def test_overlay_commits_pip_install_upgrade_into_vendor(opaque_env: _OpaqueEnv)
     # dirs (version is in the dir name, so they are separate paths), so we
     # do not assert the 1.15.0 dist-info is gone. The overlay fix being
     # verified here is: the commit accepts the upgrade's directory
-    # replacements without rejecting on opaque xattrs. Both daytona_shell calls
+    # replacements without rejecting on opaque xattrs. Both shell calls
     # above already assert no `overlay_*_opaque_dir` token appears in
     # the tool output.

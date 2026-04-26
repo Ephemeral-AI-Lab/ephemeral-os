@@ -195,7 +195,7 @@ class OverlayAuditor:
                     stdout=stdout_text,
                     diff=diff,
                     agent_id=agent_id,
-                    description=description or "daytona_shell overlay",
+                    description=description or "shell overlay",
                     attribute_changes=attribute_changes,
                     git_snapshot_timings=diff.snapshot_timings or snapshot.timings,
                 )
