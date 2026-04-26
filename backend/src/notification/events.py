@@ -12,4 +12,4 @@ class SystemNotification:
     text: str
     category: str = ""
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""

@@ -2,16 +2,16 @@ from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
     AssistantTurnComplete,
     BackgroundTaskCompleted,
-    SystemNotification,
     ThinkingDelta,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from notification.events import SystemNotification
 from providers.types import UsageSnapshot
 from message.messages import ConversationMessage, TextBlock
 
 
-def test_printer_includes_work_id_in_prefix() -> None:
+def test_printer_includes_run_id_in_prefix() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
@@ -20,7 +20,7 @@ def test_printer_includes_work_id_in_prefix() -> None:
             tool_name="pytest",
             tool_input={"k": "value"},
             agent_name="developer",
-            work_id="1234567890abcdef1234",
+            run_id="1234567890abcdef1234",
         )
     )
 
@@ -29,19 +29,19 @@ def test_printer_includes_work_id_in_prefix() -> None:
     ]
 
 
-def test_printer_keeps_work_id_for_flushed_thinking() -> None:
+def test_printer_keeps_run_id_for_flushed_thinking() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ThinkingDelta(text="working", agent_name="analysis_agent", work_id="b88848c71234425a")
+        ThinkingDelta(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
     )
     printer.emit(
         AssistantTurnComplete(
             message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="analysis_agent",
-            work_id="b88848c71234425a",
+            run_id="b88848c71234425a",
         )
     )
 
@@ -62,7 +62,7 @@ def test_printer_renders_structured_shell_error_detail() -> None:
             ),
             is_error=True,
             agent_name="developer",
-            work_id="1234567890abcdef1234",
+            run_id="1234567890abcdef1234",
         )
     )
 
@@ -87,7 +87,7 @@ def test_printer_renders_structured_shell_cmd_error_detail() -> None:
             ),
             is_error=True,
             agent_name="developer",
-            work_id="1234567890abcdef1234",
+            run_id="1234567890abcdef1234",
         )
     )
 
@@ -108,7 +108,7 @@ def test_printer_keeps_plain_shell_error_payload() -> None:
             output="Execution failed: sandbox unavailable",
             is_error=True,
             agent_name="developer",
-            work_id="1234567890abcdef1234",
+            run_id="1234567890abcdef1234",
         )
     )
 
@@ -129,7 +129,7 @@ def test_printer_renders_background_shell_error_fallback() -> None:
             output='{"cwd": "/testbed", "status": "error", "shells_run": 1}',
             is_error=True,
             agent_name="developer",
-            work_id="1234567890abcdef1234",
+            run_id="1234567890abcdef1234",
         )
     )
 
@@ -161,7 +161,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
             text=long_text,
             category="background_progress",
             agent_name="analysis_agent",
-            work_id="1a0578d4c4dd7f1f14dd",
+            run_id="1a0578d4c4dd7f1f14dd",
         )
     )
 

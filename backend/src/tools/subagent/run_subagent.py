@@ -37,11 +37,7 @@ from tools.core.decorator import tool
 logger = logging.getLogger(__name__)
 
 
-# Hard upper bound on the peek window — even if a caller requests more,
-# the subagent peek clamps to this so the parent's peek response stays bounded.
 PEEK_MESSAGE_MAX = 10
-_PEEK_BLOCK_CHAR_CAP = 200
-_PEEK_TOTAL_CHAR_CAP = 2048
 
 
 @dataclass
@@ -49,10 +45,8 @@ class _ValidatedRunSubagentRequest:
     sub_def: Any
 
 
-def _truncate(s: str) -> str:
+def _compact_text(s: str) -> str:
     s = s.replace("\n", " ").strip()
-    if len(s) > _PEEK_BLOCK_CHAR_CAP:
-        return s[: _PEEK_BLOCK_CHAR_CAP - 1] + "…"
     return s
 
 
@@ -61,18 +55,18 @@ def _compact_args(inp: Any) -> str:
         s = json.dumps(inp, separators=(",", ":"), default=str)
     except Exception:
         s = str(inp)
-    return _truncate(s)
+    return _compact_text(s)
 
 
 def _render_block(block: Any) -> str:
     if isinstance(block, TextBlock):
-        return f"[text] {_truncate(block.text)}"
+        return f"[text] {_compact_text(block.text)}"
     if isinstance(block, ThinkingBlock):
-        return f"[think] {_truncate(block.text)}"
+        return f"[think] {_compact_text(block.text)}"
     if isinstance(block, ToolUseBlock):
         return f"[tool] {block.name}({_compact_args(block.input)})"
     if isinstance(block, ToolResultBlock):
-        return f"[result] {_truncate(str(block.content))}"
+        return f"[result] {_compact_text(str(block.content))}"
     return ""
 
 
@@ -91,10 +85,7 @@ def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
                 rendered.append(f"{prefix} {line}")
     if not rendered:
         return "(no renderable content yet)"
-    out = "\n".join(rendered)
-    if len(out) > _PEEK_TOTAL_CHAR_CAP:
-        out = "…" + out[-(_PEEK_TOTAL_CHAR_CAP - 1):]
-    return out
+    return "\n".join(rendered)
 
 
 class RunSubagentInput(BaseModel):

@@ -313,7 +313,7 @@ The query loop integrates with external systems via `on_turn` callbacks for live
            on_turn callback    │      │      │  agent metadata
                   ▼            │      │      ▼
      ┌────────────────────┐    │      │  ┌────────────────────────┐
-     │ on_turn(display_   │    │      │  │ agent_name, work_id    │
+     │ on_turn(display_   │    │      │  │ agent_name, run_id     │
      │ messages)          │    │      │  │ stamped on events      │
      └────────┬───────────┘    │      │  └──────────┬─────────────┘
               │                │      │             │ multiplexing
@@ -475,6 +475,6 @@ The `EphemeralAgent` is spawned per request by `spawn_agent()`, wrapping the que
                               ┌──────────────────────────┐
                               │ caller receives events   │
                               │ (with agent_name,        │
-                              │  work_id)                │
+                              │  run_id)                 │
                               └──────────────────────────┘
 ```

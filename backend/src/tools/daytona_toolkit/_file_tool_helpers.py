@@ -7,16 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
     _get_repo_root,
     _recover_sandbox,
     _require_sandbox,
-    _truncate,
 )
-
-_GREP_MATCH_CAP = CODE_INTELLIGENCE_TUNING.grep_match_cap
 
 
 class ReadFileInput(BaseModel):
@@ -88,7 +84,6 @@ class GrepOutput(BaseModel):
         description="Matching file lines.",
     )
     total_matches: int = Field(..., description="Total number of matches found.")
-    truncated: bool = Field(..., description="Whether returned matches were capped.")
 
 
 class GlobInput(BaseModel):
@@ -140,7 +135,7 @@ def build_read_file_result(
                 "total_lines": total,
                 "start_line": start,
                 "end_line": end,
-                "content": _truncate("\n".join(selected)),
+                "content": "\n".join(selected),
             }
         )
     )
@@ -161,7 +156,6 @@ def build_find_result(
     path: str,
     matches: list[dict[str, Any]],
     total_matches: int | None = None,
-    truncated: bool = False,
 ) -> ToolResult:
     total = len(matches) if total_matches is None else int(total_matches)
     return ToolResult(
@@ -170,9 +164,8 @@ def build_find_result(
                 "cwd": cwd,
                 "pattern": pattern,
                 "path": path,
-                "matches": [build_match_result(match) for match in matches[:_GREP_MATCH_CAP]],
+                "matches": [build_match_result(match) for match in matches],
                 "total_matches": total,
-                "truncated": bool(truncated or total > _GREP_MATCH_CAP),
             }
         )
     )
@@ -207,7 +200,6 @@ __all__ = [
     "ReadFileOutput",
     "WriteFileInput",
     "WriteFileOutput",
-    "_GREP_MATCH_CAP",
     "build_find_result",
     "build_glob_result",
     "build_read_file_result",

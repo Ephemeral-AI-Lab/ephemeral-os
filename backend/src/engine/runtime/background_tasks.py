@@ -14,8 +14,6 @@ from tools.core.base import ToolResult
 from message.messages import BackgroundTaskStateBlock, ConversationMessage
 from message.stream_events import BackgroundTaskCompleted, BackgroundTaskStarted
 
-MAX_OUTPUT_LENGTH: int = 2000
-
 logger = logging.getLogger(__name__)
 
 # Async callback that physically kills the sandbox process.
@@ -471,10 +469,6 @@ def deliver_completed_background_task(
 ) -> BackgroundTaskCompleted:
     """Append a completion message to *display_messages* and return the event."""
     output = task.result.output if task.result else "No output"
-    if task.tool_name != "run_subagent" and len(output) > MAX_OUTPUT_LENGTH:
-        output = (
-            f"[truncated, showing last {MAX_OUTPUT_LENGTH} chars]\n...{output[-MAX_OUTPUT_LENGTH:]}"
-        )
     terminal_status = (
         "cancelled"
         if str(task.status) == "cancelled"

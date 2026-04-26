@@ -2,74 +2,87 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from tools.core.base import ToolExecutionContextService
+from tools.daytona_toolkit._file_tool_helpers import (
+    build_find_result,
+    build_read_file_result,
+)
 from tools.daytona_toolkit._daytona_utils import (
-    _format_shell_stdout,
     _get_repo_root,
     _path_error,
     _resolve_path,
-    _truncate,
-    _truncate_tail,
 )
+from tools.daytona_toolkit.shell import _build_tool_output
 
 
 def _ctx(services=None) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd=Path("/tmp"), services=services or {})
 
 
-# ---------------------------------------------------------------------------
-# _truncate
-# ---------------------------------------------------------------------------
+def test_build_tool_output_preserves_all_shell_outputs():
+    long_command = "python -c " + repr("x" * 200)
+    long_stdout = "start-" + ("x" * 9_000) + "-end"
+    long_error = "error-" + ("y" * 1_000)
+    shells = [
+        {
+            "command": f"{long_command}-{idx}",
+            "exit_code": 0,
+            "stdout": f"{long_stdout}-{idx}",
+            "stderr": "",
+        }
+        for idx in range(4)
+    ]
+
+    result = _build_tool_output(
+        context=_ctx(),
+        status="ok",
+        files_written=0,
+        shells=shells,
+        warnings=[],
+        error=long_error,
+    )
+    payload = json.loads(result.output)
+
+    assert payload["error"] == long_error
+    assert payload["shell_summaries"][-1] == f"$ {long_command}-3 -> exit 0"
+    assert payload["shell_outputs"] == shells
 
 
-def test_truncate_short_passthrough():
-    assert _truncate("hello") == "hello"
+def test_build_read_file_result_preserves_full_selected_content():
+    long_line = "x" * 9_000
+    result = build_read_file_result(
+        context=_ctx(),
+        file_path="/tmp/example.txt",
+        content=f"first\n{long_line}\nlast",
+        start_line=1,
+        end_line=None,
+    )
+    payload = json.loads(result.output)
+
+    assert long_line in payload["content"]
+    assert payload["content"].endswith("   3: last")
 
 
-def test_truncate_exact_boundary():
-    text = "x" * 8000
-    assert _truncate(text) == text
+def test_build_find_result_preserves_all_matches_without_truncated_flag():
+    matches = [
+        {"file": f"/tmp/{idx}.py", "line": idx, "content": f"match {idx}"}
+        for idx in range(600)
+    ]
 
+    result = build_find_result(
+        cwd="/tmp",
+        pattern="match",
+        path="/tmp",
+        matches=matches,
+    )
+    payload = json.loads(result.output)
 
-def test_truncate_long_text():
-    text = "a" * 10_000
-    result = _truncate(text)
-    assert "truncated" in result
-    assert len(result) < len(text)
-    assert result.startswith("a" * 4000)
-    assert result.endswith("a" * 4000)
-
-
-def test_truncate_custom_max():
-    text = "ab" * 100
-    result = _truncate(text, max_chars=10)
-    assert "truncated" in result
-
-
-def test_truncate_tail_keeps_end_only():
-    text = "prefix-" + ("x" * 50) + "-suffix"
-    result = _truncate_tail(text, max_chars=20)
-    assert "truncated" in result
-    assert "prefix-" not in result
-    assert result.endswith(text[-20:])
-
-
-def test_format_shell_stdout_prefers_tail_for_errors():
-    text = "header-" + ("m" * 50) + "-failure-tail"
-    result = _format_shell_stdout(text, exit_code=1, max_chars=25)
-    assert "truncated" in result
-    assert "header-" not in result
-    assert result.endswith(text[-25:])
-
-
-def test_format_shell_stdout_keeps_head_and_tail_for_success():
-    text = "header-" + ("m" * 50) + "-success-tail"
-    result = _format_shell_stdout(text, exit_code=0, max_chars=24)
-    assert "truncated" in result
-    assert result.startswith(text[:12])
-    assert result.endswith(text[-12:])
+    assert len(payload["matches"]) == len(matches)
+    assert payload["total_matches"] == len(matches)
+    assert "truncated" not in payload
 
 
 # ---------------------------------------------------------------------------

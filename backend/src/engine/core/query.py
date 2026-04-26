@@ -665,21 +665,21 @@ async def run_query(
     from dataclasses import fields, is_dataclass, replace
 
     agent_name = context.agent_name
-    work_id = context.run_id
+    run_id = context.run_id
 
     def _stamp(
         event: StreamEvent,
     ) -> StreamEvent:
         if not is_dataclass(event):
             return event
-        if not (agent_name or work_id):
+        if not (agent_name or run_id):
             return event
         names = {f.name for f in fields(event)}
         updates: dict[str, str] = {}
         if "agent_name" in names and not getattr(event, "agent_name", ""):
             updates["agent_name"] = agent_name
-        if "work_id" in names and not getattr(event, "work_id", ""):
-            updates["work_id"] = work_id
+        if "run_id" in names and not getattr(event, "run_id", ""):
+            updates["run_id"] = run_id
         if not updates:
             return event
         return replace(event, **updates)

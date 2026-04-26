@@ -9,7 +9,6 @@ from dataclasses import dataclass
 class CodeIntelligenceTuning:
     rename_preview_cache_max: int = 32
     scope_recent_seconds: float = 300.0
-    grep_match_cap: int = 500
     shell_default_timeout: int = 900
     shell_write_timeout: int = 5
 

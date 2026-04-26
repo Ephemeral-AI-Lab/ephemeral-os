@@ -17,7 +17,6 @@ from tools.daytona_toolkit._daytona_utils import (
 from tools.daytona_toolkit._file_tool_helpers import (
     GrepInput,
     GrepOutput,
-    _GREP_MATCH_CAP,
     build_find_result,
     run_with_recovery,
 )
@@ -42,7 +41,7 @@ async def grep(
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
         command = _wrap_bash_command(
-            build_grep_command(root=path, pattern=pattern, match_cap=_GREP_MATCH_CAP)
+            build_grep_command(root=path, pattern=pattern)
         )
         response = await run_with_recovery(
             context,
@@ -75,7 +74,6 @@ async def grep(
             path=path,
             matches=matches,
             total_matches=payload.get("total_matches"),
-            truncated=bool(payload.get("truncated", False)),
         )
     except Exception as exc:
         return ToolResult(

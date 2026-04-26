@@ -14,7 +14,8 @@ from engine.core.streaming_executor import StreamingToolExecutor
 from engine.runtime.background_dispatch import launch_background_tool
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import ConversationMessage, ToolUseBlock
-from message.stream_events import StreamEvent, SystemNotification, ToolExecutionStarted
+from message.stream_events import StreamEvent, ToolExecutionStarted
+from notification.events import SystemNotification
 from providers.types import (
     ApiMessageCompleteEvent,
     ApiToolUseDeltaEvent,

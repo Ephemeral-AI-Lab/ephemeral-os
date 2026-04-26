@@ -14,7 +14,6 @@ from tools.core.decorator import tool
 from tools.daytona_toolkit._commit import submit_shell_cmd
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
-    _format_shell_stdout,
     _get_repo_root,
     _recover_sandbox,
     _require_sandbox,
@@ -129,11 +128,10 @@ async def _exec_shell_command(
         stdout,
         fallback_exit_code=fallback_exit_code,
     )
-    formatted_stdout = _format_shell_stdout(cleaned_stdout, exit_code=exit_code)
     return {
         "command": command,
-        "stdout": formatted_stdout,
-        "stderr": formatted_stdout if exit_code != 0 else "",
+        "stdout": cleaned_stdout,
+        "stderr": cleaned_stdout if exit_code != 0 else "",
         "exit_code": exit_code,
         "changed_paths": list(change.changed_paths),
         "ambient_changed_paths": list(change.ambient_changed_paths),
@@ -208,22 +206,12 @@ def _build_tool_output(
 ) -> ToolResult:
     shell_summaries: list[str] = []
     shell_outputs: list[dict[str, object]] = []
-    for shell_result in shells[:3]:
+    for shell_result in shells:
         command = str(shell_result.get("command", "") or "")
         exit_code = shell_result.get("exit_code", "?")
-        try:
-            exit_code_int = int(exit_code)
-        except (TypeError, ValueError):
-            exit_code_int = 1
-        stdout = _format_shell_stdout(
-            str(shell_result.get("stdout", "") or ""),
-            exit_code=exit_code_int,
-        )
-        stderr = _format_shell_stdout(
-            str(shell_result.get("stderr", "") or ""),
-            exit_code=exit_code_int,
-        )
-        shell_summaries.append(f"$ {command[:80]} -> exit {exit_code}")
+        stdout = str(shell_result.get("stdout", "") or "")
+        stderr = str(shell_result.get("stderr", "") or "")
+        shell_summaries.append(f"$ {command} -> exit {exit_code}")
         shell_outputs.append(
             {
                 "command": command,
@@ -245,7 +233,7 @@ def _build_tool_output(
                 "shell_summaries": shell_summaries,
                 "shell_outputs": shell_outputs,
                 "warnings": warnings,
-                "error": error[:500] if error else "",
+                "error": error if error else "",
             }
         ),
         is_error=is_error,

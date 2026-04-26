@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_TIMEOUT = 120
-_OUTPUT_MAX_CHARS = 8000
 _EXIT_MARKER = "__CODEX_EXIT_CODE__="
 _SANDBOX_RECOVERY_KEY = "daytona_recovery_attempts"
 _SANDBOX_RECOVERY_PATTERNS = (
@@ -46,31 +45,6 @@ _TEST_FILE_SUFFIXES = (
     "-spec.py",
 )
 _REMOTE_WRITE_CHUNK_BYTES = 24 * 1024
-
-
-# ---------------------------------------------------------------------------
-# Output formatting
-# ---------------------------------------------------------------------------
-
-
-def _truncate(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    if len(text) <= max_chars:
-        return text
-    half = max_chars // 2
-    return text[:half] + f"\n\n... truncated ({len(text)} chars total) ...\n\n" + text[-half:]
-
-
-def _truncate_tail(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    if len(text) <= max_chars:
-        return text
-    return f"... truncated ({len(text)} chars total, showing last {max_chars}) ...\n\n{text[-max_chars:]}"
-
-
-def _format_shell_stdout(text: str, *, exit_code: int, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    """Trim shell output for the model."""
-    if exit_code != 0:
-        return _truncate_tail(text, max_chars=max_chars)
-    return _truncate(text, max_chars=max_chars)
 
 
 # ---------------------------------------------------------------------------

@@ -26,8 +26,6 @@ from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
 from tools.daytona_toolkit._daytona_utils import _exec_command
 
 logger = logging.getLogger(__name__)
-_SYMBOL_FALLBACK_LIMIT = 100
-_STRUCTURE_FALLBACK_LIMIT = 500
 
 
 class CiStatusInput(BaseModel):
@@ -109,7 +107,6 @@ class CiWorkspaceStructureOutput(BaseModel):
     max_depth: int | None = Field(default=None, description="Requested maximum depth.")
     paths: list[str] = Field(default_factory=list, description="Workspace paths.")
     rendered: str = Field(default="", description="Human-readable newline-delimited paths.")
-    truncated: bool = Field(default=False, description="Whether the rendered path list was truncated.")
     message: str | None = Field(default=None, description="Human-readable status message.")
 
 
@@ -251,10 +248,7 @@ def _indexed_workspace_paths(
 
 
 def _render_workspace_paths(paths: list[str]) -> str:
-    output = "\n".join(paths[:_STRUCTURE_FALLBACK_LIMIT])
-    if len(paths) > _STRUCTURE_FALLBACK_LIMIT:
-        output += "\n... (truncated at 500 files)"
-    return output
+    return "\n".join(paths)
 
 
 def _workspace_structure_result(
@@ -274,9 +268,8 @@ def _workspace_structure_result(
         source=source,
         path=path,
         max_depth=max_depth,
-        paths=resolved_paths[:_STRUCTURE_FALLBACK_LIMIT],
+        paths=resolved_paths,
         rendered=_render_workspace_paths(resolved_paths) if resolved_paths else "",
-        truncated=len(resolved_paths) > _STRUCTURE_FALLBACK_LIMIT,
         message=message,
     )
     return ToolResult(output=payload.model_dump_json())
@@ -386,8 +379,6 @@ def _fallback_query_symbols(
         if exit_code not in (0, 1) or not stdout:
             continue
         collected.extend(_parse_rg_matches(stdout, query=query, kind=spec.kind))
-        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
-            break
     return collected
 
 
@@ -448,8 +439,6 @@ def _local_workspace_structure(
             file_depth = len([part for part in relative_to_prefix.split("/") if part])
             if file_depth <= depth_limit:
                 collected.append(rel_path)
-            if len(collected) >= _STRUCTURE_FALLBACK_LIMIT:
-                return collected
     return collected
 
 
@@ -474,7 +463,6 @@ workspace_root = sys.argv[2]
 max_depth = int(sys.argv[3])
 skip_dirs = set(json.loads(sys.argv[4]))
 extensions = set(json.loads(sys.argv[5]))
-limit = int(sys.argv[6])
 
 if not os.path.isdir(root):
     sys.exit(0)
@@ -497,9 +485,6 @@ for dirpath, dirnames, filenames in os.walk(root):
         file_depth = len([part for part in rel_from_root.split(os.sep) if part])
         if file_depth <= max_depth:
             matches.append(rel_path)
-        if len(matches) >= limit:
-            print("\\n".join(matches))
-            sys.exit(0)
 
 print("\\n".join(matches))
 """
@@ -509,8 +494,7 @@ print("\\n".join(matches))
         f"{shlex.quote(workspace_root)} "
         f"{shlex.quote(str(max(0, int(max_depth))))} "
         f"{shlex.quote(json.dumps(sorted(SKIP_DIRECTORIES)))} "
-        f"{shlex.quote(json.dumps(sorted(SUPPORTED_EXTENSIONS)))} "
-        f"{shlex.quote(str(_STRUCTURE_FALLBACK_LIMIT))}"
+        f"{shlex.quote(json.dumps(sorted(SUPPORTED_EXTENSIONS)))}"
     )
     response, output = await _exec_remote(
         context,
@@ -670,10 +654,6 @@ async def run_ci_workspace_structure(
 
 
 # -- Symbol Query (unified) ---------------------------------------------------
-
-
-_MAX_REFERENCE_DEFINITIONS = 5
-_MAX_REFERENCES = 50
 
 
 def _reference_definition_priority(workspace_root: str, definition: Any) -> tuple[int, int, int]:
@@ -899,8 +879,6 @@ def _file_query_symbols(
                 if Path(indexed_rel).suffix.lower() not in SUPPORTED_EXTENSIONS:
                     continue
                 matches.extend(file_symbols(indexed_path))
-                if len(matches) >= 100:
-                    break
 
     definitions = [
         {
@@ -912,7 +890,7 @@ def _file_query_symbols(
             "line": symbol.line,
             "signature": symbol.signature,
         }
-        for symbol in matches[:100]
+        for symbol in matches
     ]
     return matched_path, definitions
 
@@ -1038,7 +1016,7 @@ async def run_ci_query_symbol(
         return ToolResult(output=payload.model_dump_json())
 
     definitions = []
-    for s in results[:100]:
+    for s in results:
         definitions.append(
             {
                 "name": s.name,
@@ -1057,7 +1035,7 @@ async def run_ci_query_symbol(
     sorted_defs = sorted(
         results,
         key=lambda d: _reference_definition_priority(workspace_root, d),
-    )[:_MAX_REFERENCE_DEFINITIONS]
+    )
 
     ref_list: list[dict[str, Any]] = []
     used_lsp = False
@@ -1081,16 +1059,10 @@ async def run_ci_query_symbol(
                                 "text": getattr(ref, "text", ""),
                             }
                         )
-                        if len(ref_list) >= _MAX_REFERENCES:
-                            break
             except Exception as exc:
                 if lsp_reason is None:
                     lsp_reason = f"find_references_error: {exc}"
                 logger.debug("LSP find_references failed for %s", query, exc_info=True)
-            if used_lsp and ref_list:
-                break
-            if len(ref_list) >= _MAX_REFERENCES:
-                break
 
     if not used_lsp:
         if lsp_reason is None:
@@ -1106,7 +1078,7 @@ async def run_ci_query_symbol(
 
     payload = {
         "definitions": definitions,
-        "references": ref_list[:_MAX_REFERENCES],
+        "references": ref_list,
         "total_references": len(ref_list),
         "confidence": "full" if used_lsp else "unavailable",
         "reference_status": "lsp" if used_lsp else "definition_fallback",

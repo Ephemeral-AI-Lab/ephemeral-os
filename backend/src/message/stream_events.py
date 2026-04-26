@@ -12,7 +12,7 @@ from notification.events import SystemNotification
 #   agent_name — short label of the emitting agent ("coordinator",
 #                "developer-1", "eval_agent", ...). Empty string for
 #                standalone single-agent callers.
-#   work_id    — stable identifier for the unit of work that produced the
+#   run_id    — stable identifier for the unit of work that produced the
 #                event. For a coordinator's own turn this is its run_id;
 #                for a dispatched subagent it is the subagent's run_id
 #                (distinct from the parent). Lets printers group and
@@ -25,7 +25,7 @@ class ThinkingDelta:
 
     text: str
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ class AssistantTextDelta:
 
     text: str
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class AssistantTurnComplete:
     message: ConversationMessage
     usage: UsageSnapshot
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ class ToolExecutionStarted:
     tool_name: str
     tool_input: dict[str, Any]
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -69,7 +69,7 @@ class ToolExecutionCompleted:
     does_terminate: bool = False
     mode_transition: str | None = None
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,7 @@ class ToolExecutionProgress:
     tool_name: str
     output: str
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -96,7 +96,7 @@ class ToolExecutionCancelled:
     tool_name: str
     reason: str
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -107,7 +107,7 @@ class BackgroundTaskStarted:
     tool_name: str
     tool_input: dict[str, Any]
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ class BackgroundTaskCompleted:
     output: str
     is_error: bool = False
     agent_name: str = ""
-    work_id: str = ""
+    run_id: str = ""
 
 
 StreamEvent = (

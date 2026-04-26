@@ -11,7 +11,6 @@ from typing import Any
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
-_SYMBOL_FALLBACK_LIMIT = 100
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
@@ -128,8 +127,6 @@ def _dedupe_matches(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         seen.add(key)
         deduped.append(match)
-        if len(deduped) >= _SYMBOL_FALLBACK_LIMIT:
-            break
     return deduped
 
 
@@ -156,11 +153,9 @@ def _parse_rg_matches(
                 "kind": kind,
                 "file": file_path,
                 "line": parsed_line,
-                "signature": snippet.strip()[:200],
+                "signature": snippet.strip(),
             }
         )
-        if len(matches) >= _SYMBOL_FALLBACK_LIMIT:
-            break
     return matches
 
 
@@ -179,8 +174,6 @@ def _python_fallback_query_symbols(
         return None
 
     for file_path in root.rglob("*"):
-        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
-            break
         if not file_path.is_file():
             continue
         if any(part in SKIP_DIRECTORIES for part in file_path.parts):
@@ -201,11 +194,9 @@ def _python_fallback_query_symbols(
                         "kind": matched_kind,
                         "file": str(file_path),
                         "line": lineno,
-                        "signature": line.strip()[:200],
+                        "signature": line.strip(),
                     }
                 )
-                break
-            if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
                 break
 
     deduped = _dedupe_matches(collected)

@@ -412,12 +412,12 @@ async def test_get_status_by_id() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 15. get_status truncates output
+# 15. get_status returns full output
 # ---------------------------------------------------------------------------
 
 
 async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
-    """Manager returns the raw output verbatim — trimming lives at the tool layer."""
+    """Manager returns the raw output verbatim."""
     mgr = BackgroundTaskManager()
     long_output = "x" * 5000
     _launch(mgr, output=long_output)
@@ -732,4 +732,3 @@ async def test_cancel_tool_rejects_all_sentinel() -> None:
     assert mgr._tasks["bg_1"].status == "running"
 
     await mgr.cancel("bg_1")
-

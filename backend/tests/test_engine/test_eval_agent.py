@@ -4,7 +4,8 @@ import asyncio
 from types import SimpleNamespace
 
 from engine.testing.eval_agent import EvalAgent
-from message.stream_events import BackgroundTaskCompleted, SystemNotification
+from message.stream_events import BackgroundTaskCompleted
+from notification.events import SystemNotification
 
 
 class _DummyClient:
@@ -31,14 +32,14 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
                     text=long_system,
                     category="background_progress",
                     agent_name="analysis_agent",
-                    work_id="wid-1",
+                    run_id="wid-1",
                 ),
                 BackgroundTaskCompleted(
                     task_id="bg_1",
                     tool_name="run_subagent",
                     output=long_background,
                     agent_name="analysis_agent",
-                    work_id="wid-1",
+                    run_id="wid-1",
                 ),
             ]
         )

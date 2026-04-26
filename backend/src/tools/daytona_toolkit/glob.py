@@ -13,7 +13,6 @@ from tools.daytona_toolkit._daytona_utils import (
 from tools.daytona_toolkit._file_tool_helpers import (
     GlobInput,
     GlobOutput,
-    _GREP_MATCH_CAP,
     build_glob_result,
     run_with_recovery,
 )
@@ -40,7 +39,6 @@ async def glob(
         command = build_glob_command(
             root=path,
             pattern=pattern,
-            match_cap=_GREP_MATCH_CAP,
         )
         resp = await run_with_recovery(
             context,
@@ -57,7 +55,7 @@ async def glob(
             )
         file_list = [
             f for f in (resp.result or "").splitlines() if f.strip()
-        ][: int(_GREP_MATCH_CAP)]
+        ]
         return build_glob_result(cwd=cwd, pattern=pattern, path=path, files=file_list)
     except Exception as exc:
         return ToolResult(

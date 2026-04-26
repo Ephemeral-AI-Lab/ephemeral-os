@@ -396,7 +396,7 @@ class TestBackgroundTaskManagerExtras:
         assert not mgr.has_pending()
 
     async def test_get_status_returns_full_output_no_truncation(self) -> None:
-        """get_status no longer truncates output — that's the tool layer's job."""
+        """get_status returns output verbatim."""
         mgr = BackgroundTaskManager()
 
         async def big() -> ToolResult:

@@ -19,12 +19,12 @@ from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
-    SystemNotification,
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from notification.events import SystemNotification
 from server.protocol import BackendEvent, TranscriptItem
 from tools.core.base import ExecutionMetadata
 

@@ -38,12 +38,12 @@ from message.stream_events import (
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
-    SystemNotification,
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from notification.events import SystemNotification
 from providers.types import SupportsStreamingMessages, UsageSnapshot
 
 logger = logging.getLogger(__name__)

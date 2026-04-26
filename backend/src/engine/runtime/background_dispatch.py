@@ -14,9 +14,9 @@ from message.messages import ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     BackgroundTaskStarted,
     StreamEvent,
-    SystemNotification,
     ToolExecutionCompleted,
 )
+from notification.events import SystemNotification
 from providers.types import UsageSnapshot
 from tools.core.base import BaseTool, ToolRegistry, ToolResult
 from tools.core.runtime import ExecutionMetadata
