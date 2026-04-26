@@ -41,6 +41,14 @@ class Task:
     mutation raises ``AttributeError``. All other fields are mutable, but
     status transitions should go through ``TaskGraph.transition`` so the
     graph's invariants are preserved.
+
+    ``mode`` is the agent-mode typestate per
+    ``docs/architecture/agent-mode-system-v1.md``. New tasks always start in
+    ``"direct"``. The mode-entry tools (``enter_plan_for_handoff``,
+    ``enter_prepare_continue_to_work``) flip it to a secondary mode exactly
+    once per agent run; the only way back is via the secondary mode's
+    terminal tool, which closes the task. The Task itself does not enforce
+    one-way semantics — that lives in the entry tool's pre-check.
     """
 
     id: TaskId
@@ -56,6 +64,7 @@ class Task:
     summary: str | None = None
     children: list[TaskId] = field(default_factory=list)
     evaluator_id: TaskId | None = None
+    mode: str = "direct"
     created_at: float = field(default_factory=time.time)
 
     def __post_init__(self) -> None:

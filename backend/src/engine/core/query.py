@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from agents.types import AgentDefinition, ModeDefinition
 from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
@@ -48,6 +49,7 @@ from tools.core.base import (
 )
 from tools.core.tool_execution import (
     _consume_tool_budget_or_reject,
+    evaluate_mode_gate,
     execute_tool_call_streaming,
 )
 
@@ -89,6 +91,14 @@ class QueryContext:
     prompt_report_recorder: PromptReportRecorder | None = None
     terminal_nudge_retries_used: int = 0
     terminal_nudge_budget_extended: bool = False
+    # Agent mode typestate (see docs/architecture/agent-mode-system-v1.md).
+    # ``agent_def`` is the bound AgentDefinition; ``active_mode`` is the
+    # currently-active ModeDefinition. Both are populated at spawn time when
+    # an agent_def is supplied. The dispatcher reads ``active_mode`` to gate
+    # tool calls; the mode-entry tools mutate it via the ``mode_transition``
+    # field on their ToolResult.
+    agent_def: AgentDefinition | None = None
+    active_mode: ModeDefinition | None = None
 
 
 MAX_TERMINAL_NUDGE_RETRIES = 3
@@ -111,20 +121,22 @@ def _should_defer_stream_tool_dispatch(
     context: QueryContext,
     background_manager: BackgroundTaskManager | None,
 ) -> Callable[[Any | None, dict[str, Any] | None], bool]:
-    terminal_batch_seen = False
+    exclusive_batch_seen = False
 
     def _defer(tool_def: Any | None, tool_input: dict[str, Any] | None) -> bool:
-        nonlocal terminal_batch_seen
+        nonlocal exclusive_batch_seen
         if background_manager is not None and defer_background_dispatch(tool_def, tool_input):
             return True
-        if terminal_batch_seen:
+        if exclusive_batch_seen:
             return True
         tool_name = str(getattr(tool_def, "name", "") or "")
-        # Terminal tools must not execute mid-stream alongside siblings;
-        # defer so validate_tool_batch can enforce exclusivity after the
-        # full tool_uses list is known.
-        if tool_name and tool_name in context.terminal_tools:
-            terminal_batch_seen = True
+        # Terminal and mode-entry tools are batch-exclusive — they must not
+        # execute mid-stream alongside siblings. Defer so validate_tool_batch
+        # can enforce exclusivity after the full tool_uses list is known.
+        is_terminal = bool(tool_name) and tool_name in context.terminal_tools
+        is_mode_entry = bool(getattr(tool_def, "is_mode_entry_tool", False))
+        if is_terminal or is_mode_entry:
+            exclusive_batch_seen = True
             return True
         return False
 
@@ -326,6 +338,23 @@ async def _run_query_loop(
 
             if isinstance(event, ApiToolUseDeltaEvent):
                 streamed_tool_use_ids.add(event.id)
+                mode_rejection = evaluate_mode_gate(
+                    context.active_mode,
+                    event.name,
+                    event.id,
+                )
+                if mode_rejection is not None:
+                    streamed_rejections.append(mode_rejection)
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=event.name,
+                            output=mode_rejection.content,
+                            is_error=True,
+                            tool_id=event.id,
+                        ),
+                        None,
+                    )
+                    continue
                 budget_rejection = _consume_tool_budget_or_reject(
                     context,
                     event.name,
@@ -435,6 +464,7 @@ async def _run_query_loop(
                         is_error=completed.is_error,
                         metadata=dict(completed.metadata or {}),
                         does_terminate=completed.does_terminate,
+                        mode_transition=completed.mode_transition,
                     )
                 )
                 yield completed, None
@@ -593,6 +623,16 @@ async def _run_query_loop(
                 "message": tool_result_message.model_dump(mode="json"),
             }
         )
+
+        # Apply any mode transition reported by a mode-entry tool this turn.
+        # Entry tools are batch-exclusive (validate_tool_batch enforces it),
+        # so at most one transition fires per turn — the loop is defensive.
+        if context.agent_def is not None:
+            for tr in tool_results:
+                if tr.mode_transition:
+                    next_mode = context.agent_def.modes_by_name.get(tr.mode_transition)
+                    if next_mode is not None:
+                        context.active_mode = next_mode
 
         # Check for a successful terminal tool. A rejected terminal call
         # is feedback for the next model turn, not a completed terminal result.

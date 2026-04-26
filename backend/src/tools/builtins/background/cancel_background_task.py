@@ -22,8 +22,7 @@ class CancelBackgroundTaskTool(BaseTool):
     """Cancel a running background task.
 
     Stops the specified background task. The task will be marked as
-    cancelled and its partial output (if any) will be available via
-    check_background_progress.
+    cancelled.
     """
 
     name: str = "cancel_background_task"
@@ -55,8 +54,7 @@ class CancelBackgroundTaskTool(BaseTool):
             return ToolResult(
                 output=(
                     "ERROR: cancel_background_task does not support task_id=\"all\". "
-                    "Cancel each task explicitly by its task_id, or call "
-                    "check_background_progress to list them first."
+                    "Cancel each task explicitly by its task_id."
                 ),
                 is_error=True,
             )

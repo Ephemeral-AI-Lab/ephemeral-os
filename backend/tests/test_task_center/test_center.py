@@ -67,7 +67,9 @@ async def test_full_handoff_happy_path() -> None:
     }
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks, specs, "Both children produce evidence.")
+        tc.submit_plan_handoff(
+            tid, tasks, specs, "Both children produce evidence.", "test handoff"
+        )
 
     async def child_done(tc, tid):
         tc.submit_task_completion(tid, f"done {tid}")
@@ -105,7 +107,7 @@ async def test_continue_to_work_propagates_through_evaluator() -> None:
     specs = {"p1": {"title": "P1", "spec": "..."}}
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks, specs, "ac")
+        tc.submit_plan_handoff(tid, tasks, specs, "ac", "note")
 
     async def p1_action(tc, tid):
         tc.submit_task_completion(tid, "done p1")
@@ -155,10 +157,10 @@ async def test_recursive_opacity_parent_only_sees_direct_children() -> None:
     specs_a = {"a1": {"title": "A1", "spec": "..."}}
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks_root, specs_root, "ac")
+        tc.submit_plan_handoff(tid, tasks_root, specs_root, "ac", "note")
 
     async def a_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks_a, specs_a, "a's ac")
+        tc.submit_plan_handoff(tid, tasks_a, specs_a, "a's ac", "note")
 
     async def b_action(tc, tid):
         tc.submit_task_completion(tid, "b done")
@@ -213,7 +215,7 @@ async def test_dag_pipelining_launches_unblocked_task_while_sibling_runs() -> No
     d_observed: dict[str, str] = {}
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks, specs, "ac")
+        tc.submit_plan_handoff(tid, tasks, specs, "ac", "note")
 
     async def a_action(tc, tid):
         tc.submit_task_completion(tid, "a done")
@@ -288,7 +290,7 @@ async def test_child_failure_fails_whole_team_run() -> None:
     specs = {"child": {"title": "Child", "spec": "..."}}
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks, specs, "child must succeed")
+        tc.submit_plan_handoff(tid, tasks, specs, "child must succeed", "note")
 
     async def child_returns_without_terminal(tc, tid):
         del tc, tid
@@ -332,7 +334,7 @@ async def test_each_query_gets_fresh_graph_for_agent_supplied_child_ids() -> Non
     specs = {"a": {"title": "A", "spec": "..."}}
 
     async def root_action(tc, tid):
-        tc.submit_full_handoff(tid, tasks, specs, "a completes")
+        tc.submit_plan_handoff(tid, tasks, specs, "a completes", "note")
 
     async def child_action(tc, tid):
         tc.submit_task_completion(tid, "a done")
@@ -358,3 +360,47 @@ async def test_each_query_gets_fresh_graph_for_agent_supplied_child_ids() -> Non
     assert first.status is Status.DONE
     assert second.status is Status.DONE
     assert tc.graph.get("a").summary == "a done"
+
+
+# --------------------------------------------------------------------------- #
+# E5 — Consolidated submit_plan_handoff carries handoff_note through          #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_plan_handoff_records_handoff_note_on_parent_and_evaluator() -> None:
+    """submit_plan_handoff always sets parent.handoff_note; the evaluator
+    materialized after children finish inherits it."""
+    tasks = [{"id": "p1"}]
+    specs = {"p1": {"title": "P1", "spec": "..."}}
+
+    async def root_action(tc, tid):
+        tc.submit_plan_handoff(
+            tid,
+            tasks,
+            specs,
+            "p1 must succeed",
+            "covers the happy path; risk: flaky test in p1",
+        )
+
+    async def p1_action(tc, tid):
+        tc.submit_task_completion(tid, "p1 done")
+
+    async def eval_action(tc, tid):
+        tc.submit_task_completion(tid, "criteria met")
+
+    tc = TaskCenter(
+        spawn_func=_scripted_spawn(
+            {
+                "t1": root_action,
+                "p1": p1_action,
+                "t1-eval": eval_action,
+            }
+        )
+    )
+    root = await tc.run_query("plan with note")
+
+    assert root.status is Status.DONE
+    assert root.handoff_note == "covers the happy path; risk: flaky test in p1"
+    evaluator = tc.graph.get("t1-eval")
+    assert evaluator.handoff_note == "covers the happy path; risk: flaky test in p1"

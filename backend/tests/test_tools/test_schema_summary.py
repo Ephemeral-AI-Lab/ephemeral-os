@@ -48,14 +48,18 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
 
     assert "Tool: submit_task_success" not in summary
     assert "Tool: request_replan" not in summary
-    assert "Tool: submit_plan" not in summary
     assert "Tool: submit_replan" not in summary
+    # ``submit_plan_handoff`` is the consolidated tool (US-006); the legacy
+    # ``submit_full_plan_handoff`` and ``submit_partial_plan_handoff`` are gone.
+    assert "Tool: submit_full_plan_handoff" not in summary
+    assert "Tool: submit_partial_plan_handoff" not in summary
 
-    # Executor-evaluator tree submission tools.
+    # Executor-evaluator tree submission + mode-entry tools.
     assert "Tool: submit_task_completion" in summary
-    assert "Tool: submit_full_plan_handoff" in summary
-    assert "Tool: submit_partial_plan_handoff" in summary
+    assert "Tool: submit_plan_handoff" in summary
     assert "Tool: submit_continue_to_work" in summary
+    assert "Tool: enter_plan_for_handoff" in summary
+    assert "Tool: enter_prepare_continue_to_work" in summary
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):

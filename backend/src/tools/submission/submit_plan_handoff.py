@@ -1,4 +1,4 @@
-"""Terminal tool: executor hands off a full DAG plan."""
+"""Terminal tool: executor hands off a DAG plan with required handoff_note."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from tools.core.decorator import tool
 from tools.submission._models import SubmissionOutput, TaskDependencyEntry, TaskSpec
 
 
-class FullPlanHandoffInput(BaseModel):
+class PlanHandoffInput(BaseModel):
     tasks: list[TaskDependencyEntry] = Field(
         ...,
         description=(
@@ -32,24 +32,37 @@ class FullPlanHandoffInput(BaseModel):
             "child outputs against this text."
         ),
     )
+    handoff_note: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Articulation of what the plan covers, what remains uncertain, "
+            "which acceptance_criteria items are most fragile, and what "
+            "evidence the evaluator should inspect. Required on every "
+            "handoff — the evaluator validates against acceptance_criteria "
+            "regardless, so this note is for context, not gating."
+        ),
+    )
 
 
 @tool(
-    name="submit_full_plan_handoff",
+    name="submit_plan_handoff",
     description=(
-        "Terminal: hand off the full task as a DAG plan. Use when the plan "
-        "fully covers the acceptance_criteria. TaskCenter compiles the DAG, "
-        "spawns child executors as deps complete, and runs one final evaluator "
-        "after every sink task is DONE."
+        "Terminal: hand off the task as a DAG plan with a required "
+        "handoff_note. TaskCenter compiles the DAG, spawns child executors as "
+        "deps complete, runs an evaluator after every sink task is DONE, and "
+        "the evaluator reads handoff_note before validating against "
+        "acceptance_criteria."
     ),
-    input_model=FullPlanHandoffInput,
+    input_model=PlanHandoffInput,
     output_model=SubmissionOutput,
     is_terminal_tool=True,
 )
-async def submit_full_plan_handoff(
+async def submit_plan_handoff(
     tasks: list[dict[str, Any]],
     task_specs: dict[str, dict[str, Any]],
     acceptance_criteria: str,
+    handoff_note: str,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
@@ -57,11 +70,13 @@ async def submit_full_plan_handoff(
     task_id = context.metadata.get("task_id")
     if tc is None or task_id is None:
         return ToolResult(
-            output="submit_full_plan_handoff: missing task_center or task_id in metadata",
+            output="submit_plan_handoff: missing task_center or task_id in metadata",
             is_error=True,
         )
     try:
-        tc.submit_full_handoff(task_id, tasks, task_specs, acceptance_criteria)
+        tc.submit_plan_handoff(
+            task_id, tasks, task_specs, acceptance_criteria, handoff_note
+        )
     except PlanValidationError as exc:
         return ToolResult(output=f"plan rejected: {exc}", is_error=True)
     return ToolResult(output="accepted")

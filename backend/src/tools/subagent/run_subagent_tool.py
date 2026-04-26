@@ -11,7 +11,7 @@ the engine to:
 The tool is declared with ``background="always"``, so the engine ALWAYS
 dispatches it as a background task regardless of LLM input. The parent
 peeks at live progress (up to ``PEEK_MESSAGE_MAX`` trailing messages) via
-``check_background_progress`` — that calls into the progress provider this
+``wait_for_background_task`` — that calls into the progress provider this
 tool registers on the ``BackgroundTaskManager``.
 
 The subagent's run is persisted to ``agent_run_store`` with ``parent_run_id``
@@ -46,9 +46,8 @@ from tools.core.decorator import tool
 logger = logging.getLogger(__name__)
 
 
-# Hard upper bound on the peek window — even if a caller (e.g. via the
-# `last_n` parameter on check_background_progress) requests more, the
-# subagent peek clamps to this so the parent's peek response stays bounded.
+# Hard upper bound on the peek window — even if a caller requests more,
+# the subagent peek clamps to this so the parent's peek response stays bounded.
 PEEK_MESSAGE_MAX = 10
 # Per-block character cap inside the peek view.
 _PEEK_BLOCK_CHAR_CAP = 200
@@ -350,9 +349,9 @@ async def run_subagent(
     # Also back-link sub_run_id and tag task_type so the in-memory bg task
     # and the persisted audit row can be cross-resolved by either id.
     if bg_manager is not None and isinstance(task_id, str):
-        # The bg manager calls the provider with the user-supplied `last_n`
-        # from check_background_progress. format_last_n_messages clamps it
-        # to PEEK_MESSAGE_MAX so the response stays bounded.
+        # The bg manager calls the provider with the user-supplied `last_n`.
+        # format_last_n_messages clamps it to PEEK_MESSAGE_MAX so the
+        # response stays bounded.
         bg_manager.set_progress_provider(
             task_id,
             lambda last_n: format_last_n_messages(agent.display_messages, last_n),

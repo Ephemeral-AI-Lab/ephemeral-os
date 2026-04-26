@@ -119,13 +119,17 @@ class SessionState:
 
         self._tool_registry = create_default_tool_registry()
 
-        # Seed the agent registry from backend/config/agents/ so the
-        # executor/evaluator definitions are available when TaskCenter
-        # spawns agents. The legacy team-runtime cleanup removed the prior
-        # seed; this restores it for the new arch.
+        # Seed the agent registry. The executor + evaluator are defined in
+        # Python (``agents.builtins``) because their secondary modes carry
+        # multi-line briefings that don't read well as YAML. User-defined
+        # agents continue to load from ``backend/config/agents/``.
+        from agents.builtins import register_builtin_agents
         from agents.loader import load_agents_dir
         from agents.registry import register_definition
         from pathlib import Path as _P
+
+        register_builtin_agents()
+        logger.info("Registered builtin agent definitions: executor, evaluator")
 
         agents_dir = (
             _P(__file__).resolve().parent.parent.parent.parent

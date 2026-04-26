@@ -14,13 +14,9 @@ from tools.submission.submit_continue_to_work import (
     ContinueToWorkInput,
     submit_continue_to_work,
 )
-from tools.submission.submit_full_plan_handoff import (
-    FullPlanHandoffInput,
-    submit_full_plan_handoff,
-)
-from tools.submission.submit_partial_plan_handoff import (
-    PartialPlanHandoffInput,
-    submit_partial_plan_handoff,
+from tools.submission.submit_plan_handoff import (
+    PlanHandoffInput,
+    submit_plan_handoff,
 )
 from tools.submission.submit_task_completion import (
     TaskCompletionInput,
@@ -43,15 +39,10 @@ class _FakeTC:
     def submit_task_completion(self, task_id, summary):
         self.calls.append(("complete", task_id, summary))
 
-    def submit_full_handoff(self, task_id, tasks, task_specs, ac):
+    def submit_plan_handoff(self, task_id, tasks, task_specs, ac, note):
         from task_center.dag import compile_dag
         compile_dag(tasks, task_specs)  # raises PlanValidationError on bad input
-        self.calls.append(("full", task_id, tasks, task_specs, ac))
-
-    def submit_partial_handoff(self, task_id, tasks, task_specs, ac, note):
-        from task_center.dag import compile_dag
-        compile_dag(tasks, task_specs)
-        self.calls.append(("partial", task_id, tasks, task_specs, ac, note))
+        self.calls.append(("handoff", task_id, tasks, task_specs, ac, note))
 
     def submit_continue_to_work(self, evaluator_id, summary):
         self.calls.append(("continue", evaluator_id, summary))
@@ -91,52 +82,34 @@ async def test_completion_missing_metadata() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# submit_full_plan_handoff                                                    #
+# submit_plan_handoff                                                         #
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.asyncio
-async def test_full_handoff_happy_path() -> None:
+async def test_plan_handoff_happy_path() -> None:
     tc = _FakeTC()
-    arg = FullPlanHandoffInput(
+    arg = PlanHandoffInput(
         tasks=[{"id": "A"}, {"id": "B", "deps": ["A"]}],
-        task_specs={"A": {"title": "A", "spec": "..."}, "B": {"title": "B", "spec": "..."}},
+        task_specs={
+            "A": {"title": "A", "spec": "..."},
+            "B": {"title": "B", "spec": "..."},
+        },
         acceptance_criteria="Both A and B complete.",
+        handoff_note="A then B; risk: B depends on A's wiring.",
     )
-    res = await submit_full_plan_handoff.execute(arg, _ctx(tc, task_id="parent"))
+    res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="parent"))
     assert res.is_error is False
-    assert tc.calls[0][0] == "full"
+    assert tc.calls[0][0] == "handoff"
     assert tc.calls[0][1] == "parent"
+    assert tc.calls[0][-1] == "A then B; risk: B depends on A's wiring."
 
 
 @pytest.mark.asyncio
-async def test_full_handoff_rejects_cycle() -> None:
-    """Invalid plan -> PlanValidationError -> tool returns is_error."""
-    tc = _FakeTC()
-    arg = FullPlanHandoffInput(
-        tasks=[
-            {"id": "A", "deps": ["B"]},
-            {"id": "B", "deps": ["A"]},
-        ],
-        task_specs={"A": {"title": "A", "spec": "..."}, "B": {"title": "B", "spec": "..."}},
-        acceptance_criteria="x",
-    )
-    res = await submit_full_plan_handoff.execute(arg, _ctx(tc, task_id="parent"))
-    assert res.is_error is True
-    assert "rejected" in res.output
-    assert tc.calls == []
-
-
-# --------------------------------------------------------------------------- #
-# submit_partial_plan_handoff                                                 #
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.asyncio
-async def test_partial_handoff_requires_non_empty_note() -> None:
+async def test_plan_handoff_requires_non_empty_note() -> None:
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
-        PartialPlanHandoffInput(
+        PlanHandoffInput(
             tasks=[{"id": "A"}],
             task_specs={"A": {"title": "A", "spec": "..."}},
             acceptance_criteria="x",
@@ -145,18 +118,25 @@ async def test_partial_handoff_requires_non_empty_note() -> None:
 
 
 @pytest.mark.asyncio
-async def test_partial_handoff_passes_note_through() -> None:
+async def test_plan_handoff_rejects_cycle() -> None:
+    """Invalid plan -> PlanValidationError -> tool returns is_error."""
     tc = _FakeTC()
-    arg = PartialPlanHandoffInput(
-        tasks=[{"id": "A"}],
-        task_specs={"A": {"title": "A", "spec": "..."}},
+    arg = PlanHandoffInput(
+        tasks=[
+            {"id": "A", "deps": ["B"]},
+            {"id": "B", "deps": ["A"]},
+        ],
+        task_specs={
+            "A": {"title": "A", "spec": "..."},
+            "B": {"title": "B", "spec": "..."},
+        },
         acceptance_criteria="x",
-        handoff_note="covers half; gap = Y",
+        handoff_note="cycle test",
     )
-    res = await submit_partial_plan_handoff.execute(arg, _ctx(tc, task_id="p"))
-    assert res.is_error is False
-    assert tc.calls[0][0] == "partial"
-    assert tc.calls[0][-1] == "covers half; gap = Y"
+    res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="parent"))
+    assert res.is_error is True
+    assert "rejected" in res.output
+    assert tc.calls == []
 
 
 # --------------------------------------------------------------------------- #

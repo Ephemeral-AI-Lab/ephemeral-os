@@ -10,9 +10,9 @@ from pydantic import Field
 
 TASK_ID_FIELD_DESCRIPTION = (
     "REQUIRED. Either the exact `task_id` string (e.g. \"bg_1\") shown "
-    "in the `[BACKGROUND LAUNCHED]` message / `check_background_progress` "
-    "output, OR the literal string \"all\" to target every pending "
-    "background task. Never pass null/None and never omit this field."
+    "in the `[BACKGROUND LAUNCHED]` message, OR the literal string \"all\" "
+    "to target every pending background task. Never pass null/None and "
+    "never omit this field."
 )
 
 TASK_ID_FIELD = Field(..., min_length=1, description=TASK_ID_FIELD_DESCRIPTION)
@@ -29,8 +29,8 @@ MIN_PER_ENTRY_CHARS = 200
 POSTED_SUBAGENT_RESULT_GUIDANCE = (
     "For `run_subagent` results whose summary is `Posted.`, the useful content "
     "is in file notes or the referenced artifact, not in another "
-    "background status snapshot. Do not call `wait_for_background_task` or "
-    "`check_background_progress` again for this delivered subagent result. "
+    "background status snapshot. Do not call `wait_for_background_task` "
+    "again for this delivered subagent result. "
     "When file notes are referenced, read them with "
     "`read_file_note(file_paths=[...])`. Never pass `bg_*` background ids "
     "as file-note or tool ids."

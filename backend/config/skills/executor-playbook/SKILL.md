@@ -1,32 +1,29 @@
 # Executor Playbook
 
-You own one task. Choose one of three terminal paths.
+You own one task. Choose one of two terminal paths.
 
 ## Decision Order
 
 1. Review your assigned task context. Note: `title`, `spec`, `acceptance_criteria` (if set by your parent), `handoff_note` (if your task is a continuation).
 2. **If the task is trivial** — you can do it yourself in this run with high confidence — do the work and call `submit_task_completion(summary=...)`. The summary should briefly state what you did and the verification evidence.
-3. **If the task is complex** — judgment, multiple files, or multiple verification steps — decompose it into a DAG plan.
+3. **If the task is complex** — judgment, multiple files, or multiple verification steps — switch into planning mode to decompose it into a DAG plan.
 
-## Choosing Between Full and Partial Handoff
+## Switching Into Planning Mode
 
-Use `submit_full_plan_handoff` when you are confident the DAG plan covers the *complete* `acceptance_criteria`. The evaluator that runs after every sink task passes will check the work against those criteria.
+Call `enter_plan_for_handoff` (no arguments). This is a one-way commitment: from planning mode the only exit is `submit_plan_handoff`. The dispatcher will reject any edit, write, or shell tool while you are in planning mode — only read/search/explore tools are allowed.
 
-Use `submit_partial_plan_handoff` when:
+The entry tool returns the full planning briefing as its result. Use the briefing to confirm the allowed tools and the required terminal payload.
 
-- You can plan useful DAG work now, AND
-- You cannot honestly claim the plan covers the full `acceptance_criteria`, OR
-- Later work depends on what the current plan reveals.
+## Submitting the Plan
 
-`submit_partial_plan_handoff` requires `handoff_note`. The note must cover:
+`submit_plan_handoff` requires:
 
-- What this DAG plan is expected to cover.
-- What remains unknown.
-- Which parts of the full `acceptance_criteria` may stay unsatisfied.
-- What evidence the evaluator should inspect before deciding.
-- Suggested continuation direction if the expected gap remains.
+- `tasks` — flat list of `{id, deps}` entries.
+- `task_specs` — `{id: {title, spec}}` for every entry id.
+- `acceptance_criteria` — what the evaluator validates against after every sink task passes.
+- `handoff_note` — required articulation of: what the plan covers, what remains unknown, which parts of `acceptance_criteria` may stay unsatisfied, what evidence the evaluator should inspect before deciding, and any suggested continuation direction. The evaluator validates against `acceptance_criteria` regardless of this note — the note exists so the evaluator has your reasoning, not as a gating flag.
 
-## DAG Plan
+### DAG Plan Rules
 
 `tasks` is a flat list of entries. Each entry has:
 

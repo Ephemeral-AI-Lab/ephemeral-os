@@ -15,7 +15,7 @@ IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
 - Use daytona_shell to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
+- Use wait_for_background_task to wait on background tasks.
 - Use cancel_background_task to cancel running background tasks."""
 
 _BG_GUIDELINES = """\
@@ -51,7 +51,7 @@ def _build_prompt(*, agent_name: str, extra_sections: str = "") -> str:
 # Pre-built prompts (drop-in replacements for the old per-file constants)
 # ---------------------------------------------------------------------------
 
-#: Standard background agent — foreground vs background decisions, progress checks, cancellation.
+#: Standard background agent — foreground vs background decisions, waiting, cancellation.
 BG_STANDARD = _build_prompt(agent_name="test-background-agent")
 
 #: Idle/wait agent — includes wait_for_background_task guidance.
@@ -70,8 +70,7 @@ BG_IDLE_PATTERNS = _build_prompt(
 IDLE AND WAIT STRATEGY:
 - When you have foreground work, do it while background runs.
 - When foreground is exhausted, transition to idle monitoring:
-  1. Call check_background_progress first
-  2. Then use wait_for_background_task to block efficiently
+  1. Use wait_for_background_task to block efficiently until tasks complete.
 - Use short timeouts (3-5s) for periodic check-ins on long tasks.
 - Use longer timeouts (10-15s) when you expect tasks to finish soon.
 - Cancel tasks that exceed reasonable time limits.""",
@@ -84,7 +83,7 @@ BG_PARALLEL = _build_prompt(
 PARALLEL EXECUTION:
 - Launch multiple background tasks simultaneously when they are independent.
 - Continue foreground work while background tasks run.
-- Use check_background_progress to monitor, wait_for_background_task when idle.
+- Use wait_for_background_task to monitor and wait for completion.
 - Aggregate results from multiple completed tasks.""",
 )
 
@@ -101,15 +100,13 @@ Use whichever tools are appropriate for the task.
 For long-running commands (tests, builds), run them in background with "background": true,
 then use wait_for_background_task to wait for the final result.
 
-You also have check_background_progress, which is non-blocking and now returns a
-LIVE TAIL of stdout lines that the background command has emitted so far. Use it
-to peek at partial output while a task is still running and make autonomous
-decisions early — for example:
-  * If the live tail already shows an obvious failure (FAIL, IMPORT ERROR, SYNTAX
+wait_for_background_task returns a live tail of stdout while the task runs. Use
+the returned snapshot to make autonomous decisions early — for example:
+  * If the tail already shows an obvious failure (FAIL, IMPORT ERROR, SYNTAX
     ERROR, STAGE FAILED, traceback...), you may cancel the task with
     cancel_background_task, fix the bug, and re-run instead of waiting for the
     full timeout.
-  * If the live tail looks healthy, keep waiting with wait_for_background_task.
+  * If the tail looks healthy, keep waiting with wait_for_background_task.
 
 You are an autonomous agent. Analyze failures, reason about root causes, apply fixes,
 and verify your fixes work. Keep iterating until the problem is solved."""

@@ -79,7 +79,6 @@ class TrackedBackgroundTask:
     # which is more meaningful than a flat line buffer. When set, get_status
     # calls this instead of joining progress_lines for running tasks.
     progress_provider: Callable[[int], str] | None = None
-    progress_checks: int = 0
     _last_reminder_line_idx: int = 0  # tracks where the last reminder left off
     _last_reminder_at: float = 0.0  # monotonic time of last reminder
     _last_provider_reminder_lines: list[str] = field(default_factory=list)
@@ -260,7 +259,7 @@ class BackgroundTaskManager:
         """Append a live progress line for *task_id*.
 
         Used by streaming-capable tools to push incremental output into the
-        manager so that ``check_background_progress`` can return a live tail
+        manager so that ``wait_for_background_task`` can return a live tail
         while the task is still running. Splits *line* on newlines so the
         caller can pass either a single line or a chunk of multiple lines.
         No-op if the task is unknown or already finished.
@@ -347,22 +346,6 @@ class BackgroundTaskManager:
                     entry["output"] = prefix + "[no output captured yet]"
             result.append(entry)
         return result
-
-    def mark_progress_checked(self, task_id: str | None = None) -> list[TrackedBackgroundTask]:
-        """Mark one or more tasks as explicitly inspected by the agent."""
-        if task_id is not None:
-            tracked = self._tasks.get(task_id)
-            if tracked is None:
-                return []
-            tracked.progress_checks += 1
-            return [tracked]
-
-        checked: list[TrackedBackgroundTask] = []
-        for tracked in self._tasks.values():
-            if tracked.status == TaskStatus.RUNNING:
-                tracked.progress_checks += 1
-                checked.append(tracked)
-        return checked
 
     async def cancel(self, task_id: str, reason: str = "") -> bool:
         """Cancel a task by id. Returns True if found and cancelled.
@@ -555,9 +538,7 @@ def build_background_reminder(
         text += (
             "\nKeep working on any other ready analysis or tool tasks first. "
             "Only wait when this background task is the remaining blocker. "
-            "A progress check is optional and only useful when live detail "
-            "changes your next action; do not recheck "
-            "task ids after a terminal status."
+            "Do not recheck task ids after a terminal status."
         )
         content.append(
             BackgroundTaskStateBlock(

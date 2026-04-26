@@ -40,6 +40,11 @@ class _CapturingTool(_DummyTool):
     captured_contexts: list[ToolFactoryContext] = []
 
 
+class _TerminalTool(_DummyTool):
+    name = "terminal_tool"
+    is_terminal_tool = True
+
+
 @pytest.fixture(autouse=True)
 def _isolate_tool_factories():
     original = dict(_factories)
@@ -125,7 +130,9 @@ def test_build_agent_tool_registry_skips_unknown_tools() -> None:
 
     registry = _build_agent_tool_registry(_make_config(), agent_def, None, "agent")
 
-    assert registry.list_tools() == []
+    # The unknown tool is skipped (with a warning). The auto-synthesized
+    # default-mode terminal still resolves via the global factory.
+    assert registry.get("missing_tool") is None
 
 
 def test_finalize_adds_background_management_tools_for_background_capable_tool() -> None:
@@ -141,9 +148,75 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     )
 
     assert has_background is True
-    assert registry.get("check_background_progress") is not None
     assert registry.get("wait_for_background_task") is not None
     assert registry.get("cancel_background_task") is not None
+
+
+def test_finalize_skips_background_management_tools_for_subagent() -> None:
+    from tools.subagent.run_subagent_tool import run_subagent
+
+    registry = ToolRegistry()
+    registry.register(run_subagent)
+
+    _, has_background = finalize_tool_registry_and_prompt(
+        registry,
+        "base",
+        agent_type="subagent",
+    )
+
+    assert has_background is False
+    assert registry.get("wait_for_background_task") is None
+    assert registry.get("cancel_background_task") is None
+
+
+def test_finalize_derives_terminal_tool_guidance_from_registry() -> None:
+    registry = ToolRegistry()
+    registry.register(_TerminalTool())
+
+    prompt, _ = finalize_tool_registry_and_prompt(
+        registry,
+        "base",
+        agent_type="agent",
+    )
+
+    assert prompt.startswith("base")
+    assert "<Termination Condition>" in prompt
+    assert "- `terminal_tool`" in prompt
+
+
+def test_build_agent_tool_registry_registers_skill_tools_only_when_declared(monkeypatch) -> None:
+    calls: list[list[str] | None] = []
+
+    monkeypatch.setattr(
+        "skills.core.loader.load_skill_registry",
+        lambda cwd: object(),
+    )
+
+    def _fake_make_skills_tools(_registry: object, skill_filter: list[str] | None = None) -> list[BaseTool]:
+        calls.append(skill_filter)
+        return [_DummyTool()]
+
+    monkeypatch.setattr(
+        "tools.builtins.skills.make_skills_tools",
+        _fake_make_skills_tools,
+    )
+
+    no_skills_registry = _build_agent_tool_registry(
+        _make_config(),
+        _make_agent_def(),
+        None,
+        "agent",
+    )
+    declared_skills_registry = _build_agent_tool_registry(
+        _make_config(),
+        _make_agent_def(skills=["demo-skill"]),
+        None,
+        "agent",
+    )
+
+    assert no_skills_registry.get("dummy_tool") is None
+    assert declared_skills_registry.get("dummy_tool") is not None
+    assert calls == [["demo-skill"]]
 
 
 def test_default_sandbox_agent_registers_daytona_tools() -> None:

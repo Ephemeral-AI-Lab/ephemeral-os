@@ -3,7 +3,7 @@
 Covers two layers, all offline (no sandbox, no LLM):
 
     1. `_common.apply_last_n_lines` — line trim, char cap, total budget.
-    2. `CheckBackgroundProgress` / `WaitForBackgroundTask` schemas and
+    2. `WaitForBackgroundTask` / `CancelBackgroundTask` schemas and
        `execute` branches that don't require a running loop to assert.
 """
 
@@ -21,10 +21,6 @@ from tools.builtins.background._common import (
     apply_last_n_lines,
     build_background_snapshot_metadata,
     render_background_snapshot,
-)
-from tools.builtins.background.check_background_progress import (
-    CheckBackgroundProgressInput,
-    CheckBackgroundProgressTool,
 )
 from tools.builtins.background.wait_for_background_task import (
     WaitForBackgroundTaskInput,
@@ -106,21 +102,6 @@ class TestApplyLastNLines:
 
 
 class TestSchemas:
-    def test_check_requires_task_id(self) -> None:
-        with pytest.raises(ValidationError):
-            CheckBackgroundProgressInput()  # type: ignore[call-arg]
-
-    def test_check_rejects_empty_task_id(self) -> None:
-        with pytest.raises(ValidationError):
-            CheckBackgroundProgressInput(task_id="")
-
-    def test_check_rejects_last_n_lines_zero(self) -> None:
-        with pytest.raises(ValidationError):
-            CheckBackgroundProgressInput(task_id="bg_1", last_n_lines=0)
-
-    def test_check_accepts_all(self) -> None:
-        assert CheckBackgroundProgressInput(task_id="all").task_id == "all"
-
     def test_wait_requires_task_id(self) -> None:
         with pytest.raises(ValidationError):
             WaitForBackgroundTaskInput()  # type: ignore[call-arg]
@@ -147,55 +128,6 @@ class TestSchemas:
 def _ctx(manager: BackgroundTaskManager | None) -> ToolExecutionContext:
     metadata = {"background_task_manager": manager} if manager else {}
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata)
-
-
-class TestCheckBackgroundProgressExecute:
-    async def test_no_manager_returns_error(self) -> None:
-        tool = CheckBackgroundProgressTool()
-        args = CheckBackgroundProgressInput(task_id="all")
-        result = await tool.execute(args, _ctx(None))
-        assert result.is_error
-        assert "not available" in result.output
-
-    async def test_empty_manager_returns_benign(self) -> None:
-        tool = CheckBackgroundProgressTool()
-        mgr = BackgroundTaskManager()
-        args = CheckBackgroundProgressInput(task_id="all")
-        result = await tool.execute(args, _ctx(mgr))
-        assert not result.is_error
-        assert "No background tasks" in result.output
-
-    async def test_unknown_task_id_is_error(self) -> None:
-        tool = CheckBackgroundProgressTool()
-        mgr = BackgroundTaskManager()
-        args = CheckBackgroundProgressInput(task_id="bg_nonexistent")
-        result = await tool.execute(args, _ctx(mgr))
-        assert result.is_error
-        assert "bg_nonexistent" in result.output
-
-    async def test_all_prefers_running_tasks(self) -> None:
-        tool = CheckBackgroundProgressTool()
-        mgr = BackgroundTaskManager()
-
-        async def fast() -> ToolResult:
-            return ToolResult(output="done")
-
-        async def slow() -> ToolResult:
-            await asyncio.sleep(5)
-            return ToolResult(output="later")
-
-        mgr.launch("bg_done", "t", {}, fast())
-        mgr.launch("bg_run", "t", {}, slow())
-        await asyncio.sleep(0.01)
-
-        try:
-            result = await tool.execute(CheckBackgroundProgressInput(task_id="all"), _ctx(mgr))
-            assert '"task_id": "bg_run"' in result.output
-            assert '"task_id": "bg_done"' not in result.output
-            assert result.metadata["background_snapshot"]["kind"] == "progress"
-            assert result.metadata["background_snapshot"]["scope"] == "all"
-        finally:
-            await mgr.cancel("bg_run")
 
 
 class TestWaitForBackgroundTaskExecute:
@@ -551,7 +483,7 @@ class TestLiveProgressTail:
 
     async def test_get_status_running_task_carries_start_stamp(self) -> None:
         """Running tasks always carry an `[started: ...]` stamp in output even
-        before any progress lines are appended, so check_background_progress
+        before any progress lines are appended, so wait_for_background_task
         always has something to surface."""
         mgr = BackgroundTaskManager()
 

@@ -66,6 +66,11 @@ class ToolResult:
     # this on the resulting ToolResultBlock to decide whether to exit with
     # QueryExitReason.TOOL_STOP.
     does_terminate: bool = False
+    # Set by mode-entry tools when they flip the agent's typestate. The
+    # dispatcher reads it after the turn's tool batch runs and updates
+    # ``QueryContext.active_mode`` so the next turn's gate sees the new mode.
+    # Wire-irrelevant — never serialised to the provider.
+    mode_transition: str | None = None
 
 
 class TextToolOutput(RootModel[str]):
@@ -115,6 +120,11 @@ class BaseTool(ABC):
     # engine stamps does_terminate=True on the resulting ToolResult and the
     # query loop exits with TOOL_STOP after the turn completes.
     is_terminal_tool: bool = False
+    # When True, the tool is a mode-entry tool. The query loop enforces that
+    # such tools are batch-exclusive (mirror the terminal-tool rule in
+    # ``validate_tool_batch``) so the same turn cannot mutate the active
+    # mode and dispatch siblings under conflicting gates.
+    is_mode_entry_tool: bool = False
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:

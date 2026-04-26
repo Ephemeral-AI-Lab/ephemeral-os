@@ -102,22 +102,27 @@ class TaskCenter:
         close_with_summary(self._graph.tasks, task_id, summary)
         self._wakeup.set()
 
-    def submit_full_handoff(
+    def submit_plan_handoff(
         self,
         executor_id: TaskId,
         tasks: list[dict[str, Any]],
         task_specs: dict[str, dict[str, Any]],
         acceptance_criteria: str,
+        handoff_note: str,
     ) -> None:
         """Validate plan, materialize child executors, mark parent AWAITING.
 
-        The evaluator is NOT created here — it is materialized by the
-        dispatcher only after every child executor reaches DONE.
+        Every handoff carries a ``handoff_note`` — the evaluator validates
+        children against ``acceptance_criteria`` regardless, and the note is
+        forwarded so it can read the executor's articulation of risks before
+        deciding. The evaluator itself is NOT created here; it is materialized
+        by the dispatcher only after every child executor reaches DONE.
         """
         deps = compile_dag(tasks, task_specs)
 
         parent = self._graph.get(executor_id)
         parent.acceptance_criteria = acceptance_criteria
+        parent.handoff_note = handoff_note
 
         # Materialize child executor tasks. Tasks with no deps are READY
         # immediately; the rest stay PENDING until their direct deps are DONE.
@@ -141,22 +146,6 @@ class TaskCenter:
         # Parent transitions RUNNING -> AWAITING.
         self._graph.transition(executor_id, Status.AWAITING)
         self._wakeup.set()
-
-    def submit_partial_handoff(
-        self,
-        executor_id: TaskId,
-        tasks: list[dict[str, Any]],
-        task_specs: dict[str, dict[str, Any]],
-        acceptance_criteria: str,
-        handoff_note: str,
-    ) -> None:
-        """Same as full handoff, plus stash handoff_note on the parent.
-
-        The evaluator (created later by the dispatcher) inherits
-        ``handoff_note`` from the parent at materialization time.
-        """
-        self.submit_full_handoff(executor_id, tasks, task_specs, acceptance_criteria)
-        self._graph.get(executor_id).handoff_note = handoff_note
 
     def submit_continue_to_work(self, evaluator_id: TaskId, summary: str) -> None:
         """Spawn a continuation executor under the evaluator; evaluator -> AWAITING."""

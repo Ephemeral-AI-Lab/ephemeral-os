@@ -470,7 +470,7 @@ class TestReduceForApi:
         messages = [
             ConversationMessage(
                 role="assistant",
-                content=[ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})],
+                content=[ToolUseBlock(id="toolu_1", name="wait_for_background_task", input={"task_id": "all"})],
             ),
             ConversationMessage(
                 role="user",
@@ -515,7 +515,7 @@ class TestReduceForApi:
         messages = [
             ConversationMessage(
                 role="assistant",
-                content=[ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})],
+                content=[ToolUseBlock(id="toolu_1", name="wait_for_background_task", input={"task_id": "all"})],
             ),
             ConversationMessage(
                 role="user",

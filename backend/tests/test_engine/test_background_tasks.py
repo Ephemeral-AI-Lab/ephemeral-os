@@ -19,10 +19,6 @@ from tools.builtins.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
 )
-from tools.builtins.background.check_background_progress import (
-    CheckBackgroundProgressInput,
-    CheckBackgroundProgressTool,
-)
 from tools.builtins.background.wait_for_background_task import (
     WaitForBackgroundTaskInput,
     WaitForBackgroundTaskTool,
@@ -841,29 +837,11 @@ async def test_wait_tool_already_completed_returns_stale_notice() -> None:
     assert "background status snapshot" in result.output
 
 
-# ---------------------------------------------------------------------------
-# 33. check_background_progress tool: unknown id is_error=True
-# ---------------------------------------------------------------------------
-
-
-async def test_check_progress_unknown_id_is_error() -> None:
-    mgr = BackgroundTaskManager()
-    tool = CheckBackgroundProgressTool()
-    args = CheckBackgroundProgressInput(task_id="ghost")
-    result = await tool.execute(args, _make_ctx(mgr))
-    assert result.is_error is True
-    assert "ghost" in result.output
-
-
 async def test_wait_tool_allows_immediate_join_on_fresh_subagent() -> None:
     mgr = BackgroundTaskManager()
     _launch_subagent(mgr, task_id="bg_1")
 
     ctx = _make_ctx(mgr)
-    check_tool = CheckBackgroundProgressTool()
-    check_result = await check_tool.execute(CheckBackgroundProgressInput(task_id="bg_1"), ctx)
-    assert check_result.is_error is False
-
     tool = WaitForBackgroundTaskTool()
     result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
     assert result.is_error is False
@@ -878,10 +856,6 @@ async def test_wait_tool_allows_wait_all_for_only_fresh_subagents() -> None:
     _launch_subagent(mgr, task_id="bg_2")
 
     ctx = _make_ctx(mgr)
-    check_tool = CheckBackgroundProgressTool()
-    check_result = await check_tool.execute(CheckBackgroundProgressInput(task_id="all"), ctx)
-    assert check_result.is_error is False
-
     tool = WaitForBackgroundTaskTool()
     result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=1), ctx)
     assert result.is_error is False
@@ -899,22 +873,6 @@ async def test_wait_tool_allows_subagent_join_without_progress_check() -> None:
     result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
     assert result.is_error is False
     assert "TIMED_OUT" in result.output
-
-    await mgr.cancel("bg_1")
-
-
-async def test_check_progress_marks_subagent_as_inspected() -> None:
-    mgr = BackgroundTaskManager()
-    _launch_subagent(mgr, task_id="bg_1")
-
-    ctx = _make_ctx(mgr)
-    tool = CheckBackgroundProgressTool()
-    result = await tool.execute(CheckBackgroundProgressInput(task_id="bg_1"), ctx)
-
-    assert result.is_error is False
-    tracked = mgr.get_task("bg_1")
-    assert tracked is not None
-    assert tracked.progress_checks == 1
 
     await mgr.cancel("bg_1")
 

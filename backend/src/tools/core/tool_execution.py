@@ -10,6 +10,7 @@ from tools.core.base import ExecutionMetadata, ToolExecutionContext
 from tools.core.hooks.execution import execute_tool_with_hooks
 
 if TYPE_CHECKING:
+    from agents.types import ModeDefinition
     from engine.core.query import QueryContext
     from tools.core.hooks import EmitStreamEvent
 
@@ -45,6 +46,58 @@ def _build_terminal_budget_reserved_error(
         ),
         is_error=True,
     )
+
+
+def _build_mode_deny(
+    tool_name: str,
+    tool_use_id: str,
+    mode: ModeDefinition,
+) -> ToolResultBlock:
+    terminals = ", ".join(sorted(mode.terminals)) or "(none)"
+    return ToolResultBlock(
+        tool_use_id=tool_use_id,
+        content=(
+            f"`{tool_name}` not allowed in `{mode.name}` mode. "
+            f"Allowed terminals: {terminals}. "
+            "Use read/search/explore tools or call a terminal."
+        ),
+        is_error=True,
+    )
+
+
+def evaluate_mode_gate(
+    active_mode: "ModeDefinition | None",
+    tool_name: str,
+    tool_use_id: str,
+) -> ToolResultBlock | None:
+    """Decide whether *tool_name* may run under *active_mode*.
+
+    Returns ``None`` to allow, or a structured deny ``ToolResultBlock`` whose
+    body matches the format described in
+    ``docs/architecture/agent-mode-system-v1.md`` §Authorization gate.
+
+    Decision order (denylist wins, then allowlist, then terminal/entry):
+        - active_mode is None         → allow (gating disabled)
+        - tool in disallowed_tools    → deny
+        - tool in terminals           → allow
+        - tool == entry_tool          → allow (idempotency handled by tool body)
+        - allowed_tools is None       → allow (default-mode "open toolset")
+        - tool in allowed_tools       → allow
+        - else                        → deny
+    """
+    if active_mode is None:
+        return None
+    if tool_name in active_mode.disallowed_tools:
+        return _build_mode_deny(tool_name, tool_use_id, active_mode)
+    if tool_name in active_mode.terminals:
+        return None
+    if active_mode.entry_tool is not None and tool_name == active_mode.entry_tool:
+        return None
+    if active_mode.allowed_tools is None:
+        return None
+    if tool_name in active_mode.allowed_tools:
+        return None
+    return _build_mode_deny(tool_name, tool_use_id, active_mode)
 
 
 def _consume_tool_budget_or_reject(
@@ -105,6 +158,11 @@ async def execute_tool_call_streaming(
     emit_started: bool = True,
 ) -> ToolResultBlock:
     """Execute one tool call through the platform hook pipeline."""
+    # Mode gate runs before budget consumption so denied calls never burn
+    # the agent's tool-call quota — see docs/architecture/agent-mode-system-v1.md.
+    mode_rejection = evaluate_mode_gate(context.active_mode, tool_name, tool_use_id)
+    if mode_rejection is not None:
+        return mode_rejection
     if consume_budget:
         budget_rejection = _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
         if budget_rejection is not None:
@@ -149,5 +207,6 @@ async def execute_tool_call_streaming(
         is_error=result.is_error,
         metadata=result.metadata,
         does_terminate=result.does_terminate,
+        mode_transition=result.mode_transition,
     )
     return tool_result

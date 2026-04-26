@@ -50,6 +50,7 @@ def tool(
     background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
     is_terminal_tool: bool = False,
+    is_mode_entry_tool: bool = False,
 ) -> Callable[[Callable[..., Any]], BaseTool]:
     """Decorator that converts a function into a ``BaseTool`` instance."""
 
@@ -104,6 +105,7 @@ def tool(
         instance.background = background
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool
+        instance.is_mode_entry_tool = is_mode_entry_tool
         # Preserve the original function for testing/introspection
         instance._entrypoint = func
 

@@ -16,7 +16,7 @@ class AgentValidationInput(Protocol):
     """Definition fields required by ``AgentDefinitionValidator``."""
 
     name: str
-    tools: list[str] | None
+    tool_universe: frozenset[str]
 
 
 class AgentValidationResult(BaseModel):
@@ -38,9 +38,10 @@ class AgentDefinitionValidator:
         if defn.name in RESERVED_BUILTIN_AGENT_NAMES:
             errors.append(f"Agent name is reserved for a builtin runtime agent: {defn.name}")
 
-        if defn.tools:
+        universe = defn.tool_universe
+        if universe:
             known_tools = self._resolve_all_tool_names()
-            unknown_tools = sorted(set(defn.tools) - known_tools)
+            unknown_tools = sorted(universe - known_tools)
             for tool_name in unknown_tools:
                 errors.append(f"Unknown tool: {tool_name}")
 

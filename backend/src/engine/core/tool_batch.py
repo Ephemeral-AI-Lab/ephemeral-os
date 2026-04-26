@@ -22,24 +22,40 @@ def validate_tool_batch(
     context: QueryContext,
     tool_calls: list[Any],
 ) -> list[ToolResultBlock] | None:
-    if not tool_calls:
+    if not tool_calls or len(tool_calls) <= 1:
         return None
 
-    # Terminal-tool exclusivity: if any tool in this batch is a declared
-    # terminal tool, it must be the ONLY tool. Mixing a terminal tool with
-    # siblings would let siblings mutate state after the agent has already
-    # submitted its terminal result.
-    if context.terminal_tools and len(tool_calls) > 1:
-        terminal_in_batch = [tc for tc in tool_calls if tc.name in context.terminal_tools]
-        if terminal_in_batch:
-            terminal_names = ", ".join(f"`{tc.name}`" for tc in terminal_in_batch)
-            called = ", ".join(f"`{tc.name}`" for tc in tool_calls)
-            message = (
-                f"Terminal tool {terminal_names} must be called alone. "
-                f"This response batched it with other tools: {called}. "
-                f"No tool in this batch executed. "
-                f"Resubmit with only the terminal tool in its own final batch."
-            )
-            return reject_tool_batch(tool_calls, message=message)
+    # Terminal-tool and mode-entry-tool exclusivity: such tools mutate run
+    # state in ways that would make sibling dispatches incoherent. If any
+    # call in the batch is exclusive, the whole batch is rejected so the
+    # model can resubmit with the exclusive tool alone.
+    terminal_in_batch = [
+        tc for tc in tool_calls if tc.name in context.terminal_tools
+    ]
+    registry = getattr(context, "tool_registry", None)
+    entry_in_batch: list[Any] = []
+    if registry is not None:
+        for tc in tool_calls:
+            tool_def = registry.get(tc.name)
+            if tool_def is not None and getattr(tool_def, "is_mode_entry_tool", False):
+                entry_in_batch.append(tc)
 
-    return None
+    flagged = terminal_in_batch + entry_in_batch
+    if not flagged:
+        return None
+
+    flagged_names = ", ".join(sorted({f"`{tc.name}`" for tc in flagged}))
+    called_names = ", ".join(f"`{tc.name}`" for tc in tool_calls)
+    if terminal_in_batch and entry_in_batch:
+        kind = "Terminal/mode-entry tool"
+    elif entry_in_batch:
+        kind = "Mode-entry tool"
+    else:
+        kind = "Terminal tool"
+    message = (
+        f"{kind} {flagged_names} must be called alone. "
+        f"This response batched it with other tools: {called_names}. "
+        f"No tool in this batch executed. "
+        f"Resubmit with only the exclusive tool in its own final batch."
+    )
+    return reject_tool_batch(tool_calls, message=message)

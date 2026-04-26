@@ -191,8 +191,13 @@ def _build_agent_tool_registry(
             "sandbox_id": sandbox_id or "",
         },
     )
-    if agent_def and agent_def.tools:
-        _register_requested_tools(tool_registry, agent_def.tools, tool_ctx, agent_name)
+    if agent_def and agent_def.tool_universe:
+        _register_requested_tools(
+            tool_registry,
+            sorted(agent_def.tool_universe),
+            tool_ctx,
+            agent_name,
+        )
     elif sandbox_id:
         from tools.daytona_toolkit import make_daytona_tools
 
@@ -324,6 +329,8 @@ def spawn_agent(
         enable_background_tasks=has_background_tools,
         user_context_message=build_runtime_context_message(cwd=config.cwd),
         agent_name=agent_name,
+        agent_def=agent_def,
+        active_mode=agent_def.default_mode if agent_def else None,
     )
 
     return EphemeralAgent(

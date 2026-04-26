@@ -48,6 +48,7 @@ def make_production_spawn(
         meta["task_center"] = tc
         meta["task_id"] = task_id
         meta["role"] = task.role
+        meta["agent_type"] = agent_def.agent_type
 
         try:
             await execute_ephemeral_agent_run(

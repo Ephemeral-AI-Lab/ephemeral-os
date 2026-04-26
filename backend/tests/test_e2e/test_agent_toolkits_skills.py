@@ -43,7 +43,7 @@ class TestInfrastructure:
         assert "submit_task_plan" not in tool_names
         assert "declare_blocker" not in tool_names
         assert "load_skill" in tool_names
-        assert "check_background_progress" in tool_names
+        assert "wait_for_background_task" in tool_names
 
 
 class TestConfigBackedAgentApi:
@@ -74,7 +74,7 @@ class TestConfigBackedAgentApi:
         assert "submit_task_success" not in tools
         assert "request_replan" not in tools
         assert "load_skill" in tools
-        assert "check_background_progress" in tools
+        assert "wait_for_background_task" in tools
 
     @pytest.mark.parametrize(
         ("method", "path"),
