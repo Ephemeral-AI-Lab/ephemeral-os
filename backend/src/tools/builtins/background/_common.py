@@ -9,67 +9,35 @@ from typing import Any
 from pydantic import Field
 
 TASK_ID_FIELD_DESCRIPTION = (
-    "REQUIRED. Either the exact `task_id` string (e.g. \"bg_1\") shown "
-    "in the `[BACKGROUND LAUNCHED]` message, OR the literal string \"all\" "
-    "to target every pending background task. Never pass null/None and "
-    "never omit this field."
+    "REQUIRED. The exact `task_id` string (e.g. \"bg_1\") shown in the "
+    "`[BACKGROUND LAUNCHED]` message. Never pass null/None and never "
+    "omit this field."
 )
 
 TASK_ID_FIELD = Field(..., min_length=1, description=TASK_ID_FIELD_DESCRIPTION)
 
 
-# Total char budget for `output` fields in a single tool response,
-# summed across every status entry. ~1k tokens, chosen to keep batched
-# `task_id="all"` responses within the agent's context budget.
-MAX_TOTAL_OUTPUT_CHARS = 4000
-# Floor on per-entry budget so a many-task response still leaves each
-# entry with enough tail to be useful.
-MIN_PER_ENTRY_CHARS = 200
+def render_tool_command(tool_name: str, tool_input: dict[str, Any]) -> str:
+    """Render a tool invocation as ``name(v1, v2, ...)``.
 
-def apply_last_n_lines(status: list[dict[str, Any]], last_n_lines: int) -> None:
-    """Trim 'output' field in each status entry, in-place.
-
-    Two-stage trim:
-      1. Keep only the *last* ``last_n_lines`` lines per entry.
-      2. Split ``MAX_TOTAL_OUTPUT_CHARS`` evenly across all entries that
-         still have output, char-capping each entry to its share (with
-         a floor of ``MIN_PER_ENTRY_CHARS``).
-
-    The per-entry char-cap keeps the tail and prepends a
-    ``... (head truncated)`` marker so the reader sees the marker before
-    the kept content. After char-capping, any leading partial line is
-    dropped so the first visible line is complete.
-
-    Caller must own the list — this mutates entries in place.
+    Values are stringified verbatim and joined by ``, ``. No truncation —
+    the wait/check tools surface this so the model can recognise which
+    background task is which.
     """
-    # Stage 1: line trim.
-    for entry in status:
-        if "output" in entry and isinstance(entry["output"], str):
-            lines = entry["output"].splitlines()
-            if len(lines) > last_n_lines:
-                entry["output"] = "\n".join(lines[-last_n_lines:])
+    if not tool_input:
+        return f"{tool_name}()"
+    parts = [str(v) for v in tool_input.values()]
+    return f"{tool_name}({', '.join(parts)})"
 
-    # Stage 2: total char budget, split per entry.
-    entries_with_output = [
-        e for e in status
-        if "output" in e and isinstance(e["output"], str) and e["output"]
-    ]
-    if not entries_with_output:
-        return
-    per_entry_budget = max(
-        MIN_PER_ENTRY_CHARS,
-        MAX_TOTAL_OUTPUT_CHARS // len(entries_with_output),
-    )
-    for entry in entries_with_output:
-        text = entry["output"]
-        if len(text) <= per_entry_budget:
-            continue
-        tail = text[-per_entry_budget:]
-        # Drop the leading partial line so the first visible line is whole.
-        nl = tail.find("\n")
-        if nl != -1:
-            tail = tail[nl + 1:]
-        entry["output"] = "... (head truncated)\n" + tail
+
+def normalize_status(raw_status: Any) -> str:
+    """Collapse internal task statuses to {running, finished, failed}."""
+    s = str(raw_status)
+    if s == "running":
+        return "running"
+    if s in ("completed", "delivered"):
+        return "finished"
+    return "failed"
 
 
 def render_background_snapshot(
@@ -79,17 +47,14 @@ def render_background_snapshot(
     elapsed_seconds: float | None = None,
 ) -> str:
     """Render a background status snapshot exactly as the tools return it."""
-    if kind == "progress":
-        return json.dumps(statuses, indent=2)
-
     if kind == "wait_completed":
         return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
 
     if kind == "wait_timed_out":
         elapsed = elapsed_seconds or 0.0
         hint = (
-            "Call wait_for_background_task again to continue waiting, "
-            "or cancel_background_task to stop."
+            "Call wait_background_tasks again to continue waiting, "
+            "or cancel_background_task to stop a specific task."
         )
         return (
             f"[TIMED_OUT after {elapsed:.1f}s]\n"
@@ -98,20 +63,9 @@ def render_background_snapshot(
         )
 
     if kind == "wait_no_tasks":
-        if statuses:
-            return (
-                "[NO TASKS RUNNING] 0 background tasks are pending. "
-                "All previously launched tasks have already finished; "
-                "their results were (or will be) delivered as "
-                "[BACKGROUND <task_id> COMPLETED] messages. Do not poll "
-                "or wait on those task ids again; act on the delivered "
-                "results instead.\n"
-                f"{json.dumps(statuses, indent=2)}"
-            )
         return (
-            "[NO TASKS RUNNING] 0 background tasks are pending and "
-            "none have ever been launched in this session. Do not poll "
-            "or wait unless you launch new background work."
+            "[NO TASKS] No background tasks have been launched in this "
+            "session, or all are already delivered. Do not poll again."
         )
 
     raise ValueError(f"Unknown background snapshot kind: {kind}")

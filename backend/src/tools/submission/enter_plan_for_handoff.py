@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from agents.builtins import PLAN_FOR_HANDOFF_BRIEFING
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from tools.submission._mode_entry import enter_secondary_mode
@@ -34,6 +33,34 @@ async def enter_plan_for_handoff(*, context: ToolExecutionContext) -> ToolResult
         context,
         target_mode="plan_for_handoff",
         required_role="executor",
-        briefing=PLAN_FOR_HANDOFF_BRIEFING,
+        briefing="""\
+You have entered plan_for_handoff mode. This is a one-way commitment: the only
+way out is to call submit_plan_handoff with a complete DAG plan.
+
+Purpose
+  Decompose the task into a DAG of child executors. Your output is the plan
+  itself — the evaluator will validate the children's combined work against
+  the acceptance_criteria you submit.
+
+Allowed tools (read-only investigation)
+  - daytona_read_file, daytona_grep, daytona_glob
+  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
+
+Terminal tool
+  - submit_plan_handoff — submit the DAG plan and exit this mode.
+
+Required fields on submit_plan_handoff
+  - tasks: flat DAG entries {id, deps}; transitive deps are implicit.
+  - task_specs: map of id -> {title, spec} for every task above.
+  - acceptance_criteria: the closure contract the evaluator will check.
+  - handoff_note: articulate what the plan covers, what risks remain, and
+    which acceptance_criteria items are most fragile. The evaluator reads
+    this before validating child outputs.
+
+You cannot edit, write, run shell commands, spawn subagents, or call any
+other terminal in this mode. The dispatcher will reject any tool that is
+not in the allowed list above. To leave this mode, call
+submit_plan_handoff with a well-formed plan.
+""",
         tool_name="enter_plan_for_handoff",
     )

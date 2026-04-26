@@ -157,7 +157,8 @@ def launch_background_tool(
         content=(
             f'[BACKGROUND LAUNCHED] task_id="{bg_alias}" tool={tool_use.name}\n'
             f"Use this task_id with "
-            f'wait_for_background_task(task_id="{bg_alias}") or '
+            f'check_background_task_result(task_id="{bg_alias}"), '
+            f"wait_background_tasks() to block until all tasks settle, or "
             f'cancel_background_task(task_id="{bg_alias}"). '
             f"Keep using the current turn on other ready work first; do not "
             f"wait immediately unless this task is the only blocker left. "

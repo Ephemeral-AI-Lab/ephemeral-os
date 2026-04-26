@@ -135,7 +135,7 @@ EXECUTOR = AgentDefinition(
             ],
             terminals=["submit_plan_handoff"],
             entry_tool="enter_plan_for_handoff",
-            briefing=PLAN_FOR_HANDOFF_BRIEFING,    # see Briefing Mechanism
+            briefing="...",                        # inline; see Briefing Mechanism
         ),
     ],
     # ... system_prompt, model, skills, etc.
@@ -162,7 +162,7 @@ EVALUATOR = AgentDefinition(
             allowed_tools=["read", "grep", "glob", "ls", "ask_user"],
             terminals=["submit_continue_to_work"],
             entry_tool="enter_prepare_continue_to_work",
-            briefing=PREPARE_CONTINUE_TO_WORK_BRIEFING,
+            briefing="...",                        # inline; see Briefing Mechanism
         ),
     ],
 )

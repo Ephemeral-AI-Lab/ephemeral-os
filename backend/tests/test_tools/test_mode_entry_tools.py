@@ -18,10 +18,6 @@ from typing import Any
 
 import pytest
 
-from agents.builtins import (
-    PLAN_FOR_HANDOFF_BRIEFING,
-    PREPARE_CONTINUE_TO_WORK_BRIEFING,
-)
 from engine.core.tool_batch import validate_tool_batch
 from message.messages import ToolUseBlock
 from task_center.task import Status, Task
@@ -89,7 +85,8 @@ async def test_plan_entry_happy_path_mutates_mode() -> None:
     res = await enter_plan_for_handoff._entrypoint(context=_ctx(task=task))
     assert not res.is_error
     assert res.mode_transition == "plan_for_handoff"
-    assert res.output == PLAN_FOR_HANDOFF_BRIEFING
+    assert "You have entered plan_for_handoff mode" in res.output
+    assert "submit_plan_handoff with a well-formed plan" in res.output
     assert task.mode == "plan_for_handoff"
 
 
@@ -154,7 +151,8 @@ async def test_prepare_entry_happy_path_mutates_mode() -> None:
     )
     assert not res.is_error
     assert res.mode_transition == "prepare_continue_to_work"
-    assert res.output == PREPARE_CONTINUE_TO_WORK_BRIEFING
+    assert "You have entered prepare_continue_to_work mode" in res.output
+    assert "submit_continue_to_work with a gap summary" in res.output
     assert task.mode == "prepare_continue_to_work"
 
 
@@ -245,3 +243,74 @@ def test_terminal_and_entry_in_same_batch_both_flagged() -> None:
     )
     assert res is not None and len(res) == 2
     assert "Terminal/mode-entry" in res[0].content
+
+
+# --------------------------------------------------------------------------- #
+# Cross-secondary deny payload includes current mode's terminals (spec §FM)   #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_cross_secondary_deny_lists_current_mode_terminals() -> None:
+    """Spec §Failure Modes: 'Tool returns is_error=true *listing the existing
+    mode's allowed terminals*.' The cross-secondary deny payload must name
+    the terminals of the mode the task is currently stuck in."""
+    from agents.types import AgentDefinition, ModeDefinition
+
+    # Build a synthetic agent with two secondary modes so a cross-secondary
+    # transition is structurally possible.
+    synthetic = AgentDefinition(
+        name="dual_secondary",
+        description="d",
+        role="evaluator",
+        modes=[
+            ModeDefinition(
+                name="direct",
+                is_default=True,
+                terminals=["submit_task_completion"],
+            ),
+            ModeDefinition(
+                name="plan_for_handoff",
+                allowed_tools=[],
+                terminals=["submit_plan_handoff"],
+                entry_tool="enter_plan_for_handoff",
+                briefing="b1",
+            ),
+            ModeDefinition(
+                name="prepare_continue_to_work",
+                allowed_tools=[],
+                terminals=["submit_continue_to_work"],
+                entry_tool="enter_prepare_continue_to_work",
+                briefing="b2",
+            ),
+        ],
+    )
+
+    task = _make_task(role="evaluator", mode="plan_for_handoff")
+    meta = ExecutionMetadata()
+    meta["role"] = "evaluator"
+    meta["agent_type"] = "agent"
+    meta["task_center"] = _FakeTC(graph=_FakeGraph(task=task))
+    meta["task_id"] = "t1"
+    meta["agent_def"] = synthetic
+    ctx = ToolExecutionContext(cwd=Path("/tmp"), metadata=meta)
+
+    res = await enter_prepare_continue_to_work._entrypoint(context=ctx)
+    assert res.is_error
+    assert "cross-secondary" in res.output
+    assert "submit_plan_handoff" in res.output  # the current mode's terminal
+    assert "plan_for_handoff" in res.output
+    assert task.mode == "plan_for_handoff"  # unchanged
+
+
+@pytest.mark.asyncio
+async def test_cross_secondary_deny_falls_back_when_agent_def_absent() -> None:
+    """Without ``agent_def`` in metadata the helper can't enumerate terminals
+    — it should still produce a structured deny instead of crashing."""
+    task = _make_task(role="evaluator", mode="plan_for_handoff")
+    res = await enter_prepare_continue_to_work._entrypoint(
+        context=_ctx(task=task, role="evaluator"),
+    )
+    assert res.is_error
+    assert "cross-secondary" in res.output
+    assert "(none registered)" in res.output

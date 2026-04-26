@@ -92,6 +92,7 @@ async def run_ephemeral_agent(
     parent_run_id: str | None = None,
     parent_task_id: str | None = None,
     on_event: AgentStreamEmitter | None = None,
+    on_agent_spawned: Callable[[Any], None] | None = None,
     extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> EphemeralRunResult:
     """Spawn → track → run → persist usage → optionally save session history.

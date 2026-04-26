@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from agents.builtins import PREPARE_CONTINUE_TO_WORK_BRIEFING
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from tools.submission._mode_entry import enter_secondary_mode
@@ -38,6 +37,30 @@ async def enter_prepare_continue_to_work(
         context,
         target_mode="prepare_continue_to_work",
         required_role="evaluator",
-        briefing=PREPARE_CONTINUE_TO_WORK_BRIEFING,
+        briefing="""\
+You have entered prepare_continue_to_work mode. This is a one-way commitment:
+the only way out is to call submit_continue_to_work with a gap summary.
+
+Purpose
+  You have judged the parent task's acceptance_criteria as not yet satisfied.
+  Prepare the gap analysis that will drive the continuation executor — your
+  summary is its input.
+
+Allowed tools (read-only investigation)
+  - daytona_read_file, daytona_grep, daytona_glob
+  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
+
+Terminal tool
+  - submit_continue_to_work — submit the gap summary and exit this mode.
+
+Required field on submit_continue_to_work
+  - summary: which acceptance_criteria items remain unmet, what evidence
+    proves the gap, and what the continuation executor should focus on.
+
+You cannot edit, write, run shell commands, spawn subagents, or call any
+other terminal in this mode. The dispatcher will reject any tool that is
+not in the allowed list above. To leave this mode, call
+submit_continue_to_work with a gap summary.
+""",
         tool_name="enter_prepare_continue_to_work",
     )

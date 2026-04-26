@@ -3,7 +3,9 @@
 These two agents have secondary modes (plan_for_handoff, prepare_continue_to_work)
 whose tool surfaces and briefings are too rich to express comfortably as YAML
 frontmatter. They live as Python literals so the tool lists can be derived from
-named constants.
+named constants. The mode briefings live in :mod:`agents.briefings` so they
+are not duplicated between the AgentDefinition literal and any caller (tests,
+docs, error messages) that wants to inspect or assert against the briefing.
 
 The legacy ``backend/config/agents/executor.md`` and ``evaluator.md`` were
 removed when this module was introduced; user-defined agents continue to load
@@ -14,6 +16,10 @@ See ``docs/architecture/agent-mode-system-v1.md``.
 
 from __future__ import annotations
 
+from agents.briefings import (
+    PLAN_FOR_HANDOFF_BRIEFING,
+    PREPARE_CONTINUE_TO_WORK_BRIEFING,
+)
 from agents.types import AgentDefinition, ModeDefinition
 
 # ---------------------------------------------------------------------------
@@ -31,64 +37,6 @@ _READ_ONLY_INVESTIGATION_TOOLS: list[str] = [
     "ci_diagnostics",
     "ci_workspace_structure",
 ]
-
-PLAN_FOR_HANDOFF_BRIEFING = """\
-You have entered plan_for_handoff mode. This is a one-way commitment: the only
-way out is to call submit_plan_handoff with a complete DAG plan.
-
-Purpose
-  Decompose the task into a DAG of child executors. Your output is the plan
-  itself — the evaluator will validate the children's combined work against
-  the acceptance_criteria you submit.
-
-Allowed tools (read-only investigation)
-  - daytona_read_file, daytona_grep, daytona_glob
-  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
-
-Terminal tool
-  - submit_plan_handoff — submit the DAG plan and exit this mode.
-
-Required fields on submit_plan_handoff
-  - tasks: flat DAG entries {id, deps}; transitive deps are implicit.
-  - task_specs: map of id -> {title, spec} for every task above.
-  - acceptance_criteria: the closure contract the evaluator will check.
-  - handoff_note: articulate what the plan covers, what risks remain, and
-    which acceptance_criteria items are most fragile. The evaluator reads
-    this before validating child outputs.
-
-You cannot edit, write, run shell commands, spawn subagents, or call any
-other terminal in this mode. The dispatcher will reject any tool that is
-not in the allowed list above. To leave this mode, call
-submit_plan_handoff with a well-formed plan.
-"""
-
-
-PREPARE_CONTINUE_TO_WORK_BRIEFING = """\
-You have entered prepare_continue_to_work mode. This is a one-way commitment:
-the only way out is to call submit_continue_to_work with a gap summary.
-
-Purpose
-  You have judged the parent task's acceptance_criteria as not yet satisfied.
-  Prepare the gap analysis that will drive the continuation executor — your
-  summary is its input.
-
-Allowed tools (read-only investigation)
-  - daytona_read_file, daytona_grep, daytona_glob
-  - ci_query_symbol, ci_diagnostics, ci_workspace_structure
-
-Terminal tool
-  - submit_continue_to_work — submit the gap summary and exit this mode.
-
-Required field on submit_continue_to_work
-  - summary: which acceptance_criteria items remain unmet, what evidence
-    proves the gap, and what the continuation executor should focus on.
-
-You cannot edit, write, run shell commands, spawn subagents, or call any
-other terminal in this mode. The dispatcher will reject any tool that is
-not in the allowed list above. To leave this mode, call
-submit_continue_to_work with a gap summary.
-"""
-
 
 # ---------------------------------------------------------------------------
 # Executor
@@ -219,15 +167,60 @@ EVALUATOR = AgentDefinition(
 
 
 # ---------------------------------------------------------------------------
+# Explorer (subagent)
+# ---------------------------------------------------------------------------
+
+_EXPLORER_SYSTEM_PROMPT = """\
+**Role**
+You are a focused exploration worker. The parent agent dispatched you with a \
+specific question or area to investigate; your only job is to gather the \
+requested information and return your findings.
+
+**Rules to Follow**
+You operate read-only — do not modify any files, run mutating commands, or \
+spawn further agents. Investigate as deeply as the prompt requires, then \
+deliver one clear result.
+
+**Task Completion**
+End your turn with exactly one terminal tool call: `submit_exploration_result` \
+with your `findings` as a free-form text payload. The parent receives that \
+text verbatim as the result of its `run_subagent` call. Do not call any other \
+terminal tool.
+"""
+
+
+EXPLORER = AgentDefinition(
+    name="explorer",
+    description=(
+        "Read-only exploration subagent. Investigates a focused question and "
+        "returns its findings to the dispatching parent agent."
+    ),
+    role="explorer",
+    agent_type="subagent",
+    model="inherit",
+    tool_call_limit=50,
+    system_prompt=_EXPLORER_SYSTEM_PROMPT,
+    modes=[
+        ModeDefinition(
+            name="direct",
+            is_default=True,
+            allowed_tools=list(_READ_ONLY_INVESTIGATION_TOOLS),
+            terminals=["submit_exploration_result"],
+        ),
+    ],
+)
+
+
+# ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
 
 
-BUILTIN_AGENTS: tuple[AgentDefinition, ...] = (EXECUTOR, EVALUATOR)
+BUILTIN_AGENTS: tuple[AgentDefinition, ...] = (EXECUTOR, EVALUATOR, EXPLORER)
 
 
 def register_builtin_agents() -> None:
-    """Register the executor and evaluator definitions in the global registry.
+    """Register the executor, evaluator, and explorer definitions.
 
     Idempotent — safe to call from multiple bootstrap paths (server lifespan,
     test fixtures, CLI helpers).
@@ -242,6 +235,8 @@ __all__ = [
     "BUILTIN_AGENTS",
     "EVALUATOR",
     "EXECUTOR",
+    "EXPLORER",
+    # Re-exported from ``agents.briefings`` for ergonomic test imports.
     "PLAN_FOR_HANDOFF_BRIEFING",
     "PREPARE_CONTINUE_TO_WORK_BRIEFING",
     "register_builtin_agents",

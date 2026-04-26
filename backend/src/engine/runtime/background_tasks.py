@@ -259,7 +259,7 @@ class BackgroundTaskManager:
         """Append a live progress line for *task_id*.
 
         Used by streaming-capable tools to push incremental output into the
-        manager so that ``wait_for_background_task`` can return a live tail
+        manager so that ``check_background_task_result`` can return a live tail
         while the task is still running. Splits *line* on newlines so the
         caller can pass either a single line or a chunk of multiple lines.
         No-op if the task is unknown or already finished.

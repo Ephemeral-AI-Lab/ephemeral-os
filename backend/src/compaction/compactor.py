@@ -83,7 +83,7 @@ TOKEN_ESTIMATION_PADDING = 4 / 3
 # Default context windows per model family
 _DEFAULT_CONTEXT_WINDOW = 200_000
 _BACKGROUND_SNAPSHOT_TOOLS: frozenset[str] = frozenset(
-    {"wait_for_background_task"}
+    {"wait_background_tasks"}
 )
 _REDUCIBLE_RUNNING_STATUSES: frozenset[str] = frozenset({"running"})
 _REDUCIBLE_TERMINAL_STATUSES: frozenset[str] = frozenset(
