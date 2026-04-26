@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "web" / "dist"
 
 if TYPE_CHECKING:
-    from task_center.center import TaskCenter
+    from task_center.orchestrator import TaskCenter
 
 TaskCenterSpawnFunc = Callable[[str, "TaskCenter", str | None], Awaitable[None]]
 
@@ -154,7 +154,7 @@ class RuntimeState:
         if self.config is None or self._task_center_spawn_func is None:
             raise RuntimeError("RuntimeState not initialised")
 
-        from task_center.center import TaskCenter
+        from task_center.orchestrator import TaskCenter
         from uuid import uuid4
 
         request_id = uuid4().hex[:12]

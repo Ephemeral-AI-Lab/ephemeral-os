@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from code_intelligence.routing.service import CodeIntelligenceService
+from code_intelligence.service import CodeIntelligenceService
 from engine.testing.eval_agent import EvalAgent
 from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
 from tools.core.base import ToolExecutionContextService, ToolResult

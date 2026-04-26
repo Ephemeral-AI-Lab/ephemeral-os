@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from server.app_factory import RuntimeConfig, RuntimeState
-from task_center.center import TaskCenter
+from task_center.orchestrator import TaskCenter
 
 
 async def test_create_task_center_returns_request_scoped_instances() -> None:

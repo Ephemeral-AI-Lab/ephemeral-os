@@ -11,9 +11,9 @@ Public surface:
 
 from __future__ import annotations
 
-from task_center.dag import compile_dag
+from task_center.plan import compile_dag
 from task_center.errors import PlanValidationError, TaskCenterError
-from task_center.harness_graph import TaskCenterHarnessGraph
+from task_center.harness import TaskCenterHarnessGraph
 from task_center.task import (
     HarnessGraphId,
     Status,

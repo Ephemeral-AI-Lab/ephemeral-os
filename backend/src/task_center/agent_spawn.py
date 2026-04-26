@@ -1,6 +1,6 @@
 """TaskCenter ``SpawnFunc`` adapter that drives a real EphemeralAgent per task.
 
-The dispatcher in :mod:`task_center.center` calls
+The dispatcher in :mod:`task_center.orchestrator` calls
 ``spawn_func(task_id, tc, sandbox_id)`` for each ``READY`` task. In production
 this needs to:
 
@@ -19,7 +19,7 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from task_center.center import TaskCenter
+    from task_center.orchestrator import TaskCenter
 
 logger = logging.getLogger(__name__)
 

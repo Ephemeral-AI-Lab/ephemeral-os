@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from code_intelligence.editing.patcher import SearchReplaceEdit
-from code_intelligence.types import EditSpec
+from code_intelligence.mutations.patcher import SearchReplaceEdit
+from code_intelligence.core.types import EditSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.ci_runtime import ci_write_required_result, get_ci_service
 from tools.core.decorator import tool

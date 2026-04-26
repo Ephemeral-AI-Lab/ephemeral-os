@@ -21,12 +21,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.routing.overlay_run import (
+from code_intelligence.overlay.run import (
     Classifier,
     ClassifyOutcome,
     PolicyRejectOutcome,
     REJECT_DOTGIT,
-    REJECT_GITIGNORE_OPAQUE_DIR,
     REJECT_GITIGNORE_WHITEOUT,
     REJECT_NON_UTF8_GITINCLUDE,
     REJECT_UNSUPPORTED_OPAQUE_DIR,
@@ -471,6 +470,30 @@ def test_classifier_rejects_non_utf8_on_gitinclude_route() -> None:
     assert result.paths == ("src/app.py",)
 
 
+def test_classifier_rejects_before_applying_gitignore_route_side_effects() -> None:
+    env = _Classifier(
+        upper_bytes={
+            ".venv/pyvenv.cfg": b"home=/usr\n",
+            "src/app.py": b"\xff\xfe\x00binary",
+        },
+        base_bytes={},
+        ignored={".pytest_cache", ".venv/pyvenv.cfg"},
+    )
+    result = env.classifier().classify(
+        [
+            _opaque_dir_entry(".pytest_cache"),
+            _regular_entry(".venv/pyvenv.cfg"),
+            _regular_entry("src/app.py"),
+        ]
+    )
+
+    assert isinstance(result, PolicyRejectOutcome)
+    assert result.reason == REJECT_NON_UTF8_GITINCLUDE
+    assert result.paths == ("src/app.py",)
+    assert env.merged == []
+    assert env.pruned == []
+
+
 def test_classifier_rejects_non_utf8_base_content_on_gitinclude_modify() -> None:
     env = _Classifier(
         upper_bytes={"src/app.py": b"ok\n"},
@@ -516,7 +539,6 @@ def test_reject_exit_codes_are_distinct_sentinels() -> None:
     reasons = [
         REJECT_DOTGIT,
         REJECT_GITIGNORE_WHITEOUT,
-        REJECT_GITIGNORE_OPAQUE_DIR,
         REJECT_UNSUPPORTED_SYMLINK,
         REJECT_UNSUPPORTED_OPAQUE_DIR,
         REJECT_NON_UTF8_GITINCLUDE,
@@ -555,7 +577,7 @@ def test_walk_upperdir_handles_missing_root(tmp_path: Path) -> None:
 def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
     outcome = ClassifyOutcome(
         gitinclude=(
-            __import__("code_intelligence.routing.overlay_run", fromlist=["GitincludeChange"])
+            __import__("code_intelligence.overlay.run", fromlist=["GitincludeChange"])
             .GitincludeChange(
                 path="a.py",
                 kind="modify",
@@ -839,7 +861,7 @@ def test_direct_merge_overwrites_existing_live_file_last_writer_wins(
 
 
 def test_run_user_command_runs_in_workspace_cwd(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import run_user_command
+    from code_intelligence.overlay.run import run_user_command
 
     stdout, exit_code = run_user_command(
         user_cmd="pwd",
@@ -852,7 +874,7 @@ def test_run_user_command_runs_in_workspace_cwd(tmp_path: Path) -> None:
 
 
 def test_run_user_command_resolves_relative_paths_against_cwd(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import run_user_command
+    from code_intelligence.overlay.run import run_user_command
 
     (tmp_path / "marker.txt").write_text("hi\n", encoding="utf-8")
     stdout, exit_code = run_user_command(
@@ -866,7 +888,7 @@ def test_run_user_command_resolves_relative_paths_against_cwd(tmp_path: Path) ->
 
 
 def test_run_user_command_disables_optional_git_locks(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import run_user_command
+    from code_intelligence.overlay.run import run_user_command
 
     stdout, exit_code = run_user_command(
         user_cmd='printf "%s" "$GIT_OPTIONAL_LOCKS"',
@@ -884,7 +906,7 @@ def test_run_user_command_disables_optional_git_locks(tmp_path: Path) -> None:
 
 
 def test_parse_args_accepts_the_full_argument_surface() -> None:
-    from code_intelligence.routing.overlay_run import _parse_args
+    from code_intelligence.overlay.run import _parse_args
 
     ns = _parse_args(
         [
@@ -905,14 +927,14 @@ def test_parse_args_accepts_the_full_argument_surface() -> None:
 
 
 def test_parse_args_rejects_missing_required_argument() -> None:
-    from code_intelligence.routing.overlay_run import _parse_args
+    from code_intelligence.overlay.run import _parse_args
 
     with pytest.raises(SystemExit):
         _parse_args(["--workspace-root", "/ws"])
 
 
 def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
-    from code_intelligence.routing import overlay_run
+    from code_intelligence.overlay import run as overlay_run
 
     assert overlay_run._NS_ROOT.startswith("/tmp/")
     assert overlay_run._NS_TMP.startswith(overlay_run._NS_ROOT + "/")
@@ -947,7 +969,7 @@ def _make_snap(repo: Path) -> str:
 
 
 def test_git_show_base_returns_bytes_for_existing_path(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import git_show_base_factory
+    from code_intelligence.overlay.run import git_show_base_factory
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -964,7 +986,7 @@ def test_git_show_base_returns_bytes_for_existing_path(tmp_path: Path) -> None:
 
 
 def test_git_show_base_returns_none_for_missing_path(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import git_show_base_factory
+    from code_intelligence.overlay.run import git_show_base_factory
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -981,7 +1003,7 @@ def test_git_show_base_returns_none_for_missing_path(tmp_path: Path) -> None:
 
 
 def test_git_show_base_raises_on_bad_sha(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_run import git_show_base_factory
+    from code_intelligence.overlay.run import git_show_base_factory
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -1006,8 +1028,8 @@ def test_git_show_base_raises_on_bad_sha(tmp_path: Path) -> None:
 
 
 def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_auditor import parse_diff_ndjson
-    from code_intelligence.routing.overlay_run import GitincludeChange
+    from code_intelligence.overlay.auditor import parse_diff_ndjson
+    from code_intelligence.overlay.run import GitincludeChange
 
     outcome = ClassifyOutcome(
         gitinclude=(
@@ -1076,7 +1098,7 @@ def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) ->
 
 
 def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
-    from code_intelligence.routing.overlay_auditor import parse_diff_ndjson
+    from code_intelligence.overlay.auditor import parse_diff_ndjson
 
     reject = PolicyRejectOutcome(
         reason="overlay_rejected_dotgit_writes",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from code_intelligence.routing import telemetry
+from code_intelligence import telemetry
 
 
 @pytest.fixture(autouse=True)

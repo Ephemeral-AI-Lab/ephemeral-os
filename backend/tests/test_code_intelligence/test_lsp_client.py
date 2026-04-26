@@ -12,8 +12,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.lsp.client import LspClient
-from code_intelligence.types import DiagnosticSeverity, ReferenceInfo, SymbolKind
+from code_intelligence.language_server.client import LspClient
+from code_intelligence.core.types import DiagnosticSeverity, ReferenceInfo, SymbolKind
 
 
 def _decode_sandbox_python_payload(command: str) -> str:
@@ -291,7 +291,7 @@ def test_sandbox_exec_logs_empty_daytona_exception_context(caplog) -> None:
 
     sandbox = SimpleNamespace(process=_SandboxProcess())
     lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
-    caplog.set_level(logging.DEBUG, logger="code_intelligence.lsp.client")
+    caplog.set_level(logging.DEBUG, logger="code_intelligence.language_server.client")
 
     assert lsp._run_python_script("print('hello')") == ""
 

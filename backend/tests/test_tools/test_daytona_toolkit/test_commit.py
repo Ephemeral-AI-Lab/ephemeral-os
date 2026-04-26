@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from code_intelligence.types import OperationResult
+from code_intelligence.core.types import OperationResult
 from tools.core.base import ToolExecutionContextService
 from tools.daytona_toolkit._commit import (
     FileChangeResult,

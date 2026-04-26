@@ -8,7 +8,7 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
-from code_intelligence.routing.content_manager import ContentManager
+from code_intelligence.mutations.content_manager import ContentManager
 
 
 class _RecordingProcess:
@@ -71,6 +71,26 @@ def test_relative_local_paths_resolve_under_workspace_root(tmp_path: Path) -> No
 
     content.delete("pkg/new.py")
     assert not (tmp_path / "pkg" / "new.py").exists()
+
+
+def test_relative_paths_cannot_escape_workspace_root(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    content = ContentManager(str(workspace))
+
+    for action in (
+        lambda: content.read("../outside.py", allow_missing=True),
+        lambda: content.write("../outside.py", "ESCAPE = True\n"),
+        lambda: content.delete("../outside.py"),
+    ):
+        try:
+            action()
+        except ValueError as exc:
+            assert "escapes workspace root" in str(exc)
+        else:
+            raise AssertionError("relative path traversal was not rejected")
+
+    assert not (tmp_path / "outside.py").exists()
 
 
 def test_read_many_prefers_real_daytona_batch_download(

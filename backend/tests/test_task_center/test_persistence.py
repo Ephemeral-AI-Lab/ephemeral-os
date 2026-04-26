@@ -12,7 +12,7 @@ import db.models  # noqa: F401
 from db.base import Base
 from db.stores.agent_run_store import AgentRunStore
 from db.stores.task_center_store import TaskCenterStore
-from task_center.center import TaskCenter
+from task_center.orchestrator import TaskCenter
 
 
 Action = Callable[[TaskCenter, str], Awaitable[None]]

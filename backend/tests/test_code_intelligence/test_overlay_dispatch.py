@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.routing.command_executor import AuditedCommandExecutor
-from code_intelligence.routing.overlay_auditor import OverlayAuditor
-from code_intelligence.routing.service import (
+from code_intelligence.overlay.command_executor import AuditedCommandExecutor
+from code_intelligence.overlay.auditor import OverlayAuditor
+from code_intelligence.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )

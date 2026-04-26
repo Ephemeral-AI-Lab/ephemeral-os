@@ -49,7 +49,17 @@ def get_async_session_factory() -> "async_sessionmaker[AsyncSession] | None":
 
 
 _DROPPED_COLUMNS: dict[str, set[str]] = {
-    "task_center_tasks": {"title", "summary"},
+    "task_center_tasks": {
+        "acceptance_criteria",
+        "children",
+        "closes_for",
+        "evaluator_id",
+        "handoff_note",
+        "parent_id",
+        "spec",
+        "summary",
+        "title",
+    },
 }
 
 

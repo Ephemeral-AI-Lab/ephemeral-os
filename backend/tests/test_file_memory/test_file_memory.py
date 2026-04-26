@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import db.models  # noqa: F401  -- registers models with Base.metadata
-from code_intelligence.types import SymbolInfo, SymbolKind
+from code_intelligence.core.types import SymbolInfo, SymbolKind
 from db.base import Base
 from db.stores.file_memory_note_store import FileMemoryNoteStore
 from file_memory.service import FileMemoryService

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from config.settings import Settings, load_settings, save_settings
+from db.engine import _DROPPED_COLUMNS
 
 
 class TestSettings:
@@ -29,6 +30,19 @@ class TestSettings:
         assert s is not updated
         assert s.verbose is False
         assert updated.verbose is True
+
+    def test_task_center_dropped_columns_include_obsolete_topology_fields(self):
+        assert _DROPPED_COLUMNS["task_center_tasks"] >= {
+            "spec",
+            "title",
+            "summary",
+            "parent_id",
+            "closes_for",
+            "children",
+            "evaluator_id",
+            "acceptance_criteria",
+            "handoff_note",
+        }
 
 
 class TestLoadSaveSettings:

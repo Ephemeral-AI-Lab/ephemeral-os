@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from code_intelligence.types import DeleteSpec
+from code_intelligence.core.types import DeleteSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.ci_runtime import ci_write_required_result, get_ci_service
 from tools.core.decorator import tool

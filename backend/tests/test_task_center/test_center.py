@@ -1,4 +1,4 @@
-"""End-to-end tests for ``task_center.center.TaskCenter``.
+"""End-to-end tests for ``task_center.orchestrator.TaskCenter``.
 
 Covers the verification scenarios in docs/architecture/gan-task-graph-v1.md.
 """
@@ -10,8 +10,9 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 
-from task_center import Status, TaskSummary
-from task_center.center import TaskCenter
+from task_center import Status, TaskCenterError, TaskSummary
+from task_center.orchestrator import TaskCenter
+from task_center.context import build_task_prompt
 
 
 Action = Callable[[TaskCenter, str], Awaitable[None]]
@@ -289,6 +290,118 @@ async def test_evaluator_driven_replan_context() -> None:
     assert "a done" in recovery_input  # completed child summary carried
 
 
+@pytest.mark.asyncio
+async def test_evaluator_replan_context_includes_nested_child_closure_summary() -> None:
+    seen_recovery_input: dict[str, str] = {}
+
+    async def root_action(tc, tid):
+        tc.launch_plan_handoff(tid, "outer plan")
+
+    async def outer_planner(tc, tid):
+        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "nested work"}, "outer")
+
+    async def x_action(tc, tid):
+        tc.launch_plan_handoff(tid, "inner plan")
+
+    async def inner_planner(tc, tid):
+        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner")
+
+    async def y_action(tc, tid):
+        tc.submit_task_success(tid, "y done")
+
+    async def inner_eval(tc, tid):
+        tc.submit_task_success(tid, "inner accepted")
+
+    async def outer_eval(tc, tid):
+        prompt = build_task_prompt(tc.graph.get(tid), tc.graph)
+        assert "inner accepted" in prompt
+        tc.launch_plan_handoff(tid, "repair any remaining gap")
+
+    async def recovery_planner(tc, tid):
+        seen_recovery_input[tid] = tc.graph.get(tid).input
+        tc.submit_plan_handoff(tid, [{"id": "fix"}], {"fix": "verify repair"}, "repair")
+
+    async def fix_action(tc, tid):
+        tc.submit_task_success(tid, "fix done")
+
+    async def recovery_eval(tc, tid):
+        tc.submit_task_success(tid, "recovery accepted")
+
+    scripts = {
+        "t1": root_action,
+        "t2": outer_planner,
+        "x": x_action,
+        "t3": inner_planner,
+        "y": y_action,
+        "t3-eval": inner_eval,
+        "t2-eval": outer_eval,
+        "t4": recovery_planner,
+        "fix": fix_action,
+        "t4-eval": recovery_eval,
+    }
+    tc = TaskCenter(spawn_func=_scripted_spawn(scripts))
+    root = await tc.run_query("nested recovery")
+
+    assert root.status is Status.DONE
+    assert "inner accepted" in seen_recovery_input["t4"]
+
+
+@pytest.mark.asyncio
+async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidence() -> None:
+    seen_nested_input: dict[str, str] = {}
+
+    async def root_action(tc, tid):
+        tc.launch_plan_handoff(tid, "outer plan")
+
+    async def outer_planner(tc, tid):
+        tc.submit_plan_handoff(
+            tid,
+            [{"id": "a"}, {"id": "x", "deps": ["a"]}],
+            {"a": "finish evidence first", "x": "delegate nested work"},
+            "outer handoff",
+        )
+
+    async def a_action(tc, tid):
+        tc.submit_task_success(tid, "a done")
+
+    async def x_action(tc, tid):
+        tc.launch_plan_handoff(tid, "nested planner should see outer evidence")
+
+    async def nested_planner(tc, tid):
+        seen_nested_input[tid] = tc.graph.get(tid).input
+        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do nested y"}, "inner")
+
+    async def y_action(tc, tid):
+        tc.submit_task_success(tid, "y done")
+
+    async def inner_eval(tc, tid):
+        tc.submit_task_success(tid, "inner ok")
+
+    async def outer_eval(tc, tid):
+        tc.submit_task_success(tid, "outer ok")
+
+    scripts = {
+        "t1": root_action,
+        "t2": outer_planner,
+        "a": a_action,
+        "x": x_action,
+        "t3": nested_planner,
+        "y": y_action,
+        "t3-eval": inner_eval,
+        "t2-eval": outer_eval,
+    }
+    tc = TaskCenter(spawn_func=_scripted_spawn(scripts))
+    root = await tc.run_query("root goal")
+
+    assert root.status is Status.DONE
+    nested_input = seen_nested_input["t3"]
+    assert '"caller_role": "executor"' in nested_input
+    assert '"caller_input": "delegate nested work"' in nested_input
+    assert '"requested_goal": "root goal"' in nested_input
+    assert "outer handoff" in nested_input
+    assert "a done" in nested_input
+
+
 # ----- 8. Graph helpers -----
 
 
@@ -324,6 +437,26 @@ async def test_graph_helpers() -> None:
     tc = TaskCenter(spawn_func=_scripted_spawn(scripts))
     root = await tc.run_query("the goal")
     assert root.status is Status.DONE
+
+
+def test_submit_plan_handoff_rejects_global_id_collision_before_mutating_planner() -> None:
+    tc = TaskCenter()
+    root = tc._create_root_executor("root")
+    tc._graph.transition(root.id, Status.RUNNING)
+    tc.launch_plan_handoff(root.id, "decompose")
+    planner = tc.graph.get("t2")
+    tc._graph.transition(planner.id, Status.RUNNING)
+
+    with pytest.raises(TaskCenterError, match="already exists"):
+        tc.submit_plan_handoff(
+            planner.id,
+            [{"id": root.id}],
+            {root.id: "collides with root"},
+            "bad plan",
+        )
+
+    assert planner.status is Status.RUNNING
+    assert planner.summaries == []
 
 
 # ----- 9. Evaluator dispatch under partial failure -----

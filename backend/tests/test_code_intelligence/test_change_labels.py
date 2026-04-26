@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from code_intelligence.editing.change_labels import change_actor_label
+from code_intelligence.mutations.change_labels import change_actor_label
 
 
 def test_change_actor_label_prefers_task_id() -> None:

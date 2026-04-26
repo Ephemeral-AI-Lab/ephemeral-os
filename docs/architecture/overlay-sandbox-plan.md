@@ -152,7 +152,7 @@ Unchanged from prior plan doc §3. Reads free, writes to tmpfs upper.
 Shared primitive from the (now absorbed) worktree migration doc. One module,
 reused verbatim by the overlay auditor.
 
-**Module:** `backend/src/code_intelligence/routing/git_snapshot.py` (new)
+**Module:** `backend/src/code_intelligence/overlay/git_snapshot.py` (new)
 
 ```python
 async def build_live_snapshot(
@@ -181,14 +181,16 @@ Invariants:
 
 ---
 
-## 3. Sandbox-side script: `overlay_run.py`
+## 3. Sandbox-side runtime: `overlay/run.py` + `overlay/runtime/`
 
-One Python script that runs **inside the unshare namespace**. Does:
+One Python entry point plus a small runtime package run **inside the
+unshare namespace**. It does:
 mount setup → run user command → walk upperdir → classify →
 direct-merge gitignore → emit NDJSON.
 
-**Module:** `backend/src/code_intelligence/routing/overlay_run.py` (new,
-deployed into the sandbox as a data file, not imported on the orchestrator).
+**Entry point:** `backend/src/code_intelligence/overlay/run.py` (thin CLI
+facade). The orchestrator deploys it with the historical sandbox names:
+`overlay_run.py` plus the sibling `overlay_runtime/` package.
 
 ### 3.1 Mount setup (inside the ns)
 
@@ -312,8 +314,9 @@ Inside the ns, `/ns/lower` is bind-mounted to the live workspace. Writes to
   os.rename(tmp_path, live_target)
   ```
   Bytes copy, not text. Parents created as needed.
-- **opaque-dir** → REJECT run (`overlay_refused_opaque_dir`)
-  (rare; equivalent to a whiteout of the whole dir).
+- **opaque-dir** → narrow-prune lower-only children, then direct-merge
+  written children. This preserves common cache/dependency rebuild
+  workflows without treating the opaque marker as a whole-tree delete.
 
 No OCC on this path. Last-writer-wins semantics across concurrent ops
 writing to the same gitignore path — matches how `pip install` behaves
@@ -356,15 +359,15 @@ without parsing log lines.
 ### 4.1 New modules
 
 ```
-backend/src/code_intelligence/routing/
+backend/src/code_intelligence/overlay/
   git_snapshot.py               # §2, build_live_snapshot
-  overlay_config.py             # EOS_OVERLAY_MAX_CONCURRENT, EOS_OVERLAY_UPPER_SIZE_MB
-  overlay_types.py              # OverlayLease, OverlayCommandResult,
+  config.py                     # EOS_OVERLAY_MAX_CONCURRENT, EOS_OVERLAY_UPPER_SIZE_MB
+  types.py                      # OverlayLease, OverlayCommandResult,
                                 # OverlayRunError, OverlayPolicyReject, OverlayDiff
-  overlay_run.py                # §3, sandbox-side script (data file)
-  overlay_auditor.py            # run-one-op: snap → exec → parse → OCC → cleanup
-  overlay_command_committer.py  # thin adapter that feeds NDJSON changes into
-                                # WriteCoordinator.commit_operation_against_base
+  run.py                        # §3, sandbox-side CLI facade
+  runtime/                      # §3, sandbox-side implementation modules
+  auditor.py                    # run-one-op: snap → exec → parse → OCC → cleanup
+  command_committer.py          # feeds NDJSON changes into WriteCoordinator
 ```
 
 ### 4.2 Modified modules
@@ -382,11 +385,11 @@ backend/src/code_intelligence/routing/
 ### 4.3 Deleted modules
 
 ```
-backend/src/code_intelligence/routing/git_workspace_pool.py
-backend/src/code_intelligence/routing/git_workspace_auditor.py
-backend/src/code_intelligence/routing/git_workspace_types.py
-backend/src/code_intelligence/routing/git_workspace_config.py
-backend/src/code_intelligence/routing/git_diff_committer.py
+backend/src/code_intelligence/overlay/git_workspace_pool.py
+backend/src/code_intelligence/overlay/git_workspace_auditor.py
+backend/src/code_intelligence/overlay/git_workspace_types.py
+backend/src/code_intelligence/overlay/git_workspace_config.py
+backend/src/code_intelligence/overlay/git_diff_committer.py
 ```
 
 And their tests:
@@ -575,7 +578,7 @@ friction. "High concurrency" claims are workload-bounded, not universal.
 
 ## 6. Observability
 
-Per-`svc.cmd` telemetry (added to `routing/telemetry.py`):
+Per-`svc.cmd` telemetry (added to `telemetry.py`):
 
 - `overlay.snap_build_ms`
 - `overlay.mount_setup_ms`
@@ -643,8 +646,8 @@ TDD: RED → GREEN → optional refactor, per project discipline.
 
 ### PR 2 — Sandbox-side overlay run script + auditor (functional, behind dispatcher swap)
 
-- Add `overlay_config.py`, `overlay_types.py`, `overlay_run.py`,
-  `overlay_auditor.py`, `overlay_command_committer.py`.
+- Add `config.py`, `types.py`, `run.py`, `runtime/`, `auditor.py`,
+  `command_committer.py`.
 - Unit tests against synthetic upperdir trees for every classifier
   branch (gitinclude add/modify/delete, gitignore create/modify, whiteout
   gitinclude whiteout, gitignore whiteout refused, `.git/*` reject, mode-only

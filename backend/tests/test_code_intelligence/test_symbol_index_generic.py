@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from code_intelligence.analysis.symbol_index import SymbolIndex
+from code_intelligence.indexing.symbol_index import SymbolIndex
 
 
 def test_symbol_index_ignores_non_python_symbols(tmp_path) -> None:

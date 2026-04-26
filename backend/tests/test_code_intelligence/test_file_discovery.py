@@ -6,7 +6,7 @@ import logging
 from types import SimpleNamespace
 from typing import Any
 
-from code_intelligence.analysis.file_discovery import collect_remote_files
+from code_intelligence.indexing.file_discovery import collect_remote_files
 
 
 class _FakeDaytonaFs:
@@ -65,7 +65,7 @@ def test_collect_remote_files_fallback_omits_expected_search_traceback(caplog) -
 
     with caplog.at_level(
         logging.DEBUG,
-        logger="code_intelligence.analysis.file_discovery",
+        logger="code_intelligence.indexing.file_discovery",
     ):
         files = collect_remote_files(SimpleNamespace(fs=fs), "/repo", max_files=10)
 

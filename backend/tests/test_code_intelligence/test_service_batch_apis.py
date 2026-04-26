@@ -11,12 +11,12 @@ here we check how the service layer feeds the coordinator.
 from __future__ import annotations
 
 import pytest
-from code_intelligence.editing.patcher import SearchReplaceEdit
-from code_intelligence.routing.service import (
+from code_intelligence.mutations.patcher import SearchReplaceEdit
+from code_intelligence.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import (
+from code_intelligence.core.types import (
     DeleteSpec,
     EditRequest,
     EditSpec,
@@ -462,7 +462,7 @@ def test_rename_symbol_returns_empty_committed_when_plan_has_no_changes(
     monkeypatch,
 ) -> None:
     svc = _svc(tmp_path)
-    from code_intelligence.types import SemanticRenamePlan
+    from code_intelligence.core.types import SemanticRenamePlan
 
     empty_plan = SemanticRenamePlan(
         new_name="new",
@@ -480,8 +480,8 @@ def test_rename_symbol_returns_empty_committed_when_plan_has_no_changes(
 
 def test_rename_symbol_submits_plan_changes_as_one_batch(tmp_path, monkeypatch) -> None:
     svc = _svc(tmp_path)
-    from code_intelligence.hashing import content_hash
-    from code_intelligence.types import (
+    from code_intelligence.core.hashing import content_hash
+    from code_intelligence.core.types import (
         SemanticFileChange,
         SemanticRenamePlan,
     )
@@ -521,8 +521,8 @@ def test_rename_symbol_submits_plan_changes_as_one_batch(tmp_path, monkeypatch) 
 
 def test_commit_rename_plan_does_not_recompute_jedi_plan(tmp_path, monkeypatch) -> None:
     svc = _svc(tmp_path)
-    from code_intelligence.hashing import content_hash
-    from code_intelligence.types import SemanticFileChange, SemanticRenamePlan
+    from code_intelligence.core.hashing import content_hash
+    from code_intelligence.core.types import SemanticFileChange, SemanticRenamePlan
 
     target = tmp_path / "rename.py"
     target.write_text("def old(): pass\n", encoding="utf-8")

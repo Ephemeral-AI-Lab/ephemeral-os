@@ -240,7 +240,7 @@ async def _upload_file_compat(
 def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
     """Dispose code intelligence for a sandbox, logging debug on failure."""
     try:
-        from code_intelligence.routing.service import dispose_code_intelligence
+        from code_intelligence.service import dispose_code_intelligence
 
         dispose_code_intelligence(sandbox_id)
     except Exception:

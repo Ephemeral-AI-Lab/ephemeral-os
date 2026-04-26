@@ -8,25 +8,29 @@ partial-apply metadata, and the committer adapter.
 
 from __future__ import annotations
 
+import io
 import json
+import subprocess
+import sys
+import tarfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.routing import overlay_auditor as overlay_auditor_module
-from code_intelligence.routing.overlay_auditor import (
+from code_intelligence.overlay import auditor as overlay_auditor_module
+from code_intelligence.overlay.auditor import (
     OverlayAuditor,
     parse_diff_ndjson,
 )
-from code_intelligence.routing.overlay_command_committer import OverlayCommandCommitter
-from code_intelligence.routing.overlay_types import (
+from code_intelligence.overlay.command_committer import OverlayCommandCommitter
+from code_intelligence.overlay.types import (
     OverlayChange,
     OverlayDiff,
     OverlayPolicyReject,
     OverlayRunError,
 )
-from code_intelligence.routing.service import (
+from code_intelligence.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
@@ -300,7 +304,7 @@ class _ScriptedSandbox:
 
     The orchestrator issues these commands in order:
       1. ``git_snapshot`` script → runs for real on the host.
-      2. ``overlay_run.py`` upload → writes the script file for real.
+      2. Overlay runtime upload → writes the script/package for real.
       3. ``unshare -Urm ... overlay_run.py`` → intercepted. Darwin has no
          unshare/overlayfs, so we pretend to run the user command, write
          ``diff.ndjson`` into the lease's run dir, and return the scripted
@@ -443,6 +447,29 @@ def _commit_all(path: Path) -> None:
 
 async def _noop_exec(sandbox, command, *, timeout=None):
     return await sandbox.exec(command, timeout=timeout)
+
+
+def test_overlay_runtime_bundle_contains_executable_facade_and_runtime_package(
+    tmp_path: Path,
+) -> None:
+    raw = overlay_auditor_module._overlay_runtime_bundle_bytes()
+    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
+        names = set(tar.getnames())
+        tar.extractall(tmp_path)
+
+    assert "overlay_run.py" in names
+    assert "overlay_runtime/__init__.py" in names
+    assert "overlay_runtime/runner.py" in names
+    assert "overlay_runtime/classifier.py" in names
+
+    proc = subprocess.run(
+        [sys.executable, str(tmp_path / "overlay_run.py"), "--help"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert "overlay_run.py" in proc.stdout
 
 
 @pytest.mark.asyncio

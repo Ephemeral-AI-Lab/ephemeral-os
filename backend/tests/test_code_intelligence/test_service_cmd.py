@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.routing.git_snapshot import GitSnapshotError
-from code_intelligence.routing.service import (
+from code_intelligence.overlay.git_snapshot import GitSnapshotError
+from code_intelligence.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )

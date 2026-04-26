@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from task_center.graph import TaskGraph
+from task_center.task_graph import TaskGraph
 from tools.core.base import ToolExecutionContextService
 from tools.core.runtime import ExecutionMetadata
 from tools.mode_tool.launch_plan_handoff import (
@@ -51,7 +51,7 @@ class _FakeTC:
         self.calls.append(("launch_plan", task_id, task_detail))
 
     def submit_plan_handoff(self, task_id, tasks, task_inputs, summary):
-        from task_center.dag import compile_dag
+        from task_center.plan import compile_dag
         compile_dag(tasks, task_inputs)
         self.calls.append(("plan_handoff", task_id, tasks, task_inputs, summary))
 

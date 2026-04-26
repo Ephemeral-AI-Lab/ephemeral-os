@@ -13,8 +13,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
-from code_intelligence.query_helpers import (
+from code_intelligence.core.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
+from code_intelligence.core.query_helpers import (
     _build_fallback_specs,
     _dedupe_matches,
     _parse_rg_matches,
@@ -598,7 +598,7 @@ async def run_ci_workspace_structure(
             logger.debug("ci_workspace_structure: symbol index wait failed", exc_info=True)
 
     # Get indexed file paths
-    from code_intelligence.analysis.symbol_index import SymbolIndex
+    from code_intelligence.indexing.symbol_index import SymbolIndex
 
     if isinstance(si, SymbolIndex):
         with si._lock:
@@ -844,7 +844,7 @@ def _file_query_symbols(
             break
 
     if not matches and not Path(rel_path).suffix:
-        from code_intelligence.analysis.symbol_index import SymbolIndex
+        from code_intelligence.indexing.symbol_index import SymbolIndex
 
         if isinstance(symbol_index, SymbolIndex):
             prefix = rel_path.rstrip("/") + "/"
@@ -887,7 +887,7 @@ async def run_ci_query_symbol(
     if err:
         return err
 
-    from code_intelligence.types import SymbolKind
+    from code_intelligence.core.types import SymbolKind
 
     kind_filter = None
     if kind:

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
-from code_intelligence.types import SymbolInfo
+from code_intelligence.core.types import SymbolInfo
 
 FileMemoryNoteType = Literal["write", "exploration"]
 

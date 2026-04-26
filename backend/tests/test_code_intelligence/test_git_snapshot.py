@@ -22,7 +22,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from code_intelligence.routing.git_snapshot import (
+from code_intelligence.overlay.git_snapshot import (
     GitSnapshotError,
     build_live_snapshot,
     build_live_snapshot_details,

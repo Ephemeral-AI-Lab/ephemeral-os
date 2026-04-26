@@ -6,7 +6,8 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from task_center.graph import TaskGraph
+from task_center.task_graph import TaskGraph
+from task_center.summary import child_summary_groups
 from task_center.task import Status, Task, TaskSummary
 
 
@@ -49,11 +50,9 @@ def _context_for(task: Task, graph: TaskGraph) -> dict[str, Any] | None:
             child = graph.tasks.get(tid)
             if child is None:
                 continue
-            for s in child.summaries:
-                if s.kind == "success":
-                    completed.append(_summary_payload(s))
-                elif s.kind in ("failure", "dependency_blocked"):
-                    failed.append(_summary_payload(s))
+            child_completed, child_failed, child_blocked = child_summary_groups(child)
+            completed.extend(_summary_payload(s) for s in child_completed)
+            failed.extend(_summary_payload(s) for s in [*child_failed, *child_blocked])
         return {
             "parent_goal": parent.input if parent is not None else None,
             "planner_handoff": [

@@ -5,13 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from code_intelligence.hashing import content_hash
-from code_intelligence.routing.service import (
+from code_intelligence.core.hashing import content_hash
+from code_intelligence.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.editing.write_coordinator import CommitOperation
-from code_intelligence.types import MoveSpec, OperationChange, SemanticFileChange
+from code_intelligence.mutations.write_coordinator import CommitOperation
+from code_intelligence.core.types import MoveSpec, OperationChange, SemanticFileChange
 
 
 @pytest.fixture(autouse=True)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from code_intelligence.types import SymbolInfo
+from code_intelligence.core.types import SymbolInfo
 from file_memory.types import FileMemory
 
 if TYPE_CHECKING:

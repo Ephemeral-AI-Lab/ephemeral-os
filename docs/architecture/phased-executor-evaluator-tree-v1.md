@@ -126,9 +126,10 @@ phase-by-phase verification via evaluators.
 
 ### 1.2 OCC as per-tool-call atomicity over a shared workspace
 
-Implemented in `backend/src/code_intelligence/routing/` (overlay_run,
-mutation_service, overlay_command_committer, overlay_auditor) and the
-daytona overlay sandbox.
+Implemented across `backend/src/code_intelligence/overlay/` and
+`backend/src/code_intelligence/mutations/` (`overlay/run.py`,
+`mutations/mutation_service.py`, `overlay/command_committer.py`,
+`overlay/auditor.py`) and the daytona overlay sandbox.
 
 The thesis: **OCC is per-tool-call concurrency control over a single
 shared workspace.** Each tool call is a short-lived transaction; the
@@ -152,7 +153,7 @@ How it works in v1:
   are buffered.
 - When the tool call finishes, the overlay command committer flushes
   the overlay back to the sandbox via the arbiter
-  (`code_intelligence/editing/arbiter.py`).
+  (`code_intelligence/mutations/arbiter.py`).
 - If two tool calls running at the same instant wrote overlapping
   regions, the second commit is rejected as a typed conflict — the
   failing tool call surfaces it; the agent retries or reports.

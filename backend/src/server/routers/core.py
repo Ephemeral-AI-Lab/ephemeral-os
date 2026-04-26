@@ -26,6 +26,8 @@ from message.stream_events import (
 )
 from notification.events import SystemNotification
 from server.protocol import BackendEvent, TranscriptItem
+from task_center.summary import latest_summary_text
+from task_center.task import Task
 from tools.core.base import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -34,6 +36,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
+
+
+def _final_root_summary_text(root: Task) -> str | None:
+    return latest_summary_text(root)
 
 # ---------------------------------------------------------------------------
 # Request models
@@ -247,13 +253,14 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                 # Surface the final root summary as a transcript item so
                 # the user sees the closure text even if no child emitted
                 # it as an AssistantMessageComplete with the same content.
-                if root.summary:
+                final_summary = _final_root_summary_text(root)
+                if final_summary:
                     await runtime.emit(
                         BackendEvent(
                             type="transcript_item",
                             item=TranscriptItem(
                                 role="assistant",
-                                text=root.summary,
+                                text=final_summary,
                             ),
                         )
                     )

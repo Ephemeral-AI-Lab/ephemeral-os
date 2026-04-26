@@ -27,7 +27,7 @@ Tools after this PR:
 | Role | Inputs | Allowed tools | Terminals |
 |---|---|---|---|
 | `executor` | Root: user's request. Otherwise: `input` assigned by the enclosing planner. Completed dependency summaries only. | `_DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_task_failure` |
-| `planner` | Structured planner launch context. Executor-launched planners get the caller input, handoff task detail, and upstream handoff summaries. Evaluator-launched recovery planners also get the enclosing parent goal, prior planner handoff, DONE child summaries, FAILED child summaries, dependency-blocked summaries, and the evaluator's recovery task detail. | `_READ_ONLY_INVESTIGATION_TOOLS` | `submit_plan_handoff[handoff_summary, tasks, task_inputs]` |
+| `planner` | Structured planner launch context. Every planner gets the same context shape: caller input, handoff task detail, requested/enclosing goal, upstream/prior planner handoff summaries, DONE child summaries, FAILED child summaries, and dependency-blocked summaries when available from the caller's enclosing harness graph. | `_READ_ONLY_INVESTIGATION_TOOLS` | `submit_plan_handoff[handoff_summary, tasks, task_inputs]` |
 | `evaluator` | Parent task input + planner handoff summary + sibling child summaries (DONE and FAILED). | `_DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_evaluation_failure` |
 | `explorer` | unchanged | unchanged | unchanged |
 
@@ -114,6 +114,7 @@ PlannerLaunchContext:
     task_detail: str
     caller_task_id: TaskId
     caller_role: Literal["executor", "evaluator"]
+    caller_input: str
     requested_goal: str
     upstream_handoff_summaries: list[TaskSummary]
     prior_planner_handoff: list[TaskSummary]
@@ -122,18 +123,13 @@ PlannerLaunchContext:
     dependency_blocked_summaries: list[TaskSummary]
 ```
 
-For an executor caller:
+For any caller:
 
-- `requested_goal` is `caller.input`.
-- `upstream_handoff_summaries` comes from the caller's owning harness graph, if any.
-- child summary fields are empty because the caller is asking for first-time decomposition.
-
-For an evaluator caller:
-
-- `requested_goal` is `parent_goal(caller.id)`, not the evaluator's narrow validation prompt.
-- `prior_planner_handoff` is the handoff summary from the evaluator's owning harness graph.
-- `completed_child_summaries`, `failed_child_summaries`, and `dependency_blocked_summaries` are copied from the evaluator context that triggered recovery.
-- `task_detail` is the evaluator's explanation of the gap to repair.
+- `caller_input` is always the local input assigned to the executor or evaluator that requested planning.
+- `requested_goal` is the enclosing harness graph's parent goal when the caller belongs to a harness graph; otherwise it is `caller.input` for the root executor.
+- `upstream_handoff_summaries` and `prior_planner_handoff` come from the caller's owning harness graph, if any.
+- `completed_child_summaries`, `failed_child_summaries`, and `dependency_blocked_summaries` come from the caller's owning harness graph, if any.
+- `task_detail` is the caller's explanation of what the new planner should plan.
 
 The recovery planner's contract is to plan only the missing corrective work. It must treat successful child summaries as completed constraints, failed child summaries as repair evidence, and dependency-blocked summaries as work that may need replacement if still relevant.
 
@@ -176,7 +172,7 @@ These helpers are computed from `Task.task_center_harness_graph_id`, `TaskCenter
 | `completed_dependencies(task_id)` | Return direct dependency tasks whose status is DONE plus their summaries. |
 | `failed_dependencies(task_id)` | Return direct dependency tasks whose status is FAILED plus their summaries. |
 | `dependency_blocked_descendants(task_id)` | Return nonterminal transitive dependents whose dependency path now contains a FAILED task. |
-| `planner_launch_context(task_id, task_detail)` | Return the structured context passed to a new planner. Executor callers receive first-time decomposition context; evaluator callers receive recovery context with prior plan, successful work, failed work, and dependency-blocked work. |
+| `planner_launch_context(task_id, task_detail)` | Return the structured context passed to a new planner from graph topology. The context shape is the same for executor and evaluator callers; fields are populated from the caller's enclosing harness graph when one exists. |
 
 Top-level executors have no harness graph, so `parent_goal` and `planner_handoff` return `None`.
 
@@ -328,7 +324,7 @@ This keeps success/failure propagation tied to the decomposition boundary instea
 
 ### 7. Prompt-context plumbing
 
-- Planner prompt: `PlannerLaunchContext`. Evaluator-driven recovery prompts must include parent goal, prior planner handoff, DONE child summaries, FAILED child summaries, dependency-blocked summaries, and evaluator recovery task detail.
+- Planner prompt: `PlannerLaunchContext`. Nested/recovery prompts must include caller input, parent goal, prior planner handoff, DONE child summaries, FAILED child summaries, dependency-blocked summaries, and caller recovery/decomposition task detail when that evidence exists.
 - Executor prompt: own input plus completed direct dependency summaries only.
 - Evaluator prompt: parent task input, planner handoff summaries, DONE child summaries, and FAILED child summaries, including dependency-blocked descendants.
 

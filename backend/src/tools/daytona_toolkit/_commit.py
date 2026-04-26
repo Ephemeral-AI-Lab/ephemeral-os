@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 from collections.abc import Sequence
 
-from code_intelligence._async_bridge import run_sync_in_executor, use_sandbox_io_loop
+from code_intelligence.core.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from tools.core.ci_attribution import (
     agent_attribution_from_context,
     rebind_ci_service,
@@ -18,7 +18,7 @@ from tools.core.ci_attribution import (
 )
 
 if TYPE_CHECKING:
-    from code_intelligence.types import OperationResult
+    from code_intelligence.core.types import OperationResult
     from tools.core.base import ToolExecutionContextService
 
 

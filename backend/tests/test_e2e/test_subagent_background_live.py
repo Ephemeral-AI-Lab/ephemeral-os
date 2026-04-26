@@ -92,7 +92,8 @@ async def _run_executor_with_debug(
     from message.event_printer import MultiAgentEventPrinter
     from server.app_factory import RuntimeConfig
     from task_center.agent_spawn import make_production_spawn
-    from task_center.center import TaskCenter
+    from task_center.orchestrator import TaskCenter
+    from task_center.summary import latest_summary_text
 
     settings = load_settings()
     EvalAgent._ensure_db_ready(settings)
@@ -144,12 +145,12 @@ async def _run_executor_with_debug(
     result.metadata.update({
         "root_task_id": root.id,
         "root_status": root.status.value,
-        "root_summary": root.summary or "",
+        "root_summary": latest_summary_text(root) or "",
         "closed_by_harness": closed_by_harness,
     })
     print(
         f"  [TaskCenter] done: root={root.id} status={root.status} "
-        f"summary={_truncate(root.summary or '', 500)}",
+        f"summary={_truncate(latest_summary_text(root) or '', 500)}",
         flush=True,
     )
     log_result(result, label)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from code_intelligence.routing import overlay_config
+from code_intelligence.overlay import config as overlay_config
 
 
 def test_overlay_max_concurrent_default_matches_load_concurrency(

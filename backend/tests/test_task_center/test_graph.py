@@ -1,11 +1,11 @@
-"""Unit tests for ``task_center.graph.TaskGraph``."""
+"""Unit tests for ``task_center.task_graph.TaskGraph``."""
 
 from __future__ import annotations
 
 import pytest
 
 from task_center import Status, Task, TaskCenterError, TaskCenterHarnessGraph
-from task_center.graph import TaskGraph
+from task_center.task_graph import TaskGraph
 
 
 def _t(
