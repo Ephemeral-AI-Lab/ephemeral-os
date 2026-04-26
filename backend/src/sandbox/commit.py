@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
-from collections.abc import Sequence
 
 from code_intelligence.core.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from tools.core.ci_attribution import (

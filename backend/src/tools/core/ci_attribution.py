@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from tools.core.base import ToolExecutionContextService
+from tools.core.context import ToolExecutionContextService
 
 __all__ = [
     "AgentAttribution",

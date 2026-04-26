@@ -12,7 +12,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from tools.core.base import ToolExecutionContextService, ToolResult
+from tools.core.context import ToolExecutionContextService
+from tools.core.results import ToolResult
 
 logger = logging.getLogger(__name__)
 

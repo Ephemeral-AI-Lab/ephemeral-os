@@ -108,28 +108,6 @@ def test_cached_query_singleflights_concurrent_misses() -> None:
     assert calls == 1
 
 
-def test_find_references_many_skips_unsupported_files(monkeypatch) -> None:
-    lsp = LspClient(workspace_root="/workspace")
-
-    def _batch(requests):
-        assert requests == [("/workspace/pkg/core.py", 1, 4)]
-        return [[ReferenceInfo(file_path="/workspace/pkg/core.py", line=1, character=4)]]
-
-    monkeypatch.setattr(lsp, "_python_references_many", _batch)
-
-    results = lsp.find_references_many(
-        [
-            ("/workspace/web/app.ts", 1, 0),
-            ("pkg/core.py", 1, 4),
-            ("/workspace/web/view.jsx", 2, 3),
-        ]
-    )
-
-    assert results[0] == []
-    assert results[1] == [ReferenceInfo(file_path="/workspace/pkg/core.py", line=1, character=4)]
-    assert results[2] == []
-
-
 def test_sandbox_read_line_caches_until_invalidate() -> None:
     calls: list[str] = []
 

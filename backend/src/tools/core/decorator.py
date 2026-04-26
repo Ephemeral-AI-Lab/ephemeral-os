@@ -36,8 +36,10 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel
 
-from tools.core.base import BaseTool, ToolExecutionContextService, ToolResult
+from tools.core.base import BaseTool
+from tools.core.context import ToolExecutionContextService
 from tools.core.hooks import validate_hook_targets
+from tools.core.results import ToolResult
 
 
 def tool(
@@ -47,7 +49,6 @@ def tool(
     *,
     input_model: type[BaseModel],
     output_model: type[BaseModel],
-    stop_after_tool_call: bool = False,
     background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
     is_terminal_tool: bool = False,
@@ -83,7 +84,6 @@ def tool(
             __doc__ = docstring
 
             # Dynamically set by the decorator
-            _stop_after_tool_call: bool
             _entrypoint: Callable[..., Any]
 
             async def execute(
@@ -103,7 +103,6 @@ def tool(
         instance.short_description = short_description
         instance.input_model = input_model
         instance.output_model = output_model
-        instance._stop_after_tool_call = stop_after_tool_call
         instance.background = background
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool

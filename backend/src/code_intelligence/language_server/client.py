@@ -91,36 +91,6 @@ class LspClient(PythonBackendMixin, LspTransportMixin, LspCacheMixin, LspTelemet
             ),
         )
 
-    def find_references_many(
-        self,
-        requests: Sequence[tuple[str, int, int]],
-    ) -> list[list[ReferenceInfo]]:
-        """Batch Python reference queries into one backend process."""
-        results: list[list[ReferenceInfo]] = [[] for _ in requests]
-        python_indexes: list[int] = []
-        python_requests: list[tuple[str, int, int]] = []
-        for index, (file_path, line, character) in enumerate(requests):
-            if self._detect_language(file_path) != "python":
-                continue
-            python_indexes.append(index)
-            python_requests.append(
-                (
-                    self._resolve_path(file_path),
-                    int(line),
-                    int(self._resolve_column(file_path, int(line), int(character))),
-                )
-            )
-        if not python_requests:
-            return results
-        if len(requests) == 1 and len(python_requests) == 1:
-            file_path, line, character = python_requests[0]
-            python_results = [self.find_references(file_path, line, character)]
-        else:
-            python_results = self._python_references_many(python_requests)
-        for index, refs in zip(python_indexes, python_results, strict=False):
-            results[index] = refs
-        return results
-
     def hover(
         self,
         file_path: str,

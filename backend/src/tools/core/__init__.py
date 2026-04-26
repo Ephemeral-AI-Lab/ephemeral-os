@@ -6,8 +6,6 @@ from tools.core.base import (
     ToolExecutionContextService,
     ToolRegistry,
     ToolResult,
-    decorate_schemas_for_background,
-    validate_tool_output,
 )
 from tools.core.decorator import tool
 from tools.core.hooks import HookResult, HookStatus, ToolPostHook, ToolPreHook
@@ -22,7 +20,5 @@ __all__ = [
     "HookStatus",
     "ToolPostHook",
     "ToolPreHook",
-    "decorate_schemas_for_background",
-    "validate_tool_output",
     "tool",
 ]

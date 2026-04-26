@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from tools.core.base import ToolExecutionContextService
+from tools.core.context import ToolExecutionContextService
 
 
 def get_daytona_sandbox(context: ToolExecutionContextService) -> Any | None:

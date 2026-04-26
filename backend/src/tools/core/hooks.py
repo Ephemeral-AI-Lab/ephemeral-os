@@ -7,7 +7,8 @@ from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel
 
-from tools.core.base import ToolExecutionContextService, ToolResult
+from tools.core.context import ToolExecutionContextService
+from tools.core.results import ToolResult
 
 
 HookStatus = Literal["pass", "fail"]

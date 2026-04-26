@@ -1,4 +1,4 @@
-"""Tests for the OCC commit façade in tools.daytona_toolkit._commit."""
+"""Tests for the sandbox OCC commit façade."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import pytest
 
 from code_intelligence.core.types import OperationResult
 from tools.core.base import ToolExecutionContextService
-from tools.daytona_toolkit._commit import (
+from sandbox.commit import (
     FileChangeResult,
     submit_shell_cmd,
     submit_commit,

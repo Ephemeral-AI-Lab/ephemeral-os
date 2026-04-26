@@ -32,7 +32,12 @@ def register_tool_factory(name: str, factory: ToolFactory) -> None:
 
 def register_tool_instance(tool: BaseTool) -> None:
     """Register a reusable stateless tool instance."""
-    register_tool_factory(tool.name, lambda ctx, tool=tool: tool)
+
+    def factory(ctx: ToolFactoryContext) -> BaseTool:
+        del ctx
+        return tool
+
+    register_tool_factory(tool.name, factory)
 
 
 def create_tool(name: str, ctx: ToolFactoryContext) -> BaseTool:

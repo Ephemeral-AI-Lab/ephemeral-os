@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from code_intelligence.core.types import DeleteSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from tools.daytona_toolkit._commit import submit_commit
+from sandbox.commit import submit_commit
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard, commit_metadata
 from sandbox.daytona_utils import _resolve_path
 from tools.daytona_toolkit._delete_move_helpers import (

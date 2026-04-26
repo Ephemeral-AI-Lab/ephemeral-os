@@ -22,7 +22,7 @@ class DaytonaContextPreparer:
             return self._sandbox
         if not self.sandbox_id:
             raise RuntimeError("No sandbox_id configured for tool context.")
-        from sandbox import fetch_sandbox as get_sandbox
+        from sandbox.service import fetch_sandbox as get_sandbox
 
         self._sandbox = get_sandbox(self.sandbox_id)
         logger.debug("Sandbox fetched: %s", self.sandbox_id)

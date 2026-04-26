@@ -39,7 +39,7 @@ def operation_result_to_tool_result(
     ``"failed"``; ``message`` pulls from ``conflict_reason`` when present.
 
     ``metadata_extra`` is merged into ``ToolResult.metadata`` on both branches
-    so callers that funnel through :mod:`tools.daytona_toolkit._commit` can
+    so callers that funnel through :mod:`sandbox.commit` can
     inject uniform ``changed_paths`` / ``ambient_changed_paths`` /
     ``conflict_reason`` keys for downstream consumers.
     """

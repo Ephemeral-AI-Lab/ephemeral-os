@@ -11,7 +11,7 @@ from code_intelligence.core.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
-from tools.daytona_toolkit._commit import submit_shell_cmd
+from sandbox.commit import submit_shell_cmd
 from sandbox.daytona_utils import (
     _extract_exit_code,
     _get_repo_root,

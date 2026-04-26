@@ -273,7 +273,7 @@ def _build_context_preparers(
     if SANDBOX_CONTEXT not in requirements:
         return []
 
-    from tools.daytona_toolkit import DaytonaContextPreparer
+    from sandbox.context import DaytonaContextPreparer
 
     return [DaytonaContextPreparer(sandbox_id)]
 

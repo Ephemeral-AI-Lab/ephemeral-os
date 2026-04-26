@@ -20,7 +20,7 @@ from tools.daytona_toolkit._file_tool_helpers import (
     build_find_result,
     run_with_recovery,
 )
-from tools.daytona_toolkit.search_commands import build_grep_command
+from sandbox.search_commands import build_grep_command
 
 
 @tool(

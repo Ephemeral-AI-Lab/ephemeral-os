@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tools.core.base import BaseTool, ToolRegistry
+from tools.core.base import BaseTool
+from tools.core.registry import ToolRegistry
 from tools.core.factory import ToolFactoryContext, create_tool, list_available_tools
 
 

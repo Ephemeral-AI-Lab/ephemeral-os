@@ -13,7 +13,7 @@ from code_intelligence.core.types import EditSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
-from tools.daytona_toolkit._commit import submit_commit
+from sandbox.commit import submit_commit
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard, commit_metadata
 from sandbox.daytona_utils import (
     _get_repo_root,
