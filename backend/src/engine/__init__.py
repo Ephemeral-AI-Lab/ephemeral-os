@@ -17,7 +17,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from message.stream_events import (
         AssistantMessageComplete,
         AssistantTextDelta,
-        AssistantTurnComplete,
         BackgroundTaskCompleted,
         BackgroundTaskStarted,
         StreamEvent,
@@ -34,7 +33,6 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = [
     "AssistantMessageComplete",
     "AssistantTextDelta",
-    "AssistantTurnComplete",
     "BackgroundTaskCompleted",
     "BackgroundTaskManager",
     "BackgroundTaskStarted",
@@ -70,7 +68,6 @@ _SUBMODULES = {
     "ToolUseBlock": ("message.messages", "ToolUseBlock"),
     "AssistantMessageComplete": ("message.stream_events", "AssistantMessageComplete"),
     "AssistantTextDelta": ("message.stream_events", "AssistantTextDelta"),
-    "AssistantTurnComplete": ("message.stream_events", "AssistantTurnComplete"),
     "BackgroundTaskCompleted": ("message.stream_events", "BackgroundTaskCompleted"),
     "BackgroundTaskStarted": ("message.stream_events", "BackgroundTaskStarted"),
     "StreamEvent": ("message.stream_events", "StreamEvent"),

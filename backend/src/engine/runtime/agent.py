@@ -218,8 +218,6 @@ def _collect_agent_phase_tools(agent_def: AgentDefinition) -> list[str]:
     for mode in agent_def.modes:
         names.update(mode.allowed_tools)
         names.update(mode.terminals)
-        if mode.entry_tool:
-            names.add(mode.entry_tool)
     return sorted(names)
 
 
@@ -364,7 +362,6 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
-        agent_def=agent_def,
         active_mode=agent_def.default_mode if agent_def else None,
     )
 

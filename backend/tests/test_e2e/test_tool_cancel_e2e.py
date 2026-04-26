@@ -59,11 +59,11 @@ async def test_tool_cancelled_event_type_recognized(sandbox_id):
     if result.has_errors:
         pytest.skip("Sandbox error occurred")
 
-    # Verify the flow completed somehow - either via cancel, tool completion, or assistant turn
+    # Verify the flow completed somehow - either via cancel, tool completion, or assistant message
     assert (
         len(result.tools_cancelled()) > 0
         or len(result.tools_completed()) > 0
-        or len(result.assistant_turns()) > 0
+        or len(result.assistant_messages()) > 0
     )
 
 
@@ -107,8 +107,8 @@ async def test_mid_stream_tool_detection(sandbox_id):
     tool_started = result.tools_started()
     assert len(tool_started) >= 1, f"Expected at least 1 tool_started, got: {len(tool_started)}"
 
-    # Assistant turns should be present
-    assert len(result.assistant_turns()) >= 1, "Should have assistant_complete"
+    # Assistant messages should be present
+    assert len(result.assistant_messages()) >= 1, "Should have assistant_complete"
 
 
 # ===========================================================================
@@ -137,8 +137,8 @@ async def test_model_can_explicitly_cancel(sandbox_id):
     if result.has_errors:
         pytest.skip("Sandbox error occurred")
 
-    # Verify the flow completed - should have at least one assistant turn
-    assert len(result.assistant_turns()) > 0, "Should have completed"
+    # Verify the flow completed - should have at least one assistant message
+    assert len(result.assistant_messages()) > 0, "Should have completed"
 
     # If cancellation happened, verify the cancelled events have tool_name
     cancelled = result.tools_cancelled()
@@ -165,7 +165,7 @@ async def test_cancel_signal_appears_in_assistant_text(sandbox_id):
     if result.has_errors:
         pytest.skip("Sandbox error occurred")
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
 
 # ===========================================================================

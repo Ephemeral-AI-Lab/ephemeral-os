@@ -397,7 +397,7 @@ React/Ink TUI with full interactive experience:
 oh [OPTIONS] COMMAND [ARGS]
 
 Session:     -c/--continue, -r/--resume, -n/--name
-Model:       -m/--model, --effort, --max-turns
+Model:       -m/--model, --effort
 Output:      -p/--print, --output-format text|json|stream-json
 Permissions: --permission-mode, --dangerously-skip-permissions
 Context:     -s/--system-prompt, --append-system-prompt, --settings

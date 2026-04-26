@@ -65,6 +65,4 @@ class AgentDefinitionValidator:
         for mode in defn.modes:
             names.update(mode.allowed_tools)
             names.update(mode.terminals)
-            if mode.entry_tool:
-                names.add(mode.entry_tool)
         return names

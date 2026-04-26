@@ -1,11 +1,10 @@
 """Builtin executor + evaluator agent definitions.
 
-These two agents have secondary modes (plan_for_handoff, prepare_continue_to_work)
-whose tool surfaces and briefings are too rich to express comfortably as YAML
-frontmatter. They live as Python literals so the tool lists can be derived from
-named constants. The mode briefings live in :mod:`agents.briefings` so they
-are not duplicated between the AgentDefinition literal and any caller (tests,
-docs, error messages) that wants to inspect or assert against the briefing.
+Builtin agents are Python literals so their tool lists can be derived from
+named constants and kept aligned with the terminal-tool contracts. The current
+runtime is single-response: agents choose their terminal submission directly in
+that response instead of entering a secondary mode and receiving another model
+request.
 
 The legacy ``backend/config/agents/executor.md`` and ``evaluator.md`` were
 removed when this module was introduced; user-defined agents continue to load
@@ -16,10 +15,6 @@ See ``docs/architecture/agent-mode-system-v1.md``.
 
 from __future__ import annotations
 
-from agents.briefings import (
-    PLAN_FOR_HANDOFF_BRIEFING,
-    PREPARE_CONTINUE_TO_WORK_BRIEFING,
-)
 from agents.types import AgentDefinition, ModeDefinition
 
 # ---------------------------------------------------------------------------
@@ -220,8 +215,5 @@ __all__ = [
     "EVALUATOR",
     "EXECUTOR",
     "EXPLORER",
-    # Re-exported from ``agents.briefings`` for ergonomic test imports.
-    "PLAN_FOR_HANDOFF_BRIEFING",
-    "PREPARE_CONTINUE_TO_WORK_BRIEFING",
     "register_builtin_agents",
 ]

@@ -15,7 +15,6 @@ from engine.runtime.background_dispatch import launch_background_tool
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
-    SystemNotificationBlock,
     ToolUseBlock,
 )
 from message.stream_events import (
@@ -484,7 +483,7 @@ async def test_execute_tool_call_streaming_returns_one_tool_result_block() -> No
     assert [type(event) for event in events] == [ToolExecutionStarted]
 
 
-async def test_query_loop_appends_hook_notification_to_history() -> None:
+async def test_query_loop_emits_hook_notification_without_history_prompt() -> None:
     class _HookNotificationClient(SupportsStreamingMessages):
         def __init__(self) -> None:
             self.requests = []
@@ -535,14 +534,7 @@ async def test_query_loop_appends_hook_notification_to_history() -> None:
         for event in events
     )
     assert len(client.requests) == 1
-    notification_messages = [
-        message
-        for message in messages
-        if any(isinstance(block, SystemNotificationBlock) for block in message.content)
-    ]
-    assert len(notification_messages) == 1
-    assert notification_messages[0].role == "user"
-    assert notification_messages[0].system_notification_text == "hook note"
+    assert [message.role for message in messages] == ["assistant"]
 
 
 async def test_query_loop_registers_run_notification_service_for_tool_body() -> None:
@@ -596,14 +588,7 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
         for event in events
     )
     assert len(client.requests) == 1
-    notification_messages = [
-        message
-        for message in messages
-        if any(isinstance(block, SystemNotificationBlock) for block in message.content)
-    ]
-    assert len(notification_messages) == 1
-    assert notification_messages[0].role == "user"
-    assert notification_messages[0].system_notification_text == "tool note"
+    assert [message.role for message in messages] == ["assistant"]
 
 
 async def test_query_loop_runs_generic_context_preparers() -> None:

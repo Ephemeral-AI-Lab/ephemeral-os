@@ -17,21 +17,12 @@ AgentType = Literal["agent", "subagent"]
 
 
 class ModeDefinition(BaseModel):
-    """One typestate of an agent — bounds the tools it may call.
-
-    A mode encodes commitment: while a task sits in this mode, the dispatcher
-    refuses any tool not on the mode's explicit allowlist. Secondary modes are
-    entered by an explicit ``entry_tool`` and exited only via their
-    ``terminals``.
-    See ``docs/architecture/agent-mode-system-v1.md`` for the full spec.
-    """
+    """The single tool surface for an agent run."""
 
     name: str
     is_default: bool = False
     allowed_tools: list[str] = Field(default_factory=list)
     terminals: list[str] = Field(default_factory=list)
-    entry_tool: str | None = None
-    briefing: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -72,8 +63,8 @@ class AgentDefinition(BaseModel):
     # --- agent type: regular agent or subagent (worker) ---
     agent_type: AgentType = "agent"
 
-    # --- phase-aware tool surface ---
-    # Tool access is declared per mode/phase via ModeDefinition.allowed_tools.
+    # --- run tool surface ---
+    # Tool access is declared via the single default ModeDefinition.
     modes: list[ModeDefinition]
 
     model_config = ConfigDict(
@@ -134,6 +125,10 @@ class AgentDefinition(BaseModel):
     def _check_modes(cls, modes: list[ModeDefinition]) -> list[ModeDefinition]:
         if not modes:
             raise ValueError("AgentDefinition.modes must be non-empty")
+        if len(modes) != 1:
+            raise ValueError(
+                "AgentDefinition.modes must contain exactly one default tool surface"
+            )
 
         defaults = [m for m in modes if m.is_default]
         if len(defaults) != 1:
@@ -141,15 +136,8 @@ class AgentDefinition(BaseModel):
                 f"AgentDefinition.modes must have exactly one is_default=True "
                 f"mode (got {len(defaults)})"
             )
-        default = defaults[0]
-        if default.entry_tool is not None or default.briefing is not None:
-            raise ValueError(
-                f"Default mode {default.name!r} must have entry_tool=None "
-                "and briefing=None"
-            )
 
         seen_names: set[str] = set()
-        seen_entry_tools: set[str] = set()
         for mode in modes:
             if mode.name in seen_names:
                 raise ValueError(f"Duplicate mode name: {mode.name!r}")
@@ -158,34 +146,14 @@ class AgentDefinition(BaseModel):
                 raise ValueError(
                     f"Mode {mode.name!r} must declare at least one terminal"
                 )
-            if not mode.is_default:
-                if not mode.entry_tool:
-                    raise ValueError(
-                        f"Non-default mode {mode.name!r} must declare entry_tool"
-                    )
-                if not mode.briefing:
-                    raise ValueError(
-                        f"Non-default mode {mode.name!r} must declare a briefing"
-                    )
-                if mode.entry_tool in seen_entry_tools:
-                    raise ValueError(
-                        f"Duplicate entry_tool across modes: {mode.entry_tool!r}"
-                    )
-                seen_entry_tools.add(mode.entry_tool)
         return modes
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def default_mode(self) -> ModeDefinition:
-        """The unique mode with ``is_default=True``."""
+        """The unique default tool surface."""
         for mode in self.modes:
             if mode.is_default:
                 return mode
         # Validator guarantees one exists; this is unreachable.
         raise RuntimeError(f"AgentDefinition {self.name!r} has no default mode")
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def modes_by_name(self) -> dict[str, ModeDefinition]:
-        """Lookup table from mode name to definition."""
-        return {mode.name: mode for mode in self.modes}

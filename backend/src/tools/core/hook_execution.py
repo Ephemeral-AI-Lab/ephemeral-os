@@ -193,7 +193,7 @@ class ToolHookExecutionHelper:
     ) -> SystemNotificationService:
         existing = context.get("system_notification_service")
         if isinstance(existing, SystemNotificationService):
-            if not existing.has_registered_messages and existing.emit is None:
+            if not existing.has_registered_agent_run and existing.emit is None:
                 existing.emit = emit
             return existing
         service = SystemNotificationService(emit=emit)
@@ -252,7 +252,7 @@ class ToolHookExecutionHelper:
                 metadata["hook_trace"] = self._hook_trace
         if effective_input is not None and self._hook_trace:
             metadata["effective_tool_input"] = effective_input.model_dump(mode="json")
-        if not self._system_notification_service.has_registered_messages:
+        if not self._system_notification_service.has_registered_agent_run:
             notifications = self._system_notification_service.pop_pending_notifications()
             if notifications:
                 metadata[SYSTEM_NOTIFICATIONS_METADATA_KEY] = serialize_system_notifications(notifications)

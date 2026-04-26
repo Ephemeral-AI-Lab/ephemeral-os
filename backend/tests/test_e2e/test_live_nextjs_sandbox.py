@@ -6,7 +6,7 @@ End-to-end pipeline that verifies the FULL agent stack:
 2. Agent scaffolds a Next.js project via tool calls
 3. Code intelligence (CI) service initializes on the project
 4. LSP tools return meaningful results on TypeScript/React files
-5. Multi-turn tool chaining: create -> verify -> modify -> verify
+5. Sequential tool chaining: create -> verify -> modify -> verify
 6. Sandbox cleanup
 
 Run with: pytest tests/test_e2e/test_live_nextjs_sandbox.py -m live -v
@@ -506,13 +506,13 @@ async def test_query_symbols_on_interface(sandbox_id):
 
 
 # ===========================================================================
-# AREA 6: Multi-Turn Modification Workflow
+# AREA 6: Sequential Modification Workflow
 # ===========================================================================
 
 
 @pytest.mark.asyncio
 async def test_add_then_verify_utility_module(sandbox_id):
-    """Turn 1: Create utility module. Turn 2: Verify it exists and has correct exports."""
+    """Run 1 creates a utility module; run 2 verifies its exports."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
     util_content = """export function formatDate(date: Date): string {
@@ -525,7 +525,7 @@ export function capitalize(str: string): string {
 
 export const APP_NAME = "EphemeralOS";"""
 
-    # Turn 1: Create
+    # Run 1: Create
     result1 = await agent.invoke(
         "Do these steps:\n"
         "1. Use shell to run: mkdir -p /workspace/nextjs-app/src/lib\n"
@@ -533,7 +533,7 @@ export const APP_NAME = "EphemeralOS";"""
     )
     assert len(result1.tools_started()) >= 1
 
-    # Turn 2: Verify
+    # Run 2: Verify
     result2 = await agent.invoke(
         "Use read_file to read /workspace/nextjs-app/src/lib/utils.ts and confirm it has formatDate and capitalize exports."
     )

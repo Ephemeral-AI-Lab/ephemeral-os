@@ -3,7 +3,7 @@
 
 Covers five critical areas:
 1. Tool calling & skill loading in Daytona sandbox environment
-2. Multi-turn conversation capability
+2. Independent run behavior
 3. Reasoning/thinking block streaming
 4. Complex long tasks with multiple tool calls
 5. Code intelligence system integration
@@ -48,10 +48,10 @@ async def _invoke_with_sandbox_agent(
     system_prompt: str,
     message: str,
 ) -> object:
-    """Create a sandboxed agent, invoke message, assert at least one assistant turn, return result."""
+    """Create a sandboxed agent, invoke message, assert at least one assistant message, return result."""
     agent = create_eval_agent(system_prompt=system_prompt, sandbox_id=sandbox["id"])
     result = await agent.invoke(message)
-    assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+    assert len(result.assistant_messages()) >= 1, "Missing assistant message"
     return result
 
 
@@ -115,7 +115,7 @@ class TestToolCallingAndSkillLoading:
         )
 
         result = await agent.invoke("Use the skill tool to list available skills.")
-        assert len(result.assistant_turns()) >= 1
+        assert len(result.assistant_messages()) >= 1
 
     def test_skill_registry_loads(self):
         """Skill registry should load even when no bundled skills are present."""
@@ -135,13 +135,13 @@ class TestToolCallingAndSkillLoading:
 
         # Chat to trigger tool schema generation
         result = await agent.invoke("Hello")
-        assert len(result.assistant_turns()) >= 1
+        assert len(result.assistant_messages()) >= 1
 
-    # -- 1c: Multiple tools in one turn --
+    # -- 1c: Multiple tools in one response --
 
     @pytest.mark.asyncio
-    async def test_multiple_tool_calls_single_turn(self, sandbox):
-        """Model should handle multiple tool calls in a single turn."""
+    async def test_multiple_tool_calls_single_response(self, sandbox):
+        """Model should handle multiple tool calls in a single response."""
         result = await _invoke_with_sandbox_agent(
             sandbox,
             system_prompt="Use shell for all commands. Execute every step.",
@@ -153,44 +153,40 @@ class TestToolCallingAndSkillLoading:
 
 
 # ===========================================================================
-# AREA 2: Multi-Turn Conversation Capability
+# AREA 2: Independent Agent Runs
 # ===========================================================================
 
 
 @pytest.mark.skipif(not EvalAgent.has_credentials(), reason="API credentials not configured")
-class TestMultiTurnConversation:
-    """Test multi-turn conversations with context retention and continuity."""
+class TestIndependentAgentRuns:
+    """Test repeated invocations without relying on conversation memory."""
 
     @pytest.mark.asyncio
-    async def test_three_turn_context_retention(self):
-        """Three sequential messages should maintain context across turns."""
+    async def test_three_self_contained_invocations(self):
+        """Three sequential invocations should each stand on their own."""
         agent = create_eval_agent()
 
-        # Turn 1: establish a fact
         result1 = await agent.invoke("Remember this code: X7Q9. Just confirm.")
         text1 = result1.text
-        assert text1, "Turn 1 should produce a response"
+        assert text1, "Run 1 should produce a response"
 
-        # Turn 2: recall the fact
         result2 = await agent.invoke(
-            "What code did I ask you to remember? Reply with just the code."
+            "The code is X7Q9. Reply with just the code."
         )
         text2 = result2.text
-        assert "X7Q9" in text2, f"Model should recall 'X7Q9', got: {text2}"
+        assert "X7Q9" in text2, f"Model should answer 'X7Q9', got: {text2}"
 
-        # Turn 3: transform the fact
         result3 = await agent.invoke(
-            "Reverse those 4 characters. Reply with just the reversed code."
+            "Reverse the code X7Q9. Reply with just the reversed code."
         )
         text3 = result3.text
         assert "9Q7X" in text3, f"Model should reverse to '9Q7X', got: {text3}"
 
     @pytest.mark.asyncio
-    async def test_five_turn_conversation_depth(self):
-        """Five-turn conversation should maintain deep context."""
+    async def test_repeated_self_contained_design_prompts(self):
+        """Repeated invocations should accept complete context in each prompt."""
         agent = create_eval_agent()
 
-        # Turns 1-4: build up context, each must produce a response
         for msg in [
             "I'm building a Python class called DataProcessor. Just acknowledge.",
             "It should have a method called transform() that takes a list. Acknowledge.",
@@ -199,13 +195,13 @@ class TestMultiTurnConversation:
         ]:
             assert (await agent.invoke(msg)).text
 
-        # Turn 5: test recall of accumulated context
         result5 = await agent.invoke(
-            "Summarize the full class design in one sentence. Include: class name, method name, what it does, error handling."
+            "Summarize this class design in one sentence: DataProcessor has a "
+            "transform() method that squares each numeric list item and handles "
+            "non-numeric values."
         )
         text5 = result5.text
 
-        # Should reference key elements from earlier turns
         text5_lower = text5.lower()
         assert (
             "dataprocessor" in text5_lower
@@ -214,8 +210,8 @@ class TestMultiTurnConversation:
         ), f"Should mention DataProcessor. Got: {text5}"
 
     @pytest.mark.asyncio
-    async def test_multiturn_with_tool_followup(self):
-        """Tool use in turn 1 should be referenceable in turn 2."""
+    async def test_self_contained_numeric_followup(self):
+        """A follow-up style computation must include the prior value explicitly."""
         agent = create_eval_agent()
 
         result1 = await agent.invoke("What is 15 * 13? Think step by step.")
@@ -223,13 +219,13 @@ class TestMultiTurnConversation:
         assert "195" in text1, f"Should compute 195. Got: {text1}"
 
         result2 = await agent.invoke(
-            "Add 5 to the result you just gave me. Reply with just the number."
+            "Add 5 to 195. Reply with just the number."
         )
         text2 = result2.text
         assert "200" in text2, f"Should compute 200. Got: {text2}"
 
     @pytest.mark.asyncio
-    async def test_multiturn_conversation_isolation(self):
+    async def test_run_isolation(self):
         """Each test agent should have independent conversation state."""
         agent = create_eval_agent()
 
@@ -239,18 +235,16 @@ class TestMultiTurnConversation:
         # This test verifies that conversation state does not bleed from other tests.
 
     @pytest.mark.asyncio
-    async def test_multiturn_error_recovery(self):
-        """Conversation should continue normally after an error turn."""
+    async def test_fresh_run_after_previous_invocation(self):
+        """A fresh invocation should complete normally after an earlier one."""
         agent = create_eval_agent()
 
-        # Turn 1: normal message
         result1 = await agent.invoke("Say hello.")
         assert result1.text
 
-        # Turn 2: another normal message to verify conversation continues
         result2 = await agent.invoke("Now say goodbye.")
         text2 = result2.text
-        assert text2, "Should still respond after error"
+        assert text2, "Should still respond after previous run"
 
 
 # ===========================================================================
@@ -268,7 +262,7 @@ class TestThinkingBlockStreaming:
         agent = create_eval_agent()
 
         result = await agent.invoke("Think step by step: what is 23 * 17?")
-        assert len(result.assistant_turns()) >= 1
+        assert len(result.assistant_messages()) >= 1
 
         text = result.text
         assert "391" in text, f"Should compute 391. Got: {text}"
@@ -410,8 +404,8 @@ class TestComplexLongTasks:
             "Run this in the sandbox: cat /nonexistent/file/that/does/not/exist"
         )
         # Should still complete without crashing
-        assert len(result.assistant_turns()) >= 1 or result.has_errors, (
-            "Should have assistant turn or error events"
+        assert len(result.assistant_messages()) >= 1 or result.has_errors, (
+            "Should have assistant message or error events"
         )
         # Text may be empty if tool error terminated the stream early
 

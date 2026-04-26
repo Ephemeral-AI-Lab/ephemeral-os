@@ -7,7 +7,7 @@ this needs to:
 1. Look up the agent definition by ``task.role`` (executor / evaluator).
 2. Spawn/run via the server's ``execute_ephemeral_agent_run`` wrapper.
 3. Inject ``task_center``, ``task_id``, ``role`` into the agent's tool
-   metadata so the mode tools can call back into TaskCenter.
+   metadata so terminal tools can call back into TaskCenter.
 4. Forward events to the TaskCenter-owned callback (which the chat router
    connects to its SSE stream).
 """
@@ -54,9 +54,6 @@ def make_production_spawn(
             meta["task_center_run_id"] = tc.run_id
         meta["role"] = task.role
         meta["agent_type"] = agent_def.agent_type
-        # Mode-entry tools' cross-secondary deny payload names the current
-        # mode's terminals; that requires the agent definition at tool time.
-        meta["agent_def"] = agent_def
 
         try:
             await execute_ephemeral_agent_run(

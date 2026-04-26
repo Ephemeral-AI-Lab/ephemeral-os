@@ -66,7 +66,6 @@ def _last_terminal_tool_result(
                     is_error=block.is_error,
                     metadata=dict(block.metadata or {}),
                     does_terminate=True,
-                    mode_transition=block.mode_transition,
                 )
     return None
 
@@ -155,7 +154,6 @@ async def run_ephemeral_agent(
                     is_error=event.is_error,
                     metadata=dict(event.metadata or {}),
                     does_terminate=True,
-                    mode_transition=event.mode_transition,
                 )
             if on_event is not None:
                 await on_event(event)
@@ -175,7 +173,6 @@ async def run_ephemeral_agent(
             "is_error": terminal_result.is_error,
             "metadata": terminal_result.metadata,
             "does_terminate": terminal_result.does_terminate,
-            "mode_transition": terminal_result.mode_transition,
         }
         if terminal_result is not None
         else None

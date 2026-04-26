@@ -119,9 +119,9 @@ class RuntimeState:
         self._tool_registry = create_default_tool_registry()
 
         # Seed the agent registry. The executor + evaluator are defined in
-        # Python (``agents.builtins``) because their secondary modes carry
-        # multi-line briefings that don't read well as YAML. User-defined
-        # agents continue to load from ``backend/config/agents/``.
+        # Python (``agents.builtins``) so their terminal-tool contracts stay
+        # aligned with the runtime. User-defined agents continue to load from
+        # ``backend/config/agents/``.
         from agents.builtins import register_builtin_agents
         from agents.loader import load_agents_dir
         from agents.registry import register_definition

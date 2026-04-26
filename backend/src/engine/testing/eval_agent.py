@@ -143,9 +143,6 @@ class EvalResult:
     def assistant_messages(self) -> list[AssistantMessageComplete]:
         return self._of_type(AssistantMessageComplete)
 
-    def assistant_turns(self) -> list[AssistantMessageComplete]:
-        return self.assistant_messages()
-
     def text_deltas(self) -> list[AssistantTextDelta]:
         return self._of_type(AssistantTextDelta)
 

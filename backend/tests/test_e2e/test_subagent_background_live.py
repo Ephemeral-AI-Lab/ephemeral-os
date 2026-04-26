@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 
 from engine.testing.eval_agent import EvalAgent, EvalResult, ToolCallResult
-from message.stream_events import AssistantTurnComplete
+from message.stream_events import AssistantMessageComplete
 from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
 from tests.test_e2e.daytona_exec_io import write_text_via_exec
 from tests.test_e2e.helpers import log_result
@@ -160,7 +160,7 @@ async def _run_executor_with_debug(
 def _result_from_events(events: list[Any], start: float) -> EvalResult:
     tool_calls: list[ToolCallResult] = []
     for event in events:
-        if isinstance(event, AssistantTurnComplete):
+        if isinstance(event, AssistantMessageComplete):
             for tool_use in event.message.tool_uses:
                 tool_calls.append(ToolCallResult(name=tool_use.name, input=tool_use.input))
     return EvalResult(
@@ -230,7 +230,7 @@ async def test_executor_launches_multiple_subagents_waits_and_checks(sandbox):
     result = await _run_executor_with_debug(
         sandbox,
         (
-            "Complete this directly as the root executor; do not enter plan_for_handoff.\n"
+            "Complete this directly as the root executor.\n"
             "Strict tool budget: exactly 2 run_subagent calls, exactly 1 "
             "check_background_task_result before waiting, exactly 1 wait_background_tasks "
             "call, then exactly 1 submit_task_completion call. Never repeat a successful "
@@ -283,7 +283,7 @@ async def test_executor_can_cancel_launched_subagent_task(sandbox):
     result = await _run_executor_with_debug(
         sandbox,
         (
-            "Complete this directly as the root executor; do not enter plan_for_handoff.\n"
+            "Complete this directly as the root executor.\n"
             "Strict tool budget: exactly 1 run_subagent call, exactly 1 "
             "cancel_background_task call, exactly 1 wait_background_tasks call, "
             "then exactly 1 submit_task_completion call. Never repeat a successful wait.\n"

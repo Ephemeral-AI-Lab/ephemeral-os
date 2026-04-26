@@ -47,9 +47,6 @@ class AssistantMessageComplete:
     run_id: str = ""
 
 
-AssistantTurnComplete = AssistantMessageComplete
-
-
 @dataclass(frozen=True)
 class ToolExecutionStarted:
     """The engine is about to execute a tool."""
@@ -70,7 +67,6 @@ class ToolExecutionCompleted:
     tool_id: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
     does_terminate: bool = False
-    mode_transition: str | None = None
     agent_name: str = ""
     run_id: str = ""
 

@@ -51,7 +51,7 @@ def _all_text(result) -> str:
 
 
 def _print_result(result) -> None:
-    """Print the standard per-turn tool-call summary line."""
+    """Print the standard per-run tool-call summary line."""
     print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
     print(f"  Tools: {result.tool_names}")
 
@@ -527,24 +527,24 @@ def test_phase7_lsp_language_detection():
 
 
 # ===========================================================================
-# Phase 8: Multi-turn edit workflow with streaming
+# Phase 8: Sequential edit workflow with streaming
 # ===========================================================================
 
 
 @pytest.mark.asyncio
 async def test_phase8_edit_workflow_with_streaming(agent):
-    """Multi-turn edit: create -> read -> append -> verify. Print all streaming."""
+    """Sequential edit: read -> append -> verify. Print all streaming."""
     print("\n--- Phase 8: Edit workflow with full streaming ---")
 
-    # Turn 1: Read utils.ts
-    print("\n  Turn 1: Read utils.ts")
+    # Run 1: Read utils.ts
+    print("\n  Run 1: Read utils.ts")
     r1 = await agent.invoke("Use read_file to read /workspace/fullrun/src/lib/utils.ts")
     _print_result(r1)
     assert len(r1.tools_started()) >= 1
     print(f"  Streamed text: {(r1.thinking_text + r1.text)[:400]}")
 
-    # Turn 2: Append a new function
-    print("\n  Turn 2: Append function")
+    # Run 2: Append a new function
+    print("\n  Run 2: Append function")
     r2 = await agent.invoke(
         "Use shell to append this to /workspace/fullrun/src/lib/utils.ts:\n"
         "echo '' >> /workspace/fullrun/src/lib/utils.ts && "
@@ -555,8 +555,8 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     _print_result(r2)
     assert len(r2.tools_started()) >= 1
 
-    # Turn 3: Verify the new function exists
-    print("\n  Turn 3: Verify slugify exists")
+    # Run 3: Verify the new function exists
+    print("\n  Run 3: Verify slugify exists")
     r3 = await agent.invoke(
         "Use grep to search for 'slugify' in /workspace/fullrun/src/lib/utils.ts"
     )
@@ -567,13 +567,13 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     print(f"  slugify found in output: {has_slugify}")
     assert has_slugify or len(r3.tools_started()) >= 1
 
-    # Aggregate all turns
+    # Aggregate all runs
     total_tools = len(r1.tools_started()) + len(r2.tools_started()) + len(r3.tools_started())
     total_stream_chunks = len(r1.text_deltas()) + len(r2.text_deltas()) + len(r3.text_deltas())
     print(f"\n  Edit workflow summary:")
     print(f"    Total tool calls: {total_tools}")
     print(f"    Total stream chunks: {total_stream_chunks}")
-    print(f"    All 3 turns used tools: {total_tools >= 3}")
+    print(f"    All 3 runs used tools: {total_tools >= 3}")
 
 
 # ===========================================================================

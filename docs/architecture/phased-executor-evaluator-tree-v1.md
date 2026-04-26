@@ -266,7 +266,7 @@ What it gives you:
 What it does *not* give you that v1 needs:
 - **No DAG between siblings.** Subagents are independent leaves; the
   parent serializes results. To express "B depends on A's output" you
-  must finish A in the parent's turn before launching B, which
+  must finish A in the parent's response before launching B, which
   serializes work that is logically parallelizable.
 - **No persistent evaluator role.** The "did the children meet
   acceptance" check is whatever the parent agent decides to do in
@@ -399,7 +399,7 @@ ones:
   Not aspirational; it is in the validator.
 - **Claude teams = 1 on typed deps**: the Agent tool returns a string;
   there is no first-class "B needs A's output" edge. You serialize in
-  the parent's turn or you don't.
+  the parent's response or you don't.
 - **v1 = 5 on phase-level gate**: the evaluator's `needs = sinks(deps)`
   *forces* every sink to `DONE` before the gate fires. It is not "the
   parent decides to call a reviewer" — it is graph topology.

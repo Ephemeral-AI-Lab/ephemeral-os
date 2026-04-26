@@ -43,10 +43,6 @@ class ToolResultBlock(BaseModel):
     # Consumed by the query loop to exit with TOOL_STOP. Wire-irrelevant —
     # never serialized to the provider.
     does_terminate: bool = False
-    # Engine-level marker stamped when a successful mode-entry tool returned.
-    # Names the mode the dispatcher should activate after this response. Wire-
-    # irrelevant — never serialised to the provider.
-    mode_transition: str | None = None
 
 
 class SystemNotificationBlock(BaseModel):

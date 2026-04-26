@@ -6,7 +6,7 @@ Verifies the FULL agent pipeline with deep assertions:
 2. Skill & tool availability — sandbox/code intelligence tools, skill registry, sandbox health
 3. Reasoning/thinking blocks — ordering, content, API param exclusion
 4. Code intelligence — service status, LSP client, registry singleton
-5. Multi-turn tool chaining — create → read → modify with content verification
+5. Sequential tool chaining — create → read → modify with content verification
 
 Run with: pytest tests/test_e2e/test_live_agent_react_landing.py -m live -v
 """
@@ -264,7 +264,7 @@ async def test_thinking_delta_has_nonempty_content(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id)
     result = await agent.invoke("Think step by step: what is 17 * 23?")
     # The agent should produce a non-empty response
-    assert len(result.assistant_turns()) > 0, "Should have at least one assistant turn"
+    assert len(result.assistant_messages()) > 0, "Should have at least one assistant message"
 
 
 @pytest.mark.asyncio
@@ -422,31 +422,31 @@ class TestCodeIntelligenceDeep:
 
 
 # ===========================================================================
-# AREA 5: Multi-Turn Tool Chaining with Content Verification
+# AREA 5: Sequential Tool Chaining with Content Verification
 # ===========================================================================
 
 
 @pytest.mark.asyncio
-async def test_two_turn_write_then_verify(sandbox_id):
-    """Turn 1: write file via tool. Turn 2: verify file via tool — check content reference."""
+async def test_two_run_write_then_verify(sandbox_id):
+    """Run 1 writes a file; run 2 verifies it through the sandbox."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
-    # Turn 1: Create file
+    # Run 1: Create file
     result1 = await agent.invoke(
         "Use write_file to create /workspace/chain_test.txt with content "
         "'CHAIN_MARKER_ABC'. Only use the tool."
     )
-    assert len(result1.assistant_turns()) > 0
+    assert len(result1.assistant_messages()) > 0
     started1 = result1.tools_started()
-    assert len(started1) >= 1, f"Turn 1 should use a tool. Has errors: {result1.has_errors}"
+    assert len(started1) >= 1, f"Run 1 should use a tool. Has errors: {result1.has_errors}"
 
-    # Turn 2: Read/verify the file
+    # Run 2: Read/verify the file
     result2 = await agent.invoke(
         "Now use shell to run 'cat /workspace/chain_test.txt' and tell me what's in it."
     )
-    assert len(result2.assistant_turns()) > 0
+    assert len(result2.assistant_messages()) > 0
 
-    # Verify context: Turn 2 should reference the file content
+    # Verify sandbox state: run 2 should reference the file content
     started2 = result2.tools_started()
     completed2 = result2.tools_completed()
 
@@ -455,49 +455,49 @@ async def test_two_turn_write_then_verify(sandbox_id):
     has_marker = "CHAIN_MARKER_ABC" in all_output2 or "CHAIN_MARKER_ABC" in text2
     has_tool = len(started2) >= 1
     assert has_marker or has_tool, (
-        f"Turn 2 should reference CHAIN_MARKER_ABC or use a tool. "
+        f"Run 2 should reference CHAIN_MARKER_ABC or use a tool. "
         f"Text: {text2[:200]}, Tool outputs: {all_output2[:200]}"
     )
 
 
 @pytest.mark.asyncio
-async def test_three_turn_create_read_modify(sandbox_id):
-    """3-turn chain: create -> read -> modify. Verify tool use AND content flow."""
+async def test_three_run_create_read_modify(sandbox_id):
+    """3-run chain: create -> read -> modify. Verify tool use and content flow."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
-    # Turn 1: Create with a unique marker
+    # Run 1: Create with a unique marker
     result1 = await agent.invoke(
         "Use shell to run: echo 'CHAIN3_ORIGINAL' > /workspace/evolving.txt"
     )
     t1_started = result1.tools_started()
-    assert len(t1_started) >= 1, f"Turn 1 should use tool. Has errors: {result1.has_errors}"
+    assert len(t1_started) >= 1, f"Run 1 should use tool. Has errors: {result1.has_errors}"
 
-    # Turn 2: Read — verify content marker flows through
+    # Run 2: Read — verify content marker flows through sandbox state
     result2 = await agent.invoke("Use shell to run: cat /workspace/evolving.txt")
     t2_started = result2.tools_started()
-    assert len(t2_started) >= 1, f"Turn 2 should use tool. Has errors: {result2.has_errors}"
+    assert len(t2_started) >= 1, f"Run 2 should use tool. Has errors: {result2.has_errors}"
 
-    # Verify Turn 2 output contains the marker from Turn 1 (when tool completes)
+    # Verify run 2 output contains the marker from run 1 (when tool completes)
     t2_completed = result2.tools_completed()
     t2_all = result2.text + " ".join(e.output for e in t2_completed)
     if t2_completed:
         assert "CHAIN3_ORIGINAL" in t2_all, (
-            f"Turn 2 should show content from Turn 1 ('CHAIN3_ORIGINAL'). Got: {t2_all[:300]}"
+            f"Run 2 should show content from run 1 ('CHAIN3_ORIGINAL'). Got: {t2_all[:300]}"
         )
     else:
-        assert len(t2_started) >= 1, "Turn 2 should at least attempt a tool call"
+        assert len(t2_started) >= 1, "Run 2 should at least attempt a tool call"
 
-    # Turn 3: Modify
+    # Run 3: Modify
     result3 = await agent.invoke(
         "Use shell to run: echo 'CHAIN3_MODIFIED' >> /workspace/evolving.txt"
     )
     t3_started = result3.tools_started()
-    assert len(t3_started) >= 1, f"Turn 3 should use tool. Has errors: {result3.has_errors}"
+    assert len(t3_started) >= 1, f"Run 3 should use tool. Has errors: {result3.has_errors}"
 
-    # All 3 turns used tools
+    # All 3 runs used tools
     total_tool_calls = len(t1_started) + len(t2_started) + len(t3_started)
     assert total_tool_calls >= 3, (
-        f"Expected at least 3 tool calls across 3 turns, got {total_tool_calls}"
+        f"Expected at least 3 tool calls across 3 runs, got {total_tool_calls}"
     )
 
 
@@ -506,14 +506,14 @@ async def test_react_landing_full_pipeline(sandbox_id):
     """Full pipeline: create React page -> verify structure -> add component."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
-    # Turn 1: Create React landing page
+    # Run 1: Create React landing page
     result1 = await agent.invoke(
         "Create /workspace/index.html with a React landing page using CDN. "
         "Include: <!DOCTYPE html>, React/ReactDOM CDN scripts from unpkg, "
         "a root div, and a component rendering 'Welcome to EphemeralOS'. "
         "Use write_file or shell."
     )
-    assert len(result1.assistant_turns()) > 0
+    assert len(result1.assistant_messages()) > 0
     t1_started = result1.tools_started()
     assert len(t1_started) >= 1, f"Should use tool to create file. Has errors: {result1.has_errors}"
 
@@ -523,11 +523,11 @@ async def test_react_landing_full_pipeline(sandbox_id):
         f"Should use sandbox tool. Got: {t1_names}"
     )
 
-    # Turn 2: Verify file structure
+    # Run 2: Verify file structure
     result2 = await agent.invoke(
         "Use shell to run 'cat /workspace/index.html' and confirm it has React CDN links."
     )
-    assert len(result2.assistant_turns()) > 0
+    assert len(result2.assistant_messages()) > 0
 
     # Check that the assistant, tool output, or tool events reference React content
     started2 = result2.tools_started()
@@ -538,7 +538,7 @@ async def test_react_landing_full_pipeline(sandbox_id):
     has_react_ref = any(kw in all_lower for kw in ["react", "unpkg", "html", "component", "index"])
     has_tool_use = len(started2) >= 1
     assert has_react_ref or has_tool_use, (
-        f"Turn 2 should reference React content or use a tool. "
+        f"Run 2 should reference React content or use a tool. "
         f"Tools: {[e.tool_name for e in started2]}, "
         f"Content: {all_content[:300]}"
     )

@@ -1,13 +1,9 @@
-"""Tests for ``tool_call_limit`` enforcement and the budget-warning reminder
-(Phase 1 Step 3).
+"""Tests for ``tool_call_limit`` enforcement.
 
 The engine loop is integration-heavy, so these tests target the small,
-pure helpers around query budgeting and tool execution:
-
-- :func:`_budget_warning_text` — fires only at the threshold and only
-  while budget remains.
-- ``execute_tool_call`` — counts every dispatch attempt and rejects
-  with a structured error once the cap is reached.
+pure helpers around query budgeting and tool execution. ``execute_tool_call``
+counts every dispatch attempt and rejects with a structured error once the
+cap is reached.
 """
 
 from __future__ import annotations
@@ -17,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from agents.types import AgentDefinition
-from notification.budget import build_budget_warning
 from engine.core.query import QueryContext
 from tools.core.tool_execution import execute_tool_call
 from tools.core.runtime import ExecutionMetadata
@@ -76,77 +71,6 @@ def test_agent_definition_rejects_removed_legacy_fields():
         AgentDefinition.model_validate(
             {"name": "x", "description": "y", "effort": "high"}
         )
-
-
-# ---------- build_budget_warning ---------------------------------------------
-
-
-def test_budget_warning_none_when_no_limit():
-    assert build_budget_warning(_ctx(None, 0)) is None
-
-
-def test_budget_warning_silent_when_far_from_limit():
-    # 100-call limit, 50 used → 50 remaining, threshold = 75 used. No warning.
-    assert build_budget_warning(_ctx(100, 50)) is None
-
-
-def test_budget_warning_fires_at_seventy_five_percent_used():
-    # 100-call limit, 75 used → 75% of the budget consumed. Warns once.
-    pair = build_budget_warning(_ctx(100, 75))
-    assert pair is not None
-    history_msg, event = pair
-    assert event.category == "budget_warning"
-    assert "25 of 100" in event.text
-    assert "75 already used" in event.text
-
-
-def test_budget_warning_fires_at_one_call_remaining():
-    # 5-call limit, 4 used → 1 remaining. Warns regardless of percentage.
-    pair = build_budget_warning(_ctx(5, 4))
-    assert pair is not None
-    _, event = pair
-    assert "1 of 5" in event.text
-
-
-def test_budget_warning_names_configured_terminal_tool():
-    ctx = _ctx(100, 75, terminal_tools={"finish_task"})
-    ctx.tool_metadata["role"] = "planner"
-    _, event = build_budget_warning(ctx)
-    assert "finish_task" in event.text
-    assert "role-correct terminal tool" in event.text
-
-
-def test_budget_warning_avoids_removed_submission_tool_names():
-    ctx = _ctx(100, 75, terminal_tools={"finish_task"})
-    ctx.tool_metadata["role"] = "reviewer"
-    _, event = build_budget_warning(ctx)
-    assert "submit_task_success()" not in event.text
-    assert "request_replan()" not in event.text
-    assert "finish_task" in event.text
-    assert "Residual Risk line" not in event.text
-
-
-def test_budget_warning_default_success_summary_requires_evidence():
-    ctx = _ctx(100, 75, terminal_tools={"finish_task"})
-    _, event = build_budget_warning(ctx)
-    assert "advisory warning, not a terminal trigger" in event.text
-    assert "bounded known fix, required diagnostic, or exact verification" in event.text
-    assert "still leaves a terminal call" in event.text
-    assert "role-correct terminal tool" in event.text
-    assert "finish_task" in event.text
-    assert "final reserved call" in event.text
-    assert "Residual Risk line" not in event.text
-
-
-def test_budget_warning_emits_once_per_remaining_count():
-    ctx = _ctx(10, 8)
-    assert build_budget_warning(ctx) is not None
-    assert build_budget_warning(ctx) is None
-
-
-def test_budget_warning_silent_when_exhausted():
-    # Exhausted: termination handles it, not the warning.
-    assert build_budget_warning(_ctx(5, 5)) is None
 
 
 # ---------- execute_tool_call budget enforcement -----------------------------

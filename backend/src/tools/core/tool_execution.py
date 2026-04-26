@@ -210,7 +210,6 @@ async def execute_tool_call_streaming(
         is_error=result.is_error,
         metadata=result.metadata,
         does_terminate=result.does_terminate,
-        mode_transition=result.mode_transition,
     )
     return tool_result
 

@@ -15,7 +15,6 @@ from message.messages import (
 from message.stream_events import (
     AssistantMessageComplete,
     AssistantTextDelta,
-    AssistantTurnComplete,
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
@@ -29,7 +28,6 @@ from message.stream_events import (
 __all__ = [
     "AssistantTextDelta",
     "AssistantMessageComplete",
-    "AssistantTurnComplete",
     "BackgroundTaskCompleted",
     "BackgroundTaskStateBlock",
     "BackgroundTaskStarted",

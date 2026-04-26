@@ -359,7 +359,7 @@ async def test_complex_task_with_10_plus_tool_calls(sandbox_id):
     )
 
     # Verify assistant completed (didn't exhaust the tool-call budget)
-    assert len(result.assistant_turns()) > 0, (
+    assert len(result.assistant_messages()) > 0, (
         "Task should complete with assistant_complete, not timeout"
     )
 

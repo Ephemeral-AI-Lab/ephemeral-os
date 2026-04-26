@@ -41,7 +41,7 @@ def sandbox_id():
 @pytest.mark.skipif(not HAS_ALL, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
 async def test_agent_makes_multiple_tool_calls(sandbox_id):
-    """Agent should make multiple tool calls in one turn."""
+    """Agent should make multiple tool calls in one response."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt="Make multiple tool calls to complete the task.",
@@ -95,7 +95,7 @@ async def test_write_then_bash_sequential(sandbox_id):
 @pytest.mark.skipif(not HAS_ALL, reason="MiniMax + Daytona both required")
 @pytest.mark.asyncio
 async def test_multiple_bash_commands(sandbox_id):
-    """Multiple bash commands in same turn."""
+    """Multiple bash commands in the same response."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt="Run all three echo commands.",
@@ -171,7 +171,7 @@ async def test_agent_completes_with_tool_calls(sandbox_id):
         "Create /workspace/complete.txt with content: 'COMPLETE'"
     )
 
-    assert len(result.assistant_turns()) > 0, "Should complete successfully"
+    assert len(result.assistant_messages()) > 0, "Should complete successfully"
 
     tool_started = result.tools_started()
     assert len(tool_started) >= 1, f"Should make at least 1 tool call. Got {len(tool_started)}"
@@ -208,7 +208,7 @@ async def test_build_python_script_workflow(sandbox_id):
 
     assert "write_file" in tool_names, f"Should write files. Tools: {tool_names}"
     assert "shell" in tool_names, f"Should run scripts. Tools: {tool_names}"
-    assert len(result.assistant_turns()) > 0, "Should complete"
+    assert len(result.assistant_messages()) > 0, "Should complete"
 
     text = result.text
     assert "8" in text, f"Should output 8 (3+5). Got: {text[:300]}"
@@ -243,7 +243,7 @@ async def test_multi_file_project_workflow(sandbox_id):
         f"Should create 3 files. Got {len(write_calls)}. Tools: {tool_names}"
     )
 
-    assert len(result.assistant_turns()) > 0, "Should complete"
+    assert len(result.assistant_messages()) > 0, "Should complete"
 
 
 @pytest.mark.skipif(not HAS_ALL, reason="MiniMax + Daytona both required")
@@ -271,7 +271,7 @@ async def test_data_processing_workflow(sandbox_id):
 
     assert "write_file" in tool_names, f"Should write file. Tools: {tool_names}"
     assert "shell" in tool_names, f"Should run commands. Tools: {tool_names}"
-    assert len(result.assistant_turns()) > 0, "Should complete"
+    assert len(result.assistant_messages()) > 0, "Should complete"
 
     text = result.text.lower()
     assert "3" in text or "3 lines" in text or "line3" in text, (
@@ -305,4 +305,4 @@ async def test_error_recovery_workflow(sandbox_id):
     assert "write_file" in tool_names, f"Should write file. Tools: {tool_names}"
     has_bash_or_read = "shell" in tool_names or "read_file" in tool_names
     assert has_bash_or_read, f"Should attempt bash or read commands. Tools: {tool_names}"
-    assert len(result.assistant_turns()) > 0, "Should complete even with errors"
+    assert len(result.assistant_messages()) > 0, "Should complete even with errors"

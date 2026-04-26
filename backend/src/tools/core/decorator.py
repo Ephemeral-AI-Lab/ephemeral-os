@@ -51,7 +51,6 @@ def tool(
     background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
     is_terminal_tool: bool = False,
-    is_mode_entry_tool: bool = False,
     context_requirements: list[str] | tuple[str, ...] = (),
     pre_hooks: list[object] | tuple[object, ...] = (),
     post_hooks: list[object] | tuple[object, ...] = (),
@@ -108,7 +107,6 @@ def tool(
         instance.background = background
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool
-        instance.is_mode_entry_tool = is_mode_entry_tool
         instance.context_requirements = normalized_context_requirements
         instance.pre_hooks = normalized_pre_hooks
         instance.post_hooks = normalized_post_hooks

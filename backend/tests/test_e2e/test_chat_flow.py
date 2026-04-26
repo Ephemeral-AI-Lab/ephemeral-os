@@ -163,7 +163,7 @@ class TestChatWithToolCalls:
         # Should end with line_complete
         assert events[-1]["type"] == "line_complete"
 
-        # Should have assistant_complete (may be from the tool error or final turn)
+        # Should have assistant_complete (may be from the tool error or final response)
         completes = events_of_type(events, "assistant_complete")
         assert len(completes) >= 1
 

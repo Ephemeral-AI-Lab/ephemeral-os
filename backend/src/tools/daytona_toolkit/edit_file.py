@@ -61,7 +61,7 @@ def _normalize_edits(
     old_text: str,
     new_text: str,
 ) -> tuple[list[SearchReplaceEdit], str | None]:
-    """Turn tool input into one search/replace edit."""
+    """Convert tool input into one search/replace edit."""
     if not old_text:
         return [], "Provide `old_text` (text to find) and `new_text` (replacement)."
     return [SearchReplaceEdit(old_text=old_text, new_text=new_text)], None

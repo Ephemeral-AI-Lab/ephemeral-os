@@ -146,7 +146,7 @@ def sandbox_id():
 async def test_agent_responds_to_simple_prompt(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=5)
     result = await agent.invoke("Say hello in exactly 3 words.")
-    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert len(result.assistant_messages()) > 0, "Missing assistant response"
     assert result.text, "Should produce a response"
 
 
@@ -154,7 +154,7 @@ async def test_agent_responds_to_simple_prompt(sandbox_id):
 async def test_agent_uses_shell(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Run this exact command in the sandbox: echo 'ANTHROPIC_BASH_OK'")
-    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert len(result.assistant_messages()) > 0, "Missing assistant response"
 
     tool_started = result.tools_started()
     tool_names = [ev.tool_name for ev in tool_started]
@@ -165,7 +165,7 @@ async def test_agent_uses_shell(sandbox_id):
 async def test_agent_multi_tool_interaction(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Use shell to run: pwd")
-    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert len(result.assistant_messages()) > 0, "Missing assistant response"
 
     tool_started = result.tools_started()
     tool_completed = result.tools_completed()
@@ -182,7 +182,7 @@ async def test_agent_multi_step_pipeline(sandbox_id):
         "2. Use shell to run: python3 /workspace/anthro_pipeline.py\n"
         "3. Report the output"
     )
-    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert len(result.assistant_messages()) > 0, "Missing assistant response"
 
     tool_started = result.tools_started()
     if tool_started:
@@ -224,7 +224,7 @@ async def test_event_lifecycle_complete(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Use shell to run: echo 'LIFECYCLE_OK'")
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert len(result.assistant_messages()) > 0, "Missing assistant response"
     tool_started = result.tools_started()
     tool_completed = result.tools_completed()
     if len(tool_started) > 0 and not result.has_errors:

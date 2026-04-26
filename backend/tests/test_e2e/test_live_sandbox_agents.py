@@ -8,7 +8,7 @@ Single-agent tests verify:
 - Agent can invoke individual Daytona tools (bash, write, read, grep, glob)
 - Tool events flow correctly (tool_started → tool_completed)
 - File roundtrips work (write → read with content verification)
-- Multi-turn tool chaining preserves sandbox state
+- Sequential invocations preserve sandbox state
 - CI-owned LSP tools are available in the schema when code intelligence is enabled
 
 Run with: pytest tests/test_e2e/test_live_sandbox_agents.py -m live -v
@@ -74,7 +74,7 @@ async def test_bash_tool_invocation(agent):
     result = await agent.invoke(
         "Use shell to run 'echo SINGLE_AGENT_BASH_OK' in the sandbox."
     )
-    assert len(result.assistant_turns()) > 0, "No assistant turns produced"
+    assert len(result.assistant_messages()) > 0, "No assistant messages produced"
 
     started = result.tools_started()
     assert len(started) >= 1, f"No tool_started events. Tool names: {result.tool_names}"
@@ -175,39 +175,39 @@ async def test_glob_search_tool(agent):
 
 
 # ===========================================================================
-# AREA 2: Single-Agent — Multi-Turn Tool Chaining
+# AREA 2: Single-Agent — Sequential Tool Chaining
 # ===========================================================================
 
 
 async def test_create_then_verify_file(agent):
-    """Turn 1: create file. Turn 2: verify file content. Sandbox state persists across invocations."""
+    """Run 1 creates a file; run 2 verifies it. Sandbox state persists."""
     marker = f"CHAIN_{uuid.uuid4().hex[:8]}"
 
-    # Turn 1: Create
+    # Run 1: Create
     result1 = await agent.invoke(
         f"Use write_file to create /workspace/chain.txt with content '{marker}'"
     )
-    assert len(result1.assistant_turns()) > 0
+    assert len(result1.assistant_messages()) > 0
     t1_tools = result1.tools_started()
-    assert len(t1_tools) >= 1, f"Turn 1 should use a tool. Tool names: {result1.tool_names}"
+    assert len(t1_tools) >= 1, f"Run 1 should use a tool. Tool names: {result1.tool_names}"
 
-    # Turn 2: Verify (self-contained prompt — no conversation memory)
+    # Run 2: Verify (self-contained prompt, no conversation memory)
     result2 = await agent.invoke(
         "Use shell to run 'cat /workspace/chain.txt' and tell me the content."
     )
-    assert len(result2.assistant_turns()) > 0
+    assert len(result2.assistant_messages()) > 0
     text2 = result2.text
     t2_completed = result2.tools_completed()
     all_output = " ".join(e.output for e in t2_completed)
     has_marker = marker in text2 or marker in all_output
     has_tool = len(result2.tools_started()) >= 1
     assert has_marker or has_tool, (
-        f"Turn 2 should reference '{marker}' or use a tool. Text: {text2[:200]}"
+        f"Run 2 should reference '{marker}' or use a tool. Text: {text2[:200]}"
     )
 
 
-async def test_three_turn_create_read_modify(agent):
-    """3-turn chain: create -> read -> modify. All turns use tools. Sandbox state persists."""
+async def test_three_run_create_read_modify(agent):
+    """3-run chain: create -> read -> modify. All runs use tools and share sandbox state."""
     result1 = await agent.invoke(
         "Use shell to run: echo 'V1_CONTENT' > /workspace/evolve.txt"
     )
@@ -227,18 +227,18 @@ async def test_three_turn_create_read_modify(agent):
     assert len(t3) >= 1
 
     total = len(t1) + len(t2) + len(t3)
-    assert total >= 3, f"Expected at least 3 tool calls across 3 turns, got {total}"
+    assert total >= 3, f"Expected at least 3 tool calls across 3 runs, got {total}"
 
 
 async def test_complex_multi_step_task(agent):
-    """Agent performs create-file -> execute -> capture-output in one turn."""
+    """Agent performs create-file -> execute -> capture-output in one response."""
     result = await agent.invoke(
         "Do these steps in the sandbox:\n"
         "1. Use write_file to create /workspace/hello.py with: print('HELLO_FROM_E2E')\n"
         "2. Use shell to run: python3 /workspace/hello.py\n"
         "3. Report the output."
     )
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
     started = result.tools_started()
     if started:
@@ -296,11 +296,11 @@ async def test_tool_completed_has_nonempty_output(agent):
 
 
 async def test_full_event_lifecycle(agent):
-    """A tool-using chat must produce assistant turns and matching tool started/completed pairs."""
+    """A tool-using chat must produce assistant messages and matching tool started/completed pairs."""
     result = await agent.invoke(
         "Use shell to run 'echo LIFECYCLE_OK'"
     )
-    assert len(result.assistant_turns()) > 0, "No assistant turns produced"
+    assert len(result.assistant_messages()) > 0, "No assistant messages produced"
 
     started = result.tools_started()
     completed = result.tools_completed()

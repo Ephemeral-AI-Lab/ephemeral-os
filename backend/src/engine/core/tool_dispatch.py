@@ -40,7 +40,6 @@ def _result_from_completed(completed: ToolExecutionCompleted) -> ToolResultBlock
         is_error=completed.is_error,
         metadata=dict(completed.metadata or {}),
         does_terminate=completed.does_terminate,
-        mode_transition=completed.mode_transition,
     )
 
 
@@ -140,7 +139,6 @@ async def _dispatch_deferred_tool_calls(
                         tool_id=tc.id,
                         metadata=dict(result.metadata or {}),
                         does_terminate=result.does_terminate,
-                        mode_transition=result.mode_transition,
                     ),
                     None,
                 )
@@ -224,7 +222,6 @@ async def _dispatch_single_foreground_tool(
                 tool_id=tc.id,
                 metadata=dict(result.metadata or {}),
                 does_terminate=result.does_terminate,
-                mode_transition=result.mode_transition,
             ),
             None,
         )
@@ -285,7 +282,6 @@ async def _dispatch_many_foreground_tools(
                         tool_id=tc.id,
                         metadata=dict(result.metadata or {}),
                         does_terminate=result.does_terminate,
-                        mode_transition=result.mode_transition,
                     ),
                     None,
                 )

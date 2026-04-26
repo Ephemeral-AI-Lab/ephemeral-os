@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import ModeDefinition
 from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
@@ -28,7 +28,6 @@ from message.stream_events import (
     ThinkingDelta,
     ToolExecutionCompleted,
 )
-from engine.core.no_tool_policy import handle_no_tool_response
 from engine.core.notifications import (
     ensure_system_notification_service,
     flush_system_notifications,
@@ -37,7 +36,6 @@ from engine.core.streaming_executor import StreamingToolExecutor, defer_backgrou
 from engine.core.tool_dispatch import dispatch_assistant_tools
 from engine.core.tool_results import (
     any_terminal_result,
-    apply_mode_transitions,
     terminal_result_from_tool_results,
 )
 from engine.core.run_request import (
@@ -88,20 +86,14 @@ class QueryContext:
     run_id: str = ""
     tool_call_limit: int | None = None
     tool_calls_used: int = 0
-    last_budget_warning_remaining: int | None = None
+    tool_budget_warning_fired: bool = False
     tool_metadata: ExecutionMetadata | None = None
     enable_background_tasks: bool = False
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
     terminal_result: ToolResult | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
-    # Agent mode typestate (see docs/architecture/agent-mode-system-v1.md).
-    # ``agent_def`` is the bound AgentDefinition; ``active_mode`` is the
-    # currently-active ModeDefinition. Both are populated at spawn time when
-    # an agent_def is supplied. The dispatcher reads ``active_mode`` to gate
-    # tool calls; the mode-entry tools mutate it via the ``mode_transition``
-    # field on their ToolResult.
-    agent_def: AgentDefinition | None = None
+    # Active tool surface used by the dispatcher to gate tool calls.
     active_mode: ModeDefinition | None = None
 
 
@@ -111,7 +103,7 @@ def _make_stream_dispatch_deferrer(
 ) -> Callable[[BaseTool | None, dict[str, Any] | None], bool]:
     """Build a per-stream `should_defer` predicate for `StreamingToolExecutor`.
 
-    Stateful: once an exclusive (terminal or mode-entry) tool is observed,
+    Stateful: once a terminal tool is observed,
     every subsequent call returns True for the rest of the stream. Construct
     a fresh predicate for each provider stream.
     """
@@ -125,12 +117,11 @@ def _make_stream_dispatch_deferrer(
             return True
         if tool_def is None:
             return False
-        # Terminal and mode-entry tools are batch-exclusive — they must not
+        # Terminal tools are batch-exclusive — they must not
         # execute mid-stream alongside siblings. Defer so validate_tool_batch
         # can enforce exclusivity after the full tool_uses list is known.
         is_terminal = tool_def.name in context.terminal_tools
-        is_mode_entry = tool_def.is_mode_entry_tool
-        if is_terminal or is_mode_entry:
+        if is_terminal:
             exclusive_batch_seen = True
             return True
         return False
@@ -156,7 +147,6 @@ class _StreamRunState:
 
 def _initialize_loop_state(
     context: QueryContext,
-    messages: list[ConversationMessage],
 ) -> tuple[BackgroundTaskManager | None, SystemNotificationService]:
     """One-time setup before issuing the provider request."""
     if context.tool_metadata is None:
@@ -166,7 +156,7 @@ def _initialize_loop_state(
         coerced.update(context.tool_metadata)
         context.tool_metadata = coerced
 
-    notification_service = ensure_system_notification_service(context.tool_metadata, messages)
+    notification_service = ensure_system_notification_service(context.tool_metadata)
 
     background_manager: BackgroundTaskManager | None = None
     if context.enable_background_tasks:
@@ -301,7 +291,6 @@ async def _drain_executor_after_stream(
 
 async def _handle_tool_dispatch_branch(
     context: QueryContext,
-    messages: list[ConversationMessage],
     executor: StreamingToolExecutor,
     run_request: QueryRunRequest,
     state: _StreamRunState,
@@ -327,7 +316,6 @@ async def _handle_tool_dispatch_branch(
     record_tool_results(run_request, tool_results)
     for event in flush_system_notifications(notification_service):
         yield event
-    apply_mode_transitions(context, tool_results)
 
     if any_terminal_result(tool_results):
         context.terminal_result = terminal_result_from_tool_results(tool_results)
@@ -362,7 +350,7 @@ async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    background_manager, notification_service = _initialize_loop_state(context, messages)
+    background_manager, notification_service = _initialize_loop_state(context)
 
     executor = await _build_stream_executor(context, background_manager)
 
@@ -385,7 +373,6 @@ async def _run_query_loop(
     if final_message.tool_uses:
         async for event, event_usage in _handle_tool_dispatch_branch(
             context,
-            messages,
             executor,
             run_request,
             state,
@@ -396,8 +383,7 @@ async def _run_query_loop(
     else:
         for event, event_usage in flush_system_notifications(notification_service):
             yield event, event_usage
-        if handle_no_tool_response().exit_text_response:
-            context.exit_reason = QueryExitReason.TEXT_RESPONSE
+        context.exit_reason = QueryExitReason.TEXT_RESPONSE
 
     if background_manager is not None and background_manager.has_pending():
         await background_manager.cancel_all()

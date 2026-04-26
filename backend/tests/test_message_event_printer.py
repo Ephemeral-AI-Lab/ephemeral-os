@@ -1,6 +1,6 @@
 from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
-    AssistantTurnComplete,
+    AssistantMessageComplete,
     BackgroundTaskCompleted,
     ThinkingDelta,
     ToolExecutionCompleted,
@@ -37,7 +37,7 @@ def test_printer_keeps_run_id_for_flushed_thinking() -> None:
         ThinkingDelta(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
     )
     printer.emit(
-        AssistantTurnComplete(
+        AssistantMessageComplete(
             message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="analysis_agent",

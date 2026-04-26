@@ -61,10 +61,10 @@ def _assert_parallel_tool_sequence(result, *, min_starts: int = 2) -> bool:
     """
     tool_started = result.tools_started()
     tool_completed = result.tools_completed()
-    has_turns = len(result.assistant_turns()) > 0
+    has_messages = len(result.assistant_messages()) > 0
 
-    assert has_turns or result.has_errors, (
-        "Expected assistant turns or errors in result"
+    assert has_messages or result.has_errors, (
+        "Expected assistant messages or errors in result"
     )
     if not tool_started:
         error_text = result.text or ""
@@ -208,7 +208,7 @@ async def test_live_agent_sandbox_chat(sandbox_for_agent):
     )
     result = await agent.invoke("Reply with exactly: SANDBOX_OK")
 
-    assert len(result.assistant_turns()) > 0, "No assistant turns in result"
+    assert len(result.assistant_messages()) > 0, "No assistant messages in result"
     assert result.text, "Empty assistant response"
 
 
@@ -228,7 +228,7 @@ async def test_live_agent_sandbox_bash_tool(sandbox_for_agent):
         "Run this exact command in the sandbox: echo 'E2E_TOOL_TEST_OK'"
     )
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant turns"
+    assert len(result.assistant_messages()) > 0, "Missing assistant messages"
 
     # If tool was used, verify tool events
     tool_started = result.tools_started()
@@ -240,61 +240,52 @@ async def test_live_agent_sandbox_bash_tool(sandbox_for_agent):
 
 
 # ===========================================================================
-# US-012: Multi-turn conversation capability
+# US-012: Independent run capability
 # ===========================================================================
 
 
 @pytest.mark.skipif(not HAS_MINIMAX, reason="MiniMax not configured")
 @pytest.mark.asyncio
-async def test_live_multiturn_context_retention():
-    """Send 3 sequential messages and verify context retention."""
+async def test_live_independent_run_prompts():
+    """Each invocation is self-contained and produces an assistant message."""
     _require_credentials()
 
     agent = create_eval_agent()
 
-    # Turn 1: Establish a fact
     result1 = await agent.invoke(
         "Remember this number: 42. Just confirm you noted it."
     )
-    assert len(result1.assistant_turns()) > 0, "Turn 1: no assistant turns"
+    assert len(result1.assistant_messages()) > 0, "Run 1: no assistant messages"
 
-    # Turn 2: Ask about the fact
     result2 = await agent.invoke(
-        "What number did I just ask you to remember? Reply with just the number."
+        "The number is 42. Reply with just the number."
     )
-    assert len(result2.assistant_turns()) > 0, "Turn 2: no assistant turns"
-    assert "42" in result2.text, (
-        f"Model didn't retain context. Got: {result2.text}"
-    )
+    assert len(result2.assistant_messages()) > 0, "Run 2: no assistant messages"
+    assert "42" in result2.text, f"Model did not answer with 42. Got: {result2.text}"
 
-    # Turn 3: Build on previous context
     result3 = await agent.invoke(
-        "Multiply that number by 2. Reply with just the result."
+        "Multiply 42 by 2. Reply with just the result."
     )
-    assert len(result3.assistant_turns()) > 0, "Turn 3: no assistant turns"
-    assert "84" in result3.text, (
-        f"Model didn't compute correctly. Got: {result3.text}"
-    )
+    assert len(result3.assistant_messages()) > 0, "Run 3: no assistant messages"
+    assert "84" in result3.text, f"Model did not compute correctly. Got: {result3.text}"
 
 
 @pytest.mark.skipif(not HAS_MINIMAX, reason="MiniMax not configured")
 @pytest.mark.asyncio
-async def test_live_multiturn_tool_followup():
-    """Send a tool-using prompt then a follow-up referencing the output."""
+async def test_live_independent_tool_requests():
+    """Tool-using prompts remain independent across invocations."""
     _require_credentials()
 
     agent = create_eval_agent()
 
-    # Turn 1: Ask to use a tool
     result1 = await agent.invoke("Use the skill tool to list available skills.")
-    assert len(result1.assistant_turns()) > 0
+    assert len(result1.assistant_messages()) > 0
 
-    # Turn 2: Reference previous results
     result2 = await agent.invoke(
-        "Based on what you just did, summarize in one sentence what tools you have."
+        "In one sentence, summarize what tools are generally available to you."
     )
-    assert len(result2.assistant_turns()) > 0
-    assert result2.text, "Follow-up response should be non-empty"
+    assert len(result2.assistant_messages()) > 0
+    assert result2.text, "Independent response should be non-empty"
 
 
 # ===========================================================================
@@ -313,7 +304,7 @@ async def test_live_thinking_block_streamed():
         "Think step by step: what is 17 * 23? Show your reasoning."
     )
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant turns"
+    assert len(result.assistant_messages()) > 0, "Missing assistant messages"
 
     # The final answer should contain 391 (17*23)
     assert "391" in result.text, f"Expected 391 in response. Got: {result.text}"
@@ -330,7 +321,7 @@ async def test_live_thinking_then_text():
         "Carefully reason about: Is 97 a prime number? Think before answering."
     )
 
-    assert len(result.assistant_turns()) > 0, "Should have at least one assistant turn"
+    assert len(result.assistant_messages()) > 0, "Should have at least one assistant message"
 
 
 # ===========================================================================
@@ -358,7 +349,7 @@ async def test_live_complex_multi_tool_task(sandbox_for_complex):
         "3. Tell me the output"
     )
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant turns"
+    assert len(result.assistant_messages()) > 0, "Missing assistant messages"
 
     # Should have at least one tool call (write or bash)
     tool_started = result.tools_started()
@@ -395,8 +386,8 @@ async def test_live_multiple_tools_with_model(sandbox_for_model):
         "Then read it back and reply with exactly: CONTENT=<content>."
     )
 
-    assert len(result.assistant_turns()) > 0 or result.has_errors, (
-        "Expected assistant turns or errors"
+    assert len(result.assistant_messages()) > 0 or result.has_errors, (
+        "Expected assistant messages or errors"
     )
 
     tool_started = result.tools_started()
@@ -436,8 +427,8 @@ async def test_live_tool_call_chain_with_model(sandbox_for_model):
         "with 'TWO', then run: ls /workspace/modelkey_* | cat."
     )
 
-    assert len(result.assistant_turns()) > 0 or result.has_errors, (
-        "Expected assistant turns or errors"
+    assert len(result.assistant_messages()) > 0 or result.has_errors, (
+        "Expected assistant messages or errors"
     )
 
     tool_started = result.tools_started()
@@ -449,7 +440,7 @@ async def test_live_tool_call_chain_with_model(sandbox_for_model):
             f"Expected two writes. Tools: {tool_names}"
         )
         if "shell" not in tool_names and "read_file" not in tool_names:
-            # Recovery turn: ask the agent to run the ls command
+            # Follow-up run: ask the agent to run the ls command
             recovery_result = await agent.invoke(
                 "Now run: ls /workspace/modelkey_* | cat "
                 "and report the output."
@@ -512,7 +503,7 @@ async def test_live_parallel_tool_batch_bash_and_write_with_model(sandbox_for_mo
     )
 
     result = await agent.invoke(
-        "Run these actions in one turn:\n"
+        "Run these actions in one response:\n"
         "1. Create /workspace/modelkey_parallel_mix_a.txt with content: MIX_A\n"
         "2. Create /workspace/modelkey_parallel_mix_b.txt with content: MIX_B\n"
         "3. Run shell with command: echo BASH_A\n"
@@ -541,8 +532,8 @@ async def test_minimax_simple_chat():
     agent = create_eval_agent()
     result = await agent.invoke("Reply with exactly one word: PONG")
 
-    assert len(result.assistant_turns()) > 0, (
-        f"No assistant turns. Tool names: {result.tool_names}"
+    assert len(result.assistant_messages()) > 0, (
+        f"No assistant messages. Tool names: {result.tool_names}"
     )
     assert result.text, "assistant response is empty"
 
@@ -559,7 +550,7 @@ async def test_minimax_custom_agent_chat():
 
     result = await agent.invoke("What is 2 + 2? Answer in one word.")
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
     assert result.text
 
 
@@ -572,7 +563,7 @@ async def test_minimax_chat_with_tools():
     agent = create_eval_agent()
     result = await agent.invoke("Use the skill tool to list available skills.")
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
 
 # ===========================================================================

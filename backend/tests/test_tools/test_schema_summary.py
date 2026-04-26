@@ -54,12 +54,12 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "Tool: submit_full_plan_handoff" not in summary
     assert "Tool: submit_partial_plan_handoff" not in summary
 
-    # Executor-evaluator tree submission + mode-entry tools.
+    # Executor-evaluator tree terminal tools.
     assert "Tool: submit_task_completion" in summary
     assert "Tool: submit_plan_handoff" in summary
     assert "Tool: submit_continue_work_handoff" in summary
-    assert "Tool: enter_plan_for_handoff" in summary
-    assert "Tool: enter_prepare_continue_to_work" in summary
+    assert "Tool: enter_plan_for_handoff" not in summary
+    assert "Tool: enter_prepare_continue_to_work" not in summary
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):

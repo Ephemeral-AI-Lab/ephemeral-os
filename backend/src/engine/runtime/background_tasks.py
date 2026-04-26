@@ -363,7 +363,7 @@ class BackgroundTaskManager:
         if tracked.task_type == "subagent":
             tracked.stop_mode = "early_stop"
             tracked.progress_lines = [f"Early stop requested{': ' + reason if reason else ''}"]
-            # Give a freshly launched subagent one event-loop turn to reach its
+            # Give a freshly launched subagent one event-loop cycle to reach its
             # first cooperative await so cancellation can be salvaged into a
             # partial result instead of short-circuiting before user code runs.
             await asyncio.sleep(0)

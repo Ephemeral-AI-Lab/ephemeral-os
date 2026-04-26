@@ -69,7 +69,7 @@ async def test_agent_responds_to_simple_prompt(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=MINIMAX_AGENT_PROMPT)
     result = await agent.invoke("Say hello in exactly 3 words.")
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant_complete turn"
+    assert len(result.assistant_messages()) > 0, "Missing assistant_complete message"
     assert result.text, "Should produce a response"
 
 
@@ -78,7 +78,7 @@ async def test_agent_uses_shell(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=MINIMAX_AGENT_PROMPT)
     result = await agent.invoke("Run this exact command in the sandbox: echo 'MINIMAX_BASH_OK'")
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant_complete turn"
+    assert len(result.assistant_messages()) > 0, "Missing assistant_complete message"
 
     tool_started = result.tools_started()
     tool_names = [ev.tool_name for ev in tool_started]
@@ -94,7 +94,7 @@ async def test_agent_write_and_read_file(sandbox_id):
         f"then read it back using shell: cat /workspace/minimax_test.txt"
     )
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
     tool_completed = result.tools_completed()
     all_output = " ".join(ev.output for ev in tool_completed)
@@ -111,7 +111,7 @@ async def test_agent_lists_files(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=MINIMAX_AGENT_PROMPT)
     result = await agent.invoke("Use shell to run 'ls /workspace'")
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
     tool_started = result.tools_started()
     tool_names = [ev.tool_name for ev in tool_started]
@@ -135,7 +135,7 @@ async def test_agent_grep_search(sandbox_id):
         "Use grep to search for 'GREP_TARGET' in /workspace/"
     )
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
     tool_started = result.tools_started()
     tool_names = [ev.tool_name for ev in tool_started]
@@ -159,7 +159,7 @@ async def test_agent_glob_find(sandbox_id):
         "Use glob to find all .txt files in /workspace/"
     )
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
 
 @pytest.mark.asyncio
@@ -172,7 +172,7 @@ async def test_agent_multi_step_pipeline(sandbox_id):
         "3. Report the output"
     )
 
-    assert len(result.assistant_turns()) > 0
+    assert len(result.assistant_messages()) > 0
 
     tool_started = result.tools_started()
     sandbox_tools = [ev for ev in tool_started if ev.tool_name in {"write_file", "read_file", "shell"}]
@@ -232,7 +232,7 @@ async def test_event_lifecycle_complete(sandbox_id_events):
     agent = create_eval_agent(sandbox_id=sandbox_id_events, system_prompt=MINIMAX_AGENT_PROMPT)
     result = await agent.invoke("Use shell to run: echo 'LIFECYCLE_OK'")
 
-    assert len(result.assistant_turns()) > 0, "Missing assistant_complete turn"
+    assert len(result.assistant_messages()) > 0, "Missing assistant_complete message"
 
     tool_started = result.tools_started()
     tool_completed = result.tools_completed()
