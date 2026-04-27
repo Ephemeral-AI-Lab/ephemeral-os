@@ -32,6 +32,7 @@ from agents.types import AgentDefinition
 from config.settings import Settings, load_settings
 from engine.core.query import run_query
 from message.messages import ConversationMessage
+from message.event_printer import format_background_start_detail
 from message.stream_events import (
     AssistantMessageComplete,
     AssistantTextDelta,
@@ -523,7 +524,10 @@ class EvalAgent:
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
             elif isinstance(event, BackgroundTaskStarted):
-                _out(f"    >> bg_start:   {event.tool_name} task_id={event.task_id}")
+                detail = format_background_start_detail(event.tool_name, event.tool_input)
+                _out(
+                    f"    >> bg_start:   {event.tool_name} task_id={event.task_id}{detail}"
+                )
             elif isinstance(event, BackgroundTaskCompleted):
                 _out(f"    << bg_done:    {event.tool_name} {event.output}")
             elif isinstance(event, SystemNotification):

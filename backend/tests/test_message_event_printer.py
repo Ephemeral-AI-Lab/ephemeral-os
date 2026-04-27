@@ -2,6 +2,7 @@ from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
     AssistantMessageComplete,
     BackgroundTaskCompleted,
+    BackgroundTaskStarted,
     ThinkingDelta,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -136,6 +137,29 @@ def test_printer_renders_background_shell_error_fallback() -> None:
     assert lines == [
         "[developer     ] [1234567890abcdef1234] "
         "<< bg_done:    shell [ERROR] status=error shells_run=1"
+    ]
+
+
+def test_printer_renders_subagent_background_launch_context() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        BackgroundTaskStarted(
+            task_id="bg_1",
+            tool_name="run_subagent",
+            tool_input={
+                "agent_name": "explorer",
+                "prompt": "Read alpha.txt\nReturn concise findings.",
+            },
+            agent_name="executor",
+            run_id="t1",
+        )
+    )
+
+    assert lines == [
+        "[executor      ] [t1] >> bg_start:   run_subagent task_id=bg_1 "
+        'agent_name="explorer" prompt="Read alpha.txt\\nReturn concise findings."'
     ]
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from benchmarks.sweevo.__main__ import _configure_benchmark_logging
+from benchmarks.sweevo.__main__ import _build_parser, _configure_benchmark_logging
 
 
 def test_configure_benchmark_logging_suppresses_warning_and_below() -> None:
@@ -18,3 +18,9 @@ def test_configure_benchmark_logging_suppresses_warning_and_below() -> None:
         assert logging.getLogger("benchmarks.sweevo").isEnabledFor(logging.ERROR)
     finally:
         logging.disable(previous_disable_level)
+
+
+def test_sweevo_cli_records_message_jsonl_by_default() -> None:
+    args = _build_parser().parse_args(["--no-evaluate"])
+
+    assert args.message_log == "message.jsonl"

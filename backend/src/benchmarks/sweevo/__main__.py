@@ -60,6 +60,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--disk", type=int, default=10)
     parser.add_argument("--no-evaluate", action="store_true", help="Skip F2P/P2P grading")
     parser.add_argument("--no-stream", action="store_true", help="Print JSON only after completion")
+    parser.add_argument(
+        "--message-log",
+        default="message.jsonl",
+        help=(
+            "Append completed agent steps to this JSONL file "
+            "(default: message.jsonl; pass an empty string to disable)"
+        ),
+    )
     parser.add_argument("--no-color", action="store_true")
     parser.add_argument(
         "-v",
@@ -112,6 +120,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         disk=args.disk,
         repo_dir=args.repo_dir,
         evaluate=not args.no_evaluate,
+        message_log_path=args.message_log or None,
     )
 
     if args.no_stream:

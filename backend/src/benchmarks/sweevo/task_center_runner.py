@@ -134,6 +134,7 @@ async def run_sweevo_with_task_center(
     repo_dir: str = _REPO_DIR,
     evaluate: bool = True,
     pr_descriptions_csv: str | os.PathLike[str] | None = None,
+    message_log_path: str | os.PathLike[str] | None = None,
 ) -> dict[str, Any]:
     """Run one SWE-EVO instance through the production TaskCenter path."""
     from agents.builtins import register_builtin_agents
@@ -210,6 +211,26 @@ async def run_sweevo_with_task_center(
             ),
         )
 
+        message_recorder = None
+        resolved_message_log_path: str | None = None
+        if message_log_path:
+            from message.agent_message_recorder import AgentMessageJsonlRecorder
+
+            message_recorder = AgentMessageJsonlRecorder(
+                message_log_path,
+                base_event={
+                    "benchmark": "sweevo",
+                    "instance_id": instance.instance_id,
+                    "sandbox_id": sandbox_id,
+                },
+            )
+            resolved_path = message_recorder.path
+            resolved_message_log_path = str(resolved_path) if resolved_path else None
+            _emit_progress(
+                printer,
+                f"[setup] message_log={resolved_message_log_path}",
+            )
+
         runtime_config = RuntimeConfig(cwd=str(_PROJECT_ROOT))
         task_center = TaskCenter(
             runtime_config,
@@ -228,6 +249,8 @@ async def run_sweevo_with_task_center(
 
         async def _on_event(event: Any) -> None:
             events.append(event)
+            if message_recorder is not None:
+                message_recorder.emit(event)
             if printer is not None and hasattr(printer, "emit"):
                 printer.emit(event)
 
@@ -236,6 +259,8 @@ async def run_sweevo_with_task_center(
             root = await task_center.run_query(user_prompt, sandbox_id=sandbox_id)
         finally:
             task_center.set_event_callback(None)
+            if message_recorder is not None:
+                message_recorder.flush()
             if printer is not None and hasattr(printer, "flush"):
                 printer.flush()
 
@@ -298,6 +323,7 @@ async def run_sweevo_with_task_center(
                 1 for task in task_center.graph.tasks.values() if task.status.value == "failed"
             ),
             "agent_events": len(events),
+            "message_log_path": resolved_message_log_path,
             "duration_s": time.monotonic() - start,
             "grading": grading,
         }

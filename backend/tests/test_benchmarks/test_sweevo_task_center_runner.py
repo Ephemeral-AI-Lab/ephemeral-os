@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 import os
 from typing import Any
 
@@ -130,6 +131,120 @@ async def test_task_center_spawn_passes_sweevo_repo_metadata(monkeypatch: pytest
     assert metadata["ci_workspace_root"] == "/testbed"
     assert captured["sandbox_id"] == "sbx-1"
     assert metadata["role"] == "executor"
+
+
+@pytest.mark.asyncio
+async def test_task_center_runner_records_agent_steps_jsonl(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    import agents.builtins
+    import config.model_config
+    import config.settings
+    import server.app_factory
+    import task_center.runtime
+    from message.stream_events import (
+        AssistantMessageComplete,
+        AssistantTextDelta,
+        ThinkingDelta,
+        ToolExecutionCompleted,
+    )
+    from message.messages import ConversationMessage, ToolUseBlock
+    from providers.types import UsageSnapshot
+
+    message_log = tmp_path / "message.jsonl"
+
+    monkeypatch.setattr(
+        "benchmarks.sweevo.task_center_runner.select_sweevo_instance",
+        lambda **_kwargs: _instance(),
+    )
+
+    async def fake_create_sandbox(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        return {
+            "sandbox_id": "sbx-1",
+            "sandbox": "sandbox-object",
+            "snapshot_name": "snapshot-1",
+        }
+
+    monkeypatch.setattr(
+        "benchmarks.sweevo.task_center_runner.create_sweevo_test_sandbox",
+        fake_create_sandbox,
+    )
+
+    async def fake_extract_patch(*_args: Any, **_kwargs: Any) -> str:
+        return ""
+
+    monkeypatch.setattr(
+        "benchmarks.sweevo.task_center_runner._extract_combined_patch",
+        fake_extract_patch,
+    )
+    monkeypatch.setattr(agents.builtins, "register_builtin_agents", lambda: None)
+    monkeypatch.setattr(config.settings, "load_settings", lambda: SimpleNamespace())
+    monkeypatch.setattr(server.app_factory, "ensure_runtime_stores_ready", lambda _settings: None)
+    monkeypatch.setattr(
+        config.model_config,
+        "try_get_active_model_kwargs",
+        lambda: {"model": "fake-model"},
+    )
+    monkeypatch.setattr(task_center.runtime, "build_production_spawn", lambda *_args, **_kwargs: None)
+
+    class FakeTaskCenter:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            status = SimpleNamespace(value="done")
+            self.graph = SimpleNamespace(tasks={"t1": SimpleNamespace(status=status)})
+            self._callback = None
+
+        def set_event_callback(self, callback) -> None:
+            self._callback = callback
+
+        async def run_query(self, _prompt: str, *, sandbox_id: str | None = None):
+            assert sandbox_id == "sbx-1"
+            assert self._callback is not None
+            await self._callback(ThinkingDelta(text="think", agent_name="executor", run_id="t1"))
+            await self._callback(AssistantTextDelta(text="text", agent_name="executor", run_id="t1"))
+            await self._callback(
+                AssistantMessageComplete(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_1",
+                                name="shell",
+                                input={"cmd": "pytest -q"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                    agent_name="executor",
+                    run_id="t1",
+                )
+            )
+            await self._callback(
+                ToolExecutionCompleted(
+                    tool_name="shell",
+                    output="ok",
+                    tool_id="toolu_1",
+                    agent_name="executor",
+                    run_id="t1",
+                )
+            )
+            return SimpleNamespace(id="t1", status=SimpleNamespace(value="done"), summaries=[])
+
+    monkeypatch.setattr(task_center.runtime, "TaskCenter", FakeTaskCenter)
+
+    result = await run_sweevo_with_task_center(
+        instance_id=_DASK_INSTANCE_ID,
+        evaluate=False,
+        message_log_path=message_log,
+    )
+
+    lines = message_log.read_text(encoding="utf-8").splitlines()
+    assert result["message_log_path"] == str(message_log)
+    assert len(lines) == 4
+    assert '"step_type": "thinking"' in lines[0]
+    assert '"step_type": "text"' in lines[1]
+    assert '"step_type": "tool_call"' in lines[2]
+    assert '"step_type": "tool_result"' in lines[3]
 
 
 @pytest.mark.e2e

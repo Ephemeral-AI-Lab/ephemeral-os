@@ -9,7 +9,21 @@ from task_center.model import HarnessGraphId, Status, Task, TaskId, TaskSummary
 
 _EXECUTOR_PROMPT_INSTRUCTIONS = (
     "Read DEPENDENCY_SUMMARIES as locked-in context, then complete the work "
-    "described in TASK_INPUT. TASK_INPUT is the task you own."
+    "described in TASK_INPUT. TASK_INPUT is the task you own. You must follow "
+    "DECISION_Guide when choosing between completing the task and calling "
+    "request_plan."
+)
+
+_EXECUTOR_DECISION_GUIDE = (
+    "You have two ways to finish this task, and you may switch between them at "
+    "any point during the run:\n"
+    "- If the task is atomic and clearly scoped, do the work and then call "
+    "submit_task_success or submit_task_failure.\n"
+    "- If the task is complex, multi-step, or its scope turns out to be larger "
+    "than a single pass, call request_plan with a decomposition request. This "
+    "is valid both before you start and mid-run once you have learned more "
+    "about the work. Prefer request_plan over pushing through a task that has "
+    "outgrown its scope."
 )
 
 
@@ -48,8 +62,9 @@ class ExecutorLaunchContext:
             deps_block = "\n\n".join(parts)
         return (
             f"## INSTRUCTIONS\n{_EXECUTOR_PROMPT_INSTRUCTIONS}\n\n"
+            f"## DEPENDENCY_SUMMARIES\n{deps_block}\n\n"
             f"## TASK_INPUT\n{self.task_input}\n\n"
-            f"## DEPENDENCY_SUMMARIES\n{deps_block}"
+            f"## DECISION_Guide\n{_EXECUTOR_DECISION_GUIDE}"
         )
 
 

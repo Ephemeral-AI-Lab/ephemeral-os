@@ -145,6 +145,24 @@ def _format_tool_completion_output(
     return f" {rendered}" if rendered else ""
 
 
+def _json_log_value(value: object) -> str:
+    return json.dumps(str(value), ensure_ascii=True)
+
+
+def format_background_start_detail(tool_name: str, tool_input: dict[str, Any]) -> str:
+    """Return compact launch context for background-start log lines."""
+    if tool_name != "run_subagent":
+        return ""
+
+    parts: list[str] = []
+    agent_name = tool_input.get("agent_name")
+    if agent_name is not None:
+        parts.append(f"agent_name={_json_log_value(agent_name)}")
+    if "prompt" in tool_input:
+        parts.append(f"prompt={_json_log_value(tool_input.get('prompt'))}")
+    return f" {' '.join(parts)}" if parts else ""
+
+
 @dataclass
 class _AgentTotals:
     color: str = ""
@@ -239,10 +257,11 @@ class MultiAgentEventPrinter:
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_full_text(event.reason)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
+            detail = format_background_start_detail(event.tool_name, event.tool_input)
             self._line(
                 agent,
                 run_id,
-                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}",
+                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}{detail}",
             )
         elif isinstance(event, BackgroundTaskCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
