@@ -11,6 +11,8 @@ from pydantic import (
     field_validator,
 )
 
+from notification.rules import NotificationRule
+
 AgentType = Literal["agent", "subagent"]
 
 
@@ -57,6 +59,12 @@ class AgentDefinition(BaseModel):
     # Terminal tools — calling any of these ends the query loop. Defaults to
     # the canonical task-completion terminal. Must be non-empty if specified.
     terminals: list[str] = Field(default_factory=lambda: ["submit_task_success"])
+
+    # --- notification rules ---
+    # Rules evaluated at the top of every model turn (see
+    # ``notification.rules.dispatch_rules``). Empty list = no notifications.
+    # Built via factories in ``notification.library``.
+    notification_rules: list[NotificationRule] = Field(default_factory=list)
 
     model_config = ConfigDict(
         populate_by_name=True,

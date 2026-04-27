@@ -87,7 +87,7 @@ class ToolExecutionContextService:
     def __contains__(self, key: object) -> bool:
         return key in self._metadata
 
-    async def notify_system(self, text: str, *, category: str = "") -> None:
+    async def notify_system(self, text: str) -> None:
         """Emit a system notification through the injected notification service."""
 
         service = self.get("system_notification_service")
@@ -98,6 +98,6 @@ class ToolExecutionContextService:
             notify = getattr(service, "notify", None)
         if notify is None:
             return
-        result = notify(text, category=category)
+        result = notify(text)
         if isawaitable(result):
             await result

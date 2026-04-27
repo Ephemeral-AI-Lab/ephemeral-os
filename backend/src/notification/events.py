@@ -10,6 +10,5 @@ class SystemNotification:
     """Engine-generated notification visible to the user and the agent."""
 
     text: str
-    category: str = ""
     agent_name: str = ""
     run_id: str = ""

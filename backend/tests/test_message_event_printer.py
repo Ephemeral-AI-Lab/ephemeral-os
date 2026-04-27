@@ -183,7 +183,6 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
     printer.emit(
         SystemNotification(
             text=long_text,
-            category="background_progress",
             agent_name="analysis_agent",
             run_id="1a0578d4c4dd7f1f14dd",
         )
@@ -191,7 +190,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
 
     expected = [
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] "
-        '[system:background_progress] Background task_id="bg_1" status="running" source="engine_progress"',
+        '[system] Background task_id="bg_1" status="running" source="engine_progress"',
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Note: Inspect pydantic/networks.py to understand URL and network type implementations",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Run ID: 84a5dde276554528",

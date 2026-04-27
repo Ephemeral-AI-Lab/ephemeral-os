@@ -358,6 +358,7 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
+        notification_rules=list(agent_def.notification_rules) if agent_def else [],
     )
 
     return EphemeralAgent(

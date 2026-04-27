@@ -312,10 +312,6 @@ class TestSystemNotificationBlock:
         block = SystemNotificationBlock(text="hello")
         assert block.type == "system_notification"
         assert block.text == "hello"
-        assert block.category == ""
-
-        categorized = SystemNotificationBlock(text="x", category="background_progress")
-        assert categorized.category == "background_progress"
 
     def test_message_with_notification_text_excludes_notification(self) -> None:
         msg = ConversationMessage(
@@ -332,14 +328,14 @@ class TestSystemNotificationBlock:
     def test_to_api_param_wraps_in_tags(self) -> None:
         msg = ConversationMessage(
             role="user",
-            content=[SystemNotificationBlock(text="bg_1 done", category="x")],
+            content=[SystemNotificationBlock(text="bg_1 done")],
         )
         api = msg.to_api_param()
         assert api["role"] == "user"
         assert len(api["content"]) == 1
         block = api["content"][0]
         assert block["type"] == "text"
-        assert block["text"] == "<system-notification>\nbg_1 done\n</system-notification>"
+        assert block["text"] == "<system-reminder>\nbg_1 done\n</system-reminder>"
 
     def test_to_api_param_mixed_content_preserves_order(self) -> None:
         msg = ConversationMessage(
@@ -354,14 +350,14 @@ class TestSystemNotificationBlock:
         types = [block["type"] for block in api["content"]]
         assert types == ["text", "text", "text"]
         assert api["content"][0]["text"] == "user said"
-        assert "<system-notification>" in api["content"][1]["text"]
+        assert "<system-reminder>" in api["content"][1]["text"]
         assert api["content"][2]["text"] == "more"
 
     def test_pydantic_round_trip(self) -> None:
         original = ConversationMessage(
             role="user",
             content=[
-                SystemNotificationBlock(text="hi", category="background_progress"),
+                SystemNotificationBlock(text="hi"),
             ],
         )
         dumped = original.model_dump()
@@ -370,20 +366,19 @@ class TestSystemNotificationBlock:
         block = restored.content[0]
         assert isinstance(block, SystemNotificationBlock)
         assert block.text == "hi"
-        assert block.category == "background_progress"
 
     def test_empty_notification_text(self) -> None:
         block = SystemNotificationBlock(text="")
         msg = ConversationMessage(role="user", content=[block])
         api = msg.to_api_param()
-        assert api["content"][0]["text"] == "<system-notification>\n\n</system-notification>"
+        assert api["content"][0]["text"] == "<system-reminder>\n\n</system-reminder>"
 
     def test_multiple_notifications_in_one_message(self) -> None:
         msg = ConversationMessage(
             role="user",
             content=[
-                SystemNotificationBlock(text="first", category="bg"),
-                SystemNotificationBlock(text="second", category="warn"),
+                SystemNotificationBlock(text="first"),
+                SystemNotificationBlock(text="second"),
             ],
         )
         assert len(msg.system_notifications) == 2

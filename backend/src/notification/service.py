@@ -32,25 +32,22 @@ class SystemNotificationService:
         """Mark the service as owned by a live agent run."""
         self._registered_agent_run = True
 
-    async def notify_system(self, text: str, *, category: str = "") -> None:
+    async def notify_system(self, text: str) -> None:
         if not text:
             return
-        event = SystemNotification(text=text, category=category)
-        self._notifications.append(SystemNotificationBlock(text=text, category=category))
+        event = SystemNotification(text=text)
+        self._notifications.append(SystemNotificationBlock(text=text))
         if self.emit is not None:
             await self.emit(event)
         else:
             self._events.append(event)
-
-    async def notify(self, text: str, *, category: str = "") -> None:
-        await self.notify_system(text, category=category)
 
     def flush_events(self) -> list[SystemNotification]:
         """Return pending notifications without appending transcript messages."""
         events = list(self._events)
         if not events and self._notifications:
             events = [
-                SystemNotification(text=notification.text, category=notification.category)
+                SystemNotification(text=notification.text)
                 for notification in self._notifications
             ]
         self._notifications.clear()
@@ -58,7 +55,17 @@ class SystemNotificationService:
         return events
 
     def pop_pending_notifications(self) -> list[SystemNotificationBlock]:
+        """Drain transcript-bound notification blocks.
+
+        In agent runs (registered via ``register_agent_run``) leaves
+        ``_events`` untouched so the stream-side flush
+        (``flush_events`` / ``flush_system_notifications``) still emits
+        these events to the user UI. In standalone tool execution where
+        nothing else drains ``_events``, clears them too to keep memory
+        bounded.
+        """
         notifications = list(self._notifications)
         self._notifications.clear()
-        self._events.clear()
+        if not self._registered_agent_run:
+            self._events.clear()
         return notifications

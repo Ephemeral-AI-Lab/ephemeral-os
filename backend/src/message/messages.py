@@ -46,7 +46,7 @@ class ToolResultBlock(BaseModel):
 
 
 class SystemNotificationBlock(BaseModel):
-    """Engine-generated notification for the model wrapped in tags.
+    """Engine-generated reminder for the model wrapped in tags.
 
     This is a first-class content block — distinct from a user-authored
     TextBlock — so the engine and UI can treat it
@@ -61,7 +61,7 @@ class SystemNotificationBlock(BaseModel):
 
     On the wire (Anthropic and other providers that only accept ``text``
     blocks mid-conversation), this block is serialized as a ``text`` block
-    whose body is wrapped in ``<system-notification>...</system-notification>``
+    whose body is wrapped in ``<system-reminder>...</system-reminder>``
     tags. See :func:`serialize_content_block`. The role of the parent
     :class:`ConversationMessage` should be ``"user"`` because Anthropic's
     API does not accept arbitrary roles in the messages array.
@@ -69,9 +69,6 @@ class SystemNotificationBlock(BaseModel):
 
     type: Literal["system_notification"] = "system_notification"
     text: str
-    # Free-form category so the UI / filters can group notifications.
-    # Examples: "background_progress", "task_warning", "context_update".
-    category: str = ""
 
 
 class BackgroundTaskStateBlock(BaseModel):
@@ -202,11 +199,11 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     if isinstance(block, SystemNotificationBlock):
         # Anthropic and most providers do not accept arbitrary block types
         # mid-conversation. Flatten to a text block whose body is wrapped
-        # in <system-notification> tags so the model recognises it as engine-
+        # in <system-reminder> tags so the model recognises it as engine-
         # generated guidance rather than user input.
         return {
             "type": "text",
-            "text": f"<system-notification>\n{block.text}\n</system-notification>",
+            "text": f"<system-reminder>\n{block.text}\n</system-reminder>",
         }
 
     if isinstance(block, BackgroundTaskStateBlock):

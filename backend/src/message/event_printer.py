@@ -280,8 +280,7 @@ class MultiAgentEventPrinter:
             # Print full thinking/text blocks once per completed message.
             self._flush_buffers(agent, run_id)
         elif isinstance(event, SystemNotification):
-            tag = f"[system{':' + event.category if event.category else ''}]"
-            self._line(agent, run_id, f"{tag} {_full_text(event.text)}")
+            self._line(agent, run_id, f"[system] {_full_text(event.text)}")
 
     def raw_line(self, agent: str, body: str) -> None:
         """Print a free-form line with the same column/tag/color treatment.

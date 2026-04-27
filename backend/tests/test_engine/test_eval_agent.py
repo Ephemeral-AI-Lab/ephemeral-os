@@ -30,7 +30,6 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
             [
                 SystemNotification(
                     text=long_system,
-                    category="background_progress",
                     agent_name="analysis_agent",
                     run_id="wid-1",
                 ),

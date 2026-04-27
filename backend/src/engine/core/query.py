@@ -45,6 +45,7 @@ from engine.core.run_request import (
 )
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.tool_context import prepare_tool_execution_context
+from notification.rules import NotificationRule, dispatch_rules
 from notification.service import SystemNotificationService
 from prompt.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
@@ -70,6 +71,20 @@ class QueryExitReason(str, Enum):
     RESOURCE_LIMIT = "resource_limit"    # budget exhausted or max_tokens
 
 
+@dataclass(frozen=True)
+class _ToolBudgetView:
+    """Read-only snapshot of tool-call budget state for notification rules."""
+
+    used: int
+    limit: int | None
+
+    @property
+    def fraction_used(self) -> float:
+        if self.limit is None or self.limit <= 0:
+            return 0.0
+        return self.used / self.limit
+
+
 @dataclass
 class QueryContext:
     api_client: SupportsStreamingMessages
@@ -88,6 +103,20 @@ class QueryContext:
     exit_reason: QueryExitReason | None = None
     terminal_result: ToolResult | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
+    # Notification rules evaluated at the top of every turn. See
+    # ``notification.rules.dispatch_rules``. Default empty list = disabled.
+    notification_rules: list[NotificationRule] = field(default_factory=list)
+    # Run-scoped dedup state managed by ``dispatch_rules``: fire_once rule
+    # names that have already fired this run.
+    notification_fired: set[str] = field(default_factory=set)
+    # Free-form per-rule scratchpad keyed by ``rule.name``. Rules own the
+    # schema of their own slot (e.g., budget_warning tracks last_fired).
+    notification_state: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def tool_budget(self) -> _ToolBudgetView:
+        """Read-only view of tool-call budget for notification rule triggers."""
+        return _ToolBudgetView(used=self.tool_calls_used, limit=self.tool_call_limit)
 
 
 def _make_stream_dispatch_deferrer(
@@ -331,6 +360,23 @@ async def _run_query_loop(
 
     while True:
         executor = await _build_stream_executor(context, background_manager)
+
+        # Evaluate notification rules and drain any reminders into the
+        # transcript before building the next provider request, so newly-
+        # fired reminders reach the model on this turn.
+        if context.notification_rules:
+            await dispatch_rules(
+                context.notification_rules,
+                messages,
+                context,
+                notification_service,
+                context.notification_fired,
+            )
+            pending = notification_service.pop_pending_notifications()
+            if pending:
+                messages.append(
+                    ConversationMessage(role="user", content=list(pending))
+                )
 
         state = _StreamRunState()
         run_request = build_query_run_request(context, messages)

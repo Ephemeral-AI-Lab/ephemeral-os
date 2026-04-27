@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
@@ -78,26 +77,7 @@ async def _consume_tool_budget_or_reject(
             context.terminal_tools,
         )
     context.tool_calls_used += 1
-    if context.tool_calls_used == math.ceil(context.tool_call_limit * 0.75):
-        await _notify_budget_warning(context)
     return None
-
-
-async def _notify_budget_warning(context: QueryContext) -> None:
-    """Emit a 75%-budget warning through the run's notification service, if any.
-
-    The threshold check lives at the call site; the counter increments by 1
-    per call so the equality fires exactly once per run.
-    """
-    metadata = context.tool_metadata
-    service = metadata.system_notification_service if metadata is not None else None
-    if service is None:
-        return
-    await service.notify_system(
-        f"Tool budget at 75%: {context.tool_calls_used}/{context.tool_call_limit} "
-        "calls used. Wrap up soon — terminate cleanly before exhausting the budget.",
-        category="tool_budget",
-    )
 
 
 async def execute_tool_call(

@@ -79,7 +79,7 @@ class _ToolNotifyTool(_EchoTool):
     name = "tool_notify"
 
     async def execute(self, arguments: _Args, context: ToolExecutionContextService) -> ToolResult:
-        await context.notify_system("tool note", category="tool_test")
+        await context.notify_system("tool note")
         return await super().execute(arguments, context)
 
 
@@ -204,7 +204,7 @@ class _NotifyPreHook:
         tool_input: _Args,
         context: ToolExecutionContextService,
     ) -> HookResult[_Args]:
-        await context.notify_system("hook note", category="hook_test")
+        await context.notify_system("hook note")
         return HookResult.pass_(tool_input)
 
 
@@ -422,7 +422,6 @@ async def test_hook_notification_uses_fallback_service_and_records_notification(
     assert result.is_error is False
     assert len(notifications) == 1
     assert notifications[0].text == "hook note"
-    assert notifications[0].category == "hook_test"
     assert result.metadata["system_notifications"][0]["text"] == "hook note"
 
 

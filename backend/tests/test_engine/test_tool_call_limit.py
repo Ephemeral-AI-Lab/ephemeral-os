@@ -133,61 +133,9 @@ async def test_execute_tool_call_unlimited_budget_does_not_count():
     assert ctx.tool_calls_used == 0
 
 
-# ---------- 75% budget warning notification ---------------------------------
-
-
-def _ctx_with_notifications(limit: int, used: int = 0) -> tuple[QueryContext, list]:
-    """Build a context wired to a SystemNotificationService and capture emits."""
-    from notification.service import SystemNotificationService
-
-    captured: list = []
-
-    async def _emit(event):
-        captured.append(event)
-
-    service = SystemNotificationService(emit=_emit)
-    ctx = _ctx(limit=limit, used=used)
-    assert ctx.tool_metadata is not None
-    ctx.tool_metadata.system_notification_service = service
-    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    return ctx, captured
-
-
-@pytest.mark.asyncio
-async def test_budget_warning_fires_when_crossing_75_percent():
-    ctx, captured = _ctx_with_notifications(limit=4, used=2)
-    # 2 -> 3 hits ceil(4*0.75)=3; warning fires.
-    await execute_tool_call(ctx, "any_tool", "id1", {})
-    assert ctx.tool_calls_used == 3
-    assert len(captured) == 1
-    assert "75%" in captured[0].text
-    assert "3/4" in captured[0].text
-    assert captured[0].category == "tool_budget"
-
-
-@pytest.mark.asyncio
-async def test_budget_warning_fires_once_per_run():
-    ctx, captured = _ctx_with_notifications(limit=4, used=2)
-    await execute_tool_call(ctx, "a", "id1", {})  # 3/4 — fires
-    await execute_tool_call(ctx, "b", "id2", {})  # 4/4 — past threshold, silent
-    assert len(captured) == 1
-
-
-@pytest.mark.asyncio
-async def test_budget_warning_silent_below_threshold():
-    ctx, captured = _ctx_with_notifications(limit=10, used=0)
-    # ceil(10*0.75)=8; nothing until used reaches 8.
-    for i in range(7):
-        await execute_tool_call(ctx, "t", f"id{i}", {})
-    assert captured == []
-    await execute_tool_call(ctx, "t", "id8", {})  # 8/10
-    assert len(captured) == 1
-
-
-@pytest.mark.asyncio
-async def test_budget_warning_skipped_when_no_service():
-    ctx = _ctx(limit=4, used=2)
-    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    # Must not crash without a SystemNotificationService attached.
-    await execute_tool_call(ctx, "any_tool", "id1", {})
-    assert ctx.tool_calls_used == 3
+# ---------- budget warning ---------------------------------------------------
+# The imperative budget-warning notification was removed from tool_execution.
+# Budget warnings now fire as a notification rule (see
+# `backend/src/notification/library/budget_warning.py`) evaluated by
+# `dispatch_rules` in the query loop. Rule-level coverage lives in
+# `backend/tests/test_notification/`.
