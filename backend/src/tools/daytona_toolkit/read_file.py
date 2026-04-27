@@ -11,6 +11,7 @@ from sandbox.daytona_utils import (
     _run_with_recovery,
 )
 from tools.daytona_toolkit._file_tool_helpers import (
+    READ_TO_EOF_LINE,
     ReadFileInput,
     ReadFileOutput,
     build_read_file_result,
@@ -32,7 +33,7 @@ from tools.daytona_toolkit._file_tool_helpers import (
 async def read_file(
     file_path: str,
     start_line: int = 1,
-    end_line: int | None = None,
+    end_line: int = READ_TO_EOF_LINE,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:

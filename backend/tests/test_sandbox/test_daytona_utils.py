@@ -5,8 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from tools.core.base import ToolExecutionContextService
 from tools.daytona_toolkit._file_tool_helpers import (
+    READ_TO_EOF_LINE,
+    ReadFileInput,
     build_find_result,
     build_read_file_result,
 )
@@ -60,12 +65,47 @@ def test_build_read_file_result_preserves_full_selected_content():
         file_path="/tmp/example.txt",
         content=f"first\n{long_line}\nlast",
         start_line=1,
-        end_line=None,
+        end_line=READ_TO_EOF_LINE,
     )
     payload = json.loads(result.output)
 
     assert long_line in payload["content"]
     assert payload["content"].endswith("   3: last")
+    assert payload["end_line"] == 3
+
+
+def test_read_file_input_rejects_null_end_line():
+    with pytest.raises(ValidationError):
+        ReadFileInput.model_validate({"file_path": "/tmp/example.txt", "end_line": None})
+
+
+def test_read_file_input_rejects_end_line_before_start_line():
+    with pytest.raises(ValidationError, match="end_line cannot be smaller"):
+        ReadFileInput.model_validate(
+            {"file_path": "/tmp/example.txt", "start_line": 10, "end_line": 9}
+        )
+
+
+def test_read_file_input_schema_makes_end_line_non_nullable():
+    end_line_schema = ReadFileInput.model_json_schema()["properties"]["end_line"]
+
+    assert end_line_schema["type"] == "integer"
+    assert "anyOf" not in end_line_schema
+
+
+def test_build_read_file_result_clamps_end_line_past_eof():
+    result = build_read_file_result(
+        context=_ctx(),
+        file_path="/tmp/example.txt",
+        content="first\nsecond\nthird",
+        start_line=2,
+        end_line=100,
+    )
+    payload = json.loads(result.output)
+
+    assert payload["start_line"] == 2
+    assert payload["end_line"] == 3
+    assert payload["content"] == "   2: second\n   3: third"
 
 
 def test_build_find_result_preserves_all_matches_without_truncated_flag():

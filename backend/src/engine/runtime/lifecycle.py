@@ -136,6 +136,7 @@ async def run_ephemeral_agent(
         agent.query_context.tool_metadata.update(extra_tool_metadata)
     if run_id is not None:
         agent.query_context.tool_metadata.agent_run_id = run_id
+    agent.query_context.run_id = task_id or run_id or agent.query_context.run_id
 
     event_count = 0
     run_error: str | None = None

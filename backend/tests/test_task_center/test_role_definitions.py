@@ -26,6 +26,23 @@ def test_executor_definition_loads_role_local_markdown() -> None:
     assert EXECUTOR.system_prompt == expected
 
 
+def test_executor_prompt_routes_composite_work_to_planner_before_tools() -> None:
+    prompt = load_executor_prompt()
+    assert "SCOPE CHECK BEFORE TOOLS" in prompt
+    assert "Composite =>\n   request_plan now" in prompt
+    assert "multiple PRs/issues" in prompt
+    assert "release-note bullets" in prompt
+    assert "before repository exploration" in prompt
+
+
+def test_executor_prompt_requires_scouts_for_direct_unclear_work() -> None:
+    prompt = load_executor_prompt()
+    assert "SCOUT WHEN DIRECT BUT UNCLEAR" in prompt
+    assert "2+ independent read-heavy unknowns" in prompt
+    assert "fan out 2–4 explorers via\n   run_subagent" in prompt
+    assert "Do not serially explore many\n  unrelated facets yourself" in prompt
+
+
 def test_planner_definition_loads_role_local_markdown() -> None:
     expected = files("task_center.harness_agents.planner").joinpath(
         "agent.md"

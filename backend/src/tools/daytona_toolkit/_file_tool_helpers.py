@@ -5,10 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from tools.core.base import ToolExecutionContextService, ToolResult
 from sandbox.daytona_utils import _get_repo_root
+
+
+READ_TO_EOF_LINE = 2_147_483_647
 
 
 class ReadFileInput(BaseModel):
@@ -21,11 +24,20 @@ class ReadFileInput(BaseModel):
         ge=1,
         description="First line to return. Lines are 1-based.",
     )
-    end_line: int | None = Field(
-        default=None,
+    end_line: int = Field(
+        default=READ_TO_EOF_LINE,
         ge=1,
-        description="Last line to return. The line is included.",
+        description=(
+            "Last line to return, inclusive. Omit this field to read through the "
+            "end of the file; do not pass null."
+        ),
     )
+
+    @model_validator(mode="after")
+    def validate_line_range(self) -> "ReadFileInput":
+        if self.end_line < self.start_line:
+            raise ValueError("end_line cannot be smaller than start_line")
+        return self
 
 
 class ReadFileOutput(BaseModel):
@@ -100,12 +112,12 @@ def build_read_file_result(
     file_path: str,
     content: str,
     start_line: int,
-    end_line: int | None,
+    end_line: int,
 ) -> ToolResult:
     lines = content.splitlines()
     total = len(lines)
     start = max(1, start_line)
-    end = min(total, end_line) if end_line else total
+    end = min(total, end_line)
     selected = [f"{i:4d}: {lines[i - 1]}" for i in range(start, end + 1)]
     return ToolResult(
         output=json.dumps(
