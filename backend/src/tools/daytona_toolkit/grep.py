@@ -25,7 +25,12 @@ from sandbox.search_commands import build_grep_command
 
 @tool(
     name="grep",
-    description="Search file contents with a regex and return matching lines.",
+    description=(
+        "Search file contents with a regex. Returns structured {file, line, content} matches. "
+        "Use to locate symbols, callers, or strings before editing. Prefer over `shell` grep/rg "
+        "— no escape pitfalls. Case-sensitive by default; prefix `(?i)` for insensitive. Combine "
+        "with `glob` to scope by extension. Doesn't match filenames."
+    ),
     short_description="Search file contents by pattern.",
     input_model=GrepInput,
     output_model=GrepOutput,

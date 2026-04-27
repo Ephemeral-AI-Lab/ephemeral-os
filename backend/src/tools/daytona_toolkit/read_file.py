@@ -19,7 +19,12 @@ from tools.daytona_toolkit._file_tool_helpers import (
 
 @tool(
     name="read_file",
-    description="Read a sandbox file.",
+    description=(
+        "Read a UTF-8 text file from the sandbox, optionally restricted to a line range. "
+        "Output is line-numbered for easy citation. Prefer this over `shell` with cat/sed/head "
+        "— cheaper and structured. Don't use on binary files or for directory listings "
+        "(use `glob`). Paths are repo-relative or sandbox-absolute."
+    ),
     short_description="Read a file from the sandbox.",
     input_model=ReadFileInput,
     output_model=ReadFileOutput,

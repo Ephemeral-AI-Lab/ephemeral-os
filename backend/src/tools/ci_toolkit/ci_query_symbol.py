@@ -14,8 +14,10 @@ from tools.core.decorator import tool
 @tool(
     name="ci_query_symbol",
     description=(
-        "Returns matching symbol definitions and optional reference sites from "
-        "code intelligence."
+        "Find where a function, class, variable, or other named symbol is defined, and "
+        "optionally all its reference sites. Prefer this over `grep` whenever you have a symbol "
+        "name — returns true definitions and usages, not text matches. Use `grep` only for "
+        "free-form strings or substrings that aren't valid identifiers."
     ),
     short_description="Find symbol definitions and references.",
     input_model=CiQuerySymbolInput,

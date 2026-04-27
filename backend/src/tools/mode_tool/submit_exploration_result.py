@@ -23,9 +23,10 @@ class ExplorationResultInput(BaseModel):
 @tool(
     name="submit_exploration_result",
     description=(
-        "Terminal: return your findings to the parent agent. The findings "
-        "string becomes the run_subagent tool result the parent reads. Call "
-        "this exactly once when your work is complete."
+        "Terminal action — return your findings to the parent agent. The `findings` string "
+        "becomes this subagent's run_subagent tool result that the parent reads. Call exactly "
+        "once when your work is complete. Make findings self-contained: cite file paths, "
+        "include key code snippets, and note any limitations the parent should know."
     ),
     input_model=ExplorationResultInput,
     output_model=TextToolOutput,

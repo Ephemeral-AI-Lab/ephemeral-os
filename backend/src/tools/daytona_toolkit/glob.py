@@ -21,7 +21,12 @@ from sandbox.search_commands import build_glob_command
 
 @tool(
     name="glob",
-    description="Find files by glob pattern, such as **/*.py or test_*.py.",
+    description=(
+        "Find files by name pattern (e.g. `**/*.py`, `test_*.py`). Returns matching paths only "
+        "— never reads contents. Use to enumerate files of a type, scope a follow-up grep, or "
+        "check existence. Prefer over `shell` find/ls. Use `grep` instead when you care about "
+        "file contents."
+    ),
     short_description="Find files by glob.",
     input_model=GlobInput,
     output_model=GlobOutput,

@@ -13,7 +13,12 @@ from tools.core.decorator import tool
 
 @tool(
     name="ci_status",
-    description="Check code intelligence readiness: cache, index, LSP, and optional edit hotspot activity.",
+    description=(
+        "Report whether code intelligence (symbol index, LSP, mutation cache) is ready, plus "
+        "optional recent edit hotspots. Use before a planning step, or when ci_query_symbol / "
+        "ci_diagnostics returns empty or stale results to confirm the index is warm. Read-only "
+        "— doesn't run any analysis, only reports state."
+    ),
     short_description="Check code intelligence status.",
     input_model=CiStatusInput,
     output_model=CiStatusOutput,

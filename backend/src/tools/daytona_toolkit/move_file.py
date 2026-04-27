@@ -60,7 +60,12 @@ class MoveFileOutput(BaseModel):
 
 @tool(
     name="move_file",
-    description="Move a sandbox file or folder.",
+    description=(
+        "Move or rename a file, or a folder tree with `is_folder=True`. Atomic via the commit "
+        "pipeline. Prefer over `shell mv`. Refuses to overwrite an existing destination "
+        "(`status: dst_exists`) — delete it first if intended. There is no copy tool; for a "
+        "copy, `read_file` then `write_file`. Parent of target must exist."
+    ),
     short_description="Move a file or folder.",
     input_model=MoveFileInput,
     output_model=MoveFileOutput,

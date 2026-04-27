@@ -25,7 +25,12 @@ def make_load_skill(
 ) -> BaseTool:
     @tool(
         name="load_skill",
-        description="Returns the full instruction document for a named skill.",
+        description=(
+            "Load the full instruction document for a named skill into context. Use when a "
+            "skill is relevant to your current task and you need its full guidance, not just "
+            "the short summary. Prefer load_skill_reference when you only need one specific "
+            "reference document attached to the skill."
+        ),
         short_description="Load a skill's instructions.",
         input_model=LoadSkillInput,
         output_model=TextToolOutput,

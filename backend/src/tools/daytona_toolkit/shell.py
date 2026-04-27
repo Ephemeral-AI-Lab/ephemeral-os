@@ -213,7 +213,49 @@ def _paths_from_shell(shell_result: dict[str, object], key: str) -> list[str]:
 
 @tool(
     name="shell",
-    description="Run a shell command in the sandbox.",
+    description=(
+        "Run a single bash command from the sandbox repo root. Captures stdout, stderr, and "
+        "exit code, and audits any file writes the command performs.\n\n"
+        "Use this when:\n"
+        "- You need to run tests, builds, linters, type-checkers, or other tooling "
+        "(`pytest`, `make build`, `npm test`, `ruff check`).\n"
+        "- You need a capability not exposed as a dedicated tool (git operations, "
+        "pip/uv/npm install, generating files via codegen).\n"
+        "- You're verifying environment state (`which python`, `git status`, `ls -la`).\n\n"
+        "Prefer dedicated tools when applicable:\n"
+        "- File reads → `read_file`, not `cat`.\n"
+        "- Filename search → `glob`, not `find` or `ls`.\n"
+        "- Content search → `grep`, not `grep`/`rg` via shell.\n"
+        "- File mutations → `write_file`/`edit_file`/`delete_file`/`move_file`. The dedicated "
+        "tools produce cleaner audit trails and structured errors.\n"
+        "- Use `shell` for tasks the dedicated tools genuinely cannot do.\n\n"
+        "Do NOT use for:\n"
+        "- Long-running interactive processes (REPLs, watchers, dev servers). Each call is "
+        "one-shot and bounded by `timeout`.\n"
+        "- Background daemons. There is no persistent shell session between calls; cwd resets "
+        "to the repo root each time.\n"
+        "- Streaming progress to the user — only the final captured output is returned.\n\n"
+        "Capabilities and constraints:\n"
+        "- Runs as bash, with the repo root as cwd.\n"
+        "- `timeout` (seconds) bounds the run; the call returns is_error if exceeded. Default "
+        "is taken from CODE_INTELLIGENCE_TUNING.\n"
+        "- Writes performed by the command are tracked. A command that exits 0 but writes "
+        "outside the audited boundary returns is_error=True with \"sandbox commit aborted: …\".\n"
+        "- No environment leakage between calls — set env vars inline (`FOO=bar cmd …`).\n"
+        "- No interactive input — use non-interactive flags (`--yes`, `--non-interactive`, "
+        "`--no-input`).\n\n"
+        "Output shape:\n"
+        "- `status`: \"ok\" | \"error\".\n"
+        "- `shell_outputs[0]`: the captured `command`, `exit_code`, `stdout`, `stderr`.\n"
+        "- `files_written`: count of audited writes the command performed.\n"
+        "- `error`: populated when status is \"error\" — combines exit-code failures and audit "
+        "conflicts.\n\n"
+        "Common pitfalls:\n"
+        "- Quoting: prefer single quotes around regexes and arguments containing $.\n"
+        "- Pipelines: pipe failures are masked unless you `set -o pipefail` inline.\n"
+        "- Background `&`: don't — the audit will not see the result, and you have no way to "
+        "wait."
+    ),
     short_description="Run a shell command from the repo root.",
     input_model=ShellInput,
     output_model=ShellOutput,

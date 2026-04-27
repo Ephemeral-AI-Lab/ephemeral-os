@@ -17,7 +17,12 @@ from tools.daytona_toolkit._file_tool_helpers import (
 
 @tool(
     name="write_file",
-    description="Create or overwrite a sandbox file.",
+    description=(
+        "Create a new file or COMPLETELY OVERWRITE an existing one with UTF-8 text. Atomic via "
+        "the commit pipeline. Use only when creating from scratch or intentionally replacing the "
+        "whole file. For partial changes use `edit_file`. No append mode. Parent directory must "
+        "already exist."
+    ),
     short_description="Create or overwrite a file.",
     input_model=WriteFileInput,
     output_model=WriteFileOutput,

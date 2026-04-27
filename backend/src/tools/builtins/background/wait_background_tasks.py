@@ -53,9 +53,10 @@ class WaitBackgroundTasksTool(BaseTool):
 
     name: str = "wait_background_tasks"
     description: str = (
-        "Blocks until every running background task settles, or the timeout "
-        "expires. Returns one entry per task with its task_id, status "
-        "(running|finished|failed), and tool_command."
+        "Block until every running background task settles, or `timeout` expires. Returns one "
+        "compact entry per task: task_id, status (running|finished|failed), and tool_command. "
+        "Doesn't return result bodies — call check_background_task_result(task_id) to fetch the "
+        "actual output. Use when parallel work must finish before the next planning step."
     )
     short_description: str = "Wait for all background tasks."
     input_model: type[BaseModel] = WaitBackgroundTasksInput

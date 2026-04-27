@@ -69,7 +69,12 @@ def _normalize_edits(
 
 @tool(
     name="edit_file",
-    description="Edit a sandbox file with exact search/replace.",
+    description=(
+        "Apply one exact search/replace edit to an existing file. `old_text` must match "
+        "byte-for-byte (whitespace, indentation, newlines included) and should be unique — add "
+        "surrounding lines if not. Prefer over `write_file` for any modification of an existing "
+        "file. Cannot create new files. Returns `aborted_version` if the file changed under you."
+    ),
     short_description="Apply atomic file edits.",
     input_model=EditFileInput,
     output_model=EditFileOutput,

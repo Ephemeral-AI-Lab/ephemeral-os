@@ -24,9 +24,10 @@ class TaskSuccessInput(BaseModel):
 @tool(
     name="submit_task_success",
     description=(
-        "Terminal: declare the current task complete with a summary. Executors "
-        "mark themselves DONE; evaluators close their owning harness graph as "
-        "successful, propagating to the parent task."
+        "Terminal action — declare the current task complete with a summary. Executors mark "
+        "themselves DONE; evaluators close their owning harness graph and propagate success up "
+        "to the parent task. Call exactly once when the success criteria are met. Don't call "
+        "if your work is partial — use submit_task_failure or submit_plan_handoff instead."
     ),
     input_model=TaskSuccessInput,
     output_model=SubmissionOutput,

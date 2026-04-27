@@ -13,7 +13,12 @@ from tools.core.decorator import tool
 
 @tool(
     name="ci_workspace_structure",
-    description="List files and directories in the workspace, sorted by path.",
+    description=(
+        "List files and directories in the sandbox workspace, sorted by path. Use to orient "
+        "yourself in an unfamiliar repo or to inspect a subtree before diving into specific "
+        "files. Prefer over `shell` ls -R or `glob '*'` for orientation. Use `glob` when you "
+        "need pattern matching and `grep` for content."
+    ),
     short_description="List workspace files and directories.",
     input_model=CiWorkspaceStructureInput,
     output_model=CiWorkspaceStructureOutput,

@@ -37,9 +37,10 @@ class PlanHandoffInput(BaseModel):
 @tool(
     name="submit_plan_handoff",
     description=(
-        "Terminal (planner-only): emit the DAG plan. TaskCenter materializes "
-        "executor children with their direct dependencies and an evaluator "
-        "inside the planner's harness graph."
+        "Terminal action (planner only) — emit the executor DAG. TaskCenter materializes "
+        "executor children with their direct dependencies and a single evaluator inside this "
+        "harness graph. Each executor task description must be self-contained. The plan may be "
+        "partial — note any uncertainty or future-step gaps in the handoff_summary."
     ),
     input_model=PlanHandoffInput,
     output_model=SubmissionOutput,

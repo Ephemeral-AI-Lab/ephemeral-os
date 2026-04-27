@@ -27,8 +27,11 @@ class CancelBackgroundTaskTool(BaseTool):
 
     name: str = "cancel_background_task"
     description: str = (
-        "Cancels a running background task by id, or the sole running task "
-        "with task_id=\"auto\"."
+        "Cancel a running background task by id, or the sole running task with "
+        "task_id=\"auto\". Mutating action — stops the task and marks it cancelled; subagents "
+        "are interrupted and salvage any partial result before reaching a terminal state. "
+        "Doesn't accept \"all\" — cancel each task explicitly. Already-finished tasks return "
+        "an error."
     )
     short_description: str = "Cancel a background task."
     input_model: type[BaseModel] = CancelBackgroundTaskInput

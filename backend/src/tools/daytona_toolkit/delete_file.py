@@ -50,7 +50,12 @@ class DeleteFileOutput(BaseModel):
 
 @tool(
     name="delete_file",
-    description="Delete a sandbox file or folder.",
+    description=(
+        "Delete a file, or a folder tree with `is_folder=True`. Atomic and audited via the "
+        "commit pipeline. Prefer over `shell rm` for structured errors and traceability. Don't "
+        "use to \"clear\" a file you intend to rewrite — just `write_file` over it. Returns "
+        "`not_found`, `aborted_version`, or `aborted_lock` on common non-success paths."
+    ),
     short_description="Delete a file or folder.",
     input_model=DeleteFileInput,
     output_model=DeleteFileOutput,

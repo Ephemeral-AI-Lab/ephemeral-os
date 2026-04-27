@@ -7,21 +7,25 @@ from task_center.graph import TaskGraph
 from task_center.prompts import build_task_prompt
 
 
-def test_root_task_prompt_is_original_input() -> None:
+def test_root_task_prompt_wraps_input_with_envelope() -> None:
     graph = TaskGraph()
     task = Task(id="t1", role="executor", input="User input message", status=Status.READY)
     graph.add(task)
-    assert build_task_prompt(task, graph) == "User input message"
+    prompt = build_task_prompt(task, graph)
+    assert "## TASK_INPUT" in prompt
+    assert "User input message" in prompt
+    assert "## DEPENDENCY_SUMMARIES" in prompt
+    assert "(none)" in prompt
 
 
 def test_planner_task_prompt_is_passed_through() -> None:
     """Planner already has the rendered PlannerLaunchContext as its input."""
     graph = TaskGraph()
     planner = Task(
-        id="p", role="planner", input='{"task_detail": "go"}', status=Status.READY
+        id="p", role="planner", input="## PARENT_GOAL\ngo", status=Status.READY
     )
     graph.add(planner)
-    assert build_task_prompt(planner, graph) == '{"task_detail": "go"}'
+    assert build_task_prompt(planner, graph) == "## PARENT_GOAL\ngo"
 
 
 def test_executor_child_prompt_includes_completed_dependencies() -> None:
@@ -39,9 +43,11 @@ def test_executor_child_prompt_includes_completed_dependencies() -> None:
     graph.add(child)
 
     prompt = build_task_prompt(child, graph)
+    assert "## TASK_INPUT" in prompt
     assert "child work" in prompt
+    assert "## DEPENDENCY_SUMMARIES" in prompt
+    assert "### dep" in prompt
     assert "dep done" in prompt
-    assert "completed_dependencies" in prompt
 
 
 def test_evaluator_prompt_includes_parent_goal_and_child_summaries() -> None:
@@ -86,8 +92,11 @@ def test_evaluator_prompt_includes_parent_goal_and_child_summaries() -> None:
     )
 
     prompt = build_task_prompt(evaluator, graph)
+    assert "## PARENT_GOAL" in prompt
     assert "parent goal" in prompt
+    assert "## PLANNER_HANDOFF" in prompt
     assert "planner says" in prompt
+    assert "## COMPLETED_CHILD_SUMMARIES" in prompt
     assert "child done" in prompt
 
 
@@ -156,5 +165,5 @@ def test_evaluator_prompt_includes_nested_child_closure_summaries() -> None:
 
     assert "inner harness accepted the delegated work" in prompt
     assert "inner harness could not satisfy the delegated work" in prompt
-    assert "completed_child_summaries" in prompt
-    assert "failed_child_summaries" in prompt
+    assert "## COMPLETED_CHILD_SUMMARIES" in prompt
+    assert "## FAILED_CHILD_SUMMARIES" in prompt

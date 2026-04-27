@@ -49,7 +49,12 @@ class CiDiagnosticsOutput(BaseModel):
 
 @tool(
     name="ci_diagnostics",
-    description="Returns syntax, import, name, and type diagnostics for one file.",
+    description=(
+        "Run syntax, import, name-resolution, and type checks on a single file and return "
+        "structured diagnostics. Use after editing a file to verify it parses and types cleanly, "
+        "or to triage a failing module. Prefer this over running pyflakes/mypy ad-hoc via "
+        "`shell` — faster, cached, and structured."
+    ),
     short_description="Check a file for diagnostics.",
     input_model=CiDiagnosticsInput,
     output_model=CiDiagnosticsOutput,

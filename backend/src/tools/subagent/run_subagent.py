@@ -159,12 +159,12 @@ def _validate_run_subagent_request(
 @tool(
     name="run_subagent",
     description=(
-        "Spawns a registered subagent as a background task. The subagent "
-        "receives `prompt` as its only input and must finish by calling its "
-        "terminal tool (typically submit_exploration_result); that tool's "
-        "text output is delivered as this tool's result. Use "
-        "check_background_task_result(task_id) to peek progress or fetch "
-        "the finished result."
+        "Spawn a registered subagent as a background task. The subagent receives `prompt` as "
+        "its only input and must finish by calling its terminal tool (typically "
+        "submit_exploration_result); that text becomes this tool's result. Use for "
+        "parallelizable, focused investigations or context-isolated work. Peek progress or "
+        "fetch the finished result with check_background_task_result(task_id); block on "
+        "completion with wait_background_tasks. Subagents cannot spawn further subagents."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,

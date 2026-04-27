@@ -23,9 +23,10 @@ class LaunchPlanHandoffInput(BaseModel):
 @tool(
     name="launch_plan_handoff",
     description=(
-        "Terminal: hand off to a planner. TaskCenter creates a new harness "
-        "graph with this task as parent, builds a structured planner launch "
-        "context, and spawns a planner task to decompose the next phase."
+        "Terminal action — escalate to a planner for the next phase. TaskCenter creates a new "
+        "harness graph with this task as parent, builds a structured launch context, and spawns "
+        "a planner to decompose the work. Use when the task scope expands or requires "
+        "multi-step planning beyond your current role."
     ),
     input_model=LaunchPlanHandoffInput,
     output_model=SubmissionOutput,

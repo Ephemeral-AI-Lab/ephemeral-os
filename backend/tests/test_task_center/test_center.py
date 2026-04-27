@@ -395,9 +395,9 @@ async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidenc
 
     assert root.status is Status.DONE
     nested_input = seen_nested_input["t3"]
-    assert '"caller_role": "executor"' in nested_input
-    assert '"caller_input": "delegate nested work"' in nested_input
-    assert '"requested_goal": "root goal"' in nested_input
+    assert "## CALLER_ROLE\nexecutor" in nested_input
+    assert "## CALLER_INPUT\ndelegate nested work" in nested_input
+    assert "## PARENT_GOAL\nroot goal" in nested_input
     assert "outer handoff" in nested_input
     assert "a done" in nested_input
 

@@ -23,9 +23,10 @@ class TaskFailureInput(BaseModel):
 @tool(
     name="submit_task_failure",
     description=(
-        "Terminal (executor-only): mark this executor task FAILED with a "
-        "summary. Dependency-blocked descendants are also marked FAILED. The "
-        "owning harness graph's evaluator decides recovery."
+        "Terminal action (executor only) — mark this executor task FAILED with a summary "
+        "explaining the failure. Dependency-blocked descendants are also marked FAILED; the "
+        "owning evaluator decides whether to retry or escalate. Use when you cannot complete "
+        "the task and a planner handoff is not the right next step."
     ),
     input_model=TaskFailureInput,
     output_model=SubmissionOutput,
