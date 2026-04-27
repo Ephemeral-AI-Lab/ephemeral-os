@@ -57,7 +57,7 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "Tool: submit_task_success" in summary
     assert "Tool: submit_task_failure" in summary
     assert "Tool: submit_evaluation_failure" in summary
-    assert "Tool: launch_plan_handoff" in summary
+    assert "Tool: request_plan" in summary
     assert "Tool: submit_plan_handoff" in summary
     assert "Tool: enter_plan_for_handoff" not in summary
     assert "Tool: enter_prepare_continue_to_work" not in summary

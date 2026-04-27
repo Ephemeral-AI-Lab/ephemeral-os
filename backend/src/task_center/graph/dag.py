@@ -1,33 +1,34 @@
-"""DAG plan compiler — validate and compile a flat task list into a dep map.
+"""DAG plan helpers owned by the task graph layer.
 
-A plan is a flat list of ``{id, deps}`` entries plus a mapping from id to
-input string. Each entry's ``deps`` lists its DIRECT dependencies; transitive
-deps are implicit via the graph.
+A submitted plan is a flat list of ``{id, deps}`` entries plus a mapping from
+task id to input string. This module validates that wire shape, compiles direct
+dependency sets, computes graph sinks, and checks global task-id availability.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
-from task_center.planning.errors import PlanValidationError
+from task_center.errors import TaskCenterError
+from task_center.graph.errors import PlanValidationError
+from task_center.model import TaskId
+
+if TYPE_CHECKING:
+    from task_center.graph.store import TaskGraph
 
 
 def compile_dag(
     tasks: list[dict[str, Any]],
     task_inputs: dict[str, str],
-) -> dict[str, frozenset[str]]:
-    """Validate a flat DAG plan and compile it into a direct-dep map.
-
-    Validations: non-empty inputs; entry shape; ids unique and present in
-    ``task_inputs``; deps reference known ids, no self-dep, no duplicates;
-    no cycles.
-    """
+) -> dict[TaskId, frozenset[TaskId]]:
+    """Validate a flat DAG plan and compile it into a direct-dep map."""
     if not isinstance(tasks, list) or len(tasks) == 0:
         raise PlanValidationError("tasks must be a non-empty list")
     if not isinstance(task_inputs, dict) or len(task_inputs) == 0:
         raise PlanValidationError("task_inputs must be a non-empty dict")
 
-    deps: dict[str, frozenset[str]] = {}
+    deps: dict[TaskId, frozenset[TaskId]] = {}
 
     for entry in tasks:
         if not isinstance(entry, dict):
@@ -51,7 +52,8 @@ def compile_dag(
         raw_deps = entry.get("deps", [])
         if not isinstance(raw_deps, list):
             raise PlanValidationError(
-                f"task {task_id!r}: 'deps' must be a list, got {type(raw_deps).__name__}"
+                f"task {task_id!r}: 'deps' must be a list, "
+                f"got {type(raw_deps).__name__}"
             )
         if len(raw_deps) != len(set(raw_deps)):
             raise PlanValidationError(
@@ -89,20 +91,36 @@ def compile_dag(
     return deps
 
 
-def _check_no_cycles(deps: dict[str, frozenset[str]]) -> None:
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color: dict[str, int] = dict.fromkeys(deps, WHITE)
+def plan_sinks(deps: Mapping[TaskId, frozenset[TaskId]]) -> frozenset[TaskId]:
+    """Return task ids with no outgoing dependency consumers in the submitted DAG."""
+    depended_upon: set[TaskId] = set()
+    for dep_set in deps.values():
+        depended_upon.update(dep_set)
+    return frozenset(tid for tid in deps if tid not in depended_upon)
 
-    def visit(tid: str, stack: list[str]) -> None:
-        color[tid] = GRAY
+
+def validate_task_ids_available(graph: "TaskGraph", task_ids: set[TaskId]) -> None:
+    """Reject submitted ids that already exist in the live task graph."""
+    existing_ids = task_ids & set(graph.tasks)
+    if existing_ids:
+        first = sorted(existing_ids)[0]
+        raise TaskCenterError(f"task id {first!r} already exists in graph")
+
+
+def _check_no_cycles(deps: dict[TaskId, frozenset[TaskId]]) -> None:
+    white, gray, black = 0, 1, 2
+    color: dict[TaskId, int] = dict.fromkeys(deps, white)
+
+    def visit(tid: TaskId, stack: list[TaskId]) -> None:
+        color[tid] = gray
         for dep in deps.get(tid, frozenset()):
-            if color.get(dep) == GRAY:
+            if color.get(dep) == gray:
                 cycle_path = " -> ".join(stack[stack.index(dep):] + [dep])
                 raise PlanValidationError(f"cycle detected in plan: {cycle_path}")
-            if color.get(dep) == WHITE:
+            if color.get(dep) == white:
                 visit(dep, stack + [dep])
-        color[tid] = BLACK
+        color[tid] = black
 
     for tid in list(deps):
-        if color[tid] == WHITE:
+        if color[tid] == white:
             visit(tid, [tid])

@@ -26,9 +26,9 @@ Tools after this PR:
 
 | Role | Inputs | Allowed tools | Terminals |
 |---|---|---|---|
-| `executor` | Root: user's request. Otherwise: `input` assigned by the enclosing planner. Completed dependency summaries only. | `_DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_task_failure` |
-| `planner` | Structured planner launch context. Every planner gets the same context shape: caller input, handoff task detail, requested/enclosing goal, upstream/prior planner handoff summaries, DONE child summaries, FAILED child summaries, and dependency-blocked summaries when available from the caller's enclosing harness graph. | `_READ_ONLY_INVESTIGATION_TOOLS` | `submit_plan_handoff[handoff_summary, tasks, task_inputs]` |
-| `evaluator` | Parent task input + planner handoff summary + sibling child summaries (DONE and FAILED). | `_DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_evaluation_failure` |
+| `executor` | Root: user's request. Otherwise: `input` assigned by the enclosing planner. Completed dependency summaries only. | `DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_task_failure` |
+| `planner` | Structured planner launch context. Every planner gets the same context shape: caller input, handoff task detail, requested/enclosing goal, upstream/prior planner handoff summaries, DONE child summaries, FAILED child summaries, and dependency-blocked summaries when available from the caller's enclosing harness graph. | `PLANNER_TOOLS` | `submit_plan_handoff[handoff_summary, tasks, task_inputs]` |
+| `evaluator` | Parent task input + planner handoff summary + sibling child summaries (DONE and FAILED). | `DIRECT_WORK_TOOLS` | `submit_task_success` · `launch_plan_handoff` · `submit_evaluation_failure` |
 | `explorer` | unchanged | unchanged | unchanged |
 
 Splitting `submit_task_failure` from `submit_evaluation_failure` keeps the tool name aligned with graph effect: executor failure is scoped; evaluator failure closes the harness graph as failed.

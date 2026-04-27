@@ -11,9 +11,9 @@ import pytest
 from task_center.graph import TaskGraph
 from tools.core.base import ToolExecutionContextService
 from tools.core.runtime import ExecutionMetadata
-from tools.mode_tool.launch_plan_handoff import (
-    LaunchPlanHandoffInput,
-    launch_plan_handoff,
+from tools.mode_tool.request_plan import (
+    RequestPlanInput,
+    request_plan,
 )
 from tools.mode_tool.submit_evaluation_failure import (
     EvaluationFailureInput,
@@ -47,13 +47,30 @@ class _FakeTC:
     def submit_evaluation_failure(self, task_id, summary):
         self.calls.append(("eval_failure", task_id, summary))
 
-    def launch_plan_handoff(self, task_id, task_detail):
-        self.calls.append(("launch_plan", task_id, task_detail))
+    def request_plan(self, task_id, request_plan_note):
+        self.calls.append(("request_plan", task_id, request_plan_note))
 
-    def submit_plan_handoff(self, task_id, tasks, task_inputs, summary):
-        from task_center.planning import compile_dag
+    def submit_plan_handoff(
+        self,
+        task_id,
+        tasks,
+        task_inputs,
+        handoff_plan_note,
+        evaluator_note,
+    ):
+        from task_center.graph import compile_dag
+
         compile_dag(tasks, task_inputs)
-        self.calls.append(("plan_handoff", task_id, tasks, task_inputs, summary))
+        self.calls.append(
+            (
+                "plan_handoff",
+                task_id,
+                tasks,
+                task_inputs,
+                handoff_plan_note,
+                evaluator_note,
+            )
+        )
 
 
 def _ctx(tc, *, task_id="self", role="executor") -> ToolExecutionContextService:
@@ -135,18 +152,18 @@ async def test_evaluation_failure_accepts_evaluator() -> None:
     assert tc.calls == [("eval_failure", "ev", "nope")]
 
 
-# --- launch_plan_handoff ---
+# --- request_plan ---
 
 
 @pytest.mark.asyncio
-async def test_launch_plan_handoff_executor_or_evaluator() -> None:
+async def test_request_plan_executor_or_evaluator() -> None:
     tc = _FakeTC()
-    res = await launch_plan_handoff.execute(
-        LaunchPlanHandoffInput(task_detail="please plan"),
+    res = await request_plan.execute(
+        RequestPlanInput(request_plan_note="please plan"),
         _ctx(tc, task_id="x", role="executor"),
     )
     assert res.is_error is False
-    assert tc.calls == [("launch_plan", "x", "please plan")]
+    assert tc.calls == [("request_plan", "x", "please plan")]
 
 
 # --- submit_plan_handoff ---
@@ -158,7 +175,8 @@ async def test_plan_handoff_planner_only() -> None:
     arg = PlanHandoffInput(
         tasks=[{"id": "A"}],
         task_inputs={"A": "do A"},
-        handoff_summary="root",
+        handoff_plan_note="root",
+        evaluator_note="verify A landed",
     )
     res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="executor"))
     assert res.is_error is True
@@ -172,12 +190,14 @@ async def test_plan_handoff_accepts_planner() -> None:
     arg = PlanHandoffInput(
         tasks=[{"id": "A"}, {"id": "B", "deps": ["A"]}],
         task_inputs={"A": "do A", "B": "do B"},
-        handoff_summary="A then B",
+        handoff_plan_note="A then B",
+        evaluator_note="verify B observes A's output",
     )
     res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="planner"))
     assert res.is_error is False
     assert tc.calls[0][0] == "plan_handoff"
-    assert tc.calls[0][-1] == "A then B"
+    assert tc.calls[0][4] == "A then B"
+    assert tc.calls[0][5] == "verify B observes A's output"
 
 
 @pytest.mark.asyncio
@@ -186,7 +206,8 @@ async def test_plan_handoff_rejects_cycle() -> None:
     arg = PlanHandoffInput(
         tasks=[{"id": "A", "deps": ["B"]}, {"id": "B", "deps": ["A"]}],
         task_inputs={"A": "do A", "B": "do B"},
-        handoff_summary="cycle",
+        handoff_plan_note="cycle",
+        evaluator_note="cycle",
     )
     res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="planner"))
     assert res.is_error is True

@@ -194,7 +194,7 @@ reading typed summaries.
   all transitioning to `DONE`. This is invariant 14: waiting-state →
   `DONE` only happens via propagation, never via `transition()`.
 - Downstream siblings read upstream summaries via the prompt builder
-  (`task_center/context/task_prompt.py`) **and** see upstream code
+  (`task_center/harness_agents/prompts.py`) **and** see upstream code
   changes via the OCC-shared workspace. Summaries are for the
   evaluator's verification budget; the workspace is for live
   collaboration.

@@ -1,10 +1,10 @@
-"""Tests for ``task_center.prompts.task_prompt.build_task_prompt``."""
+"""Tests for harness-agent prompt construction."""
 
 from __future__ import annotations
 
 from task_center import HarnessGraph, Status, Task, TaskSummary
 from task_center.graph import TaskGraph
-from task_center.prompts import build_task_prompt
+from task_center.harness_agents.prompts import build_task_prompt
 
 
 def test_root_task_prompt_wraps_input_with_envelope() -> None:
@@ -86,17 +86,20 @@ def test_evaluator_prompt_includes_parent_goal_and_child_summaries() -> None:
             run_id="r",
             parent_task_id="p",
             planner_task_id="pl",
+            root_goal="parent goal",
+            request_plan_note="please plan",
+            handoff_plan_note="planner says",
+            evaluator_note="validate",
             evaluator_task_id="ev",
             executor_task_ids=["c"],
         )
     )
 
     prompt = build_task_prompt(evaluator, graph)
-    assert "## PARENT_GOAL" in prompt
-    assert "parent goal" in prompt
-    assert "## PLANNER_HANDOFF" in prompt
-    assert "planner says" in prompt
-    assert "## COMPLETED_CHILD_SUMMARIES" in prompt
+    assert "## ROOT_GOAL\nparent goal" in prompt
+    assert "## REQUEST_PLAN_NOTE\nplease plan" in prompt
+    assert "## PLAN_HANDOFF_NOTE\nplanner says" in prompt
+    assert "## SUCCESS_CHILD_SUMMARIES" in prompt
     assert "child done" in prompt
 
 
@@ -156,6 +159,10 @@ def test_evaluator_prompt_includes_nested_child_closure_summaries() -> None:
             run_id="r",
             parent_task_id="p",
             planner_task_id="pl",
+            root_goal="parent goal",
+            request_plan_note="please plan",
+            handoff_plan_note="handoff",
+            evaluator_note="validate",
             evaluator_task_id="ev",
             executor_task_ids=["nested-success", "nested-failure"],
         )
@@ -165,5 +172,6 @@ def test_evaluator_prompt_includes_nested_child_closure_summaries() -> None:
 
     assert "inner harness accepted the delegated work" in prompt
     assert "inner harness could not satisfy the delegated work" in prompt
-    assert "## COMPLETED_CHILD_SUMMARIES" in prompt
-    assert "## FAILED_CHILD_SUMMARIES" in prompt
+    assert "## SUCCESS_CHILD_SUMMARIES" in prompt
+    assert "## FAIL_CHILD_SUMMARIES" in prompt
+    assert "## BLOCKED_CHILD_SUMMARIES" in prompt

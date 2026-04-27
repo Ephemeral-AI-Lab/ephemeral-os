@@ -33,7 +33,7 @@ def build_production_spawn(
         from agents.registry import get_definition
         from server.routers.core import execute_ephemeral_agent_run
         from task_center.errors import TaskCenterError
-        from task_center.prompts import build_task_prompt
+        from task_center.harness_agents.prompts import build_task_prompt
         from tools.core.base import ExecutionMetadata
 
         task = tc.graph.get(task_id)

@@ -8,29 +8,10 @@ testable against a hand-built ``TaskGraph`` fixture.
 from __future__ import annotations
 
 from task_center.graph.store import TaskGraph
-from task_center.model import Status, Task, TaskId, TaskSummary
+from task_center.model import Status, Task, TaskId
 
 
 _TERMINAL_STATUSES: frozenset[Status] = frozenset({Status.DONE, Status.FAILED})
-
-
-def parent_goal(graph: TaskGraph, task_id: TaskId) -> str | None:
-    """Return the goal of the harness graph that owns ``task_id``."""
-    task = graph.get(task_id)
-    if task.task_center_harness_graph_id is None:
-        return None
-    harness = graph.get_harness_graph(task.task_center_harness_graph_id)
-    return graph.get(harness.parent_task_id).input
-
-
-def planner_handoff(graph: TaskGraph, task_id: TaskId) -> list[TaskSummary]:
-    """Return the planner's handoff summaries for the harness graph owning ``task_id``."""
-    task = graph.get(task_id)
-    if task.task_center_harness_graph_id is None:
-        return []
-    harness = graph.get_harness_graph(task.task_center_harness_graph_id)
-    planner = graph.get(harness.planner_task_id)
-    return [s for s in planner.summaries if s.kind == "handoff"]
 
 
 def dependency_blocked_descendants(graph: TaskGraph, task_id: TaskId) -> list[Task]:

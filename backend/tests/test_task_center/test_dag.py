@@ -1,11 +1,16 @@
-"""Unit tests for ``task_center.planning.compile_dag``."""
+"""Unit tests for graph-owned DAG helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center import PlanValidationError
-from task_center.planning import compile_dag
+from task_center import PlanValidationError, Status, Task, TaskCenterError
+from task_center.graph import (
+    TaskGraph,
+    compile_dag,
+    plan_sinks,
+    validate_task_ids_available,
+)
 
 
 def _specs(*ids: str) -> dict[str, str]:
@@ -116,6 +121,28 @@ def test_diamond_compiles() -> None:
     assert deps["D"] == frozenset({"B", "C"})
 
 
+def test_plan_sinks_returns_nodes_with_no_consumers() -> None:
+    deps = compile_dag(
+        [
+            {"id": "A"},
+            {"id": "B", "deps": ["A"]},
+            {"id": "C", "deps": ["A"]},
+            {"id": "D", "deps": ["B", "C"]},
+        ],
+        _specs("A", "B", "C", "D"),
+    )
+
+    assert plan_sinks(deps) == frozenset({"D"})
+
+
+def test_validate_task_ids_available_rejects_existing_graph_ids() -> None:
+    graph = TaskGraph()
+    graph.add(Task(id="A", role="executor", input="...", status=Status.READY))
+
+    with pytest.raises(TaskCenterError, match="already exists"):
+        validate_task_ids_available(graph, {"A", "B"})
+
+
 def test_omitted_deps_means_no_deps() -> None:
     deps = compile_dag([{"id": "A"}], _specs("A"))
     assert deps["A"] == frozenset()
@@ -124,5 +151,4 @@ def test_omitted_deps_means_no_deps() -> None:
 def test_explicit_empty_deps_means_no_deps() -> None:
     deps = compile_dag([{"id": "A", "deps": []}], _specs("A"))
     assert deps["A"] == frozenset()
-
 

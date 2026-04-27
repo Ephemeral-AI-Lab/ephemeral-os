@@ -71,7 +71,7 @@ async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_ev
     _create_run(store, request_id="req", run_id="run", prompt="plan it")
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
@@ -79,6 +79,7 @@ async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_ev
             [{"id": "left"}, {"id": "right", "deps": ["left"]}],
             {"left": "do left", "right": "do right"},
             "left then right",
+            "evaluate",
         )
 
     async def child_action(tc, tid):
@@ -127,16 +128,16 @@ async def test_nested_plan_handoffs_persist_two_harness_graphs() -> None:
     _create_run(store, request_id="req", run_id="run", prompt="nested")
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "outer")
+        tc.request_plan(tid, "outer")
 
     async def outer_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "complex"}, "outer")
+        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "complex"}, "outer", "evaluate")
 
     async def x_action(tc, tid):
-        tc.launch_plan_handoff(tid, "x decompose")
+        tc.request_plan(tid, "x decompose")
 
     async def inner_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner")
+        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner", "evaluate")
 
     async def y_action(tc, tid):
         tc.submit_task_success(tid, "y done")

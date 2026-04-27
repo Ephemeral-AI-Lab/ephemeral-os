@@ -51,10 +51,10 @@ async def test_task_center_persists_request_run_tasks_and_harness_graph() -> Non
     store.create_run(run_id="run1", request_id="req1")
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "child"}], {"child": "child input"}, "h")
+        tc.submit_plan_handoff(tid, [{"id": "child"}], {"child": "child input"}, "h", "evaluate")
 
     async def child_action(tc, tid):
         tc.submit_task_success(tid, "child done")

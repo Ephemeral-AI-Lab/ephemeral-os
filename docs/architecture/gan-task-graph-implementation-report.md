@@ -285,8 +285,10 @@ class PlannerLaunchContext:
 
 | Path | Purpose |
 |------|---------|
-| `backend/src/task_center/harness_graph.py` | `TaskCenterHarnessGraph` dataclass |
-| `backend/src/task_center/planner_launch.py` | `PlannerLaunchContext` dataclass + JSON renderer |
+| `backend/src/task_center/model/harness.py` | `HarnessGraph` dataclass |
+| `backend/src/task_center/harness_agents/planner/context.py` | `PlannerLaunchContext` dataclass + renderer |
+| `backend/src/task_center/harness_agents/{executor,evaluator}/context.py` | Executor/evaluator dispatch contexts |
+| `backend/src/task_center/graph/dag.py` | Graph-owned DAG validation, sink calculation, and ID collision helpers |
 | `backend/src/tools/mode_tool/submit_task_success.py` | Renamed terminal tool |
 | `backend/src/tools/mode_tool/submit_task_failure.py` | New executor-only terminal |
 | `backend/src/tools/mode_tool/submit_evaluation_failure.py` | New evaluator-only terminal |
@@ -298,16 +300,16 @@ class PlannerLaunchContext:
 
 | Path | Change |
 |------|--------|
-| `backend/src/task_center/task.py` | New `Task` shape + `TaskSummary` |
-| `backend/src/task_center/graph.py` | Stores harness graphs alongside tasks; `HANDOFF → DONE/FAILED` allowed |
-| `backend/src/task_center/center.py` | Five new mode-tool entry points; harness-graph closure replaces `closes_for` chain; evaluator promotion based on graph readiness |
-| `backend/src/task_center/dag.py` | Accepts `task_inputs: dict[str, str]` instead of `task_specs` with title |
+| `backend/src/task_center/model/task.py` | New `Task` shape + `TaskSummary` |
+| `backend/src/task_center/graph/` | Stores harness graphs, DAG helpers, readiness, and graph queries |
+| `backend/src/task_center/runtime/orchestrator.py` | Five mode-tool entry points delegate to role lifecycle modules; evaluator promotion based on graph readiness |
 | `backend/src/task_center/__init__.py` | New exports |
-| `backend/src/task_center/context/task_prompt.py` | Role-aware prompt context: planner gets pre-rendered context, executor sees deps, evaluator sees parent goal + planner handoff + child summaries |
+| `backend/src/task_center/harness_agents/prompts.py` | Role-aware prompt context: planner gets pre-rendered context, executor sees deps, evaluator sees parent goal + planner handoff + child summaries |
 | `backend/src/tools/mode_tool/__init__.py` | New tool registration |
 | `backend/src/tools/mode_tool/_models.py` | Removed `TaskSpec` |
 | `backend/src/tools/mode_tool/submit_plan_handoff.py` | Planner-only; signature changed to `tasks`, `task_inputs`, `handoff_summary` |
-| `backend/src/agents/builtins.py` | Added `PLANNER` agent; updated executor/evaluator terminals |
+| `backend/src/task_center/harness_agents/{planner,executor,evaluator}/definition.py` | Role-local agent definitions loaded from sibling `agent.md` files |
+| `backend/src/agents/builtins.py` | Registers role-local harness agents plus the explorer subagent |
 | `backend/src/agents/types.py` | Default mode terminal renamed |
 | `backend/src/db/models/task_center.py` | Reshaped: `TaskCenterHarnessGraphRecord` (one row per harness graph); `TaskCenterTaskRecord` carries `summaries`/`needs`/`task_center_harness_graph_id` |
 | `backend/src/db/stores/task_center_store.py` | New `upsert_harness_graph` + `list_harness_graphs_for_run` |

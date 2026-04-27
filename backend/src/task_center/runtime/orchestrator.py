@@ -8,10 +8,11 @@ Each user query routes through a fresh ``TaskCenter.run_query``. The class owns:
 - a dispatcher loop that spawns one agent coroutine per ready task
 
 Pure read-only queries over the graph live in :mod:`task_center.graph.queries`
-and :mod:`task_center.graph.readiness`; the planner-input builder lives in
-:mod:`task_center.planning.context_builder`. Thin method wrappers on
-``TaskCenter`` delegate to those free functions so callers can keep using
-``tc.parent_goal(...)``-style attribute access.
+and :mod:`task_center.graph.readiness`. Role-specific lifecycle operations live
+under :mod:`task_center.harness_agents`. Thin method wrappers on ``TaskCenter``
+delegate to those free functions so callers can keep using
+``tc.parent_goal(...)``-style attribute access and the public mode-tool entry
+points.
 """
 
 from __future__ import annotations
@@ -30,6 +31,9 @@ from task_center.graph import (
     parent_goal as _q_parent_goal,
     planner_handoff as _q_planner_handoff,
 )
+from task_center.harness_agents.evaluator import lifecycle as evaluator_lifecycle
+from task_center.harness_agents.executor import lifecycle as executor_lifecycle
+from task_center.harness_agents.planner import lifecycle as planner_lifecycle
 from task_center.model import (
     HarnessGraph,
     HarnessGraphId,
@@ -38,11 +42,6 @@ from task_center.model import (
     TaskId,
     TaskSummary,
 )
-from task_center.planning import (
-    build_planner_launch_context,
-    compile_dag,
-)
-from task_center.summaries import latest_summary_text
 
 if TYPE_CHECKING:
     from db.stores.task_center_store import TaskCenterStore
@@ -71,7 +70,7 @@ class TaskCenter:
         task_center_store: "TaskCenterStore | None" = None,
     ) -> None:
         self._graph: TaskGraph = TaskGraph()
-        self._runtime_config = runtime_config
+        del runtime_config
         self._spawn_func: SpawnFunc | None = spawn_func
         self._wakeup: asyncio.Event = asyncio.Event()
         self._counter = itertools.count(1)
@@ -170,18 +169,7 @@ class TaskCenter:
     # ------------------------------------------------------------------ #
 
     def _create_root_executor(self, prompt: str) -> Task:
-        task = Task(
-            id=self._new_id(),
-            role="executor",
-            input=prompt,
-            status=Status.READY,
-            task_center_harness_graph_id=None,
-        )
-        self._graph.add(task)
-        if self._task_center_store is not None and self.run_id is not None:
-            self._task_center_store.set_run_root(self.run_id, self.persisted_task_id(task.id))
-        self._persist_task(task)
-        return task
+        return executor_lifecycle.create_root_executor(self, prompt)
 
     # ------------------------------------------------------------------ #
     # Graph queries — thin wrappers over task_center.graph.queries       #
@@ -209,206 +197,36 @@ class TaskCenter:
             raise TaskCenterError(
                 f"submit_task_success: task {task_id!r} role {task.role!r} not allowed"
             )
-        task.summaries.append(
-            TaskSummary(kind="success", text=summary, source_task_id=task_id)
-        )
-        self._mark_terminal(task, Status.DONE)
         if task.role == "executor":
-            self._notify_child_terminal_changed()
+            executor_lifecycle.submit_task_success(self, task_id, summary)
         else:
-            assert task.task_center_harness_graph_id is not None
-            self._close_harness_graph_success(task.task_center_harness_graph_id, task_id)
-        self._persist_all()
-        self._wakeup.set()
+            evaluator_lifecycle.submit_task_success(self, task_id, summary)
 
     def submit_task_failure(self, task_id: TaskId, summary: str) -> None:
-        task = self._graph.get(task_id)
-        if task.role != "executor":
-            raise TaskCenterError(
-                f"submit_task_failure: task {task_id!r} role {task.role!r} is not executor"
-            )
-        task.summaries.append(
-            TaskSummary(kind="failure", text=summary, source_task_id=task_id)
-        )
-        self._mark_terminal(task, Status.FAILED)
-        for descendant in self.dependency_blocked_descendants(task_id):
-            descendant.summaries.append(
-                TaskSummary(
-                    kind="dependency_blocked",
-                    text=f"Blocked because dependency {task_id!r} failed.",
-                    source_task_id=task_id,
-                )
-            )
-            self._mark_terminal(descendant, Status.FAILED)
-        self._notify_child_terminal_changed()
-        self._persist_all()
-        self._wakeup.set()
+        executor_lifecycle.submit_task_failure(self, task_id, summary)
 
     def submit_evaluation_failure(self, task_id: TaskId, summary: str) -> None:
-        task = self._graph.get(task_id)
-        if task.role != "evaluator":
-            raise TaskCenterError(
-                f"submit_evaluation_failure: task {task_id!r} role {task.role!r} is not evaluator"
-            )
-        task.summaries.append(
-            TaskSummary(kind="evaluation_failure", text=summary, source_task_id=task_id)
-        )
-        self._mark_terminal(task, Status.FAILED)
-        assert task.task_center_harness_graph_id is not None
-        self._close_harness_graph_failed(task.task_center_harness_graph_id, task_id)
-        self._persist_all()
-        self._wakeup.set()
+        evaluator_lifecycle.submit_evaluation_failure(self, task_id, summary)
 
-    def launch_plan_handoff(self, task_id: TaskId, task_detail: str) -> None:
-        caller = self._graph.get(task_id)
-        if caller.role not in ("executor", "evaluator"):
-            raise TaskCenterError(
-                f"launch_plan_handoff: task {task_id!r} role {caller.role!r} is not executor/evaluator"
-            )
-        caller.summaries.append(
-            TaskSummary(kind="handoff", text=task_detail, source_task_id=task_id)
-        )
-        self._graph.transition(caller.id, Status.HANDOFF)
-
-        graph_id = self._new_graph_id()
-        planner_id = self._new_id()
-        context = build_planner_launch_context(self._graph, caller, task_detail)
-        planner = Task(
-            id=planner_id,
-            role="planner",
-            input=context.to_planner_input(),
-            status=Status.READY,
-            task_center_harness_graph_id=graph_id,
-        )
-        graph = HarnessGraph(
-            id=graph_id,
-            run_id=self.run_id or "",
-            parent_task_id=caller.id,
-            planner_task_id=planner_id,
-        )
-        self._graph.add(planner)
-        self._graph.add_harness_graph(graph)
-        self._persist_all()
-        self._wakeup.set()
+    def request_plan(self, task_id: TaskId, request_plan_note: str) -> None:
+        planner_lifecycle.request_plan(self, task_id, request_plan_note)
 
     def submit_plan_handoff(
         self,
         planner_id: TaskId,
         tasks: list[dict[str, Any]],
         task_inputs: dict[str, str],
-        handoff_summary: str,
+        handoff_plan_note: str,
+        evaluator_note: str,
     ) -> None:
-        planner = self._graph.get(planner_id)
-        if planner.role != "planner":
-            raise TaskCenterError(
-                f"submit_plan_handoff: task {planner_id!r} role {planner.role!r} is not planner"
-            )
-        deps = compile_dag(tasks, task_inputs)
-        assert planner.task_center_harness_graph_id is not None
-        graph = self._graph.get_harness_graph(planner.task_center_harness_graph_id)
-        evaluator_id = f"{planner_id}-eval"
-        new_ids = set(deps) | {evaluator_id}
-        existing_ids = new_ids & set(self._graph.tasks)
-        if existing_ids:
-            first = sorted(existing_ids)[0]
-            raise TaskCenterError(f"task id {first!r} already exists in graph")
-
-        planner.summaries.append(
-            TaskSummary(kind="handoff", text=handoff_summary, source_task_id=planner_id)
+        planner_lifecycle.submit_plan_handoff(
+            self,
+            planner_id,
+            tasks,
+            task_inputs,
+            handoff_plan_note,
+            evaluator_note,
         )
-        self._graph.transition(planner.id, Status.HANDOFF)
-
-        depended_upon: set[str] = set()
-        for entry in tasks:
-            depended_upon |= deps[entry["id"]]
-        sinks = frozenset(tid for tid in deps if tid not in depended_upon)
-
-        for entry in tasks:
-            tid = entry["id"]
-            child_status = Status.READY if not deps[tid] else Status.PENDING
-            child = Task(
-                id=tid,
-                role="executor",
-                input=task_inputs[tid],
-                status=child_status,
-                task_center_harness_graph_id=graph.id,
-                needs=deps[tid],
-            )
-            self._graph.add(child)
-            graph.executor_task_ids.append(tid)
-
-        evaluator = Task(
-            id=evaluator_id,
-            role="evaluator",
-            input=(
-                "Validate the parent task's goal against direct child summaries. "
-                "Choose submit_task_success, submit_evaluation_failure, or "
-                "launch_plan_handoff."
-            ),
-            status=Status.PENDING,
-            task_center_harness_graph_id=graph.id,
-            needs=sinks,
-        )
-        self._graph.add(evaluator)
-        graph.evaluator_task_id = evaluator_id
-
-        self._persist_all()
-        self._wakeup.set()
-
-    # ------------------------------------------------------------------ #
-    # Closure                                                            #
-    # ------------------------------------------------------------------ #
-
-    def _close_harness_graph_success(
-        self, graph_id: HarnessGraphId, source_task_id: TaskId
-    ) -> None:
-        graph = self._graph.get_harness_graph(graph_id)
-        planner = self._graph.get(graph.planner_task_id)
-        self._mark_terminal(planner, Status.DONE)
-        source_task = self._graph.get(source_task_id)
-        parent = self._graph.get(graph.parent_task_id)
-        parent.summaries.append(
-            TaskSummary(
-                kind="child_success",
-                text=latest_summary_text(source_task) or "",
-                source_task_id=source_task_id,
-            )
-        )
-        self._mark_terminal(parent, Status.DONE)
-        self._propagate_parent_terminal(parent, success=True)
-
-    def _close_harness_graph_failed(
-        self, graph_id: HarnessGraphId, source_task_id: TaskId
-    ) -> None:
-        graph = self._graph.get_harness_graph(graph_id)
-        planner = self._graph.get(graph.planner_task_id)
-        self._mark_terminal(planner, Status.FAILED)
-        source_task = self._graph.get(source_task_id)
-        parent = self._graph.get(graph.parent_task_id)
-        parent.summaries.append(
-            TaskSummary(
-                kind="child_failure",
-                text=latest_summary_text(source_task) or "",
-                source_task_id=source_task_id,
-            )
-        )
-        self._mark_terminal(parent, Status.FAILED)
-        self._propagate_parent_terminal(parent, success=False)
-
-    def _propagate_parent_terminal(self, parent: Task, *, success: bool) -> None:
-        if parent.task_center_harness_graph_id is None:
-            return  # parent is the root; already marked terminal above.
-        if parent.role == "evaluator":
-            if success:
-                self._close_harness_graph_success(
-                    parent.task_center_harness_graph_id, parent.id
-                )
-            else:
-                self._close_harness_graph_failed(
-                    parent.task_center_harness_graph_id, parent.id
-                )
-        else:
-            self._notify_child_terminal_changed()
 
     def _notify_child_terminal_changed(self) -> None:
         # The dispatcher polls is_harness_graph_ready_for_evaluation each tick,
@@ -508,19 +326,8 @@ class TaskCenter:
     def _handle_silent_termination(self, task: Task, reason: str) -> None:
         """Treat a silent agent exit as a role-appropriate terminal."""
         if task.role == "executor":
-            self.submit_task_failure(task.id, reason)
+            executor_lifecycle.handle_silent_termination(self, task, reason)
         elif task.role == "planner":
-            assert task.task_center_harness_graph_id is not None
-            task.summaries.append(
-                TaskSummary(
-                    kind="failure", text=reason, source_task_id=task.id
-                )
-            )
-            self._mark_terminal(task, Status.FAILED)
-            self._close_harness_graph_failed(
-                task.task_center_harness_graph_id, task.id
-            )
-            self._persist_all()
-            self._wakeup.set()
+            planner_lifecycle.handle_silent_termination(self, task, reason)
         else:
-            self.submit_evaluation_failure(task.id, reason)
+            evaluator_lifecycle.handle_silent_termination(self, task, reason)

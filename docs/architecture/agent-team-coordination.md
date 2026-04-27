@@ -32,9 +32,9 @@ The graph has a `parent_task_id` pointing back to whichever task (executor or ev
 
 | Role | Sees (Input) | Can Use (Tools) | May End With (Terminals) |
 |---|---|---|---|
-| **executor** | Own `input` + DONE direct-dependency summaries | `_DIRECT_WORK_TOOLS` (real side-effects: edit, run, etc.) | `submit_task_success` · `submit_task_failure` · `launch_plan_handoff` |
-| **planner** | `PlannerLaunchContext` (caller input, parent goal, prior handoffs, child success/failure/blocked summaries, recovery `task_detail`) | `_READ_ONLY_INVESTIGATION_TOOLS` (no mutations) | `submit_plan_handoff(tasks, task_inputs, handoff_summary)` |
-| **evaluator** | Parent task input + planner handoff summary + ALL sibling summaries (DONE + FAILED + dependency-blocked) | `_DIRECT_WORK_TOOLS` (can verify by running things) | `submit_task_success` · `submit_evaluation_failure` · `launch_plan_handoff` |
+| **executor** | Own `input` + DONE direct-dependency summaries | `DIRECT_WORK_TOOLS` (real side-effects: edit, run, etc.) | `submit_task_success` · `submit_task_failure` · `launch_plan_handoff` |
+| **planner** | `PlannerLaunchContext` (caller input, parent goal, prior handoffs, child success/failure/blocked summaries, recovery `task_detail`) | `PLANNER_TOOLS` (read-only plus explorer dispatch) | `submit_plan_handoff(tasks, task_inputs, handoff_summary)` |
+| **evaluator** | Parent task input + planner handoff summary + ALL sibling summaries (DONE + FAILED + dependency-blocked) | `DIRECT_WORK_TOOLS` (can verify by running things) | `submit_task_success` · `submit_evaluation_failure` · `launch_plan_handoff` |
 
 ### Boundary rules (enforced at the tool layer)
 
@@ -43,13 +43,17 @@ The graph has a `parent_task_id` pointing back to whichever task (executor or ev
 - Planner **cannot** mutate state — read-only investigation only.
 - Executors **never** see their parent task; they only see `needs` dependencies.
 
-### Tool Surfaces (from `backend/src/agents/builtins.py`)
+### Tool Surfaces (from `backend/src/task_center/harness_agents/tool_surfaces.py`)
 
-> **Note on the "bundles":** `_READ_ONLY_INVESTIGATION_TOOLS` and `_DIRECT_WORK_TOOLS` are **module-private Python lists used only at agent-definition time**. Each `AgentDefinition` stores a flat, frozen `allowed_tools: list[str]` of tool *name strings* — `list(_DIRECT_WORK_TOOLS)` materializes a copy at construction. The bundles are an authoring convenience (DRY), not a runtime entity: they are not persisted, not inherited, and not visible to the dispatcher. Mutating a bundle after definition has no effect on already-constructed agents. To compose a new surface (e.g. read-only + `shell`), build a new flat list by concatenation.
+> **Note on the "bundles":** `READ_ONLY_INVESTIGATION_TOOLS` and
+> `DIRECT_WORK_TOOLS` are Python lists used only at agent-definition time.
+> Each `AgentDefinition` stores a flat, frozen `allowed_tools: list[str]` of
+> tool name strings — `list(DIRECT_WORK_TOOLS)` materializes a copy at
+> construction. The bundles are an authoring convenience, not a runtime entity.
 
 Two tool bundles back the current role contracts:
 
-**`_READ_ONLY_INVESTIGATION_TOOLS`** — discovery without side effects.
+**`READ_ONLY_INVESTIGATION_TOOLS`** — discovery without side effects.
 
 | Tool | Purpose |
 |---|---|
@@ -60,7 +64,7 @@ Two tool bundles back the current role contracts:
 | `ci_diagnostics` | LSP-style diagnostics for a file/region |
 | `ci_workspace_structure` | High-level workspace topology |
 
-**`_DIRECT_WORK_TOOLS`** — read-only set **plus** mutation, execution, and subagent dispatch.
+**`DIRECT_WORK_TOOLS`** — read-only set **plus** mutation, execution, and subagent dispatch.
 
 | Tool | Purpose |
 |---|---|
@@ -81,15 +85,16 @@ Two tool bundles back the current role contracts:
 
 | Role | Bundle | Terminal tools (additional) | `tool_call_limit` |
 |---|---|---|---|
-| **executor** | `_DIRECT_WORK_TOOLS` | `submit_task_success`, `submit_task_failure`, `launch_plan_handoff` | 100 |
-| **planner** | `_READ_ONLY_INVESTIGATION_TOOLS` | `submit_plan_handoff` | 100 |
-| **evaluator** | `_DIRECT_WORK_TOOLS` | `submit_task_success`, `submit_evaluation_failure`, `launch_plan_handoff` | 100 |
-| **explorer** (subagent) | `_READ_ONLY_INVESTIGATION_TOOLS` | `submit_exploration_result` | 50 |
+| **executor** | `DIRECT_WORK_TOOLS` | `submit_task_success`, `submit_task_failure`, `launch_plan_handoff` | 100 |
+| **planner** | `PLANNER_TOOLS` | `submit_plan_handoff` | 100 |
+| **evaluator** | `DIRECT_WORK_TOOLS` | `submit_task_success`, `submit_evaluation_failure`, `launch_plan_handoff` | 100 |
+| **explorer** (subagent) | `READ_ONLY_INVESTIGATION_TOOLS` | `submit_exploration_result` | 50 |
 
 Notes:
-- Executor and evaluator share `_DIRECT_WORK_TOOLS` — the evaluator may *run* code (tests, scripts) to verify, but is forbidden by prompt from editing test files.
-- Planner and explorer share `_READ_ONLY_INVESTIGATION_TOOLS` — neither can mutate the workspace or dispatch subagents.
-- `run_subagent` is the only path to spawning an `explorer`; only executors/evaluators can do it. Planners stay read-only and single-threaded.
+- Executor and evaluator share `DIRECT_WORK_TOOLS` — the evaluator may *run* code (tests, scripts) to verify, but is forbidden by prompt from editing test files.
+- Planner uses `PLANNER_TOOLS` (`READ_ONLY_INVESTIGATION_TOOLS` plus background task tools), while explorer uses only `READ_ONLY_INVESTIGATION_TOOLS`.
+- `run_subagent` is the only path to spawning an `explorer`; planners,
+  executors, and evaluators can dispatch explorers, while explorers cannot.
 - Terminal tools are not in the bundles above — they are wired in via each `ModeDefinition.terminals` and the `mode_gate` enforces role × terminal pairing.
 
 ---
@@ -147,7 +152,7 @@ The evaluator's decision protocol:
    • If partial: what gap did the planner flag?
 
 2. Verify executed work against summaries
-   • Use _DIRECT_WORK_TOOLS read paths (read_file, grep, ci_*) to confirm claims
+   • Use DIRECT_WORK_TOOLS read paths (read_file, grep, ci_*) to confirm claims
    • Optionally run shell/tests to validate behavior end-to-end
 
 3. Choose terminal:
@@ -167,7 +172,7 @@ The evaluator's decision protocol:
 
 ### 3a.3 Evaluator: minor in-place fixes are allowed; large work is not
 
-Because evaluators carry `_DIRECT_WORK_TOOLS`, they *can* edit and run code. The intent is to allow the evaluator to close trivial gaps (a typo in a string, an obvious off-by-one in a comment, a missing import) **without** the round-trip cost of spawning a recovery planner.
+Because evaluators carry `DIRECT_WORK_TOOLS`, they *can* edit and run code. The intent is to allow the evaluator to close trivial gaps (a typo in a string, an obvious off-by-one in a comment, a missing import) **without** the round-trip cost of spawning a recovery planner.
 
 | Effort level | Evaluator action |
 |---|---|

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.planning import PlanValidationError
+from task_center.graph import PlanValidationError
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.mode_tool._models import SubmissionOutput, TaskDependencyEntry
@@ -24,12 +24,22 @@ class PlanHandoffInput(BaseModel):
             "Map of task id -> task input string. Every entry id must be a key here."
         ),
     )
-    handoff_summary: str = Field(
+    handoff_plan_note: str = Field(
         ...,
         min_length=1,
         description=(
-            "Articulation of what the plan covers and what the evaluator should "
-            "verify before declaring success."
+            "Articulation of the plan itself: PLAN_SHAPE, TOPOLOGY, "
+            "COVERAGE_MAP, CONFIDENCE_BOUNDARY, GAP. Stored on the harness "
+            "graph and surfaced to the evaluator."
+        ),
+    )
+    evaluator_note: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Explicit instruction to the evaluator that will gate this "
+            "harness graph: what to verify, what to skip, which adversarial "
+            "probes are most relevant. Becomes the evaluator's task input."
         ),
     )
 
@@ -40,7 +50,7 @@ class PlanHandoffInput(BaseModel):
         "Terminal action (planner only) — emit the executor DAG. TaskCenter materializes "
         "executor children with their direct dependencies and a single evaluator inside this "
         "harness graph. Each executor task description must be self-contained. The plan may be "
-        "partial — note any uncertainty or future-step gaps in the handoff_summary."
+        "partial — note any uncertainty or future-step gaps in the handoff_plan_note."
     ),
     input_model=PlanHandoffInput,
     output_model=SubmissionOutput,
@@ -49,7 +59,8 @@ class PlanHandoffInput(BaseModel):
 async def submit_plan_handoff(
     tasks: list[dict],
     task_inputs: dict[str, str],
-    handoff_summary: str,
+    handoff_plan_note: str,
+    evaluator_note: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -59,7 +70,7 @@ async def submit_plan_handoff(
             output=(
                 "submit_plan_handoff is planner-only "
                 f"(current role={role!r}); executors and evaluators must use "
-                "launch_plan_handoff to spawn a planner instead."
+                "request_plan to spawn a planner instead."
             ),
             is_error=True,
         )
@@ -71,7 +82,9 @@ async def submit_plan_handoff(
             is_error=True,
         )
     try:
-        tc.submit_plan_handoff(task_id, tasks, task_inputs, handoff_summary)
+        tc.submit_plan_handoff(
+            task_id, tasks, task_inputs, handoff_plan_note, evaluator_note
+        )
     except PlanValidationError as exc:
         return ToolResult(output=f"plan rejected: {exc}", is_error=True)
     return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

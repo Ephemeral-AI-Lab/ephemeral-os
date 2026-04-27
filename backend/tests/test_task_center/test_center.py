@@ -10,8 +10,8 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 
-from task_center import Status, TaskCenterError, TaskSummary
-from task_center.prompts import build_task_prompt
+from task_center import PlanValidationError, Status, TaskCenterError, TaskSummary
+from task_center.harness_agents.prompts import build_task_prompt
 from task_center.runtime import TaskCenter
 
 
@@ -70,7 +70,7 @@ async def test_simple_task_failure() -> None:
 @pytest.mark.asyncio
 async def test_plan_driven_happy_path() -> None:
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
@@ -78,6 +78,7 @@ async def test_plan_driven_happy_path() -> None:
             [{"id": "a"}, {"id": "b", "deps": ["a"]}],
             {"a": "do a", "b": "do b"},
             "plan a then b",
+            "evaluate",
         )
 
     async def child_action(tc, tid):
@@ -112,7 +113,7 @@ async def test_plan_driven_happy_path() -> None:
 @pytest.mark.asyncio
 async def test_soft_fail_dependency_blocked() -> None:
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
@@ -120,6 +121,7 @@ async def test_soft_fail_dependency_blocked() -> None:
             [{"id": "a"}, {"id": "b", "deps": ["a"]}, {"id": "c"}],
             {"a": "do a", "b": "do b", "c": "do c"},
             "a, b dep on a, c standalone",
+            "evaluate",
         )
 
     async def fail_a(tc, tid):
@@ -156,11 +158,12 @@ async def test_soft_fail_dependency_blocked() -> None:
 @pytest.mark.asyncio
 async def test_hard_fail_propagates_to_root() -> None:
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "a"}], {"a": "do a"}, "single child"
+            tid, [{"id": "a"}], {"a": "do a"}, "single child",
+            "evaluate",
         )
 
     async def child_action(tc, tid):
@@ -191,19 +194,21 @@ async def test_hard_fail_propagates_to_root() -> None:
 async def test_nested_graph_recovery() -> None:
     """Inner evaluator hard-fails; outer evaluator dispatches with FAILED child."""
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "outer plan")
+        tc.request_plan(tid, "outer plan")
 
     async def outer_planner(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "x"}], {"x": "complex work"}, "x"
+            tid, [{"id": "x"}], {"x": "complex work"}, "x",
+            "evaluate",
         )
 
     async def x_action(tc, tid):
-        tc.launch_plan_handoff(tid, "x decompose")
+        tc.request_plan(tid, "x decompose")
 
     async def inner_planner(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "y"}], {"y": "do y"}, "y"
+            tid, [{"id": "y"}], {"y": "do y"}, "y",
+            "evaluate",
         )
 
     async def y_action(tc, tid):
@@ -241,24 +246,26 @@ async def test_evaluator_driven_replan_context() -> None:
     seen_planner_inputs: dict[str, str] = {}
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "first plan")
+        tc.request_plan(tid, "first plan")
 
     async def planner_action(tc, tid):
         seen_planner_inputs[tid] = tc.graph.get(tid).input
         tc.submit_plan_handoff(
-            tid, [{"id": "a"}], {"a": "do a"}, "single"
+            tid, [{"id": "a"}], {"a": "do a"}, "single",
+            "evaluate",
         )
 
     async def a_action(tc, tid):
         tc.submit_task_success(tid, "a done")
 
     async def eval_replan(tc, tid):
-        tc.launch_plan_handoff(tid, "fix the gap")
+        tc.request_plan(tid, "fix the gap")
 
     async def recovery_planner(tc, tid):
         seen_planner_inputs[tid] = tc.graph.get(tid).input
         tc.submit_plan_handoff(
-            tid, [{"id": "fix"}], {"fix": "fix the gap"}, "recovery"
+            tid, [{"id": "fix"}], {"fix": "fix the gap"}, "recovery",
+            "evaluate",
         )
 
     async def fix_action(tc, tid):
@@ -281,13 +288,14 @@ async def test_evaluator_driven_replan_context() -> None:
 
     assert root.status is Status.DONE
 
-    # The recovery planner's input should reflect evaluator-driven recovery context.
+    # The recovery planner sees only the two notes captured on its harness
+    # graph: ROOT_GOAL (= the evaluator's task input, which equals the
+    # planner-authored evaluator_note from the previous harness) and
+    # REQUEST_PLAN_NOTE (= the task_detail the evaluator passed to
+    # request_plan).
     recovery_input = seen_planner_inputs["t3"]
-    assert "evaluator" in recovery_input  # caller_role
-    assert "fix the gap" in recovery_input  # task_detail
-    assert "with replan" in recovery_input  # requested_goal == parent_goal
-    assert "single" in recovery_input  # prior_planner_handoff text from planner
-    assert "a done" in recovery_input  # completed child summary carried
+    assert "## ROOT_GOAL\nevaluate" in recovery_input
+    assert "## REQUEST_PLAN_NOTE\nfix the gap" in recovery_input
 
 
 @pytest.mark.asyncio
@@ -295,16 +303,16 @@ async def test_evaluator_replan_context_includes_nested_child_closure_summary() 
     seen_recovery_input: dict[str, str] = {}
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "outer plan")
+        tc.request_plan(tid, "outer plan")
 
     async def outer_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "nested work"}, "outer")
+        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "nested work"}, "outer", "evaluate")
 
     async def x_action(tc, tid):
-        tc.launch_plan_handoff(tid, "inner plan")
+        tc.request_plan(tid, "inner plan")
 
     async def inner_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner")
+        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner", "evaluate")
 
     async def y_action(tc, tid):
         tc.submit_task_success(tid, "y done")
@@ -315,11 +323,11 @@ async def test_evaluator_replan_context_includes_nested_child_closure_summary() 
     async def outer_eval(tc, tid):
         prompt = build_task_prompt(tc.graph.get(tid), tc.graph)
         assert "inner accepted" in prompt
-        tc.launch_plan_handoff(tid, "repair any remaining gap")
+        tc.request_plan(tid, "repair any remaining gap")
 
     async def recovery_planner(tc, tid):
         seen_recovery_input[tid] = tc.graph.get(tid).input
-        tc.submit_plan_handoff(tid, [{"id": "fix"}], {"fix": "verify repair"}, "repair")
+        tc.submit_plan_handoff(tid, [{"id": "fix"}], {"fix": "verify repair"}, "repair", "evaluate")
 
     async def fix_action(tc, tid):
         tc.submit_task_success(tid, "fix done")
@@ -343,7 +351,13 @@ async def test_evaluator_replan_context_includes_nested_child_closure_summary() 
     root = await tc.run_query("nested recovery")
 
     assert root.status is Status.DONE
-    assert "inner accepted" in seen_recovery_input["t4"]
+    # Recovery planner is anchored on its own harness's two notes only.
+    # Forwarding child-closure context like "inner accepted" is now the
+    # evaluator's responsibility — it must fold relevant context into the
+    # request_plan_note when calling request_plan.
+    recovery_input = seen_recovery_input["t4"]
+    assert "## ROOT_GOAL\nevaluate" in recovery_input
+    assert "## REQUEST_PLAN_NOTE\nrepair any remaining gap" in recovery_input
 
 
 @pytest.mark.asyncio
@@ -351,7 +365,7 @@ async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidenc
     seen_nested_input: dict[str, str] = {}
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "outer plan")
+        tc.request_plan(tid, "outer plan")
 
     async def outer_planner(tc, tid):
         tc.submit_plan_handoff(
@@ -359,17 +373,18 @@ async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidenc
             [{"id": "a"}, {"id": "x", "deps": ["a"]}],
             {"a": "finish evidence first", "x": "delegate nested work"},
             "outer handoff",
+            "evaluate",
         )
 
     async def a_action(tc, tid):
         tc.submit_task_success(tid, "a done")
 
     async def x_action(tc, tid):
-        tc.launch_plan_handoff(tid, "nested planner should see outer evidence")
+        tc.request_plan(tid, "nested planner should see outer evidence")
 
     async def nested_planner(tc, tid):
         seen_nested_input[tid] = tc.graph.get(tid).input
-        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do nested y"}, "inner")
+        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do nested y"}, "inner", "evaluate")
 
     async def y_action(tc, tid):
         tc.submit_task_success(tid, "y done")
@@ -395,11 +410,15 @@ async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidenc
 
     assert root.status is Status.DONE
     nested_input = seen_nested_input["t3"]
-    assert "## CALLER_ROLE\nexecutor" in nested_input
-    assert "## CALLER_INPUT\ndelegate nested work" in nested_input
-    assert "## PARENT_GOAL\nroot goal" in nested_input
-    assert "outer handoff" in nested_input
-    assert "a done" in nested_input
+    # Per (A): each new harness graph captures its immediate caller's
+    # task input as ROOT_GOAL. x's input was the TaskSpec the outer planner
+    # handed to it ("delegate nested work").
+    assert "## ROOT_GOAL\ndelegate nested work" in nested_input
+    # REQUEST_PLAN_NOTE is the verbatim text x passed to request_plan.
+    assert (
+        "## REQUEST_PLAN_NOTE\nnested planner should see outer evidence"
+        in nested_input
+    )
 
 
 # ----- 8. Graph helpers -----
@@ -408,11 +427,12 @@ async def test_executor_nested_planner_context_uses_same_enclosing_graph_evidenc
 @pytest.mark.asyncio
 async def test_graph_helpers() -> None:
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "decompose")
+        tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "a"}], {"a": "do a"}, "single"
+            tid, [{"id": "a"}], {"a": "do a"}, "single",
+            "evaluate",
         )
         # While inside, snapshot some helper outputs.
 
@@ -443,7 +463,7 @@ def test_submit_plan_handoff_rejects_global_id_collision_before_mutating_planner
     tc = TaskCenter()
     root = tc._create_root_executor("root")
     tc._graph.transition(root.id, Status.RUNNING)
-    tc.launch_plan_handoff(root.id, "decompose")
+    tc.request_plan(root.id, "decompose")
     planner = tc.graph.get("t2")
     tc._graph.transition(planner.id, Status.RUNNING)
 
@@ -453,6 +473,28 @@ def test_submit_plan_handoff_rejects_global_id_collision_before_mutating_planner
             [{"id": root.id}],
             {root.id: "collides with root"},
             "bad plan",
+            "evaluate",
+        )
+
+    assert planner.status is Status.RUNNING
+    assert planner.summaries == []
+
+
+def test_submit_plan_handoff_delegates_dag_validation_before_mutating_planner() -> None:
+    tc = TaskCenter()
+    root = tc._create_root_executor("root")
+    tc._graph.transition(root.id, Status.RUNNING)
+    tc.request_plan(root.id, "decompose")
+    planner = tc.graph.get("t2")
+    tc._graph.transition(planner.id, Status.RUNNING)
+
+    with pytest.raises(PlanValidationError, match="cycle detected"):
+        tc.submit_plan_handoff(
+            planner.id,
+            [{"id": "A", "deps": ["B"]}, {"id": "B", "deps": ["A"]}],
+            {"A": "do A", "B": "do B"},
+            "bad plan",
+            "evaluate",
         )
 
     assert planner.status is Status.RUNNING
@@ -465,11 +507,12 @@ def test_submit_plan_handoff_rejects_global_id_collision_before_mutating_planner
 @pytest.mark.asyncio
 async def test_evaluator_dispatch_under_partial_failure() -> None:
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "plan")
+        tc.request_plan(tid, "plan")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "a"}, {"id": "b"}], {"a": "do a", "b": "do b"}, "two"
+            tid, [{"id": "a"}, {"id": "b"}], {"a": "do a", "b": "do b"}, "two",
+            "evaluate",
         )
 
     async def a_fail(tc, tid):
@@ -510,10 +553,10 @@ async def test_role_rejection_both_directions() -> None:
     async def root_action(tc, tid):
         with pytest.raises(TaskCenterError):
             tc.submit_evaluation_failure(tid, "wrong tool")
-        tc.launch_plan_handoff(tid, "go")
+        tc.request_plan(tid, "go")
 
     async def planner_action(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "a"}], {"a": "do a"}, "plan")
+        tc.submit_plan_handoff(tid, [{"id": "a"}], {"a": "do a"}, "plan", "evaluate")
 
     async def a_action(tc, tid):
         tc.submit_task_success(tid, "a done")
@@ -541,11 +584,12 @@ async def test_role_rejection_both_directions() -> None:
 async def test_summary_history_coexists() -> None:
     """All summary kinds coexist on their respective tasks."""
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "plan it")
+        tc.request_plan(tid, "plan it")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
-            tid, [{"id": "a"}], {"a": "do a"}, "planner says do a"
+            tid, [{"id": "a"}], {"a": "do a"}, "planner says do a",
+            "evaluate",
         )
 
     async def a_action(tc, tid):
@@ -628,7 +672,7 @@ async def test_dag_pipelining_launches_unblocked_task() -> None:
     d_observed: dict[str, str] = {}
 
     async def root_action(tc, tid):
-        tc.launch_plan_handoff(tid, "plan")
+        tc.request_plan(tid, "plan")
 
     async def planner_action(tc, tid):
         tc.submit_plan_handoff(
@@ -641,6 +685,7 @@ async def test_dag_pipelining_launches_unblocked_task() -> None:
             ],
             {tid_: "..." for tid_ in ("a", "b", "c", "d")},
             "pipeline",
+            "evaluate",
         )
 
     async def a_action(tc, tid):

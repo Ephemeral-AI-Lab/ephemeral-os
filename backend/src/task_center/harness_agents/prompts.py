@@ -1,17 +1,11 @@
-"""Build the prompt sent to an agent for one task at dispatch time.
-
-The launch-context dataclasses in ``task_center.planning`` own the wire format
-for each role; this module is a thin dispatcher.
-"""
+"""Build role-specific task prompts for harness agents at dispatch time."""
 
 from __future__ import annotations
 
 from task_center.graph import TaskGraph
+from task_center.harness_agents.evaluator.context import build_evaluator_launch_context
+from task_center.harness_agents.executor.context import build_executor_launch_context
 from task_center.model import Task
-from task_center.planning import (
-    build_evaluator_launch_context,
-    build_executor_launch_context,
-)
 
 
 def build_task_prompt(task: Task, graph: TaskGraph) -> str:
