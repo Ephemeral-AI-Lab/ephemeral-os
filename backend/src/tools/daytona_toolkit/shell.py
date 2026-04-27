@@ -11,6 +11,10 @@ from code_intelligence.core.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.ci_adapter import ci_required_result, get_ci_service
 from tools.core.decorator import tool
+from tools.daytona_toolkit._shell_prehooks import (
+    DestructiveGitShellPreHook,
+    DestructiveShellPreHook,
+)
 from sandbox.commit import submit_shell_cmd
 from sandbox.daytona_utils import (
     _extract_exit_code,
@@ -240,15 +244,15 @@ def _paths_from_shell(shell_result: dict[str, object], key: str) -> list[str]:
         "- `timeout` (seconds) bounds the run; the call returns is_error if exceeded. Default "
         "is taken from CODE_INTELLIGENCE_TUNING.\n"
         "- Writes performed by the command are tracked. A command that exits 0 but writes "
-        "outside the audited boundary returns is_error=True with \"sandbox commit aborted: …\".\n"
+        'outside the audited boundary returns is_error=True with "sandbox commit aborted: …".\n'
         "- No environment leakage between calls — set env vars inline (`FOO=bar cmd …`).\n"
         "- No interactive input — use non-interactive flags (`--yes`, `--non-interactive`, "
         "`--no-input`).\n\n"
         "Output shape:\n"
-        "- `status`: \"ok\" | \"error\".\n"
+        '- `status`: "ok" | "error".\n'
         "- `shell_outputs[0]`: the captured `command`, `exit_code`, `stdout`, `stderr`.\n"
         "- `files_written`: count of audited writes the command performed.\n"
-        "- `error`: populated when status is \"error\" — combines exit-code failures and audit "
+        '- `error`: populated when status is "error" — combines exit-code failures and audit '
         "conflicts.\n\n"
         "Common pitfalls:\n"
         "- Quoting: prefer single quotes around regexes and arguments containing $.\n"
@@ -260,6 +264,7 @@ def _paths_from_shell(shell_result: dict[str, object], key: str) -> list[str]:
     input_model=ShellInput,
     output_model=ShellOutput,
     background="optional",
+    pre_hooks=(DestructiveGitShellPreHook(), DestructiveShellPreHook()),
 )
 async def shell(
     command: str,
@@ -305,9 +310,7 @@ async def shell(
     ambient_changed_paths = _paths_from_shell(shell_result, "ambient_changed_paths")
     is_error = exit_code != 0 or not audit_success
     if not audit_success and exit_code == 0:
-        error_detail = (
-            f"sandbox commit aborted: {audit_conflict or 'unknown reason'}"
-        )
+        error_detail = f"sandbox commit aborted: {audit_conflict or 'unknown reason'}"
     elif exit_code != 0:
         error_detail = _shell_result_error_detail(shell_result)
     else:
