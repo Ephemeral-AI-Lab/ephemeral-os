@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import AgentDefinition
 from task_center.harness_agents.evaluator.definition import EVALUATOR
 from task_center.harness_agents.executor.definition import EXECUTOR
 from task_center.harness_agents.planner.definition import PLANNER
@@ -78,14 +78,8 @@ EXPLORER = AgentDefinition(
     model="inherit",
     tool_call_limit=50,
     system_prompt=_EXPLORER_SYSTEM_PROMPT,
-    modes=[
-        ModeDefinition(
-            name="direct",
-            is_default=True,
-            allowed_tools=list(READ_ONLY_INVESTIGATION_TOOLS),
-            terminals=["submit_exploration_result"],
-        ),
-    ],
+    allowed_tools=list(READ_ONLY_INVESTIGATION_TOOLS),
+    terminals=["submit_exploration_result"],
 )
 
 

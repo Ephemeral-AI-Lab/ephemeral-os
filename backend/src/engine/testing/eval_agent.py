@@ -338,7 +338,7 @@ class EvalAgent:
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
-            allowed_tools: Tool names allowed in the direct phase. Defaults to
+            allowed_tools: Tool names the agent may call. Defaults to
                 Daytona sandbox tools plus ``run_subagent``.
 
         Returns:
@@ -386,20 +386,12 @@ class EvalAgent:
                 "shell",
                 "run_subagent",
             ]
-        from agents.types import ModeDefinition
-
         agent_def = AgentDefinition(
             name="eval_agent",
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
-            modes=[
-                ModeDefinition(
-                    name="direct",
-                    is_default=True,
-                    allowed_tools=allowed_tools,
-                    terminals=["submit_task_success"],
-                )
-            ],
+            allowed_tools=allowed_tools,
+            terminals=["submit_task_success"],
             tool_call_limit=tool_call_limit,
         )
 

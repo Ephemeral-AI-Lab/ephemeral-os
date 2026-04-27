@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import AgentDefinition
 from task_center.harness_agents.tool_surfaces import PLANNER_TOOLS
 
 
@@ -24,14 +24,8 @@ PLANNER = AgentDefinition(
     model="inherit",
     tool_call_limit=100,
     system_prompt=load_system_prompt(),
-    modes=[
-        ModeDefinition(
-            name="direct",
-            is_default=True,
-            allowed_tools=list(PLANNER_TOOLS),
-            terminals=["submit_plan_handoff"],
-        ),
-    ],
+    allowed_tools=list(PLANNER_TOOLS),
+    terminals=["submit_plan_handoff"],
 )
 
 __all__ = ["PLANNER", "load_system_prompt"]

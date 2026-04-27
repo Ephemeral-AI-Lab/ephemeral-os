@@ -10,7 +10,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from agents.types import ModeDefinition
 from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
@@ -55,10 +54,7 @@ from tools.core.base import (
     ToolExecutionContextService,
     ToolRegistry,
 )
-from tools.core.tool_execution import (
-    _consume_tool_budget_or_reject,
-    evaluate_mode_gate,
-)
+from tools.core.tool_execution import _consume_tool_budget_or_reject
 
 
 logger = logging.getLogger(__name__)
@@ -92,8 +88,6 @@ class QueryContext:
     exit_reason: QueryExitReason | None = None
     terminal_result: ToolResult | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
-    # Active tool surface used by the dispatcher to gate tool calls.
-    active_mode: ModeDefinition | None = None
 
 
 def _make_stream_dispatch_deferrer(
@@ -219,23 +213,6 @@ async def _consume_provider_stream(
 
         if isinstance(event, ApiToolUseDeltaEvent):
             state.streamed_tool_use_ids.add(event.id)
-            mode_rejection = evaluate_mode_gate(
-                context.active_mode,
-                event.name,
-                event.id,
-            )
-            if mode_rejection is not None:
-                state.streamed_rejections.append(mode_rejection)
-                yield (
-                    ToolExecutionCompleted(
-                        tool_name=event.name,
-                        output=mode_rejection.content,
-                        is_error=True,
-                        tool_id=event.id,
-                    ),
-                    None,
-                )
-                continue
             budget_rejection = await _consume_tool_budget_or_reject(
                 context,
                 event.name,

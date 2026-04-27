@@ -17,7 +17,6 @@ from tools.core.runtime import ExecutionMetadata
 from tools.core.validation import execute_tool_body, parse_tool_input, validate_tool_output
 
 if TYPE_CHECKING:
-    from agents.types import ModeDefinition
     from engine.core.query import QueryContext
 
 
@@ -55,49 +54,6 @@ def _build_terminal_budget_reserved_error(
         ),
         is_error=True,
     )
-
-
-def _build_mode_deny(
-    tool_name: str,
-    tool_use_id: str,
-    mode: ModeDefinition,
-) -> ToolResultBlock:
-    terminals = ", ".join(sorted(mode.terminals)) or "(none)"
-    return ToolResultBlock(
-        tool_use_id=tool_use_id,
-        content=(
-            f"`{tool_name}` not allowed in `{mode.name}` mode. "
-            f"Allowed terminals: {terminals}. "
-            "Use read/search/explore tools or call a terminal."
-        ),
-        is_error=True,
-    )
-
-
-def evaluate_mode_gate(
-    active_mode: "ModeDefinition | None",
-    tool_name: str,
-    tool_use_id: str,
-) -> ToolResultBlock | None:
-    """Decide whether *tool_name* may run under *active_mode*.
-
-    Returns ``None`` to allow, or a structured deny ``ToolResultBlock`` whose
-    body matches the format described in
-    ``docs/architecture/agent-mode-system-v1.md`` §Authorization gate.
-
-    Decision order:
-        - active_mode is None         → allow (gating disabled)
-        - tool in terminals           → allow
-        - tool in allowed_tools       → allow
-        - else                        → deny
-    """
-    if active_mode is None:
-        return None
-    if tool_name in active_mode.terminals:
-        return None
-    if tool_name in active_mode.allowed_tools:
-        return None
-    return _build_mode_deny(tool_name, tool_use_id, active_mode)
 
 
 async def _consume_tool_budget_or_reject(
@@ -177,11 +133,6 @@ async def execute_tool_call_streaming(
     emit_started: bool = True,
 ) -> ToolResultBlock:
     """Execute one tool call and emit lifecycle events for the active stream."""
-    # Mode gate runs before budget consumption so denied calls never burn
-    # the agent's tool-call quota — see docs/architecture/agent-mode-system-v1.md.
-    mode_rejection = evaluate_mode_gate(context.active_mode, tool_name, tool_use_id)
-    if mode_rejection is not None:
-        return mode_rejection
     if consume_budget:
         budget_rejection = await _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
         if budget_rejection is not None:

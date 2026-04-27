@@ -199,7 +199,7 @@ def _build_agent_tool_registry(
     if agent_def:
         _register_requested_tools(
             tool_registry,
-            _collect_agent_phase_tools(agent_def),
+            _collect_agent_tool_surface(agent_def),
             tool_ctx,
             agent_name,
         )
@@ -212,13 +212,9 @@ def _build_agent_tool_registry(
     return tool_registry
 
 
-def _collect_agent_phase_tools(agent_def: AgentDefinition) -> list[str]:
-    """Return explicit tool names required by the agent's modes."""
-    names: set[str] = set()
-    for mode in agent_def.modes:
-        names.update(mode.allowed_tools)
-        names.update(mode.terminals)
-    return sorted(names)
+def _collect_agent_tool_surface(agent_def: AgentDefinition) -> list[str]:
+    """Return the agent's declared tool surface (allowed_tools ∪ terminals)."""
+    return sorted(set(agent_def.allowed_tools) | set(agent_def.terminals))
 
 
 def _register_requested_tools(
@@ -234,7 +230,7 @@ def _register_requested_tools(
             continue
         if clean_name in _BACKGROUND_CONTROL_TOOL_NAMES:
             # These are synthesized by finalize_tool_registry_and_prompt when
-            # the registered phase tools include at least one background-capable
+            # the registered tools include at least one background-capable
             # tool. They are not ordinary tool factories.
             continue
         if not has_tool(clean_name):
@@ -309,7 +305,7 @@ def spawn_agent(
     If *agent_def* is provided, its fields customize the runtime defaults:
     - ``model`` overrides the active model
     - ``system_prompt`` is appended after the runtime system prompt
-    - ``modes`` declare per-phase tool allowlists
+    - ``allowed_tools`` + ``terminals`` declare the tool surface
     - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """
     from pathlib import Path
@@ -362,7 +358,6 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
-        active_mode=agent_def.default_mode if agent_def else None,
     )
 
     return EphemeralAgent(

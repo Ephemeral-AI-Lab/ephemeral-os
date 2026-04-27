@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from agents.registry import RESERVED_BUILTIN_AGENT_NAMES
 
 if TYPE_CHECKING:
-    from agents.types import ModeDefinition
     from tools.core.base import ToolRegistry
 
 
@@ -17,7 +16,8 @@ class AgentValidationInput(Protocol):
     """Definition fields required by ``AgentDefinitionValidator``."""
 
     name: str
-    modes: list["ModeDefinition"]
+    allowed_tools: list[str]
+    terminals: list[str]
 
 
 class AgentValidationResult(BaseModel):
@@ -61,8 +61,4 @@ class AgentDefinitionValidator:
 
     @staticmethod
     def _collect_requested_tools(defn: AgentValidationInput) -> set[str]:
-        names: set[str] = set()
-        for mode in defn.modes:
-            names.update(mode.allowed_tools)
-            names.update(mode.terminals)
-        return names
+        return set(defn.allowed_tools) | set(defn.terminals)

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import AgentDefinition
 from engine.runtime.agent import (
     _build_agent_tool_registry,
     _build_context_preparers,
@@ -76,18 +76,11 @@ def _make_config(cwd: str = "/tmp/project") -> SimpleNamespace:
 
 
 def _make_agent_def(**overrides: Any) -> AgentDefinition:
-    allowed_tools = overrides.pop("allowed_tools", [])
     data: dict[str, Any] = {
         "name": "agent",
         "description": "Agent",
-        "modes": [
-            ModeDefinition(
-                name="direct",
-                is_default=True,
-                allowed_tools=allowed_tools,
-                terminals=["submit_task_success"],
-            )
-        ],
+        "allowed_tools": overrides.pop("allowed_tools", []),
+        "terminals": ["submit_task_success"],
     }
     data.update(overrides)
     return AgentDefinition(**data)

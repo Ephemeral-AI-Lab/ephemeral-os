@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import AgentDefinition
 from task_center.harness_agents.tool_surfaces import DIRECT_WORK_TOOLS
 
 
@@ -26,17 +26,11 @@ EXECUTOR = AgentDefinition(
     model="inherit",
     tool_call_limit=100,
     system_prompt=load_system_prompt(),
-    modes=[
-        ModeDefinition(
-            name="direct",
-            is_default=True,
-            allowed_tools=list(DIRECT_WORK_TOOLS),
-            terminals=[
-                "submit_task_success",
-                "submit_task_failure",
-                "request_plan",
-            ],
-        ),
+    allowed_tools=list(DIRECT_WORK_TOOLS),
+    terminals=[
+        "submit_task_success",
+        "submit_task_failure",
+        "request_plan",
     ],
 )
 

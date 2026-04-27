@@ -11,11 +11,10 @@ from agents.registry import (
     register_definition,
     unregister_definition,
 )
-from agents.types import AgentDefinition, ModeDefinition
+from agents.types import AgentDefinition
 
 __all__ = [
     "AgentDefinition",
-    "ModeDefinition",
     "get_definition",
     "list_definitions",
     "register_definition",
