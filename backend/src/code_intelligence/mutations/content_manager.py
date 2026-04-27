@@ -185,6 +185,23 @@ def _build_inline_apply_script(payload_bytes: bytes, body: str) -> str:
     return prelude + body
 
 
+def _parse_checked_apply_response(cleaned: str, exit_code: int | None) -> CheckedApplyResult:
+    """Decode the JSON envelope emitted by ``_CHECKED_APPLY_BODY``."""
+    if exit_code not in (0, None):
+        raise RuntimeError(cleaned or "checked batch apply failed")
+    payload_out = json.loads(cleaned or "{}")
+    if not isinstance(payload_out, dict):
+        raise RuntimeError("checked batch apply returned invalid JSON")
+    if payload_out.get("ok"):
+        return CheckedApplyResult(success=True)
+    return CheckedApplyResult(
+        success=False,
+        conflict_path=str(payload_out.get("path") or "") or None,
+        conflict_reason=str(payload_out.get("reason") or "failed"),
+        message=str(payload_out.get("message") or ""),
+    )
+
+
 class ContentManager:
     """Read and write file content, routing to a sandbox when one is bound."""
 
@@ -540,56 +557,13 @@ print(json.dumps(files))
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or f"delete failed for {file_path}")
 
-    def _stage_remote_payload(self, process: Any, payload: bytes) -> str:
-        """Write *payload* to a unique remote tmp file via chunked base64 appends.
-
-        Returns the tmp path. Used to pass large batch payloads to apply scripts
-        without inlining them into the command line (which trips ARG_MAX/E2BIG).
-        Caller is responsible for removing the tmp file (use the returned path
-        with ``_build_remove_file_command``).
-        """
-        tmp_path = f"/tmp/codex-batch-apply-{uuid.uuid4().hex}.json"
-        response = run_sync(
-            process.exec(
-                _wrap_bash_command(_build_truncate_text_file_command(tmp_path)),
-            ),
-        )
-        cleaned, exit_code = _extract_exit_code(
+    def _exec_remote(self, process: Any, command: str) -> tuple[str, int | None]:
+        """Run *command* through the sandbox and return ``(cleaned_stdout, exit_code)``."""
+        response = run_sync(process.exec(_wrap_bash_command(command)))
+        return _extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or "stage payload truncate failed")
-        chunk_size = _REMOTE_WRITE_CHUNK_BYTES
-        for index in range(0, len(payload), chunk_size):
-            chunk = payload[index : index + chunk_size]
-            chunk_b64 = base64.b64encode(chunk).decode("ascii")
-            response = run_sync(
-                process.exec(
-                    _wrap_bash_command(
-                        _build_append_text_file_chunk_command(tmp_path, chunk_b64),
-                    ),
-                ),
-            )
-            cleaned, exit_code = _extract_exit_code(
-                getattr(response, "result", "") or "",
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
-            if exit_code not in (0, None):
-                try:
-                    run_sync(
-                        process.exec(
-                            _wrap_bash_command(_build_remove_file_command(tmp_path)),
-                        ),
-                    )
-                except Exception:
-                    logger.debug(
-                        "stage payload cleanup failed for %s",
-                        tmp_path,
-                        exc_info=True,
-                    )
-                raise RuntimeError(cleaned or "stage payload chunk failed")
-        return tmp_path
 
     def _cleanup_remote_tmp(self, process: Any, tmp_path: str) -> None:
         try:
@@ -604,6 +578,32 @@ print(json.dumps(files))
                 tmp_path,
                 exc_info=True,
             )
+
+    def _stage_remote_payload(self, process: Any, payload: bytes) -> str:
+        """Write *payload* to a unique remote tmp file via chunked base64 appends.
+
+        Returns the tmp path. Used to pass large batch payloads to apply scripts
+        without inlining them into the command line (which trips ARG_MAX/E2BIG).
+        Caller is responsible for removing the tmp file via ``_cleanup_remote_tmp``.
+        """
+        tmp_path = f"/tmp/codex-batch-apply-{uuid.uuid4().hex}.json"
+        cleaned, exit_code = self._exec_remote(
+            process, _build_truncate_text_file_command(tmp_path),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or "stage payload truncate failed")
+        chunk_size = _REMOTE_WRITE_CHUNK_BYTES
+        for index in range(0, len(payload), chunk_size):
+            chunk = payload[index : index + chunk_size]
+            chunk_b64 = base64.b64encode(chunk).decode("ascii")
+            cleaned, exit_code = self._exec_remote(
+                process,
+                _build_append_text_file_chunk_command(tmp_path, chunk_b64),
+            )
+            if exit_code not in (0, None):
+                self._cleanup_remote_tmp(process, tmp_path)
+                raise RuntimeError(cleaned or "stage payload chunk failed")
+        return tmp_path
 
     def _apply_remote_batch(self, changes: list[tuple[str, str | None]]) -> None:
         process = self._process()
@@ -624,11 +624,7 @@ print(json.dumps(files))
             return
         script = _build_inline_apply_script(payload_bytes, _APPLY_BODY)
         command = f"python3 -c {shlex.quote(script)}"
-        response = run_sync(process.exec(_wrap_bash_command(command)))
-        cleaned, exit_code = _extract_exit_code(
-            getattr(response, "result", "") or "",
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
+        cleaned, exit_code = self._exec_remote(process, command)
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or "batch apply failed")
 
@@ -639,11 +635,7 @@ print(json.dumps(files))
                 f"python3 -c {shlex.quote(_BATCH_APPLY_FROM_FILE_SCRIPT)} "
                 f"{shlex.quote(tmp_path)}"
             )
-            response = run_sync(process.exec(_wrap_bash_command(command)))
-            cleaned, exit_code = _extract_exit_code(
-                getattr(response, "result", "") or "",
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
+            cleaned, exit_code = self._exec_remote(process, command)
             if exit_code not in (0, None):
                 raise RuntimeError(cleaned or "batch apply failed")
         finally:
@@ -741,113 +733,10 @@ print(json.dumps(files))
         payload_bytes = json.dumps(payload).encode("utf-8")
         if len(payload_bytes) > _REMOTE_WRITE_CHUNK_BYTES:
             return self._apply_remote_batch_checked_staged(process, payload_bytes)
-        encoded = base64.b64encode(payload_bytes).decode("ascii")
-        script = f"""
-import base64
-import hashlib
-import json
-import pathlib
-
-ops = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
-backups = []
-for item in ops:
-    path = pathlib.Path(item["path"])
-    original_path = item.get("original_path") or item["path"]
-    if item.get("content_b64") is None and not item.get("base_existed"):
-        print(json.dumps({{
-            "ok": False,
-            "reason": "base_mismatch",
-            "path": original_path,
-            "message": "file content changed before delete",
-        }}))
-        raise SystemExit(0)
-    try:
-        current = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        existed = False
-        current = ""
-        current_hash = ""
-    else:
-        existed = True
-        current_hash = hashlib.sha256(current.encode("utf-8")).hexdigest()[:16]
-    backups.append({{
-        "path": item["path"],
-        "existed": existed,
-        "content_b64": base64.b64encode(current.encode("utf-8")).decode("ascii"),
-    }})
-    if item.get("base_existed"):
-        if (not existed) or current_hash != item.get("base_hash", ""):
-            print(json.dumps({{
-                "ok": False,
-                "reason": "base_mismatch",
-                "path": original_path,
-                "message": "file content changed before checked apply",
-            }}))
-            raise SystemExit(0)
-    elif existed:
-        print(json.dumps({{
-            "ok": False,
-            "reason": "base_mismatch",
-            "path": original_path,
-            "message": "file already exists; base said it did not",
-        }}))
-        raise SystemExit(0)
-
-try:
-    for item in ops:
-        path = pathlib.Path(item["path"])
-        content_b64 = item.get("content_b64")
-        if content_b64 is None:
-            try:
-                path.unlink()
-            except FileNotFoundError:
-                pass
-            continue
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(base64.b64decode(content_b64))
-except Exception as exc:
-    for backup in reversed(backups):
-        path = pathlib.Path(backup["path"])
-        try:
-            if backup.get("existed"):
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(base64.b64decode(backup["content_b64"]))
-            else:
-                try:
-                    path.unlink()
-                except FileNotFoundError:
-                    pass
-        except Exception:
-            pass
-    print(json.dumps({{
-        "ok": False,
-        "reason": "write_failed",
-        "path": "",
-        "message": str(exc),
-    }}))
-    raise SystemExit(0)
-
-print(json.dumps({{"ok": True}}))
-"""
+        script = _build_inline_apply_script(payload_bytes, _CHECKED_APPLY_BODY)
         command = f"python3 -c {shlex.quote(script)}"
-        response = run_sync(process.exec(_wrap_bash_command(command)))
-        cleaned, exit_code = _extract_exit_code(
-            getattr(response, "result", "") or "",
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        if exit_code not in (0, None):
-            raise RuntimeError(cleaned or "checked batch apply failed")
-        payload_out = json.loads(cleaned or "{}")
-        if not isinstance(payload_out, dict):
-            raise RuntimeError("checked batch apply returned invalid JSON")
-        if payload_out.get("ok"):
-            return CheckedApplyResult(success=True)
-        return CheckedApplyResult(
-            success=False,
-            conflict_path=str(payload_out.get("path") or "") or None,
-            conflict_reason=str(payload_out.get("reason") or "failed"),
-            message=str(payload_out.get("message") or ""),
-        )
+        cleaned, exit_code = self._exec_remote(process, command)
+        return _parse_checked_apply_response(cleaned, exit_code)
 
     def _apply_remote_batch_checked_staged(
         self,
@@ -860,23 +749,7 @@ print(json.dumps({{"ok": True}}))
                 f"python3 -c {shlex.quote(_CHECKED_BATCH_APPLY_FROM_FILE_SCRIPT)} "
                 f"{shlex.quote(tmp_path)}"
             )
-            response = run_sync(process.exec(_wrap_bash_command(command)))
-            cleaned, exit_code = _extract_exit_code(
-                getattr(response, "result", "") or "",
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
-            if exit_code not in (0, None):
-                raise RuntimeError(cleaned or "checked batch apply failed")
-            payload_out = json.loads(cleaned or "{}")
-            if not isinstance(payload_out, dict):
-                raise RuntimeError("checked batch apply returned invalid JSON")
-            if payload_out.get("ok"):
-                return CheckedApplyResult(success=True)
-            return CheckedApplyResult(
-                success=False,
-                conflict_path=str(payload_out.get("path") or "") or None,
-                conflict_reason=str(payload_out.get("reason") or "failed"),
-                message=str(payload_out.get("message") or ""),
-            )
+            cleaned, exit_code = self._exec_remote(process, command)
+            return _parse_checked_apply_response(cleaned, exit_code)
         finally:
             self._cleanup_remote_tmp(process, tmp_path)
