@@ -35,7 +35,7 @@ CHANGE_SURFACE, UNCERTAINTIES.
      b. glob within SCOPE.paths_to_search.
      c. grep for textual patterns the brief mentions.
      d. read_file ONLY on candidates surfaced by a–c, respecting
-        max_files_to_read.
+        max_files_to_read and the 200-line window limit per call.
 3. STOP early once QUESTION is answered. Padding hurts.
 4. WRITE FINDINGS in the prescribed format. Cite file:line for every claim.
 5. TERMINATE with submit_exploration_result(findings=<the FINDINGS string>).

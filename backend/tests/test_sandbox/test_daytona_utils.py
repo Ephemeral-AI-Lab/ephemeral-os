@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from tools.core.base import ToolExecutionContextService
 from tools.daytona_toolkit._file_tool_helpers import (
-    READ_TO_EOF_LINE,
+    MAX_READ_FILE_LINES,
     ReadFileInput,
     build_find_result,
     build_read_file_result,
@@ -65,7 +65,7 @@ def test_build_read_file_result_preserves_full_selected_content():
         file_path="/tmp/example.txt",
         content=f"first\n{long_line}\nlast",
         start_line=1,
-        end_line=READ_TO_EOF_LINE,
+        end_line=MAX_READ_FILE_LINES,
     )
     payload = json.loads(result.output)
 
@@ -84,6 +84,33 @@ def test_read_file_input_rejects_end_line_before_start_line():
         ReadFileInput.model_validate(
             {"file_path": "/tmp/example.txt", "start_line": 10, "end_line": 9}
         )
+
+
+def test_read_file_input_rejects_ranges_over_200_lines():
+    with pytest.raises(ValidationError, match="at most 200 lines"):
+        ReadFileInput.model_validate(
+            {
+                "file_path": "dask/dataframe/utils.py",
+                "start_line": 1,
+                "end_line": 2_147_483_647,
+            }
+        )
+
+
+def test_read_file_input_default_reads_at_most_200_lines():
+    parsed = ReadFileInput.model_validate({"file_path": "/tmp/example.txt"})
+
+    assert parsed.start_line == 1
+    assert parsed.end_line == MAX_READ_FILE_LINES
+
+
+def test_read_file_input_omitted_end_line_uses_200_line_window_from_start():
+    parsed = ReadFileInput.model_validate(
+        {"file_path": "/tmp/example.txt", "start_line": 300}
+    )
+
+    assert parsed.start_line == 300
+    assert parsed.end_line == 499
 
 
 def test_read_file_input_schema_makes_end_line_non_nullable():
@@ -106,6 +133,23 @@ def test_build_read_file_result_clamps_end_line_past_eof():
     assert payload["start_line"] == 2
     assert payload["end_line"] == 3
     assert payload["content"] == "   2: second\n   3: third"
+
+
+def test_build_read_file_result_caps_selected_content_to_200_lines():
+    content = "\n".join(f"line {idx}" for idx in range(1, MAX_READ_FILE_LINES + 50))
+
+    result = build_read_file_result(
+        context=_ctx(),
+        file_path="/tmp/example.txt",
+        content=content,
+        start_line=25,
+        end_line=1_000,
+    )
+    payload = json.loads(result.output)
+
+    assert payload["start_line"] == 25
+    assert payload["end_line"] == 224
+    assert len(payload["content"].splitlines()) == MAX_READ_FILE_LINES
 
 
 def test_build_find_result_preserves_all_matches_without_truncated_flag():

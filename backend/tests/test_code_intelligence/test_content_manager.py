@@ -228,3 +228,58 @@ def test_write_remote_chunks_large_file_payload(tmp_path: Path) -> None:
 
     assert target.read_text(encoding="utf-8") == content
     assert len(process.commands) > 2
+
+
+def test_apply_many_stages_payload_for_large_files(tmp_path: Path) -> None:
+    """Large batch payloads must stage through a tmp file, not inline argv.
+
+    Inlining base64 of large files into ``python3 -c`` overflows ARG_MAX and
+    surfaces as the bare-string ``"checked batch apply failed"`` from the
+    sandbox; verify the staged path produces correct results.
+    """
+    big_content = "".join(f"line_{i} = {i}\n" for i in range(5000))
+    target_a = tmp_path / "big_a.py"
+    target_b = tmp_path / "big_b.py"
+    process = _RecordingProcess()
+    sandbox = SimpleNamespace(process=process)
+    manager = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    manager.apply_many([(str(target_a), big_content), (str(target_b), big_content)])
+
+    assert target_a.read_text(encoding="utf-8") == big_content
+    assert target_b.read_text(encoding="utf-8") == big_content
+    # Staging must produce more than the single inline-script invocation.
+    assert len(process.commands) > 3
+    # No tmp staging file should leak in /tmp.
+    leftover = list(Path("/tmp").glob("codex-batch-apply-*.json"))
+    assert leftover == []
+
+
+def test_apply_many_with_base_check_stages_large_payloads(tmp_path: Path) -> None:
+    from code_intelligence.core.hashing import content_hash
+    from code_intelligence.mutations.content_manager import CheckedApplyChange
+
+    big_content = "".join(f"line_{i} = {i}\n" for i in range(5000))
+    target = tmp_path / "groupby.py"
+    target.write_text("seed\n", encoding="utf-8")
+    base_hash = content_hash("seed\n")
+
+    process = _RecordingProcess()
+    sandbox = SimpleNamespace(process=process)
+    manager = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    result = manager.apply_many_with_base_check(
+        [
+            CheckedApplyChange(
+                file_path=str(target),
+                base_hash=base_hash,
+                base_existed=True,
+                final_content=big_content,
+            ),
+        ],
+    )
+
+    assert result.success, (result.conflict_reason, result.message)
+    assert target.read_text(encoding="utf-8") == big_content
+    leftover = list(Path("/tmp").glob("codex-batch-apply-*.json"))
+    assert leftover == []

@@ -11,7 +11,7 @@ from tools.core.base import ToolExecutionContextService, ToolResult
 from sandbox.daytona_utils import _get_repo_root
 
 
-READ_TO_EOF_LINE = 2_147_483_647
+MAX_READ_FILE_LINES = 200
 
 
 class ReadFileInput(BaseModel):
@@ -25,18 +25,30 @@ class ReadFileInput(BaseModel):
         description="First line to return. Lines are 1-based.",
     )
     end_line: int = Field(
-        default=READ_TO_EOF_LINE,
+        default=MAX_READ_FILE_LINES,
         ge=1,
         description=(
-            "Last line to return, inclusive. Omit this field to read through the "
-            "end of the file; do not pass null."
+            "Last line to return, inclusive. Omit this field to read up to 200 "
+            "lines from start_line; do not pass null."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_end_line_to_window(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "end_line" in data:
+            return data
+        start_line = data.get("start_line", 1)
+        if not isinstance(start_line, int):
+            return data
+        return {**data, "end_line": start_line + MAX_READ_FILE_LINES - 1}
 
     @model_validator(mode="after")
     def validate_line_range(self) -> "ReadFileInput":
         if self.end_line < self.start_line:
             raise ValueError("end_line cannot be smaller than start_line")
+        if self.end_line - self.start_line + 1 > MAX_READ_FILE_LINES:
+            raise ValueError(f"read_file can return at most {MAX_READ_FILE_LINES} lines")
         return self
 
 
@@ -117,7 +129,7 @@ def build_read_file_result(
     lines = content.splitlines()
     total = len(lines)
     start = max(1, start_line)
-    end = min(total, end_line)
+    end = min(total, end_line, start + MAX_READ_FILE_LINES - 1)
     selected = [f"{i:4d}: {lines[i - 1]}" for i in range(start, end + 1)]
     return ToolResult(
         output=json.dumps(
@@ -188,6 +200,7 @@ __all__ = [
     "GlobOutput",
     "GrepInput",
     "GrepOutput",
+    "MAX_READ_FILE_LINES",
     "ReadFileInput",
     "ReadFileOutput",
     "WriteFileInput",

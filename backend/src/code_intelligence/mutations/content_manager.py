@@ -7,14 +7,18 @@ from dataclasses import dataclass
 import json
 import logging
 import shlex
+import uuid
 from pathlib import Path
 from typing import Any
 
 from code_intelligence.core.hashing import content_hash
 from code_intelligence.core.path_utils import resolve_workspace_path
 from sandbox.daytona_utils import (
+    _REMOTE_WRITE_CHUNK_BYTES,
+    _build_append_text_file_chunk_command,
     _build_read_text_file_command,
     _build_remove_file_command,
+    _build_truncate_text_file_command,
     _build_write_text_file_commands,
     _extract_exit_code,
     _wrap_bash_command,
@@ -52,6 +56,133 @@ class CheckedApplyResult:
     conflict_path: str | None = None
     conflict_reason: str = ""
     message: str = ""
+
+
+# Apply-script bodies. The same body runs whether ``ops`` was loaded from an
+# inline base64 literal (small payloads) or a staged tmp file (large payloads
+# that would overflow ARG_MAX/E2BIG if inlined into ``python3 -c`` argv).
+_APPLY_BODY = """
+for item in ops:
+    path = pathlib.Path(item["path"])
+    content_b64 = item.get("content_b64")
+    if content_b64 is None:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        continue
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(base64.b64decode(content_b64))
+"""
+
+_CHECKED_APPLY_BODY = """
+backups = []
+for item in ops:
+    path = pathlib.Path(item["path"])
+    original_path = item.get("original_path") or item["path"]
+    if item.get("content_b64") is None and not item.get("base_existed"):
+        print(json.dumps({
+            "ok": False,
+            "reason": "base_mismatch",
+            "path": original_path,
+            "message": "file content changed before delete",
+        }))
+        raise SystemExit(0)
+    try:
+        current = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        existed = False
+        current = ""
+        current_hash = ""
+    else:
+        existed = True
+        current_hash = hashlib.sha256(current.encode("utf-8")).hexdigest()[:16]
+    backups.append({
+        "path": item["path"],
+        "existed": existed,
+        "content_b64": base64.b64encode(current.encode("utf-8")).decode("ascii"),
+    })
+    if item.get("base_existed"):
+        if (not existed) or current_hash != item.get("base_hash", ""):
+            print(json.dumps({
+                "ok": False,
+                "reason": "base_mismatch",
+                "path": original_path,
+                "message": "file content changed before checked apply",
+            }))
+            raise SystemExit(0)
+    elif existed:
+        print(json.dumps({
+            "ok": False,
+            "reason": "base_mismatch",
+            "path": original_path,
+            "message": "file already exists; base said it did not",
+        }))
+        raise SystemExit(0)
+
+try:
+    for item in ops:
+        path = pathlib.Path(item["path"])
+        content_b64 = item.get("content_b64")
+        if content_b64 is None:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(base64.b64decode(content_b64))
+except Exception as exc:
+    for backup in reversed(backups):
+        path = pathlib.Path(backup["path"])
+        try:
+            if backup.get("existed"):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(base64.b64decode(backup["content_b64"]))
+            else:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
+        except Exception:
+            pass
+    print(json.dumps({
+        "ok": False,
+        "reason": "write_failed",
+        "path": "",
+        "message": str(exc),
+    }))
+    raise SystemExit(0)
+
+print(json.dumps({"ok": True}))
+"""
+
+_FROM_FILE_PRELUDE = """
+import base64
+import hashlib
+import json
+import pathlib
+import sys
+
+ops = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+"""
+
+_BATCH_APPLY_FROM_FILE_SCRIPT = _FROM_FILE_PRELUDE + _APPLY_BODY
+_CHECKED_BATCH_APPLY_FROM_FILE_SCRIPT = _FROM_FILE_PRELUDE + _CHECKED_APPLY_BODY
+
+
+def _build_inline_apply_script(payload_bytes: bytes, body: str) -> str:
+    """Compose an inline-payload apply script (small batches; avoids tmp file)."""
+    encoded = base64.b64encode(payload_bytes).decode("ascii")
+    prelude = (
+        "import base64\n"
+        "import hashlib\n"
+        "import json\n"
+        "import pathlib\n"
+        "\n"
+        f"ops = json.loads(base64.b64decode({encoded!r}).decode(\"utf-8\"))\n"
+    )
+    return prelude + body
 
 
 class ContentManager:
@@ -409,6 +540,71 @@ print(json.dumps(files))
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or f"delete failed for {file_path}")
 
+    def _stage_remote_payload(self, process: Any, payload: bytes) -> str:
+        """Write *payload* to a unique remote tmp file via chunked base64 appends.
+
+        Returns the tmp path. Used to pass large batch payloads to apply scripts
+        without inlining them into the command line (which trips ARG_MAX/E2BIG).
+        Caller is responsible for removing the tmp file (use the returned path
+        with ``_build_remove_file_command``).
+        """
+        tmp_path = f"/tmp/codex-batch-apply-{uuid.uuid4().hex}.json"
+        response = run_sync(
+            process.exec(
+                _wrap_bash_command(_build_truncate_text_file_command(tmp_path)),
+            ),
+        )
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or "stage payload truncate failed")
+        chunk_size = _REMOTE_WRITE_CHUNK_BYTES
+        for index in range(0, len(payload), chunk_size):
+            chunk = payload[index : index + chunk_size]
+            chunk_b64 = base64.b64encode(chunk).decode("ascii")
+            response = run_sync(
+                process.exec(
+                    _wrap_bash_command(
+                        _build_append_text_file_chunk_command(tmp_path, chunk_b64),
+                    ),
+                ),
+            )
+            cleaned, exit_code = _extract_exit_code(
+                getattr(response, "result", "") or "",
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                try:
+                    run_sync(
+                        process.exec(
+                            _wrap_bash_command(_build_remove_file_command(tmp_path)),
+                        ),
+                    )
+                except Exception:
+                    logger.debug(
+                        "stage payload cleanup failed for %s",
+                        tmp_path,
+                        exc_info=True,
+                    )
+                raise RuntimeError(cleaned or "stage payload chunk failed")
+        return tmp_path
+
+    def _cleanup_remote_tmp(self, process: Any, tmp_path: str) -> None:
+        try:
+            run_sync(
+                process.exec(
+                    _wrap_bash_command(_build_remove_file_command(tmp_path)),
+                ),
+            )
+        except Exception:
+            logger.debug(
+                "remote batch tmp cleanup failed for %s",
+                tmp_path,
+                exc_info=True,
+            )
+
     def _apply_remote_batch(self, changes: list[tuple[str, str | None]]) -> None:
         process = self._process()
         payload = [
@@ -422,25 +618,11 @@ print(json.dumps(files))
             }
             for path, content in changes
         ]
-        encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
-        script = f"""
-import base64
-import json
-import pathlib
-
-ops = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
-for item in ops:
-    path = pathlib.Path(item["path"])
-    content_b64 = item.get("content_b64")
-    if content_b64 is None:
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
-        continue
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(base64.b64decode(content_b64))
-"""
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        if len(payload_bytes) > _REMOTE_WRITE_CHUNK_BYTES:
+            self._apply_remote_batch_staged(process, payload_bytes)
+            return
+        script = _build_inline_apply_script(payload_bytes, _APPLY_BODY)
         command = f"python3 -c {shlex.quote(script)}"
         response = run_sync(process.exec(_wrap_bash_command(command)))
         cleaned, exit_code = _extract_exit_code(
@@ -449,6 +631,23 @@ for item in ops:
         )
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or "batch apply failed")
+
+    def _apply_remote_batch_staged(self, process: Any, payload_bytes: bytes) -> None:
+        tmp_path = self._stage_remote_payload(process, payload_bytes)
+        try:
+            command = (
+                f"python3 -c {shlex.quote(_BATCH_APPLY_FROM_FILE_SCRIPT)} "
+                f"{shlex.quote(tmp_path)}"
+            )
+            response = run_sync(process.exec(_wrap_bash_command(command)))
+            cleaned, exit_code = _extract_exit_code(
+                getattr(response, "result", "") or "",
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                raise RuntimeError(cleaned or "batch apply failed")
+        finally:
+            self._cleanup_remote_tmp(process, tmp_path)
 
     def _apply_local_batch_checked(
         self,
@@ -539,7 +738,10 @@ for item in ops:
             }
             for change in changes
         ]
-        encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        if len(payload_bytes) > _REMOTE_WRITE_CHUNK_BYTES:
+            return self._apply_remote_batch_checked_staged(process, payload_bytes)
+        encoded = base64.b64encode(payload_bytes).decode("ascii")
         script = f"""
 import base64
 import hashlib
@@ -646,3 +848,35 @@ print(json.dumps({{"ok": True}}))
             conflict_reason=str(payload_out.get("reason") or "failed"),
             message=str(payload_out.get("message") or ""),
         )
+
+    def _apply_remote_batch_checked_staged(
+        self,
+        process: Any,
+        payload_bytes: bytes,
+    ) -> CheckedApplyResult:
+        tmp_path = self._stage_remote_payload(process, payload_bytes)
+        try:
+            command = (
+                f"python3 -c {shlex.quote(_CHECKED_BATCH_APPLY_FROM_FILE_SCRIPT)} "
+                f"{shlex.quote(tmp_path)}"
+            )
+            response = run_sync(process.exec(_wrap_bash_command(command)))
+            cleaned, exit_code = _extract_exit_code(
+                getattr(response, "result", "") or "",
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                raise RuntimeError(cleaned or "checked batch apply failed")
+            payload_out = json.loads(cleaned or "{}")
+            if not isinstance(payload_out, dict):
+                raise RuntimeError("checked batch apply returned invalid JSON")
+            if payload_out.get("ok"):
+                return CheckedApplyResult(success=True)
+            return CheckedApplyResult(
+                success=False,
+                conflict_path=str(payload_out.get("path") or "") or None,
+                conflict_reason=str(payload_out.get("reason") or "failed"),
+                message=str(payload_out.get("message") or ""),
+            )
+        finally:
+            self._cleanup_remote_tmp(process, tmp_path)

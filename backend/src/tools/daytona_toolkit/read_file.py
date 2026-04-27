@@ -11,7 +11,7 @@ from sandbox.daytona_utils import (
     _run_with_recovery,
 )
 from tools.daytona_toolkit._file_tool_helpers import (
-    READ_TO_EOF_LINE,
+    MAX_READ_FILE_LINES,
     ReadFileInput,
     ReadFileOutput,
     build_read_file_result,
@@ -22,9 +22,10 @@ from tools.daytona_toolkit._file_tool_helpers import (
     name="read_file",
     description=(
         "Read a UTF-8 text file from the sandbox, optionally restricted to a line range. "
-        "Output is line-numbered for easy citation. Prefer this over `shell` with cat/sed/head "
-        "— cheaper and structured. Don't use on binary files or for directory listings "
-        "(use `glob`). Paths are repo-relative or sandbox-absolute."
+        "Each call can return at most 200 lines. Output is line-numbered for easy citation. "
+        "Prefer this over `shell` with cat/sed/head — cheaper and structured. Don't use on "
+        "binary files or for directory listings (use `glob`). Paths are repo-relative or "
+        "sandbox-absolute."
     ),
     short_description="Read a file from the sandbox.",
     input_model=ReadFileInput,
@@ -33,7 +34,7 @@ from tools.daytona_toolkit._file_tool_helpers import (
 async def read_file(
     file_path: str,
     start_line: int = 1,
-    end_line: int = READ_TO_EOF_LINE,
+    end_line: int = MAX_READ_FILE_LINES,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
