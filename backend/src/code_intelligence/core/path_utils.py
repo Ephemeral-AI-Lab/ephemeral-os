@@ -18,7 +18,11 @@ def relativize_workspace_path(path: str, workspace_root: str = "") -> str:
         return ""
     if root and normalized.startswith(root + "/"):
         normalized = normalized[len(root) + 1 :]
-    return normalized.lstrip("./").strip("/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    while normalized.startswith("/"):
+        normalized = normalized[1:]
+    return normalized.rstrip("/")
 
 
 def resolve_workspace_path(file_path: str, workspace_root: str = "") -> str:
