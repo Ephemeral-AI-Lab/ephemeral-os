@@ -62,7 +62,6 @@ def _serialize_harness_graph(record: TaskCenterHarnessGraphRecord) -> dict:
         "run_id": record.run_id,
         "root_task_id": record.root_task_id,
         "planner_task_id": record.planner_task_id,
-        "evaluator_task_id": record.evaluator_task_id,
         "executor_task_ids": record.executor_task_ids or [],
         "dag_nodes": record.dag_nodes or [],
         "plan_shape": record.plan_shape,
@@ -212,7 +211,6 @@ class TaskCenterStore(SyncStoreMixin):
         run_id: str,
         root_task_id: str,
         planner_task_id: str,
-        evaluator_task_id: str | None,
         executor_task_ids: list[str],
         dag_nodes: list[str] | None = None,
         plan_shape: str | None = None,
@@ -228,7 +226,6 @@ class TaskCenterStore(SyncStoreMixin):
                     run_id=run_id,
                     root_task_id=root_task_id,
                     planner_task_id=planner_task_id,
-                    evaluator_task_id=evaluator_task_id,
                     executor_task_ids=executor_task_ids,
                     dag_nodes=list(dag_nodes) if dag_nodes is not None else [],
                     plan_shape=plan_shape,
@@ -241,7 +238,6 @@ class TaskCenterStore(SyncStoreMixin):
             else:
                 record.root_task_id = root_task_id
                 record.planner_task_id = planner_task_id
-                record.evaluator_task_id = evaluator_task_id
                 record.executor_task_ids = executor_task_ids
                 if dag_nodes is not None:
                     record.dag_nodes = list(dag_nodes)

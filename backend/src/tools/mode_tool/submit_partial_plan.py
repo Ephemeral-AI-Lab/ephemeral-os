@@ -1,4 +1,4 @@
-"""Terminal tool: planner emits a partial-plan DAG (Stage 3 of the four-role roadmap)."""
+"""Terminal tool: planner emits a partial-plan DAG."""
 
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ class PartialPlanInput(BaseModel):
         ...,
         description=(
             "Flat DAG plan covering the next bounded segment: each entry is "
-            "{id, deps, role}. Verifiers cannot be DAG sinks."
+            "{id, deps, role}. The DAG must end in one final verifier that "
+            "directly depends on every other node."
         ),
     )
     task_details: dict[str, str] = Field(
@@ -28,17 +29,8 @@ class PartialPlanInput(BaseModel):
         min_length=1,
         description=(
             "Directive form of REPLAN_AFTER: instructions for the *next* "
-            "planner that will continue from this segment's evaluator success. "
+            "planner that will continue from this segment's verifier success. "
             "Stored on the harness graph for the Stage 5 continuation chain."
-        ),
-    )
-    evaluation_specification: str = Field(
-        ...,
-        min_length=1,
-        description=(
-            "Explicit instruction to the auto-spawned evaluator gating this "
-            "segment's checkpoint: what to verify, what to skip, which "
-            "adversarial probes are most relevant."
         ),
     )
 
@@ -47,7 +39,7 @@ class PartialPlanInput(BaseModel):
     name="submit_partial_plan",
     description=(
         "Terminal action (planner only) — emit a partial DAG plan whose "
-        "evaluator success triggers a continuation graph. Use when the next "
+        "final verifier success triggers a continuation graph. Use when the next "
         "segment is bounded and verifiable but the tail's planning depends "
         "on what this segment uncovers (e.g., canary-then-fan-out, "
         "shim-then-bulk-migration)."
@@ -60,7 +52,6 @@ async def submit_partial_plan(
     task_dep_graphs: list[dict],
     task_details: dict[str, str],
     what_to_do_next: str,
-    evaluation_specification: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -69,7 +60,7 @@ async def submit_partial_plan(
         return ToolResult(
             output=(
                 "submit_partial_plan is planner-only "
-                f"(current role={role!r}); executors and evaluators must use "
+                f"(current role={role!r}); executors must use "
                 "request_plan to spawn a planner instead."
             ),
             is_error=True,
@@ -86,7 +77,6 @@ async def submit_partial_plan(
         task_dep_graphs,
         task_details,
         what_to_do_next,
-        evaluation_specification,
     )
     if err is not None:
         return ToolResult(

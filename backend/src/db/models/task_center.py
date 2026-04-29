@@ -115,7 +115,7 @@ class TaskCenterTaskRecord(Base):
 
 
 class TaskCenterHarnessGraphRecord(Base):
-    """Persisted harness graph (planner + executor children + evaluator)."""
+    """Persisted harness graph (planner + executor/verifier DAG)."""
 
     __tablename__ = "task_center_harness_graph"
 
@@ -127,7 +127,6 @@ class TaskCenterHarnessGraphRecord(Base):
     )
     root_task_id: Mapped[str] = mapped_column(String(96))
     planner_task_id: Mapped[str] = mapped_column(String(96))
-    evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     executor_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Stage 1/3/5 four-role roadmap fields:
     # ``dag_nodes`` is the union of executor + verifier ids the planner

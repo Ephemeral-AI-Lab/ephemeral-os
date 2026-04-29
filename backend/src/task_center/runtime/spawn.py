@@ -4,7 +4,7 @@ The dispatcher in :mod:`task_center.runtime.orchestrator` calls
 ``spawn_func(task_id, tc, sandbox_id)`` for each ``READY`` task. In production
 this needs to:
 
-1. Look up the agent definition by ``task.role`` (executor / evaluator).
+1. Look up the agent definition by ``task.role``.
 2. Spawn/run via the server's ``execute_ephemeral_agent_run`` wrapper.
 3. Inject ``task_center``, ``task_id``, ``role`` into the agent's tool
    metadata so terminal tools can call back into TaskCenter.
@@ -43,7 +43,7 @@ def build_production_spawn(
         if agent_def is None:
             raise TaskCenterError(
                 f"production spawn: no agent definition registered for role "
-                f"{task.role!r} (expected 'executor', 'planner', or 'evaluator')"
+                f"{task.role!r} (expected executor, planner, verifier, or advisor)"
             )
 
         meta = ExecutionMetadata()

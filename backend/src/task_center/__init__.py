@@ -1,4 +1,4 @@
-"""Request-scoped task graph orchestrator for the GAN-style executor/planner/evaluator graph.
+"""Request-scoped task graph orchestrator for planner/executor/verifier graphs.
 
 Public surface:
 

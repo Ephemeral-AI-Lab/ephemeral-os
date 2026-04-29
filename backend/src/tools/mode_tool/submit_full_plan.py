@@ -1,4 +1,4 @@
-"""Terminal tool: planner emits a full-plan DAG (Stage 3 of the four-role roadmap)."""
+"""Terminal tool: planner emits a full-plan DAG."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ class FullPlanInput(BaseModel):
         description=(
             "Flat DAG plan: each entry is {id, deps, role}. List only DIRECT "
             "deps; transitive predecessors are implicit. Each role is a "
-            "generator role: 'executor' or 'verifier'."
+            "generator role: 'executor' or 'verifier'. The DAG must end in "
+            "one final verifier that directly depends on every other node."
         ),
     )
     task_details: dict[str, str] = Field(
@@ -24,25 +25,14 @@ class FullPlanInput(BaseModel):
             "Map of task id -> task input string. Every entry id must be a key here."
         ),
     )
-    evaluation_specification: str = Field(
-        ...,
-        min_length=1,
-        description=(
-            "Explicit instruction to the auto-spawned evaluator: what to "
-            "verify, what to skip, which adversarial probes are most relevant. "
-            "Becomes the evaluator's task input."
-        ),
-    )
-
 
 @tool(
     name="submit_full_plan",
     description=(
         "Terminal action (planner only) — emit a complete DAG plan. The "
-        "harness materializes generator children (executors and verifiers) "
-        "with their direct dependencies and a single evaluator at the DAG's "
-        "sinks. A 'full' plan asserts the planning unit's goal can be met "
-        "without further planner involvement once the evaluator approves."
+        "harness materializes executor and verifier tasks with their direct "
+        "dependencies. A 'full' plan must end in one verifier that depends on "
+        "all other DAG nodes and closes the planning unit when it approves."
     ),
     input_model=FullPlanInput,
     output_model=SubmissionOutput,
@@ -51,7 +41,6 @@ class FullPlanInput(BaseModel):
 async def submit_full_plan(
     task_dep_graphs: list[dict],
     task_details: dict[str, str],
-    evaluation_specification: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -60,7 +49,7 @@ async def submit_full_plan(
         return ToolResult(
             output=(
                 "submit_full_plan is planner-only "
-                f"(current role={role!r}); executors and evaluators must use "
+                f"(current role={role!r}); executors must use "
                 "request_plan to spawn a planner instead."
             ),
             is_error=True,
@@ -72,9 +61,7 @@ async def submit_full_plan(
             output="submit_full_plan: missing task_center or task_id in metadata",
             is_error=True,
         )
-    err = tc.submit_full_plan(
-        task_id, task_dep_graphs, task_details, evaluation_specification
-    )
+    err = tc.submit_full_plan(task_id, task_dep_graphs, task_details)
     if err is not None:
         return ToolResult(
             output=f"plan rejected ({err.code}): {err.message}",

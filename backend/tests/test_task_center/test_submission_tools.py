@@ -15,10 +15,6 @@ from tools.mode_tool.request_plan import (
     RequestPlanInput,
     request_plan,
 )
-from tools.mode_tool.submit_evaluation_failure import (
-    EvaluationFailureInput,
-    submit_evaluation_failure,
-)
 from tools.mode_tool.submit_task_failure import (
     TaskFailureInput,
     submit_task_failure,
@@ -39,9 +35,6 @@ class _FakeTC:
 
     def submit_task_failure(self, task_id, summary):
         self.calls.append(("task_failure", task_id, summary))
-
-    def submit_evaluation_failure(self, task_id, summary):
-        self.calls.append(("eval_failure", task_id, summary))
 
     def request_plan(self, task_id, request_plan_note):
         self.calls.append(("request_plan", task_id, request_plan_note))
@@ -73,7 +66,17 @@ async def test_success_missing_metadata() -> None:
     bad_ctx = ToolExecutionContextService(cwd=Path("/tmp"), services=ExecutionMetadata())
     res = await submit_task_success.execute(TaskSuccessInput(summary="x"), bad_ctx)
     assert res.is_error is True
-    assert "missing" in res.output
+    assert "executor-only" in res.output
+
+
+@pytest.mark.asyncio
+async def test_success_executor_only() -> None:
+    tc = _FakeTC()
+    res = await submit_task_success.execute(
+        TaskSuccessInput(summary="ok"), _ctx(tc, task_id="t1", role="verifier")
+    )
+    assert res.is_error is True
+    assert "executor-only" in res.output
 
 
 # --- submit_task_failure ---
@@ -83,7 +86,7 @@ async def test_success_missing_metadata() -> None:
 async def test_task_failure_executor_only() -> None:
     tc = _FakeTC()
     res = await submit_task_failure.execute(
-        TaskFailureInput(summary="boom"), _ctx(tc, task_id="t1", role="evaluator")
+        TaskFailureInput(summary="boom"), _ctx(tc, task_id="t1", role="verifier")
     )
     assert res.is_error is True
     assert "executor-only" in res.output
@@ -100,37 +103,11 @@ async def test_task_failure_accepts_executor() -> None:
     assert tc.calls == [("task_failure", "t1", "boom")]
 
 
-# --- submit_evaluation_failure ---
-
-
-@pytest.mark.asyncio
-async def test_evaluation_failure_evaluator_only() -> None:
-    tc = _FakeTC()
-    res = await submit_evaluation_failure.execute(
-        EvaluationFailureInput(summary="nope"),
-        _ctx(tc, task_id="ev", role="executor"),
-    )
-    assert res.is_error is True
-    assert "evaluator-only" in res.output
-    assert tc.calls == []
-
-
-@pytest.mark.asyncio
-async def test_evaluation_failure_accepts_evaluator() -> None:
-    tc = _FakeTC()
-    res = await submit_evaluation_failure.execute(
-        EvaluationFailureInput(summary="nope"),
-        _ctx(tc, task_id="ev", role="evaluator"),
-    )
-    assert res.is_error is False
-    assert tc.calls == [("eval_failure", "ev", "nope")]
-
-
 # --- request_plan ---
 
 
 @pytest.mark.asyncio
-async def test_request_plan_executor_or_evaluator() -> None:
+async def test_request_plan_accepts_executor() -> None:
     tc = _FakeTC()
     res = await request_plan.execute(
         RequestPlanInput(request_plan_note="please plan"),
@@ -140,6 +117,13 @@ async def test_request_plan_executor_or_evaluator() -> None:
     assert tc.calls == [("request_plan", "x", "please plan")]
 
 
-# Stage 7: legacy submit_plan_handoff tool dropped — its tests removed.
-# The Stage 3 submit_full_plan / submit_partial_plan terminals replace it
-# and are exercised by tests/test_task_center/test_materialization.py.
+@pytest.mark.asyncio
+async def test_request_plan_executor_only() -> None:
+    tc = _FakeTC()
+    res = await request_plan.execute(
+        RequestPlanInput(request_plan_note="please plan"),
+        _ctx(tc, task_id="x", role="verifier"),
+    )
+    assert res.is_error is True
+    assert "executor-only" in res.output
+    assert tc.calls == []

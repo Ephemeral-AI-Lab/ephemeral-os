@@ -72,6 +72,9 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "summary",
         "title",
     },
+    "task_center_harness_graph": {
+        "evaluator_task_id",
+    },
 }
 
 

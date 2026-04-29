@@ -3,7 +3,8 @@
 The verifier validates the work of its DAG dependencies against its own
 verification specification (its ``task_input``). It is scoped to one node —
 it does NOT see ``root_goal``, plan summary, or sibling work outside its
-dep set. End-of-graph closure decisions belong to the evaluator.
+dep set. When the verifier is the final DAG sink, its terminal result closes
+the harness graph.
 
 The structural shape of ``VerifierLaunchContext`` mirrors
 ``ExecutorLaunchContext`` because both roles are scoped the same way (own

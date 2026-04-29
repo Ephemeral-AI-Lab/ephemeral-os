@@ -94,20 +94,6 @@ def test_create_verifier_role_and_needs() -> None:
     assert task.status is Status.PENDING
 
 
-# ---- _create_evaluator ------------------------------------------------------
-
-def test_create_evaluator_is_always_pending() -> None:
-    tc = _new_tc()
-    task = tc._create_evaluator(
-        input="eval",
-        harness_graph_id="g1",
-        needs=frozenset({"a", "b"}),
-    )
-    assert task.role == "evaluator"
-    assert task.status is Status.PENDING
-    assert task.needs == frozenset({"a", "b"})
-
-
 # ---- _create_advisor (Stage 1 surface; Stage 4 fills in the impl) ---------
 
 
@@ -143,7 +129,6 @@ def test_open_graph_records_planner_in_both_legacy_and_new_slots() -> None:
     assert graph.request_plan_note == "please plan"
     assert graph.prior_graph_id is None
     assert graph.dag_nodes == []
-    assert graph.evaluator is None
 
 
 def test_orchestrator_spawn_creates_graph_plus_planner() -> None:

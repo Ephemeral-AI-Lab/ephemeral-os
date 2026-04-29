@@ -1,4 +1,4 @@
-"""Orchestrator — graph-scoped facade for the four-role / recursive design.
+"""Orchestrator — graph-scoped facade for the planner/verifier design.
 
 Every :class:`HarnessGraph` has exactly one orchestrator. The orchestrator is
 a transient frozen-dataclass view bound to a ``graph_id`` and a
@@ -48,7 +48,9 @@ class MaterializationFailure:
       - ``unknown_role`` — role is not a generator role
       - ``unknown_dep`` — node references an unknown dep id
       - ``cycle`` — DAG contains a cycle
-      - ``verifier_sink`` — a verifier node sits at a DAG sink
+      - ``id_collision`` — a DAG id already exists in the task graph
+      - ``terminal_verifier`` — the DAG must end in exactly one verifier
+      - ``terminal_verifier_deps`` — the final verifier must depend on all tasks
     """
 
     code: str
@@ -107,11 +109,13 @@ class Orchestrator:
         return self.tc.graph.get(self.graph.planner)
 
     @property
-    def evaluator(self) -> Task | None:
-        eid = self.graph.evaluator
-        if eid is None:
+    def terminal_verifier(self) -> Task | None:
+        from task_center.runtime.closure import terminal_verifier_id
+
+        verifier_id = terminal_verifier_id(self.tc, self.graph_id)
+        if verifier_id is None:
             return None
-        return self.tc.graph.get(eid)
+        return self.tc.graph.get(verifier_id)
 
     @property
     def dag_nodes(self) -> list[Task]:
@@ -125,9 +129,8 @@ class Orchestrator:
         self,
         task_dep_graphs: list[dict[str, Any]],
         task_details: dict[str, str],
-        evaluation_specification: str,
     ) -> MaterializationFailure | None:
-        """Validate a full-plan DAG and create its generator children + evaluator.
+        """Validate a full-plan DAG and create its generator children.
 
         Returns ``None`` on success and a :class:`MaterializationFailure`
         on validation failure (no graph mutation occurs in that case).
@@ -135,9 +138,10 @@ class Orchestrator:
         err = _validate_plan_dag(task_dep_graphs, task_details)
         if err is not None:
             return err
-        self._materialize_dag(
-            task_dep_graphs, task_details, evaluation_specification
-        )
+        err = self._validate_task_ids_available(set(task_details))
+        if err is not None:
+            return err
+        self._materialize_dag(task_dep_graphs, task_details)
         graph = self.graph
         graph.plan_shape = "full"
         self.tc._persist_all()
@@ -149,9 +153,8 @@ class Orchestrator:
         task_dep_graphs: list[dict[str, Any]],
         task_details: dict[str, str],
         what_to_do_next: str,
-        evaluation_specification: str,
     ) -> MaterializationFailure | None:
-        """Validate a partial-plan DAG and create its children + evaluator.
+        """Validate a partial-plan DAG and create its children.
 
         Same as :meth:`materialize_full_plan` plus stores ``what_to_do_next``
         on the harness graph and marks ``plan_shape='partial'`` for the
@@ -160,9 +163,10 @@ class Orchestrator:
         err = _validate_plan_dag(task_dep_graphs, task_details)
         if err is not None:
             return err
-        self._materialize_dag(
-            task_dep_graphs, task_details, evaluation_specification
-        )
+        err = self._validate_task_ids_available(set(task_details))
+        if err is not None:
+            return err
+        self._materialize_dag(task_dep_graphs, task_details)
         graph = self.graph
         graph.plan_shape = "partial"
         graph.what_to_do_next = what_to_do_next
@@ -174,21 +178,14 @@ class Orchestrator:
         self,
         task_dep_graphs: list[dict[str, Any]],
         task_details: dict[str, str],
-        evaluation_specification: str,
     ) -> None:
         """Common body for both materialization paths.
 
         Assumes the DAG has already been validated by ``_validate_plan_dag``.
-        Creates one Task per generator entry, then auto-spawns the evaluator
-        with ``needs = sinks(DAG)``. The planner transitions to HANDOFF.
+        Creates one Task per generator entry. The planner transitions to HANDOFF.
         """
         graph = self.graph
         planner = self.tc.graph.get(graph.planner)
-        # Stage 3 scope: keep the legacy ``handoff_plan_note`` /
-        # ``evaluator_note`` slots in sync with the new spec where
-        # callers want them. The new terminal does not pass a separate
-        # plan note; the evaluator's input is the evaluation_specification.
-        graph.evaluator_note = evaluation_specification
         self.tc.graph.transition(planner.id, Status.HANDOFF)
 
         # Per-node creation in topological order so ``needs`` resolves
@@ -197,7 +194,6 @@ class Orchestrator:
             entry["id"]: frozenset(entry.get("deps", []))
             for entry in task_dep_graphs
         }
-        sink_ids = _compute_sinks(task_dep_graphs)
 
         for nid in _topo_sort(task_dep_graphs):
             entry = next(e for e in task_dep_graphs if e["id"] == nid)
@@ -221,25 +217,28 @@ class Orchestrator:
             if role == "executor":
                 graph.executor_task_ids.append(child.id)
 
-        evaluator_id = f"{planner.id}-eval"
-        evaluator = self.tc._create_evaluator(
-            input=evaluation_specification,
-            harness_graph_id=graph.id,
-            needs=frozenset(sink_ids),
-            id=evaluator_id,
-        )
-        graph.evaluator = evaluator.id
-        graph.evaluator_task_id = evaluator.id
+    def _validate_task_ids_available(
+        self, ids: set[TaskId]
+    ) -> MaterializationFailure | None:
+        collisions = sorted(ids & set(self.tc.graph.tasks))
+        if collisions:
+            return MaterializationFailure(
+                code="id_collision",
+                message=f"task ids already exist in graph: {collisions!r}",
+            )
+        return None
 
     # ------------------------------------------------------------------ #
     # Stage 5 — Partial-plan continuation chain                          #
     # ------------------------------------------------------------------ #
 
-    def close_partial_success(self, summary: str) -> "Orchestrator":
+    def close_partial_success(
+        self, summary: str, *, source_task_id: TaskId
+    ) -> "Orchestrator":
         """Close a partial-plan graph successfully and spawn the continuation.
 
-        Pre-condition: the evaluator's terminal handler has already marked
-        the evaluator DONE. This method:
+        Pre-condition: the final verifier's terminal handler has already
+        marked the verifier DONE. This method:
 
         - marks the planner DONE,
         - appends a ``segment_success`` summary to the graph's root task
@@ -260,7 +259,7 @@ class Orchestrator:
             TaskSummary(
                 kind="segment_success",
                 text=summary,
-                source_task_id=graph.evaluator if graph.evaluator is not None else planner.id,
+                source_task_id=source_task_id,
             )
         )
         # root_task stays in HANDOFF — explicitly NOT transitioned. The
@@ -284,7 +283,7 @@ class Orchestrator:
 
             ROOT_GOAL: {root_task.input}
             PRIOR SEGMENTS:
-              [each prior graph's what_to_do_next + evaluator success summary]
+              [each prior graph's what_to_do_next + verifier success summary]
             CURRENT REQUEST:
               {graph.what_to_do_next}
         """
@@ -303,15 +302,18 @@ class Orchestrator:
         if chain:
             parts.append("PRIOR SEGMENTS:")
             for i, prior in enumerate(chain, start=1):
-                eval_summary = ""
-                if prior.evaluator is not None:
-                    ev = self.tc.graph.get(prior.evaluator)
-                    if ev.summaries:
-                        eval_summary = ev.summaries[-1].text
+                verifier_summary = ""
+                from task_center.runtime.closure import terminal_verifier_id
+
+                prior_verifier_id = terminal_verifier_id(self.tc, prior.id)
+                if prior_verifier_id is not None:
+                    verifier = self.tc.graph.get(prior_verifier_id)
+                    if verifier.summaries:
+                        verifier_summary = verifier.summaries[-1].text
                 directive = prior.what_to_do_next or "(no follow-up directive)"
                 parts.append(
                     f"  Segment {i}: {directive}\n"
-                    f"    Evaluator summary: {eval_summary}"
+                    f"    Verifier summary: {verifier_summary}"
                 )
         parts.append(
             f"CURRENT REQUEST: {graph.what_to_do_next or '(no directive)'}"
@@ -362,7 +364,7 @@ class Orchestrator:
             "A verifier downstream of your dependencies failed. Repair the "
             "minimal scope of work that triggered the failure so the verifier "
             "can re-run successfully. Constraints (mirrored from the "
-            "evaluator inline-fix policy):\n"
+            "bounded verifier-fix policy):\n"
             "- ≤5 file edits; no new files; no test-file edits\n"
             "- narrow change categories (typo, missing import, wrong constant, "
             "syntax fix)\n"
@@ -386,46 +388,36 @@ class Orchestrator:
         return fix_executor
 
     # ------------------------------------------------------------------ #
-    # Stage 7 — Closure facade on the Orchestrator                       #
-    #                                                                    #
-    # The recursive-orchestrator design (§5.3) places full-plan          #
-    # success/failure closure on the Orchestrator alongside              #
-    # ``close_partial_success``. Stage 7 fulfills that invariant by      #
-    # delegating to the evaluator-lifecycle helpers that already         #
-    # implement the state transitions. Lifecycle code remains the single #
-    # source of state-mutation truth; the Orchestrator is the            #
-    # graph-scoped facade callers reach for.                             #
+    # Closure facade on the Orchestrator                                  #
     # ------------------------------------------------------------------ #
 
     def close_success(self) -> None:
         """Full-plan closure: planner DONE, root_task DONE, propagate up.
 
-        The evaluator's success summary was attached by its terminal handler
-        before this facade was called; closure is a state-only step.
+        The final verifier's success summary was attached by its terminal
+        handler before this facade was called; closure is a state-only step.
         """
-        from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
+        from task_center.runtime import closure
 
-        evaluator = self.evaluator
-        if evaluator is None:
+        verifier = self.terminal_verifier
+        if verifier is None:
             raise RuntimeError(
-                f"Orchestrator.close_success: graph {self.graph_id!r} has no evaluator"
+                f"Orchestrator.close_success: graph {self.graph_id!r} "
+                "has no terminal verifier"
             )
-        eval_lifecycle.close_harness_graph_success(
-            self.tc, self.graph_id, evaluator.id
-        )
+        closure.close_harness_graph_success(self.tc, self.graph_id, verifier.id)
 
     def close_failure(self) -> None:
-        """Full-plan / partial-plan closure when the evaluator hard-fails."""
-        from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
+        """Full-plan / partial-plan closure when the final verifier fails."""
+        from task_center.runtime import closure
 
-        evaluator = self.evaluator
-        if evaluator is None:
+        verifier = self.terminal_verifier
+        if verifier is None:
             raise RuntimeError(
-                f"Orchestrator.close_failure: graph {self.graph_id!r} has no evaluator"
+                f"Orchestrator.close_failure: graph {self.graph_id!r} "
+                "has no terminal verifier"
             )
-        eval_lifecycle.close_harness_graph_failed(
-            self.tc, self.graph_id, evaluator.id
-        )
+        closure.close_harness_graph_failed(self.tc, self.graph_id, verifier.id)
 
 
 # ---------------------------------------------------------------------------- #
@@ -486,19 +478,40 @@ def _validate_plan_dag(
         )
 
     sinks = _compute_sinks(task_dep_graphs)
-    bad = [
-        nid
-        for nid in sinks
-        if next(e for e in task_dep_graphs if e["id"] == nid).get("role")
-        == "verifier"
-    ]
-    if bad:
+    if len(sinks) != 1:
         return MaterializationFailure(
-            code="verifier_sink",
+            code="terminal_verifier",
             message=(
-                f"verifier nodes cannot be DAG sinks: {sorted(bad)!r} — "
-                "verifier success must unblock something downstream, otherwise "
-                "the auto-spawned evaluator gates the same scope twice"
+                "DAG must have exactly one sink, and that sink must be the "
+                f"final verifier; got sinks {sorted(sinks)!r}"
+            ),
+        )
+    final_id = sinks[0]
+    final_entry = next(e for e in task_dep_graphs if e["id"] == final_id)
+    if final_entry.get("role", "executor") != "verifier":
+        return MaterializationFailure(
+            code="terminal_verifier",
+            message=(
+                f"DAG sink {final_id!r} must have role='verifier' so the "
+                "planning unit ends with verification"
+            ),
+        )
+
+    expected_deps = id_set - {final_id}
+    actual_deps = set(final_entry.get("deps", []))
+    if actual_deps != expected_deps:
+        missing = sorted(expected_deps - actual_deps)
+        extra = sorted(actual_deps - expected_deps)
+        detail = []
+        if missing:
+            detail.append(f"missing deps {missing!r}")
+        if extra:
+            detail.append(f"unexpected deps {extra!r}")
+        return MaterializationFailure(
+            code="terminal_verifier_deps",
+            message=(
+                f"final verifier {final_id!r} must directly depend on every "
+                f"other DAG node ({'; '.join(detail)})"
             ),
         )
 

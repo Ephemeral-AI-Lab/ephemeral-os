@@ -1,6 +1,6 @@
-"""Task and Status — the core data model for the GAN-style task graph.
+"""Task and Status — the core data model for the planner/verifier task graph.
 
-Each task is a node owned by an executor, planner, or evaluator. Tasks belong
+Each task is a node owned by an executor, planner, verifier, or advisor. Tasks belong
 to at most one ``HarnessGraph`` via ``task_center_harness_graph_id``; only the
 root executor has no harness graph. Dependencies between executor tasks are
 represented by ``needs``.
@@ -32,18 +32,17 @@ class Status(str, Enum):
     FIXING = "fixing"
 
 
-TaskRole = Literal["executor", "planner", "verifier", "evaluator", "advisor"]
+TaskRole = Literal["executor", "planner", "verifier", "advisor"]
 
 SummaryKind = Literal[
     "handoff",
     "success",
     "failure",
-    "evaluation_failure",
     "dependency_blocked",
     "child_success",
     "child_failure",
     # Stage 5: appended onto a partial-plan graph's root_task when the
-    # segment evaluator approves; the chain continues with a new graph.
+    # segment verifier approves; the chain continues with a new graph.
     "segment_success",
     # Stage 4: encoded "{verdict}|{reason}" string written by the advisor
     # via submit_advisor_feedback. The calling agent's ask_advisor tool

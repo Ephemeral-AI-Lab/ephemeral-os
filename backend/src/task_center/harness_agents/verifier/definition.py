@@ -21,10 +21,10 @@ def _load_distilled_rules() -> str:
 VERIFIER = AgentDefinition(
     name="verifier",
     description=(
-        "Mid-graph node-scoped verifier. Validates DAG dependencies against "
-        "this node's verification specification. Scoped to one node — no "
-        "root_goal, no plan summary, no graph-closure decisions. Failure "
-        "spawns a fix-executor; success unblocks dependents."
+        "Verifier for planner DAG nodes. Validates dependencies against this "
+        "node's verification specification. The final verifier closes the "
+        "planning unit. Failure spawns a fix-executor; success unblocks "
+        "dependents or closes the graph."
     ),
     role="verifier",
     agent_type="agent",

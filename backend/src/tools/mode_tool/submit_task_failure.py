@@ -15,7 +15,7 @@ class TaskFailureInput(BaseModel):
         min_length=1,
         description=(
             "Failure summary: what was attempted, what blocked it, and what "
-            "evidence the evaluator should look at to decide on recovery."
+            "evidence supports the failure."
         ),
     )
 
@@ -25,7 +25,7 @@ class TaskFailureInput(BaseModel):
     description=(
         "Terminal action (executor only) — mark this executor task FAILED with a summary "
         "explaining the failure. Dependency-blocked descendants are also marked FAILED; the "
-        "owning evaluator decides whether to retry or escalate. Use when you cannot complete "
+        "owning graph fails if this blocks the final verifier. Use when you cannot complete "
         "the task and a planner handoff is not the right next step."
     ),
     input_model=TaskFailureInput,
@@ -42,8 +42,7 @@ async def submit_task_failure(
         return ToolResult(
             output=(
                 "submit_task_failure is executor-only "
-                f"(current role={role!r}); evaluators must use "
-                "submit_evaluation_failure instead."
+                f"(current role={role!r})"
             ),
             is_error=True,
         )

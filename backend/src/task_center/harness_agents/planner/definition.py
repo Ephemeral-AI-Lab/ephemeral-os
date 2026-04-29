@@ -22,7 +22,7 @@ PLANNER = AgentDefinition(
     name="planner",
     description=(
         "Read-only planner with scout dispatch. Decomposes a parent goal into "
-        "a recursive DAG plan with an evaluator gate."
+        "a recursive DAG plan ending in a final verifier."
     ),
     role="planner",
     agent_type="agent",

@@ -66,7 +66,7 @@ async def test_single_task_persists_no_harness_graph() -> None:
 
 
 @pytest.mark.asyncio
-async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_evaluator() -> None:
+async def test_plan_persists_harness_graph_with_planner_executors_and_verifier() -> None:
     store = _memory_store()
     _create_run(store, request_id="req", run_id="run", prompt="plan it")
 
@@ -74,29 +74,28 @@ async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_ev
         tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
-        # Stage 7: legacy submit_plan_handoff dropped → submit_full_plan.
         tc.submit_full_plan(
             tid,
             [
                 {"id": "left", "deps": [], "role": "executor"},
                 {"id": "right", "deps": ["left"], "role": "executor"},
+                {"id": "verify", "deps": ["left", "right"], "role": "verifier"},
             ],
-            {"left": "do left", "right": "do right"},
-            "evaluate",
+            {"left": "do left", "right": "do right", "verify": "verify both"},
         )
 
     async def child_action(tc, tid):
         tc.submit_task_success(tid, f"{tid} done")
 
-    async def eval_action(tc, tid):
-        tc.submit_task_success(tid, "accepted")
+    async def verify_action(tc, tid):
+        tc.submit_verification_success(tid, "accepted")
 
     scripts = {
         "t1": root_action,
         "t2": planner_action,
         "left": child_action,
         "right": child_action,
-        "t2-eval": eval_action,
+        "verify": verify_action,
     }
     tc = TaskCenter(
         spawn_func=_scripted_spawn(scripts),
@@ -113,16 +112,17 @@ async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_ev
     assert tasks["run:left"]["status"] == "done"
     assert tasks["run:right"]["status"] == "done"
     assert tasks["run:right"]["needs"] == ["run:left"]
-    assert tasks["run:t2-eval"]["role"] == "evaluator"
-    assert tasks["run:t2-eval"]["status"] == "done"
+    assert tasks["run:verify"]["role"] == "verifier"
+    assert tasks["run:verify"]["status"] == "done"
+    assert tasks["run:verify"]["needs"] == ["run:left", "run:right"]
 
     graphs = store.list_harness_graphs_for_run("run")
     assert len(graphs) == 1
     g = graphs[0]
     assert g["root_task_id"] == "run:t1"
     assert g["planner_task_id"] == "run:t2"
-    assert g["evaluator_task_id"] == "run:t2-eval"
     assert sorted(g["executor_task_ids"]) == ["run:left", "run:right"]
+    assert sorted(g["dag_nodes"]) == ["run:left", "run:right", "run:verify"]
 
 
 @pytest.mark.asyncio
@@ -136,9 +136,11 @@ async def test_nested_plan_handoffs_persist_two_harness_graphs() -> None:
     async def outer_planner(tc, tid):
         tc.submit_full_plan(
             tid,
-            [{"id": "x", "deps": [], "role": "executor"}],
-            {"x": "complex"},
-            "evaluate",
+            [
+                {"id": "x", "deps": [], "role": "executor"},
+                {"id": "outer_verify", "deps": ["x"], "role": "verifier"},
+            ],
+            {"x": "complex", "outer_verify": "verify x"},
         )
 
     async def x_action(tc, tid):
@@ -147,19 +149,21 @@ async def test_nested_plan_handoffs_persist_two_harness_graphs() -> None:
     async def inner_planner(tc, tid):
         tc.submit_full_plan(
             tid,
-            [{"id": "y", "deps": [], "role": "executor"}],
-            {"y": "do y"},
-            "evaluate",
+            [
+                {"id": "y", "deps": [], "role": "executor"},
+                {"id": "inner_verify", "deps": ["y"], "role": "verifier"},
+            ],
+            {"y": "do y", "inner_verify": "verify y"},
         )
 
     async def y_action(tc, tid):
         tc.submit_task_success(tid, "y done")
 
-    async def inner_eval(tc, tid):
-        tc.submit_task_success(tid, "inner ok")
+    async def inner_verify(tc, tid):
+        tc.submit_verification_success(tid, "inner ok")
 
-    async def outer_eval(tc, tid):
-        tc.submit_task_success(tid, "outer ok")
+    async def outer_verify(tc, tid):
+        tc.submit_verification_success(tid, "outer ok")
 
     scripts = {
         "t1": root_action,
@@ -167,8 +171,8 @@ async def test_nested_plan_handoffs_persist_two_harness_graphs() -> None:
         "x": x_action,
         "t3": inner_planner,
         "y": y_action,
-        "t3-eval": inner_eval,
-        "t2-eval": outer_eval,
+        "inner_verify": inner_verify,
+        "outer_verify": outer_verify,
     }
     tc = TaskCenter(
         spawn_func=_scripted_spawn(scripts),

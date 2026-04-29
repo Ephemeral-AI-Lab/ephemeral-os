@@ -13,15 +13,16 @@ class TaskDependencyEntry(BaseModel):
         default_factory=list,
         description=(
             "Direct dependency ids. Transitive deps are implicit via the graph "
-            "— do not list indirect predecessors."
+            "except for the final verifier, which must list every other DAG "
+            "node as a direct dependency."
         ),
     )
     role: str = Field(
         default="executor",
         description=(
             "Generator role for this DAG node: 'executor' (default) for a "
-            "DAG-local doer, or 'verifier' for a mid-graph node-scoped check. "
-            "Verifiers cannot be DAG sinks."
+            "DAG-local doer, or 'verifier' for a node-scoped check. Every "
+            "plan must have exactly one final verifier sink."
         ),
     )
 

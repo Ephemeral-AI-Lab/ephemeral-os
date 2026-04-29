@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from task_center.graph import TaskGraph
-from task_center.harness_agents.evaluator.context import build_evaluator_launch_context
 from task_center.harness_agents.executor.context import build_executor_launch_context
 from task_center.harness_agents.verifier.context import build_verifier_launch_context
 from task_center.model import Task
@@ -15,11 +14,6 @@ def build_task_prompt(task: Task, graph: TaskGraph) -> str:
         return task.input
     if task.role == "executor":
         return build_executor_launch_context(graph, task).to_executor_prompt()
-    if task.role == "evaluator":
-        ctx = build_evaluator_launch_context(graph, task)
-        if ctx is None:
-            return task.input
-        return ctx.to_evaluator_prompt()
     if task.role == "verifier":
         return build_verifier_launch_context(graph, task).to_verifier_prompt()
     return task.input

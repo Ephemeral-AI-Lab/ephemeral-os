@@ -93,6 +93,10 @@ def submit_task_failure(tc: "TaskCenter", task_id: TaskId, summary: str) -> None
                 )
             )
             tc._mark_terminal(descendant, Status.FAILED)
+        if task.task_center_harness_graph_id is not None:
+            from task_center.runtime.closure import close_if_terminal_verifier_failed
+
+            close_if_terminal_verifier_failed(tc, task.task_center_harness_graph_id)
 
     tc._notify_child_terminal_changed()
     tc._persist_all()

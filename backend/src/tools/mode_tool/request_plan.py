@@ -1,4 +1,4 @@
-"""Terminal tool: executor or evaluator requests a planner-led decomposition."""
+"""Terminal tool: executor requests a planner-led decomposition."""
 
 from __future__ import annotations
 
@@ -41,6 +41,15 @@ async def request_plan(
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
+    role = context.get("role")
+    if role != "executor":
+        return ToolResult(
+            output=(
+                "request_plan is executor-only "
+                f"(current role={role!r})"
+            ),
+            is_error=True,
+        )
     tc = context.get("task_center")
     task_id = context.get("task_id")
     if tc is None or task_id is None:

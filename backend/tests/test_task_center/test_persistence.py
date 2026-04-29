@@ -54,20 +54,20 @@ async def test_task_center_persists_request_run_tasks_and_harness_graph() -> Non
         tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
-        # Stage 7: legacy submit_plan_handoff dropped; planners now emit
-        # submit_full_plan with explicit DAG roles.
         tc.submit_full_plan(
             tid,
-            [{"id": "child", "deps": [], "role": "executor"}],
-            {"child": "child input"},
-            "evaluate",
+            [
+                {"id": "child", "deps": [], "role": "executor"},
+                {"id": "verify", "deps": ["child"], "role": "verifier"},
+            ],
+            {"child": "child input", "verify": "verify child"},
         )
 
     async def child_action(tc, tid):
         tc.submit_task_success(tid, "child done")
 
-    async def eval_action(tc, tid):
-        tc.submit_task_success(tid, "accepted")
+    async def verify_action(tc, tid):
+        tc.submit_verification_success(tid, "accepted")
 
     tc = TaskCenter(
         spawn_func=_scripted_spawn(
@@ -75,7 +75,7 @@ async def test_task_center_persists_request_run_tasks_and_harness_graph() -> Non
                 "t1": root_action,
                 "t2": planner_action,
                 "child": child_action,
-                "t2-eval": eval_action,
+                "verify": verify_action,
             }
         ),
         request_id="req1",
@@ -102,15 +102,16 @@ async def test_task_center_persists_request_run_tasks_and_harness_graph() -> Non
     assert tasks["run1:t2"]["role"] == "planner"
     assert tasks["run1:child"]["task_input"] == "child input"
     assert any(s["kind"] == "success" for s in tasks["run1:child"]["summaries"])
-    assert tasks["run1:t2-eval"]["role"] == "evaluator"
+    assert tasks["run1:verify"]["role"] == "verifier"
+    assert any(s["kind"] == "success" for s in tasks["run1:verify"]["summaries"])
 
     harness_graphs = store.list_harness_graphs_for_run("run1")
     assert len(harness_graphs) == 1
     g = harness_graphs[0]
     assert g["root_task_id"] == "run1:t1"
     assert g["planner_task_id"] == "run1:t2"
-    assert g["evaluator_task_id"] == "run1:t2-eval"
     assert g["executor_task_ids"] == ["run1:child"]
+    assert g["dag_nodes"] == ["run1:child", "run1:verify"]
 
 
 def test_agent_run_is_one_to_one_with_task() -> None:

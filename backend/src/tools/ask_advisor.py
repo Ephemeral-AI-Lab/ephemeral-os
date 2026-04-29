@@ -69,7 +69,7 @@ class AskAdvisorOutput(BaseModel):
     description=(
         "Consult the advisor before calling a high-stakes terminal "
         "(submit_full_plan, submit_partial_plan, submit_verification_*, "
-        "submit_evaluation_*, request_plan). Returns {verdict, reason}. "
+        "request_plan). Returns {verdict, reason}. "
         "On accept, you may call the terminal with the EXACT same "
         "proposed_input. On reject, call a different terminal — there is "
         "no rephrase-and-resubmit path."

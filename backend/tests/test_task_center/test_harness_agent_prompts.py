@@ -5,9 +5,6 @@ from task_center.graph import TaskGraph
 from task_center.harness_agents.advisor.definition import (
     load_system_prompt as load_advisor_prompt,
 )
-from task_center.harness_agents.evaluator.definition import (
-    load_system_prompt as load_evaluator_prompt,
-)
 from task_center.harness_agents.executor.definition import (
     load_system_prompt as load_executor_prompt,
 )
@@ -29,7 +26,6 @@ def test_harness_role_prompts_are_concise_contracts() -> None:
     for prompt in (
         load_executor_prompt(),
         load_planner_prompt(),
-        load_evaluator_prompt(),
         load_verifier_prompt(),
         load_explorer_prompt(),
         load_advisor_prompt(),
@@ -48,6 +44,7 @@ def test_explorer_definition_lives_under_harness_agents() -> None:
     assert BUILTIN_EXPLORER.agent_type == "subagent"
     assert BUILTIN_EXPLORER.system_prompt == load_explorer_prompt()
     assert "explorer" in {agent.name for agent in BUILTIN_AGENTS}
+    assert "evaluator" not in {agent.name for agent in BUILTIN_AGENTS}
 
 
 def test_verifier_dispatch_prompt_wraps_dependency_context() -> None:

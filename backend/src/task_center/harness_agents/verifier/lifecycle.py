@@ -22,7 +22,13 @@ if TYPE_CHECKING:
 def submit_verification_success(
     tc: "TaskCenter", task_id: TaskId, summary: str
 ) -> None:
-    """Mark a verifier DONE; dependents promote on the next dispatcher tick."""
+    """Mark a verifier DONE and close the graph if it is the final verifier."""
+    from task_center.runtime.closure import (
+        close_harness_graph_success,
+        is_terminal_verifier,
+    )
+    from task_center.runtime.orchestrator import Orchestrator
+
     task = tc.graph.get(task_id)
     if task.role != "verifier":
         raise TaskCenterError(
@@ -33,6 +39,15 @@ def submit_verification_success(
         TaskSummary(kind="success", text=summary, source_task_id=task_id)
     )
     tc._mark_terminal(task, Status.DONE)
+    assert task.task_center_harness_graph_id is not None
+    graph = tc.graph.get_harness_graph(task.task_center_harness_graph_id)
+    if is_terminal_verifier(tc, graph.id, task.id):
+        if graph.plan_shape == "partial":
+            Orchestrator(graph_id=graph.id, tc=tc).close_partial_success(
+                summary, source_task_id=task.id
+            )
+        else:
+            close_harness_graph_success(tc, graph.id, task.id)
     tc._notify_child_terminal_changed()
     tc._persist_all()
     tc._wakeup.set()
@@ -108,6 +123,8 @@ def fail_after_fix_failure(
     Cascade-fails dependency-blocked descendants the same way Stage 2's
     degraded path did.
     """
+    from task_center.runtime.closure import close_if_terminal_verifier_failed
+
     verifier = tc.graph.get(verifier_id)
     if verifier.status is not Status.FIXING:
         raise TaskCenterError(
@@ -131,6 +148,8 @@ def fail_after_fix_failure(
             )
         )
         tc._mark_terminal(descendant, Status.FAILED)
+    assert verifier.task_center_harness_graph_id is not None
+    close_if_terminal_verifier_failed(tc, verifier.task_center_harness_graph_id)
 
 
 def handle_silent_termination(tc: "TaskCenter", task, reason: str) -> None:

@@ -28,10 +28,8 @@ from task_center.errors import TaskCenterError
 from task_center.graph import (
     TaskGraph,
     dependency_blocked_descendants as _q_dependency_blocked_descendants,
-    is_harness_graph_ready_for_evaluation as _q_is_harness_graph_ready_for_evaluation,
 )
 from task_center.harness_agents.advisor import lifecycle as advisor_lifecycle
-from task_center.harness_agents.evaluator import lifecycle as evaluator_lifecycle
 from task_center.harness_agents.executor import lifecycle as executor_lifecycle
 from task_center.harness_agents.planner import lifecycle as planner_lifecycle
 from task_center.harness_agents.verifier import lifecycle as verifier_lifecycle
@@ -152,11 +150,6 @@ class TaskCenter:
             run_id=self.run_id,
             root_task_id=self.persisted_task_id(graph.root_task_id),
             planner_task_id=self.persisted_task_id(graph.planner_task_id),
-            evaluator_task_id=(
-                self.persisted_task_id(graph.evaluator_task_id)
-                if graph.evaluator_task_id is not None
-                else None
-            ),
             executor_task_ids=[
                 self.persisted_task_id(eid) for eid in graph.executor_task_ids
             ],
@@ -275,24 +268,6 @@ class TaskCenter:
             id=id,
         )
 
-    def _create_evaluator(
-        self,
-        *,
-        input: str,
-        harness_graph_id: HarnessGraphId,
-        needs: frozenset[TaskId] = frozenset(),
-        id: TaskId | None = None,
-    ) -> Task:
-        """Add a ``Task(role='evaluator')`` to the graph store. Always PENDING."""
-        return self._create_task(
-            role="evaluator",
-            input=input,
-            harness_graph_id=harness_graph_id,
-            needs=needs,
-            status=Status.PENDING,
-            id=id,
-        )
-
     def _create_advisor(self, *, input: str) -> Task:
         """Add a transient ``Task(role='advisor')`` to the graph store.
 
@@ -377,45 +352,20 @@ class TaskCenter:
     def dependency_blocked_descendants(self, task_id: TaskId) -> list[Task]:
         return _q_dependency_blocked_descendants(self._graph, task_id)
 
-    def is_harness_graph_ready_for_evaluation(self, graph_id: HarnessGraphId) -> bool:
-        return _q_is_harness_graph_ready_for_evaluation(self._graph, graph_id)
-
     # ------------------------------------------------------------------ #
     # Mode-tool entry points                                             #
     # ------------------------------------------------------------------ #
 
     def submit_task_success(self, task_id: TaskId, summary: str) -> None:
         task = self._graph.get(task_id)
-        if task.role not in ("executor", "evaluator"):
+        if task.role != "executor":
             raise TaskCenterError(
                 f"submit_task_success: task {task_id!r} role {task.role!r} not allowed"
             )
-        if task.role == "executor":
-            executor_lifecycle.submit_task_success(self, task_id, summary)
-        else:
-            evaluator_lifecycle.submit_task_success(self, task_id, summary)
+        executor_lifecycle.submit_task_success(self, task_id, summary)
 
     def submit_task_failure(self, task_id: TaskId, summary: str) -> None:
         executor_lifecycle.submit_task_failure(self, task_id, summary)
-
-    def submit_evaluation_failure(self, task_id: TaskId, summary: str) -> None:
-        evaluator_lifecycle.submit_evaluation_failure(self, task_id, summary)
-
-    def submit_evaluation_success(self, task_id: TaskId, summary: str) -> None:
-        """Stage 7 — evaluator success terminal under the four-role-correct name.
-
-        Routes to the same lifecycle handler as the legacy polymorphic
-        ``submit_task_success`` does for evaluator tasks. The legacy entry is
-        preserved as a backward-compat shim until existing tests + scripted
-        spawns migrate over.
-        """
-        task = self._graph.get(task_id)
-        if task.role != "evaluator":
-            raise TaskCenterError(
-                f"submit_evaluation_success: task {task_id!r} role "
-                f"{task.role!r} is not evaluator"
-            )
-        evaluator_lifecycle.submit_task_success(self, task_id, summary)
 
     def submit_verification_success(self, task_id: TaskId, summary: str) -> None:
         verifier_lifecycle.submit_verification_success(self, task_id, summary)
@@ -432,48 +382,22 @@ class TaskCenter:
     def request_plan(self, task_id: TaskId, request_plan_note: str) -> None:
         planner_lifecycle.request_plan(self, task_id, request_plan_note)
 
-    def submit_plan_handoff(
-        self,
-        planner_id: TaskId,
-        tasks: list[dict[str, Any]],
-        task_inputs: dict[str, str],
-        handoff_plan_note: str,
-        evaluator_note: str,
-    ) -> None:
-        """Legacy planner terminal — kept for backward compatibility.
-
-        Stage 3 wires this through the new ``Orchestrator.materialize_full_plan``
-        path so legacy callers benefit from the structured validation matrix
-        while still surfacing ``handoff_plan_note`` on the harness graph.
-        """
-        planner_lifecycle.submit_plan_handoff(
-            self,
-            planner_id,
-            tasks,
-            task_inputs,
-            handoff_plan_note,
-            evaluator_note,
-        )
-
     def submit_full_plan(
         self,
         planner_id: TaskId,
         task_dep_graphs: list[dict[str, Any]],
         task_details: dict[str, str],
-        evaluation_specification: str,
     ) -> "MaterializationFailure | None":
-        """Stage 3 — full-plan terminal.
+        """Full-plan terminal.
 
         Returns :class:`MaterializationFailure` on validation failure (the
-        agent retains the advisor accept and can retry per Phase 1's lenient
-        policy); ``None`` on success.
+        agent can retry); ``None`` on success.
         """
         return planner_lifecycle.submit_full_plan(
             self,
             planner_id,
             task_dep_graphs,
             task_details,
-            evaluation_specification,
         )
 
     def submit_partial_plan(
@@ -482,21 +406,18 @@ class TaskCenter:
         task_dep_graphs: list[dict[str, Any]],
         task_details: dict[str, str],
         what_to_do_next: str,
-        evaluation_specification: str,
     ) -> "MaterializationFailure | None":
-        """Stage 3 — partial-plan terminal."""
+        """Partial-plan terminal."""
         return planner_lifecycle.submit_partial_plan(
             self,
             planner_id,
             task_dep_graphs,
             task_details,
             what_to_do_next,
-            evaluation_specification,
         )
 
     def _notify_child_terminal_changed(self) -> None:
-        # The dispatcher polls is_harness_graph_ready_for_evaluation each tick,
-        # so it picks up the evaluator promotion. Just wake the loop here.
+        # The dispatcher promotes PENDING tasks when their deps are DONE.
         self._wakeup.set()
 
     def _mark_terminal(self, task: Task, terminal: Status) -> None:
@@ -519,19 +440,7 @@ class TaskCenter:
         root = self._create_root_executor(prompt)
         running: dict[TaskId, asyncio.Task[None]] = {}
 
-        def _promote_ready_evaluators() -> None:
-            for graph in self._graph.harness_graphs.values():
-                if graph.evaluator_task_id is None:
-                    continue
-                evaluator = self._graph.get(graph.evaluator_task_id)
-                if evaluator.status is not Status.PENDING:
-                    continue
-                if self.is_harness_graph_ready_for_evaluation(graph.id):
-                    self._graph.transition(evaluator.id, Status.READY)
-                    self._persist_task(evaluator)
-
         def _spawn_for_ready() -> None:
-            _promote_ready_evaluators()
             for task in self._graph.ready_tasks():
                 if task.id in running:
                     continue
@@ -600,7 +509,9 @@ class TaskCenter:
         elif task.role == "advisor":
             advisor_lifecycle.handle_silent_termination(self, task, reason)
         else:
-            evaluator_lifecycle.handle_silent_termination(self, task, reason)
+            raise TaskCenterError(
+                f"silent termination for unsupported role {task.role!r}"
+            )
 
 
 # Re-export for backward compat: existing callers import TaskSummary from here.
