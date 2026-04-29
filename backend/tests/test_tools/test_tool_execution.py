@@ -210,6 +210,19 @@ class _NotifyPreHook:
         return HookResult.pass_(tool_input)
 
 
+class _ConversationMessagesPreHook:
+    target_tool = "echo_tool"
+
+    async def run(
+        self,
+        tool_input: _Args,
+        context: ToolExecutionContextService,
+    ) -> HookResult[_Args]:
+        messages = context.get("conversation_messages")
+        assert isinstance(messages, list)
+        return HookResult.pass_(_Args(value=f"{tool_input.value}:{len(messages)}"))
+
+
 class _FakeClient(SupportsStreamingMessages):
     async def stream_message(self, request):  # pragma: no cover - not used
         if False:
@@ -483,6 +496,60 @@ async def test_execute_tool_call_streaming_returns_one_tool_result_block() -> No
     assert result.content == "hi"
     assert result.is_error is False
     assert [type(event) for event in events] == [ToolExecutionStarted]
+
+
+async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
+    class _ConversationMessagesClient(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def stream_message(self, request):
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_messages",
+                                name="echo_tool",
+                                input={"value": "seen"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                )
+            else:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(role="assistant", content=[]),
+                    usage=UsageSnapshot(),
+                )
+
+    tool = _EchoTool()
+    tool.pre_hooks = (_ConversationMessagesPreHook(),)
+    registry = ToolRegistry()
+    registry.register(tool)
+    context = QueryContext(
+        api_client=_ConversationMessagesClient(),
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+
+    initial_messages = [ConversationMessage.from_user_text("start")]
+    messages, stream = await run_query(context, initial_messages)
+    async for _event, _usage in stream:
+        pass
+
+    assert [message.role for message in messages] == [
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+    ]
+    assert tool.seen == ["seen:2"]
 
 
 async def test_query_loop_emits_hook_notification_without_history_prompt() -> None:

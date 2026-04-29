@@ -203,11 +203,17 @@ def _initialize_loop_state(
 async def _build_stream_executor(
     context: QueryContext,
     background_manager: BackgroundTaskManager | None,
+    messages: list[ConversationMessage],
 ) -> StreamingToolExecutor:
     """Build the streaming tool executor for this provider request."""
+    metadata = (
+        context.tool_metadata.copy()
+        if context.tool_metadata is not None
+        else ExecutionMetadata()
+    ).with_overrides(conversation_messages=messages)
     execution_context = ToolExecutionContextService(
         cwd=context.cwd,
-        services=context.tool_metadata,
+        services=metadata,
     )
     executor = StreamingToolExecutor(
         tool_registry=context.tool_registry,
@@ -309,6 +315,7 @@ async def _handle_tool_dispatch_branch(
 
     dispatch = await dispatch_assistant_tools(
         context,
+        messages,
         final_message,
         executor,
         streamed_rejections=state.streamed_rejections,
@@ -359,7 +366,7 @@ async def _run_query_loop(
     background_manager, notification_service = _initialize_loop_state(context)
 
     while True:
-        executor = await _build_stream_executor(context, background_manager)
+        executor = await _build_stream_executor(context, background_manager, messages)
 
         # Evaluate notification rules and drain any reminders into the
         # transcript before building the next provider request, so newly-

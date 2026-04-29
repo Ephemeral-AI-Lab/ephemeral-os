@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.tool_trace import record_tool_trace
-from message.messages import ToolResultBlock, ToolUseBlock
+from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     BackgroundTaskStarted,
     StreamEvent,
@@ -147,6 +147,7 @@ def launch_background_tool(
 
 def launch_and_collect_bg_events(
     context: QueryContext,
+    conversation_messages: list[ConversationMessage],
     background_manager: BackgroundTaskManager,
     tc: ToolUseBlock,
     tool_results: list[ToolResultBlock],
@@ -178,6 +179,7 @@ def launch_and_collect_bg_events(
             tool_input,
             emit=emit,
             extra_metadata=extra_metadata,
+            conversation_messages=conversation_messages,
         )
 
     tool_result, bg_event, reject_event = launch_background_tool(

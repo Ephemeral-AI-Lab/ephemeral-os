@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+from message.messages import ConversationMessage
 from message.messages import ToolResultBlock
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from tools.core.base import BaseTool
@@ -86,6 +87,7 @@ async def execute_tool_call(
     tool_use_id: str,
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    conversation_messages: list[ConversationMessage] | None = None,
 ) -> ToolResultBlock:
     async def _noop_emit(event: StreamEvent) -> None:
         del event
@@ -96,6 +98,7 @@ async def execute_tool_call(
         tool_use_id,
         tool_input,
         extra_metadata=extra_metadata,
+        conversation_messages=conversation_messages,
         emit=_noop_emit,
         emit_started=False,
     )
@@ -109,6 +112,7 @@ async def execute_tool_call_streaming(
     *,
     emit: "EmitStreamEvent",
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    conversation_messages: list[ConversationMessage] | None = None,
     consume_budget: bool = True,
     emit_started: bool = True,
 ) -> ToolResultBlock:
@@ -131,6 +135,8 @@ async def execute_tool_call_streaming(
     )
     metadata.tool_registry = context.tool_registry
     metadata.tool_id = tool_use_id
+    if conversation_messages is not None:
+        metadata = metadata.with_overrides(conversation_messages=conversation_messages)
     if extra_metadata:
         metadata.update(extra_metadata)
 

@@ -64,6 +64,7 @@ def _assign_missing_tool_result_ids(
 
 async def dispatch_assistant_tools(
     context: QueryContext,
+    messages: list[ConversationMessage],
     final_message: ConversationMessage,
     executor: StreamingToolExecutor,
     *,
@@ -95,6 +96,7 @@ async def dispatch_assistant_tools(
             events.extend(
                 launch_and_collect_bg_events(
                     context,
+                    messages,
                     background_manager,
                     tc,
                     tool_results,
@@ -106,6 +108,7 @@ async def dispatch_assistant_tools(
         events.extend(
             await _dispatch_deferred_tool_calls(
                 context,
+                messages,
                 final_message.tool_uses,
                 streamed_tool_use_ids=streamed_tool_use_ids,
                 background_manager=background_manager,
@@ -119,6 +122,7 @@ async def dispatch_assistant_tools(
 
 async def _dispatch_deferred_tool_calls(
     context: QueryContext,
+    messages: list[ConversationMessage],
     tool_calls: list[ToolUseBlock],
     *,
     streamed_tool_use_ids: set[str],
@@ -160,6 +164,7 @@ async def _dispatch_deferred_tool_calls(
             events.extend(
                 launch_and_collect_bg_events(
                     context,
+                    messages,
                     background_manager,
                     tc,
                     tool_results,
@@ -172,6 +177,7 @@ async def _dispatch_deferred_tool_calls(
         events.extend(
             await _dispatch_single_foreground_tool(
                 context,
+                messages,
                 foreground_calls[0],
                 streamed_tool_use_ids=streamed_tool_use_ids,
                 tool_results=tool_results,
@@ -181,6 +187,7 @@ async def _dispatch_deferred_tool_calls(
         events.extend(
             await _dispatch_many_foreground_tools(
                 context,
+                messages,
                 foreground_calls,
                 streamed_tool_use_ids=streamed_tool_use_ids,
                 tool_results=tool_results,
@@ -191,6 +198,7 @@ async def _dispatch_deferred_tool_calls(
 
 async def _dispatch_single_foreground_tool(
     context: QueryContext,
+    messages: list[ConversationMessage],
     tc: ToolUseBlock,
     *,
     streamed_tool_use_ids: set[str],
@@ -207,6 +215,7 @@ async def _dispatch_single_foreground_tool(
         tc.id,
         tc.input,
         emit=emit,
+        conversation_messages=messages,
         consume_budget=tc.id not in streamed_tool_use_ids,
     )
     tool_results.append(result)
@@ -231,6 +240,7 @@ async def _dispatch_single_foreground_tool(
 
 async def _dispatch_many_foreground_tools(
     context: QueryContext,
+    messages: list[ConversationMessage],
     foreground_calls: list[ToolUseBlock],
     *,
     streamed_tool_use_ids: set[str],
@@ -250,6 +260,7 @@ async def _dispatch_many_foreground_tools(
                 tc.id,
                 tc.input,
                 emit=emit,
+                conversation_messages=messages,
                 consume_budget=tc.id not in streamed_tool_use_ids,
             )
         except Exception as exc:
