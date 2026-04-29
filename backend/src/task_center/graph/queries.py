@@ -15,10 +15,12 @@ _TERMINAL_STATUSES: frozenset[Status] = frozenset({Status.DONE, Status.FAILED})
 
 
 def dependency_blocked_descendants(graph: TaskGraph, task_id: TaskId) -> list[Task]:
-    """Return non-terminal executor tasks whose dependency path now contains ``task_id``.
+    """Return non-terminal generator tasks whose dependency path now contains ``task_id``.
 
-    Evaluators are excluded — they dispatch via harness graph readiness and
-    must see FAILED sibling executors instead of being short-circuited.
+    Generators (executors and verifiers) cascade-fail together when an
+    upstream dependency fails. Evaluators are excluded — they dispatch via
+    harness graph readiness and must see FAILED sibling generators instead
+    of being short-circuited.
     """
     out: list[Task] = []
     seen: set[TaskId] = set()
@@ -28,7 +30,7 @@ def dependency_blocked_descendants(graph: TaskGraph, task_id: TaskId) -> list[Ta
         for candidate in graph.tasks.values():
             if candidate.id in seen or candidate.id == task_id:
                 continue
-            if candidate.role != "executor":
+            if candidate.role not in ("executor", "verifier"):
                 continue
             if current in candidate.needs and candidate.status not in _TERMINAL_STATUSES:
                 seen.add(candidate.id)

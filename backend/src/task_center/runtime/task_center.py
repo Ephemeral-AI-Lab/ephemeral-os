@@ -33,6 +33,7 @@ from task_center.graph import (
 from task_center.harness_agents.evaluator import lifecycle as evaluator_lifecycle
 from task_center.harness_agents.executor import lifecycle as executor_lifecycle
 from task_center.harness_agents.planner import lifecycle as planner_lifecycle
+from task_center.harness_agents.verifier import lifecycle as verifier_lifecycle
 from task_center.model import (
     HarnessGraph,
     HarnessGraphId,
@@ -346,6 +347,12 @@ class TaskCenter:
     def submit_evaluation_failure(self, task_id: TaskId, summary: str) -> None:
         evaluator_lifecycle.submit_evaluation_failure(self, task_id, summary)
 
+    def submit_verification_success(self, task_id: TaskId, summary: str) -> None:
+        verifier_lifecycle.submit_verification_success(self, task_id, summary)
+
+    def submit_verification_failure(self, task_id: TaskId, summary: str) -> None:
+        verifier_lifecycle.submit_verification_failure(self, task_id, summary)
+
     def request_plan(self, task_id: TaskId, request_plan_note: str) -> None:
         planner_lifecycle.request_plan(self, task_id, request_plan_note)
 
@@ -467,6 +474,8 @@ class TaskCenter:
             executor_lifecycle.handle_silent_termination(self, task, reason)
         elif task.role == "planner":
             planner_lifecycle.handle_silent_termination(self, task, reason)
+        elif task.role == "verifier":
+            verifier_lifecycle.handle_silent_termination(self, task, reason)
         else:
             evaluator_lifecycle.handle_silent_termination(self, task, reason)
 

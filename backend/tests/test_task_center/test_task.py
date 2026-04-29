@@ -11,8 +11,17 @@ from task_center import (
 )
 
 
-def test_status_enum_has_exactly_six_values() -> None:
-    expected = ["pending", "ready", "running", "handoff", "done", "failed"]
+def test_status_enum_has_exactly_seven_values() -> None:
+    # Stage 2 of the four-role roadmap added FIXING for verifier recovery.
+    expected = [
+        "pending",
+        "ready",
+        "running",
+        "handoff",
+        "done",
+        "failed",
+        "fixing",
+    ]
     assert [s.value for s in Status] == expected
 
 

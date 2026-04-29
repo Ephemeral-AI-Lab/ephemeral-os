@@ -25,6 +25,11 @@ class Status(str, Enum):
     HANDOFF = "handoff"
     DONE = "done"
     FAILED = "failed"
+    # Stage 2 of the four-role roadmap: a verifier that emitted
+    # ``submit_verification_failure`` enters FIXING while a fix-executor
+    # is in flight (Stage 6). Stage 2 itself does not transition into
+    # FIXING — that wiring lands with the fix-executor primitive.
+    FIXING = "fixing"
 
 
 TaskRole = Literal["executor", "planner", "verifier", "evaluator"]
