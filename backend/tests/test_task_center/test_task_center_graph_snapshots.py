@@ -74,11 +74,14 @@ async def test_plan_handoff_persists_harness_graph_with_planner_executors_and_ev
         tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
-        tc.submit_plan_handoff(
+        # Stage 7: legacy submit_plan_handoff dropped → submit_full_plan.
+        tc.submit_full_plan(
             tid,
-            [{"id": "left"}, {"id": "right", "deps": ["left"]}],
+            [
+                {"id": "left", "deps": [], "role": "executor"},
+                {"id": "right", "deps": ["left"], "role": "executor"},
+            ],
             {"left": "do left", "right": "do right"},
-            "left then right",
             "evaluate",
         )
 
@@ -131,13 +134,23 @@ async def test_nested_plan_handoffs_persist_two_harness_graphs() -> None:
         tc.request_plan(tid, "outer")
 
     async def outer_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "x"}], {"x": "complex"}, "outer", "evaluate")
+        tc.submit_full_plan(
+            tid,
+            [{"id": "x", "deps": [], "role": "executor"}],
+            {"x": "complex"},
+            "evaluate",
+        )
 
     async def x_action(tc, tid):
         tc.request_plan(tid, "x decompose")
 
     async def inner_planner(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "y"}], {"y": "do y"}, "inner", "evaluate")
+        tc.submit_full_plan(
+            tid,
+            [{"id": "y", "deps": [], "role": "executor"}],
+            {"y": "do y"},
+            "evaluate",
+        )
 
     async def y_action(tc, tid):
         tc.submit_task_success(tid, "y done")

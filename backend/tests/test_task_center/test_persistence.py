@@ -54,7 +54,14 @@ async def test_task_center_persists_request_run_tasks_and_harness_graph() -> Non
         tc.request_plan(tid, "decompose")
 
     async def planner_action(tc, tid):
-        tc.submit_plan_handoff(tid, [{"id": "child"}], {"child": "child input"}, "h", "evaluate")
+        # Stage 7: legacy submit_plan_handoff dropped; planners now emit
+        # submit_full_plan with explicit DAG roles.
+        tc.submit_full_plan(
+            tid,
+            [{"id": "child", "deps": [], "role": "executor"}],
+            {"child": "child input"},
+            "evaluate",
+        )
 
     async def child_action(tc, tid):
         tc.submit_task_success(tid, "child done")

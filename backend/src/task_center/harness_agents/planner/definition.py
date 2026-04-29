@@ -31,7 +31,6 @@ PLANNER = AgentDefinition(
     system_prompt=load_system_prompt(),
     allowed_tools=list(PLANNER_TOOLS),
     terminals=[
-        "submit_plan_handoff",  # legacy — Stage 7 drops this
         "submit_full_plan",
         "submit_partial_plan",
     ],

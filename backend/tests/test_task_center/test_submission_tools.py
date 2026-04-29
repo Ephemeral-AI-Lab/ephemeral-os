@@ -19,10 +19,6 @@ from tools.mode_tool.submit_evaluation_failure import (
     EvaluationFailureInput,
     submit_evaluation_failure,
 )
-from tools.mode_tool.submit_plan_handoff import (
-    PlanHandoffInput,
-    submit_plan_handoff,
-)
 from tools.mode_tool.submit_task_failure import (
     TaskFailureInput,
     submit_task_failure,
@@ -49,28 +45,6 @@ class _FakeTC:
 
     def request_plan(self, task_id, request_plan_note):
         self.calls.append(("request_plan", task_id, request_plan_note))
-
-    def submit_plan_handoff(
-        self,
-        task_id,
-        tasks,
-        task_inputs,
-        handoff_plan_note,
-        evaluator_note,
-    ):
-        from task_center.graph import compile_dag
-
-        compile_dag(tasks, task_inputs)
-        self.calls.append(
-            (
-                "plan_handoff",
-                task_id,
-                tasks,
-                task_inputs,
-                handoff_plan_note,
-                evaluator_note,
-            )
-        )
 
 
 def _ctx(tc, *, task_id="self", role="executor") -> ToolExecutionContextService:
@@ -189,50 +163,6 @@ async def test_request_plan_executor_or_evaluator() -> None:
     assert tc.calls == [("request_plan", "x", "please plan")]
 
 
-# --- submit_plan_handoff ---
-
-
-@pytest.mark.asyncio
-async def test_plan_handoff_planner_only() -> None:
-    tc = _FakeTC()
-    arg = PlanHandoffInput(
-        tasks=[{"id": "A"}],
-        task_inputs={"A": "do A"},
-        handoff_plan_note="root",
-        evaluator_note="verify A landed",
-    )
-    res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="executor"))
-    assert res.is_error is True
-    assert "planner-only" in res.output
-    assert tc.calls == []
-
-
-@pytest.mark.asyncio
-async def test_plan_handoff_accepts_planner() -> None:
-    tc = _FakeTC()
-    arg = PlanHandoffInput(
-        tasks=[{"id": "A"}, {"id": "B", "deps": ["A"]}],
-        task_inputs={"A": "do A", "B": "do B"},
-        handoff_plan_note="A then B",
-        evaluator_note="verify B observes A's output",
-    )
-    res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="planner"))
-    assert res.is_error is False
-    assert tc.calls[0][0] == "plan_handoff"
-    assert tc.calls[0][4] == "A then B"
-    assert tc.calls[0][5] == "verify B observes A's output"
-
-
-@pytest.mark.asyncio
-async def test_plan_handoff_rejects_cycle() -> None:
-    tc = _FakeTC()
-    arg = PlanHandoffInput(
-        tasks=[{"id": "A", "deps": ["B"]}, {"id": "B", "deps": ["A"]}],
-        task_inputs={"A": "do A", "B": "do B"},
-        handoff_plan_note="cycle",
-        evaluator_note="cycle",
-    )
-    res = await submit_plan_handoff.execute(arg, _ctx(tc, task_id="p", role="planner"))
-    assert res.is_error is True
-    assert "rejected" in res.output
-    assert tc.calls == []
+# Stage 7: legacy submit_plan_handoff tool dropped — its tests removed.
+# The Stage 3 submit_full_plan / submit_partial_plan terminals replace it
+# and are exercised by tests/test_task_center/test_materialization.py.
