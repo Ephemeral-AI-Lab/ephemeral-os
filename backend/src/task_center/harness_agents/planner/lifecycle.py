@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, Any
 from task_center.errors import TaskCenterError
 from task_center.graph import compile_dag, plan_sinks, validate_task_ids_available
 from task_center.harness_agents.planner.context import build_planner_launch_context
-from task_center.model import HarnessGraph, Status, Task, TaskId, TaskSummary
+from task_center.model import Status, Task, TaskId, TaskSummary
 
 if TYPE_CHECKING:
-    from task_center.runtime.orchestrator import TaskCenter
+    from task_center.runtime.task_center import TaskCenter
 
 
 def request_plan(tc: "TaskCenter", task_id: TaskId, request_plan_note: str) -> None:
@@ -19,6 +19,8 @@ def request_plan(tc: "TaskCenter", task_id: TaskId, request_plan_note: str) -> N
     The caller's input becomes the new graph's ``root_goal``; ``request_plan_note``
     is captured verbatim. Together they form the planner's prompt context.
     """
+    from task_center.runtime.orchestrator import Orchestrator
+
     caller = tc.graph.get(task_id)
     if caller.role not in ("executor", "evaluator"):
         raise TaskCenterError(
@@ -30,26 +32,18 @@ def request_plan(tc: "TaskCenter", task_id: TaskId, request_plan_note: str) -> N
     )
     tc.graph.transition(caller.id, Status.HANDOFF)
 
-    graph_id = tc._new_graph_id()
-    planner_id = tc._new_id()
-    graph = HarnessGraph(
-        id=graph_id,
-        run_id=tc.run_id or "",
+    orch = Orchestrator.spawn(
+        tc,
         root_task_id=caller.id,
-        planner_task_id=planner_id,
-        root_goal=caller.input,
         request_plan_note=request_plan_note,
     )
-    context = build_planner_launch_context(graph)
-    planner = Task(
-        id=planner_id,
-        role="planner",
-        input=context.to_planner_input(),
-        status=Status.READY,
-        task_center_harness_graph_id=graph_id,
-    )
-    tc.graph.add(planner)
-    tc.graph.add_harness_graph(graph)
+    # The planner's input is built from a launch context (root_goal +
+    # request_plan_note). ``Orchestrator.spawn`` seeded it with the raw
+    # request_plan_note; rewrite it through the formal context-builder so
+    # downstream prompt rendering keeps the historical structure.
+    planner = orch.planner
+    planner.input = build_planner_launch_context(orch.graph).to_planner_input()
+
     tc._persist_all()
     tc._wakeup.set()
 
@@ -93,27 +87,24 @@ def submit_plan_handoff(
     for entry in tasks:
         tid = entry["id"]
         child_status = Status.READY if not deps[tid] else Status.PENDING
-        child = Task(
-            id=tid,
-            role="executor",
+        child = tc._create_executor(
             input=task_inputs[tid],
-            status=child_status,
-            task_center_harness_graph_id=graph.id,
+            harness_graph_id=graph.id,
             needs=deps[tid],
+            status=child_status,
+            id=tid,
         )
-        tc.graph.add(child)
-        graph.executor_task_ids.append(tid)
+        graph.executor_task_ids.append(child.id)
+        graph.dag_nodes.append(child.id)
 
-    evaluator = Task(
-        id=evaluator_id,
-        role="evaluator",
+    evaluator = tc._create_evaluator(
         input=evaluator_note,
-        status=Status.PENDING,
-        task_center_harness_graph_id=graph.id,
+        harness_graph_id=graph.id,
         needs=sinks,
+        id=evaluator_id,
     )
-    tc.graph.add(evaluator)
-    graph.evaluator_task_id = evaluator_id
+    graph.evaluator_task_id = evaluator.id
+    graph.evaluator = evaluator.id
 
     tc._persist_all()
     tc._wakeup.set()

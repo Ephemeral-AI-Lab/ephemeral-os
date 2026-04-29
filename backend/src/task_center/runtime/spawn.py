@@ -19,7 +19,7 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Mapping
 
 if TYPE_CHECKING:
-    from task_center.runtime.orchestrator import TaskCenter
+    from task_center.runtime.task_center import TaskCenter
 
 logger = logging.getLogger(__name__)
 

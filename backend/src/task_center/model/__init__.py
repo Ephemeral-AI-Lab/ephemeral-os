@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from task_center.model.harness import HarnessGraph
+from task_center.model.role import GeneratorRole
 from task_center.model.task import (
     HarnessGraphId,
     Status,
@@ -13,6 +14,7 @@ from task_center.model.task import (
 )
 
 __all__ = [
+    "GeneratorRole",
     "HarnessGraph",
     "HarnessGraphId",
     "Status",

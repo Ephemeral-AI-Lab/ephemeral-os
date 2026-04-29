@@ -9,7 +9,7 @@ from task_center.model import HarnessGraphId, Status, Task, TaskId, TaskSummary
 from task_center.summaries import latest_summary_text
 
 if TYPE_CHECKING:
-    from task_center.runtime.orchestrator import TaskCenter
+    from task_center.runtime.task_center import TaskCenter
 
 
 def submit_task_success(tc: "TaskCenter", task_id: TaskId, summary: str) -> None:

@@ -9,23 +9,20 @@ from task_center.graph import dependency_blocked_descendants
 from task_center.model import Status, Task, TaskId, TaskSummary
 
 if TYPE_CHECKING:
-    from task_center.runtime.orchestrator import TaskCenter
+    from task_center.runtime.task_center import TaskCenter
 
 
 def create_root_executor(tc: "TaskCenter", prompt: str) -> Task:
-    """Create the root executor task for a user query."""
-    task = Task(
-        id=tc._new_id(),
-        role="executor",
-        input=prompt,
-        status=Status.READY,
-        task_center_harness_graph_id=None,
-    )
-    tc.graph.add(task)
-    if tc._task_center_store is not None and tc.run_id is not None:
-        tc._task_center_store.set_run_root(tc.run_id, tc.persisted_task_id(task.id))
-    tc._persist_task(task)
-    return task
+    """Create the root executor task for a user query.
+
+    Uses the ``RunController`` so the root_exec creation goes through the
+    same primitive (:meth:`TaskCenter._create_executor`) every other
+    executor uses. The root asymmetry (no harness graph, no needs) is
+    captured by ``RunController.start``.
+    """
+    from task_center.runtime.run_controller import RunController
+
+    return RunController(tc=tc).start(prompt)
 
 
 def submit_task_success(tc: "TaskCenter", task_id: TaskId, summary: str) -> None:
