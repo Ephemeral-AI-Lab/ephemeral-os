@@ -372,6 +372,22 @@ class TaskCenter:
     def submit_evaluation_failure(self, task_id: TaskId, summary: str) -> None:
         evaluator_lifecycle.submit_evaluation_failure(self, task_id, summary)
 
+    def submit_evaluation_success(self, task_id: TaskId, summary: str) -> None:
+        """Stage 7 — evaluator success terminal under the four-role-correct name.
+
+        Routes to the same lifecycle handler as the legacy polymorphic
+        ``submit_task_success`` does for evaluator tasks. The legacy entry is
+        preserved as a backward-compat shim until existing tests + scripted
+        spawns migrate over.
+        """
+        task = self._graph.get(task_id)
+        if task.role != "evaluator":
+            raise TaskCenterError(
+                f"submit_evaluation_success: task {task_id!r} role "
+                f"{task.role!r} is not evaluator"
+            )
+        evaluator_lifecycle.submit_task_success(self, task_id, summary)
+
     def submit_verification_success(self, task_id: TaskId, summary: str) -> None:
         verifier_lifecycle.submit_verification_success(self, task_id, summary)
 

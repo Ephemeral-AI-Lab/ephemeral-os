@@ -31,6 +31,11 @@ EVALUATOR = AgentDefinition(
     system_prompt=load_system_prompt(),
     allowed_tools=list(DIRECT_WORK_TOOLS),
     terminals=[
+        # Stage 7 four-role rename: agent.md now directs evaluators at the
+        # new ``submit_evaluation_success`` terminal. ``submit_task_success``
+        # stays in the allowed list as a polymorphic backward-compat path
+        # while existing tests + scripted spawns migrate.
+        "submit_evaluation_success",
         "submit_task_success",
         "submit_evaluation_failure",
         "request_plan",
