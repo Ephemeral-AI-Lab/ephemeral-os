@@ -90,6 +90,10 @@ class TaskCenterTaskRecord(Base):
     task_center_harness_graph_id: Mapped[str | None] = mapped_column(
         String(96), nullable=True
     )
+    # Stage 6: fix-executor recovery wiring (round-tripped to/from
+    # ``Task.fix_target_id`` / ``Task.spawn_reason``).
+    fix_target_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    spawn_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -125,6 +129,17 @@ class TaskCenterHarnessGraphRecord(Base):
     planner_task_id: Mapped[str] = mapped_column(String(96))
     evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     executor_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Stage 1/3/5 four-role roadmap fields:
+    # ``dag_nodes`` is the union of executor + verifier ids the planner
+    # emitted (Stage 3 introduced verifier nodes in DAGs). ``plan_shape``
+    # / ``what_to_do_next`` capture the partial-vs-full distinction
+    # surfaced in the new submit_full_plan / submit_partial_plan
+    # terminals. ``prior_graph_id`` back-links the partial-plan
+    # continuation chain (Stage 5).
+    dag_nodes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    plan_shape: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    what_to_do_next: Mapped[str] = mapped_column(Text, default="")
+    prior_graph_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

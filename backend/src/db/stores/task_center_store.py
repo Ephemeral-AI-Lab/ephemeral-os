@@ -49,6 +49,8 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict:
         "summaries": record.summaries or [],
         "needs": record.needs or [],
         "task_center_harness_graph_id": record.task_center_harness_graph_id,
+        "fix_target_id": record.fix_target_id,
+        "spawn_reason": record.spawn_reason,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -62,6 +64,10 @@ def _serialize_harness_graph(record: TaskCenterHarnessGraphRecord) -> dict:
         "planner_task_id": record.planner_task_id,
         "evaluator_task_id": record.evaluator_task_id,
         "executor_task_ids": record.executor_task_ids or [],
+        "dag_nodes": record.dag_nodes or [],
+        "plan_shape": record.plan_shape,
+        "what_to_do_next": record.what_to_do_next or "",
+        "prior_graph_id": record.prior_graph_id,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -165,6 +171,8 @@ class TaskCenterStore(SyncStoreMixin):
         summaries: list[dict],
         needs: list[str],
         task_center_harness_graph_id: str | None,
+        fix_target_id: str | None = None,
+        spawn_reason: str | None = None,
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -179,6 +187,8 @@ class TaskCenterStore(SyncStoreMixin):
                     summaries=summaries,
                     needs=needs,
                     task_center_harness_graph_id=task_center_harness_graph_id,
+                    fix_target_id=fix_target_id,
+                    spawn_reason=spawn_reason,
                     created_at=now,
                     updated_at=now,
                 )
@@ -190,6 +200,8 @@ class TaskCenterStore(SyncStoreMixin):
                 record.summaries = summaries
                 record.needs = needs
                 record.task_center_harness_graph_id = task_center_harness_graph_id
+                record.fix_target_id = fix_target_id
+                record.spawn_reason = spawn_reason
                 record.updated_at = now
             db.commit()
 
@@ -202,6 +214,10 @@ class TaskCenterStore(SyncStoreMixin):
         planner_task_id: str,
         evaluator_task_id: str | None,
         executor_task_ids: list[str],
+        dag_nodes: list[str] | None = None,
+        plan_shape: str | None = None,
+        what_to_do_next: str = "",
+        prior_graph_id: str | None = None,
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -214,6 +230,10 @@ class TaskCenterStore(SyncStoreMixin):
                     planner_task_id=planner_task_id,
                     evaluator_task_id=evaluator_task_id,
                     executor_task_ids=executor_task_ids,
+                    dag_nodes=list(dag_nodes) if dag_nodes is not None else [],
+                    plan_shape=plan_shape,
+                    what_to_do_next=what_to_do_next or "",
+                    prior_graph_id=prior_graph_id,
                     created_at=now,
                     updated_at=now,
                 )
@@ -223,6 +243,11 @@ class TaskCenterStore(SyncStoreMixin):
                 record.planner_task_id = planner_task_id
                 record.evaluator_task_id = evaluator_task_id
                 record.executor_task_ids = executor_task_ids
+                if dag_nodes is not None:
+                    record.dag_nodes = list(dag_nodes)
+                record.plan_shape = plan_shape
+                record.what_to_do_next = what_to_do_next or ""
+                record.prior_graph_id = prior_graph_id
                 record.updated_at = now
             db.commit()
 

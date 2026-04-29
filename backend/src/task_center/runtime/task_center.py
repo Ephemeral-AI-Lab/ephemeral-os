@@ -135,6 +135,12 @@ class TaskCenter:
                 if task.task_center_harness_graph_id is not None
                 else None
             ),
+            fix_target_id=(
+                self.persisted_task_id(task.fix_target_id)
+                if task.fix_target_id is not None
+                else None
+            ),
+            spawn_reason=task.spawn_reason,
         )
 
     def _persist_harness_graph(self, graph: HarnessGraph) -> None:
@@ -153,6 +159,16 @@ class TaskCenter:
             executor_task_ids=[
                 self.persisted_task_id(eid) for eid in graph.executor_task_ids
             ],
+            dag_nodes=[
+                self.persisted_task_id(nid) for nid in graph.dag_nodes
+            ],
+            plan_shape=graph.plan_shape,
+            what_to_do_next=graph.what_to_do_next,
+            prior_graph_id=(
+                self.persisted_graph_id(graph.prior_graph_id)
+                if graph.prior_graph_id is not None
+                else None
+            ),
         )
 
     def _persist_all(self) -> None:
