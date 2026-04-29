@@ -118,18 +118,6 @@ async def test_evaluation_failure_evaluator_only() -> None:
 @pytest.mark.asyncio
 async def test_evaluation_failure_accepts_evaluator() -> None:
     tc = _FakeTC()
-    # Stage 4 gating: record an advisor accept matching this terminal+payload
-    # so the pre-hook permits the call.
-    from task_center.runtime.pre_hooks import record_accept
-
-    record_accept(
-        tc,
-        caller_id="ev",
-        terminal_tool="submit_evaluation_failure",
-        proposed_input={"summary": "nope"},
-        verdict="accept",
-        reason="advisor approved",
-    )
     res = await submit_evaluation_failure.execute(
         EvaluationFailureInput(summary="nope"),
         _ctx(tc, task_id="ev", role="evaluator"),
@@ -144,17 +132,6 @@ async def test_evaluation_failure_accepts_evaluator() -> None:
 @pytest.mark.asyncio
 async def test_request_plan_executor_or_evaluator() -> None:
     tc = _FakeTC()
-    # Stage 4 gating: record an advisor accept matching this terminal+payload.
-    from task_center.runtime.pre_hooks import record_accept
-
-    record_accept(
-        tc,
-        caller_id="x",
-        terminal_tool="request_plan",
-        proposed_input={"request_plan_note": "please plan"},
-        verdict="accept",
-        reason="advisor approved",
-    )
     res = await request_plan.execute(
         RequestPlanInput(request_plan_note="please plan"),
         _ctx(tc, task_id="x", role="executor"),

@@ -3,11 +3,10 @@
 The advisor runs as a transient ``Task(role='advisor')`` dispatched by the
 TaskCenter run loop. ``ask_advisor`` polls the task's status until it
 terminates (DONE / FAILED), then decodes the verdict from the task's
-last summary and stashes the AdvisorAccept on the calling task's
-pre-hook slot.
+last summary and returns it.
 
-Phase 1 polling cadence: 50ms tight-loop sleep. Adequate for advisors
-that take seconds; Phase 2 may swap in an asyncio.Event keyed on the
+Polling cadence: 50ms tight-loop sleep. Adequate for advisors that take
+seconds; a future iteration may swap in an asyncio.Event keyed on the
 advisor's terminal transition.
 """
 
@@ -20,7 +19,6 @@ from pydantic import BaseModel, Field
 
 from task_center.harness_agents.advisor.lifecycle import decode_verdict
 from task_center.model import Status
-from task_center.runtime.pre_hooks import record_accept
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 
@@ -118,14 +116,6 @@ async def ask_advisor(
     else:
         verdict, advisor_reason = decode_verdict(advisor_task.summaries[-1].text)
 
-    record_accept(
-        tc,
-        caller_id=caller_id,
-        terminal_tool=terminal_tool,
-        proposed_input=proposed_input,
-        verdict=verdict,
-        reason=advisor_reason,
-    )
     return ToolResult(
         output=AskAdvisorOutput(verdict=verdict, reason=advisor_reason).model_dump_json()
     )

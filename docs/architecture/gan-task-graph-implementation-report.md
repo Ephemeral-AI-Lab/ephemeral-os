@@ -308,8 +308,8 @@ class PlannerLaunchContext:
 | `backend/src/tools/mode_tool/__init__.py` | New tool registration |
 | `backend/src/tools/mode_tool/_models.py` | Removed `TaskSpec` |
 | `backend/src/tools/mode_tool/submit_plan_handoff.py` | Planner-only; signature changed to `tasks`, `task_inputs`, `handoff_summary` |
-| `backend/src/task_center/harness_agents/{planner,executor,evaluator}/definition.py` | Role-local agent definitions loaded from sibling `agent.md` files |
-| `backend/src/agents/builtins.py` | Registers role-local harness agents plus the explorer subagent |
+| `backend/src/task_center/harness_agents/{planner,executor,evaluator,verifier,explorer,advisor}/definition.py` | Role-local agent definitions loaded from sibling `agent.md` files |
+| `backend/src/agents/builtins.py` | Registers role-local harness agents |
 | `backend/src/agents/types.py` | Default mode terminal renamed |
 | `backend/src/db/models/task_center.py` | Reshaped: `TaskCenterHarnessGraphRecord` (one row per harness graph); `TaskCenterTaskRecord` carries `summaries`/`needs`/`task_center_harness_graph_id` |
 | `backend/src/db/stores/task_center_store.py` | New `upsert_harness_graph` + `list_harness_graphs_for_run` |

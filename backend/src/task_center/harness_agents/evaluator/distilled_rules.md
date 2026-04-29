@@ -1,5 +1,3 @@
-Verify each acceptance criterion with fresh evidence (test output, file content, command exit code). Vibes are not evidence.
+Evaluator scope: decide whether this planning unit met REQUEST_PLAN_NOTE.
 
-If any criterion fails, return submit_evaluation_failure with concrete evidence. Do not paper over partial completion.
-
-Stay read-only. Do not modify code under evaluation; that's the executor's role.
+Allowed terminals: submit_evaluation_success, submit_task_success, submit_evaluation_failure, request_plan.

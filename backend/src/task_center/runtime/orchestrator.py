@@ -216,7 +216,10 @@ class Orchestrator:
                 id=nid,
             )
             graph.dag_nodes.append(child.id)
-            graph.executor_task_ids.append(child.id)
+            # Legacy ``executor_task_ids`` mirrors only the executor
+            # subset; verifier ids live on ``dag_nodes`` exclusively.
+            if role == "executor":
+                graph.executor_task_ids.append(child.id)
 
         evaluator_id = f"{planner.id}-eval"
         evaluator = self.tc._create_evaluator(
@@ -257,7 +260,7 @@ class Orchestrator:
             TaskSummary(
                 kind="segment_success",
                 text=summary,
-                source_task_id=graph.evaluator if graph.evaluator else planner.id,
+                source_task_id=graph.evaluator if graph.evaluator is not None else planner.id,
             )
         )
         # root_task stays in HANDOFF — explicitly NOT transitioned. The
@@ -394,13 +397,14 @@ class Orchestrator:
     # graph-scoped facade callers reach for.                             #
     # ------------------------------------------------------------------ #
 
-    def close_success(self, summary: str) -> None:
-        """Full-plan closure: planner DONE, root_task DONE, propagate up."""
-        # Local import to avoid a runtime cycle: evaluator_lifecycle is
-        # imported by task_center.py, which is imported here at module load.
+    def close_success(self) -> None:
+        """Full-plan closure: planner DONE, root_task DONE, propagate up.
+
+        The evaluator's success summary was attached by its terminal handler
+        before this facade was called; closure is a state-only step.
+        """
         from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
 
-        del summary  # state-only path; evaluator's summary already attached
         evaluator = self.evaluator
         if evaluator is None:
             raise RuntimeError(
@@ -410,11 +414,10 @@ class Orchestrator:
             self.tc, self.graph_id, evaluator.id
         )
 
-    def close_failure(self, summary: str) -> None:
+    def close_failure(self) -> None:
         """Full-plan / partial-plan closure when the evaluator hard-fails."""
         from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
 
-        del summary
         evaluator = self.evaluator
         if evaluator is None:
             raise RuntimeError(

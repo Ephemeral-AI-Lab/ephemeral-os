@@ -115,7 +115,7 @@ def test_create_advisor_creates_ready_transient_task() -> None:
     """Stage 4 replaced the Stage 1 stub; the primitive now produces a real
     READY advisor task with no harness graph (transient by design)."""
     tc = _new_tc()
-    advisor = tc._create_advisor(input="ask", caller_id="t1")
+    advisor = tc._create_advisor(input="ask")
     assert advisor.role == "advisor"
     assert advisor.status is Status.READY
     assert advisor.task_center_harness_graph_id is None

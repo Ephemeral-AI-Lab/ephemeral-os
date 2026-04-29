@@ -48,7 +48,9 @@ def submit_task_success(tc: "TaskCenter", task_id: TaskId, summary: str) -> None
         # Lazy import — verifier_lifecycle imports back into the runtime.
         from task_center.harness_agents.verifier import lifecycle as verifier_lifecycle
 
-        verifier_lifecycle.reenter_after_fix_success(tc, task.fix_target_id)
+        verifier_lifecycle.reenter_after_fix_success(
+            tc, task.fix_target_id, task.id, summary
+        )
 
     tc._notify_child_terminal_changed()
     tc._persist_all()

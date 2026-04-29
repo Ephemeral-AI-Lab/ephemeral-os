@@ -85,6 +85,13 @@ def submit_plan_handoff(
         tc.graph, set(task_inputs.keys()) | {evaluator_id}
     )
 
+    # Apply legacy-only fields BEFORE materialization so they are
+    # captured in the same ``_persist_all`` snapshot as the DAG state.
+    planner.summaries.append(
+        TaskSummary(kind="handoff", text=handoff_plan_note, source_task_id=planner_id)
+    )
+    graph.handoff_plan_note = handoff_plan_note
+
     # Translate the legacy entries into the Stage 3 DAG shape with role
     # defaulting to "executor". Then delegate to the new materializer.
     task_dep_graphs = [
@@ -104,12 +111,6 @@ def submit_plan_handoff(
         # already, so this path is reachable only if a Stage 3-only check
         # (e.g., verifier_sink with role-bearing legacy inputs) fails.
         raise PlanValidationError(f"{err.code}: {err.message}")
-
-    # Legacy concerns the new materializer does not handle:
-    planner.summaries.append(
-        TaskSummary(kind="handoff", text=handoff_plan_note, source_task_id=planner_id)
-    )
-    graph.handoff_plan_note = handoff_plan_note
 
 
 def submit_full_plan(

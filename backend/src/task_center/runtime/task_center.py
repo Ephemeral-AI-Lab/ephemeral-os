@@ -293,21 +293,14 @@ class TaskCenter:
             id=id,
         )
 
-    def _create_advisor(
-        self,
-        *,
-        input: str,
-        caller_id: TaskId,
-    ) -> Task:
+    def _create_advisor(self, *, input: str) -> Task:
         """Add a transient ``Task(role='advisor')`` to the graph store.
 
-        Stage 4: the advisor is dispatched READY (no harness graph), runs
-        once, and reports verdict via ``submit_advisor_feedback``. The
-        ``caller_id`` link lets the calling agent's polling loop find the
-        advisor via the graph (the task's id is also returned to the
-        caller directly).
+        The advisor is dispatched READY with no harness graph, runs once,
+        and reports verdict via ``submit_advisor_feedback``. The caller-
+        side polling loop holds the advisor's task id directly, so no
+        back-link is needed on the Task itself.
         """
-        del caller_id  # caller_id is recorded by ask_advisor on context, not the Task
         return self._create_task(
             role="advisor",
             input=input,
@@ -336,9 +329,7 @@ class TaskCenter:
             agent_reason=agent_reason,
             calling_agent_context=calling_agent_context,
         )
-        advisor = self._create_advisor(
-            input=ctx.to_advisor_prompt(), caller_id=caller_id
-        )
+        advisor = self._create_advisor(input=ctx.to_advisor_prompt())
         self._persist_task(advisor)
         self._wakeup.set()
         return advisor

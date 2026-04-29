@@ -95,7 +95,7 @@ def test_orchestrator_close_success_marks_planner_and_root_done() -> None:
     )
     tc._mark_terminal(eval_task, Status.DONE)
 
-    orch.close_success("approved")
+    orch.close_success()
 
     # Planner DONE, root_task DONE.
     assert tc.graph.get(orch.planner.id).status is Status.DONE
@@ -121,7 +121,7 @@ def test_orchestrator_close_failure_marks_planner_and_root_failed() -> None:
     )
     tc._mark_terminal(eval_task, Status.FAILED)
 
-    orch.close_failure("cannot meet goal")
+    orch.close_failure()
 
     assert tc.graph.get(orch.planner.id).status is Status.FAILED
     assert orch.root_task.status is Status.FAILED

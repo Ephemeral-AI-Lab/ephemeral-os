@@ -118,9 +118,9 @@ class RuntimeState:
 
         self._tool_registry = create_default_tool_registry()
 
-        # Seed the agent registry. The executor + evaluator are defined in
-        # Python (``agents.builtins``) so their terminal-tool contracts stay
-        # aligned with the runtime. User-defined agents continue to load from
+        # Seed the agent registry. Builtin harness agents are registered from
+        # ``agents.builtins`` so their terminal-tool contracts stay aligned
+        # with the runtime. User-defined agents continue to load from
         # ``backend/config/agents/``.
         from agents.builtins import register_builtin_agents
         from agents.loader import load_agents_dir
@@ -128,7 +128,7 @@ class RuntimeState:
         from pathlib import Path as _P
 
         register_builtin_agents()
-        logger.info("Registered builtin agent definitions: executor, evaluator")
+        logger.info("Registered builtin harness agent definitions")
 
         agents_dir = (
             _P(__file__).resolve().parent.parent.parent.parent

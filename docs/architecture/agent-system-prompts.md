@@ -6,7 +6,9 @@ system prompts are role-local package assets, not duplicated architecture text:
 - Executor: `backend/src/task_center/harness_agents/executor/agent.md`
 - Planner: `backend/src/task_center/harness_agents/planner/agent.md`
 - Evaluator: `backend/src/task_center/harness_agents/evaluator/agent.md`
-- Explorer: `backend/src/agents/builtins.py`
+- Verifier: `backend/src/task_center/harness_agents/verifier/agent.md`
+- Explorer: `backend/src/task_center/harness_agents/explorer/agent.md`
+- Advisor: `backend/src/task_center/harness_agents/advisor/agent.md`
 
 Each role's `definition.py` loads its sibling `agent.md` and installs that
 text into the role's `AgentDefinition.system_prompt`.
@@ -129,6 +131,33 @@ graph must achieve); `ROOT_GOAL` is the anchor.
 
 Owner: `task_center.harness_agents.evaluator.context`.
 
+### VerifierLaunchContext
+
+Rebuilt at verifier dispatch time. Verifiers see only their own task input
+and DONE direct-dependency summaries.
+
+```text
+## INSTRUCTIONS
+Read DEPENDENCY_SUMMARIES as the artifacts to verify. Run independent
+verification against TASK_INPUT (your verification specification)...
+
+## DEPENDENCY_SUMMARIES
+### <dep_id>
+input: <dependency task input>
+summaries:
+  - [success] <summary text>
+
+## TASK_INPUT
+<verifier task input — the planner-authored verification specification>
+```
+
+Owner: `task_center.harness_agents.verifier.context`.
+
+### Explorer Prompt
+
+Explorer is a `run_subagent` target. Its user prompt is the exact
+`prompt` string supplied by the parent agent; the runtime does not wrap it.
+
 ## Shared Prompt Dispatcher
 
 `task_center.harness_agents.prompts.build_task_prompt` is the dispatch-time
@@ -138,17 +167,23 @@ prompt builder:
   `PlannerLaunchContext`)
 - executor tasks are wrapped with `ExecutorLaunchContext`
 - evaluator tasks are wrapped with `EvaluatorLaunchContext`
+- verifier tasks are wrapped with `VerifierLaunchContext`
 
 ## Terminal Tools
 
 | Tool | Caller | Effect |
 |---|---|---|
 | `request_plan(request_plan_note)` | executor or evaluator | creates a new harness graph; captures caller.input as `root_goal` and `request_plan_note` verbatim; spawns a planner |
-| `submit_plan_handoff(tasks, task_inputs, handoff_plan_note, evaluator_note)` | planner | materializes executor children + evaluator; stores `handoff_plan_note` and `evaluator_note` on the harness graph; the evaluator's task input is `evaluator_note` |
+| `submit_full_plan(task_dep_graphs, task_details, evaluation_specification)` | planner | materializes a complete generator DAG plus evaluator |
+| `submit_partial_plan(task_dep_graphs, task_details, what_to_do_next, evaluation_specification)` | planner | materializes a prefix DAG plus evaluator and records continuation guidance |
 | `submit_task_success(summary)` | executor or evaluator | marks DONE |
 | `submit_task_failure(summary)` | executor only | marks FAILED |
+| `submit_evaluation_success(summary)` | evaluator | marks the planning unit successful |
 | `submit_evaluation_failure(summary)` | evaluator only | marks the planning unit FAILED |
+| `submit_verification_success(summary)` | verifier | marks node-scoped verification successful |
+| `submit_verification_failure(summary)` | verifier | records node-scoped verification failure |
 | `submit_exploration_result(findings)` | explorer subagent | returns findings to the dispatching parent |
+| `submit_advisor_feedback(verdict, reason)` | advisor | returns approval or rejection for a proposed terminal call |
 
 ## Related Docs
 

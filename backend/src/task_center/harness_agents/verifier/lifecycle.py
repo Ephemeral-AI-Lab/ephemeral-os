@@ -73,12 +73,16 @@ def submit_verification_failure(
     tc._wakeup.set()
 
 
-def reenter_after_fix_success(tc: "TaskCenter", verifier_id: TaskId) -> None:
+def reenter_after_fix_success(
+    tc: "TaskCenter", verifier_id: TaskId, fix_executor_id: TaskId, fix_summary: str
+) -> None:
     """Stage 6 — fix-executor reported success; re-run the verifier.
 
     Transitions the verifier from FIXING back to READY so the dispatcher
-    re-spawns it. The verifier's prior failure summary stays on the task
-    so the agent can read what was wrong + what the fix-executor did.
+    re-spawns it, and attaches the fix-executor's success summary onto
+    the verifier as a ``child_success`` entry. The verifier's prior
+    failure summary stays in place so the re-running agent can read both
+    the original deficiency and what the fix did.
     """
     verifier = tc.graph.get(verifier_id)
     if verifier.status is not Status.FIXING:
@@ -86,6 +90,13 @@ def reenter_after_fix_success(tc: "TaskCenter", verifier_id: TaskId) -> None:
             f"reenter_after_fix_success: verifier {verifier_id!r} is in "
             f"status {verifier.status.value!r}, expected 'fixing'"
         )
+    verifier.summaries.append(
+        TaskSummary(
+            kind="child_success",
+            text=f"Fix-executor applied: {fix_summary}",
+            source_task_id=fix_executor_id,
+        )
+    )
     tc.graph.transition(verifier.id, Status.READY)
 
 

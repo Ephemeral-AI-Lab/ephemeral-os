@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.runtime.pre_hooks import BlockedTerminal, check_advisor_accept
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.mode_tool._models import SubmissionOutput
@@ -49,11 +48,5 @@ async def submit_verification_success(
             output="submit_verification_success: missing task_center or task_id in metadata",
             is_error=True,
         )
-    try:
-        check_advisor_accept(
-            tc, task_id, "submit_verification_success", {"summary": summary}
-        )
-    except BlockedTerminal as block:
-        return ToolResult(output=str(block), is_error=True)
     tc.submit_verification_success(task_id, summary)
     return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())
