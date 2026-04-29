@@ -10,32 +10,26 @@ from task_center.model.task import HarnessGraphId, TaskId
 
 @dataclass
 class HarnessGraph:
-    """One planner-led decomposition: planner + executor children + evaluator.
+    """One planner-led decomposition: planner + generator children + evaluator.
 
     The graph's ``root_task_id`` points at the executor or evaluator that
     launched the planner via ``request_plan``. The root executor is not
     inside any harness graph.
 
-    The four note fields anchor every prompt rendered for this graph:
+    Note fields:
 
-    - ``root_goal`` — the input of the immediate caller (the parent task)
-      that invoked ``request_plan``. Captured once at graph creation.
-    - ``request_plan_note`` — the verbatim ``request_plan_note`` argument
-      the caller passed when invoking ``request_plan``. Captured once.
-    - ``handoff_plan_note`` — the planner's ``handoff_plan_note`` from
-      ``submit_plan_handoff`` (plan shape, topology, coverage map, GAP).
-    - ``evaluator_note`` — the planner's explicit instruction to the
-      evaluator from ``submit_plan_handoff`` (what to verify, what to
-      skip, which adversarial probes are most relevant). Stored as the
-      evaluator task's input.
+    - ``root_goal`` / ``request_plan_note`` anchor every prompt rendered for
+      this graph (captured once at graph creation).
+    - ``handoff_plan_note`` / ``evaluator_note`` are populated by the legacy
+      ``tc.submit_plan_handoff`` shim. The new ``submit_full_plan`` /
+      ``submit_partial_plan`` terminals route ``evaluation_specification``
+      directly into the evaluator's task input and surface partial-plan
+      directives via ``what_to_do_next``.
 
-    Stage 1 of the four-role/orchestrator roadmap adds three structural
-    slots — ``planner``, ``dag_nodes``, ``evaluator`` — that mirror the
+    Structural slots: ``planner``, ``dag_nodes``, ``evaluator`` mirror the
     legacy ``planner_task_id`` / ``executor_task_ids`` / ``evaluator_task_id``
-    fields. The legacy fields are preserved so existing callers keep
-    working; the new slots are kept in sync at construction time and on
-    every mutation. Stage 5 adds ``prior_graph_id`` for partial-plan
-    continuation chains.
+    fields, kept in sync at construction. ``plan_shape``, ``what_to_do_next``,
+    and ``prior_graph_id`` carry partial-plan continuation state.
     """
 
     id: HarnessGraphId

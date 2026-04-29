@@ -27,7 +27,7 @@ class TaskSuccessInput(BaseModel):
         "Terminal action — declare the current task complete with a summary. Executors mark "
         "themselves DONE; evaluators close their owning harness graph and propagate success up "
         "to the parent task. Call exactly once when the success criteria are met. Don't call "
-        "if your work is partial — use submit_task_failure or submit_plan_handoff instead."
+        "if your work is partial — use submit_task_failure or request_plan instead."
     ),
     input_model=TaskSuccessInput,
     output_model=SubmissionOutput,

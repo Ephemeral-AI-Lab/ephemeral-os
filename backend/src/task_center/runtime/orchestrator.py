@@ -4,20 +4,14 @@ Every :class:`HarnessGraph` has exactly one orchestrator. The orchestrator is
 a transient frozen-dataclass view bound to a ``graph_id`` and a
 :class:`TaskCenter` reference; it has no state of its own.
 
-There are two ways to obtain an orchestrator:
+Two ways to obtain an orchestrator:
 
 1. :meth:`Orchestrator.spawn` — opens a *new* graph + planner, returns the
    orchestrator for it. Side-effecting.
 2. ``Orchestrator(graph_id, tc)`` — pure view of an *existing* graph.
 
-Stage 1 of the four-role / recursive-orchestrator restructure introduced the
-class with ``spawn`` and the read accessors. Stage 3 adds
-``materialize_full_plan`` / ``materialize_partial_plan`` with validation;
-``MaterializationFailure`` is the structured rejection payload.
-
-Backward compatibility: the prior location of :class:`TaskCenter` was this
-module. Stage 1 keeps a re-export so existing imports
-(``from task_center.runtime.orchestrator import TaskCenter``) keep working.
+This module also re-exports :class:`TaskCenter` so legacy callers using
+``from task_center.runtime.orchestrator import TaskCenter`` keep working.
 """
 
 from __future__ import annotations

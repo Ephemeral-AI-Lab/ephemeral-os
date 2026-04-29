@@ -26,7 +26,7 @@ class EvaluationFailureInput(BaseModel):
         "Terminal action (evaluator only) — hard-fail the owning harness graph after reviewing "
         "executor output. The graph's planner and parent task become FAILED, and failure "
         "propagates to outer graphs. Use when the executors' work cannot be salvaged. Prefer "
-        "submit_plan_handoff when a re-plan under the same parent might recover."
+        "request_plan when a re-plan under the same parent might recover."
     ),
     input_model=EvaluationFailureInput,
     output_model=SubmissionOutput,
