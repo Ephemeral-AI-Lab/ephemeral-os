@@ -72,3 +72,56 @@ def test_legacy_submit_task_success_still_works_for_evaluator() -> None:
 
     tc.submit_task_success(eval_id, "legacy path approved")
     assert tc.graph.get(eval_id).status is Status.DONE
+
+
+# ---- Stage 7 — Orchestrator.close_success / close_failure ----------------
+
+
+def test_orchestrator_close_success_marks_planner_and_root_done() -> None:
+    """Full-plan closure facade on Orchestrator delegates to evaluator
+    lifecycle and mirrors the state transitions of the legacy path."""
+    from task_center.runtime import Orchestrator
+
+    tc = TaskCenter()
+    eval_id = _setup_evaluator(tc)
+    eval_task = tc.graph.get(eval_id)
+    assert eval_task.task_center_harness_graph_id is not None
+    orch = Orchestrator(graph_id=eval_task.task_center_harness_graph_id, tc=tc)
+    # Drive evaluator DONE (the lifecycle helper assumes it's already DONE).
+    from task_center.model import TaskSummary
+
+    eval_task.summaries.append(
+        TaskSummary(kind="success", text="approved", source_task_id=eval_id)
+    )
+    tc._mark_terminal(eval_task, Status.DONE)
+
+    orch.close_success("approved")
+
+    # Planner DONE, root_task DONE.
+    assert tc.graph.get(orch.planner.id).status is Status.DONE
+    assert orch.root_task.status is Status.DONE
+
+
+def test_orchestrator_close_failure_marks_planner_and_root_failed() -> None:
+    from task_center.runtime import Orchestrator
+
+    tc = TaskCenter()
+    eval_id = _setup_evaluator(tc)
+    eval_task = tc.graph.get(eval_id)
+    assert eval_task.task_center_harness_graph_id is not None
+    orch = Orchestrator(graph_id=eval_task.task_center_harness_graph_id, tc=tc)
+    from task_center.model import TaskSummary
+
+    eval_task.summaries.append(
+        TaskSummary(
+            kind="evaluation_failure",
+            text="cannot meet goal",
+            source_task_id=eval_id,
+        )
+    )
+    tc._mark_terminal(eval_task, Status.FAILED)
+
+    orch.close_failure("cannot meet goal")
+
+    assert tc.graph.get(orch.planner.id).status is Status.FAILED
+    assert orch.root_task.status is Status.FAILED

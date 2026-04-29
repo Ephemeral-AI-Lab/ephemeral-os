@@ -389,18 +389,45 @@ class Orchestrator:
         return fix_executor
 
     # ------------------------------------------------------------------ #
-    # Stage 7 stubs (filled by Stage 7 cleanup pass)                     #
+    # Stage 7 — Closure facade on the Orchestrator                       #
+    #                                                                    #
+    # The recursive-orchestrator design (§5.3) places full-plan          #
+    # success/failure closure on the Orchestrator alongside              #
+    # ``close_partial_success``. Stage 7 fulfills that invariant by      #
+    # delegating to the evaluator-lifecycle helpers that already         #
+    # implement the state transitions. Lifecycle code remains the single #
+    # source of state-mutation truth; the Orchestrator is the            #
+    # graph-scoped facade callers reach for.                             #
     # ------------------------------------------------------------------ #
 
     def close_success(self, summary: str) -> None:
-        raise NotImplementedError(
-            "Orchestrator.close_success lands in Stage 7 (evaluator narrows). "
-            "Until then, evaluator_lifecycle.close_harness_graph_success handles closure."
+        """Full-plan closure: planner DONE, root_task DONE, propagate up."""
+        # Local import to avoid a runtime cycle: evaluator_lifecycle is
+        # imported by task_center.py, which is imported here at module load.
+        from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
+
+        del summary  # state-only path; evaluator's summary already attached
+        evaluator = self.evaluator
+        if evaluator is None:
+            raise RuntimeError(
+                f"Orchestrator.close_success: graph {self.graph_id!r} has no evaluator"
+            )
+        eval_lifecycle.close_harness_graph_success(
+            self.tc, self.graph_id, evaluator.id
         )
 
     def close_failure(self, summary: str) -> None:
-        raise NotImplementedError(
-            "Orchestrator.close_failure lands in Stage 7 (closure rewire)."
+        """Full-plan / partial-plan closure when the evaluator hard-fails."""
+        from task_center.harness_agents.evaluator import lifecycle as eval_lifecycle
+
+        del summary
+        evaluator = self.evaluator
+        if evaluator is None:
+            raise RuntimeError(
+                f"Orchestrator.close_failure: graph {self.graph_id!r} has no evaluator"
+            )
+        eval_lifecycle.close_harness_graph_failed(
+            self.tc, self.graph_id, evaluator.id
         )
 
 

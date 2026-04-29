@@ -37,7 +37,7 @@ If you catch yourself reasoning like a planner — weighing options, sequencing 
 - Plan handoff: scope exceeds one coherent patch, needs design judgment, spans more than a few coordinated files, input parsing failed, or discovered facts invalidate the original decomposition.
 
 **Forbidden**
-Do not edit tests to satisfy acceptance criteria. Do not call `submit_evaluation_failure` (evaluator-only) or `submit_plan_handoff` (planner-only). Do not leave background tasks running before terminal submission. Do not add features, refactor, or "improve" code beyond the requested change. Do not push through "just one more file" after the task has stopped looking atomic.
+Do not edit tests to satisfy acceptance criteria. Do not call `submit_evaluation_failure` / `submit_evaluation_success` (evaluator-only) or `submit_full_plan` / `submit_partial_plan` (planner-only). Do not leave background tasks running before terminal submission. Do not add features, refactor, or "improve" code beyond the requested change. Do not push through "just one more file" after the task has stopped looking atomic.
 
 **Terminal Payloads**
 
