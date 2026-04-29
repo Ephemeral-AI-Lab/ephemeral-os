@@ -15,6 +15,7 @@ from engine.runtime.background_dispatch import launch_background_tool
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
+    SystemNotificationBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -24,6 +25,7 @@ from message.stream_events import (
     ToolExecutionStarted,
 )
 from notification.events import SystemNotification
+from notification.library import make_budget_warning, make_opening_reminder
 from providers.types import (
     ApiMessageCompleteEvent,
     ApiToolUseDeltaEvent,
@@ -591,6 +593,119 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
     assert len(client.requests) == 2
     assert [message.role for message in messages] == ["assistant", "user", "assistant"]
     assert any(isinstance(block, ToolResultBlock) for block in messages[1].content)
+
+
+async def test_query_loop_injects_opening_reminder_before_first_provider_request() -> None:
+    class _OpeningReminderClient(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def stream_message(self, request):
+            self.requests.append(request)
+            yield ApiMessageCompleteEvent(
+                message=ConversationMessage(role="assistant", content=[]),
+                usage=UsageSnapshot(),
+            )
+
+    client = _OpeningReminderClient()
+    context = QueryContext(
+        api_client=client,
+        tool_registry=ToolRegistry(),
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+        notification_rules=[make_opening_reminder("follow the distilled rules")],
+    )
+
+    messages, stream = await run_query(
+        context,
+        [ConversationMessage.from_user_text("solve the task")],
+    )
+    async for _event, _usage in stream:
+        pass
+
+    assert len(client.requests) == 1
+    first_request = client.requests[0]
+    assert [message.role for message in first_request.messages] == ["user", "user"]
+    reminder_block = first_request.messages[1].content[0]
+    assert isinstance(reminder_block, SystemNotificationBlock)
+    assert reminder_block.text == "follow the distilled rules"
+    assert context.notification_fired == {"opening_reminder"}
+    assert [message.role for message in messages] == ["user", "user", "assistant"]
+    transcript_block = messages[1].content[0]
+    assert isinstance(transcript_block, SystemNotificationBlock)
+    assert transcript_block.text == "follow the distilled rules"
+
+
+async def test_query_loop_injects_budget_warning_into_followup_provider_request() -> None:
+    class _BudgetWarningClient(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def stream_message(self, request):
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_echo",
+                                name="echo_tool",
+                                input={"value": "budgeted"},
+                            )
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                )
+            else:
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(role="assistant", content=[]),
+                    usage=UsageSnapshot(),
+                )
+
+    registry = ToolRegistry()
+    registry.register(_EchoTool())
+    client = _BudgetWarningClient()
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+        tool_call_limit=2,
+        notification_rules=[make_budget_warning(thresholds=(0.5,))],
+    )
+
+    messages, stream = await run_query(
+        context,
+        [ConversationMessage.from_user_text("solve the task")],
+    )
+    async for _event, _usage in stream:
+        pass
+
+    assert len(client.requests) == 2
+    assert all(
+        not isinstance(block, SystemNotificationBlock)
+        for message in client.requests[0].messages
+        for block in message.content
+    )
+    reminder_blocks = [
+        block
+        for message in client.requests[1].messages
+        for block in message.content
+        if isinstance(block, SystemNotificationBlock)
+    ]
+    assert len(reminder_blocks) == 1
+    assert reminder_blocks[0].text.startswith("Tool-call budget at 50%")
+    assert context.tool_calls_used == 1
+    assert context.notification_state["budget_warning"]["last_fired"] == 0.5
+    assert [message.role for message in messages] == ["user", "assistant", "user", "user", "assistant"]
+    transcript_block = messages[3].content[0]
+    assert isinstance(transcript_block, SystemNotificationBlock)
+    assert transcript_block.text.startswith("Tool-call budget at 50%")
 
 
 async def test_query_loop_runs_generic_context_preparers() -> None:
