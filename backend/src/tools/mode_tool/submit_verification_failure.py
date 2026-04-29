@@ -1,4 +1,4 @@
-"""Terminal tool: evaluator hard-fails the harness graph."""
+"""Terminal tool: verifier marks node-scoped verification failed."""
 
 from __future__ import annotations
 
@@ -10,40 +10,41 @@ from tools.core.decorator import tool
 from tools.mode_tool._models import SubmissionOutput
 
 
-class EvaluationFailureInput(BaseModel):
+class VerificationFailureInput(BaseModel):
     summary: str = Field(
         ...,
         min_length=1,
         description=(
-            "Why the parent goal cannot be met given the available evidence."
+            "Why the dependencies fail this node's verification specification. "
+            "The runtime spawns a fix-executor scoped to repair the named "
+            "deficiency."
         ),
     )
 
 
 @tool(
-    name="submit_evaluation_failure",
+    name="submit_verification_failure",
     description=(
-        "Terminal action (evaluator only) — hard-fail the owning harness graph after reviewing "
-        "executor output. The graph's planner and parent task become FAILED, and failure "
-        "propagates to outer graphs. Use when the executors' work cannot be salvaged. Prefer "
-        "submit_plan_handoff when a re-plan under the same parent might recover."
+        "Terminal action (verifier only) — reject dependencies. Verifier "
+        "transitions FIXING and the runtime spawns a bounded fix-executor "
+        "(Stage 6 of the four-role roadmap). On fix success, the verifier "
+        "re-runs; on fix failure, dependents cascade-fail."
     ),
-    input_model=EvaluationFailureInput,
+    input_model=VerificationFailureInput,
     output_model=SubmissionOutput,
     is_terminal_tool=True,
 )
-async def submit_evaluation_failure(
+async def submit_verification_failure(
     summary: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
     role = context.get("role")
-    if role != "evaluator":
+    if role != "verifier":
         return ToolResult(
             output=(
-                "submit_evaluation_failure is evaluator-only "
-                f"(current role={role!r}); executors must use "
-                "submit_task_failure instead."
+                f"submit_verification_failure is verifier-only "
+                f"(current role={role!r})."
             ),
             is_error=True,
         )
@@ -51,14 +52,14 @@ async def submit_evaluation_failure(
     task_id = context.get("task_id")
     if tc is None or task_id is None:
         return ToolResult(
-            output="submit_evaluation_failure: missing task_center or task_id in metadata",
+            output="submit_verification_failure: missing task_center or task_id in metadata",
             is_error=True,
         )
     try:
         check_advisor_accept(
-            tc, task_id, "submit_evaluation_failure", {"summary": summary}
+            tc, task_id, "submit_verification_failure", {"summary": summary}
         )
     except BlockedTerminal as block:
         return ToolResult(output=str(block), is_error=True)
-    tc.submit_evaluation_failure(task_id, summary)
+    tc.submit_verification_failure(task_id, summary)
     return ToolResult(output=SubmissionOutput(status="accepted").model_dump_json())

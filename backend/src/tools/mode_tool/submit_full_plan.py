@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from task_center.runtime.pre_hooks import BlockedTerminal, check_advisor_accept
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.mode_tool._models import SubmissionOutput, TaskDependencyEntry
@@ -72,6 +73,21 @@ async def submit_full_plan(
             output="submit_full_plan: missing task_center or task_id in metadata",
             is_error=True,
         )
+    # Stage 4 first-cut gate: require a fresh advisor accept whose payload
+    # exactly matches the call. Phase-1 lenient consumption — a
+    # MaterializationFailure preserves the accept; only a successful
+    # terminal or a divergent next ask_advisor invalidates it.
+    proposed_input = {
+        "task_dep_graphs": list(task_dep_graphs),
+        "task_details": dict(task_details),
+        "evaluation_specification": evaluation_specification,
+    }
+    try:
+        check_advisor_accept(
+            tc, task_id, "submit_full_plan", proposed_input
+        )
+    except BlockedTerminal as block:
+        return ToolResult(output=str(block), is_error=True)
     err = tc.submit_full_plan(
         task_id, task_dep_graphs, task_details, evaluation_specification
     )

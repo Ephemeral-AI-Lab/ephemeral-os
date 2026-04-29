@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from agents.types import AgentDefinition
+from task_center.harness_agents.advisor.definition import ADVISOR
 from task_center.harness_agents.evaluator.definition import EVALUATOR
 from task_center.harness_agents.executor.definition import EXECUTOR
 from task_center.harness_agents.planner.definition import PLANNER
 from task_center.harness_agents.tool_surfaces import READ_ONLY_INVESTIGATION_TOOLS
+from task_center.harness_agents.verifier.definition import VERIFIER
 
 
 # ---------------------------------------------------------------------------
@@ -88,11 +90,18 @@ EXPLORER = AgentDefinition(
 # ---------------------------------------------------------------------------
 
 
-BUILTIN_AGENTS: tuple[AgentDefinition, ...] = (EXECUTOR, PLANNER, EVALUATOR, EXPLORER)
+BUILTIN_AGENTS: tuple[AgentDefinition, ...] = (
+    EXECUTOR,
+    PLANNER,
+    EVALUATOR,
+    EXPLORER,
+    VERIFIER,
+    ADVISOR,
+)
 
 
 def register_builtin_agents() -> None:
-    """Register the executor, planner, evaluator, and explorer definitions."""
+    """Register all built-in agent definitions used by the harness."""
     from agents.registry import register_definition
 
     for defn in BUILTIN_AGENTS:
@@ -100,10 +109,12 @@ def register_builtin_agents() -> None:
 
 
 __all__ = [
+    "ADVISOR",
     "BUILTIN_AGENTS",
     "EVALUATOR",
     "EXECUTOR",
     "EXPLORER",
     "PLANNER",
+    "VERIFIER",
     "register_builtin_agents",
 ]

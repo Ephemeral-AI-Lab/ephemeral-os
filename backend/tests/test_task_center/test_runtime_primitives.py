@@ -108,12 +108,17 @@ def test_create_evaluator_is_always_pending() -> None:
     assert task.needs == frozenset({"a", "b"})
 
 
-# ---- _create_advisor (Stage 1 stub) ----------------------------------------
+# ---- _create_advisor (Stage 1 surface; Stage 4 fills in the impl) ---------
 
-def test_create_advisor_is_a_stage1_stub() -> None:
+
+def test_create_advisor_creates_ready_transient_task() -> None:
+    """Stage 4 replaced the Stage 1 stub; the primitive now produces a real
+    READY advisor task with no harness graph (transient by design)."""
     tc = _new_tc()
-    with pytest.raises(NotImplementedError, match="Stage 1 stub"):
-        tc._create_advisor(input="ask", caller_id="t1")
+    advisor = tc._create_advisor(input="ask", caller_id="t1")
+    assert advisor.role == "advisor"
+    assert advisor.status is Status.READY
+    assert advisor.task_center_harness_graph_id is None
 
 
 # ---- _open_graph + Orchestrator.spawn ---------------------------------------

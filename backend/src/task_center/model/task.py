@@ -32,7 +32,7 @@ class Status(str, Enum):
     FIXING = "fixing"
 
 
-TaskRole = Literal["executor", "planner", "verifier", "evaluator"]
+TaskRole = Literal["executor", "planner", "verifier", "evaluator", "advisor"]
 
 SummaryKind = Literal[
     "handoff",
@@ -45,6 +45,10 @@ SummaryKind = Literal[
     # Stage 5: appended onto a partial-plan graph's root_task when the
     # segment evaluator approves; the chain continues with a new graph.
     "segment_success",
+    # Stage 4: encoded "{verdict}|{reason}" string written by the advisor
+    # via submit_advisor_feedback. The calling agent's ask_advisor tool
+    # decodes it to surface the verdict.
+    "advisor_feedback",
 ]
 
 

@@ -30,6 +30,7 @@ from task_center.graph import (
     dependency_blocked_descendants as _q_dependency_blocked_descendants,
     is_harness_graph_ready_for_evaluation as _q_is_harness_graph_ready_for_evaluation,
 )
+from task_center.harness_agents.advisor import lifecycle as advisor_lifecycle
 from task_center.harness_agents.evaluator import lifecycle as evaluator_lifecycle
 from task_center.harness_agents.executor import lifecycle as executor_lifecycle
 from task_center.harness_agents.planner import lifecycle as planner_lifecycle
@@ -298,12 +299,49 @@ class TaskCenter:
         input: str,
         caller_id: TaskId,
     ) -> Task:
-        """Stage 1 stub. Real implementation lands with Stage 4 (advisor)."""
-        del input, caller_id
-        raise NotImplementedError(
-            "_create_advisor is a Stage 1 stub. Stage 4 of the four-role "
-            "roadmap (advisor + ask_advisor) wires the real implementation."
+        """Add a transient ``Task(role='advisor')`` to the graph store.
+
+        Stage 4: the advisor is dispatched READY (no harness graph), runs
+        once, and reports verdict via ``submit_advisor_feedback``. The
+        ``caller_id`` link lets the calling agent's polling loop find the
+        advisor via the graph (the task's id is also returned to the
+        caller directly).
+        """
+        del caller_id  # caller_id is recorded by ask_advisor on context, not the Task
+        return self._create_task(
+            role="advisor",
+            input=input,
+            harness_graph_id=None,
+            needs=frozenset(),
+            status=Status.READY,
         )
+
+    def create_advisor(
+        self,
+        caller_id: TaskId,
+        terminal_tool: str,
+        proposed_input: dict[str, Any],
+        agent_reason: str,
+        calling_agent_context: str,
+    ) -> Task:
+        """Public composer — synthesize advisor input + create the task READY."""
+        from task_center.harness_agents.advisor.context import (
+            AdvisorLaunchContext,
+        )
+
+        ctx = AdvisorLaunchContext(
+            caller_id=caller_id,
+            proposed_terminal_tool=terminal_tool,
+            proposed_input=proposed_input,
+            agent_reason=agent_reason,
+            calling_agent_context=calling_agent_context,
+        )
+        advisor = self._create_advisor(
+            input=ctx.to_advisor_prompt(), caller_id=caller_id
+        )
+        self._persist_task(advisor)
+        self._wakeup.set()
+        return advisor
 
     def _open_graph(
         self,
@@ -393,6 +431,12 @@ class TaskCenter:
 
     def submit_verification_failure(self, task_id: TaskId, summary: str) -> None:
         verifier_lifecycle.submit_verification_failure(self, task_id, summary)
+
+    def submit_advisor_feedback(
+        self, task_id: TaskId, verdict: str, reason: str
+    ) -> None:
+        """Stage 4 — advisor terminal: record (verdict, reason) on the task."""
+        advisor_lifecycle.submit_advisor_feedback(self, task_id, verdict, reason)
 
     def request_plan(self, task_id: TaskId, request_plan_note: str) -> None:
         planner_lifecycle.request_plan(self, task_id, request_plan_note)
@@ -562,6 +606,8 @@ class TaskCenter:
             planner_lifecycle.handle_silent_termination(self, task, reason)
         elif task.role == "verifier":
             verifier_lifecycle.handle_silent_termination(self, task, reason)
+        elif task.role == "advisor":
+            advisor_lifecycle.handle_silent_termination(self, task, reason)
         else:
             evaluator_lifecycle.handle_silent_termination(self, task, reason)
 

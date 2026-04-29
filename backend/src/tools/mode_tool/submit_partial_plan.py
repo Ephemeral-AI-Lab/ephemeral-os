@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from task_center.runtime.pre_hooks import BlockedTerminal, check_advisor_accept
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.mode_tool._models import SubmissionOutput, TaskDependencyEntry
@@ -81,6 +82,18 @@ async def submit_partial_plan(
             output="submit_partial_plan: missing task_center or task_id in metadata",
             is_error=True,
         )
+    proposed_input = {
+        "task_dep_graphs": list(task_dep_graphs),
+        "task_details": dict(task_details),
+        "what_to_do_next": what_to_do_next,
+        "evaluation_specification": evaluation_specification,
+    }
+    try:
+        check_advisor_accept(
+            tc, task_id, "submit_partial_plan", proposed_input
+        )
+    except BlockedTerminal as block:
+        return ToolResult(output=str(block), is_error=True)
     err = tc.submit_partial_plan(
         task_id,
         task_dep_graphs,
