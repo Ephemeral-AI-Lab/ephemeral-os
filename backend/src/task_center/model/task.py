@@ -27,7 +27,7 @@ class Status(str, Enum):
     FAILED = "failed"
 
 
-TaskRole = Literal["executor", "planner", "evaluator"]
+TaskRole = Literal["executor", "planner", "verifier", "evaluator"]
 
 SummaryKind = Literal[
     "handoff",
