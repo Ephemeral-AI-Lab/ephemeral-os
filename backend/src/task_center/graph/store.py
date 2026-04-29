@@ -16,8 +16,15 @@ from task_center.model import HarnessGraph, HarnessGraphId, Status, Task, TaskId
 _ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
     Status.PENDING: {Status.READY, Status.FAILED},
     Status.READY: {Status.RUNNING, Status.FAILED},
-    Status.RUNNING: {Status.HANDOFF, Status.DONE, Status.FAILED},
+    # Stage 6: a verifier in RUNNING that calls submit_verification_failure
+    # transitions to FIXING while the fix-executor is in flight.
+    Status.RUNNING: {Status.HANDOFF, Status.DONE, Status.FAILED, Status.FIXING},
     Status.HANDOFF: {Status.DONE, Status.FAILED},
+    # Stage 6: from FIXING the verifier either re-runs (→ READY) on
+    # fix-executor success, or fails permanently (→ FAILED) on fix
+    # failure. There is no FIXING → DONE shortcut: the verifier always
+    # has the last word (F2: trust no self-reports).
+    Status.FIXING: {Status.READY, Status.FAILED},
     Status.DONE: set(),
     Status.FAILED: set(),
 }

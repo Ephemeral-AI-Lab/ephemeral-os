@@ -70,3 +70,10 @@ class Task:
     needs: frozenset[TaskId] = field(default_factory=frozenset)
     summaries: list[TaskSummary] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
+    # Stage 6: fix-executor recovery wiring.
+    # ``fix_target_id`` back-points at the verifier this fix-executor was
+    # spawned to repair. ``spawn_reason`` distinguishes ordinary executors
+    # from fix-executors at dispatch time so the runtime can apply the
+    # narrowed prompt + tool-surface restriction.
+    fix_target_id: TaskId | None = None
+    spawn_reason: str | None = None

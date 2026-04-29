@@ -1,10 +1,9 @@
-"""Stage 2 — verifier lifecycle (degraded — no fix-executor yet).
+"""Stage 2/6 — verifier lifecycle.
 
-Stage 2 of the four-role roadmap lands the verifier success/failure routers.
-Failure cascade-fails dependents (the Stage 6 ``Status.FIXING`` →
-fix-executor flow lands later). Stage 2 also adds ``Status.FIXING`` to the
-enum even though it is not yet entered — kept here so that DB migration
-work in Stage 8 sees the literal value.
+Stage 2 added the success/failure dispatchers in their degraded form.
+Stage 6 replaces failure cascade-fail with: verifier → FIXING + spawn
+fix-executor. Fix-executor success → verifier re-runs (FIXING → READY).
+Fix-executor failure → verifier FAILED + cascade.
 """
 
 from __future__ import annotations
@@ -17,12 +16,11 @@ from task_center.runtime import TaskCenter
 
 
 def _build_two_node_graph(tc: TaskCenter) -> tuple[str, str, str]:
-    """Construct a parent → verifier → downstream chain by hand.
+    """Construct a parent → verifier → downstream chain.
 
-    Returns (parent_executor_id, verifier_id, downstream_executor_id).
-    The verifier is left in RUNNING (the state the real dispatcher
-    transitions tasks through before they call their terminal tool), so
-    the verifier success/failure transitions land legally.
+    Returns (parent_executor_id, verifier_id, downstream_executor_id). The
+    verifier is left in RUNNING (the state the real dispatcher transitions
+    tasks through before they call their terminal tool).
     """
     parent = tc._create_executor(
         input="parent",
@@ -30,7 +28,6 @@ def _build_two_node_graph(tc: TaskCenter) -> tuple[str, str, str]:
         needs=frozenset(),
         status=Status.READY,
     )
-    # Drive parent to DONE so the verifier becomes the failure point.
     tc.graph.transition(parent.id, Status.RUNNING)
     tc.graph.transition(parent.id, Status.DONE)
 
@@ -73,7 +70,7 @@ def test_verification_success_marks_verifier_done() -> None:
     assert verifier.summaries[-1].text == "checks pass"
 
     # Downstream should still be PENDING — promotion happens on the next
-    # dispatcher tick. Stage 2 only requires the success transition.
+    # dispatcher tick.
     assert tc.graph.get(downstream_id).status is Status.PENDING
 
 
@@ -89,50 +86,35 @@ def test_verification_success_rejects_wrong_role() -> None:
         tc.submit_verification_success(executor.id, "wrong role")
 
 
-# ---- submit_verification_failure (degraded path) ---------------------------
+# ---- Stage 6 — submit_verification_failure → FIXING + fix-executor ---------
 
 
-def test_verification_failure_cascades_to_dependents() -> None:
+def test_verification_failure_transitions_to_fixing_and_spawns_fix_executor() -> None:
     tc = TaskCenter()
     _, verifier_id, downstream_id = _build_two_node_graph(tc)
 
-    tc.submit_verification_failure(verifier_id, "checks failed")
+    tc.submit_verification_failure(verifier_id, "checks failed: typo on line 42")
 
     verifier = tc.graph.get(verifier_id)
-    assert verifier.status is Status.FAILED
+    assert verifier.status is Status.FIXING
     assert verifier.summaries[-1].kind == "failure"
-    assert verifier.summaries[-1].text == "checks failed"
-
-    downstream = tc.graph.get(downstream_id)
-    assert downstream.status is Status.FAILED
-    assert downstream.summaries[-1].kind == "dependency_blocked"
-    assert verifier_id in downstream.summaries[-1].text
-
-
-def test_verification_failure_cascades_to_verifier_dependent() -> None:
-    """Generators (executors AND verifiers) downstream of a failed verifier
-    cascade-fail together. Pins the four-role behavior of
-    ``dependency_blocked_descendants``.
-    """
-    tc = TaskCenter()
-    parent = tc._create_verifier(
-        input="parent verify",
-        harness_graph_id="g1",
-        needs=frozenset(),
-        status=Status.READY,
-    )
-    tc.graph.transition(parent.id, Status.RUNNING)
-    downstream_verifier = tc._create_verifier(
-        input="downstream verify",
-        harness_graph_id="g1",
-        needs=frozenset({parent.id}),
-        status=Status.PENDING,
-    )
-
-    tc.submit_verification_failure(parent.id, "boom")
-
-    assert tc.graph.get(parent.id).status is Status.FAILED
-    assert tc.graph.get(downstream_verifier.id).status is Status.FAILED
+    # Downstream must NOT cascade-fail while the fix attempt is in flight.
+    assert tc.graph.get(downstream_id).status is Status.PENDING
+    # A fix-executor was spawned in the same harness graph.
+    fix_execs = [
+        t
+        for t in tc.graph.tasks.values()
+        if t.spawn_reason == "fix_verification" and t.fix_target_id == verifier_id
+    ]
+    assert len(fix_execs) == 1
+    fix = fix_execs[0]
+    assert fix.role == "executor"
+    assert fix.status is Status.READY
+    # Synthesized input includes the failure summary, the verifier's input,
+    # and dep summaries.
+    assert "checks failed: typo on line 42" in fix.input
+    assert "check parent" in fix.input  # verifier's task input
+    assert "FIX MODE" in fix.input
 
 
 def test_verification_failure_rejects_wrong_role() -> None:
@@ -147,19 +129,70 @@ def test_verification_failure_rejects_wrong_role() -> None:
         tc.submit_verification_failure(executor.id, "wrong role")
 
 
-# ---- silent termination -----------------------------------------------------
+# ---- Stage 6 — fix-executor success: verifier re-runs ----------------------
 
 
-def test_verifier_silent_termination_routes_to_failure() -> None:
-    """A verifier task that exits without a terminal call should fail
-    through the same path as ``submit_verification_failure``."""
+def test_fix_executor_success_re_runs_verifier() -> None:
+    tc = TaskCenter()
+    _, verifier_id, _ = _build_two_node_graph(tc)
+    tc.submit_verification_failure(verifier_id, "boom")
+
+    fix = next(
+        t
+        for t in tc.graph.tasks.values()
+        if t.spawn_reason == "fix_verification"
+    )
+    # Drive the fix-executor through RUNNING (mirroring dispatcher).
+    tc.graph.transition(fix.id, Status.RUNNING)
+    tc.submit_task_success(fix.id, "fixed the typo")
+
+    # Verifier re-runs: transitions FIXING → READY.
+    verifier = tc.graph.get(verifier_id)
+    assert verifier.status is Status.READY
+    # Fix-executor itself is DONE.
+    assert tc.graph.get(fix.id).status is Status.DONE
+
+
+# ---- Stage 6 — fix-executor failure: verifier FAILED + cascade -------------
+
+
+def test_fix_executor_failure_fails_verifier_and_cascades() -> None:
+    tc = TaskCenter()
+    _, verifier_id, downstream_id = _build_two_node_graph(tc)
+    tc.submit_verification_failure(verifier_id, "boom")
+
+    fix = next(
+        t
+        for t in tc.graph.tasks.values()
+        if t.spawn_reason == "fix_verification"
+    )
+    tc.graph.transition(fix.id, Status.RUNNING)
+    tc.submit_task_failure(fix.id, "couldn't repair, scope too wide")
+
+    # Verifier FAILED, descendants cascade.
+    assert tc.graph.get(verifier_id).status is Status.FAILED
+    assert tc.graph.get(downstream_id).status is Status.FAILED
+    assert tc.graph.get(fix.id).status is Status.FAILED
+
+
+# ---- silent termination on a verifier still routes through Stage 6 ---------
+
+
+def test_verifier_silent_termination_routes_to_fixing() -> None:
+    """Silent verifier exit triggers ``submit_verification_failure`` →
+    Stage 6 path (verifier FIXING + fix-executor spawned)."""
     tc = TaskCenter()
     _, verifier_id, downstream_id = _build_two_node_graph(tc)
 
     verifier = tc.graph.get(verifier_id)
-    # The fixture leaves the verifier in RUNNING; silent termination is
-    # the dispatcher's reaction to the agent exiting from RUNNING.
     tc._handle_silent_termination(verifier, "agent crashed")
 
-    assert tc.graph.get(verifier_id).status is Status.FAILED
-    assert tc.graph.get(downstream_id).status is Status.FAILED
+    assert tc.graph.get(verifier_id).status is Status.FIXING
+    # Downstream waits for the fix attempt rather than cascading immediately.
+    assert tc.graph.get(downstream_id).status is Status.PENDING
+    fix_execs = [
+        t
+        for t in tc.graph.tasks.values()
+        if t.spawn_reason == "fix_verification"
+    ]
+    assert len(fix_execs) == 1

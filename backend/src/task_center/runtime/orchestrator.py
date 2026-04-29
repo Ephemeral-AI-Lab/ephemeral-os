@@ -322,17 +322,75 @@ class Orchestrator:
         return "\n".join(parts)
 
     # ------------------------------------------------------------------ #
-    # Stage 6/7 stubs (filled by later stages)                           #
+    # Stage 6 — Fix-executor                                             #
     # ------------------------------------------------------------------ #
 
     def create_harness_fix_executor(
         self,
         verifier_id: TaskId,
         failure_summary: str,
-    ) -> None:
-        raise NotImplementedError(
-            "create_harness_fix_executor lands in Stage 6 (fix-executor)."
+    ) -> Task:
+        """Spawn a bounded recovery executor for a failed verifier.
+
+        The fix-executor's input is synthesized deterministically from:
+          - the verifier's ``failure_summary`` (just-now reason),
+          - the verifier's task input (the verification spec it ran), and
+          - the verifier's dep summaries (what it had to work with).
+
+        The fix-executor is created READY in the verifier's harness graph
+        with no ``needs`` (it does not depend on any DAG node — it operates
+        side-channel) and is tagged ``spawn_reason='fix_verification'`` +
+        ``fix_target_id=verifier_id`` so the runtime can route success/
+        failure back to the verifier (Stage 6: F2 — verifier always has the
+        last word, so success means re-run, not bypass).
+        """
+        verifier = self.tc.graph.get(verifier_id)
+        if verifier.role != "verifier":
+            raise ValueError(
+                f"create_harness_fix_executor: target {verifier_id!r} is "
+                f"role {verifier.role!r}, not verifier"
+            )
+        # Aggregate the verifier's dep summaries; the dep ids are the
+        # verifier's ``needs``. Each dep contributes its latest summary
+        # (most likely the success summary that the verifier read).
+        dep_lines: list[str] = []
+        for dep_id in sorted(verifier.needs):
+            dep = self.tc.graph.get(dep_id)
+            latest = dep.summaries[-1].text if dep.summaries else "(no summary)"
+            dep_lines.append(f"- {dep_id}: {latest}")
+        dep_block = "\n".join(dep_lines) if dep_lines else "(no upstream deps)"
+
+        fix_input = (
+            "## FIX MODE — verifier recovery\n"
+            "A verifier downstream of your dependencies failed. Repair the "
+            "minimal scope of work that triggered the failure so the verifier "
+            "can re-run successfully. Constraints (mirrored from the "
+            "evaluator inline-fix policy):\n"
+            "- ≤5 file edits; no new files; no test-file edits\n"
+            "- narrow change categories (typo, missing import, wrong constant, "
+            "syntax fix)\n"
+            "- do not call request_plan from this task; recovery is bounded\n"
+            "- if the repair is broader than that, submit_task_failure\n\n"
+            "## VERIFIER FAILURE SUMMARY\n"
+            f"{failure_summary}\n\n"
+            "## VERIFIER TASK INPUT (spec the verifier was checking)\n"
+            f"{verifier.input}\n\n"
+            "## VERIFIER DEP SUMMARIES\n"
+            f"{dep_block}"
         )
+        fix_executor = self.tc._create_executor(
+            input=fix_input,
+            harness_graph_id=self.graph_id,
+            needs=frozenset(),
+            status=Status.READY,
+            spawn_reason="fix_verification",
+            fix_target_id=verifier_id,
+        )
+        return fix_executor
+
+    # ------------------------------------------------------------------ #
+    # Stage 7 stubs (filled by Stage 7 cleanup pass)                     #
+    # ------------------------------------------------------------------ #
 
     def close_success(self, summary: str) -> None:
         raise NotImplementedError(

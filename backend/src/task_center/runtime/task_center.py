@@ -184,6 +184,8 @@ class TaskCenter:
         needs: frozenset[TaskId] = frozenset(),
         status: Status,
         id: TaskId | None = None,
+        fix_target_id: TaskId | None = None,
+        spawn_reason: str | None = None,
     ) -> Task:
         task = Task(
             id=id if id is not None else self._new_id(),
@@ -192,6 +194,8 @@ class TaskCenter:
             status=status,
             task_center_harness_graph_id=harness_graph_id,
             needs=needs,
+            fix_target_id=fix_target_id,
+            spawn_reason=spawn_reason,
         )
         self._graph.add(task)
         return task
@@ -204,6 +208,8 @@ class TaskCenter:
         needs: frozenset[TaskId] = frozenset(),
         status: Status,
         id: TaskId | None = None,
+        fix_target_id: TaskId | None = None,
+        spawn_reason: str | None = None,
     ) -> Task:
         """Add a ``Task(role='executor')`` to the graph store."""
         return self._create_task(
@@ -213,6 +219,8 @@ class TaskCenter:
             needs=needs,
             status=status,
             id=id,
+            fix_target_id=fix_target_id,
+            spawn_reason=spawn_reason,
         )
 
     def _create_planner(
