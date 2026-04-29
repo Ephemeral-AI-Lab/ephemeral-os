@@ -30,7 +30,11 @@ PLANNER = AgentDefinition(
     tool_call_limit=100,
     system_prompt=load_system_prompt(),
     allowed_tools=list(PLANNER_TOOLS),
-    terminals=["submit_plan_handoff"],
+    terminals=[
+        "submit_plan_handoff",  # legacy — Stage 7 drops this
+        "submit_full_plan",
+        "submit_partial_plan",
+    ],
     notification_rules=[
         make_opening_reminder(_load_distilled_rules()),
         make_budget_warning(),

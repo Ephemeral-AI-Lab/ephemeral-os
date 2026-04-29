@@ -5,11 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from task_center.errors import TaskCenterError
-from task_center.graph import compile_dag, plan_sinks, validate_task_ids_available
+from task_center.graph import compile_dag, validate_task_ids_available
+from task_center.graph.errors import PlanValidationError
 from task_center.harness_agents.planner.context import build_planner_launch_context
 from task_center.model import Status, Task, TaskId, TaskSummary
 
 if TYPE_CHECKING:
+    from task_center.runtime.orchestrator import MaterializationFailure
     from task_center.runtime.task_center import TaskCenter
 
 
@@ -56,58 +58,114 @@ def submit_plan_handoff(
     handoff_plan_note: str,
     evaluator_note: str,
 ) -> None:
-    """Accept a planner DAG handoff and materialize executor children + evaluator.
+    """Legacy planner terminal — preserved for backward compatibility.
 
-    ``handoff_plan_note`` describes the plan itself (PLAN_SHAPE, TOPOLOGY,
-    COVERAGE_MAP, GAP). ``evaluator_note`` is the planner's explicit
-    instruction to the evaluator (what to verify, what to skip, which
-    adversarial probes are most relevant); it becomes the evaluator's
-    task input.
+    Stage 3 routes this through the new
+    :meth:`Orchestrator.materialize_full_plan` so legacy callers benefit
+    from the structured validation matrix while still surfacing
+    ``handoff_plan_note`` on the harness graph (the new terminals do not
+    take a separate plan-note argument).
     """
+    from task_center.runtime.orchestrator import Orchestrator
+
     planner = tc.graph.get(planner_id)
     if planner.role != "planner":
         raise TaskCenterError(
             f"submit_plan_handoff: task {planner_id!r} role {planner.role!r} "
             "is not planner"
         )
-    deps = compile_dag(tasks, task_inputs)
+    # Legacy strict validation (raises PlanValidationError for cycles,
+    # duplicate ids, missing inputs, etc.). Preserves error messages that
+    # existing tests assert against.
+    compile_dag(tasks, task_inputs)
     assert planner.task_center_harness_graph_id is not None
     graph = tc.graph.get_harness_graph(planner.task_center_harness_graph_id)
     evaluator_id = f"{planner_id}-eval"
-    validate_task_ids_available(tc.graph, set(deps) | {evaluator_id})
+    validate_task_ids_available(
+        tc.graph, set(task_inputs.keys()) | {evaluator_id}
+    )
 
+    # Translate the legacy entries into the Stage 3 DAG shape with role
+    # defaulting to "executor". Then delegate to the new materializer.
+    task_dep_graphs = [
+        {
+            "id": entry["id"],
+            "deps": list(entry.get("deps", [])),
+            "role": entry.get("role", "executor"),
+        }
+        for entry in tasks
+    ]
+    orch = Orchestrator(graph_id=graph.id, tc=tc)
+    err = orch.materialize_full_plan(
+        task_dep_graphs, task_inputs, evaluator_note
+    )
+    if err is not None:
+        # Defensive: compile_dag should have caught structural issues
+        # already, so this path is reachable only if a Stage 3-only check
+        # (e.g., verifier_sink with role-bearing legacy inputs) fails.
+        raise PlanValidationError(f"{err.code}: {err.message}")
+
+    # Legacy concerns the new materializer does not handle:
     planner.summaries.append(
         TaskSummary(kind="handoff", text=handoff_plan_note, source_task_id=planner_id)
     )
-    tc.graph.transition(planner.id, Status.HANDOFF)
     graph.handoff_plan_note = handoff_plan_note
-    graph.evaluator_note = evaluator_note
 
-    sinks = plan_sinks(deps)
-    for entry in tasks:
-        tid = entry["id"]
-        child_status = Status.READY if not deps[tid] else Status.PENDING
-        child = tc._create_executor(
-            input=task_inputs[tid],
-            harness_graph_id=graph.id,
-            needs=deps[tid],
-            status=child_status,
-            id=tid,
+
+def submit_full_plan(
+    tc: "TaskCenter",
+    planner_id: TaskId,
+    task_dep_graphs: list[dict[str, Any]],
+    task_details: dict[str, str],
+    evaluation_specification: str,
+) -> "MaterializationFailure | None":
+    """Stage 3 — full-plan terminal handler.
+
+    Runs :meth:`Orchestrator.materialize_full_plan` on the planner's graph
+    and returns the validation failure (if any) so the dispatcher can
+    surface it to the agent as a tool-result failure for retry.
+    """
+    from task_center.runtime.orchestrator import Orchestrator
+
+    planner = tc.graph.get(planner_id)
+    if planner.role != "planner":
+        raise TaskCenterError(
+            f"submit_full_plan: task {planner_id!r} role {planner.role!r} "
+            "is not planner"
         )
-        graph.executor_task_ids.append(child.id)
-        graph.dag_nodes.append(child.id)
-
-    evaluator = tc._create_evaluator(
-        input=evaluator_note,
-        harness_graph_id=graph.id,
-        needs=sinks,
-        id=evaluator_id,
+    assert planner.task_center_harness_graph_id is not None
+    orch = Orchestrator(
+        graph_id=planner.task_center_harness_graph_id, tc=tc
     )
-    graph.evaluator_task_id = evaluator.id
-    graph.evaluator = evaluator.id
+    return orch.materialize_full_plan(
+        task_dep_graphs, task_details, evaluation_specification
+    )
 
-    tc._persist_all()
-    tc._wakeup.set()
+
+def submit_partial_plan(
+    tc: "TaskCenter",
+    planner_id: TaskId,
+    task_dep_graphs: list[dict[str, Any]],
+    task_details: dict[str, str],
+    what_to_do_next: str,
+    evaluation_specification: str,
+) -> "MaterializationFailure | None":
+    """Stage 3 — partial-plan terminal handler."""
+    from task_center.runtime.orchestrator import Orchestrator
+
+    planner = tc.graph.get(planner_id)
+    if planner.role != "planner":
+        raise TaskCenterError(
+            f"submit_partial_plan: task {planner_id!r} role {planner.role!r} "
+            "is not planner"
+        )
+    assert planner.task_center_harness_graph_id is not None
+    orch = Orchestrator(
+        graph_id=planner.task_center_harness_graph_id, tc=tc
+    )
+    return orch.materialize_partial_plan(
+        task_dep_graphs, task_details, what_to_do_next, evaluation_specification
+    )
 
 
 def handle_silent_termination(tc: "TaskCenter", task: Task, reason: str) -> None:

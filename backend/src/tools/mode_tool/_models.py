@@ -16,6 +16,14 @@ class TaskDependencyEntry(BaseModel):
             "— do not list indirect predecessors."
         ),
     )
+    role: str = Field(
+        default="executor",
+        description=(
+            "Generator role for this DAG node: 'executor' (default) for a "
+            "DAG-local doer, or 'verifier' for a mid-graph node-scoped check. "
+            "Verifiers cannot be DAG sinks."
+        ),
+    )
 
 
 class SubmissionOutput(BaseModel):

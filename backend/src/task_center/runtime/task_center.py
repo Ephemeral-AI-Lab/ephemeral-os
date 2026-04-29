@@ -46,6 +46,7 @@ from task_center.model import (
 
 if TYPE_CHECKING:
     from db.stores.task_center_store import TaskCenterStore
+    from task_center.runtime.orchestrator import MaterializationFailure
 
 logger = logging.getLogger(__name__)
 
@@ -364,6 +365,12 @@ class TaskCenter:
         handoff_plan_note: str,
         evaluator_note: str,
     ) -> None:
+        """Legacy planner terminal — kept for backward compatibility.
+
+        Stage 3 wires this through the new ``Orchestrator.materialize_full_plan``
+        path so legacy callers benefit from the structured validation matrix
+        while still surfacing ``handoff_plan_note`` on the harness graph.
+        """
         planner_lifecycle.submit_plan_handoff(
             self,
             planner_id,
@@ -371,6 +378,45 @@ class TaskCenter:
             task_inputs,
             handoff_plan_note,
             evaluator_note,
+        )
+
+    def submit_full_plan(
+        self,
+        planner_id: TaskId,
+        task_dep_graphs: list[dict[str, Any]],
+        task_details: dict[str, str],
+        evaluation_specification: str,
+    ) -> "MaterializationFailure | None":
+        """Stage 3 — full-plan terminal.
+
+        Returns :class:`MaterializationFailure` on validation failure (the
+        agent retains the advisor accept and can retry per Phase 1's lenient
+        policy); ``None`` on success.
+        """
+        return planner_lifecycle.submit_full_plan(
+            self,
+            planner_id,
+            task_dep_graphs,
+            task_details,
+            evaluation_specification,
+        )
+
+    def submit_partial_plan(
+        self,
+        planner_id: TaskId,
+        task_dep_graphs: list[dict[str, Any]],
+        task_details: dict[str, str],
+        what_to_do_next: str,
+        evaluation_specification: str,
+    ) -> "MaterializationFailure | None":
+        """Stage 3 — partial-plan terminal."""
+        return planner_lifecycle.submit_partial_plan(
+            self,
+            planner_id,
+            task_dep_graphs,
+            task_details,
+            what_to_do_next,
+            evaluation_specification,
         )
 
     def _notify_child_terminal_changed(self) -> None:
