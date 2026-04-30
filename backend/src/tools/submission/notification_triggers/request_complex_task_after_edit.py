@@ -1,4 +1,4 @@
-"""Soft reminder for generator complex-task handoff after edit."""
+"""Soft reminder for disabled generator complex-task request starts after edit."""
 
 from __future__ import annotations
 

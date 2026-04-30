@@ -32,6 +32,8 @@ from sandbox.code_intelligence.overlay.types import (
 )
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 

@@ -21,8 +21,8 @@ class HelperRequestGate:
         tool_input: BaseModel,
         context: ToolExecutionContextService,
     ) -> HookResult[Any]:
-        role = str(context.get("role") or "").strip()
-        if not role:
+        role = str(context.get("role") or "")
+        if not role or role.isspace():
             return HookResult.fail(
                 f"{self.target_tool} requires caller role metadata."
             )

@@ -1,4 +1,4 @@
-"""Prehook blocking complex-task handoff after the first edit-capable call."""
+"""Prehook blocking complex-task request starts after the first edit-capable call."""
 
 from __future__ import annotations
 

@@ -85,7 +85,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     graph = graph_store.get(fixture.graph_id)
     assert not result.is_error
     assert graph is not None
-    assert graph.continuation_goal == "continue with phase 2"
+    assert graph.continuation_goal == "  continue with phase 2  "
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,8 @@ import pytest
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 from sandbox.code_intelligence.mutations.write_coordinator import CommitOperation

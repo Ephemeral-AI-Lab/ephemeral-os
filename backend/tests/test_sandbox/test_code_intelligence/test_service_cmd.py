@@ -11,6 +11,8 @@ import pytest
 from sandbox.code_intelligence.overlay.git_snapshot import GitSnapshotError
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 

@@ -205,5 +205,5 @@ spells out the concrete artifacts already in place and the seams left to wire:
 
 - [`phase-02-harness-graph-orchestrator-lifecycle.md`](./phase-02-harness-graph-orchestrator-lifecycle.md)
 - [`phase-03-agent-roles-and-tool-gates.md`](./phase-03-agent-roles-and-tool-gates.md)
-- [`phase-04-complex-task-spawning-and-handoff.md`](./phase-04-complex-task-spawning-and-handoff.md)
+- [`phase-04-complex-task-spawning.md`](./phase-04-complex-task-spawning.md)
 - [`phase-06-context-engine.md`](./phase-06-context-engine.md)

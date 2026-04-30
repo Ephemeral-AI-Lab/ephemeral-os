@@ -423,10 +423,10 @@ class TestCodeIntelligenceOnProject:
 
     def test_ci_registry_singleton(self, nextjs_sandbox):
         """get_code_intelligence returns same instance for same sandbox_id."""
-        from sandbox.code_intelligence.service import (
-            get_code_intelligence,
-            dispose_all_code_intelligence,
-        )
+        from sandbox.code_intelligence.registry import (
+    get_code_intelligence,
+    dispose_all_code_intelligence,
+)
 
         dispose_all_code_intelligence()
 

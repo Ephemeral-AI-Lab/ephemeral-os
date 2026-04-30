@@ -112,19 +112,19 @@ class TestCIServiceRegistry:
 
     def setup_method(self):
         """Clean up the global registry before each test."""
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
     def teardown_method(self):
         """Clean up after each test."""
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
     def test_ci_service_registry_returns_singleton(self):
         """get_code_intelligence should return the same instance for the same sandbox_id."""
-        from sandbox.code_intelligence.service import get_code_intelligence
+        from sandbox.code_intelligence.registry import get_code_intelligence
 
         svc1 = get_code_intelligence("registry-test-001", "/workspace")
         svc2 = get_code_intelligence("registry-test-001", "/workspace")
@@ -132,7 +132,7 @@ class TestCIServiceRegistry:
 
     def test_ci_service_registry_different_sandboxes(self):
         """Different sandbox_ids should get different instances."""
-        from sandbox.code_intelligence.service import get_code_intelligence
+        from sandbox.code_intelligence.registry import get_code_intelligence
 
         svc1 = get_code_intelligence("sandbox-a", "/workspace")
         svc2 = get_code_intelligence("sandbox-b", "/workspace")
@@ -142,10 +142,10 @@ class TestCIServiceRegistry:
 
     def test_ci_service_if_exists(self):
         """get_code_intelligence_if_exists should return None if not created."""
-        from sandbox.code_intelligence.service import (
-            get_code_intelligence,
-            get_code_intelligence_if_exists,
-        )
+        from sandbox.code_intelligence.registry import (
+    get_code_intelligence,
+    get_code_intelligence_if_exists,
+)
 
         assert get_code_intelligence_if_exists("nonexistent") is None
 
@@ -156,11 +156,11 @@ class TestCIServiceRegistry:
 
     def test_ci_service_dispose_removes_from_registry(self):
         """dispose_code_intelligence should remove the service from the registry."""
-        from sandbox.code_intelligence.service import (
-            dispose_code_intelligence,
-            get_code_intelligence,
-            get_code_intelligence_if_exists,
-        )
+        from sandbox.code_intelligence.registry import (
+    dispose_code_intelligence,
+    get_code_intelligence,
+    get_code_intelligence_if_exists,
+)
 
         get_code_intelligence("dispose-test", "/workspace")
         assert get_code_intelligence_if_exists("dispose-test") is not None
@@ -170,10 +170,10 @@ class TestCIServiceRegistry:
 
     def test_ci_service_all_status(self):
         """get_all_services_status should return status for all services."""
-        from sandbox.code_intelligence.service import (
-            get_all_services_status,
-            get_code_intelligence,
-        )
+        from sandbox.code_intelligence.registry import (
+    get_all_services_status,
+    get_code_intelligence,
+)
 
         get_code_intelligence("status-a", "/workspace")
         get_code_intelligence("status-b", "/workspace")

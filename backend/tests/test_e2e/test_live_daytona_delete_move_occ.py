@@ -29,6 +29,8 @@ from dotenv import load_dotenv
 
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec

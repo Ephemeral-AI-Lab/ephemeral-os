@@ -18,7 +18,7 @@ from tools.submission.main_agent.planner._schemas import (
     PlanTaskInput,
     PlannerSubmissionBaseInput,
     build_planner_submission,
-    strip_nonblank,
+    validate_nonblank,
 )
 
 
@@ -27,8 +27,8 @@ class SubmitPartialPlanInput(PlannerSubmissionBaseInput):
 
     @field_validator("continuation_goal")
     @classmethod
-    def _strip_continuation_goal(cls, value: str) -> str:
-        return strip_nonblank(value, "continuation_goal")
+    def _validate_continuation_goal(cls, value: str) -> str:
+        return validate_nonblank(value, "continuation_goal")
 
 
 @tool(

@@ -39,8 +39,8 @@ def resolve_harness_submission_context(
             "Missing harness graph runtime for this TaskCenter submission."
         )
 
-    task_id = str(context.get("task_center_task_id") or "").strip()
-    if not task_id:
+    task_id = str(context.get("task_center_task_id") or "")
+    if not task_id or task_id.isspace():
         raise HarnessSubmissionContextError(
             "Missing TaskCenter task id for this submission."
         )
@@ -51,13 +51,17 @@ def resolve_harness_submission_context(
             f"TaskCenter task {task_id!r} was not found."
         )
 
-    graph_id = str(task.get("task_center_harness_graph_id") or "").strip()
-    if not graph_id:
+    graph_id = str(task.get("task_center_harness_graph_id") or "")
+    if not graph_id or graph_id.isspace():
         raise HarnessSubmissionContextError(
             f"TaskCenter task {task_id!r} is not attached to a harness graph."
         )
 
-    metadata_graph_id = str(context.get("task_center_harness_graph_id") or "").strip()
+    metadata_graph_id = str(context.get("task_center_harness_graph_id") or "")
+    if metadata_graph_id.isspace():
+        raise HarnessSubmissionContextError(
+            "TaskCenter graph metadata is blank."
+        )
     if metadata_graph_id and metadata_graph_id != graph_id:
         raise HarnessSubmissionContextError(
             "TaskCenter graph metadata does not match the persisted task row."

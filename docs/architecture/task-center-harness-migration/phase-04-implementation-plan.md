@@ -1,10 +1,10 @@
 # Phase 04 - Implementation Plan
 
 Companion to
-[`phase-04-complex-task-spawning-and-handoff.md`](./phase-04-complex-task-spawning-and-handoff.md).
+[`phase-04-complex-task-spawning.md`](./phase-04-complex-task-spawning.md).
 This document is the actionable build plan for complex-task spawning, parent
-executor handoff, close-report delivery, and the persistence API walk over the
-durable request / segment / graph model.
+executor request start, close-report delivery, and the persistence API walk over
+the durable request / segment / graph model.
 
 Phase 04 does not redefine the Phase 01 durable model, the Phase 02
 single-graph orchestrator, or the Phase 03 public terminal-tool layer. It
@@ -22,12 +22,12 @@ requesting generator task.
 
 Deliverables:
 
-1. A single orchestration service for complex-task handoff creation, replacing
+1. A single orchestration service for complex-task request startup, replacing
    the tool file's inline request/segment/graph construction.
 2. An executor-profile hard gate so only the generator executor agent can call
    `request_complex_task_solution`, `submit_execution_success`, and
    `submit_execution_failure`; verifier terminals remain verifier-only.
-3. Handoff creation that avoids leaving the parent task stuck in
+3. Delegated request startup that avoids leaving the parent task stuck in
    `waiting_complex_task` when delegated graph startup fails.
 4. Initial delegated request creation through `ComplexTaskRequestHandler`, initial
    segment creation through the handler, and initial graph creation through the
@@ -44,9 +44,9 @@ Deliverables:
 8. `/api/db/task-center-runs/{id}/graph` backed by
    `complex_task_requests -> task_segments -> harness_graphs`, with task rows
    attached per graph for the UI.
-9. Focused tests covering handoff success, startup failure, delegated success,
-   delegated failure, continuation, retry, replay, profile gates, and the graph
-   API route.
+9. Focused tests covering delegated request startup, startup failure, delegated
+   success, delegated failure, continuation, retry, replay, profile gates, and
+   the graph API route.
 
 Not in scope:
 
@@ -67,12 +67,12 @@ Not in scope:
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | Phase 01 durable records         | `ComplexTaskRequestRecord`, `TaskSegmentRecord`, and `HarnessGraphRecord` exist under `backend/src/db/models/`; stores return frozen DTOs.       | Reuse. Add only query helpers needed by delivery and route walking.                                         |
 | Request/segment lifecycle        | `ComplexTaskRequestHandler` creates requests and segments, emits close reports through an optional callback, and spawns `TaskSegmentManager`.    | Reuse. Do not create requests or segments from any other class.                                             |
-| Segment retry lifecycle          | `TaskSegmentManager` is the only**** creator of graphs inside one segment and already handles retry vs segment closure.                          | Reuse. Add a narrow deferred-start seam only if needed for safe handoff startup.                            |
+| Segment retry lifecycle          | `TaskSegmentManager` is the only creator of graphs inside one segment and already handles retry vs segment closure.                              | Reuse. Add a narrow deferred-start seam only if needed for safe request startup.                            |
 | Phase 02 graph orchestration     | `HarnessGraphOrchestrator` starts planner, schedules generators, spawns evaluator, closes graphs, and keeps `waiting_complex_task` non-terminal. | Reuse. Harden close-report idempotency and validation.                                                      |
 | Parent resume entry              | `HarnessGraphOrchestrator.apply_complex_task_close_report(...)` exists and maps delegated success to parent `done`, failure to parent `failed`.  | Keep as the single parent resume method. Add replay/idempotency behavior around it.                         |
-| Phase 03 public tool             | `request_complex_task_solution` is registered and currently performs handoff creation inline.                                                    | Refactor the body into a coordinator. The tool should validate input and delegate.                          |
-| Phase 03 planner validation      | Whitespace stripping is already implemented in `planner/_schemas.py`.                                                                            | No Phase 04 work.                                                                                           |
-| Phase 03 executor/verifier split | Current hard gate checks only persisted structural role `generator`; it does not prove executor vs verifier profile.                             | Wave 0 must add profile gates before relying on executor-only handoff behavior.                             |
+| Phase 03 public tool             | `request_complex_task_solution` is registered and currently performs delegated request creation inline.                                          | Refactor the body into a starter. The tool should validate input and delegate.                              |
+| Phase 03 planner validation      | Nonblank validation is implemented in `planner/_schemas.py`; valid input values are preserved rather than stripped.                               | No Phase 04 work.                                                                                           |
+| Phase 03 executor/verifier split | Current hard gate checks only persisted structural role `generator`; it does not prove executor vs verifier profile.                             | Wave 0 must add profile gates before relying on executor-only delegated request behavior.                   |
 | Runtime store initialization     | Server initializes `TaskCenterStore`, `AgentRunStore`, and `ModelStore`; request/segment/graph stores are test-only or runtime-object-only.      | Initialize `ComplexTaskRequestStore`, `TaskSegmentStore`, and `HarnessGraphStore` in app/runtime bootstrap. |
 | Graph API route                  | `persistence.py` still returns `{"harness_graphs": []}` with `TODO(phase-04)`.                                                                   | Implement the route from the new schema.                                                                    |
 
@@ -87,16 +87,16 @@ while the parent task can remain waiting. Phase 04 must eliminate this state.
 
 ## 3. Workflow Diagrams
 
-### 3a. Executor Handoff Creation
+### 3a. Executor Delegated Request Start
 
 ```mermaid
 flowchart TD
     Exec["Generator executor task E<br/>status = running"] --> Tool["request_complex_task_solution(goal)"]
     Tool --> Gates["Hard gates<br/>generator role + executor profile + before-edit"]
     Gates --> Resolve["Resolve task -> parent graph -> segment -> request -> runtime"]
-    Resolve --> Coord["ComplexTaskHandoffCoordinator.start_handoff"]
+    Resolve --> Starter["ComplexTaskRequestStarter.start"]
 
-    Coord --> ParentCheck{"Parent task still running<br/>and no open child request?"}
+    Starter --> ParentCheck{"Parent task still running<br/>and no open child request?"}
     ParentCheck -->|"no"| InlineErr["ToolResult is_error=True<br/>parent remains running"]
     ParentCheck -->|"yes"| CreateReq["ComplexTaskRequestHandler.create_complex_task_request"]
     CreateReq --> CreateSeg["ComplexTaskRequestHandler.create_initial_segment"]
@@ -107,10 +107,10 @@ flowchart TD
     Start --> Startup{"Delegated graph startup OK?"}
     Startup -->|"no"| Rollback["Rollback parent to running<br/>cancel/compensate delegated artifacts"]
     Rollback --> InlineErr
-    Startup -->|"yes"| Success["ToolResult terminal success<br/>agent run stops at handoff boundary"]
+    Startup -->|"yes"| Success["ToolResult terminal success<br/>agent run stops at delegated request boundary"]
 ```
 
-The coordinator owns the ordering. The tool should not call
+The starter owns the ordering. The tool should not call
 `ComplexTaskRequestHandler`, `TaskSegmentManager`, or `TaskCenterStore`
 directly after Phase 04.
 
@@ -189,7 +189,7 @@ Ownership remains strict:
 | `TaskSegment` creation                            | `ComplexTaskRequestHandler` only         |
 | `TaskSegmentManager` spawning                     | `ComplexTaskRequestHandler` only         |
 | `HarnessGraph` creation inside a segment          | that segment's `TaskSegmentManager` only |
-| Initial complex-task handoff orchestration        | new `ComplexTaskHandoffCoordinator`      |
+| Initial delegated complex-task request start      | new `ComplexTaskRequestStarter`          |
 | Close-report routing to parent graph              | new `ComplexTaskCloseReportRouter`       |
 | Parent generator state mutation from close report | parent `HarnessGraphOrchestrator` only   |
 | Frontend graph serialization                      | persistence router helper functions only |
@@ -204,7 +204,7 @@ The coordinator composes existing owners; it must not bypass them.
 backend/src/task_center/complex_task/
 |-- request.py                         # existing DTOs; keep ComplexTaskCloseReport here
 |-- handler.py                         # edit only if callback/replay hook needs shaping
-|-- handoff.py                         # NEW: ComplexTaskHandoffCoordinator
+|-- request_start.py                   # NEW: ComplexTaskRequestStarter
 |-- close_report_delivery.py           # NEW: ComplexTaskCloseReportRouter + replay helpers
 `-- validation.py                      # existing request invariants
 
@@ -222,7 +222,7 @@ backend/src/tools/submission/hooks/
 
 backend/src/tools/submission/main_agent/generator/
 |-- executor/
-|   |-- request_complex_task_solution.py # EDIT: delegate to handoff coordinator
+|   |-- request_complex_task_solution.py # EDIT: delegate to request starter
 |   |-- submit_execution_success.py      # EDIT: add executor profile gate
 |   `-- submit_execution_failure.py      # EDIT: add executor profile gate
 `-- verifier/
@@ -240,13 +240,13 @@ backend/src/server/
 `-- routers/persistence.py             # EDIT: implement graph route from new schema
 
 backend/tests/task_center/lifecycle/
-|-- test_phase04_complex_task_handoff.py
+|-- test_phase04_complex_task_request_start.py
 |-- test_phase04_close_report_delivery.py
 `-- test_phase04_replay.py
 
 backend/tests/test_tools/
 |-- test_submission_tool_gates.py      # EDIT: executor/verifier profile coverage
-`-- test_submission_terminal_routing.py # EDIT: handoff delegates to coordinator
+`-- test_submission_terminal_routing.py # EDIT: request start delegates to starter
 
 backend/tests/server/
 `-- test_persistence_graph_route.py
@@ -256,14 +256,16 @@ backend/tests/server/
 
 ## 6. Files, Classes, and Functions
 
-### 6a. `task_center/complex_task/handoff.py`
+### 6a. `task_center/complex_task/request_start.py`
 
-Create a coordinator that turns an accepted executor tool call into a durable
-delegated request plus initial graph.
+Create a starter that turns an accepted executor tool call into a durable
+delegated request plus initial graph. This is not a domain model; it is the
+use-case boundary that composes the existing request, segment, graph, and parent
+task owners.
 
 ```python
 @dataclass(frozen=True, slots=True)
-class ComplexTaskHandoffResult:
+class StartedComplexTaskRequest:
     parent_task_id: str
     parent_harness_graph_id: str
     complex_task_request_id: str
@@ -272,17 +274,17 @@ class ComplexTaskHandoffResult:
     goal: str
 
 
-class ComplexTaskHandoffCoordinator:
+class ComplexTaskRequestStarter:
     def __init__(self, *, runtime: HarnessGraphRuntime) -> None: ...
 
-    def start_handoff(
+    def start(
         self,
         *,
         task_center_run_id: str,
         parent_task_id: str,
         parent_harness_graph_id: str,
         goal: str,
-    ) -> ComplexTaskHandoffResult: ...
+    ) -> StartedComplexTaskRequest: ...
 ```
 
 Required behavior:
@@ -305,12 +307,12 @@ Required behavior:
 7. Get the registered `TaskSegmentManager` for the new segment.
 8. Create the initial delegated graph through the manager without starting its
    orchestrator yet.
-9. Mark the parent task `waiting_complex_task` with a handoff summary that
+9. Mark the parent task `waiting_complex_task` with a delegated request summary that
    names the delegated request, segment, graph, and goal.
 10. Start the delegated graph orchestrator.
 11. If startup fails, roll the parent task back to `running` and compensate the
     delegated request/segment/graph state.
-12. Return `ComplexTaskHandoffResult`.
+12. Return `StartedComplexTaskRequest`.
 
 Startup failure handling:
 
@@ -336,8 +338,8 @@ class TaskSegmentManager:
 ```
 
 Default behavior stays compatible with existing Phase 01/02 tests. The
-coordinator should use `start_orchestrator=False`, persist the parent handoff
-summary, then call `start_harness_graph(...)`. This prevents a synchronously
+starter should use `start_orchestrator=False`, persist the parent delegated
+request summary, then call `start_harness_graph(...)`. This prevents a synchronously
 closing test orchestrator from delivering a close report before the parent task
 has entered `waiting_complex_task`.
 
@@ -446,7 +448,7 @@ Do not make the orchestrator create delegated requests or segments.
 
 ### 6d. `tools/submission/main_agent/generator/request_complex_task_solution.py`
 
-Keep the public schema and terminal registration, but strip the body down to
+Keep the public schema and terminal registration, but reduce the body to
 validation plus delegation.
 
 ```python
@@ -455,16 +457,20 @@ class RequestComplexTaskSolutionInput(BaseModel):
 
     @field_validator("goal")
     @classmethod
-    def _strip_goal(cls, value: str) -> str: ...
+    def _validate_goal(cls, value: str) -> str: ...
 ```
+
+The validator rejects empty or whitespace-only goals and returns the original
+value unchanged. The request-start path should not strip or normalize the durable
+goal.
 
 Tool handler flow:
 
 1. Resolve `HarnessSubmissionContext`.
 2. Confirm the persisted task is `running`.
-3. Instantiate `ComplexTaskHandoffCoordinator(runtime=submission_context.runtime)`.
-4. Call `start_handoff(...)`.
-5. Return terminal `ToolResult` with metadata from `ComplexTaskHandoffResult`.
+3. Instantiate `ComplexTaskRequestStarter(runtime=submission_context.runtime)`.
+4. Call `start(...)`.
+5. Return terminal `ToolResult` with metadata from `StartedComplexTaskRequest`.
 
 The tool should not contain delivery callbacks, handler factories, registry
 lookups, or direct task status mutation after Phase 04.
@@ -543,7 +549,7 @@ def cancel(self, segment_id: str, *, closed_at: datetime | None = None) -> TaskS
 
 `backend/src/db/stores/task_center_store.py`
 
-Add a compare-and-set helper to avoid racing duplicate handoffs or stale
+Add a compare-and-set helper to avoid racing duplicate request starts or stale
 delivery:
 
 ```python
@@ -652,14 +658,14 @@ Keep the route name and the top-level `harness_graphs` key stable.
    - executor profile cannot call verifier terminals
 4. Run the focused submission gate tests.
 
-### Wave 1 - Extract Handoff Coordinator
+### Wave 1 - Extract Request Starter
 
-1. Add `ComplexTaskHandoffCoordinator` and `ComplexTaskHandoffResult`.
+1. Add `ComplexTaskRequestStarter` and `StartedComplexTaskRequest`.
 2. Move handler factory and close-report sink construction out of
    `request_complex_task_solution.py`.
 3. Add duplicate-open-request and parent-status checks.
 4. Refactor the tool to delegate.
-5. Preserve existing successful handoff behavior in
+5. Preserve existing successful delegated request behavior in
    `test_request_complex_task_solution_starts_delegated_request`.
 
 ### Wave 2 - Safe Startup and Compensation
@@ -713,14 +719,14 @@ Keep the route name and the top-level `harness_graphs` key stable.
 
 ### Wave 6 - Verification and Docs Sync
 
-1. Update `phase-04-complex-task-spawning-and-handoff.md` only if the
+1. Update `phase-04-complex-task-spawning.md` only if the
    implementation changes the target behavior.
 2. Add `phase-04-implementation-report.md` after implementation.
 3. Run:
 
 ```bash
 uv run pytest backend/tests/test_tools/test_submission_tool_gates.py backend/tests/test_tools/test_submission_terminal_routing.py -q
-uv run pytest backend/tests/task_center/lifecycle/test_phase04_complex_task_handoff.py backend/tests/task_center/lifecycle/test_phase04_close_report_delivery.py backend/tests/task_center/lifecycle/test_phase04_replay.py -q
+uv run pytest backend/tests/task_center/lifecycle/test_phase04_complex_task_request_start.py backend/tests/task_center/lifecycle/test_phase04_close_report_delivery.py backend/tests/task_center/lifecycle/test_phase04_replay.py -q
 uv run pytest backend/tests/server/test_persistence_graph_route.py -q
 uv run pytest backend/tests/task_center -q
 uv run ruff check backend/src/task_center backend/src/tools/submission backend/src/server backend/tests
@@ -739,12 +745,12 @@ graphify update .
 
 | Test                                                                            | Purpose                                                                                                |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `test_executor_profile_required_for_handoff`                                    | Verifier-owned generator run cannot call `request_complex_task_solution`.                              |
+| `test_executor_profile_required_for_complex_task_request`                       | Verifier-owned generator run cannot call `request_complex_task_solution`.                              |
 | `test_executor_profile_required_for_execution_terminals`                        | Verifier cannot submit executor terminals even though persisted role is `generator`.                   |
 | `test_verifier_profile_required_for_verification_terminals`                     | Executor cannot submit verifier terminals.                                                             |
-| `test_handoff_creates_request_segment_graph_and_marks_parent_waiting`           | Main happy path from tool/coordinator.                                                                 |
-| `test_handoff_startup_failure_leaves_parent_running`                            | Regression for Phase 03 review finding.                                                                |
-| `test_handoff_rejects_second_open_child_request_for_same_executor`              | Prevent duplicate delegated requests from one running task.                                            |
+| `test_request_start_creates_request_segment_graph_and_marks_parent_waiting`     | Main happy path from tool/starter.                                                                     |
+| `test_request_start_startup_failure_leaves_parent_running`                      | Regression for Phase 03 review finding.                                                               |
+| `test_request_start_rejects_second_open_child_request_for_same_executor`        | Prevent duplicate delegated requests from one running task.                                            |
 | `test_delegated_success_close_report_marks_parent_done`                         | Final delegated success resumes parent graph.                                                          |
 | `test_delegated_failure_close_report_marks_parent_failed_and_blocks_dependents` | Final delegated failure propagates as generator failure.                                               |
 | `test_delegated_continuation_waits_until_final_segment`                         | `success_continue` creates a later segment and does not resume parent early.                           |
@@ -782,4 +788,3 @@ Phase 04 is complete when:
   empty stub.
 - Focused tests, `backend/tests/task_center`, ruff, and strict mypy for
   `task_center` and `agents` are green.
-

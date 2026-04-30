@@ -446,12 +446,12 @@ class TestCodeIntelligenceSystem:
 
     def setup_method(self):
         """Clean up the CI service registry."""
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
     def teardown_method(self):
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
@@ -500,7 +500,7 @@ class TestCodeIntelligenceSystem:
 
     def test_ci_registry_singleton(self):
         """Same sandbox_id should return the same service instance."""
-        from sandbox.code_intelligence.service import get_code_intelligence
+        from sandbox.code_intelligence.registry import get_code_intelligence
 
         svc1 = get_code_intelligence("singleton-test", "/ws")
         svc2 = get_code_intelligence("singleton-test", "/ws")
@@ -508,7 +508,7 @@ class TestCodeIntelligenceSystem:
 
     def test_ci_registry_different_sandboxes(self):
         """Different sandbox_ids should get different instances."""
-        from sandbox.code_intelligence.service import get_code_intelligence
+        from sandbox.code_intelligence.registry import get_code_intelligence
 
         svc_a = get_code_intelligence("ci-a", "/ws")
         svc_b = get_code_intelligence("ci-b", "/ws")
@@ -518,11 +518,11 @@ class TestCodeIntelligenceSystem:
 
     def test_ci_registry_dispose_removes(self):
         """Disposing a service should remove it from the registry."""
-        from sandbox.code_intelligence.service import (
-            get_code_intelligence,
-            get_code_intelligence_if_exists,
-            dispose_code_intelligence,
-        )
+        from sandbox.code_intelligence.registry import (
+    get_code_intelligence,
+    get_code_intelligence_if_exists,
+    dispose_code_intelligence,
+)
 
         get_code_intelligence("dispose-reg", "/ws")
         assert get_code_intelligence_if_exists("dispose-reg") is not None
@@ -531,7 +531,7 @@ class TestCodeIntelligenceSystem:
 
     def test_ci_registry_all_status(self):
         """get_all_services_status should return all active services."""
-        from sandbox.code_intelligence.service import get_code_intelligence, get_all_services_status
+        from sandbox.code_intelligence.registry import get_code_intelligence, get_all_services_status
 
         get_code_intelligence("status-x", "/ws")
         get_code_intelligence("status-y", "/ws")

@@ -10,6 +10,8 @@ from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExe
 from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 

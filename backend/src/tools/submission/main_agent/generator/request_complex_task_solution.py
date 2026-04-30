@@ -1,8 +1,8 @@
-"""request_complex_task_solution orchestration handoff tool."""
+"""request_complex_task_solution delegated request tool."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from task_center.complex_task.handler import ComplexTaskRequestHandler
 from task_center.complex_task.request import ComplexTaskCloseReport
@@ -25,6 +25,13 @@ from tools.submission.hooks import (
 class RequestComplexTaskSolutionInput(BaseModel):
     goal: str = Field(..., min_length=1)
 
+    @field_validator("goal")
+    @classmethod
+    def _validate_goal(cls, value: str) -> str:
+        if not value or value.isspace():
+            raise ValueError("goal must be nonblank")
+        return value
+
 
 def _deliver_complex_task_close_report(
     runtime: HarnessGraphRuntime,
@@ -35,8 +42,8 @@ def _deliver_complex_task_close_report(
         raise GraphInvariantViolation(
             f"TaskCenter task {report.requested_by_task_id!r} was not found."
         )
-    graph_id = str(task.get("task_center_harness_graph_id") or "").strip()
-    if not graph_id:
+    graph_id = str(task.get("task_center_harness_graph_id") or "")
+    if not graph_id or graph_id.isspace():
         raise GraphInvariantViolation(
             f"TaskCenter task {report.requested_by_task_id!r} is not attached "
             "to a harness graph."
@@ -93,13 +100,6 @@ async def request_complex_task_solution(
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
-    clean_goal = goal.strip()
-    if not clean_goal:
-        return ToolResult(
-            output="request_complex_task_solution requires a nonblank goal.",
-            is_error=True,
-        )
-
     try:
         submission_context = resolve_harness_submission_context(context)
     except HarnessSubmissionContextError as exc:
@@ -119,7 +119,7 @@ async def request_complex_task_solution(
         delegated_request = request_handler.create_complex_task_request(
             task_center_run_id=submission_context.task["task_center_run_id"],
             requested_by_task_id=submission_context.task_center_task_id,
-            goal=clean_goal,
+            goal=goal,
         )
         initial_segment = request_handler.create_initial_segment(
             complex_task_request_id=delegated_request.id,
@@ -138,12 +138,12 @@ async def request_complex_task_solution(
             submission_context.task_center_task_id,
             status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
             summary={
-                "outcome": "complex_task_handoff",
+                "outcome": "complex_task_request_start",
                 "summary": "Waiting on delegated complex task solution.",
                 "payload": {
                     "complex_task_request_id": delegated_request.id,
                     "initial_segment_id": initial_segment.id,
-                    "goal": clean_goal,
+                    "goal": goal,
                 },
             },
         )
@@ -157,7 +157,7 @@ async def request_complex_task_solution(
             f"{delegated_request.id} for this generator task."
         ),
         metadata={
-            "submission_kind": "complex_task_handoff",
+            "submission_kind": "complex_task_request_start",
             "task_center_task_id": submission_context.task_center_task_id,
             "harness_graph_id": submission_context.graph.id,
             "complex_task_request_id": delegated_request.id,

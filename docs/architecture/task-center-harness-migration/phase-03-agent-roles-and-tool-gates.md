@@ -58,7 +58,7 @@ that every gate reads from; Phase 03 wires the tool-side enforcement.
   Its handoff body creates a request via
   `ComplexTaskRequestHandler.create_complex_task_request` plus
   `create_initial_segment`. The Phase 04 hand-off described in
-  `phase-04-complex-task-spawning-and-handoff.md` shares this entry point.
+  `phase-04-complex-task-spawning.md` shares this entry point.
 
 ## Role model
 

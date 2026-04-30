@@ -22,12 +22,12 @@ class HelperRoleGate:
         tool_input: BaseModel,
         context: ToolExecutionContextService,
     ) -> HookResult[Any]:
-        role = str(context.get("role") or "").strip()
+        role = str(context.get("role") or "")
         if role and role != self.expected_role:
             return HookResult.fail(
                 f"{self.target_tool} is only valid for {self.expected_role} runs."
             )
-        agent_type = str(context.get("agent_type") or "").strip()
+        agent_type = str(context.get("agent_type") or "")
         if (
             self.expected_agent_type is not None
             and agent_type

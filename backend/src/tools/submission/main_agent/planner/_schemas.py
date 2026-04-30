@@ -1,4 +1,4 @@
-"""Planner submission schemas and normalization helpers."""
+"""Planner submission schemas and validation helpers."""
 
 from __future__ import annotations
 
@@ -22,18 +22,20 @@ class PlanTaskInput(BaseModel):
 
     @field_validator("id")
     @classmethod
-    def _strip_id(cls, value: str) -> str:
-        return strip_nonblank(value, "id")
+    def _validate_id(cls, value: str) -> str:
+        return validate_nonblank(value, "id")
 
     @field_validator("agent_name")
     @classmethod
-    def _strip_agent_name(cls, value: str) -> str:
-        return strip_nonblank(value, "agent_name")
+    def _validate_agent_name(cls, value: str) -> str:
+        return validate_nonblank(value, "agent_name")
 
     @field_validator("deps")
     @classmethod
-    def _strip_deps(cls, value: list[str]) -> list[str]:
-        return [strip_nonblank(dep, "deps") for dep in value]
+    def _validate_deps(cls, value: list[str]) -> list[str]:
+        for dep in value:
+            validate_nonblank(dep, "deps")
+        return value
 
 
 class PlannerSubmissionBaseInput(BaseModel):
@@ -46,39 +48,29 @@ class PlannerSubmissionBaseInput(BaseModel):
 
     @field_validator("task_specification")
     @classmethod
-    def _strip_task_specification(cls, value: str) -> str:
-        return strip_nonblank(value, "task_specification")
+    def _validate_task_specification(cls, value: str) -> str:
+        return validate_nonblank(value, "task_specification")
 
     @field_validator("evaluation_criteria")
     @classmethod
-    def _strip_evaluation_criteria(cls, value: list[str]) -> list[str]:
-        return [
-            strip_nonblank(criterion, "evaluation_criteria")
-            for criterion in value
-        ]
+    def _validate_evaluation_criteria(cls, value: list[str]) -> list[str]:
+        for criterion in value:
+            validate_nonblank(criterion, "evaluation_criteria")
+        return value
 
     @field_validator("task_specs")
     @classmethod
-    def _strip_task_specs(cls, value: dict[str, str]) -> dict[str, str]:
-        normalized: dict[str, str] = {}
+    def _validate_task_specs(cls, value: dict[str, str]) -> dict[str, str]:
         for key, spec in value.items():
-            clean_key = strip_nonblank(key, "task_specs key")
-            if clean_key in normalized:
-                raise ValueError(
-                    f"task_specs contains duplicate id after trimming: {clean_key!r}"
-                )
-            normalized[clean_key] = strip_nonblank(
-                spec,
-                f"task spec for {clean_key!r}",
-            )
-        return normalized
+            validate_nonblank(key, "task_specs key")
+            validate_nonblank(spec, f"task spec for {key!r}")
+        return value
 
 
-def strip_nonblank(value: str, field_name: str) -> str:
-    stripped = value.strip()
-    if not stripped:
+def validate_nonblank(value: str, field_name: str) -> str:
+    if not value or value.isspace():
         raise ValueError(f"{field_name} must be nonblank")
-    return stripped
+    return value
 
 
 def _is_generator_capable_agent(agent_name: str) -> bool:
@@ -120,7 +112,7 @@ def build_planner_submission(
         return None, f"task_specs contains unknown ids {', '.join(extra_specs)}."
 
     for task_id_for_spec, spec in task_specs.items():
-        if not spec.strip():
+        if not spec or spec.isspace():
             return None, f"Task spec for {task_id_for_spec!r} is blank."
 
     planned = tuple(

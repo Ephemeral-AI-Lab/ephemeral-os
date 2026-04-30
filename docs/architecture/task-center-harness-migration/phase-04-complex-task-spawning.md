@@ -1,4 +1,4 @@
-# Phase 04 - Complex Task Spawning and Handoff
+# Phase 04 - Complex Task Spawning
 
 ## Goal
 
@@ -137,8 +137,9 @@ The outer graph consumes E's final task result
 ```
 
 `request_complex_task_solution` may happen at any graph depth and during any
-generator executor task. The call is a handoff: the original executor agent run
-ends at the request boundary and does not submit a second terminal.
+generator executor task. The call starts a delegated complex-task request: the
+original executor agent run ends at the request boundary and does not submit a
+second terminal.
 
 ## Recursive complex-task requests
 
@@ -215,8 +216,8 @@ complex request open and creates the next segment.
 
 1. Implement `request_complex_task_solution` creation of `ComplexTaskRequest`
    through `ComplexTaskRequestHandler`.
-2. Treat `request_complex_task_solution` as a handoff whose final result is
-   supplied by the complex-task close report.
+2. Treat `request_complex_task_solution` as a delegated request start whose
+   final result is supplied by the complex-task close report.
 3. Create initial `TaskSegment` through `ComplexTaskRequestHandler`, spawn
    `TaskSegmentManager(S1)`, then have the manager create the initial
    `HarnessGraph`.

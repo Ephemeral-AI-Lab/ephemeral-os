@@ -318,12 +318,12 @@ class TestCodeIntelligenceDeep:
     """Deep verification of CI service, LSP client, and registry."""
 
     def setup_method(self):
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
     def teardown_method(self):
-        from sandbox.code_intelligence.service import dispose_all_code_intelligence
+        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 
         dispose_all_code_intelligence()
 
@@ -392,7 +392,7 @@ class TestCodeIntelligenceDeep:
 
     def test_ci_registry_singleton_per_sandbox(self):
         """get_code_intelligence must return same instance for same sandbox_id."""
-        from sandbox.code_intelligence.service import get_code_intelligence
+        from sandbox.code_intelligence.registry import get_code_intelligence
 
         svc1 = get_code_intelligence("singleton-deep", "/ws")
         svc2 = get_code_intelligence("singleton-deep", "/ws")

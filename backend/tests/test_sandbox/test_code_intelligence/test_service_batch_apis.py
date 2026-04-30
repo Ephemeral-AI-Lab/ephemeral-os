@@ -14,6 +14,8 @@ import pytest
 from sandbox.code_intelligence.mutations.patcher import SearchReplaceEdit
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
+)
+from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
 from sandbox.code_intelligence.core.types import (

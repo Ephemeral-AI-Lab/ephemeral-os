@@ -1219,7 +1219,7 @@ to `requested_by_task_id`.
 - [Phase 00 - Target Architecture](./phase-00-target-architecture.md)
 - [Phase 01 - Graph and Attempt Model](./phase-01-graph-and-attempt-model.md) (the spec this plan implements)
 - [Phase 02 - Harness Graph Orchestrator Lifecycle](./phase-02-harness-graph-orchestrator-lifecycle.md) (consumer of Phase 01 contracts)
-- [Phase 04 - Complex Task Spawning and Handoff](./phase-04-complex-task-spawning-and-handoff.md)
+- [Phase 04 - Complex Task Spawning](./phase-04-complex-task-spawning.md)
 - [Complex Task Workflow Overview](./complex-task-workflow-overview.md)
 - `backend/src/db/engine.py` — auto-migration mechanism used by this plan
 - `backend/src/db/stores/model_store.py` — closest existing precedent for store-returns-DTO style

@@ -1946,4 +1946,4 @@ and test that helper request tools do not call `HarnessGraphOrchestrator`.
 - [Phase 02 - Harness Graph Orchestrator Lifecycle](./phase-02-harness-graph-orchestrator-lifecycle.md)
 - [Phase 02 - Implementation Plan](./phase-02-implementation-plan.md)
 - [Phase 03 - Agent Roles and Tool Gates](./phase-03-agent-roles-and-tool-gates.md)
-- [Phase 04 - Complex Task Spawning and Handoff](./phase-04-complex-task-spawning-and-handoff.md)
+- [Phase 04 - Complex Task Spawning](./phase-04-complex-task-spawning.md)
