@@ -13,32 +13,32 @@ from datetime import UTC, datetime
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
-from task_center.config import HarnessLifecycleConfig
-from task_center.invariants import (
+from task_center.complex_task.validation import (
     assert_continuation_segment_predecessor,
     assert_no_root_creation_reason,
     assert_request_open,
     assert_segment_id_unique_in_list,
     assert_segment_sequence_contiguous,
 )
-from task_center.segment_manager import TaskSegmentManager
-from task_center.segment_registry import SegmentManagerRegistry
-from task_center.domain.complex_task_request import (
+from task_center.complex_task.request import (
     ComplexTaskCloseReport,
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
 )
-from task_center.domain.segment_closure_report import (
+from task_center.config import HarnessLifecycleConfig
+from task_center.exceptions import GraphInvariantViolation
+from task_center.segment.closure_report import (
     AttemptPlanFailed,
     SuccessContinue,
     TaskSegmentClosureReport,
     TerminalSuccess,
 )
-from task_center.domain.task_segment import (
+from task_center.segment.manager import TaskSegmentManager
+from task_center.segment.registry import SegmentManagerRegistry
+from task_center.segment.segment import (
     TaskSegment,
     TaskSegmentCreationReason,
 )
-from task_center.exceptions import GraphInvariantViolation
 
 
 CloseReportSink = Callable[[ComplexTaskCloseReport], None]

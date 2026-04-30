@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.segment_manager import TaskSegmentManager
-from task_center.domain.harness_graph import (
+from task_center.segment.manager import TaskSegmentManager
+from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )
-from task_center.domain.segment_closure_report import (
+from task_center.segment.closure_report import (
     AttemptPlanFailed,
     SuccessContinue,
     TaskSegmentClosureReport,
     TerminalSuccess,
 )
-from task_center.domain.task_segment import (
+from task_center.segment.segment import (
     TaskSegmentCreationReason,
     TaskSegmentStatus,
 )

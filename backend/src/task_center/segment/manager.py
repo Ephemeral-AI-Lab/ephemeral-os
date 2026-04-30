@@ -11,23 +11,25 @@ from datetime import UTC, datetime
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
-from task_center.invariants import (
+from task_center.exceptions import GraphInvariantViolation
+from task_center.harness_graph.graph import HarnessGraph, HarnessGraphStatus
+from task_center.harness_graph.validation import (
     assert_fail_reason_present_on_failure,
-    assert_graph_belongs_to_segment,
     assert_graph_sequence_contiguous,
-    assert_segment_has_budget,
-    assert_segment_open,
 )
-from task_center.domain.harness_graph import HarnessGraph, HarnessGraphStatus
-from task_center.domain.segment_closure_report import (
+from task_center.segment.closure_report import (
     AttemptedPlanEntry,
     AttemptPlanFailed,
     SuccessContinue,
     TaskSegmentClosureReport,
     TerminalSuccess,
 )
-from task_center.domain.task_segment import TaskSegment, TaskSegmentStatus
-from task_center.exceptions import GraphInvariantViolation
+from task_center.segment.validation import (
+    assert_graph_belongs_to_segment,
+    assert_segment_has_budget,
+    assert_segment_open,
+)
+from task_center.segment.segment import TaskSegment, TaskSegmentStatus
 
 
 ClosureReportSink = Callable[[TaskSegmentClosureReport], None]

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.task_segment import TaskSegmentRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain.task_segment import (
+from task_center.segment.segment import (
     TaskSegment,
     TaskSegmentCreationReason,
     TaskSegmentStatus,

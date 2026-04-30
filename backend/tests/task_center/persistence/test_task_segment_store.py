@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.domain.task_segment import (
+from task_center.segment.segment import (
     TaskSegment,
     TaskSegmentCreationReason,
     TaskSegmentStatus,

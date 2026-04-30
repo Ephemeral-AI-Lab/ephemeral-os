@@ -314,27 +314,26 @@ Rules:
 
 ## 4. Folder layout
 
-Phase 02 keeps the Phase 01 package shape and adds focused files under the
-existing harness-graph lifecycle package.
+Phase 02 keeps the post-restructure peer-subpackage shape from Phase 01 and
+adds focused files under the existing `harness_graph/` lifecycle package.
 
 ```text
 backend/src/task_center/
-|-- domain/
-|   |-- harness_graph.py                    # EDIT: optional convenience helpers
-|   `-- harness_task.py                     # NEW: task role/status + submission DTOs
-|
-`-- complex_task_request/
-    |-- handler.py                          # EDIT: accept/pass orchestrator_factory
-    `-- segment/
-        |-- manager.py                      # EDIT: start orchestrators after graph create
-        `-- harness_graph/
-            |-- __init__.py                 # EDIT: re-export new Phase 02 helpers
-            |-- invariants.py               # EDIT: stage/submission invariants
-            |-- orchestrator.py             # EDIT: Phase 02 state machine
-            |-- orchestrator_registry.py    # NEW: process-local graph -> orchestrator map
-            |-- runtime.py                  # NEW: runtime deps + launcher protocol
-            |-- task_graph.py               # NEW: DAG/status helper functions
-            `-- task_ids.py                 # NEW: stable planner/generator/evaluator ids
+|-- complex_task/
+|   `-- handler.py                          # EDIT: accept/pass orchestrator_factory
+|-- segment/
+|   `-- manager.py                          # EDIT: start orchestrators after graph create
+`-- harness_graph/
+    |-- __init__.py                         # EDIT: re-export new Phase 02 helpers
+    |-- graph.py                            # EDIT: optional convenience helpers (Phase 01 DTO)
+    |-- task.py                             # NEW: task role/status + submission DTOs
+    |-- validation.py                       # EDIT: stage/submission invariants
+    |-- orchestrator.py                     # EDIT: Phase 02 state machine
+    |-- orchestrator_registry.py            # NEW: process-local graph -> orchestrator map
+    |-- runtime.py                          # NEW: runtime deps + launcher protocol
+    |-- task_graph.py                       # NEW: DAG/status helper functions
+    |-- task_ids.py                         # NEW: stable planner/generator/evaluator ids
+    `-- factory.py                          # NEW: production orchestrator factory
 ```
 
 Persistence and task helpers:
@@ -378,7 +377,7 @@ backend/src/tools/submission/main_agent/
 
 ### 5a. Domain task roles and submission DTOs
 
-**`backend/src/task_center/domain/harness_task.py`** - new
+**`backend/src/task_center/harness_graph/task.py`** - new
 
 ```python
 from dataclasses import dataclass
@@ -492,7 +491,7 @@ Notes:
 
 ### 5b. Stable task ids
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/task_ids.py`** - new
+**`backend/src/task_center/harness_graph/task_ids.py`** - new
 
 ```python
 def planner_task_id(harness_graph_id: str) -> str:
@@ -519,7 +518,7 @@ short hash suffix and keep the mapping in the task summary.
 
 ### 5c. Runtime dependency container
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/runtime.py`** - new
+**`backend/src/task_center/harness_graph/runtime.py`** - new
 
 ```python
 from collections.abc import Callable
@@ -529,8 +528,8 @@ from typing import Protocol
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
-from task_center.domain.harness_graph import HarnessGraph
-from task_center.domain.harness_task import HarnessTaskRole
+from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph.task import HarnessTaskRole
 
 
 @dataclass(frozen=True, slots=True)
@@ -624,10 +623,10 @@ Phase 02.
 
 ### 5e. Generator DAG helpers
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/task_graph.py`** - new
+**`backend/src/task_center/harness_graph/task_graph.py`** - new
 
 ```python
-from task_center.domain.harness_task import (
+from task_center.harness_graph.task import (
     HarnessTaskStatus,
     PlannedGeneratorTask,
 )
@@ -687,7 +686,7 @@ failed task indicates a scheduler bug and should raise `GraphInvariantViolation`
 
 ### 5f. Orchestrator registry
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator_registry.py`** - new
+**`backend/src/task_center/harness_graph/orchestrator_registry.py`** - new
 
 ```python
 from task_center.exceptions import GraphInvariantViolation
@@ -753,7 +752,7 @@ This keeps terminal tools as the public contract while avoiding extra lifecycle
 classes in Phase 02. The orchestrator is the graph-scoped owner; the split is
 kept as method groups instead of separate objects.
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator.py`** - edit
+**`backend/src/task_center/harness_graph/orchestrator.py`** - edit
 
 ```python
 class HarnessGraphOrchestrator:
@@ -799,7 +798,7 @@ class HarnessGraphOrchestrator:
 
 ### 5h. Orchestrator implementation
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator.py`** - edit
+**`backend/src/task_center/harness_graph/orchestrator.py`** - edit
 
 The orchestrator is one graph-scoped state machine. It exposes only bootstrap,
 planner-exhaustion, and accepted-submission entries; all launch and close
@@ -904,7 +903,7 @@ Important behavior:
 
 ### 5i. Stage and submission invariants
 
-**`backend/src/task_center/complex_task_request/segment/harness_graph/invariants.py`** - edit
+**`backend/src/task_center/harness_graph/validation.py`** - edit
 
 Add:
 
@@ -937,7 +936,7 @@ All raise `GraphInvariantViolation`.
 
 ### 5j. TaskSegmentManager wiring
 
-**`backend/src/task_center/complex_task_request/segment/manager.py`** - edit
+**`backend/src/task_center/segment/manager.py`** - edit
 
 Tighten the factory callback contract so a shared factory can be passed through
 the request handler while each segment manager still supplies its own closed-graph
@@ -977,7 +976,7 @@ graphs without starting an orchestrator.
 
 ### 5k. ComplexTaskRequestHandler wiring
 
-**`backend/src/task_center/complex_task_request/handler.py`** - edit
+**`backend/src/task_center/complex_task/handler.py`** - edit
 
 Add an optional constructor parameter:
 
@@ -1015,7 +1014,7 @@ the existing Phase 01 factory seam.
 Add a small composition helper near the lifecycle package boundary:
 
 ```text
-backend/src/task_center/complex_task_request/segment/harness_graph/factory.py
+backend/src/task_center/harness_graph/factory.py
 ```
 
 ```python
@@ -1328,7 +1327,7 @@ Each wave is independently testable.
 
 ### Wave 1 - Submission DTOs and task helpers
 
-1. Add `task_center/domain/harness_task.py`.
+1. Add `task_center/harness_graph/task.py`.
 2. Add `task_ids.py`.
 3. Add `TaskCenterStore` task helper methods.
 4. Add persistence tests for task helpers.
@@ -1477,7 +1476,7 @@ planner run without a valid `submit_*_plan` call.
 Required Phase 02 work to land the rename:
 
 1. Rename the enum member and its serialized literal in the Phase 01
-   domain module (e.g. `task_center.domain.harness_graph`).
+   domain module (e.g. `task_center.harness_graph.graph`).
 2. Update Phase 01 invariants and any tests that assert on the literal
    string `"planner_step_budget_exhausted"`.
 3. Backfill or alias any persisted graph rows that already carry the old

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.domain.complex_task_request import (
+from task_center.complex_task.request import (
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
 )

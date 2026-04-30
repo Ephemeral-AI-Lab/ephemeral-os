@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.domain.harness_graph import (
+from task_center.harness_graph.graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,

@@ -6,30 +6,34 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.invariants import (
+from task_center.complex_task.validation import (
     assert_continuation_segment_predecessor,
-    assert_fail_reason_present_on_failure,
-    assert_graph_belongs_to_segment,
-    assert_graph_sequence_contiguous,
     assert_no_root_creation_reason,
     assert_request_open,
-    assert_segment_has_budget,
     assert_segment_id_unique_in_list,
-    assert_segment_open,
     assert_segment_sequence_contiguous,
 )
-from task_center.segment_registry import SegmentManagerRegistry
-from task_center.domain.complex_task_request import (
+from task_center.harness_graph.validation import (
+    assert_fail_reason_present_on_failure,
+    assert_graph_sequence_contiguous,
+)
+from task_center.segment.validation import (
+    assert_graph_belongs_to_segment,
+    assert_segment_has_budget,
+    assert_segment_open,
+)
+from task_center.segment.registry import SegmentManagerRegistry
+from task_center.complex_task.request import (
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
 )
-from task_center.domain.harness_graph import (
+from task_center.harness_graph.graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,
     HarnessGraphStatus,
 )
-from task_center.domain.task_segment import (
+from task_center.segment.segment import (
     TaskSegment,
     TaskSegmentCreationReason,
     TaskSegmentStatus,

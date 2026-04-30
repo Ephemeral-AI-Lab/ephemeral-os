@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from db.stores.harness_graph_store import HarnessGraphStore
-from task_center.domain.harness_graph import (
+from task_center.harness_graph.graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStatus,

@@ -11,16 +11,16 @@ from collections.abc import Callable
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from task_center.config import HarnessLifecycleConfig
-from task_center.handler import ComplexTaskRequestHandler
-from task_center.segment_manager import TaskSegmentManager
-from task_center.segment_registry import SegmentManagerRegistry
-from task_center.domain.complex_task_request import ComplexTaskRequestStatus
-from task_center.domain.harness_graph import (
+from task_center.complex_task.handler import ComplexTaskRequestHandler
+from task_center.segment.manager import TaskSegmentManager
+from task_center.segment.registry import SegmentManagerRegistry
+from task_center.complex_task.request import ComplexTaskRequestStatus
+from task_center.harness_graph.graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )
-from task_center.domain.task_segment import TaskSegmentStatus
+from task_center.segment.segment import TaskSegmentStatus
 
 
 class _StubOrchestrator:

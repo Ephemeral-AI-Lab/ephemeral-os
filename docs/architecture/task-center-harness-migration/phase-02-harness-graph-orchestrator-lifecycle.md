@@ -28,7 +28,7 @@ seam this phase needs; Phase 02 only fills behaviour.
 **Already in place:**
 
 - `HarnessGraphOrchestrator` class skeleton at
-  `backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator.py`
+  `backend/src/task_center/harness_graph/orchestrator.py`
   with constructor signature `(harness_graph, graph_store, on_graph_closed)`.
   Phase 02 should replace the old terminal-handler placeholder surface with
   `start()`, public `apply_*` terminal-submission entries, and private
@@ -53,7 +53,7 @@ seam this phase needs; Phase 02 only fills behaviour.
 - Graph-level invariants
   (`assert_graph_running`, `assert_graph_sequence_contiguous`,
   `assert_fail_reason_present_on_failure`) live in
-  `task_center.complex_task_request.segment.harness_graph.invariants` and
+  `task_center.harness_graph.validation` and
   raise `GraphInvariantViolation` on breach.
 
 **Phase 02 wires:**

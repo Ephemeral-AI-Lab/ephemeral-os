@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.harness_graph import HarnessGraphRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain.harness_graph import (
+from task_center.harness_graph.graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,
