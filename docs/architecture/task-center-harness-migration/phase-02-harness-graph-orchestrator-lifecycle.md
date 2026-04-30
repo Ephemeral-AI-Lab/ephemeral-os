@@ -122,7 +122,7 @@ the callers; they validate input and role gates first, then pass typed DTOs.
 | Entry | Called by | Receives | Mutates |
 | ----- | --------- | -------- | ------- |
 | `apply_plan_submission(...)` | `submit_full_plan` or `submit_partial_plan` handler | `PlannerSubmission` | Persists graph contract, stores `continuation_goal` for partial plans, creates all generator task rows, sets graph stage to `generating`, then dispatches ready work. |
-| `apply_planner_failure(...)` | runtime (no tool handler — see note below) | `PlannerFailureSubmission` | Marks the planner task `failed` with the runtime-supplied summary, then closes the graph failed via `_close_graph(planner_step_budget_exhausted)`. |
+| `apply_planner_failure(...)` | runtime (no tool handler — see note below) | `PlannerFailureSubmission` | Marks the planner task `failed` with the runtime-supplied summary, then closes the graph failed via `_close_graph(planner_failed)`. |
 | `apply_generator_submission(...)` | `submit_execution_*` or `submit_verification_*` handler | `GeneratorSubmission` | Appends the role-tagged summary and marks the generator task `done` or `failed`; on failure, blocks pending descendants. |
 | `apply_evaluator_submission(...)` | `submit_evaluation_success` or `submit_evaluation_failure` handler | `EvaluatorSubmission` | Appends evaluator summary and marks the evaluator task `done` or `failed`; dispatch then closes the graph passed or failed. |
 
@@ -219,21 +219,24 @@ Failure escape valves:
       -> _close_graph(FAILED, evaluator_failed)
 
   - Planner agent ends without a successful submit_*_plan
-      -> runtime calls HarnessGraphOrchestrator.notify_planner_run_exhausted()
-      -> _close_graph(FAILED, planner_step_budget_exhausted)
+      -> runtime synthesizes a PlannerFailureSubmission and calls
+         HarnessGraphOrchestrator.apply_planner_failure(submission)
+      -> mutation marks the planner task failed with the runtime-supplied summary
+      -> _close_graph(FAILED, planner_failed)
 ```
 
-The planner has no failure terminal. Its only soft-fail channel is inline
-tool-call rejection. Only a planner run ending without a valid plan
-submission escalates to `HarnessGraphOrchestrator` via
-`notify_planner_run_exhausted()`, which delegates to
-`_close_graph(FAILED, planner_step_budget_exhausted)`.
+The planner has no agent-facing failure terminal — it cannot self-declare
+failure via a tool call. Its only soft-fail channel is inline tool-call
+rejection. When a planner run ends without a valid plan submission, the
+runtime escalates to `HarnessGraphOrchestrator.apply_planner_failure(...)`
+with a synthesized `PlannerFailureSubmission`; that entry delegates to
+`_close_graph(FAILED, planner_failed)`.
 
 ## Harness Graph Failures
 
 | Failure mode | Detected by | Wait point |
 | ------------ | ----------- | ---------- |
-| `planner_step_budget_exhausted` | runtime ends planner without valid plan submission | immediate |
+| `planner_failed` | runtime ends planner without valid plan submission | immediate |
 | `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED`. `WAITING_COMPLEX_TASK` is non-terminal and keeps the graph in `generating` until the nested request resumes the outer task. |
 | `evaluator_failed` | evaluator submitted `submit_evaluation_failure` | immediate |
 
@@ -262,7 +265,7 @@ close_harness_graph(H, outcome):
     H.continuation_goal = null
                         | string (set from submit_partial_plan)
     H.fail_reason       = null
-                        | planner_step_budget_exhausted
+                        | planner_failed
                         | generator_failed
                         | evaluator_failed
 
@@ -328,10 +331,13 @@ pass/fail decision, not by the segment manager.
 
 ```text
 Entry into the orchestrator is one of:
-  - Terminal tool handler validates input and calls HarnessGraphOrchestrator.apply_* for H
-    (drives the generating and evaluating branches)
-  - Runtime calls HarnessGraphOrchestrator.notify_planner_run_exhausted()
-    (drives the planning branch only)
+  - Terminal tool handler calls apply_plan_submission /
+    apply_generator_submission / apply_evaluator_submission for H
+    (drives the generating and evaluating close branches; planner success
+     leaves the planning stage rather than closing the graph)
+  - Runtime synthesizes a PlannerFailureSubmission and calls
+    apply_planner_failure(submission)
+    (drives the planning close branch only)
         |
         v
    H.stage:
@@ -384,8 +390,10 @@ H failed     no        yes    H passed H failed
    `_dispatch_ready_work()` launches dependency-free pending generators, waits
    for generator quiescence, spawns the evaluator when every generator is
    `done`, and closes the graph when the evaluator is terminal.
-7. Add `notify_planner_run_exhausted()` on the orchestrator façade. It
-   delegates to `_close_graph(FAILED, planner_step_budget_exhausted)`.
+7. Add `apply_planner_failure(submission: PlannerFailureSubmission)` on the
+   orchestrator façade. It marks the planner task `failed` with the
+   runtime-supplied summary and delegates to
+   `_close_graph(FAILED, planner_failed)`.
 8. Implement graph close reporting via `_close_graph(...)` as the single close
    site: it calls `graph_store.close(...)` exactly once and then
    `on_graph_closed(graph_id)` to `TaskSegmentManager`.

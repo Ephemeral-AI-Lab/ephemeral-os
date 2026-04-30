@@ -121,7 +121,8 @@ flowchart TD
     GenRecords --> GenStage["Set graph stage = generating"]
     GenStage --> LaunchRoots["Launch dependency-free generators"]
 
-    Planner -->|"planner exhausted"| PlannerFail["Close graph failed: planner_step_budget_exhausted"]
+    Planner -->|"planner exhausted"| PlannerFailMutation["HarnessGraphOrchestrator.apply_planner_failure"]
+    PlannerFailMutation --> PlannerFail["Close graph failed: planner_failed"]
 
     LaunchRoots --> GenEvent["Executor or verifier terminal submission"]
     GenEvent --> GenMutation["HarnessGraphOrchestrator.apply_generator_submission"]
@@ -434,6 +435,20 @@ class PlannerSubmission:
 
 
 @dataclass(frozen=True, slots=True)
+class PlannerFailureSubmission:
+    """Synthesized by the runtime when a planner agent run ends without a
+    valid submit_*_plan call. The planner has no agent-facing failure tool
+    in Phase 02; this DTO exists so the orchestrator close-path surface
+    stays uniform across all four failure modes.
+    """
+
+    graph_id: str
+    planner_task_id: str
+    fail_reason: Literal["run_exhausted"]
+    summary: str
+
+
+@dataclass(frozen=True, slots=True)
 class GeneratorSubmission:
     """Validated executor or verifier terminal outcome for one generator task."""
 
@@ -463,11 +478,13 @@ Notes:
 - Phase 03 public terminal tools validate their own inputs and then call
   `HarnessGraphOrchestrator.apply_*` with `PlannerSubmission`,
   `GeneratorSubmission`, or `EvaluatorSubmission`.
-- Phase 02 tests can construct these DTOs directly to verify state-transition
-  policy without coupling tests to tool classes.
-- Planner exhaustion does not need a fake terminal type. It is a runtime
-  observation that the planner agent run ended without a valid planner
-  submission.
+- `PlannerFailureSubmission` has no Phase 03 tool counterpart. The runtime
+  constructs it directly when it observes that a planner agent run ended
+  without a valid `submit_*_plan` call. The DTO exists to keep all four
+  close paths on a uniform `apply_*` surface, not to support a planner
+  failure tool.
+- Phase 02 tests can construct any of these DTOs directly to verify
+  state-transition policy without coupling tests to tool classes.
 - `WAITING_COMPLEX_TASK` is intentionally not in
   `TERMINAL_GENERATOR_STATUSES`; the outer graph remains in `generating` until
   the nested request close report marks the waiting generator task `done` or
@@ -742,9 +759,11 @@ kept as method groups instead of separate objects.
 class HarnessGraphOrchestrator:
     def start(self) -> None: ...
 
-    def notify_planner_run_exhausted(self) -> None: ...
-
     def apply_plan_submission(self, submission: PlannerSubmission) -> None: ...
+
+    def apply_planner_failure(
+        self, submission: PlannerFailureSubmission
+    ) -> None: ...
 
     def apply_generator_submission(
         self, submission: GeneratorSubmission
@@ -812,11 +831,15 @@ def start(self) -> None:
     """
 
 
-def notify_planner_run_exhausted(self) -> None:
-    """Runtime signal: planner agent run ended without a valid plan
-    submission. Delegates to _close_graph(status=FAILED,
-    fail_reason=PLANNER_STEP_BUDGET_EXHAUSTED) after asserting
-    stage = planning.
+def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
+    """Runtime-synthesized failure submission. The planner has no
+    agent-facing failure tool; the runtime calls this when a planner agent
+    run ends without a valid submit_*_plan call.
+
+    Asserts stage = planning, appends submission.summary to the planner
+    task row, marks the task FAILED, and delegates to
+    _close_graph(status=FAILED,
+    fail_reason=PLANNER_FAILED).
     """
 ```
 
@@ -850,8 +873,10 @@ Important behavior:
 - `start()` requires graph status `running` and stage `planning`. It
   persists the planner task id and marks the planner task `running` before
   the launcher returns.
-- `notify_planner_run_exhausted()` is the only orchestrator-level escape
-  valve for the planner; the planner has no failure terminal.
+- `apply_planner_failure(submission)` is the only orchestrator-level escape
+  valve for the planner. The planner has no agent-facing failure terminal,
+  so the runtime synthesizes the submission when it observes a planner run
+  ending without a valid `submit_*_plan` call.
 - Terminal tool handlers call `HarnessGraphOrchestrator.apply_*` directly after
   validation. They do not call orchestrator-private methods.
 - `apply_plan_submission` persists `task_specification`, `evaluation_criteria`,
@@ -1176,7 +1201,7 @@ Close paths and triggers:
 
 | Path | Status | Fail reason | Trigger | Wait point |
 | --- | --- | --- | --- | --- |
-| Planner exhausted | `failed` | `planner_step_budget_exhausted` | `HarnessGraphOrchestrator.notify_planner_run_exhausted()` -> `_close_graph(...)` | immediate |
+| Planner exhausted | `failed` | `planner_failed` | runtime synthesizes `PlannerFailureSubmission`; calls `HarnessGraphOrchestrator.apply_planner_failure(submission)` -> `_close_graph(...)` | immediate |
 | Generator failed/blocked after quiescence | `failed` | `generator_failed` | `_dispatch_ready_work()` after every generator is terminal | all generators terminal |
 | Evaluator failure | `failed` | `evaluator_failed` | `_dispatch_ready_work()` after `apply_evaluator_submission` writes failed | immediate |
 | Evaluator success | `passed` | `None` | `_dispatch_ready_work()` after `apply_evaluator_submission` writes done | immediate |
@@ -1206,7 +1231,8 @@ budget.
 | Domain | `HarnessTaskRole` | NEW | Stable role names for persisted task rows |
 | Domain | `HarnessTaskStatus` | NEW | Pending/running/waiting/done/failed/blocked lifecycle |
 | Domain | `PlannedGeneratorTask` | NEW | One normalized planner DAG node |
-| Domain | `PlannerSubmission` | NEW | Unified planner DTO for full and partial plans |
+| Domain | `PlannerSubmission` | NEW | Unified planner success DTO for full and partial plans |
+| Domain | `PlannerFailureSubmission` | NEW | Runtime-synthesized planner failure DTO (no agent-facing tool) |
 | Domain | `GeneratorSubmission` | NEW | Executor/verifier success or failure DTO |
 | Domain | `EvaluatorSubmission` | NEW | Evaluator success or failure DTO |
 | Persistence | `TaskCenterStore.get_task` | EDIT | Load one persisted task dict |
@@ -1217,10 +1243,10 @@ budget.
 | Runtime | `HarnessGraphRuntime` | NEW | Dependency bundle for orchestrator behavior |
 | Lifecycle | `HarnessGraphOrchestratorRegistry` | NEW | Process-local graph -> orchestrator lookup |
 | Lifecycle | `HarnessGraphOrchestrator.start` | EDIT | Bootstrap planner |
-| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct terminal submission mutation surface (`apply_plan_submission`, `apply_generator_submission`, `apply_evaluator_submission`). `apply_nested_close_report` ships in Phase 04. |
+| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct submission mutation surface (`apply_plan_submission`, `apply_planner_failure`, `apply_generator_submission`, `apply_evaluator_submission`). `apply_planner_failure` is called by the runtime; the others by terminal tool handlers. `apply_nested_close_report` ships in Phase 04. |
 | Lifecycle | `HarnessGraphOrchestrator._dispatch_ready_work` | EDIT | Launchability, generator quiescence, evaluator spawn |
 | Lifecycle | `HarnessGraphOrchestrator._close_graph` | EDIT | Single close site that calls `graph_store.close(...)` and `on_graph_closed` |
-| Lifecycle | `HarnessGraphOrchestrator.notify_planner_run_exhausted` | NEW | Runtime signal for planner agent run end without valid submission; delegates to `_close_graph(planner_step_budget_exhausted)` |
+| Lifecycle | `HarnessGraphOrchestrator.apply_planner_failure` | NEW | Runtime-synthesized planner failure entry; marks planner task `failed` and delegates to `_close_graph(planner_failed)` |
 | Lifecycle | `TaskSegmentManager._start_orchestrator_if_configured` | EDIT | Start graph orchestrator after graph creation |
 | Lifecycle | `ComplexTaskRequestHandler.__init__` | EDIT | Accept/pass orchestrator factory |
 
@@ -1256,7 +1282,8 @@ keys or live agent runs are needed in Phase 02.
 | --- | --- |
 | `test_start_creates_planner_task_and_sets_graph_planner_id` | Start path |
 | `test_apply_plan_submission_persists_contract_and_generator_ids` | Planner submission success |
-| `test_planner_exhaustion_closes_graph_failed` | `planner_step_budget_exhausted` |
+| `test_apply_planner_failure_marks_task_and_closes_graph` | Runtime-synthesized `PlannerFailureSubmission` flows through `apply_planner_failure`, marks the planner task `failed` with the runtime summary, then closes the graph with `planner_failed` |
+| `test_planner_exhaustion_closes_graph_failed` | End-to-end planner exhaustion close path through the runtime callback |
 | `test_generator_roots_launch_after_plan` | DAG root scheduling |
 | `test_apply_generator_success_launches_newly_ready_dependents` | Dependency scheduling |
 | `test_waiting_complex_task_prevents_generator_quiescence` | Outer graph stays in `generating` while a generator task is `waiting_complex_task` (Phase 04 owns the transition; Phase 02 only verifies the quiescence observation) |
@@ -1325,7 +1352,8 @@ Each wave is independently testable.
    subsequent step calls into them.
 2. Implement `HarnessGraphOrchestrator.start`.
 3. Implement `HarnessGraphOrchestrator.apply_plan_submission`.
-4. Implement planner exhaustion handling.
+4. Implement `HarnessGraphOrchestrator.apply_planner_failure` (runtime
+   exhaustion path; marks planner task `failed` then closes the graph).
 5. Implement generator submission handling, dependency scheduling, and
    quiescence close.
 6. Implement `waiting_complex_task` observation in quiescence checks
@@ -1369,7 +1397,7 @@ uv run ruff check backend/src/task_center backend/src/db/stores/task_center_stor
 | Generator failure waits for quiescence before graph failure is reported | `test_generator_failure_waits_for_independent_running_tasks` |
 | Failed generator blocks pending dependents | `test_generator_failure_blocks_pending_descendants` |
 | Evaluator failure closes the harness graph immediately | `test_evaluator_failure_closes_graph_failed` |
-| Planner exhaustion closes the graph with `planner_step_budget_exhausted` | `test_planner_exhaustion_closes_graph_failed` |
+| Planner exhaustion closes the graph with `planner_failed` | `test_planner_exhaustion_closes_graph_failed` |
 | No retry path is implemented inside `HarnessGraphOrchestrator` | `test_orchestrator_never_creates_retry_graph` |
 | Retry remains delegated to `TaskSegmentManager` | `test_failed_graph_with_budget_starts_next_graph_orchestrator` |
 | Orchestrator close reports to `TaskSegmentManager` via callback | `test_close_graph_calls_on_graph_closed_once` |
@@ -1437,6 +1465,28 @@ is accidentally treated as terminal, the outer graph can spawn an evaluator
 before the nested request returns. Keep `TERMINAL_GENERATOR_STATUSES` limited
 to `done`, `failed`, and `blocked`, and add explicit quiescence tests for a
 waiting generator.
+
+### 11i. `HarnessGraphFailReason` enum rename
+
+Phase 01 shipped `HarnessGraphFailReason.PLANNER_STEP_BUDGET_EXHAUSTED`.
+Phase 02 renames it to `PLANNER_FAILED` (literal value `planner_failed`)
+to remove the misleading "step budget" framing — Phase 02 does not count
+planner steps anywhere, and the reason fires for any cause that ends a
+planner run without a valid `submit_*_plan` call.
+
+Required Phase 02 work to land the rename:
+
+1. Rename the enum member and its serialized literal in the Phase 01
+   domain module (e.g. `task_center.domain.harness_graph`).
+2. Update Phase 01 invariants and any tests that assert on the literal
+   string `"planner_step_budget_exhausted"`.
+3. Backfill or alias any persisted graph rows that already carry the old
+   value (none expected if Phase 01 has not produced this fail reason in
+   production yet — verify before merging).
+4. Update Phase 02 docs in this same change (already done in this revision).
+
+If a one-shot data migration is required, scope it as its own commit with
+its own review, separate from the orchestrator behavior changes.
 
 ---
 
