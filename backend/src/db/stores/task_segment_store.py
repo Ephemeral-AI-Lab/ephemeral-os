@@ -108,6 +108,42 @@ class TaskSegmentStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
+    def list_for_requests(
+        self, complex_task_request_ids: list[str]
+    ) -> list[TaskSegment]:
+        """Ordered by request id, then sequence_no ascending."""
+        if not complex_task_request_ids:
+            return []
+        with self._sf() as db:
+            q = (
+                db.query(TaskSegmentRecord)
+                .filter(
+                    TaskSegmentRecord.complex_task_request_id.in_(
+                        complex_task_request_ids
+                    )
+                )
+                .order_by(
+                    TaskSegmentRecord.complex_task_request_id.asc(),
+                    TaskSegmentRecord.sequence_no.asc(),
+                )
+            )
+            return [self._to_dto(r) for r in q.all()]
+
+    def _cancel_for_compensation(
+        self, segment_id: str, *, closed_at: datetime | None = None
+    ) -> TaskSegment:
+        """Mark a segment CANCELLED. Reserved for handoff compensation paths."""
+        with self._sf() as db:
+            record = db.get(TaskSegmentRecord, segment_id)
+            if record is None:
+                raise LookupError(f"TaskSegment {segment_id!r} not found")
+            record.status = TaskSegmentStatus.CANCELLED.value
+            if closed_at is not None:
+                record.closed_at = closed_at
+            db.commit()
+            db.refresh(record)
+            return self._to_dto(record)
+
     def get_by_sequence(
         self, *, complex_task_request_id: str, sequence_no: int
     ) -> TaskSegment | None:

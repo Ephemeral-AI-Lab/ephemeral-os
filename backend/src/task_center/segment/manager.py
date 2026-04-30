@@ -6,14 +6,20 @@ emitter of ``TaskSegmentClosureReport``.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import HarnessGraph, HarnessGraphStatus
+from task_center.harness_graph.graph import (
+    HarnessGraph,
+    HarnessGraphFailReason,
+    HarnessGraphStatus,
+)
 from task_center.harness_graph.validation import (
     assert_fail_reason_present_on_failure,
     assert_graph_sequence_contiguous,
@@ -35,12 +41,36 @@ from task_center.segment.segment import TaskSegment, TaskSegmentStatus
 if TYPE_CHECKING:
     from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 
+logger = logging.getLogger(__name__)
+
 
 ClosureReportSink = Callable[[TaskSegmentClosureReport], None]
 GraphClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[
     [HarnessGraph, GraphClosedCallback], "HarnessGraphOrchestrator"
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class HarnessGraphStartHandle:
+    """One-shot starter returned alongside a created (but not started) graph.
+
+    The handle's ``start()`` method must be called exactly once for the
+    delegated graph to begin running. ``cancel()`` is reserved for handoff
+    compensation: it discards the unstarted handle without launching the
+    orchestrator. Calling either method twice raises.
+    """
+
+    graph: HarnessGraph
+    _start: Callable[[], None]
+    _cancel: Callable[[], None]
+
+    def start(self) -> HarnessGraph:
+        self._start()
+        return self.graph
+
+    def cancel(self) -> None:
+        self._cancel()
 
 
 class TaskSegmentManager:
@@ -63,8 +93,14 @@ class TaskSegmentManager:
 
     # ---- public API -----------------------------------------------------
 
-    def create_initial_harness_graph(self) -> HarnessGraph:
-        """Create graph_sequence_no=1 and append it to the segment."""
+    def create_initial_harness_graph(self) -> HarnessGraphStartHandle:
+        """Create graph_sequence_no=1 and return a deferred start handle.
+
+        The graph row is persisted, but the orchestrator is *not* started until
+        ``handle.start()`` runs. Coordinators that need to set parent-task state
+        between graph creation and orchestrator startup take advantage of this
+        seam; eager callers chain ``.start()``.
+        """
         segment = self._current_segment_snapshot()
         assert_segment_open(segment)
         if segment.harness_graph_ids:
@@ -72,7 +108,8 @@ class TaskSegmentManager:
                 f"TaskSegment {segment.id!r} already has graphs; use "
                 f"create_next_harness_graph"
             )
-        return self._create_graph(segment, graph_sequence_no=1)
+        graph = self._insert_graph(segment, graph_sequence_no=1)
+        return self._make_start_handle(graph)
 
     def create_next_harness_graph(
         self, *, previous_harness_graph_id: str
@@ -87,9 +124,11 @@ class TaskSegmentManager:
                 f"the latest graph of segment {segment.id!r} "
                 f"(latest={segment.latest_graph_id!r})"
             )
-        return self._create_graph(
+        graph = self._insert_graph(
             segment, graph_sequence_no=segment.attempt_count + 1
         )
+        self._start_orchestrator_if_configured(graph)
+        return graph
 
     def handle_harness_graph_closed(self, harness_graph_id: str) -> None:
         """Entry point for the closed-graph callback from the orchestrator."""
@@ -129,7 +168,7 @@ class TaskSegmentManager:
             )
         return segment
 
-    def _create_graph(
+    def _insert_graph(
         self, segment: TaskSegment, *, graph_sequence_no: int
     ) -> HarnessGraph:
         assert_graph_sequence_contiguous(segment, graph_sequence_no)
@@ -138,16 +177,57 @@ class TaskSegmentManager:
             graph_sequence_no=graph_sequence_no,
         )
         self._segment_store.append_graph_id(segment.id, graph.id)
-        self._start_orchestrator_if_configured(graph)
         return graph
 
     def _start_orchestrator_if_configured(self, graph: HarnessGraph) -> None:
         if self._orchestrator_factory is None:
             return
-        orchestrator = self._orchestrator_factory(
-            graph, self.handle_harness_graph_closed
-        )
-        orchestrator.start()
+        try:
+            orchestrator = self._orchestrator_factory(
+                graph, self.handle_harness_graph_closed
+            )
+            orchestrator.start()
+        except Exception:
+            self._close_graph_after_startup_failure(graph)
+            raise
+
+    def _make_start_handle(
+        self, graph: HarnessGraph
+    ) -> HarnessGraphStartHandle:
+        consumed = {"value": False}
+
+        def _start() -> None:
+            if consumed["value"]:
+                raise GraphInvariantViolation(
+                    f"HarnessGraphStartHandle for {graph.id!r} already consumed"
+                )
+            consumed["value"] = True
+            self._start_orchestrator_if_configured(graph)
+
+        def _cancel() -> None:
+            if consumed["value"]:
+                raise GraphInvariantViolation(
+                    f"HarnessGraphStartHandle for {graph.id!r} already consumed"
+                )
+            consumed["value"] = True
+
+        return HarnessGraphStartHandle(graph=graph, _start=_start, _cancel=_cancel)
+
+    def _close_graph_after_startup_failure(self, graph: HarnessGraph) -> None:
+        try:
+            latest = self._graph_store.get(graph.id)
+            if latest is None or latest.is_closed:
+                return
+            self._graph_store.close(
+                graph.id,
+                status=HarnessGraphStatus.FAILED,
+                fail_reason=HarnessGraphFailReason.STARTUP_FAILED,
+                closed_at=datetime.now(UTC),
+            )
+        except Exception:
+            logger.exception(
+                "TaskSegmentManager: startup graph cleanup failed",
+            )
 
     def _close_segment_passed(self, graph: HarnessGraph) -> None:
         self._segment_store.set_continuation_goal(

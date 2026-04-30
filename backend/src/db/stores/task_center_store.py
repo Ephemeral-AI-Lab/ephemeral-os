@@ -227,6 +227,26 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
+    def list_tasks_for_harness_graphs(
+        self, harness_graph_ids: list[str]
+    ) -> list[SerializedRow]:
+        if not harness_graph_ids:
+            return []
+        with self._sf() as db:
+            q = (
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_harness_graph_id.in_(
+                        harness_graph_ids
+                    )
+                )
+                .order_by(
+                    TaskCenterTaskRecord.task_center_harness_graph_id.asc(),
+                    TaskCenterTaskRecord.created_at.asc(),
+                )
+            )
+            return [_serialize_task(record) for record in q.all()]
+
     def list_generator_tasks_for_harness_graph(
         self, harness_graph_id: str
     ) -> list[SerializedRow]:
@@ -253,6 +273,33 @@ class TaskCenterStore(SyncStoreMixin):
             record = db.get(TaskCenterTaskRecord, task_id)
             if record is None:
                 raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            record.status = status
+            if summary is not None:
+                record.summaries = [*(record.summaries or []), summary]
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)
+
+    def set_task_status_if_current(
+        self,
+        task_id: str,
+        *,
+        expected_status: str,
+        status: str,
+        summary: SerializedRow | None = None,
+    ) -> SerializedRow | None:
+        """Compare-and-set task status. Returns the new row, or ``None`` on mismatch.
+
+        The CAS miss is the idempotency primitive for parent-task transitions
+        in the complex-task-handoff lifecycle.
+        """
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            if record.status != expected_status:
+                return None
             record.status = status
             if summary is not None:
                 record.summaries = [*(record.summaries or []), summary]

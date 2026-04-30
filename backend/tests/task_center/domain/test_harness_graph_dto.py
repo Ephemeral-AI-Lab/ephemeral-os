@@ -53,3 +53,4 @@ def test_fail_reason_enum_values():
     )
     assert HarnessGraphFailReason.GENERATOR_FAILED.value == "generator_failed"
     assert HarnessGraphFailReason.EVALUATOR_FAILED.value == "evaluator_failed"
+    assert HarnessGraphFailReason.STARTUP_FAILED.value == "startup_failed"

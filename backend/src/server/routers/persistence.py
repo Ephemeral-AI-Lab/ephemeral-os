@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from db.stores import AgentRunStore, TaskCenterStore
+from db.stores import (
+    AgentRunStore,
+    ComplexTaskRequestStore,
+    HarnessGraphStore,
+    TaskCenterStore,
+    TaskSegmentStore,
+)
+from server.read_models.task_center_graph import build_task_center_graph_response
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -11,12 +18,22 @@ from fastapi.responses import JSONResponse
 def create_persistence_router(
     task_center_store: TaskCenterStore,
     agent_run_store: AgentRunStore,
+    complex_task_request_store: ComplexTaskRequestStore,
+    task_segment_store: TaskSegmentStore,
+    harness_graph_store: HarnessGraphStore,
 ) -> APIRouter:
     """Build the persistence API router."""
     router = APIRouter(prefix="/api/db")
 
     def _db_available() -> bool:
         return task_center_store._session_factory is not None
+
+    def _graph_stores_ready() -> bool:
+        return (
+            complex_task_request_store.is_ready
+            and task_segment_store.is_ready
+            and harness_graph_store.is_ready
+        )
 
     @router.get("/task-center-requests")
     async def list_task_center_requests(cwd: str | None = None, limit: int = 20):
@@ -83,13 +100,20 @@ def create_persistence_router(
 
     @router.get("/task-center-runs/{task_center_run_id}/graph")
     async def list_task_center_harness_graph(task_center_run_id: str):
-        if not _db_available():
+        if not _db_available() or not _graph_stores_ready():
             return JSONResponse(
                 status_code=503,
                 content={"error": "Database not configured"},
             )
-        # TODO(phase-04): surface harness graphs via the new request/segment/graph stores.
-        return JSONResponse(content={"harness_graphs": []})
+        return JSONResponse(
+            content=build_task_center_graph_response(
+                task_center_run_id=task_center_run_id,
+                request_store=complex_task_request_store,
+                segment_store=task_segment_store,
+                graph_store=harness_graph_store,
+                task_store=task_center_store,
+            )
+        )
 
     @router.get("/agent-runs/{agent_run_id}")
     async def get_agent_run(agent_run_id: str):

@@ -130,7 +130,7 @@ def test_full_plan_execution_success_closes_request_success(
     segment = handler.create_initial_segment(complex_task_request_id=request.id)
     manager = manager_registry.get(segment.id)
     assert manager is not None
-    graph = manager.create_initial_harness_graph()
+    graph = manager.create_initial_harness_graph().start()
     orchestrator = orchestrator_registry.get_or_raise(graph.id)
 
     orchestrator.apply_plan_submission(_plan(graph.id))
@@ -166,7 +166,7 @@ def test_generator_failure_retry_then_evaluator_success(
     segment = handler.create_initial_segment(complex_task_request_id=request.id)
     manager = manager_registry.get(segment.id)
     assert manager is not None
-    graph1 = manager.create_initial_harness_graph()
+    graph1 = manager.create_initial_harness_graph().start()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
 
     orchestrator1.apply_plan_submission(_plan(graph1.id))

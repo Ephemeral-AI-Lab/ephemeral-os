@@ -125,7 +125,9 @@ async def test_resolver_success_gate_does_not_block_failure_terminal(
     result = await execute_tool_once(
         submit_verification_failure,
         {"summary": "failed", "unresolved_issues": ["still broken"]},
-        make_tool_context(fixture, generator_id, messages=_resolver_messages(5)),
+        make_tool_context(
+            fixture, generator_id, messages=_resolver_messages(5), role="verifier"
+        ),
         emit=_noop_emit,
     )
 

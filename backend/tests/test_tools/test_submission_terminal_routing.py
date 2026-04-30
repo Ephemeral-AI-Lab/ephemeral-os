@@ -109,7 +109,7 @@ async def test_submit_verification_success_calls_apply_generator_submission(
     result = await execute_tool_once(
         submit_verification_success,
         {"summary": "verified", "checks": ["pytest"]},
-        make_tool_context(fixture, generator_id),
+        make_tool_context(fixture, generator_id, role="verifier"),
         emit=_noop_emit,
     )
 

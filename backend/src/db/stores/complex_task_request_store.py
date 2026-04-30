@@ -94,6 +94,70 @@ class ComplexTaskRequestStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
+    def list_for_run(
+        self, task_center_run_id: str
+    ) -> list[ComplexTaskRequest]:
+        with self._sf() as db:
+            q = (
+                db.query(ComplexTaskRequestRecord)
+                .filter(
+                    ComplexTaskRequestRecord.task_center_run_id
+                    == task_center_run_id
+                )
+                .order_by(ComplexTaskRequestRecord.created_at.asc())
+            )
+            return [self._to_dto(r) for r in q.all()]
+
+    def list_closed_for_run(
+        self, task_center_run_id: str
+    ) -> list[ComplexTaskRequest]:
+        """Requests that closed with a delivered outcome (SUCCEEDED or FAILED).
+
+        Excludes CANCELLED requests, which carry no ``final_outcome`` and
+        should not appear in close-report replay.
+        """
+        return [
+            r
+            for r in self.list_for_run(task_center_run_id)
+            if r.status
+            in (
+                ComplexTaskRequestStatus.SUCCEEDED,
+                ComplexTaskRequestStatus.FAILED,
+            )
+        ]
+
+    def list_closed(self) -> list[ComplexTaskRequest]:
+        """Requests that closed with a delivered outcome (SUCCEEDED or FAILED)."""
+        with self._sf() as db:
+            q = (
+                db.query(ComplexTaskRequestRecord)
+                .filter(
+                    ComplexTaskRequestRecord.status.in_(
+                        [
+                            ComplexTaskRequestStatus.SUCCEEDED.value,
+                            ComplexTaskRequestStatus.FAILED.value,
+                        ]
+                    )
+                )
+                .order_by(ComplexTaskRequestRecord.created_at.asc())
+            )
+            return [self._to_dto(r) for r in q.all()]
+
+    def _cancel_for_compensation(
+        self, request_id: str, *, closed_at: datetime | None = None
+    ) -> ComplexTaskRequest:
+        """Mark a request CANCELLED. Reserved for handoff compensation paths."""
+        with self._sf() as db:
+            record = db.get(ComplexTaskRequestRecord, request_id)
+            if record is None:
+                raise LookupError(f"ComplexTaskRequest {request_id!r} not found")
+            record.status = ComplexTaskRequestStatus.CANCELLED.value
+            if closed_at is not None:
+                record.closed_at = closed_at
+            db.commit()
+            db.refresh(record)
+            return self._to_dto(record)
+
     def _to_dto(self, record: ComplexTaskRequestRecord) -> ComplexTaskRequest:
         return ComplexTaskRequest(
             id=record.id,

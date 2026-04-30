@@ -146,6 +146,23 @@ class HarnessGraphStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
+    def list_for_segments(
+        self, task_segment_ids: list[str]
+    ) -> list[HarnessGraph]:
+        """Ordered by segment id, then graph_sequence_no ascending."""
+        if not task_segment_ids:
+            return []
+        with self._sf() as db:
+            q = (
+                db.query(HarnessGraphRecord)
+                .filter(HarnessGraphRecord.task_segment_id.in_(task_segment_ids))
+                .order_by(
+                    HarnessGraphRecord.task_segment_id.asc(),
+                    HarnessGraphRecord.graph_sequence_no.asc(),
+                )
+            )
+            return [self._to_dto(r) for r in q.all()]
+
     def get_by_sequence(
         self, *, task_segment_id: str, graph_sequence_no: int
     ) -> HarnessGraph | None:

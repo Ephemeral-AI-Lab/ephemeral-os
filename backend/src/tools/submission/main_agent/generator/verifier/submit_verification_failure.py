@@ -13,7 +13,7 @@ from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-from tools.submission.hooks import HarnessRoleGate
+from tools.submission.hooks import HarnessAgentProfileGate, HarnessRoleGate
 
 
 class SubmitVerificationFailureInput(BaseModel):
@@ -29,6 +29,10 @@ class SubmitVerificationFailureInput(BaseModel):
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_verification_failure", HarnessTaskRole.GENERATOR),
+        HarnessAgentProfileGate(
+            target_tool="submit_verification_failure",
+            expected_profile_role="verifier",
+        ),
     ),
 )
 async def submit_verification_failure(

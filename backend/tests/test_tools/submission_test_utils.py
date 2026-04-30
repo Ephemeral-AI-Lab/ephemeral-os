@@ -97,7 +97,7 @@ def make_tool_context(
     task_id: str,
     *,
     messages: list[Any] | None = None,
-    role: str | None = None,
+    role: str | None = "executor",
     agent_type: str | None = None,
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(

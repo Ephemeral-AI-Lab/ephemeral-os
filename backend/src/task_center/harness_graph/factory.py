@@ -25,7 +25,6 @@ def make_harness_graph_orchestrator_factory(
             on_graph_closed=on_graph_closed,
             runtime=runtime,
         )
-        runtime.orchestrator_registry.register(orchestrator)
         return orchestrator
 
     return factory

@@ -24,6 +24,7 @@ class HarnessGraphFailReason(StrEnum):
     PLANNER_FAILED = "planner_failed"
     GENERATOR_FAILED = "generator_failed"
     EVALUATOR_FAILED = "evaluator_failed"
+    STARTUP_FAILED = "startup_failed"
 
 
 @dataclass(frozen=True, slots=True)

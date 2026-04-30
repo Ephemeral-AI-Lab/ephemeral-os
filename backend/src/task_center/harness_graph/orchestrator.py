@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -49,6 +50,8 @@ from task_center.harness_graph.validation import (
     assert_valid_graph_close,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class HarnessGraphOrchestrator:
     """Runs one planner -> generator DAG -> evaluator harness graph."""
@@ -84,32 +87,38 @@ class HarnessGraphOrchestrator:
             )
 
         task_id = planner_task_id(graph.id)
-        task_input = runtime.task_input_for_graph(graph)
-        task_center_run_id = runtime.task_center_run_id_for_graph(graph)
-        runtime.task_store.upsert_task(
-            task_id=task_id,
-            task_center_run_id=task_center_run_id,
-            role=HarnessTaskRole.PLANNER.value,
-            task_input=task_input,
-            status=HarnessTaskStatus.RUNNING.value,
-            summaries=[],
-            needs=[],
-            task_center_harness_graph_id=graph.id,
-            spawn_reason="harness_graph_planner",
-        )
-        self._graph_store.set_planner_task_id(graph.id, task_id)
-        runtime.agent_launcher.launch(
-            HarnessAgentLaunch(
+        runtime.orchestrator_registry.register(self)
+        try:
+            task_input = runtime.task_input_for_graph(graph)
+            task_center_run_id = runtime.task_center_run_id_for_graph(graph)
+            runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,
-                harness_graph_id=graph.id,
-                role=HarnessTaskRole.PLANNER,
-                agent_name=HarnessTaskRole.PLANNER.value,
+                role=HarnessTaskRole.PLANNER.value,
                 task_input=task_input,
-                needs=(),
+                status=HarnessTaskStatus.RUNNING.value,
+                summaries=[],
+                needs=[],
+                task_center_harness_graph_id=graph.id,
+                spawn_reason="harness_graph_planner",
             )
-        )
-        self._dispatch_ready_work()
+            self._graph_store.set_planner_task_id(graph.id, task_id)
+            runtime.agent_launcher.launch(
+                HarnessAgentLaunch(
+                    task_id=task_id,
+                    task_center_run_id=task_center_run_id,
+                    harness_graph_id=graph.id,
+                    role=HarnessTaskRole.PLANNER,
+                    agent_name=HarnessTaskRole.PLANNER.value,
+                    task_input=task_input,
+                    needs=(),
+                )
+            )
+            self._dispatch_ready_work()
+            self._replay_pending_complex_task_close_reports(task_center_run_id)
+        except Exception:
+            self._mark_startup_failed(planner_task_id=task_id)
+            raise
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_graph(submission.graph_id)
@@ -197,20 +206,24 @@ class HarnessGraphOrchestrator:
         self._dispatch_ready_work()
 
     def apply_complex_task_close_report(self, report: ComplexTaskCloseReport) -> None:
-        """Resume a generator task waiting on a delegated complex-task request."""
+        """Resume a generator task waiting on a delegated complex-task request.
+
+        Idempotent: if the parent has already been resumed (status moved off
+        ``waiting_complex_task`` by an earlier delivery), return silently
+        without re-asserting graph stage or appending another summary.
+        """
         runtime = self._require_runtime()
-        graph = self._assert_stage(HarnessGraphStage.GENERATING)
         task = runtime.task_store.get_task(report.requested_by_task_id)
         if task is None:
             raise GraphInvariantViolation(
                 f"Generator task {report.requested_by_task_id!r} not found"
             )
+        if task.get("status") != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
+            # Already delivered; no further action.
+            return
+
+        graph = self._assert_stage(HarnessGraphStage.GENERATING)
         assert_generator_task_for_submission(task, graph)
-        if task["status"] != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
-            raise GraphInvariantViolation(
-                f"Generator task {report.requested_by_task_id!r} is not waiting "
-                "on a complex task"
-            )
 
         if report.outcome == "success":
             status = HarnessTaskStatus.DONE
@@ -223,15 +236,22 @@ class HarnessGraphOrchestrator:
                 f"Delegated complex task {report.complex_task_request_id} failed."
             )
 
-        runtime.task_store.set_task_status(
+        updated = runtime.task_store.set_task_status_if_current(
             report.requested_by_task_id,
+            expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
             status=status.value,
             summary={
                 "outcome": report.outcome,
                 "summary": summary,
-                "payload": {"complex_task_close_report": asdict(report)},
+                "payload": {
+                    "complex_task_close_report": asdict(report),
+                    "submission_kind": "complex_task_close_report",
+                },
             },
         )
+        if updated is None:
+            # Race: another delivery moved the parent first. Idempotent.
+            return
         if status == HarnessTaskStatus.FAILED:
             self._block_failed_generator_descendants(report.requested_by_task_id)
         self._dispatch_ready_work()
@@ -478,6 +498,60 @@ class HarnessGraphOrchestrator:
         if self._runtime is not None:
             self._runtime.orchestrator_registry.deregister(graph.id)
         self._on_graph_closed(graph.id)
+
+    def _mark_startup_failed(self, *, planner_task_id: str) -> None:
+        runtime = self._runtime
+        if runtime is not None:
+            runtime.orchestrator_registry.deregister(self._harness_graph.id)
+            try:
+                runtime.task_store.set_task_status_if_current(
+                    planner_task_id,
+                    expected_status=HarnessTaskStatus.RUNNING.value,
+                    status=HarnessTaskStatus.FAILED.value,
+                    summary={
+                        "fail_reason": HarnessGraphFailReason.STARTUP_FAILED.value,
+                    },
+                )
+            except LookupError:
+                pass
+            except Exception:
+                logger.exception(
+                    "HarnessGraphOrchestrator: startup task cleanup failed",
+                )
+
+        try:
+            graph = self._graph_store.get(self._harness_graph.id)
+            if graph is not None and not graph.is_closed:
+                self._graph_store.close(
+                    graph.id,
+                    status=HarnessGraphStatus.FAILED,
+                    fail_reason=HarnessGraphFailReason.STARTUP_FAILED,
+                    closed_at=datetime.now(UTC),
+                )
+        except Exception:
+            logger.exception(
+                "HarnessGraphOrchestrator: startup graph cleanup failed",
+            )
+
+    def _replay_pending_complex_task_close_reports(
+        self, task_center_run_id: str
+    ) -> None:
+        runtime = self._runtime
+        if runtime is None:
+            return
+        try:
+            from task_center.complex_task.close_report_delivery import (
+                deliver_pending_complex_task_close_reports,
+            )
+
+            deliver_pending_complex_task_close_reports(
+                runtime=runtime,
+                task_center_run_id=task_center_run_id,
+            )
+        except Exception:
+            logger.exception(
+                "HarnessGraphOrchestrator: close-report replay failed",
+            )
 
     def _fresh_graph(self) -> HarnessGraph:
         graph = self._graph_store.get(self._harness_graph.id)

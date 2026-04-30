@@ -300,12 +300,41 @@ uv run ruff check backend/src backend/tests
 uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/agents
 ```
 
-## Open questions before final cutover
+## Resolved design questions
 
-1. Retry-budget defaults for task segments: fixed runtime defaults or
-   request-level configuration?
-2. Planner step-budget detection: confirm the exact runtime signal for
-   `planner_failed`.
+### Retry budget lives on `TaskSegment`, not `ComplexTaskRequest`
+
+`ComplexTaskRequest` does **not** retry. The only retry primitive is a
+`TaskSegment` creating a new `HarnessGraph` inside itself when the previous
+graph fails and budget remains. The request closes failed when the *current*
+segment exhausts its budget — it never re-issues a segment.
+
+The budget is a fixed runtime default applied at segment creation:
+
+- `HarnessLifecycleConfig.default_attempt_budget = 2` at
+  `backend/src/task_center/config.py:16`.
+- `ComplexTaskRequestHandler` reads it for both the initial segment
+  (`handler.py:98`) and each continuation segment (`handler.py:122`).
+- `TaskSegment.attempt_budget` (`segment/segment.py:31`) and
+  `has_budget_remaining` (`segment/segment.py:48`) drive the
+  `TaskSegmentManager` retry decision.
+
+No per-request override is exposed. If a caller later needs one, threading
+it through `ComplexTaskRequest` is a small, additive change — out of scope
+for this phase.
+
+### Planner-exhaustion signal
+
+Planner exhaustion = the planner agent terminates **without** having
+submitted a valid `submit_full_plan` or `submit_partial_plan`. The runtime
+detects this on agent exit and dispatches a `PlannerFailureSubmission` to
+the orchestrator. `HarnessGraphOrchestrator.apply_planner_failure`
+(`orchestrator.py:162–190`) closes the graph with
+`HarnessGraphFailReason.PLANNER_FAILED`, which then flows into the standard
+`TaskSegmentManager` retry-or-fail decision path.
+
+This is already implemented; Phase 05's job is to exercise it in
+`test_phase05_failure_paths.py`.
 
 ## Phase exit criteria
 

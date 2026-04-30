@@ -35,15 +35,20 @@ async def _noop_emit(event) -> None:
     del event
 
 
-def _tool_context(runtime: HarnessGraphRuntime, graph_id: str, task_id: str):
-    return ToolExecutionContextService(
-        cwd="/tmp",
-        services=ExecutionMetadata(
-            task_center_task_id=task_id,
-            task_center_harness_graph_id=graph_id,
-            harness_graph_runtime=runtime,
-        ),
+def _tool_context(
+    runtime: HarnessGraphRuntime,
+    graph_id: str,
+    task_id: str,
+    *,
+    role: str = "executor",
+):
+    metadata = ExecutionMetadata(
+        task_center_task_id=task_id,
+        task_center_harness_graph_id=graph_id,
+        harness_graph_runtime=runtime,
     )
+    metadata["role"] = role
+    return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
 def _build_runtime(request_store, segment_store, graph_store, task_store):

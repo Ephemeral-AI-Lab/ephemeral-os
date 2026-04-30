@@ -13,7 +13,7 @@ from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-from tools.submission.hooks import HarnessRoleGate
+from tools.submission.hooks import HarnessAgentProfileGate, HarnessRoleGate
 
 
 class SubmitExecutionFailureInput(BaseModel):
@@ -30,6 +30,10 @@ class SubmitExecutionFailureInput(BaseModel):
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_execution_failure", HarnessTaskRole.GENERATOR),
+        HarnessAgentProfileGate(
+            target_tool="submit_execution_failure",
+            expected_profile_role="executor",
+        ),
     ),
 )
 async def submit_execution_failure(

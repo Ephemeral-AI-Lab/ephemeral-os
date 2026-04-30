@@ -23,6 +23,7 @@ from task_center.complex_task.validation import (
 )
 from task_center.complex_task.request import (
     ComplexTaskCloseReport,
+    ComplexTaskFinalOutcome,
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
 )
@@ -135,7 +136,13 @@ class ComplexTaskRequestHandler:
         try:
             outcome = report.outcome
             if isinstance(outcome, SuccessContinue):
-                self.create_continuation_segment(previous_segment=segment)
+                next_segment = self.create_continuation_segment(
+                    previous_segment=segment
+                )
+                self._start_continuation_segment(
+                    next_segment=next_segment,
+                    previous_report=report,
+                )
             elif isinstance(outcome, TerminalSuccess):
                 self.close_complex_task_request(
                     complex_task_request_id=segment.complex_task_request_id,
@@ -170,11 +177,11 @@ class ComplexTaskRequestHandler:
         outcome_label: Literal["success", "failed"] = (
             "success" if succeeded else "failed"
         )
-        final_outcome = {
-            "outcome": outcome_label,
-            "final_segment_id": final_segment_id,
-            "final_harness_graph_id": final_harness_graph_id,
-        }
+        final_outcome = ComplexTaskFinalOutcome(
+            outcome=outcome_label,
+            final_segment_id=final_segment_id,
+            final_harness_graph_id=final_harness_graph_id,
+        )
         status = (
             ComplexTaskRequestStatus.SUCCEEDED
             if succeeded
@@ -183,21 +190,60 @@ class ComplexTaskRequestHandler:
         updated = self._request_store.set_status(
             complex_task_request_id,
             status=status,
-            final_outcome=final_outcome,
+            final_outcome=final_outcome.to_payload(),
             closed_at=datetime.now(UTC),
         )
         if self._deliver_close_report is not None:
-            close_report = ComplexTaskCloseReport(
-                complex_task_request_id=updated.id,
-                requested_by_task_id=updated.requested_by_task_id,
-                outcome=outcome_label,
-                final_segment_id=final_segment_id,
-                final_harness_graph_id=final_harness_graph_id,
-            )
-            self._deliver_close_report(close_report)
+            self._deliver_close_report(final_outcome.to_close_report(updated))
         return updated
 
     # ---- internal -------------------------------------------------------
+
+    def _start_continuation_segment(
+        self,
+        *,
+        next_segment: TaskSegment,
+        previous_report: TaskSegmentClosureReport,
+    ) -> None:
+        """Create and start the continuation segment's initial graph.
+
+        Skipped when no ``orchestrator_factory`` is configured: in that case
+        the test or harness driver is responsible for creating and stopping the
+        graph manually. Production paths always attach a factory through the
+        handoff coordinator, so continuation startup runs end-to-end.
+
+        On startup failure the continuation segment is cancelled and the
+        request is closed as failed. The previous segment's final graph id is
+        used as ``final_harness_graph_id`` because the continuation segment
+        never produced a running graph of its own.
+        """
+        if self._orchestrator_factory is None:
+            return
+        next_manager = self._manager_registry.get(next_segment.id)
+        if next_manager is None:
+            raise GraphInvariantViolation(
+                f"TaskSegmentManager not registered for continuation segment "
+                f"{next_segment.id!r}"
+            )
+        handle = None
+        try:
+            handle = next_manager.create_initial_harness_graph()
+            handle.start()
+        except Exception:
+            if handle is not None:
+                try:
+                    handle.cancel()
+                except GraphInvariantViolation:
+                    pass
+            self._segment_store._cancel_for_compensation(
+                next_segment.id, closed_at=datetime.now(UTC)
+            )
+            self.close_complex_task_request(
+                complex_task_request_id=next_segment.complex_task_request_id,
+                succeeded=False,
+                final_segment_id=next_segment.id,
+                final_harness_graph_id=previous_report.final_harness_graph_id,
+            )
 
     def _require_request(self, request_id: str) -> ComplexTaskRequest:
         request = self._request_store.get(request_id)

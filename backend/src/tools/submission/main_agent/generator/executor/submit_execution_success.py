@@ -13,7 +13,7 @@ from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-from tools.submission.hooks import HarnessRoleGate
+from tools.submission.hooks import HarnessAgentProfileGate, HarnessRoleGate
 
 
 class SubmitExecutionSuccessInput(BaseModel):
@@ -29,6 +29,10 @@ class SubmitExecutionSuccessInput(BaseModel):
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_execution_success", HarnessTaskRole.GENERATOR),
+        HarnessAgentProfileGate(
+            target_tool="submit_execution_success",
+            expected_profile_role="executor",
+        ),
     ),
 )
 async def submit_execution_success(

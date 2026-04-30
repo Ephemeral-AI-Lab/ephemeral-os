@@ -23,7 +23,14 @@ load_dotenv()
 
 from config import Settings, load_settings
 from db.engine import get_session_factory, initialize_db
-from db.stores import AgentRunStore, ModelStore, TaskCenterStore
+from db.stores import (
+    AgentRunStore,
+    ComplexTaskRequestStore,
+    HarnessGraphStore,
+    ModelStore,
+    TaskCenterStore,
+    TaskSegmentStore,
+)
 from server.protocol import BackendEvent, BackendHostConfig, ToolSnapshot
 from server.logging_config import configure_runtime_logging
 from providers.types import SupportsStreamingMessages
@@ -179,6 +186,9 @@ _runtime: RuntimeState | None = None
 task_center_store = TaskCenterStore()
 agent_run_store = AgentRunStore()
 model_store = ModelStore()
+complex_task_request_store = ComplexTaskRequestStore()
+task_segment_store = TaskSegmentStore()
+harness_graph_store = HarnessGraphStore()
 
 
 def _model_registry_path() -> Path:
@@ -204,6 +214,12 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
         agent_run_store.initialize(sf)
     if not model_store.is_available:
         model_store.initialize(sf)
+    if not complex_task_request_store.is_ready:
+        complex_task_request_store.initialize(sf)
+    if not task_segment_store.is_ready:
+        task_segment_store.initialize(sf)
+    if not harness_graph_store.is_ready:
+        harness_graph_store.initialize(sf)
 
     model_store.seed_from_json(str(_model_registry_path()))
     return sf
@@ -243,7 +259,15 @@ def create_app(config: BackendHostConfig) -> FastAPI:
 
     # Register routers
     app.include_router(create_core_router(_get_runtime))
-    app.include_router(create_persistence_router(task_center_store, agent_run_store))
+    app.include_router(
+        create_persistence_router(
+            task_center_store,
+            agent_run_store,
+            complex_task_request_store,
+            task_segment_store,
+            harness_graph_store,
+        )
+    )
     app.include_router(create_sandbox_router())
     app.include_router(ci_router)
     app.include_router(create_models_router(model_store))

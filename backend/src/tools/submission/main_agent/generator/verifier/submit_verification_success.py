@@ -13,7 +13,11 @@ from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-from tools.submission.hooks import HarnessRoleGate, ResolverSuccessLimitGate
+from tools.submission.hooks import (
+    HarnessAgentProfileGate,
+    HarnessRoleGate,
+    ResolverSuccessLimitGate,
+)
 
 
 class SubmitVerificationSuccessInput(BaseModel):
@@ -29,6 +33,10 @@ class SubmitVerificationSuccessInput(BaseModel):
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_verification_success", HarnessTaskRole.GENERATOR),
+        HarnessAgentProfileGate(
+            target_tool="submit_verification_success",
+            expected_profile_role="verifier",
+        ),
         ResolverSuccessLimitGate("submit_verification_success"),
     ),
 )
