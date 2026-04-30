@@ -13,15 +13,17 @@ from typing import Any
 
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
-from sandbox.daytona_utils import (
+from sandbox.daytona.bash import (
+    _extract_exit_code,
+    _wrap_bash_command,
+)
+from sandbox.daytona.exec_files import (
     _REMOTE_WRITE_CHUNK_BYTES,
     _build_append_text_file_chunk_command,
     _build_read_text_file_command,
     _build_remove_file_command,
     _build_truncate_text_file_command,
     _build_write_text_file_commands,
-    _extract_exit_code,
-    _wrap_bash_command,
 )
 
 from sandbox.async_bridge import run_sync

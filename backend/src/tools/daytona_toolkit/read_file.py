@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from sandbox.daytona_utils import (
+from sandbox.daytona.exec_files import _read_text_file_via_exec
+from sandbox.daytona.paths import (
     _path_error,
-    _read_text_file_via_exec,
     _resolve_path,
-    _run_with_recovery,
 )
+from sandbox.daytona.recovery import _run_with_recovery
 from tools.daytona_toolkit._file_tool_helpers import (
     MAX_READ_FILE_LINES,
     ReadFileInput,

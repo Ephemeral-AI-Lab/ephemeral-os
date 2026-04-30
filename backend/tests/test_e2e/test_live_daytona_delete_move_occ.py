@@ -35,7 +35,7 @@ from sandbox.code_intelligence.registry import (
 )
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona_utils import (
+from sandbox.daytona.bash import (
     _extract_exit_code,
     _wrap_bash_command,
 )

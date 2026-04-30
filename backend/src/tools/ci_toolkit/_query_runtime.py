@@ -29,7 +29,7 @@ from sandbox.code_intelligence.indexing.file_discovery import (
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.ci_adapter import get_ci_service
 from tools.core.sandbox_runtime import resolve_daytona_path, resolve_sandbox
-from sandbox.daytona_utils import _exec_command
+from sandbox.daytona.exec_files import _exec_command
 
 logger = logging.getLogger(__name__)
 

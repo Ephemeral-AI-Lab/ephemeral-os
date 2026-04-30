@@ -19,7 +19,10 @@ from sandbox.code_intelligence.service import CodeIntelligenceService
 from engine.testing.eval_agent import EvalAgent
 from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona_utils import _extract_exit_code, _wrap_bash_command
+from sandbox.daytona.bash import (
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 from tools.daytona_toolkit.write_file import write_file
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]

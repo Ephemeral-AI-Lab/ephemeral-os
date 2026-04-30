@@ -31,7 +31,10 @@ from dotenv import load_dotenv
 
 from sandbox.code_intelligence.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContextService
-from sandbox.daytona_utils import _extract_exit_code, _wrap_bash_command
+from sandbox.daytona.bash import (
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 from tools.daytona_toolkit.shell import shell
 from tools.daytona_toolkit.edit_file import edit_file
 from tools.daytona_toolkit.write_file import write_file

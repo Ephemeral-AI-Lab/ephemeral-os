@@ -6,7 +6,8 @@ import shlex
 from pathlib import Path
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
-from sandbox.daytona_utils import _build_write_text_file_command, _wrap_bash_command
+from sandbox.daytona.bash import _wrap_bash_command
+from sandbox.daytona.exec_files import _build_write_text_file_command
 
 
 EVAL_SANDBOX_FILES: dict[str, str] = {

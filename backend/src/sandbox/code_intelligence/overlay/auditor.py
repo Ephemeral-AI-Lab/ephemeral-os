@@ -54,7 +54,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.daytona_utils import _extract_exit_code, _wrap_bash_command
+from sandbox.daytona.bash import (
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 
 from sandbox.code_intelligence.overlay.git_snapshot import build_live_snapshot_details
 from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter

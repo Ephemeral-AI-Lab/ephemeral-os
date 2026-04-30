@@ -19,10 +19,8 @@ from sandbox.async_client import get_async_sandbox
 from sandbox.lifecycle import shutdown_cached_client_async
 from sandbox.testing import create_test_sandbox, delete_test_sandbox
 from tools.core.base import ToolExecutionContextService
-from sandbox.daytona_utils import (
-    _build_write_text_file_command,
-    _wrap_bash_command,
-)
+from sandbox.daytona.bash import _wrap_bash_command
+from sandbox.daytona.exec_files import _build_write_text_file_command
 from tools.daytona_toolkit.glob import glob
 from tools.daytona_toolkit.grep import grep
 

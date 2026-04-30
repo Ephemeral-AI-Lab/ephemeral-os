@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona_utils import _get_repo_root
+from sandbox.daytona.paths import _get_repo_root
 
 
 MAX_READ_FILE_LINES = 200

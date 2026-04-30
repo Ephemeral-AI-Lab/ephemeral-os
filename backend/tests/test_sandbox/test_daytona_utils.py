@@ -15,13 +15,13 @@ from tools.daytona_toolkit._file_tool_helpers import (
     build_find_result,
     build_read_file_result,
 )
-from sandbox.daytona_utils import (
+from sandbox.daytona.paths import (
     _get_repo_root,
     _normalized_path,
     _path_error,
-    _run_with_recovery,
     _resolve_path,
 )
+from sandbox.daytona.recovery import _run_with_recovery
 from tools.daytona_toolkit.shell import _build_tool_output
 
 

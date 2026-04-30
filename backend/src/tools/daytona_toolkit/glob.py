@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from sandbox.daytona_utils import (
-    _exec_command,
+from sandbox.daytona.exec_files import _exec_command
+from sandbox.daytona.paths import (
     _get_repo_root,
     _path_error,
-    _run_with_recovery,
     _resolve_path,
 )
+from sandbox.daytona.recovery import _run_with_recovery
 from tools.daytona_toolkit._file_tool_helpers import (
     GlobInput,
     GlobOutput,

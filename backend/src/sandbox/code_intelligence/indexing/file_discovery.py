@@ -9,7 +9,10 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-from sandbox.daytona_utils import _extract_exit_code, _wrap_bash_command
+from sandbox.daytona.bash import (
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 
 from sandbox.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS

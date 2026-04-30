@@ -16,12 +16,12 @@ from tools.daytona_toolkit._shell_prehooks import (
     DestructiveShellPreHook,
 )
 from tools.core.sandbox_commit import submit_shell_cmd_from_context
-from sandbox.daytona_utils import (
+from sandbox.daytona.bash import (
     _extract_exit_code,
-    _get_repo_root,
-    _run_with_recovery,
     _wrap_bash_command,
 )
+from sandbox.daytona.paths import _get_repo_root
+from sandbox.daytona.recovery import _run_with_recovery
 
 _SHELL_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.shell_default_timeout
 

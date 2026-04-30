@@ -15,7 +15,7 @@ from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
 from tools.core.sandbox_commit import commit_metadata, submit_commit_from_context
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard
-from sandbox.daytona_utils import (
+from sandbox.daytona.paths import (
     _get_repo_root,
     _resolve_path,
 )

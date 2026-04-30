@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sandbox.daytona_utils import (
-    _build_read_text_file_command,
-    _build_write_text_file_command,
+from sandbox.daytona.bash import (
     _extract_exit_code,
     _wrap_bash_command,
+)
+from sandbox.daytona.exec_files import (
+    _build_read_text_file_command,
+    _build_write_text_file_command,
 )
 
 
