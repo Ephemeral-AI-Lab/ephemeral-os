@@ -1,4 +1,4 @@
-"""Tests for the overlay counter recorder in :mod:`routing.telemetry`."""
+"""Tests for the overlay counter recorder in :mod:`sandbox.code_intelligence.telemetry`."""
 
 from __future__ import annotations
 
