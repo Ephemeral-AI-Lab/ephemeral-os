@@ -62,7 +62,6 @@ def _build_handler(
         manager_registry=manager_registry,
         config=HarnessLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=make_harness_graph_orchestrator_factory(
-            graph_store=graph_store,
             runtime=runtime,
         ),
     )
@@ -130,7 +129,7 @@ def test_full_plan_execution_success_closes_request_success(
     segment = handler.create_initial_segment(complex_task_request_id=request.id)
     manager = manager_registry.get(segment.id)
     assert manager is not None
-    graph = manager.create_initial_harness_graph().start()
+    graph = manager.create_initial_harness_graph()
     orchestrator = orchestrator_registry.get_or_raise(graph.id)
 
     orchestrator.apply_plan_submission(_plan(graph.id))
@@ -166,7 +165,7 @@ def test_generator_failure_retry_then_evaluator_success(
     segment = handler.create_initial_segment(complex_task_request_id=request.id)
     manager = manager_registry.get(segment.id)
     assert manager is not None
-    graph1 = manager.create_initial_harness_graph().start()
+    graph1 = manager.create_initial_harness_graph()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
 
     orchestrator1.apply_plan_submission(_plan(graph1.id))

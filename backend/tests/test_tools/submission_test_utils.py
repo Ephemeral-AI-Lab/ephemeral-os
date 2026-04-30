@@ -78,7 +78,6 @@ def build_harness_fixture(
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )

@@ -8,7 +8,6 @@ import pytest
 
 from task_center.complex_task.validation import (
     assert_continuation_segment_predecessor,
-    assert_no_root_creation_reason,
     assert_request_open,
     assert_segment_id_unique_in_list,
     assert_segment_sequence_contiguous,
@@ -146,18 +145,6 @@ def test_assert_segment_sequence_contiguous():
         assert_segment_sequence_contiguous(_request(task_segment_ids=("s1",)), 1)
     with pytest.raises(GraphInvariantViolation):
         assert_segment_sequence_contiguous(_request(task_segment_ids=("s1",)), 3)
-
-
-def test_assert_no_root_creation_reason_passes_known_kinds():
-    assert_no_root_creation_reason(TaskSegmentCreationReason.INITIAL.value)
-    assert_no_root_creation_reason(
-        TaskSegmentCreationReason.PARTIAL_CONTINUATION.value
-    )
-
-
-def test_assert_no_root_creation_reason_rejects_root():
-    with pytest.raises(GraphInvariantViolation):
-        assert_no_root_creation_reason("root")
 
 
 def test_assert_continuation_segment_predecessor_requires_succeeded_with_goal():

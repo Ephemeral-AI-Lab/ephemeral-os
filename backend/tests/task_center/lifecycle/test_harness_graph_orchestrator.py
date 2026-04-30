@@ -93,7 +93,6 @@ def _build_orchestrator(
     closed: list[str] = []
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=closed.append,
         runtime=runtime,
     )

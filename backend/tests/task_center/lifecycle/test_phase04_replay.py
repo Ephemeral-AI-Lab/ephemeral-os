@@ -61,7 +61,6 @@ def _build_parent_environment(
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )
@@ -170,7 +169,6 @@ def test_graph_start_replays_closed_request_to_active_waiting_parent(
     segment_store.append_graph_id(segment.id, graph.id)
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )

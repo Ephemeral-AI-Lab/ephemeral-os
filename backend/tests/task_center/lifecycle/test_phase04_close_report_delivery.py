@@ -62,7 +62,6 @@ def _build_runtime_with_open_graph(
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )
@@ -158,7 +157,6 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )

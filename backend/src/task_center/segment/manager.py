@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -51,28 +50,6 @@ OrchestratorFactory = Callable[
 ]
 
 
-@dataclass(frozen=True, slots=True)
-class HarnessGraphStartHandle:
-    """One-shot starter returned alongside a created (but not started) graph.
-
-    The handle's ``start()`` method must be called exactly once for the
-    delegated graph to begin running. ``cancel()`` is reserved for handoff
-    compensation: it discards the unstarted handle without launching the
-    orchestrator. Calling either method twice raises.
-    """
-
-    graph: HarnessGraph
-    _start: Callable[[], None]
-    _cancel: Callable[[], None]
-
-    def start(self) -> HarnessGraph:
-        self._start()
-        return self.graph
-
-    def cancel(self) -> None:
-        self._cancel()
-
-
 class TaskSegmentManager:
     """Manages one open TaskSegment's lifecycle."""
 
@@ -93,14 +70,8 @@ class TaskSegmentManager:
 
     # ---- public API -----------------------------------------------------
 
-    def create_initial_harness_graph(self) -> HarnessGraphStartHandle:
-        """Create graph_sequence_no=1 and return a deferred start handle.
-
-        The graph row is persisted, but the orchestrator is *not* started until
-        ``handle.start()`` runs. Coordinators that need to set parent-task state
-        between graph creation and orchestrator startup take advantage of this
-        seam; eager callers chain ``.start()``.
-        """
+    def create_initial_harness_graph(self, *, start: bool = True) -> HarnessGraph:
+        """Create graph_sequence_no=1 and optionally start its orchestrator."""
         segment = self._current_segment_snapshot()
         assert_segment_open(segment)
         if segment.harness_graph_ids:
@@ -109,7 +80,16 @@ class TaskSegmentManager:
                 f"create_next_harness_graph"
             )
         graph = self._insert_graph(segment, graph_sequence_no=1)
-        return self._make_start_handle(graph)
+        if start:
+            self.start_harness_graph(graph)
+        return graph
+
+    def start_harness_graph(self, graph: HarnessGraph) -> None:
+        """Start a graph that belongs to this manager's open segment."""
+        segment = self._current_segment_snapshot()
+        assert_segment_open(segment)
+        assert_graph_belongs_to_segment(graph, segment)
+        self._start_orchestrator_if_configured(graph)
 
     def create_next_harness_graph(
         self, *, previous_harness_graph_id: str
@@ -187,28 +167,6 @@ class TaskSegmentManager:
             self._close_graph_after_startup_failure(graph)
             raise
         orchestrator.start()
-
-    def _make_start_handle(
-        self, graph: HarnessGraph
-    ) -> HarnessGraphStartHandle:
-        consumed = {"value": False}
-
-        def _start() -> None:
-            if consumed["value"]:
-                raise GraphInvariantViolation(
-                    f"HarnessGraphStartHandle for {graph.id!r} already consumed"
-                )
-            consumed["value"] = True
-            self._start_orchestrator_if_configured(graph)
-
-        def _cancel() -> None:
-            if consumed["value"]:
-                raise GraphInvariantViolation(
-                    f"HarnessGraphStartHandle for {graph.id!r} already consumed"
-                )
-            consumed["value"] = True
-
-        return HarnessGraphStartHandle(graph=graph, _start=_start, _cancel=_cancel)
 
     def _close_graph_after_startup_failure(self, graph: HarnessGraph) -> None:
         try:

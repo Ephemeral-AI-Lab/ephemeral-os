@@ -65,7 +65,7 @@ def test_initial_segment_creates_graph_sequence_1(
     """Phase 01 exit: create segment 1 with harness graph sequence 1."""
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
     mgr, _ = _make_manager(seg_id, segment_store, graph_store)
-    g = mgr.create_initial_harness_graph().start()
+    g = mgr.create_initial_harness_graph()
     assert g.graph_sequence_no == 1
     seg = segment_store.get(seg_id)
     assert seg is not None
@@ -78,7 +78,7 @@ def test_retry_creates_graph_in_same_segment(
     """Phase 01 exit: retry creates another HarnessGraph in the same segment."""
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
     mgr, _ = _make_manager(seg_id, segment_store, graph_store)
-    g1 = mgr.create_initial_harness_graph().start()
+    g1 = mgr.create_initial_harness_graph()
     g2 = mgr.create_next_harness_graph(previous_harness_graph_id=g1.id)
     assert g2.task_segment_id == seg_id
     assert g2.graph_sequence_no == 2
@@ -92,7 +92,7 @@ def test_passing_graph_with_null_continuation_emits_terminal_success(
 ):
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
     mgr, captured = _make_manager(seg_id, segment_store, graph_store)
-    g = mgr.create_initial_harness_graph().start()
+    g = mgr.create_initial_harness_graph()
     # No continuation_goal set on the graph.
     graph_store.close(
         g.id, status=HarnessGraphStatus.PASSED, fail_reason=None
@@ -110,7 +110,7 @@ def test_passing_graph_with_continuation_emits_success_continue(
 ):
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
     mgr, captured = _make_manager(seg_id, segment_store, graph_store)
-    g = mgr.create_initial_harness_graph().start()
+    g = mgr.create_initial_harness_graph()
     graph_store.set_plan_contract(
         g.id,
         task_specification="spec",
@@ -136,7 +136,7 @@ def test_passing_graph_does_not_retry(
     """Spec rule: passing graph always closes the segment; no second graph."""
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
     mgr, _ = _make_manager(seg_id, segment_store, graph_store)
-    g = mgr.create_initial_harness_graph().start()
+    g = mgr.create_initial_harness_graph()
     graph_store.close(
         g.id, status=HarnessGraphStatus.PASSED, fail_reason=None
     )
@@ -152,7 +152,7 @@ def test_failed_graph_with_budget_creates_next_graph(
 ):
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id, attempt_budget=2)
     mgr, captured = _make_manager(seg_id, segment_store, graph_store)
-    g1 = mgr.create_initial_harness_graph().start()
+    g1 = mgr.create_initial_harness_graph()
     graph_store.close(
         g1.id,
         status=HarnessGraphStatus.FAILED,
@@ -185,7 +185,34 @@ def test_manager_starts_orchestrator_when_factory_present(
         orchestrator_factory=factory,
     )
 
-    graph = mgr.create_initial_harness_graph().start()
+    graph = mgr.create_initial_harness_graph()
+
+    assert started == [graph.id]
+
+
+def test_initial_graph_start_can_be_deferred(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
+    started: list[str] = []
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _StartedOrchestrator(graph.id, started)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+
+    graph = mgr.create_initial_harness_graph(start=False)
+    assert started == []
+
+    mgr.start_harness_graph(graph)
 
     assert started == [graph.id]
 
@@ -208,7 +235,7 @@ def test_failed_graph_with_budget_starts_next_graph_orchestrator(
         on_segment_closed=captured.append,
         orchestrator_factory=factory,
     )
-    graph = mgr.create_initial_harness_graph().start()
+    graph = mgr.create_initial_harness_graph()
     graph_store.close(
         graph.id,
         status=HarnessGraphStatus.FAILED,
@@ -228,7 +255,7 @@ def test_failed_graph_without_budget_emits_attempt_plan_failed(
 ):
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id, attempt_budget=2)
     mgr, captured = _make_manager(seg_id, segment_store, graph_store)
-    g1 = mgr.create_initial_harness_graph().start()
+    g1 = mgr.create_initial_harness_graph()
     graph_store.set_plan_contract(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
     )
@@ -262,7 +289,7 @@ def test_attempted_plan_history_ordered_by_graph_sequence(
 ):
     seg_id = _seed_segment(request_store, segment_store, task_center_run_id, attempt_budget=2)
     mgr, captured = _make_manager(seg_id, segment_store, graph_store)
-    g1 = mgr.create_initial_harness_graph().start()
+    g1 = mgr.create_initial_harness_graph()
     graph_store.set_plan_contract(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
     )

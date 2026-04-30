@@ -80,7 +80,6 @@ def _build_runtime(request_store, segment_store, graph_store, task_store):
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )

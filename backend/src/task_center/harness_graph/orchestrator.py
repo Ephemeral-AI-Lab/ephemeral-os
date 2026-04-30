@@ -7,7 +7,6 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from db.stores.harness_graph_store import HarnessGraphStore
 from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.graph import (
@@ -60,12 +59,10 @@ class HarnessGraphOrchestrator:
         self,
         *,
         harness_graph: HarnessGraph,
-        graph_store: HarnessGraphStore,
         on_graph_closed: Callable[[str], None],
-        runtime: HarnessGraphRuntime | None = None,
+        runtime: HarnessGraphRuntime,
     ) -> None:
         self._harness_graph = harness_graph
-        self._graph_store = graph_store
         self._on_graph_closed = on_graph_closed
         self._runtime = runtime
 
@@ -102,7 +99,7 @@ class HarnessGraphOrchestrator:
                 task_center_harness_graph_id=graph.id,
                 spawn_reason="harness_graph_planner",
             )
-            self._graph_store.set_planner_task_id(graph.id, task_id)
+            runtime.graph_store.set_planner_task_id(graph.id, task_id)
             runtime.agent_launcher.launch(
                 HarnessAgentLaunch(
                     task_id=task_id,
@@ -155,8 +152,8 @@ class HarnessGraphOrchestrator:
         )
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
-        self._graph_store.set_generator_task_ids(graph.id, list(generator_ids))
-        self._graph_store.set_stage(graph.id, HarnessGraphStage.GENERATING)
+        runtime.graph_store.set_generator_task_ids(graph.id, list(generator_ids))
+        runtime.graph_store.set_stage(graph.id, HarnessGraphStage.GENERATING)
         self._dispatch_ready_work()
 
     def apply_planner_failure(
@@ -257,7 +254,7 @@ class HarnessGraphOrchestrator:
         self._dispatch_ready_work()
 
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
-        self._graph_store.set_plan_contract(
+        self._require_runtime().graph_store.set_plan_contract(
             submission.graph_id,
             task_specification=submission.task_specification,
             evaluation_criteria=list(submission.evaluation_criteria),
@@ -527,8 +524,8 @@ class HarnessGraphOrchestrator:
             task_center_harness_graph_id=graph.id,
             spawn_reason="harness_graph_evaluator",
         )
-        self._graph_store.set_evaluator_task_id(graph.id, task_id)
-        self._graph_store.set_stage(graph.id, HarnessGraphStage.EVALUATING)
+        runtime.graph_store.set_evaluator_task_id(graph.id, task_id)
+        runtime.graph_store.set_stage(graph.id, HarnessGraphStage.EVALUATING)
         self._launch_evaluator(
             HarnessAgentLaunch(
                 task_id=task_id,
@@ -554,40 +551,38 @@ class HarnessGraphOrchestrator:
             raise GraphInvariantViolation(
                 f"HarnessGraph {graph.id!r} is not running"
             )
-        self._graph_store.close(
+        self._require_runtime().graph_store.close(
             graph.id,
             status=status,
             fail_reason=fail_reason,
             closed_at=datetime.now(UTC),
         )
-        if self._runtime is not None:
-            self._runtime.orchestrator_registry.deregister(graph.id)
+        self._runtime.orchestrator_registry.deregister(graph.id)
         self._on_graph_closed(graph.id)
 
     def _mark_startup_failed(self, *, planner_task_id: str) -> None:
         runtime = self._runtime
-        if runtime is not None:
-            runtime.orchestrator_registry.deregister(self._harness_graph.id)
-            try:
-                runtime.task_store.set_task_status_if_current(
-                    planner_task_id,
-                    expected_status=HarnessTaskStatus.RUNNING.value,
-                    status=HarnessTaskStatus.FAILED.value,
-                    summary={
-                        "fail_reason": HarnessGraphFailReason.STARTUP_FAILED.value,
-                    },
-                )
-            except LookupError:
-                pass
-            except Exception:
-                logger.exception(
-                    "HarnessGraphOrchestrator: startup task cleanup failed",
-                )
+        runtime.orchestrator_registry.deregister(self._harness_graph.id)
+        try:
+            runtime.task_store.set_task_status_if_current(
+                planner_task_id,
+                expected_status=HarnessTaskStatus.RUNNING.value,
+                status=HarnessTaskStatus.FAILED.value,
+                summary={
+                    "fail_reason": HarnessGraphFailReason.STARTUP_FAILED.value,
+                },
+            )
+        except LookupError:
+            pass
+        except Exception:
+            logger.exception(
+                "HarnessGraphOrchestrator: startup task cleanup failed",
+            )
 
         try:
-            graph = self._graph_store.get(self._harness_graph.id)
+            graph = runtime.graph_store.get(self._harness_graph.id)
             if graph is not None and not graph.is_closed:
-                self._graph_store.close(
+                runtime.graph_store.close(
                     graph.id,
                     status=HarnessGraphStatus.FAILED,
                     fail_reason=HarnessGraphFailReason.STARTUP_FAILED,
@@ -602,8 +597,6 @@ class HarnessGraphOrchestrator:
         self, task_center_run_id: str
     ) -> None:
         runtime = self._runtime
-        if runtime is None:
-            return
         try:
             from task_center.complex_task.close_report_delivery import (
                 deliver_pending_complex_task_close_reports,
@@ -619,7 +612,7 @@ class HarnessGraphOrchestrator:
             )
 
     def _fresh_graph(self) -> HarnessGraph:
-        graph = self._graph_store.get(self._harness_graph.id)
+        graph = self._require_runtime().graph_store.get(self._harness_graph.id)
         if graph is None:
             raise GraphInvariantViolation(
                 f"HarnessGraph {self._harness_graph.id!r} not found"
@@ -634,10 +627,6 @@ class HarnessGraphOrchestrator:
         return graph
 
     def _require_runtime(self) -> HarnessGraphRuntime:
-        if self._runtime is None:
-            raise GraphInvariantViolation(
-                "HarnessGraphOrchestrator requires runtime dependencies"
-            )
         return self._runtime
 
     def _assert_submission_graph(self, graph_id: str) -> None:

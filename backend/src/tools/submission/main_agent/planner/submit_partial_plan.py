@@ -13,7 +13,7 @@ from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-from tools.submission.hooks import HarnessRoleGate, RecursivePartialPlanGate
+from tools.submission.hooks import HarnessRoleGate, PartialPlanAncestorGate
 from tools.submission.main_agent.planner._schemas import (
     PlanTaskInput,
     PlannerSubmissionBaseInput,
@@ -39,7 +39,7 @@ class SubmitPartialPlanInput(PlannerSubmissionBaseInput):
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_partial_plan", HarnessTaskRole.PLANNER),
-        RecursivePartialPlanGate(),
+        PartialPlanAncestorGate(),
     ),
 )
 async def submit_partial_plan(

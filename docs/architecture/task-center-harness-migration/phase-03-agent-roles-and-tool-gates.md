@@ -199,7 +199,7 @@ Therefore helper gates read stamped `ExecutionMetadata.agent_name`, `role`, and
 
 | Tool | Block when | State source | Soft behavior | Hard behavior |
 | ---- | ---------- | ------------ | ------------- | ------------- |
-| `submit_partial_plan` | current request already has a prior segment with non-null `continuation_goal` | `ComplexTaskRequest.task_segment_ids` plus each segment's `continuation_goal` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
+| `submit_partial_plan` | current request was spawned, directly or transitively, from a harness graph whose planner submitted a partial plan | Walk `ComplexTaskRequest.requested_by_task_id` to the caller task, then caller `HarnessGraph.continuation_goal`, then the caller graph's request ancestor chain | remind planner that only `submit_full_plan` is allowed | prehook blocks nested partial planning below a partial-planned ancestor graph |
 | `submit_full_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref | handler-level validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `submit_partial_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref, or blank `continuation_goal` | handler-level validation plus continuation validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `request_complex_task_solution` | generator agent has called any edit tool at least once | soft rules inspect their `messages` argument; prehooks inspect `ExecutionMetadata.conversation_messages` | remind generator after first edit | prehook blocks after edit |
@@ -239,8 +239,8 @@ Soft layer examples:
 - First edit detected: `request_complex_task_solution` is now disabled.
 - Resolver unresolved count is four: one resolver call remains before success is
   blocked.
-- Previous segment already used a partial plan: only `submit_full_plan` is
-  permitted.
+- This request has a partial-planned caller graph in its ancestry: only
+  `submit_full_plan` is permitted.
 
 ## Implementation tasks
 
@@ -256,8 +256,10 @@ Soft layer examples:
 4. Add malformed generator graph validation to plan submission handlers,
    including task id uniqueness, known agent names, exact `task_specs` coverage,
    and dependency validity.
-5. Add recursive partial-plan gating by walking `ComplexTaskRequest.task_segment_ids`
-   and checking each prior segment's `continuation_goal`.
+5. Add partial-plan ancestor gating by walking from the current
+   `ComplexTaskRequest.requested_by_task_id` to its caller harness graph, then
+   repeating through caller request ancestry. Block only when an ancestor caller
+   graph has non-null `HarnessGraph.continuation_goal`.
 6. Add `request_complex_task_solution` after-edit gating from
    `ExecutionMetadata.conversation_messages`.
 7. Add resolver-count gating for verifier and evaluator success terminals.
@@ -270,7 +272,7 @@ Soft layer examples:
 
 - Every terminal or orchestration request is accepted or rejected from the new
   state model.
-- Recursive partial plan is blocked across `TaskSegment` continuation lineage.
+- Nested partial planning is blocked below partial-planned ancestor graphs.
 - `request_complex_task_solution` is blocked after generator edits.
 - Resolver unresolved-count gates still force failure at the limit.
 - Malformed plans fail inline without marking the harness graph failed.

@@ -83,7 +83,6 @@ def _seed_outer_running_generator(
     segment_store.append_graph_id(outer_segment.id, outer_graph.id)
     outer_orchestrator = HarnessGraphOrchestrator(
         harness_graph=outer_graph,
-        graph_store=graph_store,
         on_graph_closed=lambda graph_id: None,
         runtime=runtime,
     )

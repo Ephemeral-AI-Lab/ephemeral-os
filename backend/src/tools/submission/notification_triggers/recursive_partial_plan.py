@@ -1,28 +1,19 @@
-"""Soft reminder for recursive partial-plan blocking."""
+"""Soft reminder for partial plans below partial-planned ancestor graphs."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from notification.rules import NotificationRule
+from task_center.exceptions import GraphInvariantViolation
 from tools.core.context import ToolExecutionContextService
 from tools.submission.context import (
     HarnessSubmissionContextError,
     resolve_harness_submission_context,
 )
-
-
-def _has_prior_partial_continuation(submission_context: Any) -> bool:
-    request = submission_context.request
-    current_segment = submission_context.segment
-    segment_store = submission_context.runtime.segment_store
-    for segment_id in request.task_segment_ids:
-        if segment_id == current_segment.id:
-            return False
-        segment = segment_store.get(segment_id)
-        if segment is not None and segment.continuation_goal is not None:
-            return True
-    return False
+from tools.submission.hooks.recursive_partial_plan_gate import (
+    request_has_partial_plan_ancestor,
+)
 
 
 def make_recursive_partial_plan_reminder() -> NotificationRule:
@@ -40,14 +31,20 @@ def make_recursive_partial_plan_reminder() -> NotificationRule:
             )
         except HarnessSubmissionContextError:
             return False
-        return _has_prior_partial_continuation(submission_context)
+        try:
+            return request_has_partial_plan_ancestor(
+                submission_context.request,
+                submission_context.runtime,
+            )
+        except GraphInvariantViolation:
+            return False
 
     def _body(messages: list[Any], context: Any) -> str:
         del messages, context
         return (
-            "submit_partial_plan is disabled because a prior segment already "
-            "used partial continuation. Use submit_full_plan for the current "
-            "segment."
+            "submit_partial_plan is disabled because an ancestor complex-task "
+            "request was spawned from a partial-planned harness graph. Use "
+            "submit_full_plan for the current request."
         )
 
     return NotificationRule(

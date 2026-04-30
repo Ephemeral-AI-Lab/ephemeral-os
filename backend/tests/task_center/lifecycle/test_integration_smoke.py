@@ -75,7 +75,7 @@ def _drive_segment(
     registry = handler._manager_registry  # type: ignore[attr-defined]
     mgr: TaskSegmentManager | None = registry.get(segment_id)
     assert mgr is not None
-    g = mgr.create_initial_harness_graph().start()
+    g = mgr.create_initial_harness_graph()
     stub = _StubOrchestrator(
         harness_graph=g,
         graph_store=graph_store,
@@ -122,7 +122,7 @@ def test_smoke_attempt_plan_failed(
     registry = handler._manager_registry  # type: ignore[attr-defined]
     mgr = registry.get(seg.id)
     assert mgr is not None
-    g1 = mgr.create_initial_harness_graph().start()
+    g1 = mgr.create_initial_harness_graph()
     graph_store.set_plan_contract(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
     )

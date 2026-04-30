@@ -23,8 +23,8 @@ from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.factory import (
     make_harness_graph_orchestrator_factory,
 )
+from task_center.harness_graph.graph import HarnessGraphFailReason, HarnessGraphStatus
 from task_center.harness_graph.runtime import HarnessGraphRuntime
-from task_center.segment.manager import HarnessGraphStartHandle
 from task_center.segment.segment import TaskSegment
 from task_center.task import HarnessTaskStatus
 
@@ -66,45 +66,43 @@ class ComplexTaskHandoffCoordinator:
             requested_by_task_id=parent_task_id,
             goal=goal,
         )
-        initial_segment = handler.create_initial_segment(
+        (
+            initial_segment,
+            segment_manager,
+        ) = handler.create_initial_segment_with_manager(
             complex_task_request_id=delegated_request.id,
         )
-        # _build_handler() above already proved manager_registry is not None.
-        manager_registry = self._runtime.manager_registry
-        assert manager_registry is not None
-        segment_manager = manager_registry.get(initial_segment.id)
-        if segment_manager is None:
-            raise GraphInvariantViolation(
-                f"TaskSegmentManager {initial_segment.id!r} was not registered."
-            )
 
-        start_handle: HarnessGraphStartHandle | None = None
+        initial_graph = None
         try:
-            start_handle = segment_manager.create_initial_harness_graph()
+            initial_graph = segment_manager.create_initial_harness_graph(start=False)
             self._mark_parent_waiting(
                 parent_task_id=parent_task_id,
                 parent_harness_graph_id=parent_harness_graph_id,
                 request=delegated_request,
                 segment=initial_segment,
-                graph_id=start_handle.graph.id,
+                graph_id=initial_graph.id,
                 goal=goal,
             )
-            start_handle.start()
+            segment_manager.start_harness_graph(initial_graph)
         except Exception:
             self._compensate_failed_handoff(
                 request=delegated_request,
                 segment=initial_segment,
-                start_handle=start_handle,
+                initial_graph_id=(
+                    initial_graph.id if initial_graph is not None else None
+                ),
                 parent_task_id=parent_task_id,
             )
             raise
 
+        assert initial_graph is not None
         return ComplexTaskHandoffResult(
             parent_task_id=parent_task_id,
             parent_harness_graph_id=parent_harness_graph_id,
             complex_task_request_id=delegated_request.id,
             initial_segment_id=initial_segment.id,
-            initial_harness_graph_id=start_handle.graph.id,
+            initial_harness_graph_id=initial_graph.id,
             goal=goal,
         )
 
@@ -122,7 +120,6 @@ class ComplexTaskHandoffCoordinator:
             router.deliver(report)
 
         orchestrator_factory = make_harness_graph_orchestrator_factory(
-            graph_store=self._runtime.graph_store,
             runtime=self._runtime,
         )
         return ComplexTaskRequestHandler(
@@ -208,23 +205,12 @@ class ComplexTaskHandoffCoordinator:
         *,
         request: ComplexTaskRequest,
         segment: TaskSegment,
-        start_handle: HarnessGraphStartHandle | None,
+        initial_graph_id: str | None,
         parent_task_id: str,
     ) -> None:
-        """Best-effort rollback. Order: handle → segment → request → parent."""
+        """Best-effort rollback. Order: graph → segment → request → parent."""
         now = datetime.now(UTC)
-        if start_handle is not None:
-            try:
-                start_handle.cancel()
-            except GraphInvariantViolation:
-                # Handle was already started — segment and request still need
-                # cancelling; the orchestrator/registry will be cleaned up
-                # when the failure path closes the graph.
-                pass
-            except Exception:
-                logger.exception(
-                    "ComplexTaskHandoffCoordinator: cancel start handle failed",
-                )
+        self._close_unstarted_graph_after_failed_handoff(initial_graph_id, now=now)
         try:
             self._runtime.segment_store.cancel_for_compensation(
                 segment.id, closed_at=now
@@ -254,3 +240,24 @@ class ComplexTaskHandoffCoordinator:
         manager_registry = self._runtime.manager_registry
         if manager_registry is not None:
             manager_registry.deregister(segment.id)
+
+    def _close_unstarted_graph_after_failed_handoff(
+        self, graph_id: str | None, *, now: datetime
+    ) -> None:
+        if graph_id is None:
+            return
+        try:
+            graph = self._runtime.graph_store.get(graph_id)
+            if graph is None or graph.is_closed:
+                return
+            self._runtime.graph_store.close(
+                graph_id,
+                status=HarnessGraphStatus.FAILED,
+                fail_reason=HarnessGraphFailReason.STARTUP_FAILED,
+                closed_at=now,
+            )
+        except Exception:
+            logger.exception(
+                "ComplexTaskHandoffCoordinator: failed to close graph "
+                "after handoff failure",
+            )

@@ -325,7 +325,7 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
     manager = registry.get(segment.id)
     assert manager is not None
 
-    graph = manager.create_initial_harness_graph().start()
+    graph = manager.create_initial_harness_graph()
 
     assert started == [graph.id]
 

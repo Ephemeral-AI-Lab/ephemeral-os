@@ -16,7 +16,6 @@ from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.complex_task.validation import (
     assert_continuation_segment_predecessor,
-    assert_no_root_creation_reason,
     assert_request_open,
     assert_segment_id_unique_in_list,
     assert_segment_sequence_contiguous,
@@ -85,9 +84,16 @@ class ComplexTaskRequestHandler:
     def create_initial_segment(
         self, *, complex_task_request_id: str
     ) -> TaskSegment:
+        segment, _ = self.create_initial_segment_with_manager(
+            complex_task_request_id=complex_task_request_id
+        )
+        return segment
+
+    def create_initial_segment_with_manager(
+        self, *, complex_task_request_id: str
+    ) -> tuple[TaskSegment, TaskSegmentManager]:
         request = self._require_request(complex_task_request_id)
         assert_request_open(request)
-        assert_no_root_creation_reason(TaskSegmentCreationReason.INITIAL.value)
         assert_segment_sequence_contiguous(request, new_sequence_no=1)
         segment = self._segment_store.insert(
             complex_task_request_id=complex_task_request_id,
@@ -97,18 +103,23 @@ class ComplexTaskRequestHandler:
             attempt_budget=self._config.default_attempt_budget,
         )
         self._append_segment_to_request(request, segment)
-        self._spawn_segment_manager(segment)
-        return segment
+        manager = self._spawn_segment_manager(segment)
+        return segment, manager
 
     def create_continuation_segment(
         self, *, previous_segment: TaskSegment
     ) -> TaskSegment:
+        segment, _ = self.create_continuation_segment_with_manager(
+            previous_segment=previous_segment
+        )
+        return segment
+
+    def create_continuation_segment_with_manager(
+        self, *, previous_segment: TaskSegment
+    ) -> tuple[TaskSegment, TaskSegmentManager]:
         request = self._require_request(previous_segment.complex_task_request_id)
         assert_request_open(request)
         assert_continuation_segment_predecessor(previous_segment)
-        assert_no_root_creation_reason(
-            TaskSegmentCreationReason.PARTIAL_CONTINUATION.value
-        )
         new_sequence_no = previous_segment.sequence_no + 1
         assert_segment_sequence_contiguous(request, new_sequence_no=new_sequence_no)
         # Narrowed by the invariant above.
@@ -121,8 +132,8 @@ class ComplexTaskRequestHandler:
             attempt_budget=self._config.default_attempt_budget,
         )
         self._append_segment_to_request(request, segment)
-        self._spawn_segment_manager(segment)
-        return segment
+        manager = self._spawn_segment_manager(segment)
+        return segment, manager
 
     def handle_segment_closed(
         self, report: TaskSegmentClosureReport
@@ -135,11 +146,15 @@ class ComplexTaskRequestHandler:
         try:
             outcome = report.outcome
             if isinstance(outcome, SuccessContinue):
-                next_segment = self.create_continuation_segment(
-                    previous_segment=segment
+                (
+                    next_segment,
+                    next_manager,
+                ) = self.create_continuation_segment_with_manager(
+                    previous_segment=segment,
                 )
                 self._start_continuation_segment(
                     next_segment=next_segment,
+                    next_manager=next_manager,
                     previous_report=report,
                 )
             elif isinstance(outcome, TerminalSuccess):
@@ -204,6 +219,7 @@ class ComplexTaskRequestHandler:
         self,
         *,
         next_segment: TaskSegment,
+        next_manager: TaskSegmentManager,
         previous_report: TaskSegmentClosureReport,
     ) -> None:
         """Create and start the continuation segment's initial graph.
@@ -220,22 +236,9 @@ class ComplexTaskRequestHandler:
         """
         if self._orchestrator_factory is None:
             return
-        next_manager = self._manager_registry.get(next_segment.id)
-        if next_manager is None:
-            raise GraphInvariantViolation(
-                f"TaskSegmentManager not registered for continuation segment "
-                f"{next_segment.id!r}"
-            )
-        handle = None
         try:
-            handle = next_manager.create_initial_harness_graph()
-            handle.start()
+            next_manager.create_initial_harness_graph()
         except Exception:
-            if handle is not None:
-                try:
-                    handle.cancel()
-                except GraphInvariantViolation:
-                    pass
             self._segment_store.cancel_for_compensation(
                 next_segment.id, closed_at=datetime.now(UTC)
             )

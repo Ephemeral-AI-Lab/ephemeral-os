@@ -35,13 +35,6 @@ def assert_segment_sequence_contiguous(
         )
 
 
-def assert_no_root_creation_reason(creation_reason: str) -> None:
-    if creation_reason == "root":
-        raise GraphInvariantViolation(
-            "Creation reason 'root' is not allowed; use 'initial' or 'partial_continuation'"
-        )
-
-
 def assert_continuation_segment_predecessor(previous: TaskSegment) -> None:
     if previous.status != TaskSegmentStatus.SUCCEEDED:
         raise GraphInvariantViolation(

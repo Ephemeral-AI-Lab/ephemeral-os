@@ -7,7 +7,7 @@ from tools.submission.hooks.harness_role_gate import HarnessRoleGate
 from tools.submission.hooks.helper_request_gate import HelperRequestGate
 from tools.submission.hooks.helper_role_gate import HelperRoleGate
 from tools.submission.hooks.recursive_partial_plan_gate import (
-    RecursivePartialPlanGate,
+    PartialPlanAncestorGate,
 )
 from tools.submission.hooks.request_complex_task_before_edit_gate import (
     EDIT_TOOL_NAMES,
@@ -23,7 +23,7 @@ __all__ = [
     "HarnessRoleGate",
     "HelperRequestGate",
     "HelperRoleGate",
-    "RecursivePartialPlanGate",
+    "PartialPlanAncestorGate",
     "RequestComplexTaskBeforeEditGate",
     "ResolverSuccessLimitGate",
 ]
