@@ -9,29 +9,30 @@ callers over to the `ComplexTaskRequest` plus `TaskSegment` plus
 ## Happy path
 
 ```
-root executor starts
+requesting executor starts
     |
     v
-root executor decides task is non-atomic
+requesting executor decides task is non-atomic
     |
     v
-root executor calls request_complex_task_solution(goal)
+requesting executor calls request_complex_task_solution(goal)
     |
     v
-ComplexTaskOrchestrator creates ComplexTaskRequest C1
-  requested_by_task_id = root executor
+ComplexTaskRequestHandler creates ComplexTaskRequest C1
+  requested_by_task_id = requesting executor
     |
     v
-ComplexTaskOrchestrator creates TaskSegment S1
+TaskSegmentManager creates TaskSegment S1
     |
     v
-ComplexTaskOrchestrator creates HarnessGraph S1.H1
+TaskSegmentManager creates HarnessGraph S1.H1
     |
     v
 HarnessGraphOrchestrator(S1.H1) spawns planner
     |
     v
-planner submits submit_full_plan
+planner submits submit_full_plan with task_specification,
+evaluation_criteria, tasks, and task_specs
     |
     v
 HarnessGraphOrchestrator(S1.H1) materializes DAG and spawns generators
@@ -49,22 +50,26 @@ evaluator submits success
 HarnessGraphOrchestrator(S1.H1) marks graph passed with plan_shape = full
     |
     v
-ComplexTaskOrchestrator closes S1 success and C1 success
+TaskSegmentManager reports request-level success
     |
     v
-runtime delivers complex task success report to root executor
+ComplexTaskRequestHandler closes C1 success
     |
     v
-root executor continues or submits final execution terminal
+runtime delivers complex task success report to requesting executor
     |
     v
-root executor closes; session ends
+requesting executor continues or submits final execution terminal
+    |
+    v
+requesting executor closes its task
 ```
 
 ## Partial continuation path
 
 ```
-planner in S1.H1 submits submit_partial_plan
+planner in S1.H1 submits submit_partial_plan with task_specification,
+evaluation_criteria, tasks, task_specs, and continuation_goal
     |
     v
 generators complete partial DAG
@@ -76,14 +81,15 @@ evaluator submits success
 HarnessGraphOrchestrator(S1.H1) marks graph passed with plan_shape = partial
     |
     v
-ComplexTaskOrchestrator closes S1 with plan_shape = partial
+TaskSegmentManager accepts S1.H1 as the closing graph
+and closes S1 with plan_shape = partial
     |
     v
-ComplexTaskOrchestrator creates TaskSegment S2 because S1 closed partial
+TaskSegmentManager creates TaskSegment S2 because S1 closed partial
   previous_segment_id = S1
     |
     v
-ComplexTaskOrchestrator creates HarnessGraph S2.H1
+TaskSegmentManager creates HarnessGraph S2.H1
     |
     v
 planner in S2.H1 must submit_full_plan
@@ -92,7 +98,10 @@ planner in S2.H1 must submit_full_plan
 HarnessGraphOrchestrator(S2.H1) runs graph to full-plan pass
     |
     v
-ComplexTaskOrchestrator closes S2 and C1, then returns one final result to
+TaskSegmentManager reports request-level success
+    |
+    v
+ComplexTaskRequestHandler closes C1 and returns one final result to
 requested_by_task_id
 ```
 
@@ -137,11 +146,12 @@ generators become quiescent
     |
     v
 HarnessGraphOrchestrator(S1.H1) marks graph failed with generator_failed
-and reports failure to ComplexTaskOrchestrator
+and reports failure to TaskSegmentManager
     |
-    +-- ComplexTaskOrchestrator: retry budget remains -> create S1.H2
+    +-- TaskSegmentManager: retry budget remains -> create S1.H2
     |
-    +-- ComplexTaskOrchestrator: retry exhausted      -> close S1 failed, close C1 failed, return report
+    +-- TaskSegmentManager: retry exhausted      -> report request-level failure
+                                                    ComplexTaskRequestHandler closes C1 failed
 ```
 
 ### Evaluator failure
@@ -151,11 +161,12 @@ evaluator in S1.H1 submits failure
     |
     v
 HarnessGraphOrchestrator(S1.H1) marks graph failed with evaluator_failed
-and reports failure to ComplexTaskOrchestrator
+and reports failure to TaskSegmentManager
     |
-    +-- ComplexTaskOrchestrator: retry budget remains -> create S1.H2
+    +-- TaskSegmentManager: retry budget remains -> create S1.H2
     |
-    +-- ComplexTaskOrchestrator: retry exhausted      -> close S1 failed, close C1 failed, return report
+    +-- TaskSegmentManager: retry exhausted      -> report request-level failure
+                                                    ComplexTaskRequestHandler closes C1 failed
 ```
 
 ### Planner exhaustion
@@ -168,24 +179,28 @@ runtime reports planner_step_budget_exhausted
     |
     v
 HarnessGraphOrchestrator(S1.H1) marks graph failed
-and reports failure to ComplexTaskOrchestrator
+and reports failure to TaskSegmentManager
     |
-    +-- ComplexTaskOrchestrator: retry budget remains -> create S1.H2
+    +-- TaskSegmentManager: retry budget remains -> create S1.H2
     |
-    +-- ComplexTaskOrchestrator: retry exhausted      -> close S1 failed, close C1 failed, return report
+    +-- TaskSegmentManager: retry exhausted      -> report request-level failure
+                                                    ComplexTaskRequestHandler closes C1 failed
 ```
 
 ## Cutover sequence
 
 1. Add feature flags or compatibility adapters if needed so old tests can run
    while the new model lands.
-2. Add `ComplexTaskOrchestrator` as the single structural creation path.
+2. Add `ComplexTaskRequestHandler` for request creation and close-report
+   delivery.
 3. Migrate persistence and stores from graph-as-attempt to
    `ComplexTaskRequest` / `TaskSegment` / `HarnessGraph`.
 4. Migrate graph terminal handlers to `HarnessGraphOrchestrator` routing and
-   request/segment decisions to `ComplexTaskOrchestrator`.
+   request decisions to `ComplexTaskRequestHandler` plus segment decisions to
+   `TaskSegmentManager`.
 5. Migrate retry from attempt rows or child graph spawn to next
-   `HarnessGraph` spawn inside the same segment.
+   `HarnessGraph` spawn inside the same segment, including failure retries and
+   retries after non-closing partial graphs.
 6. Migrate `submit_request_plan` to `request_complex_task_solution`.
 7. Migrate partial-plan continuation to `TaskSegment` creation with
    `previous_segment_id` lineage.
@@ -202,10 +217,10 @@ Prioritize focused tests near the runtime modules touched by the migration.
 
 Minimum coverage:
 
-- Root executor creation and closure.
+- Requesting executor pause, resume, and terminal closure.
 - `request_complex_task_solution` creates `ComplexTaskRequest`.
-- `ComplexTaskOrchestrator` is the only creator for requests, segments, and
-  harness graphs.
+- `ComplexTaskRequestHandler` is the only creator and closer for requests.
+- `TaskSegmentManager` is the only creator for segments and harness graphs.
 - Request links to `requested_by_task_id`.
 - Initial `TaskSegment` creation.
 - Initial `HarnessGraph` creation.
@@ -216,6 +231,14 @@ Minimum coverage:
 - Retry budget exhaustion.
 - Retry creates `HarnessGraph` N+1 inside the same segment.
 - Partial-plan continuation creates `TaskSegment` N+1.
+- Partial-plan continuation is based only on the accepted closing graph for the
+  previous segment.
+- Earlier partial graphs do not create continuation when the accepted closing
+  graph is full.
+- `retry_after_partial` can create a later harness graph in the same segment,
+  and that later graph can become the accepted closing graph.
+- `request_complex_task_solution` can create a nested `ComplexTaskRequest`
+  from a generator executor inside an existing harness graph.
 - Recursive partial-plan gate blocks continuation planners.
 - Complex-task close report resumes the requesting executor.
 - No `RETRY_ON_FAILURE` graph spawn remains.
