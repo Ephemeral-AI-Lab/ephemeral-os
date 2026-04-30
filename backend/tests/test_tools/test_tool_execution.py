@@ -11,7 +11,10 @@ from pydantic import BaseModel, RootModel
 
 from engine.core.query import QueryContext, QueryExitReason, run_query
 from engine.core.streaming_executor import StreamingToolExecutor
-from engine.runtime.background_dispatch import launch_background_tool
+from engine.runtime.background_dispatch import (
+    launch_and_collect_bg_events,
+    launch_background_tool,
+)
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
@@ -1075,3 +1078,69 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
         "prehook denied for test"
     )
     assert tool.seen == []
+
+
+async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -> None:
+    class _BackgroundEchoTool(_EchoTool):
+        name = "background_echo"
+        background = "optional"
+
+    class _BackgroundConversationMessagesPreHook(_ConversationMessagesPreHook):
+        target_tool = "background_echo"
+
+    tool = _BackgroundEchoTool()
+    tool.pre_hooks = (_BackgroundConversationMessagesPreHook(),)
+    registry = ToolRegistry()
+    registry.register(tool)
+    context = QueryContext(
+        api_client=_FakeClient(),
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+    manager = BackgroundTaskManager()
+    tool_results: list[ToolResultBlock] = []
+    conversation_messages = [
+        ConversationMessage.from_user_text("start"),
+        ConversationMessage(
+            role="assistant",
+            content=[
+                ToolUseBlock(
+                    id="toolu_bg",
+                    name="background_echo",
+                    input={"value": "seen", "background": True},
+                )
+            ],
+        ),
+    ]
+
+    events = launch_and_collect_bg_events(
+        context,
+        conversation_messages,
+        manager,
+        ToolUseBlock(
+            id="toolu_bg",
+            name="background_echo",
+            input={"value": "seen", "background": True},
+        ),
+        tool_results,
+    )
+
+    assert len(tool_results) == 1
+    assert tool_results[0].is_error is False
+    assert len(events) == 1
+
+    completed = []
+    for _ in range(20):
+        await asyncio.sleep(0.01)
+        completed = manager.collect_completed()
+        if completed:
+            break
+
+    assert completed
+    assert completed[0].result is not None
+    assert completed[0].result.is_error is False
+    assert completed[0].result.output == "seen:2"
+    assert tool.seen == ["seen:2"]

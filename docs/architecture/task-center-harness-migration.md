@@ -1,4 +1,4 @@
-# Task Center Harness Migration
+# Task Center Harness
 
 > Demonstrative migration plan for the next harness/workflow refactor.
 > Scope: TaskCenter roles, terminal tools, recovery model, retry mechanic,
@@ -397,4 +397,3 @@ Failure-trigger routing table:
 | evaluator `submit_evaluation_failure`            | immediate (generators already passed)                                | same                                  |
 
 ***
-
