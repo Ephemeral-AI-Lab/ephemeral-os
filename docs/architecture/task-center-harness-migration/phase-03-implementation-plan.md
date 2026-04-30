@@ -47,8 +47,9 @@ Deliverables:
 10. Soft notification rules implemented beside the TaskCenter submission tools
     and dispatched through the existing `notification.rules` system-reminder
     path, aligned with the hard gates.
-11. Agent prompt/tool-surface updates so executor uses
-   `request_complex_task_solution` instead of `submit_request_plan`.
+11. Canonical executor handoff name defined as
+   `request_complex_task_solution`; executor prompt/tool-surface updates only
+   ship when a real handoff handler is configured.
 12. Focused tests covering inline handler rejection, prehook enforcement,
     terminal routing, helper/subagent result delivery, soft reminders, and
     registration.
@@ -97,14 +98,17 @@ query-loop terminal path.
 
 Two seams need explicit handling:
 
-1. Terminal tools need current task and graph runtime metadata. Add typed
-   `ExecutionMetadata` fields for harness task id, run id, graph id, and the
-   `HarnessGraphRuntime` dependency bundle. The production harness launcher
-   supplies those fields when spawning planner/generator/evaluator agents.
+1. Terminal tools need current task identity and graph runtime dependencies.
+   Add `QueryContext.task_center_task_id` plus matching
+   `ExecutionMetadata.task_center_task_id`. The production harness launcher
+   supplies that value when spawning planner/generator/evaluator agents. Graph
+   id is derived from the persisted task row, not trusted as a second required
+   metadata field.
 2. `request_complex_task_solution` has a Phase 03 public contract but a Phase 04
    body. In Phase 03, implement the tool name, schemas, registration, and gates;
    keep the actual handoff body behind a small injectable handler so Phase 04 can
-   replace the placeholder without changing the public tool surface.
+   replace the placeholder without changing the public tool surface. Do not
+   instruct production executors to call this tool unless that handler is present.
 3. Helper-agent tools are blocking helper runs rather than TaskCenter graph
    nodes. They should use `run_ephemeral_agent(...)` and return the helper's
    terminal `ToolResult` to the caller. They should not call
@@ -334,6 +338,7 @@ factories that live beside the submission tools and run through
 ```text
 backend/src/tools/submission/
 |-- __init__.py                              # EDIT: export make_submission_tools
+|-- context.py                               # NEW: resolve task -> graph -> segment -> request -> orchestrator
 |-- factory.py                               # NEW: register all TaskCenter submission tools
 |
 |-- hooks/
@@ -397,12 +402,15 @@ backend/src/tools/submission/
 Runtime metadata and registration:
 
 ```text
+backend/src/engine/core/
+`-- query.py                                 # EDIT: add task_center_task_id
+
 backend/src/tools/core/
 |-- factory.py                               # EDIT: register make_submission_tools()
 `-- runtime.py                               # EDIT: add typed harness metadata fields
 
 backend/src/task_center/harness_graph/
-`-- runtime.py                               # EDIT later if production launcher needs helper
+`-- runtime.py                               # EDIT: expose graph_store for submission context resolution
 ```
 
 Agent definitions:
@@ -476,6 +484,30 @@ Soft trigger inventory:
 
 ### 5a. Runtime metadata and query history
 
+**`backend/src/engine/core/query.py`** - edit task identity only
+
+Add the current TaskCenter task id to `QueryContext`:
+
+```python
+@dataclass
+class QueryContext:
+    # existing fields...
+
+    task_center_task_id: str = ""
+```
+
+`run_ephemeral_agent(task_id=...)` should set this field after spawning the
+agent:
+
+```python
+if task_id:
+    agent.query_context.task_center_task_id = task_id
+```
+
+The field is TaskCenter-specific, but keeping it on `QueryContext` gives the
+tool-dispatch path one stable run-level source to copy into each tool context.
+Plain chat runs and subagent/helper runs can leave it blank.
+
 **`backend/src/tools/core/runtime.py`** - edit
 
 Add typed fields used by more than one terminal tool and prehook:
@@ -487,13 +519,16 @@ class ExecutionMetadata:
 
     task_center_run_id: str | None = None
     task_center_task_id: str | None = None
-    task_center_harness_graph_id: str | None = None
+    task_center_harness_graph_id: str | None = None  # optional consistency check
     harness_graph_runtime: Any | None = None
     conversation_messages: list[Any] = field(default_factory=list)
 ```
 
 Add the names to `_TYPED_FIELDS`.
 
+`task_center_task_id` is the authoritative injected identity for submission
+tools. `task_center_harness_graph_id` is optional metadata for diagnostics or a
+consistency assertion; handlers derive graph id from the persisted task row.
 `conversation_messages` is only a per-call view for hooks and tools. It is not
 a second transcript owner.
 
@@ -504,12 +539,21 @@ planner, generator, or evaluator:
 ExecutionMetadata(
     task_center_run_id=launch.task_center_run_id,
     task_center_task_id=launch.task_id,
-    task_center_harness_graph_id=launch.harness_graph_id,
+    task_center_harness_graph_id=launch.harness_graph_id,  # optional check
     harness_graph_runtime=runtime,
 )
 ```
 
 Tests may inject the same metadata directly into `ToolExecutionContextService`.
+
+`execute_tool_call_streaming(...)` and `_build_stream_executor(...)` should copy
+`QueryContext.task_center_task_id` into the per-call metadata whenever it is
+set:
+
+```python
+if context.task_center_task_id:
+    metadata.task_center_task_id = context.task_center_task_id
+```
 
 **`backend/src/engine/core/query.py`** - no transcript ownership change
 
@@ -528,23 +572,83 @@ Phase 03 may make `ExecutionMetadata.conversation_messages` a typed field for
 discoverability, but it must remain a derived per-call view copied from the
 existing query-loop `messages` list.
 
-### 5b. Rule-local state resolution and planner validation
+**`backend/src/task_center/harness_graph/runtime.py`** - edit
 
-Do not add shared cross-cutting modules for submission context, message-history
-parsing, or planner validation. Phase 03 keeps each rule's state inference
-inside the hook or notification-trigger file that owns the rule, and keeps
-planner schemas plus normalization beside the planner tool files.
+Expose `HarnessGraphStore` on the runtime dependency bundle so submission tools
+can resolve the current graph without reaching into private orchestrator state:
+
+```python
+@dataclass(frozen=True, slots=True)
+class HarnessGraphRuntime:
+    request_store: ComplexTaskRequestStore
+    segment_store: TaskSegmentStore
+    graph_store: HarnessGraphStore
+    task_store: TaskCenterStore
+    agent_launcher: HarnessAgentLauncher
+    orchestrator_registry: HarnessGraphOrchestratorRegistry
+```
+
+### 5b. Submission context resolver and planner validation
+
+Add one small shared resolver for durable submission context. This is the only
+cross-cutting helper Phase 03 should add for state resolution; message-history
+parsing and planner validation remain local to their owning rule/tool files.
+
+**`backend/src/tools/submission/context.py`** - new
+
+```python
+@dataclass(frozen=True, slots=True)
+class HarnessSubmissionContext:
+    task_center_task_id: str
+    task: dict[str, Any]
+    graph: HarnessGraph
+    segment: TaskSegment
+    request: ComplexTaskRequest
+    runtime: HarnessGraphRuntime
+    orchestrator: HarnessGraphOrchestrator
+
+
+def resolve_harness_submission_context(
+    context: ToolExecutionContextService,
+) -> HarnessSubmissionContext: ...
+```
+
+Resolver flow:
+
+1. Read `harness_graph_runtime` and `task_center_task_id` from
+   `ToolExecutionContextService`.
+2. Load the task with `runtime.task_store.get_task(task_center_task_id)`.
+3. Derive `graph_id` from `task["task_center_harness_graph_id"]`.
+4. If optional metadata contains `task_center_harness_graph_id`, assert it
+   matches the task row.
+5. Load the graph with `runtime.graph_store.get(graph_id)`.
+6. Load the segment with `runtime.segment_store.get(graph.task_segment_id)`.
+7. Load the request with
+   `runtime.request_store.get(segment.complex_task_request_id)`.
+8. Load the active orchestrator with
+   `runtime.orchestrator_registry.get_or_raise(graph_id)`.
+
+Missing metadata or records should return a user-facing tool error through the
+caller, not crash the agent run. The resolver should raise a narrow local
+exception that handlers and hooks convert into `HookResult.fail(...)` or
+`ToolResult(is_error=True)`.
+
+Graph id is still used internally for orchestrator lookup and submission DTOs,
+but it is derived from the task row. The task id is the required injected
+identity.
+
+Phase 03 keeps planner schemas plus normalization beside the planner tool files.
 
 State-resolution ownership:
 
 - Planner, generator, and evaluator terminal handlers resolve current task,
-  graph, segment, request, and orchestrator directly from
-  `ToolExecutionContextService` metadata and the stores they need.
+  graph, segment, request, and orchestrator through
+  `resolve_harness_submission_context(...)`.
 - `hooks/harness_role_gate.py` performs its own role / graph / orchestrator
-  ownership lookup before a tool handler runs.
+  ownership check by calling the same resolver before a tool handler runs.
 - `hooks/recursive_partial_plan_gate.py` and
   `notification_triggers/recursive_partial_plan.py` each resolve the current
-  request and segment from `QueryContext.tool_metadata` / tool metadata and
+  request and segment through the resolver / `QueryContext.tool_metadata` and
   inspect prior segment `continuation_goal` values.
 - `hooks/request_complex_task_before_edit_gate.py` and
   `notification_triggers/request_complex_task_after_edit.py` each scan
@@ -660,7 +764,7 @@ class ResolverSuccessLimitGate:
 @dataclass(frozen=True, slots=True)
 class HelperRequestGate:
     target_tool: str
-    allowed_caller_roles: frozenset[HarnessTaskRole]
+    allowed_caller_roles: frozenset[str]
 
     async def run(
         self,
@@ -687,11 +791,11 @@ Gate behavior:
 
 | Gate | Attached tools | Block condition |
 | --- | --- | --- |
-| `HarnessRoleGate` | all Phase 03 terminals | Current persisted task role does not match expected role, graph id does not match current task, or no active orchestrator exists |
+| `HarnessRoleGate` | all Phase 03 terminals | Current persisted task role does not match expected role, derived graph context is unavailable, optional graph metadata conflicts with the task row, or no active orchestrator exists |
 | `RecursivePartialPlanGate` | `submit_partial_plan` | Any segment listed before the current segment in the current request has non-null `continuation_goal` |
 | `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | Per-call `ExecutionMetadata.conversation_messages` contains an edit tool call |
 | `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | Rule-local scan of per-call `ExecutionMetadata.conversation_messages` finds at least five unresolved resolver calls |
-| `HelperRequestGate` | `ask_advisor`, `ask_resolver` | Caller is not one of the roles allowed to invoke that helper request |
+| `HelperRequestGate` | `ask_advisor`, `ask_resolver` | Caller profile role is not one of the roles allowed to invoke that helper request |
 | `HelperRoleGate` | helper/subagent terminals | Helper run metadata does not match the expected helper role or agent type |
 
 Failure terminals deliberately do not receive `ResolverSuccessLimitGate`.
@@ -957,7 +1061,9 @@ Phase 03 implementation options:
   present. Phase 04 supplies this handler.
 - Until Phase 04 lands: return an explicit `ToolResult(is_error=True)` saying
   the handoff body is not wired. The gates and registration can still be tested
-  without pretending nested requests work.
+  without pretending nested requests work. In that state, do not list
+  `request_complex_task_solution` in the production executor agent's terminal
+  surface or prompt.
 
 Do not route this through `HarnessGraphOrchestrator.apply_generator_submission`.
 It is not a generator success or failure outcome.
@@ -1323,9 +1429,10 @@ still filter their tool surface to `allowed_tools | terminals`.
 
 ### 5o. Agent definitions
 
-**`backend/src/agents/main_agent/generator/executor/agent.md`** - edit
+**`backend/src/agents/main_agent/generator/executor/agent.md`** - edit when the
+handoff handler is wired
 
-Change:
+Once `complex_task_handoff_handler` is available, change:
 
 ```yaml
 terminals:
@@ -1470,8 +1577,9 @@ submit_evaluation_failure
 - `TaskCenterStore.get_task(task_id)` returns a row.
 - task row `role` matches the expected structural role:
   `planner`, `generator`, or `evaluator`.
-- task row `task_center_harness_graph_id` matches
-  `task_center_harness_graph_id` metadata when metadata provides it.
+- graph id is derived from the task row's `task_center_harness_graph_id`.
+- optional metadata `task_center_harness_graph_id`, when present, matches the
+  derived graph id.
 - active graph is not closed.
 - active orchestrator exists in the process-local registry.
 
@@ -1487,15 +1595,16 @@ More specific task-id checks remain in handlers:
 Helper request tools and helper terminals should not use `HarnessRoleGate`
 unless they are being invoked from a normal graph task and need graph ownership
 metadata. Advisor, resolver, and explorer runs are not graph task rows, so their
-default gates are scoped to helper contracts:
+default gates are scoped to helper contracts and agent profile metadata:
 
 - `ask_advisor` must only dispatch the registered `advisor` helper and should
-  pass no edit-capable tools to that helper. `HelperRequestGate` allows
-  planner, executor, verifier, and evaluator callers.
+  pass no edit-capable tools to that helper. `HelperRequestGate` checks
+  `ExecutionMetadata.role` and allows `planner`, `executor`, `verifier`, and
+  `evaluator` callers.
 - `submit_advisor_feedback` requires `role == "advisor"` metadata when present.
 - `ask_resolver` should only be available to verifier/evaluator callers and
   should dispatch the registered `resolver` helper with edit-capable tools.
-  `HelperRequestGate` enforces the verifier/evaluator caller set.
+  `HelperRequestGate` enforces the `verifier` / `evaluator` profile-role set.
 - `submit_resolver_result` requires `role == "resolver"` metadata when present.
 - `submit_exploration_result` requires `agent_type == "subagent"` and
   `role == "explorer"` metadata when present.
@@ -1506,7 +1615,7 @@ Use small helper prehooks rather than the graph role gate:
 @dataclass(frozen=True, slots=True)
 class HelperRequestGate:
     target_tool: str
-    allowed_caller_roles: frozenset[HarnessTaskRole]
+    allowed_caller_roles: frozenset[str]
 
     async def run(...) -> HookResult[Any]: ...
 
@@ -1526,11 +1635,14 @@ class HelperRoleGate:
 
 | Layer | Class/function | New / edited | Responsibility |
 | --- | --- | --- | --- |
+| Runtime | `QueryContext.task_center_task_id` | EDIT | Run-level TaskCenter task identity copied into tool metadata |
 | Runtime | `ExecutionMetadata.task_center_run_id` | EDIT | Current TaskCenter run id for harness agents |
 | Runtime | `ExecutionMetadata.task_center_task_id` | EDIT | Current planner/generator/evaluator task id |
-| Runtime | `ExecutionMetadata.task_center_harness_graph_id` | EDIT | Current graph id for terminal routing |
+| Runtime | `ExecutionMetadata.task_center_harness_graph_id` | EDIT | Optional consistency check against graph id derived from the task row |
 | Runtime | `ExecutionMetadata.harness_graph_runtime` | EDIT | Store + registry dependency bundle for tools |
 | Runtime | `ExecutionMetadata.conversation_messages` | EDIT | Per-call view copied from the query-loop `messages` list into tool context |
+| Runtime | `HarnessGraphRuntime.graph_store` | EDIT | Graph lookup for submission-context resolution |
+| Submission context | `HarnessSubmissionContext` / `resolve_harness_submission_context` | NEW | Shared task id -> graph -> segment -> request -> orchestrator resolver |
 | Agent defs | `AgentDefinition.notification_triggers` | EDIT | Declarative `agent.md` trigger ids resolved by harness launch code |
 | Tool factory | `make_submission_tools` | NEW | Registers all TaskCenter submission tools |
 | Planner tool schemas | `PlanTaskInput`, `SubmitFullPlanInput`, `SubmitPartialPlanInput` | NEW | Public planner schemas colocated with planner tools |
@@ -1547,7 +1659,7 @@ class HelperRoleGate:
 | Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `resolve_harness_notification_triggers()` |
 | Planner tools | `submit_full_plan` | EDIT | Validate and call `apply_plan_submission(kind="full")` |
 | Planner tools | `submit_partial_plan` | EDIT | Validate and call `apply_plan_submission(kind="partial")` |
-| Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface; body completed in Phase 04 |
+| Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface; expose to production executor only when handoff handler is wired |
 | Executor tools | `submit_execution_success` / `submit_execution_failure` | EDIT | Normalize executor outcome into `GeneratorSubmission` |
 | Verifier tools | `submit_verification_success` / `submit_verification_failure` | EDIT | Normalize verifier outcome into `GeneratorSubmission` |
 | Evaluator tools | `submit_evaluation_success` / `submit_evaluation_failure` | EDIT | Normalize evaluator outcome into `EvaluatorSubmission` |
@@ -1556,7 +1668,7 @@ class HelperRoleGate:
 | Resolver tools | `ask_resolver` | EDIT | Blocking edit-capable helper request |
 | Resolver tools | `submit_resolver_result` | EDIT | Resolver terminal result consumed by resolver-count gates |
 | Explorer tools | `submit_exploration_result` | EDIT | Explorer subagent terminal returned by `run_subagent` |
-| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids and replace executor `submit_request_plan` with `request_complex_task_solution` |
+| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids; replace executor `submit_request_plan` with `request_complex_task_solution` only with a wired handoff handler |
 | Agent defs | helper/subagent `agent.md` files | EDIT | Align terminal schema wording |
 
 ---
@@ -1572,7 +1684,7 @@ class HelperRoleGate:
 | `test_helper_request_tools_are_non_terminal` | `ask_advisor` and `ask_resolver` do not terminate the caller run |
 | `test_helper_and_explorer_terminals_are_terminal` | Advisor, resolver, and explorer submission tools terminate their own helper runs |
 | `test_plan_task_input_rejects_extra_keys` | Planner nodes contain exactly `id`, `agent_name`, `deps` |
-| `test_executor_agent_uses_request_complex_task_solution` | Executor agent definition no longer lists `submit_request_plan` |
+| `test_executor_handoff_surface_requires_handler` | Executor agent definition lists `request_complex_task_solution` only when a real handoff handler is wired |
 
 ### 8b. Planner validation tests
 
@@ -1667,22 +1779,30 @@ uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/a
 Each wave is independently committable. Keep tests focused per wave before
 moving to the next one.
 
-### Wave 1 - Runtime metadata and registration
+### Wave 1 - Runtime metadata, fail-closed gates, and registration
 
-1. Add harness fields to `ExecutionMetadata`.
-2. Add `tools/submission/factory.py` and register submission tools in
+1. Add `QueryContext.task_center_task_id` and harness fields to
+   `ExecutionMetadata`.
+2. Copy `run_ephemeral_agent(task_id=...)` into both `QueryContext` and
+   per-call tool metadata.
+3. Add `HarnessGraphRuntime.graph_store`.
+4. Add `tools/submission/context.py` with
+   `resolve_harness_submission_context(...)`.
+5. Add a fail-closed `HarnessRoleGate` skeleton and attach it before any
+   terminal handler calls `HarnessGraphOrchestrator.apply_*`.
+6. Add `tools/submission/factory.py` and register submission tools in
    `tools/core/factory.py`.
-3. Replace terminal stubs with decorated no-op/rejection tools where needed so
+7. Replace terminal stubs with decorated no-op/rejection tools where needed so
    schemas and terminal flags are visible.
-4. Add registration/schema tests.
+8. Add registration/schema tests.
 
 ### Wave 2 - Existing history plumbing and rule-local reads
 
 1. Keep the existing query-loop `messages` list as the transcript owner and
    type `ExecutionMetadata.conversation_messages` as the per-call tool-context
    view.
-2. Add tests for current task -> graph -> request resolution in the relevant
-   hook or tool handler tests.
+2. Add tests for current task -> graph -> segment -> request -> orchestrator
+   resolution in submission-context tests.
 3. Add tests for edit detection and resolver unresolved-count parsing in the
    hook and notification-trigger tests.
 
@@ -1707,11 +1827,13 @@ moving to the next one.
 
 ### Wave 5 - Hard gates
 
-1. Implement `hooks/harness_role_gate.py`.
+1. Complete `hooks/harness_role_gate.py` using
+   `resolve_harness_submission_context(...)`.
 2. Implement `hooks/recursive_partial_plan_gate.py`.
 3. Implement `hooks/request_complex_task_before_edit_gate.py`.
 4. Implement `hooks/resolver_success_limit_gate.py`.
-5. Implement `hooks/helper_request_gate.py`.
+5. Implement `hooks/helper_request_gate.py` using agent profile metadata
+   (`agent_name`, `role`, `agent_type`) rather than `HarnessTaskRole`.
 6. Implement `hooks/helper_role_gate.py`.
 7. Attach gates to the relevant tools.
 8. Add prehook enforcement tests.
@@ -1727,7 +1849,9 @@ moving to the next one.
 6. Wire the harness launcher to resolve `agent_def.notification_triggers` into
    copied agent definitions before `run_ephemeral_agent`.
 7. Update executor `agent.md` from `submit_request_plan` to
-   `request_complex_task_solution`.
+   `request_complex_task_solution` only if a real handoff handler is wired in
+   the same wave; otherwise keep the prompt on the legacy/error path until
+   Phase 04.
 8. Register role-specific trigger ids in planner, executor, verifier, and
    evaluator `agent.md`.
 9. Update helper/subagent prompt schema wording where needed.
@@ -1766,10 +1890,15 @@ moving to the next one.
 
 ### 11a. Production launcher metadata
 
-The terminal tools require `task_center_task_id`, graph id, and
-`harness_graph_runtime` in `ExecutionMetadata`. Tests can inject these values,
-but production correctness depends on the harness launcher setting them for
-each spawned planner, generator, and evaluator run.
+The terminal tools require `task_center_task_id` and `harness_graph_runtime` in
+`ExecutionMetadata`, and `QueryContext.task_center_task_id` for run-level
+identity. Tests can inject these values, but production correctness depends on
+the harness launcher setting them for each spawned planner, generator, and
+evaluator run.
+
+Graph id is derived from `TaskCenterStore.get_task(task_center_task_id)`. If
+metadata also carries `task_center_harness_graph_id`, it is only a consistency
+check.
 
 Mitigation: make `HarnessRoleGate` fail loudly with a user-facing tool error
 when metadata is missing, and add a launcher-focused integration test once the
@@ -1821,12 +1950,16 @@ files. Add tests that compare representative hard and soft conditions.
 
 ### 11g. `request_complex_task_solution` body is Phase 04
 
-The Phase 03 tool can expose the public name and gates before the nested
-request handoff works. A successful terminal handoff should not be faked.
+Phase 03 can define the public name, schema, and gates before the nested request
+handoff works. A successful terminal handoff should not be faked, and
+production executor prompts should not instruct agents to call a handoff tool
+that can only return an inline error.
 
-Mitigation: inject the Phase 04 handoff handler through metadata. Until that is
-present, return an explicit non-terminal error from the handler after gates
-pass.
+Mitigation: inject the Phase 04 handoff handler through metadata and expose
+`request_complex_task_solution` in the executor terminal surface only when that
+handler is present. Until then, the registered tool may return an explicit
+non-terminal error for direct tests, but the production executor prompt should
+not advertise it.
 
 ### 11h. Helper runs are blocking but not graph tasks
 
