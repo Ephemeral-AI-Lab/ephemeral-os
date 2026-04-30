@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from sandbox.context import DaytonaContextPreparer
+from sandbox.lifecycle.context import DaytonaContextPreparer
 from tools.core.base import ToolExecutionContextService
 
 
@@ -35,7 +35,7 @@ def test_get_sandbox_no_id_raises() -> None:
 def test_get_sandbox_caches_instance() -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-abc")
     fake_sb = MagicMock()
-    with patch("sandbox.context.DaytonaContextPreparer._get_sandbox") as mock_get:
+    with patch("sandbox.lifecycle.context.DaytonaContextPreparer._get_sandbox") as mock_get:
         mock_get.return_value = fake_sb
         result = tk._get_sandbox()
         assert result is fake_sb
@@ -64,10 +64,10 @@ async def test_get_sandbox_async_caches_per_loop() -> None:
     async def fake_get_async(sandbox_id):
         return fake_sb
 
-    with patch("sandbox.async_client.get_async_sandbox", new=fake_get_async, create=True):
+    with patch("sandbox.client.async_.get_async_sandbox", new=fake_get_async, create=True):
         mock_module = MagicMock()
         mock_module.get_async_sandbox = fake_get_async
-        with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
+        with patch.dict("sys.modules", {"sandbox.client.async_": mock_module}):
             result = await tk._get_sandbox_async()
             assert result is fake_sb
             result2 = await tk._get_sandbox_async()
@@ -86,7 +86,7 @@ async def test_get_sandbox_async_invalidates_on_new_loop() -> None:
 
     mock_module = MagicMock()
     mock_module.get_async_sandbox = fake_get_async
-    with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
+    with patch.dict("sys.modules", {"sandbox.client.async_": mock_module}):
         result = await tk._get_sandbox_async()
         assert result is new_sb
 
@@ -99,7 +99,7 @@ def test_prepare_context_injects_sandbox_and_cwd() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"),
-        patch("sandbox.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -116,7 +116,7 @@ def test_prepare_context_no_cwd_skips_metadata_key() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value=None),
-        patch("sandbox.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -135,7 +135,7 @@ def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"
         ) as resolve_mock,
-        patch("sandbox.workspace._attach_code_intelligence") as inject_mock,
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence") as inject_mock,
     ):
         tk.prepare_context(ctx)
 
@@ -158,7 +158,7 @@ async def test_prepare_context_async_injects_sandbox_and_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value="/async/workspace"),
         ),
-        patch("sandbox.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -179,7 +179,7 @@ async def test_prepare_context_async_no_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value=None),
         ),
-        patch("sandbox.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -198,7 +198,7 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
         ) as resolve_mock,
-        patch("sandbox.workspace._attach_code_intelligence") as inject_mock,
+        patch("sandbox.lifecycle.workspace._attach_code_intelligence") as inject_mock,
     ):
         await tk.prepare_context_async(ctx)
 
@@ -213,7 +213,7 @@ def test_resolve_cwd_sync_calls_discover_workspace() -> None:
     fake_sb = MagicMock()
     mock_module = MagicMock()
     mock_module.discover_workspace.return_value = "/found/workspace"
-    with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
+    with patch.dict("sys.modules", {"sandbox.lifecycle.workspace": mock_module}):
         result = DaytonaContextPreparer._resolve_cwd_sync(fake_sb)
         assert result == "/found/workspace"
         mock_module.discover_workspace.assert_called_once_with(fake_sb)
@@ -223,7 +223,7 @@ async def test_resolve_cwd_async_calls_discover_workspace_async() -> None:
     fake_sb = MagicMock()
     mock_module = MagicMock()
     mock_module.discover_workspace_async = AsyncMock(return_value="/async/found")
-    with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
+    with patch.dict("sys.modules", {"sandbox.lifecycle.workspace": mock_module}):
         result = await DaytonaContextPreparer._resolve_cwd_async(fake_sb)
         assert result == "/async/found"
 

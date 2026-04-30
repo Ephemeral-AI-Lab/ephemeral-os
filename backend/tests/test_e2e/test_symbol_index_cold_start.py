@@ -157,7 +157,7 @@ class TestSymbolIndexColdStart:
     def test__attach_code_intelligence_starts_background_build(self):
         """_attach_code_intelligence should start the symbol index build
         for async sandboxes even without a sync handle."""
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         context = ToolExecutionContextService(cwd=Path("/tmp"))
@@ -243,7 +243,7 @@ class TestSymbolIndexColdStart:
 
         Simulates the exact analysis_agent cold-start sequence.
         """
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
         from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
         from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure
 
@@ -335,7 +335,7 @@ class TestLiveColdStart:
     async def test_live_ci_tools_after_cold_inject(self, live_sandbox_id):
         """Inject CI into a live sandbox and verify ci_query_symbol works."""
         from sandbox.service import SandboxService
-        from sandbox.workspace import discover_workspace, _attach_code_intelligence
+        from sandbox.lifecycle.workspace import discover_workspace, _attach_code_intelligence
         from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
         from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure
 

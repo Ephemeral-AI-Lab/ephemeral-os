@@ -14,7 +14,7 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
-from sandbox.async_bridge import run_sync
+from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)

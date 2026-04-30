@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
-from sandbox.async_bridge import run_sync_in_executor, use_sandbox_io_loop
+from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 
 if TYPE_CHECKING:
     from sandbox.code_intelligence.core.types import OperationResult

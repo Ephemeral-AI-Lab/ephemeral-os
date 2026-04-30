@@ -26,7 +26,7 @@ from sandbox.daytona.exec_files import (
     _build_write_text_file_commands,
 )
 
-from sandbox.async_bridge import run_sync
+from sandbox.client.async_bridge import run_sync
 
 logger = logging.getLogger(__name__)
 

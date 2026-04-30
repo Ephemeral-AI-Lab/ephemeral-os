@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
-from sandbox.async_client import get_async_sandbox
+from sandbox.client.async_ import get_async_sandbox
 from sandbox.daytona.bash import _wrap_bash_command
 from sandbox.daytona.exec_files import _build_write_text_file_command
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from sandbox.async_bridge import run_sync_in_executor, use_sandbox_io_loop
+from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContextService, ToolResult

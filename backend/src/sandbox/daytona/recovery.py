@@ -40,8 +40,8 @@ async def _attach_sandbox_to_context(context: _SandboxContext) -> Any:
     if not sandbox_id:
         raise RuntimeError(_sandbox_context_error())
     try:
-        from sandbox.async_client import get_async_sandbox
-        from sandbox.workspace import (
+        from sandbox.client.async_ import get_async_sandbox
+        from sandbox.lifecycle.workspace import (
             discover_workspace_async,
             ensure_code_intelligence_runtime,
         )

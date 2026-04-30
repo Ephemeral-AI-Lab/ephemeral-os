@@ -13,7 +13,7 @@ import threading
 
 import pytest
 
-from sandbox.async_bridge import (
+from sandbox.client.async_bridge import (
     DEFAULT_RUN_SYNC_TIMEOUT_SECONDS,
     configure_default_executor,
     current_sandbox_io_loop,

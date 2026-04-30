@@ -39,7 +39,7 @@ class DaytonaContextPreparer:
         self._sandbox_loop_id = None
         if not self.sandbox_id:
             raise RuntimeError("No sandbox_id configured for tool context.")
-        from sandbox.async_client import get_async_sandbox
+        from sandbox.client.async_ import get_async_sandbox
 
         self._sandbox = await get_async_sandbox(self.sandbox_id)
         self._sandbox_loop_id = loop_id
@@ -48,13 +48,13 @@ class DaytonaContextPreparer:
 
     @staticmethod
     def _resolve_cwd_sync(sandbox: Any) -> str | None:
-        from sandbox.workspace import discover_workspace
+        from sandbox.lifecycle.workspace import discover_workspace
 
         return discover_workspace(sandbox)
 
     @staticmethod
     async def _resolve_cwd_async(sandbox: Any) -> str | None:
-        from sandbox.workspace import discover_workspace_async
+        from sandbox.lifecycle.workspace import discover_workspace_async
 
         return await discover_workspace_async(sandbox)
 
@@ -62,7 +62,7 @@ class DaytonaContextPreparer:
         """Add the sandbox and repo root to tool execution metadata."""
         sandbox = self._get_sandbox()
         repo_root = context.get("repo_root") or self._resolve_cwd_sync(sandbox)
-        from sandbox.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
 
         ensure_code_intelligence_runtime(
             context,
@@ -75,7 +75,7 @@ class DaytonaContextPreparer:
         """Add the async sandbox and repo root to tool execution metadata."""
         sandbox = await self._get_sandbox_async()
         repo_root = context.get("repo_root") or await self._resolve_cwd_async(sandbox)
-        from sandbox.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
 
         ensure_code_intelligence_runtime(
             context,

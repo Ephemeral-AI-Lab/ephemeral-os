@@ -130,7 +130,7 @@ def sandbox_info():
 @pytest.fixture()
 async def async_sandbox(sandbox_info):
     """Get an async sandbox handle via the async SDK client."""
-    from sandbox.async_client import get_async_sandbox
+    from sandbox.client.async_ import get_async_sandbox
 
     sandbox = await get_async_sandbox(sandbox_info["id"])
     return sandbox

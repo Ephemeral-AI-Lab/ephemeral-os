@@ -13,7 +13,7 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
-from sandbox.async_bridge import run_sync
+from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import LSP_QUERY_TIMEOUT
 from sandbox.code_intelligence.language_server.utils import _format_transport_exception
 

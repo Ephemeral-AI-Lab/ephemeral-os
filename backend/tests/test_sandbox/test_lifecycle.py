@@ -57,7 +57,7 @@ class TestAsyncCloseClient:
 
 class TestShutdownCachedClient:
     def test_clears_async_client_cached_state(self):
-        import sandbox.async_client as async_client_mod
+        import sandbox.client.async_ as async_client_mod
         import sandbox.lifecycle as mod
 
         async def fake_close():
@@ -76,7 +76,7 @@ class TestShutdownCachedClient:
         assert len(async_client_mod._cached_clients) == 0
 
     def test_async_shutdown_closes_active_loop_client(self):
-        import sandbox.async_client as async_client_mod
+        import sandbox.client.async_ as async_client_mod
         import sandbox.lifecycle as mod
 
         closed = False

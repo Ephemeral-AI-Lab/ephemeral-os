@@ -566,7 +566,7 @@ class TestDaytonaToolIntegration:
         )
 
     def test_context_preparer_no_sandbox_id_raises_on_get(self):
-        from sandbox.context import DaytonaContextPreparer
+        from sandbox.lifecycle.context import DaytonaContextPreparer
 
         preparer = DaytonaContextPreparer("")
         with pytest.raises(RuntimeError, match="No sandbox_id"):
@@ -669,7 +669,7 @@ class TestDaytonaToolLive:
             labels={"purpose": "tools-e2e"},
         )
         # Get async sandbox — tools use `await sandbox.process.exec(...)` etc.
-        from sandbox.async_client import get_async_sandbox
+        from sandbox.client.async_ import get_async_sandbox
 
         async_sb = _run(get_async_sandbox(sb["id"]))
         yield {"info": sb, "raw": async_sb}

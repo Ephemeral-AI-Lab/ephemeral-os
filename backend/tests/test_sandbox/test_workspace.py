@@ -10,7 +10,7 @@ from tools.core.base import ToolExecutionContextService
 
 class TestDiscoverWorkspace:
     def test_returns_project_dir_when_present(self):
-        from sandbox.workspace import discover_workspace
+        from sandbox.lifecycle.workspace import discover_workspace
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir="/workspace/my-project")
@@ -19,7 +19,7 @@ class TestDiscoverWorkspace:
         assert result == "/workspace/my-project"
 
     def test_falls_back_to_pwd(self):
-        from sandbox.workspace import discover_workspace
+        from sandbox.lifecycle.workspace import discover_workspace
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir=None)
@@ -34,7 +34,7 @@ class TestDiscoverWorkspace:
         exec_mock.assert_called_once_with("pwd")
 
     def test_returns_none_when_both_fail(self):
-        from sandbox.workspace import discover_workspace
+        from sandbox.lifecycle.workspace import discover_workspace
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir=None)
@@ -49,7 +49,7 @@ class TestDiscoverWorkspace:
 class TestDiscoverWorkspaceAsync:
     @pytest.mark.anyio
     async def test_returns_project_dir_when_present(self):
-        from sandbox.workspace import discover_workspace_async
+        from sandbox.lifecycle.workspace import discover_workspace_async
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir="/workspace/my-project")
@@ -60,7 +60,7 @@ class TestDiscoverWorkspaceAsync:
 
     @pytest.mark.anyio
     async def test_falls_back_to_pwd(self):
-        from sandbox.workspace import discover_workspace_async
+        from sandbox.lifecycle.workspace import discover_workspace_async
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir=None)
@@ -75,7 +75,7 @@ class TestDiscoverWorkspaceAsync:
 
     @pytest.mark.anyio
     async def test_returns_none_when_both_fail(self):
-        from sandbox.workspace import discover_workspace_async
+        from sandbox.lifecycle.workspace import discover_workspace_async
 
         sandbox = MagicMock()
         sandbox.configure_mock(project_dir=None)
@@ -99,7 +99,7 @@ def _patch_sandbox_service(monkeypatch, *, fake_service_class):
 
 class TestInjectCodeIntelligence:
     def test_injects_ci_service(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -119,7 +119,7 @@ class TestInjectCodeIntelligence:
         assert mock_context["ci_service"] == mock_svc
 
     def test_prefers_sandbox_project_dir_for_ci_workspace(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -143,7 +143,7 @@ class TestInjectCodeIntelligence:
         mock_svc.ensure_initialized.assert_called_once_with(wait=True)
 
     def test_skips_when_ci_import_fails(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -157,7 +157,7 @@ class TestInjectCodeIntelligence:
         assert "ci_service" not in mock_context
 
     def test_reinjects_when_ci_service_key_is_none(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp", services={"ci_service": None})
         mock_sandbox = MagicMock()
@@ -179,7 +179,7 @@ class TestInjectCodeIntelligence:
 
 class TestCodeIntelligenceRuntime:
     def test_sets_runtime_metadata_and_injects_ci(self, monkeypatch):
-        import sandbox.workspace as workspace_module
+        import sandbox.lifecycle.workspace as workspace_module
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -203,7 +203,7 @@ class TestCodeIntelligenceRuntime:
         assert calls == [(mock_context, "sb-123", mock_sandbox, "/workspace")]
 
     def test_respects_existing_repo_and_ci_workspace_overrides(self, monkeypatch):
-        import sandbox.workspace as workspace_module
+        import sandbox.lifecycle.workspace as workspace_module
 
         mock_context = ToolExecutionContextService(cwd="/tmp", services={
             "repo_root": "/testbed",
@@ -229,7 +229,7 @@ class TestCodeIntelligenceRuntime:
         assert calls == [(mock_context, "sb-123", mock_sandbox, "/ci-root")]
 
     def test_skip_code_intelligence_only_skips_ci_attachment(self, monkeypatch):
-        import sandbox.workspace as workspace_module
+        import sandbox.lifecycle.workspace as workspace_module
 
         mock_context = ToolExecutionContextService(
             cwd="/tmp",
@@ -252,7 +252,7 @@ class TestCodeIntelligenceRuntime:
         inject_mock.assert_not_called()
 
     def test_uses_sync_handle_for_async_remote_sandbox_prewarm(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()
@@ -285,7 +285,7 @@ class TestCodeIntelligenceRuntime:
         mock_svc.lsp_client.ensure_ready.assert_not_called()
 
     def test_skips_eager_warmup_when_async_remote_sandbox_has_no_sync_handle(self, monkeypatch):
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()
@@ -321,7 +321,7 @@ class TestCodeIntelligenceRuntime:
 
     def test_async_sandbox_symbol_index_start_failure_is_silent(self, monkeypatch):
         """If ensure_built raises when starting background build, it is swallowed."""
-        from sandbox.workspace import _attach_code_intelligence
+        from sandbox.lifecycle.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()

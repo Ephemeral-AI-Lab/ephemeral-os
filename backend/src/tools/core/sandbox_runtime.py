@@ -41,7 +41,7 @@ async def resolve_sandbox(context: ToolExecutionContextService) -> Any | None:
     if not sandbox_id:
         return None
     try:
-        from sandbox.async_client import get_async_sandbox
+        from sandbox.client.async_ import get_async_sandbox
 
         sandbox = await get_async_sandbox(sandbox_id)
         context["daytona_sandbox"] = sandbox

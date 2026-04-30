@@ -269,7 +269,7 @@ def _build_context_preparers(
     if SANDBOX_CONTEXT not in requirements:
         return []
 
-    from sandbox.context import DaytonaContextPreparer
+    from sandbox.lifecycle.context import DaytonaContextPreparer
 
     return [DaytonaContextPreparer(sandbox_id)]
 

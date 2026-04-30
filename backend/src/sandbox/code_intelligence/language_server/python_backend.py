@@ -11,7 +11,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from sandbox.async_bridge import run_sync
+from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
 from sandbox.code_intelligence.core.types import (
     Diagnostic,
