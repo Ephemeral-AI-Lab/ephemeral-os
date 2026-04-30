@@ -85,8 +85,8 @@ query-loop terminal path.
 | Malformed planner DAG rejection is inline | Phase 02, Phase 03 | Tool handler returns `ToolResult(is_error=True)` before calling the orchestrator | OK |
 | Recursive partial plan gate reads request lineage | Phase 01, Phase 03 | Prehook walks `ComplexTaskRequest.task_segment_ids` and segment `continuation_goal` | OK |
 | `request_complex_task_solution` is a handoff, not failure | Phase 00, Phase 02, Phase 04 | Phase 03 exposes the canonical tool and gates it; Phase 04 fills request creation/resume behavior | OK |
-| After-edit gate reads message history | Phase 03 | Query loop injects the active transcript into `QueryContext.conversation_messages`; prehooks read that injected history for edit tool use before allowing handoff | OK |
-| Resolver success limits read message history | Phase 03, Phase 05 | QueryContext-injected history lets prehooks block verifier/evaluator success at five unresolved resolver calls | OK |
+| After-edit gate reads message history | Phase 03 | Notification rules inspect the live `messages` argument passed by `dispatch_rules`; prehooks read the per-call `ExecutionMetadata.conversation_messages` copy before allowing handoff | OK |
+| Resolver success limits read message history | Phase 03, Phase 05 | The existing query-loop message flow lets prehooks block verifier/evaluator success at five unresolved resolver calls without adding a second transcript owner | OK |
 | Evaluator spawn remains orchestrator-owned | Phase 02, Phase 03 | No public evaluator-spawn tool exists; Phase 03 only guards evaluator terminal submissions | OK |
 | Attempt-budget gate remains segment-manager-owned | Phase 01, Phase 02, Phase 03 | Tool layer does not spend or inspect retry budget except for soft context where already exposed | OK |
 | Failure terminals are never resolver-blocked | Phase 03 | Resolver-limit hooks attach only to success terminals | OK |
@@ -223,7 +223,7 @@ then decides whether to submit a normal graph terminal.
 top of model turn
   |
   v
-notification rules inspect QueryContext.conversation_messages
+notification rules inspect the live messages list passed by dispatch_rules
   |
   +-- first edit already happened
   |     -> remind executor that request_complex_task_solution is disabled
@@ -254,8 +254,7 @@ Soft block:
 1. The executor calls an edit-capable tool such as `edit_file`, `write_file`,
    `delete_file`, `move_file`, or `shell`.
 2. On the next model turn, the TaskCenter reminder rule for
-   `request_complex_task_solution` inspects
-   `QueryContext.conversation_messages`.
+   `request_complex_task_solution` inspects its `messages` argument.
 3. If its local state inference says the executor has edited, it injects a
    `<system-reminder>` telling the executor that
    `request_complex_task_solution` is disabled and the valid terminal choices
@@ -268,7 +267,7 @@ Hard block:
 1. The agent calls `request_complex_task_solution`.
 2. `ToolHookExecutionHelper` runs that tool's `pre_hooks`.
 3. `RequestComplexTaskBeforeEditGate` infers the same condition from the
-   per-call copy of `QueryContext.conversation_messages`.
+   per-call `ExecutionMetadata.conversation_messages` copy.
 4. If the predicate is true, the prehook returns `HookResult.fail(...)`.
 5. `ToolHookExecutionHelper` converts the failed prehook into
    `ToolResult(is_error=True)`, does not call the tool handler, and the agent
@@ -314,8 +313,8 @@ async def request_complex_task_solution(...):
     ...
 ```
 
-The corresponding notification rule is registered through
-`tools.submission.notification_triggers.make_harness_gate_reminders()` when
+The corresponding notification rule is declared in the executor `agent.md` via
+`notification_triggers: [request_complex_task_after_edit]` and resolved when
 launching the executor agent. Its implementation lives in
 `tools/submission/notification_triggers/request_complex_task_after_edit.py`. It
 is not attached to the tool object; the hard prehook is attached on the tool.
@@ -443,8 +442,8 @@ backend/tests/task_center/lifecycle/
 Hard hooks are attached per tool through `pre_hooks=(...)`. Soft triggers are
 `NotificationRule` factories assembled into the launched agent definition; they
 are not attached to tool objects. Each hook and trigger file may infer its own
-state from `QueryContext.conversation_messages` plus any TaskCenter stores
-available through injected harness metadata.
+state from the live message list supplied by the existing query-loop plumbing
+plus any TaskCenter stores available through injected harness metadata.
 
 | Public tool | Role / caller | Kind | Hard hook files | Soft trigger files |
 | --- | --- | --- | --- | --- |
@@ -468,8 +467,8 @@ Soft trigger inventory:
 | Trigger file | Fires for | State inference | Reminder |
 | --- | --- | --- | --- |
 | `notification_triggers/recursive_partial_plan.py` | planner | Resolve request/segment from `QueryContext.tool_metadata`; inspect prior segment `continuation_goal` values | `submit_partial_plan` is disabled; use `submit_full_plan` |
-| `notification_triggers/request_complex_task_after_edit.py` | generator executor | Scan `QueryContext.conversation_messages` for edit-capable tool calls | `request_complex_task_solution` is disabled after the first edit |
-| `notification_triggers/resolver_limit.py` | verifier and evaluator | Scan `QueryContext.conversation_messages` for unresolved `ask_resolver` results | One unresolved resolver call remains before success is blocked |
+| `notification_triggers/request_complex_task_after_edit.py` | generator executor | Scan the notification rule's `messages` argument for edit-capable tool calls | `request_complex_task_solution` is disabled after the first edit |
+| `notification_triggers/resolver_limit.py` | verifier and evaluator | Scan the notification rule's `messages` argument for unresolved `ask_resolver` results | One unresolved resolver call remains before success is blocked |
 
 ---
 
@@ -490,9 +489,13 @@ class ExecutionMetadata:
     task_center_task_id: str | None = None
     task_center_harness_graph_id: str | None = None
     harness_graph_runtime: Any | None = None
+    conversation_messages: list[Any] = field(default_factory=list)
 ```
 
 Add the names to `_TYPED_FIELDS`.
+
+`conversation_messages` is only a per-call view for hooks and tools. It is not
+a second transcript owner.
 
 The production harness agent launcher should set these values when it spawns a
 planner, generator, or evaluator:
@@ -508,41 +511,22 @@ ExecutionMetadata(
 
 Tests may inject the same metadata directly into `ToolExecutionContextService`.
 
-**`backend/src/engine/core/query.py`** - edit
+**`backend/src/engine/core/query.py`** - no transcript ownership change
 
-`QueryContext` owns the active conversation history. The query loop already has
-the mutable `messages` list; Phase 03 should inject that list into
-`QueryContext` and keep it current before notification dispatch and tool
-dispatch.
+Do not add `QueryContext.conversation_messages`. The query loop already owns
+the mutable `messages` list and passes that same live list to the two consumers
+Phase 03 needs:
 
-```python
-@dataclass
-class QueryContext:
-    # existing fields...
+- `notification.rules.dispatch_rules(...)` receives `messages` directly, so
+  soft reminder rules should inspect their `messages` parameter.
+- Tool dispatch passes `conversation_messages=messages` into
+  `execute_tool_call_streaming(...)`, and streaming execution builds its
+  `ToolExecutionContextService` with
+  `ExecutionMetadata.conversation_messages`.
 
-    conversation_messages: list[ConversationMessage] = field(default_factory=list)
-```
-
-At the start of `_run_query_loop` and before each notification or tool-dispatch
-step, set:
-
-```python
-context.conversation_messages = messages
-```
-
-Tool execution should derive history from `QueryContext`, not from a separate
-ad hoc history argument. When building `ToolExecutionContextService`,
-`execute_tool_call_streaming(...)` copies
-`context.conversation_messages` into tool metadata for prehooks:
-
-```python
-metadata = context.tool_metadata.copy() if context.tool_metadata else ExecutionMetadata()
-metadata.conversation_messages = context.conversation_messages
-```
-
-If `ExecutionMetadata` does not yet expose `conversation_messages` as a typed
-field, add it there as a derived per-call view and include it in
-`_TYPED_FIELDS`. The canonical owner remains `QueryContext`.
+Phase 03 may make `ExecutionMetadata.conversation_messages` a typed field for
+discoverability, but it must remain a derived per-call view copied from the
+existing query-loop `messages` list.
 
 ### 5b. Rule-local state resolution and planner validation
 
@@ -564,10 +548,10 @@ State-resolution ownership:
   inspect prior segment `continuation_goal` values.
 - `hooks/request_complex_task_before_edit_gate.py` and
   `notification_triggers/request_complex_task_after_edit.py` each scan
-  `QueryContext.conversation_messages` for edit-capable tool calls.
+  their live message-history input for edit-capable tool calls.
 - `hooks/resolver_success_limit_gate.py` and
   `notification_triggers/resolver_limit.py` each scan
-  `QueryContext.conversation_messages` for unresolved `ask_resolver` results.
+  their live message-history input for unresolved `ask_resolver` results.
 
 Message-history inference should live inside the rule files. If multiple files
 need identical low-level parsing, keep the helper private to one rule package or
@@ -705,17 +689,16 @@ Gate behavior:
 | --- | --- | --- |
 | `HarnessRoleGate` | all Phase 03 terminals | Current persisted task role does not match expected role, graph id does not match current task, or no active orchestrator exists |
 | `RecursivePartialPlanGate` | `submit_partial_plan` | Any segment listed before the current segment in the current request has non-null `continuation_goal` |
-| `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | `QueryContext.conversation_messages` contains an edit tool call |
-| `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | Rule-local scan of `QueryContext.conversation_messages` finds at least five unresolved resolver calls |
+| `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | Per-call `ExecutionMetadata.conversation_messages` contains an edit tool call |
+| `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | Rule-local scan of per-call `ExecutionMetadata.conversation_messages` finds at least five unresolved resolver calls |
 | `HelperRequestGate` | `ask_advisor`, `ask_resolver` | Caller is not one of the roles allowed to invoke that helper request |
 | `HelperRoleGate` | helper/subagent terminals | Helper run metadata does not match the expected helper role or agent type |
 
 Failure terminals deliberately do not receive `ResolverSuccessLimitGate`.
 
-Each hook file owns its own state inference. For message-history rules, read the
-per-call history copied from `QueryContext.conversation_messages` into
-`ExecutionMetadata.conversation_messages` and parse tool use/result records
-inside the hook file.
+Each hook file owns its own state inference. For message-history rules, read
+`ExecutionMetadata.conversation_messages` from the tool context and parse tool
+use/result records inside the hook file.
 
 The prehooks should return short, direct reasons that tell the agent which
 terminal path remains valid. Example:
@@ -752,7 +735,9 @@ def make_resolver_limit_reminder(*, warning_at: int = 4) -> NotificationRule: ..
 
 
 # backend/src/tools/submission/notification_triggers/__init__.py
-def make_harness_gate_reminders() -> list[NotificationRule]: ...
+def resolve_harness_notification_triggers(
+    trigger_ids: list[str],
+) -> list[NotificationRule]: ...
 ```
 
 Reminder triggers mirror hard gates but fire before the next provider request:
@@ -766,14 +751,39 @@ Reminder triggers mirror hard gates but fire before the next provider request:
   will be blocked after one more unresolved resolver call.
 
 Each trigger file owns its own state inference. It should use
-`QueryContext.tool_metadata` for current harness metadata and
-`QueryContext.conversation_messages` for run history. Message-history triggers
-parse records inside the trigger file and decide whether to emit.
+`QueryContext.tool_metadata` for current harness metadata and its
+`messages` argument for run history. Message-history triggers parse records
+inside the trigger file and decide whether to emit.
 
-If the current static agent loader cannot express `NotificationRule` instances
-from `agent.md`, attach these rules in the harness launcher by copying the
-loaded `AgentDefinition` and appending `make_harness_gate_reminders()` before
-calling `run_ephemeral_agent`.
+Register soft triggers declaratively in `agent.md` as stable string ids. Do not
+try to serialize `NotificationRule` callables in YAML. Add a string field to
+`AgentDefinition`:
+
+```python
+notification_triggers: list[str] = Field(default_factory=list)
+```
+
+The harness launcher resolves these ids into `NotificationRule` instances before
+calling `run_ephemeral_agent` by copying the loaded `AgentDefinition` and
+appending the resolved rules to `notification_rules`. Unknown trigger ids should
+fail at harness launch time with a clear configuration error.
+
+```python
+agent_def = base_agent_def.model_copy(
+    update={
+        "notification_rules": [
+            *base_agent_def.notification_rules,
+            *resolve_harness_notification_triggers(
+                base_agent_def.notification_triggers
+            ),
+        ]
+    }
+)
+```
+
+Trigger ids are owned by `tools/submission/notification_triggers/`, not
+`notification/library/`, because these reminders are TaskCenter submission
+policy.
 
 ### 5g. Tool result shape
 
@@ -1331,6 +1341,8 @@ terminals:
   - request_complex_task_solution
   - submit_execution_success
   - submit_execution_failure
+notification_triggers:
+  - request_complex_task_after_edit
 ```
 
 Update body text:
@@ -1358,6 +1370,25 @@ tool descriptions and prompt text should match the concrete schemas:
   `submit_resolver_result`.
 - `backend/src/agents/subagent/explorer/agent.md` terminates through
   `submit_exploration_result`.
+
+Add role-specific `notification_triggers` frontmatter:
+
+```yaml
+# backend/src/agents/main_agent/planner/agent.md
+notification_triggers:
+  - recursive_partial_plan
+
+# backend/src/agents/main_agent/generator/verifier/agent.md
+notification_triggers:
+  - resolver_limit
+
+# backend/src/agents/main_agent/evaluator/agent.md
+notification_triggers:
+  - resolver_limit
+```
+
+Do not register `resolver_limit` on executor, because executor is not equipped
+with `ask_resolver`.
 
 ---
 
@@ -1405,8 +1436,9 @@ None of these errors should call `HarnessGraphOrchestrator.apply_plan_submission
 
 ### 6c. After-edit gate
 
-The gate scans `QueryContext.conversation_messages` for tool uses whose name is
-in `EDIT_TOOL_NAMES`. If found, it blocks `request_complex_task_solution`.
+The gate scans `ExecutionMetadata.conversation_messages` for tool uses whose
+name is in `EDIT_TOOL_NAMES`. If found, it blocks
+`request_complex_task_solution`.
 
 This gate is intentionally about the current executor agent run, not durable
 workspace state. A prior graph or sibling task may have edited; that does not
@@ -1498,8 +1530,8 @@ class HelperRoleGate:
 | Runtime | `ExecutionMetadata.task_center_task_id` | EDIT | Current planner/generator/evaluator task id |
 | Runtime | `ExecutionMetadata.task_center_harness_graph_id` | EDIT | Current graph id for terminal routing |
 | Runtime | `ExecutionMetadata.harness_graph_runtime` | EDIT | Store + registry dependency bundle for tools |
-| Runtime | `QueryContext.conversation_messages` | EDIT | Canonical active transcript for notification rules and tool prehooks |
-| Runtime | `ExecutionMetadata.conversation_messages` | EDIT | Per-call view copied from `QueryContext` into tool context |
+| Runtime | `ExecutionMetadata.conversation_messages` | EDIT | Per-call view copied from the query-loop `messages` list into tool context |
+| Agent defs | `AgentDefinition.notification_triggers` | EDIT | Declarative `agent.md` trigger ids resolved by harness launch code |
 | Tool factory | `make_submission_tools` | NEW | Registers all TaskCenter submission tools |
 | Planner tool schemas | `PlanTaskInput`, `SubmitFullPlanInput`, `SubmitPartialPlanInput` | NEW | Public planner schemas colocated with planner tools |
 | Planner tool handlers | planner-local normalization helpers | NEW | Public input -> `PlannerSubmission` before orchestrator apply |
@@ -1512,7 +1544,7 @@ class HelperRoleGate:
 | Notification trigger | `notification_triggers/recursive_partial_plan.py` | NEW | Planner reminder when partial continuation is no longer allowed |
 | Notification trigger | `notification_triggers/request_complex_task_after_edit.py` | NEW | Executor reminder after first edit disables handoff |
 | Notification trigger | `notification_triggers/resolver_limit.py` | NEW | Verifier/evaluator warning before resolver success block |
-| Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `make_harness_gate_reminders()` |
+| Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `resolve_harness_notification_triggers()` |
 | Planner tools | `submit_full_plan` | EDIT | Validate and call `apply_plan_submission(kind="full")` |
 | Planner tools | `submit_partial_plan` | EDIT | Validate and call `apply_plan_submission(kind="partial")` |
 | Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface; body completed in Phase 04 |
@@ -1524,7 +1556,7 @@ class HelperRoleGate:
 | Resolver tools | `ask_resolver` | EDIT | Blocking edit-capable helper request |
 | Resolver tools | `submit_resolver_result` | EDIT | Resolver terminal result consumed by resolver-count gates |
 | Explorer tools | `submit_exploration_result` | EDIT | Explorer subagent terminal returned by `run_subagent` |
-| Agent defs | executor `agent.md` | EDIT | Replace `submit_request_plan` with `request_complex_task_solution` |
+| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids and replace executor `submit_request_plan` with `request_complex_task_solution` |
 | Agent defs | helper/subagent `agent.md` files | EDIT | Align terminal schema wording |
 
 ---
@@ -1644,10 +1676,11 @@ moving to the next one.
    schemas and terminal flags are visible.
 4. Add registration/schema tests.
 
-### Wave 2 - Runtime history injection and rule-local reads
+### Wave 2 - Existing history plumbing and rule-local reads
 
-1. Inject active run history into `QueryContext.conversation_messages` and copy
-   it into per-call tool metadata.
+1. Keep the existing query-loop `messages` list as the transcript owner and
+   type `ExecutionMetadata.conversation_messages` as the per-call tool-context
+   view.
 2. Add tests for current task -> graph -> request resolution in the relevant
    hook or tool handler tests.
 3. Add tests for edit detection and resolver unresolved-count parsing in the
@@ -1688,14 +1721,17 @@ moving to the next one.
 1. Implement `notification_triggers/recursive_partial_plan.py`.
 2. Implement `notification_triggers/request_complex_task_after_edit.py`.
 3. Implement `notification_triggers/resolver_limit.py`.
-4. Export `make_harness_gate_reminders()` from
-   `notification_triggers/__init__.py`.
-5. Wire the harness reminder rules into harness agent launches or copied agent
-   definitions.
-6. Update executor `agent.md` from `submit_request_plan` to
+4. Add `AgentDefinition.notification_triggers` and loader/frontmatter coverage.
+5. Export a resolver from `notification_triggers/__init__.py` that maps
+   `agent.md` trigger ids to `NotificationRule` factories.
+6. Wire the harness launcher to resolve `agent_def.notification_triggers` into
+   copied agent definitions before `run_ephemeral_agent`.
+7. Update executor `agent.md` from `submit_request_plan` to
    `request_complex_task_solution`.
-7. Update helper/subagent prompt schema wording where needed.
-8. Add reminder tests and agent-definition tests.
+8. Register role-specific trigger ids in planner, executor, verifier, and
+   evaluator `agent.md`.
+9. Update helper/subagent prompt schema wording where needed.
+10. Add reminder tests and agent-definition tests.
 
 ### Wave 7 - Integration smoke
 

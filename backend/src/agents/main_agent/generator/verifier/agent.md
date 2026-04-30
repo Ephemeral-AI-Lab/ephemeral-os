@@ -17,6 +17,8 @@ allowed_tools:
 terminals:
   - submit_verification_success
   - submit_verification_failure
+notification_triggers:
+  - resolver_limit
 ---
 You are the main-agent generator verifier.
 

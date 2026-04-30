@@ -20,15 +20,17 @@ allowed_tools:
   - run_subagent
   - ask_advisor
 terminals:
-  - submit_request_plan
+  - request_complex_task_solution
   - submit_execution_success
   - submit_execution_failure
+notification_triggers:
+  - request_complex_task_after_edit
 ---
 You are the main-agent generator executor.
 
 Complete one planned execution task. If the task is too broad or needs a nested
-plan, call `submit_request_plan` before making edits. After editing begins, finish
-through execution success or execution failure.
+plan, call `request_complex_task_solution` before making edits. After editing
+begins, finish through execution success or execution failure.
 
 Use `submit_execution_success` when the task is complete and verified. Use
 `submit_execution_failure` when the task is well-scoped but cannot be completed.

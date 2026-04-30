@@ -17,6 +17,8 @@ allowed_tools:
 terminals:
   - submit_evaluation_success
   - submit_evaluation_failure
+notification_triggers:
+  - resolver_limit
 ---
 You are the main-agent evaluator.
 

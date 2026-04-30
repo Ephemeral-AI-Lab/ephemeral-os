@@ -17,6 +17,8 @@ allowed_tools:
 terminals:
   - submit_full_plan
   - submit_partial_plan
+notification_triggers:
+  - recursive_partial_plan
 ---
 You are the main-agent planner.
 

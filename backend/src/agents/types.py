@@ -60,6 +60,9 @@ class AgentDefinition(BaseModel):
     # TaskCenter terminal package has been removed, so definitions only get
     # terminal behavior when they explicitly name a registered terminal tool.
     terminals: list[str] = Field(default_factory=list)
+    # Declarative notification trigger ids resolved into NotificationRule
+    # instances by runtime-specific launch code.
+    notification_triggers: list[str] = Field(default_factory=list)
 
     # --- notification rules ---
     # Rules evaluated at the top of every model turn (see
@@ -106,3 +109,8 @@ class AgentDefinition(BaseModel):
     @classmethod
     def _check_terminals(cls, terminals: list[str]) -> list[str]:
         return [terminal for terminal in terminals if terminal.strip()]
+
+    @field_validator("notification_triggers")
+    @classmethod
+    def _check_notification_triggers(cls, triggers: list[str]) -> list[str]:
+        return [trigger for trigger in triggers if trigger.strip()]
