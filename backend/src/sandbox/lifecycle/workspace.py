@@ -60,7 +60,7 @@ def _ci_sandbox_handle(sandbox_id: str | None, sandbox: Any) -> tuple[Any, bool]
     if not sandbox_id or sandbox is None or not _sandbox_exec_is_async(sandbox):
         return sandbox, True
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         return SandboxService().get_sandbox_object(sandbox_id), True
     except Exception:
@@ -113,7 +113,7 @@ def _attach_code_intelligence(
     if context.get("ci_service") is not None:
         return
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         ci_sandbox, eager_warmup_safe = _ci_sandbox_handle(sandbox_id, sandbox)
         ci_workspace_root = _ci_workspace_root(workspace_root, ci_sandbox)

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from sandbox.code_intelligence.core.types import OperationResult
-from sandbox.commit import (
+from sandbox.lifecycle.commit import (
     FileChangeResult,
     submit_commit,
     submit_shell_cmd,

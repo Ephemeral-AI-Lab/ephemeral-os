@@ -111,7 +111,7 @@ def live_sandbox_id():
 
 def _build_ci_context(sandbox_id: str) -> tuple[Any, ToolExecutionContextService]:
     """Build a CI service and tool context for a live sandbox."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
     from sandbox.lifecycle.workspace import discover_workspace, _attach_code_intelligence
 
     svc_client = SandboxService()

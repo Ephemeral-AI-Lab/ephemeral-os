@@ -645,7 +645,7 @@ def _ensure_sync_lsp_sandbox(
         return lsp, "async_sandbox_lsp_unavailable"
 
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         sync_sandbox = SandboxService().get_sandbox_object(sandbox_id)
     except Exception:

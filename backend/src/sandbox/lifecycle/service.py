@@ -20,7 +20,7 @@ from sandbox.client.sync import (
     acquire_client,
     fetch_sandbox,
 )
-from sandbox.credentials import load_credentials
+from sandbox.client.credentials import load_credentials
 from sandbox.lifecycle.proxy import SandboxProxy
 
 if TYPE_CHECKING:

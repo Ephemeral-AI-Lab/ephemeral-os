@@ -163,7 +163,7 @@ class TestSymbolIndexColdStart:
         context = ToolExecutionContextService(cwd=Path("/tmp"))
 
         # Patch SandboxService to fail — simulates no sync handle available
-        with patch("sandbox.service.SandboxService", side_effect=RuntimeError("no sync")):
+        with patch("sandbox.lifecycle.service.SandboxService", side_effect=RuntimeError("no sync")):
             _attach_code_intelligence(context, "sb-cold", sandbox, "/workspace")
 
         svc = context.get("ci_service")
@@ -251,7 +251,7 @@ class TestSymbolIndexColdStart:
         context = ToolExecutionContextService(cwd=Path("/tmp"))
 
         # Step 1: _attach_code_intelligence (async sandbox, no sync handle)
-        with patch("sandbox.service.SandboxService", side_effect=RuntimeError("no sync")):
+        with patch("sandbox.lifecycle.service.SandboxService", side_effect=RuntimeError("no sync")):
             _attach_code_intelligence(context, "sb-pipeline", sandbox, "/workspace")
 
         svc = context["ci_service"]
@@ -334,7 +334,7 @@ class TestLiveColdStart:
 
     async def test_live_ci_tools_after_cold_inject(self, live_sandbox_id):
         """Inject CI into a live sandbox and verify ci_query_symbol works."""
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
         from sandbox.lifecycle.workspace import discover_workspace, _attach_code_intelligence
         from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
         from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure

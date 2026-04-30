@@ -12,7 +12,7 @@ import threading
 import weakref
 from typing import Any
 
-from sandbox.credentials import load_credentials
+from sandbox.client.credentials import load_credentials
 from sandbox.errors import AsyncDaytonaUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def _attempt_sandbox_recovery(sandbox_id: str, *, cause: Exception | None)
     if not _looks_recoverable(cause):
         return
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         await asyncio.to_thread(SandboxService().ensure_sandbox_running, sandbox_id)
         logger.warning("Recovered sandbox %s after async fetch failure", sandbox_id)

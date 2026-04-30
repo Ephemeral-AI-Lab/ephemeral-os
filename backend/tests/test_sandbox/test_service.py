@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from sandbox.service import (
-    SandboxProxy,
+from sandbox.client.sync import (
     _normalize_dict,
     _normalize_optional_text,
     _timeout_seconds_from_env,
 )
+from sandbox.lifecycle.proxy import SandboxProxy
 
 
 def _make_proxy(**attrs) -> SandboxProxy:

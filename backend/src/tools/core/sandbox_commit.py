@@ -12,7 +12,7 @@ from collections.abc import Callable, Sequence
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from sandbox.commit import (
+from sandbox.lifecycle.commit import (
     CommitOp,
     FileChangeResult,
     commit_metadata,

@@ -660,7 +660,7 @@ class TestDaytonaToolLive:
 
     @pytest.fixture(scope="class")
     def live_sandbox(self):
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         svc = SandboxService()
         sb = svc.create_sandbox(

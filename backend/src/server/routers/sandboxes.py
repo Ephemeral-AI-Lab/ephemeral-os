@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
-from sandbox.service import SandboxService
+from sandbox.lifecycle.service import SandboxService
 
 logger = logging.getLogger(__name__)
 

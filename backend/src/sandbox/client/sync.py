@@ -7,7 +7,7 @@ import os
 import threading
 from typing import Any
 
-from sandbox.credentials import load_credentials
+from sandbox.client.credentials import load_credentials
 from sandbox.errors import DaytonaUnavailableError
 
 logger = logging.getLogger(__name__)

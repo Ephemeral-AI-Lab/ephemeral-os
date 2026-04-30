@@ -6,7 +6,7 @@ import time
 
 
 def get_sandbox_service():
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     return SandboxService()
 

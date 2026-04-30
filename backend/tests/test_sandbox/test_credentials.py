@@ -11,7 +11,7 @@ class TestLoadCredentials:
         monkeypatch.setenv("DAYTONA_API_URL", "https://url-from-env")
         monkeypatch.setenv("DAYTONA_TARGET", "target-from-env")
 
-        from sandbox.credentials import load_credentials
+        from sandbox.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "key-from-env"
@@ -40,7 +40,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.credentials import load_credentials
+        from sandbox.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "key-from-settings"
@@ -67,7 +67,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.credentials import load_credentials
+        from sandbox.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "env-key"
@@ -94,7 +94,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.credentials import load_credentials
+        from sandbox.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == ""
@@ -123,7 +123,7 @@ class TestBuildConfig:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.credentials import build_config
+        from sandbox.client.credentials import build_config
         from sandbox.errors import DaytonaUnavailableError
 
         with pytest.raises(DaytonaUnavailableError, match="not configured"):
@@ -152,7 +152,7 @@ class TestBuildConfig:
         original = sys.modules.get("daytona_sdk")
         sys.modules["daytona_sdk"] = None
         try:
-            from sandbox.credentials import build_config
+            from sandbox.client.credentials import build_config
             from sandbox.errors import DaytonaUnavailableError
 
             with pytest.raises(DaytonaUnavailableError, match="not installed"):

@@ -92,9 +92,9 @@ def _patch_sandbox_service(monkeypatch, *, fake_service_class):
     import sys
     import types
 
-    fake_service_module = types.ModuleType("sandbox.service")
+    fake_service_module = types.ModuleType("sandbox.lifecycle.service")
     fake_service_module.SandboxService = fake_service_class
-    monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
+    monkeypatch.setitem(sys.modules, "sandbox.lifecycle.service", fake_service_module)
 
 
 class TestInjectCodeIntelligence:
@@ -150,7 +150,7 @@ class TestInjectCodeIntelligence:
 
         import sys
 
-        monkeypatch.setitem(sys.modules, "sandbox.service", None)
+        monkeypatch.setitem(sys.modules, "sandbox.lifecycle.service", None)
 
         _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 

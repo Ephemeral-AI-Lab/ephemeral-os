@@ -218,7 +218,7 @@ class TestLiveSymbolIndexReferences:
 
     async def test_live_references_via_symbol_index(self, live_sandbox_id):
         """Live: ci_query_symbol finds references using symbol index + LSP."""
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
         from sandbox.lifecycle.workspace import discover_workspace, _attach_code_intelligence
 
         svc_client = SandboxService()

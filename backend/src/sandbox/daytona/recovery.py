@@ -90,7 +90,7 @@ async def _recover_sandbox(context: _SandboxContext, exc: Exception) -> Any:
         exc,
     )
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         await asyncio.to_thread(SandboxService().ensure_sandbox_running, sandbox_id)
     finally:

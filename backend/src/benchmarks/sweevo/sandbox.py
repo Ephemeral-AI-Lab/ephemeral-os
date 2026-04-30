@@ -56,7 +56,7 @@ def _progress(on_progress: ProgressCallback | None, message: str) -> None:
 
 def _service() -> Any:
     """Return a SandboxService instance (lazy import to avoid cycles)."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     return SandboxService()
 
@@ -253,7 +253,7 @@ async def _upload_file_compat(
 def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
     """Dispose code intelligence for a sandbox, logging debug on failure."""
     try:
-        from sandbox.service import SandboxService
+        from sandbox.lifecycle.service import SandboxService
 
         SandboxService().dispose_code_intelligence(sandbox_id)
     except Exception:

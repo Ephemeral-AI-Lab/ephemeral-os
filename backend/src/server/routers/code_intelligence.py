@@ -33,7 +33,7 @@ class EditRequest(BaseModel):
 
 def _get_service(sandbox_id: str, workspace_root: str = "/workspace") -> Any:
     """Get or create a CI service for a sandbox via SandboxService."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     return SandboxService().code_intelligence_for(
         sandbox_id, workspace_root=workspace_root
@@ -42,7 +42,7 @@ def _get_service(sandbox_id: str, workspace_root: str = "/workspace") -> Any:
 
 def _get_service_if_exists(sandbox_id: str) -> Any:
     """Get existing CI service via SandboxService, or raise 404."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     service = SandboxService().code_intelligence_if_exists(sandbox_id)
     if service is None:
@@ -58,7 +58,7 @@ def _get_service_if_exists(sandbox_id: str) -> Any:
 @router.get("/health")
 async def health() -> dict:
     """Code intelligence health check."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     statuses = SandboxService().all_code_intelligence_status()
     return {"healthy": True, "active_services": len(statuses)}
@@ -255,7 +255,7 @@ async def telemetry(sandbox_id: str) -> dict:
 @router.post("/{sandbox_id}/dispose")
 async def dispose_service(sandbox_id: str) -> dict:
     """Dispose CI service for a sandbox."""
-    from sandbox.service import SandboxService
+    from sandbox.lifecycle.service import SandboxService
 
     SandboxService().dispose_code_intelligence(sandbox_id)
     return {"disposed": sandbox_id}
