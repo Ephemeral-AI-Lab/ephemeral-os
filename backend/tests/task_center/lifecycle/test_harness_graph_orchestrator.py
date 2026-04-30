@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+
+from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
     HarnessGraphStage,
@@ -254,6 +256,33 @@ def test_apply_generator_success_launches_newly_ready_dependents(
     ]
     task_b = task_store.get_task(generator_task_id(graph.id, "b"))
     assert task_b is not None and task_b["status"] == "running"
+
+
+def test_missing_generator_agent_profile_is_invariant_violation(
+    request_store, segment_store, graph_store, task_store, task_center_run_id
+):
+    orchestrator, graph, _, _, _ = _build_orchestrator(
+        request_store, segment_store, graph_store, task_store, task_center_run_id
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            graph.id,
+            tasks=(
+                PlannedGeneratorTask("a", "executor", (), "do A"),
+                PlannedGeneratorTask("b", "verifier", ("a",), "verify A"),
+            ),
+        )
+    )
+    task_b_id = generator_task_id(graph.id, "b")
+    orchestrator._generator_agent_names.pop(task_b_id)
+
+    with pytest.raises(GraphInvariantViolation):
+        orchestrator.apply_generator_submission(_generator_success(graph.id, "a"))
+
+    task_b = task_store.get_task(task_b_id)
+    assert task_b is not None
+    assert task_b["status"] == HarnessTaskStatus.PENDING.value
 
 
 def test_waiting_complex_task_prevents_generator_quiescence(

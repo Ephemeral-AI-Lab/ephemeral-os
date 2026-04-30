@@ -328,6 +328,11 @@ class HarnessGraphOrchestrator:
         ready_ids = ready_pending_generator_ids(task_records)
         if ready_ids:
             for task_id in ready_ids:
+                agent_name = self._generator_agent_names.get(task_id)
+                if agent_name is None:
+                    raise GraphInvariantViolation(
+                        f"Generator task {task_id!r} has no registered agent profile"
+                    )
                 task = runtime.task_store.set_task_status(
                     task_id, status=HarnessTaskStatus.RUNNING.value
                 )
@@ -337,9 +342,7 @@ class HarnessGraphOrchestrator:
                         task_center_run_id=task["task_center_run_id"],
                         harness_graph_id=graph.id,
                         role=HarnessTaskRole.GENERATOR,
-                        agent_name=self._generator_agent_names.get(
-                            task_id, HarnessTaskRole.GENERATOR.value
-                        ),
+                        agent_name=agent_name,
                         task_input=task["task_input"],
                         needs=tuple(task["needs"]),
                     )

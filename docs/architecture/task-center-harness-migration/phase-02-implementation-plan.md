@@ -323,16 +323,18 @@ backend/src/task_center/
 |   `-- handler.py                          # EDIT: accept/pass orchestrator_factory
 |-- segment/
 |   `-- manager.py                          # EDIT: start orchestrators after graph create
+|-- task/
+|   |-- __init__.py                         # EDIT: re-export task DTOs and id helpers
+|   |-- models.py                           # NEW: task role/status + submission DTOs
+|   `-- ids.py                              # NEW: stable planner/generator/evaluator ids
 `-- harness_graph/
     |-- __init__.py                         # EDIT: re-export new Phase 02 helpers
     |-- graph.py                            # EDIT: optional convenience helpers (Phase 01 DTO)
-    |-- task.py                             # NEW: task role/status + submission DTOs
     |-- validation.py                       # EDIT: stage/submission invariants
     |-- orchestrator.py                     # EDIT: Phase 02 state machine
     |-- orchestrator_registry.py            # NEW: process-local graph -> orchestrator map
     |-- runtime.py                          # NEW: runtime deps + launcher protocol
     |-- task_graph.py                       # NEW: DAG/status helper functions
-    |-- task_ids.py                         # NEW: stable planner/generator/evaluator ids
     `-- factory.py                          # NEW: production orchestrator factory
 ```
 
@@ -349,7 +351,7 @@ Tests:
 backend/tests/task_center/
 |-- lifecycle/
 |   |-- test_harness_graph_orchestrator.py
-|   |-- test_harness_graph_generator_quiescence.py
+|   |-- test_harness_graph_task_graph.py
 |   |-- test_harness_graph_orchestrator_registry.py
 |   `-- test_integration_phase02.py
 `-- persistence/
@@ -377,7 +379,7 @@ backend/src/tools/submission/main_agent/
 
 ### 5a. Domain task roles and submission DTOs
 
-**`backend/src/task_center/task/task.py`** - new
+**`backend/src/task_center/task/models.py`** - new
 
 ```python
 from dataclasses import dataclass
@@ -491,7 +493,7 @@ Notes:
 
 ### 5b. Stable task ids
 
-**`backend/src/task_center/task/task_ids.py`** - new
+**`backend/src/task_center/task/ids.py`** - new
 
 ```python
 def planner_task_id(harness_graph_id: str) -> str:
@@ -1259,9 +1261,9 @@ keys or live agent runs are needed in Phase 02.
 | --- | --- |
 | `test_registry_enforces_one_orchestrator_per_graph` | Duplicate active orchestrator is invariant violation |
 | `test_registry_deregister_allows_replacement` | Closed graph cleanup works |
-| `test_orchestrator_applies_full_plan_submission` | Full plan and generator task creation share the direct apply path |
-| `test_orchestrator_applies_partial_plan_submission` | Partial plan stores the continuation goal through the same plan entry |
-| `test_orchestrator_rejects_submit_request_plan` | Legacy request-plan calls never mutate graph task state |
+| `test_apply_plan_submission_persists_contract_and_generator_ids` | Full plan and generator task creation share the direct apply path |
+| `test_apply_partial_plan_submission_stores_continuation_goal` | Partial plan stores the continuation goal through the same plan entry |
+| `test_orchestrator_rejects_submit_request_plan_shape` | Legacy request-plan calls never mutate graph task state |
 
 ### 8c. Orchestrator unit tests
 
@@ -1270,17 +1272,16 @@ keys or live agent runs are needed in Phase 02.
 | `test_start_creates_planner_task_and_sets_graph_planner_id` | Start path |
 | `test_apply_plan_submission_persists_contract_and_generator_ids` | Planner submission success |
 | `test_apply_planner_failure_marks_task_and_closes_graph` | Runtime-synthesized `PlannerFailureSubmission` flows through `apply_planner_failure`, marks the planner task `failed` with the runtime summary, then closes the graph with `planner_failed` |
-| `test_planner_exhaustion_closes_graph_failed` | End-to-end planner exhaustion close path through the runtime callback |
-| `test_generator_roots_launch_after_plan` | DAG root scheduling |
+| `test_apply_plan_submission_persists_contract_and_generator_ids` | DAG root scheduling |
 | `test_apply_generator_success_launches_newly_ready_dependents` | Dependency scheduling |
+| `test_missing_generator_agent_profile_is_invariant_violation` | Missing generator launch metadata is treated as an invariant violation |
 | `test_waiting_complex_task_prevents_generator_quiescence` | Outer graph stays in `generating` while a generator task is `waiting_complex_task` (Phase 04 owns the transition; Phase 02 only verifies the quiescence observation) |
 | `test_apply_generator_failure_blocks_pending_descendants` | Failure propagation |
-| `test_generator_failure_waits_for_independent_running_tasks` | Quiescence wait |
-| `test_generator_failure_closes_after_quiescence` | `generator_failed` close |
+| `test_generator_failure_waits_then_closes_after_quiescence` | Quiescence wait and `generator_failed` close |
 | `test_all_generators_done_spawns_evaluator` | Evaluator spawn gate |
 | `test_apply_evaluator_success_closes_graph_passed` | Passed close |
 | `test_apply_evaluator_failure_closes_graph_failed` | `evaluator_failed` close |
-| `test_close_graph_calls_on_graph_closed_once` | Callback contract |
+| `test_apply_evaluator_success_closes_graph_passed` | Callback contract |
 | `test_orchestrator_never_creates_retry_graph` | Retry remains manager-owned |
 
 ### 8d. Manager/handler integration
@@ -1288,7 +1289,7 @@ keys or live agent runs are needed in Phase 02.
 | Test | Purpose |
 | --- | --- |
 | `test_manager_starts_orchestrator_when_factory_present` | Factory seam activates |
-| `test_manager_without_factory_preserves_phase01_behavior` | Backward compatibility |
+| `test_initial_segment_creates_graph_sequence_1` | Backward compatibility for managers without a factory |
 | `test_failed_graph_with_budget_starts_next_graph_orchestrator` | Retry graph start |
 | `test_handler_passes_orchestrator_factory_to_spawned_manager` | Handler wiring |
 | `test_full_plan_execution_success_closes_request_success` | Phase 02 success smoke |
@@ -1315,8 +1316,8 @@ Each wave is independently testable.
 
 ### Wave 1 - Submission DTOs and task helpers
 
-1. Add `task_center/task/task.py`.
-2. Add `task_center/task/task_ids.py`.
+1. Add `task_center/task/models.py`.
+2. Add `task_center/task/ids.py`.
 3. Add `TaskCenterStore` task helper methods.
 4. Add persistence tests for task helpers.
 
@@ -1368,7 +1369,7 @@ Recommended commands:
 ```bash
 uv run pytest backend/tests/task_center/persistence/test_task_center_task_helpers.py -q
 uv run pytest backend/tests/task_center/lifecycle/test_harness_graph_orchestrator.py -q
-uv run pytest backend/tests/task_center/lifecycle/test_harness_graph_generator_quiescence.py -q
+uv run pytest backend/tests/task_center/lifecycle/test_harness_graph_task_graph.py -q
 uv run pytest backend/tests/task_center/lifecycle/test_integration_phase02.py -q
 uv run pytest backend/tests/task_center/ -q
 uv run ruff check backend/src/task_center backend/src/db/stores/task_center_store.py backend/tests/task_center
@@ -1381,17 +1382,17 @@ uv run ruff check backend/src/task_center backend/src/db/stores/task_center_stor
 | Phase 02 exit criterion | Verified by |
 | --- | --- |
 | A harness graph can complete full-plan execution successfully | `test_full_plan_execution_success_closes_request_success` |
-| Generator failure waits for quiescence before graph failure is reported | `test_generator_failure_waits_for_independent_running_tasks` |
-| Failed generator blocks pending dependents | `test_generator_failure_blocks_pending_descendants` |
-| Evaluator failure closes the harness graph immediately | `test_evaluator_failure_closes_graph_failed` |
-| Planner exhaustion closes the graph with `planner_failed` | `test_planner_exhaustion_closes_graph_failed` |
+| Generator failure waits for quiescence before graph failure is reported | `test_generator_failure_waits_then_closes_after_quiescence` |
+| Failed generator blocks pending dependents | `test_apply_generator_failure_blocks_pending_descendants` |
+| Evaluator failure closes the harness graph immediately | `test_apply_evaluator_failure_closes_graph_failed` |
+| Planner exhaustion closes the graph with `planner_failed` | `test_apply_planner_failure_marks_task_and_closes_graph` |
 | No retry path is implemented inside `HarnessGraphOrchestrator` | `test_orchestrator_never_creates_retry_graph` |
 | Retry remains delegated to `TaskSegmentManager` | `test_failed_graph_with_budget_starts_next_graph_orchestrator` |
-| Orchestrator close reports to `TaskSegmentManager` via callback | `test_close_graph_calls_on_graph_closed_once` |
-| Terminal tools call the direct apply surface after validation | `test_orchestrator_applies_full_plan_submission` |
-| `submit_full_plan` and `submit_partial_plan` share one plan apply entry | `test_orchestrator_applies_partial_plan_submission` |
+| Orchestrator close reports to `TaskSegmentManager` via callback | `test_apply_evaluator_success_closes_graph_passed` |
+| Terminal tools call the direct apply surface after validation | `test_apply_plan_submission_persists_contract_and_generator_ids` |
+| `submit_full_plan` and `submit_partial_plan` share one plan apply entry | `test_apply_partial_plan_submission_stores_continuation_goal` |
 | Executor and verifier outcomes share one `apply_generator_submission` entry | `test_apply_generator_success_launches_newly_ready_dependents` |
-| Legacy generator `submit_request_plan` is not handled by orchestration | `test_orchestrator_rejects_submit_request_plan` |
+| Legacy generator `submit_request_plan` is not handled by orchestration | `test_orchestrator_rejects_submit_request_plan_shape` |
 | `waiting_complex_task` keeps the outer graph in `generating` and out of evaluator spawn | `test_waiting_complex_task_prevents_generator_quiescence` |
 
 ---
