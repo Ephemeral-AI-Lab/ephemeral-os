@@ -20,7 +20,7 @@ from tools.daytona_toolkit._file_tool_helpers import (
     GrepOutput,
     build_find_result,
 )
-from sandbox.search_commands import build_grep_command
+from sandbox.daytona.search_commands import build_grep_command
 
 
 @tool(

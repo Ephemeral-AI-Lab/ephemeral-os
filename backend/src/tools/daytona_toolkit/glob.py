@@ -16,7 +16,7 @@ from tools.daytona_toolkit._file_tool_helpers import (
     GlobOutput,
     build_glob_result,
 )
-from sandbox.search_commands import build_glob_command
+from sandbox.daytona.search_commands import build_glob_command
 
 
 @tool(
