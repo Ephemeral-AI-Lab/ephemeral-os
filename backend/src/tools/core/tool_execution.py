@@ -135,6 +135,8 @@ async def execute_tool_call_streaming(
     )
     metadata.tool_registry = context.tool_registry
     metadata.tool_id = tool_use_id
+    if context.task_center_task_id:
+        metadata.task_center_task_id = context.task_center_task_id
     if conversation_messages is not None:
         metadata = metadata.with_overrides(conversation_messages=conversation_messages)
     if extra_metadata:

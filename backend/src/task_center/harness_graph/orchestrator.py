@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import asdict
 from datetime import UTC, datetime
 
 from db.stores.harness_graph_store import HarnessGraphStore
+from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.graph import (
     HarnessGraph,
@@ -192,6 +194,42 @@ class HarnessGraphOrchestrator:
     ) -> None:
         self._assert_submission_graph(submission.graph_id)
         self._mark_evaluator(submission)
+        self._dispatch_ready_work()
+
+    def apply_complex_task_close_report(self, report: ComplexTaskCloseReport) -> None:
+        """Resume a generator task waiting on a nested complex-task request."""
+        runtime = self._require_runtime()
+        graph = self._assert_stage(HarnessGraphStage.GENERATING)
+        task = runtime.task_store.get_task(report.requested_by_task_id)
+        if task is None:
+            raise GraphInvariantViolation(
+                f"Generator task {report.requested_by_task_id!r} not found"
+            )
+        assert_generator_task_for_submission(task, graph)
+        if task["status"] != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
+            raise GraphInvariantViolation(
+                f"Generator task {report.requested_by_task_id!r} is not waiting "
+                "on a complex task"
+            )
+
+        if report.outcome == "success":
+            status = HarnessTaskStatus.DONE
+            summary = f"Nested complex task {report.complex_task_request_id} succeeded."
+        else:
+            status = HarnessTaskStatus.FAILED
+            summary = f"Nested complex task {report.complex_task_request_id} failed."
+
+        runtime.task_store.set_task_status(
+            report.requested_by_task_id,
+            status=status.value,
+            summary={
+                "outcome": report.outcome,
+                "summary": summary,
+                "payload": {"complex_task_close_report": asdict(report)},
+            },
+        )
+        if status == HarnessTaskStatus.FAILED:
+            self._block_failed_generator_descendants(report.requested_by_task_id)
         self._dispatch_ready_work()
 
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:

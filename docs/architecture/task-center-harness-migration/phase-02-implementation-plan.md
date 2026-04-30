@@ -37,7 +37,7 @@ Deliverables:
    sits in `waiting_complex_task`, the orchestrator treats it as non-terminal
    during quiescence checks so the outer graph stays in `generating`. The
    transition into `waiting_complex_task` and the resume path
-   (`apply_nested_close_report`) are owned by Phase 04.
+   (`apply_complex_task_close_report`) are owned by Phase 04.
 9. `TaskSegmentManager` wiring so newly created graphs start their orchestrator
    when an orchestrator factory is configured.
 10. `ComplexTaskRequestHandler` wiring so every spawned segment manager receives
@@ -54,7 +54,7 @@ Not in scope:
   is the canonical migration name, and Phase 03/04 should either reject the legacy
   stub or alias it before orchestration.
 - Creation of the nested `ComplexTaskRequest`, the
-  `apply_nested_close_report` resume entry on `HarnessGraphOrchestrator`, and
+  `apply_complex_task_close_report` resume entry on `HarnessGraphOrchestrator`, and
   durable final report delivery to `requested_by_task_id` (all Phase 04).
   Phase 02 only ensures the orchestrator observes `waiting_complex_task` as
   non-terminal during generator quiescence.
@@ -762,7 +762,7 @@ class HarnessGraphOrchestrator:
         self, submission: EvaluatorSubmission
     ) -> None: ...
 
-    # `apply_nested_close_report(report)` ships in Phase 04 alongside the
+    # `apply_complex_task_close_report(report)` ships in Phase 04 alongside the
     # `request_complex_task_solution` spawn handler.
 
     # mutation helpers
@@ -833,7 +833,7 @@ def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
 ```
 
 Terminal tool handlers call `apply_*` methods after validation. Phase 04
-adds `apply_nested_close_report(report)` for nested-request resume.
+adds `apply_complex_task_close_report(report)` for nested-request resume.
 
 Internal helpers (kept on the façade only because they are graph-scoped
 plumbing, not policy):
@@ -881,7 +881,7 @@ Important behavior:
   `request_complex_task_solution` is accepted. The orchestrator only
   observes `waiting_complex_task` as a non-terminal generator status during
   quiescence checks. The matching resume entry
-  (`apply_nested_close_report`) ships in Phase 04.
+  (`apply_complex_task_close_report`) ships in Phase 04.
 - Evaluator is spawned by `_dispatch_ready_work` only when every generator
   task record is `done`.
 - `_close_graph(...)` calls `graph_store.close(...)` exactly once and then
@@ -1135,7 +1135,7 @@ not launched, evaluator is not spawned, the graph stays in `generating`.
 Phase 02's only job here is to keep `waiting_complex_task` non-terminal in
 quiescence checks so the outer graph stays in `generating` (no evaluator
 spawn, no premature `generator_failed` close). The resume entry
-(`apply_nested_close_report`) and its wiring through
+(`apply_complex_task_close_report`) and its wiring through
 `ComplexTaskRequestHandler.deliver_close_report` ship in Phase 04. The
 terminal tool gate (Phase 03), not the orchestrator, decides which generator
 agent profiles may call `request_complex_task_solution`.
@@ -1232,7 +1232,7 @@ budget.
 | Runtime | `HarnessGraphRuntime` | NEW | Dependency bundle for orchestrator behavior |
 | Lifecycle | `HarnessGraphOrchestratorRegistry` | NEW | Process-local graph -> orchestrator lookup |
 | Lifecycle | `HarnessGraphOrchestrator.start` | EDIT | Bootstrap planner |
-| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct submission mutation surface (`apply_plan_submission`, `apply_planner_failure`, `apply_generator_submission`, `apply_evaluator_submission`). `apply_planner_failure` is called by the runtime; the others by terminal tool handlers. `apply_nested_close_report` ships in Phase 04. |
+| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct submission mutation surface (`apply_plan_submission`, `apply_planner_failure`, `apply_generator_submission`, `apply_evaluator_submission`). `apply_planner_failure` is called by the runtime; the others by terminal tool handlers. `apply_complex_task_close_report` ships in Phase 04. |
 | Lifecycle | `HarnessGraphOrchestrator._dispatch_ready_work` | EDIT | Launchability, generator quiescence, evaluator spawn |
 | Lifecycle | `HarnessGraphOrchestrator._close_graph` | EDIT | Single close site that calls `graph_store.close(...)` and `on_graph_closed` |
 | Lifecycle | `HarnessGraphOrchestrator.apply_planner_failure` | NEW | Runtime-synthesized planner failure entry; marks planner task `failed` and delegates to `_close_graph(planner_failed)` |

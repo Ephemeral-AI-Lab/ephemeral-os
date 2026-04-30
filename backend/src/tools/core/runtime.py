@@ -34,6 +34,11 @@ class ExecutionMetadata:
     cwd: str = ""
     repo_root: str = ""
     exec_cwd: str = ""
+    task_center_run_id: str | None = None
+    task_center_task_id: str | None = None
+    task_center_harness_graph_id: str | None = None
+    harness_graph_runtime: Any | None = None
+    conversation_messages: list[Any] = field(default_factory=list)
 
     # Tool registry reference (used by tools that need to introspect the
     # broader tool surface, e.g. skills that can call sibling tools).
@@ -76,6 +81,11 @@ class ExecutionMetadata:
             "cwd",
             "repo_root",
             "exec_cwd",
+            "task_center_run_id",
+            "task_center_task_id",
+            "task_center_harness_graph_id",
+            "harness_graph_runtime",
+            "conversation_messages",
             "tool_registry",
             "context_preparers",
             "background_task_manager",

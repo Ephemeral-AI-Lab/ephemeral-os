@@ -134,6 +134,9 @@ async def run_ephemeral_agent(
         agent.query_context.tool_metadata = ExecutionMetadata()
     if extra_tool_metadata:
         agent.query_context.tool_metadata.update(extra_tool_metadata)
+    if task_id:
+        agent.query_context.task_center_task_id = task_id
+        agent.query_context.tool_metadata.task_center_task_id = task_id
     if agent_run_id is not None:
         agent.query_context.tool_metadata.agent_run_id = agent_run_id
     agent.query_context.run_id = task_id or agent_run_id or agent.query_context.run_id

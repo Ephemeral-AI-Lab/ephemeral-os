@@ -80,11 +80,10 @@ that can declare failure.
 handoff: the executor delegates its task to a nested complex-task workflow, and
 the nested request's close report becomes the executor task result.
 
-The executor prompt/tool surface should expose `request_complex_task_solution`
-only when the runtime has a real handoff handler that can create the nested
-request and mark the outer generator task waiting. A registered schema plus
-prehook-only placeholder is valid for tests, but production executors should not
-be instructed to call a handoff tool that can only return an inline error.
+The executor prompt/tool surface exposes `request_complex_task_solution` when
+the runtime provides the TaskCenter handoff dependencies. The default handoff
+path creates the nested request, marks the outer generator task waiting, and
+routes the complex task close report back to that generator task.
 
 ## Planner terminal signatures
 

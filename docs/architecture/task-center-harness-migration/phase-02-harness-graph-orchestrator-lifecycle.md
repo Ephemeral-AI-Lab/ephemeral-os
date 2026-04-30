@@ -61,7 +61,7 @@ seam this phase needs; Phase 02 only fills behaviour.
 - A `HarnessGraphOrchestrator` with `start()` and one public `apply_*`
   entry per close path (`apply_plan_submission`, `apply_planner_failure`,
   `apply_generator_submission`, `apply_evaluator_submission`).
-  Phase 04 ships `apply_nested_close_report` for nested-request resume.
+  Phase 04 ships `apply_complex_task_close_report` for nested-request resume.
 - Private mutation helpers for graph-owned task writes and private dispatch
   helpers for launchability, generator-failure quiescence, evaluator spawn, and
   graph close.
@@ -385,7 +385,7 @@ H failed     no        yes    H passed H failed
    `HarnessGraphOrchestrator`. The Phase 04 spawn handler owns the transition
    to `waiting_complex_task`; Phase 02 only ensures the orchestrator observes
    that status as non-terminal during quiescence checks. The matching
-   `apply_nested_close_report` resume entry ships in Phase 04.
+   `apply_complex_task_close_report` resume entry ships in Phase 04.
 6. Add private `_dispatch_ready_work()` and `_close_graph(...)` helpers.
    `_dispatch_ready_work()` launches dependency-free pending generators, waits
    for generator quiescence, spawns the evaluator when every generator is

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
@@ -71,6 +72,7 @@ def _build_orchestrator(
     runtime = HarnessGraphRuntime(
         request_store=request_store,
         segment_store=segment_store,
+        graph_store=graph_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
@@ -312,6 +314,91 @@ def test_waiting_complex_task_prevents_generator_quiescence(
     assert refreshed is not None
     assert refreshed.stage == HarnessGraphStage.GENERATING
     assert closed == []
+
+
+def test_complex_task_close_report_success_resumes_waiting_generator(
+    request_store, segment_store, graph_store, task_store, task_center_run_id
+):
+    orchestrator, graph, _, _, _ = _build_orchestrator(
+        request_store, segment_store, graph_store, task_store, task_center_run_id
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            graph.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        )
+    )
+    task_id = generator_task_id(graph.id, "a")
+    task_store.set_task_status(
+        task_id,
+        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+    )
+
+    orchestrator.apply_complex_task_close_report(
+        ComplexTaskCloseReport(
+            complex_task_request_id="nested-1",
+            requested_by_task_id=task_id,
+            outcome="success",
+            final_segment_id="segment-1",
+            final_harness_graph_id="graph-1",
+        )
+    )
+
+    task = task_store.get_task(task_id)
+    refreshed = graph_store.get(graph.id)
+    assert task is not None
+    assert task["status"] == HarnessTaskStatus.DONE.value
+    assert task["summaries"][-1]["payload"]["complex_task_close_report"][
+        "complex_task_request_id"
+    ] == "nested-1"
+    assert refreshed is not None
+    assert refreshed.stage == HarnessGraphStage.EVALUATING
+
+
+def test_complex_task_close_report_failure_blocks_dependents_and_closes_graph(
+    request_store, segment_store, graph_store, task_store, task_center_run_id
+):
+    orchestrator, graph, _, _, closed = _build_orchestrator(
+        request_store, segment_store, graph_store, task_store, task_center_run_id
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            graph.id,
+            tasks=(
+                PlannedGeneratorTask("a", "executor", (), "do A"),
+                PlannedGeneratorTask("b", "executor", ("a",), "do B"),
+            ),
+        )
+    )
+    task_id = generator_task_id(graph.id, "a")
+    dependent_id = generator_task_id(graph.id, "b")
+    task_store.set_task_status(
+        task_id,
+        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+    )
+
+    orchestrator.apply_complex_task_close_report(
+        ComplexTaskCloseReport(
+            complex_task_request_id="nested-1",
+            requested_by_task_id=task_id,
+            outcome="failed",
+            final_segment_id="segment-1",
+            final_harness_graph_id="graph-1",
+        )
+    )
+
+    task = task_store.get_task(task_id)
+    dependent = task_store.get_task(dependent_id)
+    refreshed = graph_store.get(graph.id)
+    assert task is not None
+    assert task["status"] == HarnessTaskStatus.FAILED.value
+    assert dependent is not None
+    assert dependent["status"] == HarnessTaskStatus.BLOCKED.value
+    assert refreshed is not None
+    assert refreshed.status == HarnessGraphStatus.FAILED
+    assert closed == [graph.id]
 
 
 def test_apply_generator_failure_blocks_pending_descendants(

@@ -95,6 +95,7 @@ class QueryContext:
     max_tokens: int
     agent_name: str = ""
     run_id: str = ""
+    task_center_task_id: str = ""
     tool_call_limit: int | None = None
     tool_calls_used: int = 0
     tool_metadata: ExecutionMetadata | None = None
@@ -211,6 +212,8 @@ async def _build_stream_executor(
         if context.tool_metadata is not None
         else ExecutionMetadata()
     ).with_overrides(conversation_messages=messages)
+    if context.task_center_task_id:
+        metadata.task_center_task_id = context.task_center_task_id
     execution_context = ToolExecutionContextService(
         cwd=context.cwd,
         services=metadata,

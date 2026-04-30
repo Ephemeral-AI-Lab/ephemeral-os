@@ -344,8 +344,23 @@ def spawn_agent(
     initial_tool_metadata = ExecutionMetadata(
         runtime_config=config,
         sandbox_id=sandbox_id or "",
+        agent_name=agent_name,
         context_preparers=_build_context_preparers(tool_registry, sandbox_id),
     )
+    if agent_def is not None:
+        initial_tool_metadata["agent_type"] = agent_def.agent_type
+        if agent_def.role:
+            initial_tool_metadata["role"] = agent_def.role
+
+    notification_rules = list(agent_def.notification_rules) if agent_def else []
+    if agent_def and agent_def.notification_triggers:
+        from tools.submission.notification_triggers import (
+            resolve_harness_notification_triggers,
+        )
+
+        notification_rules.extend(
+            resolve_harness_notification_triggers(agent_def.notification_triggers)
+        )
 
     query_context = QueryContext(
         api_client=api_client,
@@ -358,7 +373,7 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
-        notification_rules=list(agent_def.notification_rules) if agent_def else [],
+        notification_rules=notification_rules,
     )
 
     return EphemeralAgent(

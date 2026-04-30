@@ -45,14 +45,16 @@ def _build_handler(
 ):
     launcher = _FakeLauncher()
     orchestrator_registry = HarnessGraphOrchestratorRegistry()
+    manager_registry = SegmentManagerRegistry()
     runtime = HarnessGraphRuntime(
         request_store=request_store,
         segment_store=segment_store,
+        graph_store=graph_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
+        manager_registry=manager_registry,
     )
-    manager_registry = SegmentManagerRegistry()
     handler = ComplexTaskRequestHandler(
         request_store=request_store,
         segment_store=segment_store,

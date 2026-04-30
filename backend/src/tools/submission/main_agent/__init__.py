@@ -1,1 +1,1 @@
-"""Main-agent submission tool stubs."""
+"""Main-agent submission tools."""

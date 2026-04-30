@@ -47,18 +47,15 @@ Deliverables:
 10. Soft notification rules implemented beside the TaskCenter submission tools
     and dispatched through the existing `notification.rules` system-reminder
     path, aligned with the hard gates.
-11. Canonical executor handoff name defined as
-   `request_complex_task_solution`; executor prompt/tool-surface updates only
-   ship when a real handoff handler is configured.
+11. Canonical executor handoff name implemented as
+   `request_complex_task_solution`, wired through the TaskCenter request /
+   segment lifecycle runtime.
 12. Focused tests covering inline handler rejection, prehook enforcement,
     terminal routing, helper/subagent result delivery, soft reminders, and
     registration.
 
 Not in scope:
 
-- Creating and resuming nested complex-task requests after
-  `request_complex_task_solution` succeeds. Phase 04 owns the handoff body,
-  close-report delivery, and `waiting_complex_task` resume path.
 - Building rich helper-agent context packets. Phase 03 can pass caller-supplied
   prompts and payloads; Phase 06 can replace those with context-engine packets.
 - Durable restart recovery for missing in-process orchestrators. Phase 05 owns
@@ -104,11 +101,11 @@ Two seams need explicit handling:
    supplies that value when spawning planner/generator/evaluator agents. Graph
    id is derived from the persisted task row, not trusted as a second required
    metadata field.
-2. `request_complex_task_solution` has a Phase 03 public contract but a Phase 04
-   body. In Phase 03, implement the tool name, schemas, registration, and gates;
-   keep the actual handoff body behind a small injectable handler so Phase 04 can
-   replace the placeholder without changing the public tool surface. Do not
-   instruct production executors to call this tool unless that handler is present.
+2. `request_complex_task_solution` needs process-local graph runtime
+   dependencies. The tool resolves the current `HarnessGraphRuntime`, creates
+   the nested request and first segment through `ComplexTaskRequestHandler`,
+   marks the requesting executor task `waiting_complex_task`, and creates the
+   nested segment's initial `HarnessGraph`.
 3. Helper-agent tools are blocking helper runs rather than TaskCenter graph
    nodes. They should use `run_ephemeral_agent(...)` and return the helper's
    terminal `ToolResult` to the caller. They should not call
@@ -165,7 +162,7 @@ flowchart TD
     Choice -->|"yes"| Handoff["request_complex_task_solution"]
     Handoff --> Edited{"Any edit tool already used?"}
     Edited -->|"yes"| Block["Prehook blocks handoff"]
-    Edited -->|"no"| Phase04["Phase 04 handoff entry point<br/>creates nested request and marks outer task waiting"]
+    Edited -->|"no"| HandoffRuntime["Create nested request, first segment,<br/>and initial harness graph"]
 ```
 
 ### 3d. Resolver limit gates
@@ -301,7 +298,7 @@ flowchart TD
 
     HardCheck -->|"no"| Allow["HookResult.pass_"]
     Allow --> Handler["Run request_complex_task_solution handler"]
-    Handler --> Handoff["Phase 04 nested complex-task handoff"]
+    Handler --> Handoff["Create nested request, first segment, and initial harness graph"]
 ```
 
 Tool registration shape:
@@ -367,8 +364,7 @@ backend/src/tools/submission/
 |   |   |   |-- __init__.py                  # EDIT: export executor tools
 |   |   |   |-- request_complex_task_solution.py  # NEW: canonical handoff tool
 |   |   |   |-- submit_execution_success.py  # EDIT: implement terminal tool
-|   |   |   |-- submit_execution_failure.py  # EDIT: implement terminal tool
-|   |   |   `-- submit_request_plan.py       # EDIT: legacy rejection or thin alias
+|   |   |   `-- submit_execution_failure.py  # EDIT: implement terminal tool
 |   |   |
 |   |   `-- verifier/
 |   |       |-- __init__.py                  # EDIT: export verifier tools
@@ -418,7 +414,7 @@ Agent definitions:
 ```text
 backend/src/agents/main_agent/
 |-- planner/agent.md                         # EDIT: keep full/partial contract wording aligned
-|-- generator/executor/agent.md              # EDIT: replace submit_request_plan
+|-- generator/executor/agent.md              # EDIT: use request_complex_task_solution
 |-- generator/verifier/agent.md              # EDIT: resolver-limit wording if needed
 `-- evaluator/agent.md                       # EDIT: resolver-limit wording if needed
 
@@ -1055,39 +1051,23 @@ async def request_complex_task_solution(
 ) -> ToolResult: ...
 ```
 
-Phase 03 implementation options:
+Phase 03 runtime path:
 
-- Preferred: call an injected `complex_task_handoff_handler` from metadata if
-  present. Phase 04 supplies this handler.
-- Until Phase 04 lands: return an explicit `ToolResult(is_error=True)` saying
-  the handoff body is not wired. The gates and registration can still be tested
-  without pretending nested requests work. In that state, do not list
-  `request_complex_task_solution` in the production executor agent's terminal
-  surface or prompt.
+- Resolve `HarnessGraphRuntime.manager_registry`, build a
+  `ComplexTaskRequestHandler`, create the nested `ComplexTaskRequest`, create
+  its initial `TaskSegment`, mark the requesting executor task
+  `waiting_complex_task`, and create the initial `HarnessGraph`.
 
 Do not route this through `HarnessGraphOrchestrator.apply_generator_submission`.
 It is not a generator success or failure outcome.
 
-**`submit_request_plan.py`** - edit
+Remove the legacy `submit_request_plan` tool surface. Phase 03 registers
+`request_complex_task_solution` as the canonical handoff name and wires the
+default executor handoff path through TaskCenter request/segment lifecycle
+services.
 
-Make the legacy tool a rejection or thin alias. The safer Phase 03 stance is
-rejection:
-
-```python
-@tool(
-    name="submit_request_plan",
-    description="Deprecated. Use request_complex_task_solution.",
-    input_model=DeprecatedSubmitRequestPlanInput,
-    output_model=TextToolOutput,
-)
-async def submit_request_plan(...) -> ToolResult:
-    return ToolResult(
-        output="submit_request_plan is obsolete. Use request_complex_task_solution.",
-        is_error=True,
-    )
-```
-
-Do not list it in the executor agent terminals after Phase 03.
+Do not list `submit_request_plan` in the executor agent terminals after
+Phase 03.
 
 ### 5j. Generator verifier tools
 
@@ -1370,7 +1350,6 @@ from tools.submission.main_agent.generator.executor import (
     request_complex_task_solution,
     submit_execution_failure,
     submit_execution_success,
-    submit_request_plan,
 )
 from tools.submission.main_agent.generator.verifier import (
     submit_verification_failure,
@@ -1399,7 +1378,6 @@ def make_submission_tools() -> list[BaseTool]:
         ask_resolver,
         submit_resolver_result,
         submit_exploration_result,
-        submit_request_plan,
     ]
 ```
 
@@ -1429,19 +1407,7 @@ still filter their tool surface to `allowed_tools | terminals`.
 
 ### 5o. Agent definitions
 
-**`backend/src/agents/main_agent/generator/executor/agent.md`** - edit when the
-handoff handler is wired
-
-Once `complex_task_handoff_handler` is available, change:
-
-```yaml
-terminals:
-  - submit_request_plan
-  - submit_execution_success
-  - submit_execution_failure
-```
-
-to:
+**`backend/src/agents/main_agent/generator/executor/agent.md`** - edit
 
 ```yaml
 terminals:
@@ -1659,7 +1625,7 @@ class HelperRoleGate:
 | Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `resolve_harness_notification_triggers()` |
 | Planner tools | `submit_full_plan` | EDIT | Validate and call `apply_plan_submission(kind="full")` |
 | Planner tools | `submit_partial_plan` | EDIT | Validate and call `apply_plan_submission(kind="partial")` |
-| Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface; expose to production executor only when handoff handler is wired |
+| Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface wired through TaskCenter request/segment lifecycle services |
 | Executor tools | `submit_execution_success` / `submit_execution_failure` | EDIT | Normalize executor outcome into `GeneratorSubmission` |
 | Verifier tools | `submit_verification_success` / `submit_verification_failure` | EDIT | Normalize verifier outcome into `GeneratorSubmission` |
 | Evaluator tools | `submit_evaluation_success` / `submit_evaluation_failure` | EDIT | Normalize evaluator outcome into `EvaluatorSubmission` |
@@ -1668,7 +1634,7 @@ class HelperRoleGate:
 | Resolver tools | `ask_resolver` | EDIT | Blocking edit-capable helper request |
 | Resolver tools | `submit_resolver_result` | EDIT | Resolver terminal result consumed by resolver-count gates |
 | Explorer tools | `submit_exploration_result` | EDIT | Explorer subagent terminal returned by `run_subagent` |
-| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids; replace executor `submit_request_plan` with `request_complex_task_solution` only with a wired handoff handler |
+| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids and use the canonical executor handoff terminal |
 | Agent defs | helper/subagent `agent.md` files | EDIT | Align terminal schema wording |
 
 ---
@@ -1684,7 +1650,7 @@ class HelperRoleGate:
 | `test_helper_request_tools_are_non_terminal` | `ask_advisor` and `ask_resolver` do not terminate the caller run |
 | `test_helper_and_explorer_terminals_are_terminal` | Advisor, resolver, and explorer submission tools terminate their own helper runs |
 | `test_plan_task_input_rejects_extra_keys` | Planner nodes contain exactly `id`, `agent_name`, `deps` |
-| `test_executor_handoff_surface_requires_handler` | Executor agent definition lists `request_complex_task_solution` only when a real handoff handler is wired |
+| `test_executor_handoff_surface_uses_canonical_tool` | Executor agent definition lists `request_complex_task_solution` and does not list legacy `submit_request_plan` |
 
 ### 8b. Planner validation tests
 
@@ -1848,10 +1814,8 @@ moving to the next one.
    `agent.md` trigger ids to `NotificationRule` factories.
 6. Wire the harness launcher to resolve `agent_def.notification_triggers` into
    copied agent definitions before `run_ephemeral_agent`.
-7. Update executor `agent.md` from `submit_request_plan` to
-   `request_complex_task_solution` only if a real handoff handler is wired in
-   the same wave; otherwise keep the prompt on the legacy/error path until
-   Phase 04.
+7. Keep executor `agent.md` on the canonical `request_complex_task_solution`
+   contract, backed by the default runtime handoff path.
 8. Register role-specific trigger ids in planner, executor, verifier, and
    evaluator `agent.md`.
 9. Update helper/subagent prompt schema wording where needed.
@@ -1923,13 +1887,15 @@ Mitigation: start conservative. If this hurts real workflows, extract or reuse
 Daytona shell prehook command classification to distinguish read-only shell
 commands instead of adding another parser.
 
-### 11d. Legacy `submit_request_plan`
+### 11d. Legacy `submit_request_plan` guard
 
-Current executor prompt/tool stubs still mention `submit_request_plan`. Phase
-03 should move the public agent contract to `request_complex_task_solution`.
+Legacy executor prompt/tool stubs previously mentioned `submit_request_plan`.
+Phase 03 moves the public agent contract to `request_complex_task_solution` and
+removes the legacy tool surface entirely.
 
-Mitigation: leave a rejection tool or alias in place for compatibility, but do
-not list it in the executor agent's terminal set.
+Mitigation: keep tests that assert executor agent definitions do not list
+`submit_request_plan`, and keep the canonical handoff body wired through
+TaskCenter request/segment lifecycle services.
 
 ### 11e. Handler-level validation vs orchestrator invariants
 
@@ -1948,18 +1914,16 @@ Mitigation: matching hook and notification-trigger files should use the same
 injected runtime fields and keep rule-specific inference local to that pair of
 files. Add tests that compare representative hard and soft conditions.
 
-### 11g. `request_complex_task_solution` body is Phase 04
+### 11g. `request_complex_task_solution` runtime dependencies
 
-Phase 03 can define the public name, schema, and gates before the nested request
-handoff works. A successful terminal handoff should not be faked, and
-production executor prompts should not instruct agents to call a handoff tool
-that can only return an inline error.
+`request_complex_task_solution` needs more than graph stores: it also needs the
+process-local `SegmentManagerRegistry` and an orchestrator factory so the nested
+request's first segment can start its initial `HarnessGraph`.
 
-Mitigation: inject the Phase 04 handoff handler through metadata and expose
-`request_complex_task_solution` in the executor terminal surface only when that
-handler is present. Until then, the registered tool may return an explicit
-non-terminal error for direct tests, but the production executor prompt should
-not advertise it.
+Mitigation: fail closed when `HarnessGraphRuntime.manager_registry` is missing.
+When it is present, build the handoff through `ComplexTaskRequestHandler` and
+route the final close report back through
+`HarnessGraphOrchestrator.apply_complex_task_close_report`.
 
 ### 11h. Helper runs are blocking but not graph tasks
 

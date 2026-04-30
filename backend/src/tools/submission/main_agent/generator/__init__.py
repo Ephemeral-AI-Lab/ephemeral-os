@@ -1,1 +1,1 @@
-"""Generator submission tool stubs."""
+"""Generator submission tools."""
