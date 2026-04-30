@@ -124,7 +124,7 @@ class TestBuildConfig:
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
         from sandbox.credentials import build_config
-        from sandbox.exc import DaytonaUnavailableError
+        from sandbox.errors import DaytonaUnavailableError
 
         with pytest.raises(DaytonaUnavailableError, match="not configured"):
             build_config()
@@ -153,7 +153,7 @@ class TestBuildConfig:
         sys.modules["daytona_sdk"] = None
         try:
             from sandbox.credentials import build_config
-            from sandbox.exc import DaytonaUnavailableError
+            from sandbox.errors import DaytonaUnavailableError
 
             with pytest.raises(DaytonaUnavailableError, match="not installed"):
                 build_config()

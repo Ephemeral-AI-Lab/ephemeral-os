@@ -15,7 +15,7 @@ import threading
 from typing import Any
 
 from sandbox.credentials import load_credentials
-from sandbox.exc import DaytonaUnavailableError
+from sandbox.errors import DaytonaUnavailableError
 
 if False:  # TYPE_CHECKING — kept lazy to avoid import-cycle on package init
     from sandbox.code_intelligence.service import CodeIntelligenceService

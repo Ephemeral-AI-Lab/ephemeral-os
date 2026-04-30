@@ -13,7 +13,7 @@ import weakref
 from typing import Any
 
 from sandbox.credentials import load_credentials
-from sandbox.exc import AsyncDaytonaUnavailableError
+from sandbox.errors import AsyncDaytonaUnavailableError
 
 logger = logging.getLogger(__name__)
 

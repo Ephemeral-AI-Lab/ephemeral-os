@@ -38,7 +38,7 @@ def build_config() -> DaytonaConfig:
     api_key, api_url, target = load_credentials()
 
     if not api_key or not api_url:
-        from sandbox.exc import DaytonaUnavailableError
+        from sandbox.errors import DaytonaUnavailableError
 
         raise DaytonaUnavailableError(
             "Daytona is not configured. Set daytona_api_key and daytona_api_url "
@@ -48,7 +48,7 @@ def build_config() -> DaytonaConfig:
     try:
         from daytona_sdk import DaytonaConfig
     except ImportError as exc:
-        from sandbox.exc import DaytonaUnavailableError
+        from sandbox.errors import DaytonaUnavailableError
 
         raise DaytonaUnavailableError(
             "Daytona SDK is not installed. Run: pip install daytona-sdk"
