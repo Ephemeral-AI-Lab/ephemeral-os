@@ -40,7 +40,7 @@ Deliverables:
 9. Hard gates implemented as ordinary `ToolPreHook` instances attached through
    `BaseTool.pre_hooks` and executed by the existing
    `ToolHookExecutionHelper` for:
-   - recursive partial-plan blocking,
+   - partial-plan ancestor blocking,
    - `request_complex_task_solution` after-edit blocking,
    - resolver-limit success blocking,
    - role / graph / task ownership checks.
@@ -81,7 +81,7 @@ query-loop terminal path.
 | Terminal tools call Phase 02 direct apply surface | Phase 02, Phase 03 | Accepted handlers call `apply_plan_submission`, `apply_generator_submission`, or `apply_evaluator_submission` | OK |
 | Full and partial plans share one orchestrator path | Phase 02, Phase 03 | Public handlers differ only in continuation validation and `kind` value | OK |
 | Malformed planner DAG rejection is inline | Phase 02, Phase 03 | Tool handler returns `ToolResult(is_error=True)` before calling the orchestrator | OK |
-| Recursive partial plan gate reads request lineage | Phase 01, Phase 03 | Prehook walks `ComplexTaskRequest.task_segment_ids` and segment `continuation_goal` | OK |
+| Partial-plan ancestor gate reads caller ancestry | Phase 01, Phase 03 | Prehook walks from `ComplexTaskRequest.requested_by_task_id` to caller harness graphs and blocks only when an ancestor caller graph has non-null `continuation_goal` | OK |
 | `request_complex_task_solution` starts a delegated request, not failure | Phase 00, Phase 02, Phase 04 | Phase 03 exposes the canonical tool and gates it; Phase 04 fills request creation/resume behavior | OK |
 | After-edit gate reads message history | Phase 03 | Notification rules inspect the live `messages` argument passed by `dispatch_rules`; prehooks read the per-call `ExecutionMetadata.conversation_messages` copy before allowing request start | OK |
 | Resolver success limits read message history | Phase 03, Phase 05 | The existing query-loop message flow lets prehooks block verifier/evaluator success at five unresolved resolver calls without adding a second transcript owner | OK |
@@ -140,9 +140,9 @@ flowchart TD
 flowchart TD
     Planner["Planner task"] --> PlanTool["submit_full_plan or submit_partial_plan"]
     PlanTool --> PartialGate{"Partial plan?"}
-    PartialGate -->|"yes"| PriorPartial{"Any prior segment<br/>has continuation_goal?"}
-    PriorPartial -->|"yes"| BlockPartial["Prehook blocks recursive partial plan"]
-    PriorPartial -->|"no"| ValidatePartial["Validate continuation_goal not blank"]
+    PartialGate -->|"yes"| AncestorPartial{"Any ancestor caller graph<br/>has continuation_goal?"}
+    AncestorPartial -->|"yes"| BlockPartial["Prehook blocks nested partial plan"]
+    AncestorPartial -->|"no"| ValidatePartial["Validate continuation_goal not blank"]
     PartialGate -->|"no"| ValidateFull["Validate full plan has no continuation_goal"]
     ValidateFull --> ValidateGraph["Validate generator graph"]
     ValidatePartial --> ValidateGraph
@@ -341,7 +341,7 @@ backend/src/tools/submission/
 |-- hooks/
 |   |-- __init__.py                          # NEW: export hard gate hooks
 |   |-- harness_role_gate.py                 # NEW: role / graph / orchestrator ownership gate
-|   |-- recursive_partial_plan_gate.py       # NEW: submit_partial_plan lineage gate
+|   |-- recursive_partial_plan_gate.py       # NEW: submit_partial_plan ancestor gate
 |   |-- request_complex_task_before_edit_gate.py  # NEW: executor request-start after-edit gate
 |   |-- resolver_success_limit_gate.py       # NEW: verifier/evaluator success limit gate
 |   |-- helper_request_gate.py               # NEW: helper request caller role gate
@@ -470,7 +470,7 @@ Soft trigger inventory:
 
 | Trigger file | Fires for | State inference | Reminder |
 | --- | --- | --- | --- |
-| `notification_triggers/recursive_partial_plan.py` | planner | Resolve request/segment from `QueryContext.tool_metadata`; inspect prior segment `continuation_goal` values | `submit_partial_plan` is disabled; use `submit_full_plan` |
+| `notification_triggers/recursive_partial_plan.py` | planner | Resolve current request from `QueryContext.tool_metadata`; walk caller request ancestry and inspect caller graph `continuation_goal` values | `submit_partial_plan` is disabled; use `submit_full_plan` |
 | `notification_triggers/request_complex_task_after_edit.py` | generator executor | Scan the notification rule's `messages` argument for edit-capable tool calls | `request_complex_task_solution` is disabled after the first edit |
 | `notification_triggers/resolver_limit.py` | verifier and evaluator | Scan the notification rule's `messages` argument for unresolved `ask_resolver` results | One unresolved resolver call remains before success is blocked |
 
@@ -644,8 +644,9 @@ State-resolution ownership:
   ownership check by calling the same resolver before a tool handler runs.
 - `hooks/recursive_partial_plan_gate.py` and
   `notification_triggers/recursive_partial_plan.py` each resolve the current
-  request and segment through the resolver / `QueryContext.tool_metadata` and
-  inspect prior segment `continuation_goal` values.
+  request through the resolver / `QueryContext.tool_metadata`, then walk caller
+  request ancestry via `requested_by_task_id` and caller
+  `HarnessGraph.continuation_goal` values.
 - `hooks/request_complex_task_before_edit_gate.py` and
   `notification_triggers/request_complex_task_after_edit.py` each scan
   their live message-history input for edit-capable tool calls.
@@ -721,7 +722,7 @@ class HarnessRoleGate:
 
 # backend/src/tools/submission/hooks/recursive_partial_plan_gate.py
 @dataclass(frozen=True, slots=True)
-class RecursivePartialPlanGate:
+class PartialPlanAncestorGate:
     target_tool: str = "submit_partial_plan"
 
     async def run(
@@ -788,7 +789,7 @@ Gate behavior:
 | Gate | Attached tools | Block condition |
 | --- | --- | --- |
 | `HarnessRoleGate` | all Phase 03 terminals | Current persisted task role does not match expected role, derived graph context is unavailable, optional graph metadata conflicts with the task row, or no active orchestrator exists |
-| `RecursivePartialPlanGate` | `submit_partial_plan` | Any segment listed before the current segment in the current request has non-null `continuation_goal` |
+| `PartialPlanAncestorGate` | `submit_partial_plan` | Current request was spawned, directly or transitively, from a caller harness graph with non-null `continuation_goal` |
 | `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | Per-call `ExecutionMetadata.conversation_messages` contains an edit tool call |
 | `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | Rule-local scan of per-call `ExecutionMetadata.conversation_messages` finds at least five unresolved resolver calls |
 | `HelperRequestGate` | `ask_advisor`, `ask_resolver` | Caller profile role is not one of the roles allowed to invoke that helper request |
@@ -804,8 +805,9 @@ The prehooks should return short, direct reasons that tell the agent which
 terminal path remains valid. Example:
 
 ```text
-submit_partial_plan is disabled for this request because a prior segment already
-used partial continuation. Submit a full plan for the current segment.
+submit_partial_plan is disabled for this request because an ancestor
+complex-task request was spawned from a partial-planned harness graph. Submit a
+full plan for the current request.
 ```
 
 ### 5f. Soft reminder rules
@@ -954,7 +956,7 @@ Handler flow:
     is_terminal_tool=True,
     pre_hooks=(
         HarnessRoleGate("submit_partial_plan", HarnessTaskRole.PLANNER),
-        RecursivePartialPlanGate(),
+        PartialPlanAncestorGate(),
     ),
 )
 async def submit_partial_plan(
@@ -1467,28 +1469,51 @@ with `ask_resolver`.
 
 ## 6. Gate details
 
-### 6a. Recursive partial-plan gate
+### 6a. Partial-plan ancestor gate
 
 Algorithm:
 
 ```python
-def request_has_prior_partial_continuation(
+def request_has_partial_plan_ancestor(
     request: ComplexTaskRequest,
-    current_segment: TaskSegment,
-    segment_store: TaskSegmentStore,
+    runtime: HarnessGraphRuntime,
 ) -> bool:
-    for segment_id in request.task_segment_ids:
-        if segment_id == current_segment.id:
+    seen_request_ids: set[str] = set()
+    current = request
+    while True:
+        if current.id in seen_request_ids:
+            raise GraphInvariantViolation("Cycle in request ancestry")
+        seen_request_ids.add(current.id)
+
+        parent_task = runtime.task_store.get_task(current.requested_by_task_id)
+        if parent_task is None:
             return False
-        segment = segment_store.get(segment_id)
-        if segment is not None and segment.continuation_goal is not None:
+        parent_graph_id = parent_task.get("task_center_harness_graph_id")
+        if not parent_graph_id:
+            return False
+
+        parent_graph = runtime.graph_store.get(parent_graph_id)
+        if parent_graph is None:
+            raise GraphInvariantViolation("Parent harness graph is missing")
+        if parent_graph.continuation_goal is not None:
             return True
-    return False
+
+        parent_segment = runtime.segment_store.get(parent_graph.task_segment_id)
+        if parent_segment is None:
+            raise GraphInvariantViolation("Parent task segment is missing")
+        parent_request = runtime.request_store.get(
+            parent_segment.complex_task_request_id
+        )
+        if parent_request is None:
+            raise GraphInvariantViolation("Parent complex task request is missing")
+        current = parent_request
 ```
 
-The gate should consider only segments before the current segment in the
-request order. A current open segment's `continuation_goal` should normally be
-null; if it is already non-null, that is an invariant problem elsewhere.
+This gate does not limit vertical continuation inside the same request. A
+request can create S1, S2, S3, and later continuation segments through repeated
+accepted `continuation_goal` values. It only prevents a child complex-task
+request, spawned from a partial-planned caller graph, from submitting another
+partial plan and recursively extending the parent graph's horizon.
 
 ### 6b. Planner graph validation
 
@@ -1614,12 +1639,12 @@ class HelperRoleGate:
 | Planner tool schemas | `PlanTaskInput`, `SubmitFullPlanInput`, `SubmitPartialPlanInput` | NEW | Public planner schemas colocated with planner tools |
 | Planner tool handlers | planner-local normalization helpers | NEW | Public input -> `PlannerSubmission` before orchestrator apply |
 | Hook file | `hooks/harness_role_gate.py` | NEW | Common role, graph, and orchestrator existence gate |
-| Hook file | `hooks/recursive_partial_plan_gate.py` | NEW | Blocks recursive partial continuation |
+| Hook file | `hooks/recursive_partial_plan_gate.py` | NEW | Implements `PartialPlanAncestorGate`, blocking nested partial planning below partial-planned caller graphs |
 | Hook file | `hooks/request_complex_task_before_edit_gate.py` | NEW | Blocks complex-task request starts after edits |
 | Hook file | `hooks/resolver_success_limit_gate.py` | NEW | Blocks success terminals at resolver limit |
 | Hook file | `hooks/helper_request_gate.py` | NEW | Guards advisor/resolver request tools by caller role |
 | Hook file | `hooks/helper_role_gate.py` | NEW | Guards helper/subagent terminals by helper role metadata |
-| Notification trigger | `notification_triggers/recursive_partial_plan.py` | NEW | Planner reminder when partial continuation is no longer allowed |
+| Notification trigger | `notification_triggers/recursive_partial_plan.py` | NEW | Planner reminder when partial planning is blocked by a partial-planned caller graph ancestor |
 | Notification trigger | `notification_triggers/request_complex_task_after_edit.py` | NEW | Executor reminder after first edit disables request start |
 | Notification trigger | `notification_triggers/resolver_limit.py` | NEW | Verifier/evaluator warning before resolver success block |
 | Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `resolve_harness_notification_triggers()` |
@@ -1670,8 +1695,8 @@ class HelperRoleGate:
 
 | Test | Purpose |
 | --- | --- |
-| `test_recursive_partial_plan_gate_blocks_after_prior_continuation` | Walks request segment ids and blocks partial plan |
-| `test_recursive_partial_plan_gate_allows_initial_segment` | No false positive before a prior continuation |
+| `test_partial_plan_ancestor_gate_blocks_child_of_partial_graph` | Walks caller request ancestry and blocks partial plan below a partial-planned caller graph |
+| `test_partial_plan_ancestor_gate_allows_same_request_continuation` | Same-request vertical continuation may submit another partial plan |
 | `test_request_complex_task_solution_blocks_after_edit` | Edit history disables request start |
 | `test_request_complex_task_solution_allows_before_edit` | No edit history allows gate to pass |
 | `test_resolver_success_gate_warn_boundary_not_blocking` | Count 4 does not block hard prehook |
@@ -1708,7 +1733,8 @@ class HelperRoleGate:
 
 | Test | Purpose |
 | --- | --- |
-| `test_recursive_partial_plan_reminder_fires` | Prior continuation emits planner reminder |
+| `test_recursive_partial_plan_reminder_fires_for_child_of_partial_graph` | Partial-planned caller ancestry emits planner reminder |
+| `test_recursive_partial_plan_reminder_does_not_fire_for_same_request_continuation` | Same-request vertical continuation does not emit the reminder |
 | `test_after_edit_reminder_fires_once` | First edit emits executor request-start-disabled reminder |
 | `test_resolver_limit_reminder_fires_at_four` | Warning emitted before success is blocked |
 | `test_hard_and_soft_gates_match_conditions` | Regression guard against drift |
@@ -1722,7 +1748,7 @@ Use the existing Phase 02 fake launcher/orchestrator setup:
 | `test_phase03_full_plan_through_evaluator_success` | Tool calls drive graph to request success |
 | `test_phase03_generator_failure_routes_to_retry` | Generator failure terminal lets segment manager retry |
 | `test_phase03_malformed_plan_does_not_close_graph` | Inline rejection keeps graph in planning |
-| `test_phase03_recursive_partial_plan_blocks_second_segment_partial` | Continuation planner must use full plan |
+| `test_phase03_partial_plan_ancestor_blocks_child_request_partial` | Child request planner below a partial-planned caller graph must use full plan |
 
 Recommended commands:
 
@@ -1837,7 +1863,7 @@ moving to the next one.
 | Phase 03 exit criterion | Verified by |
 | --- | --- |
 | Every terminal or orchestration request is accepted or rejected from the new state model | `test_role_gate_blocks_wrong_task_role`, terminal routing tests |
-| Recursive partial plan is blocked across `TaskSegment` continuation lineage | `test_recursive_partial_plan_gate_blocks_after_prior_continuation` |
+| Nested partial planning is blocked below partial-planned caller graph ancestry | `test_partial_plan_ancestor_gate_blocks_child_of_partial_graph` |
 | `request_complex_task_solution` is blocked after executor edits | `test_request_complex_task_solution_blocks_after_edit` |
 | Resolver unresolved-count gates force failure at the limit | `test_resolver_success_gate_blocks_at_limit` and failure-terminal test |
 | Malformed plans fail inline without marking the harness graph failed | planner validation tests and integration smoke |

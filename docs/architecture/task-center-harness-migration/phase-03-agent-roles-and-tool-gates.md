@@ -22,11 +22,10 @@ that every gate reads from; Phase 03 wires the tool-side enforcement.
   `get_by_sequence`, and `HarnessGraphStore.get` / `list_for_segment` /
   `get_by_sequence`.
 - `TaskSegment.continuation_goal` is set only from passing graphs — enforced
-  by `assert_continuation_goal_only_from_passing_graph`. The recursive
-  partial-plan gate can walk
-  `ComplexTaskRequestStore.get(...).task_segment_ids` and read each
-  segment's `continuation_goal` to decide whether `submit_partial_plan` is
-  still allowed.
+  by `assert_continuation_goal_only_from_passing_graph`. The partial-plan
+  ancestor gate can walk from `ComplexTaskRequest.requested_by_task_id` to the
+  caller task's `task_center_harness_graph_id`, inspect that graph's
+  `continuation_goal`, and repeat through caller request ancestry.
 - `'root'` creation reason is rejected by `assert_no_root_creation_reason`.
 - `get_attempt_count(task_segment)` (under
   `task_center.complex_task_request.segment.attempt_count`) returns the

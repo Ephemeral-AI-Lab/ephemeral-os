@@ -97,7 +97,7 @@ Commands run during verification:
 | Continuation creates `TaskSegment` N+1 with inherited continuation goal | `test_continuation_segment_inherits_continuation_goal`, `test_smoke_success_continue_then_terminal`, `test_delegated_continuation_waits_until_final_segment` |
 | Passing graph closes its segment; failed graphs return to manager | `test_passing_graph_does_not_retry`, `test_passing_graph_with_continuation_emits_success_continue`, `test_passing_graph_with_null_continuation_emits_terminal_success`, `test_failed_graph_*` |
 | `request_complex_task_solution` from generator inside in-flight graph | `test_request_complex_task_solution_starts_delegated_request`, `test_handoff_creates_request_segment_graph_and_marks_parent_waiting` |
-| Recursive partial-plan gate blocks continuation planners | `test_recursive_partial_plan_gate_blocks_after_prior_continuation` |
+| Partial-plan ancestor gate blocks child request planners below partial-planned caller graphs and allows same-request continuation planners | `test_partial_plan_ancestor_gate_blocks_child_of_partial_graph`, `test_partial_plan_ancestor_gate_allows_same_request_continuation` |
 | Resolver loop unresolved counter blocks success at 5 unresolved calls | `test_resolver_success_gate_boundary_and_limit`, `test_submit_resolver_result_metadata_drives_unresolved_count` |
 | No `RETRY_ON_FAILURE` graph spawn remains | `test_no_retry_on_failure_constant_in_src` |
 | No `ROOT` spawn or creation reason remains | `test_no_root_spawn_or_creation_reason_in_src`, `test_no_root_creation_reason_in_lifecycle`, `test_assert_no_root_creation_reason_*` |

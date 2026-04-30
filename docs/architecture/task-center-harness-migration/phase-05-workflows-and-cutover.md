@@ -103,7 +103,8 @@ ComplexTaskRequestHandler spawns TaskSegmentManager(S2)
 TaskSegmentManager(S2) creates HarnessGraph S2.H1
     |
     v
-planner in S2.H1 must submit_full_plan (recursive partial gate)
+planner in S2.H1 may submit_full_plan or submit_partial_plan
+  (same-request vertical continuation is allowed)
     |
     v
 HarnessGraphOrchestrator(S2.H1) runs graph to full-plan pass
@@ -287,7 +288,8 @@ Minimum coverage:
   `TaskSegmentManager` for a retry decision subject to budget.
 - `request_complex_task_solution` can create a delegated `ComplexTaskRequest` from
   a generator executor inside an existing harness graph.
-- Recursive partial-plan gate blocks continuation planners.
+- Partial-plan ancestor gate blocks child request planners only when a caller
+  graph in their request ancestry was itself partial-planned.
 - No `RETRY_ON_FAILURE` graph spawn remains.
 - No `ROOT` spawn or creation reason remains.
 

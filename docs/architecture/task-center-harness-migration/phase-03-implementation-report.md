@@ -48,7 +48,7 @@ Three implementation issues remain:
 | `backend/src/tools/submission/context.py` | new | Resolves current task id to task, graph, segment, request, runtime, and active orchestrator |
 | `backend/src/tools/submission/factory.py` | new | Central factory for all public submission tools |
 | `backend/src/tools/submission/hooks/harness_role_gate.py` | new | Structural role, graph, and active-orchestrator gate |
-| `backend/src/tools/submission/hooks/recursive_partial_plan_gate.py` | new | Blocks partial plans after prior segment continuation |
+| `backend/src/tools/submission/hooks/recursive_partial_plan_gate.py` | new | Blocks nested partial planning below partial-planned caller graph ancestors |
 | `backend/src/tools/submission/hooks/request_complex_task_before_edit_gate.py` | new | Blocks executor request start after edit-capable tool use |
 | `backend/src/tools/submission/hooks/resolver_success_limit_gate.py` | new | Blocks verifier/evaluator success at unresolved resolver limit |
 | `backend/src/tools/submission/hooks/helper_request_gate.py` | new | Guards helper request tools by caller profile role |
@@ -122,7 +122,7 @@ Exit criteria mapping:
 | Exit criterion | Current coverage |
 | --- | --- |
 | Every terminal or orchestration request is accepted or rejected from the new state model | Role-gate tests and terminal routing tests |
-| Recursive partial plan is blocked across `TaskSegment` lineage | `test_recursive_partial_plan_gate_blocks_after_prior_continuation` |
+| Nested partial planning is blocked below partial-planned caller graph ancestry | `test_partial_plan_ancestor_gate_blocks_child_of_partial_graph` |
 | `request_complex_task_solution` is blocked after executor edits | `test_request_complex_task_solution_blocks_after_edit` |
 | Resolver unresolved-count gates force failure at the limit | `test_resolver_success_gate_boundary_and_limit` plus failure-terminal coverage |
 | Malformed plans fail inline without marking graph failed | `test_plan_validation_errors_do_not_mutate_graph` |
@@ -154,7 +154,7 @@ QueryContext.task_center_task_id + ExecutionMetadata.harness_graph_runtime
   v
 Tool prehooks
   - HarnessRoleGate
-  - RecursivePartialPlanGate
+  - PartialPlanAncestorGate
   - RequestComplexTaskBeforeEditGate
   - ResolverSuccessLimitGate
   - HelperRequestGate / HelperRoleGate
@@ -227,8 +227,9 @@ of complex-task spawning.
 - Planner handlers validate duplicate task ids, unknown generator agents,
   exact `task_specs` coverage, blank task spec values, dangling dependencies,
   and dependency cycles before calling the orchestrator.
-- `submit_partial_plan` is prehook-blocked when an earlier segment in the same
-  request already has a `continuation_goal`.
+- `submit_partial_plan` is prehook-blocked when the current request was spawned,
+  directly or transitively, from a caller harness graph with non-null
+  `continuation_goal`.
 - `request_complex_task_solution` is prehook-blocked after edit-capable tool
   use in the current executor run.
 - Resolver-limit gates attach only to verifier/evaluator success terminals;

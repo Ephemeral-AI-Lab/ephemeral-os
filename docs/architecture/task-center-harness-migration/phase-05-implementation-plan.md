@@ -52,7 +52,7 @@ a coverage map, a doc sweep, and the implementation report.**
 | Continuation creates `TaskSegment` N+1 with `goal` inherited from passing graph's `continuation_goal` | `test_continuation_segment_inherits_continuation_goal`, `test_smoke_success_continue_then_terminal`, `test_delegated_continuation_waits_until_final_segment` |
 | Passing graph closes its segment; failed graphs return to manager | `test_passing_graph_does_not_retry`, `test_passing_graph_with_continuation_emits_success_continue`, `test_passing_graph_with_null_continuation_emits_terminal_success`, `test_failed_graph_*` |
 | `request_complex_task_solution` from generator inside in-flight graph | `test_request_complex_task_solution_starts_delegated_request`, `test_handoff_creates_request_segment_graph_and_marks_parent_waiting` |
-| Recursive partial-plan gate blocks continuation planners | `test_recursive_partial_plan_gate_blocks_after_prior_continuation` (`test_submission_tool_gates.py:189`) |
+| Partial-plan ancestor gate blocks child request planners below partial-planned caller graphs, while allowing same-request continuation planners | `test_partial_plan_ancestor_gate_blocks_child_of_partial_graph`, `test_partial_plan_ancestor_gate_allows_same_request_continuation` |
 | Resolver loop unresolved counter (5 → success blocked) | `test_submission_tool_gates.py:111` ("five unresolved resolver calls"), `test_submission_helper_tools.py:53` |
 | No `RETRY_ON_FAILURE` graph spawn remains | Negative grep + Phase 05 regression test below |
 | No `ROOT` spawn or creation reason remains | `test_no_root_creation_reason_in_lifecycle`, plus regression test below |

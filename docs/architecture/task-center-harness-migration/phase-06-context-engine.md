@@ -329,12 +329,16 @@ relevant retry input.
 
 Planner context should make partial-plan gating explicit:
 
-- if no prior segment in the request had a non-null `continuation_goal`, both
-  `submit_full_plan` and `submit_partial_plan` are available according to role
-  policy;
-- if any prior segment had a non-null `continuation_goal`, context should remind
-  the planner that only a full plan is valid, while the hard prehook enforces
-  the same rule.
+- if no caller harness graph in the current request's ancestry has non-null
+  `continuation_goal`, both `submit_full_plan` and `submit_partial_plan` are
+  available according to role policy;
+- if any caller harness graph in the current request's ancestry has non-null
+  `continuation_goal`, context should remind the planner that only a full plan
+  is valid, while the hard prehook enforces the same rule.
+
+This gate does not block same-request vertical continuation. A continuation
+segment may submit another partial plan if the request itself was not spawned
+from a partial-planned caller graph.
 
 ### Generator executor context
 

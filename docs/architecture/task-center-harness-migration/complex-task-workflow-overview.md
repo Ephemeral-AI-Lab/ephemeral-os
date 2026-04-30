@@ -233,8 +233,10 @@ requested it.
 
 Important gates:
 
-- `submit_partial_plan` is blocked if the current request already has a prior
-  segment with non-null `continuation_goal`.
+- `submit_partial_plan` is blocked only when the current request was spawned,
+  directly or transitively, from a caller harness graph with non-null
+  `continuation_goal`; same-request continuation segments may submit partial
+  plans again.
 - malformed planner DAG submissions fail inline without marking the graph
   failed.
 - `request_complex_task_solution` is blocked after the generator agent has edited.
