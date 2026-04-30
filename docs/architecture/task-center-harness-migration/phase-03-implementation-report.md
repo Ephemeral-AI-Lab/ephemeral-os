@@ -20,7 +20,7 @@ Three implementation issues remain:
 
 | Severity | Finding | Impact |
 | --- | --- | --- |
-| Major | `request_complex_task_solution` implements nested request creation and parent resume behavior even though the Phase 03 plan explicitly defers that body to Phase 04 | Phase boundary is no longer coherent, and a failure during nested graph startup can leave the parent generator task in `waiting_complex_task` after the tool returns an inline error |
+| Major | `request_complex_task_solution` implements delegated request creation and parent resume behavior even though the Phase 03 plan explicitly defers that body to Phase 04 | Phase boundary is no longer coherent, and a failure during delegated graph startup can leave the parent generator task in `waiting_complex_task` after the tool returns an inline error |
 | Major | Generator terminals are hard-gated only by structural `generator` role, not by executor vs verifier agent profile | A verifier task can be accepted through `submit_execution_success`, bypassing verifier-only resolver-limit gates if the tool is exposed or misconfigured |
 | Major | Planner schemas use `min_length=1` without stripping for task ids, agent names, and partial continuation goals | Whitespace-only ids or continuation goals pass validation and can mutate graph state despite the plan's nonblank-input requirement |
 
@@ -137,7 +137,7 @@ Missing coverage relative to the plan:
 
 - No regression test rejects whitespace-only `continuation_goal`, task ids, or agent names.
 - No hard-gate test proves executor terminals reject verifier-owned generator tasks, or verifier terminals reject executor-owned generator tasks.
-- No failure-path test proves `request_complex_task_solution` leaves parent generator state unchanged when nested graph startup fails.
+- No failure-path test proves `request_complex_task_solution` leaves parent generator state unchanged when delegated graph startup fails.
 
 ---
 
@@ -190,13 +190,13 @@ notification.rules.dispatch_rules evaluates each NotificationRule per turn
 SystemNotificationService emits ordinary <system-reminder> messages
 ```
 
-The implementation also adds a Phase-04-adjacent nested handoff path:
+The implementation also adds a Phase-04-adjacent delegated handoff path:
 
 ```text
 request_complex_task_solution
   |
   v
-create nested ComplexTaskRequest
+create delegated ComplexTaskRequest
   |
   v
 create initial TaskSegment and TaskSegmentManager
@@ -205,7 +205,7 @@ create initial TaskSegment and TaskSegmentManager
 mark parent generator task waiting_complex_task
   |
   v
-create initial nested HarnessGraph and start its orchestrator
+create initial delegated HarnessGraph and start its orchestrator
   |
   v
 complex task close report -> parent orchestrator.apply_complex_task_close_report
@@ -245,24 +245,24 @@ of complex-task spawning.
 
 ### 7a. Phase 04 handoff behavior shipped inside Phase 03
 
-`request_complex_task_solution` now creates nested complex-task requests,
+`request_complex_task_solution` now creates delegated complex-task requests,
 segments, managers, graphs, and parent resume behavior. The Phase 03 plan
 explicitly says this body belongs to Phase 04 and that Phase 03 should return an
 inline "not wired" error unless a handler is supplied.
 
 Evidence:
 
-- `backend/src/tools/submission/main_agent/generator/executor/request_complex_task_solution.py:110`
-  starts the built-in nested request path when no injected handler is present.
-- `backend/src/tools/submission/main_agent/generator/executor/request_complex_task_solution.py:134`
-  marks the parent task `waiting_complex_task` before nested graph startup.
+- `backend/src/tools/submission/main_agent/generator/request_complex_task_solution.py:110`
+  starts the built-in delegated request path when no injected handler is present.
+- `backend/src/tools/submission/main_agent/generator/request_complex_task_solution.py:134`
+  marks the parent task `waiting_complex_task` before delegated graph startup.
 - `backend/src/task_center/harness_graph/orchestrator.py:199` adds parent
   resume behavior through `apply_complex_task_close_report`.
 
 This is more than scope drift. In the current handler, the parent generator task
-is marked `waiting_complex_task` before the nested graph is created. If nested
+is marked `waiting_complex_task` before the delegated graph is created. If delegated
 graph creation or orchestrator startup raises, the tool returns an inline error
-while the parent task may already be waiting and a nested request/segment may
+while the parent task may already be waiting and a delegated request/segment may
 already exist.
 
 Recommended fix:
@@ -270,7 +270,7 @@ Recommended fix:
 - Either move this body back behind an injected Phase 04 handler and restore the
   explicit unwired error for Phase 03, or update the plan/report boundary to
   make this a Phase 04 implementation.
-- If the body stays, make request creation, parent waiting status, and nested
+- If the body stays, make request creation, parent waiting status, and delegated
   graph startup transactional or compensating, and add a regression test for
   startup failure after parent status mutation.
 
@@ -342,4 +342,4 @@ Recommended fix:
 | Production launch metadata wiring beyond direct `run_ephemeral_agent` stamping | real `HarnessAgentLauncher` implementation | 05 |
 | Rich helper-agent context packets | advisor/resolver request prompt construction | 06 |
 | Context-engine summaries and durable graph summaries | launch packets and close payloads | 06 |
-| Full nested complex-task spawning and handoff review, if the current early implementation remains | `request_complex_task_solution`, `apply_complex_task_close_report` | 04 |
+| Full delegated complex-task spawning and handoff review, if the current early implementation remains | `request_complex_task_solution`, `apply_complex_task_close_report` | 04 |

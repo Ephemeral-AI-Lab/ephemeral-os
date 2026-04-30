@@ -337,7 +337,7 @@ def test_complex_task_close_report_success_resumes_waiting_generator(
 
     orchestrator.apply_complex_task_close_report(
         ComplexTaskCloseReport(
-            complex_task_request_id="nested-1",
+            complex_task_request_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="success",
             final_segment_id="segment-1",
@@ -351,7 +351,7 @@ def test_complex_task_close_report_success_resumes_waiting_generator(
     assert task["status"] == HarnessTaskStatus.DONE.value
     assert task["summaries"][-1]["payload"]["complex_task_close_report"][
         "complex_task_request_id"
-    ] == "nested-1"
+    ] == "delegated-1"
     assert refreshed is not None
     assert refreshed.stage == HarnessGraphStage.EVALUATING
 
@@ -381,7 +381,7 @@ def test_complex_task_close_report_failure_blocks_dependents_and_closes_graph(
 
     orchestrator.apply_complex_task_close_report(
         ComplexTaskCloseReport(
-            complex_task_request_id="nested-1",
+            complex_task_request_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="failed",
             final_segment_id="segment-1",

@@ -15,8 +15,8 @@ from tools.submission.hooks.request_complex_task_before_edit_gate import (
 from tools.submission.hooks.resolver_success_limit_gate import (
     ResolverSuccessLimitGate,
 )
+from tools.submission.main_agent.generator import request_complex_task_solution
 from tools.submission.main_agent.generator.executor import (
-    request_complex_task_solution,
     submit_execution_success,
 )
 from tools.submission.main_agent.generator.verifier import (
@@ -76,7 +76,7 @@ def _resolver_messages(count: int) -> list[ConversationMessage]:
 async def test_request_complex_task_solution_blocks_after_edit() -> None:
     gate = RequestComplexTaskBeforeEditGate()
     outcome = await gate.run(
-        request_complex_task_solution.input_model(goal="nested"),
+        request_complex_task_solution.input_model(goal="delegated"),
         make_tool_context_stub(messages=_edit_messages()),
     )
 
@@ -86,7 +86,7 @@ async def test_request_complex_task_solution_blocks_after_edit() -> None:
 
 async def test_request_complex_task_solution_allows_before_edit() -> None:
     gate = RequestComplexTaskBeforeEditGate()
-    tool_input = request_complex_task_solution.input_model(goal="nested")
+    tool_input = request_complex_task_solution.input_model(goal="delegated")
     outcome = await gate.run(tool_input, make_tool_context_stub(messages=[]))
 
     assert outcome.status == "pass"

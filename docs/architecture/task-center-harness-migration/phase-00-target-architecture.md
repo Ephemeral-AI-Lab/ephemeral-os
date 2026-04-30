@@ -193,7 +193,7 @@ pass/fail decision, not by the segment manager.
 
 ### Recursive request boundary
 
-Complex-task requests can be nested. Any generator executor inside any
+Complex-task requests can delegate recursively. Any generator executor inside any
 `HarnessGraph` may call `request_complex_task_solution(goal)`. That creates a
 new `ComplexTaskRequest`; it does not create a child `TaskSegment` in the outer
 request.
@@ -218,7 +218,7 @@ C2 closes
 E7 receives the C2 close report as its final task result inside C1.S1.H1
 ```
 
-The nested request has its own segment chain and retry history. The outer
+The delegated request has its own segment chain and retry history. The outer
 request sees only the close report returned to the executor that requested it.
 
 ### Horizontal axis

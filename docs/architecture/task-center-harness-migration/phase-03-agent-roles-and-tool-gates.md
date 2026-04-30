@@ -63,13 +63,13 @@ that every gate reads from; Phase 03 wires the tool-side enforcement.
 ## Role model
 
 TaskCenter owns four main agent roles, all scoped to one `HarnessGraph` except
-the requesting executor, whose task result can be supplied by a nested
+the requesting generator task, whose task result can be supplied by a delegated
 `ComplexTaskRequest` close report.
 
 | Role | Scope | Tools / terminals |
 | ---- | ----- | ----------------- |
 | Planner | one `HarnessGraph` | `submit_full_plan`, `submit_partial_plan` |
-| Generator executor | one `HarnessGraph` DAG node | `submit_execution_success`, `submit_execution_failure`, `request_complex_task_solution` |
+| Generator direct-work profile | one `HarnessGraph` DAG node | `submit_execution_success`, `submit_execution_failure`; may also declare `request_complex_task_solution` |
 | Generator verifier | one `HarnessGraph` DAG node | `submit_verification_success`, `submit_verification_failure` |
 | Evaluator | sink for one `HarnessGraph` | `submit_evaluation_success`, `submit_evaluation_failure` |
 
@@ -77,13 +77,13 @@ Planner has no failure terminal. Executor, verifier, and evaluator are the roles
 that can declare failure.
 
 `request_complex_task_solution` is not a terminal failure. It is an orchestration
-handoff: the executor delegates its task to a nested complex-task workflow, and
-the nested request's close report becomes the executor task result.
+handoff: a generator task delegates its task to a separate complex-task workflow,
+and the delegated request's close report becomes that generator task result.
 
-The executor prompt/tool surface exposes `request_complex_task_solution` when
-the runtime provides the TaskCenter handoff dependencies. The default handoff
-path creates the nested request, marks the outer generator task waiting, and
-routes the complex task close report back to that generator task.
+A generator agent profile can expose `request_complex_task_solution` when the
+runtime provides the TaskCenter handoff dependencies. The default handoff path
+creates the delegated request, marks the outer generator task waiting, and routes
+the complex task close report back to that generator task.
 
 ## Planner terminal signatures
 
@@ -201,7 +201,7 @@ Therefore helper gates read stamped `ExecutionMetadata.agent_name`, `role`, and
 | `submit_partial_plan` | current request already has a prior segment with non-null `continuation_goal` | `ComplexTaskRequest.task_segment_ids` plus each segment's `continuation_goal` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
 | `submit_full_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref | handler-level validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `submit_partial_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref, or blank `continuation_goal` | handler-level validation plus continuation validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
-| `request_complex_task_solution` | executor has called any edit tool at least once | soft rules inspect their `messages` argument; prehooks inspect `ExecutionMetadata.conversation_messages` | remind executor after first edit | prehook blocks after edit |
+| `request_complex_task_solution` | generator agent has called any edit tool at least once | soft rules inspect their `messages` argument; prehooks inspect `ExecutionMetadata.conversation_messages` | remind generator after first edit | prehook blocks after edit |
 | `submit_evaluation_success` | evaluator has at least five unresolved resolver calls | soft rules inspect their `messages` argument; prehooks inspect `ExecutionMetadata.conversation_messages` | warn at four unresolved resolver calls | prehook blocks success at five |
 | `submit_verification_success` | verifier has at least five unresolved resolver calls | soft rules inspect their `messages` argument; prehooks inspect `ExecutionMetadata.conversation_messages` | warn at four unresolved resolver calls | prehook blocks success at five |
 | evaluator spawn | any generator in current `HarnessGraph` is not `DONE` | current harness graph task statuses | none | `HarnessGraphOrchestrator` does not spawn evaluator |
@@ -270,6 +270,6 @@ Soft layer examples:
 - Every terminal or orchestration request is accepted or rejected from the new
   state model.
 - Recursive partial plan is blocked across `TaskSegment` continuation lineage.
-- `request_complex_task_solution` is blocked after executor edits.
+- `request_complex_task_solution` is blocked after generator edits.
 - Resolver unresolved-count gates still force failure at the limit.
 - Malformed plans fail inline without marking the harness graph failed.

@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from agents.types import AgentDefinition
+from agents.validation import AgentDefinitionValidator
 from tools.core.factory import ToolFactoryContext, create_tool, has_tool
 from tools.submission.main_agent.planner import PlanTaskInput
 
@@ -39,6 +41,20 @@ def test_submission_tools_are_terminal_except_helper_requests() -> None:
     for name in PHASE03_TOOLS:
         tool = create_tool(name, ctx)
         assert tool.is_terminal_tool is (name not in non_terminal)
+
+
+def test_custom_generator_agent_can_declare_complex_task_solution_terminal() -> None:
+    agent = AgentDefinition(
+        name="custom_generator",
+        description="Custom generator agent.",
+        role="custom_generator",
+        terminals=["request_complex_task_solution"],
+    )
+
+    result = AgentDefinitionValidator(None).validate(agent)
+
+    assert result.valid
+    assert result.errors == []
 
 
 def test_plan_task_input_rejects_extra_keys() -> None:

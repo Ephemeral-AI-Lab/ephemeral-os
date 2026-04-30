@@ -1,6 +1,6 @@
 """Executor submission tools."""
 
-from tools.submission.main_agent.generator.executor.request_complex_task_solution import (
+from tools.submission.main_agent.generator.request_complex_task_solution import (
     RequestComplexTaskSolutionInput,
     request_complex_task_solution,
 )

@@ -15,8 +15,8 @@ from tools.submission.main_agent.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
+from tools.submission.main_agent.generator import request_complex_task_solution
 from tools.submission.main_agent.generator.executor import (
-    request_complex_task_solution,
     submit_execution_failure,
     submit_execution_success,
 )

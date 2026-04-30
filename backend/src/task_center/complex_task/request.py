@@ -39,7 +39,7 @@ class ComplexTaskRequest:
 class ComplexTaskCloseReport:
     """Final report attached to ``requested_by_task_id`` when the request closes.
 
-    Phase 04 wires the actual delivery to the executor task.
+    Phase 04 wires the actual delivery to the requesting generator task.
     """
 
     complex_task_request_id: str

@@ -99,7 +99,7 @@ The `goal` passed to `request_complex_task_solution(goal)` is the source of
 truth for the complex task request and the initial segment. Later segment goals
 come from the previous segment's accepted `continuation_goal`. Parent executor
 context can be included as background evidence, but it is not the contract for
-the nested request.
+the delegated request.
 
 ## Context engine contract
 

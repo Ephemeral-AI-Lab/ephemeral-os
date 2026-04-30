@@ -61,7 +61,7 @@ seam this phase needs; Phase 02 only fills behaviour.
 - A `HarnessGraphOrchestrator` with `start()` and one public `apply_*`
   entry per close path (`apply_plan_submission`, `apply_planner_failure`,
   `apply_generator_submission`, `apply_evaluator_submission`).
-  Phase 04 ships `apply_complex_task_close_report` for nested-request resume.
+  Phase 04 ships `apply_complex_task_close_report` for delegated-request resume.
 - Private mutation helpers for graph-owned task writes and private dispatch
   helpers for launchability, generator-failure quiescence, evaluator spawn, and
   graph close.
@@ -193,7 +193,7 @@ failed after generator quiescence.
 
 `request_complex_task_solution` is a generator task handoff. The requesting
 generator agent run exits after the request tool call; the outer graph receives
-that task's final result when the nested complex task request closes.
+that task's final result when the delegated complex task request closes.
 
 ## Failure escape valves
 
@@ -237,7 +237,7 @@ with a synthesized `PlannerFailureSubmission`; that entry delegates to
 | Failure mode | Detected by | Wait point |
 | ------------ | ----------- | ---------- |
 | `planner_failed` | runtime ends planner without valid plan submission | immediate |
-| `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED`. `WAITING_COMPLEX_TASK` is non-terminal and keeps the graph in `generating` until the nested request resumes the outer task. |
+| `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED`. `WAITING_COMPLEX_TASK` is non-terminal and keeps the graph in `generating` until the delegated request resumes the outer task. |
 | `evaluator_failed` | evaluator submitted `submit_evaluation_failure` | immediate |
 
 ### Generator-failure quiescence
@@ -402,7 +402,7 @@ H failed     no        yes    H passed H failed
    `TaskSegmentManager`.
 10. Preserve Phase 01 continuation segment creation in
     `ComplexTaskRequestHandler`; Phase 04 only wires final close-report delivery
-    and nested-request resume.
+    and delegated-request resume.
 
 ## Phase exit criteria
 

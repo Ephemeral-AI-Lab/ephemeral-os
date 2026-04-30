@@ -285,7 +285,7 @@ Minimum coverage:
   passing harness graph that closed the previous segment.
 - A passing harness graph always closes its segment; failed graphs return to
   `TaskSegmentManager` for a retry decision subject to budget.
-- `request_complex_task_solution` can create a nested `ComplexTaskRequest` from
+- `request_complex_task_solution` can create a delegated `ComplexTaskRequest` from
   a generator executor inside an existing harness graph.
 - Recursive partial-plan gate blocks continuation planners.
 - No `RETRY_ON_FAILURE` graph spawn remains.

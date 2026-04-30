@@ -1,6 +1,6 @@
 """ComplexTaskRequest persistence model — origin axis of harness work.
 
-A ComplexTaskRequest is created when an executor task calls
+A ComplexTaskRequest is created when a generator task calls
 ``request_complex_task_solution(goal)``. It owns an ordered list of
 ``TaskSegment`` ids representing the vertical (continuation) progression of
 work toward the request's goal.

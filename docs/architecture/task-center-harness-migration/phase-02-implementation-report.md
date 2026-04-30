@@ -227,7 +227,7 @@ The implementation review produced three findings; all were addressed:
 | --- | --- | --- |
 | Public terminal tool schemas, role gates, and user-facing errors | `backend/src/tools/submission/main_agent/...` stubs | 03 |
 | Rejection or aliasing of legacy `submit_request_plan` before orchestration | generator executor tool layer | 03 / 04 |
-| `request_complex_task_solution` nested request spawn | complex-task request boundary | 04 |
+| `request_complex_task_solution` delegated request spawn | complex-task request boundary | 04 |
 | `HarnessGraphOrchestrator.apply_complex_task_close_report` resume path | `harness_graph/orchestrator.py` | 04 |
 | Durable final close-report delivery to `requested_by_task_id` | `ComplexTaskRequestHandler.deliver_close_report` wiring | 04 |
 | Durable orchestrator recovery after process restart | registry and cutover runtime | 05 |

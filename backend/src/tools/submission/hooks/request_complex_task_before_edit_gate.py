@@ -23,7 +23,7 @@ EDIT_TOOL_NAMES = frozenset(
 )
 
 
-def executor_has_edited(messages: list[Any]) -> bool:
+def generator_has_edited(messages: list[Any]) -> bool:
     for message in messages:
         if not isinstance(message, ConversationMessage):
             continue
@@ -43,9 +43,9 @@ class RequestComplexTaskBeforeEditGate:
         context: ToolExecutionContextService,
     ) -> HookResult[Any]:
         messages = context.get("conversation_messages", [])
-        if isinstance(messages, list) and executor_has_edited(messages):
+        if isinstance(messages, list) and generator_has_edited(messages):
             return HookResult.fail(
                 "request_complex_task_solution is disabled after the first edit. "
-                "Finish with submit_execution_success or submit_execution_failure."
+                "Finish through this generator agent's success or failure terminal."
             )
         return HookResult.pass_(tool_input)

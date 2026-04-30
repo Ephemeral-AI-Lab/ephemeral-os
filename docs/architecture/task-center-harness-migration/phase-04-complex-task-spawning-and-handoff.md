@@ -174,8 +174,8 @@ C2 closes
 ComplexTaskRequestHandler returns C2 close report as E7's final task result
 ```
 
-The nested request does not become a child `TaskSegment` of the outer request.
-The nested request has its own segment chain and retry history.
+The delegated request does not become a child `TaskSegment` of the outer request.
+The delegated request has its own segment chain and retry history.
 
 ## Close reports
 

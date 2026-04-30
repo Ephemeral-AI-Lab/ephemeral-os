@@ -103,9 +103,9 @@ Two seams need explicit handling:
    metadata field.
 2. `request_complex_task_solution` needs process-local graph runtime
    dependencies. The tool resolves the current `HarnessGraphRuntime`, creates
-   the nested request and first segment through `ComplexTaskRequestHandler`,
+   the delegated request and first segment through `ComplexTaskRequestHandler`,
    marks the requesting executor task `waiting_complex_task`, and creates the
-   nested segment's initial `HarnessGraph`.
+   delegated segment's initial `HarnessGraph`.
 3. Helper-agent tools are blocking helper runs rather than TaskCenter graph
    nodes. They should use `run_ephemeral_agent(...)` and return the helper's
    terminal `ToolResult` to the caller. They should not call
@@ -162,7 +162,7 @@ flowchart TD
     Choice -->|"yes"| Handoff["request_complex_task_solution"]
     Handoff --> Edited{"Any edit tool already used?"}
     Edited -->|"yes"| Block["Prehook blocks handoff"]
-    Edited -->|"no"| HandoffRuntime["Create nested request, first segment,<br/>and initial harness graph"]
+    Edited -->|"no"| HandoffRuntime["Create delegated request, first segment,<br/>and initial harness graph"]
 ```
 
 ### 3d. Resolver limit gates
@@ -298,7 +298,7 @@ flowchart TD
 
     HardCheck -->|"no"| Allow["HookResult.pass_"]
     Allow --> Handler["Run request_complex_task_solution handler"]
-    Handler --> Handoff["Create nested request, first segment, and initial harness graph"]
+    Handler --> Handoff["Create delegated request, first segment, and initial harness graph"]
 ```
 
 Tool registration shape:
@@ -1023,7 +1023,7 @@ class SubmitExecutionFailureInput(BaseModel):
 Build `GeneratorSubmission(outcome="failure", payload={"generator_role":
 "executor", "reason": reason, "details": details})`.
 
-**`backend/src/tools/submission/main_agent/generator/executor/request_complex_task_solution.py`** - new
+**`backend/src/tools/submission/main_agent/generator/request_complex_task_solution.py`** - new
 
 ```python
 class RequestComplexTaskSolutionInput(BaseModel):
@@ -1033,7 +1033,7 @@ class RequestComplexTaskSolutionInput(BaseModel):
 @tool(
     name="request_complex_task_solution",
     description=(
-        "Request a nested complex-task solution for the current generator task. "
+        "Request a delegated complex-task solution for the current generator task. "
         "This must be called before making edits."
     ),
     input_model=RequestComplexTaskSolutionInput,
@@ -1054,7 +1054,7 @@ async def request_complex_task_solution(
 Phase 03 runtime path:
 
 - Resolve `HarnessGraphRuntime.manager_registry`, build a
-  `ComplexTaskRequestHandler`, create the nested `ComplexTaskRequest`, create
+  `ComplexTaskRequestHandler`, create the delegated `ComplexTaskRequest`, create
   its initial `TaskSegment`, mark the requesting executor task
   `waiting_complex_task`, and create the initial `HarnessGraph`.
 
@@ -1421,7 +1421,7 @@ notification_triggers:
 Update body text:
 
 ```md
-If the task is too broad or needs a nested plan, call
+If the task is too broad or needs a delegated plan, call
 `request_complex_task_solution` before making edits. After editing begins,
 finish through execution success or execution failure.
 ```
@@ -1917,7 +1917,7 @@ files. Add tests that compare representative hard and soft conditions.
 ### 11g. `request_complex_task_solution` runtime dependencies
 
 `request_complex_task_solution` needs more than graph stores: it also needs the
-process-local `SegmentManagerRegistry` and an orchestrator factory so the nested
+process-local `SegmentManagerRegistry` and an orchestrator factory so the delegated
 request's first segment can start its initial `HarnessGraph`.
 
 Mitigation: fail closed when `HarnessGraphRuntime.manager_registry` is missing.

@@ -1,4 +1,4 @@
-"""Soft reminder for executor handoff after edit."""
+"""Soft reminder for generator complex-task handoff after edit."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ _EDIT_TOOL_NAMES = frozenset(
 )
 
 
-def _executor_has_edited(messages: list[Any]) -> bool:
+def _generator_has_edited(messages: list[Any]) -> bool:
     for message in messages:
         if not isinstance(message, ConversationMessage):
             continue
@@ -32,13 +32,13 @@ def _executor_has_edited(messages: list[Any]) -> bool:
 def make_request_after_edit_reminder() -> NotificationRule:
     def _trigger(messages: list[Any], context: Any) -> bool:
         del context
-        return _executor_has_edited(messages)
+        return _generator_has_edited(messages)
 
     def _body(messages: list[Any], context: Any) -> str:
         del messages, context
         return (
             "request_complex_task_solution is disabled after the first edit. "
-            "Finish with submit_execution_success or submit_execution_failure."
+            "Finish through this generator agent's success or failure terminal."
         )
 
     return NotificationRule(

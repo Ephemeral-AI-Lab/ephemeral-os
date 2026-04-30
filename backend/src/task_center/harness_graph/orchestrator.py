@@ -197,7 +197,7 @@ class HarnessGraphOrchestrator:
         self._dispatch_ready_work()
 
     def apply_complex_task_close_report(self, report: ComplexTaskCloseReport) -> None:
-        """Resume a generator task waiting on a nested complex-task request."""
+        """Resume a generator task waiting on a delegated complex-task request."""
         runtime = self._require_runtime()
         graph = self._assert_stage(HarnessGraphStage.GENERATING)
         task = runtime.task_store.get_task(report.requested_by_task_id)
@@ -214,10 +214,14 @@ class HarnessGraphOrchestrator:
 
         if report.outcome == "success":
             status = HarnessTaskStatus.DONE
-            summary = f"Nested complex task {report.complex_task_request_id} succeeded."
+            summary = (
+                f"Delegated complex task {report.complex_task_request_id} succeeded."
+            )
         else:
             status = HarnessTaskStatus.FAILED
-            summary = f"Nested complex task {report.complex_task_request_id} failed."
+            summary = (
+                f"Delegated complex task {report.complex_task_request_id} failed."
+            )
 
         runtime.task_store.set_task_status(
             report.requested_by_task_id,

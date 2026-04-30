@@ -53,7 +53,7 @@ Not in scope:
   request-plan surface to `HarnessGraphOrchestrator`; `request_complex_task_solution`
   is the canonical migration name, and Phase 03/04 should either reject the legacy
   stub or alias it before orchestration.
-- Creation of the nested `ComplexTaskRequest`, the
+- Creation of the delegated `ComplexTaskRequest`, the
   `apply_complex_task_close_report` resume entry on `HarnessGraphOrchestrator`, and
   durable final report delivery to `requested_by_task_id` (all Phase 04).
   Phase 02 only ensures the orchestrator observes `waiting_complex_task` as
@@ -253,7 +253,7 @@ The key boundary is:
 
 `request_complex_task_solution` is not a generator success or failure terminal.
 It is a handoff from one generator task to a new complex-task request.
-The outer graph stays in `generating` while the nested request runs.
+The outer graph stays in `generating` while the delegated request runs.
 
 ```mermaid
 flowchart TD
@@ -262,7 +262,7 @@ flowchart TD
     H1 --> E7["Generator task E7"]
     E7 --> Req["request_complex_task_solution(goal)"]
     Req --> Wait["Mark E7 waiting_complex_task"]
-    Req --> C2["Create nested ComplexTaskRequest C2"]
+    Req --> C2["Create delegated ComplexTaskRequest C2"]
     C2 --> Link["C2.requested_by_task_id = E7"]
     C2 --> C2S1["C2 TaskSegment S1"]
     C2S1 --> C2H1["C2.S1 HarnessGraph H1"]
@@ -275,7 +275,7 @@ flowchart TD
     Failed --> Block["Outer H1 blocks E7 descendants and waits for quiescence"]
 ```
 
-Nested request shape:
+Delegated request shape:
 
 ```text
 C1
@@ -488,7 +488,7 @@ Notes:
   state-transition policy without coupling tests to tool classes.
 - `WAITING_COMPLEX_TASK` is intentionally not in
   `TERMINAL_GENERATOR_STATUSES`; the outer graph remains in `generating` until
-  the nested request close report marks the waiting generator task `done` or
+  the delegated request close report marks the waiting generator task `done` or
   `failed`.
 
 ### 5b. Stable task ids
@@ -833,7 +833,7 @@ def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
 ```
 
 Terminal tool handlers call `apply_*` methods after validation. Phase 04
-adds `apply_complex_task_close_report(report)` for nested-request resume.
+adds `apply_complex_task_close_report(report)` for delegated-request resume.
 
 Internal helpers (kept on the façade only because they are graph-scoped
 plumbing, not policy):
@@ -1120,7 +1120,7 @@ orchestrator must not accept it. The Phase 04 spawn handler owns this
 flow:
 
 1. Generator executor calls `request_complex_task_solution(goal)`.
-2. Phase 04 spawn handler validates the call, creates the nested
+2. Phase 04 spawn handler validates the call, creates the delegated
    `ComplexTaskRequest` with `requested_by_task_id` set to the outer
    generator task id, and writes the outer generator task row directly
    via `task_store.set_task_status(task_id, status=WAITING_COMPLEX_TASK,
@@ -1450,7 +1450,7 @@ internals independent of the public tool name.
 
 `waiting_complex_task` is a graph-local pause, not a generator terminal. If it
 is accidentally treated as terminal, the outer graph can spawn an evaluator
-before the nested request returns. Keep `TERMINAL_GENERATOR_STATUSES` limited
+before the delegated request returns. Keep `TERMINAL_GENERATOR_STATUSES` limited
 to `done`, `failed`, and `blocked`, and add explicit quiescence tests for a
 waiting generator.
 

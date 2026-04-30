@@ -1,11 +1,11 @@
 # Complex Task Segmentation and Harness Graph Workflow
 
-This document summarizes how a complex executor task is routed through the
+This document summarizes how a complex generator task is routed through the
 harness graph runtime and reported back to the task that requested it.
 
 The migration separates three concepts that were previously overloaded:
 
-- `ComplexTaskRequest`: the delegated complex goal requested by an executor.
+- `ComplexTaskRequest`: the delegated complex goal requested by a generator task.
 - `TaskSegment`: one vertical continuation slice of that complex goal.
 - `HarnessGraph`: one concrete planner-produced graph execution inside one
   segment.
@@ -16,13 +16,13 @@ Complex task progression has three axes:
 
 | Axis | Entity | Trigger | Meaning |
 | ---- | ------ | ------- | ------- |
-| Request origin | `ComplexTaskRequest` | Executor calls `request_complex_task_solution(goal)` | A delegated complex goal starts for the requesting task. |
+| Request origin | `ComplexTaskRequest` | Generator task calls `request_complex_task_solution(goal)` | A delegated complex goal starts for the requesting task. |
 | Vertical continuation | `TaskSegment` | Prior segment passes with non-null `continuation_goal` | The same complex request moves to its next sequential slice. |
 | Horizontal retry | `HarnessGraph` | A graph fails and segment attempt budget remains | The same segment receives a fresh planner-produced graph. |
 
 ```mermaid
 flowchart TD
-    E["Executor task"] -->|"request_complex_task_solution(goal)"| C["ComplexTaskRequest"]
+    E["Generator task"] -->|"request_complex_task_solution(goal)"| C["ComplexTaskRequest"]
     C --> S1["TaskSegment S1"]
     S1 --> H11["HarnessGraph S1.H1"]
     H11 -->|"failed, attempt budget remains"| H12["HarnessGraph S1.H2"]
@@ -37,7 +37,7 @@ The key rule is:
 - A new `TaskSegment` means accepted vertical continuation.
 - A new `HarnessGraph` inside that segment means retry after failure.
 - The complex-task close report supplies the final result for
-  `requested_by_task_id`; the original executor agent run ends at the handoff.
+  `requested_by_task_id`; the original generator agent run ends at the handoff.
 
 ## Layer responsibilities
 
@@ -46,14 +46,14 @@ The key rule is:
 | `ComplexTaskRequestHandler` | Request creation and close, initial segment creation, continuation segment creation, final close report to `requested_by_task_id`. | Per-segment retry policy or graph execution. |
 | `TaskSegmentManager` | One segment's attempt budget, next harness graph creation after failed graphs, segment close, `TaskSegmentClosureReport`. | Request creation, continuation segment creation, or planner/generator/evaluator execution. |
 | `HarnessGraphOrchestrator` | One `planner -> generator DAG -> evaluator` execution and graph pass/fail outcome. | Retry, continuation, or request close. |
-| Agent roles | Planner, generator executor, verifier, and evaluator terminal submissions inside a graph. | Structural lifecycle decisions. |
+| Agent roles | Planner, generator agent, verifier, and evaluator terminal submissions inside a graph. | Structural lifecycle decisions. |
 | Context engine | Role-specific launch context, durable summaries, and detailed close-report payloads. | Lifecycle policy or source-of-truth state transitions. |
 
 ## End-to-end flow
 
 ```mermaid
 sequenceDiagram
-    participant E as Executor
+    participant E as Generator
     participant R as ComplexTaskRequestHandler
     participant S as TaskSegmentManager
     participant H as HarnessGraphOrchestrator
@@ -149,7 +149,7 @@ one final report for the whole complex request.
 
 ```mermaid
 flowchart TD
-    E["Executor decides task is non-atomic"] --> Request["request_complex_task_solution(goal)"]
+    E["Generator decides task is non-atomic"] --> Request["request_complex_task_solution(goal)"]
     Request --> C["Create ComplexTaskRequest C1"]
     C --> S1["Create TaskSegment S1"]
     S1 --> H1["Create HarnessGraph S1.H1"]
@@ -200,15 +200,16 @@ failed graph's `continuation_goal`.
 
 ## Recursive complex task request
 
-Any generator executor can request its own complex task before it edits. That
+Any generator agent profile can request its own complex task before it edits,
+provided that profile declares `request_complex_task_solution`. That
 creates a new request, not a child segment in the outer request.
 
 ```mermaid
 flowchart TD
     C1["Outer ComplexTaskRequest C1"] --> S1["TaskSegment S1"]
     S1 --> H1["HarnessGraph S1.H1"]
-    H1 --> E7["Generator executor E7"]
-    E7 -->|"request_complex_task_solution(goal)"| C2["Nested ComplexTaskRequest C2"]
+    H1 --> E7["Generator task E7"]
+    E7 -->|"request_complex_task_solution(goal)"| C2["Delegated ComplexTaskRequest C2"]
     C2 --> C2S1["C2 TaskSegment S1"]
     C2S1 --> C2H1["C2 HarnessGraph S1.H1"]
     C2H1 --> C2Close["C2 closes"]
@@ -216,16 +217,16 @@ flowchart TD
     E7 --> OuterContinue["Outer graph consumes E7's final report"]
 ```
 
-The nested request has its own segment chain and retry history. The outer
-request sees only the close report associated with the executor that requested
-it.
+The delegated request has its own segment chain and retry history. The outer
+request sees only the close report associated with the generator task that
+requested it.
 
 ## Tool and role boundaries
 
 | Role | Scope | Main terminals |
 | ---- | ----- | -------------- |
 | Planner | One `HarnessGraph` | `submit_full_plan`, `submit_partial_plan` |
-| Generator executor | One graph DAG node | `submit_execution_success`, `submit_execution_failure`, `request_complex_task_solution` |
+| Generator direct-work profile | One graph DAG node | `submit_execution_success`, `submit_execution_failure`; may also declare `request_complex_task_solution` |
 | Generator verifier | One graph DAG node | `submit_verification_success`, `submit_verification_failure` |
 | Evaluator | Sink for one graph | `submit_evaluation_success`, `submit_evaluation_failure` |
 
@@ -235,7 +236,7 @@ Important gates:
   segment with non-null `continuation_goal`.
 - malformed planner DAG submissions fail inline without marking the graph
   failed.
-- `request_complex_task_solution` is blocked after the executor has edited.
+- `request_complex_task_solution` is blocked after the generator agent has edited.
 - evaluator spawn is blocked until every generator in the current graph is
   `DONE`.
 - next graph creation is blocked once the segment attempt budget is exhausted.
