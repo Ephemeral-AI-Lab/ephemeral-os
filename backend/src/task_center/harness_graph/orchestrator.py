@@ -68,7 +68,6 @@ class HarnessGraphOrchestrator:
         self._graph_store = graph_store
         self._on_graph_closed = on_graph_closed
         self._runtime = runtime
-        self._generator_agent_names: dict[str, str] = {}
 
     @property
     def harness_graph_id(self) -> str:
@@ -95,6 +94,7 @@ class HarnessGraphOrchestrator:
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,
                 role=HarnessTaskRole.PLANNER.value,
+                agent_name=HarnessTaskRole.PLANNER.value,
                 task_input=task_input,
                 status=HarnessTaskStatus.RUNNING.value,
                 summaries=[],
@@ -282,6 +282,7 @@ class HarnessGraphOrchestrator:
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,
                 role=HarnessTaskRole.GENERATOR.value,
+                agent_name=task.agent_name,
                 task_input=task.task_spec,
                 status=HarnessTaskStatus.PENDING.value,
                 summaries=[],
@@ -289,7 +290,6 @@ class HarnessGraphOrchestrator:
                 task_center_harness_graph_id=graph.id,
                 spawn_reason="harness_graph_generator",
             )
-            self._generator_agent_names[task_id] = task.agent_name
             task_ids.append(task_id)
         return tuple(task_ids)
 
@@ -370,6 +370,79 @@ class HarnessGraphOrchestrator:
                 summary={"blocked_by": failed_task_id},
             )
 
+    def _launch_ready_generator(self, *, graph: HarnessGraph, task_id: str) -> bool:
+        runtime = self._require_runtime()
+        current = runtime.task_store.get_task(task_id)
+        if current is None:
+            raise GraphInvariantViolation(f"Generator task {task_id!r} not found")
+        agent_name = self._task_agent_name(current)
+        task = runtime.task_store.set_task_status(
+            task_id, status=HarnessTaskStatus.RUNNING.value
+        )
+        try:
+            runtime.agent_launcher.launch(
+                HarnessAgentLaunch(
+                    task_id=task_id,
+                    task_center_run_id=task["task_center_run_id"],
+                    harness_graph_id=graph.id,
+                    role=HarnessTaskRole.GENERATOR,
+                    agent_name=agent_name,
+                    task_input=task["task_input"],
+                    needs=tuple(task["needs"]),
+                )
+            )
+        except Exception:
+            logger.exception(
+                "HarnessGraphOrchestrator: generator launch failed",
+                extra={"task_id": task_id, "harness_graph_id": graph.id},
+            )
+            runtime.task_store.set_task_status_if_current(
+                task_id,
+                expected_status=HarnessTaskStatus.RUNNING.value,
+                status=HarnessTaskStatus.FAILED.value,
+                summary={
+                    "fail_reason": "agent_launch_failed",
+                    "summary": "Generator agent launch failed.",
+                },
+            )
+            self._block_failed_generator_descendants(task_id)
+            return False
+        return True
+
+    def _launch_evaluator(self, launch: HarnessAgentLaunch) -> None:
+        runtime = self._require_runtime()
+        try:
+            runtime.agent_launcher.launch(launch)
+        except Exception:
+            logger.exception(
+                "HarnessGraphOrchestrator: evaluator launch failed",
+                extra={
+                    "task_id": launch.task_id,
+                    "harness_graph_id": launch.harness_graph_id,
+                },
+            )
+            runtime.task_store.set_task_status_if_current(
+                launch.task_id,
+                expected_status=HarnessTaskStatus.RUNNING.value,
+                status=HarnessTaskStatus.FAILED.value,
+                summary={
+                    "fail_reason": "agent_launch_failed",
+                    "summary": "Evaluator agent launch failed.",
+                },
+            )
+            self._close_graph(
+                status=HarnessGraphStatus.FAILED,
+                fail_reason=HarnessGraphFailReason.EVALUATOR_FAILED,
+            )
+
+    def _task_agent_name(self, task: dict[str, object]) -> str:
+        agent_name = str(task.get("agent_name") or "").strip()
+        if not agent_name:
+            raise GraphInvariantViolation(
+                f"Task {task.get('id')!r} has no persisted agent profile"
+            )
+        return agent_name
+
     def _dispatch_ready_work(self) -> None:
         graph = self._fresh_graph()
         if graph.is_closed:
@@ -389,26 +462,17 @@ class HarnessGraphOrchestrator:
         )
         ready_ids = ready_pending_generator_ids(task_records)
         if ready_ids:
+            launch_failed = False
             for task_id in ready_ids:
-                agent_name = self._generator_agent_names.get(task_id)
-                if agent_name is None:
-                    raise GraphInvariantViolation(
-                        f"Generator task {task_id!r} has no registered agent profile"
-                    )
-                task = runtime.task_store.set_task_status(
-                    task_id, status=HarnessTaskStatus.RUNNING.value
-                )
-                runtime.agent_launcher.launch(
-                    HarnessAgentLaunch(
+                launch_failed = (
+                    not self._launch_ready_generator(
+                        graph=graph,
                         task_id=task_id,
-                        task_center_run_id=task["task_center_run_id"],
-                        harness_graph_id=graph.id,
-                        role=HarnessTaskRole.GENERATOR,
-                        agent_name=agent_name,
-                        task_input=task["task_input"],
-                        needs=tuple(task["needs"]),
                     )
+                    or launch_failed
                 )
+            if launch_failed:
+                self._dispatch_ready_work()
             return
 
         if not all_generators_quiescent(task_records):
@@ -455,6 +519,7 @@ class HarnessGraphOrchestrator:
             task_id=task_id,
             task_center_run_id=task_center_run_id,
             role=HarnessTaskRole.EVALUATOR.value,
+            agent_name=HarnessTaskRole.EVALUATOR.value,
             task_input=task_input,
             status=HarnessTaskStatus.RUNNING.value,
             summaries=[],
@@ -464,7 +529,7 @@ class HarnessGraphOrchestrator:
         )
         self._graph_store.set_evaluator_task_id(graph.id, task_id)
         self._graph_store.set_stage(graph.id, HarnessGraphStage.EVALUATING)
-        runtime.agent_launcher.launch(
+        self._launch_evaluator(
             HarnessAgentLaunch(
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,

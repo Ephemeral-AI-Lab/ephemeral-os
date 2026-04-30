@@ -91,6 +91,7 @@ def _seed_outer_generator_task(
         task_id=parent_task_id,
         task_center_run_id=task_center_run_id,
         role=HarnessTaskRole.GENERATOR.value,
+        agent_name="executor",
         task_input="execute the outer task",
         status=HarnessTaskStatus.RUNNING.value,
         summaries=[],
@@ -201,6 +202,8 @@ def test_handoff_startup_failure_leaves_parent_running(
     cancelled_segment = segment_store.list_for_request(cancelled[0].id)
     assert len(cancelled_segment) == 1
     assert cancelled_segment[0].status == TaskSegmentStatus.CANCELLED
+    assert runtime.manager_registry is not None
+    assert runtime.manager_registry.get(cancelled_segment[0].id) is None
 
 
 def test_handoff_startup_failure_closes_started_graph_and_deregisters_orchestrator(
@@ -240,6 +243,8 @@ def test_handoff_startup_failure_closes_started_graph_and_deregisters_orchestrat
     assert failed_graph.status == HarnessGraphStatus.FAILED
     assert failed_graph.fail_reason == HarnessGraphFailReason.STARTUP_FAILED
     assert runtime.orchestrator_registry.get(failed_graph.id) is None
+    assert runtime.manager_registry is not None
+    assert runtime.manager_registry.get(cancelled_segment.id) is None
     planner_task = task_store.get_task(planner_task_id(failed_graph.id))
     assert planner_task is not None
     assert planner_task["status"] == HarnessTaskStatus.FAILED.value

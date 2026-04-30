@@ -22,6 +22,7 @@ from task_center.harness_graph.runtime import (
 from task_center.task import (
     EvaluatorSubmission,
     GeneratorSubmission,
+    HarnessTaskRole,
     HarnessTaskStatus,
     PlannedGeneratorTask,
     PlannerFailureSubmission,
@@ -39,6 +40,17 @@ class _FakeLauncher:
 
     def launch(self, launch: HarnessAgentLaunch) -> None:
         self.launches.append(launch)
+
+
+class _FailingRoleLauncher(_FakeLauncher):
+    def __init__(self, role: HarnessTaskRole) -> None:
+        super().__init__()
+        self._role = role
+
+    def launch(self, launch: HarnessAgentLaunch) -> None:
+        if launch.role == self._role:
+            raise RuntimeError(f"{self._role.value} launch failed")
+        super().launch(launch)
 
 
 def _seed_graph(request_store, segment_store, graph_store, task_center_run_id):
@@ -63,11 +75,12 @@ def _build_orchestrator(
     graph_store,
     task_store,
     task_center_run_id,
+    launcher=None,
 ):
     graph = _seed_graph(
         request_store, segment_store, graph_store, task_center_run_id
     )
-    launcher = _FakeLauncher()
+    launcher = launcher or _FakeLauncher()
     registry = HarnessGraphOrchestratorRegistry()
     runtime = HarnessGraphRuntime(
         request_store=request_store,
@@ -277,14 +290,94 @@ def test_missing_generator_agent_profile_is_invariant_violation(
         )
     )
     task_b_id = generator_task_id(graph.id, "b")
-    orchestrator._generator_agent_names.pop(task_b_id)
+    task_b = task_store.get_task(task_b_id)
+    assert task_b is not None
+    task_store.upsert_task(
+        task_id=task_b_id,
+        task_center_run_id=task_b["task_center_run_id"],
+        role=task_b["role"],
+        agent_name=None,
+        task_input=task_b["task_input"],
+        status=task_b["status"],
+        summaries=task_b["summaries"],
+        needs=task_b["needs"],
+        task_center_harness_graph_id=task_b["task_center_harness_graph_id"],
+        spawn_reason=task_b["spawn_reason"],
+    )
 
     with pytest.raises(GraphInvariantViolation):
         orchestrator.apply_generator_submission(_generator_success(graph.id, "a"))
 
-    task_b = task_store.get_task(task_b_id)
-    assert task_b is not None
-    assert task_b["status"] == HarnessTaskStatus.PENDING.value
+    refreshed_task_b = task_store.get_task(task_b_id)
+    assert refreshed_task_b is not None
+    assert refreshed_task_b["status"] == HarnessTaskStatus.PENDING.value
+
+
+def test_generator_launch_failure_marks_task_failed_and_closes_graph(
+    request_store, segment_store, graph_store, task_store, task_center_run_id
+):
+    launcher = _FailingRoleLauncher(HarnessTaskRole.GENERATOR)
+    orchestrator, graph, _, registry, closed = _build_orchestrator(
+        request_store,
+        segment_store,
+        graph_store,
+        task_store,
+        task_center_run_id,
+        launcher=launcher,
+    )
+    orchestrator.start()
+
+    orchestrator.apply_plan_submission(
+        _plan(
+            graph.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        )
+    )
+
+    task = task_store.get_task(generator_task_id(graph.id, "a"))
+    refreshed = graph_store.get(graph.id)
+    assert task is not None
+    assert task["status"] == HarnessTaskStatus.FAILED.value
+    assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
+    assert refreshed is not None
+    assert refreshed.status == HarnessGraphStatus.FAILED
+    assert refreshed.fail_reason == HarnessGraphFailReason.GENERATOR_FAILED
+    assert closed == [graph.id]
+    assert registry.get(graph.id) is None
+
+
+def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
+    request_store, segment_store, graph_store, task_store, task_center_run_id
+):
+    launcher = _FailingRoleLauncher(HarnessTaskRole.EVALUATOR)
+    orchestrator, graph, _, registry, closed = _build_orchestrator(
+        request_store,
+        segment_store,
+        graph_store,
+        task_store,
+        task_center_run_id,
+        launcher=launcher,
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            graph.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        )
+    )
+
+    orchestrator.apply_generator_submission(_generator_success(graph.id, "a"))
+
+    task = task_store.get_task(evaluator_task_id(graph.id))
+    refreshed = graph_store.get(graph.id)
+    assert task is not None
+    assert task["status"] == HarnessTaskStatus.FAILED.value
+    assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
+    assert refreshed is not None
+    assert refreshed.status == HarnessGraphStatus.FAILED
+    assert refreshed.fail_reason == HarnessGraphFailReason.EVALUATOR_FAILED
+    assert closed == [graph.id]
+    assert registry.get(graph.id) is None
 
 
 def test_waiting_complex_task_prevents_generator_quiescence(

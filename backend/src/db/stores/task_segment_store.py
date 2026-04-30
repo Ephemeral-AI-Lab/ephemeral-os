@@ -129,7 +129,7 @@ class TaskSegmentStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def _cancel_for_compensation(
+    def cancel_for_compensation(
         self, segment_id: str, *, closed_at: datetime | None = None
     ) -> TaskSegment:
         """Mark a segment CANCELLED. Reserved for handoff compensation paths."""

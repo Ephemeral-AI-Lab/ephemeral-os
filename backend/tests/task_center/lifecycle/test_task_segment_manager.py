@@ -290,22 +290,6 @@ def test_attempted_plan_history_ordered_by_graph_sequence(
     assert outcome.attempted_plan_history[0].failure_landscape is None
 
 
-def test_get_attempt_count_derived_from_list(
-    request_store, segment_store, graph_store, task_center_run_id
-):
-    seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
-    mgr, _ = _make_manager(seg_id, segment_store, graph_store)
-    assert mgr.get_attempt_count() == 0
-    g1 = mgr.create_initial_harness_graph().start()
-    assert mgr.get_attempt_count() == 1
-    graph_store.close(
-        g1.id, status=HarnessGraphStatus.FAILED,
-        fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
-    )
-    mgr.create_next_harness_graph(previous_harness_graph_id=g1.id)
-    assert mgr.get_attempt_count() == 2
-
-
 def test_creating_initial_graph_twice_raises(
     request_store, segment_store, graph_store, task_center_run_id
 ):

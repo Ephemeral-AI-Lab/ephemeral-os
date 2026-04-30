@@ -143,7 +143,7 @@ class ComplexTaskRequestStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def _cancel_for_compensation(
+    def cancel_for_compensation(
         self, request_id: str, *, closed_at: datetime | None = None
     ) -> ComplexTaskRequest:
         """Mark a request CANCELLED. Reserved for handoff compensation paths."""

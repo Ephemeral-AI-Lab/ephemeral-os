@@ -55,16 +55,7 @@ def create_persistence_router(
         record = task_center_store.get_request(request_id)
         if record is None:
             return JSONResponse(status_code=404, content={"error": "Request not found"})
-        return JSONResponse(
-            content={
-                "id": record.id,
-                "cwd": record.cwd,
-                "sandbox_id": record.sandbox_id,
-                "request_prompt": record.request_prompt,
-                "created_at": record.created_at.isoformat() if record.created_at else None,
-                "updated_at": record.updated_at.isoformat() if record.updated_at else None,
-            }
-        )
+        return JSONResponse(content=record)
 
     @router.get("/task-center-requests/{request_id}/runs")
     async def list_task_center_runs(request_id: str, limit: int = 50):

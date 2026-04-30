@@ -18,7 +18,10 @@ class SegmentManagerRegistry:
 
     def register(self, manager: "TaskSegmentManager") -> None:
         segment_id = manager.task_segment_id
-        self.assert_unique_for_segment(segment_id)
+        if segment_id in self._by_segment_id:
+            raise GraphInvariantViolation(
+                f"TaskSegmentManager already registered for segment {segment_id!r}"
+            )
         self._by_segment_id[segment_id] = manager
 
     def get(self, task_segment_id: str) -> "TaskSegmentManager | None":
@@ -26,10 +29,3 @@ class SegmentManagerRegistry:
 
     def deregister(self, task_segment_id: str) -> None:
         self._by_segment_id.pop(task_segment_id, None)
-
-    def assert_unique_for_segment(self, task_segment_id: str) -> None:
-        if task_segment_id in self._by_segment_id:
-            raise GraphInvariantViolation(
-                f"TaskSegmentManager already registered for segment "
-                f"{task_segment_id!r}"
-            )

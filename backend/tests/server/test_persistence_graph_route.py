@@ -99,6 +99,7 @@ def test_graph_route_walks_request_segment_graph_schema(stores):
         task_id="task-1",
         task_center_run_id="run1",
         role=HarnessTaskRole.GENERATOR.value,
+        agent_name="executor",
         task_input="do work",
         status=HarnessTaskStatus.RUNNING.value,
         summaries=[],

@@ -54,7 +54,6 @@ class TaskCenterRunRecord(Base):
         ForeignKey("task_center_requests.id", ondelete="CASCADE"),
         index=True,
     )
-    root_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="running")
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -82,6 +81,7 @@ class TaskCenterTaskRecord(Base):
         index=True,
     )
     role: Mapped[str] = mapped_column(String(32))
+    agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     task_input: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
     summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)

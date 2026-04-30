@@ -214,8 +214,11 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
     assert engine is not None
     insp = inspect(engine)
     columns = {col["name"] for col in insp.get_columns("task_center_tasks")}
+    run_columns = {col["name"] for col in insp.get_columns("task_center_runs")}
     assert "task_center_run_id" in columns
+    assert "agent_name" in columns
     assert "run_id" not in columns
+    assert "root_task_id" not in run_columns
     # Phase 01 drops the legacy task_center_harness_graph table after init.
     assert not insp.has_table("task_center_harness_graph")
     assert insp.has_table("harness_graphs")
@@ -300,6 +303,7 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
         task_id="run:t1",
         task_center_run_id="run",
         role="executor",
+        agent_name="executor",
         task_input="prompt",
         status="running",
         summaries=[],

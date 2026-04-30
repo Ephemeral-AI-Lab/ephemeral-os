@@ -283,7 +283,7 @@ def test_replay_skips_cancelled_compensation_requests(
         requested_by_task_id=parent_task_id,
         goal="cancelled goal",
     )
-    request_store._cancel_for_compensation(cancelled.id)
+    request_store.cancel_for_compensation(cancelled.id)
     # Succeeded request that should still be delivered.
     _seed_closed_delegated_request(
         request_store=request_store,

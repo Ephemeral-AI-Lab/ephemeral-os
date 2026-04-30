@@ -155,9 +155,6 @@ class TaskSegmentManager:
         else:
             self._retry_or_close_failed(graph)
 
-    def get_attempt_count(self) -> int:
-        return self._current_segment_snapshot().attempt_count
-
     # ---- internal -------------------------------------------------------
 
     def _current_segment_snapshot(self) -> TaskSegment:

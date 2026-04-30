@@ -226,7 +226,7 @@ class ComplexTaskHandoffCoordinator:
                     "ComplexTaskHandoffCoordinator: cancel start handle failed",
                 )
         try:
-            self._runtime.segment_store._cancel_for_compensation(
+            self._runtime.segment_store.cancel_for_compensation(
                 segment.id, closed_at=now
             )
         except Exception:
@@ -234,7 +234,7 @@ class ComplexTaskHandoffCoordinator:
                 "ComplexTaskHandoffCoordinator: cancel segment failed",
             )
         try:
-            self._runtime.request_store._cancel_for_compensation(
+            self._runtime.request_store.cancel_for_compensation(
                 request.id, closed_at=now
             )
         except Exception:
@@ -251,9 +251,6 @@ class ComplexTaskHandoffCoordinator:
             logger.exception(
                 "ComplexTaskHandoffCoordinator: rollback parent status failed",
             )
-
-
-__all__ = [
-    "ComplexTaskHandoffCoordinator",
-    "ComplexTaskHandoffResult",
-]
+        manager_registry = self._runtime.manager_registry
+        if manager_registry is not None:
+            manager_registry.deregister(segment.id)

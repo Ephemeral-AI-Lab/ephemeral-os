@@ -236,9 +236,10 @@ class ComplexTaskRequestHandler:
                     handle.cancel()
                 except GraphInvariantViolation:
                     pass
-            self._segment_store._cancel_for_compensation(
+            self._segment_store.cancel_for_compensation(
                 next_segment.id, closed_at=datetime.now(UTC)
             )
+            self._manager_registry.deregister(next_segment.id)
             self.close_complex_task_request(
                 complex_task_request_id=next_segment.complex_task_request_id,
                 succeeded=False,

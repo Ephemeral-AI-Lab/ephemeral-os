@@ -43,6 +43,9 @@ class TestSettings:
             "acceptance_criteria",
             "handoff_note",
         }
+        assert _DROPPED_COLUMNS["task_center_runs"] >= {
+            "root_task_id",
+        }
 
 
 class TestLoadSaveSettings:

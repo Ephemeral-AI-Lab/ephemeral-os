@@ -16,6 +16,7 @@ def _upsert(
         task_id=task_id,
         task_center_run_id="run1",
         role=role,
+        agent_name=role,
         task_input=f"input-{task_id}",
         status=status,
         summaries=[],
@@ -32,7 +33,20 @@ def test_get_task_returns_serialized_task(task_store):
     assert task is not None
     assert task["id"] == "g1:gen:a"
     assert task["task_center_harness_graph_id"] == "g1"
+    assert task["agent_name"] == "generator"
     assert task["needs"] == []
+
+
+def test_request_and_run_helpers_return_serialized_rows(task_store):
+    request = task_store.get_request("req1")
+    run = task_store.get_run("run1")
+
+    assert request is not None
+    assert request["id"] == "req1"
+    assert request["cwd"] == "/tmp"
+    assert run is not None
+    assert run["id"] == "run1"
+    assert run["status"] == "running"
 
 
 def test_list_tasks_for_harness_graph_filters_by_graph_id(task_store):

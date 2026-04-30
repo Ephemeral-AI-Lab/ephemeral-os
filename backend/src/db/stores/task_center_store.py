@@ -17,10 +17,6 @@ from db.models.task_center import (
 from db.stores.base import SyncStoreMixin
 
 
-def persisted_task_id(task_center_run_id: str, task_id: str) -> str:
-    return f"{task_center_run_id}:{task_id}"
-
-
 SerializedRow = dict[str, Any]
 
 
@@ -39,7 +35,6 @@ def _serialize_run(record: TaskCenterRunRecord) -> SerializedRow:
     return {
         "id": record.id,
         "request_id": record.request_id,
-        "root_task_id": record.root_task_id,
         "status": record.status,
         "started_at": record.started_at.isoformat() if record.started_at else None,
         "finished_at": record.finished_at.isoformat() if record.finished_at else None,
@@ -51,6 +46,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
         "id": record.id,
         "task_center_run_id": record.task_center_run_id,
         "role": record.role,
+        "agent_name": record.agent_name,
         "task_input": record.task_input,
         "status": record.status,
         "summaries": record.summaries or [],
@@ -73,7 +69,7 @@ class TaskCenterStore(SyncStoreMixin):
         cwd: str,
         sandbox_id: str | None,
         request_prompt: str,
-    ) -> TaskCenterRequestRecord:
+    ) -> SerializedRow:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = TaskCenterRequestRecord(
@@ -87,11 +83,12 @@ class TaskCenterStore(SyncStoreMixin):
             db.add(record)
             db.commit()
             db.refresh(record)
-            return record
+            return _serialize_request(record)
 
-    def get_request(self, request_id: str) -> TaskCenterRequestRecord | None:
+    def get_request(self, request_id: str) -> SerializedRow | None:
         with self._sf() as db:
-            return db.get(TaskCenterRequestRecord, request_id)
+            record = db.get(TaskCenterRequestRecord, request_id)
+            return _serialize_request(record) if record is not None else None
 
     def list_requests(
         self, cwd: str | None = None, limit: int = 20
@@ -108,7 +105,7 @@ class TaskCenterStore(SyncStoreMixin):
         *,
         task_center_run_id: str,
         request_id: str,
-    ) -> TaskCenterRunRecord:
+    ) -> SerializedRow:
         with self._sf() as db:
             record = TaskCenterRunRecord(
                 id=task_center_run_id,
@@ -119,15 +116,7 @@ class TaskCenterStore(SyncStoreMixin):
             db.add(record)
             db.commit()
             db.refresh(record)
-            return record
-
-    def set_run_root(self, task_center_run_id: str, root_task_id: str) -> None:
-        with self._sf() as db:
-            record = db.get(TaskCenterRunRecord, task_center_run_id)
-            if record is None:
-                return
-            record.root_task_id = root_task_id
-            db.commit()
+            return _serialize_run(record)
 
     def finish_run(self, task_center_run_id: str, status: str) -> None:
         with self._sf() as db:
@@ -138,9 +127,10 @@ class TaskCenterStore(SyncStoreMixin):
             record.finished_at = datetime.now(UTC)
             db.commit()
 
-    def get_run(self, task_center_run_id: str) -> TaskCenterRunRecord | None:
+    def get_run(self, task_center_run_id: str) -> SerializedRow | None:
         with self._sf() as db:
-            return db.get(TaskCenterRunRecord, task_center_run_id)
+            record = db.get(TaskCenterRunRecord, task_center_run_id)
+            return _serialize_run(record) if record is not None else None
 
     def list_runs_for_request(
         self, request_id: str, limit: int = 50
@@ -165,6 +155,7 @@ class TaskCenterStore(SyncStoreMixin):
         summaries: list[SerializedRow],
         needs: list[str],
         task_center_harness_graph_id: str | None,
+        agent_name: str | None = None,
         fix_target_id: str | None = None,
         spawn_reason: str | None = None,
     ) -> None:
@@ -176,6 +167,7 @@ class TaskCenterStore(SyncStoreMixin):
                     id=task_id,
                     task_center_run_id=task_center_run_id,
                     role=role,
+                    agent_name=agent_name,
                     task_input=task_input,
                     status=status,
                     summaries=summaries,
@@ -189,6 +181,7 @@ class TaskCenterStore(SyncStoreMixin):
                 db.add(record)
             else:
                 record.role = role
+                record.agent_name = agent_name
                 record.task_input = task_input
                 record.status = status
                 record.summaries = summaries
