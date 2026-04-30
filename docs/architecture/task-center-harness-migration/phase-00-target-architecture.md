@@ -10,8 +10,7 @@ overloaded onto graph and retry state:
 - A `ComplexTaskRequest` is the complex delegated goal requested by an
   executor that cannot solve its current task atomically.
 - A `TaskSegment` is one vertical slice of that complex task. Segment 2+ exists
-  only when the previous segment's accepted closing harness graph completed a
-  partial plan.
+  only when the previous segment closed with a non-null `continuation_goal`.
 - A `HarnessGraph` is one concrete planner-produced graph for one segment.
   Retry creates another `HarnessGraph` in the same segment.
 
@@ -65,23 +64,24 @@ COMPLEX TASK REQUEST C1
   |     `-- HARNESS GRAPH S1.H2
   |           retry_no = 2
   |           status = passed
-  |           plan_shape = partial
+  |           continuation_goal = "<next-segment goal>"
   |
-  |     segment closes with plan_shape = partial
-  |     because accepted graph S1.H2 is partial,
+  |     S1.H2 passes, so S1 closes
+  |     S1.continuation_goal = S1.H2.continuation_goal
+  |     because S1.continuation_goal is not null,
   |     TaskSegmentManager creates S2
   |
   +-- TASK SEGMENT S2
   |     sequence_no = 2
   |     previous_segment_id = S1
-  |     created because S1 closed with plan_shape = partial
+  |     goal = S1.continuation_goal
   |
   |     `-- HARNESS GRAPH S2.H1
   |           retry_no = 1
   |           status = passed
-  |           plan_shape = full
+  |           continuation_goal = null
   |
-  |     segment closes with plan_shape = full
+  |     S2.H1 passes, so S2 closes with continuation_goal = null
   |
   `-- final complex-task result returns to requested_by_task_id
 ```
@@ -97,13 +97,15 @@ ComplexTaskRequest
   `-- TaskSegment
         sequence_no
         previous_segment_id
+        goal
         retry_budget
+        continuation_goal
         |
         `-- HarnessGraph
               retry_no
               stage
               status
-              plan_shape
+              continuation_goal
               fail_reason
               |
               +-- planner task
@@ -111,6 +113,17 @@ ComplexTaskRequest
               |     executors + verifiers
               `-- evaluator task
 ```
+
+`continuation_goal` is set on a harness graph by that graph's own planner
+submission: `null` from `submit_full_plan`, the supplied goal from
+`submit_partial_plan(continuation_goal)`. Each harness graph's
+`continuation_goal` is independent — a retry graph does not inherit it from a
+prior failed graph in the same segment; the new planner decides freshly.
+When a harness graph passes, it closes the segment, and the segment inherits
+`continuation_goal` from that passing graph (the last harness graph in the
+segment, since failed graphs trigger retry rather than closing).
+`should_continue` is a derived predicate (`continuation_goal is not None`)
+and is not stored.
 
 Explorer subagents are not TaskCenter nodes; they are non-blocking,
 parallel-safe helper runs. Advisor and resolver helper calls are also not
@@ -122,8 +135,8 @@ edit, but it reports back into the task that called it.
 | Axis | Entity | What changes | Triggered by | Shape effect |
 | ---- | ------ | ------------ | ------------ | ------------ |
 | Request origin | `ComplexTaskRequest` | new delegated complex goal | `request_complex_task_solution(goal)` | new request chain owned by the calling executor |
-| Vertical | `TaskSegment` | next partial-plan segment | accepted closing graph succeeded with `plan_shape = partial` | segment sequence increases |
-| Horizontal | `HarnessGraph` | same segment, fresh try | graph failure or non-closing graph under segment retry budget | retry number increases |
+| Vertical | `TaskSegment` | next continuation segment | segment closed with `continuation_goal != null` | segment sequence increases |
+| Horizontal | `HarnessGraph` | same segment, fresh try | graph failure under segment retry budget | retry number increases |
 
 ### Request origin
 
@@ -139,8 +152,8 @@ The requesting executor is the stable parent for context management.
 ### Vertical axis
 
 A `TaskSegment` represents one sequential continuation step in a complex task.
-New segments are created only when the accepted closing harness graph for the
-previous segment passes with `plan_shape = partial`.
+A new segment is created only when the previous segment closed with a non-null
+`continuation_goal`.
 
 The segment chain is:
 
@@ -148,41 +161,42 @@ The segment chain is:
 S1 -> S2 -> S3
 ```
 
-`previous_segment_id` is only for partial-plan continuation. It is not a retry
-chain.
+`previous_segment_id` is the continuation lineage. It is not a retry chain.
 
-### Segment close source of truth
+### Segment close rule
 
-`TaskSegmentManager` decides continuation from the segment's accepted closing
-harness graph only. Earlier harness graphs in the same segment can provide
-context, but they do not determine whether a continuation segment is created.
+A passing harness graph closes its segment. The segment inherits its
+`continuation_goal` from that graph:
 
 ```text
-TaskSegment S1
-  |
-  +-- HarnessGraph S1.H1
-  |     status = passed
-  |     plan_shape = partial
-  |     superseded by later segment work
-  |
-  `-- HarnessGraph S1.H2
-        status = passed
-        plan_shape = full
-        accepted closing graph for S1
+TaskSegment S has running HarnessGraph H
 
-S1 closes with plan_shape = full.
-TaskSegmentManager does not create S2.
+H passes
+  S.continuation_goal = H.continuation_goal
+  S closes
+    if S.continuation_goal is not None:
+      TaskSegmentManager creates S+1 with goal = S.continuation_goal
+    else:
+      report request-level success
+
+H fails
+  if retry budget remains:
+    create HarnessGraph retry N+1 in S
+  else:
+    close S failed
+    report request-level failure
 ```
 
-The rule is: if the accepted closing graph is full, the segment is complete
-even if an earlier harness graph in that segment produced a partial plan.
+There is no policy hook for "spend retry on a passed graph": once a graph
+passes, it closes the segment. Plan quality is enforced by the evaluator's
+pass/fail decision, not by the segment manager.
 
 ### Recursive request boundary
 
 Complex-task requests can be nested. Any generator executor inside any
-`HarnessGraph` may call `request_complex_task_solution(goal)` before it edits.
-That creates a new `ComplexTaskRequest`; it does not create a child
-`TaskSegment` in the outer request.
+`HarnessGraph` may call `request_complex_task_solution(goal)`. That creates a
+new `ComplexTaskRequest`; it does not create a child `TaskSegment` in the outer
+request.
 
 ```text
 ComplexTaskRequest C1
@@ -219,7 +233,7 @@ Retry never creates a new `ComplexTaskRequest` or `TaskSegment`.
 ## Why the split matters
 
 - Complex-task context starts from the executor that requested the solution.
-- Segment sequence reflects partial-plan continuation, not retry count.
+- Segment sequence reflects continuation, not retry count.
 - Retry history lives as harness graphs inside one task segment.
 - Bubble-up to the requesting executor happens only when the complex task
   request closes.
@@ -231,8 +245,8 @@ Retry never creates a new `ComplexTaskRequest` or `TaskSegment`.
 | Component | Owner / scope | Responsibility |
 | --------- | ------------- | -------------- |
 | `ComplexTaskRequest` | `TaskCenter` | Container for a non-atomic delegated goal. Holds `requested_by_task_id`, goal, status, and final close result. |
-| `TaskSegment` | `ComplexTaskRequest` | One vertical partial-plan segment. Holds sequence, previous segment, retry budget, current harness graph, and accepted closing harness graph. |
-| `HarnessGraph` | `TaskSegment` | One concrete planner DAG execution: planner, generator DAG, evaluator, status, plan shape, and failure reason. |
+| `TaskSegment` | `ComplexTaskRequest` | One vertical continuation segment. Holds sequence, previous segment, segment goal, retry budget, current harness graph, and `continuation_goal` inherited from the harness graph that closed it. |
+| `HarnessGraph` | `TaskSegment` | One concrete planner DAG execution: planner, generator DAG, evaluator, status, `continuation_goal`, and failure reason. |
 | `ComplexTaskRequestHandler` | request boundary / one active handler per `ComplexTaskRequest` | Owns the executor handoff from `request_complex_task_solution`, creates and closes the request, pauses/resumes the requesting executor, and returns the final report to `requested_by_task_id`. |
 | `TaskSegmentManager` | one active manager per `ComplexTaskRequest` segment chain | Owns segment lifecycle, continuation policy, retry budget, and creation of `TaskSegment` and `HarnessGraph` records inside the request. |
 | `HarnessGraphOrchestrator` | one per `HarnessGraph` | Runs one planner-produced graph through planner, generator DAG tasks, and evaluator. It reports the graph outcome back to `TaskSegmentManager`. |
@@ -246,7 +260,7 @@ The runtime uses three explicit layers:
 | ----- | ---- | ------------ |
 | `ComplexTaskRequestHandler` | request creation, request close, executor pause/resume, final close report | segment retry policy or graph execution |
 | `TaskSegmentManager` | initial segment, continuation segment, retry graph creation, segment close | executor tool boundary or planner/generator/evaluator execution |
-| `HarnessGraphOrchestrator` | one `planner -> generator DAG -> evaluator` execution | retry, partial continuation, or request close |
+| `HarnessGraphOrchestrator` | one `planner -> generator DAG -> evaluator` execution | retry, continuation, or request close |
 
 `ComplexTaskRequestHandler` owns:
 
@@ -262,9 +276,8 @@ The runtime uses three explicit layers:
 - `create_retry_harness_graph(task_segment_id, previous_harness_graph_id)`,
 - `handle_harness_graph_closed(harness_graph_id)`.
 
-`create_retry_harness_graph` is for the same segment only. It can follow a
-failed graph or a partial graph that `TaskSegmentManager` has not accepted as
-the segment's closing graph.
+`create_retry_harness_graph` follows a failed graph in the same segment.
+A passed graph closes the segment; it never produces a retry.
 
 `HarnessGraphOrchestrator` decides the outcome of one harness graph.
 `TaskSegmentManager` decides whether that outcome closes the segment, creates a
@@ -294,6 +307,7 @@ TaskSegmentManager
   | create TaskSegment S1
   |   sequence_no = 1
   |   previous_segment_id = null
+  |   goal = C.goal
   |
   | create HarnessGraph S1.H1
   |   retry_no = 1
@@ -314,15 +328,16 @@ HarnessGraphOrchestrator(S1.H2) <-------------+
   |
   | run planner -> generator DAG -> evaluator
   |
-  +-- graph passed with plan_shape = partial
+  +-- graph passed with continuation_goal != null
   v
 TaskSegmentManager
   |
-  | accept S1.H2 as closing graph
-  | close TaskSegment S1 with plan_shape = partial
-  | create TaskSegment S2 because S1 closed partial
+  | close TaskSegment S1
+  |   S1.continuation_goal = S1.H2.continuation_goal
+  | create TaskSegment S2 because S1.continuation_goal is not null
   |   sequence_no = 2
   |   previous_segment_id = S1
+  |   goal = S1.continuation_goal
   |
   | create HarnessGraph S2.H1
   |   retry_no = 1
@@ -331,12 +346,12 @@ HarnessGraphOrchestrator(S2.H1)
   |
   | run planner -> generator DAG -> evaluator
   |
-  +-- graph passed with plan_shape = full
+  +-- graph passed with continuation_goal = null
   v
 TaskSegmentManager
   |
-  | accept S2.H1 as closing graph
-  | close TaskSegment S2 with plan_shape = full
+  | close TaskSegment S2
+  |   S2.continuation_goal = null
   | report request-level success
   v
 ComplexTaskRequestHandler
@@ -374,10 +389,14 @@ ComplexTaskRequestHandler
 
 - The team agrees that `ComplexTaskRequest` is the executor-requested complex
   goal.
-- The team agrees that `TaskSegment` is only for partial-plan continuation.
-- The team agrees that `HarnessGraph` is the retryable planner DAG execution.
+- The team agrees that `TaskSegment` is the continuation unit and inherits its
+  `continuation_goal` from the harness graph that closes it.
+- The team agrees that `HarnessGraph` is the retryable planner DAG execution
+  and carries the planner-emitted `continuation_goal`.
 - The team agrees that retry is horizontal and creates a new `HarnessGraph`
   inside the same `TaskSegment`.
+- The team agrees that a passed harness graph always closes its segment;
+  there is no `retry_after_partial` and no separate "accept" step.
 - The team agrees that `ROOT` is not a creation or spawn reason.
 - The context-engine boundary is explicit: planner launch context, per-graph
   evidence, detailed close-report payloads, and segment visibility are

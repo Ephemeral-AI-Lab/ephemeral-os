@@ -35,7 +35,10 @@ planner submits submit_full_plan with task_specification,
 evaluation_criteria, tasks, and task_specs
     |
     v
-HarnessGraphOrchestrator(S1.H1) materializes DAG and spawns generators
+S1.H1.continuation_goal = null
+    |
+    v
+HarnessGraphOrchestrator(S1.H1) instantiates generator DAG and spawns generators
     |
     v
 executors and verifiers submit success
@@ -47,9 +50,11 @@ HarnessGraphOrchestrator(S1.H1) spawns evaluator
 evaluator submits success
     |
     v
-HarnessGraphOrchestrator(S1.H1) marks graph passed with plan_shape = full
+HarnessGraphOrchestrator(S1.H1) marks graph passed
     |
     v
+TaskSegmentManager closes S1
+S1.continuation_goal = S1.H1.continuation_goal = null
 TaskSegmentManager reports request-level success
     |
     v
@@ -69,7 +74,10 @@ requesting executor closes its task
 
 ```
 planner in S1.H1 submits submit_partial_plan with task_specification,
-evaluation_criteria, tasks, task_specs, and continuation_goal
+evaluation_criteria, tasks, task_specs, and continuation_goal = G
+    |
+    v
+S1.H1.continuation_goal = G          (per-graph; not shared with retries)
     |
     v
 generators complete partial DAG
@@ -78,31 +86,62 @@ generators complete partial DAG
 evaluator submits success
     |
     v
-HarnessGraphOrchestrator(S1.H1) marks graph passed with plan_shape = partial
+HarnessGraphOrchestrator(S1.H1) marks graph passed
     |
     v
-TaskSegmentManager accepts S1.H1 as the closing graph
-and closes S1 with plan_shape = partial
+TaskSegmentManager closes S1
+S1.continuation_goal = S1.H1.continuation_goal = G
+    (segment inherits from the passing harness graph)
     |
     v
-TaskSegmentManager creates TaskSegment S2 because S1 closed partial
+TaskSegmentManager creates TaskSegment S2 because S1.continuation_goal != null
   previous_segment_id = S1
+  goal                = G
     |
     v
 TaskSegmentManager creates HarnessGraph S2.H1
     |
     v
-planner in S2.H1 must submit_full_plan
+planner in S2.H1 must submit_full_plan (recursive partial gate)
     |
     v
 HarnessGraphOrchestrator(S2.H1) runs graph to full-plan pass
+S2.H1.continuation_goal = null
     |
     v
-TaskSegmentManager reports request-level success
+TaskSegmentManager closes S2 (S2.continuation_goal = null)
+and reports request-level success
     |
     v
 ComplexTaskRequestHandler closes C1 and returns one final result to
 requested_by_task_id
+```
+
+## Retry-then-pass path
+
+```
+planner in S1.H1 submits a plan; generators run; evaluator fails (or planner
+exhausts, or generator fails)
+    |
+    v
+HarnessGraphOrchestrator(S1.H1) marks graph failed
+    |
+    v
+TaskSegmentManager: retry budget remains
+TaskSegmentManager creates HarnessGraph S1.H2
+    (S1.H2.continuation_goal starts unset; its own planner will decide)
+    |
+    v
+planner in S1.H2 submits submit_full_plan or submit_partial_plan
+    (independent decision; S1.H1's continuation_goal is not inherited)
+    |
+    v
+S1.H2 runs to pass
+    |
+    v
+TaskSegmentManager closes S1
+S1.continuation_goal = S1.H2.continuation_goal
+    (only the passing graph contributes)
 ```
 
 ## Resolver loop validation
@@ -199,16 +238,17 @@ and reports failure to TaskSegmentManager
    request decisions to `ComplexTaskRequestHandler` plus segment decisions to
    `TaskSegmentManager`.
 5. Migrate retry from attempt rows or child graph spawn to next
-   `HarnessGraph` spawn inside the same segment, including failure retries and
-   retries after non-closing partial graphs.
+   `HarnessGraph` spawn inside the same segment, after a failed graph.
 6. Migrate `submit_request_plan` to `request_complex_task_solution`.
 7. Migrate partial-plan continuation to `TaskSegment` creation with
-   `previous_segment_id` lineage.
+   `previous_segment_id` lineage and `continuation_goal` inherited from the
+   passing harness graph.
 8. Migrate tool gates to read request, segment, and harness graph state.
 9. Update prompts and docs that mention retry as a child graph or
    `RETRY_ON_FAILURE`.
-10. Remove obsolete attempt rows, retry graph states, old spawn reasons, and
-   compatibility code.
+10. Remove obsolete attempt rows, retry graph states, old spawn reasons, the
+    `plan_shape` field, the `closing_harness_graph_id` field,
+    `retry_after_partial`, and compatibility code.
 11. Run targeted TaskCenter runtime tests, then broader backend checks.
 
 ## Test plan
@@ -230,13 +270,13 @@ Minimum coverage:
 - Planner exhaustion retry.
 - Retry budget exhaustion.
 - Retry creates `HarnessGraph` N+1 inside the same segment.
-- Partial-plan continuation creates `TaskSegment` N+1.
-- Partial-plan continuation is based only on the accepted closing graph for the
-  previous segment.
-- Earlier partial graphs do not create continuation when the accepted closing
-  graph is full.
-- `retry_after_partial` can create a later harness graph in the same segment,
-  and that later graph can become the accepted closing graph.
+- Retry harness graph's `continuation_goal` is set independently by its own
+  planner and is not inherited from prior failed graphs.
+- Continuation creates `TaskSegment` N+1 with `goal` inherited from the
+  previous segment's `continuation_goal`, which itself was inherited from the
+  passing harness graph that closed the previous segment.
+- A passing harness graph always closes its segment; failed graphs retry
+  within the segment subject to budget.
 - `request_complex_task_solution` can create a nested `ComplexTaskRequest`
   from a generator executor inside an existing harness graph.
 - Recursive partial-plan gate blocks continuation planners.
@@ -261,9 +301,6 @@ uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/a
    a complex-task result does not require a separate harness graph stage.
 3. Planner step-budget detection: confirm the exact runtime signal for
    `planner_step_budget_exhausted`.
-4. Context-engine boundary: planner launch context, per-harness-graph evidence,
-   detailed close-report payloads, and prior-segment visibility need their own
-   spec.
 
 ## Phase exit criteria
 
@@ -271,5 +308,7 @@ uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/a
 - Public executor contract exposes `request_complex_task_solution`,
   `submit_execution_success`, and `submit_execution_failure`.
 - Docs no longer describe retry as `RETRY_ON_FAILURE` child graph creation.
-- Segment progression reflects only partial-plan continuation.
-- Retry history is stored only as harness graphs inside one segment.
+- Segment progression reflects only continuation through `continuation_goal`
+  inherited from the passing harness graph.
+- Retry history is stored only as harness graphs inside one segment, with
+  per-graph `continuation_goal` independence.

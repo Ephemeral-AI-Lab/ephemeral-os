@@ -10,8 +10,8 @@ The lifecycle split is:
   `request_complex_task_solution`, request creation, request close, executor
   pause/resume, and final close-report delivery to `requested_by_task_id`.
 - `TaskSegmentManager` owns segment lifecycle: initial segment creation,
-  retry-budget decisions, retry harness graph creation, partial continuation,
-  and segment close.
+  retry-budget decisions, retry harness graph creation, continuation, and
+  segment close.
 - `HarnessGraphOrchestrator` owns one `HarnessGraph` execution:
   `planner -> generator tasks -> evaluator`.
 
@@ -26,8 +26,9 @@ to a passed or failed outcome, and reports that outcome to `TaskSegmentManager`.
 
 `TaskSegmentManager` then decides whether to:
 
-- create a retry `HarnessGraph`,
-- create a partial-continuation `TaskSegment`,
+- create a retry `HarnessGraph` (after a failed graph),
+- create a continuation `TaskSegment` (after a passed graph with non-null
+  `continuation_goal`),
 - close the current segment,
 - report a final request-level outcome.
 
@@ -40,8 +41,8 @@ a final outcome.
 For one `HarnessGraph`, `HarnessGraphOrchestrator`:
 
 1. Spawns the harness graph planner.
-2. Materializes generator tasks and task dependencies after a valid plan
-   submission.
+2. Instantiates the generator DAG after a valid plan submission by creating
+   generator task records and dependency edges.
 3. Spawns generator tasks.
 4. Watches generator terminal transitions.
 5. Spawns the evaluator only after all generators pass.
@@ -56,6 +57,11 @@ For one `HarnessGraph`, `HarnessGraphOrchestrator`:
 | `generating` | executor and verifier generator tasks | all generators are terminal |
 | `evaluating` | evaluator task | evaluator submits success or failure |
 | `closed` | none | harness graph is passed or failed |
+
+Leaving `generating` does not always create an evaluator. If every generator is
+`DONE`, `HarnessGraphOrchestrator` creates the evaluator and moves to
+`evaluating`. If any generator is `FAILED` or `BLOCKED`, the graph closes as
+failed after generator quiescence.
 
 `request_complex_task_solution` may pause one executor while its complex task
 request runs. That pause is executor-local waiting inside the executor's
@@ -115,16 +121,23 @@ immediately.
 
 ```
 close_harness_graph(H, outcome):
-    H.status      = passed | failed
-    H.stage       = closed
-    H.plan_shape  = full | partial | null
-    H.fail_reason = null
-                  | planner_step_budget_exhausted
-                  | generator_failed
-                  | evaluator_failed
+    H.status            = passed | failed
+    H.stage             = closed
+    H.continuation_goal = null
+                        | string (set from submit_partial_plan)
+    H.fail_reason       = null
+                        | planner_step_budget_exhausted
+                        | generator_failed
+                        | evaluator_failed
 
     TaskSegmentManager.handle_harness_graph_closed(H)
 ```
+
+`H.continuation_goal` is set when the planner submits its plan, not at close.
+`submit_full_plan` leaves it null; `submit_partial_plan(continuation_goal)`
+sets it to the supplied goal. On failure paths it remains null. Each harness
+graph's `continuation_goal` belongs to that graph alone — retry graphs in the
+same segment do not inherit it from prior graphs.
 
 `HarnessGraphOrchestrator` does not inspect retry budget and does not create
 the next graph. Retry is a segment-level decision owned by
@@ -132,32 +145,26 @@ the next graph. Retry is a segment-level decision owned by
 
 ## Segment Reaction
 
-`TaskSegmentManager` reacts to a closed harness graph. Continuation decisions
-are based only on the harness graph that the manager accepts as the segment's
-closing graph:
+`TaskSegmentManager` reacts to a closed harness graph. A passed graph always
+closes its segment; a failed graph either retries within the segment or closes
+the segment failed:
 
 ```
 H.status:
   passed
-    if H.plan_shape == partial and segment policy spends another retry:
-      create HarnessGraph retry N+1 in the same segment.
+    segment.continuation_goal = H.continuation_goal
+    close current segment.
 
-    else if H.plan_shape == partial:
-      set segment.closing_harness_graph_id = H.
-      close current segment with plan_shape = partial.
-      create TaskSegment N+1.
+    if segment.continuation_goal is not None:
+      create TaskSegment N+1 with goal = segment.continuation_goal.
       create HarnessGraph retry 1 in the new segment.
-
     else:
-      set segment.closing_harness_graph_id = H.
-      close current segment success.
       report request-level success to ComplexTaskRequestHandler.
 
   failed
     if current segment has retry budget remaining:
       create HarnessGraph retry N+1 in the same segment.
     else:
-      set segment.closing_harness_graph_id = H.
       close current segment failed.
       report request-level failure to ComplexTaskRequestHandler.
 ```
@@ -165,12 +172,9 @@ H.status:
 Retry creates a new `HarnessGraph` in the same `TaskSegment`. It never creates
 a new segment or complex task request.
 
-If an earlier harness graph in the segment has `plan_shape = partial` but a
-later accepted closing graph has `plan_shape = full`, the segment closes as
-full and no continuation segment is created.
-
-If the segment manager accepts a partial harness graph as the closing graph,
-then and only then does it create the next `TaskSegment`.
+There is no policy hook for "spend retry on a passed graph": once a graph
+passes, it closes the segment. Plan quality is enforced by the evaluator's
+pass/fail decision, not by the segment manager.
 
 `ComplexTaskRequestHandler` turns request-level success or failure into the
 single close report returned to `requested_by_task_id`.
@@ -218,8 +222,7 @@ H failed     no        yes    H passed H failed
 7. Implement evaluator success and failure handling.
 8. Implement graph close reporting from `HarnessGraphOrchestrator` to
    `TaskSegmentManager`.
-9. Keep partial-continuation segment creation stubbed or feature-gated until
-   Phase 04.
+9. Keep continuation segment creation stubbed or feature-gated until Phase 04.
 
 ## Phase exit criteria
 

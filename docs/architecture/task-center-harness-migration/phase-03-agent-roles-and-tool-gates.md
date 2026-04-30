@@ -96,7 +96,7 @@ registration.
 
 | Tool | Block when | State source | Soft behavior | Hard behavior |
 | ---- | ---------- | ------------ | ------------- | ------------- |
-| `submit_partial_plan` | current request already has a prior segment completed with `plan_shape = partial` | `TaskSegment.previous_segment_id` walk plus each segment's `closing_harness_graph_id.plan_shape` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
+| `submit_partial_plan` | current request already has a prior segment with non-null `continuation_goal` | `TaskSegment.previous_segment_id` walk plus each segment's `continuation_goal` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
 | `submit_full_plan` / `submit_partial_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref | handler-level validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `request_complex_task_solution` | executor has called any edit tool at least once | agent message history | remind executor after first edit | prehook blocks after edit |
 | `submit_evaluation_success` | evaluator has at least five unresolved resolver calls | agent message history | warn at four unresolved resolver calls | prehook blocks success at five |
@@ -147,7 +147,7 @@ Soft layer examples:
    including task id uniqueness, known agent names, exact `task_specs` coverage,
    and dependency validity.
 4. Add recursive partial-plan gating by walking `TaskSegment.previous_segment_id`
-   and each prior segment's `closing_harness_graph_id`.
+   and checking each prior segment's `continuation_goal`.
 5. Add `request_complex_task_solution` after-edit gating from message history.
 6. Add resolver-count gating for verifier and evaluator success terminals.
 7. Keep soft reminders aligned with hard prehook behavior.
