@@ -20,6 +20,49 @@ The lifecycle split is:
 `HarnessGraphOrchestrator` is in-process and ephemeral. Durable state lives on
 `ComplexTaskRequest`, `TaskSegment`, `HarnessGraph`, tasks, and task outputs.
 
+## Phase 01 inheritance
+
+Phase 01 ships the orchestrator's contract surface and every persistence
+seam this phase needs; Phase 02 only fills behaviour.
+
+**Already in place:**
+
+- `HarnessGraphOrchestrator` class skeleton at
+  `backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator.py`
+  with constructor signature `(harness_graph, graph_store, on_graph_closed)`.
+  All terminal handlers (`start`, `handle_planner_terminal`,
+  `handle_generator_terminal`, `handle_evaluator_terminal`, `close`) raise
+  `NotImplementedError("Phase 02")`.
+- `HarnessGraphStore` mutators that the orchestrator drives stage-by-stage:
+  `set_planner_task_id`, `set_plan_contract(task_specification,
+  evaluation_criteria, continuation_goal)`, `set_generator_task_ids`,
+  `set_evaluator_task_id`, `set_stage`, and `close(status, fail_reason,
+  closed_at)`.
+- `TaskSegmentManager.__init__` accepts an optional
+  `orchestrator_factory: Callable[[HarnessGraph], HarnessGraphOrchestrator] | None`
+  parameter (`None` in Phase 01); Phase 02 wires it.
+- `TaskSegmentManager.handle_harness_graph_closed` is the callback the
+  orchestrator's `on_graph_closed` already targets. The closure routing
+  (`PASSED → terminal_success | success_continue`,
+  `FAILED → retry or attempt_plan_failed`) is already verified by
+  `backend/tests/task_center/lifecycle/test_integration_smoke.py`, which
+  exercises the full pipeline through a synchronous stub orchestrator.
+- Graph-level invariants
+  (`assert_graph_running`, `assert_graph_sequence_contiguous`,
+  `assert_fail_reason_present_on_failure`) live in
+  `task_center.complex_task_request.segment.harness_graph.invariants` and
+  raise `GraphInvariantViolation` on breach.
+
+**Phase 02 wires:**
+
+- The planner / generator / evaluator state-machine bodies inside
+  `HarnessGraphOrchestrator` (replacing the `NotImplementedError` stubs).
+- An orchestrator factory passed to every `TaskSegmentManager` spawned by
+  `ComplexTaskRequestHandler._spawn_segment_manager`.
+- Calls to `graph_store.set_*` mutators as the orchestrator advances through
+  `planning → generating → evaluating`, and the persisted close via
+  `graph_store.close(...)` followed by the `on_graph_closed` callback.
+
 ## Responsibility Boundary
 
 `HarnessGraphOrchestrator` never creates `ComplexTaskRequest`, `TaskSegment`, or

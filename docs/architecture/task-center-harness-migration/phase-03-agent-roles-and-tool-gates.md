@@ -8,6 +8,52 @@ Port role semantics and terminal-tool gating onto the new
 This phase should preserve the public agent contract while changing where state
 is read from.
 
+## Phase 01 inheritance
+
+Phase 01 ships the durable state model and the request/segment lifecycle
+that every gate reads from; Phase 03 wires the tool-side enforcement.
+
+**Already in place:**
+
+- Three persisted records (`ComplexTaskRequest`, `TaskSegment`,
+  `HarnessGraph`) and their stores in `db.stores`. Tool prehooks read
+  structural state through `ComplexTaskRequestStore.get` /
+  `list_for_executor_task`, `TaskSegmentStore.get` / `list_for_request` /
+  `get_by_sequence`, and `HarnessGraphStore.get` / `list_for_segment` /
+  `get_by_sequence`.
+- `TaskSegment.continuation_goal` is set only from passing graphs — enforced
+  by `assert_continuation_goal_only_from_passing_graph`. The recursive
+  partial-plan gate can walk
+  `ComplexTaskRequestStore.get(...).task_segment_ids` and read each
+  segment's `continuation_goal` to decide whether `submit_partial_plan` is
+  still allowed.
+- `'root'` creation reason is rejected by `assert_no_root_creation_reason`.
+- `get_attempt_count(task_segment)` (under
+  `task_center.complex_task_request.segment.attempt_count`) returns the
+  budget-remaining input for the next-graph gate.
+- `ComplexTaskRequestHandler.create_initial_segment` and
+  `create_continuation_segment` enforce the segment-side half of the
+  partial-plan-continuation gate (predecessor SUCCEEDED + non-null
+  `continuation_goal`); only the planner-side `submit_partial_plan`
+  prehook is missing.
+- `HarnessGraphStore.set_plan_contract(task_specification,
+  evaluation_criteria, continuation_goal)` and `set_planner_task_id` are
+  the persistence calls the planner-submission handlers will make.
+
+**Phase 03 wires:**
+
+- `submit_full_plan` and `submit_partial_plan` handlers call
+  `HarnessGraphStore.set_plan_contract` and `set_planner_task_id` on the
+  active graph and validate the generator graph (task-id uniqueness, agent
+  names, exact `task_specs` coverage, dependency validity).
+- Tool prehooks read the three new stores plus agent message history to
+  enforce the gating matrix below.
+- `request_complex_task_solution` after-edit gating (read from agent
+  message history; no Phase 01 dependency) creates a request via
+  `ComplexTaskRequestHandler.create_complex_task_request` plus
+  `create_initial_segment`. The Phase 04 hand-off described in
+  `phase-04-complex-task-spawning-and-handoff.md` shares this entry point.
+
 ## Role model
 
 TaskCenter owns four main agent roles, all scoped to one `HarnessGraph` except

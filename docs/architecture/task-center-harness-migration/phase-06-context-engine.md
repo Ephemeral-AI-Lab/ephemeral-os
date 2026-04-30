@@ -19,6 +19,54 @@ The design target is flexible and structured enough for three layers:
 - task segment management,
 - harness graph orchestration.
 
+## Phase 01 inheritance
+
+Phase 01 ships durable structural state and a per-segment failure-history
+scaffold with reserved slots for context-engine summaries; Phase 06 fills
+in those summary fields and the recording hooks.
+
+**Already in place:**
+
+- `AttemptedPlanEntry` (under
+  `task_center.domain.segment_closure_report`) carries
+  `harness_graph_id`, `graph_sequence_no`, `task_specification`,
+  `evaluation_criteria`, `fail_reason`, and two Phase 06 slots:
+  `harness_graph_summary_id: str | None` and
+  `failure_landscape: dict | None`. Phase 01 populates the summary slots
+  as `None`; the unit test
+  `backend/tests/task_center/domain/test_segment_closure_report.py::test_phase06_summary_fields_default_to_none`
+  pins the contract.
+- `TaskSegmentManager._build_attempted_plan_history()` returns the ordered
+  tuple of `AttemptedPlanEntry`s for every closed graph in the segment,
+  preserving `graph_sequence_no` order via
+  `HarnessGraphStore.list_for_segment`. Phase 06 only needs to fill the
+  two summary fields when assembling `attempt_plan_failed`; the iteration
+  and ordering are already done.
+- The new request / segment / graph stores expose every walk the context
+  engine needs:
+  `ComplexTaskRequestStore.get` / `list_for_executor_task`,
+  `TaskSegmentStore.list_for_request` / `get_by_sequence`,
+  `HarnessGraphStore.list_for_segment` / `get_by_sequence`.
+- Closure routing is already in place — `TaskSegmentManager` reads from
+  `HarnessGraphStore.list_for_segment` to assemble history, so Phase 06
+  can hook a `record_harness_graph_summary` call into the orchestrator's
+  close path (Phase 02) and into segment close without rewriting history
+  assembly.
+
+**Phase 06 wires:**
+
+- `ContextEngine.record_harness_graph_summary(harness_graph_id)` produces
+  a `harness_graph_summary_id` and a `failure_landscape` payload per
+  closed graph; those IDs back-fill `AttemptedPlanEntry` when the segment
+  closes.
+- `record_task_segment_summary(task_segment_id)` is called by
+  `TaskSegmentManager` on segment close.
+- `record_complex_task_summary(complex_task_request_id)` is called by
+  `ComplexTaskRequestHandler` on request close, before
+  `deliver_close_report` (Phase 04).
+- Planner / generator / evaluator context recipes use the new store
+  surfaces to walk the request → segment → graph chain.
+
 ## Non-goals
 
 The context engine does not:

@@ -212,24 +212,18 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
     engine = engine_mod.get_engine()
     assert engine is not None
     insp = inspect(engine)
-    for table_name in ("task_center_tasks", "task_center_harness_graph"):
-        columns = {col["name"] for col in insp.get_columns(table_name)}
-        assert "task_center_run_id" in columns
-        assert "run_id" not in columns
+    columns = {col["name"] for col in insp.get_columns("task_center_tasks")}
+    assert "task_center_run_id" in columns
+    assert "run_id" not in columns
+    # Phase 01 drops the legacy task_center_harness_graph table after init.
+    assert not insp.has_table("task_center_harness_graph")
+    assert insp.has_table("harness_graphs")
     with engine.connect() as conn:
         task_run_id = conn.execute(
             text('SELECT task_center_run_id FROM task_center_tasks WHERE id = :id'),
             {"id": "tc-run:t1"},
         ).scalar_one()
-        graph_run_id = conn.execute(
-            text(
-                "SELECT task_center_run_id "
-                "FROM task_center_harness_graph WHERE id = :id"
-            ),
-            {"id": "graph-1"},
-        ).scalar_one()
     assert task_run_id == "tc-run"
-    assert graph_run_id == "tc-run"
 
 
 def test_initialize_db_migrates_legacy_agent_runs_schema(

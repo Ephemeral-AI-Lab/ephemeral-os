@@ -16,6 +16,54 @@ the current segment.
 Each per-segment `TaskSegmentManager` is the only creator of `HarnessGraph`
 records inside its owned segment.
 
+## Phase 01 inheritance
+
+Phase 01 ships request creation, segment-chain construction, and close-report
+assembly; Phase 04 wires the actual delivery to `requested_by_task_id`.
+
+**Already in place:**
+
+- `ComplexTaskRequestHandler.create_complex_task_request(task_center_run_id,
+  requested_by_task_id, goal)` creates the request with
+  `requested_by_task_id` recorded. `create_initial_segment` /
+  `create_continuation_segment` enforce sequence-number contiguity and the
+  predecessor SUCCEEDED + non-null `continuation_goal` precondition for
+  continuation.
+- `ComplexTaskCloseReport` DTO carries `complex_task_request_id`,
+  `requested_by_task_id`, `outcome` (`"success"` | `"failed"`),
+  `final_segment_id`, and `final_harness_graph_id`. It is constructed by
+  `ComplexTaskRequestHandler._build_close_report` whenever a request closes.
+- `ComplexTaskRequestHandler.close_complex_task_request(...)` invokes a
+  `deliver_close_report: Callable[[ComplexTaskCloseReport], None] | None`
+  callback if one is supplied (the parameter exists; it defaults to
+  `None` in Phase 01). Verified end-to-end by
+  `test_close_complex_task_request_delivers_close_report_when_callback_set`.
+- `ComplexTaskRequestRecord.final_outcome` is persisted as a JSON dict
+  shaped `{"outcome": "success" | "failed", "final_segment_id": ...,
+  "final_harness_graph_id": ...}`.
+- `/api/db/task-center-runs/{id}/graph` router currently returns
+  `{"harness_graphs": []}` with a `# TODO(phase-04)` comment, so callers
+  see the route shape but no data while the new walk is built.
+- The integration smoke (`test_integration_smoke.py`) drives every
+  segment-closure → request-closure path through stub orchestrators, so
+  `ComplexTaskRequestStatus.SUCCEEDED` and `ComplexTaskRequestStatus.FAILED`
+  transitions are already locked.
+
+**Phase 04 wires:**
+
+- A `deliver_close_report` callable that attaches the report to the
+  executor task identified by `requested_by_task_id` and unblocks its
+  outer agent run.
+- The `request_complex_task_solution` tool handler that calls
+  `ComplexTaskRequestHandler.create_complex_task_request` followed by
+  `create_initial_segment`, then exits the executor agent run pending the
+  close report (the Phase 03 tool gate guards the same entry point).
+- Persistence or replay semantics for the close report so a process
+  restart can still deliver to `requested_by_task_id`.
+- The `/api/db/task-center-runs/{id}/graph` router endpoint, walking
+  `complex_task_requests → task_segments → harness_graphs` to surface
+  the new schema's harness-graph view to the frontend.
+
 ## Creation path
 
 ```text
