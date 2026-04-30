@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.code_intelligence.language_server.client import LspClient
-from sandbox.code_intelligence.core.types import DiagnosticSeverity, ReferenceInfo, SymbolKind
+from sandbox.code_intelligence.core.types import DiagnosticSeverity, SymbolKind
 
 
 def _decode_sandbox_python_payload(command: str) -> str:
