@@ -285,7 +285,7 @@ async def test_run_with_recovery_retries_with_recovered_sandbox(monkeypatch):
             raise RuntimeError("container not found")
         return "ok"
 
-    monkeypatch.setattr("sandbox.daytona_utils._recover_sandbox", fake_recover_sandbox)
+    monkeypatch.setattr("sandbox.daytona.recovery._recover_sandbox", fake_recover_sandbox)
 
     result = await _run_with_recovery(_ctx({"daytona_sandbox": original}), operation)
 
