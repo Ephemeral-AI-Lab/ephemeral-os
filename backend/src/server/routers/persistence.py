@@ -88,10 +88,8 @@ def create_persistence_router(
                 status_code=503,
                 content={"error": "Database not configured"},
             )
-        harness_graphs = task_center_store.list_harness_graphs_for_run(
-            task_center_run_id
-        )
-        return JSONResponse(content={"harness_graphs": harness_graphs})
+        # TODO(phase-04): surface harness graphs via the new request/segment/graph stores.
+        return JSONResponse(content={"harness_graphs": []})
 
     @router.get("/agent-runs/{agent_run_id}")
     async def get_agent_run(agent_run_id: str):

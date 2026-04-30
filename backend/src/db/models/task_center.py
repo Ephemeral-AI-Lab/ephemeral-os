@@ -1,4 +1,8 @@
-"""TaskCenter request/run/task/harness-graph persistence models."""
+"""TaskCenter request/run/task persistence models.
+
+Harness-graph persistence has been moved to ``db.models.harness_graph`` and
+is owned by the new three-axis (request / segment / graph) schema.
+"""
 
 from __future__ import annotations
 
@@ -63,11 +67,6 @@ class TaskCenterRunRecord(Base):
         back_populates="run",
         cascade="all, delete-orphan",
     )
-    harness_graphs: Mapped[list["TaskCenterHarnessGraphRecord"]] = relationship(
-        "TaskCenterHarnessGraphRecord",
-        back_populates="run",
-        cascade="all, delete-orphan",
-    )
 
     def __repr__(self) -> str:
         return f"<TaskCenterRunRecord id={self.id!r} status={self.status!r}>"
@@ -112,41 +111,3 @@ class TaskCenterTaskRecord(Base):
 
     def __repr__(self) -> str:
         return f"<TaskCenterTaskRecord id={self.id!r} status={self.status!r}>"
-
-
-class TaskCenterHarnessGraphRecord(Base):
-    """Persisted harness graph (planner + executor/verifier DAG)."""
-
-    __tablename__ = "task_center_harness_graph"
-
-    id: Mapped[str] = mapped_column(String(96), primary_key=True)
-    task_center_run_id: Mapped[str] = mapped_column(
-        String(36),
-        ForeignKey("task_center_runs.id", ondelete="CASCADE"),
-        index=True,
-    )
-    root_task_id: Mapped[str] = mapped_column(String(96))
-    planner_task_id: Mapped[str] = mapped_column(String(96))
-    executor_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    # Stage 1/3/5 four-role roadmap fields:
-    # ``dag_nodes`` is the union of executor + verifier ids the planner
-    # emitted (Stage 3 introduced verifier nodes in DAGs). ``plan_shape``
-    # / ``what_to_do_next`` and ``prior_graph_id`` are legacy migration fields
-    # kept for compatibility while the TaskCenter harness is rebuilt.
-    dag_nodes: Mapped[list[str]] = mapped_column(JSON, default=list)
-    plan_shape: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    what_to_do_next: Mapped[str] = mapped_column(Text, default="")
-    prior_graph_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
-    )
-
-    run: Mapped[TaskCenterRunRecord] = relationship(back_populates="harness_graphs")
-
-    def __repr__(self) -> str:
-        return f"<TaskCenterHarnessGraphRecord id={self.id!r}>"

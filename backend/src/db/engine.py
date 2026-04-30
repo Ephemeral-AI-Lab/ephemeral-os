@@ -89,6 +89,21 @@ _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
 }
 
 
+_LEGACY_TABLES_TO_DROP: set[str] = {
+    "task_center_harness_graph",
+}
+
+
+def _drop_legacy_tables(engine: Engine) -> None:
+    """Drop tables that are no longer modelled. Run after create_all/migrate."""
+    insp = inspect(engine)
+    for name in _LEGACY_TABLES_TO_DROP:
+        if insp.has_table(name):
+            logger.info("Dropping legacy table %s", name)
+            with engine.begin() as conn:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{name}"'))
+
+
 def _drop_indexes_for_columns(engine: Engine, table_name: str, columns: set[str]) -> None:
     insp = inspect(engine)
     for index in insp.get_indexes(table_name):
@@ -304,6 +319,9 @@ def initialize_db(
 
     # Patch existing tables with columns added after initial creation.
     _add_missing_columns(_engine)
+
+    # Drop tables that are no longer modelled (post-migration cleanup).
+    _drop_legacy_tables(_engine)
 
     logger.info("Database tables created / verified")
 

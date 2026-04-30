@@ -5,12 +5,31 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-__all__ = ["AgentRunStore", "ModelStore", "TaskCenterStore"]
+__all__ = [
+    "AgentRunStore",
+    "ComplexTaskRequestStore",
+    "HarnessGraphStore",
+    "ModelStore",
+    "TaskCenterStore",
+    "TaskSegmentStore",
+]
 
 _EXPORTS = {
     "AgentRunStore": ("db.stores.agent_run_store", "AgentRunStore"),
+    "ComplexTaskRequestStore": (
+        "db.stores.complex_task_request_store",
+        "ComplexTaskRequestStore",
+    ),
+    "HarnessGraphStore": (
+        "db.stores.harness_graph_store",
+        "HarnessGraphStore",
+    ),
     "ModelStore": ("db.stores.model_store", "ModelStore"),
     "TaskCenterStore": ("db.stores.task_center_store", "TaskCenterStore"),
+    "TaskSegmentStore": (
+        "db.stores.task_segment_store",
+        "TaskSegmentStore",
+    ),
 }
 
 
