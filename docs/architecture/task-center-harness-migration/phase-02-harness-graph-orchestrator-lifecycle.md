@@ -30,9 +30,9 @@ seam this phase needs; Phase 02 only fills behaviour.
 - `HarnessGraphOrchestrator` class skeleton at
   `backend/src/task_center/complex_task_request/segment/harness_graph/orchestrator.py`
   with constructor signature `(harness_graph, graph_store, on_graph_closed)`.
-  All terminal handlers (`start`, `handle_planner_terminal`,
-  `handle_generator_terminal`, `handle_evaluator_terminal`, `close`) raise
-  `NotImplementedError("Phase 02")`.
+  Phase 02 should replace the old terminal-handler placeholder surface with
+  `start()` and `reconcile()` entry points plus internal state-mutation and
+  dispatch primitives.
 - `HarnessGraphStore` mutators that the orchestrator drives stage-by-stage:
   `set_planner_task_id`, `set_plan_contract(task_specification,
   evaluation_criteria, continuation_goal)`, `set_generator_task_ids`,
@@ -55,8 +55,10 @@ seam this phase needs; Phase 02 only fills behaviour.
 
 **Phase 02 wires:**
 
-- The planner / generator / evaluator state-machine bodies inside
+- The planner / generator / evaluator reconcile loop inside
   `HarnessGraphOrchestrator` (replacing the `NotImplementedError` stubs).
+- A terminal-call view that terminal tools write after validation and that the
+  orchestrator reads during reconciliation.
 - An orchestrator factory passed to every `TaskSegmentManager` spawned by
   `ComplexTaskRequestHandler._spawn_segment_manager`.
 - Calls to `graph_store.set_*` mutators as the orchestrator advances through
@@ -69,6 +71,12 @@ seam this phase needs; Phase 02 only fills behaviour.
 sibling `HarnessGraph` rows. It receives a current `HarnessGraph`, runs it to a
 passed or failed outcome, and reports that outcome to its owning
 `TaskSegmentManager`.
+
+Terminal tools also remain outside the orchestrator. They parse public tool
+input, enforce role gates, return user-facing tool errors, persist an accepted
+terminal-call view, and end the agent run. The orchestrator reads that
+terminal-call view later and owns only the resulting state transition and
+follow-up task dispatch.
 
 `TaskSegmentManager` then decides, inside its owned segment, whether to:
 
@@ -88,21 +96,79 @@ final report when it receives a `TaskSegmentClosureReport` with
 
 For one `HarnessGraph`, `HarnessGraphOrchestrator`:
 
-1. Spawns the harness graph planner.
-2. Instantiates the generator DAG after a valid plan submission by creating
-   generator task records and dependency edges.
-3. Spawns generator tasks.
-4. Watches generator terminal transitions.
-5. Spawns the evaluator only after all generators pass.
-6. Marks the harness graph passed or failed.
-7. Reports the graph outcome to `TaskSegmentManager`.
+1. Opens one task creation / task mutation service surface for accepted
+   terminal submissions and nested complex-task close reports.
+2. Opens one task dispatch / graph-outcome surface that decides when tasks can
+   launch and when graph state should be escalated to the owning segment.
+
+Graph close is a state mutation followed by the existing
+`on_graph_closed(graph_id)` callback to `TaskSegmentManager`.
+
+### Task creation / task mutation handler
+
+This handler is an internal service/function-call surface owned by
+`HarnessGraphOrchestrator`. It is not a public terminal tool API. Public tool
+handlers still parse input, enforce role gates, persist an accepted call view,
+and end the agent run. The orchestrator's mutation handler consumes the accepted
+view later.
+
+The handler has four entry families:
+
+| Entry | Consumes | Mutates |
+| ----- | -------- | ------- |
+| `apply_plan_submission(...)` | `submit_full_plan` or `submit_partial_plan` | Persists graph contract, stores `continuation_goal` for partial plans, creates all generator task rows, sets graph stage to `generating`. |
+| `apply_executor_submission(...)` | `submit_execution_success` or `submit_execution_failure` | Appends executor summary and marks the generator task `done` or `failed`. |
+| `apply_verifier_submission(...)` | `submit_verification_success` or `submit_verification_failure` | Appends verifier summary and marks the generator task `done` or `failed`. |
+| `apply_evaluator_submission(...)` | `submit_evaluation_success` or `submit_evaluation_failure` | Appends evaluator summary and closes the graph passed or failed. |
+
+`apply_plan_submission(...)` is the unified planner entry. It receives a
+normalized plan view with `kind = full | partial`; it does not expose separate
+orchestrator methods for `submit_full_plan` and `submit_partial_plan`.
+
+Executor and verifier submissions are both generator task outcomes, but they
+remain separate mutation entries because their public tool contracts, summaries,
+and gating rules differ.
+
+The mutation handler must not handle generator `submit_request_plan` or any
+legacy request-plan tool. Request-style generator handoffs are not success or
+failure task outcomes. The supported handoff path is
+`request_complex_task_solution`, which belongs to the complex-task request
+boundary described in Phase 04. If a legacy `submit_request_plan` surface still
+exists during migration, it should be rejected or translated before reaching
+`HarnessGraphOrchestrator`.
+
+### Task dispatch / graph-outcome manager
+
+This manager is also internal to one `HarnessGraphOrchestrator`. It reads
+persisted task state after mutations and decides the next launch or graph
+outcome.
+
+It owns:
+
+- launching the planner when a graph starts,
+- launching dependency-free generator tasks after a plan is accepted,
+- launching generator tasks whose dependencies are all `DONE`,
+- launching the evaluator only after every generator task is `DONE`,
+- blocking pending descendants after a generator failure,
+- holding graph failure escalation until generator quiescence,
+- closing the graph and notifying `TaskSegmentManager` when the graph outcome
+  is known.
+
+Generator failures include executor and verifier failures. When an executor
+task fails, the manager marks descendants that can no longer run as `BLOCKED`,
+continues to let already-running independent generator tasks finish, and does
+not report graph failure to the segment until all non-blocked work has reached a
+terminal state. This preserves useful sibling evidence for the next retry plan.
+
+Evaluator failure escalates immediately because the evaluator is launched only
+after generator quiescence has already been reached.
 
 ## Harness graph stages
 
 | Stage | Running work | Exit condition |
 | ----- | ------------ | -------------- |
 | `planning` | planner task | planner submits a valid plan, or planner run ends without valid submission |
-| `generating` | executor and verifier generator tasks | all generators are terminal |
+| `generating` | generator tasks | all generators are terminal |
 | `evaluating` | evaluator task | evaluator submits success or failure |
 | `closed` | none | harness graph is passed or failed |
 
@@ -111,9 +177,9 @@ Leaving `generating` does not always create an evaluator. If every generator is
 `evaluating`. If any generator is `FAILED` or `BLOCKED`, the graph closes as
 failed after generator quiescence.
 
-`request_complex_task_solution` is a generator task handoff. The executor agent
-run exits after the request tool call; the outer graph receives that task's final
-result when the nested complex task request closes.
+`request_complex_task_solution` is a generator task handoff. The requesting
+generator agent run exits after the request tool call; the outer graph receives
+that task's final result when the nested complex task request closes.
 
 ## Failure escape valves
 
@@ -124,11 +190,15 @@ Failure escape valves:
       -> agent retries inside its own run
       -> no harness-graph-level escalation
 
-  - Generator or verifier submit_*_failure
+  - Generator executor/verifier submit_*_failure terminal-call view
       -> wait for generator quiescence
       -> mark HarnessGraph failed with generator_failed
 
-  - Evaluator submit_evaluation_failure
+  - Generator submit_request_plan or legacy request-plan call
+      -> not accepted by HarnessGraphOrchestrator
+      -> reject/translate before mutation handling
+
+  - Evaluator submit_evaluation_failure terminal-call view
       -> mark HarnessGraph failed with evaluator_failed immediately
 
   - Planner agent ends without a successful submit_*_plan
@@ -145,7 +215,7 @@ submission escalates to `HarnessGraphOrchestrator` as
 | Failure mode | Detected by | Wait point |
 | ------------ | ----------- | ---------- |
 | `planner_step_budget_exhausted` | runtime ends planner without valid plan submission | immediate |
-| `generator_failed` | executor or verifier submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED` |
+| `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED` |
 | `evaluator_failed` | evaluator submitted `submit_evaluation_failure` | immediate |
 
 ### Generator-failure quiescence
@@ -238,7 +308,7 @@ pass/fail decision, not by the segment manager.
 ## Closure decision tree
 
 ```text
-HarnessGraphOrchestrator observes a terminal transition in HarnessGraph H
+HarnessGraphOrchestrator reconciles a terminal-call view for HarnessGraph H
         |
         v
    H.stage:
@@ -268,17 +338,26 @@ H failed     no        yes    H passed H failed
 ## Implementation tasks
 
 1. Add `HarnessGraphOrchestrator` lookup by `HarnessGraph.id`.
-2. Route planner, generator, verifier, and evaluator terminal handlers through
-   the current graph's `HarnessGraphOrchestrator`.
-3. Implement planner success path: valid plan submission creates generator
+2. Add the terminal-call view and reader used by tool handlers and tests.
+3. Add the task creation / mutation handler with one unified
+   `apply_plan_submission(...)` entry for `submit_full_plan` and
+   `submit_partial_plan`.
+4. Add executor and verifier task-outcome entries for `submit_*_success` and
+   `submit_*_failure`.
+5. Keep generator `submit_request_plan` out of the orchestrator mutation
+   surface.
+6. Add the task dispatch / graph-outcome manager for launchability,
+   generator-failure quiescence, evaluator spawn, and graph close escalation.
+7. Implement planner success path: valid plan submission creates generator
    tasks and task dependencies for the current `HarnessGraph`.
-4. Implement planner exhaustion path.
-5. Implement generator failure quiescence and dependent blocking.
-6. Implement evaluator spawn after generator success.
-7. Implement evaluator success and failure handling.
-8. Implement graph close reporting from `HarnessGraphOrchestrator` to
+8. Implement planner exhaustion path.
+9. Implement generator failure quiescence and dependent blocking.
+10. Implement generator complex-task handoff and nested close-report resume.
+11. Implement evaluator spawn after generator success.
+12. Implement evaluator success and failure reconciliation.
+13. Implement graph close reporting from `HarnessGraphOrchestrator` to
    `TaskSegmentManager`.
-9. Keep continuation segment creation stubbed or feature-gated until Phase 04.
+14. Keep continuation segment creation stubbed or feature-gated until Phase 04.
 
 ## Phase exit criteria
 
@@ -287,5 +366,12 @@ H failed     no        yes    H passed H failed
 - Evaluator failure closes the harness graph immediately.
 - Planner exhaustion closes the harness graph with
   `planner_step_budget_exhausted`.
+- `submit_full_plan` and `submit_partial_plan` share one orchestrator plan
+  mutation entry.
+- Executor and verifier success/failure submissions update generator task
+  summaries and statuses without leaking public tool handlers into graph
+  dispatch policy.
+- Generator `submit_request_plan` is not handled by
+  `HarnessGraphOrchestrator`.
 - No retry path is implemented inside `HarnessGraphOrchestrator`; retry is
   delegated to `TaskSegmentManager`.
