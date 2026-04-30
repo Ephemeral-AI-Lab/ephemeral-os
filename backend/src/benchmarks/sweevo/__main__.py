@@ -1,4 +1,4 @@
-"""CLI entrypoint for running one SWE-EVO instance through TaskCenter.
+"""CLI entrypoint for the legacy SWE-EVO TaskCenter runner.
 
 Example:
     PYTHONPATH=backend/src uv run python -m benchmarks.sweevo \
@@ -24,9 +24,8 @@ from benchmarks.sweevo.models import (
 def _configure_benchmark_logging() -> None:
     """Keep the SWE-EVO CLI stream focused on benchmark progress.
 
-    Agent, TaskCenter, and sandbox setup output for this command is emitted
-    through ``MultiAgentEventPrinter``. Suppress lower-severity stdlib logging
-    so SDK/backend logger noise does not interleave with that stream.
+    Suppress lower-severity stdlib logging so SDK/backend logger noise does
+    not interleave with benchmark output.
     """
     logging.basicConfig(
         level=logging.ERROR,
@@ -38,7 +37,7 @@ def _configure_benchmark_logging() -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks.sweevo",
-        description="Run a SWE-EVO benchmark instance through TaskCenter.",
+        description="Legacy TaskCenter SWE-EVO runner.",
     )
     parser.add_argument("--source", default=_DEFAULT_DATASET_SOURCE)
     parser.add_argument("--instance-id", default=None, help="Exact instance_id to run")
@@ -101,27 +100,31 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         printer = MultiAgentEventPrinter(color=not args.no_color, timestamps=True)
         print("=" * 72, flush=True)
         print(
-            f"  SWE-EVO TaskCenter run  instance="
+            f"  SWE-EVO legacy TaskCenter run  instance="
             f"{args.instance_id or f'<auto size={args.size}>'}",
             flush=True,
         )
         print("=" * 72, flush=True)
 
-    result = await run_sweevo_with_task_center(
-        printer=printer,
-        source=args.source,
-        instance_id=args.instance_id,
-        size=args.size,
-        target_bullets=args.target_bullets,
-        snapshot_name=args.snapshot_name,
-        sandbox_name=args.sandbox_name,
-        register_snapshot=args.register_snapshot,
-        cpu=args.cpu,
-        disk=args.disk,
-        repo_dir=args.repo_dir,
-        evaluate=not args.no_evaluate,
-        message_log_path=args.message_log or None,
-    )
+    try:
+        result = await run_sweevo_with_task_center(
+            printer=printer,
+            source=args.source,
+            instance_id=args.instance_id,
+            size=args.size,
+            target_bullets=args.target_bullets,
+            snapshot_name=args.snapshot_name,
+            sandbox_name=args.sandbox_name,
+            register_snapshot=args.register_snapshot,
+            cpu=args.cpu,
+            disk=args.disk,
+            repo_dir=args.repo_dir,
+            evaluate=not args.no_evaluate,
+            message_log_path=args.message_log or None,
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     if args.no_stream:
         print(json.dumps(result, indent=2, default=str))

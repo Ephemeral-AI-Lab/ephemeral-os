@@ -56,9 +56,10 @@ class AgentDefinition(BaseModel):
     # Tools the agent may call during a run. The agent's tool registry is
     # filtered to ``allowed_tools ∪ terminals``; the LLM only sees those.
     allowed_tools: list[str] = Field(default_factory=list)
-    # Terminal tools — calling any of these ends the query loop. Defaults to
-    # the canonical task-completion terminal. Must be non-empty if specified.
-    terminals: list[str] = Field(default_factory=lambda: ["submit_task_success"])
+    # Terminal tools — calling any of these ends the query loop. The legacy
+    # TaskCenter terminal package has been removed, so definitions only get
+    # terminal behavior when they explicitly name a registered terminal tool.
+    terminals: list[str] = Field(default_factory=list)
 
     # --- notification rules ---
     # Rules evaluated at the top of every model turn (see
@@ -104,6 +105,4 @@ class AgentDefinition(BaseModel):
     @field_validator("terminals")
     @classmethod
     def _check_terminals(cls, terminals: list[str]) -> list[str]:
-        if not terminals:
-            raise ValueError("AgentDefinition.terminals must be non-empty")
-        return terminals
+        return [terminal for terminal in terminals if terminal.strip()]

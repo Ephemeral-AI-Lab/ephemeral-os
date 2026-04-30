@@ -18,7 +18,7 @@ class AgentValidationRequest(BaseModel):
     )
     tool_call_limit: int | None = Field(default=None, gt=0)
     allowed_tools: list[str] = Field(default_factory=list)
-    terminals: list[str] = Field(min_length=1)
+    terminals: list[str] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
     background: bool = False
     tags: list[str] | None = None

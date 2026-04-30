@@ -1,4 +1,4 @@
-"""Core API routes — health, state, chat, config, TaskCenter requests."""
+"""Core API routes — health, state, chat, config, and legacy request history."""
 
 from __future__ import annotations
 
@@ -26,8 +26,6 @@ from message.stream_events import (
 )
 from notification.events import SystemNotification
 from server.protocol import BackendEvent, TranscriptItem
-from task_center.model import Task
-from task_center.summaries import latest_summary_text
 from tools.core.base import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -36,10 +34,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
-
-
-def _final_root_summary_text(root: Task) -> str | None:
-    return latest_summary_text(root)
 
 # ---------------------------------------------------------------------------
 # Request models
@@ -236,34 +230,12 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     if backend_event is not None:
                         await runtime.emit(backend_event)
 
-                # Route every user query through a request-scoped TaskCenter
-                # (US-009 — the new phased executor-evaluator tree). The
-                # TaskCenter spawns a root executor for the user's prompt,
-                # drives any phased subtasks it submits, and runs an evaluator
-                # before closing the root.
-                task_center = runtime.create_task_center(
-                    request_prompt=req.line,
+                await execute_ephemeral_agent_run(
+                    runtime.config,
+                    req.line,
+                    on_agent_event=_on_agent_event,
                     sandbox_id=req.sandbox_id,
                 )
-                task_center.set_event_callback(_on_agent_event)
-                try:
-                    root = await task_center.run_query(req.line, sandbox_id=req.sandbox_id)
-                finally:
-                    task_center.set_event_callback(None)
-                # Surface the final root summary as a transcript item so
-                # the user sees the closure text even if no child emitted
-                # it as an AssistantMessageComplete with the same content.
-                final_summary = _final_root_summary_text(root)
-                if final_summary:
-                    await runtime.emit(
-                        BackendEvent(
-                            type="transcript_item",
-                            item=TranscriptItem(
-                                role="assistant",
-                                text=final_summary,
-                            ),
-                        )
-                    )
                 await runtime.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
                 await runtime.emit(BackendEvent(type="error", message=f"Processing error: {exc}"))

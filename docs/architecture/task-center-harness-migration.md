@@ -4,15 +4,6 @@
 > Scope: TaskCenter roles, terminal tools, recovery model, retry mechanic,
 > and runtime tool gating.
 
-## §0. Changes at a glance
-
-| Category | Surface |
-|---|---|
-| **Removed** | `TaskRole='advisor'`, `_create_advisor`, `create_advisor`, advisor lifecycle module, `Status.FIXING`, `Task.fix_target_id`, `Task.spawn_reason`, `create_harness_fix_executor`, `reenter_after_fix_success`, `fail_after_fix_failure` |
-| **Renamed** | `submit_task_success` → `submit_execution_success` · `submit_task_failure` → `submit_execution_failure` · `request_plan` → `submit_request_plan` |
-| **Added** | `TaskRole='evaluator'` · `TaskRole='generator'` · generator agent kind (`executor` \| `verifier`) · `_create_evaluator` · `HarnessGraph.evaluator_task_id` · `HarnessGraph.chain_fail_count` · `HarnessGraph.retry_budget` · `ask_resolver` helper tool · `submit_resolver_result` terminal · prehook gating layer + state-aware notification rules |
-| **Reused** | `prior_graph_id` continuation chain — now also chains retry graphs |
-
 ---
 
 ## §1. Architecture (new world)
@@ -78,45 +69,7 @@
 
 ---
 
-## §3. Data model deltas
 
-### `Task`
-
-| Field | State |
-|---|---|
-| `role: TaskRole` | enum updated: `planner`, `generator`, `evaluator`; `−advisor`; executor/verifier selected by generator agent kind |
-| `agent_kind` / equivalent discriminator | **NEW** for generator tasks — `executor` or `verifier`; evaluator remains a separate role |
-| `fix_target_id` | **DROPPED** |
-| `spawn_reason` | **DROPPED** |
-| `id`, `input`, `status`, `task_center_harness_graph_id`, `needs`, `summaries`, `created_at` | unchanged |
-
-### `Status`
-
-| Status | State |
-|---|---|
-| `PENDING`, `READY`, `RUNNING`, `HANDOFF`, `DONE`, `FAILED` | unchanged |
-| `FIXING` | **DROPPED** |
-
-### `HarnessGraph`
-
-| Field | State |
-|---|---|
-| `evaluator_task_id: TaskId \| None = None` | **NEW** — system-spawned evaluator id |
-| `chain_fail_count: int = 0` | **NEW** — retries used in this segment |
-| `retry_budget: int = 1` | **NEW** — retries allowed before close-fail |
-| `prior_graph_id` | reused — now chains both partial-plan and retry continuations |
-| `plan_shape` | reused — `'full' \| 'partial'`; retries inherit prior shape |
-| (other fields) | unchanged |
-
-### `SummaryKind`
-
-| Kind | State |
-|---|---|
-| `handoff`, `success`, `failure`, `dependency_blocked`, `child_success`, `child_failure`, `segment_success` | unchanged |
-| `advisor_feedback` | **DROPPED** (advisor no longer a Task) |
-| `retry_segment` | **NEW** — appended to root_task on retry continuation, mirrors `segment_success` |
-
----
 
 ## §4. Workflows
 
@@ -399,49 +352,3 @@ Failure-trigger routing table:
 
 ---
 
-## §7. Migration ordering
-
-| # | Stage | What ships |
-|---|---|---|
-| 0 | Expose transcript to prehooks | inject `conversation_messages` into `ToolExecutionContextService` metadata |
-| 1 | Drop advisor as TaskCenter task | `ask_advisor` runs advisor inline via `execute_ephemeral_agent_run` + callback buffer |
-| 2 | Strip Stage-6 fix-executor | remove `Status.FIXING`, `fix_target_id`, `spawn_reason`, `create_harness_fix_executor`, reenter/fail helpers |
-| 3 | Add resolver helper | `harness_agents/resolver/` + `ask_resolver` tool + `submit_resolver_result` |
-| 4 | Rename terminals | `submit_task_*` → `submit_execution_*` · `request_plan` → `submit_request_plan` |
-| 5 | Collapse executor/verifier into generator role | `TaskRole='generator'` plus generator agent kind for executor/verifier creation and prompts |
-| 6 | Add evaluator role | new role, `_create_evaluator`, `evaluator_task_id`, evaluator agent files, spawn-in-closure wiring |
-| 7 | Retry continuation | `chain_fail_count`, `retry_budget`, `request_retry_or_fail`, retry branch in `build_continuation_note` |
-| 8 | Tool gating layer | prehook framework + 4 prehooks + state-aware notification rules |
-| 9 | Persistence schema sweep | DB columns: `+evaluator_task_id`, `+chain_fail_count`, `+retry_budget`, generator kind discriminator, `−fix_target_id`, `−spawn_reason` |
-
----
-
-## §8. Test impact
-
-### Already-touched on this branch (per `git status`)
-
-- `test_center.py` — drop advisor cases, drop fix-executor cases, add evaluator + retry cases
-- `test_evaluator_rename.py` (deleted) — replace with new evaluator role tests
-- `test_submission_tools.py` — terminal renames
-- `test_partial_chain.py` — extend with retry continuation cases
-- `test_persistence_stage8_fields.py` — schema additions
-- `test_runtime_primitives.py` — new `_create_evaluator`, generator executor/verifier creation, dropped `_create_advisor`
-- `test_materialization.py` — DAG validator unchanged; generator-kind assertions + evaluator-spawn assertion added downstream
-- `test_harness_agent_prompts.py` — evaluator + resolver prompt assertions
-- `test_verifier_closure.py` (untracked) — adapt to no-fix-executor world
-
-### New test files
-
-- `test_evaluator_lifecycle.py`
-- `test_retry_continuation.py`
-- `test_resolver_helper.py`
-- `test_tool_gates.py` (prehook + notification combos)
-
----
-
-## §9. Open / verify
-
-1. Stage 0 — confirmed/fixed: tool prehooks can read the live transcript through `ToolExecutionContextService.get("conversation_messages")`. `run_query(context, messages)` still owns the transcript and notification rules still receive `(messages, context)` directly; tool execution now injects `conversation_messages` into execution metadata before hook dispatch.
-2. `ask_resolver` input shape — propose `(issues_to_resolve: str, calling_agent_context: str)` mirroring advisor.
-3. `submit_resolver_result.summaries` — `list[str]` or richer struct?
-4. Retry-graph launch context — beyond plan + outcomes + failure summaries, do you also want successful executor outputs surfaced so the new planner can avoid re-doing solved work?

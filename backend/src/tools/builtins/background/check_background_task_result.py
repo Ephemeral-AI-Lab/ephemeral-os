@@ -79,9 +79,9 @@ class CheckBackgroundTaskResultTool(BaseTool):
     description: str = (
         "Fetches the result of a background task by id. Returns "
         "{id, status (running|finished|failed), tool_command, result}. "
-        "For run_subagent: result is the submit_exploration_result findings "
-        "if finished, or the last 5 messages otherwise. For other tools "
-        "(e.g. shell): result is the full output."
+        "For run_subagent: result is the terminal-tool output if finished, "
+        "or the last 5 messages otherwise. For other tools (e.g. shell): "
+        "result is the full output."
     )
     short_description: str = "Check a background task's result."
     input_model: type[BaseModel] = CheckBackgroundTaskResultInput

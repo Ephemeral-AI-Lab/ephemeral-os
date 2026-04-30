@@ -5,11 +5,11 @@ working while the subagent runs. Peek progress with
 ``check_background_task_result(task_id)``; block on completion with
 ``wait_background_tasks()``.
 
-The subagent must terminate via a registered terminal tool (typically
-``submit_exploration_result``); whatever ``ToolResult`` the engine stamps
-with ``does_terminate=True`` becomes this tool's output. If the subagent
-exits without calling a terminal tool, the bg task is marked failed and
-``check_background_task_result`` falls back to the message peek.
+The subagent must terminate via a registered terminal tool; whatever
+``ToolResult`` the engine stamps with ``does_terminate=True`` becomes this
+tool's output. If the subagent exits without calling a terminal tool, the bg
+task is marked failed and ``check_background_task_result`` falls back to the
+message peek.
 
 Subagents cannot spawn further subagents — recursion is rejected at
 validation time so the focused-worker contract holds.
@@ -160,8 +160,8 @@ def _validate_run_subagent_request(
     name="run_subagent",
     description=(
         "Spawn a registered subagent as a background task. The subagent receives `prompt` as "
-        "its only input and must finish by calling its terminal tool (typically "
-        "submit_exploration_result); that text becomes this tool's result. Use for "
+        "its only input and must finish by calling its terminal tool; that text becomes "
+        "this tool's result. Use for "
         "parallelizable, focused investigations or context-isolated work. Peek progress or "
         "fetch the finished result with check_background_task_result(task_id); block on "
         "completion with wait_background_tasks. Subagents cannot spawn further subagents."

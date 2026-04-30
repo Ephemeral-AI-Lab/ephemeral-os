@@ -55,18 +55,18 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     # Stage 7 of the four-role roadmap: legacy submit_plan_handoff dropped.
     assert "Tool: submit_plan_handoff" not in summary
 
-    # Four-role task graph terminal tools.
-    assert "Tool: submit_task_success" in summary
-    assert "Tool: submit_task_failure" in summary
-    assert "Tool: submit_evaluation_success" in summary
-    assert "Tool: submit_evaluation_failure" in summary
-    assert "Tool: submit_full_plan" in summary
-    assert "Tool: submit_partial_plan" in summary
-    assert "Tool: submit_verification_success" in summary
-    assert "Tool: submit_verification_failure" in summary
-    assert "Tool: submit_advisor_feedback" in summary
-    assert "Tool: ask_advisor" in summary
-    assert "Tool: request_plan" in summary
+    # Legacy TaskCenter terminal tools were removed from the default registry.
+    assert "Tool: submit_task_success" not in summary
+    assert "Tool: submit_task_failure" not in summary
+    assert "Tool: submit_evaluation_success" not in summary
+    assert "Tool: submit_evaluation_failure" not in summary
+    assert "Tool: submit_full_plan" not in summary
+    assert "Tool: submit_partial_plan" not in summary
+    assert "Tool: submit_verification_success" not in summary
+    assert "Tool: submit_verification_failure" not in summary
+    assert "Tool: submit_advisor_feedback" not in summary
+    assert "Tool: ask_advisor" not in summary
+    assert "Tool: request_plan" not in summary
     assert "Tool: enter_plan_for_handoff" not in summary
     assert "Tool: enter_prepare_continue_to_work" not in summary
 

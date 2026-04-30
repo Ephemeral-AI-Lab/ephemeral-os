@@ -391,7 +391,7 @@ class EvalAgent:
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
             allowed_tools=allowed_tools,
-            terminals=["submit_task_success"],
+            terminals=[],
             tool_call_limit=tool_call_limit,
         )
 

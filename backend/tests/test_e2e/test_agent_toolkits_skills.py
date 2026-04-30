@@ -113,7 +113,7 @@ class TestConfigBackedAgentApi:
         assert resp.status_code == 405
         assert "file-backed under backend/config/agents" in resp.json()["detail"]
 
-    def test_validate_agent_allows_former_builtin_name(self, app_client):
+    def test_validate_agent_rejects_removed_task_center_terminal(self, app_client):
         client, _ = app_client
         resp = client.post(
             "/api/agents/validate",
@@ -134,8 +134,8 @@ class TestConfigBackedAgentApi:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["valid"] is True
-        assert data["errors"] == []
+        assert data["valid"] is False
+        assert "Unknown tool: submit_task_success" in data["errors"]
 
     def test_validate_agent_rejects_unknown_tool(self, app_client):
         client, _ = app_client

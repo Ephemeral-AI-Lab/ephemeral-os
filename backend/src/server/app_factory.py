@@ -11,11 +11,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import mimetypes
-from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -42,11 +40,6 @@ from skills.api.router import create_skills_router
 logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "web" / "dist"
-
-if TYPE_CHECKING:
-    from task_center.runtime import TaskCenter
-
-TaskCenterSpawnFunc = Callable[[str, "TaskCenter", str | None], Awaitable[None]]
 
 
 # ---------------------------------------------------------------------------
@@ -95,8 +88,7 @@ def build_runtime_config(
 class RuntimeState:
     """Manages process-level runtime dependencies and event routing.
 
-    Request identity and task state live in TaskCenter persistence. This class
-    only keeps process-level dependencies shared across requests.
+    This class only keeps process-level dependencies shared across requests.
     """
 
     def __init__(self) -> None:
@@ -105,7 +97,6 @@ class RuntimeState:
         self._busy_lock = asyncio.Lock()
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
         self._tool_registry: ToolRegistry | None = None
-        self._task_center_spawn_func: TaskCenterSpawnFunc | None = None
 
     async def initialize(self, host_config: BackendHostConfig) -> None:
         self.config = build_runtime_config(
@@ -118,17 +109,16 @@ class RuntimeState:
 
         self._tool_registry = create_default_tool_registry()
 
-        # Seed the agent registry. Builtin harness agents are registered from
-        # ``agents.builtins`` so their terminal-tool contracts stay aligned
-        # with the runtime. User-defined agents continue to load from
-        # ``backend/config/agents/``.
+        # Seed the agent registry. Builtins are currently empty while the
+        # TaskCenter runtime is rebuilt. User-defined agents continue to load
+        # from ``backend/config/agents/``.
         from agents.builtins import register_builtin_agents
         from agents.loader import load_agents_dir
         from agents.registry import register_definition
         from pathlib import Path as _P
 
         register_builtin_agents()
-        logger.info("Registered builtin harness agent definitions")
+        logger.info("Registered builtin agent definitions")
 
         agents_dir = (
             _P(__file__).resolve().parent.parent.parent.parent
@@ -137,45 +127,6 @@ class RuntimeState:
         for defn in load_agents_dir(agents_dir):
             register_definition(defn)
             logger.info("Registered agent definition %r", defn.name)
-
-        # Build the TaskCenter spawn function once; each /chat request gets a
-        # fresh TaskCenter with its own graph and event callback.
-        from task_center.runtime import build_production_spawn
-
-        self._task_center_spawn_func = build_production_spawn(self.config)
-
-    def create_task_center(
-        self,
-        *,
-        request_prompt: str,
-        sandbox_id: str | None,
-    ) -> TaskCenter:
-        """Create a request-scoped TaskCenter for one user query."""
-        if self.config is None or self._task_center_spawn_func is None:
-            raise RuntimeError("RuntimeState not initialised")
-
-        from task_center.runtime import TaskCenter
-        from uuid import uuid4
-
-        request_id = uuid4().hex[:12]
-        run_id = uuid4().hex[:12]
-        store = task_center_store if task_center_store.is_ready else None
-        if store is not None:
-            store.create_request(
-                request_id=request_id,
-                cwd=self.config.cwd,
-                sandbox_id=sandbox_id,
-                request_prompt=request_prompt,
-            )
-            store.create_run(run_id=run_id, request_id=request_id)
-
-        return TaskCenter(
-            self.config,
-            spawn_func=self._task_center_spawn_func,
-            request_id=request_id,
-            run_id=run_id,
-            task_center_store=store,
-        )
 
     @property
     def cwd(self) -> str:
