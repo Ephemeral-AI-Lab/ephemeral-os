@@ -1,0 +1,1 @@
+"""Evaluator submission tool stubs."""

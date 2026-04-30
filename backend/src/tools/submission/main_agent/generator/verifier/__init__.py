@@ -1,0 +1,1 @@
+"""Verifier submission tool stubs."""
