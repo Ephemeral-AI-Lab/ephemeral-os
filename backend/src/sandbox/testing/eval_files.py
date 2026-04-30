@@ -1,9 +1,8 @@
-"""Sandbox test utilities — sandbox factory, file population, and cleanup."""
+"""Eval-sandbox file fixtures and remote populate helper."""
 
 from __future__ import annotations
 
 import shlex
-import time
 from pathlib import Path
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
@@ -188,22 +187,9 @@ class AuthService:
 }
 
 
-def get_sandbox_service():
-    from sandbox.service import SandboxService
-
-    return SandboxService()
-
-
-def create_test_sandbox(name: str = "e2e-test") -> dict:
-    svc = get_sandbox_service()
-    return svc.create_sandbox(
-        name=f"{name}-{int(time.time())}",
-        language="python",
-        labels={"purpose": f"e2e-{name}"},
-    )
-
-
 def populate_sandbox_files(sandbox_id: str) -> None:
+    from sandbox.testing.fixtures import get_sandbox_service
+
     svc = get_sandbox_service()
     raw_sandbox = svc.get_sandbox_object(sandbox_id)
 
@@ -236,9 +222,4 @@ def populate_sandbox_files(sandbox_id: str) -> None:
                 print(f"Warning: Failed to write {file_path}: {exc}")
 
 
-def delete_test_sandbox(sandbox_id: str) -> None:
-    try:
-        svc = get_sandbox_service()
-        svc.delete_sandbox(sandbox_id)
-    except Exception:
-        pass
+__all__ = ["EVAL_SANDBOX_FILES", "populate_sandbox_files"]
