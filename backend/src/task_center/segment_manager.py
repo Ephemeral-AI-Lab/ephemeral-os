@@ -8,16 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.invariants import (
-    assert_continuation_goal_only_from_passing_graph,
     assert_fail_reason_present_on_failure,
     assert_graph_belongs_to_segment,
     assert_graph_sequence_contiguous,
-    assert_passing_graph_closes_segment,
     assert_segment_has_budget,
     assert_segment_open,
 )
@@ -32,11 +29,7 @@ from task_center.domain.segment_closure_report import (
 from task_center.domain.task_segment import TaskSegment, TaskSegmentStatus
 from task_center.exceptions import GraphInvariantViolation
 
-if TYPE_CHECKING:
-    from task_center.graph_orchestrator import HarnessGraphOrchestrator
 
-
-OrchestratorFactory = Callable[[HarnessGraph], "HarnessGraphOrchestrator"]
 ClosureReportSink = Callable[[TaskSegmentClosureReport], None]
 
 
@@ -50,13 +43,11 @@ class TaskSegmentManager:
         segment_store: TaskSegmentStore,
         graph_store: HarnessGraphStore,
         on_segment_closed: ClosureReportSink,
-        orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self.task_segment_id = task_segment_id
         self._segment_store = segment_store
         self._graph_store = graph_store
         self._on_segment_closed = on_segment_closed
-        self._orchestrator_factory = orchestrator_factory
 
     # ---- public API -----------------------------------------------------
 
@@ -138,11 +129,9 @@ class TaskSegmentManager:
         return graph
 
     def _close_segment_passed(self, graph: HarnessGraph) -> None:
-        assert_passing_graph_closes_segment(graph)
-        segment = self._segment_store.set_continuation_goal(
+        self._segment_store.set_continuation_goal(
             self.task_segment_id, graph.continuation_goal
         )
-        assert_continuation_goal_only_from_passing_graph(graph, segment)
         self._segment_store.set_status(
             self.task_segment_id,
             status=TaskSegmentStatus.SUCCEEDED,

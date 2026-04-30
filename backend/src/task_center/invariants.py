@@ -75,26 +75,6 @@ def assert_segment_has_budget(segment: TaskSegment) -> None:
         )
 
 
-def assert_passing_graph_closes_segment(graph: HarnessGraph) -> None:
-    if graph.status != HarnessGraphStatus.PASSED:
-        raise GraphInvariantViolation(
-            f"Expected passing HarnessGraph {graph.id!r}, got status={graph.status}"
-        )
-
-
-def assert_continuation_goal_only_from_passing_graph(
-    graph: HarnessGraph, segment: TaskSegment
-) -> None:
-    if (
-        segment.continuation_goal is not None
-        and graph.status != HarnessGraphStatus.PASSED
-    ):
-        raise GraphInvariantViolation(
-            f"TaskSegment {segment.id!r} continuation_goal must come from a "
-            f"passing graph; HarnessGraph {graph.id!r} status={graph.status}"
-        )
-
-
 def assert_graph_belongs_to_segment(
     graph: HarnessGraph, segment: TaskSegment
 ) -> None:

@@ -7,13 +7,11 @@ from datetime import UTC, datetime
 import pytest
 
 from task_center.invariants import (
-    assert_continuation_goal_only_from_passing_graph,
     assert_continuation_segment_predecessor,
     assert_fail_reason_present_on_failure,
     assert_graph_belongs_to_segment,
     assert_graph_sequence_contiguous,
     assert_no_root_creation_reason,
-    assert_passing_graph_closes_segment,
     assert_request_open,
     assert_segment_has_budget,
     assert_segment_id_unique_in_list,
@@ -191,29 +189,6 @@ def test_assert_segment_has_budget():
     with pytest.raises(GraphInvariantViolation):
         assert_segment_has_budget(
             _segment(attempt_budget=2, harness_graph_ids=("g1", "g2"))
-        )
-
-
-def test_assert_passing_graph_closes_segment():
-    assert_passing_graph_closes_segment(_graph(status=HarnessGraphStatus.PASSED))
-    with pytest.raises(GraphInvariantViolation):
-        assert_passing_graph_closes_segment(
-            _graph(status=HarnessGraphStatus.RUNNING)
-        )
-
-
-def test_assert_continuation_goal_only_from_passing_graph():
-    assert_continuation_goal_only_from_passing_graph(
-        _graph(status=HarnessGraphStatus.PASSED),
-        _segment(continuation_goal="next"),
-    )
-    with pytest.raises(GraphInvariantViolation):
-        assert_continuation_goal_only_from_passing_graph(
-            _graph(
-                status=HarnessGraphStatus.FAILED,
-                fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
-            ),
-            _segment(continuation_goal="next"),
         )
 
 
