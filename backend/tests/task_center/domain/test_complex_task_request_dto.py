@@ -31,21 +31,6 @@ def _request(**overrides) -> ComplexTaskRequest:
     return ComplexTaskRequest(**base)
 
 
-def test_with_appended_segment_returns_new_dto_unchanged_original():
-    original = _request(task_segment_ids=("s1",))
-    updated = original.with_appended_segment("s2")
-    assert original.task_segment_ids == ("s1",)
-    assert updated.task_segment_ids == ("s1", "s2")
-    assert isinstance(updated.task_segment_ids, tuple)
-
-
-def test_latest_segment_id_returns_last():
-    assert _request(task_segment_ids=()).latest_segment_id is None
-    assert (
-        _request(task_segment_ids=("a", "b", "c")).latest_segment_id == "c"
-    )
-
-
 def test_is_open_matches_status():
     assert _request(status=ComplexTaskRequestStatus.OPEN).is_open is True
     assert _request(status=ComplexTaskRequestStatus.SUCCEEDED).is_open is False

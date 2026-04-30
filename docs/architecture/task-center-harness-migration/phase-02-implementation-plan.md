@@ -33,9 +33,11 @@ Deliverables:
    lifecycle under the current `HarnessGraph`.
 7. Generator DAG scheduling: root launch, dependent launch after dependencies
    pass, failure blocking, and quiescence detection.
-8. Recursive complex-task handoff state for generator tasks: the outer
-   generator task can wait on a nested `ComplexTaskRequest` and later resume
-   from that request's close report.
+8. Recursive complex-task handoff observation: when an outer generator task
+   sits in `waiting_complex_task`, the orchestrator treats it as non-terminal
+   during quiescence checks so the outer graph stays in `generating`. The
+   transition into `waiting_complex_task` and the resume path
+   (`apply_nested_close_report`) are owned by Phase 04.
 9. `TaskSegmentManager` wiring so newly created graphs start their orchestrator
    when an orchestrator factory is configured.
 10. `ComplexTaskRequestHandler` wiring so every spawned segment manager receives
@@ -50,11 +52,11 @@ Not in scope:
 - Generator `submit_request_plan` handling. Phase 02 must not add this legacy
   request-plan surface to `HarnessGraphOrchestrator`; Phase 03/04 can reject,
   rename, or translate it before orchestration.
-- Creation of the nested `ComplexTaskRequest` and durable final report delivery
-  to `requested_by_task_id` beyond the existing
-  `ComplexTaskRequestHandler.deliver_close_report` seam (Phase 04). Phase 02
-  only defines how the outer graph task waits and resumes once that seam is
-  invoked.
+- Creation of the nested `ComplexTaskRequest`, the
+  `apply_nested_close_report` resume entry on `HarnessGraphOrchestrator`, and
+  durable final report delivery to `requested_by_task_id` (all Phase 04).
+  Phase 02 only ensures the orchestrator observes `waiting_complex_task` as
+  non-terminal during generator quiescence.
 - End-to-end cutover from any old task-center runtime path (Phase 05).
 - Context-engine launch packets, durable graph summaries, and
   `failure_landscape` payload population (Phase 06).
@@ -87,7 +89,7 @@ report.
 | Evaluator starts only after every generator passes | Phase 01/02/03 | Orchestrator uses task status checks before creating evaluator | OK |
 | Evaluator failure closes immediately | Phase 02 | No extra wait point exists because generator quiescence already happened | OK |
 | Continuation goal belongs to the graph that submitted it | Phase 01/02 | Orchestrator stores `continuation_goal` during planner success and never copies it across failed graphs | OK |
-| Recursive complex task is a new request, not a child segment | Phase 00/04 | Outer generator task enters `waiting_complex_task`; nested request owns its own segments/graphs; close report resumes the outer generator task | OK |
+| Recursive complex task is a new request, not a child segment | Phase 00/04 | Outer generator task enters `waiting_complex_task` via the Phase 04 spawn handler; Phase 02 keeps that status non-terminal in quiescence so the outer graph stays open until the Phase 04 resume entry fires | OK |
 | `TaskSegmentManager` factory seam exists | Phase 01 report | Phase 02 wires the factory from handler -> manager -> graph start | OK |
 | Context evidence belongs to Phase 06 | Phase 01/06 | Phase 02 records structural task summaries only; context summaries remain `None` | OK |
 
@@ -121,7 +123,7 @@ flowchart TD
     Planner -->|"planner exhausted"| PlannerFail["Close graph failed: planner_step_budget_exhausted"]
 
     LaunchRoots --> GenEvent["Executor or verifier terminal submission"]
-    GenEvent --> GenMutation["HarnessGraphOrchestrator.apply_executor/verifier_submission"]
+    GenEvent --> GenMutation["HarnessGraphOrchestrator.apply_generator_submission"]
     GenMutation --> GenFailed{"Failed?"}
     GenFailed -->|"yes"| BlockDeps["Block pending downstream dependents"]
     GenFailed -->|"no"| LaunchReady["Launch newly ready dependents"]
@@ -168,7 +170,7 @@ sequenceDiagram
     Orch->>Orch: _dispatch_ready_work
     Orch->>Agents: launch ready generators
     Agents->>Tools: executor/verifier terminal calls
-    Tools->>Orch: apply_executor/verifier_submission
+    Tools->>Orch: apply_generator_submission
     Orch->>Orch: _dispatch_ready_work
     Orch->>Agents: launch evaluator after all generators pass
     Agents->>Tools: evaluator terminal tool call
@@ -416,7 +418,7 @@ class PlannedGeneratorTask:
 
 
 @dataclass(frozen=True, slots=True)
-class PlanSubmission:
+class PlannerSubmission:
     """Validated planner submission from submit_full_plan or submit_partial_plan."""
 
     graph_id: str
@@ -457,7 +459,7 @@ Notes:
   split. Executor and verifier are generator agent profiles, represented by
   `PlannedGeneratorTask.agent_name` and launch metadata.
 - Phase 03 public terminal tools validate their own inputs and then call
-  `HarnessGraphOrchestrator.apply_*` with `PlanSubmission`,
+  `HarnessGraphOrchestrator.apply_*` with `PlannerSubmission`,
   `GeneratorSubmission`, or `EvaluatorSubmission`.
 - Phase 02 tests can construct these DTOs directly to verify state-transition
   policy without coupling tests to tool classes.
@@ -737,13 +739,9 @@ class HarnessGraphOrchestrator:
 
     def notify_planner_run_exhausted(self) -> None: ...
 
-    def apply_plan_submission(self, submission: PlanSubmission) -> None: ...
+    def apply_plan_submission(self, submission: PlannerSubmission) -> None: ...
 
-    def apply_executor_submission(
-        self, submission: GeneratorSubmission
-    ) -> None: ...
-
-    def apply_verifier_submission(
+    def apply_generator_submission(
         self, submission: GeneratorSubmission
     ) -> None: ...
 
@@ -751,19 +749,16 @@ class HarnessGraphOrchestrator:
         self, submission: EvaluatorSubmission
     ) -> None: ...
 
-    def apply_nested_close_report(
-        self, report: ComplexTaskCloseReport
-    ) -> None: ...
+    # `apply_nested_close_report(report)` ships in Phase 04 alongside the
+    # `request_complex_task_solution` spawn handler.
 
     # mutation helpers
-    def _persist_plan_contract(self, submission: PlanSubmission) -> None: ...
+    def _persist_plan_contract(self, submission: PlannerSubmission) -> None: ...
     def _persist_generator_tasks(
         self, tasks: tuple[PlannedGeneratorTask, ...]
     ) -> tuple[str, ...]: ...
-    def _mark_generator_done(self, submission: GeneratorSubmission) -> None: ...
-    def _mark_generator_failed(self, submission: GeneratorSubmission) -> None: ...
-    def _mark_evaluator_done(self, submission: EvaluatorSubmission) -> None: ...
-    def _mark_evaluator_failed(self, submission: EvaluatorSubmission) -> None: ...
+    def _mark_generator(self, submission: GeneratorSubmission) -> None: ...
+    def _mark_evaluator(self, submission: EvaluatorSubmission) -> None: ...
     def _block_failed_generator_descendants(self, failed_task_id: str) -> None: ...
 
     # dispatch helpers
@@ -1074,10 +1069,10 @@ Then:
 
 ### 6c. Generator submission handling
 
-`HarnessGraphOrchestrator.apply_executor_submission` and
-`apply_verifier_submission` share these state-transition rules. Both write to
-the same generator task row; the entries differ only in which terminal tool
-routed the validated `GeneratorSubmission`.
+`HarnessGraphOrchestrator.apply_generator_submission` handles both executor
+and verifier outcomes. The DTO is the same `GeneratorSubmission` regardless of
+which terminal tool routed it; the Phase 03 tool handler stamps the role into
+`payload`/`summary` before dispatching.
 
 On success (`outcome = "success"`):
 
@@ -1115,25 +1110,13 @@ observes the outer task as `waiting_complex_task` on the next
 `_dispatch_ready_work()` call and treats it as non-terminal: dependents are
 not launched, evaluator is not spawned, the graph stays in `generating`.
 
-When the nested request closes, Phase 04's
-`ComplexTaskRequestHandler.deliver_close_report` resolves the outer
-orchestrator from the registry and calls
-`apply_nested_close_report(report)`:
-
-1. Load the waiting task from `report.requested_by_task_id`.
-2. Assert the task belongs to this graph and is `waiting_complex_task`.
-3. If `report.outcome == "success"`: mark the task `done`, append the
-   close report summary, then call `_dispatch_ready_work()` (launches newly
-   ready dependents).
-4. If `report.outcome == "failed"`: mark the task `failed`, append the
-   close report summary, block pending descendants, then call
-   `_dispatch_ready_work()` (continues quiescence wait).
-
-The nested request's internal retries and continuation segments are
-invisible to the outer graph; the outer graph only observes the final
-close report. The terminal tool gate (Phase 03), not the orchestrator,
-decides which generator agent profiles may call
-`request_complex_task_solution`.
+Phase 02's only job here is to keep `waiting_complex_task` non-terminal in
+quiescence checks so the outer graph stays in `generating` (no evaluator
+spawn, no premature `generator_failed` close). The resume entry
+(`apply_nested_close_report`) and its wiring through
+`ComplexTaskRequestHandler.deliver_close_report` ship in Phase 04. The
+terminal tool gate (Phase 03), not the orchestrator, decides which generator
+agent profiles may call `request_complex_task_solution`.
 
 ### 6d. Evaluator task
 
@@ -1215,7 +1198,7 @@ budget.
 | Domain | `HarnessTaskRole` | NEW | Stable role names for persisted task rows |
 | Domain | `HarnessTaskStatus` | NEW | Pending/running/waiting/done/failed/blocked lifecycle |
 | Domain | `PlannedGeneratorTask` | NEW | One normalized planner DAG node |
-| Domain | `PlanSubmission` | NEW | Unified planner DTO for full and partial plans |
+| Domain | `PlannerSubmission` | NEW | Unified planner DTO for full and partial plans |
 | Domain | `GeneratorSubmission` | NEW | Executor/verifier success or failure DTO |
 | Domain | `EvaluatorSubmission` | NEW | Evaluator success or failure DTO |
 | Persistence | `TaskCenterStore.get_task` | EDIT | Load one persisted task dict |
@@ -1226,13 +1209,12 @@ budget.
 | Runtime | `HarnessGraphRuntime` | NEW | Dependency bundle for orchestrator behavior |
 | Lifecycle | `HarnessGraphOrchestratorRegistry` | NEW | Process-local graph -> orchestrator lookup |
 | Lifecycle | `HarnessGraphOrchestrator.start` | EDIT | Bootstrap planner |
-| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct terminal submission mutation surface (`apply_plan_submission`, `apply_executor_submission`, `apply_verifier_submission`, `apply_evaluator_submission`, `apply_nested_close_report`) |
+| Lifecycle | `HarnessGraphOrchestrator.apply_*` | EDIT | Direct terminal submission mutation surface (`apply_plan_submission`, `apply_generator_submission`, `apply_evaluator_submission`). `apply_nested_close_report` ships in Phase 04. |
 | Lifecycle | `HarnessGraphOrchestrator._dispatch_ready_work` | EDIT | Launchability, generator quiescence, evaluator spawn |
 | Lifecycle | `HarnessGraphOrchestrator._close_graph` | EDIT | Single close site that calls `graph_store.close(...)` and `on_graph_closed` |
 | Lifecycle | `HarnessGraphOrchestrator.notify_planner_run_exhausted` | NEW | Runtime signal for planner agent run end without valid submission; delegates to `_close_graph(planner_step_budget_exhausted)` |
 | Lifecycle | `TaskSegmentManager._start_orchestrator_if_configured` | EDIT | Start graph orchestrator after graph creation |
 | Lifecycle | `ComplexTaskRequestHandler.__init__` | EDIT | Accept/pass orchestrator factory |
-| Lifecycle | `ComplexTaskRequestHandler.deliver_close_report` | EDIT (Phase 04 seam) | Resolve outer orchestrator from registry and call `apply_nested_close_report` |
 
 ---
 
@@ -1259,7 +1241,6 @@ keys or live agent runs are needed in Phase 02.
 | `test_orchestrator_applies_full_plan_submission` | Full plan and generator task creation share the direct apply path |
 | `test_orchestrator_applies_partial_plan_submission` | Partial plan stores the continuation goal through the same plan entry |
 | `test_orchestrator_rejects_submit_request_plan` | Legacy request-plan calls never mutate graph task state |
-| `test_nested_close_report_resolves_by_requested_task_id` | Nested request close report can resume waiting generator task |
 
 ### 8c. Orchestrator unit tests
 
@@ -1270,10 +1251,7 @@ keys or live agent runs are needed in Phase 02.
 | `test_planner_exhaustion_closes_graph_failed` | `planner_step_budget_exhausted` |
 | `test_generator_roots_launch_after_plan` | DAG root scheduling |
 | `test_apply_generator_success_launches_newly_ready_dependents` | Dependency scheduling |
-| `test_request_complex_task_handoff_marks_task_waiting` | Recursive request handoff |
-| `test_apply_nested_complex_task_success_marks_generator_done` | Nested close report success path |
-| `test_apply_nested_complex_task_failure_marks_generator_failed` | Nested close report failure path |
-| `test_waiting_complex_task_prevents_generator_quiescence` | Outer graph remains generating while nested request runs |
+| `test_waiting_complex_task_prevents_generator_quiescence` | Outer graph stays in `generating` while a generator task is `waiting_complex_task` (Phase 04 owns the transition; Phase 02 only verifies the quiescence observation) |
 | `test_apply_generator_failure_blocks_pending_descendants` | Failure propagation |
 | `test_generator_failure_waits_for_independent_running_tasks` | Quiescence wait |
 | `test_generator_failure_closes_after_quiescence` | `generator_failed` close |
@@ -1340,7 +1318,8 @@ Each wave is independently testable.
 3. Implement planner exhaustion handling.
 4. Implement generator submission handling, dependency scheduling, and
    quiescence close.
-5. Implement generator complex-task waiting and nested close-report resume.
+5. Implement `waiting_complex_task` observation in quiescence checks
+   (resume entry is Phase 04).
 6. Implement evaluator spawn and evaluator submission handling.
 7. Implement `_dispatch_ready_work()` and `_close_graph()`.
 8. Run orchestrator unit tests.

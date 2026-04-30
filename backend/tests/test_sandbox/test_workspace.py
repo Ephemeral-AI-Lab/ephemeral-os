@@ -87,6 +87,16 @@ class TestDiscoverWorkspaceAsync:
         assert result is None
 
 
+def _patch_sandbox_service(monkeypatch, *, fake_service_class):
+    """Swap `sandbox.service.SandboxService` with a fake class for the test."""
+    import sys
+    import types
+
+    fake_service_module = types.ModuleType("sandbox.service")
+    fake_service_module.SandboxService = fake_service_class
+    monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
+
+
 class TestInjectCodeIntelligence:
     def test_injects_ci_service(self, monkeypatch):
         from sandbox.workspace import _attach_code_intelligence
@@ -95,15 +105,14 @@ class TestInjectCodeIntelligence:
         mock_sandbox = MagicMock()
         mock_svc = MagicMock()
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            return mock_svc
+        class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                return mock_svc
 
-        import sys
-        import types
+            def get_sandbox_object(self, sandbox_id):
+                return mock_sandbox
 
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
@@ -118,16 +127,15 @@ class TestInjectCodeIntelligence:
         mock_svc = MagicMock()
         captured = {}
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            captured["workspace_root"] = workspace_root
-            return mock_svc
+        class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                captured["workspace_root"] = workspace_root
+                return mock_svc
 
-        import sys
-        import types
+            def get_sandbox_object(self, sandbox_id):
+                return mock_sandbox
 
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
@@ -142,7 +150,7 @@ class TestInjectCodeIntelligence:
 
         import sys
 
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", None)
+        monkeypatch.setitem(sys.modules, "sandbox.service", None)
 
         _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
@@ -155,15 +163,14 @@ class TestInjectCodeIntelligence:
         mock_sandbox = MagicMock()
         mock_svc = MagicMock()
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            return mock_svc
+        class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                return mock_svc
 
-        import sys
-        import types
+            def get_sandbox_object(self, sandbox_id):
+                return mock_sandbox
 
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
@@ -255,24 +262,15 @@ class TestCodeIntelligenceRuntime:
         mock_svc.lsp_client = MagicMock()
         captured = {}
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            captured["sandbox"] = sandbox
-            return mock_svc
-
-        import sys
-        import types
-
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
-
         class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                captured["sandbox"] = sandbox
+                return mock_svc
+
             def get_sandbox_object(self, sandbox_id):
                 return sync_sandbox
 
-        fake_service_module = types.ModuleType("sandbox.service")
-        fake_service_module.SandboxService = FakeSandboxService
-        monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         _attach_code_intelligence(
             mock_context,
@@ -296,24 +294,15 @@ class TestCodeIntelligenceRuntime:
         mock_svc.lsp_client = MagicMock()
         captured = {}
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            captured["sandbox"] = sandbox
-            return mock_svc
-
-        import sys
-        import types
-
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
-
         class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                captured["sandbox"] = sandbox
+                return mock_svc
+
             def get_sandbox_object(self, sandbox_id):
                 raise RuntimeError("sync handle unavailable")
 
-        fake_service_module = types.ModuleType("sandbox.service")
-        fake_service_module.SandboxService = FakeSandboxService
-        monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         _attach_code_intelligence(
             mock_context,
@@ -341,23 +330,14 @@ class TestCodeIntelligenceRuntime:
         mock_svc.lsp_client = MagicMock()
         mock_svc.symbol_index.ensure_built.side_effect = RuntimeError("boom")
 
-        def fake_get_ci(sandbox_id, workspace_root, sandbox):
-            return mock_svc
-
-        import sys
-        import types
-
-        fake_ci_module = types.ModuleType("sandbox.code_intelligence.service")
-        fake_ci_module.get_code_intelligence = fake_get_ci
-        monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
-
         class FakeSandboxService:
+            def code_intelligence_for(self, sandbox_id, *, workspace_root=None, sandbox=None):
+                return mock_svc
+
             def get_sandbox_object(self, sandbox_id):
                 raise RuntimeError("sync handle unavailable")
 
-        fake_service_module = types.ModuleType("sandbox.service")
-        fake_service_module.SandboxService = FakeSandboxService
-        monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
+        _patch_sandbox_service(monkeypatch, fake_service_class=FakeSandboxService)
 
         # Should not raise
         _attach_code_intelligence(

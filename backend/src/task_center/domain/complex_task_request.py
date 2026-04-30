@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
@@ -33,15 +33,6 @@ class ComplexTaskRequest:
     @property
     def is_open(self) -> bool:
         return self.status == ComplexTaskRequestStatus.OPEN
-
-    @property
-    def latest_segment_id(self) -> str | None:
-        return self.task_segment_ids[-1] if self.task_segment_ids else None
-
-    def with_appended_segment(self, segment_id: str) -> "ComplexTaskRequest":
-        return replace(
-            self, task_segment_ids=(*self.task_segment_ids, segment_id)
-        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -13,18 +13,16 @@ from datetime import UTC, datetime
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
-from task_center.complex_task_request.config import HarnessLifecycleConfig
-from task_center.complex_task_request.invariants import (
+from task_center.config import HarnessLifecycleConfig
+from task_center.invariants import (
     assert_continuation_segment_predecessor,
     assert_no_root_creation_reason,
     assert_request_open,
     assert_segment_id_unique_in_list,
     assert_segment_sequence_contiguous,
 )
-from task_center.complex_task_request.segment.manager import TaskSegmentManager
-from task_center.complex_task_request.segment_manager_registry import (
-    SegmentManagerRegistry,
-)
+from task_center.segment_manager import TaskSegmentManager
+from task_center.segment_registry import SegmentManagerRegistry
 from task_center.domain.complex_task_request import (
     ComplexTaskCloseReport,
     ComplexTaskRequest,
@@ -184,8 +182,9 @@ class ComplexTaskRequestHandler:
             closed_at=datetime.now(UTC),
         )
         if self._deliver_close_report is not None:
-            close_report = self._build_close_report(
-                request=updated,
+            close_report = ComplexTaskCloseReport(
+                complex_task_request_id=updated.id,
+                requested_by_task_id=updated.requested_by_task_id,
                 outcome=outcome_label,
                 final_segment_id=final_segment_id,
                 final_harness_graph_id=final_harness_graph_id,
@@ -218,24 +217,3 @@ class ComplexTaskRequestHandler:
         )
         self._manager_registry.register(manager)
         return manager
-
-    def _build_close_report(
-        self,
-        *,
-        request: ComplexTaskRequest,
-        outcome: str,
-        final_segment_id: str,
-        final_harness_graph_id: str,
-    ) -> ComplexTaskCloseReport:
-        # ``outcome`` is constrained by ``close_complex_task_request`` above.
-        if outcome not in ("success", "failed"):
-            raise GraphInvariantViolation(
-                f"Unexpected close report outcome {outcome!r}"
-            )
-        return ComplexTaskCloseReport(
-            complex_task_request_id=request.id,
-            requested_by_task_id=request.requested_by_task_id,
-            outcome=outcome,  # type: ignore[arg-type]
-            final_segment_id=final_segment_id,
-            final_harness_graph_id=final_harness_graph_id,
-        )

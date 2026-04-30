@@ -12,20 +12,14 @@ from typing import TYPE_CHECKING
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
-from task_center.complex_task_request.segment.attempt_count import (
-    get_attempt_count,
-)
-from task_center.complex_task_request.segment.harness_graph.invariants import (
-    assert_fail_reason_present_on_failure,
-    assert_graph_sequence_contiguous,
-)
-from task_center.complex_task_request.segment.invariants import (
+from task_center.invariants import (
     assert_continuation_goal_only_from_passing_graph,
+    assert_fail_reason_present_on_failure,
     assert_graph_belongs_to_segment,
+    assert_graph_sequence_contiguous,
     assert_passing_graph_closes_segment,
     assert_segment_has_budget,
     assert_segment_open,
-    assert_segment_open_for_graph_creation,
 )
 from task_center.domain.harness_graph import HarnessGraph, HarnessGraphStatus
 from task_center.domain.segment_closure_report import (
@@ -39,9 +33,7 @@ from task_center.domain.task_segment import TaskSegment, TaskSegmentStatus
 from task_center.exceptions import GraphInvariantViolation
 
 if TYPE_CHECKING:
-    from task_center.complex_task_request.segment.harness_graph.orchestrator import (
-        HarnessGraphOrchestrator,
-    )
+    from task_center.graph_orchestrator import HarnessGraphOrchestrator
 
 
 OrchestratorFactory = Callable[[HarnessGraph], "HarnessGraphOrchestrator"]
@@ -71,7 +63,7 @@ class TaskSegmentManager:
     def create_initial_harness_graph(self) -> HarnessGraph:
         """Create graph_sequence_no=1 and append it to the segment."""
         segment = self._current_segment_snapshot()
-        assert_segment_open_for_graph_creation(segment)
+        assert_segment_open(segment)
         if segment.harness_graph_ids:
             raise GraphInvariantViolation(
                 f"TaskSegment {segment.id!r} already has graphs; use "
@@ -84,7 +76,7 @@ class TaskSegmentManager:
     ) -> HarnessGraph:
         """Called after a failed graph if the segment still has budget."""
         segment = self._current_segment_snapshot()
-        assert_segment_open_for_graph_creation(segment)
+        assert_segment_open(segment)
         assert_segment_has_budget(segment)
         if segment.latest_graph_id != previous_harness_graph_id:
             raise GraphInvariantViolation(
@@ -122,7 +114,7 @@ class TaskSegmentManager:
             self._retry_or_close_failed(graph)
 
     def get_attempt_count(self) -> int:
-        return get_attempt_count(self._current_segment_snapshot())
+        return self._current_segment_snapshot().attempt_count
 
     # ---- internal -------------------------------------------------------
 

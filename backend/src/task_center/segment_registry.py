@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from task_center.exceptions import GraphInvariantViolation
 
 if TYPE_CHECKING:
-    from task_center.complex_task_request.segment.manager import TaskSegmentManager
+    from task_center.segment_manager import TaskSegmentManager
 
 
 class SegmentManagerRegistry:

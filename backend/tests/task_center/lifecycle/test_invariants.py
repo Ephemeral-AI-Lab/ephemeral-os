@@ -6,28 +6,21 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.complex_task_request.invariants import (
+from task_center.invariants import (
+    assert_continuation_goal_only_from_passing_graph,
     assert_continuation_segment_predecessor,
+    assert_fail_reason_present_on_failure,
+    assert_graph_belongs_to_segment,
+    assert_graph_sequence_contiguous,
     assert_no_root_creation_reason,
+    assert_passing_graph_closes_segment,
     assert_request_open,
+    assert_segment_has_budget,
     assert_segment_id_unique_in_list,
+    assert_segment_open,
     assert_segment_sequence_contiguous,
 )
-from task_center.complex_task_request.segment.harness_graph.invariants import (
-    assert_fail_reason_present_on_failure,
-    assert_graph_running,
-    assert_graph_sequence_contiguous,
-)
-from task_center.complex_task_request.segment.invariants import (
-    assert_continuation_goal_only_from_passing_graph,
-    assert_graph_belongs_to_segment,
-    assert_passing_graph_closes_segment,
-    assert_segment_has_budget,
-    assert_segment_open,
-)
-from task_center.complex_task_request.segment_manager_registry import (
-    SegmentManagerRegistry,
-)
+from task_center.segment_registry import SegmentManagerRegistry
 from task_center.domain.complex_task_request import (
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
@@ -235,12 +228,6 @@ def test_assert_graph_belongs_to_segment():
 
 
 # ---- Graph-level --------------------------------------------------------
-
-
-def test_assert_graph_running():
-    assert_graph_running(_graph(status=HarnessGraphStatus.RUNNING))
-    with pytest.raises(GraphInvariantViolation):
-        assert_graph_running(_graph(status=HarnessGraphStatus.PASSED))
 
 
 def test_assert_graph_sequence_contiguous():

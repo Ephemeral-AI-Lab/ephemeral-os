@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.complex_task_request.segment.manager import TaskSegmentManager
+from task_center.segment_manager import TaskSegmentManager
 from task_center.domain.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,

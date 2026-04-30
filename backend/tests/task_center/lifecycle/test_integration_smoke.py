@@ -10,12 +10,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from db.stores.harness_graph_store import HarnessGraphStore
-from task_center.complex_task_request.config import HarnessLifecycleConfig
-from task_center.complex_task_request.handler import ComplexTaskRequestHandler
-from task_center.complex_task_request.segment.manager import TaskSegmentManager
-from task_center.complex_task_request.segment_manager_registry import (
-    SegmentManagerRegistry,
-)
+from task_center.config import HarnessLifecycleConfig
+from task_center.handler import ComplexTaskRequestHandler
+from task_center.segment_manager import TaskSegmentManager
+from task_center.segment_registry import SegmentManagerRegistry
 from task_center.domain.complex_task_request import ComplexTaskRequestStatus
 from task_center.domain.harness_graph import (
     HarnessGraph,
