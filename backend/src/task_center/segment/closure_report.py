@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from task_center.harness_graph.graph import HarnessGraphFailReason
 
@@ -18,7 +18,7 @@ class AttemptedPlanEntry:
     evaluation_criteria: tuple[str, ...]
     fail_reason: HarnessGraphFailReason | None
     harness_graph_summary_id: str | None
-    failure_landscape: dict | None
+    failure_landscape: dict[str, Any] | None
 
 
 @dataclass(frozen=True, slots=True)

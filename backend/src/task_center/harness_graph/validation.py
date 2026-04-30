@@ -11,8 +11,8 @@ from task_center.harness_graph.graph import (
     HarnessGraphStage,
     HarnessGraphStatus,
 )
-from task_center.harness_graph.task import HarnessTaskRole
 from task_center.segment.segment import TaskSegment
+from task_center.task import HarnessTaskRole
 
 
 def assert_graph_sequence_contiguous(

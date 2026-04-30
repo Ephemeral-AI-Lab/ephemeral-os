@@ -377,7 +377,7 @@ backend/src/tools/submission/main_agent/
 
 ### 5a. Domain task roles and submission DTOs
 
-**`backend/src/task_center/harness_graph/task.py`** - new
+**`backend/src/task_center/task/task.py`** - new
 
 ```python
 from dataclasses import dataclass
@@ -491,7 +491,7 @@ Notes:
 
 ### 5b. Stable task ids
 
-**`backend/src/task_center/harness_graph/task_ids.py`** - new
+**`backend/src/task_center/task/task_ids.py`** - new
 
 ```python
 def planner_task_id(harness_graph_id: str) -> str:
@@ -523,7 +523,7 @@ from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.harness_graph.graph import HarnessGraph
-from task_center.harness_graph.task import HarnessTaskRole
+from task_center.task import HarnessTaskRole
 
 
 @dataclass(frozen=True, slots=True)
@@ -619,7 +619,7 @@ Phase 02.
 **`backend/src/task_center/harness_graph/task_graph.py`** - new
 
 ```python
-from task_center.harness_graph.task import (
+from task_center.task import (
     HarnessTaskStatus,
     PlannedGeneratorTask,
 )
@@ -1315,8 +1315,8 @@ Each wave is independently testable.
 
 ### Wave 1 - Submission DTOs and task helpers
 
-1. Add `task_center/harness_graph/task.py`.
-2. Add `task_ids.py`.
+1. Add `task_center/task/task.py`.
+2. Add `task_center/task/task_ids.py`.
 3. Add `TaskCenterStore` task helper methods.
 4. Add persistence tests for task helpers.
 

@@ -17,7 +17,7 @@ from task_center.harness_graph.runtime import (
     HarnessAgentLaunch,
     HarnessGraphRuntime,
 )
-from task_center.harness_graph.task import (
+from task_center.task import (
     EvaluatorSubmission,
     GeneratorSubmission,
     HarnessTaskRole,
@@ -25,6 +25,9 @@ from task_center.harness_graph.task import (
     PlannedGeneratorTask,
     PlannerFailureSubmission,
     PlannerSubmission,
+    evaluator_task_id,
+    generator_task_id,
+    planner_task_id,
 )
 from task_center.harness_graph.task_graph import (
     all_generators_done,
@@ -34,11 +37,6 @@ from task_center.harness_graph.task_graph import (
     dependency_task_ids,
     ordered_generator_tasks,
     ready_pending_generator_ids,
-)
-from task_center.harness_graph.task_ids import (
-    evaluator_task_id,
-    generator_task_id,
-    planner_task_id,
 )
 from task_center.harness_graph.validation import (
     assert_evaluator_task_for_submission,

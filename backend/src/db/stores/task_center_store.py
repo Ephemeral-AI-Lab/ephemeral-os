@@ -7,6 +7,7 @@ and is owned by the new three-axis (request / segment / graph) schema.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from db.models.task_center import (
     TaskCenterRequestRecord,
@@ -20,7 +21,10 @@ def persisted_task_id(task_center_run_id: str, task_id: str) -> str:
     return f"{task_center_run_id}:{task_id}"
 
 
-def _serialize_request(record: TaskCenterRequestRecord) -> dict:
+SerializedRow = dict[str, Any]
+
+
+def _serialize_request(record: TaskCenterRequestRecord) -> SerializedRow:
     return {
         "id": record.id,
         "cwd": record.cwd,
@@ -31,7 +35,7 @@ def _serialize_request(record: TaskCenterRequestRecord) -> dict:
     }
 
 
-def _serialize_run(record: TaskCenterRunRecord) -> dict:
+def _serialize_run(record: TaskCenterRunRecord) -> SerializedRow:
     return {
         "id": record.id,
         "request_id": record.request_id,
@@ -42,7 +46,7 @@ def _serialize_run(record: TaskCenterRunRecord) -> dict:
     }
 
 
-def _serialize_task(record: TaskCenterTaskRecord) -> dict:
+def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
     return {
         "id": record.id,
         "task_center_run_id": record.task_center_run_id,
@@ -89,7 +93,9 @@ class TaskCenterStore(SyncStoreMixin):
         with self._sf() as db:
             return db.get(TaskCenterRequestRecord, request_id)
 
-    def list_requests(self, cwd: str | None = None, limit: int = 20) -> list[dict]:
+    def list_requests(
+        self, cwd: str | None = None, limit: int = 20
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = db.query(TaskCenterRequestRecord)
             if cwd:
@@ -136,7 +142,9 @@ class TaskCenterStore(SyncStoreMixin):
         with self._sf() as db:
             return db.get(TaskCenterRunRecord, task_center_run_id)
 
-    def list_runs_for_request(self, request_id: str, limit: int = 50) -> list[dict]:
+    def list_runs_for_request(
+        self, request_id: str, limit: int = 50
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterRunRecord)
@@ -154,7 +162,7 @@ class TaskCenterStore(SyncStoreMixin):
         role: str,
         task_input: str,
         status: str,
-        summaries: list[dict],
+        summaries: list[SerializedRow],
         needs: list[str],
         task_center_harness_graph_id: str | None,
         fix_target_id: str | None = None,
@@ -191,12 +199,12 @@ class TaskCenterStore(SyncStoreMixin):
                 record.updated_at = now
             db.commit()
 
-    def get_task(self, task_id: str) -> dict | None:
+    def get_task(self, task_id: str) -> SerializedRow | None:
         with self._sf() as db:
             record = db.get(TaskCenterTaskRecord, task_id)
             return _serialize_task(record) if record is not None else None
 
-    def list_tasks_for_run(self, task_center_run_id: str) -> list[dict]:
+    def list_tasks_for_run(self, task_center_run_id: str) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
@@ -207,7 +215,7 @@ class TaskCenterStore(SyncStoreMixin):
 
     def list_tasks_for_harness_graph(
         self, harness_graph_id: str
-    ) -> list[dict]:
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
@@ -221,7 +229,7 @@ class TaskCenterStore(SyncStoreMixin):
 
     def list_generator_tasks_for_harness_graph(
         self, harness_graph_id: str
-    ) -> list[dict]:
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
@@ -239,8 +247,8 @@ class TaskCenterStore(SyncStoreMixin):
         task_id: str,
         *,
         status: str,
-        summary: dict | None = None,
-    ) -> dict:
+        summary: SerializedRow | None = None,
+    ) -> SerializedRow:
         with self._sf() as db:
             record = db.get(TaskCenterTaskRecord, task_id)
             if record is None:

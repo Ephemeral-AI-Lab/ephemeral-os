@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.task import PlannedGeneratorTask
 from task_center.harness_graph.task_graph import (
     all_generators_done,
     all_generators_quiescent,
@@ -13,6 +12,7 @@ from task_center.harness_graph.task_graph import (
     ordered_generator_tasks,
     ready_pending_generator_ids,
 )
+from task_center.task import PlannedGeneratorTask
 
 
 def _task(task_id: str, status: str, needs: tuple[str, ...] = ()) -> dict:

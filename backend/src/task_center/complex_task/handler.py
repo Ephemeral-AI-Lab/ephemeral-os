@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Literal
 
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.harness_graph_store import HarnessGraphStore
@@ -166,7 +167,9 @@ class ComplexTaskRequestHandler:
     ) -> ComplexTaskRequest:
         request = self._require_request(complex_task_request_id)
         assert_request_open(request)
-        outcome_label = "success" if succeeded else "failed"
+        outcome_label: Literal["success", "failed"] = (
+            "success" if succeeded else "failed"
+        )
         final_outcome = {
             "outcome": outcome_label,
             "final_segment_id": final_segment_id,

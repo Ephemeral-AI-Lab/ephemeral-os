@@ -10,7 +10,7 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.graph import HarnessGraph
-from task_center.harness_graph.task import HarnessTaskRole
+from task_center.task import HarnessTaskRole
 
 if TYPE_CHECKING:
     from task_center.harness_graph.orchestrator_registry import (

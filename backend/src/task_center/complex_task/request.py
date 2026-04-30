@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 
 class ComplexTaskRequestStatus(StrEnum):
@@ -25,7 +25,7 @@ class ComplexTaskRequest:
     goal: str
     status: ComplexTaskRequestStatus
     task_segment_ids: tuple[str, ...]
-    final_outcome: dict | None
+    final_outcome: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None

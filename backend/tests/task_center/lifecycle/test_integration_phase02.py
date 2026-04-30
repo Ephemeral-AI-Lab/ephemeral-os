@@ -16,13 +16,11 @@ from task_center.harness_graph.runtime import (
     HarnessAgentLaunch,
     HarnessGraphRuntime,
 )
-from task_center.harness_graph.task import (
+from task_center.task import (
     EvaluatorSubmission,
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannerSubmission,
-)
-from task_center.harness_graph.task_ids import (
     evaluator_task_id,
     generator_task_id,
     planner_task_id,
