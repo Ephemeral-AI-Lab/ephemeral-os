@@ -191,6 +191,11 @@ class TaskCenterStore(SyncStoreMixin):
                 record.updated_at = now
             db.commit()
 
+    def get_task(self, task_id: str) -> dict | None:
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            return _serialize_task(record) if record is not None else None
+
     def list_tasks_for_run(self, task_center_run_id: str) -> list[dict]:
         with self._sf() as db:
             q = (
@@ -199,3 +204,51 @@ class TaskCenterStore(SyncStoreMixin):
                 .order_by(TaskCenterTaskRecord.created_at.asc())
             )
             return [_serialize_task(record) for record in q.all()]
+
+    def list_tasks_for_harness_graph(
+        self, harness_graph_id: str
+    ) -> list[dict]:
+        with self._sf() as db:
+            q = (
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_harness_graph_id
+                    == harness_graph_id
+                )
+                .order_by(TaskCenterTaskRecord.created_at.asc())
+            )
+            return [_serialize_task(record) for record in q.all()]
+
+    def list_generator_tasks_for_harness_graph(
+        self, harness_graph_id: str
+    ) -> list[dict]:
+        with self._sf() as db:
+            q = (
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_harness_graph_id
+                    == harness_graph_id,
+                    TaskCenterTaskRecord.role == "generator",
+                )
+                .order_by(TaskCenterTaskRecord.created_at.asc())
+            )
+            return [_serialize_task(record) for record in q.all()]
+
+    def set_task_status(
+        self,
+        task_id: str,
+        *,
+        status: str,
+        summary: dict | None = None,
+    ) -> dict:
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            record.status = status
+            if summary is not None:
+                record.summaries = [*(record.summaries or []), summary]
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)

@@ -48,8 +48,8 @@ def test_is_closed_matches_stage():
 
 def test_fail_reason_enum_values():
     assert (
-        HarnessGraphFailReason.PLANNER_STEP_BUDGET_EXHAUSTED.value
-        == "planner_step_budget_exhausted"
+        HarnessGraphFailReason.PLANNER_FAILED.value
+        == "planner_failed"
     )
     assert HarnessGraphFailReason.GENERATOR_FAILED.value == "generator_failed"
     assert HarnessGraphFailReason.EVALUATOR_FAILED.value == "evaluator_failed"

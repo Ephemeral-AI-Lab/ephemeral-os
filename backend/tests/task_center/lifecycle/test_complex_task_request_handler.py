@@ -291,6 +291,45 @@ def test_close_complex_task_request_delivers_close_report_when_callback_set(
     assert delivered[0].requested_by_task_id == "executor-1"
 
 
+def test_handler_passes_orchestrator_factory_to_spawned_manager(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    started: list[str] = []
+
+    class _StartedOrchestrator:
+        def __init__(self, graph_id: str) -> None:
+            self.harness_graph_id = graph_id
+
+        def start(self) -> None:
+            started.append(self.harness_graph_id)
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _StartedOrchestrator(graph.id)
+
+    registry = SegmentManagerRegistry()
+    handler = ComplexTaskRequestHandler(
+        request_store=request_store,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        manager_registry=registry,
+        config=HarnessLifecycleConfig(default_attempt_budget=2),
+        orchestrator_factory=factory,
+    )
+    req = handler.create_complex_task_request(
+        task_center_run_id=task_center_run_id,
+        requested_by_task_id="executor-1",
+        goal="g",
+    )
+    segment = handler.create_initial_segment(complex_task_request_id=req.id)
+    manager = registry.get(segment.id)
+    assert manager is not None
+
+    graph = manager.create_initial_harness_graph()
+
+    assert started == [graph.id]
+
+
 def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
     """Phase 01 spec: 'root' creation reason is not allowed."""
     # Indirect: handler-driven segment creation only ever uses INITIAL or

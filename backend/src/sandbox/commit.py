@@ -1,4 +1,9 @@
-"""Shared commit helpers for sandbox write tools."""
+"""Shared commit helpers for sandbox write tools.
+
+Decoupled from tool execution contexts: callers resolve attribution and the CI
+service themselves, then pass resolved values in. Context-aware shims live in
+:mod:`tools.core.sandbox_commit`.
+"""
 
 from __future__ import annotations
 
@@ -10,15 +15,9 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from sandbox.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-from tools.core.ci_attribution import (
-    agent_attribution_from_context,
-    rebind_ci_service,
-    resolved_agent_id,
-)
 
 if TYPE_CHECKING:
     from sandbox.code_intelligence.core.types import OperationResult
-    from tools.core.base import ToolExecutionContextService
 
 
 T = TypeVar("T")
@@ -41,12 +40,21 @@ class FileChangeResult(Generic[T]):
 
 @dataclass
 class _CommitBatchEntry:
-    context: "ToolExecutionContextService"
     op: CommitOp
     specs: Sequence[Any]
     fallback_paths: Sequence[str]
     description: str
     future: asyncio.Future[Any]
+    agent_id: str
+    sandbox: Any
+
+
+def _maybe_rebind(svc: Any, sandbox: Any) -> None:
+    if sandbox is None:
+        return
+    rebind = getattr(svc, "rebind_sandbox", None)
+    if callable(rebind):
+        rebind(sandbox)
 
 
 class _CommitBatcher:
@@ -58,22 +66,24 @@ class _CommitBatcher:
 
     async def submit(
         self,
-        context: "ToolExecutionContextService",
         *,
         op: CommitOp,
         specs: Sequence[Any],
         fallback_paths: Sequence[str],
         description: str,
+        agent_id: str,
+        sandbox: Any,
     ) -> Any:
         loop = asyncio.get_running_loop()
         future: asyncio.Future[Any] = loop.create_future()
         entry = _CommitBatchEntry(
-            context=context,
             op=op,
             specs=tuple(specs),
             fallback_paths=tuple(fallback_paths),
             description=description,
             future=future,
+            agent_id=agent_id,
+            sandbox=sandbox,
         )
         async with self._lock:
             self._entries.append(entry)
@@ -93,13 +103,7 @@ class _CommitBatcher:
         if len(entries) == 1:
             entry = entries[0]
             try:
-                result = await _run_direct_commit(
-                    entry.context,
-                    self._svc,
-                    op=entry.op,
-                    specs=entry.specs,
-                    description=entry.description,
-                )
+                result = await _run_direct_commit(self._svc, entry)
             except Exception as exc:
                 entry.future.set_exception(exc)
             else:
@@ -112,12 +116,12 @@ class _CommitBatcher:
             return
 
         for entry in entries:
-            rebind_ci_service(entry.context, self._svc)
+            _maybe_rebind(self._svc, entry.sandbox)
         requests = [
             {
                 "op": entry.op,
                 "specs": tuple(entry.specs),
-                "agent_id": resolved_agent_id(entry.context),
+                "agent_id": entry.agent_id,
                 "description": entry.description,
             }
             for entry in entries
@@ -137,13 +141,7 @@ class _CommitBatcher:
     async def _flush_direct(self, entries: Sequence[_CommitBatchEntry]) -> None:
         for entry in entries:
             try:
-                result = await _run_direct_commit(
-                    entry.context,
-                    self._svc,
-                    op=entry.op,
-                    specs=entry.specs,
-                    description=entry.description,
-                )
+                result = await _run_direct_commit(self._svc, entry)
             except Exception as exc:
                 entry.future.set_exception(exc)
             else:
@@ -172,22 +170,15 @@ def _operation_paths(result: Any, fallback: Sequence[str]) -> tuple[str, ...]:
     return tuple(fallback)
 
 
-async def _run_direct_commit(
-    context: "ToolExecutionContextService",
-    svc: Any,
-    *,
-    op: CommitOp,
-    specs: Sequence[Any],
-    description: str,
-) -> Any:
-    method = getattr(svc, f"{op}_file")
-    rebind_ci_service(context, svc)
+async def _run_direct_commit(svc: Any, entry: _CommitBatchEntry) -> Any:
+    method = getattr(svc, f"{entry.op}_file")
+    _maybe_rebind(svc, entry.sandbox)
     with use_sandbox_io_loop():
         return await run_sync_in_executor(
             method,
-            list(specs),
-            agent_id=resolved_agent_id(context),
-            description=description,
+            list(entry.specs),
+            agent_id=entry.agent_id,
+            description=entry.description,
         )
 
 
@@ -202,17 +193,21 @@ def _batcher_for(svc: Any) -> _CommitBatcher:
 
 
 async def submit_commit(
-    context: "ToolExecutionContextService",
+    svc: Any,
     *,
     op: CommitOp,
     specs: Sequence[Any],
     fallback_paths: Sequence[str],
     description: str,
+    agent_id: str,
+    sandbox: Any | None = None,
 ) -> FileChangeResult["OperationResult"]:
-    """Submit one write/edit/delete/move commit through the CI service."""
-    from tools.core.ci_adapter import get_ci_service
+    """Submit one write/edit/delete/move commit through *svc*.
 
-    svc = get_ci_service(context)
+    *svc* must be an active CodeIntelligenceService. *agent_id* is the ledger
+    attribution label. *sandbox*, when not ``None``, is rebound onto the service
+    before the sync OCC dispatch so reads see the current handle.
+    """
     if svc is None:
         raise RuntimeError(
             "submit_commit requires an active ci_service; "
@@ -220,11 +215,12 @@ async def submit_commit(
         )
 
     result = await _batcher_for(svc).submit(
-        context,
         op=op,
         specs=specs,
         fallback_paths=fallback_paths,
         description=description,
+        agent_id=agent_id,
+        sandbox=sandbox,
     )
 
     paths = _operation_paths(result, fallback_paths)
@@ -238,48 +234,43 @@ async def submit_commit(
 
 
 async def submit_shell_cmd(
-    context: "ToolExecutionContextService",
+    svc: Any,
+    sandbox: Any,
     *,
     command: str,
     description: str,
     timeout: int | None = None,
-    sandbox: Any | None = None,
     attribute_changes: bool = True,
     on_progress_line: Callable[[str], None] | None = None,
+    agent_id: str,
+    run_id: str = "",
+    agent_run_id: str = "",
+    task_id: str = "",
 ) -> FileChangeResult[SimpleNamespace]:
-    """Run a shell command through the CI service."""
-    from tools.core.ci_adapter import get_ci_service
-
-    svc = get_ci_service(context)
+    """Run a shell command through *svc* against *sandbox*."""
     if svc is None:
         raise RuntimeError(
             "submit_shell_cmd requires an active ci_service; "
             "caller must short-circuit before entering the façade",
         )
-    resolved_sandbox = sandbox
-    if resolved_sandbox is None:
-        resolved_sandbox = context.get("ci_sandbox") or context.get(
-            "daytona_sandbox",
-        )
-    if resolved_sandbox is None:
+    if sandbox is None:
         raise RuntimeError(
-            "submit_shell_cmd requires a sandbox in tool execution context "
-            "(ci_sandbox or daytona_sandbox) or as an explicit argument",
+            "submit_shell_cmd requires a sandbox handle "
+            "(ci_sandbox or daytona_sandbox in context, or an explicit override)",
         )
 
-    attribution = agent_attribution_from_context(context)
     cmd_kwargs: dict[str, Any] = {
         "timeout": timeout,
         "description": description,
-        "agent_id": attribution.agent_id,
-        "run_id": attribution.run_id,
-        "agent_run_id": attribution.agent_run_id,
-        "task_id": attribution.task_id,
+        "agent_id": agent_id,
+        "run_id": run_id,
+        "agent_run_id": agent_run_id,
+        "task_id": task_id,
         "attribute_changes": attribute_changes,
     }
     if on_progress_line is not None:
         cmd_kwargs["on_progress_line"] = on_progress_line
-    response = await svc.cmd(resolved_sandbox, command, **cmd_kwargs)
+    response = await svc.cmd(sandbox, command, **cmd_kwargs)
 
     changed = _dedup_sorted(getattr(response, "changed_paths", None))
     ambient = _dedup_sorted(getattr(response, "ambient_changed_paths", None))
@@ -323,6 +314,6 @@ __all__ = [
     "FileChangeResult",
     "commit_metadata",
     "failure_status",
-    "submit_shell_cmd",
     "submit_commit",
+    "submit_shell_cmd",
 ]

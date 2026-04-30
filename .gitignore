@@ -78,3 +78,4 @@ uv.lock
 .claude/
 .agents/
 .omc/
+graphify-out/

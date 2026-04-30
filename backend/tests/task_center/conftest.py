@@ -13,6 +13,7 @@ import db.models  # noqa: F401  - populates Base.metadata
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
 from db.stores.harness_graph_store import HarnessGraphStore
+from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 
 
@@ -63,6 +64,13 @@ def segment_store(session_factory) -> TaskSegmentStore:
 @pytest.fixture
 def graph_store(session_factory) -> HarnessGraphStore:
     store = HarnessGraphStore()
+    store.initialize(session_factory)
+    return store
+
+
+@pytest.fixture
+def task_store(session_factory) -> TaskCenterStore:
+    store = TaskCenterStore()
     store.initialize(session_factory)
     return store
 

@@ -50,6 +50,15 @@ def _make_manager(seg_id, segment_store, graph_store):
     return mgr, captured
 
 
+class _StartedOrchestrator:
+    def __init__(self, graph_id: str, started: list[str]) -> None:
+        self.harness_graph_id = graph_id
+        self._started = started
+
+    def start(self) -> None:
+        self._started.append(self.harness_graph_id)
+
+
 def test_initial_segment_creates_graph_sequence_1(
     request_store, segment_store, graph_store, task_center_run_id
 ):
@@ -155,6 +164,63 @@ def test_failed_graph_with_budget_creates_next_graph(
     assert seg is not None
     assert seg.is_open
     assert len(seg.harness_graph_ids) == 2
+
+
+def test_manager_starts_orchestrator_when_factory_present(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
+    started: list[str] = []
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _StartedOrchestrator(graph.id, started)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+
+    graph = mgr.create_initial_harness_graph()
+
+    assert started == [graph.id]
+
+
+def test_failed_graph_with_budget_starts_next_graph_orchestrator(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id, attempt_budget=2)
+    started: list[str] = []
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _StartedOrchestrator(graph.id, started)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+    graph = mgr.create_initial_harness_graph()
+    graph_store.close(
+        graph.id,
+        status=HarnessGraphStatus.FAILED,
+        fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
+    )
+
+    mgr.handle_harness_graph_closed(graph.id)
+
+    segment = segment_store.get(seg_id)
+    assert segment is not None
+    assert started == list(segment.harness_graph_ids)
+    assert captured == []
 
 
 def test_failed_graph_without_budget_emits_attempt_plan_failed(

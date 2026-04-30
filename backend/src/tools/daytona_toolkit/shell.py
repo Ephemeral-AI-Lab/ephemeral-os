@@ -15,7 +15,7 @@ from tools.daytona_toolkit._shell_prehooks import (
     DestructiveGitShellPreHook,
     DestructiveShellPreHook,
 )
-from sandbox.commit import submit_shell_cmd
+from tools.core.sandbox_commit import submit_shell_cmd_from_context
 from sandbox.daytona_utils import (
     _extract_exit_code,
     _get_repo_root,
@@ -115,7 +115,7 @@ async def _exec_shell_command(
     if get_ci_service(context) is None:
         raise RuntimeError("Code intelligence service is unavailable")
 
-    change = await submit_shell_cmd(
+    change = await submit_shell_cmd_from_context(
         context,
         command=_wrap_bash_command(command, cwd=cwd),
         description="shell",

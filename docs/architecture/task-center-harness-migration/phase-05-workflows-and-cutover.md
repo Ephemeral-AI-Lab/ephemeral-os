@@ -215,7 +215,7 @@ and reports failure to TaskSegmentManager
 planner in S1.H1 ends without valid full-plan submission
     |
     v
-runtime reports planner_step_budget_exhausted
+runtime reports planner_failed
     |
     v
 HarnessGraphOrchestrator(S1.H1) marks graph failed
@@ -305,7 +305,7 @@ uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/a
 1. Retry-budget defaults for task segments: fixed runtime defaults or
    request-level configuration?
 2. Planner step-budget detection: confirm the exact runtime signal for
-   `planner_step_budget_exhausted`.
+   `planner_failed`.
 
 ## Phase exit criteria
 

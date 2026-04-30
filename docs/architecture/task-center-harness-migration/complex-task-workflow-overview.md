@@ -84,7 +84,7 @@ attempt budget and does not create sibling graphs.
 flowchart TD
     Start["HarnessGraph starts"] --> Plan["planning: run planner"]
     Plan -->|"valid full plan submitted"| Gen["generating: run executor/verifier DAG"]
-    Plan -->|"planner ends without valid plan"| PlannerFail["close graph failed: planner_step_budget_exhausted"]
+    Plan -->|"planner ends without valid plan"| PlannerFail["close graph failed: planner_failed"]
     Gen -->|"any generator failed or blocked after quiescence"| GenFail["close graph failed: generator_failed"]
     Gen -->|"all generators done"| Eval["evaluating: run evaluator"]
     Eval -->|"submit_evaluation_success"| Passed["close graph passed"]

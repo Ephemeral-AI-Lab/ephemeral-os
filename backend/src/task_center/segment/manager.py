@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_segment_store import TaskSegmentStore
@@ -31,8 +32,15 @@ from task_center.segment.validation import (
 )
 from task_center.segment.segment import TaskSegment, TaskSegmentStatus
 
+if TYPE_CHECKING:
+    from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
+
 
 ClosureReportSink = Callable[[TaskSegmentClosureReport], None]
+GraphClosedCallback = Callable[[str], None]
+OrchestratorFactory = Callable[
+    [HarnessGraph, GraphClosedCallback], "HarnessGraphOrchestrator"
+]
 
 
 class TaskSegmentManager:
@@ -45,11 +53,13 @@ class TaskSegmentManager:
         segment_store: TaskSegmentStore,
         graph_store: HarnessGraphStore,
         on_segment_closed: ClosureReportSink,
+        orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self.task_segment_id = task_segment_id
         self._segment_store = segment_store
         self._graph_store = graph_store
         self._on_segment_closed = on_segment_closed
+        self._orchestrator_factory = orchestrator_factory
 
     # ---- public API -----------------------------------------------------
 
@@ -128,7 +138,16 @@ class TaskSegmentManager:
             graph_sequence_no=graph_sequence_no,
         )
         self._segment_store.append_graph_id(segment.id, graph.id)
+        self._start_orchestrator_if_configured(graph)
         return graph
+
+    def _start_orchestrator_if_configured(self, graph: HarnessGraph) -> None:
+        if self._orchestrator_factory is None:
+            return
+        orchestrator = self._orchestrator_factory(
+            graph, self.handle_harness_graph_closed
+        )
+        orchestrator.start()
 
     def _close_segment_passed(self, graph: HarnessGraph) -> None:
         self._segment_store.set_continuation_goal(

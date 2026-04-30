@@ -1,9 +1,4 @@
-"""Wave 4 integration smoke: end-to-end through a stub orchestrator.
-
-Phase 02 will wire a real orchestrator. This test substitutes a synchronous
-stub that closes the graph immediately to exercise the full
-``Manager.handle_harness_graph_closed -> Handler.handle_segment_closed`` path.
-"""
+"""Manager/handler closure smoke with a synchronous graph closer."""
 
 from __future__ import annotations
 

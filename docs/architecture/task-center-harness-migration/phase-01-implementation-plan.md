@@ -152,7 +152,7 @@ HarnessGraph stage:    planning ─► generating ─► evaluating ─► close
 HarnessGraph status:   running ──┬─► passed
                                  └─► failed
                                        (fail_reason ∈ {
-                                         planner_step_budget_exhausted,
+                                         planner_failed,
                                          generator_failed,
                                          evaluator_failed
                                        })
@@ -588,7 +588,7 @@ class HarnessGraphStatus(StrEnum):
 
 
 class HarnessGraphFailReason(StrEnum):
-    PLANNER_STEP_BUDGET_EXHAUSTED = "planner_step_budget_exhausted"
+    PLANNER_FAILED = "planner_failed"
     GENERATOR_FAILED              = "generator_failed"
     EVALUATOR_FAILED              = "evaluator_failed"
 

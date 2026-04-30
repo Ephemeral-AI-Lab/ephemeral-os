@@ -13,7 +13,7 @@ from sandbox.code_intelligence.core.types import EditSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
-from sandbox.commit import commit_metadata, submit_commit
+from tools.core.sandbox_commit import commit_metadata, submit_commit_from_context
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard
 from sandbox.daytona_utils import (
     _get_repo_root,
@@ -108,7 +108,7 @@ async def edit_file(
         return guard
 
     commit_started = time.perf_counter()
-    change = await submit_commit(
+    change = await submit_commit_from_context(
         context,
         op="edit",
         specs=[EditSpec(file_path=file_path, edits=normalized_edits)],

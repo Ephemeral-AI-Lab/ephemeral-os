@@ -7,7 +7,11 @@ from pydantic import BaseModel, Field
 from sandbox.code_intelligence.core.types import DeleteSpec
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from sandbox.commit import commit_metadata, failure_status, submit_commit
+from tools.core.sandbox_commit import (
+    commit_metadata,
+    failure_status,
+    submit_commit_from_context,
+)
 from tools.daytona_toolkit._mutation_helpers import ci_write_guard
 from sandbox.daytona_utils import _normalized_path, _resolve_path
 from tools.daytona_toolkit._delete_move_helpers import operation_payload
@@ -75,7 +79,7 @@ async def delete_file(
 
     specs = [DeleteSpec(path=resolved, is_folder=is_folder)]
 
-    change = await submit_commit(
+    change = await submit_commit_from_context(
         context,
         op="delete",
         specs=specs,

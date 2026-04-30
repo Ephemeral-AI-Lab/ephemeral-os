@@ -2,25 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from sandbox.code_intelligence.core.types import OperationResult
-from tools.core.base import ToolExecutionContextService
 from sandbox.commit import (
     FileChangeResult,
-    submit_shell_cmd,
     submit_commit,
+    submit_shell_cmd,
 )
 
 pytestmark = pytest.mark.asyncio
-
-
-def _ctx(metadata: dict | None = None) -> ToolExecutionContextService:
-    return ToolExecutionContextService(cwd=Path("/ws"), services=metadata or {})
 
 
 def _op_result(
@@ -50,14 +44,14 @@ def _svc_with_op(method_name: str, result: OperationResult) -> MagicMock:
 
 async def test_submit_commit_success_exposes_changed_paths() -> None:
     svc = _svc_with_op("write_file", _op_result(paths=["/ws/a.py", "/ws/b.py"]))
-    ctx = _ctx({"ci_service": svc})
 
     change = await submit_commit(
-        ctx,
+        svc,
         op="write",
         specs=[],
         fallback_paths=["/ws/a.py"],
         description="write",
+        agent_id="test-agent",
     )
 
     assert isinstance(change, FileChangeResult)
@@ -73,14 +67,14 @@ async def test_submit_commit_failure_surfaces_conflict_reason() -> None:
         "edit_file",
         _op_result(success=False, status="aborted_version", conflict_reason="version_drift"),
     )
-    ctx = _ctx({"ci_service": svc})
 
     change = await submit_commit(
-        ctx,
+        svc,
         op="edit",
         specs=[],
         fallback_paths=["/ws/x.py"],
         description="edit",
+        agent_id="test-agent",
     )
 
     assert change.success is False
@@ -90,29 +84,28 @@ async def test_submit_commit_failure_surfaces_conflict_reason() -> None:
 
 async def test_submit_commit_preserves_successful_empty_file_set() -> None:
     svc = _svc_with_op("delete_file", _op_result(paths=[]))
-    ctx = _ctx({"ci_service": svc})
 
     change = await submit_commit(
-        ctx,
+        svc,
         op="delete",
         specs=["/ws/gone.py"],
         fallback_paths=["/ws/gone.py"],
         description="delete",
+        agent_id="test-agent",
     )
 
     assert change.changed_paths == ()
 
 
 async def test_submit_commit_rejects_when_ci_service_missing() -> None:
-    ctx = _ctx({})
-
     with pytest.raises(RuntimeError, match="submit_commit requires"):
         await submit_commit(
-            ctx,
+            None,
             op="write",
             specs=[],
             fallback_paths=[],
             description="write",
+            agent_id="test-agent",
         )
 
 
@@ -122,14 +115,14 @@ async def test_submit_commit_dispatches_on_op_name() -> None:
     svc = MagicMock(spec=["rebind_sandbox", "move_file"])
     svc.rebind_sandbox = MagicMock()
     svc.move_file = MagicMock(return_value=_op_result(paths=["/ws/b"]))
-    ctx = _ctx({"ci_service": svc})
 
     change = await submit_commit(
-        ctx,
+        svc,
         op="move",
         specs=[],
         fallback_paths=["/ws/b"],
         description="move",
+        agent_id="test-agent",
     )
 
     assert change.success is True
@@ -145,12 +138,13 @@ async def test_submit_shell_cmd_normalizes_changed_paths() -> None:
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        object(),
         command="echo hi",
         description="test",
+        agent_id="test-agent",
     )
 
     assert change.success is True
@@ -169,12 +163,13 @@ async def test_submit_shell_cmd_marks_nonzero_exit_as_failure() -> None:
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        object(),
         command="false",
         description="test",
+        agent_id="test-agent",
     )
 
     assert change.success is False
@@ -190,12 +185,13 @@ async def test_submit_shell_cmd_treats_noop_commit_status_as_success() -> None:
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        object(),
         command="python3 -m venv .venv",
         description="test",
+        agent_id="test-agent",
     )
 
     assert change.success is True
@@ -213,12 +209,13 @@ async def test_submit_shell_cmd_treats_sandbox_commit_abort_as_failure() -> None
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        object(),
         command="echo hi",
         description="test",
+        agent_id="test-agent",
     )
 
     assert change.success is False
@@ -228,36 +225,36 @@ async def test_submit_shell_cmd_treats_sandbox_commit_abort_as_failure() -> None
 async def test_submit_shell_cmd_rejects_when_no_sandbox_available() -> None:
     svc = MagicMock()
     svc.cmd = AsyncMock()
-    ctx = _ctx({"ci_service": svc})
 
     with pytest.raises(RuntimeError, match="requires a sandbox"):
         await submit_shell_cmd(
-            ctx,
+            svc,
+            None,
             command="echo hi",
             description="test",
+            agent_id="test-agent",
         )
 
 
-async def test_submit_shell_cmd_uses_explicit_sandbox_override() -> None:
+async def test_submit_shell_cmd_passes_explicit_sandbox_through() -> None:
     response = SimpleNamespace(
         result="ok", exit_code=0, changed_paths=[], ambient_changed_paths=[],
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    recovered_sandbox = object()
-    # No sandbox in context metadata — caller passes an explicit override.
-    ctx = _ctx({"ci_service": svc})
+    explicit_sandbox = object()
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        explicit_sandbox,
         command="echo hi",
         description="test",
-        sandbox=recovered_sandbox,
+        agent_id="test-agent",
     )
 
     assert change.success is True
     called_sandbox = svc.cmd.await_args.args[0]
-    assert called_sandbox is recovered_sandbox
+    assert called_sandbox is explicit_sandbox
 
 
 async def test_submit_shell_cmd_forwards_progress_callback() -> None:
@@ -266,17 +263,43 @@ async def test_submit_shell_cmd_forwards_progress_callback() -> None:
     )
     svc = MagicMock()
     svc.cmd = AsyncMock(return_value=response)
-    ctx = _ctx({"ci_service": svc, "ci_sandbox": object()})
 
     def on_progress(line: str) -> None:
         del line
 
     change = await submit_shell_cmd(
-        ctx,
+        svc,
+        object(),
         command="echo hi",
         description="test",
+        agent_id="test-agent",
         on_progress_line=on_progress,
     )
 
     assert change.success is True
     assert svc.cmd.await_args.kwargs["on_progress_line"] is on_progress
+
+
+async def test_submit_shell_cmd_forwards_attribution_kwargs() -> None:
+    response = SimpleNamespace(
+        result="ok", exit_code=0, changed_paths=[], ambient_changed_paths=[],
+    )
+    svc = MagicMock()
+    svc.cmd = AsyncMock(return_value=response)
+
+    await submit_shell_cmd(
+        svc,
+        object(),
+        command="echo hi",
+        description="test",
+        agent_id="agent-1",
+        run_id="run-1",
+        agent_run_id="agent-run-1",
+        task_id="task-1",
+    )
+
+    kwargs = svc.cmd.await_args.kwargs
+    assert kwargs["agent_id"] == "agent-1"
+    assert kwargs["run_id"] == "run-1"
+    assert kwargs["agent_run_id"] == "agent-run-1"
+    assert kwargs["task_id"] == "task-1"

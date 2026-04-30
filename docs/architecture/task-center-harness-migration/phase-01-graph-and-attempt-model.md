@@ -82,7 +82,7 @@ HarnessGraph {
     continuation_goal:   null
                        | string (set from submit_partial_plan)
     fail_reason:         null
-                       | planner_step_budget_exhausted
+                       | planner_failed
                        | generator_failed
                        | evaluator_failed
 }

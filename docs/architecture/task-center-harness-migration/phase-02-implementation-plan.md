@@ -504,12 +504,6 @@ def generator_task_id(harness_graph_id: str, local_task_id: str) -> str:
 
 def evaluator_task_id(harness_graph_id: str) -> str:
     return f"{harness_graph_id}:evaluator"
-
-
-def local_generator_task_id(
-    *, harness_graph_id: str, persisted_task_id: str
-) -> str:
-    """Return the planner-local id from a persisted generator task id."""
 ```
 
 These ids fit the existing `TaskCenterTaskRecord.id: String(96)` as long as
@@ -561,7 +555,6 @@ class HarnessGraphRuntime:
     task_store: TaskCenterStore
     agent_launcher: HarnessAgentLauncher
     orchestrator_registry: "HarnessGraphOrchestratorRegistry"
-    id_factory: Callable[[], str] | None = None
 
     def task_center_run_id_for_graph(self, graph: HarnessGraph) -> str: ...
 ```
@@ -630,11 +623,6 @@ from task_center.harness_graph.task import (
     HarnessTaskStatus,
     PlannedGeneratorTask,
 )
-
-
-def assert_generator_plan_acyclic(
-    tasks: tuple[PlannedGeneratorTask, ...]
-) -> None: ...
 
 
 def assert_generator_deps_exist(
@@ -1465,27 +1453,16 @@ before the nested request returns. Keep `TERMINAL_GENERATOR_STATUSES` limited
 to `done`, `failed`, and `blocked`, and add explicit quiescence tests for a
 waiting generator.
 
-### 11i. `HarnessGraphFailReason` enum rename
+### 11i. `HarnessGraphFailReason.PLANNER_FAILED`
 
-Phase 01 shipped `HarnessGraphFailReason.PLANNER_STEP_BUDGET_EXHAUSTED`.
-Phase 02 renames it to `PLANNER_FAILED` (literal value `planner_failed`)
-to remove the misleading "step budget" framing — Phase 02 does not count
-planner steps anywhere, and the reason fires for any cause that ends a
-planner run without a valid `submit_*_plan` call.
+Phase 02 uses `HarnessGraphFailReason.PLANNER_FAILED` (literal value
+`planner_failed`) for planner runs that end without a valid `submit_*_plan`
+call. The name avoids the misleading "step budget" framing because Phase 02
+does not count planner steps.
 
-Required Phase 02 work to land the rename:
-
-1. Rename the enum member and its serialized literal in the Phase 01
-   domain module (e.g. `task_center.harness_graph.graph`).
-2. Update Phase 01 invariants and any tests that assert on the literal
-   string `"planner_step_budget_exhausted"`.
-3. Backfill or alias any persisted graph rows that already carry the old
-   value (none expected if Phase 01 has not produced this fail reason in
-   production yet — verify before merging).
-4. Update Phase 02 docs in this same change (already done in this revision).
-
-If a one-shot data migration is required, scope it as its own commit with
-its own review, separate from the orchestrator behavior changes.
+No persisted production rows with the old literal are expected from Phase 01.
+If such rows are later found in a deployed environment, handle that backfill as
+a separate migration rather than folding it into orchestrator behavior.
 
 ---
 

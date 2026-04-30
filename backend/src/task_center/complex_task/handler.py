@@ -33,7 +33,7 @@ from task_center.segment.closure_report import (
     TaskSegmentClosureReport,
     TerminalSuccess,
 )
-from task_center.segment.manager import TaskSegmentManager
+from task_center.segment.manager import OrchestratorFactory, TaskSegmentManager
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.segment.segment import (
     TaskSegment,
@@ -56,6 +56,7 @@ class ComplexTaskRequestHandler:
         manager_registry: SegmentManagerRegistry,
         config: HarnessLifecycleConfig,
         deliver_close_report: CloseReportSink | None = None,
+        orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self._request_store = request_store
         self._segment_store = segment_store
@@ -63,6 +64,7 @@ class ComplexTaskRequestHandler:
         self._manager_registry = manager_registry
         self._config = config
         self._deliver_close_report = deliver_close_report
+        self._orchestrator_factory = orchestrator_factory
 
     # ---- public API -----------------------------------------------------
 
@@ -214,6 +216,7 @@ class ComplexTaskRequestHandler:
             segment_store=self._segment_store,
             graph_store=self._graph_store,
             on_segment_closed=self.handle_segment_closed,
+            orchestrator_factory=self._orchestrator_factory,
         )
         self._manager_registry.register(manager)
         return manager
