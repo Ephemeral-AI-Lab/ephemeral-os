@@ -89,7 +89,7 @@ class TestDiscoverWorkspaceAsync:
 
 class TestInjectCodeIntelligence:
     def test_injects_ci_service(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -105,12 +105,12 @@ class TestInjectCodeIntelligence:
         fake_ci_module.get_code_intelligence = fake_get_ci
         monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
 
-        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+        _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
         assert mock_context["ci_service"] == mock_svc
 
     def test_prefers_sandbox_project_dir_for_ci_workspace(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -129,13 +129,13 @@ class TestInjectCodeIntelligence:
         fake_ci_module.get_code_intelligence = fake_get_ci
         monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
 
-        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+        _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
         assert captured["workspace_root"] == "/testbed"
         mock_svc.ensure_initialized.assert_called_once_with(wait=True)
 
     def test_skips_when_ci_import_fails(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         mock_sandbox = MagicMock()
@@ -144,12 +144,12 @@ class TestInjectCodeIntelligence:
 
         monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", None)
 
-        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+        _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
         assert "ci_service" not in mock_context
 
     def test_reinjects_when_ci_service_key_is_none(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp", services={"ci_service": None})
         mock_sandbox = MagicMock()
@@ -165,7 +165,7 @@ class TestInjectCodeIntelligence:
         fake_ci_module.get_code_intelligence = fake_get_ci
         monkeypatch.setitem(sys.modules, "sandbox.code_intelligence.service", fake_ci_module)
 
-        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+        _attach_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
         assert mock_context["ci_service"] == mock_svc
 
@@ -181,7 +181,7 @@ class TestCodeIntelligenceRuntime:
         def fake_inject(context, sandbox_id, sandbox, workspace_root):
             calls.append((context, sandbox_id, sandbox, workspace_root))
 
-        monkeypatch.setattr(workspace_module, "inject_code_intelligence", fake_inject)
+        monkeypatch.setattr(workspace_module, "_attach_code_intelligence", fake_inject)
 
         workspace_module.ensure_code_intelligence_runtime(
             mock_context,
@@ -208,7 +208,7 @@ class TestCodeIntelligenceRuntime:
         def fake_inject(context, sandbox_id, sandbox, workspace_root):
             calls.append((context, sandbox_id, sandbox, workspace_root))
 
-        monkeypatch.setattr(workspace_module, "inject_code_intelligence", fake_inject)
+        monkeypatch.setattr(workspace_module, "_attach_code_intelligence", fake_inject)
 
         workspace_module.ensure_code_intelligence_runtime(
             mock_context,
@@ -230,7 +230,7 @@ class TestCodeIntelligenceRuntime:
         )
         mock_sandbox = MagicMock()
         inject_mock = MagicMock()
-        monkeypatch.setattr(workspace_module, "inject_code_intelligence", inject_mock)
+        monkeypatch.setattr(workspace_module, "_attach_code_intelligence", inject_mock)
 
         workspace_module.ensure_code_intelligence_runtime(
             mock_context,
@@ -245,7 +245,7 @@ class TestCodeIntelligenceRuntime:
         inject_mock.assert_not_called()
 
     def test_uses_sync_handle_for_async_remote_sandbox_prewarm(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()
@@ -274,7 +274,7 @@ class TestCodeIntelligenceRuntime:
         fake_service_module.SandboxService = FakeSandboxService
         monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
 
-        inject_code_intelligence(
+        _attach_code_intelligence(
             mock_context,
             "sb-123",
             async_sandbox,
@@ -287,7 +287,7 @@ class TestCodeIntelligenceRuntime:
         mock_svc.lsp_client.ensure_ready.assert_not_called()
 
     def test_skips_eager_warmup_when_async_remote_sandbox_has_no_sync_handle(self, monkeypatch):
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()
@@ -315,7 +315,7 @@ class TestCodeIntelligenceRuntime:
         fake_service_module.SandboxService = FakeSandboxService
         monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
 
-        inject_code_intelligence(
+        _attach_code_intelligence(
             mock_context,
             "sb-123",
             async_sandbox,
@@ -332,7 +332,7 @@ class TestCodeIntelligenceRuntime:
 
     def test_async_sandbox_symbol_index_start_failure_is_silent(self, monkeypatch):
         """If ensure_built raises when starting background build, it is swallowed."""
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         mock_context = ToolExecutionContextService(cwd="/tmp")
         async_sandbox = MagicMock()
@@ -360,7 +360,7 @@ class TestCodeIntelligenceRuntime:
         monkeypatch.setitem(sys.modules, "sandbox.service", fake_service_module)
 
         # Should not raise
-        inject_code_intelligence(
+        _attach_code_intelligence(
             mock_context, "sb-123", async_sandbox, "/workspace",
         )
         assert mock_context["ci_service"] == mock_svc

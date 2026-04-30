@@ -32,17 +32,19 @@ class EditRequest(BaseModel):
 
 
 def _get_service(sandbox_id: str, workspace_root: str = "/workspace") -> Any:
-    """Get or create a CI service for a sandbox."""
-    from sandbox.code_intelligence.service import get_code_intelligence
+    """Get or create a CI service for a sandbox via SandboxService."""
+    from sandbox.service import SandboxService
 
-    return get_code_intelligence(sandbox_id, workspace_root=workspace_root)
+    return SandboxService().code_intelligence_for(
+        sandbox_id, workspace_root=workspace_root
+    )
 
 
 def _get_service_if_exists(sandbox_id: str) -> Any:
-    """Get existing CI service or raise 404."""
-    from sandbox.code_intelligence.service import get_code_intelligence_if_exists
+    """Get existing CI service via SandboxService, or raise 404."""
+    from sandbox.service import SandboxService
 
-    service = get_code_intelligence_if_exists(sandbox_id)
+    service = SandboxService().code_intelligence_if_exists(sandbox_id)
     if service is None:
         raise HTTPException(404, f"No CI service for sandbox '{sandbox_id}'")
     return service
@@ -56,9 +58,9 @@ def _get_service_if_exists(sandbox_id: str) -> Any:
 @router.get("/health")
 async def health() -> dict:
     """Code intelligence health check."""
-    from sandbox.code_intelligence.service import get_all_services_status
+    from sandbox.service import SandboxService
 
-    statuses = get_all_services_status()
+    statuses = SandboxService().all_code_intelligence_status()
     return {"healthy": True, "active_services": len(statuses)}
 
 
@@ -253,7 +255,7 @@ async def telemetry(sandbox_id: str) -> dict:
 @router.post("/{sandbox_id}/dispose")
 async def dispose_service(sandbox_id: str) -> dict:
     """Dispose CI service for a sandbox."""
-    from sandbox.code_intelligence.service import dispose_code_intelligence
+    from sandbox.service import SandboxService
 
-    dispose_code_intelligence(sandbox_id)
+    SandboxService().dispose_code_intelligence(sandbox_id)
     return {"disposed": sandbox_id}

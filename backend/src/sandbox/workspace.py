@@ -99,57 +99,65 @@ async def discover_workspace_async(sandbox: Any) -> str | None:
     return None
 
 
-def inject_code_intelligence(
+def _attach_code_intelligence(
     context: Any,
-    sandbox_id: str | None,
+    sandbox_id: str,
     sandbox: Any,
     workspace_root: str,
 ) -> None:
-    if sandbox_id and context.get("ci_service") is None:
-        try:
-            from sandbox.code_intelligence.service import get_code_intelligence
+    """Internal helper — attach a CI service via SandboxService.
 
-            ci_sandbox, eager_warmup_safe = _ci_sandbox_handle(sandbox_id, sandbox)
-            ci_workspace_root = _ci_workspace_root(workspace_root, ci_sandbox)
-            svc = get_code_intelligence(
-                sandbox_id=sandbox_id,
-                workspace_root=ci_workspace_root,
-                sandbox=ci_sandbox,
-            )
-            try:
-                if eager_warmup_safe:
-                    if str(ci_workspace_root or "").strip():
-                        svc.ensure_initialized(wait=True)
-                    else:
-                        svc.lsp_client.ensure_ready(install_missing=False)
+    Kept private to ``sandbox.workspace`` so external code does not call it
+    directly. Callers must reach CI via :class:`sandbox.service.SandboxService`.
+    """
+    if context.get("ci_service") is not None:
+        return
+    try:
+        from sandbox.service import SandboxService
+
+        ci_sandbox, eager_warmup_safe = _ci_sandbox_handle(sandbox_id, sandbox)
+        ci_workspace_root = _ci_workspace_root(workspace_root, ci_sandbox)
+        svc = SandboxService().code_intelligence_for(
+            sandbox_id,
+            workspace_root=ci_workspace_root,
+            sandbox=ci_sandbox,
+        )
+        try:
+            if eager_warmup_safe:
+                if str(ci_workspace_root or "").strip():
+                    svc.ensure_initialized(wait=True)
                 else:
-                    logger.debug(
-                        "Skipping eager CI warmup for async sandbox %s because "
-                        "no sync handle was available; starting background "
-                        "symbol index build",
-                        sandbox_id,
-                    )
-                    # Full ensure_initialized is unsafe (LSP bootstrap may
-                    # corrupt the async event loop), but the symbol index
-                    # build runs in its own daemon thread and is safe to
-                    # start eagerly.  This gives the index a head start so
-                    # it is more likely to be ready by the time the first
-                    # ci_query_symbol call arrives.
-                    try:
-                        svc.symbol_index.ensure_built(wait=False)
-                    except Exception:
-                        logger.debug(
-                            "Background symbol index start failed for %s",
-                            sandbox_id,
-                            exc_info=True,
-                        )
-            except Exception:
+                    svc.lsp_client.ensure_ready(install_missing=False)
+            else:
                 logger.debug(
-                    "CI service warmup skipped for sandbox %s", sandbox_id, exc_info=True
+                    "Skipping eager CI warmup for async sandbox %s because "
+                    "no sync handle was available; starting background "
+                    "symbol index build",
+                    sandbox_id,
                 )
-            context["ci_service"] = svc
+                # Full ensure_initialized is unsafe (LSP bootstrap may
+                # corrupt the async event loop), but the symbol index
+                # build runs in its own daemon thread and is safe to
+                # start eagerly.  This gives the index a head start so
+                # it is more likely to be ready by the time the first
+                # ci_query_symbol call arrives.
+                try:
+                    svc.symbol_index.ensure_built(wait=False)
+                except Exception:
+                    logger.debug(
+                        "Background symbol index start failed for %s",
+                        sandbox_id,
+                        exc_info=True,
+                    )
         except Exception:
-            logger.debug("CI service not available for sandbox %s", sandbox_id)
+            logger.debug(
+                "CI service warmup skipped for sandbox %s",
+                sandbox_id,
+                exc_info=True,
+            )
+        context["ci_service"] = svc
+    except Exception:
+        logger.debug("CI service not available for sandbox %s", sandbox_id)
 
 
 def ensure_code_intelligence_runtime(
@@ -165,6 +173,8 @@ def ensure_code_intelligence_runtime(
     This is the shared boundary for Daytona-backed tools. Callers may discover
     ``workspace_root`` differently (sync context prepare, async context prepare,
     lazy attach), but this helper owns the metadata contract and CI attachment.
+
+    CI services are obtained through :class:`sandbox.service.SandboxService`.
     """
     if sandbox is not None:
         context["daytona_sandbox"] = sandbox
@@ -187,5 +197,5 @@ def ensure_code_intelligence_runtime(
         or str(workspace_root or "").strip()
         or default_ci_root
     )
-    if not context.get("skip_code_intelligence"):
-        inject_code_intelligence(context, sandbox_id, sandbox, ci_root)
+    if sandbox_id and not context.get("skip_code_intelligence"):
+        _attach_code_intelligence(context, sandbox_id, sandbox, ci_root)

@@ -219,14 +219,14 @@ class TestLiveSymbolIndexReferences:
     async def test_live_references_via_symbol_index(self, live_sandbox_id):
         """Live: ci_query_symbol finds references using symbol index + LSP."""
         from sandbox.service import SandboxService
-        from sandbox.workspace import discover_workspace, inject_code_intelligence
+        from sandbox.workspace import discover_workspace, _attach_code_intelligence
 
         svc_client = SandboxService()
         sandbox = svc_client.get_sandbox_object(live_sandbox_id)
         workspace_root = discover_workspace(sandbox) or "/home/daytona"
 
         context = ToolExecutionContextService(cwd=Path("/tmp"))
-        inject_code_intelligence(context, live_sandbox_id, sandbox, workspace_root)
+        _attach_code_intelligence(context, live_sandbox_id, sandbox, workspace_root)
 
         ci_svc = context.get("ci_service")
         assert ci_svc is not None

@@ -2,7 +2,7 @@
 """E2E: Symbol index cold start — verify the index is built before CI tools run.
 
 Exercises the full cold-start flow that analysis_agent hits:
-  1. inject_code_intelligence with an async sandbox (no sync handle)
+  1. _attach_code_intelligence with an async sandbox (no sync handle)
   2. ci_workspace_structure — should wait for the index and return indexed paths
   3. ci_query_symbol — should find symbols from the indexed workspace
 
@@ -125,7 +125,7 @@ class TestSymbolIndexColdStart:
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         svc = self._create_ci_service(sandbox)
 
-        # Manually trigger the build (simulates what inject_code_intelligence now does)
+        # Manually trigger the build (simulates what _attach_code_intelligence now does)
         ready = svc.symbol_index.ensure_built(wait=True, timeout=30.0)
         assert ready, "Symbol index should have built successfully"
         assert svc.symbol_index.is_built
@@ -154,17 +154,17 @@ class TestSymbolIndexColdStart:
         names = [s.name for s in results]
         assert "User" in names
 
-    def test_inject_code_intelligence_starts_background_build(self):
-        """inject_code_intelligence should start the symbol index build
+    def test__attach_code_intelligence_starts_background_build(self):
+        """_attach_code_intelligence should start the symbol index build
         for async sandboxes even without a sync handle."""
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         context = ToolExecutionContextService(cwd=Path("/tmp"))
 
         # Patch SandboxService to fail — simulates no sync handle available
         with patch("sandbox.service.SandboxService", side_effect=RuntimeError("no sync")):
-            inject_code_intelligence(context, "sb-cold", sandbox, "/workspace")
+            _attach_code_intelligence(context, "sb-cold", sandbox, "/workspace")
 
         svc = context.get("ci_service")
         assert svc is not None, "CI service should be injected"
@@ -211,7 +211,7 @@ class TestSymbolIndexColdStart:
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         svc = self._create_ci_service(sandbox)
 
-        # Start background build (non-blocking) — simulates inject_code_intelligence
+        # Start background build (non-blocking) — simulates _attach_code_intelligence
         svc.symbol_index.ensure_built(wait=False)
 
         ctx = _ctx({
@@ -243,16 +243,16 @@ class TestSymbolIndexColdStart:
 
         Simulates the exact analysis_agent cold-start sequence.
         """
-        from sandbox.workspace import inject_code_intelligence
+        from sandbox.workspace import _attach_code_intelligence
         from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
         from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         context = ToolExecutionContextService(cwd=Path("/tmp"))
 
-        # Step 1: inject_code_intelligence (async sandbox, no sync handle)
+        # Step 1: _attach_code_intelligence (async sandbox, no sync handle)
         with patch("sandbox.service.SandboxService", side_effect=RuntimeError("no sync")):
-            inject_code_intelligence(context, "sb-pipeline", sandbox, "/workspace")
+            _attach_code_intelligence(context, "sb-pipeline", sandbox, "/workspace")
 
         svc = context["ci_service"]
 
@@ -335,7 +335,7 @@ class TestLiveColdStart:
     async def test_live_ci_tools_after_cold_inject(self, live_sandbox_id):
         """Inject CI into a live sandbox and verify ci_query_symbol works."""
         from sandbox.service import SandboxService
-        from sandbox.workspace import discover_workspace, inject_code_intelligence
+        from sandbox.workspace import discover_workspace, _attach_code_intelligence
         from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
         from tools.ci_toolkit.ci_workspace_structure import ci_workspace_structure
 
@@ -346,7 +346,7 @@ class TestLiveColdStart:
         workspace_root = discover_workspace(sandbox) or "/home/daytona"
 
         context = ToolExecutionContextService(cwd=Path("/tmp"))
-        inject_code_intelligence(context, live_sandbox_id, sandbox, workspace_root)
+        _attach_code_intelligence(context, live_sandbox_id, sandbox, workspace_root)
 
         ci_svc = context.get("ci_service")
         assert ci_svc is not None

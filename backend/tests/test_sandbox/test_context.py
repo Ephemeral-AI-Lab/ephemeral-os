@@ -99,7 +99,7 @@ def test_prepare_context_injects_sandbox_and_cwd() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"),
-        patch("sandbox.workspace.inject_code_intelligence"),
+        patch("sandbox.workspace._attach_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -116,7 +116,7 @@ def test_prepare_context_no_cwd_skips_metadata_key() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value=None),
-        patch("sandbox.workspace.inject_code_intelligence"),
+        patch("sandbox.workspace._attach_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -135,7 +135,7 @@ def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"
         ) as resolve_mock,
-        patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
+        patch("sandbox.workspace._attach_code_intelligence") as inject_mock,
     ):
         tk.prepare_context(ctx)
 
@@ -158,7 +158,7 @@ async def test_prepare_context_async_injects_sandbox_and_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value="/async/workspace"),
         ),
-        patch("sandbox.workspace.inject_code_intelligence"),
+        patch("sandbox.workspace._attach_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -179,7 +179,7 @@ async def test_prepare_context_async_no_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value=None),
         ),
-        patch("sandbox.workspace.inject_code_intelligence"),
+        patch("sandbox.workspace._attach_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -198,7 +198,7 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
         ) as resolve_mock,
-        patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
+        patch("sandbox.workspace._attach_code_intelligence") as inject_mock,
     ):
         await tk.prepare_context_async(ctx)
 

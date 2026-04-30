@@ -17,6 +17,9 @@ from typing import Any
 from sandbox.credentials import load_credentials
 from sandbox.exc import DaytonaUnavailableError
 
+if False:  # TYPE_CHECKING — kept lazy to avoid import-cycle on package init
+    from sandbox.code_intelligence.service import CodeIntelligenceService
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -479,10 +482,61 @@ class SandboxService:
         return sb.serialize()
 
     def delete_sandbox(self, sandbox_id: str) -> None:
-        """Delete a sandbox."""
+        """Delete a sandbox and dispose its code-intelligence service."""
         sb = self._get_proxy(sandbox_id)
         sb._raw.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        # Dispose the per-sandbox CI service so it doesn't leak past the
+        # underlying sandbox.
+        self.dispose_code_intelligence(sandbox_id)
         logger.info("Sandbox deleted: %s", sandbox_id)
+
+    # -- Code Intelligence ----------------------------------------------------
+
+    def code_intelligence_for(
+        self,
+        sandbox_id: str,
+        *,
+        workspace_root: str | None = None,
+        sandbox: Any | None = None,
+    ) -> "CodeIntelligenceService":
+        """Return the per-sandbox CI service, creating it lazily if needed.
+
+        This is the only public way to obtain a :class:`CodeIntelligenceService`
+        for code outside the ``sandbox`` package. The internal registry under
+        :mod:`sandbox.code_intelligence.registry` is reserved for whitebox
+        tests; routers, benchmarks, and tool wiring must come through here.
+        """
+        from sandbox.code_intelligence.registry import get_code_intelligence
+
+        return get_code_intelligence(
+            sandbox_id=sandbox_id,
+            workspace_root=workspace_root or "/workspace",
+            sandbox=sandbox,
+        )
+
+    def code_intelligence_if_exists(
+        self, sandbox_id: str
+    ) -> "CodeIntelligenceService | None":
+        """Return the existing CI service for *sandbox_id*, or ``None``."""
+        from sandbox.code_intelligence.registry import (
+            get_code_intelligence_if_exists,
+        )
+
+        return get_code_intelligence_if_exists(sandbox_id)
+
+    def dispose_code_intelligence(self, sandbox_id: str) -> None:
+        """Dispose the per-sandbox CI service. No-op if nothing exists."""
+        from sandbox.code_intelligence.registry import (
+            dispose_code_intelligence as _dispose,
+        )
+
+        _dispose(sandbox_id)
+
+    def all_code_intelligence_status(self) -> dict[str, dict[str, Any]]:
+        """Return status for every active CI service."""
+        from sandbox.code_intelligence.registry import get_all_services_status
+
+        return get_all_services_status()
 
     # -- Snapshots ------------------------------------------------------------
 

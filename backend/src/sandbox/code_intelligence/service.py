@@ -39,6 +39,19 @@ from sandbox.code_intelligence.core.types import (
     WriteSpec,
 )
 
+# Registry helpers — re-exported here for whitebox tests only.
+# External consumers (server routers, benchmarks, non-sandbox-package code)
+# MUST go through SandboxService.code_intelligence_for / dispose_code_intelligence
+# / code_intelligence_if_exists / all_code_intelligence_status — these names
+# are intentionally absent from `__all__`.
+from sandbox.code_intelligence.registry import (  # noqa: E402,F401
+    dispose_all_code_intelligence,
+    dispose_code_intelligence,
+    get_all_services_status,
+    get_code_intelligence,
+    get_code_intelligence_if_exists,
+)
+
 __all__ = ["CodeIntelligenceService"]
 
 logger = logging.getLogger(__name__)

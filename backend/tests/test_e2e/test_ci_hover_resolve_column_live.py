@@ -112,14 +112,14 @@ def live_sandbox_id():
 def _build_ci_context(sandbox_id: str) -> tuple[Any, ToolExecutionContextService]:
     """Build a CI service and tool context for a live sandbox."""
     from sandbox.service import SandboxService
-    from sandbox.workspace import discover_workspace, inject_code_intelligence
+    from sandbox.workspace import discover_workspace, _attach_code_intelligence
 
     svc_client = SandboxService()
     sandbox = svc_client.get_sandbox_object(sandbox_id)
     workspace_root = discover_workspace(sandbox) or "/home/daytona"
 
     context = ToolExecutionContextService(cwd=Path("/tmp"))
-    inject_code_intelligence(context, sandbox_id, sandbox, workspace_root)
+    _attach_code_intelligence(context, sandbox_id, sandbox, workspace_root)
 
     ci_svc = context.get("ci_service")
     assert ci_svc is not None

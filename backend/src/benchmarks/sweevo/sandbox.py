@@ -252,9 +252,9 @@ async def _upload_file_compat(
 def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
     """Dispose code intelligence for a sandbox, logging debug on failure."""
     try:
-        from sandbox.code_intelligence.service import dispose_code_intelligence
+        from sandbox.service import SandboxService
 
-        dispose_code_intelligence(sandbox_id)
+        SandboxService().dispose_code_intelligence(sandbox_id)
     except Exception:
         logger.debug(
             "CI disposal skipped after %s for sandbox %s",
