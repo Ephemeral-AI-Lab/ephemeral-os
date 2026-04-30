@@ -39,8 +39,11 @@ seam this phase needs; Phase 02 only fills behaviour.
   `set_evaluator_task_id`, `set_stage`, and `close(status, fail_reason,
   closed_at)`.
 - `TaskSegmentManager.__init__` accepts an optional
-  `orchestrator_factory: Callable[[HarnessGraph], HarnessGraphOrchestrator] | None`
-  parameter (`None` in Phase 01); Phase 02 wires it.
+  `orchestrator_factory` parameter (`None` in Phase 01). Phase 02 should tighten
+  the factory shape to
+  `Callable[[HarnessGraph, Callable[[str], None]], HarnessGraphOrchestrator]`
+  so each manager can pass its own `handle_harness_graph_closed` callback when
+  it starts a graph.
 - `TaskSegmentManager.handle_harness_graph_closed` is the callback the
   orchestrator's `on_graph_closed` already targets. The closure routing
   (`PASSED → terminal_success | success_continue`,
@@ -55,9 +58,8 @@ seam this phase needs; Phase 02 only fills behaviour.
 
 **Phase 02 wires:**
 
-- A `HarnessGraphOrchestrator` with `start()`,
-  `notify_planner_run_exhausted()`, and one public `apply_*` entry per
-  accepted submission (`apply_plan_submission`,
+- A `HarnessGraphOrchestrator` with `start()` and one public `apply_*`
+  entry per close path (`apply_plan_submission`, `apply_planner_failure`,
   `apply_generator_submission`, `apply_evaluator_submission`).
   Phase 04 ships `apply_nested_close_report` for nested-request resume.
 - Private mutation helpers for graph-owned task writes and private dispatch
@@ -120,13 +122,21 @@ the callers; they validate input and role gates first, then pass typed DTOs.
 | Entry | Called by | Receives | Mutates |
 | ----- | --------- | -------- | ------- |
 | `apply_plan_submission(...)` | `submit_full_plan` or `submit_partial_plan` handler | `PlannerSubmission` | Persists graph contract, stores `continuation_goal` for partial plans, creates all generator task rows, sets graph stage to `generating`, then dispatches ready work. |
+| `apply_planner_failure(...)` | runtime (no tool handler — see note below) | `PlannerFailureSubmission` | Marks the planner task `failed` with the runtime-supplied summary, then closes the graph failed via `_close_graph(planner_step_budget_exhausted)`. |
 | `apply_generator_submission(...)` | `submit_execution_*` or `submit_verification_*` handler | `GeneratorSubmission` | Appends the role-tagged summary and marks the generator task `done` or `failed`; on failure, blocks pending descendants. |
 | `apply_evaluator_submission(...)` | `submit_evaluation_success` or `submit_evaluation_failure` handler | `EvaluatorSubmission` | Appends evaluator summary and marks the evaluator task `done` or `failed`; dispatch then closes the graph passed or failed. |
 
-`apply_plan_submission(...)` is the unified planner entry. It receives a
-normalized `PlannerSubmission` with `kind = full | partial`; it does not expose
+`apply_plan_submission(...)` is the unified planner success entry. It receives
+a normalized `PlannerSubmission` with `kind = full | partial`; it does not expose
 separate orchestrator methods for `submit_full_plan` and
 `submit_partial_plan`.
+
+`apply_planner_failure(...)` is called by the runtime, not a tool handler. The
+planner has no agent-facing failure terminal in Phase 02; instead, when a planner
+agent run ends without a valid `submit_*_plan` call, the runtime synthesizes a
+`PlannerFailureSubmission` and routes it through this entry. This keeps all four
+close paths on a uniform `apply_*` surface even though the planner has only one
+agent-facing success path.
 
 Executor and verifier submissions both produce generator task outcomes and
 share `apply_generator_submission`. Their public tool contracts (separate
@@ -139,7 +149,7 @@ any legacy request-plan tool. Request-style generator handoffs are not success
 or failure task outcomes. The supported handoff path is
 `request_complex_task_solution`, which belongs to the complex-task request
 boundary described in Phase 04. If a legacy `submit_request_plan` surface still
-exists during migration, it should be rejected or translated before reaching
+exists during migration, it should be rejected or aliased before reaching
 `HarnessGraphOrchestrator`.
 
 ### Private dispatch helpers
@@ -224,7 +234,7 @@ submission escalates to `HarnessGraphOrchestrator` via
 | Failure mode | Detected by | Wait point |
 | ------------ | ----------- | ---------- |
 | `planner_step_budget_exhausted` | runtime ends planner without valid plan submission | immediate |
-| `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED` |
+| `generator_failed` | generator submitted failure | wait until every generator is `DONE`, `FAILED`, or `BLOCKED`. `WAITING_COMPLEX_TASK` is non-terminal and keeps the graph in `generating` until the nested request resumes the outer task. |
 | `evaluator_failed` | evaluator submitted `submit_evaluation_failure` | immediate |
 
 ### Generator-failure quiescence
@@ -317,7 +327,11 @@ pass/fail decision, not by the segment manager.
 ## Closure decision tree
 
 ```text
-Terminal tool handler validates and calls HarnessGraphOrchestrator.apply_* for H
+Entry into the orchestrator is one of:
+  - Terminal tool handler validates input and calls HarnessGraphOrchestrator.apply_* for H
+    (drives the generating and evaluating branches)
+  - Runtime calls HarnessGraphOrchestrator.notify_planner_run_exhausted()
+    (drives the planning branch only)
         |
         v
    H.stage:
@@ -360,12 +374,12 @@ H failed     no        yes    H passed H failed
 4. Add `apply_evaluator_submission(...)` on `HarnessGraphOrchestrator`. It marks
    the evaluator task done or failed and calls `_dispatch_ready_work()`, which
    then closes the graph.
-5. Keep both `submit_request_plan` and the `request_complex_task_solution`
-   handoff out of `HarnessGraphOrchestrator`. The Phase 04 spawn handler owns
-   the transition to `waiting_complex_task`; Phase 02 only ensures the
-   orchestrator observes that status as non-terminal during quiescence
-   checks. The matching `apply_nested_close_report` resume entry ships in
-   Phase 04.
+5. Keep both legacy `submit_request_plan` and canonical
+   `request_complex_task_solution` handoff handling out of
+   `HarnessGraphOrchestrator`. The Phase 04 spawn handler owns the transition
+   to `waiting_complex_task`; Phase 02 only ensures the orchestrator observes
+   that status as non-terminal during quiescence checks. The matching
+   `apply_nested_close_report` resume entry ships in Phase 04.
 6. Add private `_dispatch_ready_work()` and `_close_graph(...)` helpers.
    `_dispatch_ready_work()` launches dependency-free pending generators, waits
    for generator quiescence, spawns the evaluator when every generator is
@@ -378,11 +392,13 @@ H failed     no        yes    H passed H failed
 9. Wire the orchestrator factory through
    `ComplexTaskRequestHandler._spawn_segment_manager` to every spawned
    `TaskSegmentManager`.
-10. Keep continuation segment creation stubbed or feature-gated until
-    Phase 04.
+10. Preserve Phase 01 continuation segment creation in
+    `ComplexTaskRequestHandler`; Phase 04 only wires final close-report delivery
+    and nested-request resume.
 
 ## Phase exit criteria
 
-See [Phase 02 - Implementation Plan §10](./phase-02-implementation-plan.md#10-phase-02-exit-criteria-mapping)
-for the criteria-to-test mapping. The criteria above are the behavioral spec;
-that table is the canonical verification list.
+The behavioral spec lives in the sections above (responsibilities, stages,
+failure escape valves, outcome, segment reaction). The canonical
+criteria-to-test mapping is in
+[Phase 02 - Implementation Plan §10](./phase-02-implementation-plan.md#10-phase-02-exit-criteria-mapping).
