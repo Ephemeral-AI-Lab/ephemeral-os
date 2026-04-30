@@ -6,37 +6,35 @@ harness graph runtime and reported back to the task that requested it.
 The migration separates three concepts that were previously overloaded:
 
 - `ComplexTaskRequest`: the delegated complex goal requested by an executor.
-- `TaskSegment`: the single request-local execution segment that owns retry
-  budget.
-- `HarnessGraph`: one concrete planner-produced graph execution inside the
+- `TaskSegment`: one vertical continuation slice of that complex goal.
+- `HarnessGraph`: one concrete planner-produced graph execution inside one
   segment.
-
-There is no partial-plan continuation feature in the target model. A
-`ComplexTaskRequest` has exactly one `TaskSegment`. Retry creates another
-`HarnessGraph` inside that segment; it never creates another segment.
 
 ## Mental model
 
-Complex task progression has two axes:
+Complex task progression has three axes:
 
 | Axis | Entity | Trigger | Meaning |
 | ---- | ------ | ------- | ------- |
 | Request origin | `ComplexTaskRequest` | Executor calls `request_complex_task_solution(goal)` | A delegated complex goal starts for the requesting task. |
-| Horizontal retry | `HarnessGraph` | A graph fails and segment retry budget remains | The same segment receives a fresh planner-produced graph. |
+| Vertical continuation | `TaskSegment` | Prior segment passes with non-null `continuation_goal` | The same complex request moves to its next sequential slice. |
+| Horizontal retry | `HarnessGraph` | A graph fails and segment attempt budget remains | The same segment receives a fresh planner-produced graph. |
 
 ```mermaid
 flowchart TD
     E["Executor task"] -->|"request_complex_task_solution(goal)"| C["ComplexTaskRequest"]
     C --> S1["TaskSegment S1"]
     S1 --> H11["HarnessGraph S1.H1"]
-    H11 -->|"failed, retry budget remains"| H12["HarnessGraph S1.H2"]
-    H12 -->|"passed"| Close["Close ComplexTaskRequest"]
+    H11 -->|"failed, attempt budget remains"| H12["HarnessGraph S1.H2"]
+    H12 -->|"passed with continuation_goal"| S2["TaskSegment S2"]
+    S2 --> H21["HarnessGraph S2.H1"]
+    H21 -->|"passed with continuation_goal = null"| Close["Close ComplexTaskRequest"]
     Close -->|"final report"| E
 ```
 
 The key rule is:
 
-- A `ComplexTaskRequest` has one `TaskSegment`.
+- A new `TaskSegment` means accepted vertical continuation.
 - A new `HarnessGraph` inside that segment means retry after failure.
 - The complex-task close report supplies the final result for
   `requested_by_task_id`; the original executor agent run ends at the handoff.
@@ -45,9 +43,9 @@ The key rule is:
 
 | Layer | Owns | Does not own |
 | ----- | ---- | ------------ |
-| `ComplexTaskRequestHandler` | Request creation and close, initial segment creation, final close report to `requested_by_task_id`. | Per-segment retry policy or graph execution. |
-| `TaskSegmentManager` | One segment's retry budget, next harness graph creation after failed graphs, segment close, `TaskSegmentClosureReport`. | Request creation or planner/generator/evaluator execution. |
-| `HarnessGraphOrchestrator` | One `planner -> generator DAG -> evaluator` execution and graph pass/fail outcome. | Retry or request close. |
+| `ComplexTaskRequestHandler` | Request creation and close, initial segment creation, continuation segment creation, final close report to `requested_by_task_id`. | Per-segment retry policy or graph execution. |
+| `TaskSegmentManager` | One segment's attempt budget, next harness graph creation after failed graphs, segment close, `TaskSegmentClosureReport`. | Request creation, continuation segment creation, or planner/generator/evaluator execution. |
+| `HarnessGraphOrchestrator` | One `planner -> generator DAG -> evaluator` execution and graph pass/fail outcome. | Retry, continuation, or request close. |
 | Agent roles | Planner, generator executor, verifier, and evaluator terminal submissions inside a graph. | Structural lifecycle decisions. |
 | Context engine | Role-specific launch context, durable summaries, and detailed close-report payloads. | Lifecycle policy or source-of-truth state transitions. |
 
@@ -67,7 +65,7 @@ sequenceDiagram
     R->>S: spawn manager for S1
     S->>H: create HarnessGraph S1.H1
     H->>A: spawn planner
-    A->>H: submit_full_plan
+    A->>H: submit_full_plan or submit_partial_plan
     H->>A: spawn generator DAG
     A->>H: generator/verifier terminal submissions
     H->>A: spawn evaluator after all generators pass
@@ -80,7 +78,7 @@ sequenceDiagram
 ## Harness graph lifecycle
 
 `HarnessGraphOrchestrator` owns exactly one graph run. It does not inspect
-retry budget and does not create sibling graphs.
+attempt budget and does not create sibling graphs.
 
 ```mermaid
 flowchart TD
@@ -104,7 +102,7 @@ nodes are terminal.
 ## Segment decision flow
 
 `TaskSegmentManager` reacts to the closed graph. It is the only layer that can
-spend segment retry budget.
+spend segment attempt budget.
 
 ```mermaid
 flowchart TD
@@ -116,7 +114,10 @@ flowchart TD
     Retry -->|"no"| FailSeg["Close TaskSegment failed"]
     FailSeg --> FailReport["Emit TaskSegmentClosureReport: attempt_plan_failed(attempted_plan_history)"]
 
-    Passed -->|"yes"| SuccessReport["Emit TaskSegmentClosureReport: terminal_success"]
+    Passed -->|"yes"| SetCont["Set segment.continuation_goal = graph.continuation_goal"]
+    SetCont --> HasCont{"continuation_goal is non-null?"}
+    HasCont -->|"yes"| ContinueReport["Emit TaskSegmentClosureReport: success_continue(goal)"]
+    HasCont -->|"no"| TerminalReport["Emit TaskSegmentClosureReport: terminal_success"]
 ```
 
 A passed graph always closes its segment. There is no retry after a passing
@@ -129,11 +130,20 @@ graph; graph quality is enforced by the evaluator.
 ```mermaid
 flowchart TD
     Report["TaskSegmentClosureReport"] --> Outcome{"Outcome"}
+    Outcome -->|"success_continue(goal)"| NextSeg["Create TaskSegment N+1"]
+    NextSeg --> Goal["goal = continuation_goal"]
+    Goal --> NewManager["Spawn fresh TaskSegmentManager"]
+    NewManager --> NewGraph["TaskSegmentManager creates initial HarnessGraph"]
+
     Outcome -->|"terminal_success"| Success["Close ComplexTaskRequest succeeded"]
     Outcome -->|"attempt_plan_failed(attempted_plan_history)"| Failed["Close ComplexTaskRequest failed"]
     Success --> Return["Deliver final report to requested_by_task_id"]
     Failed --> Return
 ```
+
+Continuation does not return to the requesting executor. It keeps the same
+complex request open and creates another segment. The requesting executor sees
+one final report for the whole complex request.
 
 ## Happy path
 
@@ -147,10 +157,29 @@ flowchart TD
     P --> G["Generator DAG completes successfully"]
     G --> V["Evaluator submits success"]
     V --> HP["HarnessGraph passes"]
-    HP --> SC["TaskSegment closes successfully"]
+    HP --> SC["TaskSegment closes with continuation_goal = null"]
     SC --> RC["ComplexTaskRequest closes success"]
     RC --> Report["Final complex-task report is attached to requested_by_task_id"]
 ```
+
+## Partial continuation path
+
+```mermaid
+flowchart TD
+    P1["Planner in S1.H1 submits submit_partial_plan"] --> CG["S1.H1.continuation_goal = G"]
+    CG --> Work1["Generators complete partial DAG"]
+    Work1 --> Eval1["Evaluator accepts S1.H1"]
+    Eval1 --> CloseS1["TaskSegmentManager closes S1"]
+    CloseS1 --> Report["TaskSegmentClosureReport: success_continue(G)"]
+    Report --> S2["ComplexTaskRequestHandler creates S2"]
+    S2 --> H2["TaskSegmentManager creates S2.H1"]
+    H2 --> Work2["S2.H1 runs and passes"]
+    Work2 --> Done["Request closes and reports back to requested_by_task_id"]
+```
+
+The segment inherits `continuation_goal` only from the passing graph that
+closed it. Failed graphs in the same segment do not propagate their
+`continuation_goal` to later graphs.
 
 ## Retry-then-pass path
 
@@ -159,15 +188,15 @@ flowchart TD
     H1["S1.H1 runs"] --> Fail["S1.H1 fails"]
     Fail --> Budget{"Retry budget remains?"}
     Budget -->|"yes"| H2["TaskSegmentManager creates S1.H2"]
-    H2 --> Fresh["S1.H2 planner submits a fresh full plan"]
+    H2 --> Fresh["S1.H2 planner decides full or partial independently"]
     Fresh --> Pass["S1.H2 passes"]
-    Pass --> Close["S1 closes successfully"]
+    Pass --> Close["S1 closes using S1.H2.continuation_goal"]
     Budget -->|"no"| Exhaust["S1 closes failed and request fails"]
 ```
 
 Retry history is horizontal inside the segment. The next planner receives the
-failure landscape as context, but lifecycle state does not inherit anything from
-prior failed graphs beyond ordered retry history.
+failure landscape as context, but lifecycle state does not inherit the prior
+failed graph's `continuation_goal`.
 
 ## Recursive complex task request
 
@@ -187,26 +216,29 @@ flowchart TD
     E7 --> OuterContinue["Outer graph consumes E7's final report"]
 ```
 
-The nested request has its own segment and retry history. The outer request sees
-only the close report associated with the executor that requested it.
+The nested request has its own segment chain and retry history. The outer
+request sees only the close report associated with the executor that requested
+it.
 
 ## Tool and role boundaries
 
 | Role | Scope | Main terminals |
 | ---- | ----- | -------------- |
-| Planner | One `HarnessGraph` | `submit_full_plan` |
+| Planner | One `HarnessGraph` | `submit_full_plan`, `submit_partial_plan` |
 | Generator executor | One graph DAG node | `submit_execution_success`, `submit_execution_failure`, `request_complex_task_solution` |
 | Generator verifier | One graph DAG node | `submit_verification_success`, `submit_verification_failure` |
 | Evaluator | Sink for one graph | `submit_evaluation_success`, `submit_evaluation_failure` |
 
 Important gates:
 
+- `submit_partial_plan` is blocked if the current request already has a prior
+  segment with non-null `continuation_goal`.
 - malformed planner DAG submissions fail inline without marking the graph
   failed.
 - `request_complex_task_solution` is blocked after the executor has edited.
 - evaluator spawn is blocked until every generator in the current graph is
   `DONE`.
-- next graph creation is blocked once the segment retry budget is exhausted.
+- next graph creation is blocked once the segment attempt budget is exhausted.
 
 ## Context engine boundary
 

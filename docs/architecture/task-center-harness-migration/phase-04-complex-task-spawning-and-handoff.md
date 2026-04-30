@@ -5,9 +5,11 @@
 Implement complex-task request creation after the durable model, orchestrators,
 and tool-gate foundations are in place.
 
-The target model has no partial-plan continuation. A `ComplexTaskRequest`
-creates exactly one `TaskSegment`; segment-manager retry creates new
-`HarnessGraph`s inside that segment.
+The target model supports partial-plan continuation. A `ComplexTaskRequest`
+starts with one `TaskSegment`, and `ComplexTaskRequestHandler` creates later
+segments only when the previous segment closes with a non-null
+`continuation_goal`. Segment-manager retry creates new `HarnessGraph`s inside
+the current segment.
 
 `ComplexTaskRequestHandler` is the only creator of `ComplexTaskRequest` and
 `TaskSegment` records, and the only spawner of `TaskSegmentManager` instances.
@@ -37,8 +39,9 @@ create another segment in an existing request.
 | ------------- | -------------- | ---------- | ---------------- |
 | `request_complex_task_solution` | `ComplexTaskRequest` | `ComplexTaskRequestHandler` | `requested_by_task_id` is the executor that called the tool |
 | initial segment | `TaskSegment` | `ComplexTaskRequestHandler` | `complex_task_request_id = C`, `sequence_no = 1`, `goal = C.goal` |
+| continuation segment | `TaskSegment` | `ComplexTaskRequestHandler` | `complex_task_request_id = C`, `sequence_no = previous + 1`, `goal = previous_segment.continuation_goal`; the segment id is appended to `task_segment_ids` |
 | initial graph | `HarnessGraph` | `TaskSegmentManager(S)` | `task_segment_id = S`, `graph_sequence_no = 1` |
-| subsequent graph after failed graph | `HarnessGraph` | `TaskSegmentManager(S)` | same `task_segment_id`, `graph_sequence_no = previous + 1`; created only after the manager decides to spend retry budget |
+| subsequent graph after failed graph | `HarnessGraph` | `TaskSegmentManager(S)` | same `task_segment_id`, `graph_sequence_no = previous + 1`; created only after the manager decides to spend attempt budget |
 
 There is no `ROOT` spawn reason. Retry is not `TaskSegment` creation and is not
 a `HarnessGraph` creation reason.
@@ -66,6 +69,13 @@ HarnessGraphOrchestrator runs S1.H1 to completion
     |
     v
 TaskSegmentManager(S1) retries inside S1, or closes S1 and emits TaskSegmentClosureReport
+    |
+    +-- success_continue(goal)
+    |     ComplexTaskRequestHandler creates continuation TaskSegment S2
+    |     and a fresh TaskSegmentManager(S2)
+    |
+    v
+eventually:
     |
     v
 ComplexTaskRequestHandler closes C with success or failure
@@ -103,9 +113,12 @@ ComplexTaskRequest C1
               ComplexTaskRequest C2
                 requested_by_task_id = E7
                 |
-                `-- TaskSegment S1
+                +-- TaskSegment S1
                       |
                       `-- HarnessGraph S1.H1
+                `-- TaskSegment S2
+                      |
+                      `-- HarnessGraph S2.H1
 
 C2 closes
   |
@@ -114,7 +127,7 @@ ComplexTaskRequestHandler returns C2 close report as E7's final task result
 ```
 
 The nested request does not become a child `TaskSegment` of the outer request.
-The nested request has its own single segment and retry history.
+The nested request has its own segment chain and retry history.
 
 ## Close reports
 
@@ -142,10 +155,13 @@ links belongs to the context engine.
 | ----- | ------- |
 | `ComplexTaskRequest` closes | final report is attached to the executor task that called `request_complex_task_solution` |
 | `TaskSegment` closes succeeded | `TaskSegmentManager` emits `terminal_success`; `ComplexTaskRequestHandler` closes the complex task request successfully |
+| `TaskSegment` closes with continuation | `TaskSegmentManager` emits `success_continue(goal)`; `ComplexTaskRequestHandler` creates the next segment and keeps the request open |
 | `TaskSegment` closes failed | `TaskSegmentManager` emits `attempt_plan_failed(attempted_plan_history)`; `ComplexTaskRequestHandler` closes the complex task request as failed |
 
 Retry never returns a close report to the requesting executor. Retry is internal
 motion inside one task segment.
+Continuation also does not return to the requesting executor. It keeps the same
+complex request open and creates the next segment.
 
 ## Implementation tasks
 
@@ -156,7 +172,8 @@ motion inside one task segment.
 3. Create initial `TaskSegment` through `ComplexTaskRequestHandler`, spawn
    `TaskSegmentManager(S1)`, then have the manager create the initial
    `HarnessGraph`.
-4. Keep exactly one `TaskSegment` per `ComplexTaskRequest`.
+4. Implement continuation segment creation when a segment closes with
+   `success_continue(goal)`.
 5. Route final complex-task close reports back to the requesting executor task.
 6. Add close-report persistence or delivery semantics robust enough for process
    restart if the surrounding runtime supports it.
@@ -165,7 +182,9 @@ motion inside one task segment.
 
 - `request_complex_task_solution` creates a complex task request and its final
   close report becomes the requesting executor task result.
-- Each complex task request creates exactly one task segment.
+- Each complex task request creates its initial task segment, and continuation
+  may create later ordered segments.
 - Retry stays inside the same segment and does not produce executor close reports
   until the complex task request closes.
-- Partial-plan continuation is absent from the request and segment lifecycle.
+- Partial-plan continuation creates the next task segment with `goal` set from
+  the prior segment's `continuation_goal`.

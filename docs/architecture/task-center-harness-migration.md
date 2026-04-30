@@ -40,9 +40,10 @@ The migration reshapes the harness around two context axes:
 
 - Request origin: a `ComplexTaskRequest` is created when an executor calls
   `request_complex_task_solution(goal)`.
-- Segment retry policy: a single `TaskSegment` owns retry budget for the
-  request. `HarnessGraph`s are planner-produced DAG executions inside that
-  segment. A failed graph returns to `TaskSegmentManager`, which decides whether
-  to spend retry budget by launching another `HarnessGraph` in the same segment.
+- Segment progression: a `TaskSegment` owns attempt budget for one vertical
+  slice of the request. A passing graph with `continuation_goal` creates the
+  next segment; a failed graph returns to `TaskSegmentManager`, which decides
+  whether to spend attempt budget by launching another `HarnessGraph` in the
+  same segment.
 
 The detailed context-composition system is specified separately in Phase 06.

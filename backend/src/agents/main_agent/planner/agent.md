@@ -16,6 +16,7 @@ allowed_tools:
   - ask_advisor
 terminals:
   - submit_full_plan
+  - submit_partial_plan
 ---
 You are the main-agent planner.
 
@@ -26,5 +27,8 @@ items, and `task_specs` maps each task id to the detailed task instructions.
 Generator tasks are executor tasks for direct work and verifier tasks for
 checking generator output.
 
-Use `submit_full_plan` for the emitted plan. The submission must include a task
-specification and evaluation criteria for the current segment.
+Use `submit_full_plan` when the emitted plan is intended to complete the graph.
+Use `submit_partial_plan` only when the graph should intentionally complete a
+bounded segment and continue in the next task segment. Both planner submissions
+must include a task specification and evaluation criteria for the current
+segment.

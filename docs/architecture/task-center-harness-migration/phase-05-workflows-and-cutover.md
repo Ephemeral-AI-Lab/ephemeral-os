@@ -6,8 +6,9 @@ Validate the full migration, remove obsolete graph-as-attempt behavior, and cut
 callers over to the `ComplexTaskRequest` plus `TaskSegment` plus `HarnessGraph`
 model.
 
-Partial-plan continuation is removed. A complex task request has one segment,
-and retry is represented by multiple harness graphs inside that segment.
+Partial-plan continuation remains part of the lifecycle. A complex task request
+has one or more ordered segments; retry is represented by multiple harness
+graphs inside the current segment.
 
 ## Happy path
 
@@ -39,6 +40,9 @@ planner submits submit_full_plan with task_specification,
 evaluation_criteria, tasks, and task_specs
     |
     v
+S1.H1.continuation_goal = null
+    |
+    v
 HarnessGraphOrchestrator(S1.H1) instantiates generator DAG and spawns generators
     |
     v
@@ -55,6 +59,7 @@ HarnessGraphOrchestrator(S1.H1) marks graph passed
     |
     v
 TaskSegmentManager(S1) closes S1
+S1.continuation_goal = S1.H1.continuation_goal = null
 TaskSegmentManager(S1) emits TaskSegmentClosureReport { outcome = terminal_success }
     |
     v
@@ -62,6 +67,55 @@ ComplexTaskRequestHandler closes C1 success
     |
     v
 runtime delivers complex task success report to requested_by_task_id
+```
+
+## Partial continuation path
+
+```text
+planner in S1.H1 submits submit_partial_plan with task_specification,
+evaluation_criteria, tasks, task_specs, and continuation_goal = G
+    |
+    v
+S1.H1.continuation_goal = G          (per-graph; not shared with later graphs)
+    |
+    v
+generators complete partial DAG
+    |
+    v
+evaluator submits success
+    |
+    v
+HarnessGraphOrchestrator(S1.H1) marks graph passed
+    |
+    v
+TaskSegmentManager(S1) closes S1
+S1.continuation_goal = S1.H1.continuation_goal = G
+    (segment inherits from the passing harness graph)
+TaskSegmentManager(S1) emits TaskSegmentClosureReport { outcome = success_continue(G) }
+    |
+    v
+ComplexTaskRequestHandler creates TaskSegment S2 because outcome is success_continue
+  goal = G
+ComplexTaskRequestHandler appends S2 to task_segment_ids
+ComplexTaskRequestHandler spawns TaskSegmentManager(S2)
+    |
+    v
+TaskSegmentManager(S2) creates HarnessGraph S2.H1
+    |
+    v
+planner in S2.H1 must submit_full_plan (recursive partial gate)
+    |
+    v
+HarnessGraphOrchestrator(S2.H1) runs graph to full-plan pass
+S2.H1.continuation_goal = null
+    |
+    v
+TaskSegmentManager(S2) closes S2 (S2.continuation_goal = null)
+emits TaskSegmentClosureReport { outcome = terminal_success }
+    |
+    v
+ComplexTaskRequestHandler closes C1 and returns one final result to
+requested_by_task_id
 ```
 
 ## Segment-manager retry then pass path
@@ -74,18 +128,21 @@ planner in S1.H1 submits a full plan; generators run; evaluator fails
 HarnessGraphOrchestrator(S1.H1) marks graph failed
     |
     v
-TaskSegmentManager decides retry budget remains
+TaskSegmentManager decides attempt budget remains
 TaskSegmentManager creates next HarnessGraph S1.H2
+    (S1.H2.continuation_goal starts unset; its own planner will decide)
     |
     v
-planner in S1.H2 submits submit_full_plan
+planner in S1.H2 submits submit_full_plan or submit_partial_plan
+    (independent decision; S1.H1's continuation_goal is not inherited)
     |
     v
 S1.H2 runs to pass
     |
     v
 TaskSegmentManager closes S1 successfully
-ComplexTaskRequestHandler closes C1 successfully
+S1.continuation_goal = S1.H2.continuation_goal
+    (only the passing graph contributes)
 ```
 
 ## Resolver loop validation
@@ -131,7 +188,7 @@ generators become quiescent
 HarnessGraphOrchestrator(S1.H1) marks graph failed with generator_failed
 and reports failure to TaskSegmentManager
     |
-    +-- TaskSegmentManager: retry budget remains -> create next graph S1.H2
+    +-- TaskSegmentManager: attempt budget remains -> create next graph S1.H2
     |
     +-- TaskSegmentManager: retry exhausted      -> emit attempt_plan_failed(attempted_plan_history)
                                                     ComplexTaskRequestHandler closes C1 failed
@@ -146,7 +203,7 @@ evaluator in S1.H1 submits failure
 HarnessGraphOrchestrator(S1.H1) marks graph failed with evaluator_failed
 and reports failure to TaskSegmentManager
     |
-    +-- TaskSegmentManager: retry budget remains -> create next graph S1.H2
+    +-- TaskSegmentManager: attempt budget remains -> create next graph S1.H2
     |
     +-- TaskSegmentManager: retry exhausted      -> emit attempt_plan_failed(attempted_plan_history)
                                                     ComplexTaskRequestHandler closes C1 failed
@@ -164,7 +221,7 @@ runtime reports planner_step_budget_exhausted
 HarnessGraphOrchestrator(S1.H1) marks graph failed
 and reports failure to TaskSegmentManager
     |
-    +-- TaskSegmentManager: retry budget remains -> create next graph S1.H2
+    +-- TaskSegmentManager: attempt budget remains -> create next graph S1.H2
     |
     +-- TaskSegmentManager: retry exhausted      -> emit attempt_plan_failed(attempted_plan_history)
                                                     ComplexTaskRequestHandler closes C1 failed
@@ -185,7 +242,8 @@ and reports failure to TaskSegmentManager
    `TaskSegmentManager` creation of the next `HarnessGraph` inside the same
    segment after a failed graph.
 6. Migrate `submit_request_plan` to `request_complex_task_solution`.
-7. Remove `submit_partial_plan` and all partial-plan compatibility paths.
+7. Migrate partial-plan continuation to `TaskSegment` creation with `goal`
+   inherited from the passing harness graph's `continuation_goal`.
 8. Migrate tool gates to read request, segment, and harness graph state.
 9. Update prompts and docs that mention retry as a child graph or
    `RETRY_ON_FAILURE`.
@@ -208,7 +266,7 @@ Minimum coverage:
 - `request_complex_task_solution` creates `ComplexTaskRequest`.
 - The complex-task close report becomes the requesting executor task result.
 - `ComplexTaskRequestHandler` is the only creator and closer for requests, and
-  the only creator of the single `TaskSegment` record.
+  the only creator of `TaskSegment` records (initial and continuation).
 - `TaskSegmentManager` is per-segment, the only creator of `HarnessGraph`
   records inside its owned segment, and the only emitter of `TaskSegmentClosureReport`.
 - Request links to `requested_by_task_id`.
@@ -220,11 +278,16 @@ Minimum coverage:
 - Planner exhaustion triggers a `TaskSegmentManager` retry decision.
 - Retry budget exhaustion.
 - `TaskSegmentManager` retry creates `HarnessGraph` N+1 inside the same segment.
+- A later harness graph's `continuation_goal` is set independently by its own
+  planner and is not inherited from prior failed graphs.
+- Continuation creates `TaskSegment` N+1 with `goal` inherited from the
+  previous segment's `continuation_goal`, which itself was inherited from the
+  passing harness graph that closed the previous segment.
 - A passing harness graph always closes its segment; failed graphs return to
   `TaskSegmentManager` for a retry decision subject to budget.
 - `request_complex_task_solution` can create a nested `ComplexTaskRequest` from
   a generator executor inside an existing harness graph.
-- No `submit_partial_plan` tool or partial-plan request path remains.
+- Recursive partial-plan gate blocks continuation planners.
 - No `RETRY_ON_FAILURE` graph spawn remains.
 - No `ROOT` spawn or creation reason remains.
 
@@ -249,7 +312,8 @@ uv run mypy --config-file backend/mypy.ini backend/src/task_center backend/src/a
 - All phase tests pass.
 - Public executor contract exposes `request_complex_task_solution`,
   `submit_execution_success`, and `submit_execution_failure`.
-- Public planner contract exposes `submit_full_plan` only.
 - Docs no longer describe retry as `RETRY_ON_FAILURE` child graph creation.
-- Segment state reflects one request-local retry scope.
-- Retry history is derived from ordered harness graphs inside one segment.
+- Segment progression reflects continuation through `continuation_goal`
+  inherited from the passing harness graph.
+- Retry history is derived from ordered harness graphs inside one segment, with
+  per-graph `continuation_goal` independence.

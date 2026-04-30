@@ -8,8 +8,6 @@ Port role semantics and terminal-tool gating onto the new
 This phase should preserve the public agent contract while changing where state
 is read from.
 
-Partial-plan continuation is removed. Planners submit `submit_full_plan` only.
-
 ## Role model
 
 TaskCenter owns four main agent roles, all scoped to one `HarnessGraph` except
@@ -18,7 +16,7 @@ the requesting executor, whose task result can be supplied by a nested
 
 | Role | Scope | Tools / terminals |
 | ---- | ----- | ----------------- |
-| Planner | one `HarnessGraph` | `submit_full_plan` |
+| Planner | one `HarnessGraph` | `submit_full_plan`, `submit_partial_plan` |
 | Generator executor | one `HarnessGraph` DAG node | `submit_execution_success`, `submit_execution_failure`, `request_complex_task_solution` |
 | Generator verifier | one `HarnessGraph` DAG node | `submit_verification_success`, `submit_verification_failure` |
 | Evaluator | sink for one `HarnessGraph` | `submit_evaluation_success`, `submit_evaluation_failure` |
@@ -30,7 +28,7 @@ that can declare failure.
 handoff: the executor delegates its task to a nested complex-task workflow, and
 the nested request's close report becomes the executor task result.
 
-## Planner terminal signature
+## Planner terminal signatures
 
 Planner submissions must define the segment contract directly.
 
@@ -43,6 +41,16 @@ submit_full_plan(
 ) -> TerminalSubmission
 ```
 
+```python
+submit_partial_plan(
+    task_specification: str,
+    evaluation_criteria: list[str],
+    tasks: list[{"id": str, "agent_name": str, "deps": list[str]}],
+    task_specs: dict[str, str],
+    continuation_goal: str,
+) -> TerminalSubmission
+```
+
 Each `tasks` item is a flat graph node with exactly `id`, `agent_name`, and
 `deps`. `task_specs` maps each task id to that task's detailed instructions.
 The keys in `task_specs` must exactly match the task ids in `tasks`: no missing
@@ -51,7 +59,9 @@ specs, no extra specs, and no duplicate task ids.
 `task_specification` describes the exact work for the current segment.
 `evaluation_criteria` lists the pass/fail conditions the evaluator must use to
 evaluate this segment's result. `HarnessGraphOrchestrator` passes both fields to
-the evaluator as evaluation instructions.
+the evaluator as evaluation instructions. For `submit_partial_plan`,
+`continuation_goal` describes what the next segment should solve if this graph
+is accepted as the segment's closing graph.
 
 ## Helper roles
 
@@ -70,7 +80,7 @@ calling task.
 Tool availability depends on:
 
 - complex task request origin,
-- current task segment,
+- task segment continuation chain,
 - current harness graph,
 - task role,
 - task message/tool history.
@@ -87,12 +97,14 @@ registration.
 
 | Tool | Block when | State source | Soft behavior | Hard behavior |
 | ---- | ---------- | ------------ | ------------- | ------------- |
+| `submit_partial_plan` | current request already has a prior segment with non-null `continuation_goal` | `ComplexTaskRequest.task_segment_ids` plus each segment's `continuation_goal` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
 | `submit_full_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref | handler-level validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
+| `submit_partial_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref, or blank `continuation_goal` | handler-level validation plus continuation validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `request_complex_task_solution` | executor has called any edit tool at least once | agent message history | remind executor after first edit | prehook blocks after edit |
 | `submit_evaluation_success` | evaluator has at least five unresolved resolver calls | agent message history | warn at four unresolved resolver calls | prehook blocks success at five |
 | `submit_verification_success` | verifier has at least five unresolved resolver calls | agent message history | warn at four unresolved resolver calls | prehook blocks success at five |
 | evaluator spawn | any generator in current `HarnessGraph` is not `DONE` | current harness graph task statuses | none | `HarnessGraphOrchestrator` does not spawn evaluator |
-| next harness graph after failed graph | `harness_graphs_used >= retry_budget` | current task segment state | none | `TaskSegmentManager` cannot spend retry budget on another graph; it closes the segment failed if the current graph failed |
+| next harness graph after failed graph | `get_attempt_count(task_segment) >= attempt_budget` | current task segment state | none | `TaskSegmentManager` cannot spend attempt budget on another graph; it closes the segment failed if the current graph failed |
 | failure terminals | never blocked for owning roles | role policy | none | allowed |
 
 ## Gate enforcement flow
@@ -124,6 +136,8 @@ Soft layer examples:
 - First edit detected: `request_complex_task_solution` is now disabled.
 - Resolver unresolved count is four: one resolver call remains before success is
   blocked.
+- Previous segment already used a partial plan: only `submit_full_plan` is
+  permitted.
 
 ## Implementation tasks
 
@@ -134,17 +148,19 @@ Soft layer examples:
 3. Add malformed generator graph validation to plan submission handlers,
    including task id uniqueness, known agent names, exact `task_specs` coverage,
    and dependency validity.
-4. Add `request_complex_task_solution` after-edit gating from message history.
-5. Add resolver-count gating for verifier and evaluator success terminals.
-6. Keep soft reminders aligned with hard prehook behavior.
-7. Add tests for each gate at both notification and enforcement level where
+4. Add recursive partial-plan gating by walking `ComplexTaskRequest.task_segment_ids`
+   and checking each prior segment's `continuation_goal`.
+5. Add `request_complex_task_solution` after-edit gating from message history.
+6. Add resolver-count gating for verifier and evaluator success terminals.
+7. Keep soft reminders aligned with hard prehook behavior.
+8. Add tests for each gate at both notification and enforcement level where
    practical.
 
 ## Phase exit criteria
 
 - Every terminal or orchestration request is accepted or rejected from the new
   state model.
-- Only `submit_full_plan` exists for planners.
+- Recursive partial plan is blocked across `TaskSegment` continuation lineage.
 - `request_complex_task_solution` is blocked after executor edits.
 - Resolver unresolved-count gates still force failure at the limit.
 - Malformed plans fail inline without marking the harness graph failed.
