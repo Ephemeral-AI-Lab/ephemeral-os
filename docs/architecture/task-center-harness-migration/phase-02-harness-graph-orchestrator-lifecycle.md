@@ -145,8 +145,8 @@ handlers, which validate, normalize into a `GeneratorSubmission`, and stamp
 the role into the summary/payload before dispatching to the orchestrator.
 
 `HarnessGraphOrchestrator` must not handle generator `submit_request_plan` or
-any legacy request-plan tool. Request-style generator handoffs are not success
-or failure task outcomes. The supported handoff path is
+any legacy request-plan tool. Request-style generator delegation is not a
+success or failure task outcome. The supported request-start path is
 `request_complex_task_solution`, which belongs to the complex-task request
 boundary described in Phase 04. If a legacy `submit_request_plan` surface still
 exists during migration, it should be rejected or aliased before reaching
@@ -191,9 +191,10 @@ Leaving `generating` does not always create an evaluator. If every generator is
 `evaluating`. If any generator is `FAILED` or `BLOCKED`, the graph closes as
 failed after generator quiescence.
 
-`request_complex_task_solution` is a generator task handoff. The requesting
-generator agent run exits after the request tool call; the outer graph receives
-that task's final result when the delegated complex task request closes.
+`request_complex_task_solution` starts a delegated request for a generator task.
+The requesting generator agent run exits after the request tool call; the outer
+graph receives that task's final result when the delegated complex task request
+closes.
 
 ## Failure escape valves
 
@@ -381,7 +382,7 @@ H failed     no        yes    H passed H failed
    the evaluator task done or failed and calls `_dispatch_ready_work()`, which
    then closes the graph.
 5. Keep both legacy `submit_request_plan` and canonical
-   `request_complex_task_solution` handoff handling out of
+   `request_complex_task_solution` request-start handling out of
    `HarnessGraphOrchestrator`. The Phase 04 spawn handler owns the transition
    to `waiting_complex_task`; Phase 02 only ensures the orchestrator observes
    that status as non-terminal during quiescence checks. The matching

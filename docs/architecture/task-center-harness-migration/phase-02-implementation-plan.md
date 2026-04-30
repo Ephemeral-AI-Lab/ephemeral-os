@@ -33,7 +33,7 @@ Deliverables:
    lifecycle under the current `HarnessGraph`.
 7. Generator DAG scheduling: root launch, dependent launch after dependencies
    pass, failure blocking, and quiescence detection.
-8. Recursive complex-task handoff observation: when an outer generator task
+8. Recursive complex-task request observation: when an outer generator task
    sits in `waiting_complex_task`, the orchestrator treats it as non-terminal
    during quiescence checks so the outer graph stays in `generating`. The
    transition into `waiting_complex_task` and the resume path
@@ -86,7 +86,7 @@ report.
 | Malformed plan rejection is inline | Phase 02/03 | Phase 02 includes minimal structural assertions needed to schedule; Phase 03 owns public tool validation and prehook UX | OK |
 | Generator failure waits for quiescence | Phase 02 | Orchestrator blocks dependents, lets independent running generators finish, and closes only when all generator tasks are terminal | OK |
 | Executor and verifier are generator outcomes | Phase 00/02/03 | Separate public tools normalize into one `apply_generator_submission` entry; role-specific detail travels in summaries/payloads | OK |
-| Legacy request-plan is not a task outcome | Phase 00/02/04 | `submit_request_plan` never enters mutation handling; canonical request handoff is `request_complex_task_solution` and is handled by request-boundary code | OK |
+| Legacy request-plan is not a task outcome | Phase 00/02/04 | `submit_request_plan` never enters mutation handling; canonical delegated request start is `request_complex_task_solution` and is handled by request-boundary code | OK |
 | Evaluator starts only after every generator passes | Phase 01/02/03 | Orchestrator uses task status checks before creating evaluator | OK |
 | Evaluator failure closes immediately | Phase 02 | No extra wait point exists because generator quiescence already happened | OK |
 | Continuation goal belongs to the graph that submitted it | Phase 01/02 | Orchestrator stores `continuation_goal` during planner success and never copies it across failed graphs | OK |
@@ -150,7 +150,7 @@ flowchart TD
     EvalFail --> Callback
 ```
 
-### 3b. Manager and orchestrator handoff
+### 3b. Manager and Orchestrator Callback Boundary
 
 ```mermaid
 sequenceDiagram
@@ -249,10 +249,10 @@ The key boundary is:
   dispatch next or whether the graph should close.
 - `TaskSegmentManager` still decides retry after the graph closes.
 
-### 3e. Recursive complex-task handoff
+### 3e. Recursive Complex-Task Request Start
 
 `request_complex_task_solution` is not a generator success or failure terminal.
-It is a handoff from one generator task to a new complex-task request.
+It starts a new complex-task request for one generator task.
 The outer graph stays in `generating` while the delegated request runs.
 
 ```mermaid
@@ -1113,7 +1113,7 @@ On failure (`outcome = "failure"`):
    independent running generators alive; once all are terminal it closes
    the graph failed with `generator_failed`.
 
-### 6c.1. Complex-task handoff is not a generator submission
+### 6c.1. Complex-task request start is not a generator submission
 
 `request_complex_task_solution` is **not** a `GeneratorSubmission`. The
 orchestrator must not accept it. The Phase 04 spawn handler owns this

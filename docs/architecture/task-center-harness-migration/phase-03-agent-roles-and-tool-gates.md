@@ -55,9 +55,9 @@ that every gate reads from; Phase 03 wires the tool-side enforcement.
   read the existing query-loop message flow.
 - `request_complex_task_solution` after-edit gating reads the per-call
   `ExecutionMetadata.conversation_messages` view; no Phase 01 dependency.
-  Its handoff body creates a request via
+  Its request-start body creates a request via
   `ComplexTaskRequestHandler.create_complex_task_request` plus
-  `create_initial_segment`. The Phase 04 hand-off described in
+  `create_initial_segment`. The Phase 04 request-start flow described in
   `phase-04-complex-task-spawning.md` shares this entry point.
 
 ## Role model
@@ -76,14 +76,15 @@ the requesting generator task, whose task result can be supplied by a delegated
 Planner has no failure terminal. Executor, verifier, and evaluator are the roles
 that can declare failure.
 
-`request_complex_task_solution` is not a terminal failure. It is an orchestration
-handoff: a generator task delegates its task to a separate complex-task workflow,
-and the delegated request's close report becomes that generator task result.
+`request_complex_task_solution` is not a terminal failure. It starts a delegated
+complex-task request: a generator task delegates its task to a separate
+complex-task workflow, and the delegated request's close report becomes that
+generator task result.
 
 A generator agent profile can expose `request_complex_task_solution` when the
-runtime provides the TaskCenter handoff dependencies. The default handoff path
-creates the delegated request, marks the outer generator task waiting, and routes
-the complex task close report back to that generator task.
+runtime provides the TaskCenter request-start dependencies. The default
+request-start path creates the delegated request, marks the outer generator task
+waiting, and routes the complex task close report back to that generator task.
 
 ## Planner terminal signatures
 

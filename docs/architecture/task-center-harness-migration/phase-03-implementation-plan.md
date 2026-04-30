@@ -21,12 +21,12 @@ Deliverables:
 
 1. Registered terminal tools for planner, generator executor, generator
    verifier, evaluator, helper-agent, and explorer subagent roles.
-2. Canonical public executor handoff tool name:
+2. Canonical public executor delegated-request tool:
    `request_complex_task_solution`.
 3. Public Pydantic schemas for `submit_full_plan`,
    `submit_partial_plan`, generator success/failure, verifier
    success/failure, evaluator success/failure, helper request/response tools,
-   explorer findings, and the complex-task handoff.
+   explorer findings, and the complex-task request start.
 4. Blocking helper tools for `ask_advisor` and `ask_resolver`, plus helper
    terminals `submit_advisor_feedback` and `submit_resolver_result`.
 5. Explorer subagent terminal `submit_exploration_result` so `run_subagent`
@@ -47,7 +47,7 @@ Deliverables:
 10. Soft notification rules implemented beside the TaskCenter submission tools
     and dispatched through the existing `notification.rules` system-reminder
     path, aligned with the hard gates.
-11. Canonical executor handoff name implemented as
+11. Canonical executor request-start tool implemented as
    `request_complex_task_solution`, wired through the TaskCenter request /
    segment lifecycle runtime.
 12. Focused tests covering inline handler rejection, prehook enforcement,
@@ -82,8 +82,8 @@ query-loop terminal path.
 | Full and partial plans share one orchestrator path | Phase 02, Phase 03 | Public handlers differ only in continuation validation and `kind` value | OK |
 | Malformed planner DAG rejection is inline | Phase 02, Phase 03 | Tool handler returns `ToolResult(is_error=True)` before calling the orchestrator | OK |
 | Recursive partial plan gate reads request lineage | Phase 01, Phase 03 | Prehook walks `ComplexTaskRequest.task_segment_ids` and segment `continuation_goal` | OK |
-| `request_complex_task_solution` is a handoff, not failure | Phase 00, Phase 02, Phase 04 | Phase 03 exposes the canonical tool and gates it; Phase 04 fills request creation/resume behavior | OK |
-| After-edit gate reads message history | Phase 03 | Notification rules inspect the live `messages` argument passed by `dispatch_rules`; prehooks read the per-call `ExecutionMetadata.conversation_messages` copy before allowing handoff | OK |
+| `request_complex_task_solution` starts a delegated request, not failure | Phase 00, Phase 02, Phase 04 | Phase 03 exposes the canonical tool and gates it; Phase 04 fills request creation/resume behavior | OK |
+| After-edit gate reads message history | Phase 03 | Notification rules inspect the live `messages` argument passed by `dispatch_rules`; prehooks read the per-call `ExecutionMetadata.conversation_messages` copy before allowing request start | OK |
 | Resolver success limits read message history | Phase 03, Phase 05 | The existing query-loop message flow lets prehooks block verifier/evaluator success at five unresolved resolver calls without adding a second transcript owner | OK |
 | Evaluator spawn remains orchestrator-owned | Phase 02, Phase 03 | No public evaluator-spawn tool exists; Phase 03 only guards evaluator terminal submissions | OK |
 | Attempt-budget gate remains segment-manager-owned | Phase 01, Phase 02, Phase 03 | Tool layer does not spend or inspect retry budget except for soft context where already exposed | OK |
@@ -152,17 +152,17 @@ flowchart TD
     Normalize --> Apply["apply_plan_submission"]
 ```
 
-### 3c. Generator executor handoff gate
+### 3c. Generator Executor Request-Start Gate
 
 ```mermaid
 flowchart TD
     Executor["Generator executor"] --> Choice{"Task too broad?"}
     Choice -->|"no"| Normal["Edit or run tools"]
     Normal --> Terminal["submit_execution_success or failure"]
-    Choice -->|"yes"| Handoff["request_complex_task_solution"]
-    Handoff --> Edited{"Any edit tool already used?"}
-    Edited -->|"yes"| Block["Prehook blocks handoff"]
-    Edited -->|"no"| HandoffRuntime["Create delegated request, first segment,<br/>and initial harness graph"]
+    Choice -->|"yes"| RequestStart["request_complex_task_solution"]
+    RequestStart --> Edited{"Any edit tool already used?"}
+    Edited -->|"yes"| Block["Prehook blocks request start"]
+    Edited -->|"no"| RuntimeStart["Create delegated request, first segment,<br/>and initial harness graph"]
 ```
 
 ### 3d. Resolver limit gates
@@ -287,8 +287,8 @@ flowchart TD
     Reminder --> AgentChoice["Agent chooses next action"]
     NoReminder --> AgentChoice
 
-    AgentChoice --> HandoffCall["Agent calls request_complex_task_solution"]
-    HandoffCall --> HookRunner["ToolHookExecutionHelper runs pre_hooks"]
+    AgentChoice --> RequestStartCall["Agent calls request_complex_task_solution"]
+    RequestStartCall --> HookRunner["ToolHookExecutionHelper runs pre_hooks"]
     HookRunner --> HardGate["RequestComplexTaskBeforeEditGate"]
     HardGate --> HardCheck{"Executor already edited?"}
 
@@ -298,7 +298,7 @@ flowchart TD
 
     HardCheck -->|"no"| Allow["HookResult.pass_"]
     Allow --> Handler["Run request_complex_task_solution handler"]
-    Handler --> Handoff["Create delegated request, first segment, and initial harness graph"]
+    Handler --> RequestStart["Create delegated request, first segment, and initial harness graph"]
 ```
 
 Tool registration shape:
@@ -342,7 +342,7 @@ backend/src/tools/submission/
 |   |-- __init__.py                          # NEW: export hard gate hooks
 |   |-- harness_role_gate.py                 # NEW: role / graph / orchestrator ownership gate
 |   |-- recursive_partial_plan_gate.py       # NEW: submit_partial_plan lineage gate
-|   |-- request_complex_task_before_edit_gate.py  # NEW: executor handoff after-edit gate
+|   |-- request_complex_task_before_edit_gate.py  # NEW: executor request-start after-edit gate
 |   |-- resolver_success_limit_gate.py       # NEW: verifier/evaluator success limit gate
 |   |-- helper_request_gate.py               # NEW: helper request caller role gate
 |   `-- helper_role_gate.py                  # NEW: helper/subagent terminal role gate
@@ -350,7 +350,7 @@ backend/src/tools/submission/
 |-- notification_triggers/
 |   |-- __init__.py                          # NEW: export soft trigger factories
 |   |-- recursive_partial_plan.py            # NEW: planner partial-plan reminder trigger
-|   |-- request_complex_task_after_edit.py   # NEW: executor handoff-disabled reminder trigger
+|   |-- request_complex_task_after_edit.py   # NEW: executor request-start-disabled reminder trigger
 |   `-- resolver_limit.py                    # NEW: verifier/evaluator resolver-limit reminder trigger
 |
 |-- main_agent/
@@ -362,7 +362,7 @@ backend/src/tools/submission/
 |   |-- generator/
 |   |   |-- executor/
 |   |   |   |-- __init__.py                  # EDIT: export executor tools
-|   |   |   |-- request_complex_task_solution.py  # NEW: canonical handoff tool
+|   |   |   |-- request_complex_task_solution.py  # NEW: canonical request-start tool
 |   |   |   |-- submit_execution_success.py  # EDIT: implement terminal tool
 |   |   |   `-- submit_execution_failure.py  # EDIT: implement terminal tool
 |   |   |
@@ -453,7 +453,7 @@ plus any TaskCenter stores available through injected harness metadata.
 | --- | --- | --- | --- | --- |
 | `submit_full_plan` | planner | terminal | `hooks/harness_role_gate.py` | none |
 | `submit_partial_plan` | planner | terminal | `hooks/harness_role_gate.py`, `hooks/recursive_partial_plan_gate.py` | `notification_triggers/recursive_partial_plan.py` |
-| `request_complex_task_solution` | generator executor | orchestration handoff | `hooks/harness_role_gate.py`, `hooks/request_complex_task_before_edit_gate.py` | `notification_triggers/request_complex_task_after_edit.py` |
+| `request_complex_task_solution` | generator executor | delegated request start | `hooks/harness_role_gate.py`, `hooks/request_complex_task_before_edit_gate.py` | `notification_triggers/request_complex_task_after_edit.py` |
 | `submit_execution_success` | generator executor | terminal | `hooks/harness_role_gate.py` | none |
 | `submit_execution_failure` | generator executor | terminal | `hooks/harness_role_gate.py` | none |
 | `submit_verification_success` | generator verifier | terminal | `hooks/harness_role_gate.py`, `hooks/resolver_success_limit_gate.py` | `notification_triggers/resolver_limit.py` |
@@ -1062,8 +1062,8 @@ Do not route this through `HarnessGraphOrchestrator.apply_generator_submission`.
 It is not a generator success or failure outcome.
 
 Remove the legacy `submit_request_plan` tool surface. Phase 03 registers
-`request_complex_task_solution` as the canonical handoff name and wires the
-default executor handoff path through TaskCenter request/segment lifecycle
+`request_complex_task_solution` as the canonical request-start tool and wires the
+default executor request-start path through TaskCenter request/segment lifecycle
 services.
 
 Do not list `submit_request_plan` in the executor agent terminals after
@@ -1615,17 +1615,17 @@ class HelperRoleGate:
 | Planner tool handlers | planner-local normalization helpers | NEW | Public input -> `PlannerSubmission` before orchestrator apply |
 | Hook file | `hooks/harness_role_gate.py` | NEW | Common role, graph, and orchestrator existence gate |
 | Hook file | `hooks/recursive_partial_plan_gate.py` | NEW | Blocks recursive partial continuation |
-| Hook file | `hooks/request_complex_task_before_edit_gate.py` | NEW | Blocks complex-task handoff after edits |
+| Hook file | `hooks/request_complex_task_before_edit_gate.py` | NEW | Blocks complex-task request starts after edits |
 | Hook file | `hooks/resolver_success_limit_gate.py` | NEW | Blocks success terminals at resolver limit |
 | Hook file | `hooks/helper_request_gate.py` | NEW | Guards advisor/resolver request tools by caller role |
 | Hook file | `hooks/helper_role_gate.py` | NEW | Guards helper/subagent terminals by helper role metadata |
 | Notification trigger | `notification_triggers/recursive_partial_plan.py` | NEW | Planner reminder when partial continuation is no longer allowed |
-| Notification trigger | `notification_triggers/request_complex_task_after_edit.py` | NEW | Executor reminder after first edit disables handoff |
+| Notification trigger | `notification_triggers/request_complex_task_after_edit.py` | NEW | Executor reminder after first edit disables request start |
 | Notification trigger | `notification_triggers/resolver_limit.py` | NEW | Verifier/evaluator warning before resolver success block |
 | Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `resolve_harness_notification_triggers()` |
 | Planner tools | `submit_full_plan` | EDIT | Validate and call `apply_plan_submission(kind="full")` |
 | Planner tools | `submit_partial_plan` | EDIT | Validate and call `apply_plan_submission(kind="partial")` |
-| Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface wired through TaskCenter request/segment lifecycle services |
+| Executor tools | `request_complex_task_solution` | NEW | Canonical request-start surface wired through TaskCenter request/segment lifecycle services |
 | Executor tools | `submit_execution_success` / `submit_execution_failure` | EDIT | Normalize executor outcome into `GeneratorSubmission` |
 | Verifier tools | `submit_verification_success` / `submit_verification_failure` | EDIT | Normalize verifier outcome into `GeneratorSubmission` |
 | Evaluator tools | `submit_evaluation_success` / `submit_evaluation_failure` | EDIT | Normalize evaluator outcome into `EvaluatorSubmission` |
@@ -1634,7 +1634,7 @@ class HelperRoleGate:
 | Resolver tools | `ask_resolver` | EDIT | Blocking edit-capable helper request |
 | Resolver tools | `submit_resolver_result` | EDIT | Resolver terminal result consumed by resolver-count gates |
 | Explorer tools | `submit_exploration_result` | EDIT | Explorer subagent terminal returned by `run_subagent` |
-| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids and use the canonical executor handoff terminal |
+| Agent defs | planner/executor/verifier/evaluator `agent.md` | EDIT | Register role-specific soft trigger ids and use the canonical executor request-start terminal |
 | Agent defs | helper/subagent `agent.md` files | EDIT | Align terminal schema wording |
 
 ---
@@ -1672,7 +1672,7 @@ class HelperRoleGate:
 | --- | --- |
 | `test_recursive_partial_plan_gate_blocks_after_prior_continuation` | Walks request segment ids and blocks partial plan |
 | `test_recursive_partial_plan_gate_allows_initial_segment` | No false positive before a prior continuation |
-| `test_request_complex_task_solution_blocks_after_edit` | Edit history disables handoff |
+| `test_request_complex_task_solution_blocks_after_edit` | Edit history disables request start |
 | `test_request_complex_task_solution_allows_before_edit` | No edit history allows gate to pass |
 | `test_resolver_success_gate_warn_boundary_not_blocking` | Count 4 does not block hard prehook |
 | `test_resolver_success_gate_blocks_at_limit` | Count 5 blocks success |
@@ -1709,7 +1709,7 @@ class HelperRoleGate:
 | Test | Purpose |
 | --- | --- |
 | `test_recursive_partial_plan_reminder_fires` | Prior continuation emits planner reminder |
-| `test_after_edit_reminder_fires_once` | First edit emits executor handoff-disabled reminder |
+| `test_after_edit_reminder_fires_once` | First edit emits executor request-start-disabled reminder |
 | `test_resolver_limit_reminder_fires_at_four` | Warning emitted before success is blocked |
 | `test_hard_and_soft_gates_match_conditions` | Regression guard against drift |
 
@@ -1815,7 +1815,7 @@ moving to the next one.
 6. Wire the harness launcher to resolve `agent_def.notification_triggers` into
    copied agent definitions before `run_ephemeral_agent`.
 7. Keep executor `agent.md` on the canonical `request_complex_task_solution`
-   contract, backed by the default runtime handoff path.
+   contract, backed by the default runtime request-start path.
 8. Register role-specific trigger ids in planner, executor, verifier, and
    evaluator `agent.md`.
 9. Update helper/subagent prompt schema wording where needed.
@@ -1894,7 +1894,7 @@ Phase 03 moves the public agent contract to `request_complex_task_solution` and
 removes the legacy tool surface entirely.
 
 Mitigation: keep tests that assert executor agent definitions do not list
-`submit_request_plan`, and keep the canonical handoff body wired through
+`submit_request_plan`, and keep the canonical request-start body wired through
 TaskCenter request/segment lifecycle services.
 
 ### 11e. Handler-level validation vs orchestrator invariants
@@ -1921,7 +1921,7 @@ process-local `SegmentManagerRegistry` and an orchestrator factory so the delega
 request's first segment can start its initial `HarnessGraph`.
 
 Mitigation: fail closed when `HarnessGraphRuntime.manager_registry` is missing.
-When it is present, build the handoff through `ComplexTaskRequestHandler` and
+When it is present, build the delegated request through `ComplexTaskRequestHandler` and
 route the final close report back through
 `HarnessGraphOrchestrator.apply_complex_task_close_report`.
 

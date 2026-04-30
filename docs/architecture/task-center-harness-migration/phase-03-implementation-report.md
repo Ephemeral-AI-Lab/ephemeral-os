@@ -49,7 +49,7 @@ Three implementation issues remain:
 | `backend/src/tools/submission/factory.py` | new | Central factory for all public submission tools |
 | `backend/src/tools/submission/hooks/harness_role_gate.py` | new | Structural role, graph, and active-orchestrator gate |
 | `backend/src/tools/submission/hooks/recursive_partial_plan_gate.py` | new | Blocks partial plans after prior segment continuation |
-| `backend/src/tools/submission/hooks/request_complex_task_before_edit_gate.py` | new | Blocks executor handoff after edit-capable tool use |
+| `backend/src/tools/submission/hooks/request_complex_task_before_edit_gate.py` | new | Blocks executor request start after edit-capable tool use |
 | `backend/src/tools/submission/hooks/resolver_success_limit_gate.py` | new | Blocks verifier/evaluator success at unresolved resolver limit |
 | `backend/src/tools/submission/hooks/helper_request_gate.py` | new | Guards helper request tools by caller profile role |
 | `backend/src/tools/submission/hooks/helper_role_gate.py` | new | Guards helper/subagent terminal tools by helper metadata |
@@ -60,7 +60,7 @@ Three implementation issues remain:
 | --- | --- | --- |
 | `backend/src/tools/submission/notification_triggers/__init__.py` | new | Maps stable trigger ids to `NotificationRule` factories |
 | `backend/src/tools/submission/notification_triggers/recursive_partial_plan.py` | new | Planner reminder when partial planning is disabled |
-| `backend/src/tools/submission/notification_triggers/request_complex_task_after_edit.py` | new | Executor reminder after edits disable handoff |
+| `backend/src/tools/submission/notification_triggers/request_complex_task_after_edit.py` | new | Executor reminder after edits disable request start |
 | `backend/src/tools/submission/notification_triggers/resolver_limit.py` | new | Verifier/evaluator warning before resolver success is blocked |
 
 ### Public tool surface
@@ -74,7 +74,7 @@ Three implementation issues remain:
 | Advisor helper | implemented | `ask_advisor`, `submit_advisor_feedback` |
 | Resolver helper | implemented | `ask_resolver`, `submit_resolver_result` |
 | Explorer subagent | implemented | `submit_exploration_result` |
-| Legacy executor handoff | removed | `submit_request_plan` is no longer registered |
+| Legacy executor request-plan surface | removed | `submit_request_plan` is no longer registered |
 
 ### Agent definitions and tests
 
@@ -86,7 +86,7 @@ Three implementation issues remain:
 | `backend/src/agents/subagent/explorer/agent.md` | edited | Aligns explorer terminal contract |
 | `backend/tests/test_tools/test_submission_*.py` | new | Registration, planner, gates, routing, helpers, and reminder coverage |
 | `backend/tests/task_center/lifecycle/test_phase03_submission_integration.py` | new | Tool-driven graph smoke coverage |
-| `backend/tests/test_agents/test_agent_markdown.py` | new | Agent markdown trigger and handoff-contract coverage |
+| `backend/tests/test_agents/test_agent_markdown.py` | new | Agent markdown trigger and request-start contract coverage |
 
 ---
 
@@ -190,7 +190,7 @@ notification.rules.dispatch_rules evaluates each NotificationRule per turn
 SystemNotificationService emits ordinary <system-reminder> messages
 ```
 
-The implementation also adds a Phase-04-adjacent delegated handoff path:
+The implementation also adds a Phase-04-adjacent delegated request-start path:
 
 ```text
 request_complex_task_solution
@@ -243,7 +243,7 @@ of complex-task spawning.
 
 ## 7. Review findings
 
-### 7a. Phase 04 handoff behavior shipped inside Phase 03
+### 7a. Phase 04 request-start behavior shipped inside Phase 03
 
 `request_complex_task_solution` now creates delegated complex-task requests,
 segments, managers, graphs, and parent resume behavior. The Phase 03 plan
@@ -342,4 +342,4 @@ Recommended fix:
 | Production launch metadata wiring beyond direct `run_ephemeral_agent` stamping | real `HarnessAgentLauncher` implementation | 05 |
 | Rich helper-agent context packets | advisor/resolver request prompt construction | 06 |
 | Context-engine summaries and durable graph summaries | launch packets and close payloads | 06 |
-| Full delegated complex-task spawning and handoff review, if the current early implementation remains | `request_complex_task_solution`, `apply_complex_task_close_report` | 04 |
+| Full delegated complex-task spawning and request-start review, if the current early implementation remains | `request_complex_task_solution`, `apply_complex_task_close_report` | 04 |

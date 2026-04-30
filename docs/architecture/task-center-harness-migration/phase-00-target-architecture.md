@@ -22,7 +22,7 @@ Executor tools use two naming families:
 | Prefix      | Meaning                                                                     |
 | ----------- | --------------------------------------------------------------------------- |
 | `submit_*`  | Terminal outcome for the current executor task.                             |
-| `request_*` | Orchestration handoff that delegates the executor task to another workflow. |
+| `request_*` | Delegated request start that moves the executor task result to another workflow. |
 
 Executor tool surface:
 
@@ -33,9 +33,9 @@ Executor tool surface:
 | `request_complex_task_solution` | The assigned task is not atomic; create a planned complex-task workflow whose close report becomes this executor task's result. |
 
 `request_complex_task_solution` is not a failure terminal. It exits the current
-executor agent run by handing the task to the complex-task harness. The harness
-later attaches a final close report to `requested_by_task_id`; the original
-executor agent run ends at the handoff.
+executor agent run by starting a complex-task request. The harness later
+attaches a final close report to `requested_by_task_id`; the original executor
+agent run ends at the request boundary.
 
 ## Target model
 
@@ -138,7 +138,7 @@ but it reports back into the task that called it.
 
 ### Request origin
 
-A `ComplexTaskRequest` represents the executor handoff:
+A `ComplexTaskRequest` represents the delegated executor request:
 
 - the executor task that requested help,
 - the goal it requested,
@@ -247,7 +247,7 @@ Retry never creates a new `ComplexTaskRequest` or `TaskSegment`.
 | `ComplexTaskRequest`        | `TaskCenter`                                                   | Container for a non-atomic delegated goal. Holds `requested_by_task_id`, goal, status, and final close result.                                                                                                             |
 | `TaskSegment`               | `ComplexTaskRequest`                                           | One request-local execution segment. Holds sequence, segment goal, attempt budget, ordered `harness_graph_ids`, and `continuation_goal`.                                                                                   |
 | `HarnessGraph`              | `TaskSegment`                                                  | One concrete planner DAG execution: graph sequence within the segment, planner, generator DAG, evaluator, status, `continuation_goal`, and failure reason.                                                                 |
-| `ComplexTaskRequestHandler` | request boundary / one active handler per `ComplexTaskRequest` | Owns the executor handoff from `request_complex_task_solution`, creates and closes the request, creates initial and continuation `TaskSegment`s, spawns their `TaskSegmentManager`s, and returns the final report.          |
+| `ComplexTaskRequestHandler` | request boundary / one active handler per `ComplexTaskRequest` | Owns the executor request start from `request_complex_task_solution`, creates and closes the request, creates initial and continuation `TaskSegment`s, spawns their `TaskSegmentManager`s, and returns the final report.   |
 | `TaskSegmentManager`        | one active manager per `TaskSegment`                           | Owns harness-graph transitions inside one segment: attempt budget, next-graph creation after failed graphs, and segment close. Reports the segment close outcome back to `ComplexTaskRequestHandler`.                      |
 | `HarnessGraphOrchestrator`  | one per `HarnessGraph`                                         | Runs one planner-produced graph through planner, generator DAG tasks, and evaluator. It reports the graph outcome back to its `TaskSegmentManager`.                                                                        |
 | Tasks                       | per `HarnessGraph`                                             | Planner, executor, verifier, and evaluator agent runs scoped to one harness graph.                                                                                                                                         |
@@ -325,7 +325,7 @@ creation, request close, and final report delivery.
 
 ## Lifecycle Interaction Diagram
 
-The lifecycle has three handoff boundaries:
+The lifecycle has three ownership boundaries:
 
 ```text
 Executor task E

@@ -37,7 +37,8 @@ The key rule is:
 - A new `TaskSegment` means accepted vertical continuation.
 - A new `HarnessGraph` inside that segment means retry after failure.
 - The complex-task close report supplies the final result for
-  `requested_by_task_id`; the original generator agent run ends at the handoff.
+  `requested_by_task_id`; the original generator agent run ends at the request
+  boundary.
 
 ## Layer responsibilities
 
