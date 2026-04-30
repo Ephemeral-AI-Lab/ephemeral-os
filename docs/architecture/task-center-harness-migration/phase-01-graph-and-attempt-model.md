@@ -117,7 +117,7 @@ There is no `ROOT` spawn or creation reason.
 | `ComplexTaskRequest` | implicit complex-task request | Executor calls `request_complex_task_solution(goal)` | `requested_by_task_id` points to the executor. |
 | `TaskSegment` | `initial` | Complex task request starts | `previous_segment_id = null`. |
 | `TaskSegment` | `partial_continuation` | Prior segment closed with non-null `continuation_goal` | `previous_segment_id` points to the prior segment. |
-| `HarnessGraph` | none | Segment starts or `TaskSegmentManager` retries after failed graph | Same segment, `graph_sequence_no = previous + 1`. |
+| `HarnessGraph` | none | Segment manager starts a graph execution | `segment_id` points to the owned segment; `graph_sequence_no = 1` for the first graph, or previous + 1 for later graphs. |
 
 Retry is never a `ComplexTaskRequest`, `TaskSegment`, or `HarnessGraph`
 creation reason. It is a `TaskSegmentManager` decision after a failed graph. A

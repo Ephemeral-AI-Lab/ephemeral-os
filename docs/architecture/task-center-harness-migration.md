@@ -14,6 +14,10 @@ the next phase to build on.
 6. [Phase 05 - End-to-end workflows and cutover](task-center-harness-migration/phase-05-workflows-and-cutover.md)
 7. [Phase 06 - Context engine](task-center-harness-migration/phase-06-context-engine.md)
 
+## Overview documents
+
+- [Complex task segmentation and harness graph workflow](task-center-harness-migration/complex-task-workflow-overview.md)
+
 ## Implementation order
 
 The dependency order is intentional:

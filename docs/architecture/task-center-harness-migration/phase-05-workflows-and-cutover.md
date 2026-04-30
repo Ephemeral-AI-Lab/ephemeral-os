@@ -250,7 +250,7 @@ and reports failure to TaskSegmentManager
 8. Migrate tool gates to read request, segment, and harness graph state.
 9. Update prompts and docs that mention retry as a child graph or
    `RETRY_ON_FAILURE`.
-10. Remove obsolete attempt rows, retry graph states, old spawn reasons, the
+10. Remove obsolete attempt rows, old graph attempt state, old spawn reasons, the
     `plan_shape` field, the `closing_harness_graph_id` field,
     `retry_after_partial`, and compatibility code.
 11. Run targeted TaskCenter runtime tests, then broader backend checks.
