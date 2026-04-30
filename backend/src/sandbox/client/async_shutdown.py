@@ -94,3 +94,11 @@ def shutdown_cached_client() -> None:
 
 
 atexit.register(shutdown_cached_client)
+
+
+__all__ = [
+    "async_close_client",
+    "close_client",
+    "shutdown_cached_client",
+    "shutdown_cached_client_async",
+]
