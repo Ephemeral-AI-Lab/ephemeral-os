@@ -46,10 +46,11 @@ that every gate reads from; Phase 03 wires the tool-side enforcement.
   `HarnessGraphStore.set_plan_contract` and `set_planner_task_id` on the
   active graph and validate the generator graph (task-id uniqueness, agent
   names, exact `task_specs` coverage, dependency validity).
-- Tool prehooks read the three new stores plus agent message history to
-  enforce the gating matrix below.
-- `request_complex_task_solution` after-edit gating (read from agent
-  message history; no Phase 01 dependency) creates a request via
+- Tool prehooks read the three new stores plus
+  `QueryContext.conversation_messages` to enforce the gating matrix below.
+- `request_complex_task_solution` after-edit gating (read from
+  `QueryContext.conversation_messages`; no Phase 01 dependency) creates a
+  request via
   `ComplexTaskRequestHandler.create_complex_task_request` plus
   `create_initial_segment`. The Phase 04 hand-off described in
   `phase-04-complex-task-spawning-and-handoff.md` shares this entry point.
@@ -133,11 +134,13 @@ Tool availability depends on:
 
 The runtime composes two layers:
 
-- Soft layer: reminders inject currently relevant constraints.
-- Hard layer: prehooks enforce the same constraints before handlers run.
+- Soft layer: existing `notification.rules` / `notification.service`
+  system-reminder plumbing injects currently relevant constraints.
+- Hard layer: existing `tools.core.hooks` prehooks, executed by
+  `ToolHookExecutionHelper`, enforce the same constraints before handlers run.
 
-Neither layer mutates the system prompt or dynamically changes tool
-registration.
+Neither layer mutates the system prompt, dynamically changes tool registration,
+or introduces a second hook/reminder framework.
 
 ## Tool gating matrix
 
@@ -146,9 +149,9 @@ registration.
 | `submit_partial_plan` | current request already has a prior segment with non-null `continuation_goal` | `ComplexTaskRequest.task_segment_ids` plus each segment's `continuation_goal` | remind planner that only `submit_full_plan` is allowed | prehook blocks recursive partial plan |
 | `submit_full_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref | handler-level validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
 | `submit_partial_plan` malformed generator graph | duplicate task id, unknown agent name, missing or extra task spec, cycle, dangling dependency, or unknown task ref, or blank `continuation_goal` | handler-level validation plus continuation validation | none | handler returns `ToolResult(is_error=True, output=reason)` |
-| `request_complex_task_solution` | executor has called any edit tool at least once | agent message history | remind executor after first edit | prehook blocks after edit |
-| `submit_evaluation_success` | evaluator has at least five unresolved resolver calls | agent message history | warn at four unresolved resolver calls | prehook blocks success at five |
-| `submit_verification_success` | verifier has at least five unresolved resolver calls | agent message history | warn at four unresolved resolver calls | prehook blocks success at five |
+| `request_complex_task_solution` | executor has called any edit tool at least once | `QueryContext.conversation_messages` | remind executor after first edit | prehook blocks after edit |
+| `submit_evaluation_success` | evaluator has at least five unresolved resolver calls | `QueryContext.conversation_messages` | warn at four unresolved resolver calls | prehook blocks success at five |
+| `submit_verification_success` | verifier has at least five unresolved resolver calls | `QueryContext.conversation_messages` | warn at four unresolved resolver calls | prehook blocks success at five |
 | evaluator spawn | any generator in current `HarnessGraph` is not `DONE` | current harness graph task statuses | none | `HarnessGraphOrchestrator` does not spawn evaluator |
 | next harness graph after failed graph | `get_attempt_count(task_segment) >= attempt_budget` | current task segment state | none | `TaskSegmentManager` cannot spend attempt budget on another graph; it closes the segment failed if the current graph failed |
 | failure terminals | never blocked for owning roles | role policy | none | allowed |
@@ -167,7 +170,7 @@ prehook(tool_input, tool_context)
         |     task_segment
         |     harness_graph
         |     task role
-        |     conversation_messages
+        |     QueryContext.conversation_messages
         |
         +-- ALLOW -> run handler -> ComplexTaskRequestHandler,
                        TaskSegmentManager, or HarnessGraphOrchestrator
@@ -189,16 +192,19 @@ Soft layer examples:
 
 1. Ensure each tool receives complex task, segment, and harness graph context
    when applicable.
-2. Port existing prehooks to read `ComplexTaskRequest`, `TaskSegment`,
+2. Implement the gates as ordinary `ToolPreHook` instances attached through
+   `BaseTool.pre_hooks`, reading `ComplexTaskRequest`, `TaskSegment`,
    `HarnessGraph`, role, and conversation state.
 3. Add malformed generator graph validation to plan submission handlers,
    including task id uniqueness, known agent names, exact `task_specs` coverage,
    and dependency validity.
 4. Add recursive partial-plan gating by walking `ComplexTaskRequest.task_segment_ids`
    and checking each prior segment's `continuation_goal`.
-5. Add `request_complex_task_solution` after-edit gating from message history.
+5. Add `request_complex_task_solution` after-edit gating from
+   `QueryContext.conversation_messages`.
 6. Add resolver-count gating for verifier and evaluator success terminals.
-7. Keep soft reminders aligned with hard prehook behavior.
+7. Keep TaskCenter soft reminder factories aligned with hard prehook behavior
+   while dispatching through the existing notification runtime.
 8. Add tests for each gate at both notification and enforcement level where
    practical.
 

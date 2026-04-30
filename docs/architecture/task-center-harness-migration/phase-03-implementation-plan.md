@@ -20,34 +20,46 @@ Phase 03 ports agent role semantics and terminal-tool gates onto the
 Deliverables:
 
 1. Registered terminal tools for planner, generator executor, generator
-   verifier, and evaluator roles.
+   verifier, evaluator, helper-agent, and explorer subagent roles.
 2. Canonical public executor handoff tool name:
    `request_complex_task_solution`.
 3. Public Pydantic schemas for `submit_full_plan`,
    `submit_partial_plan`, generator success/failure, verifier
-   success/failure, evaluator success/failure, and the complex-task handoff.
-4. Shared submission-context resolution from the current task row to the active
-   `HarnessGraphOrchestrator`.
-5. Planner submission normalization into `PlannerSubmission`, including exact
+   success/failure, evaluator success/failure, helper request/response tools,
+   explorer findings, and the complex-task handoff.
+4. Blocking helper tools for `ask_advisor` and `ask_resolver`, plus helper
+   terminals `submit_advisor_feedback` and `submit_resolver_result`.
+5. Explorer subagent terminal `submit_exploration_result` so `run_subagent`
+   can return read-only findings through the existing terminal-result channel.
+6. Per-tool and per-hook state resolution from the current task row to the
+   active `HarnessGraphOrchestrator`.
+7. Planner submission normalization into `PlannerSubmission`, including exact
    `task_specs` coverage and generator DAG validation.
-6. Generator and evaluator terminal normalization into `GeneratorSubmission`
+8. Generator and evaluator terminal normalization into `GeneratorSubmission`
    and `EvaluatorSubmission`.
-7. Hard prehooks for:
+9. Hard gates implemented as ordinary `ToolPreHook` instances attached through
+   `BaseTool.pre_hooks` and executed by the existing
+   `ToolHookExecutionHelper` for:
    - recursive partial-plan blocking,
    - `request_complex_task_solution` after-edit blocking,
    - resolver-limit success blocking,
    - role / graph / task ownership checks.
-8. Soft notification rules aligned with the hard gates.
-9. Agent prompt/tool-surface updates so executor uses
+10. Soft notification rules implemented beside the TaskCenter submission tools
+    and dispatched through the existing `notification.rules` system-reminder
+    path, aligned with the hard gates.
+11. Agent prompt/tool-surface updates so executor uses
    `request_complex_task_solution` instead of `submit_request_plan`.
-10. Focused tests covering inline handler rejection, prehook enforcement,
-    terminal routing, soft reminders, and registration.
+12. Focused tests covering inline handler rejection, prehook enforcement,
+    terminal routing, helper/subagent result delivery, soft reminders, and
+    registration.
 
 Not in scope:
 
 - Creating and resuming nested complex-task requests after
   `request_complex_task_solution` succeeds. Phase 04 owns the handoff body,
   close-report delivery, and `waiting_complex_task` resume path.
+- Building rich helper-agent context packets. Phase 03 can pass caller-supplied
+  prompts and payloads; Phase 06 can replace those with context-engine packets.
 - Durable restart recovery for missing in-process orchestrators. Phase 05 owns
   cutover and recovery semantics.
 - Context-engine summaries, resolver-summary persistence, and detailed failure
@@ -67,17 +79,21 @@ query-loop terminal path.
 
 | Concept | Source docs | Phase 03 implementation stance | Verdict |
 | --- | --- | --- | --- |
-| Tool handlers read Phase 01 state | Phase 01, Phase 03 | Submission context resolves current task -> graph -> segment -> request via stores | OK |
+| Tool handlers read Phase 01 state | Phase 01, Phase 03 | Each handler or hook resolves current task -> graph -> segment -> request via stores as needed | OK |
 | Terminal tools call Phase 02 direct apply surface | Phase 02, Phase 03 | Accepted handlers call `apply_plan_submission`, `apply_generator_submission`, or `apply_evaluator_submission` | OK |
 | Full and partial plans share one orchestrator path | Phase 02, Phase 03 | Public handlers differ only in continuation validation and `kind` value | OK |
 | Malformed planner DAG rejection is inline | Phase 02, Phase 03 | Tool handler returns `ToolResult(is_error=True)` before calling the orchestrator | OK |
 | Recursive partial plan gate reads request lineage | Phase 01, Phase 03 | Prehook walks `ComplexTaskRequest.task_segment_ids` and segment `continuation_goal` | OK |
 | `request_complex_task_solution` is a handoff, not failure | Phase 00, Phase 02, Phase 04 | Phase 03 exposes the canonical tool and gates it; Phase 04 fills request creation/resume behavior | OK |
-| After-edit gate reads message history | Phase 03 | Prehook scans `conversation_messages` for edit tool use before allowing handoff | OK |
-| Resolver success limits read message history | Phase 03, Phase 05 | Prehook blocks verifier/evaluator success at five unresolved resolver calls | OK |
+| After-edit gate reads message history | Phase 03 | Query loop injects the active transcript into `QueryContext.conversation_messages`; prehooks read that injected history for edit tool use before allowing handoff | OK |
+| Resolver success limits read message history | Phase 03, Phase 05 | QueryContext-injected history lets prehooks block verifier/evaluator success at five unresolved resolver calls | OK |
 | Evaluator spawn remains orchestrator-owned | Phase 02, Phase 03 | No public evaluator-spawn tool exists; Phase 03 only guards evaluator terminal submissions | OK |
 | Attempt-budget gate remains segment-manager-owned | Phase 01, Phase 02, Phase 03 | Tool layer does not spend or inspect retry budget except for soft context where already exposed | OK |
 | Failure terminals are never resolver-blocked | Phase 03 | Resolver-limit hooks attach only to success terminals | OK |
+| Helper agents are not TaskCenter graph nodes | Phase 03 | `ask_advisor`, `ask_resolver`, and `run_subagent` create helper/subagent runs whose terminal output returns to the caller, not graph lifecycle tasks | OK |
+| Resolver count gate has a concrete source | Phase 03, Phase 05 | `ask_resolver` result metadata records whether a resolver call remains unresolved | OK |
+| Hard gates reuse existing prehook execution | Existing tool core, Phase 03 | TaskCenter-specific gate classes implement `ToolPreHook`, return `HookResult`, and are attached on each decorated tool; `ToolHookExecutionHelper` remains the only runner | OK |
+| Soft gates reuse existing system reminders | Existing notification package, Phase 03 | TaskCenter reminder factories live beside submission tools, produce `NotificationRule` objects, and emit through `SystemNotificationService` via `notification.rules.dispatch_rules` | OK |
 
 Two seams need explicit handling:
 
@@ -89,6 +105,10 @@ Two seams need explicit handling:
    body. In Phase 03, implement the tool name, schemas, registration, and gates;
    keep the actual handoff body behind a small injectable handler so Phase 04 can
    replace the placeholder without changing the public tool surface.
+3. Helper-agent tools are blocking helper runs rather than TaskCenter graph
+   nodes. They should use `run_ephemeral_agent(...)` and return the helper's
+   terminal `ToolResult` to the caller. They should not call
+   `HarnessGraphOrchestrator.apply_*` and should not mutate graph state.
 
 ---
 
@@ -171,13 +191,39 @@ submit_evaluation_failure
 
 These remain available regardless of resolver count.
 
-### 3e. Soft reminder flow
+### 3e. Helper-agent and explorer flows
+
+```mermaid
+flowchart TD
+    Caller["Planner, executor, verifier, or evaluator"] --> HelperChoice{"Helper needed?"}
+    HelperChoice -->|"parallel read-only investigation"| Explorer["run_subagent(agent_name='explorer', prompt)"]
+    Explorer --> ExplorerRun["Explorer subagent runs read-only"]
+    ExplorerRun --> ExplorerTerminal["submit_exploration_result"]
+    ExplorerTerminal --> ExplorerReturn["run_subagent returns findings to caller"]
+
+    HelperChoice -->|"blocking no-edit advice"| Advisor["ask_advisor(tool_name, tool_payloads, prompt)"]
+    Advisor --> AdvisorRun["Advisor helper runs read-only"]
+    AdvisorRun --> AdvisorTerminal["submit_advisor_feedback"]
+    AdvisorTerminal --> AdvisorReturn["ask_advisor returns verdict to caller"]
+
+    HelperChoice -->|"blocking edit-capable fix"| Resolver["ask_resolver(issues_to_resolve)"]
+    Resolver --> ResolverRun["Resolver helper may edit"]
+    ResolverRun --> ResolverTerminal["submit_resolver_result(resolved, summary)"]
+    ResolverTerminal --> ResolverReturn["ask_resolver returns result metadata"]
+    ResolverReturn --> Count["Resolver success gate counts unresolved results"]
+```
+
+Helper and explorer runs are not `HarnessGraph` DAG nodes. They are scoped to
+the calling agent run and return through their own terminal tools. The caller
+then decides whether to submit a normal graph terminal.
+
+### 3f. Soft reminder flow
 
 ```text
 top of model turn
   |
   v
-notification rules inspect QueryContext + conversation_messages
+notification rules inspect QueryContext.conversation_messages
   |
   +-- first edit already happened
   |     -> remind executor that request_complex_task_solution is disabled
@@ -193,24 +239,118 @@ The soft layer never mutates tool registration or the system prompt. It emits
 ordinary `<system-reminder>` transcript messages through the existing
 notification-rule mechanism.
 
+### 3g. Per-tool soft and hard block example
+
+`request_complex_task_solution` is a per-tool gate. It is available only while
+the generator executor has not edited the workspace. The soft reminder and hard
+prehook each infer the same condition from injected run history:
+
+```python
+executor_has_edited(messages)
+```
+
+Soft block:
+
+1. The executor calls an edit-capable tool such as `edit_file`, `write_file`,
+   `delete_file`, `move_file`, or `shell`.
+2. On the next model turn, the TaskCenter reminder rule for
+   `request_complex_task_solution` inspects
+   `QueryContext.conversation_messages`.
+3. If its local state inference says the executor has edited, it injects a
+   `<system-reminder>` telling the executor that
+   `request_complex_task_solution` is disabled and the valid terminal choices
+   are now `submit_execution_success` or `submit_execution_failure`.
+4. The agent may still ignore this reminder; no tool execution is blocked by
+   the soft layer.
+
+Hard block:
+
+1. The agent calls `request_complex_task_solution`.
+2. `ToolHookExecutionHelper` runs that tool's `pre_hooks`.
+3. `RequestComplexTaskBeforeEditGate` infers the same condition from the
+   per-call copy of `QueryContext.conversation_messages`.
+4. If the predicate is true, the prehook returns `HookResult.fail(...)`.
+5. `ToolHookExecutionHelper` converts the failed prehook into
+   `ToolResult(is_error=True)`, does not call the tool handler, and the agent
+   run continues.
+
+```mermaid
+flowchart TD
+    Executor["Generator executor run"] --> EditTool["Calls edit-capable tool"]
+    EditTool --> NextTurn["Next model turn begins"]
+
+    NextTurn --> SoftRule["TaskCenter NotificationRule runs"]
+    SoftRule --> SoftCheck{"request_complex_task_solution disabled after edit?"}
+    SoftCheck -->|"yes"| Reminder["Soft block: inject <system-reminder>"]
+    SoftCheck -->|"no"| NoReminder["No reminder"]
+
+    Reminder --> AgentChoice["Agent chooses next action"]
+    NoReminder --> AgentChoice
+
+    AgentChoice --> HandoffCall["Agent calls request_complex_task_solution"]
+    HandoffCall --> HookRunner["ToolHookExecutionHelper runs pre_hooks"]
+    HookRunner --> HardGate["RequestComplexTaskBeforeEditGate"]
+    HardGate --> HardCheck{"Executor already edited?"}
+
+    HardCheck -->|"yes"| Deny["Hard block: HookResult.fail"]
+    Deny --> ErrorResult["ToolResult is_error=True; handler not called"]
+    ErrorResult --> Continue["Agent continues and must use success or failure terminal"]
+
+    HardCheck -->|"no"| Allow["HookResult.pass_"]
+    Allow --> Handler["Run request_complex_task_solution handler"]
+    Handler --> Handoff["Phase 04 nested complex-task handoff"]
+```
+
+Tool registration shape:
+
+```python
+@tool(
+    name="request_complex_task_solution",
+    input_model=RequestComplexTaskSolutionInput,
+    output_model=TextToolOutput,
+    pre_hooks=(RequestComplexTaskBeforeEditGate(),),
+)
+async def request_complex_task_solution(...):
+    ...
+```
+
+The corresponding notification rule is registered through
+`tools.submission.notification_triggers.make_harness_gate_reminders()` when
+launching the executor agent. Its implementation lives in
+`tools/submission/notification_triggers/request_complex_task_after_edit.py`. It
+is not attached to the tool object; the hard prehook is attached on the tool.
+
 ---
 
 ## 4. Folder layout
 
 Phase 03 keeps terminal tools under the existing
 `tools/submission/main_agent/` role tree and adds shared implementation helpers
-at the `tools/submission/` package boundary.
+at the `tools/submission/` package boundary. It must not add a second hook or
+reminder framework: hard gates use `tools.core.hooks` and the existing tool
+hook runner; soft reminders are TaskCenter-specific `NotificationRule`
+factories that live beside the submission tools and run through
+`notification.rules.dispatch_rules`.
 
 ```text
 backend/src/tools/submission/
 |-- __init__.py                              # EDIT: export make_submission_tools
 |-- factory.py                               # NEW: register all TaskCenter submission tools
-|-- context.py                               # NEW: resolve current task/request/segment/graph
-|-- history.py                               # NEW: conversation history inspection helpers
-|-- plan_validation.py                       # NEW: planner graph validation + normalization
-|-- prehooks.py                              # NEW: hard gate hook classes
-|-- reminders.py                             # NEW: notification-rule factories
-|-- results.py                               # NEW: small success/error ToolResult helpers
+|
+|-- hooks/
+|   |-- __init__.py                          # NEW: export hard gate hooks
+|   |-- harness_role_gate.py                 # NEW: role / graph / orchestrator ownership gate
+|   |-- recursive_partial_plan_gate.py       # NEW: submit_partial_plan lineage gate
+|   |-- request_complex_task_before_edit_gate.py  # NEW: executor handoff after-edit gate
+|   |-- resolver_success_limit_gate.py       # NEW: verifier/evaluator success limit gate
+|   |-- helper_request_gate.py               # NEW: helper request caller role gate
+|   `-- helper_role_gate.py                  # NEW: helper/subagent terminal role gate
+|
+|-- notification_triggers/
+|   |-- __init__.py                          # NEW: export soft trigger factories
+|   |-- recursive_partial_plan.py            # NEW: planner partial-plan reminder trigger
+|   |-- request_complex_task_after_edit.py   # NEW: executor handoff-disabled reminder trigger
+|   `-- resolver_limit.py                    # NEW: verifier/evaluator resolver-limit reminder trigger
 |
 |-- main_agent/
 |   |-- planner/
@@ -235,6 +375,24 @@ backend/src/tools/submission/
 |       |-- __init__.py                      # EDIT: export evaluator tools
 |       |-- submit_evaluation_success.py
 |       `-- submit_evaluation_failure.py
+|
+|-- helper_agent/
+|   |-- __init__.py                          # EDIT: export helper tools
+|   |-- advisor/
+|   |   |-- __init__.py                      # EDIT: export advisor tools
+|   |   |-- ask_advisor.py                   # EDIT: blocking no-edit helper request
+|   |   `-- submit_advisor_feedback.py       # EDIT: advisor terminal
+|   |
+|   `-- resolver/
+|       |-- __init__.py                      # EDIT: export resolver tools
+|       |-- ask_resolver.py                  # EDIT: blocking edit-capable helper request
+|       `-- submit_resolver_result.py        # EDIT: resolver terminal
+|
+`-- subagent/
+    |-- __init__.py                          # EDIT: export subagent terminal tools
+    `-- explorer/
+        |-- __init__.py                      # EDIT: export explorer terminal
+        `-- submit_exploration_result.py     # EDIT: explorer subagent terminal
 ```
 
 Runtime metadata and registration:
@@ -256,6 +414,13 @@ backend/src/agents/main_agent/
 |-- generator/executor/agent.md              # EDIT: replace submit_request_plan
 |-- generator/verifier/agent.md              # EDIT: resolver-limit wording if needed
 `-- evaluator/agent.md                       # EDIT: resolver-limit wording if needed
+
+backend/src/agents/helper_agent/
+|-- advisor/agent.md                          # EDIT: submit_advisor_feedback schema wording
+`-- resolver/agent.md                         # EDIT: submit_resolver_result schema wording
+
+backend/src/agents/subagent/
+`-- explorer/agent.md                         # EDIT: submit_exploration_result schema wording
 ```
 
 Tests:
@@ -263,20 +428,54 @@ Tests:
 ```text
 backend/tests/test_tools/
 |-- test_submission_tool_registration.py
-|-- test_submission_plan_validation.py
+|-- test_submission_planner_tools.py
 |-- test_submission_tool_gates.py
 |-- test_submission_terminal_routing.py
+|-- test_submission_helper_tools.py
 `-- test_submission_soft_reminders.py
 
 backend/tests/task_center/lifecycle/
 `-- test_phase03_submission_integration.py
 ```
 
+### 4a. Draft tool, hook, and trigger inventory
+
+Hard hooks are attached per tool through `pre_hooks=(...)`. Soft triggers are
+`NotificationRule` factories assembled into the launched agent definition; they
+are not attached to tool objects. Each hook and trigger file may infer its own
+state from `QueryContext.conversation_messages` plus any TaskCenter stores
+available through injected harness metadata.
+
+| Public tool | Role / caller | Kind | Hard hook files | Soft trigger files |
+| --- | --- | --- | --- | --- |
+| `submit_full_plan` | planner | terminal | `hooks/harness_role_gate.py` | none |
+| `submit_partial_plan` | planner | terminal | `hooks/harness_role_gate.py`, `hooks/recursive_partial_plan_gate.py` | `notification_triggers/recursive_partial_plan.py` |
+| `request_complex_task_solution` | generator executor | orchestration handoff | `hooks/harness_role_gate.py`, `hooks/request_complex_task_before_edit_gate.py` | `notification_triggers/request_complex_task_after_edit.py` |
+| `submit_execution_success` | generator executor | terminal | `hooks/harness_role_gate.py` | none |
+| `submit_execution_failure` | generator executor | terminal | `hooks/harness_role_gate.py` | none |
+| `submit_verification_success` | generator verifier | terminal | `hooks/harness_role_gate.py`, `hooks/resolver_success_limit_gate.py` | `notification_triggers/resolver_limit.py` |
+| `submit_verification_failure` | generator verifier | terminal | `hooks/harness_role_gate.py` | none |
+| `submit_evaluation_success` | evaluator | terminal | `hooks/harness_role_gate.py`, `hooks/resolver_success_limit_gate.py` | `notification_triggers/resolver_limit.py` |
+| `submit_evaluation_failure` | evaluator | terminal | `hooks/harness_role_gate.py` | none |
+| `ask_advisor` | planner, executor, verifier, evaluator | blocking helper request | `hooks/helper_request_gate.py` | none |
+| `ask_resolver` | verifier, evaluator | blocking helper request | `hooks/helper_request_gate.py` | none |
+| `submit_advisor_feedback` | advisor helper | helper terminal | `hooks/helper_role_gate.py` | none |
+| `submit_resolver_result` | resolver helper | helper terminal | `hooks/helper_role_gate.py` | none |
+| `submit_exploration_result` | explorer subagent | subagent terminal | `hooks/helper_role_gate.py` | none |
+
+Soft trigger inventory:
+
+| Trigger file | Fires for | State inference | Reminder |
+| --- | --- | --- | --- |
+| `notification_triggers/recursive_partial_plan.py` | planner | Resolve request/segment from `QueryContext.tool_metadata`; inspect prior segment `continuation_goal` values | `submit_partial_plan` is disabled; use `submit_full_plan` |
+| `notification_triggers/request_complex_task_after_edit.py` | generator executor | Scan `QueryContext.conversation_messages` for edit-capable tool calls | `request_complex_task_solution` is disabled after the first edit |
+| `notification_triggers/resolver_limit.py` | verifier and evaluator | Scan `QueryContext.conversation_messages` for unresolved `ask_resolver` results | One unresolved resolver call remains before success is blocked |
+
 ---
 
 ## 5. Files and functions
 
-### 5a. Runtime metadata
+### 5a. Runtime metadata and query history
 
 **`backend/src/tools/core/runtime.py`** - edit
 
@@ -309,220 +508,82 @@ ExecutionMetadata(
 
 Tests may inject the same metadata directly into `ToolExecutionContextService`.
 
-### 5b. Submission context resolution
+**`backend/src/engine/core/query.py`** - edit
 
-**`backend/src/tools/submission/context.py`** - new
-
-```python
-from dataclasses import dataclass
-from typing import Literal
-
-from task_center.complex_task.request import ComplexTaskRequest
-from task_center.harness_graph.graph import HarnessGraph
-from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
-from task_center.harness_graph.runtime import HarnessGraphRuntime
-from task_center.segment.segment import TaskSegment
-from task_center.task import HarnessTaskRole
-from tools.core.context import ToolExecutionContextService
-from tools.core.results import ToolResult
-
-
-SubmissionRole = Literal["planner", "generator", "evaluator"]
-
-
-@dataclass(frozen=True, slots=True)
-class HarnessSubmissionContext:
-    runtime: HarnessGraphRuntime
-    task: dict
-    request: ComplexTaskRequest
-    segment: TaskSegment
-    graph: HarnessGraph
-    orchestrator: HarnessGraphOrchestrator
-
-
-def require_harness_runtime(
-    context: ToolExecutionContextService,
-) -> HarnessGraphRuntime: ...
-
-
-def require_current_task_id(context: ToolExecutionContextService) -> str: ...
-
-
-def resolve_harness_submission_context(
-    context: ToolExecutionContextService,
-    *,
-    expected_role: HarnessTaskRole,
-) -> HarnessSubmissionContext | ToolResult: ...
-
-
-def ensure_task_matches_graph(
-    task: dict,
-    *,
-    graph_id: str,
-    expected_role: HarnessTaskRole,
-) -> ToolResult | None: ...
-
-
-def active_conversation_messages(context: ToolExecutionContextService) -> list: ...
-```
-
-Resolution flow:
-
-```text
-context.task_center_task_id
-  -> TaskCenterStore.get_task(task_id)
-  -> task["task_center_harness_graph_id"]
-  -> HarnessGraphStore.get(graph_id)
-  -> TaskSegmentStore.get(graph.task_segment_id)
-  -> ComplexTaskRequestStore.get(segment.complex_task_request_id)
-  -> HarnessGraphRuntime.orchestrator_registry.get_or_raise(graph_id)
-```
-
-If any required value is missing, return a user-facing `ToolResult` with
-`is_error=True`; reserve `GraphInvariantViolation` for impossible internal
-states inside lifecycle classes.
-
-### 5c. Conversation history helpers
-
-**`backend/src/tools/submission/history.py`** - new
+`QueryContext` owns the active conversation history. The query loop already has
+the mutable `messages` list; Phase 03 should inject that list into
+`QueryContext` and keep it current before notification dispatch and tool
+dispatch.
 
 ```python
-from dataclasses import dataclass
-from typing import Any
+@dataclass
+class QueryContext:
+    # existing fields...
 
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
-
-
-EDIT_TOOL_NAMES: frozenset[str] = frozenset(
-    {"write_file", "edit_file", "delete_file", "move_file", "shell"}
-)
-RESOLVER_REQUEST_TOOL = "ask_resolver"
-
-
-@dataclass(frozen=True, slots=True)
-class ToolCallRecord:
-    tool_use_id: str
-    name: str
-    input: dict[str, Any]
-    result: ToolResultBlock | None
-
-
-def iter_tool_call_records(
-    messages: list[ConversationMessage],
-) -> tuple[ToolCallRecord, ...]: ...
-
-
-def has_tool_call(
-    messages: list[ConversationMessage],
-    names: frozenset[str],
-) -> bool: ...
-
-
-def has_edit_tool_call(messages: list[ConversationMessage]) -> bool: ...
-
-
-def unresolved_resolver_call_count(
-    messages: list[ConversationMessage],
-) -> int: ...
-
-
-def _resolver_result_is_unresolved(result: ToolResultBlock | None) -> bool: ...
+    conversation_messages: list[ConversationMessage] = field(default_factory=list)
 ```
 
-`unresolved_resolver_call_count` should prefer structured metadata from
-`ask_resolver` results, for example `result.metadata["resolver"]["resolved"]`.
-Until the resolver helper is implemented, fall back to parsing JSON output with
-a top-level `resolved: false`. A missing resolver result should count as
-unresolved for conservative gating.
-
-The edit gate should treat mutating edit tools as edits. `shell` is included
-because it can mutate the workspace. If this proves too broad, split it later
-with shell command classification in the Daytona prehook package.
-
-### 5d. Planner public schemas and validation
-
-**`backend/src/tools/submission/plan_validation.py`** - new
+At the start of `_run_query_loop` and before each notification or tool-dispatch
+step, set:
 
 ```python
-from dataclasses import dataclass
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, Field
-
-from task_center.task import PlannedGeneratorTask, PlannerSubmission
-from tools.submission.context import HarnessSubmissionContext
-from tools.core.results import ToolResult
-
-
-class PlanTaskInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(..., min_length=1)
-    agent_name: str = Field(..., min_length=1)
-    deps: list[str] = Field(default_factory=list)
-
-
-class BasePlanInput(BaseModel):
-    task_specification: str = Field(..., min_length=1)
-    evaluation_criteria: list[str] = Field(..., min_length=1)
-    tasks: list[PlanTaskInput] = Field(..., min_length=1)
-    task_specs: dict[str, str] = Field(..., min_length=1)
-
-
-class SubmitFullPlanInput(BasePlanInput):
-    pass
-
-
-class SubmitPartialPlanInput(BasePlanInput):
-    continuation_goal: str = Field(..., min_length=1)
-
-
-@dataclass(frozen=True, slots=True)
-class NormalizedPlannerPlan:
-    task_specification: str
-    evaluation_criteria: tuple[str, ...]
-    tasks: tuple[PlannedGeneratorTask, ...]
-    continuation_goal: str | None
-
-
-def normalize_planner_plan(
-    tool_input: BasePlanInput,
-    *,
-    kind: Literal["full", "partial"],
-) -> NormalizedPlannerPlan | ToolResult: ...
-
-
-def validate_task_ids_unique(tasks: list[PlanTaskInput]) -> ToolResult | None: ...
-
-
-def validate_task_specs_exact(
-    tasks: list[PlanTaskInput],
-    task_specs: dict[str, str],
-) -> ToolResult | None: ...
-
-
-def validate_known_generator_agents(
-    tasks: list[PlanTaskInput],
-) -> ToolResult | None: ...
-
-
-def validate_generator_graph_shape(
-    tasks: tuple[PlannedGeneratorTask, ...],
-) -> ToolResult | None: ...
-
-
-def build_planner_submission(
-    submission_context: HarnessSubmissionContext,
-    normalized: NormalizedPlannerPlan,
-    *,
-    kind: Literal["full", "partial"],
-) -> PlannerSubmission: ...
-
-
-def render_plan_summary(normalized: NormalizedPlannerPlan) -> str: ...
+context.conversation_messages = messages
 ```
 
-Validation rules:
+Tool execution should derive history from `QueryContext`, not from a separate
+ad hoc history argument. When building `ToolExecutionContextService`,
+`execute_tool_call_streaming(...)` copies
+`context.conversation_messages` into tool metadata for prehooks:
+
+```python
+metadata = context.tool_metadata.copy() if context.tool_metadata else ExecutionMetadata()
+metadata.conversation_messages = context.conversation_messages
+```
+
+If `ExecutionMetadata` does not yet expose `conversation_messages` as a typed
+field, add it there as a derived per-call view and include it in
+`_TYPED_FIELDS`. The canonical owner remains `QueryContext`.
+
+### 5b. Rule-local state resolution and planner validation
+
+Do not add shared cross-cutting modules for submission context, message-history
+parsing, or planner validation. Phase 03 keeps each rule's state inference
+inside the hook or notification-trigger file that owns the rule, and keeps
+planner schemas plus normalization beside the planner tool files.
+
+State-resolution ownership:
+
+- Planner, generator, and evaluator terminal handlers resolve current task,
+  graph, segment, request, and orchestrator directly from
+  `ToolExecutionContextService` metadata and the stores they need.
+- `hooks/harness_role_gate.py` performs its own role / graph / orchestrator
+  ownership lookup before a tool handler runs.
+- `hooks/recursive_partial_plan_gate.py` and
+  `notification_triggers/recursive_partial_plan.py` each resolve the current
+  request and segment from `QueryContext.tool_metadata` / tool metadata and
+  inspect prior segment `continuation_goal` values.
+- `hooks/request_complex_task_before_edit_gate.py` and
+  `notification_triggers/request_complex_task_after_edit.py` each scan
+  `QueryContext.conversation_messages` for edit-capable tool calls.
+- `hooks/resolver_success_limit_gate.py` and
+  `notification_triggers/resolver_limit.py` each scan
+  `QueryContext.conversation_messages` for unresolved `ask_resolver` results.
+
+Message-history inference should live inside the rule files. If multiple files
+need identical low-level parsing, keep the helper private to one rule package or
+duplicate the small parser until an actual abstraction pressure appears.
+
+Planner schema and validation ownership:
+
+- `PlanTaskInput` and common planner input fields live in the planner package
+  next to `submit_full_plan.py` and `submit_partial_plan.py`, either duplicated
+  locally or factored into `main_agent/planner/_schemas.py`.
+- `SubmitFullPlanInput` lives with `submit_full_plan.py`.
+- `SubmitPartialPlanInput` lives with `submit_partial_plan.py`.
+- Planner normalization and public DAG validation run in the planner tool
+  handlers before calling `HarnessGraphOrchestrator.apply_plan_submission`.
+
+Planner validation rules:
 
 - `tasks[*]` must contain exactly `id`, `agent_name`, and `deps`; Pydantic
   `extra="forbid"` enforces this.
@@ -542,7 +603,13 @@ Validation rules:
 
 ### 5e. Hard gate prehooks
 
-**`backend/src/tools/submission/prehooks.py`** - new
+Hard gates are one file per rule under `tools/submission/hooks/`. These are
+TaskCenter-specific hook implementations, not a new hook system. Each class
+implements the existing `ToolPreHook` contract from `tools.core.hooks`, returns
+`HookResult`, declares `target_tool`, and is attached to the relevant decorated
+tool through `pre_hooks=(...)`. The existing `ToolHookExecutionHelper` remains
+responsible for target validation, sequential execution, hook-failure metadata,
+and notification-service plumbing.
 
 ```python
 from dataclasses import dataclass
@@ -555,6 +622,7 @@ from tools.core.context import ToolExecutionContextService
 from tools.core.hooks import HookResult
 
 
+# backend/src/tools/submission/hooks/harness_role_gate.py
 @dataclass(frozen=True, slots=True)
 class HarnessRoleGate:
     target_tool: str
@@ -567,6 +635,7 @@ class HarnessRoleGate:
     ) -> HookResult[Any]: ...
 
 
+# backend/src/tools/submission/hooks/recursive_partial_plan_gate.py
 @dataclass(frozen=True, slots=True)
 class RecursivePartialPlanGate:
     target_tool: str = "submit_partial_plan"
@@ -578,6 +647,7 @@ class RecursivePartialPlanGate:
     ) -> HookResult[Any]: ...
 
 
+# backend/src/tools/submission/hooks/request_complex_task_before_edit_gate.py
 @dataclass(frozen=True, slots=True)
 class RequestComplexTaskBeforeEditGate:
     target_tool: str = "request_complex_task_solution"
@@ -589,10 +659,38 @@ class RequestComplexTaskBeforeEditGate:
     ) -> HookResult[Any]: ...
 
 
+# backend/src/tools/submission/hooks/resolver_success_limit_gate.py
 @dataclass(frozen=True, slots=True)
 class ResolverSuccessLimitGate:
     target_tool: str
     limit: int = 5
+
+    async def run(
+        self,
+        tool_input: BaseModel,
+        context: ToolExecutionContextService,
+    ) -> HookResult[Any]: ...
+
+
+# backend/src/tools/submission/hooks/helper_request_gate.py
+@dataclass(frozen=True, slots=True)
+class HelperRequestGate:
+    target_tool: str
+    allowed_caller_roles: frozenset[HarnessTaskRole]
+
+    async def run(
+        self,
+        tool_input: BaseModel,
+        context: ToolExecutionContextService,
+    ) -> HookResult[Any]: ...
+
+
+# backend/src/tools/submission/hooks/helper_role_gate.py
+@dataclass(frozen=True, slots=True)
+class HelperRoleGate:
+    target_tool: str
+    expected_role: str
+    expected_agent_type: str | None = None
 
     async def run(
         self,
@@ -607,10 +705,17 @@ Gate behavior:
 | --- | --- | --- |
 | `HarnessRoleGate` | all Phase 03 terminals | Current persisted task role does not match expected role, graph id does not match current task, or no active orchestrator exists |
 | `RecursivePartialPlanGate` | `submit_partial_plan` | Any segment listed before the current segment in the current request has non-null `continuation_goal` |
-| `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | Current conversation history contains an edit tool call |
-| `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | `unresolved_resolver_call_count(messages) >= 5` |
+| `RequestComplexTaskBeforeEditGate` | `request_complex_task_solution` | `QueryContext.conversation_messages` contains an edit tool call |
+| `ResolverSuccessLimitGate` | `submit_verification_success`, `submit_evaluation_success` | Rule-local scan of `QueryContext.conversation_messages` finds at least five unresolved resolver calls |
+| `HelperRequestGate` | `ask_advisor`, `ask_resolver` | Caller is not one of the roles allowed to invoke that helper request |
+| `HelperRoleGate` | helper/subagent terminals | Helper run metadata does not match the expected helper role or agent type |
 
 Failure terminals deliberately do not receive `ResolverSuccessLimitGate`.
+
+Each hook file owns its own state inference. For message-history rules, read the
+per-call history copied from `QueryContext.conversation_messages` into
+`ExecutionMetadata.conversation_messages` and parse tool use/result records
+inside the hook file.
 
 The prehooks should return short, direct reasons that tell the agent which
 terminal path remains valid. Example:
@@ -622,21 +727,31 @@ used partial continuation. Submit a full plan for the current segment.
 
 ### 5f. Soft reminder rules
 
-**`backend/src/tools/submission/reminders.py`** - new
+Soft triggers are one file per rule under
+`tools/submission/notification_triggers/`. Harness reminders are TaskCenter
+submission policy, so their factories live beside the submission tools. They
+still use the existing notification runtime: each factory returns a
+`NotificationRule`, and `notification.rules.dispatch_rules` emits through
+`SystemNotificationService`. Do not put TaskCenter-specific reminders in
+`notification/library/`.
 
 ```python
 from notification.rules import NotificationRule
 
 
+# backend/src/tools/submission/notification_triggers/recursive_partial_plan.py
 def make_recursive_partial_plan_reminder() -> NotificationRule: ...
 
 
+# backend/src/tools/submission/notification_triggers/request_complex_task_after_edit.py
 def make_request_after_edit_reminder() -> NotificationRule: ...
 
 
+# backend/src/tools/submission/notification_triggers/resolver_limit.py
 def make_resolver_limit_reminder(*, warning_at: int = 4) -> NotificationRule: ...
 
 
+# backend/src/tools/submission/notification_triggers/__init__.py
 def make_harness_gate_reminders() -> list[NotificationRule]: ...
 ```
 
@@ -650,45 +765,37 @@ Reminder triggers mirror hard gates but fire before the next provider request:
 - Resolver unresolved count reaches four: warn verifier/evaluator that success
   will be blocked after one more unresolved resolver call.
 
-These rules should read the same helper functions as prehooks. They should use
+Each trigger file owns its own state inference. It should use
 `QueryContext.tool_metadata` for current harness metadata and
-`conversation_messages` passed as the rule's message argument.
+`QueryContext.conversation_messages` for run history. Message-history triggers
+parse records inside the trigger file and decide whether to emit.
 
 If the current static agent loader cannot express `NotificationRule` instances
 from `agent.md`, attach these rules in the harness launcher by copying the
 loaded `AgentDefinition` and appending `make_harness_gate_reminders()` before
 calling `run_ephemeral_agent`.
 
-### 5g. Terminal result helpers
+### 5g. Tool result shape
 
-**`backend/src/tools/submission/results.py`** - new
-
-```python
-from tools.core.results import ToolResult
-
-
-def submission_error(reason: str, *, metadata: dict | None = None) -> ToolResult:
-    return ToolResult(output=reason, is_error=True, metadata=metadata or {})
-
-
-def submission_accepted(
-    message: str,
-    *,
-    metadata: dict | None = None,
-) -> ToolResult:
-    return ToolResult(output=message, is_error=False, metadata=metadata or {})
-```
-
-Keep successful outputs plain text because the tools use `TextToolOutput`.
-Include machine-readable metadata for tests and future UI:
+Do not add a shared `tools/submission/results.py` helper. Submission tools
+return `ToolResult(...)` directly. Keep successful outputs plain text because
+the tools use `TextToolOutput`, and include machine-readable metadata for tests
+and future UI:
 
 ```python
-{
-    "submission_kind": "planner_full" | "planner_partial" | ...,
-    "task_center_task_id": "...",
-    "harness_graph_id": "...",
-}
+ToolResult(
+    output="Accepted planner submission.",
+    is_error=False,
+    metadata={
+        "submission_kind": "planner_full",
+        "task_center_task_id": "...",
+        "harness_graph_id": "...",
+    },
+)
 ```
+
+If a single tool file has repeated metadata construction, keep that helper
+private to the tool file or role package.
 
 ### 5h. Planner terminal tools
 
@@ -717,11 +824,13 @@ async def submit_full_plan(
 
 Handler flow:
 
-1. Resolve `HarnessSubmissionContext` with expected role `PLANNER`.
+1. Resolve current planner task, graph, segment, request, and orchestrator from
+   `ToolExecutionContextService` metadata plus stores.
 2. Confirm current task id equals `graph.planner_task_id`.
-3. Normalize and validate the plan with `kind="full"`.
+3. Normalize and validate the plan with `kind="full"` inside this handler or a
+   private planner-local helper.
 4. Build `PlannerSubmission`.
-5. Call `submission_context.orchestrator.apply_plan_submission(submission)`.
+5. Call `orchestrator.apply_plan_submission(submission)`.
 6. Return accepted `ToolResult`.
 
 **`backend/src/tools/submission/main_agent/planner/submit_partial_plan.py`** - edit
@@ -784,8 +893,8 @@ Build:
 
 ```python
 GeneratorSubmission(
-    graph_id=submission_context.graph.id,
-    task_id=submission_context.task["id"],
+    graph_id=graph.id,
+    task_id=task["id"],
     outcome="success",
     summary=summary,
     payload={"generator_role": "executor", "artifacts": artifacts},
@@ -942,12 +1051,201 @@ Attach only `HarnessRoleGate`. Build
 `EvaluatorSubmission(outcome="failure", payload={"failed_criteria":
 failed_criteria})`.
 
-### 5l. Submission tool factory and registration
+### 5l. Helper-agent tools
+
+Helper-agent tools are not graph terminals. The request tools are blocking
+ordinary tools used by main agents; the helper submission tools are terminal
+tools used inside helper-agent runs.
+
+**`backend/src/tools/submission/helper_agent/advisor/ask_advisor.py`** - edit
+
+```python
+class AskAdvisorInput(BaseModel):
+    tool_name: str = Field(..., min_length=1)
+    tool_payloads: list[dict[str, object]] = Field(default_factory=list)
+    prompt: str = Field(..., min_length=1)
+
+
+@tool(
+    name="ask_advisor",
+    description=(
+        "Ask the advisor helper for blocking read-only advice before a "
+        "terminal submission or decision."
+    ),
+    input_model=AskAdvisorInput,
+    output_model=TextToolOutput,
+)
+async def ask_advisor(
+    tool_name: str,
+    tool_payloads: list[dict[str, object]],
+    prompt: str,
+    *,
+    context: ToolExecutionContextService,
+) -> ToolResult: ...
+```
+
+Handler behavior:
+
+1. Resolve the `advisor` agent definition.
+2. Build a prompt containing `tool_name`, `tool_payloads`, and `prompt`.
+3. Call `run_ephemeral_agent(...)` with `persist_agent_run=False` and the
+   same sandbox/runtime metadata needed for read-only tools.
+4. Require the helper to finish via `submit_advisor_feedback`.
+5. Return the advisor terminal output to the caller.
+
+**`backend/src/tools/submission/helper_agent/advisor/submit_advisor_feedback.py`** - edit
+
+```python
+class SubmitAdvisorFeedbackInput(BaseModel):
+    verdict: Literal["approve", "revise", "reject"]
+    summary: str = Field(..., min_length=1)
+    risks: list[str] = Field(default_factory=list)
+
+
+@tool(
+    name="submit_advisor_feedback",
+    description="Submit advisor helper feedback.",
+    input_model=SubmitAdvisorFeedbackInput,
+    output_model=TextToolOutput,
+    is_terminal_tool=True,
+)
+async def submit_advisor_feedback(...) -> ToolResult: ...
+```
+
+Successful metadata should include:
+
+```python
+{
+    "helper_role": "advisor",
+    "verdict": verdict,
+    "risks": risks,
+}
+```
+
+**`backend/src/tools/submission/helper_agent/resolver/ask_resolver.py`** - edit
+
+```python
+class AskResolverInput(BaseModel):
+    issues_to_resolve: list[str] = Field(..., min_length=1)
+    issue_context: str = Field(default="")
+
+
+@tool(
+    name="ask_resolver",
+    description=(
+        "Ask the resolver helper to address unresolved verifier or evaluator "
+        "issues. The resolver may edit files."
+    ),
+    input_model=AskResolverInput,
+    output_model=TextToolOutput,
+)
+async def ask_resolver(
+    issues_to_resolve: list[str],
+    issue_context: str,
+    *,
+    context: ToolExecutionContextService,
+) -> ToolResult: ...
+```
+
+Handler behavior:
+
+1. Resolve the `resolver` agent definition.
+2. Build a prompt containing the issues and caller context.
+3. Call `run_ephemeral_agent(...)` with the same sandbox/runtime metadata so
+   edit-capable tools work.
+4. Require the helper to finish via `submit_resolver_result`.
+5. Return resolver terminal output and preserve resolver metadata. The
+   resolver-limit gate reads this metadata from conversation history.
+
+**`backend/src/tools/submission/helper_agent/resolver/submit_resolver_result.py`** - edit
+
+```python
+class SubmitResolverResultInput(BaseModel):
+    resolved: bool
+    summary: str = Field(..., min_length=1)
+    changed_files: list[str] = Field(default_factory=list)
+    remaining_issues: list[str] = Field(default_factory=list)
+
+
+@tool(
+    name="submit_resolver_result",
+    description="Submit resolver helper outcome.",
+    input_model=SubmitResolverResultInput,
+    output_model=TextToolOutput,
+    is_terminal_tool=True,
+)
+async def submit_resolver_result(...) -> ToolResult: ...
+```
+
+Successful metadata should include:
+
+```python
+{
+    "helper_role": "resolver",
+    "resolver": {
+        "resolved": resolved,
+        "remaining_issues": remaining_issues,
+    },
+    "changed_files": changed_files,
+}
+```
+
+`unresolved_resolver_call_count(...)` counts `ask_resolver` tool results where
+this metadata is missing or where `resolved` is false.
+
+### 5m. Explorer subagent terminal
+
+`run_subagent` already launches registered subagents and returns the terminal
+result from the subagent. Phase 03 must implement the explorer subagent's
+terminal so the read-only helper path can complete.
+
+**`backend/src/tools/submission/subagent/explorer/submit_exploration_result.py`** - edit
+
+```python
+class SubmitExplorationResultInput(BaseModel):
+    summary: str = Field(..., min_length=1)
+    findings: list[str] = Field(default_factory=list)
+    references: list[str] = Field(default_factory=list)
+
+
+@tool(
+    name="submit_exploration_result",
+    description="Submit read-only explorer subagent findings.",
+    input_model=SubmitExplorationResultInput,
+    output_model=TextToolOutput,
+    is_terminal_tool=True,
+)
+async def submit_exploration_result(...) -> ToolResult: ...
+```
+
+Successful metadata should include:
+
+```python
+{
+    "subagent_role": "explorer",
+    "findings": findings,
+    "references": references,
+}
+```
+
+Do not attach `HarnessRoleGate`; explorer runs are not TaskCenter graph tasks.
+The existing `run_subagent` wrapper already enforces subagent dispatchability
+and prevents subagents from spawning further subagents.
+
+### 5n. Submission tool factory and registration
 
 **`backend/src/tools/submission/factory.py`** - new
 
 ```python
 from tools.core.base import BaseTool
+from tools.submission.helper_agent.advisor import (
+    ask_advisor,
+    submit_advisor_feedback,
+)
+from tools.submission.helper_agent.resolver import (
+    ask_resolver,
+    submit_resolver_result,
+)
 from tools.submission.main_agent.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
@@ -966,6 +1264,7 @@ from tools.submission.main_agent.planner import (
     submit_full_plan,
     submit_partial_plan,
 )
+from tools.submission.subagent.explorer import submit_exploration_result
 
 
 def make_submission_tools() -> list[BaseTool]:
@@ -979,6 +1278,11 @@ def make_submission_tools() -> list[BaseTool]:
         submit_verification_failure,
         submit_evaluation_success,
         submit_evaluation_failure,
+        ask_advisor,
+        submit_advisor_feedback,
+        ask_resolver,
+        submit_resolver_result,
+        submit_exploration_result,
         submit_request_plan,
     ]
 ```
@@ -1007,7 +1311,7 @@ def _register_builtins() -> None:
 Registering all submission tools globally is safe because agent definitions
 still filter their tool surface to `allowed_tools | terminals`.
 
-### 5m. Agent definitions
+### 5o. Agent definitions
 
 **`backend/src/agents/main_agent/generator/executor/agent.md`** - edit
 
@@ -1044,6 +1348,16 @@ updates if needed to mirror the hard gates:
   partial continuation.
 - Verifier/evaluator: after too many unresolved resolver calls, success is
   blocked and the correct path is failure.
+
+Helper and subagent definitions should keep their current terminals, but their
+tool descriptions and prompt text should match the concrete schemas:
+
+- `backend/src/agents/helper_agent/advisor/agent.md` terminates through
+  `submit_advisor_feedback`.
+- `backend/src/agents/helper_agent/resolver/agent.md` terminates through
+  `submit_resolver_result`.
+- `backend/src/agents/subagent/explorer/agent.md` terminates through
+  `submit_exploration_result`.
 
 ---
 
@@ -1091,8 +1405,8 @@ None of these errors should call `HarnessGraphOrchestrator.apply_plan_submission
 
 ### 6c. After-edit gate
 
-The gate scans `conversation_messages` for tool uses whose name is in
-`EDIT_TOOL_NAMES`. If found, it blocks `request_complex_task_solution`.
+The gate scans `QueryContext.conversation_messages` for tool uses whose name is
+in `EDIT_TOOL_NAMES`. If found, it blocks `request_complex_task_solution`.
 
 This gate is intentionally about the current executor agent run, not durable
 workspace state. A prior graph or sibling task may have edited; that does not
@@ -1136,6 +1450,44 @@ More specific task-id checks remain in handlers:
 - generator handlers rely on `assert_generator_task_for_submission` inside the
   orchestrator after context resolution.
 
+### 6f. Helper and subagent gates
+
+Helper request tools and helper terminals should not use `HarnessRoleGate`
+unless they are being invoked from a normal graph task and need graph ownership
+metadata. Advisor, resolver, and explorer runs are not graph task rows, so their
+default gates are scoped to helper contracts:
+
+- `ask_advisor` must only dispatch the registered `advisor` helper and should
+  pass no edit-capable tools to that helper. `HelperRequestGate` allows
+  planner, executor, verifier, and evaluator callers.
+- `submit_advisor_feedback` requires `role == "advisor"` metadata when present.
+- `ask_resolver` should only be available to verifier/evaluator callers and
+  should dispatch the registered `resolver` helper with edit-capable tools.
+  `HelperRequestGate` enforces the verifier/evaluator caller set.
+- `submit_resolver_result` requires `role == "resolver"` metadata when present.
+- `submit_exploration_result` requires `agent_type == "subagent"` and
+  `role == "explorer"` metadata when present.
+
+Use small helper prehooks rather than the graph role gate:
+
+```python
+@dataclass(frozen=True, slots=True)
+class HelperRequestGate:
+    target_tool: str
+    allowed_caller_roles: frozenset[HarnessTaskRole]
+
+    async def run(...) -> HookResult[Any]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class HelperRoleGate:
+    target_tool: str
+    expected_role: str
+    expected_agent_type: str | None = None
+
+    async def run(...) -> HookResult[Any]: ...
+```
+
 ---
 
 ## 7. Class summary
@@ -1146,29 +1498,34 @@ More specific task-id checks remain in handlers:
 | Runtime | `ExecutionMetadata.task_center_task_id` | EDIT | Current planner/generator/evaluator task id |
 | Runtime | `ExecutionMetadata.task_center_harness_graph_id` | EDIT | Current graph id for terminal routing |
 | Runtime | `ExecutionMetadata.harness_graph_runtime` | EDIT | Store + registry dependency bundle for tools |
+| Runtime | `QueryContext.conversation_messages` | EDIT | Canonical active transcript for notification rules and tool prehooks |
+| Runtime | `ExecutionMetadata.conversation_messages` | EDIT | Per-call view copied from `QueryContext` into tool context |
 | Tool factory | `make_submission_tools` | NEW | Registers all TaskCenter submission tools |
-| Submission context | `HarnessSubmissionContext` | NEW | Current task, request, segment, graph, orchestrator |
-| Submission context | `resolve_harness_submission_context` | NEW | Common store walk and active orchestrator lookup |
-| History | `iter_tool_call_records` | NEW | Pair tool uses and results from conversation history |
-| History | `has_edit_tool_call` | NEW | After-edit gate input |
-| History | `unresolved_resolver_call_count` | NEW | Resolver success gate input |
-| Plan validation | `PlanTaskInput` | NEW | Public planner DAG node schema |
-| Plan validation | `SubmitFullPlanInput` | NEW | Public full-plan schema |
-| Plan validation | `SubmitPartialPlanInput` | NEW | Public partial-plan schema |
-| Plan validation | `normalize_planner_plan` | NEW | Public input -> planned generator task DTOs |
-| Plan validation | `build_planner_submission` | NEW | Normalized plan -> `PlannerSubmission` |
-| Hooks | `HarnessRoleGate` | NEW | Common role, graph, and orchestrator existence gate |
-| Hooks | `RecursivePartialPlanGate` | NEW | Blocks recursive partial continuation |
-| Hooks | `RequestComplexTaskBeforeEditGate` | NEW | Blocks complex-task handoff after edits |
-| Hooks | `ResolverSuccessLimitGate` | NEW | Blocks success terminals at resolver limit |
-| Reminders | `make_harness_gate_reminders` | NEW | Soft reminder rules matching hard gates |
+| Planner tool schemas | `PlanTaskInput`, `SubmitFullPlanInput`, `SubmitPartialPlanInput` | NEW | Public planner schemas colocated with planner tools |
+| Planner tool handlers | planner-local normalization helpers | NEW | Public input -> `PlannerSubmission` before orchestrator apply |
+| Hook file | `hooks/harness_role_gate.py` | NEW | Common role, graph, and orchestrator existence gate |
+| Hook file | `hooks/recursive_partial_plan_gate.py` | NEW | Blocks recursive partial continuation |
+| Hook file | `hooks/request_complex_task_before_edit_gate.py` | NEW | Blocks complex-task handoff after edits |
+| Hook file | `hooks/resolver_success_limit_gate.py` | NEW | Blocks success terminals at resolver limit |
+| Hook file | `hooks/helper_request_gate.py` | NEW | Guards advisor/resolver request tools by caller role |
+| Hook file | `hooks/helper_role_gate.py` | NEW | Guards helper/subagent terminals by helper role metadata |
+| Notification trigger | `notification_triggers/recursive_partial_plan.py` | NEW | Planner reminder when partial continuation is no longer allowed |
+| Notification trigger | `notification_triggers/request_complex_task_after_edit.py` | NEW | Executor reminder after first edit disables handoff |
+| Notification trigger | `notification_triggers/resolver_limit.py` | NEW | Verifier/evaluator warning before resolver success block |
+| Notification trigger | `notification_triggers/__init__.py` | NEW | Exports `make_harness_gate_reminders()` |
 | Planner tools | `submit_full_plan` | EDIT | Validate and call `apply_plan_submission(kind="full")` |
 | Planner tools | `submit_partial_plan` | EDIT | Validate and call `apply_plan_submission(kind="partial")` |
 | Executor tools | `request_complex_task_solution` | NEW | Canonical handoff surface; body completed in Phase 04 |
 | Executor tools | `submit_execution_success` / `submit_execution_failure` | EDIT | Normalize executor outcome into `GeneratorSubmission` |
 | Verifier tools | `submit_verification_success` / `submit_verification_failure` | EDIT | Normalize verifier outcome into `GeneratorSubmission` |
 | Evaluator tools | `submit_evaluation_success` / `submit_evaluation_failure` | EDIT | Normalize evaluator outcome into `EvaluatorSubmission` |
+| Advisor tools | `ask_advisor` | EDIT | Blocking read-only helper request |
+| Advisor tools | `submit_advisor_feedback` | EDIT | Advisor terminal result |
+| Resolver tools | `ask_resolver` | EDIT | Blocking edit-capable helper request |
+| Resolver tools | `submit_resolver_result` | EDIT | Resolver terminal result consumed by resolver-count gates |
+| Explorer tools | `submit_exploration_result` | EDIT | Explorer subagent terminal returned by `run_subagent` |
 | Agent defs | executor `agent.md` | EDIT | Replace `submit_request_plan` with `request_complex_task_solution` |
+| Agent defs | helper/subagent `agent.md` files | EDIT | Align terminal schema wording |
 
 ---
 
@@ -1180,6 +1537,8 @@ More specific task-id checks remain in handlers:
 | --- | --- |
 | `test_submission_tools_registered` | `has_tool(...)` is true for every Phase 03 public terminal |
 | `test_submission_tools_are_terminal_except_legacy_request_plan` | New terminal tools set `is_terminal_tool=True`; legacy rejection is non-terminal or absent from agent defs |
+| `test_helper_request_tools_are_non_terminal` | `ask_advisor` and `ask_resolver` do not terminate the caller run |
+| `test_helper_and_explorer_terminals_are_terminal` | Advisor, resolver, and explorer submission tools terminate their own helper runs |
 | `test_plan_task_input_rejects_extra_keys` | Planner nodes contain exactly `id`, `agent_name`, `deps` |
 | `test_executor_agent_uses_request_complex_task_solution` | Executor agent definition no longer lists `submit_request_plan` |
 
@@ -1224,16 +1583,27 @@ More specific task-id checks remain in handlers:
 | `test_tool_error_does_not_terminate_agent_run` | Error result from terminal tool is not stamped as terminal |
 | `test_tool_success_terminates_agent_run` | Successful terminal result receives `does_terminate=True` |
 
-### 8e. Soft reminder tests
+### 8e. Helper and subagent tests
+
+| Test | Purpose |
+| --- | --- |
+| `test_ask_advisor_runs_advisor_and_returns_terminal_feedback` | Blocking advisor request returns `submit_advisor_feedback` output |
+| `test_submit_advisor_feedback_metadata_contains_verdict` | Advisor terminal result is machine-readable |
+| `test_ask_resolver_runs_resolver_and_returns_terminal_result` | Blocking resolver request returns `submit_resolver_result` output |
+| `test_submit_resolver_result_metadata_drives_unresolved_count` | Resolver metadata feeds resolver-limit gate |
+| `test_submit_exploration_result_returns_subagent_findings` | Explorer terminal result flows through `run_subagent` |
+| `test_helper_role_gate_blocks_wrong_helper_terminal_role` | Advisor cannot submit resolver result, etc. |
+
+### 8f. Soft reminder tests
 
 | Test | Purpose |
 | --- | --- |
 | `test_recursive_partial_plan_reminder_fires` | Prior continuation emits planner reminder |
 | `test_after_edit_reminder_fires_once` | First edit emits executor handoff-disabled reminder |
 | `test_resolver_limit_reminder_fires_at_four` | Warning emitted before success is blocked |
-| `test_hard_and_soft_gates_share_history_helpers` | Regression guard against drift |
+| `test_hard_and_soft_gates_match_conditions` | Regression guard against drift |
 
-### 8f. Integration tests
+### 8g. Integration tests
 
 Use the existing Phase 02 fake launcher/orchestrator setup:
 
@@ -1248,9 +1618,10 @@ Recommended commands:
 
 ```bash
 uv run pytest backend/tests/test_tools/test_submission_tool_registration.py -q
-uv run pytest backend/tests/test_tools/test_submission_plan_validation.py -q
+uv run pytest backend/tests/test_tools/test_submission_planner_tools.py -q
 uv run pytest backend/tests/test_tools/test_submission_tool_gates.py -q
 uv run pytest backend/tests/test_tools/test_submission_terminal_routing.py -q
+uv run pytest backend/tests/test_tools/test_submission_helper_tools.py -q
 uv run pytest backend/tests/test_tools/test_submission_soft_reminders.py -q
 uv run pytest backend/tests/task_center/lifecycle/test_phase03_submission_integration.py -q
 uv run ruff check backend/src/tools/submission backend/src/tools/core backend/src/agents/main_agent backend/tests/test_tools backend/tests/task_center
@@ -1273,44 +1644,58 @@ moving to the next one.
    schemas and terminal flags are visible.
 4. Add registration/schema tests.
 
-### Wave 2 - Shared context and history helpers
+### Wave 2 - Runtime history injection and rule-local reads
 
-1. Create `tools/submission/context.py`.
-2. Create `tools/submission/history.py`.
-3. Add tests for current task -> graph -> request resolution.
-4. Add tests for edit detection and resolver unresolved-count parsing.
+1. Inject active run history into `QueryContext.conversation_messages` and copy
+   it into per-call tool metadata.
+2. Add tests for current task -> graph -> request resolution in the relevant
+   hook or tool handler tests.
+3. Add tests for edit detection and resolver unresolved-count parsing in the
+   hook and notification-trigger tests.
 
 ### Wave 3 - Planner plan validation
 
-1. Create `tools/submission/plan_validation.py`.
-2. Implement exact task spec coverage, known agent checks, and DAG validation.
-3. Implement `submit_full_plan` and `submit_partial_plan` handlers.
-4. Add planner validation and routing tests.
+1. Implement exact task spec coverage, known agent checks, and DAG validation
+   beside the planner tool handlers.
+2. Implement `submit_full_plan` and `submit_partial_plan` handlers.
+3. Add planner validation and routing tests.
 
-### Wave 4 - Generator and evaluator terminal handlers
+### Wave 4 - Generator, evaluator, helper, and subagent handlers
 
 1. Implement executor success/failure terminals.
 2. Implement verifier success/failure terminals.
 3. Implement evaluator success/failure terminals.
-4. Add direct routing tests for `GeneratorSubmission` and
+4. Implement `ask_advisor` and `submit_advisor_feedback`.
+5. Implement `ask_resolver` and `submit_resolver_result`.
+6. Implement `submit_exploration_result`.
+7. Add direct routing tests for `GeneratorSubmission` and
    `EvaluatorSubmission`.
+8. Add helper/subagent terminal-result tests.
 
 ### Wave 5 - Hard gates
 
-1. Implement `HarnessRoleGate`.
-2. Implement `RecursivePartialPlanGate`.
-3. Implement `RequestComplexTaskBeforeEditGate`.
-4. Implement `ResolverSuccessLimitGate`.
-5. Attach gates to the relevant tools.
-6. Add prehook enforcement tests.
+1. Implement `hooks/harness_role_gate.py`.
+2. Implement `hooks/recursive_partial_plan_gate.py`.
+3. Implement `hooks/request_complex_task_before_edit_gate.py`.
+4. Implement `hooks/resolver_success_limit_gate.py`.
+5. Implement `hooks/helper_request_gate.py`.
+6. Implement `hooks/helper_role_gate.py`.
+7. Attach gates to the relevant tools.
+8. Add prehook enforcement tests.
 
 ### Wave 6 - Soft reminders and agent prompt updates
 
-1. Implement `tools/submission/reminders.py`.
-2. Wire reminders into harness agent launches or copied agent definitions.
-3. Update executor `agent.md` from `submit_request_plan` to
+1. Implement `notification_triggers/recursive_partial_plan.py`.
+2. Implement `notification_triggers/request_complex_task_after_edit.py`.
+3. Implement `notification_triggers/resolver_limit.py`.
+4. Export `make_harness_gate_reminders()` from
+   `notification_triggers/__init__.py`.
+5. Wire the harness reminder rules into harness agent launches or copied agent
+   definitions.
+6. Update executor `agent.md` from `submit_request_plan` to
    `request_complex_task_solution`.
-4. Add reminder tests and agent-definition tests.
+7. Update helper/subagent prompt schema wording where needed.
+8. Add reminder tests and agent-definition tests.
 
 ### Wave 7 - Integration smoke
 
@@ -1334,6 +1719,8 @@ moving to the next one.
 | Malformed plans fail inline without marking the harness graph failed | planner validation tests and integration smoke |
 | Accepted planner submissions persist graph contract through orchestrator | full/partial planner routing tests |
 | Accepted generator and evaluator terminals use Phase 02 apply surface | generator/evaluator routing tests |
+| Helper-agent request tools return helper terminal results without graph mutation | helper tool tests |
+| Explorer subagent terminal result is returned through `run_subagent` | explorer terminal test |
 | Soft reminders match hard prehook behavior | soft reminder tests |
 | Executor public contract uses `request_complex_task_solution` | agent-definition registration test |
 
@@ -1358,8 +1745,8 @@ production launcher exists.
 the intended metadata shape and a JSON fallback, but final resolver semantics
 may shift when helper-agent execution is implemented.
 
-Mitigation: keep resolver history parsing in one file and cover it with tests
-using both metadata and JSON-output fixtures.
+Mitigation: cover resolver count inference in both the hard gate and soft
+trigger tests using metadata and JSON-output fixtures.
 
 ### 11c. `shell` as an edit tool may be conservative
 
@@ -1367,8 +1754,9 @@ The after-edit gate treats any `shell` call as an edit because shell can mutate
 the workspace. This may block legitimate before-edit diagnostics executed via
 shell.
 
-Mitigation: start conservative. If this hurts real workflows, reuse Daytona
-shell prehook command classification to distinguish read-only shell commands.
+Mitigation: start conservative. If this hurts real workflows, extract or reuse
+Daytona shell prehook command classification to distinguish read-only shell
+commands instead of adding another parser.
 
 ### 11d. Legacy `submit_request_plan`
 
@@ -1384,16 +1772,16 @@ Planner handler validation returns user-facing `ToolResult` errors. The
 orchestrator still raises `GraphInvariantViolation` for impossible internal
 states. Avoid duplicating all orchestrator checks in the tool layer.
 
-Mitigation: validate public input shape in `plan_validation.py`; let
-orchestrator assertions protect persisted state and stage correctness.
+Mitigation: validate public input shape in planner-local schemas and handlers;
+let orchestrator assertions protect persisted state and stage correctness.
 
 ### 11f. Soft reminders can drift from hard gates
 
 The soft layer is advisory. If it reimplements logic separately, it can drift.
 
-Mitigation: both reminders and prehooks must call the same helpers in
-`context.py` and `history.py`; add tests that compare representative hard and
-soft conditions.
+Mitigation: matching hook and notification-trigger files should use the same
+injected runtime fields and keep rule-specific inference local to that pair of
+files. Add tests that compare representative hard and soft conditions.
 
 ### 11g. `request_complex_task_solution` body is Phase 04
 
@@ -1403,6 +1791,16 @@ request handoff works. A successful terminal handoff should not be faked.
 Mitigation: inject the Phase 04 handoff handler through metadata. Until that is
 present, return an explicit non-terminal error from the handler after gates
 pass.
+
+### 11h. Helper runs are blocking but not graph tasks
+
+Advisor, resolver, and explorer terminal results return to their caller, while
+planner/generator/evaluator terminals mutate graph state. Mixing these paths
+would make helper output accidentally close or fail a `HarnessGraph`.
+
+Mitigation: keep helper tool implementations in `tools/submission/helper_agent`
+and `tools/submission/subagent`, avoid `HarnessRoleGate` on helper terminals,
+and test that helper request tools do not call `HarnessGraphOrchestrator`.
 
 ---
 
