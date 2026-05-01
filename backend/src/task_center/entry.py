@@ -21,6 +21,7 @@ from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.predicates import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
+from task_center.context_engine.scope import ContextScope
 from task_center.harness_graph.factory import make_harness_graph_orchestrator_factory
 from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
@@ -267,17 +268,17 @@ class TaskCenterEntryCoordinator:
         task_center_run_id: str,
     ) -> None:
         try:
-            runtime.agent_launcher.launch(
-                AgentLaunch(
-                    task_id=entry_graph.task_id,
-                    task_center_run_id=task_center_run_id,
-                    harness_graph_id=entry_graph.graph_id,
-                    role=HarnessTaskRole.GENERATOR,
-                    agent_name=ENTRY_AGENT_NAME,
-                    task_input=self._prompt,
-                    needs=(),
-                )
+            launch = self._build_entry_launch(
+                runtime=runtime,
+                entry_graph=entry_graph,
+                task_center_run_id=task_center_run_id,
             )
+            if launch.context_packet_id is not None:
+                self._task_store.set_task_context_packet_id(
+                    entry_graph.task_id,
+                    context_packet_id=launch.context_packet_id,
+                )
+            runtime.agent_launcher.launch(launch)
         except Exception:
             self._graph_store.close(
                 entry_graph.graph_id,
@@ -286,6 +287,45 @@ class TaskCenterEntryCoordinator:
             )
             entry_graph.manager.handle_harness_graph_closed(entry_graph.graph_id)
             raise
+
+    def _build_entry_launch(
+        self,
+        *,
+        runtime: HarnessGraphRuntime,
+        entry_graph: EntryHarnessGraph,
+        task_center_run_id: str,
+    ) -> AgentLaunch:
+        composer = runtime.composer
+        if composer is None:
+            return AgentLaunch(
+                task_id=entry_graph.task_id,
+                task_center_run_id=task_center_run_id,
+                harness_graph_id=entry_graph.graph_id,
+                role=HarnessTaskRole.GENERATOR,
+                agent_name=ENTRY_AGENT_NAME,
+                task_input=self._prompt,
+                needs=(),
+                complex_task_request_id=entry_graph.complex_task_request_id,
+            )
+        bundle = composer.compose(
+            base_agent_name=ENTRY_AGENT_NAME,
+            scope=ContextScope(
+                request_id=entry_graph.complex_task_request_id,
+                task_id=entry_graph.task_id,
+            ),
+        )
+        return AgentLaunch(
+            task_id=entry_graph.task_id,
+            task_center_run_id=task_center_run_id,
+            harness_graph_id=entry_graph.graph_id,
+            role=HarnessTaskRole.GENERATOR,
+            agent_name=bundle.agent_def.name,
+            task_input=bundle.task_input,
+            needs=(),
+            system_prompt=bundle.system_prompt,
+            context_packet_id=bundle.context_packet_id,
+            complex_task_request_id=entry_graph.complex_task_request_id,
+        )
 
 
 def _assert_stores_ready(

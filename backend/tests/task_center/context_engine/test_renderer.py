@@ -89,35 +89,6 @@ def test_low_blocks_compressed_before_medium_blocks():
     assert "M" * 4_000 in out
 
 
-def test_inherited_blocks_grouped_under_parent_context_section():
-    blocks = [
-        ContextBlock(
-            kind="parent_question",
-            priority=ContextPriority.REQUIRED,
-            text="question",
-        ),
-        ContextBlock(
-            kind="segment_goal",
-            priority=ContextPriority.HIGH,
-            text="parent goal",
-            metadata={"inherited_from_parent": "true"},
-        ),
-        ContextBlock(
-            kind="prior_segment_summary",
-            priority=ContextPriority.MEDIUM,
-            text="parent summary",
-            metadata={"inherited_from_parent": "true"},
-        ),
-    ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
-    parent_idx = out.find("# Parent context")
-    assert parent_idx > 0, "expected '# Parent context' section"
-    assert out.find("parent goal") > parent_idx
-    assert out.find("parent summary") > parent_idx
-    # Helper-owned parent_question renders before the Parent context heading.
-    assert out.find("question") < parent_idx
-
-
 def test_block_subtitle_metadata_renders_under_heading():
     blocks = [
         ContextBlock(

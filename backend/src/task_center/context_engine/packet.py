@@ -43,7 +43,6 @@ class ContextBlockKind(StrEnum):
     COMPLETED_TASK_SUMMARY = "completed_task_summary"
     ARTIFACT_REFERENCE = "artifact_reference"
     ENTRY_REQUEST = "entry_request"
-    PARENT_QUESTION = "parent_question"
     CAPABILITY_NOTE = "capability_note"
 
 

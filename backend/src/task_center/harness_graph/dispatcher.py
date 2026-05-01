@@ -156,14 +156,18 @@ class HarnessGraphDispatcher:
             task_id, status=HarnessTaskStatus.RUNNING.value
         )
         try:
-            runtime.agent_launcher.launch(
-                self._build_generator_launch(
-                    graph=graph,
-                    task=task,
-                    task_id=task_id,
-                    base_agent_name=agent_name,
-                )
+            launch = self._build_generator_launch(
+                graph=graph,
+                task=task,
+                task_id=task_id,
+                base_agent_name=agent_name,
             )
+            if launch.context_packet_id is not None:
+                runtime.task_store.set_task_context_packet_id(
+                    task_id,
+                    context_packet_id=launch.context_packet_id,
+                )
+            runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
                 "HarnessGraphDispatcher: generator launch failed",
@@ -229,6 +233,7 @@ class HarnessGraphDispatcher:
             summaries=[],
             needs=list(graph.generator_task_ids),
             task_center_harness_graph_id=graph.id,
+            context_packet_id=launch.context_packet_id,
             spawn_reason="harness_graph_evaluator",
         )
         runtime.graph_store.set_evaluator_task_id(graph.id, task_id)

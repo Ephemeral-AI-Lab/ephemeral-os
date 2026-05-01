@@ -52,7 +52,7 @@ def _make_packet(packet_id: str = "pkt-1") -> ContextPacket:
                 source_kind="task_segment",
                 metadata={
                     "segment_sequence_no": "1",
-                    "inherited_from_parent": "true",
+                    "source_label": "accepted",
                 },
             ),
         ],
@@ -70,9 +70,9 @@ def test_round_trip_preserves_blocks_and_metadata(packet_store):
     assert loaded.target_role == "planner"
     assert loaded.canonical_refs.request_id == "req-A"
     assert len(loaded.blocks) == 2
-    inherited = loaded.blocks[1]
-    assert inherited.metadata["segment_sequence_no"] == "1"
-    assert inherited.metadata["inherited_from_parent"] == "true"
+    prior = loaded.blocks[1]
+    assert prior.metadata["segment_sequence_no"] == "1"
+    assert prior.metadata["source_label"] == "accepted"
     assert loaded.metadata["is_initial_segment"] == "false"
     assert loaded.source_ids == ["seg-1", "seg-prior"]
 

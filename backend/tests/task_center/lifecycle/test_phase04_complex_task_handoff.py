@@ -16,7 +16,7 @@ from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
-from task_center.harness_graph.runtime import HarnessAgentLaunch, HarnessGraphRuntime
+from task_center.harness_graph.runtime import AgentLaunch, HarnessGraphRuntime
 from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
@@ -31,14 +31,14 @@ from task_center.task import HarnessTaskRole, HarnessTaskStatus, planner_task_id
 
 class _FakeLauncher:
     def __init__(self) -> None:
-        self.launches: list[HarnessAgentLaunch] = []
+        self.launches: list[AgentLaunch] = []
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         self.launches.append(launch)
 
 
 class _FailingLauncher:
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         del launch
         raise RuntimeError("delegated planner launch boom")
 

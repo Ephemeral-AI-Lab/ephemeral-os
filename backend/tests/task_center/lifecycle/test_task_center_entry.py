@@ -17,14 +17,19 @@ async def test_entry_executor_runs_inside_task_center_graph(
     segment_store,
     graph_store,
     task_store,
+    context_packet_store,
     tmp_path,
 ) -> None:
-    previous = {name: get_definition(name) for name in ("executor", "planner")}
+    previous = {
+        name: get_definition(name)
+        for name in ("entry_executor", "executor", "planner")
+    }
     register_definition(
         AgentDefinition(
-            name="executor",
-            description="test executor",
+            name="entry_executor",
+            description="test entry executor",
             role="executor",
+            context_recipe="entry_executor_v1",
             terminals=["submit_execution_success", "submit_execution_failure"],
         )
     )
@@ -39,8 +44,7 @@ async def test_entry_executor_runs_inside_task_center_graph(
     captured: list[dict[str, object]] = []
 
     async def fake_runner(*args, **kwargs):
-        del args
-        captured.append(kwargs)
+        captured.append({**kwargs, "input_query": args[1]})
         agent_def = kwargs["agent_def"]
         return EphemeralRunResult(
             status="completed",
@@ -60,6 +64,7 @@ async def test_entry_executor_runs_inside_task_center_graph(
             request_store=request_store,
             segment_store=segment_store,
             graph_store=graph_store,
+            context_packet_store=context_packet_store,
             runner=fake_runner,
         )
         await entry.launcher.wait_for_idle()
@@ -76,9 +81,15 @@ async def test_entry_executor_runs_inside_task_center_graph(
     assert request.requested_by_task_id == entry.entry_task_id
     assert task is not None
     assert task["role"] == "generator"
-    assert task["agent_name"] == "executor"
+    assert task["agent_name"] == "entry_executor"
     assert task["task_center_harness_graph_id"] == entry.harness_graph_id
+    assert task["context_packet_id"] is not None
+    packet = context_packet_store.get(task["context_packet_id"])
+    assert packet is not None
+    assert packet.blocks[0].kind == "entry_request"
     assert run is not None
     assert run["status"] == "failed"
-    assert captured[0]["agent_def"].name == "executor"
+    assert captured[0]["agent_def"].name == "entry_executor"
+    assert "# Entry request" in captured[0]["input_query"]
+    assert "do a complex thing" in captured[0]["input_query"]
     assert captured[0]["extra_tool_metadata"].task_center_task_id == entry.entry_task_id

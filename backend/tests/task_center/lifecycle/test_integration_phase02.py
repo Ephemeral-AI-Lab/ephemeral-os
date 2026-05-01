@@ -13,7 +13,7 @@ from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
 from task_center.harness_graph.runtime import (
-    HarnessAgentLaunch,
+    AgentLaunch,
     HarnessGraphRuntime,
 )
 from task_center.task import (
@@ -31,9 +31,9 @@ from task_center.segment.segment import TaskSegmentStatus
 
 class _FakeLauncher:
     def __init__(self) -> None:
-        self.launches: list[HarnessAgentLaunch] = []
+        self.launches: list[AgentLaunch] = []
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         self.launches.append(launch)
 
 

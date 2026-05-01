@@ -2,8 +2,8 @@
 
 The resolver walks the base agent's ``variants:`` list in declared order and
 returns the first matching target. Empty variants take a fast path. The
-resolver is role-agnostic — every kind of agent (planner, generator,
-evaluator, helper) goes through the same code path.
+resolver is role-agnostic — every composed harness role goes through the
+same code path.
 """
 
 from __future__ import annotations

@@ -37,8 +37,7 @@ class ContextEngineDeps:
     graph_store: "HarnessGraphStore"
     task_store: "TaskCenterStore"
 
-    # Helper recipes (advisor / resolver) load parent packets from this store.
-    # Optional so non-helper recipes can be tested without spinning one up.
+    # Optional: when supplied, the composer persists rendered packet inputs.
     context_packet_store: object | None = None
 
 

@@ -52,6 +52,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
         "summaries": record.summaries or [],
         "needs": record.needs or [],
         "task_center_harness_graph_id": record.task_center_harness_graph_id,
+        "context_packet_id": record.context_packet_id,
         "fix_target_id": record.fix_target_id,
         "spawn_reason": record.spawn_reason,
         "created_at": record.created_at.isoformat() if record.created_at else None,
@@ -156,6 +157,7 @@ class TaskCenterStore(SyncStoreMixin):
         needs: list[str],
         task_center_harness_graph_id: str | None,
         agent_name: str | None = None,
+        context_packet_id: str | None = None,
         fix_target_id: str | None = None,
         spawn_reason: str | None = None,
     ) -> None:
@@ -173,6 +175,7 @@ class TaskCenterStore(SyncStoreMixin):
                     summaries=summaries,
                     needs=needs,
                     task_center_harness_graph_id=task_center_harness_graph_id,
+                    context_packet_id=context_packet_id,
                     fix_target_id=fix_target_id,
                     spawn_reason=spawn_reason,
                     created_at=now,
@@ -187,6 +190,7 @@ class TaskCenterStore(SyncStoreMixin):
                 record.summaries = summaries
                 record.needs = needs
                 record.task_center_harness_graph_id = task_center_harness_graph_id
+                record.context_packet_id = context_packet_id
                 record.fix_target_id = fix_target_id
                 record.spawn_reason = spawn_reason
                 record.updated_at = now
@@ -297,6 +301,22 @@ class TaskCenterStore(SyncStoreMixin):
             record.status = status
             if summary is not None:
                 record.summaries = [*(record.summaries or []), summary]
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)
+
+    def set_task_context_packet_id(
+        self,
+        task_id: str,
+        *,
+        context_packet_id: str | None,
+    ) -> SerializedRow:
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            record.context_packet_id = context_packet_id
             record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)

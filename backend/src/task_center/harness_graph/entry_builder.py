@@ -12,12 +12,13 @@ from task_center.harness_graph.runtime import HarnessGraphRuntime
 from task_center.segment.manager import TaskSegmentManager
 from task_center.task import HarnessTaskRole, HarnessTaskStatus
 
-ENTRY_AGENT_NAME = "executor"
+ENTRY_AGENT_NAME = "entry_executor"
 ENTRY_SPAWN_REASON = "entry_executor"
 
 
 @dataclass(frozen=True, slots=True)
 class EntryHarnessGraph:
+    complex_task_request_id: str
     segment_id: str
     graph_id: str
     task_id: str
@@ -66,6 +67,7 @@ class EntryHarnessGraphBuilder:
         )
         self._runtime.orchestrator_registry.register(orchestrator)
         return EntryHarnessGraph(
+            complex_task_request_id=complex_task_request_id,
             segment_id=segment.id,
             graph_id=graph.id,
             task_id=entry_task_id,

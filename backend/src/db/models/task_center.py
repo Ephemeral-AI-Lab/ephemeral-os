@@ -89,6 +89,7 @@ class TaskCenterTaskRecord(Base):
     task_center_harness_graph_id: Mapped[str | None] = mapped_column(
         String(96), nullable=True
     )
+    context_packet_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     # Stage 6: fix-executor recovery wiring (round-tripped to/from
     # ``Task.fix_target_id`` / ``Task.spawn_reason``).
     fix_target_id: Mapped[str | None] = mapped_column(String(96), nullable=True)

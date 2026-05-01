@@ -18,7 +18,7 @@ from task_center.harness_graph.graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )
-from task_center.harness_graph.runtime import HarnessAgentLaunch, HarnessGraphRuntime
+from task_center.harness_graph.runtime import AgentLaunch, HarnessGraphRuntime
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.segment.segment import (
     TaskSegmentCreationReason,
@@ -38,9 +38,9 @@ from task_center.task import (
 
 class _FakeLauncher:
     def __init__(self) -> None:
-        self.launches: list[HarnessAgentLaunch] = []
+        self.launches: list[AgentLaunch] = []
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         self.launches.append(launch)
 
 
@@ -49,7 +49,7 @@ class _FailOnLaunchNumber(_FakeLauncher):
         super().__init__()
         self._fail_on = fail_on
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         super().launch(launch)
         if len(self.launches) == self._fail_on:
             raise RuntimeError("planned launch failure")

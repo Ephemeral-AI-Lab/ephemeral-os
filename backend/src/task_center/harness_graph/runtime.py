@@ -36,11 +36,6 @@ class AgentLaunch:
     complex_task_request_id: str | None = None
 
 
-# Back-compat alias — every existing call site continues to work without
-# touching unrelated code. Schedule removal once all consumers migrate.
-HarnessAgentLaunch = AgentLaunch
-
-
 class HarnessAgentLauncher(Protocol):
     """Launches or queues one harness agent task."""
 

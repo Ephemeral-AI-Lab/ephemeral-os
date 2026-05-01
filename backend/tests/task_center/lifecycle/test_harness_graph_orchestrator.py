@@ -16,7 +16,7 @@ from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
 from task_center.harness_graph.runtime import (
-    HarnessAgentLaunch,
+    AgentLaunch,
     HarnessGraphRuntime,
 )
 from task_center.task import (
@@ -36,9 +36,9 @@ from task_center.segment.segment import TaskSegmentCreationReason
 
 class _FakeLauncher:
     def __init__(self) -> None:
-        self.launches: list[HarnessAgentLaunch] = []
+        self.launches: list[AgentLaunch] = []
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         self.launches.append(launch)
 
 
@@ -47,7 +47,7 @@ class _FailingRoleLauncher(_FakeLauncher):
         super().__init__()
         self._role = role
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         if launch.role == self._role:
             raise RuntimeError(f"{self._role.value} launch failed")
         super().launch(launch)

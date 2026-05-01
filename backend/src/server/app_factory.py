@@ -26,6 +26,7 @@ from db.engine import get_session_factory, initialize_db
 from db.stores import (
     AgentRunStore,
     ComplexTaskRequestStore,
+    ContextPacketStore,
     HarnessGraphStore,
     ModelStore,
     TaskCenterStore,
@@ -194,6 +195,7 @@ model_store = ModelStore()
 complex_task_request_store = ComplexTaskRequestStore()
 task_segment_store = TaskSegmentStore()
 harness_graph_store = HarnessGraphStore()
+context_packet_store = ContextPacketStore()
 
 
 def _model_registry_path() -> Path:
@@ -225,6 +227,8 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
         task_segment_store.initialize(sf)
     if not harness_graph_store.is_ready:
         harness_graph_store.initialize(sf)
+    if not context_packet_store.is_ready:
+        context_packet_store.initialize(sf)
 
     model_store.seed_from_json(str(_model_registry_path()))
     return sf

@@ -109,6 +109,7 @@ class HarnessGraphOrchestrator:
                 summaries=[],
                 needs=[],
                 task_center_harness_graph_id=graph.id,
+                context_packet_id=launch.context_packet_id,
                 spawn_reason="harness_graph_planner",
             )
             runtime.graph_store.set_planner_task_id(graph.id, task_id)

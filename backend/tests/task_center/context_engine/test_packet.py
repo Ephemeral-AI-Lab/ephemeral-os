@@ -38,10 +38,10 @@ def test_block_metadata_round_trip():
         kind="prior_segment_specification",
         priority=ContextPriority.HIGH,
         text="spec",
-        metadata={"segment_sequence_no": "2", "inherited_from_parent": "true"},
+        metadata={"segment_sequence_no": "2", "source_label": "accepted"},
     )
     assert block.metadata["segment_sequence_no"] == "2"
-    assert block.metadata["inherited_from_parent"] == "true"
+    assert block.metadata["source_label"] == "accepted"
 
 
 def test_packet_auto_generates_id():

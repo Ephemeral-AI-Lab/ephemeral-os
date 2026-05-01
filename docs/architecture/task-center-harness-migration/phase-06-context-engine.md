@@ -139,12 +139,14 @@ class ContextEngine:
     ) -> ComplexTaskSummary: ...
 ```
 
-The shipped recipes — `planner_v1`, `generator_v1`, `evaluator_v1`,
-`entry_executor_v1`, `advisor_v1`, `resolver_v1` — cover every role
-previously exposed via the role-keyed methods above. Each recipe declares
+The shipped recipes — `planner_v1`, `generator_v1`, `evaluator_v1`, and
+`entry_executor_v1` — cover the TaskCenter-owned harness roles currently
+launched through `ContextComposer`. Each recipe declares
 `required_scope_fields`; the engine validates the scope before invoking the
 build callable. Prompt rendering remains a downstream formatting step
-(see :class:`MarkdownPromptRenderer`).
+(see :class:`MarkdownPromptRenderer`). Helper agents (`advisor`, `resolver`,
+and subagents) still use their existing tool-specific prompt paths until their
+tool handlers are explicitly rewired through the composer.
 
 ## Context packet model
 
@@ -194,7 +196,6 @@ Suggested block kinds:
 - `failed_graph_landscape`,
 - `resolver_summary`,
 - `artifact_reference`,
-- `parent_question` *(used by `advisor_v1` / `resolver_v1` helper recipes)*,
 - `capability_note` *(emitted by `AgentSelection.required_context_blocks` when a variant changes the model-facing tool/prose surface — partial-plan disable is the first user)*,
 - `close_report`.
 

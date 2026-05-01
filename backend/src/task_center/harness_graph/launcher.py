@@ -13,7 +13,6 @@ from message.stream_events import StreamEvent
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.runtime import (
     AgentLaunch,
-    HarnessAgentLaunch,
     HarnessGraphRuntime,
 )
 from task_center.task import (
@@ -62,7 +61,7 @@ class EphemeralHarnessAgentLauncher:
         self._runner = runner
         self._pending: set[asyncio.Task[None]] = set()
 
-    def launch(self, launch: HarnessAgentLaunch) -> None:
+    def launch(self, launch: AgentLaunch) -> None:
         agent_def = self._resolve_agent_definition(launch.agent_name)
         try:
             loop = asyncio.get_running_loop()
@@ -152,7 +151,7 @@ class EphemeralHarnessAgentLauncher:
 
     async def _report_unfinished_running_task(
         self,
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
@@ -180,7 +179,7 @@ class EphemeralHarnessAgentLauncher:
     @staticmethod
     def _mark_unowned_task_exhausted(
         runtime: HarnessGraphRuntime,
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
@@ -200,7 +199,7 @@ class EphemeralHarnessAgentLauncher:
     @staticmethod
     def _report_planner_exhaustion(
         orchestrator: "HarnessGraphOrchestrator",
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
@@ -216,7 +215,7 @@ class EphemeralHarnessAgentLauncher:
     @staticmethod
     def _report_generator_exhaustion(
         orchestrator: "HarnessGraphOrchestrator",
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
@@ -233,7 +232,7 @@ class EphemeralHarnessAgentLauncher:
     @staticmethod
     def _report_evaluator_exhaustion(
         orchestrator: "HarnessGraphOrchestrator",
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:

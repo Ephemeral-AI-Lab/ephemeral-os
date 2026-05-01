@@ -232,6 +232,7 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
 
                 from server.app_factory import (
                     complex_task_request_store,
+                    context_packet_store,
                     harness_graph_store,
                     task_center_store,
                     task_segment_store,
@@ -242,6 +243,7 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     and complex_task_request_store.is_ready
                     and task_segment_store.is_ready
                     and harness_graph_store.is_ready
+                    and context_packet_store.is_ready
                 ):
                     raise RuntimeError("TaskCenter stores are not ready.")
 
@@ -256,6 +258,7 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     request_store=complex_task_request_store,
                     segment_store=task_segment_store,
                     graph_store=harness_graph_store,
+                    context_packet_store=context_packet_store,
                 )
                 await runtime.emit(
                     BackendEvent(
