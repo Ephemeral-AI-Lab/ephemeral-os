@@ -102,7 +102,7 @@ def _seed_running_graph(graph_store, segment_id, *, sequence_no: int):
 # ---------------------------------------------------------------------------
 
 
-def test_seg1_emits_one_segment_goal_block_with_initial_metadata(
+def test_seg1_emits_one_segment_goal_block_with_initial_subtitle(
     deps_with_stores, request_store, segment_store, graph_store,
     task_center_run_id,
 ):
@@ -120,7 +120,10 @@ def test_seg1_emits_one_segment_goal_block_with_initial_metadata(
     )
     kinds = [b.kind for b in packet.blocks]
     assert kinds == ["segment_goal"]
-    assert packet.metadata["is_initial_segment"] == "true"
+    segment_goal = packet.blocks[0]
+    assert segment_goal.metadata.get("subtitle", "").startswith(
+        "*(first segment"
+    )
     assert packet.target_id == g.id
 
 
@@ -158,7 +161,8 @@ def test_seg2_emits_complex_goal_segment_goal_and_one_prior_pair(
         "prior_segment_specification",
         "prior_segment_summary",
     ]
-    assert packet.metadata["is_initial_segment"] == "false"
+    segment_goal = packet.blocks[1]
+    assert "subtitle" not in segment_goal.metadata
     prior_spec = packet.blocks[2]
     assert prior_spec.priority == ContextPriority.HIGH
     assert prior_spec.metadata["segment_sequence_no"] == "1"

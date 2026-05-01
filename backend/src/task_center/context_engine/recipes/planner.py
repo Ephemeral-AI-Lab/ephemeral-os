@@ -50,11 +50,9 @@ def _planner_v1_build(
             f"TaskSegment {scope.segment_id!r} not found"
         )
 
-    metadata: dict[str, str] = {}
     blocks: list[ContextBlock] = []
 
     is_initial = segment.sequence_no == 1
-    metadata["is_initial_segment"] = "true" if is_initial else "false"
     if is_initial:
         blocks.append(_segment_goal_block(segment, is_initial=True))
     else:
@@ -83,7 +81,6 @@ def _planner_v1_build(
             harness_graph_id=scope.harness_graph_id,
         ),
         blocks=blocks,
-        metadata=metadata,
         source_ids=[b.source_id for b in blocks if b.source_id],
     )
 
