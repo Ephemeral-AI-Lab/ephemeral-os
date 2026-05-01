@@ -17,8 +17,15 @@ def _load_one(directory: Path):
     return loaded[0]
 
 
+def _load_named(directory: Path, name: str):
+    loaded = load_agents_dir(directory)
+    by_name = {a.name: a for a in loaded}
+    assert name in by_name, f"agent {name!r} not found in {directory}"
+    return by_name[name]
+
+
 def test_harness_agent_markdown_declares_notification_triggers() -> None:
-    planner = _load_one(AGENTS_ROOT / "main_agent" / "planner")
+    planner = _load_named(AGENTS_ROOT / "main_agent" / "planner", "planner")
     executor = _load_one(AGENTS_ROOT / "main_agent" / "generator" / "executor")
     verifier = _load_one(AGENTS_ROOT / "main_agent" / "generator" / "verifier")
     evaluator = _load_one(AGENTS_ROOT / "main_agent" / "evaluator")
