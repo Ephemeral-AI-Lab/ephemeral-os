@@ -37,15 +37,20 @@ class ComplexTaskRequest:
 
 @dataclass(frozen=True, slots=True)
 class ComplexTaskCloseReport:
-    """Final report attached to ``requested_by_task_id`` when the request closes."""
+    """Final report attached to ``requested_by_task_id`` when the request closes.
+
+    ``final_harness_graph_id`` is ``None`` for graph-less entry segments — the
+    entry executor lives in a segment with zero ``HarnessGraph`` rows and
+    closes via the entry-task controller rather than a passing graph.
+    """
 
     complex_task_request_id: str
     requested_by_task_id: str
     outcome: Literal["success", "failed"]
     final_segment_id: str
-    final_harness_graph_id: str
+    final_harness_graph_id: str | None
 
-    def to_final_outcome(self) -> dict[str, str]:
+    def to_final_outcome(self) -> dict[str, str | None]:
         return {
             "outcome": self.outcome,
             "final_segment_id": self.final_segment_id,

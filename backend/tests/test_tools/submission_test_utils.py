@@ -48,6 +48,7 @@ def build_harness_fixture(
     segment_store: Any,
     graph_store: Any,
     task_store: Any,
+    composer: Any,
 ) -> HarnessFixture:
     request = request_store.insert(
         task_center_run_id="run1",
@@ -75,6 +76,7 @@ def build_harness_fixture(
         agent_launcher=launcher,
         orchestrator_registry=registry,
         manager_registry=SegmentManagerRegistry(),
+        composer=composer,
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,

@@ -75,6 +75,8 @@ def _build_orchestrator(
     graph_store,
     task_store,
     task_center_run_id,
+    *,
+    composer,
     launcher=None,
 ):
     graph = _seed_graph(
@@ -89,6 +91,7 @@ def _build_orchestrator(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
+        composer=composer,
     )
     closed: list[str] = []
     orchestrator = HarnessGraphOrchestrator(
@@ -150,10 +153,10 @@ def _evaluator_submission(graph_id: str, outcome: str) -> EvaluatorSubmission:
 
 
 def test_start_creates_planner_task_and_sets_graph_planner_id(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, launcher, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
 
     orchestrator.start()
@@ -168,10 +171,10 @@ def test_start_creates_planner_task_and_sets_graph_planner_id(
 
 
 def test_apply_plan_submission_persists_contract_and_generator_ids(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, launcher, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     tasks = (
@@ -196,10 +199,10 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
 
 
 def test_apply_partial_plan_submission_stores_continuation_goal(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
 
@@ -218,10 +221,10 @@ def test_apply_partial_plan_submission_stores_continuation_goal(
 
 
 def test_apply_planner_failure_marks_task_and_closes_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, registry, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
 
@@ -245,10 +248,10 @@ def test_apply_planner_failure_marks_task_and_closes_graph(
 
 
 def test_apply_generator_success_launches_newly_ready_dependents(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, launcher, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -273,10 +276,10 @@ def test_apply_generator_success_launches_newly_ready_dependents(
 
 
 def test_missing_generator_agent_profile_is_invariant_violation(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -313,7 +316,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
 
 
 def test_generator_launch_failure_marks_task_failed_and_closes_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     launcher = _FailingRoleLauncher(HarnessTaskRole.GENERATOR)
     orchestrator, graph, _, registry, closed = _build_orchestrator(
@@ -323,6 +326,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
         task_store,
         task_center_run_id,
         launcher=launcher,
+        composer=composer,
     )
     orchestrator.start()
 
@@ -346,7 +350,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
 
 
 def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     launcher = _FailingRoleLauncher(HarnessTaskRole.EVALUATOR)
     orchestrator, graph, _, registry, closed = _build_orchestrator(
@@ -356,6 +360,7 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
         task_store,
         task_center_run_id,
         launcher=launcher,
+        composer=composer,
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -380,10 +385,10 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
 
 
 def test_waiting_complex_task_prevents_generator_quiescence(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -409,10 +414,10 @@ def test_waiting_complex_task_prevents_generator_quiescence(
 
 
 def test_complex_task_close_report_success_resumes_waiting_generator(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -449,10 +454,10 @@ def test_complex_task_close_report_success_resumes_waiting_generator(
 
 
 def test_complex_task_close_report_failure_blocks_dependents_and_closes_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -494,10 +499,10 @@ def test_complex_task_close_report_failure_blocks_dependents_and_closes_graph(
 
 
 def test_apply_generator_failure_blocks_pending_descendants(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -523,10 +528,10 @@ def test_apply_generator_failure_blocks_pending_descendants(
 
 
 def test_generator_failure_waits_then_closes_after_quiescence(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -552,10 +557,10 @@ def test_generator_failure_waits_then_closes_after_quiescence(
 
 
 def test_all_generators_done_spawns_evaluator(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, launcher, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -574,10 +579,10 @@ def test_all_generators_done_spawns_evaluator(
 
 
 def test_apply_evaluator_success_closes_graph_passed(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -600,10 +605,10 @@ def test_apply_evaluator_success_closes_graph_passed(
 
 
 def test_apply_evaluator_failure_closes_graph_failed(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, closed = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -626,10 +631,10 @@ def test_apply_evaluator_failure_closes_graph_failed(
 
 
 def test_orchestrator_rejects_submit_request_plan_shape(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
 
@@ -638,10 +643,10 @@ def test_orchestrator_rejects_submit_request_plan_shape(
 
 
 def test_orchestrator_never_creates_retry_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ):
     orchestrator, graph, _, _, _ = _build_orchestrator(
-        request_store, segment_store, graph_store, task_store, task_center_run_id
+        request_store, segment_store, graph_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(

@@ -44,7 +44,7 @@ class _FailingLauncher:
 
 
 def _build_runtime(
-    request_store, segment_store, graph_store, task_store, launcher=None
+    request_store, segment_store, graph_store, task_store, *, composer, launcher=None
 ) -> HarnessGraphRuntime:
     launcher = launcher or _FakeLauncher()
     registry = HarnessGraphOrchestratorRegistry()
@@ -56,6 +56,7 @@ def _build_runtime(
         agent_launcher=launcher,
         orchestrator_registry=registry,
         manager_registry=SegmentManagerRegistry(),
+        composer=composer,
     )
 
 
@@ -103,10 +104,10 @@ def _seed_outer_generator_task(
 
 
 def test_handoff_creates_request_segment_graph_and_marks_parent_waiting(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_generator_task(
         task_store=task_store,
@@ -144,10 +145,10 @@ def test_handoff_creates_request_segment_graph_and_marks_parent_waiting(
 
 
 def test_handoff_startup_failure_leaves_parent_running(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_generator_task(
         task_store=task_store,
@@ -207,7 +208,7 @@ def test_handoff_startup_failure_leaves_parent_running(
 
 
 def test_handoff_startup_failure_closes_started_graph_and_deregisters_orchestrator(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
         request_store,
@@ -215,6 +216,7 @@ def test_handoff_startup_failure_closes_started_graph_and_deregisters_orchestrat
         graph_store,
         task_store,
         launcher=_FailingLauncher(),
+        composer=composer,
     )
     parent_task_id, parent_graph_id = _seed_outer_generator_task(
         task_store=task_store,
@@ -251,10 +253,10 @@ def test_handoff_startup_failure_closes_started_graph_and_deregisters_orchestrat
 
 
 def test_handoff_rejects_second_open_child_request_for_same_executor(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_generator_task(
         task_store=task_store,
@@ -289,10 +291,10 @@ def test_handoff_rejects_second_open_child_request_for_same_executor(
 
 
 def test_handoff_rejects_non_running_parent(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_generator_task(
         task_store=task_store,
@@ -314,3 +316,92 @@ def test_handoff_rejects_non_running_parent(
             goal="delegated",
         )
     assert "not running" in str(exc.value)
+
+
+def test_handoff_accepts_entry_mode_caller_with_no_parent_graph(
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+) -> None:
+    """Entry-mode caller has ``parent_harness_graph_id=None``.
+
+    The handoff coordinator must accept that and route the parent-waiting
+    transition through the runtime's :class:`EntryTaskController` so the
+    controller stays the single owner of entry-task state transitions.
+    """
+    from task_center.complex_task.handler import ComplexTaskRequestHandler
+    from task_center.config import HarnessLifecycleConfig
+    from task_center.entry_task_controller import EntryTaskController
+
+    # Seed the entry-mode caller: an entry task with task_center_harness_graph_id=None.
+    entry_task_id = "entry-task-id"
+    entry_request = request_store.insert(
+        task_center_run_id=task_center_run_id,
+        requested_by_task_id=entry_task_id,
+        goal="entry goal",
+    )
+    handler = ComplexTaskRequestHandler(
+        request_store=request_store,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        manager_registry=SegmentManagerRegistry(),
+        config=HarnessLifecycleConfig(),
+    )
+    entry_segment, _ = handler.create_initial_segment_with_manager(
+        complex_task_request_id=entry_request.id
+    )
+    task_store.upsert_task(
+        task_id=entry_task_id,
+        task_center_run_id=task_center_run_id,
+        role=HarnessTaskRole.GENERATOR.value,
+        agent_name="entry_executor",
+        task_input="entry goal",
+        status=HarnessTaskStatus.RUNNING.value,
+        summaries=[],
+        needs=[],
+        task_center_harness_graph_id=None,
+        spawn_reason="entry_executor",
+    )
+    controller = EntryTaskController(
+        task_id=entry_task_id,
+        task_center_run_id=task_center_run_id,
+        complex_task_request_id=entry_request.id,
+        task_segment_id=entry_segment.id,
+        task_store=task_store,
+        segment_store=segment_store,
+        request_handler=handler,
+        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
+    )
+    runtime = HarnessGraphRuntime(
+        request_store=request_store,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        task_store=task_store,
+        agent_launcher=_FakeLauncher(),
+        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
+        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
+        composer=composer,
+        entry_task_controller=controller,
+    )
+
+    coordinator = ComplexTaskHandoffCoordinator(runtime=runtime)
+    result: ComplexTaskHandoffResult = coordinator.start(
+        task_center_run_id=task_center_run_id,
+        parent_task_id=entry_task_id,
+        parent_harness_graph_id=None,
+        goal="solve delegated work",
+    )
+
+    # Entry task is now WAITING_COMPLEX_TASK via the controller.
+    entry_task = task_store.get_task(entry_task_id)
+    assert entry_task is not None
+    assert entry_task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    # Result carries None for parent_harness_graph_id (entry mode).
+    assert result.parent_harness_graph_id is None
+    # Delegated request + segment + graph were all created and started.
+    delegated_request = request_store.get(result.complex_task_request_id)
+    delegated_segment = segment_store.get(result.initial_segment_id)
+    delegated_graph = graph_store.get(result.initial_harness_graph_id)
+    assert delegated_request is not None
+    assert delegated_request.status == ComplexTaskRequestStatus.OPEN
+    assert delegated_segment is not None
+    assert delegated_graph is not None
+    assert runtime.orchestrator_registry.get(delegated_graph.id) is not None

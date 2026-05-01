@@ -45,13 +45,14 @@ async def _noop_emit(event) -> None:
 
 
 async def test_submit_execution_success_calls_apply_generator_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -71,13 +72,14 @@ async def test_submit_execution_success_calls_apply_generator_submission(
 
 
 async def test_submit_execution_failure_calls_apply_generator_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -96,13 +98,14 @@ async def test_submit_execution_failure_calls_apply_generator_submission(
 
 
 async def test_submit_verification_success_calls_apply_generator_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture, agent_name="verifier")
 
@@ -120,13 +123,14 @@ async def test_submit_verification_success_calls_apply_generator_submission(
 
 
 async def test_submit_evaluation_success_calls_apply_evaluator_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     evaluator_id = spawn_evaluator(fixture)
 
@@ -144,13 +148,14 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
 
 
 async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     evaluator_id = spawn_evaluator(fixture)
 
@@ -168,13 +173,14 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
 
 
 async def test_request_complex_task_solution_starts_delegated_request(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -206,13 +212,31 @@ async def test_request_complex_task_solution_starts_delegated_request(
 
 
 async def test_request_complex_task_solution_accepts_any_generator_agent_profile(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
+    from agents import registry as agents_registry
+    from agents.types import AgentDefinition
+
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="custom_generator",
+            description="custom generator for this test",
+            role="generator",
+            context_recipe="generator_v1",
+            terminals=[
+                "request_complex_task_solution",
+                "submit_execution_success",
+                "submit_execution_failure",
+            ],
+        )
+    )
+
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(
         fixture,
@@ -234,13 +258,14 @@ async def test_request_complex_task_solution_accepts_any_generator_agent_profile
 
 
 async def test_request_complex_task_solution_return_updates_outer_generator(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     outer_generator_id = apply_single_generator_plan(fixture)
 

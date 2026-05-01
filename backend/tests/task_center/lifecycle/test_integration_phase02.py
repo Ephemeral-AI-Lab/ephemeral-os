@@ -42,6 +42,8 @@ def _build_handler(
     segment_store,
     graph_store,
     task_store,
+    *,
+    composer,
 ):
     launcher = _FakeLauncher()
     orchestrator_registry = HarnessGraphOrchestratorRegistry()
@@ -54,6 +56,7 @@ def _build_handler(
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
         manager_registry=manager_registry,
+        composer=composer,
     )
     handler = ComplexTaskRequestHandler(
         request_store=request_store,
@@ -117,9 +120,10 @@ def test_full_plan_execution_success_closes_request_success(
     graph_store,
     task_store,
     task_center_run_id,
+    composer,
 ):
     handler, manager_registry, orchestrator_registry = _build_handler(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     request = handler.create_complex_task_request(
         task_center_run_id=task_center_run_id,
@@ -153,9 +157,10 @@ def test_generator_failure_retry_then_evaluator_success(
     graph_store,
     task_store,
     task_center_run_id,
+    composer,
 ):
     handler, manager_registry, orchestrator_registry = _build_handler(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     request = handler.create_complex_task_request(
         task_center_run_id=task_center_run_id,

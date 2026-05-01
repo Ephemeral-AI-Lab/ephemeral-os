@@ -7,13 +7,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from task_center.harness_graph.runtime import HarnessGraphRuntime
 from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.hooks import HookResult
-from tools.submission.context import (
-    HarnessSubmissionContextError,
-    resolve_harness_submission_context,
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,19 +23,42 @@ class HarnessRoleGate:
         tool_input: BaseModel,
         context: ToolExecutionContextService,
     ) -> HookResult[Any]:
-        try:
-            submission_context = resolve_harness_submission_context(context)
-        except HarnessSubmissionContextError as exc:
-            return HookResult.fail(str(exc))
+        runtime = context.get("harness_graph_runtime")
+        if not isinstance(runtime, HarnessGraphRuntime):
+            return HookResult.fail(
+                "Missing harness graph runtime for this TaskCenter submission."
+            )
+        task_id = str(context.get("task_center_task_id") or "")
+        if not task_id or task_id.isspace():
+            return HookResult.fail(
+                "Missing TaskCenter task id for this submission."
+            )
+        task = runtime.task_store.get_task(task_id)
+        if task is None:
+            return HookResult.fail(f"TaskCenter task {task_id!r} was not found.")
 
-        actual_role = str(submission_context.task.get("role") or "")
+        actual_role = str(task.get("role") or "")
         if actual_role != self.expected_role.value:
             return HookResult.fail(
                 f"{self.target_tool} is only valid for "
                 f"{self.expected_role.value} tasks."
             )
-        if submission_context.graph.is_closed:
+
+        # Generator-role tasks may be the graph-less entry executor; the
+        # closed-graph check only applies when there's a graph.
+        graph_id = str(task.get("task_center_harness_graph_id") or "")
+        if self.expected_role != HarnessTaskRole.GENERATOR and not graph_id:
             return HookResult.fail(
-                "This harness graph is already closed; terminal submissions are disabled."
+                f"TaskCenter task {task_id!r} is not attached to a harness graph."
             )
+        if graph_id:
+            graph = runtime.graph_store.get(graph_id)
+            if graph is None:
+                return HookResult.fail(
+                    f"HarnessGraph {graph_id!r} was not found."
+                )
+            if graph.is_closed:
+                return HookResult.fail(
+                    "This harness graph is already closed; terminal submissions are disabled."
+                )
         return HookResult.pass_(tool_input)

@@ -37,13 +37,14 @@ def _valid_plan_payload() -> dict[str, object]:
 
 
 async def test_full_plan_routes_to_apply_plan_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
 
@@ -64,13 +65,14 @@ async def test_full_plan_routes_to_apply_plan_submission(
 
 
 async def test_partial_plan_routes_to_apply_plan_submission(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
     payload = {**_valid_plan_payload(), "continuation_goal": "  continue with phase 2  "}
@@ -153,6 +155,7 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     segment_store,
     graph_store,
     task_store,
+    composer,
     payload_update,
     expected,
 ) -> None:
@@ -161,6 +164,7 @@ async def test_plan_validation_errors_do_not_mutate_graph(
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
     payload = {**_valid_plan_payload(), **payload_update}
@@ -180,13 +184,14 @@ async def test_plan_validation_errors_do_not_mutate_graph(
 
 
 async def test_full_plan_rejects_continuation_goal(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
     payload = {**_valid_plan_payload(), "continuation_goal": "continue later"}
@@ -207,13 +212,14 @@ async def test_full_plan_rejects_continuation_goal(
 
 
 async def test_partial_plan_rejects_blank_continuation_goal(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
     payload = {**_valid_plan_payload(), "continuation_goal": " "}

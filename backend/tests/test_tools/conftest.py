@@ -8,6 +8,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from agents import registry as agents_registry
+from agents.types import AgentDefinition
 from db.base import Base
 import db.models  # noqa: F401
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
@@ -18,8 +20,12 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.predicates import register_builtin_predicates
+from task_center.context_engine.predicates import (
+    PredicateRegistry,
+    register_builtin_predicates,
+)
 from task_center.context_engine.recipes import register_builtin_recipes
+from task_center.context_engine.recipes_registry import RecipeRegistry
 
 
 @pytest.fixture
@@ -87,11 +93,89 @@ def context_packet_store(session_factory) -> ContextPacketStore:
 
 
 @pytest.fixture
-def composer(
-    request_store, segment_store, graph_store, task_store, context_packet_store
-) -> ContextComposer:
+def isolated_agent_registries():
+    """Save + restore predicate / recipe / agent registries for test isolation."""
+    saved_predicates = dict(PredicateRegistry._registry)
+    saved_recipes = dict(RecipeRegistry._registry)
+    saved_definitions = dict(agents_registry._DEFINITIONS)
+    PredicateRegistry.clear()
+    RecipeRegistry.clear()
+    agents_registry._DEFINITIONS.clear()
     register_builtin_predicates()
     register_builtin_recipes()
+    yield
+    PredicateRegistry.clear()
+    RecipeRegistry.clear()
+    agents_registry._DEFINITIONS.clear()
+    PredicateRegistry._registry.update(saved_predicates)
+    RecipeRegistry._registry.update(saved_recipes)
+    agents_registry._DEFINITIONS.update(saved_definitions)
+
+
+@pytest.fixture
+def register_test_agents(isolated_agent_registries):
+    """Register the bare-minimum agents needed by tool/lifecycle tests."""
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="planner",
+            description="test planner",
+            role="planner",
+            context_recipe="planner_v1",
+            terminals=["submit_full_plan", "submit_partial_plan"],
+        )
+    )
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="executor",
+            description="test executor",
+            role="executor",
+            context_recipe="generator_v1",
+            terminals=[
+                "request_complex_task_solution",
+                "submit_execution_success",
+                "submit_execution_failure",
+            ],
+        )
+    )
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="generator",
+            description="test generator",
+            role="generator",
+            context_recipe="generator_v1",
+            terminals=["submit_execution_success", "submit_execution_failure"],
+        )
+    )
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="verifier",
+            description="test verifier",
+            role="generator",
+            context_recipe="generator_v1",
+            terminals=["submit_verification_success", "submit_verification_failure"],
+        )
+    )
+    agents_registry.register_definition(
+        AgentDefinition(
+            name="evaluator",
+            description="test evaluator",
+            role="evaluator",
+            context_recipe="evaluator_v1",
+            terminals=["submit_evaluation"],
+        )
+    )
+    yield
+
+
+@pytest.fixture
+def composer(
+    request_store,
+    segment_store,
+    graph_store,
+    task_store,
+    context_packet_store,
+    register_test_agents,
+) -> ContextComposer:
     deps = ContextEngineDeps(
         request_store=request_store,
         segment_store=segment_store,

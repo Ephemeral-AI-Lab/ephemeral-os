@@ -56,7 +56,7 @@ class _FailOnLaunchNumber(_FakeLauncher):
 
 
 def _build_runtime(
-    request_store, segment_store, graph_store, task_store, launcher=None
+    request_store, segment_store, graph_store, task_store, *, composer, launcher=None
 ) -> HarnessGraphRuntime:
     return HarnessGraphRuntime(
         request_store=request_store,
@@ -66,6 +66,7 @@ def _build_runtime(
         agent_launcher=launcher or _FakeLauncher(),
         orchestrator_registry=HarnessGraphOrchestratorRegistry(),
         manager_registry=SegmentManagerRegistry(),
+        composer=composer,
     )
 
 
@@ -231,10 +232,10 @@ def _drive_delegated_graph_to_fail(
 
 
 def test_delegated_continuation_waits_until_final_segment(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_running_generator(
         runtime=runtime,
@@ -298,7 +299,7 @@ def test_delegated_continuation_waits_until_final_segment(
 
 
 def test_continuation_startup_failure_reports_continuation_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     launcher = _FailOnLaunchNumber(fail_on=6)
     runtime = _build_runtime(
@@ -306,6 +307,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
         segment_store,
         graph_store,
         task_store,
+        composer=composer,
         launcher=launcher,
     )
     parent_task_id, parent_graph_id = _seed_outer_running_generator(
@@ -351,10 +353,10 @@ def test_continuation_startup_failure_reports_continuation_graph(
 
 
 def test_delegated_retry_waits_until_final_graph(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        request_store, segment_store, graph_store, task_store
+        request_store, segment_store, graph_store, task_store, composer=composer
     )
     parent_task_id, parent_graph_id = _seed_outer_running_generator(
         runtime=runtime,

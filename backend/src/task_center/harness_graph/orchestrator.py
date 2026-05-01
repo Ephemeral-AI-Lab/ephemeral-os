@@ -126,21 +126,9 @@ class HarnessGraphOrchestrator:
         task_id: str,
         task_center_run_id: str,
     ) -> AgentLaunch:
-        """Compose the planner launch via :class:`ContextComposer` when wired,
-        otherwise fall back to the legacy ``task_input_for_graph`` path so
-        existing tests that don't construct a composer keep working."""
+        """Compose the planner launch via :class:`ContextComposer`."""
         runtime = self._runtime
-        composer = runtime.composer
-        if composer is None:
-            return AgentLaunch(
-                task_id=task_id,
-                task_center_run_id=task_center_run_id,
-                harness_graph_id=graph.id,
-                role=HarnessTaskRole.PLANNER,
-                agent_name=HarnessTaskRole.PLANNER.value,
-                task_input=runtime.task_input_for_graph(graph),
-                needs=(),
-            )
+        composer = runtime.require_composer()
         segment = runtime.segment_store.get(graph.task_segment_id)
         if segment is None:
             raise GraphInvariantViolation(

@@ -29,13 +29,14 @@ async def _noop_emit(event) -> None:
 
 
 async def test_executor_profile_required_for_complex_task_request(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -51,13 +52,14 @@ async def test_executor_profile_required_for_complex_task_request(
 
 
 async def test_executor_profile_required_for_execution_terminals(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -81,13 +83,14 @@ async def test_executor_profile_required_for_execution_terminals(
 
 
 async def test_verifier_profile_required_for_verification_terminals(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture, agent_name="verifier")
 
@@ -111,13 +114,14 @@ async def test_verifier_profile_required_for_verification_terminals(
 
 
 async def test_executor_profile_can_call_executor_terminals(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture)
 
@@ -132,13 +136,14 @@ async def test_executor_profile_can_call_executor_terminals(
 
 
 async def test_verifier_profile_can_call_verifier_terminals(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture, agent_name="verifier")
 

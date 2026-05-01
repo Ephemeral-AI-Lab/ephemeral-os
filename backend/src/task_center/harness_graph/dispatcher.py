@@ -249,16 +249,6 @@ class HarnessGraphDispatcher:
             )
         return agent_name
 
-    @staticmethod
-    def _evaluator_task_input(graph: HarnessGraph) -> str:
-        criteria = "\n".join(f"- {item}" for item in graph.evaluation_criteria)
-        return (
-            "Task specification:\n"
-            f"{graph.task_specification or ''}\n\n"
-            "Evaluation criteria:\n"
-            f"{criteria}"
-        )
-
     def _build_generator_launch(
         self,
         *,
@@ -268,17 +258,7 @@ class HarnessGraphDispatcher:
         base_agent_name: str,
     ) -> AgentLaunch:
         runtime = self._runtime
-        composer = runtime.composer
-        if composer is None:
-            return AgentLaunch(
-                task_id=task_id,
-                task_center_run_id=task["task_center_run_id"],
-                harness_graph_id=graph.id,
-                role=HarnessTaskRole.GENERATOR,
-                agent_name=base_agent_name,
-                task_input=task["task_input"],
-                needs=tuple(task["needs"]),
-            )
+        composer = runtime.require_composer()
         segment = runtime.segment_store.get(graph.task_segment_id)
         if segment is None:
             raise GraphInvariantViolation(
@@ -314,17 +294,7 @@ class HarnessGraphDispatcher:
         task_center_run_id: str,
     ) -> AgentLaunch:
         runtime = self._runtime
-        composer = runtime.composer
-        if composer is None:
-            return AgentLaunch(
-                task_id=task_id,
-                task_center_run_id=task_center_run_id,
-                harness_graph_id=graph.id,
-                role=HarnessTaskRole.EVALUATOR,
-                agent_name=HarnessTaskRole.EVALUATOR.value,
-                task_input=self._evaluator_task_input(graph),
-                needs=tuple(graph.generator_task_ids),
-            )
+        composer = runtime.require_composer()
         segment = runtime.segment_store.get(graph.task_segment_id)
         if segment is None:
             raise GraphInvariantViolation(

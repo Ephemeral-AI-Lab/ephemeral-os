@@ -51,7 +51,7 @@ def _tool_context(
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
-def _build_runtime(request_store, segment_store, graph_store, task_store):
+def _build_runtime(request_store, segment_store, graph_store, task_store, *, composer):
     request = request_store.insert(
         task_center_run_id="run1",
         requested_by_task_id="outer-task",
@@ -77,6 +77,7 @@ def _build_runtime(request_store, segment_store, graph_store, task_store):
         agent_launcher=launcher,
         orchestrator_registry=registry,
         manager_registry=SegmentManagerRegistry(),
+        composer=composer,
     )
     orchestrator = HarnessGraphOrchestrator(
         harness_graph=graph,
@@ -88,13 +89,14 @@ def _build_runtime(request_store, segment_store, graph_store, task_store):
 
 
 async def test_phase03_full_plan_through_evaluator_success(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     runtime, orchestrator, graph_id = _build_runtime(
         request_store,
         segment_store,
         graph_store,
         task_store,
+        composer=composer,
     )
     orchestrator.start()
 

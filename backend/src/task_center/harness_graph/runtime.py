@@ -17,6 +17,7 @@ from task_center.task import HarnessTaskRole
 
 if TYPE_CHECKING:
     from task_center.context_engine.composer import ContextComposer
+    from task_center.entry_task_controller import EntryTaskController
     from task_center.harness_graph.orchestrator_registry import (
         HarnessGraphOrchestratorRegistry,
     )
@@ -56,6 +57,12 @@ class HarnessGraphRuntime:
     # to obtain a rendered task_input + selected agent_def + system_prompt.
     # Optional so existing tests can continue without composer wiring.
     composer: "ContextComposer | None" = None
+    # Lifecycle controller for the graph-less entry executor. ``None`` for
+    # delegated-only runtimes (handoff coordinator builds its own runtime
+    # with no controller because delegated requests always have a graph).
+    # The close-report router and launcher use this to dispatch lifecycle
+    # events for entry tasks whose ``task_center_harness_graph_id`` is None.
+    entry_task_controller: "EntryTaskController | None" = None
 
     def task_center_run_id_for_graph(self, graph: HarnessGraph) -> str:
         segment = self.segment_store.get(graph.task_segment_id)
@@ -72,11 +79,27 @@ class HarnessGraphRuntime:
             )
         return request.task_center_run_id
 
-    def task_input_for_graph(self, graph: HarnessGraph) -> str:
-        segment = self.segment_store.get(graph.task_segment_id)
-        if segment is None:
+    def require_composer(self) -> "ContextComposer":
+        if self.composer is None:
             raise GraphInvariantViolation(
-                f"TaskSegment {graph.task_segment_id!r} not found for "
-                f"HarnessGraph {graph.id!r}"
+                "HarnessGraphRuntime requires a ContextComposer for harness "
+                "agent launches; none was wired."
             )
-        return segment.goal
+        return self.composer
+
+    def entry_task_controller_for(
+        self, task_id: str
+    ) -> "EntryTaskController | None":
+        """Return the entry controller iff it's bound to *task_id*.
+
+        Used at the four entry-mode dispatch sites (handoff coordinator
+        parent-waiting + compensation + duplicate-child check, close-report
+        router, submission resolver) so each site collapses to one call
+        instead of duplicating the ``is not None and task_id == X`` guard.
+        Returns ``None`` for graph-mode tasks or when no controller is
+        wired.
+        """
+        controller = self.entry_task_controller
+        if controller is None or controller.task_id != task_id:
+            return None
+        return controller

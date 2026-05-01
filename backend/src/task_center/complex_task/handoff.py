@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class ComplexTaskHandoffResult:
     parent_task_id: str
-    parent_harness_graph_id: str
+    # ``None`` when the caller is the graph-less entry executor.
+    parent_harness_graph_id: str | None
     complex_task_request_id: str
     initial_segment_id: str
     initial_harness_graph_id: str
@@ -53,7 +54,7 @@ class ComplexTaskHandoffCoordinator:
         *,
         task_center_run_id: str,
         parent_task_id: str,
-        parent_harness_graph_id: str,
+        parent_harness_graph_id: str | None,
         goal: str,
     ) -> ComplexTaskHandoffResult:
         self._assert_parent_running_and_no_open_child(
@@ -140,7 +141,7 @@ class ComplexTaskHandoffCoordinator:
         self,
         *,
         parent_task_id: str,
-        parent_harness_graph_id: str,
+        parent_harness_graph_id: str | None,
     ) -> None:
         task = self._runtime.task_store.get_task(parent_task_id)
         if task is None:
@@ -153,17 +154,29 @@ class ComplexTaskHandoffCoordinator:
                 "complex-task handoff requires a running generator task."
             )
         attached_graph = str(task.get("task_center_harness_graph_id") or "")
-        if attached_graph != parent_harness_graph_id:
+        # In entry mode the caller has no parent graph (parent_harness_graph_id
+        # is None) and the task row's graph id column is empty/None too. In
+        # graph mode both must match.
+        expected = parent_harness_graph_id or ""
+        if attached_graph != expected:
             raise GraphInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is attached to graph "
-                f"{attached_graph!r}, not {parent_harness_graph_id!r}."
+                f"{attached_graph!r}, not {expected!r}."
             )
+        # Entry-mode caveat: the entry task's *own* complex_request has
+        # ``requested_by_task_id == entry_task_id`` because the entry task
+        # is the top-level requestor. That self-request is not a child and
+        # must be excluded from the duplicate-open-child check.
+        controller = self._runtime.entry_task_controller_for(parent_task_id)
+        own_request_id = (
+            controller.complex_task_request_id if controller is not None else None
+        )
         existing_open = [
             r
             for r in self._runtime.request_store.list_for_executor_task(
                 parent_task_id
             )
-            if r.is_open
+            if r.is_open and r.id != own_request_id
         ]
         if existing_open:
             raise GraphInvariantViolation(
@@ -175,12 +188,24 @@ class ComplexTaskHandoffCoordinator:
         self,
         *,
         parent_task_id: str,
-        parent_harness_graph_id: str,
+        parent_harness_graph_id: str | None,
         request: ComplexTaskRequest,
         segment: TaskSegment,
         graph_id: str,
         goal: str,
     ) -> None:
+        # Entry-mode caller: route through the EntryTaskController so the
+        # controller is the single owner of entry-task state transitions.
+        controller = self._runtime.entry_task_controller_for(parent_task_id)
+        if controller is not None:
+            controller.mark_waiting_complex_task(
+                delegated_request_id=request.id,
+                delegated_segment_id=segment.id,
+                delegated_graph_id=graph_id,
+                goal=goal,
+            )
+            return
+
         summary = {
             "outcome": "complex_task_request_start",
             "summary": "Waiting on delegated complex task solution.",
@@ -232,11 +257,17 @@ class ComplexTaskHandoffCoordinator:
                 "ComplexTaskHandoffCoordinator: cancel request failed",
             )
         try:
-            self._runtime.task_store.set_task_status_if_current(
-                parent_task_id,
-                expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
-                status=HarnessTaskStatus.RUNNING.value,
-            )
+            controller = self._runtime.entry_task_controller_for(parent_task_id)
+            if controller is not None:
+                # Entry-mode rollback flows through the controller so the
+                # controller stays the single owner of entry-task transitions.
+                controller.restore_running_after_failed_handoff()
+            else:
+                self._runtime.task_store.set_task_status_if_current(
+                    parent_task_id,
+                    expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+                    status=HarnessTaskStatus.RUNNING.value,
+                )
         except Exception:
             logger.critical(
                 "ComplexTaskHandoffCoordinator: parent status rollback failed; "

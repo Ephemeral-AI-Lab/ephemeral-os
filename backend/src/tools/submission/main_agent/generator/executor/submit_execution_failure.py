@@ -5,13 +5,13 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from task_center.exceptions import GraphInvariantViolation
-from task_center.task import GeneratorSubmission, HarnessTaskRole
+from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
     HarnessSubmissionContextError,
-    resolve_harness_submission_context,
+    resolve_executor_submission_context,
 )
 from tools.submission.hooks import HarnessAgentProfileGate, HarnessRoleGate
 
@@ -44,19 +44,9 @@ async def submit_execution_failure(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
-        submission_context = resolve_harness_submission_context(context)
-        submission_context.orchestrator.apply_generator_submission(
-            GeneratorSubmission(
-                graph_id=submission_context.graph.id,
-                task_id=submission_context.task_center_task_id,
-                outcome="failure",
-                summary=summary,
-                payload={
-                    "generator_role": "executor",
-                    "reason": reason,
-                    "details": details,
-                },
-            )
+        submission_context = resolve_executor_submission_context(context)
+        submission_context.submit_executor_failure(
+            summary=summary, reason=reason, details=details
         )
     except (HarnessSubmissionContextError, GraphInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
@@ -66,6 +56,6 @@ async def submit_execution_failure(
         metadata={
             "submission_kind": "generator_executor_failure",
             "task_center_task_id": submission_context.task_center_task_id,
-            "harness_graph_id": submission_context.graph.id,
+            "harness_graph_id": submission_context.graph_id,
         },
     )

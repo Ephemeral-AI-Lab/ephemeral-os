@@ -100,16 +100,14 @@ class EphemeralHarnessAgentLauncher:
 
             runner = run_ephemeral_agent
 
-        # When the launch has no harness graph (entry executor mode), drop the
-        # runtime handle as well — tools that need a harness runtime fail
-        # cleanly instead of operating on an unrelated graph.
-        attach_harness = launch.harness_graph_id is not None
+        # Runtime is always attached: graph-mode tools resolve via the
+        # graph id, entry-mode tools branch on ``runtime.entry_task_controller``.
         metadata = ExecutionMetadata(
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_harness_graph_id=launch.harness_graph_id,
             task_center_request_id=launch.complex_task_request_id,
-            harness_graph_runtime=runtime if attach_harness else None,
+            harness_graph_runtime=runtime,
             composer=runtime.composer,
         )
         result: EphemeralRunResult | None = None
@@ -162,6 +160,23 @@ class EphemeralHarnessAgentLauncher:
             return
         task = runtime.task_store.get_task(launch.task_id)
         if task is None or task.get("status") != HarnessTaskStatus.RUNNING.value:
+            # Entry-mode tasks may already be in WAITING_COMPLEX_TASK after a
+            # delegated handoff; or DONE/FAILED via a terminal. Either way,
+            # the controller has already moved the task off RUNNING and
+            # there's nothing to do.
+            return
+
+        if launch.harness_graph_id is None:
+            # Entry mode — dispatch through the controller instead of the
+            # orchestrator registry. Missing controller is a hard error: the
+            # entry task is RUNNING and the run cannot finalize without it.
+            controller = runtime.entry_task_controller
+            if controller is None:
+                self._mark_unowned_task_exhausted(
+                    runtime, launch, summary=summary
+                )
+                return
+            controller.apply_run_exhausted(summary=summary)
             return
 
         orchestrator = runtime.orchestrator_registry.get(launch.harness_graph_id)

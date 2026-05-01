@@ -71,6 +71,18 @@ class ComplexTaskRequestHandler:
 
     # ---- public API -----------------------------------------------------
 
+    def set_orchestrator_factory(
+        self, factory: OrchestratorFactory
+    ) -> None:
+        """Inject the orchestrator factory after construction.
+
+        The entry coordinator builds the handler before the runtime exists
+        (the handler is a dependency of the entry-task controller, which is
+        in turn a dependency of the runtime). The factory closes over the
+        runtime, so it must be installed once construction completes.
+        """
+        self._orchestrator_factory = factory
+
     def create_complex_task_request(
         self,
         *,
@@ -187,7 +199,7 @@ class ComplexTaskRequestHandler:
         complex_task_request_id: str,
         succeeded: bool,
         final_segment_id: str,
-        final_harness_graph_id: str,
+        final_harness_graph_id: str | None,
     ) -> ComplexTaskRequest:
         request = self._require_request(complex_task_request_id)
         assert_request_open(request)

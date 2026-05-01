@@ -4,8 +4,11 @@ Companion to
 [`context-engine-flexible-composition.md`](../../../.omc/plans/context-engine-flexible-composition.md)
 (plan v8) and the corresponding amendments to
 [`phase-06-context-engine.md`](./phase-06-context-engine.md).
-This report records the structural changes, file inventory, verification
-outcome, and deferred items for the flexible-composition implementation.
+This report records the structural changes, file inventory, and
+verification outcome for the flexible-composition implementation. The
+prior "deferred items" bucket has been emptied: US-011b (helper-tool
+rewiring) landed in `d6665799` and US-017b (entry-graph carve-out)
+landed in this PR; see §6 for the full coverage map.
 
 ---
 
@@ -25,16 +28,29 @@ notification trigger have been removed in favour of an `agent.md`
 US-011b (helper tool rewiring) landed in `d6665799`: `ask_advisor` and
 `ask_resolver` now compose `advisor_v1` / `resolver_v1` packets, persist them,
 and pass the rendered prompt + selected agent definition into
-`run_ephemeral_agent`. The composer-less helper path is gone. The TaskCenter
-suite is green at 218 tests; the broader backend sweep is green at 958 tests.
-Ruff is clean across the touched `task_center`, `agents`, `db`, server, and
-`tools/submission` slices.
+`run_ephemeral_agent`. The composer-less helper path is gone.
 
-One story remains intentionally deferred: **US-017b — delete
-`EntryHarnessGraphBuilder` and carve the entry executor out of the harness
-submission path.** It is non-blocking for the planner-fork feature and does
-not change model-facing behaviour; see §7 for what the carve-out entails and
-what blocks it.
+US-017b (entry-graph carve-out) **landed in this PR**: the synthetic
+one-node `HarnessGraph` that wrapped the entry executor is removed.
+`EntryTaskController` is the new lifecycle owner for graph-less entry
+tasks (terminal submissions, run exhaustion, delegated close-report
+resume), attached to `HarnessGraphRuntime.entry_task_controller` peer to
+`composer`. Submission tools resolve through a unified
+`ExecutorSubmissionContext` that branches on graph-mode vs entry-mode.
+`EntryHarnessGraphBuilder` is deleted; the entry segment now contains
+zero `HarnessGraph` rows. The TaskCenter suite is green at 220 tests; the
+broader backend sweep is green at 968 tests. Ruff is clean across the
+touched `task_center`, `agents`, `db`, server, and `tools/submission`
+slices.
+
+The composer-None production fallbacks (`orchestrator._build_planner_launch`,
+`dispatcher._build_generator_launch`, `dispatcher._build_evaluator_launch`,
+`entry._build_entry_launch`) and `runtime.task_input_for_graph` were also
+deleted as part of this PR — the previous report claim that c6296d59 had
+removed them was incorrect (only the `HarnessAgentLaunch` back-compat alias
+went in that commit). Production paths now require a composer; runtimes
+without one raise a clean `GraphInvariantViolation` from
+`HarnessGraphRuntime.require_composer()` at first launch.
 
 ---
 
@@ -78,6 +94,12 @@ what blocks it.
 | --- | ---: | --- |
 | `backend/src/task_center/complex_task/ancestry.py` | 81 | Canonical `has_partial_planned_caller_ancestor(*, request_id, …stores) -> bool` walker |
 
+### New entry-mode controller (US-017b)
+
+| File | Lines | Purpose |
+| --- | ---: | --- |
+| `backend/src/task_center/entry_task_controller.py` | 240 | `EntryTaskController` — graph-less entry executor lifecycle owner. Receives `apply_executor_success`, `apply_executor_failure`, `apply_run_exhausted`, `apply_complex_task_close_report`, `mark_waiting_complex_task`, `restore_running_after_failed_handoff`. Closes entry segment + complex_request via the shared request handler so the existing `deliver_close_report` callback path finishes the run. |
+
 ### New persistence
 
 | File | Lines | Purpose |
@@ -116,6 +138,8 @@ what blocks it.
 | `backend/tests/test_agents/test_planner_full_only_md.py` | 65 | Drift checks + `submit_partial_plan` absence + shared `planner_v1` recipe |
 | `backend/tests/task_center/context_engine/test_helper_recipes.py` | 220 | Demotion table + `parent_question` shape + missing-packet-store / missing-parent-task / missing-parent-packet error paths |
 | `backend/tests/test_tools/test_submission_helper_tools.py` (delta) | +120 | `ask_advisor` and `ask_resolver` end-to-end through composer: parent context inherited, "# Parent context" + "# Advisor request" / "# Resolver request" sections present, missing-composer is a hard error |
+| `backend/tests/task_center/lifecycle/test_entry_task_controller.py` | 320 | US-017b: terminal success / failure / run exhaustion close entry task + segment + complex_request + finish run; mark-waiting + close-report (success/failed) + idempotency + restore-running rollback |
+| `backend/tests/task_center/lifecycle/test_task_center_entry.py` (delta) | +90 | Two tests: `test_entry_executor_runs_in_graph_less_mode` pins `task_center_harness_graph_id is None` + run exhaustion via controller; `test_entry_segment_has_zero_harness_graph_rows` is the regression pin (`graph_store.list_for_segment(entry_segment_id) == []`) |
 
 ### Edited modules
 
@@ -127,9 +151,14 @@ what blocks it.
 | `backend/src/db/models/{__init__,task_center,task_segment}.py` | edited | `ContextPacketRecord` exported; task row `context_packet_id`; `TaskSegment` denormalized fields |
 | `backend/src/db/stores/{__init__,task_center_store,task_segment_store}.py` | edited | `ContextPacketStore` exported; task context-packet id round-trip; `close_succeeded`; `get_evaluator_pass_summary` helper |
 | `backend/src/task_center/segment/{segment,manager}.py` | edited | DTO fields; manager calls `close_succeeded` on success path |
-| `backend/src/task_center/complex_task/handler.py` | edited | Optional `task_store` thread-through |
-| `backend/src/task_center/harness_graph/{runtime,launcher,orchestrator,dispatcher}.py` | edited | `AgentLaunch` rename + nullable `harness_graph_id`; composer-or-fallback launch helpers |
-| `backend/src/task_center/entry.py` | edited | Builds composer at startup, runs `validate_agent_definitions_resolved()` |
+| `backend/src/task_center/complex_task/handler.py` | edited | Optional `task_store` thread-through; `close_complex_task_request.final_harness_graph_id` widened to `str \| None` |
+| `backend/src/task_center/complex_task/handoff.py` | edited | `ComplexTaskHandoffCoordinator.start(parent_harness_graph_id: str \| None)`; `_assert_parent_running_and_no_open_child` accepts entry-mode (no parent graph); `ComplexTaskHandoffResult.parent_harness_graph_id: str \| None` |
+| `backend/src/task_center/complex_task/close_report_delivery.py` | edited | Routes graph-less parents through `runtime.entry_task_controller.apply_complex_task_close_report` |
+| `backend/src/task_center/complex_task/request.py` | edited | `ComplexTaskCloseReport.final_harness_graph_id` widened to `str \| None`; `to_final_outcome()` returns `dict[str, str \| None]` |
+| `backend/src/task_center/harness_graph/{runtime,launcher,orchestrator,dispatcher}.py` | edited | `AgentLaunch` nullable `harness_graph_id`; composer is required (composer-None fallbacks deleted); `runtime.require_composer()` is the new clean error path; runtime gains `entry_task_controller: EntryTaskController \| None`; launcher exhaustion routes graph-less launches through the controller |
+| `backend/src/task_center/entry.py` | edited | Rewrites coordinator: no synthetic graph; constructs `EntryTaskController` from run/task/segment/request ids; runtime built with `composer` + `entry_task_controller`; `AgentLaunch` carries `harness_graph_id=None`; startup-failure compensation drives controller's `apply_run_exhausted`. `TaskCenterEntryHandle` drops the `harness_graph_id` field. |
+| `backend/src/tools/submission/context.py` | edited | New `ExecutorSubmissionContext` + `resolve_executor_submission_context` — unified resolver branching graph-mode vs entry-mode; exposes `submit_executor_success` / `submit_executor_failure` / `start_complex_task_handoff` |
+| `backend/src/tools/submission/main_agent/generator/{request_complex_task_solution,executor/submit_execution_success,executor/submit_execution_failure}.py` | edited | Resolve through `ExecutorSubmissionContext` and call its operations; graph-only path retired |
 | `backend/src/tools/submission/hooks/__init__.py` | edited | `PartialPlanAncestorGate` export removed |
 | `backend/src/tools/submission/notification_triggers/__init__.py` | edited | `recursive_partial_plan` factory removed |
 | `backend/src/tools/submission/main_agent/planner/submit_partial_plan.py` | edited | Prehook registration removed |
@@ -142,8 +171,10 @@ what blocks it.
 | --- | --- |
 | `backend/src/tools/submission/hooks/recursive_partial_plan_gate.py` | Gate moved up the stack — `terminals:` filter on `planner_full_only` is now authoritative |
 | `backend/src/tools/submission/notification_triggers/recursive_partial_plan.py` | Soft reminder is redundant once the model can't see the disabled tool |
-| `backend/src/task_center/harness_graph/runtime.HarnessGraphRuntime.task_input_for_graph` | Composer is unconditional; the legacy fallback method is gone (`c6296d59`) |
-| `backend/src/task_center/harness_graph/runtime.HarnessAgentLaunch` (back-compat alias) | Removed once every consumer migrated to `AgentLaunch` (`c6296d59`) |
+| `backend/src/task_center/harness_graph/entry_builder.py` | US-017b: synthetic entry-graph removed. `EntryHarnessGraph` + `EntryHarnessGraphBuilder` deleted; `ENTRY_AGENT_NAME` / `ENTRY_SPAWN_REASON` constants moved to `task_center/entry.py` |
+| `backend/src/task_center/harness_graph/runtime.HarnessGraphRuntime.task_input_for_graph` | Composer is now required at every harness launch; the legacy fallback method is gone. (Earlier report incorrectly attributed this to `c6296d59`; the deletion actually landed in this PR.) |
+| `backend/src/task_center/harness_graph/dispatcher.HarnessGraphDispatcher._evaluator_task_input` | Only callsite was the deleted composer-None evaluator fallback. |
+| `backend/src/task_center/harness_graph/runtime.HarnessAgentLaunch` (back-compat alias) | Removed by `c6296d59` once every consumer migrated to `AgentLaunch` |
 
 ---
 
@@ -284,15 +315,17 @@ for `planner_v1`'s prior-segment block builder.
 
 Commands run during verification:
 
-- `.venv/bin/pytest backend/tests/task_center -q` — **211 passed**
-- `.venv/bin/pytest backend/tests/test_tools/test_submission_helper_tools.py backend/tests/task_center -q` — **218 passed**
-- `.venv/bin/pytest backend/tests --ignore=test_e2e --ignore=test_benchmarks --ignore=experiments -q` — **958 passed**
-- `uv run ruff check backend/src/task_center backend/src/agents backend/src/db backend/src/server/routers/core.py backend/src/server/app_factory.py backend/src/tools/submission backend/tests/task_center backend/tests/test_tools/test_submission_helper_tools.py` — clean
+- `.venv/bin/pytest backend/tests/task_center -q` — **220 passed** (was 211 before US-017b — `+9` for `test_entry_task_controller.py` and `+1` for the new entry-segment regression test in `test_task_center_entry.py`).
+- `.venv/bin/pytest backend/tests/task_center backend/tests/test_tools -q` — **387 passed**.
+- `.venv/bin/pytest backend/tests --ignore=test_e2e --ignore=test_benchmarks --ignore=experiments -q` — **968 passed** (was 958 before US-017b).
+- `.venv/bin/ruff check backend/src backend/tests` — clean.
 
 Grep-side proofs:
 
 - `grep -rn "PartialPlanAncestorGate\|recursive_partial_plan\|request_has_partial_plan_ancestor" backend/src` — only the historical-note reference inside `task_center/complex_task/ancestry.py` docstring (intentional);
-- `grep -rn "task_input_for_graph" backend/src` — no matches; the composer-less fallback was deleted alongside the launcher composer-required cutover;
+- `grep -rn "task_input_for_graph" backend/src` — no matches; the legacy fallback was deleted in this PR (correcting the previous report claim that c6296d59 had removed it);
+- `grep -rn "composer is None" backend/src` — two legitimate hits: `runtime.require_composer()` self-check and `tools/submission/helper_agent/_compose.py` runtime guard. No production fallback paths;
+- `grep -rn "EntryHarnessGraphBuilder\|EntryHarnessGraph\b" backend/` — no matches. `entry_builder.py` is gone; the constants moved to `task_center/entry.py`;
 - `grep -rn "composer.compose" backend/src` — five live call sites: orchestrator (planner), dispatcher (generator + evaluator), entry coordinator (entry executor), and the shared helper-tool builder at `tools/submission/helper_agent/_compose.py` (advisor + resolver via `ask_advisor` / `ask_resolver`).
 
 ---
@@ -314,109 +347,109 @@ Grep-side proofs:
 | 11. Wire orchestrator → composer | US-014 | ✅ | `test_orchestrator_composer.py` |
 | 12. Wire dispatcher → composer | US-014 | ✅ | `test_orchestrator_composer.py` |
 | 13. Remove obsoleted prehook + trigger | US-016 | ✅ | grep-side proofs above |
-| 14. Delete `task_input_for_graph` | — | ✅ | composer-less fallback removed in `c6296d59`; launcher requires composer |
-| 15. Entry executor wiring | US-017 ✅ / US-017b 🟡 | entry launch uses `entry_executor_v1`; synthetic-graph carve-out deferred | lifecycle suite |
+| 14. Delete `task_input_for_graph` | — | ✅ | composer-None fallbacks deleted across orchestrator + dispatcher + entry; `task_input_for_graph` and `_evaluator_task_input` deleted; `require_composer()` is the new clean error path |
+| 15. Entry executor wiring | US-017 ✅ / US-017b ✅ | entry launch uses `entry_executor_v1`; synthetic graph removed; entry segment has zero `HarnessGraph` rows; `EntryTaskController` owns graph-less lifecycle | `test_task_center_entry.py`, `test_entry_task_controller.py` |
 | 16. Helper tool handler wiring | US-011b ✅ | `ask_advisor` + `ask_resolver` rewired through `compose_helper_bundle`; advisor / resolver agents now declare `context_recipe` | `test_submission_helper_tools.py`, `test_helper_recipes.py` |
 | 17. End-to-end gate test | US-018 | ✅ | `test_planner_capability_fork.py` |
 | 18. Token-budget compression test | US-019 | ✅ | `test_token_budget.py` |
 
 ---
 
-## 7. Deferred items
+## 7. US-017b: entry-graph carve-out (shipped)
 
-One story remains intentionally deferred. It is non-blocking for the
-planner-fork feature and does not change model-facing behaviour.
+The synthetic one-node `HarnessGraph` that previously wrapped the entry
+executor is gone. `TaskCenterEntryCoordinator.start` now:
 
-### US-017b — delete `EntryHarnessGraphBuilder`; entry-graph carve-out
+1. Creates the top-level run + entry task id;
+2. Builds `ComplexTaskRequestHandler` once, reused for both the entry
+   request and any delegated-complex-task requests the entry executor
+   spawns. The handler's `deliver_close_report` is the run-finalization
+   sink that finishes the run when the entry's complex_request closes;
+3. Calls `handler.create_complex_task_request` and
+   `handler.create_initial_segment_with_manager` — the segment is real,
+   but no `HarnessGraph` row is created;
+4. Constructs `EntryTaskController` from the run + task + segment +
+   request ids, plus the handler;
+5. Builds `HarnessGraphRuntime` with `composer` and the new
+   `entry_task_controller` field wired;
+6. Writes the entry task row with `task_center_harness_graph_id=None`,
+   `agent_name="entry_executor"`, `spawn_reason="entry_executor"`;
+7. Composes the entry launch via `ContextComposer.compose("entry_executor",
+   ContextScope(request_id, task_id))` and calls
+   `agent_launcher.launch(AgentLaunch(harness_graph_id=None, ...))`.
 
-**Scope.** The entry launch already composes `entry_executor_v1` and persists
-its packet, but the synthetic one-node `HarnessGraph` that wraps the entry
-executor is still in place. `TaskCenterEntryCoordinator.start` builds it via
-`EntryHarnessGraphBuilder.create`, which:
+When `harness_graph_id` is `None`, the launcher attaches
+`harness_graph_runtime=None` to the agent's tool metadata so harness-only
+tools fail cleanly outside the controller-aware paths.
 
-* creates the initial `TaskSegment` + `TaskSegmentManager`;
-* creates a one-node `HarnessGraph`, stamps a synthetic plan contract
-  (`task_specification=prompt`, single evaluation criterion), and pins it to
-  `STAGE.GENERATING`;
-* writes the entry task row with `role=GENERATOR`,
-  `task_center_harness_graph_id=<graph.id>`, and
-  `spawn_reason="entry_executor"`;
-* registers a `HarnessGraphOrchestrator` so the orchestrator-registry lookup
-  for the synthetic graph id resolves to a live state machine.
+### Lifecycle dispatch in graph-less mode
 
-The synthetic graph exists so the entry executor's three terminals
-(`request_complex_task_solution`, `submit_execution_success`,
-`submit_execution_failure`) and its delegated-complex-task resume path
-(`apply_complex_task_close_report` on the orchestrator) can reuse the
-existing harness-submission infrastructure unchanged.
+| Event | Owner |
+| --- | --- |
+| `submit_execution_success` / `submit_execution_failure` | `EntryTaskController.apply_executor_*` (via `ExecutorSubmissionContext`) |
+| `request_complex_task_solution` | `ComplexTaskHandoffCoordinator.start(parent_harness_graph_id=None)` (entry mode) |
+| Delegated complex-task close report | `ComplexTaskCloseReportRouter` → `EntryTaskController.apply_complex_task_close_report` |
+| Run exhaustion (agent ended without terminal) | `EphemeralHarnessAgentLauncher._report_unfinished_running_task` → `EntryTaskController.apply_run_exhausted` |
+| Startup-time launch failure | `TaskCenterEntryCoordinator._compensate_startup_failure` → `EntryTaskController.apply_run_exhausted` |
 
-**Why this is debt, not a feature.** The synthetic plan contract is a lie —
-there is no real planner / generator / evaluator triplet. Plan §3.6 of the
-v8 spec says the entry executor is *not* a harness graph; §4 step 15 still
-provisions one for submission-tool reuse. The v3 changelog (referenced in
-the PRD notes) resolves the conflict in favour of §3.6. Until the carve-out
-lands, every read of an entry-segment graph shows a passing one-node graph
-that never actually planned anything.
+Each terminal event drives a single fan-out:
+1. CAS the entry task to `DONE`/`FAILED` (idempotent — late races short-circuit);
+2. Close the entry segment via `TaskSegmentStore.close_succeeded` (success)
+   or `set_status(FAILED)` (failure / exhaustion);
+3. Deregister the segment manager from `SegmentManagerRegistry`;
+4. Call `request_handler.close_complex_task_request(...,
+   final_harness_graph_id=None)` — which closes the request and delivers a
+   `ComplexTaskCloseReport` to the entry coordinator's
+   `_finish_entry_run` callback, finishing the run.
 
-**What the carve-out requires.** Roughly two days of work spread across:
+### API widenings
 
-1. **Submission tools (`request_complex_task_solution`,
-   `submit_execution_success`, `submit_execution_failure`).** Add a code path
-   that operates on the entry task directly when `harness_graph_runtime is
-   None` instead of delegating to `HarnessGraphOrchestrator.apply_*`.
-   `submit_execution_success` / `submit_execution_failure` close the
-   `TaskCenter` run via `_finish_entry_run` directly;
-   `request_complex_task_solution` parks the entry task in
-   `WAITING_COMPLEX_TASK` without touching a graph.
-2. **Resume path.** Replace the orchestrator's
-   `apply_complex_task_close_report` for the entry case. Either thread the
-   resume callback through the entry coordinator (single-task awareness) or
-   rebuild it as a `TaskSegmentManager`-level resume that doesn't assume a
-   `generator_task_ids` list.
-3. **`HarnessGraph.is_passed` invariants.** The synthetic graph currently
-   passes when the entry task succeeds, which downstream code reads. Audit
-   `harness_graph_store.list_for_segment` consumers (especially the planner
-   recipe's failed-graph landscape) for entry-segment edge cases.
-4. **Entry coordinator.** Delete `EntryHarnessGraphBuilder`; replace
-   `_create_runtime` / `_launch_entry_executor` with a path that builds the
-   `AgentLaunch` with `harness_graph_id=None` and writes the entry task row
-   with `task_center_harness_graph_id=None`. The launcher already handles
-   this: when `launch.harness_graph_id is None`, it attaches
-   `harness_graph_runtime=None`, so harness-only tools fail cleanly.
-5. **`AgentLaunch.harness_graph_id` typing.** Currently `str | None`; it
-   already has the right shape, but document the entry-executor case as the
-   live consumer.
-6. **Tests.**
-   * `tests/task_center/lifecycle/test_task_center_entry.py` — assertions
-     about the synthetic graph need to flip to "no graph row written for the
-     entry segment".
-   * `tests/task_center/lifecycle/test_phase04_complex_task_handoff.py` and
-     `test_phase04_close_report_delivery.py` — exercise both the harness-graph
-     path (delegated complex tasks) and the new entry-task-only path.
-   * Add a regression test pinning that no `HarnessGraph` row exists for an
-     entry-only `TaskSegment`.
-7. **Documentation.** Amend `phase-06-context-engine.md` *Sources of truth*
-   to record that an entry segment may have zero `HarnessGraph` rows.
+* `ComplexTaskCloseReport.final_harness_graph_id: str | None` — `None` for
+  entry-segment closes (no graph backing the close).
+* `ComplexTaskHandoffResult.parent_harness_graph_id: str | None` — `None`
+  when the caller is the graph-less entry executor.
+* `ComplexTaskHandoffCoordinator.start(parent_harness_graph_id: str | None,
+  ...)` — accepts `None` for the entry-mode caller; the
+  `_assert_parent_running_and_no_open_child` graph match relaxes when both
+  the task row and the caller report no graph.
+* `HarnessGraphRuntime.entry_task_controller: EntryTaskController | None` —
+  new field, peer to `composer`. Set by the entry coordinator only;
+  delegated-only runtimes leave it `None`.
 
-**What blocks doing it now.** Nothing technical. Skipped because:
-* Entry-executor path is exercised end-to-end and is not the rotting
-  surface — the synthetic graph is consistent and the model never sees it.
-* The submission-tool changes ripple into terminal-tool gates that haven't
-  been touched in this delivery; cleaner as its own PR with its own review
-  surface.
-* The carve-out is structural cleanup, not a feature. Bundling it into this
-  delivery would inflate the diff and mix architectural cleanup with the
-  composition seam that is the actual deliverable.
+### Regression test pins
 
-**Recommended sequencing.** Land the carve-out as a follow-up PR before any
-work that adds new entry-executor terminals or new entry-segment behaviours,
-so the new code does not bake in the synthetic-graph assumption.
+* `test_task_center_entry.py::test_entry_executor_runs_in_graph_less_mode`
+  asserts `task["task_center_harness_graph_id"] is None`,
+  `metadata.harness_graph_runtime is None`, and the run finishes via the
+  controller's `apply_run_exhausted` path (run.status="failed").
+* `test_task_center_entry.py::test_entry_segment_has_zero_harness_graph_rows`
+  asserts `graph_store.list_for_segment(entry.task_segment_id) == []`.
+* `test_entry_task_controller.py` covers each controller method:
+  terminal success, terminal failure, run exhaustion, mark-waiting,
+  close-report success, close-report failure, idempotency, restore-running.
+
+### What was deleted
+
+* `backend/src/task_center/harness_graph/entry_builder.py` (full file:
+  `EntryHarnessGraph` dataclass, `EntryHarnessGraphBuilder`,
+  `ENTRY_AGENT_NAME` / `ENTRY_SPAWN_REASON` constants — the constants moved
+  to `task_center/entry.py`).
+* `HarnessGraphRuntime.task_input_for_graph` (the legacy fallback method).
+* `HarnessGraphDispatcher._evaluator_task_input` (only callsite was a
+  composer-None fallback).
+* The `composer is None` branch in
+  `HarnessGraphOrchestrator._build_planner_launch`,
+  `HarnessGraphDispatcher._build_generator_launch`,
+  `HarnessGraphDispatcher._build_evaluator_launch`, and
+  `TaskCenterEntryCoordinator._build_entry_launch`. Production paths now
+  raise `GraphInvariantViolation` via `HarnessGraphRuntime.require_composer()`
+  if a composer is missing.
 
 ---
 
 ## 8. Phase-06 doc deltas applied
 
-The companion `phase-06-context-engine.md` was amended in this PR:
+The companion `phase-06-context-engine.md` was amended:
 
 1. **Engine API shape** — the role-keyed `build_planner_context` /
    `build_generator_context` / `build_evaluator_context` /
@@ -428,10 +461,15 @@ The companion `phase-06-context-engine.md` was amended in this PR:
    `parent_question` is the helper-recipe contract: the parent's task input
    carried as the helper's `priority=required` framing block.
 3. **TaskSegment denormalization note** — the *Sources of truth* section
-   now records that `TaskSegment.task_specification` and
-   `TaskSegment.task_summary` are denormalized projections from the
-   segment's passing harness graph at close. The graph row remains
-   canonical.
+   records that `TaskSegment.task_specification` and `TaskSegment.task_summary`
+   are denormalized projections from the segment's passing harness graph
+   at close. The graph row remains canonical.
+4. **US-017b carve-out amendment (this PR)** — *Sources of truth* now also
+   records that an entry segment may have **zero** `HarnessGraph` rows. The
+   entry executor lives in graph-less mode receiving lifecycle events
+   through `EntryTaskController` rather than a `HarnessGraphOrchestrator`.
+   `ComplexTaskCloseReport.final_harness_graph_id` is widened to
+   `str | None`; `None` identifies the entry-segment close path.
 
 ---
 
@@ -447,11 +485,13 @@ project memory:
 - `cb313c88` (codex) — Move partial-plan gate to planner agent variant
 - `bdc05726` (codex) — Refine context engine composition helpers
 - `93c5bc4a` (codex) — Remove planner initial-segment packet metadata
-- `c6296d59` (codex) — Refine context engine composition wiring (composer
-  required, `task_input_for_graph` removed, `context_packet_id` threaded
-  onto the task row, `ContextPacketStore` wired through bootstrap; helper
-  recipes were also deleted in this commit on the cleanup-of-unused-code
-  reading)
+- `c6296d59` (codex) — Refine context engine composition wiring
+  (`HarnessAgentLaunch` back-compat alias removed, `context_packet_id`
+  threaded onto the task row, `ContextPacketStore` wired through
+  bootstrap; helper recipes were also deleted in this commit on the
+  cleanup-of-unused-code reading). The earlier report's claim that this
+  commit also removed `task_input_for_graph` and the composer-None
+  fallbacks was over-reach — those landed in the US-017b PR (below).
 - `8a07402a` (Claude) — Restore helper-recipe substrate (advisor / resolver
   recipes, scope `parent_*` fields, `parent_question` block kind, renderer
   inherited-block grouping); reverses the helper-recipe deletes from
@@ -460,5 +500,16 @@ project memory:
   `ContextComposer` (US-011b); helpers now actually call
   `composer.compose("advisor"/"resolver", scope)` with the parent's
   `context_packet_id` from the task row
+- *(this PR — Claude)* — US-017b carve-out: delete
+  `EntryHarnessGraphBuilder`; introduce `EntryTaskController` peer to the
+  composer on `HarnessGraphRuntime`; rewrite `TaskCenterEntryCoordinator`
+  to launch the entry executor with `harness_graph_id=None`; rewire
+  submission tools through the unified `ExecutorSubmissionContext`;
+  generalize `ComplexTaskHandoffCoordinator` and
+  `ComplexTaskCloseReportRouter` to handle entry mode; widen
+  `ComplexTaskCloseReport.final_harness_graph_id` to `str | None`;
+  delete `task_input_for_graph` and the composer-None production
+  fallbacks; introduce `runtime.require_composer()`. Phase-06 *Sources of
+  truth* amended with the entry-segment-may-have-zero-graphs invariant.
 
 Stage with explicit file paths; avoid `git add <dir>`.

@@ -110,6 +110,18 @@ the delegated request.
 > failed close — see plan §3.8 for the atomicity contract on
 > `TaskSegmentStore.close_succeeded`.
 
+> **Amendment (US-017b — entry-graph carve-out).**
+> An **entry segment may have zero `HarnessGraph` rows.** The entry
+> executor is launched in graph-less mode: its task row carries
+> `task_center_harness_graph_id=None`, and the segment row's
+> `harness_graph_ids` is empty. Lifecycle events for the entry task are
+> received by `EntryTaskController` (peer to `composer` on
+> `HarnessGraphRuntime`) instead of a `HarnessGraphOrchestrator`. The
+> controller owns terminal submissions, run exhaustion, and delegated
+> complex-task close-report resume. The close-report data class's
+> `final_harness_graph_id` field is widened to `str | None`; `None`
+> identifies the entry-segment close path.
+
 ## Context engine contract
 
 > **Revised by `context-engine-flexible-composition` plan v8.** The build API

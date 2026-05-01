@@ -63,10 +63,25 @@ class ComplexTaskCloseReportRouter:
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
                 "on a complex task."
             )
-        if graph_id is None or graph_id.isspace():
-            raise GraphInvariantViolation(
-                f"TaskCenter task {report.requested_by_task_id!r} is not "
-                "attached to a harness graph."
+
+        if graph_id is None:
+            # Entry mode: parent is the graph-less entry executor. Route
+            # through the runtime's EntryTaskController instead of the
+            # orchestrator registry.
+            controller = self._runtime.entry_task_controller_for(
+                report.requested_by_task_id
+            )
+            if controller is None:
+                raise GraphInvariantViolation(
+                    f"TaskCenter task {report.requested_by_task_id!r} is "
+                    "graph-less but no entry controller is bound to it; "
+                    "close-report delivery cannot proceed."
+                )
+            controller.apply_complex_task_close_report(report)
+            return CloseReportDeliveryResult(
+                status="delivered",
+                requested_by_task_id=report.requested_by_task_id,
+                parent_harness_graph_id=None,
             )
 
         orchestrator = self._runtime.orchestrator_registry.get(graph_id)

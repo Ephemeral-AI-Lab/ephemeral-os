@@ -112,13 +112,14 @@ async def test_resolver_success_gate_boundary_and_limit() -> None:
 
 
 async def test_resolver_success_gate_does_not_block_failure_terminal(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     generator_id = apply_single_generator_plan(fixture, agent_name="verifier")
 
@@ -136,13 +137,14 @@ async def test_resolver_success_gate_does_not_block_failure_terminal(
 
 
 async def test_role_gate_blocks_wrong_task_role(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
 
@@ -158,13 +160,14 @@ async def test_role_gate_blocks_wrong_task_role(
 
 
 async def test_role_gate_blocks_missing_orchestrator(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     planner_id = start_planner(fixture)
     fixture.runtime.orchestrator_registry.deregister(fixture.graph_id)
@@ -187,15 +190,26 @@ async def test_role_gate_blocks_missing_orchestrator(
 
 
 async def test_partial_plan_ancestor_gate_allows_same_request_continuation(
-    request_store, segment_store, graph_store, task_store
+    request_store, segment_store, graph_store, task_store, composer
 ) -> None:
+    from datetime import UTC, datetime
+
     fixture = build_harness_fixture(
         request_store=request_store,
         segment_store=segment_store,
         graph_store=graph_store,
         task_store=task_store,
+        composer=composer,
     )
     segment_store.set_continuation_goal(fixture.segment_id, "continue")
+    # Populate seg-1's denormalized task_specification + task_summary so the
+    # planner_v1 recipe sees a complete prior-segment chain when planning seg-2.
+    segment_store.close_succeeded(
+        fixture.segment_id,
+        task_specification="seg-1 spec",
+        task_summary="seg-1 summary",
+        closed_at=datetime.now(UTC),
+    )
     segment2 = segment_store.insert(
         complex_task_request_id=fixture.request_id,
         sequence_no=2,

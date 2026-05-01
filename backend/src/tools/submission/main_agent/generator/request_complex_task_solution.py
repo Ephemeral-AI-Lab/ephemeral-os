@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
-from task_center.complex_task.handoff import (
-    ComplexTaskHandoffCoordinator,
-    ComplexTaskHandoffResult,
-)
+from task_center.complex_task.handoff import ComplexTaskHandoffResult
 from task_center.exceptions import GraphInvariantViolation
 from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
@@ -15,7 +12,7 @@ from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
     HarnessSubmissionContextError,
-    resolve_harness_submission_context,
+    resolve_executor_submission_context,
 )
 from tools.submission.hooks import (
     HarnessAgentProfileGate,
@@ -59,19 +56,13 @@ async def request_complex_task_solution(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
-        submission_context = resolve_harness_submission_context(context)
+        submission_context = resolve_executor_submission_context(context)
     except HarnessSubmissionContextError as exc:
         return ToolResult(output=str(exc), is_error=True)
 
-    coordinator = ComplexTaskHandoffCoordinator(
-        runtime=submission_context.runtime,
-    )
     try:
-        handoff: ComplexTaskHandoffResult = coordinator.start(
-            task_center_run_id=submission_context.task["task_center_run_id"],
-            parent_task_id=submission_context.task_center_task_id,
-            parent_harness_graph_id=submission_context.graph.id,
-            goal=goal,
+        handoff: ComplexTaskHandoffResult = (
+            submission_context.start_complex_task_handoff(goal=goal)
         )
     except GraphInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
