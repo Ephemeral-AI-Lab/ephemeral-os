@@ -3,6 +3,10 @@
 The renderer never touches stores or runtime objects. It walks blocks in
 priority order, groups by kind via a per-kind heading template, and respects
 ``packet.metadata['token_budget']`` when present.
+
+Inherited blocks (``metadata['inherited_from_parent'] == 'true'``) are
+segregated under a single ``# Parent context`` heading so helper agents see
+their own contract first and the parent's frame underneath.
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ _PRIORITY_ORDER: tuple[ContextPriority, ...] = (
     ContextPriority.LOW,
 )
 
+_INHERITED_FLAG = "inherited_from_parent"
 _TOKEN_BUDGET_KEY = "token_budget"
 
 # Approximate, deterministic token estimate (4 chars ≈ 1 token). Used for
@@ -89,6 +94,7 @@ def default_heading_template() -> HeadingTemplate:
             "completed_task_summary": "# Completed task summary ({task_id})",
             "artifact_reference": "# Artifact reference",
             "entry_request": "# Entry request",
+            "parent_question": "# Parent question",
             "capability_note": "# Capability note",
         }
     )
@@ -96,6 +102,10 @@ def default_heading_template() -> HeadingTemplate:
 
 def _estimate_tokens(text: str) -> int:
     return max(1, (len(text) + _CHARS_PER_TOKEN - 1) // _CHARS_PER_TOKEN)
+
+
+def _is_inherited(block: ContextBlock) -> bool:
+    return block.metadata.get(_INHERITED_FLAG) == "true"
 
 
 class MarkdownPromptRenderer:
@@ -120,7 +130,12 @@ class MarkdownPromptRenderer:
     def render(self, packet: ContextPacket) -> str:
         budget = self._budget_from(packet)
         kept_blocks = self._compress(packet.blocks, budget=budget)
-        sections = self._render_blocks(kept_blocks)
+        helper_owned, inherited = self._split_inherited(kept_blocks)
+        sections: list[str] = []
+        sections.extend(self._render_blocks(helper_owned))
+        if inherited:
+            sections.append("# Parent context")
+            sections.extend(self._render_blocks(inherited))
         return "\n\n".join(s for s in sections if s).strip() + "\n"
 
     # ---- internals ------------------------------------------------------
@@ -135,6 +150,14 @@ class MarkdownPromptRenderer:
             return value if value > 0 else None
         except ValueError:
             return None
+
+    @staticmethod
+    def _split_inherited(
+        blocks: list[ContextBlock],
+    ) -> tuple[list[ContextBlock], list[ContextBlock]]:
+        owned = [b for b in blocks if not _is_inherited(b)]
+        inherited = [b for b in blocks if _is_inherited(b)]
+        return owned, inherited
 
     def _render_blocks(
         self, blocks: list[ContextBlock]

@@ -19,6 +19,7 @@ allowed_tools:
   - shell
 terminals:
   - submit_resolver_result
+context_recipe: resolver_v1
 ---
 You are the resolver helper agent.
 

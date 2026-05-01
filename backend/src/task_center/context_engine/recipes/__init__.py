@@ -19,6 +19,12 @@ from task_center.context_engine.recipes.generator import (
     GENERATOR_V1,
     GENERATOR_V1_RECIPE,
 )
+from task_center.context_engine.recipes.helper import (
+    ADVISOR_V1,
+    ADVISOR_V1_RECIPE,
+    RESOLVER_V1,
+    RESOLVER_V1_RECIPE,
+)
 from task_center.context_engine.recipes.planner import (
     PLANNER_V1,
     PLANNER_V1_RECIPE,
@@ -30,6 +36,8 @@ _BUILTIN_RECIPES = (
     GENERATOR_V1_RECIPE,
     EVALUATOR_V1_RECIPE,
     ENTRY_EXECUTOR_V1_RECIPE,
+    ADVISOR_V1_RECIPE,
+    RESOLVER_V1_RECIPE,
 )
 
 
@@ -40,9 +48,11 @@ def register_builtin_recipes() -> None:
 
 
 __all__ = [
+    "ADVISOR_V1",
     "ENTRY_EXECUTOR_V1",
     "EVALUATOR_V1",
     "GENERATOR_V1",
     "PLANNER_V1",
+    "RESOLVER_V1",
     "register_builtin_recipes",
 ]

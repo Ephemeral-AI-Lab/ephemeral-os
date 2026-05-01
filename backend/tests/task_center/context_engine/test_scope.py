@@ -39,3 +39,17 @@ def test_assert_fields_lists_all_missing_fields_sorted():
     # Check sorted ordering.
     assert msg.index("harness_graph_id") < msg.index("segment_id")
     assert msg.index("segment_id") < msg.index("task_id")
+
+
+def test_helper_scope_fields_round_trip():
+    scope = ContextScope(
+        request_id="r",
+        task_id="helper-1",
+        parent_packet_id="pkt-1",
+        parent_task_id="parent-task",
+    )
+    scope.assert_fields(
+        frozenset(
+            {"request_id", "task_id", "parent_packet_id", "parent_task_id"}
+        )
+    )
