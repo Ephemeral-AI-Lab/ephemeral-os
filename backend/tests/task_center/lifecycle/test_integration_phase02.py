@@ -8,7 +8,7 @@ from task_center.complex_task.request import ComplexTaskRequestStatus
 from task_center.harness_graph.factory import (
     make_harness_graph_orchestrator_factory,
 )
-from task_center.harness_graph.graph import HarnessGraphStatus
+from task_center.harness_graph import HarnessGraphStatus
 from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )

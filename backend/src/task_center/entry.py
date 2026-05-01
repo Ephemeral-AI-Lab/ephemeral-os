@@ -23,7 +23,7 @@ from task_center.context_engine.predicates import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.harness_graph.factory import make_harness_graph_orchestrator_factory
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )

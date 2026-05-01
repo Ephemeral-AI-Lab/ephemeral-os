@@ -26,7 +26,7 @@ from task_center.complex_task.request import (
     ComplexTaskRequest,
     ComplexTaskRequestStatus,
 )
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,

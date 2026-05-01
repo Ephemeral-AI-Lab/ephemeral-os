@@ -21,7 +21,7 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from server.routers.persistence import create_persistence_router
 from task_center.complex_task.request import ComplexTaskRequestStatus
-from task_center.harness_graph.graph import HarnessGraphStatus
+from task_center.harness_graph import HarnessGraphStatus
 from task_center.segment.segment import (
     TaskSegmentCreationReason,
     TaskSegmentStatus,

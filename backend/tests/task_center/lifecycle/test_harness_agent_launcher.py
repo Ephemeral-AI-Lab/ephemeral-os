@@ -8,7 +8,7 @@ from agents.registry import get_definition, register_definition, unregister_defi
 from agents.types import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
 from server.app_factory import RuntimeConfig
-from task_center.harness_graph.graph import HarnessGraphFailReason, HarnessGraphStatus
+from task_center.harness_graph import HarnessGraphFailReason, HarnessGraphStatus
 from task_center.harness_graph.launcher import EphemeralHarnessAgentLauncher
 from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.orchestrator_registry import (

@@ -6,7 +6,7 @@ import pytest
 
 from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStage,
     HarnessGraphStatus,

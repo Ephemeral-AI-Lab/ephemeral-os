@@ -11,7 +11,7 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.config import HarnessLifecycleConfig
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph.state import HarnessGraph
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.task import HarnessTaskRole
 

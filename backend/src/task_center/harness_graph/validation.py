@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import (
+from task_center.harness_graph.state import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,

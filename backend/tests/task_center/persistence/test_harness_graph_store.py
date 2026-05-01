@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,

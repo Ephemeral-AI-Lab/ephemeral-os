@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from db.stores import HarnessGraphStore, TaskCenterStore
 from task_center.complex_task.handler import ComplexTaskRequestHandler
-from task_center.harness_graph.graph import HarnessGraphStage
+from task_center.harness_graph.state import HarnessGraphStage
 from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.runtime import HarnessGraphRuntime
 from task_center.segment.manager import TaskSegmentManager

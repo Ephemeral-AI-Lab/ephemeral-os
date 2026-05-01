@@ -17,7 +17,7 @@ from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
 from task_center.harness_graph.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )

@@ -12,7 +12,7 @@ from db.stores import (
     TaskSegmentStore,
 )
 from task_center.complex_task.request import ComplexTaskRequest
-from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph import HarnessGraph
 from task_center.segment.segment import TaskSegment
 
 

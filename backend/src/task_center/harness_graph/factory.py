@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph.state import HarnessGraph
 from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.runtime import HarnessGraphRuntime
 

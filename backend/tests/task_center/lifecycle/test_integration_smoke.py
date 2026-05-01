@@ -10,7 +10,7 @@ from task_center.complex_task.handler import ComplexTaskRequestHandler
 from task_center.segment.manager import TaskSegmentManager
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.complex_task.request import ComplexTaskRequestStatus
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStatus,

@@ -16,7 +16,7 @@ from task_center.context_engine.recipes.planner import (
     _planner_v1_build,
 )
 from task_center.context_engine.scope import ContextScope
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )

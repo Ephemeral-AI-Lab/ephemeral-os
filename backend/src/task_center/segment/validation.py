@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph import HarnessGraph
 from task_center.segment.segment import TaskSegment
 
 

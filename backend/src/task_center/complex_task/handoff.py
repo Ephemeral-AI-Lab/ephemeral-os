@@ -23,7 +23,7 @@ from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.factory import (
     make_harness_graph_orchestrator_factory,
 )
-from task_center.harness_graph.graph import HarnessGraphFailReason, HarnessGraphStatus
+from task_center.harness_graph import HarnessGraphFailReason, HarnessGraphStatus
 from task_center.harness_graph.runtime import HarnessGraphRuntime
 from task_center.segment.segment import TaskSegment
 from task_center.task import HarnessTaskStatus

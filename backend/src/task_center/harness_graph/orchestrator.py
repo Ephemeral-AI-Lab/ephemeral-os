@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.exceptions import GraphInvariantViolation
 from task_center.harness_graph.dispatcher import HarnessGraphDispatcher
-from task_center.harness_graph.graph import (
+from task_center.harness_graph.state import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStage,

@@ -15,7 +15,7 @@ from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraph,
     HarnessGraphFailReason,
     HarnessGraphStatus,

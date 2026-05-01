@@ -7,7 +7,7 @@ from typing import Any
 
 from task_center.complex_task.request import ComplexTaskRequest
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.graph import HarnessGraph
+from task_center.harness_graph import HarnessGraph
 from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.runtime import HarnessGraphRuntime
 from task_center.segment.segment import TaskSegment

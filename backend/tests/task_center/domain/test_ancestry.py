@@ -19,7 +19,7 @@ from task_center.context_engine.predicates import (
 from task_center.harness_graph.ancestry import (
     has_partial_planned_caller_ancestor,
 )
-from task_center.harness_graph.graph import HarnessGraphStage
+from task_center.harness_graph import HarnessGraphStage
 from task_center.segment.segment import TaskSegmentCreationReason
 
 

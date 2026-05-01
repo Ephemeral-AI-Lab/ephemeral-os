@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.harness_graph.graph import HarnessGraphStatus
+from task_center.harness_graph import HarnessGraphStatus
 from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,

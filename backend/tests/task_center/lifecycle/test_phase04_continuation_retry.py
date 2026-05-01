@@ -14,7 +14,7 @@ from task_center.harness_graph.orchestrator import HarnessGraphOrchestrator
 from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
-from task_center.harness_graph.graph import (
+from task_center.harness_graph import (
     HarnessGraphFailReason,
     HarnessGraphStatus,
 )

@@ -26,7 +26,7 @@ from task_center.context_engine.packet import (
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
-from task_center.harness_graph.graph import HarnessGraph, HarnessGraphStatus
+from task_center.harness_graph import HarnessGraph, HarnessGraphStatus
 from task_center.segment.segment import TaskSegment
 
 PLANNER_V1 = "planner_v1"
