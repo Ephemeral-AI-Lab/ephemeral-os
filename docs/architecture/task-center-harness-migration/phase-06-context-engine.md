@@ -197,6 +197,7 @@ Suggested block kinds:
 - `resolver_summary`,
 - `artifact_reference`,
 - `capability_note` *(emitted by `AgentSelection.required_context_blocks` when a variant changes the model-facing tool/prose surface — partial-plan disable is the first user)*,
+- `parent_question` *(emitted by `advisor_v1` / `resolver_v1` to carry the parent task's framing as the helper's `priority=required` first block; renderer surfaces inherited blocks under "# Parent context" below it)*,
 - `close_report`.
 
 ## Summary model
