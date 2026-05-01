@@ -11,14 +11,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.scope import ContextScope
 
-# Forward references avoid circular imports — the engine imports recipes_registry,
-# recipes_registry stays free of engine-deps.
-RecipeBuild = Callable[[ContextScope, "ContextEngineDepsLike"], ContextPacket]  # type: ignore[name-defined]  # noqa: F821
+if TYPE_CHECKING:  # pragma: no cover - typing-only; engine imports this module
+    from task_center.context_engine.engine import ContextEngineDeps
+
+# The engine imports this module at runtime to wire ``ContextRecipe``; the
+# deps type is imported only for typing so the cycle stays static.
+RecipeBuild = Callable[[ContextScope, "ContextEngineDeps"], ContextPacket]
 
 
 @dataclass(frozen=True, slots=True)

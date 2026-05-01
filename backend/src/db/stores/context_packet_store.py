@@ -17,8 +17,9 @@ class ContextPacketStore(SyncStoreMixin):
     def insert(self, packet: ContextPacket) -> str:
         """Persist *packet*. Returns the stored id (matches ``packet.id``).
 
-        Re-inserting the same id is rejected at the database layer; callers
-        rely on composer-minted UUIDs to keep this simple.
+        Composer-minted ids are UUIDs so collisions are not expected. Re-inserting
+        an existing id surfaces as :class:`sqlalchemy.exc.IntegrityError`; callers
+        should treat that as a bug, not a retryable condition.
         """
         with self._sf() as db:
             record = ContextPacketRecord(

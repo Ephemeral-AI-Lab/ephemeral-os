@@ -41,7 +41,7 @@ _DEMOTION = {
 }
 
 
-def _demote_priority(priority: ContextPriority) -> ContextPriority:
+def demote_priority(priority: ContextPriority) -> ContextPriority:
     return _DEMOTION[priority]
 
 
@@ -77,7 +77,7 @@ def _build_helper_packet(
         )
     ]
     for parent_block in parent_packet.blocks:
-        demoted = _demote_priority(parent_block.priority)
+        demoted = demote_priority(parent_block.priority)
         inherited_meta = {
             **parent_block.metadata,
             "inherited_from_parent": "true",
@@ -139,5 +139,5 @@ __all__ = [
     "ADVISOR_V1_RECIPE",
     "RESOLVER_V1",
     "RESOLVER_V1_RECIPE",
-    "_demote_priority",
+    "demote_priority",
 ]

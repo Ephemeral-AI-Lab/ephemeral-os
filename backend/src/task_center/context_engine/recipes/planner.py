@@ -27,7 +27,7 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 from task_center.harness_graph.graph import HarnessGraph, HarnessGraphStatus
-from task_center.segment.segment import TaskSegment, TaskSegmentStatus
+from task_center.segment.segment import TaskSegment
 
 PLANNER_V1 = "planner_v1"
 MAX_FAILED_GRAPHS_RENDERED = 6
@@ -53,11 +53,11 @@ def _planner_v1_build(
     metadata: dict[str, str] = {}
     blocks: list[ContextBlock] = []
 
-    if segment.sequence_no == 1:
-        metadata["is_initial_segment"] = "true"
-        blocks.append(_segment_goal_block(segment))
+    is_initial = segment.sequence_no == 1
+    metadata["is_initial_segment"] = "true" if is_initial else "false"
+    if is_initial:
+        blocks.append(_segment_goal_block(segment, is_initial=True))
     else:
-        metadata["is_initial_segment"] = "false"
         blocks.append(_complex_task_goal_block(request))
         blocks.append(_segment_goal_block(segment))
         blocks.extend(
@@ -94,13 +94,21 @@ def _planner_v1_build(
 # ---------------------------------------------------------------------------
 
 
-def _segment_goal_block(segment: TaskSegment) -> ContextBlock:
+def _segment_goal_block(
+    segment: TaskSegment, *, is_initial: bool = False
+) -> ContextBlock:
+    metadata: dict[str, str] = {}
+    if is_initial:
+        metadata["subtitle"] = (
+            "*(first segment — equal to the original request goal)*"
+        )
     return ContextBlock(
         kind=ContextBlockKind.SEGMENT_GOAL,
         priority=ContextPriority.REQUIRED,
         text=segment.goal,
         source_id=segment.id,
         source_kind="task_segment",
+        metadata=metadata,
     )
 
 
@@ -230,10 +238,8 @@ PLANNER_V1_RECIPE = ContextRecipe(
 )
 
 
-# Light re-export so tests / other recipes can reuse the segment status enum.
 __all__ = [
     "PLANNER_V1",
     "PLANNER_V1_RECIPE",
     "MAX_FAILED_GRAPHS_RENDERED",
-    "TaskSegmentStatus",
 ]

@@ -17,7 +17,6 @@ from dataclasses import dataclass
 
 from agents.types import AgentDefinition
 from task_center.context_engine.engine import ContextEngine
-from task_center.context_engine.errors import MissingContextRecipeError
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.renderer import (
     MarkdownPromptRenderer,
@@ -71,11 +70,8 @@ class ContextComposer:
             scope=scope,
             deps=self.engine.deps,
         )
-        if not selection.context_recipe:
-            raise MissingContextRecipeError(
-                f"Resolved agent {selection.agent_def.name!r} lacks a "
-                "context_recipe."
-            )
+        # ``resolver.resolve`` enforces context_recipe presence and raises
+        # ``MissingContextRecipeError`` for both base and variant-target paths.
         packet = self.engine.build(selection.context_recipe, scope)
         if selection.required_context_blocks:
             packet.blocks.extend(selection.required_context_blocks)

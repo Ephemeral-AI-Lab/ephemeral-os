@@ -16,6 +16,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
+from task_center.context_engine.recipes._summaries import latest_summary_text
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
@@ -59,13 +60,11 @@ def _evaluator_v1_build(
         task = deps.task_store.get_task(task_id)
         if task is None:
             continue
-        summaries = task.get("summaries") or []
-        text = _format_completed_summary(summaries)
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.COMPLETED_TASK_SUMMARY,
                 priority=ContextPriority.HIGH,
-                text=text,
+                text=latest_summary_text(task.get("summaries")),
                 source_id=task_id,
                 source_kind="task_center_task",
                 metadata={"task_id": task_id},
@@ -83,15 +82,6 @@ def _evaluator_v1_build(
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],
     )
-
-
-def _format_completed_summary(summaries: list[dict]) -> str:  # type: ignore[type-arg]
-    if not summaries:
-        return "(no summary recorded)"
-    last = summaries[-1]
-    if not isinstance(last, dict):
-        return str(last)
-    return str(last.get("summary") or last.get("outcome") or "(empty)")
 
 
 EVALUATOR_V1_RECIPE = ContextRecipe(

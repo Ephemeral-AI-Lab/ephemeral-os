@@ -118,18 +118,17 @@ def test_inherited_blocks_grouped_under_parent_context_section():
     assert out.find("question") < parent_idx
 
 
-def test_seg_initial_subtitle_emitted_when_metadata_set():
+def test_block_subtitle_metadata_renders_under_heading():
     blocks = [
         ContextBlock(
             kind="segment_goal",
             priority=ContextPriority.REQUIRED,
             text="g",
+            metadata={"subtitle": "*(first segment)*"},
         )
     ]
-    out = MarkdownPromptRenderer().render(
-        _packet(blocks, is_initial_segment="true")
-    )
-    assert "*(first segment" in out
+    out = MarkdownPromptRenderer().render(_packet(blocks))
+    assert "*(first segment)*" in out
 
 
 def test_render_is_deterministic_for_fixed_packet():

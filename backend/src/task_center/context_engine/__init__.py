@@ -16,6 +16,7 @@ Public surface (per plan §3.1):
 from __future__ import annotations
 
 from task_center.context_engine.errors import (
+    AgentDefinitionValidationError,
     ContextEngineError,
     MissingContextRecipeError,
     RecipeScopeError,
@@ -30,6 +31,7 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.scope import ContextScope
 
 __all__ = [
+    "AgentDefinitionValidationError",
     "ContextBlock",
     "ContextBlockKind",
     "ContextEngineError",

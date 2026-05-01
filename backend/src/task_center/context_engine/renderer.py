@@ -132,10 +132,10 @@ class MarkdownPromptRenderer:
         kept_blocks = self._compress(packet.blocks, budget=budget)
         helper_owned, inherited = self._split_inherited(kept_blocks)
         sections: list[str] = []
-        sections.extend(self._render_blocks(helper_owned, packet=packet))
+        sections.extend(self._render_blocks(helper_owned))
         if inherited:
             sections.append("# Parent context")
-            sections.extend(self._render_blocks(inherited, packet=packet))
+            sections.extend(self._render_blocks(inherited))
         return "\n\n".join(s for s in sections if s).strip() + "\n"
 
     # ---- internals ------------------------------------------------------
@@ -160,13 +160,13 @@ class MarkdownPromptRenderer:
         return owned, inherited
 
     def _render_blocks(
-        self, blocks: list[ContextBlock], *, packet: ContextPacket
+        self, blocks: list[ContextBlock]
     ) -> list[str]:
         ordered = self._order_by_priority(blocks)
         out: list[str] = []
         for block in ordered:
             heading = self._headings.heading_for(block)
-            subtitle = self._subtitle_for(block, packet=packet)
+            subtitle = block.metadata.get("subtitle") or None
             body = block.text.strip()
             section = heading
             if subtitle:
@@ -174,15 +174,6 @@ class MarkdownPromptRenderer:
             section += f"\n\n{body}"
             out.append(section)
         return out
-
-    @staticmethod
-    def _subtitle_for(block: ContextBlock, *, packet: ContextPacket) -> str | None:
-        if (
-            block.kind == "segment_goal"
-            and packet.metadata.get("is_initial_segment") == "true"
-        ):
-            return "*(first segment — equal to the original request goal)*"
-        return None
 
     @staticmethod
     def _order_by_priority(blocks: list[ContextBlock]) -> list[ContextBlock]:

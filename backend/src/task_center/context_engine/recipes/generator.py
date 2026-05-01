@@ -17,6 +17,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
+from task_center.context_engine.recipes._summaries import latest_summary_text
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
@@ -61,7 +62,6 @@ def _generator_v1_build(
     blocks.extend(
         _dependency_summary_blocks(
             needs=task.get("needs") or (),
-            harness_graph_id=scope.harness_graph_id,
             task_store=deps.task_store,
         )
     )
@@ -83,7 +83,6 @@ def _generator_v1_build(
 def _dependency_summary_blocks(
     *,
     needs,  # type: ignore[no-untyped-def]
-    harness_graph_id: str,
     task_store,  # type: ignore[no-untyped-def]
 ) -> list[ContextBlock]:
     out: list[ContextBlock] = []
@@ -91,29 +90,17 @@ def _dependency_summary_blocks(
         dep = task_store.get_task(dep_id)
         if dep is None:
             continue
-        summaries = dep.get("summaries") or []
-        text = _format_dependency_summaries(summaries)
         out.append(
             ContextBlock(
                 kind=ContextBlockKind.DEPENDENCY_SUMMARY,
                 priority=ContextPriority.MEDIUM,
-                text=text,
+                text=latest_summary_text(dep.get("summaries")),
                 source_id=dep_id,
                 source_kind="task_center_task",
                 metadata={"dep_id": dep_id},
             )
         )
     return out
-
-
-def _format_dependency_summaries(summaries: list[dict]) -> str:  # type: ignore[type-arg]
-    if not summaries:
-        return "(no summary recorded)"
-    last = summaries[-1]
-    if not isinstance(last, dict):
-        return str(last)
-    summary_text = last.get("summary") or last.get("outcome") or "(empty)"
-    return str(summary_text)
 
 
 GENERATOR_V1_RECIPE = ContextRecipe(

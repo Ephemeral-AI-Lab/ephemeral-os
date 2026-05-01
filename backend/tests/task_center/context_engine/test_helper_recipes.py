@@ -22,7 +22,7 @@ from task_center.context_engine.packet import (
 )
 from task_center.context_engine.recipes.helper import (
     _advisor_v1_build,
-    _demote_priority,
+    demote_priority,
     _resolver_v1_build,
 )
 from task_center.context_engine.scope import ContextScope
@@ -100,10 +100,10 @@ def _seed_parent_task(task_store, *, task_center_run_id, task_id, question):
 
 
 def test_demotion_table_covers_all_priorities():
-    assert _demote_priority(ContextPriority.REQUIRED) == ContextPriority.HIGH
-    assert _demote_priority(ContextPriority.HIGH) == ContextPriority.MEDIUM
-    assert _demote_priority(ContextPriority.MEDIUM) == ContextPriority.LOW
-    assert _demote_priority(ContextPriority.LOW) == ContextPriority.LOW
+    assert demote_priority(ContextPriority.REQUIRED) == ContextPriority.HIGH
+    assert demote_priority(ContextPriority.HIGH) == ContextPriority.MEDIUM
+    assert demote_priority(ContextPriority.MEDIUM) == ContextPriority.LOW
+    assert demote_priority(ContextPriority.LOW) == ContextPriority.LOW
 
 
 def test_advisor_v1_emits_required_parent_question_then_demoted_inherits(
