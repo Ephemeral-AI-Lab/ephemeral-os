@@ -108,7 +108,9 @@ class EphemeralHarnessAgentLauncher:
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_harness_graph_id=launch.harness_graph_id,
+            task_center_request_id=launch.complex_task_request_id,
             harness_graph_runtime=runtime if attach_harness else None,
+            composer=runtime.composer,
         )
         result: EphemeralRunResult | None = None
         try:

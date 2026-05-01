@@ -7,6 +7,12 @@ import pytest
 from agents import register_definition, unregister_definition
 from agents.types import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
+from task_center.context_engine.packet import (
+    ContextBlock,
+    ContextPacket,
+    ContextPriority,
+    ContextRefs,
+)
 from tools.core.context import ToolExecutionContextService
 from tools.core.results import ToolResult
 from tools.core.runtime import ExecutionMetadata
@@ -23,6 +29,10 @@ from tools.submission.subagent.explorer import submit_exploration_result
 
 pytestmark = pytest.mark.asyncio
 
+PARENT_TASK_ID = "t-parent"
+PARENT_RUN_ID = "run1"
+PARENT_REQUEST_ID = "req-A"
+
 
 async def _noop_emit(event) -> None:
     del event
@@ -34,6 +44,56 @@ def _context(*, role: str = "", agent_type: str = "agent") -> ToolExecutionConte
         metadata["role"] = role
     if agent_type:
         metadata["agent_type"] = agent_type
+    return ToolExecutionContextService(cwd="/tmp", services=metadata)
+
+
+def _seed_parent_packet(context_packet_store) -> ContextPacket:
+    packet = ContextPacket(
+        target_role="planner",
+        target_id="g-parent",
+        canonical_refs=ContextRefs(
+            request_id=PARENT_REQUEST_ID, harness_graph_id="g-parent"
+        ),
+        blocks=[
+            ContextBlock(
+                kind="segment_goal",
+                priority=ContextPriority.REQUIRED,
+                text="parent goal text",
+            ),
+        ],
+    )
+    context_packet_store.insert(packet)
+    return packet
+
+
+def _seed_parent_task(task_store, *, packet_id: str) -> None:
+    task_store.upsert_task(
+        task_id=PARENT_TASK_ID,
+        task_center_run_id=PARENT_RUN_ID,
+        role="generator",
+        agent_name="executor",
+        task_input="parent task input",
+        status="running",
+        summaries=[],
+        needs=[],
+        task_center_harness_graph_id="g-parent",
+        context_packet_id=packet_id,
+        spawn_reason="harness_graph_generator",
+    )
+
+
+def _helper_context(
+    *, role: str, composer, request_id: str = PARENT_REQUEST_ID
+) -> ToolExecutionContextService:
+    metadata = ExecutionMetadata(
+        runtime_config=object(),
+        composer=composer,
+        task_center_task_id=PARENT_TASK_ID,
+        task_center_run_id=PARENT_RUN_ID,
+        task_center_request_id=request_id,
+    )
+    metadata["role"] = role
+    metadata["agent_type"] = "agent"
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
@@ -102,13 +162,18 @@ async def test_helper_role_gate_blocks_wrong_helper_terminal_role() -> None:
     assert "resolver runs" in result.output
 
 
-async def test_ask_advisor_runs_advisor_and_returns_terminal_feedback(monkeypatch) -> None:
+async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
+    monkeypatch, composer, context_packet_store, task_store
+) -> None:
+    parent_packet = _seed_parent_packet(context_packet_store)
+    _seed_parent_task(task_store, packet_id=parent_packet.id)
     register_definition(
         AgentDefinition(
             name="advisor",
             description="advisor",
             role="advisor",
             terminals=["submit_advisor_feedback"],
+            context_recipe="advisor_v1",
         )
     )
     seen: dict[str, object] = {}
@@ -136,7 +201,7 @@ async def test_ask_advisor_runs_advisor_and_returns_terminal_feedback(monkeypatc
                 "tool_payloads": [{"task": "a"}],
                 "prompt": "review this",
             },
-            _context(role="planner"),
+            _helper_context(role="planner", composer=composer),
             emit=_noop_emit,
         )
     finally:
@@ -146,19 +211,62 @@ async def test_ask_advisor_runs_advisor_and_returns_terminal_feedback(monkeypatc
     assert result.output == "approved"
     assert result.metadata["verdict"] == "approve"
     assert seen["agent_def"] == "advisor"
+    composed_prompt = str(seen["prompt"])
+    # Composer-built parent inheritance section is present.
+    assert "# Parent context" in composed_prompt
+    assert "parent goal text" in composed_prompt
+    # Original advisor question is appended as the request section.
+    assert "# Advisor request" in composed_prompt
+    assert "review this" in composed_prompt
+    assert "submit_full_plan" in composed_prompt
 
 
-async def test_ask_resolver_runs_resolver_and_returns_terminal_result(monkeypatch) -> None:
+async def test_ask_advisor_errors_when_composer_missing() -> None:
+    register_definition(
+        AgentDefinition(
+            name="advisor",
+            description="advisor",
+            role="advisor",
+            terminals=["submit_advisor_feedback"],
+            context_recipe="advisor_v1",
+        )
+    )
+    try:
+        result = await execute_tool_once(
+            ask_advisor,
+            {
+                "tool_name": "submit_full_plan",
+                "tool_payloads": [],
+                "prompt": "advise",
+            },
+            _context(role="planner"),
+            emit=_noop_emit,
+        )
+    finally:
+        unregister_definition("advisor")
+
+    assert result.is_error
+    assert "composer is not wired" in result.output
+
+
+async def test_ask_resolver_runs_resolver_with_inherited_parent_context(
+    monkeypatch, composer, context_packet_store, task_store
+) -> None:
+    parent_packet = _seed_parent_packet(context_packet_store)
+    _seed_parent_task(task_store, packet_id=parent_packet.id)
     register_definition(
         AgentDefinition(
             name="resolver",
             description="resolver",
             role="resolver",
             terminals=["submit_resolver_result"],
+            context_recipe="resolver_v1",
         )
     )
+    seen: dict[str, object] = {}
 
     async def _fake_run(*args, **kwargs):
+        seen["prompt"] = args[1]
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -178,7 +286,7 @@ async def test_ask_resolver_runs_resolver_and_returns_terminal_result(monkeypatc
         result = await execute_tool_once(
             ask_resolver,
             {"issues_to_resolve": ["fix bug"], "issue_context": "context"},
-            _context(role="verifier"),
+            _helper_context(role="verifier", composer=composer),
             emit=_noop_emit,
         )
     finally:
@@ -186,3 +294,8 @@ async def test_ask_resolver_runs_resolver_and_returns_terminal_result(monkeypatc
 
     assert not result.is_error
     assert result.metadata["resolver"]["resolved"] is True
+    composed_prompt = str(seen["prompt"])
+    assert "# Parent context" in composed_prompt
+    assert "parent goal text" in composed_prompt
+    assert "# Resolver request" in composed_prompt
+    assert "fix bug" in composed_prompt

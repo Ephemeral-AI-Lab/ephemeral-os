@@ -37,7 +37,11 @@ class ExecutionMetadata:
     task_center_run_id: str | None = None
     task_center_task_id: str | None = None
     task_center_harness_graph_id: str | None = None
+    task_center_request_id: str | None = None
     harness_graph_runtime: Any | None = None
+    # Per-request ContextComposer used by helper tools (ask_advisor /
+    # ask_resolver) to build the parent-inheriting prompt for the helper agent.
+    composer: Any | None = None
     conversation_messages: list[Any] = field(default_factory=list)
 
     # Tool registry reference (used by tools that need to introspect the
@@ -84,7 +88,9 @@ class ExecutionMetadata:
             "task_center_run_id",
             "task_center_task_id",
             "task_center_harness_graph_id",
+            "task_center_request_id",
             "harness_graph_runtime",
+            "composer",
             "conversation_messages",
             "tool_registry",
             "context_preparers",

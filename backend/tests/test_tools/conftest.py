@@ -12,9 +12,14 @@ from db.base import Base
 import db.models  # noqa: F401
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
 from db.stores.complex_task_request_store import ComplexTaskRequestStore
+from db.stores.context_packet_store import ContextPacketStore
 from db.stores.harness_graph_store import HarnessGraphStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.task_segment_store import TaskSegmentStore
+from task_center.context_engine.composer import ContextComposer
+from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
+from task_center.context_engine.predicates import register_builtin_predicates
+from task_center.context_engine.recipes import register_builtin_recipes
 
 
 @pytest.fixture
@@ -72,3 +77,26 @@ def task_store(session_factory) -> TaskCenterStore:
     store = TaskCenterStore()
     store.initialize(session_factory)
     return store
+
+
+@pytest.fixture
+def context_packet_store(session_factory) -> ContextPacketStore:
+    store = ContextPacketStore()
+    store.initialize(session_factory)
+    return store
+
+
+@pytest.fixture
+def composer(
+    request_store, segment_store, graph_store, task_store, context_packet_store
+) -> ContextComposer:
+    register_builtin_predicates()
+    register_builtin_recipes()
+    deps = ContextEngineDeps(
+        request_store=request_store,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        task_store=task_store,
+        context_packet_store=context_packet_store,
+    )
+    return ContextComposer.default(ContextEngine(deps))

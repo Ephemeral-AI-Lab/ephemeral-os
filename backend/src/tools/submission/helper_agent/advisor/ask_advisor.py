@@ -6,10 +6,13 @@ import json
 
 from pydantic import BaseModel, Field
 
-from agents import get_definition
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
+from tools.submission.helper_agent._compose import (
+    HelperComposeError,
+    compose_helper_bundle,
+)
 from tools.submission.hooks import HelperRequestGate
 
 
@@ -19,7 +22,7 @@ class AskAdvisorInput(BaseModel):
     prompt: str = Field(..., min_length=1)
 
 
-def _advisor_prompt(
+def _question_section(
     *,
     tool_name: str,
     tool_payloads: list[dict[str, object]],
@@ -27,10 +30,10 @@ def _advisor_prompt(
 ) -> str:
     payloads = json.dumps(tool_payloads, indent=2, sort_keys=True)
     return (
-        "Review this pending decision or terminal submission.\n\n"
+        "# Advisor request\n\n"
         f"Tool name: {tool_name}\n\n"
         f"Tool payloads:\n{payloads}\n\n"
-        f"Prompt:\n{prompt}"
+        f"Prompt:\n{prompt}\n"
     )
 
 
@@ -65,18 +68,25 @@ async def ask_advisor(
             is_error=True,
         )
 
-    advisor = get_definition("advisor")
-    if advisor is None:
-        return ToolResult(output="ask_advisor: advisor agent is not registered.", is_error=True)
+    try:
+        bundle = compose_helper_bundle(
+            helper_role="advisor",
+            base_agent_name="advisor",
+            context=context,
+        )
+    except HelperComposeError as exc:
+        return exc.to_tool_result()
+
+    composed_input = bundle.task_input.rstrip() + "\n\n" + _question_section(
+        tool_name=tool_name,
+        tool_payloads=tool_payloads,
+        prompt=prompt,
+    )
 
     result = await run_ephemeral_agent(
         runtime_config,
-        _advisor_prompt(
-            tool_name=tool_name,
-            tool_payloads=tool_payloads,
-            prompt=prompt,
-        ),
-        agent_def=advisor,
+        composed_input,
+        agent_def=bundle.agent_def,
         sandbox_id=context.sandbox_id or None,
         persist_agent_run=False,
         extra_tool_metadata=context.services_with_overrides(
