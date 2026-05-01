@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from agents.types import AgentDefinition
 
 if TYPE_CHECKING:  # pragma: no cover
-    from task_center.context_engine.predicates import PredicateRegistry as _PR
+    from task_center.agent_launch.predicates import PredicateRegistry as _PR
     from task_center.context_engine.recipes_registry import (
         RecipeRegistry as _RR,
     )
@@ -96,7 +96,7 @@ def validate_agent_definitions_resolved(
     from task_center.context_engine.errors import (
         AgentDefinitionValidationError,
     )
-    from task_center.context_engine.predicates import (
+    from task_center.agent_launch.predicates import (
         PredicateRegistry as DefaultPredicateRegistry,
     )
     from task_center.context_engine.recipes_registry import (

@@ -19,7 +19,7 @@ from agents.types import (
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.predicates import (
+from task_center.agent_launch.predicates import (
     PredicateRegistry,
     register_builtin_predicates,
 )

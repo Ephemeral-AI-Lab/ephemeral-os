@@ -58,6 +58,9 @@ class HeadingTemplate:
         self._templates[kind] = template
 
     def heading_for(self, block: ContextBlock) -> str:
+        explicit = block.metadata.get("heading")
+        if explicit:
+            return explicit
         template = self._templates.get(block.kind, "# {title}")
         try:
             return template.format(

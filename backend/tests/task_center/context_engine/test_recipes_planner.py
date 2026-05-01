@@ -11,8 +11,10 @@ from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import (
     ContextPriority,
 )
-from task_center.context_engine.recipes.planner import (
+from task_center.context_engine.recipes.graph_landscape import (
     MAX_FAILED_GRAPHS_RENDERED,
+)
+from task_center.context_engine.recipes.planner import (
     _planner_v1_build,
 )
 from task_center.context_engine.scope import ContextScope

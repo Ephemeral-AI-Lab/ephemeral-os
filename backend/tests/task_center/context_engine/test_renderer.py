@@ -131,6 +131,20 @@ def test_block_subtitle_metadata_renders_under_heading():
     assert "*(first segment)*" in out
 
 
+def test_block_heading_metadata_overrides_default_heading():
+    blocks = [
+        ContextBlock(
+            kind="custom_kind",
+            priority=ContextPriority.REQUIRED,
+            text="body",
+            metadata={"heading": "# Custom heading"},
+        )
+    ]
+    out = MarkdownPromptRenderer().render(_packet(blocks))
+    assert out.startswith("# Custom heading\n\nbody")
+    assert "# Custom kind" not in out
+
+
 def test_render_is_deterministic_for_fixed_packet():
     blocks = [
         ContextBlock(kind="a", priority=ContextPriority.REQUIRED, text="a"),

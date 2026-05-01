@@ -29,7 +29,7 @@ from task_center.complex_task.request import ComplexTaskCloseReport
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.predicates import register_builtin_predicates
+from task_center.agent_launch.predicates import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry_task_controller import EntryTaskController

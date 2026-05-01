@@ -240,7 +240,10 @@ TaskSegmentClosureReport {
 entry is derived from a closed harness graph summary and records both the plan
 that was tried and the failure reason or failure landscape for that graph.
 
-`TaskSegmentManager` must enforce these invariants:
+`TaskSegmentManager` must enforce these invariants for graph-mode task
+segments. The graph-less entry segment introduced later in Phase 06 is a narrow
+carve-out owned by `EntryTaskController`; it does not use `TaskSegmentManager`
+or create `HarnessGraph` rows.
 
 - Subsequent harness graphs stay in the same segment.
 - Graph sequence numbers are contiguous within a segment.
@@ -250,8 +253,8 @@ that was tried and the failure reason or failure landscape for that graph.
   that closes it.
 - A failed harness graph returns to `TaskSegmentManager`; the manager retries
   while attempt budget remains, and closes the segment failed once budget is exhausted.
-- The segment is initialized with exactly one initial harness graph and closes
-  exactly once.
+- A graph-mode segment is initialized with exactly one initial harness graph and
+  closes exactly once.
 - The manager never creates `ComplexTaskRequest` or `TaskSegment` records.
 
 `ComplexTaskRequestHandler` must enforce these invariants:

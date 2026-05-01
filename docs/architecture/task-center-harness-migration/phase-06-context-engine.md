@@ -304,13 +304,17 @@ Required fields:
 | `goal` | Request goal from `request_complex_task_solution(goal)`. |
 | `outcome` | Succeeded, failed, or cancelled. |
 | `final_segment_id` | Segment that produced the final outcome. |
-| `final_harness_graph_id` | Graph that produced the final outcome. |
+| `final_harness_graph_id` | Harness graph that produced the final outcome; `None` only when the final outcome came from the graph-less entry segment. |
 | `segment_summaries` | Ordered digest of segment results. |
 | `final_result` | The payload returned for the requesting executor task. |
 | `artifact_refs` | Final durable evidence references. |
 | `residual_risks` | Follow-ups the requesting executor task must know. |
 
 This summary powers the close packet delivered to `requested_by_task_id`.
+For normal graph-mode complex-task requests, `final_harness_graph_id` names the
+passing or final failed harness graph. For the top-level entry request, the entry
+segment may close without any harness graph rows; in that entry-only case the
+field is `None` and `final_segment_id` is the structural close target.
 
 ## Role-specific context recipes
 

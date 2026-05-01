@@ -12,7 +12,7 @@ from agents.types import (
 from task_center.context_engine.errors import (
     AgentDefinitionValidationError,
 )
-from task_center.context_engine.predicates import PredicateRegistry
+from task_center.agent_launch.predicates import PredicateRegistry
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,

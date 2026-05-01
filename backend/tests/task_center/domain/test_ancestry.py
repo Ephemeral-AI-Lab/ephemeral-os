@@ -12,7 +12,7 @@ import inspect
 
 import pytest
 
-from task_center.context_engine.predicates import (
+from task_center.agent_launch.predicates import (
     PredicateRegistry,
     register_builtin_predicates,
 )
@@ -281,7 +281,7 @@ def test_resolver_predicate_dispatches_to_canonical(
     register_builtin_predicates()
     try:
         from task_center.context_engine.engine import ContextEngineDeps
-        from task_center.context_engine.predicates import ResolverContext
+        from task_center.agent_launch.predicates import ResolverContext
         from task_center.context_engine.scope import ContextScope
 
         # Seed a partial-plan caller chain.
@@ -341,7 +341,7 @@ def test_resolver_call_sites_reference_canonical_in_source():
     """Structural enforcement: every shim must call into the canonical via
     the same name, so a future caller that drifts to a different signature
     breaks this assertion."""
-    from task_center.context_engine.predicates import (
+    from task_center.agent_launch.predicates import (
         ResolverContext,
         _partial_plan_caller_ancestor,
     )

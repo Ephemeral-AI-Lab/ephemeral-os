@@ -59,8 +59,10 @@ assembly; Phase 04 wires the actual delivery to `requested_by_task_id`.
   `ComplexTaskRequestHandler.create_complex_task_request` followed by
   `create_initial_segment`, then exits the executor agent run pending the
   close report (the Phase 03 tool gate guards the same entry point).
-- Persistence or replay semantics for the close report so a process
-  restart can still deliver to `requested_by_task_id`.
+- Synchronous close-report delivery to the active parent orchestrator. Phase 04
+  deliberately assumes no process restart while a parent task is waiting on a
+  delegated request; durable replay/recovery for waiting close reports is future
+  runtime recovery work.
 - The `/api/db/task-center-runs/{id}/graph` router endpoint, walking
   `complex_task_requests → task_segments → harness_graphs` to surface
   the new schema's harness-graph view to the frontend.
@@ -198,7 +200,12 @@ harness-owned fields:
 | `requested_by_task_id` | executor task that requested the complex solution |
 | `outcome` | `success` or `failed` |
 | `final_segment_id` | segment that produced the final outcome |
-| `final_harness_graph_id` | harness graph that produced the final outcome |
+| `final_harness_graph_id` | harness graph that produced the final outcome; `None` only for graph-less entry-segment closes |
+
+For delegated complex-task requests started by `request_complex_task_solution`,
+this field is normally the passing or final failed harness graph. The nullable
+case exists for the top-level entry segment, which is closed by
+`EntryTaskController` without creating a `HarnessGraph`.
 
 Detailed payload such as per-task summaries, planner scratchpads, and evidence
 links belongs to the context engine.
@@ -217,6 +224,14 @@ motion inside one task segment.
 Continuation also does not return to the requesting executor. It keeps the same
 complex request open and creates the next segment.
 
+Current implementation note: graph-mode close-report delivery is synchronous and
+process-local. The parent task must still be `waiting_complex_task`, and its
+parent `HarnessGraphOrchestrator` must still be registered in the active
+process. If that orchestrator is missing, delivery raises a graph invariant
+violation rather than replaying from persisted rows. Reconstructing active
+orchestrators and replaying undelivered close reports after process restart is
+outside this phase.
+
 ## Implementation tasks
 
 1. Implement `request_complex_task_solution` as a thin tool handler that
@@ -229,9 +244,10 @@ complex request open and creates the next segment.
 4. Implement continuation segment creation when a segment closes with
    `success_continue(goal)`, and ensure the fresh `TaskSegmentManager` creates
    and starts the continuation segment's initial `HarnessGraph`.
-5. Route final complex-task close reports back to the requesting executor task.
-6. Add close-report persistence or delivery semantics robust enough for process
-   restart if the surrounding runtime supports it.
+5. Route final complex-task close reports back to the requesting executor task
+   through the active parent orchestrator.
+6. Keep restart-safe close-report replay out of Phase 04; it belongs with
+   durable runtime recovery.
 
 ## Phase exit criteria
 

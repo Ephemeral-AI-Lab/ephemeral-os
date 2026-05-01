@@ -296,3 +296,7 @@ Phase 04 known limitations recorded for the next phase:
   raises before registration, so this path is not exercised. Tracking as a
   known limitation; Phase 05's durable recovery work owns proper registry
   hygiene under startup failure.
+- Close-report delivery is intentionally synchronous and process-local in this
+  phase. A waiting parent task requires an active registered parent
+  `HarnessGraphOrchestrator`; restart-safe replay from persisted request,
+  segment, graph, and task rows remains future durable recovery work.

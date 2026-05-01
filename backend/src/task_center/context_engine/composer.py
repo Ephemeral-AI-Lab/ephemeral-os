@@ -22,7 +22,7 @@ from task_center.context_engine.renderer import (
     MarkdownPromptRenderer,
     PromptRenderer,
 )
-from task_center.context_engine.resolver import (
+from task_center.agent_launch.resolver import (
     AgentResolver,
     RuleBasedAgentResolver,
 )

@@ -7,10 +7,7 @@ Public surface (per plan §3.1):
 * :class:`ContextRecipe`, :class:`RecipeRegistry` — recipe dispatch.
 * :class:`ContextEngine`, :class:`ContextEngineDeps` — packet builder.
 * :class:`PromptRenderer`, :class:`MarkdownPromptRenderer` — pure renderer.
-* :class:`AgentResolver`, :class:`AgentSelection`,
-  :class:`RuleBasedAgentResolver` — frontmatter-driven variant selection.
 * :class:`ContextComposer`, :class:`LaunchBundle` — single launch entry point.
-* :class:`PredicateRegistry`, :class:`ResolverContext` — named predicates.
 """
 
 from __future__ import annotations

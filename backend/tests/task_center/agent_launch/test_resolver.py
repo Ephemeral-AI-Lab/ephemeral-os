@@ -15,11 +15,11 @@ from task_center.context_engine.errors import (
     AgentDefinitionValidationError,
     MissingContextRecipeError,
 )
-from task_center.context_engine.predicates import (
+from task_center.agent_launch.predicates import (
     PredicateRegistry,
     ResolverContext,
 )
-from task_center.context_engine.resolver import (
+from task_center.agent_launch.resolver import (
     AgentSelection,
     RuleBasedAgentResolver,
 )
