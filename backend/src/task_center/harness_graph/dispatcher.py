@@ -24,7 +24,7 @@ from task_center.harness_graph.runtime import (
     AgentLaunch,
     HarnessGraphRuntime,
 )
-from task_center.harness_graph.task_graph import (
+from task_center.harness_graph.generator_dag import (
     all_generators_done,
     all_generators_quiescent,
     any_generator_failed_or_blocked,

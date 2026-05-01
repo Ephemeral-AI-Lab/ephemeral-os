@@ -32,7 +32,7 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.harness_graph.task_graph import (
+from task_center.harness_graph.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
 )
