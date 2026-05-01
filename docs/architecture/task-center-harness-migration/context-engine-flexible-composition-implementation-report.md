@@ -76,7 +76,7 @@ what blocks it.
 
 | File | Lines | Purpose |
 | --- | ---: | --- |
-| `backend/src/task_center/harness_graph/ancestry.py` | 81 | Canonical `has_partial_planned_caller_ancestor(*, request_id, …stores) -> bool` walker |
+| `backend/src/task_center/complex_task/ancestry.py` | 81 | Canonical `has_partial_planned_caller_ancestor(*, request_id, …stores) -> bool` walker |
 
 ### New persistence
 
@@ -291,7 +291,7 @@ Commands run during verification:
 
 Grep-side proofs:
 
-- `grep -rn "PartialPlanAncestorGate\|recursive_partial_plan\|request_has_partial_plan_ancestor" backend/src` — only the historical-note reference inside `task_center/harness_graph/ancestry.py` docstring (intentional);
+- `grep -rn "PartialPlanAncestorGate\|recursive_partial_plan\|request_has_partial_plan_ancestor" backend/src` — only the historical-note reference inside `task_center/complex_task/ancestry.py` docstring (intentional);
 - `grep -rn "task_input_for_graph" backend/src` — no matches; the composer-less fallback was deleted alongside the launcher composer-required cutover;
 - `grep -rn "composer.compose" backend/src` — five live call sites: orchestrator (planner), dispatcher (generator + evaluator), entry coordinator (entry executor), and the shared helper-tool builder at `tools/submission/helper_agent/_compose.py` (advisor + resolver via `ask_advisor` / `ask_resolver`).
 
