@@ -11,7 +11,11 @@ from agents.registry import get_definition
 from engine.runtime.lifecycle import EphemeralRunResult
 from message.stream_events import StreamEvent
 from task_center.exceptions import GraphInvariantViolation
-from task_center.harness_graph.runtime import HarnessAgentLaunch, HarnessGraphRuntime
+from task_center.harness_graph.runtime import (
+    AgentLaunch,
+    HarnessAgentLaunch,
+    HarnessGraphRuntime,
+)
 from task_center.task import (
     EvaluatorSubmission,
     GeneratorSubmission,
@@ -87,7 +91,7 @@ class EphemeralHarnessAgentLauncher:
 
     async def _run_launch(
         self,
-        launch: HarnessAgentLaunch,
+        launch: AgentLaunch,
         agent_def: "AgentDefinition",
     ) -> None:
         runtime = self._require_runtime()
@@ -97,11 +101,15 @@ class EphemeralHarnessAgentLauncher:
 
             runner = run_ephemeral_agent
 
+        # When the launch has no harness graph (entry executor mode), drop the
+        # runtime handle as well — tools that need a harness runtime fail
+        # cleanly instead of operating on an unrelated graph.
+        attach_harness = launch.harness_graph_id is not None
         metadata = ExecutionMetadata(
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_harness_graph_id=launch.harness_graph_id,
-            harness_graph_runtime=runtime,
+            harness_graph_runtime=runtime if attach_harness else None,
         )
         result: EphemeralRunResult | None = None
         try:

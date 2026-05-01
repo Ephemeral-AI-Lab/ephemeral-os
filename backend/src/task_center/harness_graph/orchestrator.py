@@ -16,8 +16,9 @@ from task_center.harness_graph.graph import (
     HarnessGraphStage,
     HarnessGraphStatus,
 )
+from task_center.context_engine.scope import ContextScope
 from task_center.harness_graph.runtime import (
-    HarnessAgentLaunch,
+    AgentLaunch,
     HarnessGraphRuntime,
 )
 from task_center.task import (
@@ -92,14 +93,18 @@ class HarnessGraphOrchestrator:
         task_id = planner_task_id(graph.id)
         runtime.orchestrator_registry.register(self)
         try:
-            task_input = runtime.task_input_for_graph(graph)
             task_center_run_id = runtime.task_center_run_id_for_graph(graph)
+            launch = self._build_planner_launch(
+                graph=graph,
+                task_id=task_id,
+                task_center_run_id=task_center_run_id,
+            )
             runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,
                 role=HarnessTaskRole.PLANNER.value,
-                agent_name=HarnessTaskRole.PLANNER.value,
-                task_input=task_input,
+                agent_name=launch.agent_name,
+                task_input=launch.task_input,
                 status=HarnessTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=[],
@@ -107,21 +112,59 @@ class HarnessGraphOrchestrator:
                 spawn_reason="harness_graph_planner",
             )
             runtime.graph_store.set_planner_task_id(graph.id, task_id)
-            runtime.agent_launcher.launch(
-                HarnessAgentLaunch(
-                    task_id=task_id,
-                    task_center_run_id=task_center_run_id,
-                    harness_graph_id=graph.id,
-                    role=HarnessTaskRole.PLANNER,
-                    agent_name=HarnessTaskRole.PLANNER.value,
-                    task_input=task_input,
-                    needs=(),
-                )
-            )
+            runtime.agent_launcher.launch(launch)
             self._dispatcher.dispatch_ready_work()
         except Exception:
             self._mark_startup_failed(planner_task_id=task_id)
             raise
+
+    def _build_planner_launch(
+        self,
+        *,
+        graph,  # type: ignore[no-untyped-def]
+        task_id: str,
+        task_center_run_id: str,
+    ) -> AgentLaunch:
+        """Compose the planner launch via :class:`ContextComposer` when wired,
+        otherwise fall back to the legacy ``task_input_for_graph`` path so
+        existing tests that don't construct a composer keep working."""
+        runtime = self._runtime
+        composer = runtime.composer
+        if composer is None:
+            return AgentLaunch(
+                task_id=task_id,
+                task_center_run_id=task_center_run_id,
+                harness_graph_id=graph.id,
+                role=HarnessTaskRole.PLANNER,
+                agent_name=HarnessTaskRole.PLANNER.value,
+                task_input=runtime.task_input_for_graph(graph),
+                needs=(),
+            )
+        segment = runtime.segment_store.get(graph.task_segment_id)
+        if segment is None:
+            raise GraphInvariantViolation(
+                f"TaskSegment {graph.task_segment_id!r} not found"
+            )
+        bundle = composer.compose(
+            base_agent_name="planner",
+            scope=ContextScope(
+                request_id=segment.complex_task_request_id,
+                segment_id=segment.id,
+                harness_graph_id=graph.id,
+            ),
+        )
+        return AgentLaunch(
+            task_id=task_id,
+            task_center_run_id=task_center_run_id,
+            harness_graph_id=graph.id,
+            role=HarnessTaskRole.PLANNER,
+            agent_name=bundle.agent_def.name,
+            task_input=bundle.task_input,
+            needs=(),
+            system_prompt=bundle.system_prompt,
+            context_packet_id=bundle.context_packet_id,
+            complex_task_request_id=segment.complex_task_request_id,
+        )
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_graph(submission.graph_id)

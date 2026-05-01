@@ -19,8 +19,9 @@ from task_center.harness_graph.graph import (
     HarnessGraphStage,
     HarnessGraphStatus,
 )
+from task_center.context_engine.scope import ContextScope
 from task_center.harness_graph.runtime import (
-    HarnessAgentLaunch,
+    AgentLaunch,
     HarnessGraphRuntime,
 )
 from task_center.harness_graph.task_graph import (
@@ -156,14 +157,11 @@ class HarnessGraphDispatcher:
         )
         try:
             runtime.agent_launcher.launch(
-                HarnessAgentLaunch(
+                self._build_generator_launch(
+                    graph=graph,
+                    task=task,
                     task_id=task_id,
-                    task_center_run_id=task["task_center_run_id"],
-                    harness_graph_id=graph.id,
-                    role=HarnessTaskRole.GENERATOR,
-                    agent_name=agent_name,
-                    task_input=task["task_input"],
-                    needs=tuple(task["needs"]),
+                    base_agent_name=agent_name,
                 )
             )
         except Exception:
@@ -184,7 +182,7 @@ class HarnessGraphDispatcher:
             return False
         return True
 
-    def _launch_evaluator(self, launch: HarnessAgentLaunch) -> None:
+    def _launch_evaluator(self, launch: AgentLaunch) -> None:
         runtime = self._runtime
         try:
             runtime.agent_launcher.launch(launch)
@@ -216,13 +214,17 @@ class HarnessGraphDispatcher:
         runtime = self._runtime
         task_id = evaluator_task_id(graph.id)
         task_center_run_id = runtime.task_center_run_id_for_graph(graph)
-        task_input = self._evaluator_task_input(graph)
+        launch = self._build_evaluator_launch(
+            graph=graph,
+            task_id=task_id,
+            task_center_run_id=task_center_run_id,
+        )
         runtime.task_store.upsert_task(
             task_id=task_id,
             task_center_run_id=task_center_run_id,
             role=HarnessTaskRole.EVALUATOR.value,
-            agent_name=HarnessTaskRole.EVALUATOR.value,
-            task_input=task_input,
+            agent_name=launch.agent_name,
+            task_input=launch.task_input,
             status=HarnessTaskStatus.RUNNING.value,
             summaries=[],
             needs=list(graph.generator_task_ids),
@@ -231,17 +233,7 @@ class HarnessGraphDispatcher:
         )
         runtime.graph_store.set_evaluator_task_id(graph.id, task_id)
         runtime.graph_store.set_stage(graph.id, HarnessGraphStage.EVALUATING)
-        self._launch_evaluator(
-            HarnessAgentLaunch(
-                task_id=task_id,
-                task_center_run_id=task_center_run_id,
-                harness_graph_id=graph.id,
-                role=HarnessTaskRole.EVALUATOR,
-                agent_name=HarnessTaskRole.EVALUATOR.value,
-                task_input=task_input,
-                needs=tuple(graph.generator_task_ids),
-            )
-        )
+        self._launch_evaluator(launch)
 
     @staticmethod
     def _task_agent_name(task: dict[str, Any]) -> str:
@@ -260,6 +252,98 @@ class HarnessGraphDispatcher:
             f"{graph.task_specification or ''}\n\n"
             "Evaluation criteria:\n"
             f"{criteria}"
+        )
+
+    def _build_generator_launch(
+        self,
+        *,
+        graph: HarnessGraph,
+        task: dict[str, Any],
+        task_id: str,
+        base_agent_name: str,
+    ) -> AgentLaunch:
+        runtime = self._runtime
+        composer = runtime.composer
+        if composer is None:
+            return AgentLaunch(
+                task_id=task_id,
+                task_center_run_id=task["task_center_run_id"],
+                harness_graph_id=graph.id,
+                role=HarnessTaskRole.GENERATOR,
+                agent_name=base_agent_name,
+                task_input=task["task_input"],
+                needs=tuple(task["needs"]),
+            )
+        segment = runtime.segment_store.get(graph.task_segment_id)
+        if segment is None:
+            raise GraphInvariantViolation(
+                f"TaskSegment {graph.task_segment_id!r} not found"
+            )
+        bundle = composer.compose(
+            base_agent_name=base_agent_name,
+            scope=ContextScope(
+                request_id=segment.complex_task_request_id,
+                segment_id=segment.id,
+                harness_graph_id=graph.id,
+                task_id=task_id,
+            ),
+        )
+        return AgentLaunch(
+            task_id=task_id,
+            task_center_run_id=task["task_center_run_id"],
+            harness_graph_id=graph.id,
+            role=HarnessTaskRole.GENERATOR,
+            agent_name=bundle.agent_def.name,
+            task_input=bundle.task_input,
+            needs=tuple(task["needs"]),
+            system_prompt=bundle.system_prompt,
+            context_packet_id=bundle.context_packet_id,
+            complex_task_request_id=segment.complex_task_request_id,
+        )
+
+    def _build_evaluator_launch(
+        self,
+        *,
+        graph: HarnessGraph,
+        task_id: str,
+        task_center_run_id: str,
+    ) -> AgentLaunch:
+        runtime = self._runtime
+        composer = runtime.composer
+        if composer is None:
+            return AgentLaunch(
+                task_id=task_id,
+                task_center_run_id=task_center_run_id,
+                harness_graph_id=graph.id,
+                role=HarnessTaskRole.EVALUATOR,
+                agent_name=HarnessTaskRole.EVALUATOR.value,
+                task_input=self._evaluator_task_input(graph),
+                needs=tuple(graph.generator_task_ids),
+            )
+        segment = runtime.segment_store.get(graph.task_segment_id)
+        if segment is None:
+            raise GraphInvariantViolation(
+                f"TaskSegment {graph.task_segment_id!r} not found"
+            )
+        bundle = composer.compose(
+            base_agent_name="evaluator",
+            scope=ContextScope(
+                request_id=segment.complex_task_request_id,
+                segment_id=segment.id,
+                harness_graph_id=graph.id,
+            ),
+        )
+        return AgentLaunch(
+            task_id=task_id,
+            task_center_run_id=task_center_run_id,
+            harness_graph_id=graph.id,
+            role=HarnessTaskRole.EVALUATOR,
+            agent_name=bundle.agent_def.name,
+            task_input=bundle.task_input,
+            needs=tuple(graph.generator_task_ids),
+            system_prompt=bundle.system_prompt,
+            context_packet_id=bundle.context_packet_id,
+            complex_task_request_id=segment.complex_task_request_id,
         )
 
     def _fresh_graph(self) -> HarnessGraph:

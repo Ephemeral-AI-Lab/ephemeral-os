@@ -25,6 +25,7 @@ terminals:
   - submit_execution_failure
 notification_triggers:
   - request_complex_task_after_edit
+context_recipe: generator_v1
 ---
 You are the main-agent generator executor.
 

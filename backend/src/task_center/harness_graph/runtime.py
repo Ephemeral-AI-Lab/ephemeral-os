@@ -16,26 +16,35 @@ from task_center.segment.registry import SegmentManagerRegistry
 from task_center.task import HarnessTaskRole
 
 if TYPE_CHECKING:
+    from task_center.context_engine.composer import ContextComposer
     from task_center.harness_graph.orchestrator_registry import (
         HarnessGraphOrchestratorRegistry,
     )
 
 
 @dataclass(frozen=True, slots=True)
-class HarnessAgentLaunch:
+class AgentLaunch:
     task_id: str
     task_center_run_id: str
-    harness_graph_id: str
+    harness_graph_id: str | None
     role: HarnessTaskRole
     agent_name: str
     task_input: str
     needs: tuple[str, ...]
+    system_prompt: str = ""
+    context_packet_id: str | None = None
+    complex_task_request_id: str | None = None
+
+
+# Back-compat alias — every existing call site continues to work without
+# touching unrelated code. Schedule removal once all consumers migrate.
+HarnessAgentLaunch = AgentLaunch
 
 
 class HarnessAgentLauncher(Protocol):
     """Launches or queues one harness agent task."""
 
-    def launch(self, launch: HarnessAgentLaunch) -> None: ...
+    def launch(self, launch: AgentLaunch) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +57,10 @@ class HarnessGraphRuntime:
     orchestrator_registry: "HarnessGraphOrchestratorRegistry"
     manager_registry: SegmentManagerRegistry | None = None
     lifecycle_config: HarnessLifecycleConfig = field(default_factory=HarnessLifecycleConfig)
+    # When set, orchestrator + dispatcher route launches through the composer
+    # to obtain a rendered task_input + selected agent_def + system_prompt.
+    # Optional so existing tests can continue without composer wiring.
+    composer: "ContextComposer | None" = None
 
     def task_center_run_id_for_graph(self, graph: HarnessGraph) -> str:
         segment = self.segment_store.get(graph.task_segment_id)

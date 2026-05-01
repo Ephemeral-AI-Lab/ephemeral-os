@@ -14,6 +14,7 @@ allowed_tools:
   - read_file
 terminals:
   - submit_advisor_feedback
+context_recipe: advisor_v1
 ---
 You are the advisor helper agent.
 
