@@ -16,7 +16,7 @@ from task_center.context_engine.predicates import (
     PredicateRegistry,
     register_builtin_predicates,
 )
-from task_center.harness_graph.ancestry import (
+from task_center.complex_task.ancestry import (
     has_partial_planned_caller_ancestor,
 )
 from task_center.harness_graph import HarnessGraphStage
