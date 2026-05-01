@@ -59,6 +59,14 @@ class _StartedOrchestrator:
         self._started.append(self.harness_graph_id)
 
 
+class _FailingStartOrchestrator:
+    def __init__(self, graph_id: str) -> None:
+        self.harness_graph_id = graph_id
+
+    def start(self) -> None:
+        raise RuntimeError("orchestrator start failed")
+
+
 def test_initial_segment_creates_graph_sequence_1(
     request_store, segment_store, graph_store, task_center_run_id
 ):
@@ -215,6 +223,107 @@ def test_initial_graph_start_can_be_deferred(
     mgr.start_harness_graph(graph)
 
     assert started == [graph.id]
+
+
+def test_initial_start_failure_closes_inserted_graph(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _FailingStartOrchestrator(graph.id)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+
+    with pytest.raises(RuntimeError, match="orchestrator start failed"):
+        mgr.create_initial_harness_graph()
+
+    segment = segment_store.get(seg_id)
+    assert segment is not None
+    assert len(segment.harness_graph_ids) == 1
+    graph = graph_store.get(segment.harness_graph_ids[0])
+    assert graph is not None
+    assert graph.status == HarnessGraphStatus.FAILED
+    assert graph.fail_reason == HarnessGraphFailReason.STARTUP_FAILED
+    assert captured == []
+
+
+def test_deferred_start_failure_closes_inserted_graph(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id)
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        return _FailingStartOrchestrator(graph.id)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+
+    graph = mgr.create_initial_harness_graph(start=False)
+
+    with pytest.raises(RuntimeError, match="orchestrator start failed"):
+        mgr.start_harness_graph(graph)
+
+    latest = graph_store.get(graph.id)
+    assert latest is not None
+    assert latest.status == HarnessGraphStatus.FAILED
+    assert latest.fail_reason == HarnessGraphFailReason.STARTUP_FAILED
+    assert captured == []
+
+
+def test_retry_start_failure_closes_inserted_graph(
+    request_store, segment_store, graph_store, task_center_run_id
+):
+    seg_id = _seed_segment(request_store, segment_store, task_center_run_id, attempt_budget=2)
+    started: list[str] = []
+
+    def factory(graph, on_graph_closed):
+        del on_graph_closed
+        if graph.graph_sequence_no == 1:
+            return _StartedOrchestrator(graph.id, started)
+        return _FailingStartOrchestrator(graph.id)
+
+    captured: list[TaskSegmentClosureReport] = []
+    mgr = TaskSegmentManager(
+        task_segment_id=seg_id,
+        segment_store=segment_store,
+        graph_store=graph_store,
+        on_segment_closed=captured.append,
+        orchestrator_factory=factory,
+    )
+    first_graph = mgr.create_initial_harness_graph()
+    graph_store.close(
+        first_graph.id,
+        status=HarnessGraphStatus.FAILED,
+        fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
+    )
+
+    with pytest.raises(RuntimeError, match="orchestrator start failed"):
+        mgr.handle_harness_graph_closed(first_graph.id)
+
+    segment = segment_store.get(seg_id)
+    assert segment is not None
+    assert len(segment.harness_graph_ids) == 2
+    retry_graph = graph_store.get(segment.harness_graph_ids[-1])
+    assert retry_graph is not None
+    assert retry_graph.status == HarnessGraphStatus.FAILED
+    assert retry_graph.fail_reason == HarnessGraphFailReason.STARTUP_FAILED
+    assert captured == []
 
 
 def test_failed_graph_with_budget_starts_next_graph_orchestrator(

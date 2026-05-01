@@ -163,10 +163,10 @@ class TaskSegmentManager:
             orchestrator = self._orchestrator_factory(
                 graph, self.handle_harness_graph_closed
             )
+            orchestrator.start()
         except Exception:
             self._close_graph_after_startup_failure(graph)
             raise
-        orchestrator.start()
 
     def _close_graph_after_startup_failure(self, graph: HarnessGraph) -> None:
         try:
