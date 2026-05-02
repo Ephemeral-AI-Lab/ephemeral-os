@@ -23,7 +23,7 @@ from sandbox.daytona.bash import (
     _extract_exit_code,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.write_file import write_file
+from tools.sandbox_toolkit.write_file import write_file
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 

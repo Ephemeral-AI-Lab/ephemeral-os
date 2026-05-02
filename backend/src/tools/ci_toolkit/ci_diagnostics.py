@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 
-from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from pydantic import BaseModel, Field
 
+from sandbox.api.models import DiagnosticsRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.ci_adapter import get_ci_service
 from tools.core.decorator import tool
+from tools.core.sandbox_session import actor_from_context, code_intelligence_api_or_error
 
 
 def _ci_cwd(context: ToolExecutionContextService) -> str | None:
@@ -65,19 +65,21 @@ async def ci_diagnostics(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Get syntax and semantic diagnostics for a file."""
-    svc = get_ci_service(context)
-    if svc is None:
+    api, err = code_intelligence_api_or_error(context)
+    if err is not None:
         return ToolResult(output="LSP not available", is_error=True)
 
     try:
-        with use_sandbox_io_loop():
-            results = await run_sync_in_executor(svc.diagnostics, file_path)
+        result = await api.diagnostics(
+            str(context.get("sandbox_id") or ""),
+            DiagnosticsRequest(file_path=file_path, actor=actor_from_context(context)),
+        )
     except Exception as exc:
         return ToolResult(
             output=f"LSP diagnostics unavailable: {exc}",
             is_error=True,
         )
-    if not results:
+    if not result.diagnostics:
         return ToolResult(
             output=json.dumps(
                 {
@@ -90,16 +92,12 @@ async def ci_diagnostics(
         )
 
     diags = []
-    for diag in results:
+    for diag in result.diagnostics:
         diags.append(
             {
                 "line": diag.line,
                 "character": diag.character,
-                "severity": (
-                    diag.severity.value
-                    if hasattr(diag.severity, "value")
-                    else str(diag.severity)
-                ),
+                "severity": diag.severity,
                 "message": diag.message,
                 "source": diag.source,
             }

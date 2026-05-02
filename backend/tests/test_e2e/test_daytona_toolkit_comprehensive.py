@@ -308,7 +308,7 @@ class TestDaytonaEditTool:
     """Test edit_file: audited search-and-replace."""
 
     def _tool(self):
-        from tools.daytona_toolkit.edit_file import edit_file
+        from tools.sandbox_toolkit.edit_file import edit_file
 
         return edit_file
 
@@ -541,9 +541,9 @@ class TestDaytonaToolIntegration:
     """Test Daytona tool registration helpers."""
 
     def _tools(self):
-        from tools.daytona_toolkit import make_daytona_tools
+        from tools.sandbox_toolkit import make_sandbox_tools
 
-        return make_daytona_tools()
+        return make_sandbox_tools()
 
     def test_daytona_registers_all_tools(self):
         tools = self._tools()
@@ -558,7 +558,7 @@ class TestDaytonaToolIntegration:
             "grep",
             "glob",
             "edit_file",
-            "delete_file",
+            "remove_file",
             "move_file",
         }
         assert set(names) == expected, (
@@ -699,7 +699,7 @@ class TestDaytonaToolLive:
     # -- Live bash --
 
     def test_live_bash_echo(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -708,7 +708,7 @@ class TestDaytonaToolLive:
         assert "LIVE_BASH_OK" in result.output
 
     def test_live_bash_python_version(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -717,7 +717,7 @@ class TestDaytonaToolLive:
         assert "Python" in result.output
 
     def test_live_bash_nonzero_exit(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -731,7 +731,7 @@ class TestDaytonaToolLive:
     # so we use bash for write+read in a single call where needed.
 
     def test_live_write_then_read(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -752,7 +752,7 @@ class TestDaytonaToolLive:
     # -- Live list files --
 
     def test_live_list_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         tool = DaytonaBashTool
@@ -762,7 +762,7 @@ class TestDaytonaToolLive:
     # -- Live grep --
 
     def test_live_grep_etc(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
@@ -781,7 +781,7 @@ class TestDaytonaToolLive:
     # -- Live glob --
 
     def test_live_glob_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -801,7 +801,7 @@ class TestDaytonaToolLive:
     # -- Live edit --
 
     def test_live_edit_file(self, live_sandbox):
-        from tools.daytona_toolkit.shell import shell as DaytonaBashTool
+        from tools.sandbox_toolkit.shell import shell as DaytonaBashTool
 
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
@@ -842,9 +842,9 @@ class TestToolSelectionAndOrdering:
     }
 
     def _get_tools(self):
-        from tools.daytona_toolkit import make_daytona_tools
+        from tools.sandbox_toolkit import make_sandbox_tools
 
-        return make_daytona_tools()
+        return make_sandbox_tools()
 
     def _get_tool_names(self) -> list[str]:
         return [tool.name for tool in self._get_tools()]
@@ -897,20 +897,20 @@ class TestToolSelectionAndOrdering:
             )
 
     def test_shell_exposes_non_null_command_schema(self):
-        from tools.daytona_toolkit.shell import shell as ShellTool
+        from tools.sandbox_toolkit.shell import shell as ShellTool
 
         schema = ShellTool.to_api_schema()["input_schema"]
         assert schema["properties"]["command"]["type"] == "string"
         assert schema["properties"]["command"]["minLength"] == 1
 
     def test_read_file_requires_file_path(self):
-        from tools.daytona_toolkit.read_file import read_file as FileReadTool
+        from tools.sandbox_toolkit.read_file import read_file as FileReadTool
 
         schema = FileReadTool.to_api_schema()["input_schema"]
         assert "file_path" in schema.get("required", [])
 
     def test_write_file_requires_file_path_and_content(self):
-        from tools.daytona_toolkit.write_file import write_file as FileWriteTool
+        from tools.sandbox_toolkit.write_file import write_file as FileWriteTool
 
         schema = FileWriteTool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
@@ -918,7 +918,7 @@ class TestToolSelectionAndOrdering:
         assert "content" in required
 
     def test_edit_requires_file_path_old_text_new_text(self):
-        from tools.daytona_toolkit.edit_file import edit_file as _edit_file
+        from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
 
         schema = _edit_file.to_api_schema()["input_schema"]
         required = schema.get("required", [])
@@ -942,7 +942,7 @@ class TestToolSelectionAndOrdering:
         assert "line" not in required
 
     def test_shell_requires_command(self):
-        from tools.daytona_toolkit.shell import shell as ShellTool
+        from tools.sandbox_toolkit.shell import shell as ShellTool
 
         schema = ShellTool.to_api_schema()["input_schema"]
         assert schema["oneOf"] == [{"required": ["command"]}, {"required": ["code"]}]
@@ -1452,7 +1452,7 @@ class TestAuditedEditFlow:
         return ctx, sandbox, ci_service.arbiter, ci_service.time_machine
 
     def _edit(self, ctx, file_path, old_text, new_text, **kwargs):
-        from tools.daytona_toolkit.edit_file import edit_file as _edit_file
+        from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
 
         return _run(
             _edit_file.execute(
@@ -1490,7 +1490,7 @@ class TestAuditedEditFlow:
 
     def test_audited_edit_without_ci_returns_error(self):
         """Coordinated edits must fail instead of raw-writing without CI."""
-        from tools.daytona_toolkit.edit_file import edit_file as _edit_file
+        from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
 
         sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
         ctx = _make_context(sandbox)  # no ci_service

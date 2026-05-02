@@ -1,12 +1,11 @@
-"""Tests for Daytona tool exports."""
+"""Tests for sandbox tool exports."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
 
 from tools.core.base import ToolExecutionContextService, ToolRegistry
-from tools.daytona_toolkit import make_daytona_tools
+from tools.sandbox_toolkit import make_sandbox_tools
 
 
 # pytest-asyncio runs in auto mode (configured in pyproject.toml) — async
@@ -19,16 +18,8 @@ def _ctx(services=None) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd=Path("/tmp"), services=services or {})
 
 
-def _sandbox_with_noop_io():
-    sandbox = MagicMock()
-    sandbox.fs.download_file = AsyncMock(return_value=b"old")
-    sandbox.fs.upload_file = AsyncMock()
-    sandbox.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    return sandbox
-
-
-def test_daytona_exports_expected_tools():
-    names = {tool.name for tool in make_daytona_tools()}
+def test_sandbox_exports_expected_tools():
+    names = {tool.name for tool in make_sandbox_tools()}
     expected = {
         "shell",
         "read_file",
@@ -36,18 +27,18 @@ def test_daytona_exports_expected_tools():
         "grep",
         "glob",
         "edit_file",
-        "delete_file",
+        "remove_file",
         "move_file",
     }
     assert names == expected
-    assert not any(name.startswith("daytona_lsp_") for name in names)
+    assert not any(name.startswith("daytona_") for name in names)
 
 
-async def test_registered_write_capable_tools_require_ci_service():
+async def test_registered_api_backed_tools_require_sandbox_api():
     registry = ToolRegistry()
-    registry.register_many(make_daytona_tools())
+    registry.register_many(make_sandbox_tools())
     tools_by_name = {tool.name: tool for tool in registry.list_tools()}
-    write_inputs = {
+    api_inputs = {
         "write_file": {"file_path": "/repo/new.txt", "content": "hello"},
         "edit_file": {
             "file_path": "/repo/app.py",
@@ -55,47 +46,47 @@ async def test_registered_write_capable_tools_require_ci_service():
             "new_text": "new",
         },
         "shell": {"command": "echo hi"},
-        "delete_file": {"path": "/repo/app.py"},
+        "remove_file": {"path": "/repo/app.py"},
         "move_file": {
             "src_path": "/repo/src.py",
             "target_path": "/repo/dst.py",
         },
     }
 
-    assert set(write_inputs).issubset(tools_by_name)
-    assert set(tools_by_name) - set(write_inputs) == {
+    assert set(api_inputs).issubset(tools_by_name)
+    assert set(tools_by_name) - set(api_inputs) == {
         "read_file",
         "grep",
         "glob",
     }
 
-    for tool_name, tool_input in write_inputs.items():
-        ctx = _ctx({"daytona_sandbox": _sandbox_with_noop_io(), "repo_root": "/repo"})
+    for tool_name, tool_input in api_inputs.items():
+        ctx = _ctx({"sandbox_id": "sb-1", "repo_root": "/repo"})
         tool = tools_by_name[tool_name]
         result = await tool.execute(tool.input_model(**tool_input), ctx)
 
         assert result.is_error, tool_name
-        assert "Code intelligence service is unavailable" in result.output
-        assert result.metadata.get("ci_required") is True, tool_name
+        assert "Sandbox API is unavailable" in result.output
+        assert result.metadata.get("sandbox_api_required") is True, tool_name
 
 
-def test_make_daytona_tools_includes_shell():
-    names = {tool.name for tool in make_daytona_tools()}
+def test_make_sandbox_tools_includes_shell():
+    names = {tool.name for tool in make_sandbox_tools()}
 
     assert "shell" in names
     assert "edit_file" in names
     assert "daytona_list_files" not in names
 
 
-def test_get_daytona_tool_by_name():
-    tools = {tool.name: tool for tool in make_daytona_tools()}
+def test_get_sandbox_tool_by_name():
+    tools = {tool.name: tool for tool in make_sandbox_tools()}
     tool = tools.get("shell")
     assert tool is not None
     assert tool.name == "shell"
 
 
 def test_shell_schema_describes_command():
-    tools = {tool.name: tool for tool in make_daytona_tools()}
+    tools = {tool.name: tool for tool in make_sandbox_tools()}
     tool = tools.get("shell")
     assert tool is not None
 
@@ -106,15 +97,15 @@ def test_shell_schema_describes_command():
     assert tool.short_description == "Run a shell command from the repo root."
 
 
-def test_missing_daytona_tool_absent():
-    tools = {tool.name: tool for tool in make_daytona_tools()}
+def test_missing_sandbox_tool_absent():
+    tools = {tool.name: tool for tool in make_sandbox_tools()}
     assert tools.get("nonexistent_tool") is None
 
 
-def test_daytona_tool_count():
-    tools = make_daytona_tools()
+def test_sandbox_tool_count():
+    tools = make_sandbox_tools()
     assert len(tools) == 8
 
 
-def test_daytona_tools_omit_instruction_block():
-    assert all(not hasattr(tool, "instructions") for tool in make_daytona_tools())
+def test_sandbox_tools_omit_instruction_block():
+    assert all(not hasattr(tool, "instructions") for tool in make_sandbox_tools())

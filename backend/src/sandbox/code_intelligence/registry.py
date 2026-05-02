@@ -30,9 +30,17 @@ def get_code_intelligence(
     """
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
+    def _transport_matches(service: CodeIntelligenceService) -> bool:
+        current = getattr(service, "_transport", None)
+        return transport is None or current is transport or current is not None
+
     with _SERVICES_LOCK:
         existing = _SERVICES.get(sandbox_id)
-        if existing is not None and existing.workspace_root == workspace_root:
+        if (
+            existing is not None
+            and existing.workspace_root == workspace_root
+            and _transport_matches(existing)
+        ):
             existing.rebind_sandbox(sandbox)
             return existing
         if sandbox_id not in _CREATION_LOCKS:
@@ -42,7 +50,11 @@ def get_code_intelligence(
     with creation_lock:
         with _SERVICES_LOCK:
             existing = _SERVICES.get(sandbox_id)
-            if existing is not None and existing.workspace_root == workspace_root:
+            if (
+                existing is not None
+                and existing.workspace_root == workspace_root
+                and _transport_matches(existing)
+            ):
                 existing.rebind_sandbox(sandbox)
                 return existing
             if existing is not None:

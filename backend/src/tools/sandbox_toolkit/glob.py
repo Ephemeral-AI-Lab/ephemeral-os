@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
+from sandbox.api.models import GlobRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from sandbox.daytona.exec_files import _exec_command
-from sandbox.daytona.paths import (
-    _get_repo_root,
-    _path_error,
-    _resolve_path,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    get_repo_root,
+    path_error,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
-from sandbox.daytona.recovery import _run_with_recovery
-from tools.daytona_toolkit._file_tool_helpers import (
+from tools.sandbox_toolkit._file_tool_helpers import (
     GlobInput,
     GlobOutput,
     build_glob_result,
 )
-from sandbox.daytona.search_commands import build_glob_command
 
 
 @tool(
@@ -38,33 +39,29 @@ async def glob(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Find files by glob pattern."""
-    cwd = _get_repo_root(context) or ""
-    path = _resolve_path(path, context) if path != "." else (cwd or ".")
+    cwd = get_repo_root(context)
+    path = resolve_sandbox_path(path, context) if path != "." else (cwd or ".")
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="glob")
+    if api_error is not None:
+        return api_error
     try:
-        command = build_glob_command(
-            root=path,
-            pattern=pattern,
-        )
-        resp = await _run_with_recovery(
-            context,
-            lambda sandbox: _exec_command(
-                sandbox,
-                command,
+        result = await api.glob(
+            sandbox_id,
+            GlobRequest(
+                pattern=pattern,
+                path=path,
                 timeout=30,
+                actor=actor_from_context(context),
             ),
         )
-        if getattr(resp, "exit_code", 0) not in (0, None):
-            return ToolResult(
-                output=getattr(resp, "result", "") or f"Glob search failed in {path}",
-                is_error=True,
-            )
-        file_list = [
-            f for f in (resp.result or "").splitlines() if f.strip()
-        ]
+        file_list = list(result.files)
         return build_glob_result(cwd=cwd, pattern=pattern, path=path, files=file_list)
     except Exception as exc:
         return ToolResult(
-            output=_path_error(exc, path) or str(exc),
+            output=path_error(exc, path) or str(exc),
             is_error=True,
         )
 

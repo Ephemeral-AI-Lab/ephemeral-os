@@ -33,11 +33,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 
 logger = logging.getLogger(__name__)
@@ -165,10 +161,10 @@ async def _run_snapshot_script(
     else:
         response = await exec_process(
             sandbox,
-            _wrap_bash_command(command),
+            wrap_bash_command(command),
             timeout=timeout,
         )
-        stdout, exit_code = _extract_exit_code(
+        stdout, exit_code = extract_exit_code(
             str(getattr(response, "result", "") or ""),
             fallback_exit_code=getattr(response, "exit_code", None),
         )

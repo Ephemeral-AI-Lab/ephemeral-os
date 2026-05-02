@@ -104,6 +104,8 @@ def _attach_code_intelligence(
     sandbox_id: str,
     sandbox: Any,
     workspace_root: str,
+    *,
+    transport: Any | None = None,
 ) -> None:
     """Internal helper — attach a CI service via SandboxService.
 
@@ -117,11 +119,23 @@ def _attach_code_intelligence(
 
         ci_sandbox, eager_warmup_safe = _ci_sandbox_handle(sandbox_id, sandbox)
         ci_workspace_root = _ci_workspace_root(workspace_root, ci_sandbox)
-        svc = SandboxService().code_intelligence_for(
-            sandbox_id,
-            workspace_root=ci_workspace_root,
-            sandbox=ci_sandbox,
+        service = SandboxService()
+        resolved_transport = (
+            transport
+            or context.get("sandbox_transport")
+            or _build_sandbox_transport(sandbox_id)
         )
+        method = service.code_intelligence_for
+        kwargs: dict[str, Any] = {
+            "workspace_root": ci_workspace_root,
+            "sandbox": ci_sandbox,
+        }
+        if (
+            resolved_transport is not None
+            and "transport" in inspect.signature(method).parameters
+        ):
+            kwargs["transport"] = resolved_transport
+        svc = method(sandbox_id, **kwargs)
         try:
             if eager_warmup_safe:
                 if str(ci_workspace_root or "").strip():
@@ -176,12 +190,11 @@ def ensure_code_intelligence_runtime(
 
     CI services are obtained through :class:`sandbox.service.SandboxService`.
 
-    Phase 1 Step 7: in addition to the legacy ``daytona_sandbox`` /
-    ``ci_service`` keys, this also constructs the provider-neutral
-    :class:`SandboxApi` / :class:`CodeIntelligenceApi` / :class:`SandboxTransport`
-    surface and attaches them to the context. Tools rewritten in Steps 8/9
-    consume these directly; legacy tools keep using the existing keys until
-    Step 10 deletion.
+    This constructs the provider-neutral :class:`SandboxApi` /
+    :class:`CodeIntelligenceApi` / :class:`SandboxTransport` surface and
+    attaches them to the context. Sandbox and CI tools consume these directly;
+    the provider-specific handles remain available for runtime construction
+    paths that still own the concrete Daytona sandbox object.
     """
     if sandbox is not None:
         context["daytona_sandbox"] = sandbox
@@ -205,35 +218,57 @@ def ensure_code_intelligence_runtime(
         or default_ci_root
     )
     if sandbox_id and not context.get("skip_code_intelligence"):
+        transport = _build_sandbox_transport(sandbox_id)
+        if transport is not None:
+            context["sandbox_transport"] = transport
         _attach_code_intelligence(context, sandbox_id, sandbox, ci_root)
-        _attach_provider_neutral_api(context, sandbox_id, sandbox)
+        _attach_provider_neutral_api(context, sandbox_id, sandbox, transport=transport)
+
+
+def _build_sandbox_transport(sandbox_id: str) -> Any | None:
+    try:
+        from sandbox.daytona.transport import DaytonaTransport
+
+        return DaytonaTransport()
+    except Exception:
+        logger.debug(
+            "Sandbox transport attachment failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
+        return None
 
 
 def _attach_provider_neutral_api(
     context: Any,
     sandbox_id: str,
     sandbox: Any,
+    *,
+    transport: Any | None = None,
 ) -> None:
     """Attach the Phase-1 ``SandboxApi`` / ``CodeIntelligenceApi`` surface.
 
     Constructs one :class:`DaytonaTransport`, one :class:`AuditedSandboxApi`,
     and one :class:`SvcCodeIntelligence` per context. Failures are swallowed
-    (the legacy ``daytona_sandbox``/``ci_service`` path remains usable) so
-    Step 7 never widens the failure surface beyond what existed before.
+    so provider-neutral attachment does not widen the runtime preparation
+    failure surface.
     """
     try:
         from sandbox.api.audited_sandbox_api import AuditedSandboxApi
         from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
-        from sandbox.daytona.transport import DaytonaTransport
 
         svc = context.get("ci_service")
-        if svc is None:
+        resolved_transport = (
+            transport
+            or context.get("sandbox_transport")
+            or _build_sandbox_transport(sandbox_id)
+        )
+        if svc is None or resolved_transport is None:
             return
-        transport = DaytonaTransport()
-        context["sandbox_transport"] = transport
+        context["sandbox_transport"] = resolved_transport
         if sandbox is not None:
             context["sandbox_api"] = AuditedSandboxApi(
-                transport=transport, svc=svc, sandbox=sandbox,
+                transport=resolved_transport, svc=svc, sandbox=sandbox,
             )
         context["code_intelligence_api"] = SvcCodeIntelligence(svc)
     except Exception:

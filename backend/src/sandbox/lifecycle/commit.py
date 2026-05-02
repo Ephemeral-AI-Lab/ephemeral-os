@@ -1,8 +1,7 @@
-"""Shared commit helpers for sandbox write tools.
+"""Shared commit helpers for sandbox API write operations.
 
 Decoupled from tool execution contexts: callers resolve attribution and the CI
-service themselves, then pass resolved values in. Context-aware shims live in
-:mod:`tools.core.sandbox_commit`.
+service themselves, then pass resolved values in.
 """
 
 from __future__ import annotations
@@ -211,7 +210,7 @@ async def submit_commit(
     if svc is None:
         raise RuntimeError(
             "submit_commit requires an active ci_service; "
-            "caller must short-circuit with ci_write_required_result first",
+            "caller must require SandboxApi before submitting commits",
         )
 
     result = await _batcher_for(svc).submit(

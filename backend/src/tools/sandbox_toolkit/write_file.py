@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from sandbox.code_intelligence.core.types import WriteSpec
+from sandbox.api.models import WriteFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from tools.core.op_result_to_tool_result import operation_result_to_tool_result
-from tools.core.sandbox_commit import commit_metadata, submit_commit_from_context
-from tools.daytona_toolkit._mutation_helpers import ci_write_guard
-from sandbox.daytona.paths import (
-    _get_repo_root,
-    _resolve_path,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    get_repo_root,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
-from tools.daytona_toolkit._file_tool_helpers import (
+from tools.sandbox_toolkit._file_tool_helpers import (
     WriteFileInput,
     WriteFileOutput,
 )
+from tools.sandbox_toolkit._mutation_result import mutation_tool_result
 
 
 @tool(
@@ -37,33 +38,41 @@ async def write_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Create or overwrite a file."""
-    file_path = _resolve_path(file_path, context)
+    file_path = resolve_sandbox_path(file_path, context)
     warnings: list[str] = []
 
-    if guard := ci_write_guard(context, tool_name="write_file", path=file_path):
-        return guard
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="write_file")
+    if api_error is not None:
+        return api_error
 
-    change = await submit_commit_from_context(
-        context,
-        op="write",
-        specs=[WriteSpec(file_path=file_path, content=content, overwrite=True)],
-        fallback_paths=[file_path],
-        description=f"write {file_path}",
+    result = await api.write_file(
+        sandbox_id,
+        WriteFileRequest(
+            path=file_path,
+            content=content,
+            actor=actor_from_context(context),
+            description=f"write {file_path}",
+            overwrite=True,
+        ),
     )
 
-    return operation_result_to_tool_result(
-        change.raw,
+    paths = list(result.changed_paths or (file_path,))
+    return mutation_tool_result(
         tool_name="write_file",
+        success=result.success,
         success_status="written",
-        primary_paths=[file_path],
+        paths=paths,
         warnings=warnings,
         success_extra={
-            "cwd": _get_repo_root(context) or "",
+            "cwd": get_repo_root(context),
             "file_path": file_path,
             "bytes_written": len(content.encode("utf-8")),
             "ci_sync": True,
         },
-        metadata_extra=commit_metadata(change),
+        conflict_reason=result.conflict_reason,
     )
 
 

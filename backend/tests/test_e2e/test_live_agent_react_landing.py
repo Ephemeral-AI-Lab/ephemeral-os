@@ -185,9 +185,9 @@ class TestSkillAndToolAvailability:
 
     def test_sandbox_operations_has_current_tools(self):
         """Daytona helpers should expose sandbox file/edit/exec tools."""
-        from tools.daytona_toolkit import make_daytona_tools
+        from tools.sandbox_toolkit import make_sandbox_tools
 
-        names = sorted(tool.name for tool in make_daytona_tools())
+        names = sorted(tool.name for tool in make_sandbox_tools())
         expected = sorted(
             [
                 "shell",
@@ -196,7 +196,7 @@ class TestSkillAndToolAvailability:
                 "grep",
                 "glob",
                 "edit_file",
-                "delete_file",
+                "remove_file",
                 "move_file",
             ]
         )
@@ -204,9 +204,9 @@ class TestSkillAndToolAvailability:
 
     def test_each_tool_has_valid_api_schema(self):
         """Every tool must produce a valid API schema with name, description, input_schema."""
-        from tools.daytona_toolkit import make_daytona_tools
+        from tools.sandbox_toolkit import make_sandbox_tools
 
-        for tool in make_daytona_tools():
+        for tool in make_sandbox_tools():
             schema = tool.to_api_schema()
             assert schema["name"] == tool.name
             assert len(schema["description"]) > 10, f"{tool.name} has too-short description"

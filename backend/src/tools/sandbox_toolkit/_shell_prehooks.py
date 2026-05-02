@@ -60,7 +60,7 @@ _DESTRUCTIVE_GIT_MESSAGE = (
     "destructive git commands and other git mutation commands are forbidden. "
     "Detected filesystem mutation command or git metadata mutation. They mutate "
     "repository metadata or working-tree files outside the OCC/write-scope audit "
-    "path. Use edit_file, write_file, delete_file, or move_file instead."
+    "path. Use edit_file, write_file, remove_file, or move_file instead."
 )
 _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r"(?:^|[;&|]\s*)(?:"
@@ -170,7 +170,7 @@ def destructive_shell_command_error(command: str) -> str | None:
 class DestructiveGitShellPreHook:
     """Block git working-tree or metadata mutations before shell execution."""
 
-    name = "daytona_shell:destructive_git"
+    name = "sandbox_shell:destructive_git"
     target_tool = "shell"
 
     async def run(
@@ -191,7 +191,7 @@ class DestructiveGitShellPreHook:
 class DestructiveShellPreHook:
     """Block destructive filesystem commands before shell execution."""
 
-    name = "daytona_shell:destructive_shell"
+    name = "sandbox_shell:destructive_shell"
     target_tool = "shell"
 
     async def run(

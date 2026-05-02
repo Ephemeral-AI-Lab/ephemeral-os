@@ -9,7 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from tools.core.base import ToolExecutionContextService
-from tools.daytona_toolkit._file_tool_helpers import (
+from tools.sandbox_toolkit._file_tool_helpers import (
     MAX_READ_FILE_LINES,
     ReadFileInput,
     build_find_result,
@@ -22,7 +22,7 @@ from sandbox.daytona.paths import (
     _resolve_path,
 )
 from sandbox.daytona.recovery import _run_with_recovery
-from tools.daytona_toolkit.shell import _build_tool_output
+from tools.sandbox_toolkit.shell import _build_tool_output
 
 
 def _ctx(services=None) -> ToolExecutionContextService:

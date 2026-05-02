@@ -8,17 +8,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from sandbox.code_intelligence.mutations.patcher import SearchReplaceEdit
-from sandbox.code_intelligence.core.types import EditSpec
+from sandbox.api.models import EditFileRequest, SearchReplaceEdit
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from tools.core.op_result_to_tool_result import operation_result_to_tool_result
-from tools.core.sandbox_commit import commit_metadata, submit_commit_from_context
-from tools.daytona_toolkit._mutation_helpers import ci_write_guard
-from sandbox.daytona.paths import (
-    _get_repo_root,
-    _resolve_path,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    get_repo_root,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
+from tools.sandbox_toolkit._mutation_result import mutation_tool_result
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ async def edit_file(
     tool_started = time.perf_counter()
     tool_timings: dict[str, float] = {}
 
-    file_path = _resolve_path(file_path, context)
+    file_path = resolve_sandbox_path(file_path, context)
     warnings: list[str] = []
 
     normalized_edits, edit_error = _normalize_edits(
@@ -104,59 +104,46 @@ async def edit_file(
         )
         return ToolResult(output=body, is_error=True)
 
-    if guard := ci_write_guard(context, tool_name="edit_file", path=file_path):
-        return guard
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="edit_file")
+    if api_error is not None:
+        return api_error
 
     commit_started = time.perf_counter()
-    change = await submit_commit_from_context(
-        context,
-        op="edit",
-        specs=[EditSpec(file_path=file_path, edits=normalized_edits)],
-        fallback_paths=[file_path],
-        description=description or f"edit {file_path}",
+    result = await api.edit_file(
+        sandbox_id,
+        EditFileRequest(
+            path=file_path,
+            edits=tuple(normalized_edits),
+            actor=actor_from_context(context),
+            description=description or f"edit {file_path}",
+        ),
     )
     tool_timings["commit"] = round(time.perf_counter() - commit_started, 6)
 
-    metadata_extra = commit_metadata(change)
-
-    if not change.success:
-        return _edit_failure_result(
-            change.raw,
-            file_path=file_path,
+    if not result.success:
+        return mutation_tool_result(
+            tool_name="edit_file",
+            success=False,
+            success_status="edited",
+            paths=list(result.changed_paths or (file_path,)),
             warnings=warnings,
-            metadata_extra=metadata_extra,
+            conflict_reason=result.conflict_reason,
         )
 
     tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
-    return operation_result_to_tool_result(
-        change.raw,
+    return mutation_tool_result(
         tool_name="edit_file",
+        success=True,
         success_status="edited",
-        primary_paths=[file_path],
+        paths=list(result.changed_paths or (file_path,)),
         warnings=warnings,
         success_extra={
-            "cwd": _get_repo_root(context) or "",
+            "cwd": get_repo_root(context),
             "file_path": file_path,
-            "applied_edits": len(normalized_edits),
+            "applied_edits": result.applied_edits,
             "timings": {"tool": tool_timings},
         },
-        metadata_extra=metadata_extra,
-    )
-
-
-def _edit_failure_result(
-    result: Any,
-    *,
-    file_path: str,
-    warnings: list[str],
-    metadata_extra: dict[str, Any] | None = None,
-) -> ToolResult:
-    """Return the user-facing error for a failed edit."""
-    return operation_result_to_tool_result(
-        result,
-        tool_name="edit_file",
-        success_status="edited",
-        primary_paths=[file_path],
-        warnings=warnings,
-        metadata_extra=metadata_extra,
     )

@@ -7,13 +7,10 @@ import logging
 import posixpath
 import shlex
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
@@ -145,16 +142,11 @@ def batch_download(
 
     fs = getattr(sandbox, "fs", None) if sandbox is not None else None
     download_files_fn = getattr(fs, "download_files", None)
-    if not callable(download_files_fn) or not _is_real_sdk(fs):
+    if not callable(download_files_fn):
         return None
 
     try:
-        from daytona_sdk.common.filesystem import FileDownloadRequest
-    except ImportError:
-        return None
-
-    try:
-        requests = [FileDownloadRequest(source=fp) for fp in files]
+        requests = [SimpleNamespace(source=fp) for fp in files]
         responses = run_sync(download_files_fn(requests))
     except Exception:
         logger.debug("Batch download_files failed", exc_info=True)
@@ -205,7 +197,7 @@ def _collect_via_transport(
 
 def _collect_via_search(fs: Any, root: str, max_files: int) -> list[str] | None:
     search_fn = getattr(fs, "search_files", None)
-    if not callable(search_fn) or not _is_real_sdk(fs):
+    if not callable(search_fn):
         return None
     try:
         result = run_sync(search_fn(root, _REMOTE_GLOB))
@@ -266,12 +258,6 @@ def _collect_via_list(fs: Any, root: str, max_files: int) -> list[str] | None:
     return files
 
 
-def _is_real_sdk(fs: Any) -> bool:
-    """Best-effort check that *fs* is the Daytona SDK, not a MagicMock."""
-    mod = getattr(type(fs), "__module__", "") or ""
-    return "daytona" in mod
-
-
 def _supports_exec_transport(sandbox: Any) -> bool:
     process = getattr(sandbox, "process", None) if sandbox is not None else None
     exec_fn = getattr(process, "exec", None) if process is not None else None
@@ -298,12 +284,12 @@ except Exception as exc:
     try:
         response = run_sync(
             sandbox.process.exec(
-                _wrap_bash_command(
+                wrap_bash_command(
                     f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
                 )
             )
         )
-        stdout, exit_code = _extract_exit_code(
+        stdout, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -339,10 +325,10 @@ print(json.dumps(payload))
     try:
         response = run_sync(
             sandbox.process.exec(
-                _wrap_bash_command(f"python3 -c {shlex.quote(script)} {args}")
+                wrap_bash_command(f"python3 -c {shlex.quote(script)} {args}")
             )
         )
-        stdout, exit_code = _extract_exit_code(
+        stdout, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )

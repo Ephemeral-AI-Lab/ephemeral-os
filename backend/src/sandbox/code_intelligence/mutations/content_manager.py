@@ -9,25 +9,15 @@ import logging
 import shlex
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.errors import SandboxTransportError
 from sandbox.api.models import CheckedWriteSpec
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-from sandbox.daytona.exec_files import (
-    _REMOTE_WRITE_CHUNK_BYTES,
-    _build_append_text_file_chunk_command,
-    _build_read_text_file_command,
-    _build_remove_file_command,
-    _build_truncate_text_file_command,
-    _build_write_text_file_commands,
-)
 
 from sandbox.client.async_bridge import run_sync
 
@@ -36,11 +26,7 @@ logger = logging.getLogger(__name__)
 FileReadResult = tuple[str, bool]
 FileReadResults = dict[str, FileReadResult]
 
-
-def _is_real_daytona_fs(fs: Any) -> bool:
-    """Best-effort check that *fs* is Daytona SDK, not a local test double."""
-    mod = getattr(type(fs), "__module__", "") or ""
-    return "daytona" in mod
+_REMOTE_WRITE_CHUNK_BYTES = 24 * 1024
 
 
 @dataclass(frozen=True)
@@ -205,6 +191,108 @@ def _parse_checked_apply_response(cleaned: str, exit_code: int | None) -> Checke
         conflict_reason=str(payload_out.get("reason") or "failed"),
         message=str(payload_out.get("message") or ""),
     )
+
+
+def _build_read_text_file_command(file_path: str) -> str:
+    script = """
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    content = path.read_text(encoding="utf-8")
+except FileNotFoundError:
+    print(json.dumps({"exists": False}))
+else:
+    print(json.dumps({"exists": True, "content": content}))
+"""
+    return f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+
+
+def _build_write_text_file_command(file_path: str, content: str) -> str:
+    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
+    )
+
+
+def _build_truncate_text_file_command(file_path: str) -> str:
+    script = """
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_bytes(b"")
+"""
+    return f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+
+
+def _build_append_text_file_chunk_command(file_path: str, payload: str) -> str:
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+with path.open("ab") as handle:
+    handle.write(base64.b64decode(sys.argv[2]))
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
+    )
+
+
+def _build_replace_file_command(tmp_path: str, file_path: str) -> str:
+    script = """
+import os
+import pathlib
+import sys
+
+tmp = pathlib.Path(sys.argv[1])
+dst = pathlib.Path(sys.argv[2])
+os.replace(tmp, dst)
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(tmp_path)} {shlex.quote(file_path)}"
+    )
+
+
+def _build_remove_file_command(file_path: str) -> str:
+    return f"rm -f {shlex.quote(file_path)}"
+
+
+def _build_write_text_file_commands(
+    file_path: str,
+    content: str,
+    *,
+    chunk_bytes: int = _REMOTE_WRITE_CHUNK_BYTES,
+) -> tuple[list[str], str | None]:
+    data = content.encode("utf-8")
+    if len(data) <= chunk_bytes:
+        return [_build_write_text_file_command(file_path, content)], None
+
+    tmp_path = f"{file_path}.codex-write-{uuid.uuid4().hex}.tmp"
+    commands = [_build_truncate_text_file_command(tmp_path)]
+    for index in range(0, len(data), chunk_bytes):
+        chunk = data[index : index + chunk_bytes]
+        payload = base64.b64encode(chunk).decode("ascii")
+        commands.append(_build_append_text_file_chunk_command(tmp_path, payload))
+    commands.append(_build_replace_file_command(tmp_path, file_path))
+    return commands, tmp_path
 
 
 class ContentManager:
@@ -449,15 +537,11 @@ class ContentManager:
     ) -> FileReadResults | None:
         fs = getattr(self._sandbox, "fs", None)
         download_files_fn = getattr(fs, "download_files", None) if fs is not None else None
-        if not callable(download_files_fn) or not _is_real_daytona_fs(fs):
-            return None
-        try:
-            from daytona_sdk.common.filesystem import FileDownloadRequest
-        except ImportError:
+        if not callable(download_files_fn):
             return None
 
         try:
-            requests = [FileDownloadRequest(source=path) for path in file_paths]
+            requests = [SimpleNamespace(source=path) for path in file_paths]
             responses = run_sync(download_files_fn(requests))
         except Exception:
             logger.debug("Batch download_files failed", exc_info=True)
@@ -490,9 +574,9 @@ class ContentManager:
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
         process = self._process()
         response = run_sync(
-            process.exec(_wrap_bash_command(_build_read_text_file_command(file_path)))
+            process.exec(wrap_bash_command(_build_read_text_file_command(file_path)))
         )
-        cleaned, exit_code = _extract_exit_code(
+        cleaned, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -531,8 +615,8 @@ print(json.dumps(files))
         command = f"python3 -c {shlex.quote(script)} " + " ".join(
             shlex.quote(path) for path in file_paths
         )
-        response = run_sync(process.exec(_wrap_bash_command(command)))
-        cleaned, exit_code = _extract_exit_code(
+        response = run_sync(process.exec(wrap_bash_command(command)))
+        cleaned, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -557,8 +641,8 @@ print(json.dumps(files))
             f"elif [ ! -d {shlex.quote(folder)} ]; then echo __NOTDIR__; "
             f"else find {shlex.quote(folder)} -type f -print; fi"
         )
-        response = run_sync(process.exec(_wrap_bash_command(probe_cmd)))
-        cleaned, exit_code = _extract_exit_code(
+        response = run_sync(process.exec(wrap_bash_command(probe_cmd)))
+        cleaned, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -577,8 +661,8 @@ print(json.dumps(files))
         commands, tmp_path = _build_write_text_file_commands(file_path, text)
         try:
             for command in commands:
-                response = run_sync(process.exec(_wrap_bash_command(command)))
-                cleaned, exit_code = _extract_exit_code(
+                response = run_sync(process.exec(wrap_bash_command(command)))
+                cleaned, exit_code = extract_exit_code(
                     getattr(response, "result", "") or "",
                     fallback_exit_code=getattr(response, "exit_code", None),
                 )
@@ -587,15 +671,15 @@ print(json.dumps(files))
         except Exception:
             if tmp_path:
                 try:
-                    run_sync(process.exec(_wrap_bash_command(_build_remove_file_command(tmp_path))))
+                    run_sync(process.exec(wrap_bash_command(_build_remove_file_command(tmp_path))))
                 except Exception:
                     logger.debug("remote temp cleanup failed for %s", tmp_path, exc_info=True)
             raise
 
     def _delete_remote(self, file_path: str) -> None:
         process = self._process()
-        response = run_sync(process.exec(_wrap_bash_command(f"rm -f {shlex.quote(file_path)}")))
-        cleaned, exit_code = _extract_exit_code(
+        response = run_sync(process.exec(wrap_bash_command(f"rm -f {shlex.quote(file_path)}")))
+        cleaned, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -604,8 +688,8 @@ print(json.dumps(files))
 
     def _exec_remote(self, process: Any, command: str) -> tuple[str, int | None]:
         """Run *command* through the sandbox and return ``(cleaned_stdout, exit_code)``."""
-        response = run_sync(process.exec(_wrap_bash_command(command)))
-        return _extract_exit_code(
+        response = run_sync(process.exec(wrap_bash_command(command)))
+        return extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
@@ -614,7 +698,7 @@ print(json.dumps(files))
         try:
             run_sync(
                 process.exec(
-                    _wrap_bash_command(_build_remove_file_command(tmp_path)),
+                    wrap_bash_command(_build_remove_file_command(tmp_path)),
                 ),
             )
         except Exception:

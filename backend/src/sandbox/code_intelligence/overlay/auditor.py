@@ -54,11 +54,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.overlay.git_snapshot import build_live_snapshot_details
 from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter
@@ -491,9 +487,9 @@ class OverlayAuditor:
             )
             return result.stdout, result.exit_code
         response = await self._exec_process(
-            sandbox, _wrap_bash_command(command), timeout=timeout,
+            sandbox, wrap_bash_command(command), timeout=timeout,
         )
-        cleaned, exit_code = _extract_exit_code(
+        cleaned, exit_code = extract_exit_code(
             str(getattr(response, "result", "") or ""),
             fallback_exit_code=getattr(response, "exit_code", None),
         )

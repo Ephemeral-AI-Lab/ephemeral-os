@@ -16,7 +16,7 @@ EDIT_TOOL_NAMES = frozenset(
     {
         "write_file",
         "edit_file",
-        "delete_file",
+        "remove_file",
         "move_file",
         "shell",
     }

@@ -4,20 +4,17 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from sandbox.code_intelligence.core.types import MoveSpec
+from sandbox.api.models import MoveFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from tools.core.sandbox_commit import (
-    commit_metadata,
-    failure_status,
-    submit_commit_from_context,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    normalized_path,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
-from tools.daytona_toolkit._mutation_helpers import ci_write_guard
-from sandbox.daytona.paths import (
-    _normalized_path,
-    _resolve_path,
-)
-from tools.daytona_toolkit._delete_move_helpers import move_payload
+from tools.sandbox_toolkit._delete_move_helpers import move_payload
 
 
 class MoveFileInput(BaseModel):
@@ -85,34 +82,31 @@ async def move_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Move a file or folder."""
-    src_resolved = _normalized_path(_resolve_path(src_path, context))
-    dst_resolved = _normalized_path(_resolve_path(target_path, context))
+    src_resolved = normalized_path(resolve_sandbox_path(src_path, context))
+    dst_resolved = normalized_path(resolve_sandbox_path(target_path, context))
     warnings: list[str] = []
 
-    if guard := ci_write_guard(context, tool_name="move_file", path=src_resolved):
-        return guard
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="move_file")
+    if api_error is not None:
+        return api_error
 
-    specs = [
-        MoveSpec(
+    result = await api.move_file(
+        sandbox_id,
+        MoveFileRequest(
             src_path=src_resolved,
             dst_path=dst_resolved,
             overwrite=False,
             is_folder=is_folder,
+            actor=actor_from_context(context),
+            description=f"move {src_resolved} -> {dst_resolved}",
         ),
-    ]
-    fallback_paths = [s.src_path for s in specs] + [s.dst_path for s in specs]
-
-    change = await submit_commit_from_context(
-        context,
-        op="move",
-        specs=specs,
-        fallback_paths=fallback_paths,
-        description=f"move {src_resolved} -> {dst_resolved}",
     )
-    paths = list(change.changed_paths)
-    common_metadata = commit_metadata(change, paths)
+    paths = list(result.changed_paths or (src_resolved, dst_resolved))
 
-    if change.success:
+    if result.success:
         return ToolResult(
             output=move_payload(
                 status="moved",
@@ -124,11 +118,12 @@ async def move_file(
             metadata={
                 "file_count": len(paths),
                 "success_count": len(paths),
-                **common_metadata,
+                "changed_paths": paths,
+                "conflict_reason": None,
             },
         )
 
-    payload_status, conflict_reason = failure_status(change.raw, move=True)
+    payload_status = _move_failure_status(result.conflict_reason)
     return ToolResult(
         output=move_payload(
             status=payload_status,
@@ -136,16 +131,31 @@ async def move_file(
             dst=dst_resolved,
             paths=paths,
             warnings=warnings,
-            conflict_reason=conflict_reason,
-            message=str(change.conflict_reason or conflict_reason),
+            conflict_reason=result.conflict_reason,
+            message=str(result.conflict_reason or payload_status),
         ),
         is_error=True,
         metadata={
             "file_count": len(paths),
             "success_count": 0,
-            **common_metadata,
+            "changed_paths": paths,
+            "conflict_reason": result.conflict_reason,
         },
     )
+
+
+def _move_failure_status(conflict_reason: str | None) -> str:
+    if conflict_reason in {"dst_exists", "destination_exists", "exists"}:
+        return "dst_exists"
+    if conflict_reason in {"not_found", "missing"}:
+        return "not_found"
+    if conflict_reason in {"base_mismatch", "version_conflict", "drift"}:
+        return "aborted_version"
+    if conflict_reason in {"overlap"}:
+        return "aborted_overlap"
+    if conflict_reason in {"lock_conflict", "locked"}:
+        return "aborted_lock"
+    return "failed"
 
 
 __all__ = ["move_file"]

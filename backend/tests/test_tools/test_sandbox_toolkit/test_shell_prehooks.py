@@ -1,4 +1,4 @@
-"""Tests for Daytona shell prehooks."""
+"""Tests for sandbox shell prehooks."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ import pytest
 
 from tools.core.base import ToolExecutionContextService
 from tools.core.safe_execution import run_tool_safely
-from tools.daytona_toolkit._shell_prehooks import (
+from tools.sandbox_toolkit._shell_prehooks import (
     destructive_git_command_error,
     destructive_shell_command_error,
 )
-from tools.daytona_toolkit.shell import shell
+from tools.sandbox_toolkit.shell import shell
 
 
 def _ctx(services=None) -> ToolExecutionContextService:
@@ -105,7 +105,7 @@ async def test_shell_prehook_blocks_git_mutation_before_ci_requirement() -> None
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "daytona_shell:destructive_git"
+    assert payload["hookName"] == "sandbox_shell:destructive_git"
     assert payload["phase"] == "pre"
     assert "git mutation commands are forbidden" in result.metadata["hook_failure"]["reason"]
 
@@ -120,19 +120,19 @@ async def test_shell_prehook_blocks_destructive_shell_before_ci_requirement() ->
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "daytona_shell:destructive_shell"
+    assert payload["hookName"] == "sandbox_shell:destructive_shell"
     assert payload["phase"] == "pre"
     assert "destructive shell command" in result.metadata["hook_failure"]["reason"]
 
 
 @pytest.mark.asyncio
-async def test_shell_prehook_allows_safe_command_to_reach_ci_requirement() -> None:
+async def test_shell_prehook_allows_safe_command_to_reach_api_requirement() -> None:
     result = await run_tool_safely(
         shell,
         {"command": "git status"},
-        context=_ctx(),
+        context=_ctx({"sandbox_id": "sb-1"}),
     )
 
     assert result.is_error
-    assert result.metadata.get("ci_required") is True
-    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata.get("sandbox_api_required") is True
+    assert "Sandbox API is unavailable" in result.output

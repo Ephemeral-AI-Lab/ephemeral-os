@@ -3,27 +3,24 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 
 from pydantic import BaseModel, Field
 
-from sandbox.code_intelligence.core.tuning import CODE_INTELLIGENCE_TUNING
+from sandbox.api.models import ShellRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.ci_adapter import ci_required_result, get_ci_service
 from tools.core.decorator import tool
-from tools.daytona_toolkit._shell_prehooks import (
+from tools.core.sandbox_session import (
+    actor_from_context,
+    get_repo_root,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
+)
+from tools.sandbox_toolkit._shell_prehooks import (
     DestructiveGitShellPreHook,
     DestructiveShellPreHook,
 )
-from tools.core.sandbox_commit import submit_shell_cmd_from_context
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-from sandbox.daytona.paths import _get_repo_root
-from sandbox.daytona.recovery import _run_with_recovery
 
-_SHELL_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.shell_default_timeout
+_SHELL_DEFAULT_TIMEOUT = 900
 
 
 class ShellInput(BaseModel):
@@ -68,9 +65,7 @@ class ShellOutput(BaseModel):
 
 
 def _format_transport_exception(exc: Exception) -> str:
-    detail = str(exc).strip()
-    if not detail:
-        detail = repr(exc)
+    detail = str(exc).strip() or repr(exc)
     if detail.rstrip().endswith(":"):
         detail = f"{detail} (no additional detail from sandbox SDK)"
     return f"{detail} [exception_type={type(exc).__name__}]"
@@ -96,51 +91,6 @@ def _format_execution_failure(
             preview = f"{preview[:237]}..."
         parts.append(f"command={preview!r}")
     return " ".join(parts)
-
-
-def _progress_callback(context: ToolExecutionContextService) -> Callable[[str], None] | None:
-    callback = context.get("on_progress_line")
-    return callback if callable(callback) else None
-
-
-async def _exec_shell_command(
-    context: ToolExecutionContextService,
-    sandbox: object,
-    *,
-    command: str,
-    cwd: str | None,
-    timeout: int,
-    attribute_changes: bool,
-) -> dict[str, object]:
-    if get_ci_service(context) is None:
-        raise RuntimeError("Code intelligence service is unavailable")
-
-    change = await submit_shell_cmd_from_context(
-        context,
-        command=_wrap_bash_command(command, cwd=cwd),
-        description="shell",
-        timeout=timeout,
-        sandbox=sandbox,
-        attribute_changes=attribute_changes,
-        on_progress_line=_progress_callback(context),
-    )
-    response = change.raw
-    stdout = getattr(response, "result", "") or ""
-    fallback_exit_code = getattr(response, "exit_code", None)
-    cleaned_stdout, exit_code = _extract_exit_code(
-        stdout,
-        fallback_exit_code=fallback_exit_code,
-    )
-    return {
-        "command": command,
-        "stdout": cleaned_stdout,
-        "stderr": cleaned_stdout if exit_code != 0 else "",
-        "exit_code": exit_code,
-        "changed_paths": list(change.changed_paths),
-        "ambient_changed_paths": list(change.ambient_changed_paths),
-        "audit_success": bool(change.success),
-        "audit_conflict_reason": change.conflict_reason,
-    }
 
 
 def _build_tool_output(
@@ -171,12 +121,10 @@ def _build_tool_output(
             }
         )
 
-    is_error = status == "error"
-
     return ToolResult(
         output=json.dumps(
             {
-                "cwd": _get_repo_root(context) or "",
+                "cwd": get_repo_root(context),
                 "status": status,
                 "files_written": files_written,
                 "shells_run": len(shells),
@@ -186,7 +134,7 @@ def _build_tool_output(
                 "error": error if error else "",
             }
         ),
-        is_error=is_error,
+        is_error=status == "error",
         metadata={
             "status": status,
             "files_written": files_written,
@@ -194,13 +142,6 @@ def _build_tool_output(
             "changed_paths": list(changed_paths or []),
             "ambient_changed_paths": list(ambient_changed_paths or []),
         },
-    )
-
-
-def _ci_required_result() -> ToolResult:
-    return ci_required_result(
-        "shell",
-        "Shell command execution is disabled without CI service.",
     )
 
 
@@ -227,10 +168,10 @@ def _paths_from_shell(shell_result: dict[str, object], key: str) -> list[str]:
         "pip/uv/npm install, generating files via codegen).\n"
         "- You're verifying environment state (`which python`, `git status`, `ls -la`).\n\n"
         "Prefer dedicated tools when applicable:\n"
-        "- File reads → `read_file`, not `cat`.\n"
-        "- Filename search → `glob`, not `find` or `ls`.\n"
-        "- Content search → `grep`, not `grep`/`rg` via shell.\n"
-        "- File mutations → `write_file`/`edit_file`/`delete_file`/`move_file`. The dedicated "
+        "- File reads -> `read_file`, not `cat`.\n"
+        "- Filename search -> `glob`, not `find` or `ls`.\n"
+        "- Content search -> `grep`, not `grep`/`rg` via shell.\n"
+        "- File mutations -> `write_file`/`edit_file`/`remove_file`/`move_file`. The dedicated "
         "tools produce cleaner audit trails and structured errors.\n"
         "- Use `shell` for tasks the dedicated tools genuinely cannot do.\n\n"
         "Do NOT use for:\n"
@@ -241,11 +182,10 @@ def _paths_from_shell(shell_result: dict[str, object], key: str) -> list[str]:
         "- Streaming progress to the user — only the final captured output is returned.\n\n"
         "Capabilities and constraints:\n"
         "- Runs as bash, with the repo root as cwd.\n"
-        "- `timeout` (seconds) bounds the run; the call returns is_error if exceeded. Default "
-        "is taken from CODE_INTELLIGENCE_TUNING.\n"
+        "- `timeout` (seconds) bounds the run; default is 900.\n"
         "- Writes performed by the command are tracked. A command that exits 0 but writes "
-        'outside the audited boundary returns is_error=True with "sandbox commit aborted: …".\n'
-        "- No environment leakage between calls — set env vars inline (`FOO=bar cmd …`).\n"
+        'outside the audited boundary returns is_error=True with "sandbox commit aborted: ...".\n'
+        "- No environment leakage between calls — set env vars inline (`FOO=bar cmd ...`).\n"
         "- No interactive input — use non-interactive flags (`--yes`, `--non-interactive`, "
         "`--no-input`).\n\n"
         "Output shape:\n"
@@ -276,20 +216,22 @@ async def shell(
     if not command or not command.strip():
         return ToolResult(output="`command` must be a non-empty string.", is_error=True)
 
-    repo_cwd = _get_repo_root(context)
-
-    if get_ci_service(context) is None:
-        return _ci_required_result()
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="shell")
+    if api_error is not None:
+        return api_error
 
     try:
-        shell_result = await _run_with_recovery(
-            context,
-            lambda sandbox: _exec_shell_command(
-                context,
-                sandbox,
+        result = await api.shell(
+            sandbox_id,
+            ShellRequest(
                 command=command,
-                cwd=repo_cwd,
+                cwd=get_repo_root(context) or None,
                 timeout=timeout,
+                actor=actor_from_context(context),
+                description="shell",
                 attribute_changes=True,
             ),
         )
@@ -303,25 +245,38 @@ async def shell(
             ),
             is_error=True,
         )
-    exit_code = int(shell_result.get("exit_code", 1))
-    audit_success = bool(shell_result.get("audit_success", True))
-    audit_conflict = shell_result.get("audit_conflict_reason") or ""
+
+    shell_result: dict[str, object] = {
+        "command": command,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "exit_code": result.exit_code,
+        "changed_paths": list(result.changed_paths),
+        "ambient_changed_paths": list(result.ambient_changed_paths),
+        "audit_success": result.audit_success,
+        "audit_conflict_reason": result.audit_conflict_reason,
+    }
     changed_paths = _paths_from_shell(shell_result, "changed_paths")
     ambient_changed_paths = _paths_from_shell(shell_result, "ambient_changed_paths")
-    is_error = exit_code != 0 or not audit_success
-    if not audit_success and exit_code == 0:
-        error_detail = f"sandbox commit aborted: {audit_conflict or 'unknown reason'}"
-    elif exit_code != 0:
+    is_error = result.exit_code != 0 or not result.audit_success
+    if not result.audit_success and result.exit_code == 0:
+        error_detail = (
+            f"sandbox commit aborted: {result.audit_conflict_reason or 'unknown reason'}"
+        )
+    elif result.exit_code != 0:
         error_detail = _shell_result_error_detail(shell_result)
     else:
         error_detail = ""
     return _build_tool_output(
         context=context,
-        status="ok" if not is_error else "error",
+        status="error" if is_error else "ok",
         files_written=len(changed_paths),
         shells=[shell_result],
-        warnings=[],
+        warnings=list(result.warnings),
         error=error_detail,
         changed_paths=changed_paths,
         ambient_changed_paths=ambient_changed_paths,
     )
+
+
+__all__ = ["shell", "_build_tool_output"]

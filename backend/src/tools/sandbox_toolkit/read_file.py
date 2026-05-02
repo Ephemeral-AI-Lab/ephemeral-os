@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from sandbox.api.models import ReadFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from sandbox.daytona.exec_files import _read_text_file_via_exec
-from sandbox.daytona.paths import (
-    _path_error,
-    _resolve_path,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    path_error,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
-from sandbox.daytona.recovery import _run_with_recovery
-from tools.daytona_toolkit._file_tool_helpers import (
+from tools.sandbox_toolkit._file_tool_helpers import (
     MAX_READ_FILE_LINES,
     ReadFileInput,
     ReadFileOutput,
@@ -39,22 +41,30 @@ async def read_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Read a file."""
-    file_path = _resolve_path(file_path, context)
+    file_path = resolve_sandbox_path(file_path, context)
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="read_file")
+    if api_error is not None:
+        return api_error
     try:
-        content, _ = await _run_with_recovery(
-            context,
-            lambda sandbox: _read_text_file_via_exec(sandbox, file_path),
+        result = await api.read_file(
+            sandbox_id,
+            ReadFileRequest(path=file_path, actor=actor_from_context(context)),
         )
+        if not result.exists:
+            raise FileNotFoundError(file_path)
         return build_read_file_result(
             context=context,
             file_path=file_path,
-            content=content,
+            content=result.content,
             start_line=start_line,
             end_line=end_line,
         )
     except Exception as exc:
         return ToolResult(
-            output=_path_error(exc, file_path) or str(exc),
+            output=path_error(exc, file_path) or str(exc),
             is_error=True,
         )
 

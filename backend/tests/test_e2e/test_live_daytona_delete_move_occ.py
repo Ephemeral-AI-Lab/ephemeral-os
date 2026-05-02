@@ -39,8 +39,8 @@ from sandbox.daytona.bash import (
     _extract_exit_code,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.delete_file import delete_file
-from tools.daytona_toolkit.move_file import move_file
+from tools.sandbox_toolkit.remove_file import remove_file as delete_file
+from tools.sandbox_toolkit.move_file import move_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")

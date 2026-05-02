@@ -381,7 +381,7 @@ class EvalAgent:
                 "read_file",
                 "write_file",
                 "edit_file",
-                "delete_file",
+                "remove_file",
                 "move_file",
                 "shell",
                 "run_subagent",

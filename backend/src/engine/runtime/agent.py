@@ -204,10 +204,10 @@ def _build_agent_tool_registry(
             agent_name,
         )
     elif sandbox_id:
-        from tools.daytona_toolkit import make_daytona_tools
+        from tools.sandbox_toolkit import make_sandbox_tools
 
-        tool_registry.register_many(make_daytona_tools())
-        logger.info("Registered Daytona sandbox tools for sandbox %s", sandbox_id)
+        tool_registry.register_many(make_sandbox_tools())
+        logger.info("Registered sandbox tools for sandbox %s", sandbox_id)
 
     return tool_registry
 

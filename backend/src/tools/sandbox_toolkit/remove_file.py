@@ -1,26 +1,23 @@
-"""Delete file tool."""
+"""Remove file tool."""
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from sandbox.code_intelligence.core.types import DeleteSpec
+from sandbox.api.models import RemoveFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
-from tools.core.sandbox_commit import (
-    commit_metadata,
-    failure_status,
-    submit_commit_from_context,
+from tools.core.sandbox_session import (
+    actor_from_context,
+    normalized_path,
+    resolve_sandbox_path,
+    sandbox_api_or_error,
+    sandbox_id_or_error,
 )
-from tools.daytona_toolkit._mutation_helpers import ci_write_guard
-from sandbox.daytona.paths import (
-    _normalized_path,
-    _resolve_path,
-)
-from tools.daytona_toolkit._delete_move_helpers import operation_payload
+from tools.sandbox_toolkit._delete_move_helpers import operation_payload
 
 
-class DeleteFileInput(BaseModel):
+class RemoveFileInput(BaseModel):
     path: str = Field(
         ...,
         min_length=1,
@@ -32,7 +29,7 @@ class DeleteFileInput(BaseModel):
     )
 
 
-class DeleteFileOutput(BaseModel):
+class RemoveFileOutput(BaseModel):
     status: str = Field(
         ...,
         description="`deleted`, `not_found`, `aborted_version`, `aborted_lock`, or `failed`.",
@@ -56,42 +53,45 @@ class DeleteFileOutput(BaseModel):
 
 
 @tool(
-    name="delete_file",
+    name="remove_file",
     description=(
-        "Delete a file, or a folder tree with `is_folder=True`. Atomic and audited via the "
+        "Remove a file, or a folder tree with `is_folder=True`. Atomic and audited via the "
         "commit pipeline. Prefer over `shell rm` for structured errors and traceability. Don't "
         "use to \"clear\" a file you intend to rewrite — just `write_file` over it. Returns "
         "`not_found`, `aborted_version`, or `aborted_lock` on common non-success paths."
     ),
-    short_description="Delete a file or folder.",
-    input_model=DeleteFileInput,
-    output_model=DeleteFileOutput,
+    short_description="Remove a file or folder.",
+    input_model=RemoveFileInput,
+    output_model=RemoveFileOutput,
 )
-async def delete_file(
+async def remove_file(
     path: str,
     is_folder: bool = False,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
-    """Delete a file or folder."""
-    resolved = _normalized_path(_resolve_path(path, context))
+    """Remove a file or folder."""
+    resolved = normalized_path(resolve_sandbox_path(path, context))
     warnings: list[str] = []
 
-    if guard := ci_write_guard(context, tool_name="delete_file", path=resolved):
-        return guard
+    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    if sandbox_id_error is not None:
+        return sandbox_id_error
+    api, api_error = sandbox_api_or_error(context, tool_name="remove_file")
+    if api_error is not None:
+        return api_error
 
-    specs = [DeleteSpec(path=resolved, is_folder=is_folder)]
-
-    change = await submit_commit_from_context(
-        context,
-        op="delete",
-        specs=specs,
-        fallback_paths=[resolved],
-        description=f"delete {resolved}",
+    result = await api.remove_file(
+        sandbox_id,
+        RemoveFileRequest(
+            path=resolved,
+            is_folder=is_folder,
+            actor=actor_from_context(context),
+            description=f"remove {resolved}",
+        ),
     )
-    paths = list(change.changed_paths)
-    common_metadata = commit_metadata(change, paths)
-    if change.success:
+    paths = list(result.changed_paths or (resolved,))
+    if result.success:
         return ToolResult(
             output=operation_payload(
                 status="deleted",
@@ -101,26 +101,38 @@ async def delete_file(
             metadata={
                 "file_count": len(paths),
                 "success_count": len(paths),
-                **common_metadata,
+                "changed_paths": paths,
+                "conflict_reason": None,
             },
         )
 
-    payload_status, conflict_reason = failure_status(change.raw, move=False)
+    payload_status = _remove_failure_status(result.conflict_reason)
     return ToolResult(
         output=operation_payload(
             status=payload_status,
             paths=paths,
             warnings=warnings,
-            conflict_reason=conflict_reason,
-            message=str(change.conflict_reason or conflict_reason),
+            conflict_reason=result.conflict_reason,
+            message=str(result.conflict_reason or payload_status),
         ),
         is_error=True,
         metadata={
             "file_count": len(paths),
             "success_count": 0,
-            **common_metadata,
+            "changed_paths": paths,
+            "conflict_reason": result.conflict_reason,
         },
     )
 
 
-__all__ = ["delete_file"]
+def _remove_failure_status(conflict_reason: str | None) -> str:
+    if conflict_reason in {"not_found", "missing"}:
+        return "not_found"
+    if conflict_reason in {"base_mismatch", "version_conflict", "drift"}:
+        return "aborted_version"
+    if conflict_reason in {"lock_conflict", "locked"}:
+        return "aborted_lock"
+    return "failed"
+
+
+__all__ = ["remove_file"]

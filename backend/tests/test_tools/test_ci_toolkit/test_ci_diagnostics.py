@@ -6,10 +6,9 @@ import asyncio
 import json
 import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
-from sandbox.client.async_bridge import current_sandbox_io_loop
+from sandbox.api.models import Diagnostic, DiagnosticsResult
 from sandbox.code_intelligence.language_server.client import LspClient
 from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
 from tools.core.base import ToolExecutionContextService
@@ -19,8 +18,25 @@ def _ctx(services=None) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd=Path("/tmp"), services=services or {})
 
 
-def _ctx_with_svc(svc) -> ToolExecutionContextService:
-    return _ctx({"ci_service": svc})
+class _DiagnosticsApi:
+    def __init__(
+        self,
+        result: DiagnosticsResult | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.result = result or DiagnosticsResult(diagnostics=(), clean=True)
+        self.error = error
+        self.calls: list[tuple[str, object]] = []
+
+    async def diagnostics(self, sandbox_id: str, request: object) -> DiagnosticsResult:
+        self.calls.append((sandbox_id, request))
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+def _ctx_with_api(api: _DiagnosticsApi) -> ToolExecutionContextService:
+    return _ctx({"code_intelligence_api": api, "sandbox_id": "sb-1", "repo_root": "/ws"})
 
 
 def test_diagnostics_no_service_returns_error():
@@ -33,9 +49,8 @@ def test_diagnostics_no_service_returns_error():
 
 
 def test_diagnostics_clean():
-    svc = MagicMock()
-    svc.diagnostics.return_value = []
-    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
+    api = _DiagnosticsApi()
+    ctx = _ctx_with_api(api)
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
@@ -43,28 +58,11 @@ def test_diagnostics_clean():
     data = json.loads(result.output)
     assert data["clean"] is True
     assert data["diagnostics"] == []
-
-
-def test_diagnostics_runs_service_with_sandbox_io_loop():
-    class _Service:
-        def diagnostics(self, file_path: str):
-            assert file_path == "/f.py"
-            assert current_sandbox_io_loop() is not None
-            return []
-
-    ctx = _ctx({"ci_service": _Service(), "repo_root": "/ws"})
-    result = asyncio.run(
-        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
-    )
-
-    assert not result.is_error
-    assert json.loads(result.output)["clean"] is True
+    assert api.calls[0][0] == "sb-1"
 
 
 def test_diagnostics_backend_failure_returns_error_not_clean():
-    svc = MagicMock()
-    svc.diagnostics.side_effect = RuntimeError("transport unavailable")
-    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
+    ctx = _ctx_with_api(_DiagnosticsApi(error=RuntimeError("transport unavailable")))
 
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
@@ -76,15 +74,16 @@ def test_diagnostics_backend_failure_returns_error_not_clean():
 
 
 def test_diagnostics_with_errors():
-    diag = MagicMock()
-    diag.line = 5
-    diag.character = 3
-    diag.severity = MagicMock(value="error")
-    diag.message = "undefined name 'x'"
-    diag.source = "pyright"
-    svc = MagicMock()
-    svc.diagnostics.return_value = [diag]
-    ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})
+    diag = Diagnostic(
+        line=5,
+        character=3,
+        severity="error",
+        message="undefined name 'x'",
+        source="pyright",
+    )
+    ctx = _ctx_with_api(
+        _DiagnosticsApi(DiagnosticsResult(diagnostics=(diag,), clean=False))
+    )
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
@@ -99,16 +98,17 @@ def test_diagnostics_with_errors():
     assert diagnostic["source"] == "pyright"
 
 
-def test_diagnostics_severity_without_value_attr():
-    diag = MagicMock(spec=["line", "character", "severity", "message", "source"])
-    diag.line = 1
-    diag.character = 0
-    diag.severity = "warning"
-    diag.message = "unused import"
-    diag.source = "flake8"
-    svc = MagicMock()
-    svc.diagnostics.return_value = [diag]
-    ctx = _ctx_with_svc(svc)
+def test_diagnostics_warning_severity():
+    diag = Diagnostic(
+        line=1,
+        character=0,
+        severity="warning",
+        message="unused import",
+        source="flake8",
+    )
+    ctx = _ctx_with_api(
+        _DiagnosticsApi(DiagnosticsResult(diagnostics=(diag,), clean=False))
+    )
     result = asyncio.run(
         ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )

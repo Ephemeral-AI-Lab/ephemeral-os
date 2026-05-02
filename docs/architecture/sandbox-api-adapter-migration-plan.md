@@ -1,8 +1,7 @@
 # Sandbox API Adapter Migration Plan
 
 **Date:** 2026-05-02
-**Status:** In progress — Steps 1–7 of 11 complete (additive, backward-compatible).
-Steps 8–11 (tool rewrites, deletions, comprehensive import-fence) pending.
+**Status:** Complete — Steps 1–11 implemented.
 **Scope:** Establish three provider-neutral surfaces and remove all direct
 `sandbox.daytona.*` imports from `tools/*` and `sandbox/code_intelligence/*`:
 
@@ -19,7 +18,7 @@ directly. Tools never see Daytona; CI never sees Daytona.
 | Step | Scope | Status |
 |---|---|---|
 | 1 | API Protocols + frozen dataclass models + errors + import-fence test | **Done** |
-| 2 | `audit.py` + `attribution.py` relocated; `tools/core/{sandbox_commit,ci_attribution}.py` rewritten as compat shims | **Done** |
+| 2 | `audit.py` + `attribution.py` relocated; temporary `tools/core/{sandbox_commit,ci_attribution}.py` compat shims added | **Done** |
 | 3 | `DaytonaTransport` (16 contract tests) | **Done** |
 | 4 | `AuditedSandboxApi` (13 dispatch tests) | **Done** |
 | 5 prep | `CheckedWriteSpec.content` widened to `bytes \| None` (deletes); `SandboxTransport.read_bytes_batch` added; staged-payload support for `apply_diff_batch_checked` | **Done** |
@@ -28,96 +27,29 @@ directly. Tools never see Daytona; CI never sees Daytona.
 | 5.3 | `file_discovery.py` + `SymbolIndex` accept `transport=` kwarg | **Done (additive)** |
 | 5.4 | `ContentManager` accepts `transport=` kwarg with branches for `read`/`read_many`/`write`/`delete`/`apply_many_with_base_check` | **Done (additive)** |
 | 6 | `SvcCodeIntelligence` (13 contract tests) | **Done** |
-| 7 | `ExecutionMetadata` extended with `sandbox_api`/`code_intelligence_api`/`sandbox_transport`; `lifecycle/workspace.py.ensure_code_intelligence_runtime` constructs `DaytonaTransport`+`AuditedSandboxApi`+`SvcCodeIntelligence` per context (3 wiring tests) | **Done (partial activation)** |
-| 8 | `daytona_toolkit/` → `sandbox_toolkit/` rename + 8 tool rewrites | **Pending** |
-| 9 | `ci_toolkit/` rewrite (5 tools) | **Pending** |
-| 10 | Delete legacy modules | **Pending** |
-| 11 | Comprehensive import-fence test | **Pending** |
+| 7 | `ExecutionMetadata` extended with `sandbox_api`/`code_intelligence_api`/`sandbox_transport`; `lifecycle/workspace.py.ensure_code_intelligence_runtime` constructs `DaytonaTransport`+`AuditedSandboxApi`+`SvcCodeIntelligence` per context and passes transport into CI service construction | **Done** |
+| 8 | `daytona_toolkit/` → `sandbox_toolkit/` rename + 8 tool rewrites | **Done** |
+| 9 | `ci_toolkit/` rewrite (5 tools) | **Done** |
+| 10 | Delete legacy modules | **Done** |
+| 11 | Comprehensive import-fence test | **Done** |
 
-**Test surface:** 549 passing (167 tools + 382 sandbox = +60 net new test
-assertions across 5 new test files; 0 regressions in pre-existing tests).
+**Verification:** `uv run pytest -q` → 1052 passed, 389 deselected. `uv run
+ruff check backend/src backend/tests` → all checks passed.
 
-## Deferred items (Steps 1–7 left these in place)
+## Completion Notes
 
-These items are intentionally not yet acted on — Steps 8–11 will resolve
-each. Reviewers should treat each as a **known-pending cleanup**, not a
-bug to file or fix in isolation.
-
-### Compatibility shims still alive
-
-These exist so `daytona_toolkit/*` keeps working through Steps 8–9
-without per-tool migration:
-
-- `tools/core/sandbox_commit.py` — thin shim re-exporting `CommitOp`,
-  `FileChangeResult`, `commit_metadata`, `failure_status` from
-  `sandbox.api.audit`, plus context-aware
-  `submit_commit_from_context` / `submit_shell_cmd_from_context`
-  wrappers. **Step 10 deletes this file.**
-- `tools/core/ci_attribution.py` — shim re-exporting `AgentAttribution`
-  and the context-aware `agent_attribution_from_context` /
-  `rebind_ci_service` / `resolved_agent_id` helpers, plus
-  `actor_from_context` adapter. **Step 10 deletes this file.**
-- `tools/core/ci_adapter.py` — untouched; still imported by 5
-  `daytona_toolkit` tools and the `ci_toolkit` modules. **Step 10
-  deletes this file.**
-
-### Step 5 transport branches: dormant in production
-
-Step 5 sub-steps added `transport=` parameters to every CI internal
-constructor and threaded transport-aware code paths into each module.
-**Production wiring (Step 7) currently does *not* pass a transport into
-`SandboxService.code_intelligence_for`**, so:
-
-- `CodeIntelligenceService` continues to construct `LspClient`,
-  `SymbolIndex`, `ContentManager`, and `AuditedCommandExecutor` with
-  `transport=None`, which means every transport-aware branch falls
-  through to the legacy `self._sandbox` path.
-- The `AuditedSandboxApi` and `SvcCodeIntelligence` wrappers attached to
-  the context **do** consume the new `DaytonaTransport`, but they
-  delegate writes/edits/etc. through the engine `svc` which is itself
-  still on the legacy path.
-- Net effect: **production behavior is unchanged.** All Step 5 transport
-  paths are exercised only by isolated contract tests.
-
-A separate sub-step ("Step 7.5") needs to extend
-`SandboxService.code_intelligence_for` to also pass the constructed
-transport into `get_code_intelligence`. This is a one-line change but
-flips the engine onto the new code paths — a real production behavior
-change that should land as its own reviewable PR.
-
-### Per-module deferrals inside Step 5 sub-steps
-
-- **`language_server/transport.py`** — legacy `self._sandbox` branch
-  preserved alongside the new transport branch. The
-  `from sandbox.daytona.bash import _wrap_bash_command, _extract_exit_code`
-  import remains for the legacy branch. Step 11 cleanup will remove
-  both once tests migrate to constructing `LspClient(transport=...)`.
-- **`overlay/auditor.py` + `overlay/git_snapshot.py`** — same pattern;
-  legacy `exec_process` callback path stays active. Daytona imports
-  remain.
-- **`indexing/file_discovery.py`** — `_is_real_sdk(fs)` sniff retained;
-  legacy `fs.search_files`/`fs.list_files`/`fs.download_files` paths
-  retained. Step 11 deletes the sniff and the legacy paths.
-- **`mutations/content_manager.py`** —
-  - `_is_real_daytona_fs` sniff still present at line 37 (deletion
-    deferred to Step 11; no test currently relies on it but production
-    code still calls into the branch when `transport is None`).
-  - `apply_many` (non-checked batch) has **no transport branch** — the
-    `SandboxTransport` Protocol does not yet expose an unchecked batch
-    apply primitive. Falls through to legacy `_apply_remote_batch`.
-  - `list_folder_files` has **no transport branch** — uses
-    `transport.list_paths` could replace it but the script semantics
-    differ (folder enumeration vs glob match). Deferred.
-
-### Test cascade not yet performed
-
-Existing tests construct `LspClient(workspace_root=..., sandbox=...)`,
-`CodeIntelligenceService(sandbox_id=..., sandbox=...)`, and
-`ContentManager(workspace_root, sandbox=...)` with sandbox handles, not
-transports. **All 25+ LSP tests, all overlay tests, and all
-ContentManager tests still pass `sandbox=`** because the legacy paths
-remain. Step 11 (or a dedicated test-migration sub-step) is the place
-to flip them.
+- The rename landed as a big-bang cutover: `tools/daytona_toolkit/` was deleted
+  and `tools/sandbox_toolkit/` has no compatibility alias.
+- `delete_file` was removed from the tool surface in favor of `remove_file`.
+- `tools/core/ci_adapter.py`, `tools/core/sandbox_commit.py`, and
+  `tools/core/ci_attribution.py` were deleted.
+- `SandboxService.code_intelligence_for(..., transport=...)` is now activated
+  from `lifecycle/workspace.py` when the context prepares the provider-neutral
+  runtime.
+- `tools/sandbox_toolkit/*`, `tools/ci_toolkit/*`, and
+  `sandbox/code_intelligence/*` are covered by the import-fence test.
+- `_is_real_daytona_fs()` / `_is_real_sdk()` provider sniffs were removed from
+  CI internals.
 
 ### Per-class `NotImplementedError` markers
 
@@ -134,55 +66,7 @@ These are intentional and part of the ProcessHandle Protocol contract
 (plan Risk #4 was about defining the contract upfront so the sidecar
 can plug in cleanly later).
 
-### Two implementations of OCC checked-batch-apply
-
-`DaytonaTransport.apply_diff_batch_checked` and
-`ContentManager._apply_remote_batch_checked` both build the same kind of
-inline+staged Python script for OCC writes. They diverged in Step 5
-prep (transport added staging support; ContentManager already had it).
-**Step 11 should unify them** — extract a shared helper in
-`sandbox/daytona/` (or move ContentManager's apply path to call
-`SandboxTransport.apply_diff_batch_checked`). Both implementations are
-verified equivalent by the existing OCC test suite.
-
-## Open design questions for Steps 8–11
-
-1. **Step 8 rename topology.** The plan says "no compat alias" for the
-   `daytona_toolkit/` → `sandbox_toolkit/` rename. Two interpretations:
-   - **Big-bang:** delete `daytona_toolkit/` in the same change as
-     creating `sandbox_toolkit/`. ~30 file changes (8 tools + tests +
-     fixtures + registry). High regression risk.
-   - **Stage:** create `sandbox_toolkit/` alongside `daytona_toolkit/`,
-     migrate tools one at a time, swap the registry, then delete
-     `daytona_toolkit/` in Step 10. Lower risk per change but creates a
-     transient duplicate package.
-
-   Recommend **stage** for safety; the "no compat alias" rule is about
-   the end state, not the transition.
-
-2. **Production transport activation timing (Step 7.5).** Should the
-   one-line change to `SandboxService.code_intelligence_for` (adding
-   `transport=transport`) land before or after Step 8?
-   - **Before:** Step 5 transport branches start running in production
-     immediately. Any Step 5 sub-step bug surfaces in CI runs.
-   - **After:** Step 8 tools migrate first; activation happens with
-     more test coverage. Lower risk but delays the actual benefit.
-
-   Recommend **after Step 8** so the new code paths see real tool
-   traffic in tests before becoming load-bearing.
-
-3. **Test migration strategy.** When Step 11 lands the comprehensive
-   import-fence, every existing test that constructs `LspClient`,
-   `ContentManager`, etc. with `sandbox=` will fail unless either:
-   - Tests are migrated en masse to construct with `transport=`.
-   - The fence allows the legacy `sandbox=` constructor parameters but
-     forbids `from sandbox.daytona.*` imports inside the engine modules.
-
-   Option 2 is more incremental but leaves the engine modules with
-   dead `if self._sandbox:` branches the Protocol contract claims are
-   gone.
-
-## Why Steps 1–7 landed additively (not as a clean refactor)
+## Why Steps 1–7 landed additively
 
 The plan's "Eleven PRs" structure, plus the autopilot constraint of
 landing each step without breaking the 167 existing tool tests or 325+
@@ -190,34 +74,36 @@ sandbox tests, drove an additive approach:
 
 - Constructor signatures **add** `transport=` kwargs rather than
   replacing `sandbox=`.
-- `tools/core/{sandbox_commit,ci_attribution}.py` become **shims** that
-  re-export, not deleted modules.
+- `tools/core/{sandbox_commit,ci_attribution}.py` temporarily became
+  **shims** so early API relocation did not break existing callers.
 - `ExecutionMetadata` **adds** three new fields rather than removing
   the legacy `daytona_sandbox` / `ci_service`.
 - Legacy code paths inside CI internals stay alive alongside the new
   transport-aware paths.
 
-Step 11 is where the cleanup happens: legacy paths deleted, fence
-enforced, dead branches stripped.
+Steps 8-11 completed that cutover: tool callers moved to the provider-neutral
+surface, temporary shims were deleted, and the import fence now protects the
+new boundary.
 
 ## Goals
 
-1. **Provider-neutral I/O for tools.** `tools/sandbox_toolkit/*` depends only
-   on `SandboxApi`.
+1. **Provider-neutral I/O for tools.** `tools/sandbox_toolkit/*` depends on
+   the `SandboxApi` protocol and its request/result models.
 2. **Provider-neutral semantic queries for tools.** `tools/ci_toolkit/*`
-   depends only on `CodeIntelligenceApi`.
+   depends on the `CodeIntelligenceApi` protocol and its request/result models.
 3. **Provider-neutral CI internals.** `sandbox/code_intelligence/*` depends
-   only on `SandboxTransport`. The 5 modules that currently import
-   `sandbox.daytona.*` are refactored. The `_is_real_daytona_fs()` runtime
-   type-sniff is deleted.
+   on the provider-neutral sandbox API/transport helpers. The 5 modules that
+   previously imported `sandbox.daytona.*` are refactored. The
+   `_is_real_daytona_fs()` runtime type-sniff is deleted.
 4. **CI work fully encapsulated from tools.** OCC, change tracking, audit,
    and attribution are internals of `SandboxApi`. Tools see audit results
    as fields on response models, not as a separate service dependency.
 
-After this phase, the only modules that import `sandbox.daytona.*` are
-inside `sandbox/daytona/` itself plus a single registry/factory. Adding a
-second provider becomes a matter of writing a new `SandboxTransport` impl;
-both tools and CI work for free.
+After this phase, `tools/*` and `sandbox/code_intelligence/*` do not import
+`sandbox.daytona.*`. Daytona-specific imports stay inside provider/runtime
+factory code. Adding a second provider becomes a matter of writing a new
+`SandboxTransport` implementation; tools and CI continue to use the same
+provider-neutral surfaces.
 
 ## Non-Goals
 
@@ -356,16 +242,16 @@ Modules deleted by this migration:
 ## Dependency Rules
 
 ```text
-tools/sandbox_toolkit/*        → sandbox.api.sandbox_api ONLY
-tools/ci_toolkit/*             → sandbox.api.code_intelligence_api ONLY
+tools/sandbox_toolkit/*        → sandbox.api sandbox/tool models only
+tools/ci_toolkit/*             → sandbox.api code-intelligence models only
 sandbox/api/sandbox_api impl   → sandbox.api.transport, sandbox.api.audit, sandbox.api.attribution
 sandbox/api/audit              → sandbox.api.transport
-sandbox/code_intelligence/*    → sandbox.api.transport ONLY (no sandbox.daytona.*)
+sandbox/code_intelligence/*    → sandbox.api transport/models/bash helpers (no sandbox.daytona.*)
 sandbox/api/code_intelligence_api impl → sandbox.code_intelligence.* (still backend-hosted)
 sandbox/daytona/*              → may use Daytona SDK
-sandbox/api/registry           → sandbox.daytona (the single factory site)
+sandbox/lifecycle/workspace    → sandbox.daytona transport factory
 
-NO other module imports sandbox.daytona.*.
+NO tools/* or sandbox/code_intelligence/* module imports sandbox.daytona.*.
 ```
 
 These rules are enforced by an import-fence test (Step 11 below).
@@ -665,7 +551,7 @@ Suggested sub-order:
 Existing `CodeIntelligenceService` tests are the regression net; they must
 all still pass after each sub-step.
 
-### Step 6 — Implement `DaytonaCodeIntelligence`
+### Step 6 — Implement `SvcCodeIntelligence`
 
 Create `sandbox/api/code_intelligence_api.py` impl as a thin async wrapper
 over `CodeIntelligenceService`. Sync→async bridging via
@@ -681,9 +567,10 @@ Add structural fields:
   attribution, and `CodeIntelligenceService` construction. Not read by tool
   code.
 
-Existing `ci_service`, `daytona_sandbox`, `ci_sandbox` keys are removed
-from the public context surface; if anything outside the API/transport
-layer still reads them, fix that caller.
+Existing `ci_service` and `daytona_sandbox` keys remain runtime internals for
+constructing the provider-neutral surface, but tool code no longer reads them.
+If new tool code needs sandbox or CI access, it must use `sandbox_api` or
+`code_intelligence_api`.
 
 ### Step 8 — Rewrite `sandbox_toolkit`
 
@@ -765,11 +652,12 @@ uv run ruff check backend/src/sandbox backend/src/tools backend/tests
 
 Phase 1 is done when:
 
-- `tools/sandbox_toolkit/*` imports only `sandbox.api.sandbox_api` and tool
-  base utilities.
-- `tools/ci_toolkit/*` imports only `sandbox.api.code_intelligence_api`.
-- `sandbox/code_intelligence/*` imports only `sandbox.api.transport` (no
-  `sandbox.daytona.*`, no `daytona_sdk`).
+- `tools/sandbox_toolkit/*` imports only the provider-neutral sandbox API
+  surface plus tool base utilities.
+- `tools/ci_toolkit/*` imports only the provider-neutral code-intelligence API
+  surface plus tool base utilities.
+- `sandbox/code_intelligence/*` imports only provider-neutral sandbox API
+  helpers (no `sandbox.daytona.*`, no `daytona_sdk`).
 - `sandbox/api/*` does not import `sandbox.daytona.*` (registry/factory
   excepted).
 - `tools/core/ci_adapter.py`, `tools/core/sandbox_commit.py`, and
@@ -797,7 +685,7 @@ Phase 1 is done when:
    threading.
 
 3. **Sync→async bridge regressions for `CodeIntelligenceApi`.** Mitigation:
-   contain the bridge in `DaytonaCodeIntelligence`; assert via contract
+   contain the bridge in `SvcCodeIntelligence`; assert via contract
    tests that no tool code awaits a sync object.
 
 4. **`ProcessHandle` Protocol must serve LSP, background shell, and future

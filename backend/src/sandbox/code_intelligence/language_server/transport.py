@@ -4,11 +4,9 @@ This module exposes ``LspTransportMixin`` — the shim that runs short
 Python query scripts either locally (subprocess) or remotely (in the
 bound sandbox).
 
-Phase 1 Step 5 prep: a new ``SandboxTransport``-based code path is
-preferred when a transport is bound on the mixin. The legacy
-``self._sandbox`` path is preserved so that existing tests (which pass
-``sandbox=`` to ``LspClient``) keep working without per-test migration.
-The legacy path will be removed alongside Step 11's import-fence.
+The ``SandboxTransport``-based code path is preferred when a transport is
+bound on the mixin. The ``self._sandbox`` path remains as a local/test
+fallback for callers that construct ``LspClient`` without a transport.
 """
 
 from __future__ import annotations
@@ -19,11 +17,7 @@ import shlex
 import subprocess
 from typing import TYPE_CHECKING, Any
 
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
-)
-
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import LSP_QUERY_TIMEOUT
@@ -78,12 +72,12 @@ class LspTransportMixin:
                 cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
                 response = run_sync(
                     self._sandbox.process.exec(
-                        _wrap_bash_command(cmd),
+                        wrap_bash_command(cmd),
                         timeout=int(LSP_QUERY_TIMEOUT),
                     )
                 )
                 result = response.result or ""
-                result, exit_code = _extract_exit_code(
+                result, exit_code = extract_exit_code(
                     result,
                     fallback_exit_code=getattr(response, "exit_code", None),
                 )
@@ -163,14 +157,13 @@ class LspTransportMixin:
             return transport_result.exit_code
         response = run_sync(
             self._sandbox.process.exec(
-                _wrap_bash_command(command),
+                wrap_bash_command(command),
                 timeout=timeout,
             )
         )
         result = str(getattr(response, "result", "") or "")
-        _cleaned, exit_code = _extract_exit_code(
+        _cleaned, exit_code = extract_exit_code(
             result,
             fallback_exit_code=getattr(response, "exit_code", None),
         )
         return exit_code
-

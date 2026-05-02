@@ -35,9 +35,9 @@ from sandbox.daytona.bash import (
     _extract_exit_code,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.shell import shell
-from tools.daytona_toolkit.edit_file import edit_file
-from tools.daytona_toolkit.write_file import write_file
+from tools.sandbox_toolkit.shell import shell
+from tools.sandbox_toolkit.edit_file import edit_file
+from tools.sandbox_toolkit.write_file import write_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")

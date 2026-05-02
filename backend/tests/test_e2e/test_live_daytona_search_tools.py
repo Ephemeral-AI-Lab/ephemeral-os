@@ -21,8 +21,8 @@ from sandbox.testing import create_test_sandbox, delete_test_sandbox
 from tools.core.base import ToolExecutionContextService
 from sandbox.daytona.bash import _wrap_bash_command
 from sandbox.daytona.exec_files import _build_write_text_file_command
-from tools.daytona_toolkit.glob import glob
-from tools.daytona_toolkit.grep import grep
+from tools.sandbox_toolkit.glob import glob
+from tools.sandbox_toolkit.grep import grep
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")

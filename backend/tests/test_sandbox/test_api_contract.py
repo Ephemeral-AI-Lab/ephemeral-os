@@ -205,33 +205,13 @@ def test_audit_module_re_exports_engine_helpers() -> None:
         assert hasattr(audit, name), f"sandbox.api.audit missing {name!r}"
 
 
-def test_legacy_shims_re_export_public_symbols() -> None:
-    """The compat shims keep every symbol importers used to read directly.
+def test_legacy_tool_core_shims_are_deleted() -> None:
+    """Step 10 removes the temporary tools/core compatibility shims."""
+    import importlib.util
 
-    A missing re-export breaks 5 daytona_toolkit tools silently. This
-    test fails loudly if a symbol is dropped before Step 10's planned
-    deletion of the shims.
-    """
-    from tools.core import ci_attribution as ci_attribution_shim
-    from tools.core import sandbox_commit as sandbox_commit_shim
-
-    for name in (
-        "AgentAttribution",
-        "agent_attribution_from_context",
-        "rebind_ci_service",
-        "resolved_agent_id",
+    for module_name in (
+        "tools.core.ci_adapter",
+        "tools.core.ci_attribution",
+        "tools.core.sandbox_commit",
     ):
-        assert hasattr(ci_attribution_shim, name), (
-            f"tools/core/ci_attribution.py shim missing {name!r}"
-        )
-    for name in (
-        "CommitOp",
-        "FileChangeResult",
-        "commit_metadata",
-        "failure_status",
-        "submit_commit_from_context",
-        "submit_shell_cmd_from_context",
-    ):
-        assert hasattr(sandbox_commit_shim, name), (
-            f"tools/core/sandbox_commit.py shim missing {name!r}"
-        )
+        assert importlib.util.find_spec(module_name) is None
