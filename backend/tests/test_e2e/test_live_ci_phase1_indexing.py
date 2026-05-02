@@ -5,9 +5,9 @@ seven cases from spec Task 1.5:
 
 * 1.5.A privilege probe (HARD: ``$HOME/.cache/eos-ci`` writable without sudo)
 * 1.5.B indexing parity vs. Phase 0 baseline
-* 1.5.C corruption recovery (snapshot rebuilds when corrupted)
-* 1.5.D storage path-confinement guard (unit-style, no live needed)
-* 1.5.E compatibility matrix (sqlite3, msgpack, jedi, git, unshare, …)
+* 1.5.C corruption recovery (SQLite index rebuilds when corrupted)
+* 1.5.D state path-confinement guard (unit-style, no live needed)
+* 1.5.E compatibility matrix (sqlite3, msgpack, basedpyright, git, unshare, …)
 * 1.5.F eager bootstrap timing (cold create < 3s; warm restart < 500ms)
 * 1.5.G overlay live mount probe (production stack: tmpfs+bind+overlay
   userxattr + write/modify/delete + whiteout + xattr round-trip)
@@ -38,8 +38,8 @@ from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.code_intelligence.in_sandbox.ci_storage import (
     CiStoragePathEscape,
+    _confine,
     workspace_root_hash,
-    write_snapshot,
 )
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
@@ -228,11 +228,14 @@ def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
         with _traced_step(h, "index_build_in_sandbox"):
             svc = env.make_ci_service(transport=DaytonaTransport())
             svc.ensure_initialized(wait=True)
-        impl = svc._impl
+        status = svc.status()
+        symbol_status = status.get("symbol_index", {})
+        actual_files = int(symbol_status.get("files") or 0)
+        actual_symbols = int(symbol_status.get("symbols") or 0)
         h.record(
             "index_build_in_sandbox",
-            count=getattr(impl, "_cached_file_count", 0),
-            bytes_=getattr(impl, "_snapshot_bytes", 0),
+            count=actual_files,
+            bytes_=actual_symbols,
         )
         with _traced_step(h, "query_symbols_first"):
             results = svc.query_symbols("Bag")
@@ -245,7 +248,6 @@ def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
 
     # Soft parity: file count must match within a small tolerance (the dask
     # workspace can drift slightly between provisioning runs).
-    actual_files = getattr(svc._impl, "_cached_file_count", 0)
     if expected_file_count:
         ratio = actual_files / max(expected_file_count, 1)
         assert 0.5 <= ratio <= 2.0, (
@@ -253,7 +255,6 @@ def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
             f"by ratio {ratio:.2f}"
         )
     if expected_symbol_count:
-        actual_symbols = getattr(svc._impl, "_cached_symbol_count", 0)
         assert actual_symbols >= expected_symbol_count // 2
 
 
@@ -263,7 +264,7 @@ def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
 
 
 def test_corruption_recovery(live_phase1_env: LivePhase1Env) -> None:
-    """Corrupt the snapshot then rebuild — daemon must recover, not crash."""
+    """Corrupt the SQLite index then rebuild — daemon must recover, not crash."""
     from sandbox.daytona.transport import DaytonaTransport
 
     h = TimingHarness(phase=1, test_name="corruption_recovery")
@@ -273,22 +274,25 @@ def test_corruption_recovery(live_phase1_env: LivePhase1Env) -> None:
         with _traced_step(h, "first_build"):
             svc = env.make_ci_service(transport=DaytonaTransport())
             svc.ensure_initialized(wait=True)
-        baseline_count = getattr(svc._impl, "_cached_symbol_count", 0)
+        baseline_count = int(
+            svc.status().get("symbol_index", {}).get("symbols") or 0
+        )
         assert baseline_count > 0
 
         wh = workspace_root_hash(env.root_dir)
-        snapshot_path = (
-            f"{env.home.strip()}/.cache/eos-ci/{wh}/v1/index.snapshot"
-        )
+        sqlite_path = f"{env.home.strip()}/.cache/eos-ci/{wh}/v1/index.sqlite3"
 
         with _traced_step(h, "corruption_inject"):
-            code, out = env.exec(f"echo 'GARBAGE' > {snapshot_path}")
+            svc.dispose()
+            code, out = env.exec(f"printf %s GARBAGE > {sqlite_path}")
             assert code == 0, out
 
         with _traced_step(h, "corruption_recovery"):
             svc2 = env.make_ci_service(transport=DaytonaTransport())
             svc2.ensure_initialized(wait=True)
-        recovered_count = getattr(svc2._impl, "_cached_symbol_count", 0)
+        recovered_count = int(
+            svc2.status().get("symbol_index", {}).get("symbols") or 0
+        )
         assert recovered_count >= baseline_count // 2
 
     _flush_print(h.report())
@@ -301,18 +305,19 @@ def test_corruption_recovery(live_phase1_env: LivePhase1Env) -> None:
 
 
 def test_storage_path_confinement(tmp_path: Path) -> None:
-    """``write_snapshot`` rejects path traversal — unit-style test in this file."""
+    """State-dir confinement rejects path traversal — unit-style test in this file."""
     state = tmp_path / "state"
     state.mkdir()
 
-    write_snapshot(state, "ok.bin", {"k": "v"})
-    assert (state / "ok.bin").exists()
+    target = _confine(state, "ok.bin")
+    target.write_text("ok", encoding="utf-8")
+    assert target.exists()
 
     with pytest.raises(CiStoragePathEscape):
-        write_snapshot(state, "../escape.bin", {"k": "v"})
+        _confine(state, "../escape.bin")
 
     with pytest.raises(CiStoragePathEscape):
-        write_snapshot(state, "/etc/passwd", {"k": "v"})
+        _confine(state, "/etc/passwd")
 
 
 # ---------------------------------------------------------------------------
@@ -455,13 +460,9 @@ def test_eager_bootstrap_timing(live_phase1_env: LivePhase1Env) -> None:
     # Phase 1 SLO context: Daytona's binary upload/download endpoints
     # (``fs.upload_file`` / ``fs.download_file``) returned 502 from the proxy
     # for any payload more than tens of KB on this self-hosted Daytona,
-    # forcing chunked-base64 over ``transport.exec``. Each chunk is one
-    # exec round-trip (~300-400ms), so a 3.2 MB snapshot read dominates
-    # ``indexer_run_cold`` (~100 chunks). Phase 2 moves the snapshot into
-    # daemon memory, deleting the snapshot transfer entirely. Until then
-    # the test enforces a generous Phase-1 ceiling that catches real
-    # regressions (a 2x slowdown over the observed 60s) without flagging
-    # the known chunked-round-trip cost.
+    # forcing chunked-base64 over ``transport.exec`` for the runtime bundle.
+    # The test keeps a generous ceiling so it catches real regressions
+    # without flagging expected Daytona exec round-trip cost.
     assert cold_total < 120.0, (
         f"cold bundle-upload + indexer > 120s ({cold_total:.2f}s) — investigate"
     )

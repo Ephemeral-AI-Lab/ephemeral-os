@@ -1,11 +1,10 @@
 """Storage layer for the in-sandbox CI runtime.
 
-Owns the ``$HOME/.cache/eos-ci/<workspace_root_hash>/v1/`` resolver, an atomic
-snapshot writer, an integrity-checking reader, and a load-bearing
-path-confinement guard.
+Owns the ``$HOME/.cache/eos-ci/<workspace_root_hash>/v1/`` resolver, the
+SQLite-backed daemon stores, and a load-bearing path-confinement guard.
 
-Phase 1 ships pickle snapshots; Phase 3.5 will swap in SQLite without
-changing the public ``write_snapshot`` / ``read_snapshot`` API.
+The private pickle reader only exists for the one-shot Phase 3.5 migration
+from old ``index.snapshot`` state into ``index.sqlite3``.
 Phase 3 adds :class:`LedgerStore` — a SQLite-WAL backed adapter that
 implements the same duck-typed interface as
 ``mutations.edit_history_ledger.EditHistoryLedger``.
@@ -19,7 +18,6 @@ import logging
 import os
 import pickle
 import sqlite3
-import tempfile
 import threading
 import time
 from collections import Counter
@@ -34,10 +32,8 @@ __all__ = [
     "LedgerStore",
     "_confine",
     "migrate_pickle_to_sqlite",
-    "read_snapshot",
     "state_dir",
     "workspace_root_hash",
-    "write_snapshot",
 ]
 
 logger = logging.getLogger(__name__)
@@ -64,8 +60,8 @@ class CiStoragePathEscape(Exception):
 def workspace_root_hash(workspace_root: str) -> str:
     """Stable 16-hex digest of ``realpath(workspace_root)``.
 
-    Symlinks resolve to the same hash as their target — ``ci_index`` and the
-    daemon must agree on the snapshot location even when callers pass
+    Symlinks resolve to the same hash as their target. The daemon must agree
+    on the state location even when callers pass
     differently-symlinked paths.
     """
     real = os.path.realpath(workspace_root)
@@ -126,31 +122,8 @@ def _confine(state: Path, name: str) -> Path:
     return target
 
 
-def write_snapshot(state: Path, name: str, payload: Any) -> None:
-    """Atomic pickle write into ``state/name``.
-
-    Writes to a temp file in the same directory, fsyncs, then ``os.replace``s
-    onto the final target. Cleans up the temp file on exception. Pickle
-    protocol 5; ``payload`` may be any pickleable structure.
-    """
-    target = _confine(state, name)
-    fd, tmp = tempfile.mkstemp(prefix=f".{Path(name).name}.", suffix=".tmp", dir=state)
-    try:
-        with os.fdopen(fd, "wb") as f:
-            pickle.dump(payload, f, protocol=5)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, target)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-
-
-def read_snapshot(state: Path, name: str) -> Any | None:
-    """Load a pickle snapshot from ``state/name``.
+def _read_pickle_snapshot(state: Path, name: str) -> Any | None:
+    """Load a legacy pickle snapshot from ``state/name``.
 
     Returns ``None`` for a missing target. On any pickle/IO corruption,
     logs a warning, unlinks the corrupt file, and returns ``None`` so the
@@ -640,8 +613,9 @@ class IndexStore:
 
     One row per file. ``symbols_blob`` is a msgpack-encoded list of
     :class:`SymbolInfo`. ``bulk_replace`` is atomic; ``refresh_file`` /
-    ``delete_file`` touch a single PK. ``query_by_substring`` is a
-    parity-preserving linear scan (matches today's in-memory ``find``).
+    ``delete_file`` touch a single PK. Query semantics stay owned by
+    :class:`SymbolIndex`, which hydrates this store into memory on daemon
+    startup.
 
     Phase 3.5 swaps the orchestrator-side pickle ``index.snapshot`` for
     this store via :func:`migrate_pickle_to_sqlite`.
@@ -758,40 +732,6 @@ class IndexStore:
             ).fetchall()
         return [str(r[0]) for r in rows]
 
-    def all_symbols(self) -> list[Any]:
-        """Materialize every symbol across every file."""
-        out: list[Any] = []
-        with self._lock:
-            rows = self._conn.execute(
-                "SELECT symbols_blob FROM index_files"
-            ).fetchall()
-        for row in rows:
-            out.extend(_decode_symbols(row[0]))
-        return out
-
-    def size(self) -> int:
-        """Total symbol count across all indexed files."""
-        return len(self.all_symbols())
-
-    def indexed_files(self) -> int:
-        """Number of files in the index."""
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT COUNT(*) FROM index_files"
-            ).fetchone()
-        return int(row[0] if row else 0)
-
-    def query_by_substring(self, needle: str, kind: Any = None) -> list[Any]:
-        """Naive linear scan — parity with in-memory ``SymbolIndex.find``."""
-        n = (needle or "").lower().strip()
-        if not n:
-            return []
-        out: list[Any] = []
-        for sym in self.all_symbols():
-            if n in sym.name.lower() and (kind is None or sym.kind == kind):
-                out.append(sym)
-        return out
-
 
 def migrate_pickle_to_sqlite(state: Path) -> int:
     """One-shot pickle ``index.snapshot`` → SQLite ``index.sqlite3`` migration.
@@ -802,9 +742,9 @@ def migrate_pickle_to_sqlite(state: Path) -> int:
     pickle_path = state / "index.snapshot"
     if not pickle_path.exists():
         return 0
-    snapshot = read_snapshot(state, "index.snapshot")
+    snapshot = _read_pickle_snapshot(state, "index.snapshot")
     if not isinstance(snapshot, dict) or not snapshot:
-        # Either corrupt (already unlinked by read_snapshot) or empty.
+        # Either corrupt (already unlinked by _read_pickle_snapshot) or empty.
         try:
             pickle_path.unlink()
         except OSError:

@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 daemon-local overlay fold implemented and live-benchmarked
 **Date approved:** 2026-05-02
-**Last amended:** 2026-05-03 (recorded Phase 6 daemon-local `svc.cmd` overlay fold live result: 10x p50 1.805s)
+**Last amended:** 2026-05-03 (recorded Phase 0-8 code review cleanup: SQLite index hydration on daemon restart and retired Phase 1 snapshot runner/read paths)
 **Predecessor:** [`code-intelligence-merged-into-sandbox.md`](../code-intelligence-merged-into-sandbox.md) — CI moved into the `sandbox/` package; still ran orchestrator-side
 **Estimated effort:** ~42-50 engineering days (≈8.5-10 weeks)
 

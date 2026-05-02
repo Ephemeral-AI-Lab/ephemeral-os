@@ -70,6 +70,7 @@ class SymbolIndex:
         self._build_event = threading.Event()
         self._generation = 0
         self._build_thread: threading.Thread | None = None
+        self._hydrate_from_persistence()
 
     # -- Public API -----------------------------------------------------------
 
@@ -215,6 +216,33 @@ class SymbolIndex:
     def bind_sandbox(self, sandbox: Any) -> None:
         """Update the filesystem-only sandbox fallback for file reads."""
         self._sandbox = sandbox
+
+    def _hydrate_from_persistence(self) -> None:
+        """Load a previously persisted SQLite index into memory, if present."""
+        if self._persistence is None:
+            return
+        try:
+            paths = list(self._persistence.indexed_paths())
+            generation = int(getattr(self._persistence, "generation", 0))
+            loaded = {
+                path: _FileSymbols(
+                    file_path=path,
+                    symbols=list(self._persistence.file_symbols(path)),
+                    generation=generation,
+                    indexed_at=time.time(),
+                )
+                for path in paths
+            }
+        except Exception:
+            logger.debug("SymbolIndex persistence hydration failed", exc_info=True)
+            return
+        if not loaded:
+            return
+        with self._lock:
+            self._symbols = loaded
+            self._generation = max(self._generation, generation)
+            self._built = True
+            self._build_event.set()
 
     # -- Background build -----------------------------------------------------
 

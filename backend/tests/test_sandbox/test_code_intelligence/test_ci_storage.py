@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pickle
 import stat
 from pathlib import Path
 
@@ -12,10 +11,8 @@ from sandbox.code_intelligence.in_sandbox.ci_storage import (
     CiStoragePathEscape,
     CiStorageUnavailable,
     _confine,
-    read_snapshot,
     state_dir,
     workspace_root_hash,
-    write_snapshot,
 )
 
 
@@ -124,90 +121,6 @@ def test_confine_rejects_state_itself(tmp_path: Path) -> None:
     state.mkdir()
     with pytest.raises(CiStoragePathEscape):
         _confine(state, ".")
-
-
-def test_write_snapshot_round_trip(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    payload = {"a": [1, 2, 3], "b": ("x", "y")}
-    write_snapshot(state, "snap.pkl", payload)
-    target = state / "snap.pkl"
-    assert target.exists()
-    with open(target, "rb") as f:
-        loaded = pickle.load(f)
-    assert loaded == payload
-
-
-def test_write_snapshot_no_tmp_leftover_on_success(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    write_snapshot(state, "snap.pkl", {"k": "v"})
-    leftovers = [p for p in state.iterdir() if p.name.endswith(".tmp")]
-    assert leftovers == []
-
-
-def test_write_snapshot_no_tmp_leftover_on_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-
-    def boom(_: object, __: object, *, protocol: int) -> None:  # pragma: no cover - direct
-        raise RuntimeError("intentional pickle failure")
-
-    monkeypatch.setattr("pickle.dump", boom)
-    with pytest.raises(RuntimeError):
-        write_snapshot(state, "snap.pkl", {"k": "v"})
-    leftovers = [p for p in state.iterdir() if p.name.endswith(".tmp")]
-    assert leftovers == []
-    assert not (state / "snap.pkl").exists()
-
-
-def test_write_snapshot_rejects_path_traversal(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    with pytest.raises(CiStoragePathEscape):
-        write_snapshot(state, "../escape.bin", {"k": "v"})
-
-
-def test_write_snapshot_rejects_absolute_path(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    with pytest.raises(CiStoragePathEscape):
-        write_snapshot(state, "/etc/passwd", {"k": "v"})
-
-
-def test_read_snapshot_missing_returns_none(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    assert read_snapshot(state, "missing.pkl") is None
-
-
-def test_read_snapshot_round_trip(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    write_snapshot(state, "snap.pkl", {"k": "v"})
-    assert read_snapshot(state, "snap.pkl") == {"k": "v"}
-
-
-def test_read_snapshot_corrupt_unlinks_and_returns_none(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    target = state / "corrupt.pkl"
-    target.write_bytes(b"GARBAGE_NOT_A_PICKLE_PAYLOAD")
-    assert read_snapshot(state, "corrupt.pkl") is None
-    assert not target.exists()
-
-
-def test_read_snapshot_truncated_unlinks(tmp_path: Path) -> None:
-    state = tmp_path / "state"
-    state.mkdir()
-    write_snapshot(state, "snap.pkl", {"k": "v"})
-    target = state / "snap.pkl"
-    raw = target.read_bytes()
-    target.write_bytes(raw[: len(raw) // 2])
-    assert read_snapshot(state, "snap.pkl") is None
-    assert not target.exists()
 
 
 def test_ci_storage_unavailable_carries_context(tmp_path: Path) -> None:

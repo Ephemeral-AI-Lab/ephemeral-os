@@ -1,7 +1,7 @@
 """Bundle helper + idempotent uploader for the in-sandbox CI runtime.
 
 The bundle is a tar.gz containing the minimal set of project + vendored
-modules needed to run ``python -m sandbox.code_intelligence.in_sandbox.ci_index``
+modules needed to run ``python -m sandbox.code_intelligence.in_sandbox``
 inside a sandbox: the entire ``sandbox/code_intelligence/`` tree, the
 transitive ``sandbox.api``/``sandbox.client.async_bridge``/``sandbox.lifecycle.commit``
 imports it pulls in, plus a vendored pure-Python ``msgpack/`` so the
@@ -232,68 +232,6 @@ def remote_state_dir(home: str, workspace_root: str) -> str:
 
     home = str(home or "").rstrip("/") or "/root"
     return f"{home}/.cache/eos-ci/{workspace_root_hash(workspace_root)}/v1"
-
-
-async def read_remote_file_via_exec(
-    transport: SandboxTransport, sandbox_id: str, path: str
-) -> bytes:
-    """Download ``path`` from the sandbox via chunked base64 over ``exec``.
-
-    Daytona's ``fs.download_file`` (the ``bulk-download`` endpoint) returns
-    intermittent 502 Bad Gateway errors at ~30 KB+ payloads. ``transport.exec``
-    is the most reliable verb on the same proxy, so we lean on it for
-    binary-file reads as well as writes.
-
-    Strategy:
-
-    * ``wc -c <path>`` resolves the size up front.
-    * For each chunk window we run ``dd if=<path> bs=<chunk> count=1 skip=<i>
-      status=none | base64 -w0`` and decode the stdout. Chunks are 32 KB so
-      they fit comfortably under any stdout-capture limit.
-    """
-    import base64
-
-    size_result = await transport.exec(
-        sandbox_id,
-        f"wc -c < {shlex.quote(path)}",
-        timeout=30,
-    )
-    if getattr(size_result, "exit_code", 1) != 0:
-        raise FileNotFoundError(path)
-    try:
-        size = int((getattr(size_result, "stdout", "") or "").strip())
-    except ValueError as exc:
-        raise RuntimeError(
-            f"could not read remote size for {path!r}: "
-            f"{getattr(size_result, 'stdout', '')!r}"
-        ) from exc
-
-    if size == 0:
-        return b""
-
-    # ``tail -c +N | head -c M`` would be the natural pattern, but
-    # ``wrap_bash_command`` enables ``set -o pipefail`` and ``head`` closes
-    # its stdin once it has read M bytes, sending SIGPIPE to ``tail``
-    # (exit 141). Pipefail then poisons the whole pipeline. ``dd`` reads
-    # exactly ``bs`` bytes per record without truncating its output, so
-    # it pairs cleanly with ``base64 -w0``.
-    chunks: list[bytes] = []
-    chunk_index = 0
-    while chunk_index * _CHUNK_SIZE < size:
-        chunk_cmd = (
-            f"dd if={shlex.quote(path)} bs={_CHUNK_SIZE} count=1 "
-            f"skip={chunk_index} status=none | base64 -w0"
-        )
-        result = await transport.exec(sandbox_id, chunk_cmd, timeout=60)
-        if getattr(result, "exit_code", 1) != 0:
-            raise RuntimeError(
-                f"chunked read failed at chunk {chunk_index} for {path!r} "
-                f"(sandbox={sandbox_id!r}): {getattr(result, 'stdout', '')}"
-            )
-        encoded = (getattr(result, "stdout", "") or "").strip()
-        chunks.append(base64.b64decode(encoded))
-        chunk_index += 1
-    return b"".join(chunks)
 
 
 async def ensure_runtime_uploaded(

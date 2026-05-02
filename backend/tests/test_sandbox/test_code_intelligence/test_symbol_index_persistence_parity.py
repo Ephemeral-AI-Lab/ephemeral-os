@@ -145,7 +145,40 @@ def test_index_store_round_trip_via_symbol_index(tmp_path: Path) -> None:
     # Reopen from disk — symbols persist across IndexStore instances.
     store2 = IndexStore(state_dir_path=sqlite_state)
     try:
-        round_tripped = sorted(s.name for s in store2.query_by_substring("alpha"))
+        round_tripped = sorted(
+            sym.name
+            for path in store2.indexed_paths()
+            for sym in store2.file_symbols(path)
+            if "alpha" in sym.name.lower()
+        )
         assert baseline == round_tripped
+    finally:
+        store2.close()
+
+
+def test_symbol_index_hydrates_from_existing_index_store(tmp_path: Path) -> None:
+    """A daemon restart can serve the persisted index before rebuilding files."""
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    _seed_workspace(workspace)
+
+    sqlite_state = tmp_path / "state"
+    store = IndexStore(state_dir_path=sqlite_state)
+    try:
+        built = _build_index(workspace, persistence=store)
+        baseline = sorted(s.name for s in built.find("alpha"))
+    finally:
+        store.close()
+
+    store2 = IndexStore(state_dir_path=sqlite_state)
+    try:
+        hydrated = SymbolIndex(str(workspace), persistence=store2)
+        assert hydrated.is_built is True
+        assert sorted(s.name for s in hydrated.find("alpha")) == baseline
+        assert sorted(hydrated.indexed_paths()) == sorted(store2.indexed_paths())
+        stored_size = sum(
+            len(store2.file_symbols(path)) for path in store2.indexed_paths()
+        )
+        assert hydrated.size == stored_size
     finally:
         store2.close()

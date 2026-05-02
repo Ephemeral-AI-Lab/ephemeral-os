@@ -27,6 +27,23 @@ The shipped model is:
 | Freshness guard | Added a daemon-local idle-window fingerprint guard over `workspace_root`, `.git/index`, and `.git/HEAD`. It fails closed if the workspace shifts between overlay runs outside the daemon path. |
 | Docs | Updated the daemon overview so `git` is described as the `git check-ignore` dependency, not a snapshot construction dependency. |
 
+## Phase 0-8 Code Review Follow-up
+
+The post-phase review found one implementation gap and one cleanup seam:
+
+- `SymbolIndex` mirrored writes into `IndexStore` but did not hydrate from
+  `index.sqlite3` on daemon restart. The restart-survival guarantee now holds
+  without a full rebuild: a new `SymbolIndex(..., persistence=IndexStore(...))`
+  loads persisted rows into memory and marks the index ready.
+- The active daemon path no longer needs the Phase 1 standalone
+  `ci_index.py` runner, the orchestrator-side remote snapshot downloader, or
+  the public pickle `write_snapshot/read_snapshot` API. Those paths were
+  removed; only a private pickle reader remains for the one-shot
+  `index.snapshot` to `index.sqlite3` migration.
+- Phase 1 live E2E assertions were updated from retired `_cached_*` /
+  `index.snapshot` fields to current daemon status and `index.sqlite3`
+  recovery.
+
 ## Probe Conclusions
 
 Task 8.0.B/C resolved to the in-namespace mechanism:

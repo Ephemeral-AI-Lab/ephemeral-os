@@ -413,10 +413,6 @@ class InProcessCiBackend:
             logger.debug("lsp_client.close() failed during dispose", exc_info=True)
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
 
-
-_RPC_NOT_READY = "RpcCiBackend method is not implemented until the daemon RPC phase"
-
-
 class RpcCiBackend:
     """Daemon-bound backend.
 

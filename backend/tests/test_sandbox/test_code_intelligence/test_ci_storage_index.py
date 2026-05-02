@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pickle
 import threading
 from pathlib import Path
 
@@ -12,7 +13,6 @@ from sandbox.code_intelligence.in_sandbox.ci_storage import (
     _decode_symbols,
     _encode_symbols,
     migrate_pickle_to_sqlite,
-    write_snapshot,
 )
 
 
@@ -84,15 +84,13 @@ def test_bulk_replace_atomic(tmp_path: Path) -> None:
         gen1 = store.bulk_replace(snap1)
         assert gen1 > 0
         assert sorted(store.indexed_paths()) == ["/a.py", "/b.py"]
-        assert store.indexed_files() == 2
-        assert len(store.all_symbols()) == 3
+        assert sum(len(store.file_symbols(path)) for path in store.indexed_paths()) == 3
 
         # Second bulk_replace fully replaces.
         snap2 = {"/c.py": [_mk_symbol("c1", "/c.py")]}
         gen2 = store.bulk_replace(snap2)
         assert gen2 > gen1
         assert store.indexed_paths() == ["/c.py"]
-        assert store.indexed_files() == 1
     finally:
         store.close()
 
@@ -121,28 +119,6 @@ def test_delete_file_removes_row(tmp_path: Path) -> None:
         store.close()
 
 
-def test_query_by_substring_parity(tmp_path: Path) -> None:
-    """SQLite-backed query parity with the in-memory linear scan."""
-    store = IndexStore(state_dir_path=tmp_path)
-    try:
-        symbols_a = [_mk_symbol(f"alpha_{i}", "/a.py", line=i) for i in range(20)]
-        symbols_b = [_mk_symbol(f"beta_{i}", "/b.py", line=i) for i in range(20)]
-        store.bulk_replace({"/a.py": symbols_a, "/b.py": symbols_b})
-
-        # In-memory baseline.
-        all_syms = symbols_a + symbols_b
-        baseline = [s for s in all_syms if "alpha" in s.name.lower()]
-        sqlite_results = store.query_by_substring("alpha")
-        assert sorted(s.name for s in baseline) == sorted(
-            s.name for s in sqlite_results
-        )
-
-        # Empty query returns nothing.
-        assert store.query_by_substring("") == []
-    finally:
-        store.close()
-
-
 def test_concurrent_refresh_file_distinct_rows(tmp_path: Path) -> None:
     store = IndexStore(state_dir_path=tmp_path)
     try:
@@ -160,7 +136,7 @@ def test_concurrent_refresh_file_distinct_rows(tmp_path: Path) -> None:
         for t in threads:
             t.join()
         assert not errors, errors
-        assert store.indexed_files() == 10
+        assert len(store.indexed_paths()) == 10
     finally:
         store.close()
 
@@ -187,7 +163,8 @@ def test_migrate_pickle_to_sqlite_only_pickle(tmp_path: Path) -> None:
         "/a.py": [_mk_symbol("foo", "/a.py")],
         "/b.py": [_mk_symbol("bar", "/b.py")],
     }
-    write_snapshot(tmp_path, "index.snapshot", snapshot)
+    with open(tmp_path / "index.snapshot", "wb") as f:
+        pickle.dump(snapshot, f, protocol=5)
     assert (tmp_path / "index.snapshot").exists()
     n = migrate_pickle_to_sqlite(tmp_path)
     assert n == 2
@@ -218,7 +195,7 @@ def test_migrate_pickle_to_sqlite_corrupt_pickle(tmp_path: Path) -> None:
     (tmp_path / "index.snapshot").write_bytes(b"not a pickle")
     n = migrate_pickle_to_sqlite(tmp_path)
     assert n == 0
-    # corrupt path is unlinked by read_snapshot OR by migrate_pickle_to_sqlite
+    # corrupt legacy pickle is unlinked by migrate_pickle_to_sqlite
     assert not (tmp_path / "index.snapshot").exists()
 
 
