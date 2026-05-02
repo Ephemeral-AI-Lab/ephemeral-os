@@ -1,0 +1,14 @@
+{
+  "phase": 1,
+  "test_name": "privilege_probe",
+  "timestamp": "2026-05-02T12:02:24.989582+00:00",
+  "steps": [
+    {
+      "name": "mkdir_home_cache",
+      "elapsed_s": 0.32306866699946113,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 0.32306866699946113
+}

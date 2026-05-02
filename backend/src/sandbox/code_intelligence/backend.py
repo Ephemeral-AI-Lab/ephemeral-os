@@ -16,13 +16,17 @@ Three artifacts live here:
 
 from __future__ import annotations
 
+import json
 import logging
+import pickle
+import shlex
 import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Protocol
 
 from sandbox.api.transport import SandboxTransport
+from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
     DeleteSpec,
@@ -422,11 +426,14 @@ _RPC_NOT_READY = "RpcCiBackend lands in Phase 1+"
 
 
 class RpcCiBackend:
-    """Placeholder daemon-bound backend.
+    """Daemon-bound backend (Phase 1: orchestrator-side cache, no daemon yet).
 
     Selected when ``EOS_CI_IN_SANDBOX=1`` and a ``transport`` + ``sandbox_id``
-    are available. Every method raises :class:`NotImplementedError` until
-    Phase 1+ implements the actual daemon RPC plumbing.
+    are available. Phase 1 implements ``ensure_initialized`` (uploads the
+    bundle + runs the in-sandbox indexer + downloads the pickled snapshot)
+    and ``query_symbols`` (searches the orchestrator-side cache). All other
+    methods continue to raise :class:`NotImplementedError` — Phase 2+ moves
+    them to real RPC verbs against the daemon.
     """
 
     is_initialized: bool = False
@@ -442,9 +449,87 @@ class RpcCiBackend:
         self.workspace_root = workspace_root
         self._transport = transport
         self.is_initialized = False
+        self._init_lock = threading.Lock()
+        self._symbol_cache: dict[str, list[SymbolInfo]] = {}
+        self._cached_file_count = 0
+        self._cached_symbol_count = 0
+        self._snapshot_bytes = 0
 
     def ensure_initialized(self, wait: bool = True) -> bool:
-        raise NotImplementedError(_RPC_NOT_READY)
+        del wait  # The Phase 1 path always runs to completion.
+        with self._init_lock:
+            if self.is_initialized:
+                return True
+        run_sync(self._ensure_initialized_async())
+        with self._init_lock:
+            return self.is_initialized
+
+    async def _ensure_initialized_async(self) -> None:
+        from sandbox.code_intelligence.in_sandbox.ci_storage import (
+            workspace_root_hash,
+        )
+        from sandbox.code_intelligence.rpc.launcher import (
+            BUNDLE_REMOTE_DIR,
+            ensure_runtime_uploaded,
+            read_remote_file_via_exec,
+        )
+
+        await ensure_runtime_uploaded(self._transport, self.sandbox_id)
+
+        cmd = (
+            f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
+            f"python3 -m sandbox.code_intelligence.in_sandbox.ci_index "
+            f"--workspace-root {shlex.quote(self.workspace_root)}"
+        )
+        result = await self._transport.exec(self.sandbox_id, cmd, timeout=300)
+        exit_code = getattr(result, "exit_code", 1)
+        stdout = (getattr(result, "stdout", "") or "").strip()
+        if exit_code != 0:
+            raise RuntimeError(
+                f"ci_index failed (exit={exit_code}, sandbox={self.sandbox_id!r}): "
+                f"{stdout}"
+            )
+        # ci_index prints a single JSON object on the last stdout line.
+        try:
+            payload = json.loads(stdout.splitlines()[-1])
+        except (IndexError, json.JSONDecodeError) as exc:
+            raise RuntimeError(
+                f"ci_index produced unparseable stdout (sandbox={self.sandbox_id!r}): "
+                f"{stdout!r}"
+            ) from exc
+        if not payload.get("ok"):
+            raise RuntimeError(f"ci_index reported failure: {payload}")
+
+        snapshot_remote = payload.get("snapshot_path")
+        if not snapshot_remote:
+            home_resp = await self._transport.exec(
+                self.sandbox_id, "echo $HOME", timeout=10
+            )
+            home = (getattr(home_resp, "stdout", "") or "").strip() or "/root"
+            wh = workspace_root_hash(self.workspace_root)
+            snapshot_remote = f"{home}/.cache/eos-ci/{wh}/v1/index.snapshot"
+
+        # Daytona's ``fs.download_file`` returns intermittent 502s for binary
+        # payloads >= a few tens of KB. Fall back to chunked-base64 over exec
+        # which uses the same code path as the upload (proven reliable).
+        raw = await read_remote_file_via_exec(
+            self._transport, self.sandbox_id, snapshot_remote
+        )
+        cache = pickle.loads(raw)
+        if not isinstance(cache, dict):
+            raise RuntimeError(
+                f"ci_index snapshot is not a dict (sandbox={self.sandbox_id!r}): "
+                f"got {type(cache).__name__}"
+            )
+        symbol_count = sum(len(v) for v in cache.values() if isinstance(v, list))
+        with self._init_lock:
+            self._symbol_cache = cache
+            self._cached_file_count = int(payload.get("file_count", len(cache)))
+            self._cached_symbol_count = int(
+                payload.get("symbol_count", symbol_count)
+            )
+            self._snapshot_bytes = len(raw)
+            self.is_initialized = True
 
     def warmup(self) -> None:
         raise NotImplementedError(_RPC_NOT_READY)
@@ -480,7 +565,20 @@ class RpcCiBackend:
         raise NotImplementedError(_RPC_NOT_READY)
 
     def query_symbols(self, query: str) -> list[SymbolInfo]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        # Phase 1: orchestrator-side cache. Phases 2-3 move this onto the daemon.
+        needle = query.lower().strip()
+        if not needle:
+            return []
+        results: list[SymbolInfo] = []
+        with self._init_lock:
+            cache_snapshot = self._symbol_cache
+        for symbols in cache_snapshot.values():
+            if not isinstance(symbols, list):
+                continue
+            for sym in symbols:
+                if needle in sym.name.lower():
+                    results.append(sym)
+        return results
 
     def apply_edit(self, request: EditRequest) -> EditResult:
         raise NotImplementedError(_RPC_NOT_READY)

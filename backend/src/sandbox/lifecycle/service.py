@@ -22,11 +22,60 @@ from sandbox.client.sync import (
 )
 from sandbox.client.credentials import load_credentials
 from sandbox.lifecycle.proxy import SandboxProxy
+from sandbox.lifecycle.workspace import (
+    _ci_in_sandbox_enabled,
+    _sandbox_project_root,
+    bootstrap_in_sandbox_ci_runtime,
+)
 
 if TYPE_CHECKING:
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
 logger = logging.getLogger(__name__)
+
+
+def _maybe_run_eager_ci_bootstrap(
+    raw_sandbox: Any, sandbox_id: str, *, eager_ci: bool
+) -> None:
+    """Best-effort eager-CI bootstrap on ``create``/``start``.
+
+    No-op when ``eager_ci`` is False or the ``EOS_CI_IN_SANDBOX`` flag is
+    unset. Resolves a transport via :class:`DaytonaTransport` and the
+    workspace via :func:`_sandbox_project_root`. Bootstrap failures
+    intentionally propagate so the caller sees the indexer error.
+    """
+    if not eager_ci:
+        return
+    if not _ci_in_sandbox_enabled():
+        return
+    workspace_root = _sandbox_project_root(raw_sandbox) or ""
+    if not workspace_root:
+        logger.debug(
+            "eager CI bootstrap skipped for sandbox %s — no project_dir on handle",
+            sandbox_id,
+        )
+        return
+
+    try:
+        from sandbox.daytona.transport import DaytonaTransport
+    except Exception:  # pragma: no cover - defensive
+        logger.debug(
+            "eager CI bootstrap skipped for sandbox %s — DaytonaTransport unavailable",
+            sandbox_id,
+            exc_info=True,
+        )
+        return
+    transport = DaytonaTransport()
+
+    from sandbox.client.async_bridge import run_sync
+
+    run_sync(
+        bootstrap_in_sandbox_ci_runtime(
+            sandbox_id=sandbox_id,
+            workspace_root=workspace_root,
+            transport=transport,
+        )
+    )
 
 
 class SandboxService:
@@ -121,8 +170,16 @@ class SandboxService:
         language: str = "python",
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
+        eager_ci: bool = True,
     ) -> dict[str, Any]:
-        """Create a new sandbox."""
+        """Create a new sandbox.
+
+        ``eager_ci`` (default ``True``) opts into the in-sandbox CI runtime
+        bootstrap: when ``EOS_CI_IN_SANDBOX=1``, the runtime bundle is
+        uploaded and the indexer is run synchronously before this method
+        returns. ``eager_ci=False`` is a test escape hatch — non-test
+        callers should leave the default in place.
+        """
         normalized_name = _normalize_optional_text(name)
         normalized_snapshot = _normalize_optional_text(snapshot)
         normalized_image = _normalize_optional_text(image)
@@ -169,10 +226,19 @@ class SandboxService:
         sb.refresh()
         sb.ensure_git()
 
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=eager_ci)
+
         return sb.serialize(assigned_agents=[])
 
-    def start_sandbox(self, sandbox_id: str) -> dict[str, Any]:
-        """Start a stopped sandbox."""
+    def start_sandbox(
+        self, sandbox_id: str, *, eager_ci: bool = True
+    ) -> dict[str, Any]:
+        """Start a stopped sandbox.
+
+        ``eager_ci`` mirrors :meth:`create_sandbox` — when
+        ``EOS_CI_IN_SANDBOX=1`` the in-sandbox runtime is re-bootstrapped
+        after the sandbox resumes.
+        """
         sb = self._get_proxy(sandbox_id)
         if sb.state == "started":
             return sb.serialize()
@@ -181,6 +247,8 @@ class SandboxService:
         sb.refresh()
         sb.ensure_git()
         sb.refresh()
+
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=eager_ci)
 
         return sb.serialize()
 
@@ -225,6 +293,13 @@ class SandboxService:
         sb.refresh()
         sb.ensure_git()
         sb.refresh()
+
+        # Restart-recovery path: re-bootstrap CI so the in-sandbox index
+        # tracks the post-restart workspace. The hook is a no-op when
+        # ``EOS_CI_IN_SANDBOX`` is unset, so the cost only lands on
+        # callers that actually opted into the daemon migration.
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=True)
+
         return sb.serialize()
 
     def delete_sandbox(self, sandbox_id: str) -> None:
@@ -245,7 +320,7 @@ class SandboxService:
         workspace_root: str | None = None,
         sandbox: Any | None = None,
         transport: Any | None = None,
-    ) -> "CodeIntelligenceService":
+    ) -> CodeIntelligenceService:
         """Return the per-sandbox CI service, creating it lazily if needed.
 
         This is the only public way to obtain a :class:`CodeIntelligenceService`
@@ -269,7 +344,7 @@ class SandboxService:
 
     def code_intelligence_if_exists(
         self, sandbox_id: str
-    ) -> "CodeIntelligenceService | None":
+    ) -> CodeIntelligenceService | None:
         """Return the existing CI service for *sandbox_id*, or ``None``."""
         from sandbox.code_intelligence.registry import (
             get_code_intelligence_if_exists,

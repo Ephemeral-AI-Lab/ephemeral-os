@@ -4,11 +4,71 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
+import shlex
 from typing import Any
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 
 logger = logging.getLogger(__name__)
+
+
+def _ci_in_sandbox_enabled() -> bool:
+    """Return True when ``EOS_CI_IN_SANDBOX=1`` (the daemon migration flag)."""
+    return os.environ.get("EOS_CI_IN_SANDBOX") == "1"
+
+
+async def bootstrap_in_sandbox_ci_runtime(
+    sandbox_id: str,
+    workspace_root: str,
+    *,
+    transport: Any,
+) -> None:
+    """Eager CI bootstrap — uploads the runtime bundle and runs the indexer.
+
+    Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
+    the underlying Daytona sandbox is provisioned/resumed. Phase 1 just runs
+    the indexer once; Phase 2+ extends this to also spawn the daemon.
+
+    Short-circuits as a no-op when ``EOS_CI_IN_SANDBOX`` != ``"1"``,
+    when ``transport`` is ``None``, or when ``workspace_root`` is empty.
+    Raises :class:`RuntimeError` on a non-zero indexer exit.
+
+    This helper is intentionally distinct from
+    :func:`ensure_code_intelligence_runtime`, which owns the orchestrator-side
+    context preparation path. The two run in different contexts and must
+    not collide.
+    """
+    if not _ci_in_sandbox_enabled():
+        return
+    if transport is None or not sandbox_id or not str(workspace_root or "").strip():
+        return
+
+    from sandbox.code_intelligence.rpc.launcher import (
+        BUNDLE_REMOTE_DIR,
+        ensure_runtime_uploaded,
+    )
+
+    await ensure_runtime_uploaded(transport, sandbox_id)
+
+    cmd = (
+        f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
+        f"python3 -m sandbox.code_intelligence.in_sandbox.ci_index "
+        f"--workspace-root {shlex.quote(workspace_root)}"
+    )
+    result = await transport.exec(sandbox_id, cmd, timeout=300)
+    exit_code = getattr(result, "exit_code", 1)
+    if exit_code != 0:
+        stdout = getattr(result, "stdout", "") or ""
+        raise RuntimeError(
+            f"eager CI bootstrap failed (sandbox={sandbox_id!r}, exit={exit_code}): "
+            f"{stdout}"
+        )
+    logger.info(
+        "eager CI bootstrap completed for sandbox %s at %s",
+        sandbox_id,
+        workspace_root,
+    )
 
 
 def _sandbox_project_root(sandbox: Any) -> str | None:

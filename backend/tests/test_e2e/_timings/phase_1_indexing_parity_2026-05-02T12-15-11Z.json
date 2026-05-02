@@ -1,0 +1,20 @@
+{
+  "phase": 1,
+  "test_name": "indexing_parity",
+  "timestamp": "2026-05-02T12:15:11.287772+00:00",
+  "steps": [
+    {
+      "name": "index_build_in_sandbox",
+      "elapsed_s": 58.82019891600066,
+      "count": 254,
+      "bytes": 3385309
+    },
+    {
+      "name": "query_symbols_first",
+      "elapsed_s": 0.0021968750006635673,
+      "count": 333,
+      "bytes": null
+    }
+  ],
+  "total_s": 58.82239579100133
+}

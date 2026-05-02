@@ -1,0 +1,110 @@
+{
+  "phase": 1,
+  "test_name": "compatibility_probe",
+  "timestamp": "2026-05-02T12:02:45.472132+00:00",
+  "steps": [
+    {
+      "name": "probe_python_version",
+      "elapsed_s": 0.34545287500077393,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_python_310_plus",
+      "elapsed_s": 0.37512054199760314,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_sqlite3",
+      "elapsed_s": 0.3878297080009361,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_msgpack_native",
+      "elapsed_s": 0.3682984170009149,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_jedi",
+      "elapsed_s": 0.4434286659961799,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_git",
+      "elapsed_s": 0.32444012500491226,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_unshare_userns",
+      "elapsed_s": 0.3304718750005122,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_setsid",
+      "elapsed_s": 0.3045822499989299,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_nohup",
+      "elapsed_s": 0.30601008299709065,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_tar",
+      "elapsed_s": 0.2989177080016816,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_base64",
+      "elapsed_s": 0.2973877080003149,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_kill",
+      "elapsed_s": 0.294452458001615,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_ps",
+      "elapsed_s": 0.2992744169969228,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_home_writable",
+      "elapsed_s": 0.29635045799659565,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_tmp_writable",
+      "elapsed_s": 0.3155299170030048,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_af_unix_sockets",
+      "elapsed_s": 0.3721114590007346,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "probe_proc_pid_status",
+      "elapsed_s": 0.29368091699871,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 5.6533395829974324
+}

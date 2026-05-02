@@ -3,7 +3,7 @@
 See ``docs/architecture/overlay-sandbox-plan.md`` §0. Two knobs:
 
 * ``EOS_OVERLAY_MAX_CONCURRENT`` — per-sandbox ``asyncio.Semaphore`` size
-  that caps parallel overlay operations. Default 20.
+  that caps parallel overlay operations. Default 50.
 * ``EOS_OVERLAY_UPPER_SIZE_MB`` — tmpfs size cap for each op's upperdir.
   Default 512 MiB. Memory ceiling per sandbox is
   ``max_concurrent * upper_size_mb``.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import os
 
-DEFAULT_OVERLAY_MAX_CONCURRENT = 20
+DEFAULT_OVERLAY_MAX_CONCURRENT = 50
 DEFAULT_OVERLAY_UPPER_SIZE_MB = 512
 
 _ENV_MAX_CONCURRENT = "EOS_OVERLAY_MAX_CONCURRENT"

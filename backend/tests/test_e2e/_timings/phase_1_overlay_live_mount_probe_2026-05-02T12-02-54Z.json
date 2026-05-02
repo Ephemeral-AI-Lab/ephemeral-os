@@ -1,0 +1,14 @@
+{
+  "phase": 1,
+  "test_name": "overlay_live_mount_probe",
+  "timestamp": "2026-05-02T12:02:54.319786+00:00",
+  "steps": [
+    {
+      "name": "overlay_live_probe",
+      "elapsed_s": 0.5188937499988242,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 0.5188937499988242
+}

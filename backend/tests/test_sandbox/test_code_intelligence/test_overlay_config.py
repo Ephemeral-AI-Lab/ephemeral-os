@@ -8,7 +8,7 @@ def test_overlay_max_concurrent_default_matches_load_concurrency(
 ) -> None:
     monkeypatch.delenv("EOS_OVERLAY_MAX_CONCURRENT", raising=False)
 
-    assert overlay_config.overlay_max_concurrent() == 20
+    assert overlay_config.overlay_max_concurrent() == 50
 
 
 def test_overlay_max_concurrent_env_override(monkeypatch) -> None:

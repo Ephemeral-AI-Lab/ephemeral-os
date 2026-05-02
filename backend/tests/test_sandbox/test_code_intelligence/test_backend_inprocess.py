@@ -166,14 +166,16 @@ def test_rpc_backend_init_attributes() -> None:
 
 
 _RPC_OP_DUMMY_ARGS: dict[str, tuple[Any, dict[str, Any]]] = {
-    "ensure_initialized": ((), {"wait": True}),
+    # Phase 1 ships real implementations for ensure_initialized and
+    # query_symbols (orchestrator-side cache); they are NOT in this
+    # not-implemented matrix anymore. See test_rpc_ci_backend.py for their
+    # Phase 1 coverage.
     "warmup": ((), {}),
     "rebind_sandbox": ((object(),), {}),
     "find_definitions": (("/tmp/x.py", "sym"), {"line": 1, "character": 0}),
     "find_references": (("/tmp/x.py", "sym"), {"line": 1, "character": 0}),
     "hover": (("/tmp/x.py", 1, 0), {}),
     "diagnostics": (("/tmp/x.py",), {}),
-    "query_symbols": (("foo",), {}),
     "apply_edit": (
         (
             EditRequest(
