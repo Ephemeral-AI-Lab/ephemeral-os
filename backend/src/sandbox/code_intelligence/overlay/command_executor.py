@@ -32,12 +32,14 @@ class AuditedCommandExecutor:
         write_coordinator: Any,
         rebind_sandbox: Callable[[Any], None],
         transport: SandboxTransport | None = None,
+        daemon_local: bool = False,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
         self._write_coordinator = write_coordinator
         self._rebind_sandbox = rebind_sandbox
         self._transport = transport
+        self._daemon_local = daemon_local
         self._overlay_auditor: OverlayAuditor | None = None
         self._init_lock = asyncio.Lock()
 
@@ -87,6 +89,7 @@ class AuditedCommandExecutor:
                 exec_process=self._exec_sandbox_process,
                 write_coordinator=self._write_coordinator,
                 transport=self._transport,
+                daemon_local=self._daemon_local,
             )
             return self._overlay_auditor
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import json
 import os
 import stat
 import sys
@@ -51,6 +52,33 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Optional base64-encoded stdin payload for the user command.",
     )
     return parser.parse_args(argv)
+
+
+def _write_result_json(
+    *,
+    run_dir: str,
+    snap: str,
+    exit_code: int,
+    rejected: dict[str, object] | None,
+    snapshot_timings: dict[str, float],
+    run_timings: dict[str, float],
+) -> str:
+    path = os.path.join(run_dir, "result.json")
+    tmp_path = f"{path}.tmp-{os.getpid()}"
+    payload = {
+        "snap": snap,
+        "exit_code": exit_code,
+        "rejected": rejected,
+        "snapshot_timings": dict(snapshot_timings),
+        "run_timings": dict(run_timings),
+    }
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, separators=(",", ":"))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp_path, path)
+    return path
 
 
 def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
@@ -121,7 +149,16 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
             snapshot_timings=snapshot_timings,
             run_timings=run_timings,
         )
-        return reject_exit_code(result.reason)
+        exit_code = reject_exit_code(result.reason)
+        _write_result_json(
+            run_dir=run_dir,
+            snap=snap,
+            exit_code=exit_code,
+            rejected={"reason": result.reason, "paths": list(result.paths)},
+            snapshot_timings=snapshot_timings,
+            run_timings=run_timings,
+        )
+        return exit_code
 
     direct_apply_started = time.perf_counter()
     direct_merged_bytes = DirectRouteApplier(
@@ -141,7 +178,15 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
         snapshot_timings=snapshot_timings,
         run_timings=run_timings,
     )
+    _write_result_json(
+        run_dir=run_dir,
+        snap=snap,
+        exit_code=exit_code,
+        rejected=None,
+        snapshot_timings=snapshot_timings,
+        run_timings=run_timings,
+    )
     return exit_code
 
 
-__all__ = ["_parse_args", "main"]
+__all__ = ["_parse_args", "_write_result_json", "main"]

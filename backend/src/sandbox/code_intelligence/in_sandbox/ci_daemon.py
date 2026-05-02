@@ -809,6 +809,7 @@ def _build_service(state: Path, workspace_root: str) -> tuple[Any, Any, Any]:
         transport=None,
         edit_history=ledger,
         symbol_index_persistence=index_store,
+        daemon_local=True,
     )
     return svc, ledger, index_store
 

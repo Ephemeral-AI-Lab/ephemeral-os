@@ -1,11 +1,10 @@
-"""Phase 5 — first-class ci_rpc verb + default flag flip live E2E.
+"""Phase 5 — first-class ci_rpc verb + daemon default live E2E.
 
-Five subtests against the real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
+Four subtests against the real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
 
-A. ``test_default_flag_on_smoke`` — with ``EOS_CI_IN_SANDBOX`` UNSET (i.e.
-   the new Phase 5 default), every operation works through ``RpcCiBackend``
-   and ``transport.ci_rpc``. Asserts ``_select_backend`` returned the daemon
-   path without an explicit env override.
+A. ``test_default_flag_on_smoke`` — every operation works through
+   ``RpcCiBackend`` and ``transport.ci_rpc``. Asserts ``_select_backend``
+   returns the daemon path for transport-backed sandboxes.
 
 B. ``test_ci_rpc_verb_faster_than_shim`` — measures warm-path query latency
    for the native verb vs the python shim (forced via
@@ -15,13 +14,10 @@ B. ``test_ci_rpc_verb_faster_than_shim`` — measures warm-path query latency
 C. ``test_concurrent_query_symbols`` — 8 concurrent ``query_symbols`` calls
    succeed with zero errors and finish in below the public-RPC ceiling.
 
-D. ``test_backout_env_var`` — ``EOS_CI_IN_SANDBOX=0`` forces
-   ``InProcessCiBackend`` even with transport+sandbox_id present (the
-   rollback knob).
-
-E. ``test_curated_cross_phase_regression`` — one assertion per prior phase
+D. ``test_curated_cross_phase_regression`` — one assertion per prior phase
    (0/1/2/3/3.5/3.6/4) wired through the now-default daemon path. Catches
-   any regression the flag flip exposes that the per-phase suites missed.
+   any regression the daemon-default selector exposes that the per-phase
+   suites missed.
 
 Run with explicit user approval (do NOT auto-run; project memory
 ``feedback_parallel_user_commits``):
@@ -47,10 +43,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
-from sandbox.code_intelligence.backend import (
-    InProcessCiBackend,
-    RpcCiBackend,
-)
+from sandbox.code_intelligence.backend import RpcCiBackend
 from sandbox.code_intelligence.core.types import WriteSpec
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
@@ -98,36 +91,15 @@ class LivePhase5Env:
         )
         return exit_code, output
 
-    def make_ci_service(
-        self,
-        *,
-        env_override: str | None = "__UNSET__",
-    ) -> CodeIntelligenceService:
-        """Build a CodeIntelligenceService with a controlled env state.
-
-        ``env_override="__UNSET__"`` (default) deletes ``EOS_CI_IN_SANDBOX``
-        for the duration of the constructor — the Phase 5 default-on path.
-        Pass ``"0"`` to exercise the backout knob, ``"1"`` to force the
-        explicit-on path.
-        """
+    def make_ci_service(self) -> CodeIntelligenceService:
+        """Build a transport-backed CodeIntelligenceService."""
         from sandbox.daytona.transport import DaytonaTransport
 
-        old_flag = os.environ.get("EOS_CI_IN_SANDBOX")
-        if env_override == "__UNSET__":
-            os.environ.pop("EOS_CI_IN_SANDBOX", None)
-        else:
-            os.environ["EOS_CI_IN_SANDBOX"] = env_override
-        try:
-            return CodeIntelligenceService(
-                sandbox_id=self.sandbox_id,
-                workspace_root=self.root_dir,
-                transport=DaytonaTransport(),
-            )
-        finally:
-            if old_flag is None:
-                os.environ.pop("EOS_CI_IN_SANDBOX", None)
-            else:
-                os.environ["EOS_CI_IN_SANDBOX"] = old_flag
+        return CodeIntelligenceService(
+            sandbox_id=self.sandbox_id,
+            workspace_root=self.root_dir,
+            transport=DaytonaTransport(),
+        )
 
 
 @pytest.fixture(scope="module")
@@ -180,7 +152,7 @@ def live_phase5_env() -> LivePhase5Env:
 
 
 # ---------------------------------------------------------------------------
-# 5.6.A — default flag (unset) selects RpcCiBackend; full smoke
+# 5.6.A — daemon-default selector uses RpcCiBackend; full smoke
 # ---------------------------------------------------------------------------
 
 
@@ -189,11 +161,10 @@ def test_default_flag_on_smoke(live_phase5_env: LivePhase5Env) -> None:
     env = live_phase5_env
 
     with _trace(h, "ci_service_construct_default"):
-        svc = env.make_ci_service()  # env_override="__UNSET__" -> default path
-    # Phase 5 default-on assertion: with no env var, transport+sandbox_id
-    # present -> RpcCiBackend.
+        svc = env.make_ci_service()
+    # Phase 5 assertion: transport+sandbox_id present -> RpcCiBackend.
     assert isinstance(svc._impl, RpcCiBackend), (
-        "EOS_CI_IN_SANDBOX unset must default to RpcCiBackend (Phase 5)"
+        "transport-backed sandboxes must use RpcCiBackend"
     )
 
     with _trace(h, "ensure_initialized"):
@@ -301,33 +272,15 @@ async def test_concurrent_query_symbols(live_phase5_env: LivePhase5Env) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5.6.D — backout via EOS_CI_IN_SANDBOX=0
-# ---------------------------------------------------------------------------
-
-
-def test_backout_env_var(live_phase5_env: LivePhase5Env) -> None:
-    env = live_phase5_env
-    svc = env.make_ci_service(env_override="0")
-    assert isinstance(svc._impl, InProcessCiBackend), (
-        "EOS_CI_IN_SANDBOX=0 must force InProcessCiBackend"
-    )
-    # Smoke that the in-process path is still functional — we're not measuring
-    # parity here, just confirming the backout doesn't deadlock.
-    svc.ensure_initialized(wait=True)
-    assert svc.is_initialized
-    svc.dispose()
-
-
-# ---------------------------------------------------------------------------
-# 5.6.E — curated cross-phase regression (one assertion from each prior phase)
+# 5.6.D — curated cross-phase regression (one assertion from each prior phase)
 # ---------------------------------------------------------------------------
 
 
 def test_curated_cross_phase_regression(live_phase5_env: LivePhase5Env) -> None:
-    """Run one representative assertion per prior phase under default-on.
+    """Run one representative assertion per prior phase under daemon-default.
 
-    If the flag flip introduces a regression the per-phase suites missed,
-    one of these will trip. Numbers (timing thresholds etc.) are
+    If the selector change introduces a regression the per-phase suites
+    missed, one of these will trip. Numbers (timing thresholds etc.) are
     intentionally generous — this is a tripwire, not a benchmark.
     """
     env = live_phase5_env

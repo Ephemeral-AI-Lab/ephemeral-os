@@ -9,7 +9,7 @@ Three artifacts live here:
 
 * :class:`CiBackend` — typing.Protocol that every backend implements.
 * :class:`InProcessCiBackend` — wraps local in-process logic for sandboxless
-  flows and the explicit ``EOS_CI_IN_SANDBOX=0`` backout.
+  flows.
 * :class:`RpcCiBackend` — the default transport-backed path. Phase 3.5 collapsed the
   Phase 1 pickle-snapshot bootstrap and Phase 3 daemon dispatch into a single
   ``ensure_daemon → index_ready → query`` pipeline; the orchestrator no
@@ -152,6 +152,7 @@ class InProcessCiBackend:
         transport: SandboxTransport | None = None,
         edit_history: Any | None = None,
         symbol_index_persistence: Any | None = None,
+        daemon_local: bool = False,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
@@ -204,6 +205,7 @@ class InProcessCiBackend:
             write_coordinator=self._write_coordinator,
             rebind_sandbox=self.rebind_sandbox,
             transport=transport,
+            daemon_local=daemon_local,
         )
 
     def ensure_initialized(self, wait: bool = True) -> bool:

@@ -1,16 +1,16 @@
-# Phase 5 — First-class `ci_rpc` transport verb + flag flip
+# Phase 5 — First-class `ci_rpc` transport verb + daemon default
 
 **Estimated effort:** 5-6 days (3 days engineering + 2-3 days E2E)
-**Risk profile:** HIGH — feature-flag flip is the actual rollout event
-**Status:** Not started
+**Risk profile:** HIGH — daemon-default selection is the actual rollout event
+**Status:** Implemented; post-canary cleanup complete
 **Blocks on:** Phase 3.5 / 3.6 closure stable in production for at least one canary week, including `svc_cmd` and the stable `run_sync` fallback loop
 
 > Current implementation note (2026-05-03): the old Phase 4 `svc.cmd`
 > hot-path plan is superseded. `svc_cmd` is wired through the daemon and
 > the ~5.5 s public-call floor was fixed in `sandbox.client.async_bridge`
 > by keeping sync callers on a reusable standalone sandbox I/O loop. Phase 5
-> is therefore a transport/product rollout phase: native `ci_rpc`, default
-> flag flip, cleanup, and optional batching/streaming work if the current
+> is therefore a transport/product rollout phase: native `ci_rpc`, daemon
+> default selection, cleanup, and optional batching/streaming work if the current
 > stable-loop `transport.exec` floor of roughly 0.3-0.5 s is still too high.
 
 ## Cleanup scope reduction (vs original draft)
@@ -26,7 +26,7 @@ Net: cleanup remains ~600 LOC, all in the existing `mutations/`, `indexing/`, `l
 Two deliverables:
 
 1. **Promote `ci_rpc` to a first-class verb on `SandboxTransport`** — replaces the python socket shim used in Phases 2-3.6. The stable-loop fix already removes the accidental ~5.5 s sync-bridge cost; `ci_rpc` targets the remaining ~0.3-0.5 s per-call `transport.exec` floor.
-2. **Flip `EOS_CI_IN_SANDBOX` default to `1`** — daemon-mode becomes the production path. The flag remains for backout for one release cycle, then is removed.
+2. **Make daemon-mode the production path** — transport-backed sandboxes select `RpcCiBackend` by default. After the post-canary cleanup, the old `EOS_CI_IN_SANDBOX=0` backend-selection backout is retired.
 
 This phase also performs the cleanup pass: deletes the `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` branches that the daemon path makes dead (~600 lines).
 
@@ -35,8 +35,8 @@ This phase also performs the cleanup pass: deletes the `_apply_remote_*`, `_read
 Three reasons:
 
 1. **The shim works; promoting it is purely additive.** Phases 2-3.6 prove the daemon model with the python shim plus the stable sync bridge. Phase 5's `ci_rpc` verb replaces the shim with a native channel — same protocol, same semantics, just less overhead. It can be benchmarked apples-to-apples against the stable-loop shim.
-2. **Default-on requires production confidence.** Phases 0-3.6 ship behind a flag (`EOS_CI_IN_SANDBOX=0` default). Production runs in flag-off mode for the entire migration. Phase 5 is the rollout event — needs a canary week and rollback evidence.
-3. **Cleanup is safe only after default-on stabilizes.** Deleting the orchestrator-side `_apply_remote_*` etc. branches is irreversible. Doing it in Phase 5 (after the flag flips and one release passes) ensures we haven't deleted code we'd need to revert to.
+2. **Daemon-default requires production confidence.** Phases 0-3.6 shipped behind a migration flag. Phase 5 is the rollout event, so it needs canary telemetry before the cleanup pass deletes the old orchestrator-side remote path.
+3. **Cleanup is safe only after daemon-default stabilizes.** Deleting the orchestrator-side `_apply_remote_*` etc. branches is irreversible. Doing it after the canary ensures we do not advertise an env-var rollback path whose implementation has already been deleted.
 
 ## What ships
 
@@ -46,8 +46,8 @@ Three reasons:
 | `ci_rpc` impl (daytona) | `backend/src/sandbox/daytona/transport_impl.py` (or wherever `DaytonaTransport` lives) | Native socket bridge — daytona-side handler proxies bytes to/from the daemon's Unix socket |
 | `ci_rpc` impl (other transports) | per-provider transport modules | Same Protocol; raises `NotImplementedError` if a provider doesn't support it |
 | `CiRpcClient` switch | `backend/src/sandbox/code_intelligence/rpc/client.py` (modified) | Use `ci_rpc` verb when available; fall back to python shim for one release |
-| Default flag flip | `backend/src/sandbox/code_intelligence/backend.py` (modified) | `_select_backend(...)` defaults to `RpcCiBackend` when transport+sandbox_id present, regardless of env (env can still force `0` for backout) |
-| Settings doc | `CHANGELOG.md`, env-var docs | Document the flip and the backout knob |
+| Daemon-default selector | `backend/src/sandbox/code_intelligence/service.py` (modified) | `_select_backend(...)` selects `RpcCiBackend` when transport+sandbox_id are present, regardless of env |
+| Settings doc | `CHANGELOG.md`, operational docs | Document the daemon default and retired backend-selection backout |
 | Cleanup deletions | `backend/src/sandbox/code_intelligence/mutations/content_manager.py`, `indexing/file_discovery.py`, `language_server/transport.py` | Remove dead remote branches (~600 lines) |
 | Phase 5 live E2E | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` | Native verb path + concurrency + curated cross-phase smoke |
 
@@ -139,27 +139,23 @@ class CiRpcClient:
 
 **`_SHIM_FORCED` env var:** `EOS_CI_FORCE_SHIM=1` forces the python shim path even when `ci_rpc` is available — useful for A/B latency measurement during the canary week.
 
-### Task 5.4 — Default flag flip
+### Task 5.4 — Daemon-default backend selection
 
-**File to modify:** `backend/src/sandbox/code_intelligence/backend.py`
+**File to modify:** `backend/src/sandbox/code_intelligence/service.py`
 
 ```python
 def _select_backend(...):
-    flag = os.environ.get("EOS_CI_IN_SANDBOX")
-
-    if flag == "0":
-        # Explicit backout
-        return InProcessCiBackend(...)
-
-    if transport is not None and sandbox_id and (flag is None or flag == "1"):
-        # Phase 5: default to RpcCiBackend when transport+sandbox_id are present
+    if transport is not None and sandbox_id:
         return RpcCiBackend(...)
 
     # Tests, local sandboxless paths
     return InProcessCiBackend(...)
 ```
 
-**Backout knob:** `EOS_CI_IN_SANDBOX=0` forces in-process. Document in `.env.example` and CHANGELOG.
+The legacy `EOS_CI_IN_SANDBOX` migration flag is not part of backend
+selection after the cleanup pass. A transport-backed sandbox must not
+fall back to `InProcessCiBackend`, because the remote discovery/read
+branches it would need are removed in Task 5.5.
 
 ### Task 5.5 — Cleanup pass
 
@@ -189,13 +185,13 @@ def _select_backend(...):
 
 **File:** `backend/tests/test_e2e/test_live_ci_phase5_default_on.py`
 
-#### 5.6.A — Default flag, full smoke
+#### 5.6.A — Daemon-default full smoke
 
 ```python
 async def test_default_flag_on_smoke(live_sweevo_env):
-    """With EOS_CI_IN_SANDBOX unset (default = on), every operation works."""
+    """With transport+sandbox_id, every operation works through RpcCiBackend."""
     h = TimingHarness(phase=5, test_name="default_on_smoke")
-    env = live_sweevo_env  # env var unset → defaults to RpcCiBackend
+    env = live_sweevo_env
     svc = env.make_ci_service()
     assert isinstance(svc._impl, RpcCiBackend)
 
@@ -280,40 +276,26 @@ async def test_concurrent_query_symbols(live_sweevo_env):
     h.dump_json()
 ```
 
-#### 5.6.D — Backout via env
+#### 5.6.D — Curated cross-phase regression
 
-```python
-async def test_backout_env_var(live_sweevo_env):
-    """EOS_CI_IN_SANDBOX=0 forces InProcessCiBackend even with transport+sandbox_id."""
-    with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "0"}):
-        env = live_sweevo_env
-        svc = env.make_ci_service()
-    assert isinstance(svc._impl, InProcessCiBackend)
-    # Should still work end-to-end
-    svc.ensure_initialized(wait=True)
-    assert svc.is_initialized
-```
-
-#### 5.6.E — Curated cross-phase regression
-
-After Phases 0-4 each have their own E2E tests, Phase 5 runs a curated subset of all of them (one assertion from each) inline as a final sanity check that nothing regressed when the flag flipped.
+After Phases 0-4 each have their own E2E tests, Phase 5 runs a curated subset of all of them (one assertion from each) inline as a final sanity check that nothing regressed when transport-backed sandboxes became daemon-default.
 
 **Run command:** `uv run pytest backend/tests/test_e2e/test_live_ci_phase5_default_on.py -m live -v -s`
 
 ### Task 5.7 — Regression check
 
-- `.venv/bin/pytest backend/tests/test_sandbox/ backend/tests/test_tools/ -q` — green with default flag on.
-- Re-run Phases 0, 1, 2, 3, 4 live E2Es — all green with default-on.
+- `.venv/bin/pytest backend/tests/test_sandbox/ backend/tests/test_tools/ -q` — green with daemon-default selection.
+- Re-run Phases 0, 1, 2, 3, 4 live E2Es — all green with daemon-default selection.
 - Verify cleanup (Task 5.5) didn't break any test by removing a code path it depended on.
 
 ### Task 5.8 — Production canary
 
 **Procedure (out of test, in production):**
-1. Land Tasks 5.1-5.4 with `EOS_CI_IN_SANDBOX=0` still default in `.env.example` (mismatched intentionally — code defaults to on, env override to off).
-2. Roll out one orchestrator instance with `EOS_CI_IN_SANDBOX` unset (= on). Monitor for 1 week.
-3. Compare production telemetry: `svc.cmd` p50/p95 latency, error rates, daemon respawn frequency.
-4. If healthy: change `.env.example` default and CHANGELOG to "on by default". Land Task 5.5 (cleanup).
-5. If unhealthy: revert via env var; investigate; add follow-up phase.
+1. Land Tasks 5.1-5.4 with daemon-default backend selection.
+2. Roll out one orchestrator instance. Monitor for 1 week.
+3. Compare production telemetry: `svc.cmd` p50/p95 latency, error rates, daemon respawn frequency, and shim usage.
+4. If healthy: land Task 5.5 cleanup and document the removed backend-selection backout.
+5. If unhealthy before cleanup: rollback the code change; investigate; add a follow-up phase.
 
 This is a process, not a code change — document it in the PR and the runbook.
 
@@ -323,25 +305,24 @@ This is a process, not a code change — document it in the PR and the runbook.
 - [ ] Daytona implementation of `ci_rpc` passes round-trip ping latency check.
 - [ ] `CiRpcClient._call_once` prefers native verb, falls back to shim, supports `EOS_CI_FORCE_SHIM` for A/B.
 - [ ] `_select_backend(...)` defaults to `RpcCiBackend` when transport+sandbox_id are present.
-- [ ] **Phase 5 live E2E (all 5 subtests A-E) passes against `dask__dask_2023.3.2_2023.4.0`.**
+- [ ] **Phase 5 live E2E (all 4 subtests A-D) passes against `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] **5.6.B verb-vs-shim assertion passes** — native `ci_rpc` faster than shim.
-- [ ] Backout knob `EOS_CI_IN_SANDBOX=0` works (5.6.D).
 - [ ] Cleanup pass (Task 5.5) removes dead code; total LOC reduction ≈ 600 lines.
 - [ ] Production canary passed for 1 week with telemetry attached to the PR.
-- [ ] Regression check: Phases 0, 1, 2, 3, 4 E2Es + full unit suite green with default-on.
-- [ ] CHANGELOG entry documenting the flip + backout knob.
-- [ ] PR description includes: 5 E2E reports + headline verb-vs-shim delta + canary telemetry summary.
+- [ ] Regression check: Phases 0, 1, 2, 3, 4 E2Es + full unit suite green with daemon-default selection.
+- [ ] CHANGELOG entry documenting daemon-default selection and the retired backend-selection backout.
+- [ ] PR description includes: 4 E2E reports + headline verb-vs-shim delta + canary telemetry summary.
 
 ## Risk callouts (Phase 5 specific)
 
 | Severity | Risk | Mitigation |
 |---|---|---|
-| **HIGH** | Default-on rolls out a regression that affects every user | Production canary (Task 5.8); backout knob `EOS_CI_IN_SANDBOX=0`; staged rollout one orchestrator at a time |
+| **HIGH** | Default-on rolls out a regression that affects every user | Production canary (Task 5.8); staged rollout one orchestrator at a time; code rollback before cleanup |
 | **HIGH** | Cleanup deletes a code path that an orchestrator-only test depended on | Run regression suite BEFORE cleanup; keep cleanup as a separate commit so it can be reverted independently |
 | **HIGH** | `ci_rpc` verb implementation in Daytona has a binary-encoding bug (e.g. NUL-byte stripping) | Round-trip a frame containing every byte value 0-255; assert exact equality |
 | **MEDIUM** | `EOS_CI_FORCE_SHIM` left enabled in production accidentally → masks Phase 5 perf win | Telemetry surfaces shim usage rate; alert if non-zero in production after rollout |
 | **MEDIUM** | Some non-Daytona transport doesn't implement `ci_rpc` → fallback to shim works but masks intent | Document per-provider matrix; raise `NotImplementedError` explicitly so the fallback is observable |
-| **MEDIUM** | `RpcCiBackend.ensure_initialized` deadlocks when daemon spawn fails right at default-on rollout | Strict timeouts everywhere; `CiDaemonUnavailable` surfaces with structured detail |
+| **MEDIUM** | `RpcCiBackend.ensure_initialized` deadlocks when daemon spawn fails during daemon-default rollout | Strict timeouts everywhere; `CiDaemonUnavailable` surfaces with structured detail |
 | **LOW** | Long-tail callers of `_apply_remote_*` etc. survive the cleanup | `grep -r` after cleanup; CI lints for unused functions |
 | **LOW** | CHANGELOG missed; users surprised by default change | Block merge until CHANGELOG entry exists |
 
@@ -349,7 +330,7 @@ This is a process, not a code change — document it in the PR and the runbook.
 
 The migration is complete. Future work (out of scope here):
 
-- **Phase 6 (deletion):** After two release cycles of stable default-on, remove the `EOS_CI_IN_SANDBOX` flag entirely; remove the python shim; require all transports to implement `ci_rpc`.
+- **Phase 6 (deletion):** remove the python shim once every supported transport implements `ci_rpc`.
 - **Eager bootstrap (`EOS_CI_EAGER_BOOTSTRAP=1`)** for ralph/codex sessions that pay first-call latency repeatedly.
 - **Streaming `on_progress_line`** as a transport enhancement if final-stdout replay is not enough for CodeAct UX.
 - **`memory/git_workspace_gitignored_deps_blocker.md`** — separate ADR on routing untracked-but-not-ignored paths through a new "runtime overlay" channel.

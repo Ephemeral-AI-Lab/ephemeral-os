@@ -1,17 +1,14 @@
 """Per-sandbox :class:`CodeIntelligenceService` facade.
 
 The facade delegates every public op to a :class:`CiBackend` selected at
-construction time. With ``EOS_CI_IN_SANDBOX`` unset (or no transport
-available) the default backend is :class:`InProcessCiBackend` — today's
-in-process logic, bit-for-bit. With the flag on plus a transport and
-sandbox id, :class:`RpcCiBackend` is selected for the in-sandbox indexing
-path.
+construction time. Transport-backed sandbox services use
+:class:`RpcCiBackend`; sandboxless/local flows keep using
+:class:`InProcessCiBackend`.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -50,27 +47,19 @@ def _select_backend(
     transport: SandboxTransport | None,
     edit_history: Any | None = None,
     symbol_index_persistence: Any | None = None,
+    daemon_local: bool = False,
 ) -> CiBackend:
-    """Pick a backend based on the EOS_CI_IN_SANDBOX flag, transport, and id.
+    """Pick a backend based on transport availability and sandbox identity.
 
-    Phase 5 default flip: returns :class:`RpcCiBackend` whenever a transport
-    AND a non-empty ``sandbox_id`` are present, UNLESS ``EOS_CI_IN_SANDBOX=0``
-    is set (the explicit backout knob). The flag's other values (``"1"``,
-    unset) all select the daemon path. Local sandboxless flows
-    (no transport / empty sandbox_id) keep using :class:`InProcessCiBackend`.
+    Transport-backed remote sandboxes use the daemon backend. Local
+    sandboxless flows (no transport / empty sandbox_id) keep using
+    :class:`InProcessCiBackend`.
 
     ``edit_history`` and ``symbol_index_persistence`` are only meaningful for
     the in-process backend (the daemon owns the canonical SQLite ledger and
     SQLite IndexStore when the RPC backend is in use).
     """
-    flag = os.environ.get("EOS_CI_IN_SANDBOX")
-    backout = flag == "0"
-    use_daemon = (
-        not backout
-        and transport is not None
-        and sandbox_id != ""
-    )
-    if use_daemon:
+    if transport is not None and sandbox_id:
         assert transport is not None  # narrow for type-checker
         return RpcCiBackend(
             sandbox_id=sandbox_id,
@@ -84,6 +73,7 @@ def _select_backend(
         transport=transport,
         edit_history=edit_history,
         symbol_index_persistence=symbol_index_persistence,
+        daemon_local=daemon_local,
     )
 
 
@@ -99,6 +89,7 @@ class CodeIntelligenceService:
         transport: SandboxTransport | None = None,
         edit_history: Any | None = None,
         symbol_index_persistence: Any | None = None,
+        daemon_local: bool = False,
     ) -> None:
         self._impl: CiBackend = _select_backend(
             sandbox_id,
@@ -107,6 +98,7 @@ class CodeIntelligenceService:
             transport=transport,
             edit_history=edit_history,
             symbol_index_persistence=symbol_index_persistence,
+            daemon_local=daemon_local,
         )
 
     # -- Identity / state forwarding -----------------------------------------

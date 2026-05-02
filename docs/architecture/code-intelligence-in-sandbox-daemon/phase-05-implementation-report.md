@@ -1,4 +1,4 @@
-# Phase 5 — first-class `ci_rpc` verb + default flag flip: Implementation Report
+# Phase 5 — first-class `ci_rpc` verb + daemon default: Implementation Report
 
 Companion to
 [`phase-05-ci-rpc-verb-and-flag-flip.md`](./phase-05-ci-rpc-verb-and-flag-flip.md).
@@ -12,7 +12,7 @@ the new code, and the perf framing.
 
 **Verdict: ships at the code-only level.** The four substantive code
 changes — Protocol method, Daytona implementation, client-side
-verb-prefer, and default flag flip — are merged with new unit coverage,
+verb-prefer, and daemon-default backend selection — are merged with new unit coverage,
 ruff clean, and a green full-suite regression at 1218 passed / 2 skipped.
 The Phase 5 live E2E suite is committed under `-m live` and verified
 collect-clean, but is NOT executed in this iteration. The post-canary
@@ -20,11 +20,10 @@ Task 5.5 cleanup deletion is now complete; live execution and production
 canary tracking remain operational follow-ups documented in §7.
 
 The spec ([`phase-05-ci-rpc-verb-and-flag-flip.md`](./phase-05-ci-rpc-verb-and-flag-flip.md))
-sequences cleanup AFTER the flip stabilizes ("Cleanup is safe only after
-default-on stabilizes. […] ensures we haven't deleted code we'd need to
-revert to" — line 39) and explicitly classifies the canary as
-"a process, not a code change" (line 318). Honoring that sequencing was
-the right call this iteration.
+sequences cleanup after the daemon-default path stabilizes, because the
+deleted code would otherwise be needed for rollback. It also classifies
+the canary as "a process, not a code change" (line 318). Honoring that
+sequencing was the right call this iteration.
 
 ---
 
@@ -55,8 +54,8 @@ The user's `/oh-my-claudecode:ralph` invocation listed four tasks:
 
 **What this iteration deliberately did NOT produce:**
 
-- **Spec Task 5.6 live execution.** The five subtests are committed and
-  collect cleanly under `pytest --collect-only -m live` (5/5 collected
+- **Spec Task 5.6 live execution.** The four subtests are committed and
+  collect cleanly under `pytest --collect-only -m live` (4/4 collected
   in 0.12 s — see §8.1), but execution is gated on user approval per
   project memory `feedback_parallel_user_commits` and the established
   Phase 4 precedent (the prior iteration's report §2 "What this iteration
@@ -67,8 +66,8 @@ The user's `/oh-my-claudecode:ralph` invocation listed four tasks:
   appropriate handoff vehicle.
 
 **The right Phase 5 deliverable from a single Ralph iteration is the
-code shipped here — a flippable, backout-knobbed default that lets
-canary owners drive the rollout without further code work.**
+code shipped here — a daemon-default path with the dead remote fallback
+branches removed after the canary window.**
 
 ---
 
@@ -81,7 +80,7 @@ canary owners drive the rollout without further code work.**
 | `backend/src/sandbox/api/transport.py` | New `ci_rpc` Protocol method (`:78-101`) — `async def ci_rpc(self, sandbox_id, payload: bytes, *, socket_path: str, timeout: int \| None = None) -> bytes`. Default body raises `NotImplementedError` so transports that don't implement the verb fall back transparently via `CiRpcClient`. Docstring documents the binary-safety requirement (every byte 0-255) and the `ConnectionRefusedError` contract for socket-unreachable failures. |
 | `backend/src/sandbox/daytona/transport.py` | `DaytonaTransport.ci_rpc` (`:373-408`) — runs an inline python3 socket bridge over `transport.exec`, base64-encoding both request and response so stdout cannot strip NULs. Bridge template at `:511-531`. Surfaces socket connect failure as `ConnectionRefusedError` so `CiRpcClient`'s `ensure_daemon` retry path engages identically to the python shim. |
 | `backend/src/sandbox/code_intelligence/rpc/client.py` | New `_send_frame` (`:117-147`) checks `getattr(transport, "ci_rpc", None)` AND `os.environ.get("EOS_CI_FORCE_SHIM") != "1"` per call; falls back to the existing `_send_frame_via_python_shim` (`:149-…`) on `NotImplementedError` or when forced. The flag is re-read every call so `mock.patch.dict(os.environ)` works for inline A/B comparisons (Phase 5 5.6.B pattern). `_call_once` (`:82-:115`) updated to call `_send_frame` instead of the shim directly. `import os` added (`:7`). |
-| `backend/src/sandbox/code_intelligence/service.py` | `_select_backend` (`:45-87`) inverts the truth table: `backout = (flag == "0")`; `use_daemon = not backout and transport is not None and sandbox_id != ""`. Phase 5 default-on means an unset flag with a transport selects `RpcCiBackend`. Backout knob is `EOS_CI_IN_SANDBOX=0`. Module docstring updated. |
+| `backend/src/sandbox/code_intelligence/service.py` | `_select_backend` (`:45-87`) now ignores the legacy migration env var and selects `RpcCiBackend` whenever both `transport` and a non-empty `sandbox_id` are present. Sandboxless/local flows still select `InProcessCiBackend`. Module docstring updated. |
 
 ### Tests
 
@@ -89,8 +88,8 @@ canary owners drive the rollout without further code work.**
 |---|---|
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py` | `_VerbTransport` (`:158-185`) extends the existing `_FakeTransport` with a recordable `ci_rpc` method; `_decode_frame` helper (`:188-190`). Four new tests (`:192-258`): `test_call_prefers_native_verb_when_available`, `test_call_falls_back_to_shim_when_force_shim_set`, `test_verb_not_implemented_falls_back_to_shim`, `test_force_shim_re_read_per_call`. Together they cover all four cells of the verb-vs-shim selection matrix. |
 | `backend/tests/test_sandbox/test_daytona_transport.py` | Three new tests (`:331-376`): `test_ci_rpc_round_trips_payload_bytes` round-trips `bytes(range(256)) * 4` through the bridge AND asserts the wrapped command contains the literal `socket_path`; `test_ci_rpc_connect_failure_surfaces_as_connection_refused` covers the exit-code-1 path; `test_ci_rpc_invalid_response_raises_connection_refused` covers the malformed-base64 path. The pre-existing `test_transport_satisfies_protocol_method_set` mechanically gates that DaytonaTransport now declares `ci_rpc` (Protocol set check). |
-| `backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py` | Truth-table tests rewritten (`:74-152`) to reflect the Phase 5 default flip: `test_select_rpc_when_flag_unset_with_transport_and_id` (NEW default), `test_select_inprocess_when_flag_zero_backout` (NEW backout), `test_select_rpc_when_flag_set_to_other_truthy_value` (formerly `…_inprocess_when_flag_set_to_other_value` — anything except `"0"` now selects daemon). Removed: pre-Phase-5 `test_select_inprocess_when_flag_off_with_transport_and_id` (replaced by the explicit-`0` backout test). |
-| `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` | NEW file, 5 subtests (`test_default_flag_on_smoke`, `test_ci_rpc_verb_faster_than_shim`, `test_concurrent_query_symbols`, `test_backout_env_var`, `test_curated_cross_phase_regression`) — all gated under `pytest.mark.live`. Module-scoped sweevo fixture mirrors the Phase 3.5 fixture exactly; `make_ci_service(env_override="__UNSET__")` sets up the default-on path under test. **NOT executed in this iteration.** |
+| `backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py` | Selector tests rewritten to match the post-cleanup contract: transport + sandbox id selects `RpcCiBackend`; missing transport or missing sandbox id selects `InProcessCiBackend`; the old `EOS_CI_IN_SANDBOX=0` value is ignored for backend selection. |
+| `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` | NEW file, 4 subtests (`test_default_flag_on_smoke`, `test_ci_rpc_verb_faster_than_shim`, `test_concurrent_query_symbols`, `test_curated_cross_phase_regression`) — all gated under `pytest.mark.live`. Module-scoped sweevo fixture mirrors the Phase 3.5 fixture exactly; `make_ci_service()` sets up the transport-backed daemon path under test. **NOT executed in this iteration.** |
 
 ### Deleted
 
@@ -111,15 +110,14 @@ The spec's DoD checklist is at lines 320-333 of
 | `ci_rpc` Protocol method added to `SandboxTransport` with documented signature | PASS | `backend/src/sandbox/api/transport.py:78-101`. Signature includes `socket_path` kwarg as the spec recommended (lines 105-108); the docstring captures the binary-safety requirement, `NotImplementedError` fallback contract, and `ConnectionRefusedError` failure surface. |
 | Daytona implementation of `ci_rpc` passes round-trip ping latency check | PASS structurally; live ping latency gated on user-approved 5.6.B | `backend/src/sandbox/daytona/transport.py:373-408`. The unit test `test_ci_rpc_round_trips_payload_bytes` (`backend/tests/test_sandbox/test_daytona_transport.py:331-352`) round-trips `bytes(range(256)) * 4` through the bridge with byte-level equality, proving binary safety in advance of live measurement. |
 | `CiRpcClient._call_once` prefers native verb, falls back to shim, supports `EOS_CI_FORCE_SHIM` for A/B | PASS | `backend/src/sandbox/code_intelligence/rpc/client.py:117-147`. Verified by `test_call_prefers_native_verb_when_available`, `test_call_falls_back_to_shim_when_force_shim_set`, `test_verb_not_implemented_falls_back_to_shim`, `test_force_shim_re_read_per_call` (`backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py:192-258`). |
-| `_select_backend(...)` defaults to `RpcCiBackend` when transport+sandbox_id are present | PASS | `backend/src/sandbox/code_intelligence/service.py:45-87`. Verified by `test_select_rpc_when_flag_unset_with_transport_and_id` (`test_backend_inprocess.py:80-93`). |
-| Phase 5 live E2E (all 5 subtests A-E) passes against `dask__dask_2023.3.2_2023.4.0` | DEFERRED to user-approved live execution | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` (committed, 5 tests collect cleanly). See §2 for the project-memory + Phase 4 precedent that gates execution on user approval. |
+| `_select_backend(...)` defaults to `RpcCiBackend` when transport+sandbox_id are present | PASS | `backend/src/sandbox/code_intelligence/service.py:45-87`. Verified by `test_select_rpc_with_transport_and_id` and `test_select_rpc_ignores_legacy_env_flag` (`test_backend_inprocess.py`). |
+| Phase 5 live E2E (all 4 subtests A-D) passes against `dask__dask_2023.3.2_2023.4.0` | DEFERRED to user-approved live execution | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` (committed, 4 tests collect cleanly). See §2 for the project-memory + Phase 4 precedent that gates execution on user approval. |
 | 5.6.B verb-vs-shim assertion passes | DEFERRED to user-approved live execution | The assertion is wired (`test_ci_rpc_verb_faster_than_shim` at `test_live_ci_phase5_default_on.py:`); structural binary-safety + selection-matrix coverage is unit-tested. |
-| Backout knob `EOS_CI_IN_SANDBOX=0` works (5.6.D) | PASS structurally; live confirmation gated on 5.6.D | `test_select_inprocess_when_flag_zero_backout` (`test_backend_inprocess.py:145-156`); live tripwire `test_backout_env_var` in the scaffold. |
 | Cleanup pass (Task 5.5) removes dead code; total LOC reduction ≈ 600 lines | PASS | Post-canary cleanup removed the dead remote/process branches and stale e2e coverage. See §7.1. |
 | Production canary passed for 1 week with telemetry attached to the PR | DEFERRED — out of code scope | Spec line 318: "This is a process, not a code change." See §7.3. |
-| Regression check: Phases 0, 1, 2, 3, 4 E2Es + full unit suite green with default-on | PARTIAL — full unit suite green with code-default-on (1218 passed / 2 skipped); per-phase live E2Es require user-approved execution | §8. |
-| CHANGELOG entry documenting the flip + backout knob | DEFERRED to PR merge | The hand-off note (§9) lists this as a PR-time deliverable; the code-default vs `.env.example` mismatch is intentional per spec line 312 and explained in §5. |
-| PR description includes: 5 E2E reports + headline verb-vs-shim delta + canary telemetry summary | N/A this iteration | All three are post-execution / post-canary deliverables; the structural code is ready for them. |
+| Regression check: Phases 0, 1, 2, 3, 4 E2Es + full unit suite green with daemon-default selection | PARTIAL — full unit suite green with daemon-default code (1218 passed / 2 skipped); per-phase live E2Es require user-approved execution | §8. |
+| CHANGELOG entry documenting the daemon default and removed backend-selection flag | DEFERRED to PR merge | The hand-off note (§9) lists this as a PR-time deliverable. |
+| PR description includes: 4 E2E reports + headline verb-vs-shim delta + canary telemetry summary | N/A this iteration | All three are post-execution / post-canary deliverables; the structural code is ready for them. |
 
 ---
 
@@ -172,46 +170,30 @@ The spec did not pin this. We chose per-call `os.environ.get` because:
 The PRD documents this choice explicitly to prevent future
 "optimization" that breaks the A/B harness.
 
-### 5.4 Default-on truth table
+### 5.4 Backend selection after cleanup
 
-Old (pre-Phase-5):
+The post-cleanup selector no longer consults `EOS_CI_IN_SANDBOX`.
+Backend choice is now only a function of whether the service is bound to
+a real remote sandbox:
 
-| `EOS_CI_IN_SANDBOX` | transport | sandbox_id | result |
-|---|---|---|---|
-| unset | any | any | InProcess |
-| `"1"` | not None | non-empty | Rpc |
-| `"1"` | None | any | InProcess |
-| `"1"` | not None | `""` | InProcess |
-| `"true"` | not None | non-empty | InProcess |
-| unset | not None | non-empty | InProcess |
+| transport | sandbox_id | result |
+|---|---|---|
+| None | any | InProcess |
+| not None | `""` | InProcess |
+| not None | non-empty | Rpc |
 
-New (Phase 5):
+This retires the old `EOS_CI_IN_SANDBOX=0` rollback path that depended on
+the orchestrator-side remote discovery/read paths removed in Task 5.5.
+The replacement test coverage is deliberately small: one test for the
+RPC default, one test proving the legacy env var is ignored, and two
+tests for sandboxless/local fallbacks.
 
-| `EOS_CI_IN_SANDBOX` | transport | sandbox_id | result |
-|---|---|---|---|
-| unset | None | any | InProcess |
-| unset | not None | `""` | InProcess |
-| **unset** | **not None** | **non-empty** | **Rpc (NEW DEFAULT)** |
-| **`"0"`** | not None | non-empty | **InProcess (NEW BACKOUT)** |
-| `"1"` | not None | non-empty | Rpc |
-| `"1"` | None | any | InProcess |
-| `"1"` | not None | `""` | InProcess |
-| `"true"` | not None | non-empty | **Rpc (anything ≠ `"0"` selects daemon)** |
+### 5.5 No `.env.example` backend-selection mismatch remains
 
-The change is precisely: invert the unset and "any-truthy-but-not-`1`"
-cases, and add `"0"` as the explicit backout. Every other cell is
-unchanged. Six tests in `test_backend_inprocess.py` cover the new
-table.
-
-### 5.5 Code default vs `.env.example` mismatch is intentional
-
-Per spec line 312 ("Land Tasks 5.1-5.4 with `EOS_CI_IN_SANDBOX=0` still
-default in `.env.example` (mismatched intentionally — code defaults to
-on, env override to off)"), the code change ships unilaterally but the
-production deployment knob remains off. Canary owners then remove the
-`.env.example` override (or unset their staging override) to ramp
-traffic onto the daemon path. We do NOT update `.env.example` in this
-PR; that update is part of the canary completion procedure.
+After Task 5.5, rollback requires restoring deleted code from history,
+not flipping an env var. `.env.example` and CHANGELOG should therefore
+document the daemon-default behavior and must not advertise
+`EOS_CI_IN_SANDBOX=0` as a backend-selection rollback path.
 
 ---
 
@@ -309,20 +291,19 @@ history.
 ### 7.2 Live execution of the Phase 5 E2E suite (spec Task 5.6)
 
 `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` is committed
-and collects cleanly (5 tests, 0.12 s collection). To execute:
+and collects cleanly (4 tests, 0.12 s collection). To execute:
 
 ```
 .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase5_default_on.py \
   -m live -v -s
 ```
 
-Five JSONs will land in `_timings/`:
+Three timing JSONs will land in `_timings/`:
 
 - `phase_5_default_on_smoke_<ts>.json`
 - `phase_5_ci_rpc_verb_vs_shim_<ts>.json` ← headline 5.6.B delta
 - `phase_5_concurrent_8_queries_<ts>.json`
-- (5.6.D and 5.6.E do not call `h.dump_json()`; they're verdicts, not
-  measurements.)
+- (5.6.D is a curated verdict, not a timing measurement.)
 
 Project memory `feedback_parallel_user_commits` and Phase 3 §7.9
 require explicit user approval before triggering live runs. Phase 4 set
@@ -330,19 +311,15 @@ the precedent (no live runs without approval).
 
 ### 7.3 Production canary (spec Task 5.8, ~1 week, out-of-band)
 
-Procedure per spec lines 311-318:
+The original spec used `EOS_CI_IN_SANDBOX=0` as a temporary rollout
+backout. That rollback path is retired by the cleanup in §7.1 because
+the remote discovery/read code it depended on is gone. From this point,
+production rollback is a normal code rollback that restores those deleted
+paths from history.
 
-1. Land the code from this PR with `EOS_CI_IN_SANDBOX=0` still default
-   in `.env.example` (intentional mismatch — code defaults on, env
-   override off).
-2. Roll out one orchestrator instance with `EOS_CI_IN_SANDBOX` unset
-   (= on). Monitor for 1 week.
-3. Compare production telemetry: `svc.cmd` p50/p95 latency, error
-   rates, daemon respawn frequency.
-4. If healthy: change `.env.example` default and CHANGELOG to "on by
-   default". Land §7.1 cleanup.
-5. If unhealthy: revert via env var (`EOS_CI_IN_SANDBOX=0`); investigate;
-   add follow-up phase.
+The remaining canary work is telemetry-only: compare `svc.cmd` p50/p95
+latency, error rates, daemon respawn frequency, and shim usage against
+the pre-cleanup baseline.
 
 ### 7.4 Re-baseline LSP benchmark on the daemon path post-stable-loop
 
@@ -393,11 +370,10 @@ new verb path. Not a Phase 5 ship blocker.
 ```
 .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase5_default_on.py \
   --collect-only -m live -q
-→ 5 tests collected in 0.12 s
+→ 4 tests collected in 0.12 s
    - test_default_flag_on_smoke
    - test_ci_rpc_verb_faster_than_shim
    - test_concurrent_query_symbols
-   - test_backout_env_var
    - test_curated_cross_phase_regression
 ```
 
@@ -427,7 +403,7 @@ new verb path. Not a Phase 5 ship blocker.
 | Phase 3.5 concurrent perf | Executed 2026-05-02 (pre-fix) and 2026-05-02T18:31Z (post-fix); five JSONs each. |
 | Phase 3.6 LSP benchmark | Executed 2026-05-02; three JSONs. |
 | Phase 4 svc.cmd live | Disowned by spec note; perf claim verified by aggregation. |
-| **Phase 5 default-on** | **Committed under `-m live`; collects cleanly (5 tests, 0.12 s); execution gated on user approval (§7.2).** |
+| **Phase 5 daemon-default** | **Committed under `-m live`; collects cleanly (4 tests, 0.12 s); execution gated on user approval (§7.2).** |
 
 ---
 
@@ -437,17 +413,15 @@ The migration's code cleanup is shipped. The remaining Phase 5
 deliverables are operational:
 
 1. **Run the Phase 5 live E2E** when sandbox time is approved
-   (§7.2). The five JSONs land in `_timings/`.
+   (§7.2). The three timing JSONs land in `_timings/`.
 2. **Drive the production canary** (§7.3, ~1 week). Compare
    `svc.cmd` p50/p95 latency, error rates, daemon respawn frequency
    against the pre-flip baseline.
-3. **Update `.env.example` + CHANGELOG** once the canary clears. Until
-   then, the intentional code-vs-env mismatch (spec line 312) protects
-   production from automatic rampage.
-5. **Re-baseline the LSP benchmark** (§7.4) once the canary closes —
+3. **Update CHANGELOG** to document that transport-backed sandboxes now
+   use the daemon path and the old backend-selection backout is retired.
+4. **Re-baseline the LSP benchmark** (§7.4) once the canary closes —
    gives the cleanest LSP-on-daemon perf number that uses the new verb
-   path, and rolls into a future Phase 6 deletion of
-   `EOS_CI_IN_SANDBOX` entirely.
+   path.
 
 The plan from spec line 357 ("The plan ends here.") holds: after the
 canary + cleanup, future work is feature work (eager bootstrap,
@@ -497,12 +471,11 @@ captured under the Phase 4 report's diff.)
    "doesn't lose NULs at scale" is one base64 step + one
    `bytes(range(256))` round-trip test. Catching that at the unit
    layer prevents a class of canary-only failures.
-4. **Truth-table flips deserve their own test cases, even if the
-   functional change is one line.** The `_select_backend` change is 4
-   added lines of code. The unit-test surface around it expanded by
-   2 NEW tests (default-on, backout) plus 1 RENAMED test. Those new
-   tests are the only thing that prevents a future "let's restore the
-   pre-Phase-5 default" PR from silently shipping with green CI.
+4. **Selector cleanup deserves explicit regression tests, even if the
+   functional change is small.** The `_select_backend` surface is now
+   transport + sandbox id only. One test proves the RPC default, one
+   proves the legacy env var is ignored, and the local fallback cases
+   keep sandboxless flows honest.
 5. **`getattr(transport, "ci_rpc", None)` + `NotImplementedError`
    fallback is the right Protocol-evolution pattern.** Adding the
    method to the Protocol with a default body that raises is more

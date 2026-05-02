@@ -35,7 +35,7 @@ from .policy import (
     REJECT_UPPER_FULL,
     reject_exit_code,
 )
-from .runner import _parse_args, main
+from .runner import _parse_args, _write_result_json, main
 from .types import (
     ClassificationPlan,
     ClassifyOutcome,
@@ -71,6 +71,7 @@ __all__ = [
     "_NS_UPPER",
     "_NS_WORK",
     "_parse_args",
+    "_write_result_json",
     "build_live_snapshot_in_namespace",
     "check_ignore_factory",
     "direct_merge_factory",

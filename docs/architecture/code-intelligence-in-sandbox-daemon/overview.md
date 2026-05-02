@@ -1,8 +1,8 @@
 # Code Intelligence — In-Sandbox Daemon Migration
 
-**Status:** Phase 3.5 / 3.6 closure documented; Phase 5 transport rollout not started
+**Status:** Phase 6 daemon-local overlay fold implemented and live-benchmarked
 **Date approved:** 2026-05-02
-**Last amended:** 2026-05-03 (recorded the stable `run_sync` fallback-loop fix: the old ~5.5 s public RPC floor was fresh-event-loop churn, not daemon/LSP/SQLite latency)
+**Last amended:** 2026-05-03 (recorded Phase 6 daemon-local `svc.cmd` overlay fold live result: 10x p50 1.805s)
 **Predecessor:** [`code-intelligence-merged-into-sandbox.md`](../code-intelligence-merged-into-sandbox.md) — CI moved into the `sandbox/` package; still ran orchestrator-side
 **Estimated effort:** ~42-50 engineering days (≈8.5-10 weeks)
 
@@ -27,9 +27,10 @@ Moving the engine into the sandbox eliminates the network for hot paths, lets in
 | [3.5](./phase-03-5-concurrency-perf-and-sqlite-index.md) | Concurrency/perf E2E suite + SQLite-backed index storage | 3 days | 2 days | 5 days |
 | [3.6](./phase-03-6-lsp-server-upgrade.md) | LSP backend experiment — qualify basedpyright (alternative pyright); rewire `LspClient` to chosen backend; benchmark vs jedi.Script | 2-3 days (1d spike + 2d eng) | 2-3 days | 5-6 days |
 | [4](./phase-04-svc-cmd-hot-path.md) | `svc.cmd` hot path through the daemon (superseded by 3.5 / 3.6 closure pass) | 2 days | 2-3 days | 4-5 days |
-| [5](./phase-05-ci-rpc-verb-and-flag-flip.md) | First-class `ci_rpc` verb + flag flip + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
+| [5](./phase-05-ci-rpc-verb-and-flag-flip.md) | First-class `ci_rpc` verb + daemon default + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
+| [6](./phase-06-fold-daemon-overlay-stages.md) | Fold daemon-side overlay stages into one in-namespace process | 0.5-1 day | 0.5-1 day | 1.5-2.5 days |
 
-Phase order is **strict** (0 → 5, including 3.5 and 3.6). Each phase is independently mergeable because the flag-off path keeps working.
+Phase order is **strict** (0 → 6, including 3.5 and 3.6). During the migration, each phase was independently mergeable because the flag-off path kept working; after the Phase 5 cleanup, transport-backed sandboxes are daemon-default.
 
 **Why Phase 3.5 between 3 and 4:** Phase 3 lands the OCC engine inside the daemon. Before pushing the highest-volume hot path (`svc.cmd`, Phase 4) through that engine, we want a perf safety net that proves the daemon survives sustained load without memory leak, FD leak, or contention pathologies. Phase 3.5 also migrates the index from pickle to SQLite so per-file `refresh()` doesn't rewrite the world.
 
@@ -110,7 +111,7 @@ Symbol index build runs in the daemon's **background thread** (Phase 3.3 fix), s
 - **Predictable latency.** Today's "first CI call is slow" pattern is hard to debug because it shows up only in the first user-visible op.
 - **Production guarantees.** A user starting a CodeAct session expects the agent to be productive immediately, not after a 1.5-3s mystery stall.
 - **Sandbox restart visibility.** Daytona may auto-pause/resume sandboxes; without eager bootstrap, the first call after resume hits the same cold-start cost. Eager hook on `start_sandbox` covers this.
-- **Trade-off:** transport-only tests pay the bootstrap cost when `EOS_CI_IN_SANDBOX=1`. Acceptable; this keeps lifecycle behavior single-path.
+- **Trade-off:** transport-only tests pay the eager-bootstrap cost when the lifecycle hook is enabled. Acceptable; this keeps lifecycle behavior single-path.
 
 ## Storage boundary (load-bearing)
 
@@ -128,14 +129,14 @@ There are **two distinct storage classes** in this design. Mixing them would be 
 
 ## Post-cutover role of `SandboxTransport`
 
-After Phase 5 lands and the flag flips:
+After Phase 5 lands and transport-backed sandboxes become daemon-default:
 
 | Phase | `SandboxTransport.exec/read/write` role |
 |---|---|
 | Today (pre-Phase 0) | Primary mutation/query channel; every CI op rides on it |
 | Phase 0-4 (flag-off default) | Same as today |
 | Phase 0-4 (flag-on opt-in) | Bootstrap (upload bundle, spawn daemon at `create_sandbox`) + every RPC via shim |
-| Phase 5 (default-on) | Bootstrap + recovery only — daemon ops ride the native `ci_rpc` verb |
+| Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the native `ci_rpc` verb |
 | Post-Phase 6 (out of scope) | Bootstrap + recovery only; shim removed entirely |
 
 **Implication:** `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` became dead code by Phase 5 and were removed in the post-canary cleanup.
@@ -199,7 +200,7 @@ These are the choices that were surfaced before approval. Re-reading them is the
 | 5 | **Daemon transport** | Unix domain socket at `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`, length-prefixed msgpack frames. No TCP, no HTTP |
 | 6 | **Process model** | Single-process daemon, asyncio event loop, one worker thread per language server. The five HARD INVARIANTS are enforced by the same async locks used today, just resident in the daemon. **Socket binds BEFORE index build starts** — `query_symbols` returns empty until index ready |
 | 7 | **Failure model** | Any RPC may raise `CiDaemonUnavailable`; `CodeIntelligenceService` retries once after respawn, then surfaces a structured error. Edit-path failures (OCC abort, merge conflict) surface as today |
-| 8 | **Flag rollout** | `EOS_CI_IN_SANDBOX` (default `0` through Phase 4, `1` in Phase 5, removed in a future phase) |
+| 8 | **Backend selection** | Transport-backed sandboxes select `RpcCiBackend`; sandboxless/local flows select `InProcessCiBackend`. The old `EOS_CI_IN_SANDBOX=0` backend-selection rollback path is retired after the Phase 5 cleanup. |
 | 9 | **Wire format** | msgpack with explicit schema versioning (`{"v": 1, "op": "...", ...}`); unknown fields rejected, unknown op = `UnsupportedOp`. **msgpack vendored into bundle** (~50KB) for offline-image compatibility |
 
 ## The five HARD INVARIANTS (must NOT regress)

@@ -41,6 +41,7 @@ from sandbox.code_intelligence.overlay.run import (
     reject_exit_code,
     walk_upperdir,
     write_diff_ndjson,
+    _write_result_json,
     write_reject_ndjson,
 )
 
@@ -638,6 +639,31 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
             "snapshot_timings": {"total": 0.1},
             "run_timings": {"total": 0.2},
         }
+    }
+
+
+def test_write_result_json_is_atomic_completion_marker(tmp_path: Path) -> None:
+    path = _write_result_json(
+        run_dir=str(tmp_path),
+        snap="snapX",
+        exit_code=7,
+        rejected={"reason": "overlay_rejected_dotgit_writes", "paths": [".git/config"]},
+        snapshot_timings={"total": 0.1},
+        run_timings={"total": 0.2},
+    )
+
+    assert Path(path).name == "result.json"
+    assert not list(tmp_path.glob("result.json.tmp-*"))
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert payload == {
+        "snap": "snapX",
+        "exit_code": 7,
+        "rejected": {
+            "reason": "overlay_rejected_dotgit_writes",
+            "paths": [".git/config"],
+        },
+        "snapshot_timings": {"total": 0.1},
+        "run_timings": {"total": 0.2},
     }
 
 

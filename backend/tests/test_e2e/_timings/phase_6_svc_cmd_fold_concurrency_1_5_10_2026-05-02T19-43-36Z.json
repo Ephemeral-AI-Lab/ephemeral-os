@@ -1,0 +1,728 @@
+{
+  "phase": 6,
+  "test_name": "svc_cmd_fold_concurrency_1_5_10",
+  "timestamp": "2026-05-02T19:43:36.208316+00:00",
+  "steps": [
+    {
+      "name": "ci_service_construct",
+      "elapsed_s": 25.18420183401031,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_1x_wall",
+      "elapsed_s": 7.179584458004683,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_5x_wall",
+      "elapsed_s": 2.085380541990162,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_10x_wall",
+      "elapsed_s": 2.2620850420062197,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 36.711251876011374,
+  "distributions": {
+    "svc_cmd_1x_latency": {
+      "p50": 6.734964458999457,
+      "p95": 6.734964458999457,
+      "p99": 6.734964458999457,
+      "min": 6.734964458999457,
+      "max": 6.734964458999457,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_cleanup": {
+      "p50": 3.8e-05,
+      "p95": 3.8e-05,
+      "p99": 3.8e-05,
+      "min": 3.8e-05,
+      "max": 3.8e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_commit_tree": {
+      "p50": 0.043547,
+      "p95": 0.043547,
+      "p99": 0.043547,
+      "min": 0.043547,
+      "max": 0.043547,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_git_add": {
+      "p50": 0.236631,
+      "p95": 0.236631,
+      "p99": 0.236631,
+      "min": 0.236631,
+      "max": 0.236631,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_prepare_env": {
+      "p50": 0.000165,
+      "p95": 0.000165,
+      "p99": 0.000165,
+      "min": 0.000165,
+      "max": 0.000165,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_read_tree": {
+      "p50": 0.038342,
+      "p95": 0.038342,
+      "p99": 0.038342,
+      "min": 0.038342,
+      "max": 0.038342,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_rev_parse_head": {
+      "p50": 0.023942,
+      "p95": 0.023942,
+      "p99": 0.023942,
+      "min": 0.023942,
+      "max": 0.023942,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_temp_index": {
+      "p50": 0.000787,
+      "p95": 0.000787,
+      "p99": 0.000787,
+      "min": 0.000787,
+      "max": 0.000787,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_total": {
+      "p50": 0.383755,
+      "p95": 0.383755,
+      "p99": 0.383755,
+      "min": 0.383755,
+      "max": 0.383755,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_validate_repo": {
+      "p50": 7e-06,
+      "p95": 7e-06,
+      "p99": 7e-06,
+      "min": 7e-06,
+      "max": 7e-06,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_write_tree": {
+      "p50": 0.039244,
+      "p95": 0.039244,
+      "p99": 0.039244,
+      "min": 0.039244,
+      "max": 0.039244,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_apply_direct_routes": {
+      "p50": 2e-05,
+      "p95": 2e-05,
+      "p99": 2e-05,
+      "min": 2e-05,
+      "max": 2e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_build_classifier": {
+      "p50": 1.7e-05,
+      "p95": 1.7e-05,
+      "p99": 1.7e-05,
+      "min": 1.7e-05,
+      "max": 1.7e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_classify": {
+      "p50": 0.064842,
+      "p95": 0.064842,
+      "p99": 0.064842,
+      "min": 0.064842,
+      "max": 0.064842,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_decode_command": {
+      "p50": 0.000161,
+      "p95": 0.000161,
+      "p99": 0.000161,
+      "min": 0.000161,
+      "max": 0.000161,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_setup_mounts": {
+      "p50": 0.100381,
+      "p95": 0.100381,
+      "p99": 0.100381,
+      "min": 0.100381,
+      "max": 0.100381,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_total": {
+      "p50": 0.880096,
+      "p95": 0.880096,
+      "p99": 0.880096,
+      "min": 0.880096,
+      "max": 0.880096,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_user_command": {
+      "p50": 0.328394,
+      "p95": 0.328394,
+      "p99": 0.328394,
+      "min": 0.328394,
+      "max": 0.328394,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_walk_upperdir": {
+      "p50": 0.000959,
+      "p95": 0.000959,
+      "p99": 0.000959,
+      "min": 0.000959,
+      "max": 0.000959,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_cleanup": {
+      "p50": 0.000779,
+      "p95": 0.000779,
+      "p99": 0.000779,
+      "min": 0.000779,
+      "max": 0.000779,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_commit": {
+      "p50": 0.002381,
+      "p95": 0.002381,
+      "p99": 0.002381,
+      "min": 0.002381,
+      "max": 0.002381,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_diff": {
+      "p50": 0.000535,
+      "p95": 0.000535,
+      "p99": 0.000535,
+      "min": 0.000535,
+      "max": 0.000535,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_envelope": {
+      "p50": 0.000792,
+      "p95": 0.000792,
+      "p99": 0.000792,
+      "min": 0.000792,
+      "max": 0.000792,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_stdout": {
+      "p50": 7.5e-05,
+      "p95": 7.5e-05,
+      "p99": 7.5e-05,
+      "min": 7.5e-05,
+      "max": 7.5e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_total": {
+      "p50": 1.31174,
+      "p95": 1.31174,
+      "p99": 1.31174,
+      "min": 1.31174,
+      "max": 1.31174,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_unshare": {
+      "p50": 1.291883,
+      "p95": 1.291883,
+      "p99": 1.291883,
+      "min": 1.291883,
+      "max": 1.291883,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_upload_runtime": {
+      "p50": 0.013609,
+      "p95": 0.013609,
+      "p99": 0.013609,
+      "min": 0.013609,
+      "max": 0.013609,
+      "n": 1.0
+    },
+    "svc_cmd_1x_rpc_call_total": {
+      "p50": 6.73493,
+      "p95": 6.73493,
+      "p99": 6.73493,
+      "min": 6.73493,
+      "max": 6.73493,
+      "n": 1.0
+    },
+    "svc_cmd_5x_latency": {
+      "p50": 1.6669502500008093,
+      "p95": 1.6727960830030497,
+      "p99": 1.6727960830030497,
+      "min": 1.6627187920094002,
+      "max": 1.6727960830030497,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_cleanup": {
+      "p50": 3.3e-05,
+      "p95": 3.4e-05,
+      "p99": 3.4e-05,
+      "min": 2.7e-05,
+      "max": 3.4e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_commit_tree": {
+      "p50": 0.036293,
+      "p95": 0.036645,
+      "p99": 0.036645,
+      "min": 0.036182,
+      "max": 0.036645,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_git_add": {
+      "p50": 0.080305,
+      "p95": 0.08077,
+      "p99": 0.08077,
+      "min": 0.077855,
+      "max": 0.08077,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_prepare_env": {
+      "p50": 0.000193,
+      "p95": 0.000221,
+      "p99": 0.000221,
+      "min": 0.000183,
+      "max": 0.000221,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_read_tree": {
+      "p50": 0.042082,
+      "p95": 0.042742,
+      "p99": 0.042742,
+      "min": 0.041668,
+      "max": 0.042742,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_rev_parse_head": {
+      "p50": 0.026849,
+      "p95": 0.027515,
+      "p99": 0.027515,
+      "min": 0.02596,
+      "max": 0.027515,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_temp_index": {
+      "p50": 0.001043,
+      "p95": 0.001119,
+      "p99": 0.001119,
+      "min": 0.000933,
+      "max": 0.001119,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_total": {
+      "p50": 0.223577,
+      "p95": 0.224618,
+      "p99": 0.224618,
+      "min": 0.219411,
+      "max": 0.224618,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_validate_repo": {
+      "p50": 1.1e-05,
+      "p95": 2.1e-05,
+      "p99": 2.1e-05,
+      "min": 9e-06,
+      "max": 2.1e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_write_tree": {
+      "p50": 0.035209,
+      "p95": 0.035575,
+      "p99": 0.035575,
+      "min": 0.034854,
+      "max": 0.035575,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_apply_direct_routes": {
+      "p50": 1.9e-05,
+      "p95": 4.5e-05,
+      "p99": 4.5e-05,
+      "min": 1.8e-05,
+      "max": 4.5e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_build_classifier": {
+      "p50": 1.4e-05,
+      "p95": 1.5e-05,
+      "p99": 1.5e-05,
+      "min": 1.1e-05,
+      "max": 1.5e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_classify": {
+      "p50": 0.060783,
+      "p95": 0.061224,
+      "p99": 0.061224,
+      "min": 0.060531,
+      "max": 0.061224,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_decode_command": {
+      "p50": 0.000178,
+      "p95": 0.00019,
+      "p99": 0.00019,
+      "min": 0.000173,
+      "max": 0.00019,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_setup_mounts": {
+      "p50": 0.080935,
+      "p95": 0.081069,
+      "p99": 0.081069,
+      "min": 0.0807,
+      "max": 0.081069,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_total": {
+      "p50": 0.688908,
+      "p95": 0.695395,
+      "p99": 0.695395,
+      "min": 0.685765,
+      "max": 0.695395,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_user_command": {
+      "p50": 0.320529,
+      "p95": 0.327399,
+      "p99": 0.327399,
+      "min": 0.319664,
+      "max": 0.327399,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_walk_upperdir": {
+      "p50": 0.000821,
+      "p95": 0.00085,
+      "p99": 0.00085,
+      "min": 0.000808,
+      "max": 0.00085,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_cleanup": {
+      "p50": 0.004159,
+      "p95": 0.005111,
+      "p99": 0.005111,
+      "min": 0.001211,
+      "max": 0.005111,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_commit": {
+      "p50": 0.005446,
+      "p95": 0.008123,
+      "p99": 0.008123,
+      "min": 0.004157,
+      "max": 0.008123,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_diff": {
+      "p50": 0.000172,
+      "p95": 0.000314,
+      "p99": 0.000314,
+      "min": 0.000101,
+      "max": 0.000314,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_envelope": {
+      "p50": 0.000495,
+      "p95": 0.000757,
+      "p99": 0.000757,
+      "min": 0.000209,
+      "max": 0.000757,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_stdout": {
+      "p50": 8e-05,
+      "p95": 0.000184,
+      "p99": 0.000184,
+      "min": 5.8e-05,
+      "max": 0.000184,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_total": {
+      "p50": 1.177394,
+      "p95": 1.185597,
+      "p99": 1.185597,
+      "min": 1.16936,
+      "max": 1.185597,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_unshare": {
+      "p50": 1.167705,
+      "p95": 1.173494,
+      "p99": 1.173494,
+      "min": 1.161773,
+      "max": 1.173494,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_upload_runtime": {
+      "p50": 0.000132,
+      "p95": 0.000146,
+      "p99": 0.000146,
+      "min": 3.5e-05,
+      "max": 0.000146,
+      "n": 5.0
+    },
+    "svc_cmd_5x_rpc_call_total": {
+      "p50": 1.666927,
+      "p95": 1.672782,
+      "p99": 1.672782,
+      "min": 1.662694,
+      "max": 1.672782,
+      "n": 5.0
+    },
+    "svc_cmd_10x_latency": {
+      "p50": 1.8054213330033235,
+      "p95": 1.825217583013,
+      "p99": 1.825217583013,
+      "min": 1.788585416987189,
+      "max": 1.825217583013,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_cleanup": {
+      "p50": 4.1e-05,
+      "p95": 7.3e-05,
+      "p99": 7.3e-05,
+      "min": 2.8e-05,
+      "max": 7.3e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_commit_tree": {
+      "p50": 0.037546,
+      "p95": 0.041461,
+      "p99": 0.041461,
+      "min": 0.035063,
+      "max": 0.041461,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_git_add": {
+      "p50": 0.08655,
+      "p95": 0.097676,
+      "p99": 0.097676,
+      "min": 0.080426,
+      "max": 0.097676,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_prepare_env": {
+      "p50": 0.000199,
+      "p95": 0.000217,
+      "p99": 0.000217,
+      "min": 0.000182,
+      "max": 0.000217,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_read_tree": {
+      "p50": 0.045894,
+      "p95": 0.048396,
+      "p99": 0.048396,
+      "min": 0.043404,
+      "max": 0.048396,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_rev_parse_head": {
+      "p50": 0.028629,
+      "p95": 0.030251,
+      "p99": 0.030251,
+      "min": 0.027723,
+      "max": 0.030251,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_temp_index": {
+      "p50": 0.000979,
+      "p95": 0.001019,
+      "p99": 0.001019,
+      "min": 0.000921,
+      "max": 0.001019,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_total": {
+      "p50": 0.237565,
+      "p95": 0.250347,
+      "p99": 0.250347,
+      "min": 0.230268,
+      "max": 0.250347,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_validate_repo": {
+      "p50": 9e-06,
+      "p95": 2.9e-05,
+      "p99": 2.9e-05,
+      "min": 7e-06,
+      "max": 2.9e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_write_tree": {
+      "p50": 0.036503,
+      "p95": 0.038097,
+      "p99": 0.038097,
+      "min": 0.033948,
+      "max": 0.038097,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_apply_direct_routes": {
+      "p50": 2.2e-05,
+      "p95": 3.8e-05,
+      "p99": 3.8e-05,
+      "min": 1.7e-05,
+      "max": 3.8e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_build_classifier": {
+      "p50": 1.5e-05,
+      "p95": 1.9e-05,
+      "p99": 1.9e-05,
+      "min": 1.2e-05,
+      "max": 1.9e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_classify": {
+      "p50": 0.065846,
+      "p95": 0.068739,
+      "p99": 0.068739,
+      "min": 0.064541,
+      "max": 0.068739,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_decode_command": {
+      "p50": 0.000188,
+      "p95": 0.000409,
+      "p99": 0.000409,
+      "min": 0.000164,
+      "max": 0.000409,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_setup_mounts": {
+      "p50": 0.09582,
+      "p95": 0.105597,
+      "p99": 0.105597,
+      "min": 0.091833,
+      "max": 0.105597,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_total": {
+      "p50": 0.786367,
+      "p95": 0.800467,
+      "p99": 0.800467,
+      "min": 0.761556,
+      "max": 0.800467,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_user_command": {
+      "p50": 0.384815,
+      "p95": 0.396133,
+      "p99": 0.396133,
+      "min": 0.347585,
+      "max": 0.396133,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_walk_upperdir": {
+      "p50": 0.000834,
+      "p95": 0.000893,
+      "p99": 0.000893,
+      "min": 0.000806,
+      "max": 0.000893,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_cleanup": {
+      "p50": 0.000365,
+      "p95": 0.005199,
+      "p99": 0.005199,
+      "min": 0.000271,
+      "max": 0.005199,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_commit": {
+      "p50": 0.00176,
+      "p95": 0.006655,
+      "p99": 0.006655,
+      "min": 0.000971,
+      "max": 0.006655,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_diff": {
+      "p50": 0.000114,
+      "p95": 0.00025,
+      "p99": 0.00025,
+      "min": 0.000104,
+      "max": 0.00025,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_envelope": {
+      "p50": 0.000169,
+      "p95": 0.000245,
+      "p99": 0.000245,
+      "min": 0.000106,
+      "max": 0.000245,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_stdout": {
+      "p50": 4.9e-05,
+      "p95": 0.000569,
+      "p99": 0.000569,
+      "min": 4.4e-05,
+      "max": 0.000569,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_total": {
+      "p50": 1.297512,
+      "p95": 1.305785,
+      "p99": 1.305785,
+      "min": 1.284484,
+      "max": 1.305785,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_unshare": {
+      "p50": 1.292056,
+      "p95": 1.303704,
+      "p99": 1.303704,
+      "min": 1.275786,
+      "max": 1.303704,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_upload_runtime": {
+      "p50": 6.8e-05,
+      "p95": 0.000142,
+      "p99": 0.000142,
+      "min": 2.9e-05,
+      "max": 0.000142,
+      "n": 10.0
+    },
+    "svc_cmd_10x_rpc_call_total": {
+      "p50": 1.805392,
+      "p95": 1.825204,
+      "p99": 1.825204,
+      "min": 1.788567,
+      "max": 1.825204,
+      "n": 10.0
+    }
+  },
+  "values": {
+    "rss_at_start": 61.23,
+    "fds_at_start": 33.0,
+    "svc_cmd_1x_wall_s": 7.179262624995317,
+    "svc_cmd_1x_throughput": 0.13929007089368767,
+    "svc_cmd_1x_errors": 0.0,
+    "svc_cmd_1x_status_committed": 1.0,
+    "svc_cmd_5x_wall_s": 2.0848812079930212,
+    "svc_cmd_5x_throughput": 2.398218172254127,
+    "svc_cmd_5x_errors": 0.0,
+    "svc_cmd_5x_status_committed": 5.0,
+    "svc_cmd_10x_wall_s": 2.2617952919972595,
+    "svc_cmd_10x_throughput": 4.421266608601694,
+    "svc_cmd_10x_errors": 0.0,
+    "svc_cmd_10x_status_committed": 10.0,
+    "rss_at_end": 61.98,
+    "fds_at_end": 33.0,
+    "rss_growth_mb": 0.75,
+    "fd_growth": 0.0,
+    "daemon_local_unshare_subprocess_count": 16.0,
+    "daemon_local_git_snapshot_stage_count": 0.0
+  }
+}
