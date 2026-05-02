@@ -52,7 +52,6 @@ def _registry():
 
 def _meta_line(**overrides) -> str:
     base = {
-        "snap": "deadbeef",
         "exit_code": 0,
         "upper_bytes": 0,
         "upper_files": 0,
@@ -63,7 +62,6 @@ def _meta_line(**overrides) -> str:
         "whiteouts_gitignore_refused": 0,
         "dotgit_rejects": 0,
         "direct_merged_bytes": 0,
-        "snapshot_timings": {},
         "run_timings": {},
         "warnings": [],
     }
@@ -80,10 +78,8 @@ def test_parse_ndjson_returns_policy_reject() -> None:
     raw = json.dumps(
         {
             "_reject": {
-                "snap": "abc",
                 "reason": "overlay_rejected_dotgit_writes",
                 "paths": [".git/config"],
-                "snapshot_timings": {"total": 0.4},
                 "run_timings": {"classify": 0.2},
             }
         }
@@ -92,7 +88,6 @@ def test_parse_ndjson_returns_policy_reject() -> None:
     assert isinstance(result, OverlayPolicyReject)
     assert result.reason == "overlay_rejected_dotgit_writes"
     assert result.paths == (".git/config",)
-    assert result.snapshot_timings == {"total": 0.4}
     assert result.run_timings == {"classify": 0.2}
 
 
@@ -120,7 +115,6 @@ def test_parse_ndjson_meta_and_one_gitinclude_entry() -> None:
     )
     result = parse_diff_ndjson(raw)
     assert isinstance(result, OverlayDiff)
-    assert result.snap == "deadbeef"
     assert result.upper_bytes == 42
     assert result.gitignore_paths == (".venv/cfg",)
     assert len(result.gitinclude_changes) == 1
@@ -839,7 +833,6 @@ async def test_auditor_surfaces_policy_reject(tmp_path: Path) -> None:
     reject_payload = json.dumps(
         {
             "_reject": {
-                "snap": "x",
                 "reason": "overlay_rejected_dotgit_writes",
                 "paths": [".git/config"],
             }

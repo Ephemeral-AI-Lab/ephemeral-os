@@ -27,7 +27,6 @@ def _registry() -> None:
 
 def _meta_line(**overrides: Any) -> str:
     base = {
-        "snap": "deadbeef",
         "exit_code": 0,
         "upper_bytes": 0,
         "upper_files": 0,
@@ -38,7 +37,6 @@ def _meta_line(**overrides: Any) -> str:
         "whiteouts_gitignore_refused": 0,
         "dotgit_rejects": 0,
         "direct_merged_bytes": 0,
-        "snapshot_timings": {"total": 0.25, "git_status": 0.01},
         "run_timings": {"total": 0.6, "classify": 0.07},
         "warnings": [],
     }
@@ -50,10 +48,8 @@ def _reject_line() -> str:
     return json.dumps(
         {
             "_reject": {
-                "snap": "deadbeef",
                 "reason": "overlay_rejected_dotgit_writes",
                 "paths": [".git/config"],
-                "snapshot_timings": {"total": 0.25},
                 "run_timings": {"total": 0.6, "classify": 0.07},
             }
         },
@@ -251,7 +247,6 @@ def _install_daemon_subprocess(
         (run_dir / "result.json").write_text(
             json.dumps(
                 {
-                    "snap": "deadbeef",
                     "exit_code": user_exit,
                     "rejected": (
                         {
@@ -261,7 +256,6 @@ def _install_daemon_subprocess(
                         if user_exit == 201
                         else None
                     ),
-                    "snapshot_timings": {"total": 0.25},
                     "run_timings": {"total": 0.6},
                 },
                 separators=(",", ":"),
@@ -288,7 +282,6 @@ def _normalize_paths(value: Any, repo: Path) -> Any:
 def _normalized_result(result: SimpleNamespace, repo: Path) -> dict[str, Any]:
     payload = dict(vars(result))
     payload = _normalize_paths(payload, repo)
-    payload["git_snapshot_timings"] = sorted(payload["git_snapshot_timings"])
     payload["overlay_run_timings"] = sorted(payload["overlay_run_timings"])
     payload.pop("overlay_stage_timings", None)
     return payload

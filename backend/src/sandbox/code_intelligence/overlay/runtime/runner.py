@@ -52,19 +52,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def _write_result_json(
     *,
     run_dir: str,
-    snap: str,
     exit_code: int,
     rejected: dict[str, object] | None,
-    snapshot_timings: dict[str, float],
     run_timings: dict[str, float],
 ) -> str:
     path = os.path.join(run_dir, "result.json")
     tmp_path = f"{path}.tmp-{os.getpid()}"
     payload = {
-        "snap": snap,
         "exit_code": exit_code,
         "rejected": rejected,
-        "snapshot_timings": dict(snapshot_timings),
         "run_timings": dict(run_timings),
     }
     with open(tmp_path, "w", encoding="utf-8") as fh:
@@ -87,8 +83,6 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     run_dir = args.run_dir.rstrip("/")
     os.makedirs(run_dir, exist_ok=True)
 
-    snap = "lowerdir"
-    snapshot_timings: dict[str, float] = {}
     run_timings: dict[str, float] = {}
 
     try:
@@ -143,18 +137,14 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
         run_timings["total"] = round(time.perf_counter() - total_started, 6)
         write_reject_ndjson(
             run_dir=run_dir,
-            snap=snap,
             reject=result,
-            snapshot_timings=snapshot_timings,
             run_timings=run_timings,
         )
         exit_code = reject_exit_code(result.reason)
         _write_result_json(
             run_dir=run_dir,
-            snap=snap,
             exit_code=exit_code,
             rejected={"reason": result.reason, "paths": list(result.paths)},
-            snapshot_timings=snapshot_timings,
             run_timings=run_timings,
         )
         return exit_code
@@ -169,20 +159,16 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
 
     write_diff_ndjson(
         run_dir=run_dir,
-        snap=snap,
         exit_code=exit_code,
         outcome=result.to_outcome(direct_merged_bytes=direct_merged_bytes),
         upper_bytes=upper_bytes,
         upper_files=upper_files,
-        snapshot_timings=snapshot_timings,
         run_timings=run_timings,
     )
     _write_result_json(
         run_dir=run_dir,
-        snap=snap,
         exit_code=exit_code,
         rejected=None,
-        snapshot_timings=snapshot_timings,
         run_timings=run_timings,
     )
     return exit_code

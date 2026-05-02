@@ -11,13 +11,11 @@ from .types import ClassifyOutcome, PolicyRejectOutcome
 def write_diff_ndjson(
     *,
     run_dir: str,
-    snap: str,
     exit_code: int,
     outcome: ClassifyOutcome,
     upper_bytes: int,
     upper_files: int,
     warnings: list[str] | None = None,
-    snapshot_timings: dict[str, float] | None = None,
     run_timings: dict[str, float] | None = None,
 ) -> str:
     """Write ``$RUN_DIR/diff.ndjson`` and return its absolute path."""
@@ -26,7 +24,6 @@ def write_diff_ndjson(
     lines: list[str] = []
     meta = {
         "_meta": {
-            "snap": snap,
             "exit_code": exit_code,
             "upper_bytes": upper_bytes,
             "upper_files": upper_files,
@@ -37,7 +34,6 @@ def write_diff_ndjson(
             "whiteouts_gitignore_refused": outcome.whiteouts_gitignore_refused,
             "dotgit_rejects": outcome.dotgit_rejects,
             "direct_merged_bytes": outcome.direct_merged_bytes,
-            "snapshot_timings": dict(snapshot_timings or {}),
             "run_timings": dict(run_timings or {}),
             "warnings": list(warnings or ()),
         }
@@ -66,19 +62,15 @@ def write_diff_ndjson(
 def write_reject_ndjson(
     *,
     run_dir: str,
-    snap: str,
     reject: PolicyRejectOutcome,
-    snapshot_timings: dict[str, float] | None = None,
     run_timings: dict[str, float] | None = None,
 ) -> str:
     path = os.path.join(run_dir, "diff.ndjson")
     os.makedirs(run_dir, exist_ok=True)
     payload = {
         "_reject": {
-            "snap": snap,
             "reason": reject.reason,
             "paths": list(reject.paths),
-            "snapshot_timings": dict(snapshot_timings or {}),
             "run_timings": dict(run_timings or {}),
         }
     }

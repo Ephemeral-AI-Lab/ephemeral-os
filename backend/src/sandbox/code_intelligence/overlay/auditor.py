@@ -261,9 +261,6 @@ class OverlayAuditor:
                         stdout=stdout_text,
                         exit_code=script_exit,
                         reject=diff_or_reject,
-                        git_snapshot_timings=(
-                            diff_or_reject.snapshot_timings
-                        ),
                         overlay_run_timings=diff_or_reject.run_timings,
                     )
                     return result
@@ -288,7 +285,6 @@ class OverlayAuditor:
                         agent_id=agent_id,
                         description=description or "shell overlay",
                         attribute_changes=attribute_changes,
-                        git_snapshot_timings=diff.snapshot_timings,
                         overlay_run_timings=diff.run_timings,
                     ),
                 )
@@ -411,7 +407,6 @@ class OverlayAuditor:
                         stdout=stdout_text,
                         exit_code=script_exit,
                         reject=diff_or_reject,
-                        git_snapshot_timings=diff_or_reject.snapshot_timings,
                         overlay_run_timings=diff_or_reject.run_timings,
                     )
                     return result
@@ -436,7 +431,6 @@ class OverlayAuditor:
                         agent_id=agent_id,
                         description=description or "shell overlay",
                         attribute_changes=attribute_changes,
-                        git_snapshot_timings=diff.snapshot_timings,
                         overlay_run_timings=diff.run_timings,
                     ),
                 )
@@ -670,7 +664,7 @@ class OverlayAuditor:
         logger.warning(
             "overlay command summary: total=%.3fs status=%s exit_code=%s "
             "conflict_file=%s conflict_reason=%s error=%s sandbox_id=%s "
-            "run_dir=%s timings=%s git_snapshot_timings=%s overlay_run_timings=%s "
+            "run_dir=%s timings=%s overlay_run_timings=%s "
             "command=%r",
             total,
             status,
@@ -681,7 +675,6 @@ class OverlayAuditor:
             self._sandbox_id,
             lease.run_dir,
             dict(stage_timings),
-            dict(getattr(result, "git_snapshot_timings", {}) or {}),
             dict(getattr(result, "overlay_run_timings", {}) or {}),
             _command_sample(command),
         )
@@ -996,7 +989,6 @@ class OverlayAuditor:
         agent_id: str,
         description: str,
         attribute_changes: bool,
-        git_snapshot_timings: dict[str, float] | None = None,
         overlay_run_timings: dict[str, float] | None = None,
     ) -> SimpleNamespace:
         gitignore_paths = [
@@ -1024,7 +1016,6 @@ class OverlayAuditor:
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
-                git_snapshot_timings=git_snapshot_timings,
                 overlay_run_timings=overlay_run_timings,
             )
 
@@ -1043,7 +1034,6 @@ class OverlayAuditor:
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
-                git_snapshot_timings=git_snapshot_timings,
                 overlay_run_timings=overlay_run_timings,
             )
 
@@ -1067,7 +1057,6 @@ class OverlayAuditor:
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=warnings,
-                git_snapshot_timings=git_snapshot_timings,
                 overlay_run_timings=overlay_run_timings,
             )
 
@@ -1099,7 +1088,6 @@ class OverlayAuditor:
             git_conflict_reason=commit_result.conflict_reason or None,
             git_conflict_file=commit_result.conflict_file,
             warnings=warnings,
-            git_snapshot_timings=git_snapshot_timings,
             overlay_run_timings=overlay_run_timings,
         )
 
@@ -1129,12 +1117,10 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
         reject_meta = first["_reject"]
         if not isinstance(reject_meta, dict):
             raise OverlayRunError(f"_reject block must be a dict, got {reject_meta!r}")
-        raw_snapshot_timings = reject_meta.get("snapshot_timings") or {}
         raw_run_timings = reject_meta.get("run_timings") or {}
         return OverlayPolicyReject(
             reason=str(reject_meta.get("reason") or ""),
             paths=tuple(str(p) for p in reject_meta.get("paths") or ()),
-            snapshot_timings=_parse_timing_dict(raw_snapshot_timings),
             run_timings=_parse_timing_dict(raw_run_timings),
         )
 
@@ -1173,10 +1159,8 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
         )
 
     gitignore_paths = tuple(str(p) for p in meta.get("gitignore_paths") or ())
-    raw_snapshot_timings = meta.get("snapshot_timings") or {}
     raw_run_timings = meta.get("run_timings") or {}
     return OverlayDiff(
-        snap=str(meta.get("snap") or ""),
         exit_code=int(meta.get("exit_code") or 0),
         upper_bytes=int(meta.get("upper_bytes") or 0),
         upper_files=int(meta.get("upper_files") or 0),
@@ -1189,7 +1173,6 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
             meta.get("whiteouts_gitignore_refused") or 0
         ),
         dotgit_rejects=int(meta.get("dotgit_rejects") or 0),
-        snapshot_timings=_parse_timing_dict(raw_snapshot_timings),
         run_timings=_parse_timing_dict(raw_run_timings),
         warnings=tuple(str(w) for w in meta.get("warnings") or ()),
     )
@@ -1229,7 +1212,6 @@ def _audit_result(
     git_conflict_reason: str | None,
     git_conflict_file: str | None,
     warnings: list[str],
-    git_snapshot_timings: dict[str, float] | None = None,
     overlay_run_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     # Preserve the downstream SimpleNamespace contract (changed_paths,
@@ -1250,7 +1232,6 @@ def _audit_result(
         mixed_gitinclude_gitignore=mixed_gitinclude_gitignore,
         mixed_partial_apply=mixed_partial_apply,
         warnings=list(warnings),
-        git_snapshot_timings=dict(git_snapshot_timings or {}),
         overlay_run_timings=dict(overlay_run_timings or {}),
     )
 
@@ -1260,7 +1241,6 @@ def _reject_result(
     stdout: str,
     exit_code: int,
     reject: OverlayPolicyReject,
-    git_snapshot_timings: dict[str, float] | None = None,
     overlay_run_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     detail = (
@@ -1283,7 +1263,6 @@ def _reject_result(
         mixed_gitinclude_gitignore=False,
         mixed_partial_apply=False,
         warnings=[detail],
-        git_snapshot_timings=dict(git_snapshot_timings or {}),
         overlay_run_timings=dict(overlay_run_timings or {}),
     )
 

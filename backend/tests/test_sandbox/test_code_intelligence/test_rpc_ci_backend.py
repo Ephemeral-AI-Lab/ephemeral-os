@@ -204,7 +204,6 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
             "mixed_gitinclude_gitignore": False,
             "mixed_partial_apply": False,
             "warnings": [],
-            "git_snapshot_timings": {"total": 0.1},
             "overlay_run_timings": {"total": 0.2},
         }
     )

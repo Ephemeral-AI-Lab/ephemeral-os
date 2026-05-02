@@ -184,7 +184,6 @@ async def test_svc_cmd_routes_through_service_and_preserves_shape(
             mixed_gitinclude_gitignore=False,
             mixed_partial_apply=False,
             warnings=[],
-            git_snapshot_timings={"total": 0.01},
             overlay_run_timings={"total": 0.02},
             overlay_stage_timings={"total": 0.03},
         )
@@ -237,7 +236,6 @@ async def test_svc_cmd_routes_through_service_and_preserves_shape(
         "mixed_gitinclude_gitignore": False,
         "mixed_partial_apply": False,
         "warnings": [],
-        "git_snapshot_timings": {"total": 0.01},
         "overlay_run_timings": {"total": 0.02},
         "overlay_stage_timings": {"total": 0.03},
     }

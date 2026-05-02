@@ -277,7 +277,6 @@ _SVC_CMD_RESULT_DEFAULTS: dict[str, Any] = {
     "mixed_gitinclude_gitignore": False,
     "mixed_partial_apply": False,
     "warnings": [],
-    "git_snapshot_timings": {},
     "overlay_run_timings": {},
     "overlay_stage_timings": {},
 }

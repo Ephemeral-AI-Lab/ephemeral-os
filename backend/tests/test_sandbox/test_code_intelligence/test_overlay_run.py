@@ -596,22 +596,18 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
 
     path = write_diff_ndjson(
         run_dir=str(tmp_path),
-        snap="deadbeef1234",
         exit_code=0,
         outcome=outcome,
         upper_bytes=99,
         upper_files=3,
-        snapshot_timings={},
         run_timings={"total": 0.5, "classify": 0.2},
     )
 
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     meta = json.loads(lines[0])
-    assert meta["_meta"]["snap"] == "deadbeef1234"
     assert meta["_meta"]["gitinclude_changes"] == 1
     assert meta["_meta"]["gitignore_changes"] == 1
     assert meta["_meta"]["gitignore_paths"] == [".venv/cfg"]
-    assert meta["_meta"]["snapshot_timings"] == {}
     assert meta["_meta"]["run_timings"] == {"total": 0.5, "classify": 0.2}
     entry = json.loads(lines[1])
     assert entry["path"] == "a.py"
@@ -625,18 +621,14 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
     reject = PolicyRejectOutcome(reason=REJECT_DOTGIT, paths=(".git/config",))
     path = write_reject_ndjson(
         run_dir=str(tmp_path),
-        snap="snapX",
         reject=reject,
-        snapshot_timings={"total": 0.1},
         run_timings={"total": 0.2},
     )
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     assert payload == {
         "_reject": {
-            "snap": "snapX",
             "reason": REJECT_DOTGIT,
             "paths": [".git/config"],
-            "snapshot_timings": {"total": 0.1},
             "run_timings": {"total": 0.2},
         }
     }
@@ -645,10 +637,8 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
 def test_write_result_json_is_atomic_completion_marker(tmp_path: Path) -> None:
     path = _write_result_json(
         run_dir=str(tmp_path),
-        snap="snapX",
         exit_code=7,
         rejected={"reason": "overlay_rejected_dotgit_writes", "paths": [".git/config"]},
-        snapshot_timings={"total": 0.1},
         run_timings={"total": 0.2},
     )
 
@@ -656,13 +646,11 @@ def test_write_result_json_is_atomic_completion_marker(tmp_path: Path) -> None:
     assert not list(tmp_path.glob("result.json.tmp-*"))
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     assert payload == {
-        "snap": "snapX",
         "exit_code": 7,
         "rejected": {
             "reason": "overlay_rejected_dotgit_writes",
             "paths": [".git/config"],
         },
-        "snapshot_timings": {"total": 0.1},
         "run_timings": {"total": 0.2},
     }
 
@@ -1061,12 +1049,10 @@ def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) ->
 
     path = write_diff_ndjson(
         run_dir=str(tmp_path),
-        snap="deadbeef",
         exit_code=0,
         outcome=outcome,
         upper_bytes=999,
         upper_files=5,
-        snapshot_timings={"total": 0.2, "commit_tree": 0.03},
         run_timings={"total": 0.4, "user_command": 0.1},
     )
     raw = Path(path).read_text(encoding="utf-8")
@@ -1074,13 +1060,11 @@ def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) ->
 
     assert not isinstance(parsed, PolicyRejectOutcome)
     # No PolicyReject — parser returns OverlayDiff.
-    assert parsed.snap == "deadbeef"
     assert parsed.upper_bytes == 999
     assert parsed.upper_files == 5
     assert parsed.direct_merged_bytes == 123
     assert parsed.whiteouts_gitinclude == 1
     assert parsed.gitignore_paths == (".venv/cfg", "node_modules/pkg/index.js")
-    assert parsed.snapshot_timings == {"total": 0.2, "commit_tree": 0.03}
     assert parsed.run_timings == {"total": 0.4, "user_command": 0.1}
 
     kinds = [c.kind for c in parsed.gitinclude_changes]
@@ -1103,9 +1087,7 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
     )
     path = write_reject_ndjson(
         run_dir=str(tmp_path),
-        snap="abc",
         reject=reject,
-        snapshot_timings={"total": 0.3},
         run_timings={"total": 0.7},
     )
     raw = Path(path).read_text(encoding="utf-8")
@@ -1115,7 +1097,6 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
     # same schema).
     assert parsed.reason == "overlay_rejected_dotgit_writes"  # type: ignore[union-attr]
     assert parsed.paths == (".git/config", ".git/objects/a")  # type: ignore[union-attr]
-    assert parsed.snapshot_timings == {"total": 0.3}  # type: ignore[union-attr]
     assert parsed.run_timings == {"total": 0.7}  # type: ignore[union-attr]
 
 
