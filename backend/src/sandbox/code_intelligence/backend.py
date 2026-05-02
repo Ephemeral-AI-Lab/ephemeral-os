@@ -10,17 +10,16 @@ Three artifacts live here:
 * :class:`CiBackend` — typing.Protocol that every backend implements.
 * :class:`InProcessCiBackend` — wraps today's in-process logic. This is the
   default backend selected when ``EOS_CI_IN_SANDBOX`` is unset.
-* :class:`RpcCiBackend` — the in-sandbox path. Phase 1 implements indexing and
-  symbol queries through a one-shot sandbox runner; later daemon phases add the
-  remaining RPC verbs.
+* :class:`RpcCiBackend` — the in-sandbox path. Phase 3.5 collapsed the
+  Phase 1 pickle-snapshot bootstrap and Phase 3 daemon dispatch into a single
+  ``ensure_daemon → index_ready → query`` pipeline; the orchestrator no
+  longer holds business state.
 """
 
 from __future__ import annotations
 
-import json
+import dataclasses
 import logging
-import pickle
-import shlex
 import threading
 from collections.abc import Sequence
 from pathlib import Path
@@ -149,6 +148,8 @@ class InProcessCiBackend:
         sandbox: Any = None,
         *,
         transport: SandboxTransport | None = None,
+        edit_history: Any | None = None,
+        symbol_index_persistence: Any | None = None,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
@@ -163,8 +164,12 @@ class InProcessCiBackend:
             sandbox=sandbox,
             transport=transport,
             sandbox_id=sandbox_id if transport is not None else "",
+            persistence=symbol_index_persistence,
         )
-        self.arbiter = Arbiter(workspace_root=workspace_root)
+        self.arbiter = Arbiter(
+            workspace_root=workspace_root,
+            edit_history=edit_history,
+        )
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
         self.lsp_client = LspClient(
@@ -427,16 +432,25 @@ _RPC_NOT_READY = "RpcCiBackend method is not implemented until the daemon RPC ph
 
 
 class RpcCiBackend:
-    """Daemon-bound backend (Phase 2: daemon lifecycle + Phase 1 index cache).
+    """Daemon-bound backend.
 
-    Selected when ``EOS_CI_IN_SANDBOX=1`` and a ``transport`` + ``sandbox_id``
-    are available. Phase 1 implements ``ensure_initialized`` (runs the
-    in-sandbox indexer + downloads the pickled snapshot) and ``query_symbols``
-    (searches the orchestrator-side cache). Phase 2 adds daemon lifecycle
-    cleanup; business verbs still move to real RPC calls in later phases.
+    Phase 1 shipped ``ensure_initialized`` + ``query_symbols`` against the
+    orchestrator-side cache. Phase 2 added daemon lifecycle cleanup. Phase 3
+    routed every code-intelligence verb through the daemon's framed-msgpack
+    RPC dispatch via :class:`CiRpcClient`. Phase 3.5 retired the
+    orchestrator-side pickle snapshot fallback now that the daemon serves
+    queries directly from the SQLite ``IndexStore``: the orchestrator no
+    longer pulls ``index.snapshot`` over the wire and no longer caches
+    symbols. ``ensure_initialized`` simply launches the daemon and polls
+    ``index_ready``.
+
+    ``cmd`` (overlay-audited shell) is intentionally still raising
+    ``NotImplementedError`` — Phase 4 owns the ``svc.cmd`` hot path collapse.
     """
 
     is_initialized: bool = False
+    _INDEX_READY_TIMEOUT_S: float = 60.0
+    _INDEX_READY_POLL_S: float = 0.5
 
     def __init__(
         self,
@@ -450,10 +464,22 @@ class RpcCiBackend:
         self._transport = transport
         self.is_initialized = False
         self._init_lock = threading.Lock()
-        self._symbol_cache: dict[str, list[SymbolInfo]] = {}
-        self._cached_file_count = 0
-        self._cached_symbol_count = 0
-        self._snapshot_bytes = 0
+        self._client: Any = None  # lazily constructed CiRpcClient
+        self._client_lock = threading.Lock()
+
+    def _ensure_client(self) -> Any:
+        """Return a memoized :class:`CiRpcClient` over the configured transport."""
+        with self._client_lock:
+            if self._client is not None:
+                return self._client
+            from sandbox.code_intelligence.rpc.client import CiRpcClient
+
+            self._client = CiRpcClient(
+                self._transport,
+                self.sandbox_id,
+                self.workspace_root,
+            )
+            return self._client
 
     def ensure_initialized(self, wait: bool = True) -> bool:
         del wait  # The Phase 1 path always runs to completion.
@@ -465,14 +491,16 @@ class RpcCiBackend:
             return self.is_initialized
 
     async def _ensure_initialized_async(self) -> None:
-        from sandbox.code_intelligence.in_sandbox.ci_storage import (
-            workspace_root_hash,
-        )
-        from sandbox.code_intelligence.rpc.launcher import (
-            BUNDLE_REMOTE_DIR,
-            DaemonLauncher,
-            read_remote_file_via_exec,
-        )
+        """Launch the daemon and wait for the SymbolIndex background build.
+
+        Phase 3.5 retirement: no longer downloads ``index.snapshot`` and no
+        longer hydrates an orchestrator-side ``_symbol_cache``. The daemon
+        owns the canonical SQLite ``IndexStore`` and serves queries directly
+        from it.
+        """
+        import asyncio
+
+        from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
 
         await DaemonLauncher(
             self._transport,
@@ -480,69 +508,60 @@ class RpcCiBackend:
             self.workspace_root,
         ).ensure_daemon()
 
-        cmd = (
-            f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-            f"python3 -m sandbox.code_intelligence.in_sandbox.ci_index "
-            f"--workspace-root {shlex.quote(self.workspace_root)}"
+        client = self._ensure_client()
+        deadline = (
+            asyncio.get_event_loop().time() + self._INDEX_READY_TIMEOUT_S
         )
-        result = await self._transport.exec(self.sandbox_id, cmd, timeout=300)
-        exit_code = getattr(result, "exit_code", 1)
-        stdout = (getattr(result, "stdout", "") or "").strip()
-        if exit_code != 0:
-            raise RuntimeError(
-                f"ci_index failed (exit={exit_code}, sandbox={self.sandbox_id!r}): "
-                f"{stdout}"
-            )
-        # ci_index prints a single JSON object on the last stdout line.
-        try:
-            payload = json.loads(stdout.splitlines()[-1])
-        except (IndexError, json.JSONDecodeError) as exc:
-            raise RuntimeError(
-                f"ci_index produced unparseable stdout (sandbox={self.sandbox_id!r}): "
-                f"{stdout!r}"
-            ) from exc
-        if not payload.get("ok"):
-            raise RuntimeError(f"ci_index reported failure: {payload}")
-
-        snapshot_remote = payload.get("snapshot_path")
-        if not snapshot_remote:
-            home_resp = await self._transport.exec(
-                self.sandbox_id, "echo $HOME", timeout=10
-            )
-            home = (getattr(home_resp, "stdout", "") or "").strip() or "/root"
-            wh = workspace_root_hash(self.workspace_root)
-            snapshot_remote = f"{home}/.cache/eos-ci/{wh}/v1/index.snapshot"
-
-        # Daytona's ``fs.download_file`` returns intermittent 502s for binary
-        # payloads >= a few tens of KB. Fall back to chunked-base64 over exec
-        # which uses the same code path as the upload (proven reliable).
-        raw = await read_remote_file_via_exec(
-            self._transport, self.sandbox_id, snapshot_remote
-        )
-        cache = pickle.loads(raw)
-        if not isinstance(cache, dict):
-            raise RuntimeError(
-                f"ci_index snapshot is not a dict (sandbox={self.sandbox_id!r}): "
-                f"got {type(cache).__name__}"
-            )
-        symbol_count = sum(len(v) for v in cache.values() if isinstance(v, list))
+        while True:
+            try:
+                resp = await client.call("index_ready", {})
+            except Exception as exc:  # pragma: no cover - exposed via tests
+                logger.debug(
+                    "index_ready call failed during ensure_initialized: %s", exc
+                )
+                resp = None
+            if isinstance(resp, dict) and resp.get("ready"):
+                break
+            if asyncio.get_event_loop().time() >= deadline:
+                # Daemon is up but index isn't built yet — surface as initialised
+                # anyway so callers can attempt queries (which will return [] until
+                # the build finishes). Future polling can re-check.
+                break
+            await asyncio.sleep(self._INDEX_READY_POLL_S)
         with self._init_lock:
-            self._symbol_cache = cache
-            self._cached_file_count = int(payload.get("file_count", len(cache)))
-            self._cached_symbol_count = int(
-                payload.get("symbol_count", symbol_count)
-            )
-            self._snapshot_bytes = len(raw)
             self.is_initialized = True
 
+    # ------------------------------------------------------------------ helpers
+
+    def _call_sync(self, op: str, args: dict[str, Any] | None = None) -> Any:
+        """Send one RPC call synchronously (bridges asyncio internally)."""
+        client = self._ensure_client()
+        return run_sync(client.call(op, args or {}))
+
+    async def _call_async(
+        self, op: str, args: dict[str, Any] | None = None
+    ) -> Any:
+        client = self._ensure_client()
+        return await client.call(op, args or {})
+
     def warmup(self) -> None:
-        raise NotImplementedError(_RPC_NOT_READY)
+        # Phase 3: warmup is just "make sure ensure_initialized has run".
+        # Phase 4 may add a dedicated daemon op if needed.
+        self.ensure_initialized(wait=True)
 
     def rebind_sandbox(self, sandbox: Any) -> None:
-        raise NotImplementedError(_RPC_NOT_READY)
+        # Daemon's CodeIntelligenceService is constructed with sandbox=None
+        # and never needs an external sandbox handle — local-FS branches do
+        # the work. Rebinding is a no-op on the RPC side.
+        del sandbox
+        return None
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
-        raise NotImplementedError(_RPC_NOT_READY)
+        # Phase 4 is responsible for collapsing svc.cmd into the daemon.
+        del sandbox, command, kwargs
+        raise NotImplementedError(
+            "RpcCiBackend.cmd is reserved for Phase 4 (svc.cmd hot path)"
+        )
 
     def find_definitions(
         self,
@@ -551,7 +570,16 @@ class RpcCiBackend:
         line: int = 0,
         character: int = 0,
     ) -> list[SymbolInfo]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        rows = self._call_sync(
+            "find_definitions",
+            {
+                "file_path": file_path,
+                "symbol": symbol,
+                "line": line,
+                "character": character,
+            },
+        )
+        return [_symbol_info_from_dict(r) for r in (rows or [])]
 
     def find_references(
         self,
@@ -560,32 +588,43 @@ class RpcCiBackend:
         line: int = 0,
         character: int = 0,
     ) -> list[ReferenceInfo]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        rows = self._call_sync(
+            "find_references",
+            {
+                "file_path": file_path,
+                "symbol": symbol,
+                "line": line,
+                "character": character,
+            },
+        )
+        return [_reference_info_from_dict(r) for r in (rows or [])]
 
     def hover(self, file_path: str, line: int, character: int) -> HoverResult | None:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync(
+            "hover",
+            {"file_path": file_path, "line": line, "character": character},
+        )
+        if not result:
+            return None
+        return _hover_result_from_dict(result)
 
     def diagnostics(self, file_path: str) -> list[Diagnostic]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        rows = self._call_sync("diagnostics", {"file_path": file_path})
+        return [_diagnostic_from_dict(r) for r in (rows or [])]
 
     def query_symbols(self, query: str) -> list[SymbolInfo]:
-        # Phase 1: orchestrator-side cache. Phases 2-3 move this onto the daemon.
-        needle = query.lower().strip()
-        if not needle:
-            return []
-        results: list[SymbolInfo] = []
-        with self._init_lock:
-            cache_snapshot = self._symbol_cache
-        for symbols in cache_snapshot.values():
-            if not isinstance(symbols, list):
-                continue
-            for sym in symbols:
-                if needle in sym.name.lower():
-                    results.append(sym)
-        return results
+        # Phase 3.5: queries route through the daemon. The Phase 1
+        # orchestrator-side pickle cache fallback was retired once the daemon
+        # became the canonical owner of the SQLite IndexStore.
+        rows = self._call_sync("query_symbols", {"query": query})
+        return [_symbol_info_from_dict(r) for r in (rows or [])]
 
     def apply_edit(self, request: EditRequest) -> EditResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync(
+            "apply_edit",
+            {"request": _edit_request_to_dict(request)},
+        )
+        return _edit_result_from_dict(result)
 
     def commit_operation_against_base(
         self,
@@ -595,16 +634,29 @@ class RpcCiBackend:
         edit_type: str,
         description: str = "",
     ) -> OperationResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync(
+            "commit_operation_against_base",
+            {
+                "changes": [_operation_change_to_dict(c) for c in changes],
+                "agent_id": agent_id,
+                "edit_type": edit_type,
+                "description": description,
+            },
+        )
+        return _operation_result_from_dict(result)
 
     def commit_specs_many(
         self,
         requests: Sequence[dict[str, Any]],
     ) -> list[OperationResult]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        rows = self._call_sync(
+            "commit_specs_many", {"requests": list(requests)}
+        )
+        return [_operation_result_from_dict(r) for r in (rows or [])]
 
     def list_folder_files(self, folder: str) -> list[str]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        rows = self._call_sync("list_folder_files", {"folder": folder})
+        return list(rows or [])
 
     def write_file(
         self,
@@ -613,7 +665,16 @@ class RpcCiBackend:
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        normalized = _normalize_write_specs(specs)
+        result = self._call_sync(
+            "write_file",
+            {
+                "specs": [_writespec_to_dict(s) for s in normalized],
+                "agent_id": agent_id,
+                "description": description,
+            },
+        )
+        return _operation_result_from_dict(result)
 
     def edit_file(
         self,
@@ -622,7 +683,16 @@ class RpcCiBackend:
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        normalized = _normalize_edit_specs(specs)
+        result = self._call_sync(
+            "edit_file",
+            {
+                "specs": [_editspec_to_dict(s) for s in normalized],
+                "agent_id": agent_id,
+                "description": description,
+            },
+        )
+        return _operation_result_from_dict(result)
 
     def delete_file(
         self,
@@ -631,7 +701,21 @@ class RpcCiBackend:
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        encoded: list[Any] = []
+        for entry in paths:
+            if isinstance(entry, str):
+                encoded.append(entry)
+            else:
+                encoded.append(_deletespec_to_dict(entry))
+        result = self._call_sync(
+            "delete_file",
+            {
+                "paths": encoded,
+                "agent_id": agent_id,
+                "description": description,
+            },
+        )
+        return _operation_result_from_dict(result)
 
     def move_file(
         self,
@@ -640,16 +724,27 @@ class RpcCiBackend:
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync(
+            "move_file",
+            {
+                "specs": [_movespec_to_dict(s) for s in specs],
+                "agent_id": agent_id,
+                "description": description,
+            },
+        )
+        return _operation_result_from_dict(result)
 
     def undo_last_edit(self, file_path: str) -> EditResult:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync("undo_last_edit", {"file_path": file_path})
+        return _edit_result_from_dict(result)
 
     def status(self) -> dict[str, Any]:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync("status")
+        return dict(result or {})
 
     def get_telemetry(self) -> CITelemetry:
-        raise NotImplementedError(_RPC_NOT_READY)
+        result = self._call_sync("get_telemetry")
+        return _telemetry_from_dict(result or {})
 
     def dispose(self) -> None:
         from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
@@ -668,3 +763,185 @@ class RpcCiBackend:
                 self.sandbox_id,
                 exc_info=True,
             )
+
+
+# ---------------------------------------------------------------------------
+# Serialization helpers (orchestrator side)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_write_specs(
+    specs: Sequence[WriteSpec] | WriteSpec,
+) -> list[WriteSpec]:
+    return [specs] if isinstance(specs, WriteSpec) else list(specs)
+
+
+def _normalize_edit_specs(
+    specs: Sequence[EditSpec] | EditSpec,
+) -> list[EditSpec]:
+    return [specs] if isinstance(specs, EditSpec) else list(specs)
+
+
+def _writespec_to_dict(spec: WriteSpec) -> dict[str, Any]:
+    return {
+        "file_path": spec.file_path,
+        "content": spec.content,
+        "overwrite": spec.overwrite,
+    }
+
+
+def _editspec_to_dict(spec: EditSpec) -> dict[str, Any]:
+    return {
+        "file_path": spec.file_path,
+        "edits": list(spec.edits),
+    }
+
+
+def _movespec_to_dict(spec: MoveSpec) -> dict[str, Any]:
+    return {
+        "src_path": spec.src_path,
+        "dst_path": spec.dst_path,
+        "overwrite": spec.overwrite,
+        "is_folder": spec.is_folder,
+    }
+
+
+def _deletespec_to_dict(spec: DeleteSpec) -> dict[str, Any]:
+    return {"path": spec.path, "is_folder": spec.is_folder}
+
+
+def _operation_change_to_dict(change: OperationChange) -> dict[str, Any]:
+    return {
+        "file_path": change.file_path,
+        "base_content": change.base_content,
+        "base_hash": change.base_hash,
+        "final_content": change.final_content,
+        "base_existed": change.base_existed,
+        "strict_base": change.strict_base,
+    }
+
+
+def _edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
+    return {
+        "file_path": request.file_path,
+        "old_text": request.old_text,
+        "new_text": request.new_text,
+        "agent_id": request.agent_id,
+        "description": request.description,
+    }
+
+
+def _symbol_info_from_dict(d: dict[str, Any]) -> SymbolInfo:
+    from sandbox.code_intelligence.core.types import SymbolKind
+
+    kind_raw = d.get("kind")
+    if isinstance(kind_raw, SymbolKind):
+        kind = kind_raw
+    elif isinstance(kind_raw, str):
+        try:
+            kind = SymbolKind(kind_raw)
+        except ValueError:
+            kind = SymbolKind.OTHER if hasattr(SymbolKind, "OTHER") else SymbolKind.CLASS
+    else:
+        kind = SymbolKind.CLASS
+    return SymbolInfo(
+        name=str(d.get("name", "")),
+        kind=kind,
+        file_path=str(d.get("file_path", "")),
+        line=int(d.get("line", 0)),
+        end_line=d.get("end_line"),
+        character=int(d.get("character", 0)),
+        signature=str(d.get("signature", "")),
+        docstring=str(d.get("docstring", "")),
+        container=str(d.get("container", "")),
+    )
+
+
+def _reference_info_from_dict(d: dict[str, Any]) -> ReferenceInfo:
+    return ReferenceInfo(
+        file_path=str(d.get("file_path", "")),
+        line=int(d.get("line", 0)),
+        character=int(d.get("character", 0)),
+        text=str(d.get("text", "")),
+    )
+
+
+def _hover_result_from_dict(d: dict[str, Any]) -> HoverResult:
+    sym_dict = d.get("symbol")
+    symbol = _symbol_info_from_dict(sym_dict) if sym_dict else None
+    return HoverResult(
+        content=str(d.get("content", "")),
+        language=str(d.get("language", "")),
+        symbol=symbol,
+    )
+
+
+def _diagnostic_from_dict(d: dict[str, Any]) -> Diagnostic:
+    from sandbox.code_intelligence.core.types import DiagnosticSeverity
+
+    severity_raw = d.get("severity")
+    if isinstance(severity_raw, DiagnosticSeverity):
+        severity = severity_raw
+    elif isinstance(severity_raw, str):
+        try:
+            severity = DiagnosticSeverity(severity_raw)
+        except ValueError:
+            severity = DiagnosticSeverity.ERROR
+    else:
+        severity = DiagnosticSeverity.ERROR
+    return Diagnostic(
+        file_path=str(d.get("file_path", "")),
+        line=int(d.get("line", 0)),
+        character=int(d.get("character", 0)),
+        end_line=d.get("end_line"),
+        end_character=d.get("end_character"),
+        severity=severity,
+        message=str(d.get("message", "")),
+        source=str(d.get("source", "")),
+        code=str(d.get("code", "")),
+    )
+
+
+def _edit_result_from_dict(d: dict[str, Any]) -> EditResult:
+    return EditResult(
+        success=bool(d.get("success", False)),
+        file_path=str(d.get("file_path", "")),
+        message=str(d.get("message", "")),
+        conflict=bool(d.get("conflict", False)),
+        conflict_reason=str(d.get("conflict_reason", "")),
+        snapshot_id=str(d.get("snapshot_id", "")),
+        timings=dict(d.get("timings") or {}),
+    )
+
+
+def _operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
+    files = tuple(_edit_result_from_dict(f) for f in (d.get("files") or ()))
+    status = d.get("status", "failed")
+    return OperationResult(
+        success=bool(d.get("success", False)),
+        status=status,  # type: ignore[arg-type]
+        files=files,
+        conflict_file=d.get("conflict_file"),
+        conflict_reason=str(d.get("conflict_reason", "")),
+        timings=dict(d.get("timings") or {}),
+    )
+
+
+def _telemetry_from_dict(d: dict[str, Any]) -> CITelemetry:
+    """Reconstruct a :class:`CITelemetry` from its asdict() shape.
+
+    The telemetry struct is mostly nested dicts; we only need the round-trip
+    to preserve the data, not enforce strict typing per nested counter.
+    """
+    if isinstance(d, CITelemetry):
+        return d
+    init = {
+        f.name: d.get(f.name)
+        for f in dataclasses.fields(CITelemetry)
+        if f.name in d
+    }
+    try:
+        return CITelemetry(**init)  # type: ignore[arg-type]
+    except TypeError:
+        # Fall back to a permissive construction on schema drift.
+        return CITelemetry()

@@ -1,27 +1,23 @@
-"""Local and sandbox script transport for language-server queries.
+"""Backend-availability probe for the LSP child process.
 
-This module exposes ``LspTransportMixin`` — the shim that runs short
-Python query scripts either locally (subprocess) or remotely (in the
-bound sandbox).
-
-The ``SandboxTransport``-based code path is preferred when a transport is
-bound on the mixin. The ``self._sandbox`` path remains as a local/test
-fallback for callers that construct ``LspClient`` without a transport.
+Phase 3.6 rewire: the per-call ``python3 -c 'import jedi; ...'`` shim was
+deleted from this module — :class:`LspClient` now talks to a persistent
+``basedpyright-langserver`` child via :class:`LspBackendChild` over JSON-RPC
+stdio. What remains here is the cheap probe that
+``LspClient.ensure_ready(install_missing=True)`` uses to decide whether the
+chosen backend is launchable on the current sandbox.
 """
 
 from __future__ import annotations
 
-import base64
 import logging
-import shlex
 import subprocess
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
-from sandbox.code_intelligence.core.constants import LSP_QUERY_TIMEOUT
-from sandbox.code_intelligence.language_server.utils import _format_transport_exception
+from sandbox.code_intelligence.language_server.lsp_child import LSP_BACKEND_CHOSEN
 
 logger = logging.getLogger("sandbox.code_intelligence.language_server.client")
 
@@ -32,88 +28,23 @@ class LspTransportMixin:
     _transport: SandboxTransport | None
     _sandbox_id: str
 
-    if TYPE_CHECKING:
-        def _record_success(self) -> None: ...
-        def _record_error(self) -> None: ...
-        def _record_script_run(self) -> None: ...
-        def _record_script_success(self) -> None: ...
-        def _record_script_error(self) -> None: ...
-
-    def _run_python_script(self, script: str) -> str:
-        """Run a Python script locally or in the sandbox.
-
-        Dispatch order:
-
-        1. Bound :class:`SandboxTransport`.
-        2. ``self._sandbox`` handle fallback for local/tests.
-        3. Local subprocess (no sandbox / offline mode).
-
-        For sandbox execution, base64 transport avoids marker-collision
-        and shell-quoting edge cases while keeping the query to one
-        ``exec`` call.
-        """
-        self._record_script_run()
-        try:
-            if self._transport is not None and self._sandbox_id:
-                payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
-                cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
-                transport_result = run_sync(
-                    self._transport.exec(
-                        self._sandbox_id, cmd, timeout=int(LSP_QUERY_TIMEOUT),
-                    )
-                )
-                result = transport_result.stdout
-                if transport_result.exit_code not in (0, None):
-                    raise RuntimeError(
-                        result or "sandbox python LSP query failed"
-                    )
-            elif self._sandbox:
-                payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
-                cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
-                response = run_sync(
-                    self._sandbox.process.exec(
-                        wrap_bash_command(cmd),
-                        timeout=int(LSP_QUERY_TIMEOUT),
-                    )
-                )
-                result = response.result or ""
-                result, exit_code = extract_exit_code(
-                    result,
-                    fallback_exit_code=getattr(response, "exit_code", None),
-                )
-                if exit_code not in (0, None):
-                    raise RuntimeError(result or "sandbox python LSP query failed")
-            else:
-                proc = subprocess.run(
-                    [__import__("sys").executable, "-c", script],
-                    capture_output=True,
-                    text=True,
-                    timeout=LSP_QUERY_TIMEOUT,
-                    cwd=self._workspace_root or None,
-                )
-                result = proc.stdout
-            self._record_success()
-            self._record_script_success()
-            return result.strip()
-        except Exception as e:
-            self._record_error()
-            self._record_script_error()
-            logger.debug(
-                "LSP Python query failed: %s operation=python lsp query "
-                "timeout=%ss workspace_root=%r",
-                _format_transport_exception(e),
-                int(LSP_QUERY_TIMEOUT),
-                self._workspace_root,
-            )
-            return ""
-
     # -- Backend availability -------------------------------------------------
 
     def _check_python_backend(self) -> bool:
-        return self._check_backend(
-            local_cmd=["python3", "-c", "import jedi"],
-            sandbox_cmd="python3 -c 'import jedi'",
-        )
+        """Phase 3.6: probe for the chosen LSP launch binary.
+
+        ``LSP_BACKEND_CHOSEN`` was set in Stage A
+        (lsp-qualification-spike-result.md). The sandbox-side check uses
+        the binary on PATH; the local fallback uses Python ``-c import``
+        only as a sanity check that the package landed in the venv.
+        """
+        if LSP_BACKEND_CHOSEN == "basedpyright":
+            local_cmd = ["python3", "-c", "import basedpyright"]
+            sandbox_cmd = "command -v basedpyright-langserver"
+        else:  # pyright
+            local_cmd = ["pyright-langserver", "--help"]
+            sandbox_cmd = "command -v pyright-langserver"
+        return self._check_backend(local_cmd=local_cmd, sandbox_cmd=sandbox_cmd)
 
     def _check_backend(self, *, local_cmd: list[str], sandbox_cmd: str) -> bool:
         try:
@@ -134,15 +65,21 @@ class LspTransportMixin:
             return False
 
     def _install_python_backend(self) -> bool:
+        """Best-effort install of the chosen LSP backend on the sandbox."""
         if self._transport is None and not self._sandbox:
             return False
-        return self._run_sandbox_install(
-            "python3 -m pip install --quiet --no-cache-dir jedi",
-        )
+        if LSP_BACKEND_CHOSEN == "basedpyright":
+            cmd = (
+                "python3 -m pip install --no-cache-dir --retries 10 "
+                "--timeout 300 basedpyright"
+            )
+        else:  # pyright
+            cmd = "npm install -g pyright"
+        return self._run_sandbox_install(cmd)
 
     def _run_sandbox_install(self, command: str) -> bool:
         try:
-            exit_code = self._run_sandbox_command_exit_code(command, timeout=120)
+            exit_code = self._run_sandbox_command_exit_code(command, timeout=600)
             return exit_code == 0
         except Exception:
             logger.debug("LSP backend install failed: %s", command, exc_info=True)

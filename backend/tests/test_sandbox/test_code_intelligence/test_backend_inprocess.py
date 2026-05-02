@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,14 +19,6 @@ from sandbox.code_intelligence.backend import (
     CiBackend,
     InProcessCiBackend,
     RpcCiBackend,
-)
-from sandbox.code_intelligence.core.types import (
-    DeleteSpec,
-    EditRequest,
-    EditSpec,
-    MoveSpec,
-    OperationChange,
-    WriteSpec,
 )
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 from sandbox.code_intelligence.service import CodeIntelligenceService
@@ -165,87 +156,21 @@ def test_rpc_backend_init_attributes() -> None:
     assert backend._transport is not None
 
 
-_RPC_OP_DUMMY_ARGS: dict[str, tuple[Any, dict[str, Any]]] = {
-    # Phase 1 ships real implementations for ensure_initialized and
-    # query_symbols (orchestrator-side cache); they are NOT in this
-    # not-implemented matrix anymore. See test_rpc_ci_backend.py for their
-    # Phase 1 coverage.
-    "warmup": ((), {}),
-    "rebind_sandbox": ((object(),), {}),
-    "find_definitions": (("/tmp/x.py", "sym"), {"line": 1, "character": 0}),
-    "find_references": (("/tmp/x.py", "sym"), {"line": 1, "character": 0}),
-    "hover": (("/tmp/x.py", 1, 0), {}),
-    "diagnostics": (("/tmp/x.py",), {}),
-    "apply_edit": (
-        (
-            EditRequest(
-                file_path="/tmp/x.py",
-                old_text="a",
-                new_text="b",
-            ),
-        ),
-        {},
-    ),
-    "commit_operation_against_base": (
-        (
-            (
-                OperationChange(
-                    file_path="/tmp/x.py",
-                    base_content="",
-                    base_hash="",
-                    final_content="x = 1\n",
-                ),
-            ),
-        ),
-        {"edit_type": "edit"},
-    ),
-    "commit_specs_many": (((),), {}),
-    "list_folder_files": (("/tmp",), {}),
-    "write_file": (
-        (
-            (WriteSpec(file_path="/tmp/x.py", content="x = 1\n"),),
-        ),
-        {},
-    ),
-    "edit_file": (
-        (
-            (EditSpec(file_path="/tmp/x.py", edits=()),),
-        ),
-        {},
-    ),
-    "delete_file": (
-        (
-            (DeleteSpec(path="/tmp/x.py"),),
-        ),
-        {},
-    ),
-    "move_file": (
-        (
-            (MoveSpec(src_path="/tmp/x.py", dst_path="/tmp/y.py"),),
-        ),
-        {},
-    ),
-    "undo_last_edit": (("/tmp/x.py",), {}),
-    "status": ((), {}),
-    "get_telemetry": ((), {}),
-}
-
-
-@pytest.mark.parametrize("op_name", sorted(_RPC_OP_DUMMY_ARGS.keys()))
-def test_rpc_backend_sync_op_raises_not_implemented(op_name: str) -> None:
-    backend = _build_rpc_backend()
-    args, kwargs = _RPC_OP_DUMMY_ARGS[op_name]
-    method = getattr(backend, op_name)
-    with pytest.raises(NotImplementedError):
-        method(*args, **kwargs)
-
-
 @pytest.mark.asyncio
-async def test_rpc_backend_cmd_raises_not_implemented() -> None:
+async def test_rpc_backend_cmd_still_raises_not_implemented() -> None:
+    """``cmd`` is reserved for Phase 4 (svc.cmd hot-path). Phase 3 leaves it
+    raising NotImplementedError so that any accidental wiring fails loud."""
     backend = _build_rpc_backend()
     sandbox = MagicMock()
     with pytest.raises(NotImplementedError):
         await backend.cmd(sandbox, "echo hi")
+
+
+def test_rpc_backend_rebind_sandbox_is_noop() -> None:
+    """Daemon's CodeIntelligenceService is constructed with sandbox=None;
+    rebinding from the orchestrator side is a no-op on the RPC backend."""
+    backend = _build_rpc_backend()
+    backend.rebind_sandbox(MagicMock(name="sandbox"))
 
 
 # ---------------------------------------------------------------------------

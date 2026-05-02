@@ -56,12 +56,18 @@ class SymbolIndex:
         *,
         transport: SandboxTransport | None = None,
         sandbox_id: str = "",
+        persistence: Any = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._max_files = max_files
         self._sandbox = sandbox
         self._transport = transport
         self._sandbox_id = sandbox_id
+        # Phase 3.5 — optional SQLite-backed persistence (IndexStore). When
+        # supplied, refresh / remove / batch commits mirror through to disk so
+        # ``query_by_substring`` survives restarts and per-file refreshes don't
+        # rewrite the world.
+        self._persistence = persistence
 
         self._lock = threading.Lock()
         self._symbols: dict[str, _FileSymbols] = {}
@@ -107,16 +113,36 @@ class SymbolIndex:
                 generation=gen,
                 indexed_at=time.time(),
             )
+        if self._persistence is not None:
+            try:
+                self._persistence.refresh_file(file_path, symbols)
+            except Exception:
+                logger.debug(
+                    "SymbolIndex persistence.refresh_file failed for %s",
+                    file_path,
+                    exc_info=True,
+                )
         return gen
 
     def remove(self, file_path: str) -> int:
         """Remove a file from the index. Returns the new generation."""
         with self._lock:
             if file_path not in self._symbols:
-                return self._generation
-            self._generation += 1
-            del self._symbols[file_path]
-            return self._generation
+                gen = self._generation
+            else:
+                self._generation += 1
+                del self._symbols[file_path]
+                gen = self._generation
+        if self._persistence is not None:
+            try:
+                self._persistence.delete_file(file_path)
+            except Exception:
+                logger.debug(
+                    "SymbolIndex persistence.delete_file failed for %s",
+                    file_path,
+                    exc_info=True,
+                )
+        return gen
 
     def find(self, query: str, kind: SymbolKind | None = None) -> list[SymbolInfo]:
         """Find symbols matching a query string (case-insensitive substring)."""
@@ -328,4 +354,13 @@ class SymbolIndex:
                     symbols=symbols,
                     generation=gen,
                     indexed_at=time.time(),
+                )
+        if self._persistence is not None and batch:
+            try:
+                for fp, symbols in batch:
+                    self._persistence.refresh_file(fp, symbols)
+            except Exception:
+                logger.debug(
+                    "SymbolIndex persistence batch mirror failed",
+                    exc_info=True,
                 )

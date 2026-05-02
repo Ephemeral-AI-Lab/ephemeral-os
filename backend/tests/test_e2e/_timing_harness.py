@@ -10,7 +10,13 @@ Public API (every method has a matching unit test in
 
 * ``TimingHarness(phase, test_name)`` — construct.
 * ``step(name)`` — context manager that times a block.
+* ``step_repeat(name, n)`` — yields *n* sample-context-managers under one
+  distribution; ``report()`` renders p50/p95/p99/min/max.
 * ``record(name, *, count, bytes_)`` — attach metadata to a step (or a bare key).
+* ``sample_rss_mb(label, transport, sandbox_id, pid)`` — one MB sample of
+  ``/proc/<pid>/status``\\ 's ``VmRSS`` over the transport.
+* ``sample_fds(label, transport, sandbox_id, pid)`` — one FD-count sample
+  of ``ls /proc/<pid>/fd | wc -l`` over the transport.
 * ``report() -> str`` — render the human-readable report.
 * ``dump_json() -> Path`` — write the JSON payload to ``_timings/`` atomically.
 * ``compare_to(baseline_path) -> str`` — render per-step deltas vs. a baseline.
@@ -19,6 +25,7 @@ Public API (every method has a matching unit test in
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 from collections.abc import Iterator
@@ -26,6 +33,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 __all__ = ["TimingHarness", "TimingStep"]
 
@@ -47,16 +55,22 @@ class TimingStep:
 class TimingHarness:
     """Records timed steps, renders a fixed-format report, persists JSON."""
 
-    phase: int
+    phase: int | float
     test_name: str
     _steps: list[TimingStep] = field(default_factory=list)
     _step_index: dict[str, TimingStep] = field(default_factory=dict)
+    distributions: dict[str, dict[str, float]] = field(default_factory=dict)
+    values: dict[str, float] = field(default_factory=dict)
+    _samples: dict[str, list[float]] = field(default_factory=dict)
 
-    def __init__(self, phase: int, test_name: str) -> None:
+    def __init__(self, phase: int | float, test_name: str) -> None:
         self.phase = phase
         self.test_name = test_name
         self._steps = []
         self._step_index = {}
+        self.distributions = {}
+        self.values = {}
+        self._samples = {}
 
     @contextmanager
     def step(self, name: str) -> Iterator[None]:
@@ -73,6 +87,64 @@ class TimingHarness:
                 self._step_index[name] = ts
             else:
                 existing.elapsed_s = elapsed
+
+    def step_repeat(self, name: str, n: int = 100) -> Iterator[Any]:
+        """Yield ``n`` step-context-managers under the same distribution name.
+
+        Each yielded item is itself a context manager wrapping ``time.perf_counter``;
+        on exit it appends the elapsed seconds to ``self._samples[name]``.
+        :meth:`report` later renders ``p50/p95/p99/min/max (N samples)``.
+
+        Usage::
+
+            for step in h.step_repeat("write_file", n=100):
+                with step:
+                    svc.write_file([WriteSpec(...)])
+        """
+        bucket = self._samples.setdefault(name, [])
+
+        @contextmanager
+        def _one_sample() -> Iterator[None]:
+            t0 = time.perf_counter()
+            try:
+                yield
+            finally:
+                bucket.append(time.perf_counter() - t0)
+
+        for _ in range(int(n)):
+            yield _one_sample()
+        self.distributions[name] = _percentiles(bucket)
+
+    def sample_rss_mb(
+        self,
+        label: str,
+        transport: Any,
+        sandbox_id: str,
+        pid: int,
+    ) -> float:
+        """Read ``VmRSS`` from ``/proc/<pid>/status`` over the transport (MB)."""
+        cmd = f"cat /proc/{int(pid)}/status | grep VmRSS"
+        text = _exec_get_stdout(transport, sandbox_id, cmd)
+        mb = _parse_vmrss_mb(text)
+        self.values[label] = mb
+        return mb
+
+    def sample_fds(
+        self,
+        label: str,
+        transport: Any,
+        sandbox_id: str,
+        pid: int,
+    ) -> int:
+        """Count open FDs by listing ``/proc/<pid>/fd`` over the transport."""
+        cmd = f"ls /proc/{int(pid)}/fd 2>/dev/null | wc -l"
+        text = _exec_get_stdout(transport, sandbox_id, cmd)
+        try:
+            count = int((text or "0").strip().split()[0])
+        except (ValueError, IndexError):
+            count = 0
+        self.values[label] = float(count)
+        return count
 
     def record(
         self,
@@ -106,6 +178,13 @@ class TimingHarness:
             <name>: <padded><elapsed>s<padding>(<bytes_human>, <count> files)
             ...
             --- TOTAL: <sum>s ---
+
+        Phase 3.5 extends the format with two optional sections:
+
+            --- DISTRIBUTIONS ---
+            <name>: p50=Xs p95=Ys p99=Zs (N samples)
+            --- RESOURCE SAMPLES ---
+            <label>: <value>
         """
         header = f"=== Phase {self.phase} E2E timing breakdown for {self.test_name} ==="
         lines = [header]
@@ -122,6 +201,27 @@ class TimingHarness:
             line = f"{base}   {extras}" if extras else base
             lines.append(line.rstrip())
         lines.append(f"--- TOTAL: {total:.3f}s ---")
+        if self.distributions:
+            lines.append("--- DISTRIBUTIONS ---")
+            d_max = max((len(n) for n in self.distributions), default=0)
+            d_col = max(d_max + 1, name_col)
+            for name, stats in self.distributions.items():
+                line = (
+                    f"{(name + ':').ljust(d_col)} "
+                    f"p50={stats['p50']:.4f}s p95={stats['p95']:.4f}s "
+                    f"p99={stats['p99']:.4f}s "
+                    f"min={stats['min']:.4f}s max={stats['max']:.4f}s "
+                    f"({int(stats['n'])} samples)"
+                )
+                lines.append(line)
+        if self.values:
+            lines.append("--- RESOURCE SAMPLES ---")
+            v_max = max((len(n) for n in self.values), default=0)
+            v_col = max(v_max + 1, name_col)
+            for label, value in self.values.items():
+                lines.append(
+                    f"{(label + ':').ljust(v_col)} {value:.2f}"
+                )
         return "\n".join(lines)
 
     def to_payload(self) -> dict:
@@ -136,12 +236,19 @@ class TimingHarness:
             for s in self._steps
         ]
         total = sum(s.elapsed_s for s in self._steps)
+        # Convert tiny IEEE noise on percentiles into stable JSON.
+        distributions = {
+            name: {k: float(v) for k, v in stats.items()}
+            for name, stats in self.distributions.items()
+        }
         return {
             "phase": self.phase,
             "test_name": self.test_name,
             "timestamp": datetime.now(UTC).isoformat(),
             "steps": steps,
             "total_s": total,
+            "distributions": distributions,
+            "values": dict(self.values),
         }
 
     def dump_json(self, dir_: Path | None = None) -> Path:
@@ -247,3 +354,89 @@ def _format_bytes(num: int) -> str:
     if abs_num < 1024 * 1024 * 1024:
         return f"{num / (1024 * 1024):.1f} MB"
     return f"{num / (1024 * 1024 * 1024):.1f} GB"
+
+
+# ---------------------------------------------------------------------------
+# Phase 3.5 — distribution + resource sampling helpers
+# ---------------------------------------------------------------------------
+
+
+def _percentiles(samples: list[float]) -> dict[str, float]:
+    """Return p50/p95/p99/min/max/n for a list of elapsed seconds."""
+    if not samples:
+        return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "min": 0.0, "max": 0.0, "n": 0}
+    ordered = sorted(samples)
+    n = len(ordered)
+
+    def _q(p: float) -> float:
+        # Nearest-rank percentile; matches numpy.percentile(..., method='lower')
+        # for small samples without pulling numpy into the test deps.
+        idx = int(math.ceil(p * n)) - 1
+        idx = max(0, min(idx, n - 1))
+        return ordered[idx]
+
+    return {
+        "p50": _q(0.50),
+        "p95": _q(0.95),
+        "p99": _q(0.99),
+        "min": ordered[0],
+        "max": ordered[-1],
+        "n": n,
+    }
+
+
+def _exec_get_stdout(transport: Any, sandbox_id: str, command: str) -> str:
+    """Run ``command`` over ``transport.exec`` (sync OR async) and return stdout.
+
+    The harness uses a thin shim because some live-test fixtures hand back a
+    sync ``raw_sandbox.process.exec`` (sweevo) and others an async transport.
+    """
+    raw = None
+    err: Exception | None = None
+    # Async transport path: ``transport.exec(sandbox_id, cmd)`` returning a
+    # coroutine resolved via the harness-side asyncio loop.
+    try:
+        import asyncio
+
+        coro = transport.exec(sandbox_id, command, timeout=30)
+        if asyncio.iscoroutine(coro):
+            raw = asyncio.get_event_loop().run_until_complete(coro)
+        else:
+            raw = coro
+    except Exception as exc:  # pragma: no cover - exercised by sync fallback
+        err = exc
+
+    if raw is None:
+        # Sync transport / raw sandbox object.
+        try:
+            response = getattr(transport, "exec", None)
+            if response is None:
+                # Final fallback: assume transport IS the sandbox object exposing process.exec.
+                response = transport.process.exec(command, timeout=30)
+            else:
+                response = response(sandbox_id, command, timeout=30)
+            raw = response
+        except Exception:  # pragma: no cover - defensive
+            if err is not None:
+                raise err  # noqa: B904
+            raise
+
+    return str(
+        getattr(raw, "stdout", None)
+        or getattr(raw, "result", None)
+        or ""
+    )
+
+
+def _parse_vmrss_mb(status_text: str) -> float:
+    """Parse the ``VmRSS:`` line of ``/proc/<pid>/status`` into MB."""
+    for line in (status_text or "").splitlines():
+        if line.lower().startswith("vmrss:"):
+            parts = line.split()
+            if len(parts) >= 3:
+                try:
+                    kb = float(parts[1])
+                    return round(kb / 1024.0, 2)
+                except ValueError:
+                    return 0.0
+    return 0.0

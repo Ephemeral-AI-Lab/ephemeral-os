@@ -201,3 +201,112 @@ def test_compare_to_marks_removed_keys(tmp_path: Path) -> None:
     removed_lines = [line for line in out.splitlines() if "(REMOVED)" in line]
     removed_names = {line.split(":", 1)[0].strip() for line in removed_lines}
     assert removed_names == {"query_symbols_first", "svc_cmd"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 3.5 — step_repeat / sample_rss_mb / sample_fds
+# ---------------------------------------------------------------------------
+
+
+class _StubResponse:
+    def __init__(self, stdout: str = "", result: str = "") -> None:
+        self.stdout = stdout
+        self.result = result
+
+
+class _StubTransport:
+    """Sync transport stub that returns a canned response per substring match."""
+
+    def __init__(self, responses: dict[str, str]) -> None:
+        self._responses = responses
+        self.calls: list[tuple[str, str]] = []
+
+    def exec(self, sandbox_id: str, command: str, timeout: int = 30) -> _StubResponse:
+        self.calls.append((sandbox_id, command))
+        for needle, payload in self._responses.items():
+            if needle in command:
+                return _StubResponse(stdout=payload)
+        return _StubResponse()
+
+
+def test_step_repeat_collects_distribution() -> None:
+    h = TimingHarness(phase=3.5, test_name="distribution_smoke")
+    for step in h.step_repeat("op", n=20):
+        with step:
+            pass
+    assert "op" in h.distributions
+    stats = h.distributions["op"]
+    assert stats["n"] == 20
+    assert stats["min"] <= stats["p50"] <= stats["p99"] <= stats["max"]
+
+
+def test_step_repeat_percentiles_monotonic_on_known_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With a deterministic perf_counter sequence, percentiles match expectations."""
+    h = TimingHarness(phase=3.5, test_name="dist_known")
+    # Provide pairs (start, end) such that elapsed = 1, 2, …, 100.
+    times: list[float] = []
+    for i in range(1, 101):
+        times.append(0.0)
+        times.append(float(i))
+    counter = iter(times)
+    from . import _timing_harness as harness_mod
+
+    monkeypatch.setattr(harness_mod.time, "perf_counter", lambda: next(counter))
+    for step in h.step_repeat("op", n=100):
+        with step:
+            pass
+    stats = h.distributions["op"]
+    assert stats["min"] == 1.0
+    assert stats["max"] == 100.0
+    assert stats["p50"] == 50.0
+    assert stats["p95"] == 95.0
+    assert stats["p99"] == 99.0
+
+
+def test_sample_rss_mb_parses_vmrss() -> None:
+    h = TimingHarness(phase=3.5, test_name="rss_smoke")
+    # /proc/<pid>/status puts VmRSS in kB.
+    transport = _StubTransport({"VmRSS": "VmRSS:\t   65432 kB\n"})
+    mb = h.sample_rss_mb("rss_at_start", transport, sandbox_id="sb", pid=4242)
+    assert mb == round(65432 / 1024.0, 2)
+    assert h.values["rss_at_start"] == mb
+
+
+def test_sample_fds_parses_count() -> None:
+    h = TimingHarness(phase=3.5, test_name="fds_smoke")
+    transport = _StubTransport({"/proc/": "  17\n"})
+    n = h.sample_fds("fds_at_start", transport, sandbox_id="sb", pid=4242)
+    assert n == 17
+    assert h.values["fds_at_start"] == 17.0
+
+
+def test_report_renders_distributions_and_resource_samples() -> None:
+    h = TimingHarness(phase=3.5, test_name="report_extras")
+    for step in h.step_repeat("write_file", n=5):
+        with step:
+            pass
+    h.values["rss_at_start"] = 100.0
+    h.values["fds_at_start"] = 30.0
+    out = h.report()
+    assert "--- DISTRIBUTIONS ---" in out
+    assert "write_file:" in out
+    assert "p50=" in out and "p95=" in out and "p99=" in out
+    assert "(5 samples)" in out
+    assert "--- RESOURCE SAMPLES ---" in out
+    assert "rss_at_start" in out
+    assert "fds_at_start" in out
+
+
+def test_dump_json_includes_distributions_and_values(tmp_path: Path) -> None:
+    h = TimingHarness(phase=3.5, test_name="dump_extras")
+    for step in h.step_repeat("op", n=4):
+        with step:
+            pass
+    h.values["rss_at_end"] = 144.0
+    out = h.dump_json(dir_=tmp_path)
+    payload = json.loads(out.read_text())
+    assert "distributions" in payload
+    assert "op" in payload["distributions"]
+    assert payload["values"]["rss_at_end"] == 144.0

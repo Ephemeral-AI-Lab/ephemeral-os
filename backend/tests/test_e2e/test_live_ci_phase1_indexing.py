@@ -326,23 +326,28 @@ def test_compatibility_probe_dep_matrix(live_phase1_env: LivePhase1Env) -> None:
     env = live_phase1_env
 
     checks = {
-        "python_version":   "python3 --version",
-        "python_310_plus":  "python3 -c 'import sys; assert sys.version_info >= (3,10)'",
-        "sqlite3":          "python3 -c 'import sqlite3'",
-        "msgpack_native":   "python3 -c 'import msgpack'",
-        "jedi":             "python3 -c 'import jedi'",
-        "git":              "git --version",
-        "unshare_userns":   "unshare -Urm true",
-        "setsid":           "command -v setsid",
-        "nohup":            "command -v nohup",
-        "tar":              "command -v tar",
-        "base64":           "command -v base64",
-        "kill":             "command -v kill",
-        "ps":               "command -v ps",
-        "home_writable":    'test -w "$HOME"',
-        "tmp_writable":     "test -w /tmp && touch /tmp/_eos_probe && rm /tmp/_eos_probe",
-        "af_unix_sockets":  "python3 -c 'import socket; s=socket.socket(socket.AF_UNIX); s.close()'",
-        "proc_pid_status":  "test -r /proc/self/status",
+        "python_version":         "python3 --version",
+        "python_310_plus":        "python3 -c 'import sys; assert sys.version_info >= (3,10)'",
+        "sqlite3":                "python3 -c 'import sqlite3'",
+        "msgpack_native":         "python3 -c 'import msgpack'",
+        # Phase 3.6: chosen LSP backend is basedpyright (see
+        # lsp-qualification-spike-result.md). The launch-binary check is the
+        # one that matters — `python3 -c 'import basedpyright'` succeeds even
+        # on images where the launch fails (Stage A finding).
+        "basedpyright_native":    "python3 -c 'import basedpyright'",
+        "basedpyright_langserver": "command -v basedpyright-langserver",
+        "git":                    "git --version",
+        "unshare_userns":         "unshare -Urm true",
+        "setsid":                 "command -v setsid",
+        "nohup":                  "command -v nohup",
+        "tar":                    "command -v tar",
+        "base64":                 "command -v base64",
+        "kill":                   "command -v kill",
+        "ps":                     "command -v ps",
+        "home_writable":          'test -w "$HOME"',
+        "tmp_writable":           "test -w /tmp && touch /tmp/_eos_probe && rm /tmp/_eos_probe",
+        "af_unix_sockets":        "python3 -c 'import socket; s=socket.socket(socket.AF_UNIX); s.close()'",
+        "proc_pid_status":        "test -r /proc/self/status",
     }
 
     matrix: dict[str, dict[str, Any]] = {}
@@ -380,13 +385,27 @@ def test_compatibility_probe_dep_matrix(live_phase1_env: LivePhase1Env) -> None:
             f"Full matrix: {matrix}"
         )
 
-    soft = ["msgpack_native", "jedi", "proc_pid_status"]
+    # Phase 3.6: the chosen LSP backend (basedpyright + its langserver
+    # binary) is HARD-required by the rewired LspClient. Until the sandbox
+    # image bundles them, the live LSP path warm-installs at fixture time
+    # — so we surface the missing deps as ERROR-level warnings (not test
+    # failures) and recommend pre-baking. Once the image bundles them,
+    # promote both to ``required`` above.
+    soft_post_3_6 = ["basedpyright_native", "basedpyright_langserver"]
+    soft = ["msgpack_native", "proc_pid_status", *soft_post_3_6]
     soft_missing = [s for s in soft if not matrix[s]["ok"]]
     if soft_missing:
         _flush_print(f"WARNING: soft deps missing: {soft_missing}")
-        _flush_print("  msgpack_native missing: OK — bundle vendors msgpack")
-        _flush_print("  jedi missing: LSP queries will degrade")
-        _flush_print("  proc_pid_status missing: Phase 3.5 RSS sampling skipped")
+        if "msgpack_native" in soft_missing:
+            _flush_print("  msgpack_native missing: OK — bundle vendors msgpack")
+        if "proc_pid_status" in soft_missing:
+            _flush_print("  proc_pid_status missing: Phase 3.5 RSS sampling skipped")
+        if any(d in soft_missing for d in soft_post_3_6):
+            _flush_print(
+                "  basedpyright_* missing: Phase 3.6 LSP path warm-installs "
+                "at fixture time. Pre-bake into sandbox image to drop the "
+                "first-spawn install cost (see lsp-qualification-spike-result.md)."
+            )
 
     h.dump_json()
 

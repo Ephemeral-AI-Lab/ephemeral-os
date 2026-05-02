@@ -1,17 +1,15 @@
 """Unit tests for ``RpcCiBackend.ensure_initialized`` + ``query_symbols``.
 
-These tests use a fake transport that mocks ``exec`` so we can exercise the
-Phase 2 daemon ensure + Phase 1 indexer/cache path without paying live-Daytona
-time. The fake transport supports the chunked-base64 read protocol
-(``wc -c`` + ``dd | base64``).
+Phase 3.5 retired the orchestrator-side pickle-snapshot fallback. These tests
+now exercise the daemon-route contract: ``ensure_initialized`` launches the
+daemon (mocked) and polls ``index_ready``; ``query_symbols`` routes through
+the daemon and surfaces errors instead of falling back to a stale cache.
 """
 
 from __future__ import annotations
 
-import base64 as _b64
-import json
-import pickle
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -29,243 +27,194 @@ def _sym(name: str, line: int = 1) -> SymbolInfo:
     )
 
 
-class _FakeTransport:
-    """Minimum SandboxTransport surface for daemon ensure and index snapshot reads."""
+class _NullTransport:
+    """Minimal stub — RpcCiBackend never calls ``transport.exec`` directly
+    after Phase 3.5 retired the snapshot bootstrap. The daemon launcher is
+    mocked at the boundary instead."""
 
-    name = "fake"
+    name = "null"
+
+    async def exec(self, *args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        raise AssertionError("RpcCiBackend should not call transport.exec post-3.5")
+
+
+class _FakeRpcClient:
+    """Stand-in for :class:`CiRpcClient` returning canned daemon responses."""
 
     def __init__(
         self,
         *,
-        snapshot_path: str = "/home/u/.cache/eos-ci/abc/v1/index.snapshot",
-        cache: dict[str, list[SymbolInfo]] | None = None,
-        ci_payload: dict[str, Any] | None = None,
+        index_ready: bool = True,
+        query_response: list[dict[str, Any]] | None = None,
+        raise_for_op: dict[str, Exception] | None = None,
     ) -> None:
-        self.exec_calls: list[tuple[str, str]] = []
-        self._snapshot_path = snapshot_path
-        cache = (
-            cache
-            if cache is not None
-            else {
-                "/ws/foo.py": [_sym("Bag"), _sym("Bagel")],
-                "/ws/bar.py": [_sym("Other")],
-            }
-        )
-        self._snapshot_blob = pickle.dumps(cache, protocol=5)
-        self._ci_payload = ci_payload or {
-            "ok": True,
-            "mode": "full_build",
-            "file_count": len(cache),
-            "symbol_count": sum(len(v) for v in cache.values()),
-            "snapshot_path": snapshot_path,
-            "elapsed_s": 0.001,
-        }
-        self._daemon_alive = False
-        self._socket_ready = False
+        self.calls: list[tuple[str, dict[str, Any] | None]] = []
+        self._index_ready = index_ready
+        self._query_response = query_response or []
+        self._raise_for_op = dict(raise_for_op or {})
 
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> Any:
-        del cwd, timeout
-        self.exec_calls.append((sandbox_id, command))
-        if 'printf %s "$HOME"' in command:
-            return type("R", (), {"exit_code": 0, "stdout": "/home/u"})()
-        if "daemon.pid" in command and "kill -0" in command:
-            return type(
-                "R",
-                (),
-                {"exit_code": 0 if self._daemon_alive else 1, "stdout": ""},
-            )()
-        if ".bundle-hash" in command and "tar -xzf" not in command:
-            # Marker check — drive the upload path.
-            return type("R", (), {"exit_code": 1, "stdout": ""})()
-        if "tar -xzf" in command:
-            return type("R", (), {"exit_code": 0, "stdout": ""})()
-        if "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox" in command:
-            self._daemon_alive = True
-            self._socket_ready = True
-            return type("R", (), {"exit_code": 0, "stdout": "1234\n"})()
-        if command.startswith("test -S") and "daemon.sock" in command:
-            return type(
-                "R",
-                (),
-                {"exit_code": 0 if self._socket_ready else 1, "stdout": ""},
-            )()
-        if "kill -TERM" in command and "daemon.pid" in command:
-            self._daemon_alive = False
-            self._socket_ready = False
-            return type("R", (), {"exit_code": 0, "stdout": ""})()
-        if "ci_index" in command:
-            return type(
-                "R",
-                (),
-                {"exit_code": 0, "stdout": json.dumps(self._ci_payload) + "\n"},
-            )()
-        if "echo $HOME" in command:
-            return type("R", (), {"exit_code": 0, "stdout": "/home/u\n"})()
-        # Chunked snapshot read protocol.
-        if "wc -c" in command and self._snapshot_path in command:
-            return type(
-                "R",
-                (),
-                {"exit_code": 0, "stdout": f"{len(self._snapshot_blob)}\n"},
-            )()
-        if command.startswith("dd if=") and "base64" in command:
-            # Canonical command: dd if=<path> bs=<chunk> count=1 skip=<idx> ...
-            try:
-                bs_str = command.split(" bs=", 1)[1].split(" ", 1)[0]
-                chunk_size = int(bs_str)
-                skip_str = command.split("skip=", 1)[1].split(" ", 1)[0]
-                idx = int(skip_str)
-            except (IndexError, ValueError):
-                return type("R", (), {"exit_code": 1, "stdout": "parse error"})()
-            start = idx * chunk_size
-            end = min(start + chunk_size, len(self._snapshot_blob))
-            piece = self._snapshot_blob[start:end]
-            return type(
-                "R",
-                (),
-                {"exit_code": 0, "stdout": _b64.b64encode(piece).decode("ascii")},
-            )()
-        return type("R", (), {"exit_code": 0, "stdout": ""})()
-
-    async def read_bytes(self, sandbox_id: str, path: str) -> bytes:
-        del sandbox_id, path
-        raise NotImplementedError(
-            "RpcCiBackend uses chunked-base64 over exec, not read_bytes"
-        )
-
-    async def read_bytes_batch(
-        self, sandbox_id: str, paths: list[str]
-    ) -> dict[str, bytes | None]:  # pragma: no cover - unused on this path
-        del sandbox_id, paths
-        return {}
-
-    async def write_bytes(
-        self, sandbox_id: str, path: str, content: bytes
-    ) -> None:  # pragma: no cover - unused on this path
-        del sandbox_id, path, content
-
-    async def apply_diff_batch_checked(
-        self, sandbox_id: str, specs: list[Any]
-    ) -> Any:  # pragma: no cover
-        del sandbox_id, specs
-        raise NotImplementedError
-
-    async def search(
-        self, sandbox_id: str, pattern: str, **_: Any
-    ) -> list[Any]:  # pragma: no cover
-        del sandbox_id, pattern
-        return []
-
-    async def list_paths(
-        self, sandbox_id: str, glob: str, **_: Any
-    ) -> list[str]:  # pragma: no cover
-        del sandbox_id, glob
-        return []
+    async def call(self, op: str, args: dict[str, Any] | None = None) -> Any:
+        self.calls.append((op, args))
+        if op in self._raise_for_op:
+            raise self._raise_for_op[op]
+        if op == "index_ready":
+            return {"ready": self._index_ready}
+        if op == "query_symbols":
+            return self._query_response
+        return None
 
 
-def test_ensure_initialized_uploads_runs_and_caches_snapshot() -> None:
-    transport = _FakeTransport()
+def _backend_with_fake_client(client: _FakeRpcClient) -> RpcCiBackend:
     backend = RpcCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
+        transport=_NullTransport(),  # type: ignore[arg-type]
     )
+    backend._client = client  # type: ignore[assignment]
+    return backend
 
-    assert backend.is_initialized is False
-    ok = backend.ensure_initialized(wait=True)
+
+class _FakeLauncher:
+    """Stand-in for :class:`DaemonLauncher` — ``ensure_daemon`` is a no-op."""
+
+    instances: list[_FakeLauncher] = []
+
+    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+        type(self).instances.append(self)
+        self.ensure_calls = 0
+        self.shutdown_calls = 0
+
+    async def ensure_daemon(self) -> None:
+        self.ensure_calls += 1
+
+    async def shutdown(self) -> None:
+        self.shutdown_calls += 1
+
+
+def test_ensure_initialized_polls_index_ready_until_built() -> None:
+    """Daemon launches; we poll ``index_ready`` and flip is_initialized once true."""
+    client = _FakeRpcClient(index_ready=True)
+    backend = _backend_with_fake_client(client)
+    _FakeLauncher.instances.clear()
+    with patch(
+        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+    ):
+        ok = backend.ensure_initialized(wait=True)
     assert ok is True
     assert backend.is_initialized is True
-    assert backend._cached_file_count == 2
-    assert backend._cached_symbol_count == 3
-    assert backend._snapshot_bytes > 0
-    # Daemon ensure + bundle upload + ci_index = several exec calls minimum.
-    assert len(transport.exec_calls) >= 3
-    assert any("setsid nohup" in cmd for _, cmd in transport.exec_calls)
-    assert any("ci_index" in cmd for _, cmd in transport.exec_calls)
+    assert _FakeLauncher.instances and _FakeLauncher.instances[-1].ensure_calls == 1
+    # The poll should have called index_ready at least once.
+    assert any(call[0] == "index_ready" for call in client.calls)
 
 
-def test_ensure_initialized_idempotent_on_second_call() -> None:
-    transport = _FakeTransport()
-    backend = RpcCiBackend(
-        sandbox_id="sb-test",
-        workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
-    )
-    backend.ensure_initialized(wait=True)
-    n_after_first = len(transport.exec_calls)
-    backend.ensure_initialized(wait=True)
-    # Second call must short-circuit on the lock check (no new exec calls).
-    assert len(transport.exec_calls) == n_after_first
+def test_ensure_initialized_idempotent() -> None:
+    client = _FakeRpcClient(index_ready=True)
+    backend = _backend_with_fake_client(client)
+    _FakeLauncher.instances.clear()
+    with patch(
+        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+    ):
+        backend.ensure_initialized(wait=True)
+        n = len(_FakeLauncher.instances)
+        backend.ensure_initialized(wait=True)
+    # Second call short-circuits; no new launcher constructed.
+    assert len(_FakeLauncher.instances) == n
 
 
-def test_query_symbols_finds_substring_match() -> None:
-    transport = _FakeTransport()
-    backend = RpcCiBackend(
-        sandbox_id="sb-test",
-        workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
-    )
-    backend.ensure_initialized(wait=True)
+def test_ensure_initialized_returns_true_even_if_index_ready_times_out() -> None:
+    """When the index-ready poll times out, ensure_initialized still flips
+    is_initialized so callers can attempt queries (which return [] until the
+    background build completes)."""
+    client = _FakeRpcClient(index_ready=False)
+    backend = _backend_with_fake_client(client)
+    backend._INDEX_READY_TIMEOUT_S = 0.05  # type: ignore[assignment]
+    backend._INDEX_READY_POLL_S = 0.01  # type: ignore[assignment]
+    _FakeLauncher.instances.clear()
+    with patch(
+        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+    ):
+        ok = backend.ensure_initialized(wait=True)
+    assert ok is True
+    assert backend.is_initialized is True
 
+
+def test_query_symbols_routes_through_daemon() -> None:
+    response = [
+        {"name": "Bag", "kind": "function", "file_path": "/ws/foo.py", "line": 1},
+        {"name": "Bagel", "kind": "function", "file_path": "/ws/foo.py", "line": 2},
+    ]
+    client = _FakeRpcClient(query_response=response)
+    backend = _backend_with_fake_client(client)
     results = backend.query_symbols("bag")
     names = sorted(s.name for s in results)
     assert names == ["Bag", "Bagel"]
+    assert any(call[0] == "query_symbols" for call in client.calls)
 
 
-def test_query_symbols_empty_query_returns_empty() -> None:
-    transport = _FakeTransport()
-    backend = RpcCiBackend(
-        sandbox_id="sb-test",
-        workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
+def test_query_symbols_propagates_daemon_error() -> None:
+    """Phase 3.5 intentionally retired the orchestrator-side cache fallback.
+    A daemon error surfaces — no silent fallback to stale data."""
+    client = _FakeRpcClient(
+        raise_for_op={"query_symbols": RuntimeError("daemon down")},
     )
-    backend.ensure_initialized(wait=True)
+    backend = _backend_with_fake_client(client)
+    with pytest.raises(RuntimeError, match="daemon down"):
+        backend.query_symbols("Bag")
 
+
+def test_query_symbols_empty_query_returns_empty_via_daemon() -> None:
+    """Empty queries route to the daemon (which returns []) — orchestrator
+    no longer special-cases the substring."""
+    client = _FakeRpcClient(query_response=[])
+    backend = _backend_with_fake_client(client)
     assert backend.query_symbols("") == []
     assert backend.query_symbols("   ") == []
 
 
-def test_query_symbols_returns_empty_before_initialization() -> None:
-    transport = _FakeTransport()
+def test_cmd_still_raises_not_implemented() -> None:
+    """``cmd`` is reserved for Phase 4 (svc.cmd hot path). Phase 3
+    intentionally leaves the RPC backend raising NotImplementedError so any
+    accidental wiring fails loud."""
+    import asyncio
+    from unittest.mock import MagicMock
+
     backend = RpcCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
+        transport=_NullTransport(),  # type: ignore[arg-type]
     )
-    # No ensure_initialized call.
-    assert backend.query_symbols("Bag") == []
+
+    async def _run() -> None:
+        with pytest.raises(NotImplementedError):
+            await backend.cmd(MagicMock(), "echo hi")
+
+    asyncio.run(_run())
 
 
-def test_ensure_initialized_raises_on_indexer_failure() -> None:
-    transport = _FakeTransport(
-        ci_payload={"ok": False, "error": "boom", "elapsed_s": 0.0},
-    )
-    backend = RpcCiBackend(
-        sandbox_id="sb-broken",
-        workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
-    )
-    with pytest.raises(RuntimeError, match="ci_index reported failure"):
-        backend.ensure_initialized(wait=True)
-    assert backend.is_initialized is False
-
-
-def test_other_methods_still_raise_not_implemented() -> None:
-    transport = _FakeTransport()
+def test_rebind_sandbox_is_noop() -> None:
     backend = RpcCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
-        transport=transport,  # type: ignore[arg-type]
+        transport=_NullTransport(),  # type: ignore[arg-type]
     )
-    with pytest.raises(NotImplementedError):
-        backend.warmup()
-    with pytest.raises(NotImplementedError):
-        backend.list_folder_files("/ws")
-    backend.dispose()
+    backend.rebind_sandbox(object())
+
+
+def test_init_drops_legacy_cache_attributes() -> None:
+    """Cleanup invariant: the orchestrator-side snapshot cache attributes
+    are gone (Phase 3.5 retirement)."""
+    backend = RpcCiBackend(
+        sandbox_id="sb-test",
+        workspace_root="/ws",
+        transport=_NullTransport(),  # type: ignore[arg-type]
+    )
+    for attr in (
+        "_symbol_cache",
+        "_cached_file_count",
+        "_cached_symbol_count",
+        "_snapshot_bytes",
+    ):
+        assert not hasattr(backend, attr), (
+            f"Phase 3.5 cleanup regression: {attr} still on RpcCiBackend"
+        )

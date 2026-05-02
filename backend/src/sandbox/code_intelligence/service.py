@@ -48,12 +48,18 @@ def _select_backend(
     sandbox: Any,
     *,
     transport: SandboxTransport | None,
+    edit_history: Any | None = None,
+    symbol_index_persistence: Any | None = None,
 ) -> CiBackend:
     """Pick a backend based on the EOS_CI_IN_SANDBOX flag, transport, and id.
 
     Returns :class:`RpcCiBackend` only when ALL of: env var ``EOS_CI_IN_SANDBOX``
     is exactly ``"1"`` AND ``transport`` is not None AND ``sandbox_id`` is
     non-empty. Otherwise returns :class:`InProcessCiBackend`.
+
+    ``edit_history`` and ``symbol_index_persistence`` are only meaningful for
+    the in-process backend (the daemon owns the canonical SQLite ledger and
+    SQLite IndexStore when the RPC backend is in use).
     """
     use_daemon = (
         os.environ.get("EOS_CI_IN_SANDBOX") == "1"
@@ -72,6 +78,8 @@ def _select_backend(
         workspace_root=workspace_root,
         sandbox=sandbox,
         transport=transport,
+        edit_history=edit_history,
+        symbol_index_persistence=symbol_index_persistence,
     )
 
 
@@ -85,12 +93,16 @@ class CodeIntelligenceService:
         sandbox: Any = None,
         *,
         transport: SandboxTransport | None = None,
+        edit_history: Any | None = None,
+        symbol_index_persistence: Any | None = None,
     ) -> None:
         self._impl: CiBackend = _select_backend(
             sandbox_id,
             workspace_root,
             sandbox,
             transport=transport,
+            edit_history=edit_history,
+            symbol_index_persistence=symbol_index_persistence,
         )
 
     # -- Identity / state forwarding -----------------------------------------

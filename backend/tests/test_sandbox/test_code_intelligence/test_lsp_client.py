@@ -1,28 +1,38 @@
-"""Unit tests for the code intelligence LSP client."""
+"""Unit tests for the code intelligence LSP client (Phase 3.6 rewire).
+
+The Phase 1 jedi.Script per-call subprocess shim and its unit tests were
+deleted alongside ``python_backend.py``. What remains here:
+
+* Cache + readiness contract (``_run_cached_query``, ``ensure_ready``,
+  ``connected``, ``reset_backend_availability``).
+* Path / line helpers from :mod:`.path_helpers`
+  (``_resolve_path``, ``_read_line`` + invalidation).
+* Routing assertions: every public ``goto_definition`` / ``find_references`` /
+  ``hover`` / ``diagnostics`` call goes through the persistent
+  :class:`LspBackendChild` (mocked here via :class:`LspAsyncHost.run`).
+
+Whatever live LSP behavior matters to the user is exercised by the live E2E
+suite (``backend/tests/test_e2e/test_live_ci_phase3_6_lsp_benchmark.py``)
+against a real basedpyright child.
+"""
 
 from __future__ import annotations
 
-import base64
 import concurrent.futures
-import logging
-import re
 import threading
 import time
 from types import SimpleNamespace
+from unittest.mock import patch
 
-import pytest
-
+from sandbox.code_intelligence.core.types import (
+    Diagnostic,
+    DiagnosticSeverity,
+    HoverResult,
+    ReferenceInfo,
+    SymbolInfo,
+    SymbolKind,
+)
 from sandbox.code_intelligence.language_server.client import LspClient
-from sandbox.code_intelligence.core.types import DiagnosticSeverity, SymbolKind
-
-
-def _decode_sandbox_python_payload(command: str) -> str:
-    match = re.search(
-        r"echo (?P<payload>[A-Za-z0-9+/=]+) \| base64 -d \| python3 -",
-        command,
-    )
-    assert match is not None, command
-    return base64.b64decode(match.group("payload")).decode("utf-8")
 
 
 def _sandbox_exit_result(exit_code: int, stdout: str = "") -> SimpleNamespace:
@@ -32,80 +42,24 @@ def _sandbox_exit_result(exit_code: int, stdout: str = "") -> SimpleNamespace:
     )
 
 
-def test_python_definitions_maps_known_symbol_kind(monkeypatch) -> None:
-    lsp = LspClient(workspace_root="/workspace")
-    monkeypatch.setattr(
-        lsp,
-        "_run_python_script",
-        lambda script: (
-            '[{"name":"demo","path":"/workspace/demo.py","line":7,"col":2,"type":"function"}]'
-        ),
-    )
-
-    results = lsp._python_definitions("/workspace/demo.py", 7, 2)
-
-    assert len(results) == 1
-    assert results[0].kind is SymbolKind.FUNCTION
+# ---------------------------------------------------------------------------
+# Path helpers (unchanged contract)
+# ---------------------------------------------------------------------------
 
 
-def test_python_definitions_preserves_unknown_types(monkeypatch) -> None:
-    lsp = LspClient(workspace_root="/workspace")
-    monkeypatch.setattr(
-        lsp,
-        "_run_python_script",
-        lambda script: (
-            '[{"name":"demo","path":"/workspace/demo.py","line":7,"col":2,"type":"statement"}]'
-        ),
-    )
-
-    results = lsp._python_definitions("/workspace/demo.py", 7, 2)
-
-    assert len(results) == 1
-    assert results[0].kind is SymbolKind.UNKNOWN
+def test_resolve_path_prepends_workspace_root() -> None:
+    lsp = LspClient(workspace_root="/testbed")
+    assert lsp._resolve_path("dask/core.py") == "/testbed/dask/core.py"
 
 
-def test_python_definitions_follows_imports_in_subprocess_path(monkeypatch) -> None:
-    captured_scripts: list[str] = []
-    lsp = LspClient(workspace_root="/workspace")
-
-    def _capture(script: str) -> str:
-        captured_scripts.append(script)
-        return "[]"
-
-    monkeypatch.setattr(lsp, "_run_python_script", _capture)
-
-    lsp._python_definitions("/workspace/pkg/uses.py", 4, 11)
-
-    assert captured_scripts
-    assert "follow_imports=True" in captured_scripts[0]
+def test_resolve_path_leaves_absolute_unchanged() -> None:
+    lsp = LspClient(workspace_root="/testbed")
+    assert lsp._resolve_path("/testbed/dask/core.py") == "/testbed/dask/core.py"
 
 
-def test_reset_backend_availability_clears_cached_readiness() -> None:
-    lsp = LspClient(workspace_root="/workspace")
-    lsp._py_available = False
-
-    lsp.reset_backend_availability()
-
-    assert lsp._py_available is None
-
-
-def test_cached_query_singleflights_concurrent_misses() -> None:
-    lsp = LspClient(workspace_root="/workspace")
-    calls = 0
-    calls_lock = threading.Lock()
-
-    def loader() -> str:
-        nonlocal calls
-        with calls_lock:
-            calls += 1
-        time.sleep(0.05)
-        return "resolved"
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(lambda _: lsp._run_cached_query("same-key", loader), range(8)))
-
-    assert results == ["resolved"] * 8
-    assert calls == 1
+def test_resolve_path_no_workspace_root_keeps_relative() -> None:
+    lsp = LspClient(workspace_root="")
+    assert lsp._resolve_path("dask/core.py") == "dask/core.py"
 
 
 def test_sandbox_read_line_caches_until_invalidate() -> None:
@@ -129,173 +83,68 @@ def test_sandbox_read_line_caches_until_invalidate() -> None:
     assert len(calls) == 2
 
 
-def test_resolve_path_prepends_workspace_root() -> None:
-    lsp = LspClient(workspace_root="/testbed")
-    assert lsp._resolve_path("dask/core.py") == "/testbed/dask/core.py"
+# ---------------------------------------------------------------------------
+# Cache / single-flight contract
+# ---------------------------------------------------------------------------
 
 
-def test_resolve_path_leaves_absolute_unchanged() -> None:
-    lsp = LspClient(workspace_root="/testbed")
-    assert lsp._resolve_path("/testbed/dask/core.py") == "/testbed/dask/core.py"
+def test_cached_query_singleflights_concurrent_misses() -> None:
+    lsp = LspClient(workspace_root="/workspace")
+    calls = 0
+    calls_lock = threading.Lock()
+
+    def loader() -> str:
+        nonlocal calls
+        with calls_lock:
+            calls += 1
+        time.sleep(0.05)
+        return "resolved"
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(
+            executor.map(lambda _: lsp._run_cached_query("same-key", loader), range(8))
+        )
+
+    assert results == ["resolved"] * 8
+    assert calls == 1
 
 
-def test_resolve_path_no_workspace_root_keeps_relative() -> None:
-    lsp = LspClient(workspace_root="")
-    assert lsp._resolve_path("dask/core.py") == "dask/core.py"
+def test_reset_backend_availability_clears_cached_readiness() -> None:
+    lsp = LspClient(workspace_root="/workspace")
+    lsp._py_available = False
+    lsp.reset_backend_availability()
+    assert lsp._py_available is None
 
 
-def test_python_diagnostics_resolves_relative_paths(tmp_path) -> None:
-    package = tmp_path / "dask"
-    package.mkdir()
-    target = package / "config.py"
-    target.write_text("def broken(:\n    pass\n", encoding="utf-8")
-
-    lsp = LspClient(workspace_root=str(tmp_path))
-
-    diagnostics = lsp.diagnostics("dask/config.py")
-
-    assert len(diagnostics) == 1
-    assert diagnostics[0].file_path == "dask/config.py"
-    assert diagnostics[0].line == 1
-    assert diagnostics[0].severity is DiagnosticSeverity.ERROR
-    assert "invalid syntax" in diagnostics[0].message
+# ---------------------------------------------------------------------------
+# Phase 3.6 readiness probe (basedpyright, NOT jedi)
+# ---------------------------------------------------------------------------
 
 
-def test_diagnostics_invalidation_matches_relative_and_absolute_paths(tmp_path) -> None:
-    package = tmp_path / "dask"
-    package.mkdir()
-    target = package / "config.py"
-    target.write_text("VALUE = 1\n", encoding="utf-8")
-    lsp = LspClient(workspace_root=str(tmp_path))
+def test_ensure_ready_probes_basedpyright_langserver_binary() -> None:
+    """The Phase 3.6 readiness probe checks for ``basedpyright-langserver``,
+    NOT ``import jedi`` (which the rewire deleted)."""
 
-    assert lsp.diagnostics("dask/config.py") == []
-
-    target.write_text("def broken(:\n    pass\n", encoding="utf-8")
-    lsp.invalidate(str(target))
-    diagnostics = lsp.diagnostics("dask/config.py")
-
-    assert len(diagnostics) == 1
-    assert diagnostics[0].line == 1
-    assert "invalid syntax" in diagnostics[0].message
-
-
-def test_sandbox_python_diagnostics_runs_inside_sandbox(monkeypatch) -> None:
-    captured_scripts: list[str] = []
-    lsp = LspClient(
-        workspace_root="/workspace",
-        sandbox=SimpleNamespace(process=SimpleNamespace(exec=lambda *_args, **_kwargs: None)),
-    )
-
-    def _capture(script: str) -> str:
-        captured_scripts.append(script)
-        return '{"type":"syntax_error","line":1,"character":11,"message":"invalid syntax"}'
-
-    monkeypatch.setattr(lsp, "_run_python_script", _capture)
-
-    diagnostics = lsp.diagnostics("dask/config.py")
-
-    assert len(diagnostics) == 1
-    assert diagnostics[0].file_path == "dask/config.py"
-    assert diagnostics[0].line == 1
-    assert diagnostics[0].character == 11
-    assert diagnostics[0].source == "python"
-    assert captured_scripts
-    assert "/workspace/dask/config.py" in captured_scripts[0]
-
-
-def test_sandbox_python_diagnostics_raises_when_query_transport_fails() -> None:
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            raise RuntimeError("Failed to execute command: ")
-
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
-
-    with pytest.raises(RuntimeError, match="LSP diagnostics unavailable"):
-        lsp.diagnostics("pkg/mod.py")
-
-    assert lsp.telemetry.script_errors == 1
-
-
-def test_sandbox_exec_runs_script_with_base64_pipe() -> None:
-    """Verify _run_python_script preserves newlines without a temp file write."""
-    captured_cmds: list[str] = []
-
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            captured_cmds.append(command)
-            return SimpleNamespace(exit_code=0, result="[]")
-
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
-
-    lsp._run_python_script("print('hello')")
-
-    assert len(captured_cmds) == 1
-    assert "base64 -d | python3 -" in captured_cmds[0]
-    assert _decode_sandbox_python_payload(captured_cmds[0]) == "print('hello')"
-    assert lsp.telemetry.script_runs == 1
-    assert lsp.telemetry.script_successes == 1
-
-
-def test_sandbox_exec_logs_empty_daytona_exception_context(caplog) -> None:
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            raise RuntimeError("Failed to execute command: ")
-
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
-    caplog.set_level(logging.DEBUG, logger="sandbox.code_intelligence.language_server.client")
-
-    assert lsp._run_python_script("print('hello')") == ""
-
-    assert lsp.telemetry.script_errors == 1
-    assert "Failed to execute command: (no additional detail from Daytona SDK)" in caplog.text
-    assert "[exception_type=RuntimeError]" in caplog.text
-    assert "operation=python lsp query" in caplog.text
-    assert "workspace_root='/testbed'" in caplog.text
-
-
-def test_sandbox_exec_no_cd_without_workspace_root() -> None:
-    """Without workspace_root, no cd prefix is added."""
-    captured_cmds: list[str] = []
-
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            captured_cmds.append(command)
-            return SimpleNamespace(exit_code=0, result="[]")
-
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="", sandbox=sandbox)
-
-    lsp._run_python_script("print('hello')")
-
-    assert len(captured_cmds) == 1
-    assert "base64 -d | python3 -" in captured_cmds[0]
-    assert _decode_sandbox_python_payload(captured_cmds[0]) == "print('hello')"
-    assert "cd " not in captured_cmds[0]
-
-
-def test_ensure_ready_can_probe_only_python_backend() -> None:
     class _SandboxProcess:
         def __init__(self) -> None:
             self.calls: list[str] = []
 
         def exec(self, command: str, timeout: int = 0):
             self.calls.append(command)
-            if "import jedi" in command:
+            if "basedpyright-langserver" in command:
                 return _sandbox_exit_result(0)
-            raise AssertionError(f"unexpected command: {command}")
+            return _sandbox_exit_result(1)
 
     process = _SandboxProcess()
-    lsp = LspClient(workspace_root="/workspace", sandbox=SimpleNamespace(process=process))
+    lsp = LspClient(
+        workspace_root="/workspace", sandbox=SimpleNamespace(process=process)
+    )
 
     readiness = lsp.ensure_ready(languages=("python",))
 
     assert readiness == {"python": True}
-    assert len(process.calls) == 1
-    assert "import jedi" in process.calls[0]
-    assert "__CODEX_EXIT_CODE__" in process.calls[0]
+    assert any("basedpyright-langserver" in cmd for cmd in process.calls)
+    assert not any("import jedi" in cmd for cmd in process.calls)
 
 
 def test_connected_only_probes_python_backend() -> None:
@@ -305,134 +154,171 @@ def test_connected_only_probes_python_backend() -> None:
 
         def exec(self, command: str, timeout: int = 0):
             self.calls.append(command)
-            if "import jedi" in command:
+            if "basedpyright-langserver" in command:
                 return _sandbox_exit_result(0)
-            raise AssertionError(f"unexpected command: {command}")
+            return _sandbox_exit_result(1)
 
     process = _SandboxProcess()
-    lsp = LspClient(workspace_root="/workspace", sandbox=SimpleNamespace(process=process))
-
+    lsp = LspClient(
+        workspace_root="/workspace", sandbox=SimpleNamespace(process=process)
+    )
     assert lsp.connected is True
-    assert len(process.calls) == 1
-    assert "import jedi" in process.calls[0]
-    assert "__CODEX_EXIT_CODE__" in process.calls[0]
+    assert any("basedpyright-langserver" in cmd for cmd in process.calls)
 
 
-def test_python_hover_uses_resolved_path(monkeypatch) -> None:
-    """Verify hover resolves relative path before injecting into Jedi script."""
-    captured_scripts: list[str] = []
-    lsp = LspClient(workspace_root="/testbed")
+def test_ensure_ready_install_command_targets_basedpyright() -> None:
+    """``install_missing=True`` runs ``pip install basedpyright`` (NOT jedi)."""
 
-    def _capture(script: str) -> str:
-        captured_scripts.append(script)
-        return "null"
-
-    monkeypatch.setattr(lsp, "_run_python_script", _capture)
-
-    lsp._python_hover("dask/groupby.py", 100, 0)
-
-    assert len(captured_scripts) == 1
-    assert "/testbed/dask/groupby.py" in captured_scripts[0]
-    assert "path='dask/groupby.py'" not in captured_scripts[0]
-
-
-def test_ensure_ready_installs_missing_sandbox_deps() -> None:
     class _SandboxProcess:
         def __init__(self) -> None:
             self.calls: list[str] = []
 
         def exec(self, command: str, timeout: int = 0):
             self.calls.append(command)
-            if "import jedi" in command:
+            if "basedpyright-langserver" in command and "install" not in command:
+                # Probe — fail so install path runs.
                 return _sandbox_exit_result(1)
-            if "python3 -m pip install --quiet --no-cache-dir jedi" in command:
+            if "pip install" in command and "basedpyright" in command:
                 return _sandbox_exit_result(0)
-            raise AssertionError(f"unexpected command: {command}")
+            return _sandbox_exit_result(1)
 
-    class _SandboxFs:
-        def upload_file(self, content: bytes, path: str):
-            pass
-
-    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
+    sandbox = SimpleNamespace(process=_SandboxProcess())
     lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
 
     readiness = lsp.ensure_ready(install_missing=True)
 
     assert readiness == {"python": True}
     assert any(
-        "python3 -m pip install --quiet --no-cache-dir jedi" in command
-        and "__CODEX_EXIT_CODE__" in command
-        for command in sandbox.process.calls
+        "pip install" in cmd and "basedpyright" in cmd
+        for cmd in sandbox.process.calls
     )
-    assert not any("npm install" in command for command in sandbox.process.calls)
+    assert not any("install" in cmd and "jedi" in cmd for cmd in sandbox.process.calls)
 
 
-def test_lsp_run_python_script_uses_transport_when_bound() -> None:
-    """When a SandboxTransport is bound, _run_python_script routes through it."""
-    from sandbox.api.models import RawExecResult
+# ---------------------------------------------------------------------------
+# Backend routing — every public method goes through LspAsyncHost.run(child)
+# ---------------------------------------------------------------------------
 
-    captured: dict[str, object] = {}
 
-    class _FakeTransport:
-        name = "fake"
+def _patched_host(host_run_results: dict[str, object]) -> object:
+    """Build a fake LspAsyncHost whose ``run(fn)`` returns the result for the
+    method being called on the dummy child."""
 
-        async def exec(
-            self, sandbox_id: str, command: str, *, cwd=None, timeout=None,
-        ) -> RawExecResult:
-            captured["sandbox_id"] = sandbox_id
-            captured["command"] = command
-            captured["timeout"] = timeout
-            return RawExecResult(exit_code=0, stdout="hello from transport")
+    class _DummyChild:
+        async def find_definitions(self, *args, **kwargs):
+            return host_run_results.get("find_definitions", [])
 
-    transport = _FakeTransport()
-    lsp = LspClient(
-        workspace_root="/workspace",
-        transport=transport,
-        sandbox_id="sb-xyz",
+        async def find_references(self, *args, **kwargs):
+            return host_run_results.get("find_references", [])
+
+        async def hover(self, *args, **kwargs):
+            return host_run_results.get("hover")
+
+        async def diagnostics(self, *args, **kwargs):
+            return host_run_results.get("diagnostics", [])
+
+    class _FakeHost:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def run(self, fn):
+            import asyncio
+
+            return asyncio.run(fn(_DummyChild()))
+
+        def close(self) -> None:
+            return None
+
+    return _FakeHost
+
+
+def test_goto_definition_routes_through_lsp_async_host() -> None:
+    sym = SymbolInfo(
+        name="foo",
+        kind=SymbolKind.FUNCTION,
+        file_path="/ws/foo.py",
+        line=5,
+        character=4,
     )
-
-    result = lsp._run_python_script("print('script body')")
-
-    assert result == "hello from transport"
-    assert captured["sandbox_id"] == "sb-xyz"
-    # Script body is base64-encoded into the bash command piped through
-    # `base64 -d | python3 -`. The encoded payload decodes to the script body.
-    command = str(captured["command"] or "")
-    payload = _decode_sandbox_python_payload(command)
-    assert payload == "print('script body')"
+    fake = _patched_host({"find_definitions": [sym]})
+    with patch(
+        "sandbox.code_intelligence.language_server.client.LspAsyncHost",
+        new=fake,
+    ):
+        lsp = LspClient(workspace_root="/ws")
+        results = lsp.goto_definition("/ws/foo.py", 1, 0)
+        assert results == [sym]
 
 
-def test_lsp_transport_path_takes_precedence_over_sandbox() -> None:
-    """If both transport and sandbox are bound, transport wins."""
-    from sandbox.api.models import RawExecResult
+def test_find_references_routes_through_lsp_async_host() -> None:
+    ref = ReferenceInfo(file_path="/ws/foo.py", line=5, character=2)
+    fake = _patched_host({"find_references": [ref]})
+    with patch(
+        "sandbox.code_intelligence.language_server.client.LspAsyncHost",
+        new=fake,
+    ):
+        lsp = LspClient(workspace_root="/ws")
+        results = lsp.find_references("/ws/foo.py", 1, 0)
+        assert results == [ref]
 
-    transport_calls: list[str] = []
 
-    class _FakeTransport:
-        name = "fake"
+def test_hover_routes_through_lsp_async_host() -> None:
+    hov = HoverResult(content="docs", language="python")
+    fake = _patched_host({"hover": hov})
+    with patch(
+        "sandbox.code_intelligence.language_server.client.LspAsyncHost",
+        new=fake,
+    ):
+        lsp = LspClient(workspace_root="/ws")
+        result = lsp.hover("/ws/foo.py", 1, 0)
+        assert result == hov
 
-        async def exec(
-            self, sandbox_id: str, command: str, *, cwd=None, timeout=None,
-        ) -> RawExecResult:
-            transport_calls.append(command)
-            return RawExecResult(exit_code=0, stdout="from transport")
 
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            raise AssertionError(
-                "Sandbox.process.exec must NOT be called when transport is bound"
-            )
-
-    transport = _FakeTransport()
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(
-        workspace_root="/workspace",
-        sandbox=sandbox,
-        transport=transport,
-        sandbox_id="sb-xyz",
+def test_diagnostics_routes_through_lsp_async_host() -> None:
+    diag = Diagnostic(
+        file_path="/ws/foo.py",
+        line=2,
+        character=0,
+        severity=DiagnosticSeverity.WARNING,
+        message="hint",
     )
+    fake = _patched_host({"diagnostics": [diag]})
+    with patch(
+        "sandbox.code_intelligence.language_server.client.LspAsyncHost",
+        new=fake,
+    ):
+        lsp = LspClient(workspace_root="/ws")
+        results = lsp.diagnostics("/ws/foo.py")
+        assert results == [diag]
 
-    result = lsp._run_python_script("anything")
 
-    assert result == "from transport"
-    assert len(transport_calls) == 1
+def test_close_releases_host_idempotently() -> None:
+    """``close()`` releases the host and is safe to call twice."""
+    closed_calls: list[bool] = []
+
+    class _FakeHost:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def run(self, fn):
+            import asyncio
+
+            class _C:
+                async def find_definitions(self, *a, **k):
+                    return []
+
+            return asyncio.run(fn(_C()))
+
+        def close(self) -> None:
+            closed_calls.append(True)
+
+    with patch(
+        "sandbox.code_intelligence.language_server.client.LspAsyncHost",
+        new=_FakeHost,
+    ):
+        lsp = LspClient(workspace_root="/ws")
+        # Trigger lazy host construction.
+        lsp.goto_definition("/ws/foo.py", 1, 0)
+        lsp.close()
+        lsp.close()
+    assert closed_calls == [True]

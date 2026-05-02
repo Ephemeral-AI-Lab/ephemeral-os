@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import textwrap
 from pathlib import Path
 
@@ -116,6 +117,13 @@ def test_diagnostics_warning_severity():
     assert data["diagnostics"][0]["severity"] == "warning"
 
 
+@pytest.mark.skipif(
+    not bool(shutil.which("basedpyright-langserver")),
+    reason=(
+        "Phase 3.6 rewire: LspClient.diagnostics now routes through the "
+        "basedpyright LSP child. Requires basedpyright-langserver on PATH."
+    ),
+)
 def test_lsp_diagnostics_cache_invalidates_relative_query_with_absolute_path(
     tmp_path: Path,
 ) -> None:
@@ -220,17 +228,19 @@ class TestResolveColumn:
 # ---------------------------------------------------------------------------
 
 
-_has_jedi = False
-try:
-    import jedi  # noqa: F401
-    _has_jedi = True
-except ImportError:
-    pass
+_has_basedpyright_langserver = bool(shutil.which("basedpyright-langserver"))
 
-_skip_no_jedi = pytest.mark.skipif(not _has_jedi, reason="jedi not installed")
+_skip_no_lsp = pytest.mark.skipif(
+    not _has_basedpyright_langserver,
+    reason=(
+        "Phase 3.6 rewire: tests that need a real LSP backend run only when "
+        "basedpyright-langserver is on PATH. Pre-bake the sandbox image or "
+        "install basedpyright in the local dev environment to enable them."
+    ),
+)
 
 
-@_skip_no_jedi
+@_skip_no_lsp
 class TestReferencesWithResolveColumn:
     """Verify find_references returns results when character=0."""
 

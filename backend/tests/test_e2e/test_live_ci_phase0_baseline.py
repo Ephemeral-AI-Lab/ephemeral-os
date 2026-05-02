@@ -4,6 +4,12 @@ Establishes the canonical baseline timing JSON
 (``_timings/phase_0_baseline_<ts>.json``) that every later phase's
 ``compare_to(...)`` references.
 
+Phase 3.5 / 3.6: this module also captures the pre-rewire jedi.Script LSP
+baseline (``_timings/phase_0_lsp_baseline_<ts>.json``) that Phase 3.6's
+benchmark asserts against. The LSP baseline MUST be captured before the
+Phase 3.6 rewire commit deletes ``python_backend.py`` — otherwise the
+jedi numbers cannot be reproduced.
+
 Run with:
     .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase0_baseline.py -m live -v -s
 """
@@ -242,3 +248,107 @@ async def test_phase0_baseline_timings(live_phase0_env: LivePhase0Env) -> None:
     assert payload_names == expected, (
         f"baseline step order/coverage mismatch: {payload_names} != {expected}"
     )
+
+
+def _find_python_symbol_position(env: LivePhase0Env, file_path: str) -> tuple[int, int]:
+    """Locate the first ``def NAME(`` line in *file_path* (1-indexed line, 0-indexed col)."""
+    code, output = env.exec(
+        f"grep -nE '^(def |class )' {file_path} | head -1",
+        timeout=20,
+    )
+    if code != 0 or not output.strip():
+        return 1, 4
+    first = output.splitlines()[0]
+    line_str, _, _ = first.partition(":")
+    try:
+        return int(line_str), 4
+    except ValueError:
+        return 1, 4
+
+
+def test_phase0_lsp_baseline_jedi(live_phase0_env: LivePhase0Env) -> None:
+    """Capture jedi.Script LSP timings BEFORE Phase 3.6 deletes ``python_backend.py``.
+
+    Phase 3.6's benchmark asserts the chosen backend (basedpyright / pyright)
+    is at least 5x faster than this jedi baseline for ``find_definitions``
+    and 10x faster for ``hover``. Once ``python_backend.py`` is removed by
+    the rewire commit, this baseline cannot be reproduced.
+    """
+    h = TimingHarness(phase=0, test_name="lsp_baseline")
+    env = live_phase0_env
+    target_file = f"{env.root_dir}/dask/__init__.py"
+
+    _flush_print(f"\n[phase0-lsp] starting LSP baseline run for {env.sandbox_id}")
+
+    with _traced_step(h, "ci_service_construct"):
+        svc = env.make_ci_service()
+    with _traced_step(h, "index_build_in_process"):
+        svc.ensure_initialized(wait=True)
+
+    target_line, target_char = _find_python_symbol_position(env, target_file)
+    _flush_print(
+        f"  [phase0-lsp] target {target_file}:{target_line}:{target_char}"
+    )
+
+    # Cold first-query cost reported separately so it is not amortized into
+    # warm-sample distributions.
+    with _traced_step(h, "lsp_cold_find_definitions"):
+        try:
+            svc.find_definitions(target_file, "", target_line, target_char)
+        except Exception as exc:
+            _flush_print(f"  [phase0-lsp] cold find_definitions failed: {exc}")
+
+    # Warm-up to allow any per-call jedi caching to settle.
+    for _ in range(3):
+        try:
+            svc.find_definitions(target_file, "", target_line, target_char)
+        except Exception:
+            pass
+
+    # 20-sample distributions for each LSP op. The op call may fall back to
+    # the symbol-index path when LSP returns nothing — we record whatever
+    # the user-facing call returns, since that is the metric Phase 3.6 must
+    # beat (LSP-or-fallback).
+    for step in h.step_repeat("find_definitions", n=20):
+        with step:
+            try:
+                svc.find_definitions(target_file, "", target_line, target_char)
+            except Exception:
+                pass
+    for step in h.step_repeat("find_references", n=20):
+        with step:
+            try:
+                svc.find_references(target_file, "", target_line, target_char)
+            except Exception:
+                pass
+    for step in h.step_repeat("hover", n=20):
+        with step:
+            try:
+                svc.hover(target_file, target_line, target_char)
+            except Exception:
+                pass
+    for step in h.step_repeat("diagnostics", n=20):
+        with step:
+            try:
+                svc.diagnostics(target_file)
+            except Exception:
+                pass
+
+    with _traced_step(h, "ci_service_dispose"):
+        svc.dispose()
+
+    report = h.report()
+    _flush_print("\n" + report)
+    baseline_path = h.dump_json()
+    _flush_print(f"\n[phase0-lsp] baseline saved at: {baseline_path}")
+
+    # Soft assertions — every LSP op must have a distribution.
+    payload = h.to_payload()
+    assert "find_definitions" in payload["distributions"]
+    assert "find_references" in payload["distributions"]
+    assert "hover" in payload["distributions"]
+    assert "diagnostics" in payload["distributions"]
+    for op in ["find_definitions", "find_references", "hover", "diagnostics"]:
+        assert payload["distributions"][op]["n"] == 20, (
+            f"{op}: expected 20 samples, got {payload['distributions'][op]['n']}"
+        )

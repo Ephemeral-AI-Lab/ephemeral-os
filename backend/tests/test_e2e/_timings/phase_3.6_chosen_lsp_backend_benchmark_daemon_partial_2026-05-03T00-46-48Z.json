@@ -1,0 +1,15 @@
+{
+  "phase": 3.6,
+  "test_name": "chosen_lsp_backend_benchmark_daemon",
+  "timestamp": "2026-05-03T00:46:48+08:00",
+  "completion": "partial",
+  "completion_reason": "warm-sample loop hung on Daytona transport queue depth at the orchestrator after cold first-query proved sandbox-resident basedpyright works; sandbox torn down manually",
+  "steps": [
+    {"name": "ci_service_construct",   "elapsed_s": 0.004,  "count": null, "bytes": null},
+    {"name": "index_build_in_sandbox", "elapsed_s": 25.046, "count": null, "bytes": null},
+    {"name": "lsp_cold_first_query",   "elapsed_s": 6.669,  "count": null, "bytes": null}
+  ],
+  "key_proof": "lsp_cold_first_query=6.669s end-to-end: orchestrator -> Daytona transport -> daemon (in sandbox) -> basedpyright LSP child (in sandbox) -> textDocument/definition reply path. The basedpyright child therefore launched and answered a real LSP request inside /testbed.",
+  "values": {},
+  "distributions": {}
+}
