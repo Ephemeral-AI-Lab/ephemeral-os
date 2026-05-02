@@ -19,7 +19,10 @@ from sandbox.code_intelligence.backend import (
     InProcessCiBackend,
     RpcCiBackend,
 )
-from sandbox.code_intelligence.registry import dispose_all_code_intelligence
+from sandbox.code_intelligence.registry import (
+    dispose_all_code_intelligence,
+    get_code_intelligence,
+)
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
 
@@ -108,6 +111,37 @@ def test_select_inprocess_with_empty_sandbox_id(tmp_path: Path) -> None:
         transport=transport,
     )
     assert type(svc._impl) is InProcessCiBackend
+
+
+# ---------------------------------------------------------------------------
+# Registry transport matching
+# ---------------------------------------------------------------------------
+
+
+def test_registry_reuses_service_with_same_transport(tmp_path: Path) -> None:
+    transport = MagicMock(name="transport-a")
+    first = get_code_intelligence("registry-reuse", str(tmp_path), transport=transport)
+    second = get_code_intelligence("registry-reuse", str(tmp_path), transport=transport)
+    assert first is second
+
+
+def test_registry_replaces_service_when_transport_changes(tmp_path: Path) -> None:
+    transport_a = MagicMock(name="transport-a")
+    transport_b = MagicMock(name="transport-b")
+    first = get_code_intelligence("registry-replace", str(tmp_path), transport=transport_a)
+    second = get_code_intelligence(
+        "registry-replace",
+        str(tmp_path),
+        transport=transport_b,
+    )
+    assert second is not first
+
+
+def test_registry_replaces_service_when_transport_is_removed(tmp_path: Path) -> None:
+    transport = MagicMock(name="transport")
+    first = get_code_intelligence("registry-remove", str(tmp_path), transport=transport)
+    second = get_code_intelligence("registry-remove", str(tmp_path))
+    assert second is not first
 
 
 # ---------------------------------------------------------------------------

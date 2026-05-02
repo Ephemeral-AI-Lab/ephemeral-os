@@ -216,9 +216,6 @@ class LspClient(LspPathMixin, LspTransportMixin, LspCacheMixin, LspTelemetryMixi
                 errors=self._telemetry.errors,
                 successes=self._telemetry.successes,
                 cache_hits=self._telemetry.cache_hits,
-                script_runs=self._telemetry.script_runs,
-                script_successes=self._telemetry.script_successes,
-                script_errors=self._telemetry.script_errors,
             )
 
     @property

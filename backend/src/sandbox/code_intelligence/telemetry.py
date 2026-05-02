@@ -115,7 +115,4 @@ def lsp_telemetry_fields(lsp_client: Any) -> dict[str, Any]:
         "successes": tel.successes,
         "errors": tel.errors,
         "cache_hits": tel.cache_hits,
-        "script_runs": tel.script_runs,
-        "script_successes": tel.script_successes,
-        "script_errors": tel.script_errors,
     }

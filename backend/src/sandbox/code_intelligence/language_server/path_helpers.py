@@ -46,11 +46,10 @@ class LspPathMixin:
     def _resolve_column(self, file_path: str, line: int, character: int) -> int:
         """When *character* is 0, advance to the actual symbol-name column.
 
-        Both jedi (legacy) and basedpyright resolve position-based queries
-        against the cursor. ``character=0`` lands on leading indentation
-        (or on the ``def``/``class`` keyword), producing empty results. For
-        ``def``/``class`` lines the cursor is placed past the keyword onto
-        the symbol name.
+        basedpyright resolves position-based queries against the cursor.
+        ``character=0`` lands on leading indentation (or on the ``def``/
+        ``class`` keyword), producing empty results. For ``def``/``class``
+        lines the cursor is placed past the keyword onto the symbol name.
         """
         if character != 0:
             return character

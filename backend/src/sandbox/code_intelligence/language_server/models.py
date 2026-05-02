@@ -32,6 +32,3 @@ class LspTelemetry:
     errors: int = 0
     successes: int = 0
     cache_hits: int = 0
-    script_runs: int = 0
-    script_successes: int = 0
-    script_errors: int = 0

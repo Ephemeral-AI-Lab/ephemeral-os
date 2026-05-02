@@ -31,7 +31,9 @@ def get_code_intelligence(
 
     def _transport_matches(service: CodeIntelligenceService) -> bool:
         current = getattr(service, "_transport", None)
-        return transport is None or current is transport or current is not None
+        if transport is None:
+            return current is None
+        return current is transport
 
     with _SERVICES_LOCK:
         existing = _SERVICES.get(sandbox_id)
