@@ -2,9 +2,9 @@
 
 **Status:** Approved (awaiting Phase 0 kickoff)
 **Date approved:** 2026-05-02
-**Last amended:** 2026-05-02 (added Phase 3.5; switched to bundle-the-package approach; tightened storage boundary; clarified `svc.cmd` result preservation; **made bootstrap EAGER on sandbox create/restart**; added compatibility probe; added msgpack runtime dep + bundle vendoring)
+**Last amended:** 2026-05-02 (added Phase 3.6 LSP backend experiment — qualify basedpyright, alternative pyright, no runtime fallback; strengthened Phase 1 compatibility probe with live overlay mount E2E that exercises the production tmpfs+bind+overlay+userxattr stack)
 **Predecessor:** [`code-intelligence-merged-into-sandbox.md`](../code-intelligence-merged-into-sandbox.md) — CI moved into the `sandbox/` package; still ran orchestrator-side
-**Estimated effort:** ~37-44 engineering days (≈7.5-9 weeks)
+**Estimated effort:** ~42-50 engineering days (≈8.5-10 weeks)
 
 ## Why this migration
 
@@ -25,12 +25,15 @@ Moving the engine into the sandbox eliminates the network for hot paths, lets in
 | [2](./phase-02-daemon-lifecycle.md) | Daemon process + lifecycle (eager spawn from `create_sandbox` / `start_sandbox`) | 4 days | 2-3 days | 6-7 days |
 | [3](./phase-03-overlay-mutations-lsp.md) | Move OCC/overlay/LSP via package reuse + SQLite ledger + socket-first daemon startup | 3 days | 2-3 days | 5-6 days |
 | [3.5](./phase-03-5-concurrency-perf-and-sqlite-index.md) | Concurrency/perf E2E suite + SQLite-backed index storage | 3 days | 2 days | 5 days |
+| [3.6](./phase-03-6-lsp-server-upgrade.md) | LSP backend experiment — qualify basedpyright (alternative pyright); rewire `LspClient` to chosen backend; benchmark vs jedi.Script | 2-3 days (1d spike + 2d eng) | 2-3 days | 5-6 days |
 | [4](./phase-04-svc-cmd-hot-path.md) | `svc.cmd` hot path through the daemon | 2 days | 2-3 days | 4-5 days |
 | [5](./phase-05-ci-rpc-verb-and-flag-flip.md) | First-class `ci_rpc` verb + flag flip + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
 
-Phase order is **strict** (0 → 5). Each phase is independently mergeable because the flag-off path keeps working.
+Phase order is **strict** (0 → 5, including 3.5 and 3.6). Each phase is independently mergeable because the flag-off path keeps working.
 
 **Why Phase 3.5 between 3 and 4:** Phase 3 lands the OCC engine inside the daemon. Before pushing the highest-volume hot path (`svc.cmd`, Phase 4) through that engine, we want a perf safety net that proves the daemon survives sustained load without memory leak, FD leak, or contention pathologies. Phase 3.5 also migrates the index from pickle to SQLite so per-file `refresh()` doesn't rewrite the world.
+
+**Why Phase 3.6 between 3.5 and 4:** Phase 3 routed `find_definitions/find_references/hover/diagnostics` through the daemon, but kept today's per-call `python3 -c "import jedi"` shim. That's a 200-500ms cold-start per query — the obvious next bottleneck after Phase 3.5 stabilizes the daemon. Phase 3.6 is a focused experiment: qualify basedpyright as a persistent LSP child of the daemon; if it can't run on our sandbox image, qualify pyright instead; pick ONE; rewire `LspClient`; remove jedi.Script. **No runtime fallback chain** — silent degradation in the LSP path would mask whether the upgrade actually landed in production. Done before Phase 4 so the headline `svc.cmd` perf measurement isn't tangled with LSP latency improvements.
 
 ## Architectural endpoint
 
@@ -168,8 +171,17 @@ The daemon depends on a specific set of OS primitives. **Phase 1 ships a compati
 
 | Dep | Why | Fallback |
 |---|---|---|
-| `jedi` (Python pkg) | LSP queries | Today's `LspClient.ensure_ready(install_missing=True)` does `pip install jedi` if missing; preserved by package reuse. Offline images need pre-bake |
+| ~~`jedi` (Python pkg)~~ | ~~LSP queries~~ | **Removed in Phase 3.6.** jedi.Script per-call mode replaced by a single qualified persistent LSP backend. The chosen backend's deps (basedpyright OR pyright) move to HARD REQUIRED in Phase 3.6 — see "Phase 3.6 hard contract" below |
 | `/proc/<pid>/status` readable | RSS/FD sampling in Phase 3.5 perf E2E | Tests skip resource assertions if unavailable |
+
+### Phase 3.6 hard contract — chosen LSP backend
+
+After Phase 3.6 ships, the **single** qualified backend's deps become required (no fallback):
+
+- **If basedpyright qualifies** (Stage A spike result, primary candidate): `python3 -c "import basedpyright"` MUST succeed on the production image (pre-baked, OR `pip install basedpyright` works at first-query time). Phase 1 compatibility probe extended to enforce this.
+- **If pyright qualifies instead** (alternative when basedpyright can't run): `command -v node` AND `command -v pyright-langserver` MUST both succeed.
+
+The qualification spike (Phase 3.6 Task 3.6.A) decides which one. The compatibility probe extension (Phase 3.6 Task 3.6.G) treats the chosen backend's deps as hard requirements thereafter — a new sandbox image lacking them fails Phase 1, not Phase 4. **No silent fallback to jedi.** If the chosen backend isn't runnable, LSP queries surface `LspUnavailable` and the caller sees the failure.
 
 ### Where it actually breaks
 
@@ -263,6 +275,11 @@ Phase 4's result-shape parity test (Task 4.3) verifies this. Downstream callers 
 - [ ] All cross-phase regression checks green (each phase reruns prior phases' E2Es).
 - [ ] Full `svc.cmd` `SimpleNamespace` field set preserved (Phase 4 result-shape parity test).
 - [ ] `msgpack` vendored into bundle; daemon starts on offline image without `pip install`.
+- [ ] **Phase 1 overlay live mount probe (Task 1.5.G) passes** — production tmpfs+bind+overlay+userxattr stack works end-to-end on the sandbox image, including write/modify/delete + whiteout marker (char(0,0) OR `user.overlay.whiteout` xattr) + user.* xattr round-trip. Stronger than `unshare -Urm true`.
+- [ ] **Phase 3.6 LSP backend qualified** — basedpyright OR pyright runs as a persistent LSP child of the daemon on `dask__dask_2023.3.2_2023.4.0`; qualification report committed at `lsp-qualification-spike-result.md`.
+- [ ] **Phase 3.6 LSP benchmark passes hard SLOs** — chosen backend `find_definitions` p50 ≥ 5x faster than pre-rewire jedi.Script baseline; p99 < 100ms warm; `hover` p50 ≥ 10x faster.
+- [ ] **Phase 3.6 jedi.Script removed from production code** — `python_backend.py` deleted, `jedi` removed from `pyproject.toml`, no runtime fallback chain.
+- [ ] **HARD INVARIANT 5 (LSP cache invalidation on commit) preserved against the chosen backend** (Phase 3.6 regression of Phase 3 Task 3.7.E).
 
 ## Cross-cutting risks
 
@@ -345,12 +362,16 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 
 ### New live E2E tests (one per phase + the compatibility probe)
 - `backend/tests/test_e2e/test_live_ci_phase0_baseline.py`
-- `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` (includes privilege probe + compatibility matrix probe)
+- `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` (privilege probe + compatibility matrix probe + **overlay live mount probe** Task 1.5.G)
 - `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` (asserts daemon ready after `create_sandbox`)
 - `backend/tests/test_e2e/test_live_ci_phase3_invariants.py`
 - `backend/tests/test_e2e/test_live_ci_phase3_5_concurrent_perf.py`
+- `backend/tests/test_e2e/test_live_ci_phase3_6_lsp_benchmark.py` (chosen LSP backend vs pre-rewire jedi.Script baseline)
 - `backend/tests/test_e2e/test_live_ci_phase4_svc_cmd.py`
 - `backend/tests/test_e2e/test_live_ci_phase5_default_on.py`
+
+### Phase 3.6 throwaway script (committed for reproducibility)
+- `scripts/lsp_qualification_spike.py` — Stage A one-shot experiment that picks basedpyright OR pyright; produces `docs/architecture/code-intelligence-in-sandbox-daemon/lsp-qualification-spike-result.md`
 
 ## Pre-existing context to read before starting any phase
 
@@ -396,3 +417,9 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
   - Phase 1 adds Task 1.5.E compatibility probe live E2E.
   - Added msgpack as runtime dep in `pyproject.toml` (Phase 0) and vendored msgpack into bundle (Phase 1, ~50KB) for offline-image compatibility.
   - Cross-cutting risks: cold-start latency risk migrates from "first call after `create_sandbox`" (lazy model) to "`create_sandbox` cost rises ~1-2s cold" (eager model). Test asserts `create_sandbox` < 3s.
+- **2026-05-02 (LSP upgrade experiment + stronger overlay probe):**
+  - Added **Phase 3.6 — LSP backend experiment**. Qualifies basedpyright as the persistent LSP child of the daemon; if it can't run on `dask__dask_2023.3.2_2023.4.0`, qualifies pyright instead. Picks ONE; rewires `LspClient` to use only the qualified backend; deletes today's `python_backend.py` (jedi.Script per-call shim) and removes `jedi` from `pyproject.toml`. **No runtime fallback** — if the chosen backend can't start, `LspUnavailable` propagates; no silent degradation to a worse path. Three stages: (A) qualification spike, (B) implementation, (C) benchmark + regression.
+  - Hard SLOs for the chosen backend vs pre-rewire jedi baseline: `find_definitions` p50 ≥ 5x faster, p99 < 100ms warm; `hover` p50 ≥ 10x faster.
+  - Phase 1 Task 1.5.E (compatibility probe) extended in Phase 3.6 Task 3.6.G to treat the chosen backend's deps as HARD REQUIRED.
+  - Bumped total estimated effort from 37-44 days to 42-50 days (≈8.5-10 weeks) for Phase 3.6.
+  - Added **Phase 1 Task 1.5.G — overlay live mount probe**. Strengthens compatibility probe by exercising the production tmpfs + bind-mount lower + `mount -t overlay -o lowerdir=...,upperdir=...,workdir=...,userxattr` + write/modify/delete + whiteout marker validation (accepts both privileged char(0,0) and userxattr `user.overlay.whiteout` xattr) + user.* xattr round-trip. Mirrors `overlay/runtime/namespace.py:setup_mounts` exactly. Stronger than `unshare -Urm true` — fails Phase 1 instead of failing in Phase 4 if the production overlay mount stack doesn't work on a new sandbox image.

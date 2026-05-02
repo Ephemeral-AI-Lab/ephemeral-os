@@ -612,6 +612,140 @@ async def test_eager_bootstrap_timing(live_sweevo_env_factory):
     h.dump_json()
 ```
 
+#### 1.5.G — Overlay live mount probe (LOAD-BEARING — stronger than `unshare -Urm true`)
+
+**Why this is needed:** the matrix probe in 1.5.E only checks `unshare -Urm true` exits 0. That proves user namespace creation works, but says **nothing** about whether the production overlay mount stack actually functions. On some kernels (4.x with overlayfs userxattr support gaps, hardened LSM profiles, missing whiteout-in-userns support), `unshare -Urm true` succeeds but the production `mount -t overlay -o lowerdir=...,upperdir=...,workdir=...,userxattr` either fails outright or silently returns wrong results when the workload tries to delete a file (whiteout creation).
+
+This probe **exercises every primitive the production overlay (`overlay/runtime/namespace.py:setup_mounts`) depends on**, so a broken sandbox image fails Phase 1 instead of failing in Phase 4 when `svc.cmd` first tries to commit a deletion through the OCC pipeline.
+
+**What it covers:**
+- ✅ tmpfs mount inside an unprivileged user namespace
+- ✅ bind mount of lowerdir (matches `namespace.py:48` pattern)
+- ✅ overlay mount with full production opts (`lowerdir=...,upperdir=...,workdir=...,userxattr`)
+- ✅ Write through merged → upperdir copy-up (gitinclude case)
+- ✅ Modify through merged → existing-file copy-up (the hot path for `svc.cmd` edits)
+- ✅ Delete through merged → whiteout marker (handles BOTH char-device(0,0) and userxattr-style `user.overlay.whiteout` xattr)
+- ✅ user.* xattr round-trip (matches the production `userxattr` mount opt requirement)
+
+```python
+def test_overlay_live_mount_probe(live_sweevo_env):
+    """End-to-end probe of the production overlay stack: tmpfs + bind lower
+    + overlay (userxattr) + write/modify/delete + whiteout + xattr.
+
+    Mirrors namespace.py:setup_mounts exactly. If this fails, svc.cmd will
+    not work on this image, regardless of what the basic dep matrix says."""
+    h = TimingHarness(phase=1, test_name="overlay_live_mount_probe")
+    env = live_sweevo_env
+
+    probe_script = r'''
+set -e
+tmpdir=$(mktemp -d)
+lower=$tmpdir/lower
+merged=$tmpdir/merged
+tmpfs_root=$tmpdir/tmpfs
+
+mkdir -p "$lower" "$merged" "$tmpfs_root"
+echo "lower-keep"   > "$lower/keep.txt"
+echo "lower-modify" > "$lower/modify.txt"
+echo "lower-delete" > "$lower/delete.txt"
+
+# Mirrors namespace.py:setup_mounts exactly
+unshare -Urm bash -c "
+  set -e
+
+  # Step 1: tmpfs upper (size-capped, matches production)
+  mount -t tmpfs -o size=10m tmpfs '$tmpfs_root'
+  mkdir -p '$tmpfs_root/upper' '$tmpfs_root/work'
+
+  # Step 2: bind-mount lowerdir (matches namespace.py:48)
+  mount --bind '$lower' '$lower'
+
+  # Step 3: overlay with the production userxattr opts
+  mount -t overlay overlay -o 'lowerdir=$lower,upperdir=$tmpfs_root/upper,workdir=$tmpfs_root/work,userxattr' '$merged'
+
+  # Step 4: WRITE — new file copies up to upperdir (gitinclude case)
+  echo 'new-content' > '$merged/new.txt'
+  test -f '$tmpfs_root/upper/new.txt' || { echo 'FAIL: new file not copied up'; exit 51; }
+  test \"\$(cat '$merged/new.txt')\" = 'new-content' || { echo 'FAIL: merged view of new file wrong'; exit 51; }
+
+  # Step 5: MODIFY — existing lowerdir file copies up on first write
+  echo 'modified-content' > '$merged/modify.txt'
+  test -f '$tmpfs_root/upper/modify.txt' || { echo 'FAIL: modify did not copy up'; exit 52; }
+  test \"\$(cat '$tmpfs_root/upper/modify.txt')\" = 'modified-content' || { echo 'FAIL: upperdir copy-up content wrong'; exit 52; }
+
+  # Step 6: DELETE — must produce a whiteout tombstone in upperdir
+  rm '$merged/delete.txt'
+  if [ -e '$merged/delete.txt' ]; then echo 'FAIL: delete still visible through merged'; exit 53; fi
+
+  # Step 7: validate whiteout marker exists in upperdir
+  upper_delete='$tmpfs_root/upper/delete.txt'
+  if [ ! -e \"\$upper_delete\" ]; then
+    echo 'FAIL: whiteout tombstone missing in upperdir'
+    ls -la '$tmpfs_root/upper'
+    exit 54
+  fi
+
+  # Step 8: validate the whiteout is a recognized form. Two valid representations:
+  #   (a) Privileged-style: character device with major/minor 0/0
+  #   (b) Userxattr-style:  regular file with user.overlay.whiteout xattr
+  # Production uses 'userxattr' so we expect (b), but kernels vary — accept either.
+  if stat -c '%t,%T' \"\$upper_delete\" 2>/dev/null | grep -q '^0,0\$'; then
+    : # privileged-style char-device whiteout — OK
+  elif getfattr -n user.overlay.whiteout \"\$upper_delete\" 2>/dev/null | grep -q whiteout; then
+    : # userxattr-style whiteout (the production path) — OK
+  else
+    echo 'FAIL: tombstone is neither char(0,0) nor user.overlay.whiteout xattr'
+    stat \"\$upper_delete\"
+    getfattr -d \"\$upper_delete\" 2>/dev/null || true
+    exit 55
+  fi
+
+  # Step 9: user.* xattr round-trip on a copied-up file (production needs userxattr)
+  setfattr -n user.eos_probe -v 'probe_value' '$merged/modify.txt'
+  got=\$(getfattr -n user.eos_probe --only-values '$merged/modify.txt' 2>/dev/null)
+  if [ \"\$got\" != 'probe_value' ]; then
+    echo \"FAIL: user.* xattr round-trip — got '\$got' expected 'probe_value'\"
+    exit 56
+  fi
+
+  echo 'OK: overlay live probe passed'
+"
+rc=$?
+rm -rf "$tmpdir"
+exit $rc
+'''
+
+    with h.step("overlay_live_probe"):
+        code, out = env.exec(probe_script, timeout=60)
+
+    if code != 0:
+        pytest.fail(
+            f"OVERLAY LIVE PROBE FAILED (exit_code={code}):\n"
+            f"{out}\n"
+            f"This is the production overlay mount stack from namespace.py:setup_mounts.\n"
+            f"Failure here means svc.cmd will not work on this image.\n"
+            f"Investigate: kernel overlayfs userxattr support (≥5.11), unprivileged userns config,\n"
+            f"LSM profiles (AppArmor/SELinux), and `xattr` userspace tools "
+            f"(getfattr/setfattr from `attr` on Debian/Ubuntu, `attr` package on RHEL)."
+        )
+
+    print(h.report())
+    h.dump_json()
+```
+
+**Common failure modes the probe surfaces (and what they mean):**
+
+| Exit code | Meaning | Likely cause |
+|---|---|---|
+| 1 (early) | `mount -t tmpfs` failed | tmpfs not mountable in user namespace (unusual; very old kernel) |
+| 1 (later) | `mount -t overlay` failed | kernel lacks overlayfs in userns OR `userxattr` opt unsupported (pre-5.11) |
+| 51 | new file not in upperdir | overlay mount succeeded but copy-up broken |
+| 52 | modify did not copy up | overlay copy-up-on-write broken or upperdir not writable |
+| 53 | delete still visible through merged | whiteout creation failed, delete not honored by overlay |
+| 54 | whiteout tombstone missing | overlay accepted `unlink()` but didn't record it |
+| 55 | tombstone is unrecognized form | kernel uses some other whiteout representation — investigate |
+| 56 | user.* xattr round-trip failed | `userxattr` opt accepted but xattrs not actually plumbed — masked failure |
+
 **Run command:** `uv run pytest backend/tests/test_e2e/test_live_ci_phase1_indexing.py -m live -v -s`
 
 ### Task 1.6 — Storage unit tests
@@ -653,18 +787,20 @@ async def test_eager_bootstrap_timing(live_sweevo_env_factory):
 - [ ] **Phase 1 live E2E privilege probe (1.5.A) passes — `mkdir -p $HOME/.cache/eos-ci/...` succeeds without sudo on the sandbox image.**
 - [ ] **Phase 1 live E2E compatibility matrix probe (1.5.E) — all required deps green on `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] **Phase 1 live E2E eager bootstrap timing (1.5.F) — `create_sandbox` cold < 3s; `start_sandbox` warm < 500ms.**
+- [ ] **Phase 1 live E2E overlay live mount probe (1.5.G) — production `tmpfs + bind lower + overlay (userxattr)` stack works end-to-end on the sandbox image, including write/modify/delete + whiteout marker (char(0,0) OR `user.overlay.whiteout` xattr) + user.* xattr round-trip.**
 - [ ] Phase 1 E2E corruption recovery (1.5.C) works — daemon rebuilds from scratch when snapshot is corrupted.
 - [ ] Phase 1 E2E symbol counts (1.5.B) match Phase 0 baseline.
 - [ ] Phase 1 E2E path-confinement guard (1.5.D) rejects path-traversal attempts.
 - [ ] Phase 1 timing report shows `index_build_in_sandbox` within 5x of Phase 0 baseline; `query_symbols_first` ≤ baseline; no other regression >50ms.
 - [ ] Regression check: Phase 0 E2E + full unit suite still green.
-- [ ] PR description includes: privilege-probe output (`$HOME`, `whoami`, `umask`), compatibility matrix output, Phase 1 `compare_to(baseline)` report, bundle size in KB, eager-bootstrap cold/warm timings.
+- [ ] PR description includes: privilege-probe output (`$HOME`, `whoami`, `umask`), compatibility matrix output, **overlay live probe output** (whiteout style detected: char(0,0) vs userxattr xattr; `kernel uname -r`; xattr round-trip result), Phase 1 `compare_to(baseline)` report, bundle size in KB, eager-bootstrap cold/warm timings.
 
 ## Risk callouts (Phase 1 specific)
 
 | Severity | Risk | Mitigation |
 |---|---|---|
 | **HIGH** | Privilege failure on `$HOME/.cache/eos-ci/` (sandbox runs as a user without `$HOME` write) | Loud failure in 1.5.A with errno + `$HOME` + `whoami`; choose between `/tmp/eos-ci-$USER/` fallback (documented) or amending the storage layout decision before Phase 2 |
+| **HIGH** | Production overlay mount stack (`tmpfs + bind + overlay -o ...,userxattr`) silently broken on the sandbox image despite `unshare -Urm true` succeeding | Task 1.5.G overlay live probe exercises the full stack including write/modify/delete + whiteout + xattr round-trip; fails Phase 1 with structured exit codes (51-56) so the failure mode is identifiable before Phase 4 ships svc.cmd through the same mounts |
 | **MEDIUM** | Bundle size spikes because `code_intelligence/` grows over time | `_ci_runtime_bundle_bytes()` reports its size on first call; alert when bundle > 5 MB (current ~200 KB; would take a major addition to hit the alert) |
 | **MEDIUM** | Bundle hash check (1.3 idempotency) miscomputes → repeated full uploads | Test the marker file mechanism explicitly; include bundle bytes-length in the marker as a sanity check |
 | **MEDIUM** | `read_bytes` on a multi-MB pickle is slow over the transport | Acceptable for Phase 1 (one-shot); Phase 2+ moves the cache into the daemon, so `query_symbols` no longer requires a snapshot transfer; Phase 3.5 swaps to SQLite for incremental updates |
