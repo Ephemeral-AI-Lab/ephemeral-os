@@ -1,0 +1,80 @@
+{
+  "phase": 0,
+  "test_name": "baseline_timings",
+  "timestamp": "2026-05-02T11:28:31.433888+00:00",
+  "steps": [
+    {
+      "name": "sandbox_create",
+      "elapsed_s": 0.0,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "sweevo_setup",
+      "elapsed_s": 0.0,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "ci_service_construct",
+      "elapsed_s": 3.737500082934275e-05,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "index_build_in_process",
+      "elapsed_s": 3.922833000004175,
+      "count": 254,
+      "bytes": 28477
+    },
+    {
+      "name": "query_symbols_first",
+      "elapsed_s": 0.006714957999065518,
+      "count": 333,
+      "bytes": null
+    },
+    {
+      "name": "query_symbols_warm",
+      "elapsed_s": 0.004324957997596357,
+      "count": 333,
+      "bytes": null
+    },
+    {
+      "name": "write_file_baseline",
+      "elapsed_s": 0.7828812910011038,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "edit_file_baseline",
+      "elapsed_s": 0.7903903749975143,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "delete_file_baseline",
+      "elapsed_s": 2.591949499998009,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_baseline",
+      "elapsed_s": 8.04662054200162,
+      "count": null,
+      "bytes": 4
+    },
+    {
+      "name": "ci_service_dispose",
+      "elapsed_s": 4.8290996346622705e-05,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "sandbox_dispose",
+      "elapsed_s": 0.0,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 16.14580028999626
+}
