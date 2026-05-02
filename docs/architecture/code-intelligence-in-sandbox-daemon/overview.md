@@ -123,7 +123,7 @@ There are **two distinct storage classes** in this design. Mixing them would be 
 | **CI internal state** | Symbol index, LSP cache, edit ledger, daemon socket/PID/log | `$HOME/.cache/eos-ci/<wh>/v1/` (XDG) | `ci_storage` adapter only — **never** through OCC/overlay |
 
 **Invariants:**
-- The CI internal state path is **outside `workspace_root`** so it never appears in `git status`, never gets versioned, never gets snapshotted by `git_snapshot.py`, and isn't user work.
+- The CI internal state path is **outside `workspace_root`** so it never appears in `git status`, never gets versioned, never appears in the overlay lowerdir snapshot, and isn't user work.
 - Workspace writes from RPC handlers must go through `WriteCoordinator`. **No RPC handler is allowed to write directly under `workspace_root`.** Phase 3 adds a guard test that attempts a bypass and asserts the daemon refuses it.
 - `ci_storage` writes are restricted to `$HOME/.cache/eos-ci/<wh>/v1/`. Any path outside that subtree raises.
 
@@ -155,7 +155,7 @@ The daemon depends on a specific set of OS primitives. **Phase 1 ships a compati
 | AF_UNIX sockets | Daemon RPC | NEW |
 | `setsid`, `nohup`, `kill`, `ps` | Daemon spawn + lifecycle | NEW |
 | `tar`, `base64`, `bash` | Bundle extraction | NEW |
-| `git` | `git_snapshot.py` does `git commit-tree` | ✓ |
+| `git` | `git check-ignore` routes overlay upperdir paths between OCC and direct merge | ✓ |
 | `unshare -Urm` (unprivileged user namespaces) | Overlay shell auditing | ✓ — most fragile dep |
 | Writable `/tmp` (not `noexec`) | Bundle extraction + overlay tmpfs | ✓ |
 | `msgpack` (Python pkg) | Daemon wire format | NEW — vendored into bundle (~50KB) so offline images work without `pip install` |

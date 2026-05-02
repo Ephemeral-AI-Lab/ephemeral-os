@@ -29,8 +29,8 @@ class OverlayCommandCommitter:
     Every change that ``git check-ignore`` did *not* flag is committed
     here; index membership is irrelevant to routing. The strict-base
     contract (``strict_base=True``) matches the plan's invariant that
-    ``base_content`` always comes from ``git show $SNAP:path`` — peer
-    edits between SNAP and commit abort the op with ``aborted_version``,
+    ``base_content`` always comes from the command-start overlay lowerdir — peer
+    edits between lowerdir read and commit abort the op with ``aborted_version``,
     never produce a silent merge. Concurrent writers to the same path
     therefore resolve as first-writer-wins.
     """

@@ -3,9 +3,10 @@
 Coordinates one ``svc.cmd`` op per plan §1:
 
 1. Acquire per-sandbox semaphore.
-2. Build the live Git snapshot used as the strict-base for tracked writes.
-3. Ship the ``overlay_run.py`` runtime bundle into the sandbox, invoke it under
-   ``unshare -Urm`` with the user command and snapshot SHA.
+2. Ship the ``overlay_run.py`` runtime bundle into the sandbox and invoke it
+   under ``unshare -Urm`` with the user command.
+3. The sandbox-side runner treats the overlay lowerdir as the command-start
+   base and emits those base bytes for strict-base OCC.
 4. Read ``$RUN_DIR/diff.ndjson`` from the sandbox.
 5. If the script emitted a ``_reject`` meta line → surface via
    ``git_commit_status`` + ``git_conflict_reason`` on the result.
@@ -59,7 +60,6 @@ from typing import Any
 
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
-from sandbox.code_intelligence.overlay.git_snapshot import build_live_snapshot_details
 from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter
 from sandbox.code_intelligence.overlay.config import (
     overlay_max_concurrent,
@@ -82,6 +82,7 @@ _PROGRESS_READ_CHUNK_BYTES = 64 * 1024
 _SLOW_OVERLAY_STAGE_SECONDS = 1.0
 _SLOW_OVERLAY_TOTAL_SECONDS = 5.0
 _COMMAND_SAMPLE_LIMIT = 160
+_WorkspaceFingerprint = tuple[tuple[str, int, int, int, int], ...]
 
 
 def _command_sample(command: str) -> str:
@@ -102,6 +103,20 @@ def _overlay_runtime_bundle_bytes() -> bytes:
             rel = path.relative_to(runtime_dir).as_posix()
             tar.add(path, arcname=f"overlay_runtime/{rel}")
     return buffer.getvalue()
+
+
+def _workspace_fingerprint(workspace_root: str) -> _WorkspaceFingerprint:
+    root = Path(workspace_root)
+    paths = (root, root / ".git" / "index", root / ".git" / "HEAD")
+    rows: list[tuple[str, int, int, int, int]] = []
+    for path in paths:
+        try:
+            st = path.stat()
+        except OSError:
+            rows.append((str(path), -1, -1, -1, -1))
+            continue
+        rows.append((str(path), st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size))
+    return tuple(rows)
 
 
 class OverlayAuditor:
@@ -135,6 +150,9 @@ class OverlayAuditor:
         )
         self._script_upload_lock = asyncio.Lock()
         self._script_uploaded = False
+        self._fingerprint_lock = asyncio.Lock()
+        self._active_fingerprint_guards = 0
+        self._last_workspace_fingerprint: _WorkspaceFingerprint | None = None
 
     async def execute(
         self,
@@ -171,19 +189,6 @@ class OverlayAuditor:
             error: BaseException | None = None
             record_overlay_op(ops_total=1)
             try:
-                snapshot = await self._timed_stage(
-                    "git_snapshot",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=build_live_snapshot_details(
-                        sandbox,
-                        self._exec_process,
-                        self._workspace_root,
-                        transport=self._transport,
-                        sandbox_id=self._sandbox_id,
-                    ),
-                )
                 await self._timed_stage(
                     "upload_runtime",
                     stage_timings=stage_timings,
@@ -206,7 +211,6 @@ class OverlayAuditor:
                         awaitable=self._run_overlay(
                             sandbox,
                             lease=lease,
-                            snap=snapshot.snap,
                             user_cmd_b64=user_cmd_b64,
                             stdin_b64=stdin_b64,
                             timeout=timeout,
@@ -221,7 +225,6 @@ class OverlayAuditor:
                         awaitable=self._run_overlay_with_progress(
                             sandbox,
                             lease=lease,
-                            snap=snapshot.snap,
                             user_cmd_b64=user_cmd_b64,
                             stdin_b64=stdin_b64,
                             timeout=timeout,
@@ -259,7 +262,7 @@ class OverlayAuditor:
                         exit_code=script_exit,
                         reject=diff_or_reject,
                         git_snapshot_timings=(
-                            diff_or_reject.snapshot_timings or snapshot.timings
+                            diff_or_reject.snapshot_timings
                         ),
                         overlay_run_timings=diff_or_reject.run_timings,
                     )
@@ -285,7 +288,7 @@ class OverlayAuditor:
                         agent_id=agent_id,
                         description=description or "shell overlay",
                         attribute_changes=attribute_changes,
-                        git_snapshot_timings=diff.snapshot_timings or snapshot.timings,
+                        git_snapshot_timings=diff.snapshot_timings,
                         overlay_run_timings=diff.run_timings,
                     ),
                 )
@@ -337,8 +340,11 @@ class OverlayAuditor:
             total_started = time.perf_counter()
             result: SimpleNamespace | None = None
             error: BaseException | None = None
+            fingerprint_guard_started = False
             record_overlay_op(ops_total=1)
             try:
+                await self._begin_workspace_fingerprint_guard()
+                fingerprint_guard_started = True
                 await self._timed_stage(
                     "upload_runtime",
                     stage_timings=stage_timings,
@@ -462,12 +468,35 @@ class OverlayAuditor:
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
                 if result is not None:
                     result.overlay_stage_timings = dict(stage_timings)
+                if fingerprint_guard_started:
+                    await self._end_workspace_fingerprint_guard()
                 self._log_execution_summary(
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
                     result=result,
                     error=error,
+                )
+
+    async def _begin_workspace_fingerprint_guard(self) -> None:
+        async with self._fingerprint_lock:
+            if self._active_fingerprint_guards == 0:
+                current = _workspace_fingerprint(self._workspace_root)
+                previous = self._last_workspace_fingerprint
+                if previous is not None and current != previous:
+                    raise OverlayRunError(
+                        "workspace changed outside the overlay OCC path; "
+                        "refusing lowerdir snapshot"
+                    )
+            self._active_fingerprint_guards += 1
+
+    async def _end_workspace_fingerprint_guard(self) -> None:
+        async with self._fingerprint_lock:
+            if self._active_fingerprint_guards > 0:
+                self._active_fingerprint_guards -= 1
+            if self._active_fingerprint_guards == 0:
+                self._last_workspace_fingerprint = _workspace_fingerprint(
+                    self._workspace_root
                 )
 
     async def _run_overlay_daemon_local(
@@ -485,8 +514,6 @@ class OverlayAuditor:
             self._workspace_root,
             "--run-dir",
             lease.run_dir,
-            "--snap",
-            "",
             "--upper-size-mb",
             str(self._upper_size_mb),
             "--user-cmd-b64",
@@ -579,7 +606,7 @@ class OverlayAuditor:
         return payload
 
     async def _cleanup_daemon_local_run_dir(self, lease: OverlayLease) -> None:
-        await asyncio.to_thread(shutil.rmtree, lease.run_dir, ignore_errors=False)
+        await asyncio.to_thread(shutil.rmtree, lease.run_dir, ignore_errors=True)
 
     async def _timed_stage(
         self,
@@ -715,7 +742,6 @@ class OverlayAuditor:
         sandbox: Any,
         *,
         lease: OverlayLease,
-        snap: str,
         user_cmd_b64: str,
         stdin_b64: str,
         timeout: int | None,
@@ -724,7 +750,6 @@ class OverlayAuditor:
         args = [
             "--workspace-root", self._workspace_root,
             "--run-dir", lease.run_dir,
-            "--snap", snap,
             "--upper-size-mb", str(self._upper_size_mb),
             "--user-cmd-b64", user_cmd_b64,
         ]
@@ -744,7 +769,6 @@ class OverlayAuditor:
         sandbox: Any,
         *,
         lease: OverlayLease,
-        snap: str,
         user_cmd_b64: str,
         stdin_b64: str,
         timeout: int | None,
@@ -754,7 +778,6 @@ class OverlayAuditor:
             self._run_overlay(
                 sandbox,
                 lease=lease,
-                snap=snap,
                 user_cmd_b64=user_cmd_b64,
                 stdin_b64=stdin_b64,
                 timeout=timeout,

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.code_intelligence.overlay.git_snapshot import GitSnapshotError
+from sandbox.code_intelligence.overlay.types import OverlayRunError
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
 )
@@ -25,7 +25,7 @@ def _clear_registry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_cmd_raises_when_overlay_snapshot_prepare_fails(tmp_path) -> None:
+async def test_cmd_raises_when_overlay_runtime_fails(tmp_path) -> None:
     sandbox = SimpleNamespace(process=_AsyncLocalProcess())
     svc = CodeIntelligenceService(
         sandbox_id=f"sandbox-cmd-overlay-fail-{tmp_path.name}",
@@ -33,10 +33,10 @@ async def test_cmd_raises_when_overlay_snapshot_prepare_fails(tmp_path) -> None:
         sandbox=sandbox,
     )
 
-    with pytest.raises(GitSnapshotError) as excinfo:
+    with pytest.raises(OverlayRunError) as excinfo:
         await svc.cmd(sandbox, "echo hi")
 
-    assert "git_snapshot" in str(excinfo.value)
+    assert "overlay diff.ndjson missing" in str(excinfo.value)
 
 
 class _AsyncLocalProcess:

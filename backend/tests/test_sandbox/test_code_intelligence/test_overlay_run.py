@@ -31,12 +31,12 @@ from sandbox.code_intelligence.overlay.run import (
     REJECT_UNSUPPORTED_OPAQUE_DIR,
     REJECT_UNSUPPORTED_SYMLINK,
     UpperEntry,
-    build_live_snapshot_in_namespace,
     check_ignore_factory,
     direct_merge_factory,
     is_opaque_dir,
     is_symlink,
     is_whiteout,
+    lowerdir_base_factory,
     narrow_prune_opaque_factory,
     reject_exit_code,
     walk_upperdir,
@@ -143,7 +143,7 @@ class _Classifier:
     def read_upper(self, rel: str) -> bytes:
         return self.upper_bytes[rel]
 
-    def git_show_base(self, rel: str) -> bytes | None:
+    def read_base(self, rel: str) -> bytes | None:
         return self.base_bytes.get(rel)
 
     def check_ignore(self, rels: list[str]) -> set[str]:
@@ -163,7 +163,7 @@ class _Classifier:
     def classifier(self) -> Classifier:
         return Classifier(
             read_upper_bytes=self.read_upper,
-            git_show_base=self.git_show_base,
+            read_base=self.read_base,
             check_ignore=self.check_ignore,
             direct_merge=self.direct_merge,
             prune_opaque_narrow=self.prune_opaque_narrow,
@@ -448,7 +448,7 @@ def test_classifier_rejects_gitinclude_opaque_dir() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_classifier_skips_mode_only_change_when_content_equal_to_snap() -> None:
+def test_classifier_skips_mode_only_change_when_content_equal_to_base() -> None:
     env = _Classifier(
         upper_bytes={"src/app.py": b"same\n"},
         base_bytes={"src/app.py": b"same\n"},
@@ -601,7 +601,7 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
         outcome=outcome,
         upper_bytes=99,
         upper_files=3,
-        snapshot_timings={"total": 0.123, "git_add": 0.045},
+        snapshot_timings={},
         run_timings={"total": 0.5, "classify": 0.2},
     )
 
@@ -611,7 +611,7 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
     assert meta["_meta"]["gitinclude_changes"] == 1
     assert meta["_meta"]["gitignore_changes"] == 1
     assert meta["_meta"]["gitignore_paths"] == [".venv/cfg"]
-    assert meta["_meta"]["snapshot_timings"] == {"total": 0.123, "git_add": 0.045}
+    assert meta["_meta"]["snapshot_timings"] == {}
     assert meta["_meta"]["run_timings"] == {"total": 0.5, "classify": 0.2}
     entry = json.loads(lines[1])
     assert entry["path"] == "a.py"
@@ -683,10 +683,8 @@ def _init_repo(path: Path) -> None:
     )
 
 
-def test_build_live_snapshot_in_namespace_returns_snap_and_timings(
-    tmp_path: Path,
-) -> None:
-    repo = tmp_path / "snapshot-repo"
+def test_lowerdir_base_factory_reads_gitinclude_base(tmp_path: Path) -> None:
+    repo = tmp_path / "lowerdir-repo"
     repo.mkdir()
     _init_repo(repo)
     (repo / "app.py").write_text("committed\n", encoding="utf-8")
@@ -694,15 +692,25 @@ def test_build_live_snapshot_in_namespace_returns_snap_and_timings(
     subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True)
     (repo / "app.py").write_text("dirty\n", encoding="utf-8")
 
-    snap, timings = build_live_snapshot_in_namespace(str(repo))
+    read_base = lowerdir_base_factory(lower_root=str(repo))
 
-    shown = subprocess.check_output(
-        ["git", "-C", str(repo), "show", f"{snap}:app.py"],
-        text=True,
-    )
-    assert shown == "dirty\n"
-    assert timings["total"] >= 0
-    assert timings["git_add"] >= 0
+    assert read_base("app.py") == b"dirty\n"
+
+
+def test_lowerdir_base_factory_reads_gitignored_base(tmp_path: Path) -> None:
+    repo = tmp_path / "lowerdir-ignored"
+    repo.mkdir()
+    _init_repo(repo)
+    (repo / ".gitignore").write_text(".venv/\nnode_modules/\n", encoding="utf-8")
+    (repo / "app.py").write_text("seed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True)
+    (repo / ".venv").mkdir()
+    (repo / ".venv" / "pyvenv.cfg").write_text("home=/usr\n", encoding="utf-8")
+
+    read_base = lowerdir_base_factory(lower_root=str(repo))
+
+    assert read_base(".venv/pyvenv.cfg") == b"home=/usr\n"
 
 
 def test_check_ignore_factory_splits_gitinclude_and_ignored(tmp_path: Path) -> None:
@@ -938,7 +946,6 @@ def test_parse_args_accepts_the_full_argument_surface() -> None:
         [
             "--workspace-root", "/ws",
             "--run-dir", "/run",
-            "--snap", "deadbeef",
             "--upper-size-mb", "256",
             "--user-cmd-b64", "ZWNobyBoaQ==",
             "--stdin-b64", "c3RkaW4=",
@@ -946,7 +953,6 @@ def test_parse_args_accepts_the_full_argument_surface() -> None:
     )
     assert ns.workspace_root == "/ws"
     assert ns.run_dir == "/run"
-    assert ns.snap == "deadbeef"
     assert ns.upper_size_mb == 256
     assert ns.user_cmd_b64 == "ZWNobyBoaQ=="
     assert ns.stdin_b64 == "c3RkaW4="
@@ -959,6 +965,24 @@ def test_parse_args_rejects_missing_required_argument() -> None:
         _parse_args(["--workspace-root", "/ws"])
 
 
+def test_git_routing_metadata_accepts_git_dir_or_file(tmp_path: Path) -> None:
+    from sandbox.code_intelligence.overlay.run import has_git_routing_metadata
+
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert has_git_routing_metadata(str(plain)) is False
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    assert has_git_routing_metadata(str(repo)) is True
+
+    linked = tmp_path / "linked"
+    linked.mkdir()
+    (linked / ".git").write_text("gitdir: ../repo/.git\n", encoding="utf-8")
+    assert has_git_routing_metadata(str(linked)) is True
+
+
 def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
     from sandbox.code_intelligence.overlay import run as overlay_run
 
@@ -969,82 +993,29 @@ def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
 
 
 # ---------------------------------------------------------------------------
-# git_show_base_factory real-git round-trip
+# lowerdir_base_factory filesystem round-trip
 # ---------------------------------------------------------------------------
 
 
-def _make_snap(repo: Path) -> str:
-    """Create a dangling commit capturing the live tree; return its SHA."""
-    env = dict(os.environ)
-    env.setdefault("GIT_AUTHOR_NAME", "T")
-    env.setdefault("GIT_AUTHOR_EMAIL", "t@example.invalid")
-    env.setdefault("GIT_COMMITTER_NAME", "T")
-    env.setdefault("GIT_COMMITTER_EMAIL", "t@example.invalid")
-    tree = subprocess.check_output(
-        ["git", "-C", str(repo), "write-tree"], env=env, text=True
-    ).strip()
-    head = subprocess.run(
-        ["git", "-C", str(repo), "rev-parse", "--verify", "HEAD"],
-        text=True,
-        capture_output=True,
-    )
-    args = ["git", "-C", str(repo), "commit-tree", tree, "-m", "snap"]
-    if head.returncode == 0:
-        args.extend(["-p", head.stdout.strip()])
-    return subprocess.check_output(args, env=env, text=True).strip()
+def test_lowerdir_base_returns_none_for_missing_path(tmp_path: Path) -> None:
+    read_base = lowerdir_base_factory(lower_root=str(tmp_path))
+
+    assert read_base("not-in-lower.py") is None
 
 
-def test_git_show_base_returns_bytes_for_existing_path(tmp_path: Path) -> None:
-    from sandbox.code_intelligence.overlay.run import git_show_base_factory
+def test_lowerdir_base_rejects_path_escape(tmp_path: Path) -> None:
+    read_base = lowerdir_base_factory(lower_root=str(tmp_path))
 
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    (repo / "app.py").write_text("hello\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-    subprocess.run(
-        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
-    )
-    snap = _make_snap(repo)
-
-    show = git_show_base_factory(repo_root=str(repo), snap=snap)
-    assert show("app.py") == b"hello\n"
+    with pytest.raises(RuntimeError, match="escapes lowerdir"):
+        read_base("../outside.py")
 
 
-def test_git_show_base_returns_none_for_missing_path(tmp_path: Path) -> None:
-    from sandbox.code_intelligence.overlay.run import git_show_base_factory
+def test_lowerdir_base_reads_symlink_target_as_base_bytes(tmp_path: Path) -> None:
+    target = tmp_path / "link"
+    target.symlink_to("real-target")
+    read_base = lowerdir_base_factory(lower_root=str(tmp_path))
 
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    (repo / "a.py").write_text("seed\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-    subprocess.run(
-        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
-    )
-    snap = _make_snap(repo)
-
-    show = git_show_base_factory(repo_root=str(repo), snap=snap)
-    assert show("not-in-snap.py") is None
-
-
-def test_git_show_base_raises_on_bad_sha(tmp_path: Path) -> None:
-    from sandbox.code_intelligence.overlay.run import git_show_base_factory
-
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    (repo / "a.py").write_text("seed\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-    subprocess.run(
-        ["git", "-C", str(repo), "commit", "-q", "-m", "seed"], check=True
-    )
-
-    show = git_show_base_factory(repo_root=str(repo), snap="0" * 40)
-    # A sha that doesn't resolve to any commit: git returns 128 and stderr
-    # has "ambiguous argument" rather than "exists on disk". We treat this
-    # as a missing base.
-    assert show("a.py") is None
+    assert read_base("link") == b"real-target"
 
 
 # ---------------------------------------------------------------------------

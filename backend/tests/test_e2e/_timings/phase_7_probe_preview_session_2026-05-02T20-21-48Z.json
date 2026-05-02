@@ -1,0 +1,33 @@
+{
+  "finished_at": "2026-05-02T20:21:48Z",
+  "local_checks": [
+    {
+      "exit": 0,
+      "i": 0,
+      "out": "200"
+    }
+  ],
+  "preview": {
+    "count": 0,
+    "first_bodies": [
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "max_ms": 0,
+    "min_ms": 0,
+    "ok_count": 0,
+    "p50_ms": 0,
+    "p95_ms": 0,
+    "statuses": [
+      502
+    ],
+    "token_len": 32,
+    "url_host": "8765-598a72dc-dfb9-4fa2-aee0-e8c9055f5f35.proxy.localhost:4000"
+  },
+  "sandbox_id": "598a72dc-dfb9-4fa2-aee0-e8c9055f5f35",
+  "session_cmd_id": "df7c61a0-1d81-41d7-8fd5-5cc06005c2c2",
+  "started_at": "2026-05-02T20:18:13Z"
+}

@@ -390,6 +390,7 @@ async def test_daemon_local_branch_matches_multistage_result_shape(
     )
 
     assert len(calls) == 1
+    assert "--snap" not in calls[0][-1]
     assert daemon_local.git_commit_status == expected_status
     assert _normalized_result(daemon_local, daemon_repo) == _normalized_result(
         multistage,

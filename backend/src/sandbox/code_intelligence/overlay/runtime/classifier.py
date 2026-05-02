@@ -35,13 +35,13 @@ class Classifier:
         self,
         *,
         read_upper_bytes: Callable[[str], bytes],
-        git_show_base: Callable[[str], bytes | None],
+        read_base: Callable[[str], bytes | None],
         check_ignore: Callable[[list[str]], set[str]],
         direct_merge: Callable[[str, str, os.stat_result], int] | None = None,
         prune_opaque_narrow: Callable[[str, str], int] | None = None,
     ) -> None:
         self._read_upper_bytes = read_upper_bytes
-        self._git_show_base = git_show_base
+        self._read_base = read_base
         self._check_ignore = check_ignore
         self._direct_route_applier = (
             DirectRouteApplier(
@@ -142,7 +142,7 @@ class Classifier:
             if entry.rel in ignored:
                 continue
             whiteouts_gitinclude += 1
-            base_bytes = self._git_show_base(entry.rel)
+            base_bytes = self._read_base(entry.rel)
             base_existed = base_bytes is not None
             try:
                 base_text = (base_bytes or b"").decode("utf-8")
@@ -178,7 +178,7 @@ class Classifier:
                 raise ClassifierIOError(
                     f"upperdir read failed for {entry.rel!r}: {exc}"
                 ) from exc
-            base_bytes = self._git_show_base(entry.rel)
+            base_bytes = self._read_base(entry.rel)
             base_existed = base_bytes is not None
             if base_existed and upper_bytes == base_bytes:
                 continue

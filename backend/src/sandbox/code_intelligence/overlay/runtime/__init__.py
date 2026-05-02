@@ -9,11 +9,8 @@ from .direct_routes import (
     direct_merge_factory,
     narrow_prune_opaque_factory,
 )
-from .git_adapters import (
-    build_live_snapshot_in_namespace,
-    check_ignore_factory,
-    git_show_base_factory,
-)
+from .gitignore import check_ignore_factory, has_git_routing_metadata
+from .lowerdir import lowerdir_base_factory
 from .namespace import (
     OverlayMountError,
     _NS_LOWER,
@@ -72,13 +69,13 @@ __all__ = [
     "_NS_WORK",
     "_parse_args",
     "_write_result_json",
-    "build_live_snapshot_in_namespace",
     "check_ignore_factory",
     "direct_merge_factory",
-    "git_show_base_factory",
+    "has_git_routing_metadata",
     "is_opaque_dir",
     "is_symlink",
     "is_whiteout",
+    "lowerdir_base_factory",
     "main",
     "narrow_prune_opaque_factory",
     "reject_exit_code",

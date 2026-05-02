@@ -17,12 +17,8 @@ from .direct_routes import (
     direct_merge_factory,
     narrow_prune_opaque_factory,
 )
-from .git_adapters import (
-    _record_timing,
-    build_live_snapshot_in_namespace,
-    check_ignore_factory,
-    git_show_base_factory,
-)
+from .gitignore import check_ignore_factory, has_git_routing_metadata
+from .lowerdir import lowerdir_base_factory
 from .namespace import (
     _NS_LOWER,
     _NS_UPPER,
@@ -39,7 +35,6 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace-root", required=True)
     parser.add_argument("--run-dir", required=True)
-    parser.add_argument("--snap", default="")
     parser.add_argument("--upper-size-mb", type=int, required=True)
     parser.add_argument(
         "--user-cmd-b64",
@@ -81,6 +76,10 @@ def _write_result_json(
     return path
 
 
+def _record_timing(timings: dict[str, float], key: str, started_at: float) -> None:
+    timings[key] = round(time.perf_counter() - started_at, 6)
+
+
 def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     total_started = time.perf_counter()
     args = _parse_args(argv if argv is not None else sys.argv[1:])
@@ -88,15 +87,9 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     run_dir = args.run_dir.rstrip("/")
     os.makedirs(run_dir, exist_ok=True)
 
-    snap = str(args.snap or "").strip()
+    snap = "lowerdir"
     snapshot_timings: dict[str, float] = {}
     run_timings: dict[str, float] = {}
-    if not snap:
-        try:
-            snap, snapshot_timings = build_live_snapshot_in_namespace(workspace_root)
-        except Exception as exc:
-            print(f"snapshot failed: {exc}", file=sys.stderr)
-            return 254
 
     try:
         setup_started = time.perf_counter()
@@ -105,6 +98,12 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     except OverlayMountError as exc:
         print(str(exc), file=sys.stderr)
         return 255
+    if not has_git_routing_metadata(_NS_LOWER):
+        print(
+            f"git routing metadata missing under lowerdir: {_NS_LOWER}",
+            file=sys.stderr,
+        )
+        return 254
 
     decode_started = time.perf_counter()
     user_cmd = base64.b64decode(args.user_cmd_b64).decode("utf-8")
@@ -132,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     classifier_started = time.perf_counter()
     classifier = Classifier(
         read_upper_bytes=lambda rel: open(os.path.join(_NS_UPPER, rel), "rb").read(),
-        git_show_base=git_show_base_factory(repo_root=_NS_LOWER, snap=snap),
+        read_base=lowerdir_base_factory(lower_root=_NS_LOWER),
         check_ignore=check_ignore_factory(repo_root=_NS_LOWER),
     )
     _record_timing(run_timings, "build_classifier", classifier_started)

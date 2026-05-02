@@ -183,8 +183,8 @@ def opaque_env():
             workspace_root=workspace,
         )
         # Seed a real git repo at workspace_root with a gitignore covering
-        # all three scenarios. Overlay requires workspace_root to be a git
-        # repo (snapshot step runs git add + git write-tree).
+        # all three scenarios. Overlay still uses git check-ignore for
+        # gitinclude/gitignore routing.
         env.exec_checked(
             " && ".join(
                 [

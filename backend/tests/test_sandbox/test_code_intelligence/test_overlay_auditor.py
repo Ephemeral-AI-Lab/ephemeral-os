@@ -332,6 +332,54 @@ async def test_committer_deletes_gitinclude_file(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Lowerdir freshness guard
+# ---------------------------------------------------------------------------
+
+
+def _make_guarded_auditor(tmp_path: Path) -> OverlayAuditor:
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir(exist_ok=True)
+    (git_dir / "index").write_text("index\n", encoding="utf-8")
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+
+    async def _unused_exec(*_args, **_kwargs):
+        raise AssertionError("freshness guard test should not execute commands")
+
+    return OverlayAuditor(
+        sandbox_id=f"freshness-{tmp_path.name}",
+        workspace_root=str(tmp_path),
+        exec_process=_unused_exec,
+        write_coordinator=object(),
+        daemon_local=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_freshness_guard_rejects_external_idle_mutation(tmp_path: Path) -> None:
+    auditor = _make_guarded_auditor(tmp_path)
+    await auditor._begin_workspace_fingerprint_guard()
+    await auditor._end_workspace_fingerprint_guard()
+
+    (tmp_path / "external.txt").write_text("outside\n", encoding="utf-8")
+
+    with pytest.raises(OverlayRunError, match="workspace changed outside"):
+        await auditor._begin_workspace_fingerprint_guard()
+
+
+@pytest.mark.asyncio
+async def test_freshness_guard_allows_concurrent_active_window(tmp_path: Path) -> None:
+    auditor = _make_guarded_auditor(tmp_path)
+    await auditor._begin_workspace_fingerprint_guard()
+    await auditor._end_workspace_fingerprint_guard()
+
+    await auditor._begin_workspace_fingerprint_guard()
+    (tmp_path / "during-active.txt").write_text("ok\n", encoding="utf-8")
+    await auditor._begin_workspace_fingerprint_guard()
+    await auditor._end_workspace_fingerprint_guard()
+    await auditor._end_workspace_fingerprint_guard()
+
+
+# ---------------------------------------------------------------------------
 # OverlayAuditor full-trip with a scripted fake exec transport.
 # ---------------------------------------------------------------------------
 
@@ -340,18 +388,17 @@ class _ScriptedSandbox:
     """Fake sandbox: intercepts only the ``unshare -Urm`` step.
 
     The orchestrator issues these commands in order:
-      1. ``git_snapshot`` script → runs for real on the host.
-      2. Overlay runtime upload → writes the script/package for real.
-      3. ``unshare -Urm ... overlay_run.py`` → intercepted. Darwin has no
+      1. Overlay runtime upload → writes the script/package for real.
+      2. ``unshare -Urm ... overlay_run.py`` → intercepted. Darwin has no
          unshare/overlayfs, so we pretend to run the user command, write
          ``diff.ndjson`` into the lease's run dir, and return the scripted
          user exit code.
-      4. ``cat diff.ndjson`` → runs for real against the run dir we just
+      3. ``cat diff.ndjson`` → runs for real against the run dir we just
          populated.
-      5. ``rm -rf run_dir`` → runs for real.
+      4. ``rm -rf run_dir`` → runs for real.
 
     Darwin ``bash`` supports the subset of features the auditor wraps
-    commands in (``pipefail``, ``-lc``), so steps 1/2/4/5 execute in the
+    commands in (``pipefail``, ``-lc``), so steps 1/3/4 execute in the
     host shell identically to how they would inside a real sandbox.
     """
 
