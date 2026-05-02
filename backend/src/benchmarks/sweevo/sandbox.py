@@ -11,8 +11,8 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.client.async_ import get_async_sandbox
-from sandbox.daytona.bash import _wrap_bash_command
-from sandbox.daytona.exec_files import _build_write_text_file_command
+from sandbox.api.bash import wrap_bash_command
+from sandbox.api.file_commands import build_write_text_file_command
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -237,7 +237,7 @@ async def _upload_file_compat(
     if callable(getattr(process, "exec", None)):
         text = content.decode("utf-8")
         response = await process.exec(
-            _wrap_bash_command(_build_write_text_file_command(path, text)),
+            wrap_bash_command(build_write_text_file_command(path, text)),
             timeout=60,
         )
         if getattr(response, "exit_code", 0) not in (0, None):

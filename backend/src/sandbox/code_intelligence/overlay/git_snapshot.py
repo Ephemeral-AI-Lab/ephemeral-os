@@ -99,9 +99,9 @@ async def build_live_snapshot_details(
 ) -> GitSnapshotDetails:
     """Build a dangling commit and return snapshot metadata/timings.
 
-    When ``transport`` and ``sandbox_id`` are provided, the snapshot
-    script is dispatched through the :class:`SandboxTransport` (Step 5
-    rails). Otherwise the legacy ``exec_process`` callback is used.
+    When ``transport`` and ``sandbox_id`` are provided, the snapshot script is
+    dispatched through :class:`SandboxTransport`. Otherwise the injected
+    ``exec_process`` callback is used.
     """
     workspace_root = repo_root.rstrip("/")
     if not workspace_root:

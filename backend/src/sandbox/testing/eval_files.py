@@ -6,8 +6,8 @@ import shlex
 from pathlib import Path
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
-from sandbox.daytona.bash import _wrap_bash_command
-from sandbox.daytona.exec_files import _build_write_text_file_command
+from sandbox.api.bash import wrap_bash_command
+from sandbox.api.file_commands import build_write_text_file_command
 
 
 EVAL_SANDBOX_FILES: dict[str, str] = {
@@ -212,7 +212,7 @@ def populate_sandbox_files(sandbox_id: str) -> None:
     for file_path, content in resolved_files.items():
         try:
             raw_sandbox.process.exec(
-                _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+                wrap_bash_command(build_write_text_file_command(file_path, content)),
                 timeout=10,
             )
         except Exception:

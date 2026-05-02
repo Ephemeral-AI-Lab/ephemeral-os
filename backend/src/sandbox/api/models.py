@@ -9,7 +9,7 @@ internals along. CI engine types and provider primitives live elsewhere.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, Protocol
+from typing import Any, Literal
 
 
 # -- Shared identity --------------------------------------------------------
@@ -79,32 +79,6 @@ class SearchMatch:
     line: int
     column: int = 0
     preview: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class ProcessStatus:
-    """Snapshot of a ``ProcessHandle`` lifecycle state."""
-
-    running: bool
-    exit_code: int | None = None
-
-
-class ProcessHandle(Protocol):
-    """Bidirectional handle to a long-running sandbox process.
-
-    Serves three call sites today and any future sidecar daemon: the LSP
-    transport (stdin/stdout streaming), the background shell tool
-    (status/wait/kill), and code-intelligence RPC clients.
-    """
-
-    process_id: str
-
-    async def write_stdin(self, data: bytes) -> None: ...
-    async def read_stdout(self, n: int = -1) -> bytes: ...
-    async def read_stderr(self, n: int = -1) -> bytes: ...
-    async def status(self) -> ProcessStatus: ...
-    async def kill(self) -> None: ...
-    async def wait(self) -> int: ...
 
 
 # -- SandboxApi: file I/O ---------------------------------------------------
@@ -406,8 +380,6 @@ __all__ = [
     "GrepResult",
     "MoveFileRequest",
     "MoveFileResult",
-    "ProcessHandle",
-    "ProcessStatus",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",

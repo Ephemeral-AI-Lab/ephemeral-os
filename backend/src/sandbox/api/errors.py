@@ -42,12 +42,7 @@ class SandboxConflictError(SandboxApiError):
         self.reason = reason
 
 
-class ProcessTerminated(SandboxApiError):
-    """A ``ProcessHandle`` operation was attempted after the process exited or was killed."""
-
-
 __all__ = [
-    "ProcessTerminated",
     "SandboxApiError",
     "SandboxConflictError",
     "SandboxNotFoundError",

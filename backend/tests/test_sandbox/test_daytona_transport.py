@@ -16,7 +16,7 @@ import pytest
 
 from sandbox.api.errors import SandboxTransportError
 from sandbox.api.models import CheckedWriteSpec
-from sandbox.daytona.bash import _EXIT_MARKER
+from sandbox.api.bash import _EXIT_MARKER
 from sandbox.daytona.transport import DaytonaTransport
 
 
@@ -117,16 +117,6 @@ async def test_write_bytes_calls_upload(
     await transport.write_bytes("sb-1", "/file", b"data")
 
     fake_sandbox.fs.upload_file.assert_awaited_once_with(b"data", "/file")
-
-
-# -- start_process -----------------------------------------------------------
-
-
-async def test_start_process_raises_not_implemented(
-    transport: DaytonaTransport,
-) -> None:
-    with pytest.raises(NotImplementedError, match="sidecar daemon"):
-        await transport.start_process("sb-1", "long-process")
 
 
 # -- apply_diff_batch_checked ------------------------------------------------

@@ -44,8 +44,8 @@ class LspTransportMixin:
 
         Dispatch order:
 
-        1. Bound :class:`SandboxTransport` (Step 5 path).
-        2. Legacy ``self._sandbox`` handle (preserved for tests).
+        1. Bound :class:`SandboxTransport`.
+        2. ``self._sandbox`` handle fallback for local/tests.
         3. Local subprocess (no sandbox / offline mode).
 
         For sandbox execution, base64 transport avoids marker-collision

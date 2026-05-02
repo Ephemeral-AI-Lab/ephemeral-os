@@ -35,9 +35,9 @@ from sandbox.code_intelligence.registry import (
 )
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
+from sandbox.api.bash import (
+    extract_exit_code,
+    wrap_bash_command,
 )
 from tools.sandbox_toolkit.remove_file import remove_file as delete_file
 from tools.sandbox_toolkit.move_file import move_file
@@ -111,9 +111,9 @@ class LiveEnv:
 
     def exec(self, command: str, *, cwd: str | None = None, timeout: int = 180) -> tuple[int, str]:
         wrapped = command if cwd is None else f"cd {shlex.quote(cwd)} && {command}"
-        response = self.raw_sandbox.process.exec(_wrap_bash_command(wrapped), timeout=timeout)
+        response = self.raw_sandbox.process.exec(wrap_bash_command(wrapped), timeout=timeout)
         raw = _TERM_NOISE.sub("", getattr(response, "result", "") or "")
-        cleaned, exit_code = _extract_exit_code(
+        cleaned, exit_code = extract_exit_code(
             raw,
             fallback_exit_code=getattr(response, "exit_code", None),
         )

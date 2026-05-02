@@ -14,7 +14,7 @@ from tools.core.sandbox_session import (
     sandbox_api_or_error,
     sandbox_id_or_error,
 )
-from tools.sandbox_toolkit._delete_move_helpers import operation_payload
+from tools.sandbox_toolkit._operation_payloads import operation_payload
 
 
 class RemoveFileInput(BaseModel):

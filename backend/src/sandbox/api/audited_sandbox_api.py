@@ -32,7 +32,6 @@ from sandbox.api.models import (
     GrepResult,
     MoveFileRequest,
     MoveFileResult,
-    ProcessHandle,
     ReadFileRequest,
     ReadFileResult,
     RemoveFileRequest,
@@ -184,19 +183,6 @@ class AuditedSandboxApi:
             audit_conflict_reason=change.conflict_reason,
             git_commit_status=getattr(raw, "git_commit_status", None),
             warnings=tuple(getattr(raw, "warnings", []) or ()),
-        )
-
-    async def shell_background(
-        self,
-        sandbox_id: str,
-        request: ShellRequest,
-    ) -> ProcessHandle:
-        del sandbox_id, request
-        raise NotImplementedError(
-            "AuditedSandboxApi.shell_background: long-running shells arrive "
-            "with the in-sandbox sidecar daemon (Phase 2). DaytonaTransport "
-            "currently raises NotImplementedError on start_process; the "
-            "background-shell path lifts at the same time."
         )
 
 

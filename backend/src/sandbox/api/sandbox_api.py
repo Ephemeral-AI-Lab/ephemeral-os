@@ -18,7 +18,6 @@ from sandbox.api.models import (
     GrepResult,
     MoveFileRequest,
     MoveFileResult,
-    ProcessHandle,
     ReadFileRequest,
     ReadFileResult,
     RemoveFileRequest,
@@ -66,10 +65,6 @@ class SandboxApi(Protocol):
     async def shell(
         self, sandbox_id: str, request: ShellRequest,
     ) -> ShellResult: ...
-
-    async def shell_background(
-        self, sandbox_id: str, request: ShellRequest,
-    ) -> ProcessHandle: ...
 
 
 __all__ = ["SandboxApi"]

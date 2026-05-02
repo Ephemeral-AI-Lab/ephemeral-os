@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
+from sandbox.api.bash import (
+    extract_exit_code,
+    wrap_bash_command,
 )
-from sandbox.daytona.exec_files import (
-    _build_read_text_file_command,
-    _build_write_text_file_command,
+from sandbox.api.file_commands import (
+    build_read_text_file_command,
+    build_write_text_file_command,
 )
 
 
@@ -25,10 +25,10 @@ def write_text_via_exec(
     """Write a UTF-8 text file through sync sandbox.process.exec."""
     text = content.decode("utf-8") if isinstance(content, bytes) else content
     response = sandbox.process.exec(
-        _wrap_bash_command(_build_write_text_file_command(file_path, text)),
+        wrap_bash_command(build_write_text_file_command(file_path, text)),
         timeout=timeout,
     )
-    cleaned, exit_code = _extract_exit_code(
+    cleaned, exit_code = extract_exit_code(
         getattr(response, "result", "") or "",
         fallback_exit_code=getattr(response, "exit_code", None),
     )
@@ -44,10 +44,10 @@ def read_text_via_exec(
 ) -> str:
     """Read a UTF-8 text file through sync sandbox.process.exec."""
     response = sandbox.process.exec(
-        _wrap_bash_command(_build_read_text_file_command(file_path)),
+        wrap_bash_command(build_read_text_file_command(file_path)),
         timeout=timeout,
     )
-    cleaned, exit_code = _extract_exit_code(
+    cleaned, exit_code = extract_exit_code(
         getattr(response, "result", "") or "",
         fallback_exit_code=getattr(response, "exit_code", None),
     )

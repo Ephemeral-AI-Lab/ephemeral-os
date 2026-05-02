@@ -14,6 +14,14 @@ from typing import Any
 
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.errors import SandboxTransportError
+from sandbox.api.file_commands import (
+    REMOTE_WRITE_CHUNK_BYTES,
+    build_append_text_file_chunk_command,
+    build_read_text_file_command,
+    build_remove_file_command,
+    build_truncate_text_file_command,
+    build_write_text_file_commands,
+)
 from sandbox.api.models import CheckedWriteSpec
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.core.hashing import content_hash
@@ -25,9 +33,6 @@ logger = logging.getLogger(__name__)
 
 FileReadResult = tuple[str, bool]
 FileReadResults = dict[str, FileReadResult]
-
-_REMOTE_WRITE_CHUNK_BYTES = 24 * 1024
-
 
 @dataclass(frozen=True)
 class CheckedApplyChange:
@@ -191,108 +196,6 @@ def _parse_checked_apply_response(cleaned: str, exit_code: int | None) -> Checke
         conflict_reason=str(payload_out.get("reason") or "failed"),
         message=str(payload_out.get("message") or ""),
     )
-
-
-def _build_read_text_file_command(file_path: str) -> str:
-    script = """
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-try:
-    content = path.read_text(encoding="utf-8")
-except FileNotFoundError:
-    print(json.dumps({"exists": False}))
-else:
-    print(json.dumps({"exists": True, "content": content}))
-"""
-    return f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
-
-
-def _build_write_text_file_command(file_path: str, content: str) -> str:
-    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
-    script = """
-import base64
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
-"""
-    return (
-        f"python3 -c {shlex.quote(script)} "
-        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
-    )
-
-
-def _build_truncate_text_file_command(file_path: str) -> str:
-    script = """
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-path.parent.mkdir(parents=True, exist_ok=True)
-path.write_bytes(b"")
-"""
-    return f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
-
-
-def _build_append_text_file_chunk_command(file_path: str, payload: str) -> str:
-    script = """
-import base64
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-with path.open("ab") as handle:
-    handle.write(base64.b64decode(sys.argv[2]))
-"""
-    return (
-        f"python3 -c {shlex.quote(script)} "
-        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
-    )
-
-
-def _build_replace_file_command(tmp_path: str, file_path: str) -> str:
-    script = """
-import os
-import pathlib
-import sys
-
-tmp = pathlib.Path(sys.argv[1])
-dst = pathlib.Path(sys.argv[2])
-os.replace(tmp, dst)
-"""
-    return (
-        f"python3 -c {shlex.quote(script)} "
-        f"{shlex.quote(tmp_path)} {shlex.quote(file_path)}"
-    )
-
-
-def _build_remove_file_command(file_path: str) -> str:
-    return f"rm -f {shlex.quote(file_path)}"
-
-
-def _build_write_text_file_commands(
-    file_path: str,
-    content: str,
-    *,
-    chunk_bytes: int = _REMOTE_WRITE_CHUNK_BYTES,
-) -> tuple[list[str], str | None]:
-    data = content.encode("utf-8")
-    if len(data) <= chunk_bytes:
-        return [_build_write_text_file_command(file_path, content)], None
-
-    tmp_path = f"{file_path}.codex-write-{uuid.uuid4().hex}.tmp"
-    commands = [_build_truncate_text_file_command(tmp_path)]
-    for index in range(0, len(data), chunk_bytes):
-        chunk = data[index : index + chunk_bytes]
-        payload = base64.b64encode(chunk).decode("ascii")
-        commands.append(_build_append_text_file_chunk_command(tmp_path, payload))
-    commands.append(_build_replace_file_command(tmp_path, file_path))
-    return commands, tmp_path
 
 
 class ContentManager:
@@ -574,7 +477,7 @@ class ContentManager:
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
         process = self._process()
         response = run_sync(
-            process.exec(wrap_bash_command(_build_read_text_file_command(file_path)))
+            process.exec(wrap_bash_command(build_read_text_file_command(file_path)))
         )
         cleaned, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
@@ -658,7 +561,7 @@ print(json.dumps(files))
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         process = self._process()
         text = payload.decode("utf-8")
-        commands, tmp_path = _build_write_text_file_commands(file_path, text)
+        commands, tmp_path = build_write_text_file_commands(file_path, text)
         try:
             for command in commands:
                 response = run_sync(process.exec(wrap_bash_command(command)))
@@ -671,7 +574,7 @@ print(json.dumps(files))
         except Exception:
             if tmp_path:
                 try:
-                    run_sync(process.exec(wrap_bash_command(_build_remove_file_command(tmp_path))))
+                    run_sync(process.exec(wrap_bash_command(build_remove_file_command(tmp_path))))
                 except Exception:
                     logger.debug("remote temp cleanup failed for %s", tmp_path, exc_info=True)
             raise
@@ -698,7 +601,7 @@ print(json.dumps(files))
         try:
             run_sync(
                 process.exec(
-                    wrap_bash_command(_build_remove_file_command(tmp_path)),
+                    wrap_bash_command(build_remove_file_command(tmp_path)),
                 ),
             )
         except Exception:
@@ -717,17 +620,17 @@ print(json.dumps(files))
         """
         tmp_path = f"/tmp/codex-batch-apply-{uuid.uuid4().hex}.json"
         cleaned, exit_code = self._exec_remote(
-            process, _build_truncate_text_file_command(tmp_path),
+            process, build_truncate_text_file_command(tmp_path),
         )
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or "stage payload truncate failed")
-        chunk_size = _REMOTE_WRITE_CHUNK_BYTES
+        chunk_size = REMOTE_WRITE_CHUNK_BYTES
         for index in range(0, len(payload), chunk_size):
             chunk = payload[index : index + chunk_size]
             chunk_b64 = base64.b64encode(chunk).decode("ascii")
             cleaned, exit_code = self._exec_remote(
                 process,
-                _build_append_text_file_chunk_command(tmp_path, chunk_b64),
+                build_append_text_file_chunk_command(tmp_path, chunk_b64),
             )
             if exit_code not in (0, None):
                 self._cleanup_remote_tmp(process, tmp_path)
@@ -748,7 +651,7 @@ print(json.dumps(files))
             for path, content in changes
         ]
         payload_bytes = json.dumps(payload).encode("utf-8")
-        if len(payload_bytes) > _REMOTE_WRITE_CHUNK_BYTES:
+        if len(payload_bytes) > REMOTE_WRITE_CHUNK_BYTES:
             self._apply_remote_batch_staged(process, payload_bytes)
             return
         script = _build_inline_apply_script(payload_bytes, _APPLY_BODY)
@@ -860,7 +763,7 @@ print(json.dumps(files))
             for change in changes
         ]
         payload_bytes = json.dumps(payload).encode("utf-8")
-        if len(payload_bytes) > _REMOTE_WRITE_CHUNK_BYTES:
+        if len(payload_bytes) > REMOTE_WRITE_CHUNK_BYTES:
             return self._apply_remote_batch_checked_staged(process, payload_bytes)
         script = _build_inline_apply_script(payload_bytes, _CHECKED_APPLY_BODY)
         command = f"python3 -c {shlex.quote(script)}"
@@ -883,7 +786,7 @@ print(json.dumps(files))
         finally:
             self._cleanup_remote_tmp(process, tmp_path)
 
-    # -- Transport-backed branches (Step 5 rails) -----------------------------
+    # -- Transport-backed branches -------------------------------------------
 
     def _read_via_transport(
         self, file_path: str, *, allow_missing: bool,
@@ -932,7 +835,7 @@ print(json.dumps(files))
         # Translate engine-side CheckedApplyChange into transport-side
         # CheckedWriteSpec. Two semantic gaps to handle:
         #   1. ``base_existed=False`` + ``final_content=None`` is a delete-of-
-        #      absent — the legacy code returns ``base_mismatch`` immediately
+        #      absent — the checked apply path returns ``base_mismatch`` immediately
         #      without even calling the apply script. Mirror that here.
         #   2. ``expected_sha`` is ``None`` only when create-only is intended
         #      (``base_existed=False`` + ``final_content`` set), otherwise the

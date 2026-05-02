@@ -23,10 +23,9 @@ def get_code_intelligence(
 ) -> "CodeIntelligenceService":
     """Get or create a CI service for *sandbox_id*.
 
-    ``transport`` is the optional :class:`SandboxTransport` (Step 5
-    rails). When supplied, downstream subsystems route their sandbox I/O
-    through it. Defaulting to ``None`` keeps the legacy ``sandbox=``
-    path active for callers that have not been migrated.
+    When ``transport`` is supplied, downstream subsystems route sandbox I/O
+    through the provider-neutral transport. Defaulting to ``None`` preserves
+    local/test callers that construct the service with only ``sandbox=``.
     """
     from sandbox.code_intelligence.service import CodeIntelligenceService
 

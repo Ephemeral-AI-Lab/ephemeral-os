@@ -45,8 +45,8 @@ def collect_remote_files(
     """Enumerate sandbox files, preferring the single-call glob API.
 
     When ``transport`` and ``sandbox_id`` are provided, enumerate via
-    :meth:`SandboxTransport.list_paths` (Step 5 rails). Otherwise the
-    legacy ``fs.search_files``/``fs.list_files`` paths run.
+    :meth:`SandboxTransport.list_paths`. Otherwise, use the sandbox filesystem
+    fallback for local/test callers.
     """
     if transport is not None and sandbox_id:
         return _collect_via_transport(transport, sandbox_id, root, max_files)
@@ -117,10 +117,8 @@ def batch_download(
     batch path is available. Individual download failures are dropped.
 
     When ``transport`` and ``sandbox_id`` are provided, the call uses
-    :meth:`SandboxTransport.read_bytes_batch` (Step 5 prep), which routes
-    through Daytona's ``download_files`` SDK call when available and
-    falls back to per-path reads otherwise. This preserves the indexing
-    perf characteristic flagged in plan Risk #2.
+    :meth:`SandboxTransport.read_bytes_batch`, preserving batched remote reads
+    for indexing. Without a transport, use sandbox filesystem fallbacks.
     """
     if transport is not None and sandbox_id:
         try:

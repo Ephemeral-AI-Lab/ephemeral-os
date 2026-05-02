@@ -41,9 +41,9 @@ from dotenv import load_dotenv
 
 from sandbox.code_intelligence.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContextService
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
+from sandbox.api.bash import (
+    extract_exit_code,
+    wrap_bash_command,
 )
 from tools.sandbox_toolkit.shell import shell
 
@@ -120,10 +120,10 @@ class _OpaqueEnv:
 
     def exec(self, command: str, *, timeout: int = 180) -> tuple[int, str]:
         response = self.raw_sandbox.process.exec(
-            _wrap_bash_command(command), timeout=timeout
+            wrap_bash_command(command), timeout=timeout
         )
         raw = getattr(response, "result", "") or ""
-        cleaned, exit_code = _extract_exit_code(
+        cleaned, exit_code = extract_exit_code(
             raw,
             fallback_exit_code=getattr(response, "exit_code", None),
         )

@@ -11,7 +11,6 @@ from sandbox.api.audited_sandbox_api import AuditedSandboxApi
 from sandbox.api.code_intelligence_api import CodeIntelligenceApi
 from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
 from sandbox.api.errors import (
-    ProcessTerminated,
     SandboxApiError,
     SandboxConflictError,
     SandboxNotFoundError,
@@ -34,8 +33,6 @@ from sandbox.api.models import (
     GrepResult,
     MoveFileRequest,
     MoveFileResult,
-    ProcessHandle,
-    ProcessStatus,
     RawExecResult,
     ReadFileRequest,
     ReadFileResult,
@@ -81,9 +78,6 @@ __all__ = [
     "GrepResult",
     "MoveFileRequest",
     "MoveFileResult",
-    "ProcessHandle",
-    "ProcessStatus",
-    "ProcessTerminated",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",

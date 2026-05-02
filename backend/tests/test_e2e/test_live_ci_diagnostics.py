@@ -19,9 +19,9 @@ from sandbox.code_intelligence.service import CodeIntelligenceService
 from engine.testing.eval_agent import EvalAgent
 from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
 from tools.core.base import ToolExecutionContextService, ToolResult
-from sandbox.daytona.bash import (
-    _extract_exit_code,
-    _wrap_bash_command,
+from sandbox.api.bash import (
+    extract_exit_code,
+    wrap_bash_command,
 )
 from tools.sandbox_toolkit.write_file import write_file
 
@@ -40,10 +40,10 @@ class LiveCiDiagnosticsEnv:
 
     def exec(self, command: str, *, timeout: int = 60) -> tuple[int, str]:
         response = self.raw_sandbox.process.exec(
-            _wrap_bash_command(command),
+            wrap_bash_command(command),
             timeout=timeout,
         )
-        output, exit_code = _extract_exit_code(
+        output, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )

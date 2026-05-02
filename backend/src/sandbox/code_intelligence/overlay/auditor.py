@@ -476,10 +476,8 @@ class OverlayAuditor:
     ) -> tuple[str, int]:
         """Exec ``command`` and return ``(stdout, exit_code)``.
 
-        Routes through the bound :class:`SandboxTransport` when set; the
-        legacy ``exec_process`` callback path stays active otherwise so
-        existing callers (which pass a sandbox-handle-bound exec adapter)
-        keep working.
+        Routes through the bound :class:`SandboxTransport` when set; otherwise
+        uses the injected ``exec_process`` callback for local/test callers.
         """
         if self._transport is not None and self._sandbox_id:
             result = await self._transport.exec(

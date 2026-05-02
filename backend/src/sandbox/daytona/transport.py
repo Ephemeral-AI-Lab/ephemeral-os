@@ -4,11 +4,6 @@ This is the single point of provider coupling for tools and CI internals
 (after Step 5). Every call routes through the AsyncDaytona client
 acquired via :func:`sandbox.client.async_.get_async_sandbox`.
 
-Step 3 deliverable: ``exec``, ``read_bytes``, ``write_bytes``, ``search``,
-``list_paths``, ``apply_diff_batch_checked``. ``start_process`` raises
-``NotImplementedError`` (Phase 2 sidecar daemon).
-
-Step 5 prep additions:
 * ``apply_diff_batch_checked`` supports deletes (``CheckedWriteSpec.content
   is None``) and stages large payloads via tmp-file chunked uploads so it
   does not regress on ``ContentManager``-scale batches.
@@ -31,20 +26,18 @@ from sandbox.api.errors import SandboxTransportError
 from sandbox.api.models import (
     CheckedWriteResult,
     CheckedWriteSpec,
-    ProcessHandle,
     RawExecResult,
     SearchMatch,
 )
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
+from sandbox.api.file_commands import REMOTE_WRITE_CHUNK_BYTES
 from sandbox.client.async_ import get_async_sandbox
-from sandbox.daytona.bash import _extract_exit_code, _wrap_bash_command
 from sandbox.daytona.search_commands import build_glob_command, build_grep_command
 
 logger = logging.getLogger(__name__)
 
 
-# Mirrors sandbox.daytona.exec_files._REMOTE_WRITE_CHUNK_BYTES so chunk
-# sizing matches what the engine has been using all along.
-_INLINE_PAYLOAD_LIMIT_BYTES = 24 * 1024
+_INLINE_PAYLOAD_LIMIT_BYTES = REMOTE_WRITE_CHUNK_BYTES
 
 
 class DaytonaTransport:
@@ -70,7 +63,7 @@ class DaytonaTransport:
         timeout: int | None = None,
     ) -> RawExecResult:
         sandbox = await self._resolve(sandbox_id)
-        wrapped = _wrap_bash_command(command, cwd=cwd)
+        wrapped = wrap_bash_command(command, cwd=cwd)
         kwargs: dict[str, Any] = {}
         if timeout is not None:
             kwargs["timeout"] = timeout
@@ -80,25 +73,11 @@ class DaytonaTransport:
             raise SandboxTransportError(
                 f"daytona exec failed (sandbox={sandbox_id}): {exc}"
             ) from exc
-        stdout, exit_code = _extract_exit_code(
+        stdout, exit_code = extract_exit_code(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
         return RawExecResult(exit_code=exit_code, stdout=stdout)
-
-    async def start_process(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-    ) -> ProcessHandle:
-        del sandbox_id, command, cwd
-        raise NotImplementedError(
-            "DaytonaTransport.start_process: long-running process handles "
-            "arrive with the in-sandbox sidecar daemon (Phase 2). Today's "
-            "LSP and shell tools use one-shot exec."
-        )
 
     # -- bytes I/O -----------------------------------------------------
 

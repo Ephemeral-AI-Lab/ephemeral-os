@@ -19,8 +19,8 @@ from sandbox.client.async_ import get_async_sandbox
 from sandbox.client.async_shutdown import shutdown_cached_client_async
 from sandbox.testing import create_test_sandbox, delete_test_sandbox
 from tools.core.base import ToolExecutionContextService
-from sandbox.daytona.bash import _wrap_bash_command
-from sandbox.daytona.exec_files import _build_write_text_file_command
+from sandbox.api.bash import wrap_bash_command
+from sandbox.api.file_commands import build_write_text_file_command
 from tools.sandbox_toolkit.glob import glob
 from tools.sandbox_toolkit.grep import grep
 
@@ -85,7 +85,7 @@ async def test_live_grep_and_glob_direct_tools() -> None:
         for file_path, content in files.items():
             await _exec_checked(
                 async_sandbox,
-                _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+                wrap_bash_command(build_write_text_file_command(file_path, content)),
                 timeout=10,
             )
 

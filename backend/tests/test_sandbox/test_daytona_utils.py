@@ -1,4 +1,4 @@
-"""Tests for pure helpers in sandbox.daytona_utils."""
+"""Tests for pure sandbox helper functions."""
 
 from __future__ import annotations
 
@@ -8,20 +8,20 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from sandbox.daytona.recovery import _run_with_recovery
 from tools.core.base import ToolExecutionContextService
+from tools.core.sandbox_session import (
+    get_repo_root,
+    normalized_path,
+    path_error,
+    resolve_sandbox_path,
+)
 from tools.sandbox_toolkit._file_tool_helpers import (
     MAX_READ_FILE_LINES,
     ReadFileInput,
     build_find_result,
     build_read_file_result,
 )
-from sandbox.daytona.paths import (
-    _get_repo_root,
-    _normalized_path,
-    _path_error,
-    _resolve_path,
-)
-from sandbox.daytona.recovery import _run_with_recovery
 from tools.sandbox_toolkit.shell import _build_tool_output
 
 
@@ -172,82 +172,71 @@ def test_build_find_result_preserves_all_matches_without_truncated_flag():
 
 
 # ---------------------------------------------------------------------------
-# _path_error
+# path_error
 # ---------------------------------------------------------------------------
 
 
 def test_path_error_file_not_found():
     exc = FileNotFoundError("gone")
-    assert _path_error(exc, "/some/path") == "Path does not exist: /some/path"
+    assert path_error(exc, "/some/path") == "Path does not exist: /some/path"
 
 
 def test_path_error_message_contains_no_such_file():
     exc = RuntimeError("No such file or directory")
-    result = _path_error(exc, "/x")
+    result = path_error(exc, "/x")
     assert result is not None
     assert "/x" in result
 
 
-def test_path_error_sdk_prefix_colon_suffix():
-    exc = RuntimeError("Failed to list files:")
-    assert _path_error(exc, "/dir") == "Path does not exist: /dir"
-
-
 def test_path_error_unrecognized_returns_none():
-    assert _path_error(RuntimeError("something totally different"), "/p") is None
-
-
-def test_path_error_sdk_prefix_without_trailing_colon():
-    # SDK prefix but no trailing colon — should NOT match
-    exc = RuntimeError("Failed to list files: details here")
-    assert _path_error(exc, "/p") is None
+    assert path_error(RuntimeError("something totally different"), "/p") is None
 
 
 # ---------------------------------------------------------------------------
-# _get_repo_root
+# get_repo_root
 # ---------------------------------------------------------------------------
 
 
 def test_get_repo_root_returns_value():
     ctx = _ctx({"repo_root": "/workspace/project"})
-    assert _get_repo_root(ctx) == "/workspace/project"
+    assert get_repo_root(ctx) == "/workspace/project"
 
 
-def test_get_repo_root_returns_none_when_missing():
-    assert _get_repo_root(_ctx()) is None
+def test_get_repo_root_returns_empty_when_missing():
+    assert get_repo_root(_ctx()) == ""
 
 
 # ---------------------------------------------------------------------------
-# _resolve_path
+# resolve_sandbox_path
 # ---------------------------------------------------------------------------
 
 
 def test_resolve_path_absolute_unchanged():
     ctx = _ctx({"repo_root": "/workspace"})
-    assert _resolve_path("/abs/path", ctx) == "/abs/path"
+    assert resolve_sandbox_path("/abs/path", ctx) == "/abs/path"
 
 
 def test_resolve_path_relative_joins_cwd():
     ctx = _ctx({"repo_root": "/workspace"})
-    assert _resolve_path("relative/file.py", ctx) == "/workspace/relative/file.py"
+    assert resolve_sandbox_path("relative/file.py", ctx) == "/workspace/relative/file.py"
 
 
 def test_resolve_path_relative_no_cwd_unchanged():
-    assert _resolve_path("bare_file.py", _ctx()) == "bare_file.py"
+    assert resolve_sandbox_path("bare_file.py", _ctx()) == "bare_file.py"
 
 
 # ---------------------------------------------------------------------------
-# _normalized_path
+# normalized_path
 # ---------------------------------------------------------------------------
 
 
 def test_normalized_path_preserves_root():
-    assert _normalized_path("/") == "/"
+    assert normalized_path("/") == "/"
 
 
 def test_normalized_path_strips_trailing_separators():
-    assert _normalized_path("/workspace/src/") == "/workspace/src"
-    assert _normalized_path("relative/path///") == "relative/path"
+    assert normalized_path("/workspace/src/") == "/workspace/src"
+    assert normalized_path("relative/path///") == "relative/path"
 
 
 # ---------------------------------------------------------------------------

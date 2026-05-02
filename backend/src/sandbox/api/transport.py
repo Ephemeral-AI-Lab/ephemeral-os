@@ -18,7 +18,6 @@ from typing import Protocol
 from sandbox.api.models import (
     CheckedWriteResult,
     CheckedWriteSpec,
-    ProcessHandle,
     RawExecResult,
     SearchMatch,
 )
@@ -37,14 +36,6 @@ class SandboxTransport(Protocol):
         cwd: str | None = None,
         timeout: int | None = None,
     ) -> RawExecResult: ...
-
-    async def start_process(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-    ) -> ProcessHandle: ...
 
     async def read_bytes(self, sandbox_id: str, path: str) -> bytes: ...
 

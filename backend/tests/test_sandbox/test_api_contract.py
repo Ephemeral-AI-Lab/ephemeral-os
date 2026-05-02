@@ -24,7 +24,6 @@ import pytest
 from sandbox import api as sandbox_api
 from sandbox.api import (
     CodeIntelligenceApi,
-    ProcessHandle,
     RequestActor,
     SandboxApi,
     SandboxTransport,
@@ -104,23 +103,6 @@ def test_protocols_declare_methods() -> None:
             if not name.startswith("_")
         ]
         assert members, f"{proto.__name__} has no public methods declared"
-
-
-def test_process_handle_declares_streaming_methods() -> None:
-    """``ProcessHandle`` must expose bidirectional stdin/stdout plus lifecycle.
-
-    Risk #4 in the migration plan: this Protocol must serve LSP, the
-    background shell tool, and a future sidecar daemon equally well.
-    Lock the surface in Step 1.
-    """
-    expected = {"write_stdin", "read_stdout", "read_stderr", "status", "kill", "wait"}
-    declared = {
-        name
-        for name, fn in inspect.getmembers(ProcessHandle, predicate=inspect.isfunction)
-        if not name.startswith("_")
-    }
-    missing = expected - declared
-    assert not missing, f"ProcessHandle missing methods: {sorted(missing)}"
 
 
 def test_request_actor_defaults() -> None:

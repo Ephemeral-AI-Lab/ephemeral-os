@@ -1,4 +1,4 @@
-"""Daytona-specific exec, path, and recovery primitives."""
+"""Daytona-specific exec and recovery primitives."""
 
 from __future__ import annotations
 

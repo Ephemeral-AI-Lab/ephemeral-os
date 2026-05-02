@@ -45,9 +45,6 @@ class _FakeTransport:
     async def exec(self, *args: Any, **kwargs: Any) -> Any:
         raise AssertionError("AuditedSandboxApi must not call transport.exec")
 
-    async def start_process(self, *args: Any, **kwargs: Any) -> Any:
-        raise AssertionError("AuditedSandboxApi must not call transport.start_process")
-
     async def read_bytes(self, sandbox_id: str, path: str) -> bytes:
         return await self.read_bytes_mock(sandbox_id, path)
 
@@ -403,16 +400,6 @@ async def test_shell_surfaces_audit_conflict(
 
     assert result.audit_success is False
     assert result.audit_conflict_reason == "aborted_version"
-
-
-async def test_shell_background_raises_not_implemented(
-    api: AuditedSandboxApi,
-    actor: RequestActor,
-) -> None:
-    with pytest.raises(NotImplementedError, match="sidecar daemon"):
-        await api.shell_background(
-            "sb-1", ShellRequest(command="long", actor=actor),
-        )
 
 
 def test_audited_sandbox_api_satisfies_protocol_method_set() -> None:

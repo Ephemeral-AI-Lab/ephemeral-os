@@ -9,9 +9,8 @@ module provides the thin attribution-aware façade that the
 the four loose strings the engine entry points consume.
 
 Phase 1 boundary: this module forwards to
-:mod:`sandbox.lifecycle.commit`. Phase 1 Step 5 rewires the engine to
-consume ``SandboxTransport`` directly; this façade does not change at
-that boundary because it talks to ``svc`` not to a transport.
+:mod:`sandbox.lifecycle.commit`. The engine consumes ``SandboxTransport``
+directly; this façade talks to ``svc`` rather than to a transport.
 
 Provider neutrality: this module must not import from
 ``sandbox.daytona``, ``sandbox.code_intelligence``, or ``tools.*``.
