@@ -23,6 +23,7 @@ import gzip
 import hashlib
 import io
 import logging
+import os
 import shlex
 import tarfile
 from pathlib import Path
@@ -448,11 +449,13 @@ class DaemonLauncher:
         """Launch the daemon detached from the transport exec shell."""
         state = await self.state_dir()
         log_path = f"{state}/daemon.log"
+        log_level = os.environ.get("EOS_CI_DAEMON_LOG_LEVEL", "INFO")
         cmd = (
             f"mkdir -p {shlex.quote(state)} && "
             f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
             "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox "
             f"--workspace-root {shlex.quote(self._workspace_root)} "
+            f"--log-level {shlex.quote(log_level)} "
             f">> {shlex.quote(log_path)} 2>&1 </dev/null & echo $!"
         )
         try:

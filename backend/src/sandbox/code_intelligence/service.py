@@ -53,16 +53,20 @@ def _select_backend(
 ) -> CiBackend:
     """Pick a backend based on the EOS_CI_IN_SANDBOX flag, transport, and id.
 
-    Returns :class:`RpcCiBackend` only when ALL of: env var ``EOS_CI_IN_SANDBOX``
-    is exactly ``"1"`` AND ``transport`` is not None AND ``sandbox_id`` is
-    non-empty. Otherwise returns :class:`InProcessCiBackend`.
+    Phase 5 default flip: returns :class:`RpcCiBackend` whenever a transport
+    AND a non-empty ``sandbox_id`` are present, UNLESS ``EOS_CI_IN_SANDBOX=0``
+    is set (the explicit backout knob). The flag's other values (``"1"``,
+    unset) all select the daemon path. Local sandboxless flows
+    (no transport / empty sandbox_id) keep using :class:`InProcessCiBackend`.
 
     ``edit_history`` and ``symbol_index_persistence`` are only meaningful for
     the in-process backend (the daemon owns the canonical SQLite ledger and
     SQLite IndexStore when the RPC backend is in use).
     """
+    flag = os.environ.get("EOS_CI_IN_SANDBOX")
+    backout = flag == "0"
     use_daemon = (
-        os.environ.get("EOS_CI_IN_SANDBOX") == "1"
+        not backout
         and transport is not None
         and sandbox_id != ""
     )

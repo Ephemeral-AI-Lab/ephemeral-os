@@ -223,6 +223,7 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
         assert result.exit_code == 0
         assert result.changed_paths == ["/ws/a.py"]
         assert result.overlay_run_timings == {"total": 0.2}
+        assert result.rpc_call_timings["total"] >= 0.0
 
     asyncio.run(_run())
     assert progress == ["hi\n"]

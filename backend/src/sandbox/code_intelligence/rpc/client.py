@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
+import os
 import textwrap
+import time
 import uuid
 from typing import Any
 
@@ -21,6 +24,8 @@ from sandbox.code_intelligence.rpc.launcher import (
 )
 
 __all__ = ["CiDaemonRpcError", "CiDaemonUnavailable", "CiRpcClient"]
+
+logger = logging.getLogger(__name__)
 
 
 class CiDaemonRpcError(Exception):
@@ -63,12 +68,31 @@ class CiRpcClient:
         Connection failures trigger one ``ensure_daemon`` retry. Daemon-side
         error envelopes are returned as :class:`CiDaemonRpcError` without retry.
         """
+        started = time.perf_counter()
         try:
-            return await self._call_once(op, args or {}, timeout=timeout)
+            result = await self._call_once(op, args or {}, timeout=timeout)
+            logger.debug(
+                "ci rpc call done: op=%s elapsed=%.3fs retry=false",
+                op,
+                time.perf_counter() - started,
+            )
+            return result
         except (ConnectionRefusedError, BrokenPipeError, FileNotFoundError, OSError):
+            retry_started = time.perf_counter()
             await self._launcher.ensure_daemon()
+            logger.debug(
+                "ci rpc retry after ensure_daemon: op=%s ensure_elapsed=%.3fs",
+                op,
+                time.perf_counter() - retry_started,
+            )
             try:
-                return await self._call_once(op, args or {}, timeout=timeout)
+                result = await self._call_once(op, args or {}, timeout=timeout)
+                logger.debug(
+                    "ci rpc call done: op=%s elapsed=%.3fs retry=true",
+                    op,
+                    time.perf_counter() - started,
+                )
+                return result
             except (
                 ConnectionRefusedError,
                 BrokenPipeError,
@@ -90,16 +114,34 @@ class CiRpcClient:
         frame = encode_frame(
             {"v": CI_PROTOCOL_VERSION, "id": request_id, "op": op, "args": args}
         )
+        socket_started = time.perf_counter()
         socket_path = await self._launcher.socket_path()
-        response_frame = await self._send_frame_via_python_shim(
+        socket_elapsed = time.perf_counter() - socket_started
+        send_started = time.perf_counter()
+        response_frame = await self._send_frame(
             socket_path,
             frame,
             timeout=timeout,
         )
+        send_elapsed = time.perf_counter() - send_started
+        parse_started = time.perf_counter()
         reader = asyncio.StreamReader()
         reader.feed_data(response_frame)
         reader.feed_eof()
         response = parse_response(await read_frame(reader))
+        parse_elapsed = time.perf_counter() - parse_started
+        logger.debug(
+            "ci rpc call_once: op=%s request_id=%s socket_path_elapsed=%.3fs "
+            "send_frame_elapsed=%.3fs parse_elapsed=%.3fs "
+            "request_bytes=%d response_bytes=%d",
+            op,
+            request_id,
+            socket_elapsed,
+            send_elapsed,
+            parse_elapsed,
+            len(frame),
+            len(response_frame),
+        )
         if response.id != request_id:
             raise RuntimeError(
                 f"daemon response id mismatch: expected {request_id}, got {response.id}"
@@ -112,6 +154,40 @@ class CiRpcClient:
                 details=error.get("details") if isinstance(error.get("details"), dict) else {},
             )
         return response.result
+
+    async def _send_frame(
+        self,
+        socket_path: str,
+        frame: bytes,
+        *,
+        timeout: float,
+    ) -> bytes:
+        """Round-trip ``frame`` through the daemon socket.
+
+        Phase 5: prefers ``transport.ci_rpc`` when the transport implements
+        the native verb; falls back to the python shim. ``EOS_CI_FORCE_SHIM=1``
+        forces the shim path (re-checked per call so A/B tests can flip it
+        with ``mock.patch.dict(os.environ)`` inside one process).
+        """
+        force_shim = os.environ.get("EOS_CI_FORCE_SHIM") == "1"
+        verb = getattr(self._transport, "ci_rpc", None)
+        if callable(verb) and not force_shim:
+            try:
+                logger.debug("ci rpc send_frame using native verb")
+                return await verb(
+                    self._sandbox_id,
+                    frame,
+                    socket_path=socket_path,
+                    timeout=int(timeout),
+                )
+            except NotImplementedError:
+                pass
+        logger.debug("ci rpc send_frame using python shim")
+        return await self._send_frame_via_python_shim(
+            socket_path,
+            frame,
+            timeout=timeout,
+        )
 
     async def _send_frame_via_python_shim(
         self,

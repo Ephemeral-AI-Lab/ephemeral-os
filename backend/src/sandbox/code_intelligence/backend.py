@@ -21,6 +21,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import threading
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from types import SimpleNamespace
@@ -567,8 +568,11 @@ class RpcCiBackend:
         timeout = kwargs.get("timeout")
         rpc_timeout = float(timeout if timeout is not None else 600) + 30.0
         payload = {"command": command, **kwargs}
+        rpc_started = time.perf_counter()
         raw = await self._call_async("svc_cmd", payload, timeout=rpc_timeout)
+        rpc_elapsed = round(time.perf_counter() - rpc_started, 6)
         result = SimpleNamespace(**(raw or {}))
+        result.rpc_call_timings = {"total": rpc_elapsed}
         if on_progress_line is not None:
             progress_text = str(getattr(result, "result", "") or "")
             if progress_text:

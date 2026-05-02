@@ -186,6 +186,7 @@ async def test_svc_cmd_routes_through_service_and_preserves_shape(
             warnings=[],
             git_snapshot_timings={"total": 0.01},
             overlay_run_timings={"total": 0.02},
+            overlay_stage_timings={"total": 0.03},
         )
 
     ci_daemon._DAEMON_STATE.svc.cmd = _fake_cmd
@@ -238,6 +239,7 @@ async def test_svc_cmd_routes_through_service_and_preserves_shape(
         "warnings": [],
         "git_snapshot_timings": {"total": 0.01},
         "overlay_run_timings": {"total": 0.02},
+        "overlay_stage_timings": {"total": 0.03},
     }
 
 

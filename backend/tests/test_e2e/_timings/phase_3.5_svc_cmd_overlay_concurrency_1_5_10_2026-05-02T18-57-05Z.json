@@ -1,0 +1,486 @@
+{
+  "phase": 3.5,
+  "test_name": "svc_cmd_overlay_concurrency_1_5_10",
+  "timestamp": "2026-05-02T18:57:05.827093+00:00",
+  "steps": [
+    {
+      "name": "ci_service_construct",
+      "elapsed_s": 25.58446354199259,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_1x_wall",
+      "elapsed_s": 9.137140541002736,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_5x_wall",
+      "elapsed_s": 3.8154370420088526,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_10x_wall",
+      "elapsed_s": 4.580567084005452,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 43.11760820900963,
+  "distributions": {
+    "svc_cmd_1x_latency": {
+      "p50": 8.708481791007216,
+      "p95": 8.708481791007216,
+      "p99": 8.708481791007216,
+      "min": 8.708481791007216,
+      "max": 8.708481791007216,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_commit_tree": {
+      "p50": 0.032949,
+      "p95": 0.032949,
+      "p99": 0.032949,
+      "min": 0.032949,
+      "max": 0.032949,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_git_add": {
+      "p50": 0.150774,
+      "p95": 0.150774,
+      "p99": 0.150774,
+      "min": 0.150774,
+      "max": 0.150774,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_prepare_env": {
+      "p50": 0.000194,
+      "p95": 0.000194,
+      "p99": 0.000194,
+      "min": 0.000194,
+      "max": 0.000194,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_read_tree": {
+      "p50": 0.041687,
+      "p95": 0.041687,
+      "p99": 0.041687,
+      "min": 0.041687,
+      "max": 0.041687,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_rev_parse_head": {
+      "p50": 0.025797,
+      "p95": 0.025797,
+      "p99": 0.025797,
+      "min": 0.025797,
+      "max": 0.025797,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_temp_index": {
+      "p50": 0.00089,
+      "p95": 0.00089,
+      "p99": 0.00089,
+      "min": 0.00089,
+      "max": 0.00089,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_total": {
+      "p50": 0.28454,
+      "p95": 0.28454,
+      "p99": 0.28454,
+      "min": 0.28454,
+      "max": 0.28454,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_validate_repo": {
+      "p50": 1.1e-05,
+      "p95": 1.1e-05,
+      "p99": 1.1e-05,
+      "min": 1.1e-05,
+      "max": 1.1e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_git_snapshot_write_tree": {
+      "p50": 0.031132,
+      "p95": 0.031132,
+      "p99": 0.031132,
+      "min": 0.031132,
+      "max": 0.031132,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_apply_direct_routes": {
+      "p50": 1.9e-05,
+      "p95": 1.9e-05,
+      "p99": 1.9e-05,
+      "min": 1.9e-05,
+      "max": 1.9e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_build_classifier": {
+      "p50": 1.6e-05,
+      "p95": 1.6e-05,
+      "p99": 1.6e-05,
+      "min": 1.6e-05,
+      "max": 1.6e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_classify": {
+      "p50": 0.062804,
+      "p95": 0.062804,
+      "p99": 0.062804,
+      "min": 0.062804,
+      "max": 0.062804,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_decode_command": {
+      "p50": 0.000146,
+      "p95": 0.000146,
+      "p99": 0.000146,
+      "min": 0.000146,
+      "max": 0.000146,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_setup_mounts": {
+      "p50": 0.082985,
+      "p95": 0.082985,
+      "p99": 0.082985,
+      "min": 0.082985,
+      "max": 0.082985,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_total": {
+      "p50": 0.451965,
+      "p95": 0.451965,
+      "p99": 0.451965,
+      "min": 0.451965,
+      "max": 0.451965,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_user_command": {
+      "p50": 0.302079,
+      "p95": 0.302079,
+      "p99": 0.302079,
+      "min": 0.302079,
+      "max": 0.302079,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_walk_upperdir": {
+      "p50": 0.000951,
+      "p95": 0.000951,
+      "p99": 0.000951,
+      "min": 0.000951,
+      "max": 0.000951,
+      "n": 1.0
+    },
+    "svc_cmd_5x_latency": {
+      "p50": 3.3798347910051234,
+      "p95": 3.3919676250079647,
+      "p99": 3.3919676250079647,
+      "min": 3.364360708001186,
+      "max": 3.3919676250079647,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_commit_tree": {
+      "p50": 0.035071,
+      "p95": 0.036516,
+      "p99": 0.036516,
+      "min": 0.03372,
+      "max": 0.036516,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_git_add": {
+      "p50": 0.081743,
+      "p95": 0.082193,
+      "p99": 0.082193,
+      "min": 0.078192,
+      "max": 0.082193,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_prepare_env": {
+      "p50": 0.000206,
+      "p95": 0.000237,
+      "p99": 0.000237,
+      "min": 0.000198,
+      "max": 0.000237,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_read_tree": {
+      "p50": 0.043873,
+      "p95": 0.044684,
+      "p99": 0.044684,
+      "min": 0.04312,
+      "max": 0.044684,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_rev_parse_head": {
+      "p50": 0.026937,
+      "p95": 0.028211,
+      "p99": 0.028211,
+      "min": 0.026763,
+      "max": 0.028211,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_temp_index": {
+      "p50": 0.000902,
+      "p95": 0.000976,
+      "p99": 0.000976,
+      "min": 0.000808,
+      "max": 0.000976,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_total": {
+      "p50": 0.226643,
+      "p95": 0.229974,
+      "p99": 0.229974,
+      "min": 0.219252,
+      "max": 0.229974,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_validate_repo": {
+      "p50": 1.5e-05,
+      "p95": 1.8e-05,
+      "p99": 1.8e-05,
+      "min": 1.3e-05,
+      "max": 1.8e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_git_snapshot_write_tree": {
+      "p50": 0.035689,
+      "p95": 0.038979,
+      "p99": 0.038979,
+      "min": 0.033506,
+      "max": 0.038979,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_apply_direct_routes": {
+      "p50": 2e-05,
+      "p95": 2.2e-05,
+      "p99": 2.2e-05,
+      "min": 1.5e-05,
+      "max": 2.2e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_build_classifier": {
+      "p50": 1.6e-05,
+      "p95": 2.1e-05,
+      "p99": 2.1e-05,
+      "min": 1.3e-05,
+      "max": 2.1e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_classify": {
+      "p50": 0.064193,
+      "p95": 0.064504,
+      "p99": 0.064504,
+      "min": 0.06329,
+      "max": 0.064504,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_decode_command": {
+      "p50": 0.00015,
+      "p95": 0.000156,
+      "p99": 0.000156,
+      "min": 0.000143,
+      "max": 0.000156,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_setup_mounts": {
+      "p50": 0.084025,
+      "p95": 0.084896,
+      "p99": 0.084896,
+      "min": 0.081651,
+      "max": 0.084896,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_total": {
+      "p50": 0.471585,
+      "p95": 0.476341,
+      "p99": 0.476341,
+      "min": 0.46735,
+      "max": 0.476341,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_user_command": {
+      "p50": 0.320149,
+      "p95": 0.323107,
+      "p99": 0.323107,
+      "min": 0.31665,
+      "max": 0.323107,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_walk_upperdir": {
+      "p50": 0.000882,
+      "p95": 0.000915,
+      "p99": 0.000915,
+      "min": 0.000842,
+      "max": 0.000915,
+      "n": 5.0
+    },
+    "svc_cmd_10x_latency": {
+      "p50": 4.088192416005768,
+      "p95": 4.156624583003577,
+      "p99": 4.156624583003577,
+      "min": 4.0173417089972645,
+      "max": 4.156624583003577,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_commit_tree": {
+      "p50": 0.037754,
+      "p95": 0.04276,
+      "p99": 0.04276,
+      "min": 0.036036,
+      "max": 0.04276,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_git_add": {
+      "p50": 0.088845,
+      "p95": 0.10439,
+      "p99": 0.10439,
+      "min": 0.083889,
+      "max": 0.10439,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_prepare_env": {
+      "p50": 0.000205,
+      "p95": 0.000252,
+      "p99": 0.000252,
+      "min": 0.000192,
+      "max": 0.000252,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_read_tree": {
+      "p50": 0.049044,
+      "p95": 0.052316,
+      "p99": 0.052316,
+      "min": 0.04377,
+      "max": 0.052316,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_rev_parse_head": {
+      "p50": 0.031307,
+      "p95": 0.03607,
+      "p99": 0.03607,
+      "min": 0.028161,
+      "max": 0.03607,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_temp_index": {
+      "p50": 0.000891,
+      "p95": 0.001459,
+      "p99": 0.001459,
+      "min": 0.00081,
+      "max": 0.001459,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_total": {
+      "p50": 0.246442,
+      "p95": 0.269951,
+      "p99": 0.269951,
+      "min": 0.235575,
+      "max": 0.269951,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_validate_repo": {
+      "p50": 1.5e-05,
+      "p95": 5.3e-05,
+      "p99": 5.3e-05,
+      "min": 1.2e-05,
+      "max": 5.3e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_git_snapshot_write_tree": {
+      "p50": 0.035398,
+      "p95": 0.041321,
+      "p99": 0.041321,
+      "min": 0.03378,
+      "max": 0.041321,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_apply_direct_routes": {
+      "p50": 2.7e-05,
+      "p95": 6.7e-05,
+      "p99": 6.7e-05,
+      "min": 1.7e-05,
+      "max": 6.7e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_build_classifier": {
+      "p50": 1.7e-05,
+      "p95": 9.2e-05,
+      "p99": 9.2e-05,
+      "min": 1.5e-05,
+      "max": 9.2e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_classify": {
+      "p50": 0.084329,
+      "p95": 0.09883,
+      "p99": 0.09883,
+      "min": 0.078424,
+      "max": 0.09883,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_decode_command": {
+      "p50": 0.000147,
+      "p95": 0.00026,
+      "p99": 0.00026,
+      "min": 0.00013,
+      "max": 0.00026,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_setup_mounts": {
+      "p50": 0.101867,
+      "p95": 0.115309,
+      "p99": 0.115309,
+      "min": 0.096754,
+      "max": 0.115309,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_total": {
+      "p50": 0.606734,
+      "p95": 0.63755,
+      "p99": 0.63755,
+      "min": 0.572749,
+      "max": 0.63755,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_user_command": {
+      "p50": 0.407208,
+      "p95": 0.45068,
+      "p99": 0.45068,
+      "min": 0.373621,
+      "max": 0.45068,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_walk_upperdir": {
+      "p50": 0.001022,
+      "p95": 0.002352,
+      "p99": 0.002352,
+      "min": 0.000915,
+      "max": 0.002352,
+      "n": 10.0
+    }
+  },
+  "values": {
+    "rss_at_start": 61.2,
+    "fds_at_start": 33.0,
+    "svc_cmd_1x_wall_s": 9.136941582997679,
+    "svc_cmd_1x_throughput": 0.10944581301262042,
+    "svc_cmd_1x_errors": 0.0,
+    "svc_cmd_1x_status_committed": 1.0,
+    "svc_cmd_5x_wall_s": 3.8152365410060156,
+    "svc_cmd_5x_throughput": 1.3105347325808485,
+    "svc_cmd_5x_errors": 0.0,
+    "svc_cmd_5x_status_committed": 5.0,
+    "svc_cmd_10x_wall_s": 4.580362083012005,
+    "svc_cmd_10x_throughput": 2.183233512714805,
+    "svc_cmd_10x_errors": 0.0,
+    "svc_cmd_10x_status_committed": 10.0,
+    "rss_at_end": 62.07,
+    "fds_at_end": 33.0,
+    "rss_growth_mb": 0.8699999999999974,
+    "fd_growth": 0.0
+  }
+}

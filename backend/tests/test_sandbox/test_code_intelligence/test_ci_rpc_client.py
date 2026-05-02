@@ -144,3 +144,117 @@ async def test_error_envelope_raises_typed_rpc_error() -> None:
         await client.call("nope")
     assert exc.value.kind == "UnsupportedOp"
     assert exc.value.details == {"op": "nope"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — native ci_rpc verb preference + EOS_CI_FORCE_SHIM fallback
+# ---------------------------------------------------------------------------
+
+
+class _VerbTransport(_FakeTransport):
+    """FakeTransport extended with a recordable native ci_rpc verb."""
+
+    def __init__(self, *, raise_not_implemented: bool = False) -> None:
+        super().__init__()
+        self.alive = True
+        self.socket_ready = True
+        self.verb_calls: list[tuple[str, bytes, str]] = []
+        self.raise_not_implemented = raise_not_implemented
+
+    async def ci_rpc(
+        self,
+        sandbox_id: str,
+        payload: bytes,
+        *,
+        socket_path: str,
+        timeout: int | None = None,
+    ) -> bytes:
+        del timeout
+        self.verb_calls.append((sandbox_id, payload, socket_path))
+        if self.raise_not_implemented:
+            raise NotImplementedError("verb not yet wired")
+        request = _decode_frame(payload)
+        response = {
+            "v": CI_PROTOCOL_VERSION,
+            "id": request["id"],
+            "ok": True,
+            "result": {"via": "verb", "op": request["op"]},
+        }
+        return encode_frame(response)
+
+
+def _decode_frame(payload: bytes) -> dict[str, Any]:
+    (length,) = struct.unpack(">I", payload[:4])
+    return msgpack.unpackb(payload[4 : 4 + length], raw=False)
+
+
+@pytest.mark.asyncio
+async def test_call_prefers_native_verb_when_available() -> None:
+    transport = _VerbTransport()
+    client = CiRpcClient(transport, "sb-verb", "/ws")  # type: ignore[arg-type]
+
+    result = await client.call("ping")
+
+    assert result == {"via": "verb", "op": "ping"}
+    assert len(transport.verb_calls) == 1
+    sandbox_id, _payload, socket_path = transport.verb_calls[0]
+    assert sandbox_id == "sb-verb"
+    # socket_path was resolved through DaemonLauncher (defaults to /home/u
+    # via the FakeTransport's HOME stub).
+    assert socket_path.endswith("/daemon.sock")
+    # Shim path was NOT exercised — no socket-shim exec was issued.
+    assert not any(
+        "socket.socket(socket.AF_UNIX)" in cmd for cmd in transport.exec_calls
+    )
+
+
+@pytest.mark.asyncio
+async def test_call_falls_back_to_shim_when_force_shim_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EOS_CI_FORCE_SHIM", "1")
+    transport = _VerbTransport()
+    client = CiRpcClient(transport, "sb-shim", "/ws")  # type: ignore[arg-type]
+
+    result = await client.call("ping")
+
+    # Shim returned the result instead of the verb.
+    assert result == {"pong": True, "op": "ping"}
+    assert transport.verb_calls == []
+    assert any(
+        "socket.socket(socket.AF_UNIX)" in cmd for cmd in transport.exec_calls
+    )
+
+
+@pytest.mark.asyncio
+async def test_verb_not_implemented_falls_back_to_shim() -> None:
+    transport = _VerbTransport(raise_not_implemented=True)
+    client = CiRpcClient(transport, "sb-fallback", "/ws")  # type: ignore[arg-type]
+
+    result = await client.call("ping")
+
+    # Verb was attempted, then the shim took over transparently.
+    assert len(transport.verb_calls) == 1
+    assert result == {"pong": True, "op": "ping"}
+
+
+@pytest.mark.asyncio
+async def test_force_shim_re_read_per_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """EOS_CI_FORCE_SHIM is re-checked on every call (per-call os.environ.get)."""
+    transport = _VerbTransport()
+    client = CiRpcClient(transport, "sb-ab", "/ws")  # type: ignore[arg-type]
+
+    # First call: flag unset -> verb path.
+    await client.call("ping")
+    assert len(transport.verb_calls) == 1
+
+    # Flip flag mid-process: subsequent call must take the shim path
+    # without rebuilding the client.
+    monkeypatch.setenv("EOS_CI_FORCE_SHIM", "1")
+    await client.call("ping")
+    assert len(transport.verb_calls) == 1  # no new verb call
+    assert any(
+        "socket.socket(socket.AF_UNIX)" in cmd for cmd in transport.exec_calls
+    )

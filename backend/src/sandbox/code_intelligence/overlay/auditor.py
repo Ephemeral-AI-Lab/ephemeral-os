@@ -47,6 +47,7 @@ import json
 import logging
 import posixpath
 import shlex
+import shutil
 import tarfile
 import time
 import uuid
@@ -296,6 +297,8 @@ class OverlayAuditor:
                         exc_info=True,
                     )
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
+                if result is not None:
+                    result.overlay_stage_timings = dict(stage_timings)
                 self._log_execution_summary(
                     command=command,
                     lease=lease,
@@ -316,11 +319,28 @@ class OverlayAuditor:
         awaitable: Awaitable[Any],
     ) -> Any:
         started = time.perf_counter()
+        logger.debug(
+            "overlay command stage start: stage=%s sandbox_id=%s run_dir=%s command=%r",
+            stage,
+            self._sandbox_id,
+            lease.run_dir,
+            _command_sample(command),
+        )
         try:
             return await awaitable
         finally:
             elapsed = round(time.perf_counter() - started, 6)
             stage_timings[stage] = elapsed
+            logger.debug(
+                "overlay command stage done: stage=%s elapsed=%.3fs "
+                "sandbox_id=%s run_dir=%s command=%r timings=%s",
+                stage,
+                elapsed,
+                self._sandbox_id,
+                lease.run_dir,
+                _command_sample(command),
+                dict(stage_timings),
+            )
             if elapsed >= _SLOW_OVERLAY_STAGE_SECONDS:
                 logger.warning(
                     "overlay command stage slow: stage=%s elapsed=%.3fs "
@@ -378,6 +398,19 @@ class OverlayAuditor:
             return
         async with self._script_upload_lock:
             if self._script_uploaded:
+                return
+            if self._can_use_local_run_dir(sandbox):
+                root = Path(_RUN_DIR_PREFIX)
+                root.mkdir(parents=True, exist_ok=True)
+                with tarfile.open(
+                    fileobj=io.BytesIO(_overlay_runtime_bundle_bytes()),
+                    mode="r:gz",
+                ) as tar:
+                    try:
+                        tar.extractall(root, filter="data")
+                    except TypeError:
+                        tar.extractall(root)
+                self._script_uploaded = True
                 return
             # Read the sandbox-side runtime bundle from the orchestrator
             # package and ship it to /tmp/eos-shell-overlay.
@@ -528,6 +561,11 @@ class OverlayAuditor:
         self, sandbox: Any, lease: OverlayLease, *, fallback: str
     ) -> str:
         stdout_path = posixpath.join(lease.run_dir, "stdout.bin")
+        if self._can_use_local_run_dir(sandbox):
+            try:
+                return Path(stdout_path).read_bytes().decode("utf-8", "replace")
+            except OSError:
+                return fallback
         script = (
             "import base64,pathlib,sys; "
             "sys.stdout.write(base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode('ascii'))"
@@ -553,6 +591,15 @@ class OverlayAuditor:
         max_bytes: int,
     ) -> tuple[bytes, int]:
         stdout_path = posixpath.join(lease.run_dir, "stdout.bin")
+        if self._can_use_local_run_dir(sandbox):
+            try:
+                data = Path(stdout_path).read_bytes()
+            except OSError:
+                return b"", offset
+            size = len(data)
+            start = offset if offset <= size else 0
+            start = max(start, size - max_bytes)
+            return data[start:size], size
         script = (
             "import base64,json,pathlib,sys; "
             "path=pathlib.Path(sys.argv[1]); "
@@ -589,6 +636,16 @@ class OverlayAuditor:
         overlay_exit_code: int | None = None,
     ) -> OverlayDiff | OverlayPolicyReject:
         diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
+        if self._can_use_local_run_dir(sandbox):
+            try:
+                return parse_diff_ndjson(Path(diff_path).read_text(encoding="utf-8"))
+            except OSError as exc:
+                raise OverlayRunError(
+                    "overlay diff.ndjson missing at "
+                    f"{diff_path}: {exc} "
+                    f"overlay_exit_code={overlay_exit_code!r} "
+                    f"overlay_output={overlay_stdout[-2000:]!r}"
+                ) from exc
         cmd = f"cat {shlex.quote(diff_path)}"
         stdout, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
         if exit_code != 0:
@@ -601,8 +658,14 @@ class OverlayAuditor:
         return parse_diff_ndjson(stdout)
 
     async def _cleanup_run_dir(self, sandbox: Any, lease: OverlayLease) -> None:
+        if self._can_use_local_run_dir(sandbox):
+            await asyncio.to_thread(shutil.rmtree, lease.run_dir, ignore_errors=True)
+            return
         cmd = f"rm -rf {shlex.quote(lease.run_dir)}"
         await self._do_exec(sandbox, cmd, timeout=60)
+
+    def _can_use_local_run_dir(self, sandbox: Any) -> bool:
+        return sandbox is None and self._transport is None
 
     async def _do_exec(
         self,

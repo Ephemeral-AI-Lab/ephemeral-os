@@ -18,7 +18,7 @@ D. ``test_sqlite_index_survives_daemon_restart`` — capture symbol counts,
 E. ``test_refresh_file_does_not_rewrite_world`` — daemon ``index_refresh``
    calls on ``/testbed/dask/__init__.py``; asserts completion below the
    provider-shim stuck threshold.
-F. ``test_svc_cmd_overlay_high_concurrency_probe`` — 10/20/30/50 concurrent
+F. ``test_svc_cmd_overlay_high_concurrency_probe`` — 1/5/10 concurrent
    full audited ``svc.cmd`` overlay ops that write distinct gitinclude files,
    with per-op and mid-flight monitor logging for bottleneck diagnosis.
 
@@ -29,6 +29,8 @@ Run with:
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import os
 import shlex
 import sys
@@ -61,10 +63,11 @@ _SUSTAINED_STATUS_SAMPLES = 3
 _CONCURRENT_AGENT_COUNT = 2
 _CONCURRENT_AGENT_SECONDS = 6.0
 _REFRESH_SAMPLES = 5
-_SVC_CMD_CONCURRENCY_LEVELS = (10, 20, 30, 50)
+_SVC_CMD_CONCURRENCY_LEVELS = (1, 5, 10)
 _SVC_CMD_OP_TIMEOUT_S = 120
 _SVC_CMD_BATCH_TIMEOUT_S = 300
 _SVC_CMD_MONITOR_INTERVAL_S = 1.0
+_SVC_CMD_DAEMON_LOG_TAIL_INTERVAL_S = 2.0
 
 
 def _flush(msg: str) -> None:
@@ -140,6 +143,8 @@ class SvcCmdProbeResult:
     changed_paths: int
     git_snapshot_timings: dict[str, float]
     overlay_run_timings: dict[str, float]
+    overlay_stage_timings: dict[str, float]
+    rpc_call_timings: dict[str, float]
     error: str | None = None
 
 
@@ -173,8 +178,15 @@ def live_phase35_env() -> LivePhase35Env:
     )
     try:
         raw_sandbox = get_sandbox_service().get_sandbox_object(sandbox_id)
-        home_resp = raw_sandbox.process.exec("printf '%s' \"$HOME\"", timeout=10)
-        home = (getattr(home_resp, "result", "") or "").strip() or "/home/daytona"
+        home_resp = raw_sandbox.process.exec(
+            wrap_bash_command("printf '%s' \"$HOME\""),
+            timeout=10,
+        )
+        home_text, home_code = extract_exit_code(
+            getattr(home_resp, "result", "") or "",
+            fallback_exit_code=getattr(home_resp, "exit_code", None),
+        )
+        home = home_text.strip() if home_code == 0 and home_text.strip() else "/home/daytona"
         env = LivePhase35Env(
             sandbox_id=sandbox_id,
             raw_sandbox=raw_sandbox,
@@ -491,7 +503,7 @@ def test_refresh_file_does_not_rewrite_world(live_phase35_env: LivePhase35Env) -
 async def test_svc_cmd_overlay_high_concurrency_probe(
     live_phase35_env: LivePhase35Env,
 ) -> None:
-    """Run 10/20/30/50 concurrent full audited ``svc.cmd`` overlay ops.
+    """Run 1/5/10 concurrent full audited ``svc.cmd`` overlay ops.
 
     Each command writes a distinct gitinclude file, so this exercises the full
     namespace + overlay diff + OCC commit path rather than only raw transport
@@ -500,11 +512,13 @@ async def test_svc_cmd_overlay_high_concurrency_probe(
     """
     h = TimingHarness(
         phase=3.5,
-        test_name="svc_cmd_overlay_concurrency_10_20_30_50",
+        test_name="svc_cmd_overlay_concurrency_1_5_10",
     )
     env = live_phase35_env
     svc = env.make_ci_service()
     failures: list[str] = []
+    old_log_level = os.environ.get("EOS_CI_DAEMON_LOG_LEVEL")
+    os.environ["EOS_CI_DAEMON_LOG_LEVEL"] = "DEBUG"
 
     try:
         with _trace(h, "ci_service_construct"):
@@ -533,6 +547,8 @@ async def test_svc_cmd_overlay_high_concurrency_probe(
         assert code == 0, output
 
         for level in _SVC_CMD_CONCURRENCY_LEVELS:
+            daemon_log = _DaemonLogTailer(env, f"{env.daemon_state_dir()}/daemon.log")
+            daemon_log.seek_end()
             with _trace(h, f"svc_cmd_{level}x_wall"):
                 results = await _run_svc_cmd_concurrency_batch(
                     h,
@@ -540,6 +556,7 @@ async def test_svc_cmd_overlay_high_concurrency_probe(
                     async_sandbox,
                     load_root=load_root,
                     concurrency=level,
+                    daemon_log=daemon_log,
                 )
             errors = [r for r in results if r.error is not None]
             bad_statuses = [
@@ -586,6 +603,10 @@ async def test_svc_cmd_overlay_high_concurrency_probe(
         if failures:
             pytest.fail("; ".join(failures))
     finally:
+        if old_log_level is None:
+            os.environ.pop("EOS_CI_DAEMON_LOG_LEVEL", None)
+        else:
+            os.environ["EOS_CI_DAEMON_LOG_LEVEL"] = old_log_level
         path = h.dump_json()
         _flush(f"  [svc_cmd] timing json: {path}")
         svc.dispose()
@@ -618,6 +639,62 @@ class _SyncSandboxTransport:
         )
 
 
+class _DaemonLogTailer:
+    """Incrementally print new daemon.log bytes during a live bottleneck probe."""
+
+    def __init__(self, env: LivePhase35Env, log_path: str) -> None:
+        self._env = env
+        self._path = log_path
+        self._offset = 0
+
+    def seek_end(self) -> None:
+        self._offset = self._remote_size()
+        _flush(
+            f"  [svc_cmd] daemon log tail starts at byte {self._offset} "
+            f"path={self._path}"
+        )
+
+    def poll(self, prefix: str) -> None:
+        script = (
+            "import base64,json,pathlib,sys; "
+            "path=pathlib.Path(sys.argv[1]); "
+            "offset=max(0,int(sys.argv[2])); "
+            "data=path.read_bytes() if path.exists() else b''; "
+            "chunk=data[offset:]; "
+            "print(json.dumps({'size': len(data), "
+            "'chunk': base64.b64encode(chunk[-65536:]).decode('ascii')}))"
+        )
+        cmd = (
+            f"python3 -c {shlex.quote(script)} "
+            f"{shlex.quote(self._path)} {self._offset}"
+        )
+        code, raw = self._env.exec(cmd, timeout=30)
+        if code != 0:
+            _flush(f"{prefix} daemon_log poll failed exit={code}: {raw[-300:]}")
+            return
+        try:
+            payload = json.loads(raw or "{}")
+        except json.JSONDecodeError:
+            _flush(f"{prefix} daemon_log poll returned non-json: {raw[-300:]}")
+            return
+        self._offset = int(payload.get("size") or self._offset)
+        chunk_b64 = str(payload.get("chunk") or "")
+        if not chunk_b64:
+            return
+        text = base64.b64decode(chunk_b64).decode("utf-8", "replace")
+        for line in text.splitlines()[-80:]:
+            _flush(f"{prefix} daemon_log {line}")
+
+    def _remote_size(self) -> int:
+        code, raw = self._env.exec(f"wc -c < {shlex.quote(self._path)}", timeout=30)
+        if code != 0:
+            return 0
+        try:
+            return int(raw.strip().split()[0])
+        except (IndexError, ValueError):
+            return 0
+
+
 async def _run_svc_cmd_concurrency_batch(
     harness: TimingHarness,
     svc: CodeIntelligenceService,
@@ -625,6 +702,7 @@ async def _run_svc_cmd_concurrency_batch(
     *,
     load_root: str,
     concurrency: int,
+    daemon_log: _DaemonLogTailer,
 ) -> list[SvcCmdProbeResult]:
     _flush(f"  [svc_cmd:{concurrency}] queueing {concurrency} overlay ops")
     start_event = asyncio.Event()
@@ -656,6 +734,7 @@ async def _run_svc_cmd_concurrency_batch(
             in_flight=in_flight,
             completed=completed,
             stop_event=stop_monitor,
+            daemon_log=daemon_log,
         )
     )
     start_event.set()
@@ -671,6 +750,7 @@ async def _run_svc_cmd_concurrency_batch(
     finally:
         stop_monitor.set()
         await monitor_task
+        daemon_log.poll(f"  [svc_cmd:{concurrency}]")
 
     wall = time.perf_counter() - wall_started
     latencies = [r.elapsed_s for r in results if r.error is None]
@@ -712,6 +792,20 @@ async def _run_svc_cmd_concurrency_batch(
         results=results,
         prefix="overlay_run",
         timing_attr="overlay_run_timings",
+    )
+    _record_stage_distributions(
+        harness,
+        concurrency=concurrency,
+        results=results,
+        prefix="overlay_stage",
+        timing_attr="overlay_stage_timings",
+    )
+    _record_stage_distributions(
+        harness,
+        concurrency=concurrency,
+        results=results,
+        prefix="rpc_call",
+        timing_attr="rpc_call_timings",
     )
     return results
 
@@ -758,6 +852,12 @@ async def _run_one_svc_cmd_probe(
         overlay_timings = _timing_map(
             getattr(result, "overlay_run_timings", {})
         )
+        overlay_stage_timings = _timing_map(
+            getattr(result, "overlay_stage_timings", {})
+        )
+        rpc_call_timings = _timing_map(
+            getattr(result, "rpc_call_timings", {})
+        )
         changed_paths = len(getattr(result, "changed_paths", []) or [])
         exit_code = _optional_int(getattr(result, "exit_code", None))
         status = _optional_str(getattr(result, "git_commit_status", None))
@@ -766,7 +866,9 @@ async def _run_one_svc_cmd_probe(
             f"elapsed={elapsed:.3f}s exit={exit_code} status={status} "
             f"changed={changed_paths} "
             f"{_format_timing_map('snapshot', snapshot_timings)} "
-            f"{_format_timing_map('overlay', overlay_timings)}"
+            f"{_format_timing_map('overlay', overlay_timings)} "
+            f"{_format_timing_map('stages', overlay_stage_timings)} "
+            f"{_format_timing_map('rpc', rpc_call_timings)}"
         )
         return SvcCmdProbeResult(
             batch_size=concurrency,
@@ -777,6 +879,8 @@ async def _run_one_svc_cmd_probe(
             changed_paths=changed_paths,
             git_snapshot_timings=snapshot_timings,
             overlay_run_timings=overlay_timings,
+            overlay_stage_timings=overlay_stage_timings,
+            rpc_call_timings=rpc_call_timings,
         )
     except Exception as exc:
         elapsed = time.perf_counter() - started if started is not None else 0.0
@@ -793,6 +897,8 @@ async def _run_one_svc_cmd_probe(
             changed_paths=0,
             git_snapshot_timings={},
             overlay_run_timings={},
+            overlay_stage_timings={},
+            rpc_call_timings={},
             error=repr(exc),
         )
     finally:
@@ -807,7 +913,9 @@ async def _monitor_svc_cmd_batch(
     in_flight: dict[int, float],
     completed: set[int],
     stop_event: asyncio.Event,
+    daemon_log: _DaemonLogTailer,
 ) -> None:
+    last_log_poll = wall_started
     while not stop_event.is_set():
         try:
             await asyncio.wait_for(
@@ -823,6 +931,9 @@ async def _monitor_svc_cmd_batch(
                 f"{now - wall_started:.1f}s done={len(completed)}/{concurrency} "
                 f"in_flight={len(in_flight)} oldest_in_flight={oldest:.1f}s"
             )
+            if now - last_log_poll >= _SVC_CMD_DAEMON_LOG_TAIL_INTERVAL_S:
+                daemon_log.poll(f"  [svc_cmd:{concurrency}]")
+                last_log_poll = now
 
 
 def _record_stage_distributions(

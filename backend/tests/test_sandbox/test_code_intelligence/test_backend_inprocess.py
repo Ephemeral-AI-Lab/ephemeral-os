@@ -71,9 +71,25 @@ def test_inprocess_exposes_required_components(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_select_inprocess_when_flag_unset(tmp_path: Path) -> None:
+def test_select_inprocess_when_flag_unset_no_transport(tmp_path: Path) -> None:
+    """No transport at all -> InProcess regardless of flag (sandboxless flow)."""
     svc = CodeIntelligenceService(sandbox_id="sb-a", workspace_root=str(tmp_path))
     assert type(svc._impl) is InProcessCiBackend
+
+
+def test_select_rpc_when_flag_unset_with_transport_and_id(tmp_path: Path) -> None:
+    """Phase 5 default flip: unset flag + transport + id -> RpcCiBackend.
+
+    This is the rollout event for the in-sandbox migration. Before Phase 5
+    the unset-flag path returned InProcessCiBackend; default-on flips it.
+    """
+    transport = MagicMock(name="SandboxTransport")
+    svc = CodeIntelligenceService(
+        sandbox_id="sb-default",
+        workspace_root=str(tmp_path),
+        transport=transport,
+    )
+    assert type(svc._impl) is RpcCiBackend
 
 
 def test_select_rpc_when_flag_on_with_transport_and_id(
@@ -110,20 +126,28 @@ def test_select_inprocess_when_flag_on_but_empty_sandbox_id(
     assert type(svc._impl) is InProcessCiBackend
 
 
-def test_select_inprocess_when_flag_set_to_other_value(
+def test_select_rpc_when_flag_set_to_other_truthy_value(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("EOS_CI_IN_SANDBOX", "true")  # not exactly "1"
+    """Phase 5: only EOS_CI_IN_SANDBOX=='0' is the backout. All other values
+    (including unset, 'true', '1', '') still select the daemon path so long
+    as transport+sandbox_id are present."""
+    monkeypatch.setenv("EOS_CI_IN_SANDBOX", "true")
     transport = MagicMock(name="SandboxTransport")
     svc = CodeIntelligenceService(
         sandbox_id="sb-d",
         workspace_root=str(tmp_path),
         transport=transport,
     )
-    assert type(svc._impl) is InProcessCiBackend
+    assert type(svc._impl) is RpcCiBackend
 
 
-def test_select_inprocess_when_flag_off_with_transport_and_id(tmp_path: Path) -> None:
+def test_select_inprocess_when_flag_zero_backout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Phase 5 backout knob: EOS_CI_IN_SANDBOX=0 forces InProcessCiBackend
+    even when transport+sandbox_id are present."""
+    monkeypatch.setenv("EOS_CI_IN_SANDBOX", "0")
     transport = MagicMock(name="SandboxTransport")
     svc = CodeIntelligenceService(
         sandbox_id="sb-e",
