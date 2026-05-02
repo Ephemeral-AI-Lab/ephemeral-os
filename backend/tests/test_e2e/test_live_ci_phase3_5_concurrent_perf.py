@@ -18,6 +18,9 @@ D. ``test_sqlite_index_survives_daemon_restart`` — capture symbol counts,
 E. ``test_refresh_file_does_not_rewrite_world`` — daemon ``index_refresh``
    calls on ``/testbed/dask/__init__.py``; asserts completion below the
    provider-shim stuck threshold.
+F. ``test_svc_cmd_overlay_high_concurrency_probe`` — 10/20/30/50 concurrent
+   full audited ``svc.cmd`` overlay ops that write distinct gitinclude files,
+   with per-op and mid-flight monitor logging for bottleneck diagnosis.
 
 Run with:
     .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase3_5_concurrent_perf.py -m live -v -s
@@ -27,9 +30,11 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shlex
 import sys
 import time
 import uuid
+from collections import Counter
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Iterator
@@ -56,6 +61,10 @@ _SUSTAINED_STATUS_SAMPLES = 3
 _CONCURRENT_AGENT_COUNT = 2
 _CONCURRENT_AGENT_SECONDS = 6.0
 _REFRESH_SAMPLES = 5
+_SVC_CMD_CONCURRENCY_LEVELS = (10, 20, 30, 50)
+_SVC_CMD_OP_TIMEOUT_S = 120
+_SVC_CMD_BATCH_TIMEOUT_S = 300
+_SVC_CMD_MONITOR_INTERVAL_S = 1.0
 
 
 def _flush(msg: str) -> None:
@@ -119,6 +128,19 @@ class LivePhase35Env:
             return int(out.strip())
         except ValueError:
             return None
+
+
+@dataclass
+class SvcCmdProbeResult:
+    batch_size: int
+    op_index: int
+    elapsed_s: float
+    exit_code: int | None
+    git_commit_status: str | None
+    changed_paths: int
+    git_snapshot_timings: dict[str, float]
+    overlay_run_timings: dict[str, float]
+    error: str | None = None
 
 
 @pytest.fixture(scope="module")
@@ -461,6 +483,115 @@ def test_refresh_file_does_not_rewrite_world(live_phase35_env: LivePhase35Env) -
 
 
 # ---------------------------------------------------------------------------
+# 3.5.5.F — full svc.cmd overlay high-concurrency probe
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_svc_cmd_overlay_high_concurrency_probe(
+    live_phase35_env: LivePhase35Env,
+) -> None:
+    """Run 10/20/30/50 concurrent full audited ``svc.cmd`` overlay ops.
+
+    Each command writes a distinct gitinclude file, so this exercises the full
+    namespace + overlay diff + OCC commit path rather than only raw transport
+    or a noop shell command. The test intentionally prints detailed mid-flight
+    progress so slow stages can be diagnosed from CI/live logs.
+    """
+    h = TimingHarness(
+        phase=3.5,
+        test_name="svc_cmd_overlay_concurrency_10_20_30_50",
+    )
+    env = live_phase35_env
+    svc = env.make_ci_service()
+    failures: list[str] = []
+
+    try:
+        with _trace(h, "ci_service_construct"):
+            svc.ensure_initialized(wait=True)
+
+        pid = env.daemon_pid()
+        sampler_pid = pid if pid is not None else _orchestrator_pid()
+        sampler_transport = _SyncSandboxTransport(env.raw_sandbox)
+        h.sample_rss_mb(
+            "rss_at_start",
+            sampler_transport,
+            env.sandbox_id,
+            sampler_pid,
+        )
+        h.sample_fds(
+            "fds_at_start",
+            sampler_transport,
+            env.sandbox_id,
+            sampler_pid,
+        )
+
+        async_sandbox = await get_async_sandbox(env.sandbox_id)
+        load_root = f"{env.root_dir}/_phase35_svc_cmd_load_{uuid.uuid4().hex[:8]}"
+        _flush(f"  [svc_cmd] preparing live load root: {load_root}")
+        code, output = env.exec(f"mkdir -p {shlex.quote(load_root)}", timeout=60)
+        assert code == 0, output
+
+        for level in _SVC_CMD_CONCURRENCY_LEVELS:
+            with _trace(h, f"svc_cmd_{level}x_wall"):
+                results = await _run_svc_cmd_concurrency_batch(
+                    h,
+                    svc,
+                    async_sandbox,
+                    load_root=load_root,
+                    concurrency=level,
+                )
+            errors = [r for r in results if r.error is not None]
+            bad_statuses = [
+                r
+                for r in results
+                if r.error is None
+                and (
+                    r.exit_code != 0
+                    or r.git_commit_status != "committed"
+                    or r.changed_paths < 1
+                )
+            ]
+            if errors:
+                failures.append(
+                    f"{level}x errors: {[r.error for r in errors[:3]]}"
+                )
+            if bad_statuses:
+                failures.append(
+                    f"{level}x unexpected statuses: "
+                    f"{[(r.op_index, r.exit_code, r.git_commit_status, r.changed_paths) for r in bad_statuses[:5]]}"
+                )
+
+        h.sample_rss_mb(
+            "rss_at_end",
+            sampler_transport,
+            env.sandbox_id,
+            sampler_pid,
+        )
+        h.sample_fds(
+            "fds_at_end",
+            sampler_transport,
+            env.sandbox_id,
+            sampler_pid,
+        )
+        h.values["rss_growth_mb"] = h.values["rss_at_end"] - h.values["rss_at_start"]
+        h.values["fd_growth"] = h.values["fds_at_end"] - h.values["fds_at_start"]
+
+        if h.values["rss_growth_mb"] >= 500.0:
+            failures.append(f"RSS grew {h.values['rss_growth_mb']:.1f} MB")
+        if h.values["fd_growth"] >= 100.0:
+            failures.append(f"FD count grew by {h.values['fd_growth']:.0f}")
+
+        _flush("\n" + h.report())
+        if failures:
+            pytest.fail("; ".join(failures))
+    finally:
+        path = h.dump_json()
+        _flush(f"  [svc_cmd] timing json: {path}")
+        svc.dispose()
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -485,6 +616,274 @@ class _SyncSandboxTransport:
             wrap_bash_command(command),
             timeout=timeout,
         )
+
+
+async def _run_svc_cmd_concurrency_batch(
+    harness: TimingHarness,
+    svc: CodeIntelligenceService,
+    async_sandbox: Any,
+    *,
+    load_root: str,
+    concurrency: int,
+) -> list[SvcCmdProbeResult]:
+    _flush(f"  [svc_cmd:{concurrency}] queueing {concurrency} overlay ops")
+    start_event = asyncio.Event()
+    stop_monitor = asyncio.Event()
+    in_flight: dict[int, float] = {}
+    completed: set[int] = set()
+
+    tasks = [
+        asyncio.create_task(
+            _run_one_svc_cmd_probe(
+                svc,
+                async_sandbox,
+                load_root=load_root,
+                concurrency=concurrency,
+                op_index=op_index,
+                start_event=start_event,
+                in_flight=in_flight,
+                completed=completed,
+            )
+        )
+        for op_index in range(concurrency)
+    ]
+    _flush(f"  [svc_cmd:{concurrency}] all tasks created; releasing start gate")
+    wall_started = time.perf_counter()
+    monitor_task = asyncio.create_task(
+        _monitor_svc_cmd_batch(
+            concurrency=concurrency,
+            wall_started=wall_started,
+            in_flight=in_flight,
+            completed=completed,
+            stop_event=stop_monitor,
+        )
+    )
+    start_event.set()
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(*tasks),
+            timeout=_SVC_CMD_BATCH_TIMEOUT_S,
+        )
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        raise
+    finally:
+        stop_monitor.set()
+        await monitor_task
+
+    wall = time.perf_counter() - wall_started
+    latencies = [r.elapsed_s for r in results if r.error is None]
+    latency_stats = harness.record_distribution(
+        f"svc_cmd_{concurrency}x_latency",
+        latencies,
+    )
+    harness.values[f"svc_cmd_{concurrency}x_wall_s"] = wall
+    harness.values[f"svc_cmd_{concurrency}x_throughput"] = (
+        float(len(results)) / wall if wall > 0 else 0.0
+    )
+    harness.values[f"svc_cmd_{concurrency}x_errors"] = float(
+        sum(1 for r in results if r.error is not None)
+    )
+    status_counts = Counter(
+        "error" if r.error is not None else str(r.git_commit_status)
+        for r in results
+    )
+    for status, count in sorted(status_counts.items()):
+        harness.values[f"svc_cmd_{concurrency}x_status_{status}"] = float(count)
+
+    _flush(
+        f"  [svc_cmd:{concurrency}] batch done wall={wall:.3f}s "
+        f"p50={latency_stats['p50']:.3f}s p95={latency_stats['p95']:.3f}s "
+        f"p99={latency_stats['p99']:.3f}s throughput="
+        f"{harness.values[f'svc_cmd_{concurrency}x_throughput']:.2f}/s "
+        f"statuses={dict(status_counts)}"
+    )
+    _record_stage_distributions(
+        harness,
+        concurrency=concurrency,
+        results=results,
+        prefix="git_snapshot",
+        timing_attr="git_snapshot_timings",
+    )
+    _record_stage_distributions(
+        harness,
+        concurrency=concurrency,
+        results=results,
+        prefix="overlay_run",
+        timing_attr="overlay_run_timings",
+    )
+    return results
+
+
+async def _run_one_svc_cmd_probe(
+    svc: CodeIntelligenceService,
+    async_sandbox: Any,
+    *,
+    load_root: str,
+    concurrency: int,
+    op_index: int,
+    start_event: asyncio.Event,
+    in_flight: dict[int, float],
+    completed: set[int],
+) -> SvcCmdProbeResult:
+    target = f"{load_root}/batch_{concurrency}_op_{op_index}.txt"
+    payload = f"batch={concurrency} op={op_index}"
+    command = f"printf '%s\\n' {shlex.quote(payload)} > {shlex.quote(target)}"
+    started: float | None = None
+    _flush(f"  [svc_cmd:{concurrency}] op={op_index:02d} queued")
+    try:
+        await start_event.wait()
+        started = time.perf_counter()
+        in_flight[op_index] = started
+        _flush(
+            f"  [svc_cmd:{concurrency}] op={op_index:02d} start "
+            f"target={target}"
+        )
+        result = await svc.cmd(
+            async_sandbox,
+            command,
+            timeout=_SVC_CMD_OP_TIMEOUT_S,
+            description=(
+                f"phase35 svc_cmd overlay concurrency={concurrency} "
+                f"op={op_index}"
+            ),
+            agent_id=f"phase35-svc-cmd-{concurrency}-{op_index}",
+            attribute_changes=True,
+        )
+        elapsed = time.perf_counter() - started
+        snapshot_timings = _timing_map(
+            getattr(result, "git_snapshot_timings", {})
+        )
+        overlay_timings = _timing_map(
+            getattr(result, "overlay_run_timings", {})
+        )
+        changed_paths = len(getattr(result, "changed_paths", []) or [])
+        exit_code = _optional_int(getattr(result, "exit_code", None))
+        status = _optional_str(getattr(result, "git_commit_status", None))
+        _flush(
+            f"  [svc_cmd:{concurrency}] op={op_index:02d} done "
+            f"elapsed={elapsed:.3f}s exit={exit_code} status={status} "
+            f"changed={changed_paths} "
+            f"{_format_timing_map('snapshot', snapshot_timings)} "
+            f"{_format_timing_map('overlay', overlay_timings)}"
+        )
+        return SvcCmdProbeResult(
+            batch_size=concurrency,
+            op_index=op_index,
+            elapsed_s=elapsed,
+            exit_code=exit_code,
+            git_commit_status=status,
+            changed_paths=changed_paths,
+            git_snapshot_timings=snapshot_timings,
+            overlay_run_timings=overlay_timings,
+        )
+    except Exception as exc:
+        elapsed = time.perf_counter() - started if started is not None else 0.0
+        _flush(
+            f"  [svc_cmd:{concurrency}] op={op_index:02d} error "
+            f"elapsed={elapsed:.3f}s error={exc!r}"
+        )
+        return SvcCmdProbeResult(
+            batch_size=concurrency,
+            op_index=op_index,
+            elapsed_s=elapsed,
+            exit_code=None,
+            git_commit_status=None,
+            changed_paths=0,
+            git_snapshot_timings={},
+            overlay_run_timings={},
+            error=repr(exc),
+        )
+    finally:
+        completed.add(op_index)
+        in_flight.pop(op_index, None)
+
+
+async def _monitor_svc_cmd_batch(
+    *,
+    concurrency: int,
+    wall_started: float,
+    in_flight: dict[int, float],
+    completed: set[int],
+    stop_event: asyncio.Event,
+) -> None:
+    while not stop_event.is_set():
+        try:
+            await asyncio.wait_for(
+                stop_event.wait(),
+                timeout=_SVC_CMD_MONITOR_INTERVAL_S,
+            )
+            break
+        except asyncio.TimeoutError:
+            now = time.perf_counter()
+            oldest = max((now - t0 for t0 in in_flight.values()), default=0.0)
+            _flush(
+                f"  [svc_cmd:{concurrency}] monitor +"
+                f"{now - wall_started:.1f}s done={len(completed)}/{concurrency} "
+                f"in_flight={len(in_flight)} oldest_in_flight={oldest:.1f}s"
+            )
+
+
+def _record_stage_distributions(
+    harness: TimingHarness,
+    *,
+    concurrency: int,
+    results: list[SvcCmdProbeResult],
+    prefix: str,
+    timing_attr: str,
+) -> None:
+    by_key: dict[str, list[float]] = {}
+    for result in results:
+        if result.error is not None:
+            continue
+        timings = getattr(result, timing_attr)
+        for key, value in timings.items():
+            by_key.setdefault(key, []).append(float(value))
+    for key, samples in sorted(by_key.items()):
+        stats = harness.record_distribution(
+            f"svc_cmd_{concurrency}x_{prefix}_{key}",
+            samples,
+        )
+        _flush(
+            f"  [svc_cmd:{concurrency}] {prefix}.{key} "
+            f"p50={stats['p50']:.3f}s p95={stats['p95']:.3f}s "
+            f"p99={stats['p99']:.3f}s max={stats['max']:.3f}s"
+        )
+
+
+def _timing_map(raw: Any) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        return {}
+    timings: dict[str, float] = {}
+    for key, value in raw.items():
+        try:
+            timings[str(key)] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return timings
+
+
+def _format_timing_map(label: str, timings: dict[str, float]) -> str:
+    if not timings:
+        return f"{label}={{}}"
+    ordered = " ".join(
+        f"{key}={value:.3f}s" for key, value in sorted(timings.items())
+    )
+    return f"{label}={{{ordered}}}"
+
+
+def _optional_int(raw: Any) -> int | None:
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_str(raw: Any) -> str | None:
+    return str(raw) if raw is not None else None
 
 
 # Suppress unused-import lint for OperationChange — it's referenced indirectly

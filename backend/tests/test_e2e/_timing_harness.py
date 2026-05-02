@@ -12,6 +12,8 @@ Public API (every method has a matching unit test in
 * ``step(name)`` — context manager that times a block.
 * ``step_repeat(name, n)`` — yields *n* sample-context-managers under one
   distribution; ``report()`` renders p50/p95/p99/min/max.
+* ``record_distribution(name, samples)`` — record a pre-collected concurrent
+  timing distribution.
 * ``record(name, *, count, bytes_)`` — attach metadata to a step (or a bare key).
 * ``sample_rss_mb(label, transport, sandbox_id, pid)`` — one MB sample of
   ``/proc/<pid>/status``\\ 's ``VmRSS`` over the transport.
@@ -114,6 +116,19 @@ class TimingHarness:
         for _ in range(int(n)):
             yield _one_sample()
         self.distributions[name] = _percentiles(bucket)
+
+    def record_distribution(self, name: str, samples: list[float]) -> dict[str, float]:
+        """Record a distribution whose samples were collected externally.
+
+        Concurrent live E2E tests cannot use :meth:`step_repeat` because their
+        samples complete out of order across asyncio tasks. This method keeps
+        those probes on the same JSON/report schema.
+        """
+        bucket = [float(sample) for sample in samples]
+        self._samples[name] = bucket
+        stats = _percentiles(bucket)
+        self.distributions[name] = stats
+        return stats
 
     def sample_rss_mb(
         self,

@@ -240,6 +240,19 @@ def test_step_repeat_collects_distribution() -> None:
     assert stats["min"] <= stats["p50"] <= stats["p99"] <= stats["max"]
 
 
+def test_record_distribution_collects_concurrent_samples() -> None:
+    h = TimingHarness(phase=3.5, test_name="concurrent_distribution")
+
+    stats = h.record_distribution("svc_cmd_50x_latency", [0.4, 0.9, 0.2, 1.1])
+
+    assert stats == h.distributions["svc_cmd_50x_latency"]
+    assert stats["n"] == 4
+    assert stats["min"] == 0.2
+    assert stats["max"] == 1.1
+    payload = h.to_payload()
+    assert payload["distributions"]["svc_cmd_50x_latency"]["p50"] == 0.4
+
+
 def test_step_repeat_percentiles_monotonic_on_known_distribution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
