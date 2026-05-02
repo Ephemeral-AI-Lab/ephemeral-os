@@ -5,7 +5,6 @@ from __future__ import annotations
 import inspect
 import logging
 import os
-import shlex
 from typing import Any
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
@@ -24,15 +23,16 @@ async def bootstrap_in_sandbox_ci_runtime(
     *,
     transport: Any,
 ) -> None:
-    """Eager CI bootstrap — uploads the runtime bundle and runs the indexer.
+    """Eager CI bootstrap — uploads the runtime bundle and starts the daemon.
 
     Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
-    the underlying Daytona sandbox is provisioned/resumed. Phase 1 just runs
-    the indexer once; Phase 2+ extends this to also spawn the daemon.
+    the underlying Daytona sandbox is provisioned/resumed. Phase 2 makes this
+    hook daemon-only; the Phase 1 indexer still runs from
+    ``RpcCiBackend.ensure_initialized`` when callers need symbol data.
 
     Short-circuits as a no-op when ``EOS_CI_IN_SANDBOX`` != ``"1"``,
     when ``transport`` is ``None``, or when ``workspace_root`` is empty.
-    Raises :class:`RuntimeError` on a non-zero indexer exit.
+    Raises when the daemon cannot be spawned or its socket never appears.
 
     This helper is intentionally distinct from
     :func:`ensure_code_intelligence_runtime`, which owns the orchestrator-side
@@ -44,28 +44,16 @@ async def bootstrap_in_sandbox_ci_runtime(
     if transport is None or not sandbox_id or not str(workspace_root or "").strip():
         return
 
-    from sandbox.code_intelligence.rpc.launcher import (
-        BUNDLE_REMOTE_DIR,
-        ensure_runtime_uploaded,
-    )
+    from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
 
-    await ensure_runtime_uploaded(transport, sandbox_id)
-
-    cmd = (
-        f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-        f"python3 -m sandbox.code_intelligence.in_sandbox.ci_index "
-        f"--workspace-root {shlex.quote(workspace_root)}"
-    )
-    result = await transport.exec(sandbox_id, cmd, timeout=300)
-    exit_code = getattr(result, "exit_code", 1)
-    if exit_code != 0:
-        stdout = getattr(result, "stdout", "") or ""
-        raise RuntimeError(
-            f"eager CI bootstrap failed (sandbox={sandbox_id!r}, exit={exit_code}): "
-            f"{stdout}"
-        )
     logger.info(
-        "eager CI bootstrap completed for sandbox %s at %s",
+        "eager CI daemon bootstrap starting for sandbox %s at %s",
+        sandbox_id,
+        workspace_root,
+    )
+    await DaemonLauncher(transport, sandbox_id, workspace_root).ensure_daemon()
+    logger.info(
+        "eager CI daemon bootstrap completed for sandbox %s at %s",
         sandbox_id,
         workspace_root,
     )

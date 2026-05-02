@@ -63,6 +63,8 @@ class _FakeTransport:
         }
         self._marker_hash_first = marker_hash_first
         self._upload_seen = False
+        self._daemon_alive = False
+        self._socket_ready = False
 
     async def exec(
         self,
@@ -74,11 +76,33 @@ class _FakeTransport:
     ) -> Any:
         del cwd, timeout
         self.exec_calls.append((sandbox_id, command))
+        if 'printf %s "$HOME"' in command:
+            return type("R", (), {"exit_code": 0, "stdout": "/home/u"})()
+        if "daemon.pid" in command and "kill -0" in command:
+            return type(
+                "R",
+                (),
+                {"exit_code": 0 if self._daemon_alive else 1, "stdout": ""},
+            )()
         if ".bundle-hash" in command and "tar -xzf" not in command:
             # Marker check — drive the upload path.
             return type("R", (), {"exit_code": 1, "stdout": ""})()
         if "tar -xzf" in command:
             self._upload_seen = True
+            return type("R", (), {"exit_code": 0, "stdout": ""})()
+        if "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox" in command:
+            self._daemon_alive = True
+            self._socket_ready = True
+            return type("R", (), {"exit_code": 0, "stdout": "1234\n"})()
+        if command.startswith("test -S") and "daemon.sock" in command:
+            return type(
+                "R",
+                (),
+                {"exit_code": 0 if self._socket_ready else 1, "stdout": ""},
+            )()
+        if "kill -TERM" in command and "daemon.pid" in command:
+            self._daemon_alive = False
+            self._socket_ready = False
             return type("R", (), {"exit_code": 0, "stdout": ""})()
         if "ci_index" in command:
             return type(
@@ -167,8 +191,9 @@ def test_ensure_initialized_uploads_runs_and_caches_snapshot(
     assert backend._cached_file_count == 2
     assert backend._cached_symbol_count == 3
     assert backend._snapshot_bytes > 0
-    # Marker check + upload + ci_index = 3 exec calls minimum.
+    # Daemon ensure + bundle upload + ci_index = several exec calls minimum.
     assert len(transport.exec_calls) >= 3
+    assert any("setsid nohup" in cmd for _, cmd in transport.exec_calls)
     assert any("ci_index" in cmd for _, cmd in transport.exec_calls)
 
 
@@ -249,5 +274,4 @@ def test_other_methods_still_raise_not_implemented() -> None:
         backend.warmup()
     with pytest.raises(NotImplementedError):
         backend.list_folder_files("/ws")
-    with pytest.raises(NotImplementedError):
-        backend.dispose()
+    backend.dispose()

@@ -59,7 +59,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/client/async_bridge.py",
         "sandbox/code_intelligence/service.py",
         "sandbox/code_intelligence/backend.py",
+        "sandbox/code_intelligence/in_sandbox/__main__.py",
+        "sandbox/code_intelligence/in_sandbox/ci_daemon.py",
         "sandbox/code_intelligence/in_sandbox/ci_index.py",
+        "sandbox/code_intelligence/in_sandbox/ci_protocol.py",
         "sandbox/code_intelligence/in_sandbox/ci_storage.py",
         "msgpack/__init__.py",
     ]
@@ -110,6 +113,35 @@ def test_bundle_extracted_imports_clean(tmp_path: Path) -> None:
         f"bundle import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )
     assert "ok: True" in result.stdout
+
+
+def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
+    bundle = _ci_runtime_bundle_bytes()
+    extract_dir = tmp_path / "extracted"
+    _extract_bundle(bundle, extract_dir)
+
+    cmd = [
+        sys.executable,
+        "-c",
+        (
+            f"import sys; sys.path.insert(0, {str(extract_dir)!r}); "
+            "from sandbox.code_intelligence.in_sandbox.__main__ import main; "
+            "from sandbox.code_intelligence.in_sandbox.ci_daemon import DISPATCH; "
+            "print('ok:', callable(main), sorted(DISPATCH))"
+        ),
+    ]
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env={"PATH": "/usr/bin:/bin"},
+    )
+    assert result.returncode == 0, (
+        f"daemon import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    )
+    assert "ok: True" in result.stdout
+    assert "ping" in result.stdout
 
 
 def test_bundle_hash_is_deterministic() -> None:

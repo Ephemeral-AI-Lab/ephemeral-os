@@ -427,14 +427,13 @@ _RPC_NOT_READY = "RpcCiBackend method is not implemented until the daemon RPC ph
 
 
 class RpcCiBackend:
-    """Daemon-bound backend (Phase 1: orchestrator-side cache, no daemon yet).
+    """Daemon-bound backend (Phase 2: daemon lifecycle + Phase 1 index cache).
 
     Selected when ``EOS_CI_IN_SANDBOX=1`` and a ``transport`` + ``sandbox_id``
-    are available. Phase 1 implements ``ensure_initialized`` (uploads the
-    bundle + runs the in-sandbox indexer + downloads the pickled snapshot)
-    and ``query_symbols`` (searches the orchestrator-side cache). All other
-    methods continue to raise :class:`NotImplementedError` — Phase 2+ moves
-    them to real RPC verbs against the daemon.
+    are available. Phase 1 implements ``ensure_initialized`` (runs the
+    in-sandbox indexer + downloads the pickled snapshot) and ``query_symbols``
+    (searches the orchestrator-side cache). Phase 2 adds daemon lifecycle
+    cleanup; business verbs still move to real RPC calls in later phases.
     """
 
     is_initialized: bool = False
@@ -471,11 +470,15 @@ class RpcCiBackend:
         )
         from sandbox.code_intelligence.rpc.launcher import (
             BUNDLE_REMOTE_DIR,
-            ensure_runtime_uploaded,
+            DaemonLauncher,
             read_remote_file_via_exec,
         )
 
-        await ensure_runtime_uploaded(self._transport, self.sandbox_id)
+        await DaemonLauncher(
+            self._transport,
+            self.sandbox_id,
+            self.workspace_root,
+        ).ensure_daemon()
 
         cmd = (
             f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
@@ -649,4 +652,19 @@ class RpcCiBackend:
         raise NotImplementedError(_RPC_NOT_READY)
 
     def dispose(self) -> None:
-        raise NotImplementedError(_RPC_NOT_READY)
+        from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
+
+        try:
+            run_sync(
+                DaemonLauncher(
+                    self._transport,
+                    self.sandbox_id,
+                    self.workspace_root,
+                ).shutdown()
+            )
+        except Exception:
+            logger.debug(
+                "CI daemon shutdown skipped for sandbox %s",
+                self.sandbox_id,
+                exc_info=True,
+            )

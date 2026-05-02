@@ -209,12 +209,22 @@ class SandboxService:
                 ephemeral=False,
             )
 
+        logger.info("create_sandbox(%s): Daytona create starting", normalized_name)
         raw = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
+        logger.info("create_sandbox(%s): Daytona create returned", normalized_name)
         sb = SandboxProxy(raw)
+        logger.info("create_sandbox(%s): refresh starting", normalized_name)
         sb.refresh()
+        logger.info("create_sandbox(%s): ensure_git starting", normalized_name)
         sb.ensure_git()
+        logger.info(
+            "create_sandbox(%s): eager CI bootstrap check starting for %s",
+            normalized_name,
+            sb.id,
+        )
 
         _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
+        logger.info("create_sandbox(%s): completed", normalized_name)
 
         return sb.serialize(assigned_agents=[])
 

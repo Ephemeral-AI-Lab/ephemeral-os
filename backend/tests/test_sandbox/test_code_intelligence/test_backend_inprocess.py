@@ -144,7 +144,7 @@ def test_select_inprocess_when_flag_off_with_transport_and_id(tmp_path: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# RpcCiBackend: Phase 2+ methods still raise NotImplementedError
+# RpcCiBackend: business methods still raise NotImplementedError
 # ---------------------------------------------------------------------------
 
 
@@ -228,7 +228,6 @@ _RPC_OP_DUMMY_ARGS: dict[str, tuple[Any, dict[str, Any]]] = {
     "undo_last_edit": (("/tmp/x.py",), {}),
     "status": ((), {}),
     "get_telemetry": ((), {}),
-    "dispose": ((), {}),
 }
 
 

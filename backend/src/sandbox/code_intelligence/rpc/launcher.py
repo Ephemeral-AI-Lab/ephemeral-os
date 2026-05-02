@@ -18,6 +18,7 @@ calls no-op when the previously-recorded ``.bundle-hash`` marker matches.
 
 from __future__ import annotations
 
+import asyncio
 import gzip
 import hashlib
 import io
@@ -30,6 +31,9 @@ from sandbox.api.transport import SandboxTransport
 
 __all__ = [
     "BUNDLE_REMOTE_DIR",
+    "CiDaemonUnavailable",
+    "DaemonLauncher",
+    "remote_state_dir",
     "ensure_runtime_uploaded",
     "_ci_runtime_bundle_bytes",
 ]
@@ -210,6 +214,20 @@ _BUNDLE_REMOTE_B64 = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz.b64"
 _CHUNK_SIZE = 32 * 1024
 
 
+class CiDaemonUnavailable(Exception):
+    """Raised when the in-sandbox daemon cannot be reached or started."""
+
+
+def remote_state_dir(home: str, workspace_root: str) -> str:
+    """Return the daemon state dir path as seen inside the sandbox."""
+    from sandbox.code_intelligence.in_sandbox.ci_storage import (
+        workspace_root_hash,
+    )
+
+    home = str(home or "").rstrip("/") or "/root"
+    return f"{home}/.cache/eos-ci/{workspace_root_hash(workspace_root)}/v1"
+
+
 async def read_remote_file_via_exec(
     transport: SandboxTransport, sandbox_id: str, path: str
 ) -> bytes:
@@ -363,3 +381,139 @@ async def ensure_runtime_uploaded(
         sandbox_id,
     )
     return digest
+
+
+class DaemonLauncher:
+    """Spawn and supervise the sandbox-local CI daemon."""
+
+    def __init__(
+        self,
+        transport: SandboxTransport,
+        sandbox_id: str,
+        workspace_root: str,
+    ) -> None:
+        self._transport = transport
+        self._sandbox_id = sandbox_id
+        self._workspace_root = workspace_root
+        self._home_cache: str | None = None
+
+    async def ensure_daemon(self, *, timeout_s: float = 10.0) -> None:
+        """Ensure the daemon is alive and its Unix socket exists."""
+        logger.info(
+            "ensuring CI daemon for sandbox %s at workspace %s",
+            self._sandbox_id,
+            self._workspace_root,
+        )
+        if await self.is_alive():
+            logger.info("CI daemon pid is alive for sandbox %s", self._sandbox_id)
+            if await self._wait_for_socket(timeout_s=timeout_s):
+                logger.info("CI daemon socket is ready for sandbox %s", self._sandbox_id)
+                return
+            raise CiDaemonUnavailable(
+                f"daemon pid is alive but socket did not appear within {timeout_s:.1f}s"
+            )
+
+        logger.info("CI daemon not alive for sandbox %s; uploading runtime", self._sandbox_id)
+        await ensure_runtime_uploaded(self._transport, self._sandbox_id)
+        logger.info("spawning CI daemon for sandbox %s", self._sandbox_id)
+        await self.spawn()
+        if await self._wait_for_socket(timeout_s=timeout_s):
+            logger.info("CI daemon socket became ready for sandbox %s", self._sandbox_id)
+            return
+        raise CiDaemonUnavailable(
+            f"daemon socket did not become ready within {timeout_s:.1f}s"
+        )
+
+    async def is_alive(self) -> bool:
+        """Return True when the pid file points at a live process."""
+        pid_path = await self.pid_path()
+        cmd = (
+            f"test -f {shlex.quote(pid_path)} && "
+            f"pid=$(cat {shlex.quote(pid_path)}) && "
+            'test -n "$pid" && kill -0 "$pid"'
+        )
+        result = await self._transport.exec(self._sandbox_id, cmd, timeout=10)
+        return getattr(result, "exit_code", 1) == 0
+
+    async def spawn(self) -> None:
+        """Launch the daemon detached from the transport exec shell."""
+        state = await self.state_dir()
+        log_path = f"{state}/daemon.log"
+        cmd = (
+            f"mkdir -p {shlex.quote(state)} && "
+            f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
+            "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox "
+            f"--workspace-root {shlex.quote(self._workspace_root)} "
+            f">> {shlex.quote(log_path)} 2>&1 </dev/null & echo $!"
+        )
+        try:
+            result = await self._transport.exec(self._sandbox_id, cmd, timeout=5)
+        except Exception:
+            logger.debug(
+                "ci daemon spawn command did not return cleanly for sandbox %s; "
+                "polling socket readiness before failing",
+                self._sandbox_id,
+                exc_info=True,
+            )
+            return
+        if getattr(result, "exit_code", 1) != 0:
+            raise CiDaemonUnavailable(
+                f"daemon spawn failed for sandbox={self._sandbox_id!r}: "
+                f"{getattr(result, 'stdout', '')}"
+            )
+        logger.info(
+            "ci daemon spawn requested for sandbox %s (pid=%s)",
+            self._sandbox_id,
+            (getattr(result, "stdout", "") or "").strip(),
+        )
+
+    async def shutdown(self) -> None:
+        """Ask a running daemon to terminate and wait briefly for cleanup."""
+        pid_path = await self.pid_path()
+        socket_path = await self.socket_path()
+        cmd = (
+            f"if test -f {shlex.quote(pid_path)}; then "
+            f"kill -TERM $(cat {shlex.quote(pid_path)}) 2>/dev/null || true; "
+            "fi"
+        )
+        await self._transport.exec(self._sandbox_id, cmd, timeout=10)
+        deadline = asyncio.get_running_loop().time() + 5.0
+        while asyncio.get_running_loop().time() < deadline:
+            if not await self.is_alive() and not await self._path_is_socket(socket_path):
+                return
+            await asyncio.sleep(0.1)
+
+    async def state_dir(self) -> str:
+        home = await self._remote_home()
+        return remote_state_dir(home, self._workspace_root)
+
+    async def socket_path(self) -> str:
+        return f"{await self.state_dir()}/daemon.sock"
+
+    async def pid_path(self) -> str:
+        return f"{await self.state_dir()}/daemon.pid"
+
+    async def _remote_home(self) -> str:
+        if self._home_cache is not None:
+            return self._home_cache
+        result = await self._transport.exec(self._sandbox_id, 'printf %s "$HOME"', timeout=10)
+        home = (getattr(result, "stdout", "") or "").strip() or "/root"
+        self._home_cache = home
+        return home
+
+    async def _wait_for_socket(self, *, timeout_s: float) -> bool:
+        socket_path = await self.socket_path()
+        deadline = asyncio.get_running_loop().time() + timeout_s
+        while asyncio.get_running_loop().time() < deadline:
+            if await self._path_is_socket(socket_path):
+                return True
+            await asyncio.sleep(0.1)
+        return False
+
+    async def _path_is_socket(self, path: str) -> bool:
+        result = await self._transport.exec(
+            self._sandbox_id,
+            f"test -S {shlex.quote(path)}",
+            timeout=10,
+        )
+        return getattr(result, "exit_code", 1) == 0

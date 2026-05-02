@@ -113,15 +113,19 @@ class SandboxProxy:
     def ensure_git(self) -> None:
         """Install git in the sandbox if missing."""
         try:
+            logger.info("ensure_git(%s): probe starting", self.id)
             resp = self._raw.process.exec(
                 'bash -lc "command -v git >/dev/null 2>&1 && echo ok || echo missing"',
                 timeout=10,
             )
             if "ok" in (resp.result or ""):
+                logger.info("ensure_git(%s): git already available", self.id)
                 return
+            logger.info("ensure_git(%s): installing git", self.id)
             self._raw.process.exec(f"bash -lc {shlex.quote(_GIT_BOOTSTRAP)}", timeout=120)
-        except Exception:
-            logger.warning("Git bootstrap failed for sandbox %s", self.id)
+            logger.info("ensure_git(%s): install completed", self.id)
+        except Exception as exc:
+            logger.warning("Git bootstrap failed for sandbox %s: %s", self.id, exc)
 
     def serialize(self, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
         """Serialize to the shape the frontend expects."""

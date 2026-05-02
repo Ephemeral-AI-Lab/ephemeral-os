@@ -1,14 +1,12 @@
-"""Unit tests for the Phase 1 eager-CI bootstrap hook + lifecycle wiring.
+"""Unit tests for the eager in-sandbox CI bootstrap hook + lifecycle wiring.
 
 Covers:
 
 * :func:`bootstrap_in_sandbox_ci_runtime` no-ops when the flag is off,
   transport is missing, or workspace is empty.
-* :func:`bootstrap_in_sandbox_ci_runtime` uploads the bundle and runs the
-  indexer when the flag is set.
+* :func:`bootstrap_in_sandbox_ci_runtime` starts the daemon when the flag is set.
 * :meth:`SandboxService.create_sandbox` (a) calls the hook when the flag is
-  set, (b) skips when the flag is unset, (c) propagates RuntimeError from the
-  hook.
+  set, (b) skips when the flag is unset, (c) propagates errors from the hook.
 """
 
 from __future__ import annotations
@@ -80,7 +78,8 @@ def test_bootstrap_helper_noop_when_workspace_empty(flag_on: None) -> None:
     )
 
 
-def test_bootstrap_helper_uploads_and_runs_indexer(flag_on: None) -> None:
+def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
+    from sandbox.code_intelligence.rpc.launcher import bundle_hash
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
     calls: list[tuple[str, str]] = []
@@ -88,8 +87,12 @@ def test_bootstrap_helper_uploads_and_runs_indexer(flag_on: None) -> None:
     class FakeTransport:
         async def exec(self, sandbox_id: str, command: str, **_: Any) -> Any:
             calls.append((sandbox_id, command))
-            if ".bundle-hash" in command and "tar -xzf" not in command:
+            if 'printf %s "$HOME"' in command:
+                return type("R", (), {"exit_code": 0, "stdout": "/home/u"})()
+            if "daemon.pid" in command and "kill -0" in command:
                 return type("R", (), {"exit_code": 1, "stdout": ""})()
+            if ".bundle-hash" in command and "tar -xzf" not in command:
+                return type("R", (), {"exit_code": 0, "stdout": bundle_hash()})()
             return type("R", (), {"exit_code": 0, "stdout": "{\"ok\": true}"})()
 
         async def write_bytes(
@@ -105,22 +108,20 @@ def test_bootstrap_helper_uploads_and_runs_indexer(flag_on: None) -> None:
             transport=FakeTransport(),
         )
     )
-    assert any("ci_index" in cmd for _, cmd in calls)
+    assert any(
+        "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox" in cmd
+        for _, cmd in calls
+    )
     assert any("--workspace-root /ws" in cmd for _, cmd in calls)
-    # The bundle is shipped as chunked base64 via repeated exec — no
-    # write_bytes call at all (Daytona's upload API was unreliable).
-    assert any("base64 -d" in cmd for _, cmd in calls)
+    assert any("test -S" in cmd and "daemon.sock" in cmd for _, cmd in calls)
 
 
-def test_bootstrap_helper_raises_on_indexer_failure(flag_on: None) -> None:
+def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
+    from sandbox.code_intelligence.rpc.launcher import CiDaemonUnavailable
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
     class FakeTransport:
         async def exec(self, sandbox_id: str, command: str, **_: Any) -> Any:
-            if "ci_index" in command:
-                return type(
-                    "R", (), {"exit_code": 7, "stdout": "boom: workspace not found"}
-                )()
             return type("R", (), {"exit_code": 0, "stdout": ""})()
 
         async def write_bytes(
@@ -128,7 +129,13 @@ def test_bootstrap_helper_raises_on_indexer_failure(flag_on: None) -> None:
         ) -> None:
             del sandbox_id, path, content
 
-    with pytest.raises(RuntimeError, match="eager CI bootstrap failed"):
+    async def fail_ensure(*_: Any, **__: Any) -> None:
+        raise CiDaemonUnavailable("socket timeout")
+
+    with patch(
+        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher.ensure_daemon",
+        new=fail_ensure,
+    ), pytest.raises(CiDaemonUnavailable, match="socket timeout"):
         asyncio.run(
             bootstrap_in_sandbox_ci_runtime(
                 sandbox_id="sb-1",
