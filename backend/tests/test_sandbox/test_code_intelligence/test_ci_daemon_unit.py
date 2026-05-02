@@ -37,7 +37,7 @@ from sandbox.code_intelligence.in_sandbox.ci_storage import state_dir
 @pytest.fixture
 def short_home_workspace(
     monkeypatch: pytest.MonkeyPatch,
-) -> Iterator[tuple[Path, Path]]:
+) -> Iterator[Path]:
     root = Path(tempfile.mkdtemp(prefix="eos-ci-", dir="/tmp"))
     home = root / "h"
     workspace = root / "w"
@@ -45,7 +45,7 @@ def short_home_workspace(
     workspace.mkdir()
     monkeypatch.setenv("HOME", str(home))
     try:
-        yield home, workspace
+        yield workspace
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
@@ -136,9 +136,9 @@ async def _wait_for_socket(path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_run_daemon_serves_ping_and_cleans_up(
-    short_home_workspace: tuple[Path, Path],
+    short_home_workspace: Path,
 ) -> None:
-    _, workspace = short_home_workspace
+    workspace = short_home_workspace
     state = state_dir(str(workspace))
     socket_path = state / "daemon.sock"
     pid_path = state / "daemon.pid"
@@ -176,9 +176,9 @@ async def test_run_daemon_serves_ping_and_cleans_up(
 
 @pytest.mark.asyncio
 async def test_dead_stale_pid_is_unlinked_and_replaced(
-    short_home_workspace: tuple[Path, Path],
+    short_home_workspace: Path,
 ) -> None:
-    _, workspace = short_home_workspace
+    workspace = short_home_workspace
     state = state_dir(str(workspace))
     socket_path = state / "daemon.sock"
     pid_path = state / "daemon.pid"

@@ -120,15 +120,6 @@ def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
     from sandbox.code_intelligence.rpc.launcher import CiDaemonUnavailable
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
-    class FakeTransport:
-        async def exec(self, sandbox_id: str, command: str, **_: Any) -> Any:
-            return type("R", (), {"exit_code": 0, "stdout": ""})()
-
-        async def write_bytes(
-            self, sandbox_id: str, path: str, content: bytes
-        ) -> None:
-            del sandbox_id, path, content
-
     async def fail_ensure(*_: Any, **__: Any) -> None:
         raise CiDaemonUnavailable("socket timeout")
 
@@ -140,7 +131,7 @@ def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
             bootstrap_in_sandbox_ci_runtime(
                 sandbox_id="sb-1",
                 workspace_root="/ws",
-                transport=FakeTransport(),
+                transport=object(),
             )
         )
 
@@ -230,7 +221,7 @@ def test_maybe_bootstrap_propagates_runtime_error(flag_on: None) -> None:
     from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
 
     async def fake_helper(*_: Any, **__: Any) -> None:
-        raise RuntimeError("indexer crashed")
+        raise RuntimeError("daemon crashed")
 
     with patch(
         "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
@@ -238,5 +229,172 @@ def test_maybe_bootstrap_propagates_runtime_error(flag_on: None) -> None:
     ), patch(
         "sandbox.daytona.transport.DaytonaTransport",
         return_value=object(),
-    ), pytest.raises(RuntimeError, match="indexer crashed"):
+    ), pytest.raises(RuntimeError, match="daemon crashed"):
         _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
+
+
+# ---------------------------------------------------------------------------
+# bootstrap_upload_runtime_bundle (background-upload phase)
+# ---------------------------------------------------------------------------
+
+
+def test_upload_helper_noop_when_flag_off(flag_off: None) -> None:
+    from sandbox.lifecycle.workspace import bootstrap_upload_runtime_bundle
+
+    transport = type(
+        "T",
+        (),
+        {"exec": lambda *_, **__: pytest.fail("transport.exec must not be called")},
+    )()
+
+    asyncio.run(
+        bootstrap_upload_runtime_bundle(
+            sandbox_id="sb-1",
+            workspace_root="/ws",
+            transport=transport,
+        )
+    )
+
+
+def test_upload_helper_noop_on_missing_inputs(flag_on: None) -> None:
+    from sandbox.lifecycle.workspace import bootstrap_upload_runtime_bundle
+
+    transport = type(
+        "T",
+        (),
+        {"exec": lambda *_, **__: pytest.fail("transport.exec must not be called")},
+    )()
+
+    for missing in ({"transport": None}, {"sandbox_id": ""}, {"workspace_root": ""}):
+        kwargs: dict[str, Any] = {
+            "sandbox_id": "sb-1",
+            "workspace_root": "/ws",
+            "transport": transport,
+        }
+        kwargs.update(missing)
+        asyncio.run(bootstrap_upload_runtime_bundle(**kwargs))
+
+
+def test_upload_helper_uploads_without_spawning_daemon(flag_on: None) -> None:
+    """Background upload runs ensure_runtime_uploaded but never the daemon spawn."""
+    from sandbox.lifecycle.workspace import bootstrap_upload_runtime_bundle
+
+    upload_calls: list[tuple[Any, str]] = []
+    spawn_called = {"value": False}
+
+    async def fake_upload(transport: Any, sandbox_id: str) -> str:
+        upload_calls.append((transport, sandbox_id))
+        return "deadbeef"
+
+    async def fake_spawn(*_: Any, **__: Any) -> None:
+        spawn_called["value"] = True
+
+    fake_transport = object()
+    with patch(
+        "sandbox.code_intelligence.rpc.launcher.ensure_runtime_uploaded",
+        new=fake_upload,
+    ), patch(
+        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher.spawn",
+        new=fake_spawn,
+    ):
+        asyncio.run(
+            bootstrap_upload_runtime_bundle(
+                sandbox_id="sb-1",
+                workspace_root="/ws",
+                transport=fake_transport,
+            )
+        )
+
+    assert upload_calls == [(fake_transport, "sb-1")]
+    assert spawn_called["value"] is False
+
+
+# ---------------------------------------------------------------------------
+# _maybe_start_eager_ci_bundle_upload / _finish_eager_ci_bundle_upload
+# ---------------------------------------------------------------------------
+
+
+def test_start_upload_returns_none_when_flag_off(flag_off: None) -> None:
+    from sandbox.lifecycle.service import _maybe_start_eager_ci_bundle_upload
+
+    assert (
+        _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        is None
+    )
+
+
+def test_start_upload_returns_none_when_workspace_missing(flag_on: None) -> None:
+    from sandbox.lifecycle.service import _maybe_start_eager_ci_bundle_upload
+
+    assert _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox(None), "sb-1") is None
+
+
+def test_start_upload_submits_future_and_invokes_helper(flag_on: None) -> None:
+    """Future resolves successfully when the background upload completes."""
+    import threading
+
+    from sandbox.lifecycle.service import (
+        _finish_eager_ci_bundle_upload,
+        _maybe_start_eager_ci_bundle_upload,
+    )
+
+    helper_done = threading.Event()
+    helper_args: dict[str, Any] = {}
+
+    async def fake_helper(
+        sandbox_id: str, workspace_root: str, *, transport: Any
+    ) -> None:
+        helper_args.update(
+            sandbox_id=sandbox_id,
+            workspace_root=workspace_root,
+            transport=transport,
+        )
+        helper_done.set()
+
+    fake_transport = object()
+    with patch(
+        "sandbox.lifecycle.service.bootstrap_upload_runtime_bundle",
+        new=fake_helper,
+    ), patch(
+        "sandbox.daytona.transport.DaytonaTransport",
+        return_value=fake_transport,
+    ):
+        future = _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        assert future is not None
+        # Caller drains the future; success path must not raise.
+        _finish_eager_ci_bundle_upload(future, "sb-1")
+
+    assert helper_done.is_set()
+    assert helper_args == {
+        "sandbox_id": "sb-1",
+        "workspace_root": "/ws",
+        "transport": fake_transport,
+    }
+
+
+def test_finish_upload_swallows_helper_failure(flag_on: None) -> None:
+    """Background failure must not propagate — sequential bootstrap retries."""
+    from sandbox.lifecycle.service import (
+        _finish_eager_ci_bundle_upload,
+        _maybe_start_eager_ci_bundle_upload,
+    )
+
+    async def boom(*_: Any, **__: Any) -> None:
+        raise RuntimeError("upload exploded")
+
+    with patch(
+        "sandbox.lifecycle.service.bootstrap_upload_runtime_bundle",
+        new=boom,
+    ), patch(
+        "sandbox.daytona.transport.DaytonaTransport",
+        return_value=object(),
+    ):
+        future = _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        assert future is not None
+        _finish_eager_ci_bundle_upload(future, "sb-1")  # MUST NOT raise
+
+
+def test_finish_upload_noop_when_future_none() -> None:
+    from sandbox.lifecycle.service import _finish_eager_ci_bundle_upload
+
+    _finish_eager_ci_bundle_upload(None, "sb-1")  # MUST NOT raise

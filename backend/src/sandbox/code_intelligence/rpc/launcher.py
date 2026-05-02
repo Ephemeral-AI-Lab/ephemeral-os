@@ -204,13 +204,18 @@ def bundle_hash(bundle: bytes | None = None) -> str:
 
 
 _BUNDLE_REMOTE_TARBALL = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz"
-_BUNDLE_REMOTE_B64 = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz.b64"
 
 # Each base64 chunk we ship via a single ``exec`` call. Daytona's exec
 # pathway rejects very large argv strings; 32 KB per chunk fits inside
 # every observed limit and keeps the upload to <10 round-trips for a
 # ~100 KB bundle. The matching memory:
 # `'checked batch apply failed' = argv E2BIG`.
+#
+# 32 KB is divisible by 4, so every chunk is a 4-aligned base64 segment
+# that ``base64 -d`` can decode independently — we therefore pipe each
+# chunk through ``base64 -d`` and append the decoded bytes straight to
+# the tarball, skipping the staged ``.b64`` intermediate file the earlier
+# implementation kept around.
 _CHUNK_SIZE = 32 * 1024
 
 
@@ -331,12 +336,14 @@ async def ensure_runtime_uploaded(
     bundle = _ci_runtime_bundle_bytes()
     encoded = base64.b64encode(bundle).decode("ascii")
 
-    # Stage: ensure dir + truncate prior b64 staging file.
+    # Stage: ensure dir + truncate target tarball. We append decoded bytes
+    # directly into the tarball below, so no separate ``.b64`` staging
+    # file is needed.
     setup = await transport.exec(
         sandbox_id,
         (
             f"mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-            f": > {shlex.quote(_BUNDLE_REMOTE_B64)}"
+            f": > {shlex.quote(_BUNDLE_REMOTE_TARBALL)}"
         ),
         timeout=30,
     )
@@ -346,11 +353,14 @@ async def ensure_runtime_uploaded(
             f"{getattr(setup, 'stdout', '')}"
         )
 
-    # Stream the base64 string in chunks via repeated `printf >> file`.
+    # Stream each base64 chunk through ``base64 -d`` and append the decoded
+    # bytes to the tarball. Each ``_CHUNK_SIZE`` slice is 4-aligned so
+    # ``base64 -d`` can decode it independently.
     for i in range(0, len(encoded), _CHUNK_SIZE):
         chunk = encoded[i : i + _CHUNK_SIZE]
         write_cmd = (
-            f"printf %s {shlex.quote(chunk)} >> {shlex.quote(_BUNDLE_REMOTE_B64)}"
+            f"printf %s {shlex.quote(chunk)} | base64 -d "
+            f">> {shlex.quote(_BUNDLE_REMOTE_TARBALL)}"
         )
         result = await transport.exec(sandbox_id, write_cmd, timeout=60)
         if getattr(result, "exit_code", 1) != 0:
@@ -359,12 +369,11 @@ async def ensure_runtime_uploaded(
                 f"(sandbox={sandbox_id!r}): {getattr(result, 'stdout', '')}"
             )
 
-    # Decode + extract + atomically install hash marker.
+    # Extract + clean up the tarball + atomically install hash marker.
     finalize_cmd = (
         f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-        f"base64 -d {shlex.quote(_BUNDLE_REMOTE_B64)} > {shlex.quote(_BUNDLE_REMOTE_TARBALL)} && "
         f"tar -xzf {shlex.quote(_BUNDLE_REMOTE_TARBALL)} && "
-        f"rm -f {shlex.quote(_BUNDLE_REMOTE_TARBALL)} {shlex.quote(_BUNDLE_REMOTE_B64)} && "
+        f"rm -f {shlex.quote(_BUNDLE_REMOTE_TARBALL)} && "
         f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
     )
     result = await transport.exec(sandbox_id, finalize_cmd, timeout=60)

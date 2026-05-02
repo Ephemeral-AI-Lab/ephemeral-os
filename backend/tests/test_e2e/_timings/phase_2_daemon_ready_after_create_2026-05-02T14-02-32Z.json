@@ -1,0 +1,26 @@
+{
+  "phase": 2,
+  "test_name": "daemon_ready_after_create",
+  "timestamp": "2026-05-02T14:02:32.851257+00:00",
+  "steps": [
+    {
+      "name": "create_sandbox_with_ci_bootstrap",
+      "elapsed_s": 31.49326679099613,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "daemon_first_ping_no_retry",
+      "elapsed_s": 5.810811333001766,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "pid_liveness_check",
+      "elapsed_s": 0.3132137499997043,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 37.6172918739976
+}

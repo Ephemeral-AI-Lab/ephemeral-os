@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +27,7 @@ from sandbox.lifecycle.workspace import (
     _ci_in_sandbox_enabled,
     _sandbox_project_root,
     bootstrap_in_sandbox_ci_runtime,
+    bootstrap_upload_runtime_bundle,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +74,103 @@ def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
             transport=transport,
         )
     )
+
+
+_BUNDLE_UPLOAD_THREAD_PREFIX = "eos-ci-upload"
+_BUNDLE_UPLOAD_JOIN_TIMEOUT_S = 60.0
+
+
+def _maybe_start_eager_ci_bundle_upload(
+    raw_sandbox: Any, sandbox_id: str
+) -> concurrent.futures.Future[None] | None:
+    """Kick off the runtime-bundle upload in a background thread.
+
+    Designed to overlap with the ~7 s ``sb.ensure_git()`` step in the create
+    pipeline. Returns a future the caller MUST drain via
+    :func:`_finish_eager_ci_bundle_upload` before invoking
+    :func:`_maybe_run_eager_ci_bootstrap`. Returns ``None`` when the
+    background path is not enabled — same gating as the sequential
+    bootstrap (flag off, no project_dir, transport unavailable).
+
+    Best-effort by design: the matching join helper swallows errors and
+    timeouts so the sequential bootstrap can retry from scratch.
+    """
+    if not _ci_in_sandbox_enabled():
+        return None
+    workspace_root = _sandbox_project_root(raw_sandbox) or ""
+    if not workspace_root or not sandbox_id:
+        return None
+
+    try:
+        from sandbox.daytona.transport import DaytonaTransport
+    except Exception:  # pragma: no cover - defensive
+        logger.debug(
+            "eager CI bundle upload (background) skipped for sandbox %s "
+            "— DaytonaTransport unavailable",
+            sandbox_id,
+            exc_info=True,
+        )
+        return None
+
+    transport = DaytonaTransport()
+
+    from sandbox.client.async_bridge import run_sync
+
+    def _do_upload() -> None:
+        run_sync(
+            bootstrap_upload_runtime_bundle(
+                sandbox_id=sandbox_id,
+                workspace_root=workspace_root,
+                transport=transport,
+            )
+        )
+
+    pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=1, thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
+    )
+    try:
+        future = pool.submit(_do_upload)
+    finally:
+        # The pool is single-shot; shutdown(wait=False) lets the worker
+        # finish without keeping the executor alive.
+        pool.shutdown(wait=False)
+    return future
+
+
+def _finish_eager_ci_bundle_upload(
+    future: concurrent.futures.Future[None] | None,
+    sandbox_id: str,
+) -> None:
+    """Join the background bundle-upload future. Errors do not propagate.
+
+    A failed background upload is recoverable: the subsequent sequential
+    :func:`_maybe_run_eager_ci_bootstrap` call will re-run
+    ``ensure_runtime_uploaded`` and either find the bundle in place
+    (best case) or retry the upload (worst case). Surfacing background
+    failures here would mask that retry path.
+    """
+    if future is None:
+        return
+    try:
+        future.result(timeout=_BUNDLE_UPLOAD_JOIN_TIMEOUT_S)
+        logger.info(
+            "eager CI bundle upload (background) joined for sandbox %s",
+            sandbox_id,
+        )
+    except concurrent.futures.TimeoutError:
+        logger.warning(
+            "eager CI bundle upload (background) did not complete within %.0fs "
+            "for sandbox %s; sequential bootstrap will retry",
+            _BUNDLE_UPLOAD_JOIN_TIMEOUT_S,
+            sandbox_id,
+        )
+    except Exception:
+        logger.warning(
+            "eager CI bundle upload (background) failed for sandbox %s; "
+            "sequential bootstrap will retry",
+            sandbox_id,
+            exc_info=True,
+        )
 
 
 class SandboxService:
@@ -215,8 +314,13 @@ class SandboxService:
         sb = SandboxProxy(raw)
         logger.info("create_sandbox(%s): refresh starting", normalized_name)
         sb.refresh()
+        # Kick off the runtime-bundle upload in a background thread so it
+        # overlaps with `ensure_git`. Both depend only on the sandbox
+        # existing; sequencing them serially leaves ~7s on the table.
+        upload_future = _maybe_start_eager_ci_bundle_upload(sb._raw, sb.id)
         logger.info("create_sandbox(%s): ensure_git starting", normalized_name)
         sb.ensure_git()
+        _finish_eager_ci_bundle_upload(upload_future, sb.id)
         logger.info(
             "create_sandbox(%s): eager CI bootstrap check starting for %s",
             normalized_name,
@@ -236,7 +340,11 @@ class SandboxService:
 
         sb._raw.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
         sb.refresh()
+        # Same overlap as create_sandbox — bundle upload runs while the
+        # sync ensure_git probe is in flight.
+        upload_future = _maybe_start_eager_ci_bundle_upload(sb._raw, sb.id)
         sb.ensure_git()
+        _finish_eager_ci_bundle_upload(upload_future, sb.id)
         sb.refresh()
 
         _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)

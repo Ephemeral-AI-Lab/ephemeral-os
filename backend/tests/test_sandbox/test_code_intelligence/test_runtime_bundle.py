@@ -179,7 +179,20 @@ async def test_ensure_runtime_uploaded_uploads_when_marker_missing() -> None:
     assert BUNDLE_REMOTE_DIR in finalize_cmd
     assert "tar -xzf" in finalize_cmd
     assert ".bundle-hash" in finalize_cmd
-    assert "base64 -d" in finalize_cmd
+
+    # Chunk writes pipe ``printf`` through ``base64 -d`` straight into the
+    # tarball — the previous ``.b64`` staging file is gone. Verify that
+    # decode happens during streaming, not in the finalize step.
+    chunk_cmds = [
+        call.args[1] for call in transport.exec.await_args_list[2:-1]
+    ]
+    assert chunk_cmds, "expected at least one streaming chunk write"
+    for cmd in chunk_cmds:
+        assert "printf %s" in cmd
+        assert "base64 -d" in cmd
+        assert ".b64" not in cmd
+    assert "base64 -d" not in finalize_cmd
+    assert ".b64" not in finalize_cmd
 
 
 @pytest.mark.asyncio

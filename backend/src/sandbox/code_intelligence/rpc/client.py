@@ -49,7 +49,6 @@ class CiRpcClient:
     ) -> None:
         self._transport = transport
         self._sandbox_id = sandbox_id
-        self._workspace_root = workspace_root
         self._launcher = DaemonLauncher(transport, sandbox_id, workspace_root)
 
     async def call(

@@ -59,6 +59,44 @@ async def bootstrap_in_sandbox_ci_runtime(
     )
 
 
+async def bootstrap_upload_runtime_bundle(
+    sandbox_id: str,
+    workspace_root: str,
+    *,
+    transport: Any,
+) -> None:
+    """Upload-only phase of the eager bootstrap.
+
+    Performs the chunked bundle upload without spawning the daemon. The
+    create-sandbox path runs this concurrently with ``ensure_git`` (which
+    is the other long pre-bootstrap step), then defers to the regular
+    :func:`bootstrap_in_sandbox_ci_runtime` afterwards — that call finds
+    the bundle already in place via ``.bundle-hash`` and only spawns the
+    daemon. Net effect: the upload's wall time overlaps with ``ensure_git``
+    instead of stacking on top of it.
+
+    Same gating as :func:`bootstrap_in_sandbox_ci_runtime`. Raises on
+    upload failure; callers running this in a background thread are
+    expected to swallow and let the sequential bootstrap retry.
+    """
+    if not _ci_in_sandbox_enabled():
+        return
+    if transport is None or not sandbox_id or not str(workspace_root or "").strip():
+        return
+
+    from sandbox.code_intelligence.rpc.launcher import ensure_runtime_uploaded
+
+    logger.info(
+        "eager CI bundle upload (background) starting for sandbox %s",
+        sandbox_id,
+    )
+    await ensure_runtime_uploaded(transport, sandbox_id)
+    logger.info(
+        "eager CI bundle upload (background) completed for sandbox %s",
+        sandbox_id,
+    )
+
+
 def _sandbox_project_root(sandbox: Any) -> str | None:
     project_dir = getattr(sandbox, "project_dir", None)
     if isinstance(project_dir, str) and project_dir.strip():

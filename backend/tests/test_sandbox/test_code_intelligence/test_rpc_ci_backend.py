@@ -1,9 +1,9 @@
 """Unit tests for ``RpcCiBackend.ensure_initialized`` + ``query_symbols``.
 
 These tests use a fake transport that mocks ``exec`` so we can exercise the
-Phase 1 path (bundle upload + indexer run + chunked snapshot download +
-cache search) without paying live-Daytona time. The fake transport supports
-the chunked-base64 read protocol (``wc -c`` + ``tail | head | base64``).
+Phase 2 daemon ensure + Phase 1 indexer/cache path without paying live-Daytona
+time. The fake transport supports the chunked-base64 read protocol
+(``wc -c`` + ``dd | base64``).
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def _sym(name: str, line: int = 1) -> SymbolInfo:
 
 
 class _FakeTransport:
-    """Minimum SandboxTransport surface for the Phase 1 build_index path."""
+    """Minimum SandboxTransport surface for daemon ensure and index snapshot reads."""
 
     name = "fake"
 
@@ -40,7 +40,6 @@ class _FakeTransport:
         snapshot_path: str = "/home/u/.cache/eos-ci/abc/v1/index.snapshot",
         cache: dict[str, list[SymbolInfo]] | None = None,
         ci_payload: dict[str, Any] | None = None,
-        marker_hash_first: bool = False,
     ) -> None:
         self.exec_calls: list[tuple[str, str]] = []
         self._snapshot_path = snapshot_path
@@ -61,8 +60,6 @@ class _FakeTransport:
             "snapshot_path": snapshot_path,
             "elapsed_s": 0.001,
         }
-        self._marker_hash_first = marker_hash_first
-        self._upload_seen = False
         self._daemon_alive = False
         self._socket_ready = False
 
@@ -88,7 +85,6 @@ class _FakeTransport:
             # Marker check — drive the upload path.
             return type("R", (), {"exit_code": 1, "stdout": ""})()
         if "tar -xzf" in command:
-            self._upload_seen = True
             return type("R", (), {"exit_code": 0, "stdout": ""})()
         if "setsid nohup python3 -m sandbox.code_intelligence.in_sandbox" in command:
             self._daemon_alive = True
@@ -139,7 +135,7 @@ class _FakeTransport:
         return type("R", (), {"exit_code": 0, "stdout": ""})()
 
     async def read_bytes(self, sandbox_id: str, path: str) -> bytes:
-        del sandbox_id, path  # noqa - unused; chunked exec path now used
+        del sandbox_id, path
         raise NotImplementedError(
             "RpcCiBackend uses chunked-base64 over exec, not read_bytes"
         )
@@ -174,9 +170,7 @@ class _FakeTransport:
         return []
 
 
-def test_ensure_initialized_uploads_runs_and_caches_snapshot(
-    tmp_path: Any,
-) -> None:
+def test_ensure_initialized_uploads_runs_and_caches_snapshot() -> None:
     transport = _FakeTransport()
     backend = RpcCiBackend(
         sandbox_id="sb-test",
