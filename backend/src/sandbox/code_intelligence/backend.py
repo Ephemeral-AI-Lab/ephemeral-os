@@ -8,9 +8,9 @@ without touching the public facade or any caller.
 Three artifacts live here:
 
 * :class:`CiBackend` — typing.Protocol that every backend implements.
-* :class:`InProcessCiBackend` — wraps today's in-process logic. This is the
-  default backend selected when ``EOS_CI_IN_SANDBOX`` is unset.
-* :class:`RpcCiBackend` — the in-sandbox path. Phase 3.5 collapsed the
+* :class:`InProcessCiBackend` — wraps local in-process logic for sandboxless
+  flows and the explicit ``EOS_CI_IN_SANDBOX=0`` backout.
+* :class:`RpcCiBackend` — the default transport-backed path. Phase 3.5 collapsed the
   Phase 1 pickle-snapshot bootstrap and Phase 3 daemon dispatch into a single
   ``ensure_daemon → index_ready → query`` pipeline; the orchestrator no
   longer holds business state.
@@ -176,7 +176,6 @@ class InProcessCiBackend:
         self.patcher = Patcher()
         self.lsp_client = LspClient(
             workspace_root=workspace_root,
-            sandbox=sandbox,
             transport=transport,
             sandbox_id=sandbox_id if transport is not None else "",
         )
@@ -215,7 +214,8 @@ class InProcessCiBackend:
         ready = self.symbol_index.ensure_built(wait=wait)
         lsp_ready = self.lsp_client.ensure_ready(languages=("python",))
         if (
-            self._sandbox is not None
+            self._transport is not None
+            and self.sandbox_id
             and not lsp_ready.get("python")
             and not self._lsp_bootstrap_attempted
         ):
@@ -240,20 +240,6 @@ class InProcessCiBackend:
     def warmup(self) -> None:
         if self.is_initialized:
             return
-        workspace_root = str(self.workspace_root or "")
-        is_remote_only = bool(
-            self._sandbox is not None
-            and workspace_root
-            and not Path(workspace_root).is_dir()
-        )
-        if is_remote_only:
-            si = self.symbol_index
-            if si is not None and not si.is_built:
-                try:
-                    si.ensure_built(wait=True, timeout=60.0)
-                except Exception:
-                    logger.debug("warmup remote symbol index failed", exc_info=True)
-            return
         try:
             self.ensure_initialized(wait=True)
         except Exception:
@@ -264,10 +250,6 @@ class InProcessCiBackend:
             return
         self._sandbox = sandbox
         self.symbol_index.bind_sandbox(sandbox)
-        old_sandbox = getattr(self.lsp_client, "_sandbox", None)
-        self.lsp_client._sandbox = sandbox
-        if old_sandbox is not sandbox:
-            self.lsp_client.reset_backend_availability()
         self._content.bind_sandbox(sandbox)
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:

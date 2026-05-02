@@ -13,7 +13,7 @@ import threading
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.core.constants import (
@@ -57,7 +57,6 @@ class LspClient(LspPathMixin, LspTransportMixin, LspCacheMixin, LspTelemetryMixi
     def __init__(
         self,
         workspace_root: str = "",
-        sandbox: Any = None,
         cache_ttl: float = LSP_CACHE_TTL,
         cache_max: int = LSP_CACHE_MAX_ENTRIES,
         *,
@@ -65,7 +64,6 @@ class LspClient(LspPathMixin, LspTransportMixin, LspCacheMixin, LspTelemetryMixi
         sandbox_id: str = "",
     ) -> None:
         self._workspace_root = workspace_root
-        self._sandbox = sandbox
         self._transport = transport
         self._sandbox_id = sandbox_id
         self._cache_ttl = cache_ttl
@@ -200,9 +198,7 @@ class LspClient(LspPathMixin, LspTransportMixin, LspCacheMixin, LspTelemetryMixi
         targets = _readiness_targets(languages)
         if "python" in targets and self._py_available is None:
             self._py_available = self._check_python_backend()
-        sandbox_available = self._sandbox is not None or (
-            self._transport is not None and self._sandbox_id
-        )
+        sandbox_available = self._transport is not None and self._sandbox_id
         if install_missing and sandbox_available:
             if "python" in targets and not self._py_available:
                 self._py_available = self._install_python_backend()

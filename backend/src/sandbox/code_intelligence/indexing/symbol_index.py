@@ -7,7 +7,6 @@ to :mod:`sandbox.code_intelligence.indexing.file_discovery`.
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 import threading
 import time
@@ -17,9 +16,7 @@ from typing import Any
 
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.indexing.file_discovery import (
-    batch_download,
     collect_local_files,
-    collect_remote_files,
     read_file_content,
 )
 from sandbox.code_intelligence.indexing.symbol_extractor import extract_symbols
@@ -30,9 +27,6 @@ from sandbox.code_intelligence.core.constants import (
 from sandbox.code_intelligence.core.types import SymbolInfo, SymbolKind
 
 logger = logging.getLogger(__name__)
-
-_REMOTE_THREAD_POOL = 8
-_REMOTE_BATCH_SIZE = 50
 
 
 @dataclass
@@ -219,7 +213,7 @@ class SymbolIndex:
             return len(self._symbols)
 
     def bind_sandbox(self, sandbox: Any) -> None:
-        """Update the sandbox used for remote file access."""
+        """Update the filesystem-only sandbox fallback for file reads."""
         self._sandbox = sandbox
 
     # -- Background build -----------------------------------------------------
@@ -250,11 +244,7 @@ class SymbolIndex:
                 self._workspace_root,
             )
 
-            if self._sandbox is not None:
-                self._build_remote(files)
-            else:
-                self._build_sequential(files)
-
+            self._build_sequential(files)
             self._finish_build(built=True)
             logger.info(
                 "Symbol index: built (%d files, %d symbols)",
@@ -276,13 +266,7 @@ class SymbolIndex:
         root = Path(self._workspace_root)
         if root.is_dir():
             return [str(fp) for fp in collect_local_files(root, self._max_files)]
-        return collect_remote_files(
-            self._sandbox,
-            self._workspace_root,
-            self._max_files,
-            transport=self._transport,
-            sandbox_id=self._sandbox_id,
-        )
+        return None
 
     def _build_sequential(self, files: list[str]) -> None:
         """Index files one at a time (local filesystem)."""
@@ -300,46 +284,6 @@ class SymbolIndex:
             if len(batch) >= SYMBOL_INDEX_BATCH_SIZE:
                 self._commit_batch(batch)
                 batch.clear()
-        if batch:
-            self._commit_batch(batch)
-
-    def _build_remote(self, files: list[str]) -> None:
-        """Download remote files (batch API preferred, thread-pool fallback)."""
-        for i in range(0, len(files), _REMOTE_BATCH_SIZE):
-            chunk = files[i : i + _REMOTE_BATCH_SIZE]
-            downloaded = batch_download(
-                self._sandbox,
-                chunk,
-                transport=self._transport,
-                sandbox_id=self._sandbox_id,
-            )
-            if downloaded is None:
-                self._build_remote_individual(chunk)
-                continue
-            commit = [(fp, extract_symbols(fp, content)) for fp, content in downloaded]
-            if commit:
-                self._commit_batch(commit)
-
-    def _build_remote_individual(self, files: list[str]) -> None:
-        """Fallback: download files individually using a thread pool."""
-
-        def _download_and_extract(fp: str) -> tuple[str, list[SymbolInfo]]:
-            content = read_file_content(
-                fp,
-                self._sandbox,
-                transport=self._transport,
-                sandbox_id=self._sandbox_id,
-            )
-            symbols = extract_symbols(fp, content) if content else []
-            return fp, symbols
-
-        batch: list[tuple[str, list[SymbolInfo]]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=_REMOTE_THREAD_POOL) as pool:
-            for result in pool.map(_download_and_extract, files):
-                batch.append(result)
-                if len(batch) >= SYMBOL_INDEX_BATCH_SIZE:
-                    self._commit_batch(batch)
-                    batch.clear()
         if batch:
             self._commit_batch(batch)
 

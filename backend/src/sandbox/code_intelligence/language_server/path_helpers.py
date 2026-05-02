@@ -19,13 +19,10 @@ from __future__ import annotations
 
 import logging
 import re
-import shlex
 import threading
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
 
-from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
 
 logger = logging.getLogger(__name__)
@@ -38,7 +35,6 @@ class LspPathMixin:
     """Mixin contributing path / line / language helpers to :class:`LspClient`."""
 
     _workspace_root: str
-    _sandbox: Any
     _cache_max: int
     _line_cache_lock: threading.Lock
     _line_cache: OrderedDict[tuple[str, int], str | None]
@@ -75,7 +71,7 @@ class LspPathMixin:
             return 0
 
     def _read_line(self, file_path: str, line: int) -> str | None:
-        """Read a single line from a local or sandbox file (1-indexed)."""
+        """Read a single line from a resolved local file (1-indexed)."""
         abs_path = self._resolve_path(file_path)
         key = (abs_path, int(line))
         with self._line_cache_lock:
@@ -92,14 +88,6 @@ class LspPathMixin:
     def _read_line_uncached(self, abs_path: str, line: int) -> str | None:
         """Read a single resolved line without consulting the local cache."""
         try:
-            if self._sandbox:
-                resp = run_sync(
-                    self._sandbox.process.exec(
-                        f"sed -n {int(line)}p {shlex.quote(abs_path)}",
-                        timeout=5,
-                    )
-                )
-                return str(getattr(resp, "result", "") or "")
             p = Path(abs_path)
             if not p.exists():
                 return None

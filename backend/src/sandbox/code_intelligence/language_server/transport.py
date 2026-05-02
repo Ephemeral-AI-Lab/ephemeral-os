@@ -12,9 +12,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from typing import Any
 
-from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.language_server.lsp_child import LSP_BACKEND_CHOSEN
@@ -24,7 +22,6 @@ logger = logging.getLogger("sandbox.code_intelligence.language_server.client")
 
 class LspTransportMixin:
     _workspace_root: str
-    _sandbox: Any
     _transport: SandboxTransport | None
     _sandbox_id: str
 
@@ -52,9 +49,6 @@ class LspTransportMixin:
                 return (
                     self._run_sandbox_command_exit_code(sandbox_cmd, timeout=10) == 0
                 )
-            if self._sandbox:
-                exit_code = self._run_sandbox_command_exit_code(sandbox_cmd, timeout=10)
-                return exit_code == 0
             proc = subprocess.run(
                 local_cmd,
                 capture_output=True,
@@ -66,7 +60,7 @@ class LspTransportMixin:
 
     def _install_python_backend(self) -> bool:
         """Best-effort install of the chosen LSP backend on the sandbox."""
-        if self._transport is None and not self._sandbox:
+        if self._transport is None or not self._sandbox_id:
             return False
         if LSP_BACKEND_CHOSEN == "basedpyright":
             cmd = (
@@ -92,15 +86,4 @@ class LspTransportMixin:
                 self._transport.exec(self._sandbox_id, command, timeout=timeout)
             )
             return transport_result.exit_code
-        response = run_sync(
-            self._sandbox.process.exec(
-                wrap_bash_command(command),
-                timeout=timeout,
-            )
-        )
-        result = str(getattr(response, "result", "") or "")
-        _cleaned, exit_code = extract_exit_code(
-            result,
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        return exit_code
+        raise RuntimeError("sandbox command execution requires a transport and sandbox id")

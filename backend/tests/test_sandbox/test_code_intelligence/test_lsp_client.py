@@ -21,6 +21,7 @@ from __future__ import annotations
 import concurrent.futures
 import threading
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -35,11 +36,21 @@ from sandbox.code_intelligence.core.types import (
 from sandbox.code_intelligence.language_server.client import LspClient
 
 
-def _sandbox_exit_result(exit_code: int, stdout: str = "") -> SimpleNamespace:
-    return SimpleNamespace(
-        exit_code=None,
-        result=f"{stdout}\n__CODEX_EXIT_CODE__={exit_code}\n",
-    )
+class _Transport:
+    name = "test"
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def exec(self, sandbox_id: str, command: str, **kwargs):
+        del kwargs
+        assert sandbox_id == "sb-1"
+        self.calls.append(command)
+        if "basedpyright-langserver" in command and "install" not in command:
+            return SimpleNamespace(exit_code=0)
+        if "pip install" in command and "basedpyright" in command:
+            return SimpleNamespace(exit_code=0)
+        return SimpleNamespace(exit_code=1)
 
 
 # ---------------------------------------------------------------------------
@@ -62,25 +73,19 @@ def test_resolve_path_no_workspace_root_keeps_relative() -> None:
     assert lsp._resolve_path("dask/core.py") == "dask/core.py"
 
 
-def test_sandbox_read_line_caches_until_invalidate() -> None:
-    calls: list[str] = []
+def test_local_read_line_caches_until_invalidate(tmp_path: Path) -> None:
+    source = tmp_path / "pkg" / "core.py"
+    source.parent.mkdir()
+    source.write_text("def alpha(value):\n    return value\n", encoding="utf-8")
+    lsp = LspClient(workspace_root=str(tmp_path))
 
-    class _SandboxProcess:
-        def exec(self, command: str, timeout: int = 0):
-            calls.append(command)
-            return SimpleNamespace(exit_code=0, result="def alpha(value):\n")
+    assert lsp._read_line("pkg/core.py", 1) == "def alpha(value):"
+    source.write_text("def beta(value):\n    return value\n", encoding="utf-8")
+    assert lsp._read_line("pkg/core.py", 1) == "def alpha(value):"
 
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
+    lsp.invalidate(str(source))
 
-    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
-    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
-    assert len(calls) == 1
-
-    lsp.invalidate("/workspace/pkg/core.py")
-
-    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
-    assert len(calls) == 2
+    assert lsp._read_line("pkg/core.py", 1) == "def beta(value):"
 
 
 # ---------------------------------------------------------------------------
@@ -125,74 +130,54 @@ def test_ensure_ready_probes_basedpyright_langserver_binary() -> None:
     """The Phase 3.6 readiness probe checks for ``basedpyright-langserver``,
     NOT ``import jedi`` (which the rewire deleted)."""
 
-    class _SandboxProcess:
-        def __init__(self) -> None:
-            self.calls: list[str] = []
-
-        def exec(self, command: str, timeout: int = 0):
-            self.calls.append(command)
-            if "basedpyright-langserver" in command:
-                return _sandbox_exit_result(0)
-            return _sandbox_exit_result(1)
-
-    process = _SandboxProcess()
+    transport = _Transport()
     lsp = LspClient(
-        workspace_root="/workspace", sandbox=SimpleNamespace(process=process)
+        workspace_root="/workspace", transport=transport, sandbox_id="sb-1",
     )
 
     readiness = lsp.ensure_ready(languages=("python",))
 
     assert readiness == {"python": True}
-    assert any("basedpyright-langserver" in cmd for cmd in process.calls)
-    assert not any("import jedi" in cmd for cmd in process.calls)
+    assert any("basedpyright-langserver" in cmd for cmd in transport.calls)
+    assert not any("import jedi" in cmd for cmd in transport.calls)
 
 
 def test_connected_only_probes_python_backend() -> None:
-    class _SandboxProcess:
-        def __init__(self) -> None:
-            self.calls: list[str] = []
-
-        def exec(self, command: str, timeout: int = 0):
-            self.calls.append(command)
-            if "basedpyright-langserver" in command:
-                return _sandbox_exit_result(0)
-            return _sandbox_exit_result(1)
-
-    process = _SandboxProcess()
+    transport = _Transport()
     lsp = LspClient(
-        workspace_root="/workspace", sandbox=SimpleNamespace(process=process)
+        workspace_root="/workspace", transport=transport, sandbox_id="sb-1",
     )
     assert lsp.connected is True
-    assert any("basedpyright-langserver" in cmd for cmd in process.calls)
+    assert any("basedpyright-langserver" in cmd for cmd in transport.calls)
 
 
 def test_ensure_ready_install_command_targets_basedpyright() -> None:
     """``install_missing=True`` runs ``pip install basedpyright`` (NOT jedi)."""
 
-    class _SandboxProcess:
-        def __init__(self) -> None:
-            self.calls: list[str] = []
-
-        def exec(self, command: str, timeout: int = 0):
+    class _InstallTransport(_Transport):
+        async def exec(self, sandbox_id: str, command: str, **kwargs):
+            del kwargs
+            assert sandbox_id == "sb-1"
             self.calls.append(command)
             if "basedpyright-langserver" in command and "install" not in command:
-                # Probe — fail so install path runs.
-                return _sandbox_exit_result(1)
+                return SimpleNamespace(exit_code=1)
             if "pip install" in command and "basedpyright" in command:
-                return _sandbox_exit_result(0)
-            return _sandbox_exit_result(1)
+                return SimpleNamespace(exit_code=0)
+            return SimpleNamespace(exit_code=1)
 
-    sandbox = SimpleNamespace(process=_SandboxProcess())
-    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
+    transport = _InstallTransport()
+    lsp = LspClient(
+        workspace_root="/workspace", transport=transport, sandbox_id="sb-1",
+    )
 
     readiness = lsp.ensure_ready(install_missing=True)
 
     assert readiness == {"python": True}
     assert any(
         "pip install" in cmd and "basedpyright" in cmd
-        for cmd in sandbox.process.calls
+        for cmd in transport.calls
     )
-    assert not any("install" in cmd and "jedi" in cmd for cmd in sandbox.process.calls)
+    assert not any("install" in cmd and "jedi" in cmd for cmd in transport.calls)
 
 
 # ---------------------------------------------------------------------------

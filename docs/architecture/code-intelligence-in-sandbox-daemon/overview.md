@@ -138,7 +138,7 @@ After Phase 5 lands and the flag flips:
 | Phase 5 (default-on) | Bootstrap + recovery only — daemon ops ride the native `ci_rpc` verb |
 | Post-Phase 6 (out of scope) | Bootstrap + recovery only; shim removed entirely |
 
-**Implication:** `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` all become dead code by Phase 5. ~600 LOC deletion in Phase 5 cleanup.
+**Implication:** `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` became dead code by Phase 5 and were removed in the post-canary cleanup.
 
 ## Sandbox image compatibility (hard contract)
 
@@ -349,7 +349,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/lifecycle/service.py` — `create_sandbox` and `start_sandbox` call the eager bootstrap hook (Phase 1)
 - `backend/src/sandbox/lifecycle/workspace.py` — `bootstrap_in_sandbox_ci_runtime` is the eager-bootstrap entry (Phase 1)
 - `pyproject.toml` — add `msgpack` as runtime dependency (Phase 0)
-- (Phase 5 cleanup) `mutations/content_manager.py`, `indexing/file_discovery.py`, `language_server/transport.py` — delete dead remote branches (~600 lines)
+- (Phase 5 cleanup) `mutations/content_manager.py`, `indexing/file_discovery.py`, `language_server/transport.py` — deleted dead remote branches after canary stabilization
 
 ### New test infrastructure (Phase 0 deliverable)
 - `backend/tests/test_e2e/_timing_harness.py` — `TimingHarness` context manager, `step()` decorator, JSON dumper, `compare_to()` baseline differ; Phase 3.5 extends with distribution collection (`step_repeat`)

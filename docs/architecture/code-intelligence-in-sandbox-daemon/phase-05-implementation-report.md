@@ -2,10 +2,9 @@
 
 Companion to
 [`phase-05-ci-rpc-verb-and-flag-flip.md`](./phase-05-ci-rpc-verb-and-flag-flip.md).
-Records the structural Phase 5 changes shipped in this iteration, the
-deliberate scope deferrals (cleanup pass + production canary + live
-execution), the unit-test coverage added for the new code, the perf
-framing, and the explicit hand-off list for the post-canary follow-ups.
+Records the structural Phase 5 changes, the post-canary cleanup pass,
+the remaining operational follow-ups, the unit-test coverage added for
+the new code, and the perf framing.
 
 ---
 
@@ -16,9 +15,9 @@ changes — Protocol method, Daytona implementation, client-side
 verb-prefer, and default flag flip — are merged with new unit coverage,
 ruff clean, and a green full-suite regression at 1218 passed / 2 skipped.
 The Phase 5 live E2E suite is committed under `-m live` and verified
-collect-clean, but is NOT executed in this iteration; live execution and
-the cleanup deletion + production canary remain explicit follow-ups
-documented in §7.
+collect-clean, but is NOT executed in this iteration. The post-canary
+Task 5.5 cleanup deletion is now complete; live execution and production
+canary tracking remain operational follow-ups documented in §7.
 
 The spec ([`phase-05-ci-rpc-verb-and-flag-flip.md`](./phase-05-ci-rpc-verb-and-flag-flip.md))
 sequences cleanup AFTER the flip stabilizes ("Cleanup is safe only after
@@ -44,8 +43,9 @@ The user's `/oh-my-claudecode:ralph` invocation listed four tasks:
   scope was correct: 4/4 stories pass, no Phase 4 deferrals carry into
   Phase 5).
 - Task 2 — implemented spec Tasks 5.1, 5.2, 5.3, 5.4, plus 5.6 scaffold
-  and 5.7 unit regression. Tasks 5.5 (cleanup of ~600 LOC) and 5.8
-  (production canary) deferred to post-canary follow-up phases.
+  and 5.7 unit regression. Task 5.5 (cleanup of ~600 LOC) is complete in
+  the post-canary cleanup pass. Task 5.8 (production canary) remains an
+  operational follow-up.
 - Task 3 — perf framing in §6, aggregating Phase 0 / 3.5 / 3.6 / 4
   numbers already on disk. The 5.6.B verb-vs-shim delta is
   **gated on user-approved live execution**; the scaffold lives at
@@ -55,12 +55,6 @@ The user's `/oh-my-claudecode:ralph` invocation listed four tasks:
 
 **What this iteration deliberately did NOT produce:**
 
-- **Spec Task 5.5 (cleanup deletion of ~600 LOC dead remote branches).**
-  Spec line 39: "Cleanup is safe only after default-on stabilizes. Doing
-  it in Phase 5 (after the flag flips and one release passes) ensures we
-  haven't deleted code we'd need to revert to." Co-shipping the deletion
-  with the flip violates the spec's own sequencing and makes rollback
-  irreversible.
 - **Spec Task 5.6 live execution.** The five subtests are committed and
   collect cleanly under `pytest --collect-only -m live` (5/5 collected
   in 0.12 s — see §8.1), but execution is gated on user approval per
@@ -100,8 +94,10 @@ canary owners drive the rollout without further code work.**
 
 ### Deleted
 
-None. The ~600 LOC cleanup deletion (spec Task 5.5) is sequenced
-post-canary by spec line 39 and is not in scope here.
+Post-canary Task 5.5 cleanup deleted the dead remote/process branches in
+`content_manager.py`, `file_discovery.py`, and `language_server/transport.py`,
+plus the obsolete `test_symbol_index_cold_start.py` e2e coverage for the
+removed orchestrator-side remote symbol-index path.
 
 ---
 
@@ -119,7 +115,7 @@ The spec's DoD checklist is at lines 320-333 of
 | Phase 5 live E2E (all 5 subtests A-E) passes against `dask__dask_2023.3.2_2023.4.0` | DEFERRED to user-approved live execution | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` (committed, 5 tests collect cleanly). See §2 for the project-memory + Phase 4 precedent that gates execution on user approval. |
 | 5.6.B verb-vs-shim assertion passes | DEFERRED to user-approved live execution | The assertion is wired (`test_ci_rpc_verb_faster_than_shim` at `test_live_ci_phase5_default_on.py:`); structural binary-safety + selection-matrix coverage is unit-tested. |
 | Backout knob `EOS_CI_IN_SANDBOX=0` works (5.6.D) | PASS structurally; live confirmation gated on 5.6.D | `test_select_inprocess_when_flag_zero_backout` (`test_backend_inprocess.py:145-156`); live tripwire `test_backout_env_var` in the scaffold. |
-| Cleanup pass (Task 5.5) removes dead code; total LOC reduction ≈ 600 lines | DEFERRED post-canary | Spec line 39 sequences this AFTER default-on stability. See §7.1. |
+| Cleanup pass (Task 5.5) removes dead code; total LOC reduction ≈ 600 lines | PASS | Post-canary cleanup removed the dead remote/process branches and stale e2e coverage. See §7.1. |
 | Production canary passed for 1 week with telemetry attached to the PR | DEFERRED — out of code scope | Spec line 318: "This is a process, not a code change." See §7.3. |
 | Regression check: Phases 0, 1, 2, 3, 4 E2Es + full unit suite green with default-on | PARTIAL — full unit suite green with code-default-on (1218 passed / 2 skipped); per-phase live E2Es require user-approved execution | §8. |
 | CHANGELOG entry documenting the flip + backout knob | DEFERRED to PR merge | The hand-off note (§9) lists this as a PR-time deliverable; the code-default vs `.env.example` mismatch is intentional per spec line 312 and explained in §5. |
@@ -285,32 +281,30 @@ streaming, batching) that lives outside the verb's scope.
 
 ---
 
-## 7. Open items / follow-ups (deliberately out of scope)
+## 7. Follow-ups
 
-### 7.1 Cleanup pass (spec Task 5.5, ~600 LOC)
+### 7.1 Cleanup pass (spec Task 5.5, completed)
 
-Three files contain dead remote branches the daemon path no longer
-exercises (per `grep` on 2026-05-03):
+The post-canary cleanup pass deleted the dead orchestrator-side remote
+branches that the daemon path no longer exercises:
 
 - `backend/src/sandbox/code_intelligence/mutations/content_manager.py`
-  (893 LoC) — `_apply_remote_batch*`, `_apply_remote_batch_checked*`,
+  — removed `_apply_remote_batch*`, `_apply_remote_batch_checked*`,
   `_read_remote*`, `_write_remote`, `_delete_remote`,
-  `_stage_remote_payload`, `_cleanup_remote_tmp`,
-  `_list_remote_folder_files` (≥10 dead methods, plus their dispatch
-  branches in `read_text`, `read_text_batch`, `list_folder_files`,
-  `write_text`, `delete_path`, `apply_batch`, `apply_batch_checked`).
+  `_stage_remote_payload`, `_cleanup_remote_tmp`, and
+  `_list_remote_folder_files`, plus their dispatch branches.
 - `backend/src/sandbox/code_intelligence/indexing/file_discovery.py`
-  (347 LoC) — `_collect_via_search`, `_collect_via_list`,
+  — removed `_collect_via_search`, `_collect_via_list`,
   `_collect_via_transport`, `_supports_exec_transport`,
   `_read_text_via_exec`, `_batch_read_text_via_exec`.
 - `backend/src/sandbox/code_intelligence/language_server/transport.py`
-  (106 LoC) — the orchestrator-side `_run_python_script` `self._sandbox`
-  branch (per spec line 178).
+  — removed the remaining orchestrator-side `self._sandbox` command
+  branch, keeping transport execution and local subprocess probes.
 
-Spec line 39 sequences this AFTER one release cycle of stable
-default-on. Doing it here would make rollback irreversible. The cleanup
-should ship as a separate, easily-revertable commit once the canary
-clears.
+The broader sweep also removed the now-orphaned remote `SymbolIndex`
+full-build path and the obsolete e2e cold-start test that covered it.
+Rollback after this point requires restoring the deleted code paths from
+history.
 
 ### 7.2 Live execution of the Phase 5 E2E suite (spec Task 5.6)
 
@@ -439,18 +433,15 @@ new verb path. Not a Phase 5 ship blocker.
 
 ## 9. Hand-off (post-Phase-5)
 
-The migration's last code-only step is shipped. The remaining Phase 5
+The migration's code cleanup is shipped. The remaining Phase 5
 deliverables are operational:
 
 1. **Run the Phase 5 live E2E** when sandbox time is approved
    (§7.2). The five JSONs land in `_timings/`.
-2. **Land the §7.1 cleanup** (~600 LOC) as a SEPARATE commit on top of
-   the canary success. Run the regression suite before and after; keep
-   the commit atomic so it's easy to revert if a hidden caller turns up.
-3. **Drive the production canary** (§7.3, ~1 week). Compare
+2. **Drive the production canary** (§7.3, ~1 week). Compare
    `svc.cmd` p50/p95 latency, error rates, daemon respawn frequency
    against the pre-flip baseline.
-4. **Update `.env.example` + CHANGELOG** once the canary clears. Until
+3. **Update `.env.example` + CHANGELOG** once the canary clears. Until
    then, the intentional code-vs-env mismatch (spec line 312) protects
    production from automatic rampage.
 5. **Re-baseline the LSP benchmark** (§7.4) once the canary closes —
