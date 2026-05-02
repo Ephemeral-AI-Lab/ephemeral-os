@@ -13,9 +13,10 @@ hand-off for the Phase 1 deliverable.
 **Verdict: ships. 11/11 PRD stories pass.** The in-sandbox indexer runs
 end-to-end against a real `dask__dask_2023.3.2_2023.4.0` Daytona sandbox.
 The runtime bundle is hand-curated to the transitive-import closure and
-extracted via out-of-band `transport.write_bytes` (E2BIG-safe); the eager
-bootstrap hook is wired into `SandboxService.create_sandbox` and
-`start_sandbox` without disturbing the existing context-prepare path.
+extracted via chunked-base64 over `transport.exec` (E2BIG-safe without
+depending on Daytona binary upload/download endpoints); the eager bootstrap
+hook is wired into `SandboxService.create_sandbox` and `start_sandbox`
+without disturbing the existing context-prepare path.
 1118 default-suite tests pass (was 1070 pre-Phase-1; +48 net new).
 
 The only LOW-severity follow-up is whether to install the `attr`
@@ -36,12 +37,12 @@ binaries are absent.
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_storage.py` | 165 | `state_dir` resolver + `_confine` guard + atomic `write_snapshot`/`read_snapshot` |
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_index.py` | 124 | Indexing CLI (full-build + `--file` refresh; exits 13 on `CiStorageUnavailable`) |
 | `backend/src/sandbox/code_intelligence/rpc/__init__.py` | 1 | Package marker |
-| `backend/src/sandbox/code_intelligence/rpc/launcher.py` | 175 | `_ci_runtime_bundle_bytes` + idempotent `ensure_runtime_uploaded` (write_bytes-based) |
+| `backend/src/sandbox/code_intelligence/rpc/launcher.py` | 175 | `_ci_runtime_bundle_bytes` + idempotent `ensure_runtime_uploaded` (chunked-base64 exec upload) |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_storage.py` | 192 | 20 storage unit tests |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_index_runner.py` | 156 | 4 CLI tests (full-build, refresh, error path, snapshot path) |
 | `backend/tests/test_sandbox/test_code_intelligence/test_runtime_bundle.py` | 162 | 9 bundle tests incl. subprocess-import smoke |
 | `backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py` | 187 | 7 tests via fake transport |
-| `backend/tests/test_sandbox/test_eager_ci_bootstrap.py` | 218 | 10 tests covering flag + eager_ci kwarg matrix |
+| `backend/tests/test_sandbox/test_eager_ci_bootstrap.py` | 235 | 9 tests covering flag, missing workspace, and error propagation |
 | `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` | 540 | 7 live cases (1.5.A–G) |
 
 ### Modified
@@ -50,7 +51,7 @@ binaries are absent.
 |---|---|
 | `backend/src/sandbox/code_intelligence/backend.py` | `RpcCiBackend.ensure_initialized` + `query_symbols` get real Phase 1 implementations; constructor adds `_init_lock`, `_symbol_cache`, `_cached_*`, `_snapshot_bytes`. Other ops still raise `NotImplementedError`. |
 | `backend/src/sandbox/lifecycle/workspace.py` | New async `bootstrap_in_sandbox_ci_runtime` (does NOT replace existing sync `ensure_code_intelligence_runtime`). |
-| `backend/src/sandbox/lifecycle/service.py` | `create_sandbox(...,eager_ci=True)` and `start_sandbox(...,eager_ci=True)` invoke `_maybe_run_eager_ci_bootstrap` after the existing path. |
+| `backend/src/sandbox/lifecycle/service.py` | `create_sandbox(...)` and `start_sandbox(...)` invoke `_maybe_run_eager_ci_bootstrap` after the existing path when `EOS_CI_IN_SANDBOX=1`; the old `eager_ci` test escape hatch was removed in the cleanup pass. |
 | `backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py` | Removed `ensure_initialized` + `query_symbols` from the not-implemented matrix. |
 
 ### Deleted
@@ -68,11 +69,11 @@ None.
 | **P1-003** Indexing CLI | PASS | `ci_index.py` constructs `CodeIntelligenceService(sandbox=None, transport=None)`, dumps snapshot dict, prints structured JSON. Exits 13 on `CiStorageUnavailable`. |
 | **P1-004** CLI runner tests | PASS | `test_ci_index_runner.py`: 4/4. Full-build over 5-file fixture, single-file refresh patch, exit-13 + JSON shape, snapshot path matches `workspace_root_hash`. |
 | **P1-005** Bundle helper | PASS | `launcher.py` ships `_ci_runtime_bundle_bytes` (deterministic gz mtime=0; tarinfo mtime/uid/gid normalized) + `ensure_runtime_uploaded`. **Subprocess-import smoke test** verifies the bundle imports `ci_index.main` cleanly. Bundle size ~250 KB, well under 1 MB budget. |
-| **P1-006** RpcCiBackend Phase 1 | PASS | `backend.py:RpcCiBackend.ensure_initialized` calls `ensure_runtime_uploaded` → exec `ci_index` → parse JSON → `read_bytes` snapshot → `pickle.loads` → cache. `query_symbols` runs case-insensitive substring search of cache. `test_rpc_ci_backend.py`: 7/7 via fake transport. |
-| **P1-007** Eager hook + lifecycle | PASS | New async helper `bootstrap_in_sandbox_ci_runtime`; `_maybe_run_eager_ci_bootstrap` resolves `DaytonaTransport` + workspace; `create_sandbox(eager_ci=True)` and `start_sandbox(eager_ci=True)` wire it. `test_eager_ci_bootstrap.py`: 10/10 covering flag + eager_ci kwarg matrix and RuntimeError propagation. |
+| **P1-006** RpcCiBackend Phase 1 | PASS | `backend.py:RpcCiBackend.ensure_initialized` calls `ensure_runtime_uploaded` → exec `ci_index` → parse JSON → chunked-base64 snapshot download via exec → `pickle.loads` → cache. `query_symbols` runs case-insensitive substring search of cache. `test_rpc_ci_backend.py`: 7/7 via fake transport. |
+| **P1-007** Eager hook + lifecycle | PASS | New async helper `bootstrap_in_sandbox_ci_runtime`; `_maybe_run_eager_ci_bootstrap` resolves `DaytonaTransport` + workspace; `create_sandbox(...)` and `start_sandbox(...)` wire it. `test_eager_ci_bootstrap.py`: 9/9 covering flag, missing workspace, and RuntimeError propagation. |
 | **P1-008** Live E2E suite | PASS | `test_live_ci_phase1_indexing.py` collects 7 cases under `[e2e, live]` markers; deselected by default suite. |
 | **P1-009** Live execution | PASS | All 7 live cases passed against a real `dask__dask_2023.3.2_2023.4.0` Daytona sandbox on 2026-05-02. See §5 for results. |
-| **P1-010** Regression sweep | PASS | `pytest backend/tests --ignore=test_e2e --ignore=test_benchmarks --ignore=experiments -q` → **1121 passed** (was 1070). `pytest backend/tests/test_sandbox -q` → 464 passed. ruff clean across the changed surface. |
+| **P1-010** Regression sweep | PASS | Original Phase 1 sweep: `pytest backend/tests --ignore=test_e2e --ignore=test_benchmarks --ignore=experiments -q` → **1121 passed** (was 1070). Post-cleanup sweep: `pytest backend/tests/test_sandbox -q` → **463 passed**. ruff clean across the changed surface. |
 | **P1-011** Implementation report | PASS | This document. |
 
 ---
@@ -84,8 +85,8 @@ None.
 | Suite | Result |
 |---|---|
 | `pytest backend/tests/test_sandbox/test_code_intelligence -q` | **265 passed** |
-| `pytest backend/tests/test_sandbox -q` | **461 passed** |
-| `pytest backend/tests --ignore=…test_e2e --ignore=…test_benchmarks --ignore=…experiments -q` | **1121 passed** |
+| `pytest backend/tests/test_sandbox -q` | **463 passed** (post-cleanup) |
+| `pytest backend/tests --ignore=…test_e2e --ignore=…test_benchmarks --ignore=…experiments -q` | **1121 passed** (original Phase 1 sweep) |
 | `pytest backend/tests/test_e2e/test_live_ci_phase1_indexing.py -m live -v -s` | **7 passed** (real Daytona) |
 
 ### Lint sweep
@@ -351,18 +352,18 @@ context dict.
 
 ### 6.5 `SandboxService.create_sandbox` real signature differs from spec
 
-The phase-01 spec showed `create_sandbox(...,eager_ci: bool = True)`
+The phase-01 spec showed `create_sandbox(..., eager_ci: bool = True)`
 calling a `_provision_daytona`/`_discover_workspace`/`_transport`
 private helper trio. None of those helpers exist on the real service:
-the real signature is `create_sandbox(*, name, snapshot, image,
+the real signature remains `create_sandbox(*, name, snapshot, image,
 language, env_vars, labels)` and the body calls `client.create(params)`
 directly.
 
-Phase 1 added the new `eager_ci=True` kwarg, then introduced a private
-`_maybe_run_eager_ci_bootstrap(raw_sandbox, sandbox_id, *, eager_ci)`
-helper that:
+The cleanup pass removed the `eager_ci` compatibility escape hatch and
+kept a single private lifecycle helper,
+`_maybe_run_eager_ci_bootstrap(raw_sandbox, sandbox_id)`, that:
 
-1. Returns early when `eager_ci=False` or `EOS_CI_IN_SANDBOX != "1"`.
+1. Returns early when `EOS_CI_IN_SANDBOX != "1"`.
 2. Resolves the workspace via the existing `_sandbox_project_root`.
 3. Imports `DaytonaTransport` lazily and constructs one per call.
 4. Bridges to the async helper via `sandbox.client.async_bridge.run_sync`.
@@ -496,9 +497,9 @@ before any code was written:
 3. **`ensure_code_intelligence_runtime` already exists** with a
    different signature — added a new helper `bootstrap_in_sandbox_ci_runtime`
    side by side; documented in §6.4.
-4. **`SandboxService.create_sandbox` real signature differs** — added
-   `eager_ci=True` kwarg + `_maybe_run_eager_ci_bootstrap` helper
-   without disturbing the existing kwargs; documented in §6.5.
+4. **`SandboxService.create_sandbox` real signature differs** — kept
+   the existing public kwargs and added `_maybe_run_eager_ci_bootstrap`
+   without an `eager_ci` escape hatch; documented in §6.5.
 
 These reconciliations are recorded in `.omc/prd.json` "notes" so the
 next phase's PRD inherits them.

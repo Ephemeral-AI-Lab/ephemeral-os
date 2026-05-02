@@ -48,6 +48,7 @@ import logging
 import posixpath
 import shlex
 import tarfile
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -76,6 +77,16 @@ logger = logging.getLogger(__name__)
 _RUN_DIR_PREFIX = "/tmp/eos-shell-overlay"
 _PROGRESS_POLL_INTERVAL_SECONDS = 2.0
 _PROGRESS_READ_CHUNK_BYTES = 64 * 1024
+_SLOW_OVERLAY_STAGE_SECONDS = 1.0
+_SLOW_OVERLAY_TOTAL_SECONDS = 5.0
+_COMMAND_SAMPLE_LIMIT = 160
+
+
+def _command_sample(command: str) -> str:
+    compact = " ".join(command.split())
+    if len(compact) <= _COMMAND_SAMPLE_LIMIT:
+        return compact
+    return compact[:_COMMAND_SAMPLE_LIMIT] + "..."
 
 
 def _overlay_runtime_bundle_bytes() -> bytes:
@@ -141,16 +152,32 @@ class OverlayAuditor:
 
         async with self._semaphore:
             lease = self._new_lease()
+            stage_timings: dict[str, float] = {}
+            total_started = time.perf_counter()
+            result: SimpleNamespace | None = None
+            error: BaseException | None = None
             record_overlay_op(ops_total=1)
             try:
-                snapshot = await build_live_snapshot_details(
-                    sandbox,
-                    self._exec_process,
-                    self._workspace_root,
-                    transport=self._transport,
-                    sandbox_id=self._sandbox_id,
+                snapshot = await self._timed_stage(
+                    "git_snapshot",
+                    stage_timings=stage_timings,
+                    lease=lease,
+                    command=command,
+                    awaitable=build_live_snapshot_details(
+                        sandbox,
+                        self._exec_process,
+                        self._workspace_root,
+                        transport=self._transport,
+                        sandbox_id=self._sandbox_id,
+                    ),
                 )
-                await self._ensure_script_uploaded(sandbox)
+                await self._timed_stage(
+                    "upload_runtime",
+                    stage_timings=stage_timings,
+                    lease=lease,
+                    command=command,
+                    awaitable=self._ensure_script_uploaded(sandbox),
+                )
                 user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
                 stdin_b64 = (
                     base64.b64encode(stdin.encode("utf-8")).decode("ascii")
@@ -158,32 +185,54 @@ class OverlayAuditor:
                     else ""
                 )
                 if on_progress_line is None:
-                    stdout_text, script_exit = await self._run_overlay(
-                        sandbox,
+                    stdout_text, script_exit = await self._timed_stage(
+                        "run_overlay",
+                        stage_timings=stage_timings,
                         lease=lease,
-                        snap=snapshot.snap,
-                        user_cmd_b64=user_cmd_b64,
-                        stdin_b64=stdin_b64,
-                        timeout=timeout,
+                        command=command,
+                        awaitable=self._run_overlay(
+                            sandbox,
+                            lease=lease,
+                            snap=snapshot.snap,
+                            user_cmd_b64=user_cmd_b64,
+                            stdin_b64=stdin_b64,
+                            timeout=timeout,
+                        ),
                     )
                 else:
-                    stdout_text, script_exit = await self._run_overlay_with_progress(
-                        sandbox,
+                    stdout_text, script_exit = await self._timed_stage(
+                        "run_overlay",
+                        stage_timings=stage_timings,
                         lease=lease,
-                        snap=snapshot.snap,
-                        user_cmd_b64=user_cmd_b64,
-                        stdin_b64=stdin_b64,
-                        timeout=timeout,
-                        on_progress_line=on_progress_line,
+                        command=command,
+                        awaitable=self._run_overlay_with_progress(
+                            sandbox,
+                            lease=lease,
+                            snap=snapshot.snap,
+                            user_cmd_b64=user_cmd_b64,
+                            stdin_b64=stdin_b64,
+                            timeout=timeout,
+                            on_progress_line=on_progress_line,
+                        ),
                     )
-                stdout_text = await self._read_stdout(
-                    sandbox, lease, fallback=stdout_text
+                stdout_text = await self._timed_stage(
+                    "read_stdout",
+                    stage_timings=stage_timings,
+                    lease=lease,
+                    command=command,
+                    awaitable=self._read_stdout(sandbox, lease, fallback=stdout_text),
                 )
-                diff_or_reject = await self._read_diff(
-                    sandbox,
-                    lease,
-                    overlay_stdout=stdout_text,
-                    overlay_exit_code=script_exit,
+                diff_or_reject = await self._timed_stage(
+                    "read_diff",
+                    stage_timings=stage_timings,
+                    lease=lease,
+                    command=command,
+                    awaitable=self._read_diff(
+                        sandbox,
+                        lease,
+                        overlay_stdout=stdout_text,
+                        overlay_exit_code=script_exit,
+                    ),
                 )
                 if isinstance(diff_or_reject, OverlayPolicyReject):
                     record_overlay_op(
@@ -192,14 +241,16 @@ class OverlayAuditor:
                             1 if diff_or_reject.reason.endswith("dotgit_writes") else 0
                         ),
                     )
-                    return _reject_result(
+                    result = _reject_result(
                         stdout=stdout_text,
                         exit_code=script_exit,
                         reject=diff_or_reject,
                         git_snapshot_timings=(
                             diff_or_reject.snapshot_timings or snapshot.timings
                         ),
+                        overlay_run_timings=diff_or_reject.run_timings,
                     )
+                    return result
                 diff = diff_or_reject
                 record_overlay_op(
                     upper_bytes=diff.upper_bytes,
@@ -210,25 +261,111 @@ class OverlayAuditor:
                     whiteouts_gitinclude=diff.whiteouts_gitinclude,
                     whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
                 )
-                return await self._commit_and_assemble(
-                    stdout=stdout_text,
-                    diff=diff,
-                    agent_id=agent_id,
-                    description=description or "shell overlay",
-                    attribute_changes=attribute_changes,
-                    git_snapshot_timings=diff.snapshot_timings or snapshot.timings,
+                result = await self._timed_stage(
+                    "commit",
+                    stage_timings=stage_timings,
+                    lease=lease,
+                    command=command,
+                    awaitable=self._commit_and_assemble(
+                        stdout=stdout_text,
+                        diff=diff,
+                        agent_id=agent_id,
+                        description=description or "shell overlay",
+                        attribute_changes=attribute_changes,
+                        git_snapshot_timings=diff.snapshot_timings or snapshot.timings,
+                        overlay_run_timings=diff.run_timings,
+                    ),
                 )
+                return result
+            except BaseException as exc:
+                error = exc
+                raise
             finally:
                 try:
-                    await self._cleanup_run_dir(sandbox, lease)
+                    await self._timed_stage(
+                        "cleanup",
+                        stage_timings=stage_timings,
+                        lease=lease,
+                        command=command,
+                        awaitable=self._cleanup_run_dir(sandbox, lease),
+                    )
                 except Exception:
                     logger.debug(
                         "overlay run-dir cleanup failed for %s",
                         lease.run_dir,
                         exc_info=True,
                     )
+                stage_timings["total"] = round(time.perf_counter() - total_started, 6)
+                self._log_execution_summary(
+                    command=command,
+                    lease=lease,
+                    stage_timings=stage_timings,
+                    result=result,
+                    error=error,
+                )
 
     # -- internals -----------------------------------------------------------
+
+    async def _timed_stage(
+        self,
+        stage: str,
+        *,
+        stage_timings: dict[str, float],
+        lease: OverlayLease,
+        command: str,
+        awaitable: Awaitable[Any],
+    ) -> Any:
+        started = time.perf_counter()
+        try:
+            return await awaitable
+        finally:
+            elapsed = round(time.perf_counter() - started, 6)
+            stage_timings[stage] = elapsed
+            if elapsed >= _SLOW_OVERLAY_STAGE_SECONDS:
+                logger.warning(
+                    "overlay command stage slow: stage=%s elapsed=%.3fs "
+                    "sandbox_id=%s run_dir=%s command=%r timings=%s",
+                    stage,
+                    elapsed,
+                    self._sandbox_id,
+                    lease.run_dir,
+                    _command_sample(command),
+                    dict(stage_timings),
+                )
+
+    def _log_execution_summary(
+        self,
+        *,
+        command: str,
+        lease: OverlayLease,
+        stage_timings: dict[str, float],
+        result: SimpleNamespace | None,
+        error: BaseException | None,
+    ) -> None:
+        total = stage_timings.get("total", 0.0)
+        status = getattr(result, "git_commit_status", None)
+        failed_status = status not in (None, "committed", "noop")
+        if error is None and not failed_status and total < _SLOW_OVERLAY_TOTAL_SECONDS:
+            return
+        error_text = f"{type(error).__name__}: {error}" if error is not None else None
+        logger.warning(
+            "overlay command summary: total=%.3fs status=%s exit_code=%s "
+            "conflict_file=%s conflict_reason=%s error=%s sandbox_id=%s "
+            "run_dir=%s timings=%s git_snapshot_timings=%s overlay_run_timings=%s "
+            "command=%r",
+            total,
+            status,
+            getattr(result, "exit_code", None),
+            getattr(result, "git_conflict_file", None),
+            getattr(result, "git_conflict_reason", None),
+            error_text,
+            self._sandbox_id,
+            lease.run_dir,
+            dict(stage_timings),
+            dict(getattr(result, "git_snapshot_timings", {}) or {}),
+            dict(getattr(result, "overlay_run_timings", {}) or {}),
+            _command_sample(command),
+        )
 
     def _new_lease(self) -> OverlayLease:
         run_dir = posixpath.join(
@@ -502,6 +639,7 @@ class OverlayAuditor:
         description: str,
         attribute_changes: bool,
         git_snapshot_timings: dict[str, float] | None = None,
+        overlay_run_timings: dict[str, float] | None = None,
     ) -> SimpleNamespace:
         gitignore_paths = [
             _live_path(self._workspace_root, p) for p in diff.gitignore_paths
@@ -529,6 +667,7 @@ class OverlayAuditor:
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
                 git_snapshot_timings=git_snapshot_timings,
+                overlay_run_timings=overlay_run_timings,
             )
 
         mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
@@ -547,6 +686,7 @@ class OverlayAuditor:
                 git_conflict_file=None,
                 warnings=list(diff.warnings),
                 git_snapshot_timings=git_snapshot_timings,
+                overlay_run_timings=overlay_run_timings,
             )
 
         commit_result = await self._committer.commit(
@@ -570,6 +710,7 @@ class OverlayAuditor:
                 git_conflict_file=None,
                 warnings=warnings,
                 git_snapshot_timings=git_snapshot_timings,
+                overlay_run_timings=overlay_run_timings,
             )
 
         # Tracked OCC aborted. Gitignored writes were already direct-merged
@@ -601,6 +742,7 @@ class OverlayAuditor:
             git_conflict_file=commit_result.conflict_file,
             warnings=warnings,
             git_snapshot_timings=git_snapshot_timings,
+            overlay_run_timings=overlay_run_timings,
         )
 
 
@@ -730,6 +872,7 @@ def _audit_result(
     git_conflict_file: str | None,
     warnings: list[str],
     git_snapshot_timings: dict[str, float] | None = None,
+    overlay_run_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     # Preserve the downstream SimpleNamespace contract (changed_paths,
     # ambient_changed_paths, git_commit_status, git_conflict_reason,
@@ -750,6 +893,7 @@ def _audit_result(
         mixed_partial_apply=mixed_partial_apply,
         warnings=list(warnings),
         git_snapshot_timings=dict(git_snapshot_timings or {}),
+        overlay_run_timings=dict(overlay_run_timings or {}),
     )
 
 
@@ -759,6 +903,7 @@ def _reject_result(
     exit_code: int,
     reject: OverlayPolicyReject,
     git_snapshot_timings: dict[str, float] | None = None,
+    overlay_run_timings: dict[str, float] | None = None,
 ) -> SimpleNamespace:
     detail = (
         f"{reject.reason}: {','.join(reject.paths)}"
@@ -781,6 +926,7 @@ def _reject_result(
         mixed_partial_apply=False,
         warnings=[detail],
         git_snapshot_timings=dict(git_snapshot_timings or {}),
+        overlay_run_timings=dict(overlay_run_timings or {}),
     )
 
 

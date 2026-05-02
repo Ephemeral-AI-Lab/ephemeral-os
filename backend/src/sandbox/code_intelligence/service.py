@@ -4,8 +4,8 @@ The facade delegates every public op to a :class:`CiBackend` selected at
 construction time. With ``EOS_CI_IN_SANDBOX`` unset (or no transport
 available) the default backend is :class:`InProcessCiBackend` — today's
 in-process logic, bit-for-bit. With the flag on plus a transport and
-sandbox id, :class:`RpcCiBackend` is selected (currently a stub that raises
-:class:`NotImplementedError`; Phase 1+ will flesh it out).
+sandbox id, :class:`RpcCiBackend` is selected for the in-sandbox indexing
+path.
 """
 
 from __future__ import annotations

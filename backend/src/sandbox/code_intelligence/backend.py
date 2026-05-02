@@ -10,8 +10,9 @@ Three artifacts live here:
 * :class:`CiBackend` — typing.Protocol that every backend implements.
 * :class:`InProcessCiBackend` — wraps today's in-process logic. This is the
   default backend selected when ``EOS_CI_IN_SANDBOX`` is unset.
-* :class:`RpcCiBackend` — placeholder stub for the in-sandbox daemon. Every
-  method raises :class:`NotImplementedError` until Phase 1+ ships the daemon.
+* :class:`RpcCiBackend` — the in-sandbox path. Phase 1 implements indexing and
+  symbol queries through a one-shot sandbox runner; later daemon phases add the
+  remaining RPC verbs.
 """
 
 from __future__ import annotations
@@ -422,7 +423,7 @@ class InProcessCiBackend:
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
 
 
-_RPC_NOT_READY = "RpcCiBackend lands in Phase 1+"
+_RPC_NOT_READY = "RpcCiBackend method is not implemented until the daemon RPC phase"
 
 
 class RpcCiBackend:

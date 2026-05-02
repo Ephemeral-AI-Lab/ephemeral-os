@@ -6,9 +6,8 @@ Covers:
   transport is missing, or workspace is empty.
 * :func:`bootstrap_in_sandbox_ci_runtime` uploads the bundle and runs the
   indexer when the flag is set.
-* :meth:`SandboxService.create_sandbox` (a) calls the hook when
-  ``eager_ci=True`` AND the flag is set, (b) skips when ``eager_ci=False``,
-  (c) skips when the flag is unset, (d) propagates RuntimeError from the
+* :meth:`SandboxService.create_sandbox` (a) calls the hook when the flag is
+  set, (b) skips when the flag is unset, (c) propagates RuntimeError from the
   hook.
 """
 
@@ -152,24 +151,6 @@ def _make_raw_sandbox(project_dir: str | None) -> Any:
     )()
 
 
-def test_maybe_bootstrap_skips_when_eager_ci_false(flag_on: None) -> None:
-    from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
-
-    sentinel_called = {"called": False}
-
-    async def boom(*_: Any, **__: Any) -> None:
-        sentinel_called["called"] = True
-
-    with patch(
-        "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
-        new=boom,
-    ):
-        _maybe_run_eager_ci_bootstrap(
-            _make_raw_sandbox("/ws"), "sb-1", eager_ci=False
-        )
-    assert sentinel_called["called"] is False
-
-
 def test_maybe_bootstrap_skips_when_flag_off(flag_off: None) -> None:
     from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
 
@@ -182,9 +163,7 @@ def test_maybe_bootstrap_skips_when_flag_off(flag_off: None) -> None:
         "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
         new=boom,
     ):
-        _maybe_run_eager_ci_bootstrap(
-            _make_raw_sandbox("/ws"), "sb-1", eager_ci=True
-        )
+        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
     assert sentinel_called["called"] is False
 
 
@@ -202,9 +181,7 @@ def test_maybe_bootstrap_skips_when_workspace_unresolvable(
         "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
         new=boom,
     ):
-        _maybe_run_eager_ci_bootstrap(
-            _make_raw_sandbox(None), "sb-1", eager_ci=True
-        )
+        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox(None), "sb-1")
     assert sentinel_called["called"] is False
 
 
@@ -234,9 +211,7 @@ def test_maybe_bootstrap_invokes_helper_when_flag_on(
         "sandbox.daytona.transport.DaytonaTransport",
         return_value=fake_transport,
     ):
-        _maybe_run_eager_ci_bootstrap(
-            _make_raw_sandbox("/ws"), "sb-1", eager_ci=True
-        )
+        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
 
     assert len(calls) == 1
     assert calls[0]["sandbox_id"] == "sb-1"
@@ -257,6 +232,4 @@ def test_maybe_bootstrap_propagates_runtime_error(flag_on: None) -> None:
         "sandbox.daytona.transport.DaytonaTransport",
         return_value=object(),
     ), pytest.raises(RuntimeError, match="indexer crashed"):
-        _maybe_run_eager_ci_bootstrap(
-            _make_raw_sandbox("/ws"), "sb-1", eager_ci=True
-        )
+        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")

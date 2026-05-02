@@ -34,18 +34,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _maybe_run_eager_ci_bootstrap(
-    raw_sandbox: Any, sandbox_id: str, *, eager_ci: bool
-) -> None:
+def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
     """Best-effort eager-CI bootstrap on ``create``/``start``.
 
-    No-op when ``eager_ci`` is False or the ``EOS_CI_IN_SANDBOX`` flag is
-    unset. Resolves a transport via :class:`DaytonaTransport` and the
-    workspace via :func:`_sandbox_project_root`. Bootstrap failures
-    intentionally propagate so the caller sees the indexer error.
+    No-op when the ``EOS_CI_IN_SANDBOX`` flag is unset. Resolves a transport
+    via :class:`DaytonaTransport` and the workspace via
+    :func:`_sandbox_project_root`. Bootstrap failures intentionally propagate
+    so the caller sees the indexer error.
     """
-    if not eager_ci:
-        return
     if not _ci_in_sandbox_enabled():
         return
     workspace_root = _sandbox_project_root(raw_sandbox) or ""
@@ -170,16 +166,8 @@ class SandboxService:
         language: str = "python",
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
-        eager_ci: bool = True,
     ) -> dict[str, Any]:
-        """Create a new sandbox.
-
-        ``eager_ci`` (default ``True``) opts into the in-sandbox CI runtime
-        bootstrap: when ``EOS_CI_IN_SANDBOX=1``, the runtime bundle is
-        uploaded and the indexer is run synchronously before this method
-        returns. ``eager_ci=False`` is a test escape hatch — non-test
-        callers should leave the default in place.
-        """
+        """Create a new sandbox."""
         normalized_name = _normalize_optional_text(name)
         normalized_snapshot = _normalize_optional_text(snapshot)
         normalized_image = _normalize_optional_text(image)
@@ -226,19 +214,12 @@ class SandboxService:
         sb.refresh()
         sb.ensure_git()
 
-        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=eager_ci)
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
 
         return sb.serialize(assigned_agents=[])
 
-    def start_sandbox(
-        self, sandbox_id: str, *, eager_ci: bool = True
-    ) -> dict[str, Any]:
-        """Start a stopped sandbox.
-
-        ``eager_ci`` mirrors :meth:`create_sandbox` — when
-        ``EOS_CI_IN_SANDBOX=1`` the in-sandbox runtime is re-bootstrapped
-        after the sandbox resumes.
-        """
+    def start_sandbox(self, sandbox_id: str) -> dict[str, Any]:
+        """Start a stopped sandbox."""
         sb = self._get_proxy(sandbox_id)
         if sb.state == "started":
             return sb.serialize()
@@ -248,7 +229,7 @@ class SandboxService:
         sb.ensure_git()
         sb.refresh()
 
-        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=eager_ci)
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
 
         return sb.serialize()
 
@@ -298,7 +279,7 @@ class SandboxService:
         # tracks the post-restart workspace. The hook is a no-op when
         # ``EOS_CI_IN_SANDBOX`` is unset, so the cost only lands on
         # callers that actually opted into the daemon migration.
-        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id, eager_ci=True)
+        _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
 
         return sb.serialize()
 

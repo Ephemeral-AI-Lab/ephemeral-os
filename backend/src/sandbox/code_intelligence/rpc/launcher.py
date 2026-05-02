@@ -223,9 +223,9 @@ async def read_remote_file_via_exec(
     Strategy:
 
     * ``wc -c <path>`` resolves the size up front.
-    * For each chunk window we run ``tail -c +<start> | head -c <n> | base64 -w0``
-      and decode the stdout. Chunks are 32 KB so they fit comfortably under
-      any stdout-capture limit.
+    * For each chunk window we run ``dd if=<path> bs=<chunk> count=1 skip=<i>
+      status=none | base64 -w0`` and decode the stdout. Chunks are 32 KB so
+      they fit comfortably under any stdout-capture limit.
     """
     import base64
 

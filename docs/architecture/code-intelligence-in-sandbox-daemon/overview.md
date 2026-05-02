@@ -43,7 +43,7 @@ Phase order is **strict** (0 → 5, including 3.5 and 3.6). Each phase is indepe
 │                                      │         │                                             │
 │  SandboxService.create_sandbox(...)  │         │                                             │
 │   ├─ provision Daytona               │         │                                             │
-│   ├─ ensure_code_intelligence_runtime│ ──────────► EAGER: bundle upload + daemon spawn       │
+│   ├─ bootstrap_in_sandbox_ci_runtime │ ──────────► EAGER: bundle upload + daemon spawn       │
 │   │   (eager bootstrap, blocking)    │         │            + index build kicked off bg     │
 │   └─ return sandbox handle           │         │                                             │
 │                                      │         │                                             │
@@ -84,15 +84,15 @@ Phase order is **strict** (0 → 5, including 3.5 and 3.6). Each phase is indepe
 
 | Hook | File | What it does |
 |---|---|---|
-| `SandboxService.create_sandbox(...)` | `backend/src/sandbox/lifecycle/service.py:115` | After Daytona provisions the sandbox, calls `ensure_code_intelligence_runtime(sandbox_id, workspace_root)` which uploads the bundle + spawns the daemon + waits for socket readiness BEFORE returning |
+| `SandboxService.create_sandbox(...)` | `backend/src/sandbox/lifecycle/service.py:115` | After Daytona provisions the sandbox, calls `bootstrap_in_sandbox_ci_runtime(sandbox_id, workspace_root, transport=...)` which uploads the bundle + spawns the daemon + waits for socket readiness BEFORE returning |
 | `SandboxService.start_sandbox(...)` | `backend/src/sandbox/lifecycle/service.py:174` | Same hook — covers Daytona auto-paused sandboxes coming back up |
-| Restart recovery path | `backend/src/sandbox/lifecycle/service.py:~211` | Existing "probe failed → targeted restart" path also calls `ensure_code_intelligence_runtime` after restart |
-| `SandboxService.code_intelligence_for(...)` | (existing) | Defensive: if daemon not running (e.g., orchestrator restart raced with sandbox restart), call `ensure_code_intelligence_runtime` once before returning |
+| Restart recovery path | `backend/src/sandbox/lifecycle/service.py:~211` | Existing "probe failed → targeted restart" path also calls `bootstrap_in_sandbox_ci_runtime` after restart |
+| `SandboxService.code_intelligence_for(...)` | (existing) | Returns the per-sandbox service; daemon auto-respawn is handled at the RPC client layer once Phase 2 lands |
 | Auto-respawn (Phase 2) | `CiRpcClient.call → ensure_daemon` | Last-resort safety net for daemon crash between calls — should rarely trigger if eager bootstrap works |
 
 ### Existing integration point
 
-`backend/src/sandbox/lifecycle/workspace.py` already exposes `ensure_code_intelligence_runtime(...)` (called from `lifecycle/context.py:65`). Phase 1 amends it to do the eager bundle+spawn, NOT just register a placeholder.
+`backend/src/sandbox/lifecycle/workspace.py` keeps `ensure_code_intelligence_runtime(...)` for orchestrator-side context preparation and exposes `bootstrap_in_sandbox_ci_runtime(...)` for lifecycle-time eager bootstrap. Keeping the two paths separate avoids overloading the context-prep helper with sandbox create/start policy.
 
 ### Blocking contract
 
@@ -105,20 +105,12 @@ Symbol index build runs in the daemon's **background thread** (Phase 3.3 fix), s
 
 **Net cost added to `create_sandbox`:** ~1-2s (cold), ~100ms (warm, bundle cached, daemon already alive from same sandbox session).
 
-### Test escape hatch
-
-`SandboxService.create_sandbox(..., eager_ci=False)` skips the bootstrap. Used only by:
-- Pure transport tests that don't touch CI (e.g., `test_daytona_loadtest.py`)
-- Phase 0 tests that intentionally compare lazy vs eager paths
-
-Production code MUST NOT pass `eager_ci=False`. CI lints flag any non-test caller.
-
 ### Why eager (rationale to revisit if reversed)
 
 - **Predictable latency.** Today's "first CI call is slow" pattern is hard to debug because it shows up only in the first user-visible op.
 - **Production guarantees.** A user starting a CodeAct session expects the agent to be productive immediately, not after a 1.5-3s mystery stall.
 - **Sandbox restart visibility.** Daytona may auto-pause/resume sandboxes; without eager bootstrap, the first call after resume hits the same cold-start cost. Eager hook on `start_sandbox` covers this.
-- **Trade-off:** transport-only tests pay the bootstrap cost or use `eager_ci=False`. Acceptable.
+- **Trade-off:** transport-only tests pay the bootstrap cost when `EOS_CI_IN_SANDBOX=1`. Acceptable; this keeps lifecycle behavior single-path.
 
 ## Storage boundary (load-bearing)
 
@@ -203,7 +195,7 @@ These are the choices that were surfaced before approval. Re-reading them is the
 | 1 | **Storage location** | `$HOME/.cache/eos-ci/<workspace_root_hash>/v1/` (XDG-compliant, no privilege requirement, outside `workspace_root` so `git status` stays clean) |
 | 2 | **Persistence semantics** | Sandbox-lifetime only. Survives orchestrator restart + daemon crash. Wiped by `dispose_sandbox` and image rotation. Daemon performs startup integrity check; corrupt state triggers rebuild-from-scratch, never crash |
 | 3 | **Workspace identity** | `<workspace_root_hash>` = `sha256(realpath(workspace_root))[:16]`. Multiple workspaces in one sandbox each get their own subtree; v1 schema directory allows future migration |
-| 4 | **Bootstrap timing** | **EAGER ALWAYS.** Daemon spawns synchronously on `SandboxService.create_sandbox` and on every sandbox restart (`start_sandbox`, restart recovery, `code_intelligence_for` defensive path). First-call latency disappears; `create_sandbox` cost rises by ~1-2s cold (~100ms warm). Test escape hatch `eager_ci=False` for transport-only tests. Auto-respawn (Phase 2) still handles daemon-crash between calls |
+| 4 | **Bootstrap timing** | **EAGER ALWAYS.** Daemon spawns synchronously on `SandboxService.create_sandbox` and on every sandbox restart (`start_sandbox`, restart recovery, `code_intelligence_for` defensive path). First-call latency disappears; `create_sandbox` cost rises by ~1-2s cold (~100ms warm). Auto-respawn (Phase 2) still handles daemon-crash between calls |
 | 5 | **Daemon transport** | Unix domain socket at `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`, length-prefixed msgpack frames. No TCP, no HTTP |
 | 6 | **Process model** | Single-process daemon, asyncio event loop, one worker thread per language server. The five HARD INVARIANTS are enforced by the same async locks used today, just resident in the daemon. **Socket binds BEFORE index build starts** — `query_symbols` returns empty until index ready |
 | 7 | **Failure model** | Any RPC may raise `CiDaemonUnavailable`; `CodeIntelligenceService` retries once after respawn, then surfaces a structured error. Edit-path failures (OCC abort, merge conflict) surface as today |
@@ -285,7 +277,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies this. Downstream callers 
 
 | Severity | Risk | Mitigation |
 |---|---|---|
-| **HIGH** | **Eager bootstrap inflates `create_sandbox` cost beyond user tolerance** (cold ~1-2s, warm ~100ms) | Phase 1 E2E times `create_sandbox` end-to-end vs baseline; if cold > 3s investigate (likely bundle upload). Test escape hatch `eager_ci=False` for transport-only tests |
+| **HIGH** | **Eager bootstrap inflates `create_sandbox` cost beyond user tolerance** (cold ~1-2s, warm ~100ms) | Phase 1 E2E times `create_sandbox` end-to-end vs baseline; if cold > 3s investigate (likely bundle upload) |
 | **HIGH** | Privilege failure on `$HOME/.cache/eos-ci/` | Phase 1 E2E tests this explicitly; on `mkdir` failure, fail loud with errno; documented fallback (`/tmp/eos-ci-$USER/`) NOT silently applied |
 | **HIGH** | Daemon process leak across `dispose_sandbox` | PID file + `kill -TERM` before registry pop; Phase 2 E2E checks `ps aux` post-dispose |
 | **HIGH** | OCC invariants regress when relocated into daemon | Phase 3 E2E reproduces all five HARD INVARIANTS live with real edits — but with the bundle-the-package approach drift risk is eliminated by construction |
@@ -314,13 +306,16 @@ Every phase ships at least one live E2E test against a real Daytona sandbox prov
 ## File layout (full)
 
 ### Bundle shipped to the sandbox (Phase 1+)
-The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree as `/tmp/eos-ci-runtime/sandbox/code_intelligence/` plus `sandbox/async_bridge.py`, plus a thin `in_sandbox/` overlay containing only daemon-specific code, plus **vendored msgpack**:
+The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree as `/tmp/eos-ci-runtime/sandbox/code_intelligence/` plus the transitive sandbox modules needed by the in-sandbox runner, plus **vendored msgpack**:
 
 ```
 /tmp/eos-ci-runtime/
   msgpack/                                             (vendored; ~50 KB; no pip install needed)
   sandbox/__init__.py                                  (empty marker)
-  sandbox/async_bridge.py                              (existing — promoted in predecessor migration)
+  sandbox/errors.py
+  sandbox/api/
+  sandbox/client/async_bridge.py                       (existing — promoted in predecessor migration)
+  sandbox/lifecycle/commit.py
   sandbox/code_intelligence/                           (FULL existing package)
     __init__.py
     service.py
@@ -352,7 +347,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/code_intelligence/registry.py` — selects `CiBackend` based on flag
 - `backend/src/sandbox/code_intelligence/service.py` — delegates to backend; accepts optional `edit_history` kwarg (Phase 3)
 - `backend/src/sandbox/lifecycle/service.py` — `create_sandbox` and `start_sandbox` call the eager bootstrap hook (Phase 1)
-- `backend/src/sandbox/lifecycle/workspace.py` — `ensure_code_intelligence_runtime` becomes the eager-bootstrap entry (Phase 1)
+- `backend/src/sandbox/lifecycle/workspace.py` — `bootstrap_in_sandbox_ci_runtime` is the eager-bootstrap entry (Phase 1)
 - `pyproject.toml` — add `msgpack` as runtime dependency (Phase 0)
 - (Phase 5 cleanup) `mutations/content_manager.py`, `indexing/file_discovery.py`, `language_server/transport.py` — delete dead remote branches (~600 lines)
 
@@ -383,7 +378,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/code_intelligence/overlay/auditor.py` — full `SimpleNamespace` result shape (Task 4.3 reference)
 - `backend/src/sandbox/lifecycle/service.py:115` — `create_sandbox` entry point (Phase 1 hook target)
 - `backend/src/sandbox/lifecycle/service.py:174` — `start_sandbox` entry point
-- `backend/src/sandbox/lifecycle/workspace.py` — existing `ensure_code_intelligence_runtime` (Phase 1 amends this)
+- `backend/src/sandbox/lifecycle/workspace.py` — `bootstrap_in_sandbox_ci_runtime` eager lifecycle hook plus existing `ensure_code_intelligence_runtime` context-prep helper
 - `backend/tests/test_e2e/test_live_ci_diagnostics.py` — canonical live-E2E pattern
 - `backend/src/benchmarks/sweevo/sandbox.py` — swe-evo sandbox provisioning helpers
 - `memory/codeact_overlay_cost_breakdown.md` — current cost profile of `svc.cmd`
@@ -410,8 +405,8 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
   - Documented full `svc.cmd` `SimpleNamespace` field set inline so future readers don't reduce it to `(stdout, stderr, exit_code)`
   - Added "no direct workspace writes from RPC handlers" guard test in Phase 3
 - **2026-05-02 (eager bootstrap + portability):**
-  - **Reversed gray-area #4 from lazy to EAGER ALWAYS.** Daemon spawns on `create_sandbox` and every restart. Reverses predecessor migration's "no CI on create" contract. Test escape hatch `eager_ci=False` for transport-only tests.
-  - Phase 1 wires the hook into `SandboxService.create_sandbox`, `start_sandbox`, restart recovery, and `code_intelligence_for` (defensive). Existing `sandbox/lifecycle/workspace.py:ensure_code_intelligence_runtime` becomes the eager-bootstrap entry.
+  - **Reversed gray-area #4 from lazy to EAGER ALWAYS.** Daemon spawns on `create_sandbox` and every restart. Reverses predecessor migration's "no CI on create" contract.
+  - Phase 1 wires the hook into `SandboxService.create_sandbox`, `start_sandbox`, and restart recovery. `sandbox/lifecycle/workspace.py:bootstrap_in_sandbox_ci_runtime` owns the eager bootstrap path.
   - Phase 3 amended: daemon binds socket FIRST, starts index build in background thread (was: blocked startup on `ensure_initialized(wait=True)`).
   - Added "Sandbox image compatibility" hard contract section with full dep matrix.
   - Phase 1 adds Task 1.5.E compatibility probe live E2E.

@@ -9,7 +9,7 @@
 
 Spawn `ci_daemon` as a long-lived asyncio process inside the sandbox listening on `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`. Implement the wire protocol (length-prefixed msgpack frames), three control ops (`ping`, `shutdown`, `version`), the orchestrator-side `CiRpcClient` with retry-after-respawn semantics, and the launcher that handles spawn, health-check, and respawn-on-dead.
 
-**Daemon spawn moves into the eager bootstrap hook from Phase 1.** `ensure_code_intelligence_runtime` now: (1) uploads bundle (Phase 1), (2) spawns daemon and waits for socket readiness (Phase 2). This means by the time `create_sandbox` / `start_sandbox` returns, the daemon is reachable. `CiRpcClient.call`'s auto-respawn becomes a fallback for daemon-crash between calls — should rarely trigger in practice.
+**Daemon spawn moves into the eager bootstrap hook from Phase 1.** `bootstrap_in_sandbox_ci_runtime` now: (1) uploads bundle (Phase 1), (2) spawns daemon and waits for socket readiness (Phase 2). This means by the time `create_sandbox` / `start_sandbox` returns, the daemon is reachable. `CiRpcClient.call`'s auto-respawn becomes a fallback for daemon-crash between calls — should rarely trigger in practice.
 
 **No business logic moves in Phase 2.** Indexing from Phase 1 still runs (now via the daemon's `ping`-stub-then-replaced-in-Phase-3 path). Phase 2 is pure scaffolding around it. Phase 3 is when overlay/mutations/LSP move into the daemon.
 
@@ -277,7 +277,7 @@ class CiRpcClient:
 **File to extend:** `backend/src/sandbox/code_intelligence/rpc/launcher.py` (created in Phase 1; this phase adds daemon-spawn logic)
 
 **Call sites (after Phase 2):**
-- **Eager (primary):** `ensure_code_intelligence_runtime` — called from `SandboxService.create_sandbox`, `start_sandbox`, restart recovery, `code_intelligence_for` (defensive). Daemon is up by the time these return.
+- **Eager (primary):** `bootstrap_in_sandbox_ci_runtime` — called from `SandboxService.create_sandbox`, `start_sandbox`, and restart recovery. Daemon is up by the time these return.
 - **Fallback (rare):** `CiRpcClient.call` retry path — covers daemon crash between calls. Should be a no-op in healthy runs.
 
 **API:**
@@ -290,7 +290,7 @@ class DaemonLauncher:
         """If daemon is alive, return. Otherwise upload the bundle and spawn it.
         Polls socket readiness up to timeout_s. Raises CiDaemonUnavailable on timeout.
 
-        After Phase 2, called eagerly from ensure_code_intelligence_runtime; the
+        After Phase 2, called eagerly from bootstrap_in_sandbox_ci_runtime; the
         CiRpcClient retry path becomes a fallback for daemon-crash recovery."""
 
     async def is_alive(self) -> bool:
@@ -329,8 +329,8 @@ async def test_daemon_ready_after_create_sandbox(live_sweevo_env_factory):
     h = TimingHarness(phase=2, test_name="daemon_ready_after_create")
 
     with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "1"}):
-        with h.step("create_sandbox_with_eager_ci"):
-            env = live_sweevo_env_factory(eager_ci=True)
+        with h.step("create_sandbox_with_ci_bootstrap"):
+            env = live_sweevo_env_factory()
 
     # No ensure_daemon retry should be needed — daemon already up
     with h.step("daemon_first_ping_no_retry"):
@@ -343,7 +343,7 @@ async def test_daemon_ready_after_create_sandbox(live_sweevo_env_factory):
     assert int(out.strip()) == 1, f"expected exactly one daemon, got: {out}"
 
     # Eager bootstrap SLO
-    cold = h.steps["create_sandbox_with_eager_ci"]
+    cold = h.steps["create_sandbox_with_ci_bootstrap"]
     assert cold < 3.0, f"create_sandbox cold-start with eager CI > 3s ({cold:.2f}s)"
 
     # First ping should be fast (daemon already warm from create)
@@ -355,7 +355,7 @@ async def test_daemon_ready_after_create_sandbox(live_sweevo_env_factory):
     h.dump_json()
 ```
 
-**Asserts:** `create_sandbox_with_eager_ci` < 3s cold; `daemon_first_ping_no_retry` < 100ms (proves daemon was already up, no `ensure_daemon` retry needed).
+**Asserts:** `create_sandbox_with_ci_bootstrap` < 3s cold; `daemon_first_ping_no_retry` < 100ms (proves daemon was already up, no `ensure_daemon` retry needed).
 
 #### 2.6.B — kill -9 + auto-respawn
 

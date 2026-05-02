@@ -3,8 +3,8 @@
 Covers the four-truth-table selection logic in
 ``CodeIntelligenceService._select_backend`` (env x transport x sandbox_id),
 the InProcessCiBackend behavioral defaults (e.g. empty workspace returns no
-symbols), and that every public op on the RpcCiBackend stub raises
-``NotImplementedError``.
+symbols), and that RpcCiBackend still exposes the full protocol while the
+Phase 2+ verbs remain unimplemented.
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ def test_select_inprocess_when_flag_off_with_transport_and_id(tmp_path: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# RpcCiBackend stub: every method raises NotImplementedError
+# RpcCiBackend: Phase 2+ methods still raise NotImplementedError
 # ---------------------------------------------------------------------------
 
 

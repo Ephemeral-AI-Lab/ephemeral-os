@@ -10,7 +10,7 @@
 Three deliverables:
 
 1. **In-sandbox indexing.** Ship the entire existing `sandbox.code_intelligence` package and invoke the existing `CodeIntelligenceService` with `sandbox=None, transport=None` so local-FS branches activate. Persist snapshot at `$HOME/.cache/eos-ci/<wh>/v1/index.snapshot` (pickle for Phase 1; Phase 3.5 migrates to SQLite).
-2. **Eager bootstrap hook** (NEW, see overview "Eager bootstrap contract"). Wire `ensure_code_intelligence_runtime` into `SandboxService.create_sandbox` and `SandboxService.start_sandbox` so the bundle is uploaded and the indexer runs synchronously before `create_sandbox` returns. This **reverses** the predecessor migration's "no CI on create" contract.
+2. **Eager bootstrap hook** (NEW, see overview "Eager bootstrap contract"). Wire `bootstrap_in_sandbox_ci_runtime` into `SandboxService.create_sandbox` and `SandboxService.start_sandbox` so the bundle is uploaded and the indexer runs synchronously before `create_sandbox` returns. This **reverses** the predecessor migration's "no CI on create" contract.
 3. **Compatibility probe** (NEW). Phase 1 ships a one-shot dependency matrix probe (`mkdir`/`unshare`/`sqlite3`/`msgpack`/`git`/etc.) so a new sandbox image can be qualified in one test run before any daemon work depends on it.
 
 For Phase 1, the orchestrator invokes the indexer via `process.exec` (no daemon yet — that lands in Phase 2). The eager hook in Phase 1 just does the bundle+indexer; Phase 2 extends the hook to also spawn the daemon.
@@ -54,17 +54,17 @@ svc.ensure_initialized(wait=True)
 
 | Artifact | File | Purpose |
 |---|---|---|
-| Bundle helper | `backend/src/sandbox/code_intelligence/rpc/launcher.py` | `_ci_runtime_bundle_bytes()` packs `sandbox/code_intelligence/` + `sandbox/async_bridge.py` + **vendored `msgpack/`** (~50KB) |
+| Bundle helper | `backend/src/sandbox/code_intelligence/rpc/launcher.py` | `_ci_runtime_bundle_bytes()` packs `sandbox/code_intelligence/` + `sandbox/client/async_bridge.py` + **vendored `msgpack/`** (~50KB) |
 | Indexing CLI | `backend/src/sandbox/code_intelligence/in_sandbox/ci_index.py` | Thin wrapper: instantiate `CodeIntelligenceService`, call `ensure_initialized`, dump snapshot via `ci_storage` |
 | Storage layer | `backend/src/sandbox/code_intelligence/in_sandbox/ci_storage.py` | `$HOME/.cache/eos-ci/<wh>/v1/` resolver, atomic snapshot writer, integrity check, **path-confinement guard** |
 | Package init | `backend/src/sandbox/code_intelligence/in_sandbox/__init__.py` | Empty marker |
 | `RpcCiBackend.build_index()` | `backend/src/sandbox/code_intelligence/backend.py` (extended) | Ships payload, runs CLI, downloads snapshot |
-| **Eager bootstrap hook** | `backend/src/sandbox/lifecycle/workspace.py` (extended `ensure_code_intelligence_runtime`) | Bundle upload + indexer run, called from `create_sandbox` and `start_sandbox` |
-| **Lifecycle integration** | `backend/src/sandbox/lifecycle/service.py` (modified) | `create_sandbox(eager_ci=True)` and `start_sandbox(...)` call the hook before returning |
+| **Eager bootstrap hook** | `backend/src/sandbox/lifecycle/workspace.py` (`bootstrap_in_sandbox_ci_runtime`) | Bundle upload + indexer run, called from `create_sandbox` and `start_sandbox` |
+| **Lifecycle integration** | `backend/src/sandbox/lifecycle/service.py` (modified) | `create_sandbox(...)` and `start_sandbox(...)` call the hook before returning when `EOS_CI_IN_SANDBOX=1` |
 | Phase 1 live E2E | `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` | Privilege probe + **compatibility matrix probe** + indexing + corruption recovery + **eager-bootstrap timing** |
 | Storage unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_storage.py` | Atomic rename, corruption recovery, missing-dir creation, path-confinement guard |
 | Index unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_index_runner.py` | Standalone runner against a fixture workspace |
-| Lifecycle hook unit tests | `backend/tests/test_sandbox/test_lifecycle/test_eager_ci_bootstrap.py` | `create_sandbox(eager_ci=True)` calls hook; `eager_ci=False` skips it |
+| Lifecycle hook unit tests | `backend/tests/test_sandbox/test_eager_ci_bootstrap.py` | Lifecycle bootstrap runs when the flag is set and skips when the flag is unset or workspace resolution fails |
 
 ## Detailed task list
 
@@ -238,7 +238,7 @@ def _ci_runtime_bundle_bytes() -> bytes:
     Layout (inside tar):
         msgpack/                                             (vendored — pure Python)
         sandbox/__init__.py                                  (empty marker)
-        sandbox/async_bridge.py                              (existing — promoted in predecessor)
+        sandbox/client/async_bridge.py                       (existing — promoted in predecessor)
         sandbox/code_intelligence/**/*.py                    (FULL package)
     """
     import msgpack
@@ -254,7 +254,7 @@ def _ci_runtime_bundle_bytes() -> bytes:
             tar.add(path, arcname=rel)
         # Sandbox markers + async_bridge
         tar.add(sandbox_dir / "__init__.py", arcname="sandbox/__init__.py")
-        tar.add(sandbox_dir / "async_bridge.py", arcname="sandbox/async_bridge.py")
+        tar.add(sandbox_dir / "client" / "async_bridge.py", arcname="sandbox/client/async_bridge.py")
         # Full code_intelligence/ tree
         ci_dir = sandbox_dir / "code_intelligence"
         for path in sorted(ci_dir.rglob("*.py")):
@@ -292,13 +292,13 @@ async def ensure_runtime_uploaded(transport, sandbox_id: str) -> None:
 ### Task 1.3.5 — Eager bootstrap hook (LOAD-BEARING, see overview)
 
 **Files to modify:**
-- `backend/src/sandbox/lifecycle/workspace.py` (extend `ensure_code_intelligence_runtime`)
+- `backend/src/sandbox/lifecycle/workspace.py` (add `bootstrap_in_sandbox_ci_runtime`)
 - `backend/src/sandbox/lifecycle/service.py` (call hook from `create_sandbox` and `start_sandbox`)
 
-**`ensure_code_intelligence_runtime` (Phase 1 body):**
+**`bootstrap_in_sandbox_ci_runtime` (Phase 1 body):**
 
 ```python
-async def ensure_code_intelligence_runtime(
+async def bootstrap_in_sandbox_ci_runtime(
     sandbox_id: str,
     workspace_root: str,
     *,
@@ -327,22 +327,19 @@ async def ensure_code_intelligence_runtime(
 **`SandboxService.create_sandbox` integration:**
 
 ```python
-def create_sandbox(self, ..., *, eager_ci: bool = True) -> ...:
+def create_sandbox(self, ...) -> ...:
     sandbox = self._provision_daytona(...)
-    if eager_ci:
-        run_sync(ensure_code_intelligence_runtime(
-            sandbox_id=sandbox.id,
-            workspace_root=self._discover_workspace(sandbox),
-            transport=self._transport,
-        ))
+    run_sync(bootstrap_in_sandbox_ci_runtime(
+        sandbox_id=sandbox.id,
+        workspace_root=self._discover_workspace(sandbox),
+        transport=self._transport,
+    ))
     return sandbox
 ```
 
 **`SandboxService.start_sandbox` integration:** same hook called after Daytona resume. Existing restart-recovery path (line ~211 in `service.py`) also calls the hook after restart.
 
-**Test escape hatch:** `eager_ci=False` skips the hook. Used only by transport-only tests. CI lints flag any non-test caller passing `False`.
-
-**`run_sync` note:** `ensure_code_intelligence_runtime` is async; `create_sandbox` is sync today. Use `sandbox.async_bridge.run_sync` (promoted in predecessor migration).
+**`run_sync` note:** `bootstrap_in_sandbox_ci_runtime` is async; `create_sandbox` is sync today. Use `sandbox.client.async_bridge.run_sync` (promoted in predecessor migration).
 
 **Run command for the indexer (after upload):**
 ```
@@ -584,8 +581,8 @@ async def test_eager_bootstrap_timing(live_sweevo_env_factory):
     h = TimingHarness(phase=1, test_name="eager_bootstrap_timing")
 
     with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "1"}):
-        with h.step("create_sandbox_cold_with_eager_ci"):
-            env = live_sweevo_env_factory(eager_ci=True)
+        with h.step("create_sandbox_cold_with_ci_bootstrap"):
+            env = live_sweevo_env_factory()
 
         with h.step("verify_index_built"):
             svc = env.make_ci_service()
@@ -594,15 +591,15 @@ async def test_eager_bootstrap_timing(live_sweevo_env_factory):
 
         # Restart simulation (Daytona pause/resume)
         env.pause_sandbox()
-        with h.step("start_sandbox_warm_with_eager_ci"):
+        with h.step("start_sandbox_warm_with_ci_bootstrap"):
             env.resume_sandbox()  # also triggers eager bootstrap
 
         with h.step("verify_index_still_ready"):
             results = svc.query_symbols("Bag")
         assert len(results) > 0
 
-    cold_cost = h.steps["create_sandbox_cold_with_eager_ci"]
-    warm_cost = h.steps["start_sandbox_warm_with_eager_ci"]
+    cold_cost = h.steps["create_sandbox_cold_with_ci_bootstrap"]
+    warm_cost = h.steps["start_sandbox_warm_with_ci_bootstrap"]
 
     # Hard SLO from overview success criteria
     assert cold_cost < 3.0, f"create_sandbox cold > 3s ({cold_cost:.2f}s) — investigate bundle upload"
@@ -779,11 +776,11 @@ exit $rc
 
 - [ ] `ci_storage.py` exists with documented API + `_confine` guard; unit tests pass.
 - [ ] `ci_index.py` instantiates `CodeIntelligenceService` with `sandbox=None, transport=None` and produces a valid snapshot pickle.
-- [ ] `_ci_runtime_bundle_bytes()` produces a tar.gz containing the entire `sandbox/code_intelligence/` tree + `sandbox/async_bridge.py` + `sandbox/__init__.py` + **vendored `msgpack/`**.
+- [ ] `_ci_runtime_bundle_bytes()` produces a tar.gz containing the entire `sandbox/code_intelligence/` tree + `sandbox/client/async_bridge.py` + `sandbox/__init__.py` + **vendored `msgpack/`**.
 - [ ] Bundle size verified: < 1 MB total; reported in PR description.
 - [ ] Bundle hash idempotency: subsequent `ensure_runtime_uploaded` calls no-op when the marker matches.
 - [ ] `RpcCiBackend.ensure_initialized()` works end-to-end against a real `dask` swe-evo sandbox.
-- [ ] **Eager bootstrap hook wired into `SandboxService.create_sandbox` and `start_sandbox`. `eager_ci=False` test escape hatch verified.**
+- [ ] **Eager bootstrap hook wired into `SandboxService.create_sandbox` and `start_sandbox`; flag-off and missing-workspace no-op paths verified.**
 - [ ] **Phase 1 live E2E privilege probe (1.5.A) passes — `mkdir -p $HOME/.cache/eos-ci/...` succeeds without sudo on the sandbox image.**
 - [ ] **Phase 1 live E2E compatibility matrix probe (1.5.E) — all required deps green on `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] **Phase 1 live E2E eager bootstrap timing (1.5.F) — `create_sandbox` cold < 3s; `start_sandbox` warm < 500ms.**
