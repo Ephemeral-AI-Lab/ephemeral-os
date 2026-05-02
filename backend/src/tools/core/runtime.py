@@ -63,6 +63,14 @@ class ExecutionMetadata:
     daytona_sandbox: Any | None = None
     ci_service: Any | None = None
 
+    # Provider-neutral sandbox API surface (Phase 1, Step 7). Tools migrated
+    # to ``sandbox_toolkit`` reach the sandbox through these handles instead
+    # of ``daytona_sandbox`` / ``ci_service``. The legacy fields stay in
+    # place during the Steps 8/9 tool rewrites and are removed in Step 10.
+    sandbox_api: Any | None = None
+    code_intelligence_api: Any | None = None
+    sandbox_transport: Any | None = None
+
     # Per-call tool id (set by the streaming executor so progress events
     # can be attributed back to their originating tool use).
     tool_id: str | None = None
@@ -99,6 +107,9 @@ class ExecutionMetadata:
             "on_progress_line",
             "daytona_sandbox",
             "ci_service",
+            "sandbox_api",
+            "code_intelligence_api",
+            "sandbox_transport",
             "tool_id",
             "system_notification_service",
         }

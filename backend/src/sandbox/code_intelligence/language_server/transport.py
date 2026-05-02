@@ -1,4 +1,15 @@
-"""Local and sandbox script transport for language-server queries."""
+"""Local and sandbox script transport for language-server queries.
+
+This module exposes ``LspTransportMixin`` — the shim that runs short
+Python query scripts either locally (subprocess) or remotely (in the
+bound sandbox).
+
+Phase 1 Step 5 prep: a new ``SandboxTransport``-based code path is
+preferred when a transport is bound on the mixin. The legacy
+``self._sandbox`` path is preserved so that existing tests (which pass
+``sandbox=`` to ``LspClient``) keep working without per-test migration.
+The legacy path will be removed alongside Step 11's import-fence.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +24,7 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import LSP_QUERY_TIMEOUT
 from sandbox.code_intelligence.language_server.utils import _format_transport_exception
@@ -23,6 +35,8 @@ logger = logging.getLogger("sandbox.code_intelligence.language_server.client")
 class LspTransportMixin:
     _workspace_root: str
     _sandbox: Any
+    _transport: SandboxTransport | None
+    _sandbox_id: str
 
     if TYPE_CHECKING:
         def _record_success(self) -> None: ...
@@ -34,12 +48,32 @@ class LspTransportMixin:
     def _run_python_script(self, script: str) -> str:
         """Run a Python script locally or in the sandbox.
 
-        For sandbox execution, base64 transport avoids marker-collision and
-        shell-quoting edge cases while keeping the query to one ``process.exec``.
+        Dispatch order:
+
+        1. Bound :class:`SandboxTransport` (Step 5 path).
+        2. Legacy ``self._sandbox`` handle (preserved for tests).
+        3. Local subprocess (no sandbox / offline mode).
+
+        For sandbox execution, base64 transport avoids marker-collision
+        and shell-quoting edge cases while keeping the query to one
+        ``exec`` call.
         """
         self._record_script_run()
         try:
-            if self._sandbox:
+            if self._transport is not None and self._sandbox_id:
+                payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
+                cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
+                transport_result = run_sync(
+                    self._transport.exec(
+                        self._sandbox_id, cmd, timeout=int(LSP_QUERY_TIMEOUT),
+                    )
+                )
+                result = transport_result.stdout
+                if transport_result.exit_code not in (0, None):
+                    raise RuntimeError(
+                        result or "sandbox python LSP query failed"
+                    )
+            elif self._sandbox:
                 payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
                 cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
                 response = run_sync(
@@ -89,6 +123,10 @@ class LspTransportMixin:
 
     def _check_backend(self, *, local_cmd: list[str], sandbox_cmd: str) -> bool:
         try:
+            if self._transport is not None and self._sandbox_id:
+                return (
+                    self._run_sandbox_command_exit_code(sandbox_cmd, timeout=10) == 0
+                )
             if self._sandbox:
                 exit_code = self._run_sandbox_command_exit_code(sandbox_cmd, timeout=10)
                 return exit_code == 0
@@ -102,7 +140,7 @@ class LspTransportMixin:
             return False
 
     def _install_python_backend(self) -> bool:
-        if not self._sandbox:
+        if self._transport is None and not self._sandbox:
             return False
         return self._run_sandbox_install(
             "python3 -m pip install --quiet --no-cache-dir jedi",
@@ -118,6 +156,11 @@ class LspTransportMixin:
 
     def _run_sandbox_command_exit_code(self, command: str, *, timeout: int) -> int:
         """Run a sandbox command and recover its shell exit code."""
+        if self._transport is not None and self._sandbox_id:
+            transport_result = run_sync(
+                self._transport.exec(self._sandbox_id, command, timeout=timeout)
+            )
+            return transport_result.exit_code
         response = run_sync(
             self._sandbox.process.exec(
                 _wrap_bash_command(command),

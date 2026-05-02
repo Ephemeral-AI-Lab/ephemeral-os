@@ -175,6 +175,13 @@ def ensure_code_intelligence_runtime(
     lazy attach), but this helper owns the metadata contract and CI attachment.
 
     CI services are obtained through :class:`sandbox.service.SandboxService`.
+
+    Phase 1 Step 7: in addition to the legacy ``daytona_sandbox`` /
+    ``ci_service`` keys, this also constructs the provider-neutral
+    :class:`SandboxApi` / :class:`CodeIntelligenceApi` / :class:`SandboxTransport`
+    surface and attaches them to the context. Tools rewritten in Steps 8/9
+    consume these directly; legacy tools keep using the existing keys until
+    Step 10 deletion.
     """
     if sandbox is not None:
         context["daytona_sandbox"] = sandbox
@@ -199,3 +206,39 @@ def ensure_code_intelligence_runtime(
     )
     if sandbox_id and not context.get("skip_code_intelligence"):
         _attach_code_intelligence(context, sandbox_id, sandbox, ci_root)
+        _attach_provider_neutral_api(context, sandbox_id, sandbox)
+
+
+def _attach_provider_neutral_api(
+    context: Any,
+    sandbox_id: str,
+    sandbox: Any,
+) -> None:
+    """Attach the Phase-1 ``SandboxApi`` / ``CodeIntelligenceApi`` surface.
+
+    Constructs one :class:`DaytonaTransport`, one :class:`AuditedSandboxApi`,
+    and one :class:`SvcCodeIntelligence` per context. Failures are swallowed
+    (the legacy ``daytona_sandbox``/``ci_service`` path remains usable) so
+    Step 7 never widens the failure surface beyond what existed before.
+    """
+    try:
+        from sandbox.api.audited_sandbox_api import AuditedSandboxApi
+        from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
+        from sandbox.daytona.transport import DaytonaTransport
+
+        svc = context.get("ci_service")
+        if svc is None:
+            return
+        transport = DaytonaTransport()
+        context["sandbox_transport"] = transport
+        if sandbox is not None:
+            context["sandbox_api"] = AuditedSandboxApi(
+                transport=transport, svc=svc, sandbox=sandbox,
+            )
+        context["code_intelligence_api"] = SvcCodeIntelligence(svc)
+    except Exception:
+        logger.debug(
+            "Provider-neutral API attachment failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )

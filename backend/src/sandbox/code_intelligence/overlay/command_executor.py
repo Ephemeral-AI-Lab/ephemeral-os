@@ -12,6 +12,7 @@ import inspect
 from typing import Any
 from collections.abc import Callable
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
 
 
@@ -28,11 +29,13 @@ class AuditedCommandExecutor:
         workspace_root: str,
         write_coordinator: Any,
         rebind_sandbox: Callable[[Any], None],
+        transport: SandboxTransport | None = None,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
         self._write_coordinator = write_coordinator
         self._rebind_sandbox = rebind_sandbox
+        self._transport = transport
         self._overlay_auditor: OverlayAuditor | None = None
         self._init_lock = asyncio.Lock()
 
@@ -81,6 +84,7 @@ class AuditedCommandExecutor:
                 workspace_root=self.workspace_root,
                 exec_process=self._exec_sandbox_process,
                 write_coordinator=self._write_coordinator,
+                transport=self._transport,
             )
             return self._overlay_auditor
 

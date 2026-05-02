@@ -1,9 +1,13 @@
-"""Tool-side adapter for sandbox commit helpers.
+"""Tool-side context shim around :mod:`sandbox.api.audit`.
 
-Tools resolve attribution and the CI service from a
-:class:`ToolExecutionContextService`, then call into :mod:`sandbox.commit`.
-This module hosts the context-aware shims so that ``sandbox.commit`` itself
-stays free of ``tools.*`` imports.
+The provider-neutral commit/shell helpers live in
+:mod:`sandbox.api.audit` after the Phase 1 relocation. This shim adds
+the ``ToolExecutionContextService``-aware wrappers tools call so the
+audit façade itself stays free of ``tools.*`` imports.
+
+Step 10 of the migration plan deletes this module once
+``tools/sandbox_toolkit`` replaces ``tools/daytona_toolkit`` and tools
+reach the sandbox through ``context.sandbox_api``.
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ from collections.abc import Callable, Sequence
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from sandbox.lifecycle.commit import (
+from sandbox.api.audit import (
     CommitOp,
     FileChangeResult,
     commit_metadata,
@@ -21,10 +25,7 @@ from sandbox.lifecycle.commit import (
     submit_shell_cmd,
 )
 from tools.core.ci_adapter import get_ci_service
-from tools.core.ci_attribution import (
-    agent_attribution_from_context,
-    resolved_agent_id,
-)
+from tools.core.ci_attribution import actor_from_context
 from tools.core.context import ToolExecutionContextService
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ async def submit_commit_from_context(
         specs=specs,
         fallback_paths=fallback_paths,
         description=description,
-        agent_id=resolved_agent_id(context),
+        actor=actor_from_context(context),
         sandbox=sandbox,
     )
 
@@ -93,7 +94,6 @@ async def submit_shell_cmd_from_context(
             "submit_shell_cmd_from_context requires a sandbox in tool execution "
             "context (ci_sandbox or daytona_sandbox) or as an explicit argument",
         )
-    attribution = agent_attribution_from_context(context)
     return await submit_shell_cmd(
         svc,
         resolved_sandbox,
@@ -102,8 +102,5 @@ async def submit_shell_cmd_from_context(
         timeout=timeout,
         attribute_changes=attribute_changes,
         on_progress_line=on_progress_line,
-        agent_id=attribution.agent_id,
-        run_id=attribution.run_id,
-        agent_run_id=attribution.agent_run_id,
-        task_id=attribution.task_id,
+        actor=actor_from_context(context),
     )

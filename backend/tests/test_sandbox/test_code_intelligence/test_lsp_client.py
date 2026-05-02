@@ -365,3 +365,74 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
         for command in sandbox.process.calls
     )
     assert not any("npm install" in command for command in sandbox.process.calls)
+
+
+def test_lsp_run_python_script_uses_transport_when_bound() -> None:
+    """When a SandboxTransport is bound, _run_python_script routes through it."""
+    from sandbox.api.models import RawExecResult
+
+    captured: dict[str, object] = {}
+
+    class _FakeTransport:
+        name = "fake"
+
+        async def exec(
+            self, sandbox_id: str, command: str, *, cwd=None, timeout=None,
+        ) -> RawExecResult:
+            captured["sandbox_id"] = sandbox_id
+            captured["command"] = command
+            captured["timeout"] = timeout
+            return RawExecResult(exit_code=0, stdout="hello from transport")
+
+    transport = _FakeTransport()
+    lsp = LspClient(
+        workspace_root="/workspace",
+        transport=transport,
+        sandbox_id="sb-xyz",
+    )
+
+    result = lsp._run_python_script("print('script body')")
+
+    assert result == "hello from transport"
+    assert captured["sandbox_id"] == "sb-xyz"
+    # Script body is base64-encoded into the bash command piped through
+    # `base64 -d | python3 -`. The encoded payload decodes to the script body.
+    command = str(captured["command"] or "")
+    payload = _decode_sandbox_python_payload(command)
+    assert payload == "print('script body')"
+
+
+def test_lsp_transport_path_takes_precedence_over_sandbox() -> None:
+    """If both transport and sandbox are bound, transport wins."""
+    from sandbox.api.models import RawExecResult
+
+    transport_calls: list[str] = []
+
+    class _FakeTransport:
+        name = "fake"
+
+        async def exec(
+            self, sandbox_id: str, command: str, *, cwd=None, timeout=None,
+        ) -> RawExecResult:
+            transport_calls.append(command)
+            return RawExecResult(exit_code=0, stdout="from transport")
+
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            raise AssertionError(
+                "Sandbox.process.exec must NOT be called when transport is bound"
+            )
+
+    transport = _FakeTransport()
+    sandbox = SimpleNamespace(process=_SandboxProcess())
+    lsp = LspClient(
+        workspace_root="/workspace",
+        sandbox=sandbox,
+        transport=transport,
+        sandbox_id="sb-xyz",
+    )
+
+    result = lsp._run_python_script("anything")
+
+    assert result == "from transport"
+    assert len(transport_calls) == 1

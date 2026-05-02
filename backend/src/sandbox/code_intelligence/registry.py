@@ -6,6 +6,7 @@ import threading
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from sandbox.api.transport import SandboxTransport
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
 _SERVICES: dict[str, "CodeIntelligenceService"] = {}
@@ -17,8 +18,16 @@ def get_code_intelligence(
     sandbox_id: str,
     workspace_root: str = "/workspace",
     sandbox: Any = None,
+    *,
+    transport: "SandboxTransport | None" = None,
 ) -> "CodeIntelligenceService":
-    """Get or create a CI service for *sandbox_id*."""
+    """Get or create a CI service for *sandbox_id*.
+
+    ``transport`` is the optional :class:`SandboxTransport` (Step 5
+    rails). When supplied, downstream subsystems route their sandbox I/O
+    through it. Defaulting to ``None`` keeps the legacy ``sandbox=``
+    path active for callers that have not been migrated.
+    """
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
     with _SERVICES_LOCK:
@@ -46,6 +55,7 @@ def get_code_intelligence(
             sandbox_id=sandbox_id,
             workspace_root=workspace_root,
             sandbox=sandbox,
+            transport=transport,
         )
         with _SERVICES_LOCK:
             _SERVICES[sandbox_id] = service

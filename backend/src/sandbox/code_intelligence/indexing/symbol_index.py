@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.indexing.file_discovery import (
     batch_download,
     collect_local_files,
@@ -52,10 +53,15 @@ class SymbolIndex:
         workspace_root: str,
         max_files: int = SYMBOL_INDEX_MAX_FILES,
         sandbox: Any = None,
+        *,
+        transport: SandboxTransport | None = None,
+        sandbox_id: str = "",
     ) -> None:
         self._workspace_root = workspace_root
         self._max_files = max_files
         self._sandbox = sandbox
+        self._transport = transport
+        self._sandbox_id = sandbox_id
 
         self._lock = threading.Lock()
         self._symbols: dict[str, _FileSymbols] = {}
@@ -83,7 +89,12 @@ class SymbolIndex:
     def refresh(self, file_path: str, content: str | None = None) -> int:
         """Re-index a single file. Returns the new generation."""
         if content is None:
-            content = read_file_content(file_path, self._sandbox)
+            content = read_file_content(
+                file_path,
+                self._sandbox,
+                transport=self._transport,
+                sandbox_id=self._sandbox_id,
+            )
             if content is None:
                 return self.remove(file_path)
         symbols = extract_symbols(file_path, content)
@@ -239,13 +250,24 @@ class SymbolIndex:
         root = Path(self._workspace_root)
         if root.is_dir():
             return [str(fp) for fp in collect_local_files(root, self._max_files)]
-        return collect_remote_files(self._sandbox, self._workspace_root, self._max_files)
+        return collect_remote_files(
+            self._sandbox,
+            self._workspace_root,
+            self._max_files,
+            transport=self._transport,
+            sandbox_id=self._sandbox_id,
+        )
 
     def _build_sequential(self, files: list[str]) -> None:
         """Index files one at a time (local filesystem)."""
         batch: list[tuple[str, list[SymbolInfo]]] = []
         for file_path in files:
-            content = read_file_content(file_path, self._sandbox)
+            content = read_file_content(
+                file_path,
+                self._sandbox,
+                transport=self._transport,
+                sandbox_id=self._sandbox_id,
+            )
             if content is None:
                 continue
             batch.append((file_path, extract_symbols(file_path, content)))
@@ -259,7 +281,12 @@ class SymbolIndex:
         """Download remote files (batch API preferred, thread-pool fallback)."""
         for i in range(0, len(files), _REMOTE_BATCH_SIZE):
             chunk = files[i : i + _REMOTE_BATCH_SIZE]
-            downloaded = batch_download(self._sandbox, chunk)
+            downloaded = batch_download(
+                self._sandbox,
+                chunk,
+                transport=self._transport,
+                sandbox_id=self._sandbox_id,
+            )
             if downloaded is None:
                 self._build_remote_individual(chunk)
                 continue
@@ -271,7 +298,12 @@ class SymbolIndex:
         """Fallback: download files individually using a thread pool."""
 
         def _download_and_extract(fp: str) -> tuple[str, list[SymbolInfo]]:
-            content = read_file_content(fp, self._sandbox)
+            content = read_file_content(
+                fp,
+                self._sandbox,
+                transport=self._transport,
+                sandbox_id=self._sandbox_id,
+            )
             symbols = extract_symbols(fp, content) if content else []
             return fp, symbols
 

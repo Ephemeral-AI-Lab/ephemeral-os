@@ -11,6 +11,9 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from sandbox.api.errors import SandboxTransportError
+from sandbox.api.models import CheckedWriteSpec
+from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
 from sandbox.daytona.bash import (
@@ -207,17 +210,31 @@ def _parse_checked_apply_response(cleaned: str, exit_code: int | None) -> Checke
 class ContentManager:
     """Read and write file content, routing to a sandbox when one is bound."""
 
-    def __init__(self, workspace_root: str, sandbox: Any = None) -> None:
+    def __init__(
+        self,
+        workspace_root: str,
+        sandbox: Any = None,
+        *,
+        transport: SandboxTransport | None = None,
+        sandbox_id: str = "",
+    ) -> None:
         self._workspace_root = str(workspace_root or "")
         self._sandbox = sandbox
+        self._transport = transport
+        self._sandbox_id = sandbox_id
 
     def bind_sandbox(self, sandbox: Any) -> None:
         """Update the sandbox handle for subsequent reads/writes."""
         self._sandbox = sandbox
 
+    def _use_transport(self) -> bool:
+        return self._transport is not None and bool(self._sandbox_id)
+
     def read(self, file_path: str, *, allow_missing: bool = False) -> FileReadResult:
         """Read *file_path* returning ``(content, existed)``."""
         resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            return self._read_via_transport(resolved_path, allow_missing=allow_missing)
         if self._sandbox is None:
             return self._read_local(resolved_path, allow_missing=allow_missing)
         if getattr(self._sandbox, "process", None) is None:
@@ -245,6 +262,12 @@ class ContentManager:
         if not unique_paths:
             return {}
         resolved_by_path = {path: self._resolve_path(path) for path in unique_paths}
+        if self._use_transport():
+            return self._read_many_via_transport(
+                unique_paths,
+                resolved_by_path,
+                allow_missing=allow_missing,
+            )
         if self._sandbox is None:
             return {
                 path: self._read_local(resolved_by_path[path], allow_missing=allow_missing)
@@ -284,6 +307,13 @@ class ContentManager:
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
         resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            run_sync(
+                self._transport.write_bytes(
+                    self._sandbox_id, resolved_path, content.encode("utf-8"),
+                )
+            )
+            return
         if self._sandbox is None:
             path = Path(resolved_path)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -303,6 +333,17 @@ class ContentManager:
     def delete(self, file_path: str) -> None:
         """Delete *file_path*, preferring the sandbox when one is bound."""
         resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            result = run_sync(
+                self._transport.exec(
+                    self._sandbox_id, f"rm -f {shlex.quote(resolved_path)}",
+                )
+            )
+            if result.exit_code not in (0, None):
+                raise RuntimeError(
+                    result.stdout or f"delete failed for {file_path}"
+                )
+            return
         if self._sandbox is None:
             path = Path(resolved_path)
             try:
@@ -356,6 +397,8 @@ class ContentManager:
         """
         if not changes:
             return CheckedApplyResult(success=True)
+        if self._use_transport():
+            return self._apply_via_transport(changes)
         if self._sandbox is None:
             return self._apply_local_batch_checked(changes)
         if getattr(self._sandbox, "process", None) is None:
@@ -755,3 +798,109 @@ print(json.dumps(files))
             return _parse_checked_apply_response(cleaned, exit_code)
         finally:
             self._cleanup_remote_tmp(process, tmp_path)
+
+    # -- Transport-backed branches (Step 5 rails) -----------------------------
+
+    def _read_via_transport(
+        self, file_path: str, *, allow_missing: bool,
+    ) -> FileReadResult:
+        try:
+            payload = run_sync(self._transport.read_bytes(self._sandbox_id, file_path))
+        except FileNotFoundError:
+            if allow_missing:
+                return "", False
+            raise
+        except SandboxTransportError as exc:
+            raise RuntimeError(str(exc)) from exc
+        if isinstance(payload, bytes):
+            return payload.decode("utf-8"), True
+        return str(payload), True
+
+    def _read_many_via_transport(
+        self,
+        unique_paths: list[str],
+        resolved_by_path: dict[str, str],
+        *,
+        allow_missing: bool,
+    ) -> FileReadResults:
+        resolved_paths = list(dict.fromkeys(resolved_by_path.values()))
+        try:
+            payload = run_sync(
+                self._transport.read_bytes_batch(self._sandbox_id, resolved_paths)
+            )
+        except SandboxTransportError as exc:
+            raise RuntimeError(str(exc)) from exc
+        results: FileReadResults = {}
+        for path in unique_paths:
+            resolved = resolved_by_path[path]
+            content_bytes = payload.get(resolved)
+            if content_bytes is None:
+                if allow_missing:
+                    results[path] = ("", False)
+                    continue
+                raise FileNotFoundError(path)
+            results[path] = (content_bytes.decode("utf-8"), True)
+        return results
+
+    def _apply_via_transport(
+        self, changes: list[CheckedApplyChange],
+    ) -> CheckedApplyResult:
+        # Translate engine-side CheckedApplyChange into transport-side
+        # CheckedWriteSpec. Two semantic gaps to handle:
+        #   1. ``base_existed=False`` + ``final_content=None`` is a delete-of-
+        #      absent — the legacy code returns ``base_mismatch`` immediately
+        #      without even calling the apply script. Mirror that here.
+        #   2. ``expected_sha`` is ``None`` only when create-only is intended
+        #      (``base_existed=False`` + ``final_content`` set), otherwise the
+        #      caller's ``base_hash`` flows through as the expected sha.
+        specs: list[CheckedWriteSpec] = []
+        for change in changes:
+            if change.final_content is None and not change.base_existed:
+                return CheckedApplyResult(
+                    success=False,
+                    conflict_path=change.file_path,
+                    conflict_reason="base_mismatch",
+                    message="file content changed before delete",
+                )
+            specs.append(
+                CheckedWriteSpec(
+                    path=self._resolve_path(change.file_path),
+                    content=(
+                        None
+                        if change.final_content is None
+                        else change.final_content.encode("utf-8")
+                    ),
+                    expected_sha=(
+                        None if not change.base_existed else change.base_hash
+                    ),
+                )
+            )
+        try:
+            transport_result = run_sync(
+                self._transport.apply_diff_batch_checked(self._sandbox_id, specs)
+            )
+        except SandboxTransportError as exc:
+            return CheckedApplyResult(
+                success=False,
+                conflict_reason="transport_error",
+                message=str(exc),
+            )
+        if transport_result.success:
+            return CheckedApplyResult(success=True)
+        conflict_path = (
+            transport_result.conflict_paths[0]
+            if transport_result.conflict_paths
+            else None
+        )
+        # Preserve the engine-side path (workspace-relative) for the conflict
+        # report rather than the transport-resolved absolute path.
+        if conflict_path is not None:
+            for change in changes:
+                if self._resolve_path(change.file_path) == conflict_path:
+                    conflict_path = change.file_path
+                    break
+        return CheckedApplyResult(
+            success=False,
+            conflict_path=conflict_path,
+            conflict_reason=transport_result.conflict_reason or "failed",
+        )

@@ -244,6 +244,7 @@ class SandboxService:
         *,
         workspace_root: str | None = None,
         sandbox: Any | None = None,
+        transport: Any | None = None,
     ) -> "CodeIntelligenceService":
         """Return the per-sandbox CI service, creating it lazily if needed.
 
@@ -251,6 +252,11 @@ class SandboxService:
         for code outside the ``sandbox`` package. The internal registry under
         :mod:`sandbox.code_intelligence.registry` is reserved for whitebox
         tests; routers, benchmarks, and tool wiring must come through here.
+
+        ``transport`` (Phase 1 Step 7) is optionally threaded through to the
+        registry so downstream CI subsystems (LSP transport, overlay
+        auditor, file_discovery, ContentManager) take their Step 5 transport
+        branches when invoked from production wiring.
         """
         from sandbox.code_intelligence.registry import get_code_intelligence
 
@@ -258,6 +264,7 @@ class SandboxService:
             sandbox_id=sandbox_id,
             workspace_root=workspace_root or "/workspace",
             sandbox=sandbox,
+            transport=transport,
         )
 
     def code_intelligence_if_exists(

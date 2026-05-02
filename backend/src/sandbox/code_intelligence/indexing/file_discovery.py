@@ -14,6 +14,7 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.core.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 
@@ -36,8 +37,22 @@ def collect_local_files(root: Path, max_files: int) -> list[Path]:
     return files
 
 
-def collect_remote_files(sandbox: Any, root: str, max_files: int) -> list[str] | None:
-    """Enumerate sandbox files, preferring the single-call glob API."""
+def collect_remote_files(
+    sandbox: Any,
+    root: str,
+    max_files: int,
+    *,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
+) -> list[str] | None:
+    """Enumerate sandbox files, preferring the single-call glob API.
+
+    When ``transport`` and ``sandbox_id`` are provided, enumerate via
+    :meth:`SandboxTransport.list_paths` (Step 5 rails). Otherwise the
+    legacy ``fs.search_files``/``fs.list_files`` paths run.
+    """
+    if transport is not None and sandbox_id:
+        return _collect_via_transport(transport, sandbox_id, root, max_files)
     fs = getattr(sandbox, "fs", None) if sandbox is not None else None
     if fs is None:
         return None
@@ -47,12 +62,32 @@ def collect_remote_files(sandbox: Any, root: str, max_files: int) -> list[str] |
     return _collect_via_list(fs, root, max_files)
 
 
-def read_file_content(file_path: str, sandbox: Any = None) -> str | None:
-    """Read a file locally; fall back to a sandbox download."""
+def read_file_content(
+    file_path: str,
+    sandbox: Any = None,
+    *,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
+) -> str | None:
+    """Read a file locally; fall back to a transport / sandbox download."""
     try:
         return Path(file_path).read_text(encoding="utf-8")
     except Exception:
         pass
+
+    if transport is not None and sandbox_id:
+        try:
+            payload = run_sync(transport.read_bytes(sandbox_id, file_path))
+        except FileNotFoundError:
+            return None
+        except Exception:
+            logger.debug(
+                "transport read_bytes failed for %s", file_path, exc_info=True,
+            )
+            return None
+        if isinstance(payload, bytes):
+            return payload.decode("utf-8")
+        return str(payload)
 
     content = _read_text_via_exec(sandbox, file_path)
     if content is not None:
@@ -75,13 +110,35 @@ def read_file_content(file_path: str, sandbox: Any = None) -> str | None:
 def batch_download(
     sandbox: Any,
     files: list[str],
+    *,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
 ) -> list[tuple[str, str]] | None:
     """Download *files* from the sandbox in one multipart request.
 
-    Returns a list of ``(file_path, content)`` tuples, or ``None`` when the
-    sandbox does not expose the batch API. Individual download failures are
-    silently dropped.
+    Returns a list of ``(file_path, content)`` tuples, or ``None`` when no
+    batch path is available. Individual download failures are dropped.
+
+    When ``transport`` and ``sandbox_id`` are provided, the call uses
+    :meth:`SandboxTransport.read_bytes_batch` (Step 5 prep), which routes
+    through Daytona's ``download_files`` SDK call when available and
+    falls back to per-path reads otherwise. This preserves the indexing
+    perf characteristic flagged in plan Risk #2.
     """
+    if transport is not None and sandbox_id:
+        try:
+            payload = run_sync(transport.read_bytes_batch(sandbox_id, files))
+        except Exception:
+            logger.debug("transport read_bytes_batch failed", exc_info=True)
+            return None
+        out: list[tuple[str, str]] = []
+        for fp in files:
+            content_bytes = payload.get(fp)
+            if content_bytes is None:
+                continue
+            out.append((fp, content_bytes.decode("utf-8")))
+        return out
+
     via_exec = _batch_read_text_via_exec(sandbox, files)
     if via_exec is not None:
         return via_exec
@@ -103,7 +160,7 @@ def batch_download(
         logger.debug("Batch download_files failed", exc_info=True)
         return None
 
-    out: list[tuple[str, str]] = []
+    out = []
     for resp in responses or []:
         fp = getattr(resp, "source", None)
         if fp is None or getattr(resp, "error", None) or getattr(resp, "result", None) is None:
@@ -112,6 +169,35 @@ def batch_download(
         content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
         out.append((fp, content))
     return out
+
+
+def _collect_via_transport(
+    transport: SandboxTransport,
+    sandbox_id: str,
+    root: str,
+    max_files: int,
+) -> list[str] | None:
+    """Enumerate sandbox files via :meth:`SandboxTransport.list_paths`."""
+    try:
+        results = run_sync(transport.list_paths(sandbox_id, "*", root=root))
+    except Exception:
+        logger.debug(
+            "transport list_paths failed for %s", root, exc_info=True,
+        )
+        return None
+    files: list[str] = []
+    for fp in results:
+        if len(files) >= max_files:
+            break
+        if not isinstance(fp, str):
+            continue
+        parts = Path(fp).parts
+        if any(part in SKIP_DIRECTORIES for part in parts):
+            continue
+        if Path(fp).suffix.lower() in SUPPORTED_EXTENSIONS:
+            files.append(fp)
+    files.sort()
+    return files
 
 
 # -- Remote enumeration helpers ----------------------------------------------

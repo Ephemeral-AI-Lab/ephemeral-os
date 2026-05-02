@@ -38,6 +38,8 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
+from sandbox.api.transport import SandboxTransport
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +63,8 @@ async def build_live_snapshot(
     repo_root: str,
     *,
     timeout: int = 120,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
 ) -> str:
     """Build a dangling commit capturing the live working tree.
 
@@ -82,6 +86,8 @@ async def build_live_snapshot(
             exec_process,
             repo_root,
             timeout=timeout,
+            transport=transport,
+            sandbox_id=sandbox_id,
         )
     ).snap
 
@@ -92,8 +98,15 @@ async def build_live_snapshot_details(
     repo_root: str,
     *,
     timeout: int = 120,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
 ) -> GitSnapshotDetails:
-    """Build a dangling commit and return snapshot metadata/timings."""
+    """Build a dangling commit and return snapshot metadata/timings.
+
+    When ``transport`` and ``sandbox_id`` are provided, the snapshot
+    script is dispatched through the :class:`SandboxTransport` (Step 5
+    rails). Otherwise the legacy ``exec_process`` callback is used.
+    """
     workspace_root = repo_root.rstrip("/")
     if not workspace_root:
         raise GitSnapshotError("repo_root must be a non-empty path")
@@ -103,6 +116,8 @@ async def build_live_snapshot_details(
         exec_process,
         workspace_root=workspace_root,
         timeout=timeout,
+        transport=transport,
+        sandbox_id=sandbox_id,
     )
 
     snap = str(payload.get("snap") or "").strip()
@@ -129,6 +144,8 @@ async def _run_snapshot_script(
     *,
     workspace_root: str,
     timeout: int,
+    transport: SandboxTransport | None = None,
+    sandbox_id: str = "",
 ) -> dict[str, Any]:
     encoded = base64.b64encode(_SNAPSHOT_SCRIPT.encode("utf-8")).decode("ascii")
     command = (
@@ -141,15 +158,20 @@ async def _run_snapshot_script(
         + " "
         + shlex.quote(workspace_root)
     )
-    response = await exec_process(
-        sandbox,
-        _wrap_bash_command(command),
-        timeout=timeout,
-    )
-    stdout, exit_code = _extract_exit_code(
-        str(getattr(response, "result", "") or ""),
-        fallback_exit_code=getattr(response, "exit_code", None),
-    )
+    if transport is not None and sandbox_id:
+        result = await transport.exec(sandbox_id, command, timeout=timeout)
+        stdout = result.stdout
+        exit_code = result.exit_code
+    else:
+        response = await exec_process(
+            sandbox,
+            _wrap_bash_command(command),
+            timeout=timeout,
+        )
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
     if exit_code != 0:
         raise GitSnapshotError(
             f"git_snapshot script failed: exit_code={exit_code} stdout={stdout[-2000:]!r}"

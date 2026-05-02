@@ -59,6 +59,7 @@ from sandbox.daytona.bash import (
     _wrap_bash_command,
 )
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.overlay.git_snapshot import build_live_snapshot_details
 from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter
 from sandbox.code_intelligence.overlay.config import (
@@ -106,10 +107,12 @@ class OverlayAuditor:
         write_coordinator: Any,
         max_concurrent: int | None = None,
         upper_size_mb: int | None = None,
+        transport: SandboxTransport | None = None,
     ) -> None:
         self._sandbox_id = sandbox_id
         self._workspace_root = workspace_root.rstrip("/")
         self._exec_process = exec_process
+        self._transport = transport
         self._semaphore = asyncio.Semaphore(
             max_concurrent if max_concurrent is not None else overlay_max_concurrent()
         )
@@ -148,6 +151,8 @@ class OverlayAuditor:
                     sandbox,
                     self._exec_process,
                     self._workspace_root,
+                    transport=self._transport,
+                    sandbox_id=self._sandbox_id,
                 )
                 await self._ensure_script_uploaded(sandbox)
                 user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
@@ -258,12 +263,8 @@ class OverlayAuditor:
                 f"python3 -c {shlex.quote(upload_snippet)} "
                 f"{shlex.quote(_RUN_DIR_PREFIX)} {shlex.quote(encoded)}"
             )
-            response = await self._exec_process(
-                sandbox, _wrap_bash_command(setup_cmd), timeout=60
-            )
-            _stdout, exit_code = _extract_exit_code(
-                str(getattr(response, "result", "") or ""),
-                fallback_exit_code=getattr(response, "exit_code", None),
+            _stdout, exit_code = await self._do_exec(
+                sandbox, setup_cmd, timeout=60,
             )
             if exit_code != 0:
                 raise OverlayRunError(
@@ -298,15 +299,7 @@ class OverlayAuditor:
             f"mkdir -p {shlex.quote(lease.run_dir)} && "
             f"unshare -Urm bash -c {shlex.quote(inner)}"
         )
-        response = await self._exec_process(
-            sandbox, _wrap_bash_command(full), timeout=timeout
-        )
-        stdout_raw = str(getattr(response, "result", "") or "")
-        cleaned, exit_code = _extract_exit_code(
-            stdout_raw,
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        return cleaned, exit_code
+        return await self._do_exec(sandbox, full, timeout=timeout)
 
     async def _run_overlay_with_progress(
         self,
@@ -407,13 +400,7 @@ class OverlayAuditor:
             "sys.stdout.write(base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode('ascii'))"
         )
         cmd = f"python3 -c {shlex.quote(script)} {shlex.quote(stdout_path)}"
-        response = await self._exec_process(
-            sandbox, _wrap_bash_command(cmd), timeout=60
-        )
-        encoded, exit_code = _extract_exit_code(
-            str(getattr(response, "result", "") or ""),
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
+        encoded, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
         if exit_code != 0:
             return fallback
         try:
@@ -450,13 +437,7 @@ class OverlayAuditor:
             f"python3 -c {shlex.quote(script)} "
             f"{shlex.quote(stdout_path)} {offset} {max_bytes}"
         )
-        response = await self._exec_process(
-            sandbox, _wrap_bash_command(cmd), timeout=60
-        )
-        raw, exit_code = _extract_exit_code(
-            str(getattr(response, "result", "") or ""),
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
+        raw, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
         if exit_code != 0:
             return b"", offset
         payload = json.loads(raw or "{}")
@@ -476,13 +457,7 @@ class OverlayAuditor:
     ) -> OverlayDiff | OverlayPolicyReject:
         diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
         cmd = f"cat {shlex.quote(diff_path)}"
-        response = await self._exec_process(
-            sandbox, _wrap_bash_command(cmd), timeout=60
-        )
-        stdout, exit_code = _extract_exit_code(
-            str(getattr(response, "result", "") or ""),
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
+        stdout, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
         if exit_code != 0:
             raise OverlayRunError(
                 "overlay diff.ndjson missing at "
@@ -494,7 +469,35 @@ class OverlayAuditor:
 
     async def _cleanup_run_dir(self, sandbox: Any, lease: OverlayLease) -> None:
         cmd = f"rm -rf {shlex.quote(lease.run_dir)}"
-        await self._exec_process(sandbox, _wrap_bash_command(cmd), timeout=60)
+        await self._do_exec(sandbox, cmd, timeout=60)
+
+    async def _do_exec(
+        self,
+        sandbox: Any,
+        command: str,
+        *,
+        timeout: int | None,
+    ) -> tuple[str, int]:
+        """Exec ``command`` and return ``(stdout, exit_code)``.
+
+        Routes through the bound :class:`SandboxTransport` when set; the
+        legacy ``exec_process`` callback path stays active otherwise so
+        existing callers (which pass a sandbox-handle-bound exec adapter)
+        keep working.
+        """
+        if self._transport is not None and self._sandbox_id:
+            result = await self._transport.exec(
+                self._sandbox_id, command, timeout=timeout,
+            )
+            return result.stdout, result.exit_code
+        response = await self._exec_process(
+            sandbox, _wrap_bash_command(command), timeout=timeout,
+        )
+        cleaned, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        return cleaned, exit_code
 
     async def _commit_and_assemble(
         self,

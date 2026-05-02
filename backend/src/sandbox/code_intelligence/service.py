@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.indexing.symbol_index import SymbolIndex
 from sandbox.code_intelligence.mutations.arbiter import Arbiter
 from sandbox.code_intelligence.mutations.patcher import Patcher
@@ -52,10 +53,13 @@ class CodeIntelligenceService:
         sandbox_id: str,
         workspace_root: str = "/workspace",
         sandbox: Any = None,
+        *,
+        transport: SandboxTransport | None = None,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
         self._sandbox = sandbox
+        self._transport = transport
         self._initialized = False
         self._lsp_bootstrap_attempted = False
         self._init_lock = threading.Lock()
@@ -63,13 +67,25 @@ class CodeIntelligenceService:
         self.symbol_index = SymbolIndex(
             workspace_root=workspace_root,
             sandbox=sandbox,
+            transport=transport,
+            sandbox_id=sandbox_id if transport is not None else "",
         )
         self.arbiter = Arbiter(workspace_root=workspace_root)
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
-        self.lsp_client = LspClient(workspace_root=workspace_root, sandbox=sandbox)
+        self.lsp_client = LspClient(
+            workspace_root=workspace_root,
+            sandbox=sandbox,
+            transport=transport,
+            sandbox_id=sandbox_id if transport is not None else "",
+        )
 
-        self._content = ContentManager(workspace_root, sandbox=sandbox)
+        self._content = ContentManager(
+            workspace_root,
+            sandbox=sandbox,
+            transport=transport,
+            sandbox_id=sandbox_id if transport is not None else "",
+        )
         self._write_coordinator = WriteCoordinator(
             arbiter=self.arbiter,
             time_machine=self.time_machine,
@@ -87,6 +103,7 @@ class CodeIntelligenceService:
             workspace_root=workspace_root,
             write_coordinator=self._write_coordinator,
             rebind_sandbox=self.rebind_sandbox,
+            transport=transport,
         )
 
     def ensure_initialized(self, wait: bool = True) -> bool:

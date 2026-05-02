@@ -344,3 +344,59 @@ class TestCodeIntelligenceRuntime:
             mock_context, "sb-123", async_sandbox, "/workspace",
         )
         assert mock_context["ci_service"] == mock_svc
+
+
+class TestProviderNeutralApiAttachment:
+    """Step 7: ``_attach_provider_neutral_api`` wires the new context fields."""
+
+    def test_wires_transport_api_and_code_intelligence(self):
+        from sandbox.api.audited_sandbox_api import AuditedSandboxApi
+        from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
+        from sandbox.daytona.transport import DaytonaTransport
+        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
+
+        mock_sandbox = MagicMock()
+        mock_svc = MagicMock()
+        mock_context = ToolExecutionContextService(
+            cwd="/tmp",
+            services={"ci_service": mock_svc},
+        )
+
+        _attach_provider_neutral_api(mock_context, "sb-123", mock_sandbox)
+
+        assert isinstance(mock_context["sandbox_transport"], DaytonaTransport)
+        assert isinstance(mock_context["sandbox_api"], AuditedSandboxApi)
+        assert isinstance(mock_context["code_intelligence_api"], SvcCodeIntelligence)
+
+    def test_returns_silently_when_ci_service_missing(self):
+        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
+
+        mock_context = ToolExecutionContextService(cwd="/tmp")
+        mock_sandbox = MagicMock()
+
+        # Should not raise — early return when ci_service unavailable.
+        _attach_provider_neutral_api(mock_context, "sb-123", mock_sandbox)
+
+        assert mock_context.get("sandbox_api") is None
+        assert mock_context.get("code_intelligence_api") is None
+        assert mock_context.get("sandbox_transport") is None
+
+    def test_skips_sandbox_api_when_sandbox_handle_missing(self):
+        """``sandbox_api`` requires the live sandbox handle (audit needs it).
+
+        ``code_intelligence_api`` is constructable from svc alone, so it
+        still gets attached even when no sandbox handle is available.
+        """
+        from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
+        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
+
+        mock_svc = MagicMock()
+        mock_context = ToolExecutionContextService(
+            cwd="/tmp",
+            services={"ci_service": mock_svc},
+        )
+
+        _attach_provider_neutral_api(mock_context, "sb-123", None)
+
+        assert mock_context.get("sandbox_api") is None
+        assert isinstance(mock_context["code_intelligence_api"], SvcCodeIntelligence)
