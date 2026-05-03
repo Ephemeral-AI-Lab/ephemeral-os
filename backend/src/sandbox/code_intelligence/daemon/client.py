@@ -23,7 +23,6 @@ from sandbox.code_intelligence.daemon.wire import (
     normalize_write_specs,
     operation_change_to_dict,
     operation_result_from_dict,
-    telemetry_from_dict,
     writespec_to_dict,
 )
 from sandbox.code_intelligence.core.types import (
@@ -63,13 +62,11 @@ class DaemonCommandError(Exception):
 class DaemonCommandClient:
     """Transport-backed client for daemon command dispatch.
 
-    The daemon owns the canonical SQLite ``IndexStore`` and serves every
-    code-intelligence verb through framed msgpack command dispatch.
+    The daemon serves mutation, shell, and telemetry verbs through framed
+    msgpack command dispatch.
     """
 
     is_initialized: bool = False
-    _INDEX_READY_TIMEOUT_S: float = 60.0
-    _INDEX_READY_POLL_S: float = 0.5
 
     def __init__(
         self,
@@ -97,23 +94,8 @@ class DaemonCommandClient:
             return self.is_initialized
 
     async def _ensure_initialized_async(self) -> None:
-        """Launch the daemon and wait until query state is ready."""
+        """Launch the daemon and mark the command channel initialized."""
         await self._launcher.ensure_daemon()
-
-        deadline = asyncio.get_event_loop().time() + self._INDEX_READY_TIMEOUT_S
-        while True:
-            try:
-                resp = await self._call_daemon_command("index_ready", {})
-            except Exception as exc:  # pragma: no cover - exposed via tests
-                logger.debug(
-                    "index_ready call failed during ensure_initialized: %s", exc
-                )
-                resp = None
-            if isinstance(resp, dict) and resp.get("ready"):
-                break
-            if asyncio.get_event_loop().time() >= deadline:
-                break
-            await asyncio.sleep(self._INDEX_READY_POLL_S)
         with self._init_lock:
             self.is_initialized = True
 
@@ -386,13 +368,15 @@ class DaemonCommandClient:
         result = self._call_sync("undo_last_edit", {"file_path": file_path})
         return edit_result_from_dict(result)
 
-    def status(self) -> dict[str, Any]:
-        result = self._call_sync("status")
-        return dict(result or {})
-
     def get_telemetry(self) -> CITelemetry:
         result = self._call_sync("get_telemetry")
-        return telemetry_from_dict(result or {})
+        if isinstance(result, dict):
+            return CITelemetry(
+                arbiter_active_locks=int(result.get("arbiter_active_locks") or 0),
+                total_edits=int(result.get("total_edits") or 0),
+                extra=dict(result.get("extra") or {}),
+            )
+        return CITelemetry()
 
     def dispose(self) -> None:
         try:

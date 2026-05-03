@@ -4,56 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Literal
-
-
-class SymbolKind(str, Enum):
-    """Symbol classification."""
-
-    FUNCTION = "function"
-    CLASS = "class"
-    METHOD = "method"
-    VARIABLE = "variable"
-    MODULE = "module"
-    INTERFACE = "interface"
-    PROPERTY = "property"
-    CONSTANT = "constant"
-    UNKNOWN = "unknown"
-
-
-class DiagnosticSeverity(str, Enum):
-    """Diagnostic severity."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    INFORMATION = "information"
-    HINT = "hint"
-
-
-@dataclass(frozen=True)
-class SymbolInfo:
-    """Resolved symbol location."""
-
-    name: str
-    kind: SymbolKind
-    file_path: str
-    line: int
-    end_line: int | None = None
-    character: int = 0
-    signature: str = ""
-    docstring: str = ""
-    container: str = ""
-
-
-@dataclass(frozen=True)
-class ReferenceInfo:
-    """A reference to a symbol in a file."""
-
-    file_path: str
-    line: int
-    character: int = 0
-    text: str = ""
 
 
 @dataclass(frozen=True)
@@ -157,9 +108,6 @@ class OperationResult:
 class CITelemetry:
     """Runtime telemetry for the code intelligence service."""
 
-    symbol_index_size: int = 0
-    symbol_index_generation: int = 0
-    indexed_files: int = 0
     arbiter_active_locks: int = 0
     total_edits: int = 0
     extra: dict[str, Any] = field(default_factory=dict)

@@ -1,4 +1,4 @@
-"""Code Intelligence API router — query, edit, and stream endpoints."""
+"""Code Intelligence API router for mutation and telemetry endpoints."""
 
 from __future__ import annotations
 
@@ -50,140 +50,12 @@ def _get_service_if_exists(sandbox_id: str) -> Any:
     return service
 
 
-# ---------------------------------------------------------------------------
-# Status endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.get("/health")
-async def health() -> dict:
-    """Code intelligence health check."""
-    from sandbox.lifecycle.service import SandboxService
-
-    statuses = SandboxService().all_code_intelligence_status()
-    return {"healthy": True, "active_services": len(statuses)}
-
-
-@router.get("/{sandbox_id}/status")
-async def status(sandbox_id: str) -> dict:
-    """Get CI service status for a sandbox."""
-    service = _get_service_if_exists(sandbox_id)
-    return service.status()
-
-
 @router.post("/initialize/{sandbox_id}")
 async def initialize(sandbox_id: str, workspace_root: str = "/workspace") -> dict:
     """Initialize CI service for a sandbox."""
     service = _get_service(sandbox_id, workspace_root)
     ready = service.ensure_initialized(wait=True)
     return {"sandbox_id": sandbox_id, "initialized": ready}
-
-
-# ---------------------------------------------------------------------------
-# Query endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.get("/{sandbox_id}/query/definitions")
-async def query_definitions(
-    sandbox_id: str,
-    file_path: str = Query(...),
-    symbol: str = Query(""),
-    line: int = Query(0),
-    character: int = Query(0),
-) -> list[dict]:
-    """Find symbol definitions."""
-    service = _get_service_if_exists(sandbox_id)
-    results = service.find_definitions(file_path, symbol, line, character)
-    return [
-        {
-            "name": s.name,
-            "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
-            "file_path": s.file_path,
-            "line": s.line,
-            "character": s.character,
-            "signature": s.signature,
-        }
-        for s in results
-    ]
-
-
-@router.get("/{sandbox_id}/query/references")
-async def query_references(
-    sandbox_id: str,
-    file_path: str = Query(...),
-    symbol: str = Query(""),
-    line: int = Query(0),
-    character: int = Query(0),
-) -> list[dict]:
-    """Find all references to a symbol."""
-    service = _get_service_if_exists(sandbox_id)
-    results = service.find_references(file_path, symbol, line, character)
-    return [
-        {
-            "file_path": r.file_path,
-            "line": r.line,
-            "character": r.character,
-            "text": r.text,
-        }
-        for r in results
-    ]
-
-
-@router.get("/{sandbox_id}/query/hover")
-async def query_hover(
-    sandbox_id: str,
-    file_path: str = Query(...),
-    line: int = Query(...),
-    character: int = Query(0),
-) -> dict | None:
-    """Get hover information at a position."""
-    service = _get_service_if_exists(sandbox_id)
-    result = service.hover(file_path, line, character)
-    if result is None:
-        return None
-    return {"content": result.content, "language": result.language}
-
-
-@router.get("/{sandbox_id}/query/symbols")
-async def query_symbols(
-    sandbox_id: str,
-    query: str = Query(...),
-) -> list[dict]:
-    """Search for symbols by name."""
-    service = _get_service_if_exists(sandbox_id)
-    results = service.query_symbols(query)
-    return [
-        {
-            "name": s.name,
-            "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
-            "file_path": s.file_path,
-            "line": s.line,
-            "signature": s.signature,
-        }
-        for s in results[:100]
-    ]
-
-
-@router.get("/{sandbox_id}/query/diagnostics")
-async def query_diagnostics(
-    sandbox_id: str,
-    file_path: str = Query(...),
-) -> list[dict]:
-    """Get diagnostics for a file."""
-    service = _get_service_if_exists(sandbox_id)
-    results = service.diagnostics(file_path)
-    return [
-        {
-            "file_path": d.file_path,
-            "line": d.line,
-            "character": d.character,
-            "severity": d.severity.value if hasattr(d.severity, "value") else str(d.severity),
-            "message": d.message,
-            "source": d.source,
-        }
-        for d in results
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -237,11 +109,6 @@ async def telemetry(sandbox_id: str) -> dict:
     service = _get_service_if_exists(sandbox_id)
     tel = service.get_telemetry()
     return {
-        "symbol_index_size": tel.symbol_index_size,
-        "symbol_index_generation": tel.symbol_index_generation,
-        "indexed_files": tel.indexed_files,
-        "lsp_connected": tel.lsp_connected,
-        "lsp_query_count": tel.lsp_query_count,
         "arbiter_active_locks": tel.arbiter_active_locks,
         "total_edits": tel.total_edits,
     }

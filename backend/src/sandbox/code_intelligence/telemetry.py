@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import Any
-
 from sandbox.code_intelligence.core.types import CITelemetry
 
 
@@ -61,41 +59,8 @@ def record_overlay_op(**fields: int) -> None:
                 setattr(_OVERLAY_COUNTERS, key, getattr(_OVERLAY_COUNTERS, key) + int(value))
 
 
-def build_status(
-    *,
-    sandbox_id: str,
-    workspace_root: str,
-    initialized: bool,
-    symbol_index: Any,
-    arbiter: Any,
-) -> dict[str, Any]:
-    """Return service status summary."""
-    overlay = overlay_counters_snapshot()
-    return {
-        "sandbox_id": sandbox_id,
-        "initialized": initialized,
-        "workspace_root": workspace_root,
-        "symbol_index": {
-            "built": symbol_index.is_built,
-            "files": symbol_index.indexed_files,
-            "symbols": symbol_index.size,
-            "generation": symbol_index.generation,
-        },
-        "arbiter": arbiter.status(),
-        "hotspots": arbiter.hotspots_summary(limit=20),
-        "edit_buffer": {
-            "entries": arbiter.metrics.total_edits,
-            "generation": arbiter.generation,
-        },
-        "overlay": overlay.__dict__,
-    }
-
-
-def build_telemetry(*, symbol_index: Any, arbiter: Any) -> CITelemetry:
+def build_telemetry(*, arbiter: object) -> CITelemetry:
     return CITelemetry(
-        symbol_index_size=symbol_index.size,
-        symbol_index_generation=symbol_index.generation,
-        indexed_files=symbol_index.indexed_files,
-        arbiter_active_locks=arbiter.active_lock_count,
-        total_edits=arbiter.metrics.total_edits,
+        arbiter_active_locks=getattr(arbiter, "active_lock_count", 0),
+        total_edits=getattr(getattr(arbiter, "metrics", None), "total_edits", 0),
     )

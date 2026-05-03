@@ -428,8 +428,8 @@ class SandboxService:
         tests; routers, benchmarks, and tool wiring must come through here.
 
         ``transport`` (Phase 1 Step 7) is optionally threaded through to the
-        registry so downstream CI subsystems (LSP transport, overlay
-        auditor, ContentManager) take their Step 5 transport
+        registry so downstream CI subsystems (overlay auditor,
+        ContentManager) take their Step 5 transport
         branches when invoked from production wiring.
         """
         from sandbox.code_intelligence.registry import get_code_intelligence
@@ -458,12 +458,6 @@ class SandboxService:
         )
 
         _dispose(sandbox_id)
-
-    def all_code_intelligence_status(self) -> dict[str, dict[str, Any]]:
-        """Return status for every active CI service."""
-        from sandbox.code_intelligence.registry import get_all_services_status
-
-        return get_all_services_status()
 
     # -- Snapshots ------------------------------------------------------------
 

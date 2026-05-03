@@ -24,7 +24,7 @@ from sandbox.code_intelligence.mutations.patcher import Patcher
 from sandbox.code_intelligence.mutations.time_machine import TimeMachine
 from sandbox.code_intelligence.mutations.write_coordinator import WriteCoordinator
 from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
-from sandbox.code_intelligence.telemetry import build_status, build_telemetry
+from sandbox.code_intelligence.telemetry import build_telemetry
 
 __all__ = ["InProcessBackend"]
 
@@ -169,14 +169,6 @@ class InProcessBackend:
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._mutations.undo_last_edit(file_path)
-
-    def status(self) -> dict[str, Any]:
-        return build_status(
-            sandbox_id=self.sandbox_id,
-            workspace_root=self.workspace_root,
-            initialized=self.is_initialized,
-            arbiter=self.arbiter,
-        )
 
     def get_telemetry(self) -> CITelemetry:
         return build_telemetry(

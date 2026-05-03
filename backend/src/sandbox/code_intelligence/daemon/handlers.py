@@ -65,15 +65,6 @@ def _test_ops_enabled() -> bool:
     return bool(state is not None and (state / ".allow_test_bypass_op").exists())
 
 
-async def handle_index_ready(args: dict[str, Any]) -> dict[str, Any]:
-    del args
-    svc = DAEMON_STATE.svc
-    if svc is None:
-        return {"ready": False}
-    si = getattr(svc, "symbol_index", None)
-    return {"ready": bool(getattr(si, "is_built", False))}
-
-
 def _require_svc() -> Any:
     svc = DAEMON_STATE.svc
     if svc is None:
@@ -166,12 +157,6 @@ def _svc_cmd_result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
-async def handle_status(args: dict[str, Any]) -> Any:
-    del args
-    svc = _require_svc()
-    return _to_dict(svc.status())
-
-
 async def handle_get_telemetry(args: dict[str, Any]) -> Any:
     del args
     svc = _require_svc()
@@ -250,20 +235,10 @@ async def handle_undo_last_edit(args: dict[str, Any]) -> Any:
     return _to_dict(svc.undo_last_edit(str(args["file_path"])))
 
 
-async def handle_index_refresh(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    si = getattr(svc, "symbol_index", None)
-    if si is None:
-        return {"generation": 0}
-    gen = si.refresh(str(args["file_path"]), args.get("content"))
-    return {"generation": int(gen)}
-
-
 DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "ping": handle_ping,
     "shutdown": handle_shutdown,
     "version": handle_version,
-    "status": handle_status,
     "get_telemetry": handle_get_telemetry,
     "svc_cmd": handle_svc_cmd,
     "apply_edit": handle_apply_edit,
@@ -272,7 +247,5 @@ DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "write_file": handle_write_file,
     "edit_file": handle_edit_file,
     "undo_last_edit": handle_undo_last_edit,
-    "index_refresh": handle_index_refresh,
-    "index_ready": handle_index_ready,
     "_set_guard_mode": handle_set_guard_mode,
 }

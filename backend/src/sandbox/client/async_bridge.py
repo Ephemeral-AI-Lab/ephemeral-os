@@ -122,7 +122,7 @@ def run_sync(result: Any, *, timeout: float | None = None) -> Any:
     1. A sandbox I/O loop is registered in the current context and it is
        running on another thread → submit via
        ``run_coroutine_threadsafe`` and wait for the result. This is the
-       common path for sync CI code (``ContentManager``, ``LspClient``)
+       common path for sync CI code (for example ``ContentManager``)
        reached from ``asyncio.to_thread``.
     2. No parent loop is registered → schedule on a reusable standalone
        sandbox I/O loop. This keeps loop-local async SDK clients warm for

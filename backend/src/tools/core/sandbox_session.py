@@ -81,20 +81,8 @@ def sandbox_api_or_error(
     )
 
 
-def code_intelligence_api_or_error(
-    context: ToolExecutionContextService,
-) -> tuple[Any | None, ToolResult | None]:
-    api = context.code_intelligence_api
-    if api is not None:
-        return api, None
-    return None, ToolResult(
-        output='{"status": "unavailable", "reason": "Code intelligence not configured"}',
-    )
-
-
 __all__ = [
     "actor_from_context",
-    "code_intelligence_api_or_error",
     "get_repo_root",
     "normalized_path",
     "path_error",

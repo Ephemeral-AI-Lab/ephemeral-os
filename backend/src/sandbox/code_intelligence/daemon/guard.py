@@ -205,7 +205,6 @@ def _reset_daemon_state_for_tests(extra_dispatch: dict[str, Any] | None = None) 
     """Reset module-level state between unit tests. Not a public API."""
     DAEMON_STATE.svc = None
     DAEMON_STATE.ledger = None
-    DAEMON_STATE.index_store = None
     DAEMON_STATE.workspace_root = ""
     DAEMON_STATE.started_at = 0.0
     DAEMON_STATE.guard_enabled = True

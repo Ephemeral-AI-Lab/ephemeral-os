@@ -17,7 +17,6 @@ class DaemonState:
 
     svc: Any = None
     ledger: Any = None
-    index_store: Any = None
     workspace_root: str = ""
     started_at: float = 0.0
     guard_enabled: bool = True
@@ -33,8 +32,6 @@ QUERY_OPS = frozenset(
     {
         "ping",
         "version",
-        "index_ready",
-        "status",
         "get_telemetry",
     }
 )

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
 import pytest
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.service import (
@@ -99,32 +97,6 @@ def test_merges_non_overlapping_concurrent_edit(tmp_path) -> None:
     text = a.read_text(encoding="utf-8")
     assert "def bar()" in text
     assert "NEW = 1" in text  # concurrent edit preserved
-
-
-def test_lsp_invalidate_and_symbol_index_refresh_per_committed_path(tmp_path) -> None:
-    a = tmp_path / "a.py"
-    b = tmp_path / "b.py"
-    a.write_text("x=1\n", encoding="utf-8")
-    b.write_text("y=2\n", encoding="utf-8")
-
-    svc = _svc(tmp_path)
-    svc.lsp_client = MagicMock()
-    svc.symbol_index = MagicMock()
-    svc._write_coordinator._lsp_client = svc.lsp_client
-    svc._write_coordinator._symbol_index = svc.symbol_index
-
-    result = svc.commit_operation_against_base(
-        [
-            _change(str(a), "x=1\n", "x=10\n"),
-            _change(str(b), "y=2\n", "y=20\n"),
-        ],
-        edit_type="semantic_edit",
-    )
-    assert result.success
-    invalidated = sorted(call.args[0] for call in svc.lsp_client.invalidate.call_args_list)
-    refreshed = sorted(call.args[0] for call in svc.symbol_index.refresh.call_args_list)
-    assert invalidated == sorted([str(a), str(b)])
-    assert refreshed == sorted([str(a), str(b)])
 
 
 def test_locks_acquired_in_sorted_order(tmp_path) -> None:

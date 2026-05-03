@@ -201,9 +201,6 @@ class CodeIntelligenceService:
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._impl.undo_last_edit(file_path)
 
-    def status(self) -> dict[str, Any]:
-        return self._impl.status()
-
     def get_telemetry(self) -> CITelemetry:
         return self._impl.get_telemetry()
 

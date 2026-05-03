@@ -38,11 +38,6 @@ def _clear_registry() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_inprocess_query_symbols_returns_empty_for_unbuilt_workspace(tmp_path: Path) -> None:
-    backend = InProcessBackend(sandbox_id="sb-1", workspace_root=str(tmp_path))
-    assert backend.query_symbols("foo") == []
-
-
 def test_inprocess_is_initialized_starts_false(tmp_path: Path) -> None:
     backend = InProcessBackend(sandbox_id="sb-2", workspace_root=str(tmp_path))
     assert backend.is_initialized is False
@@ -50,13 +45,10 @@ def test_inprocess_is_initialized_starts_false(tmp_path: Path) -> None:
 
 def test_inprocess_exposes_required_components(tmp_path: Path) -> None:
     backend = InProcessBackend(sandbox_id="sb-3", workspace_root=str(tmp_path))
-    # Load-bearing attributes for callers that read internals (workspace.py,
-    # code_intelligence_api.py, several tests).
-    assert backend.symbol_index is not None
+    # Load-bearing attributes for mutation callers that read internals.
     assert backend.arbiter is not None
     assert backend.time_machine is not None
     assert backend.patcher is not None
-    assert backend.lsp_client is not None
     assert backend._content is not None
     assert backend._write_coordinator is not None
     assert backend._mutations is not None

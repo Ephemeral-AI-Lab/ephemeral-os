@@ -119,7 +119,7 @@ def _ci_workspace_root(workspace_root: str, sandbox: Any) -> str:
 def _sandbox_exec_is_async(sandbox: Any) -> bool:
     """Best-effort detection for async Daytona sandbox wrappers.
 
-    Async sandbox warmup must stay lazy. Eager CI/LSP warmup against an async
+    Async sandbox warmup must stay lazy. Eager CI warmup against an async
     sandbox can corrupt the shared aiohttp client across loop boundaries,
     which then breaks later sandbox tool calls with
     ``RuntimeError('Event loop is closed')``.
@@ -134,7 +134,7 @@ def _ci_sandbox_handle(sandbox_id: str | None, sandbox: Any) -> tuple[Any, bool]
 
     Worker tools use an async sandbox so shell/file operations can be awaited
     and cancelled. CI warmup should not reuse that same async handle because
-    some CI/LSP warmup paths are synchronous and may survive across loop
+    some CI warmup paths are synchronous and may survive across loop
     boundaries. When we detect an async Daytona sandbox, resolve a separate
     sync handle for CI instead.
 
@@ -224,31 +224,7 @@ def _attach_code_intelligence(
         svc = method(sandbox_id, **kwargs)
         try:
             if eager_warmup_safe:
-                if str(ci_workspace_root or "").strip():
-                    svc.ensure_initialized(wait=True)
-                else:
-                    svc.lsp_client.ensure_ready(install_missing=False)
-            else:
-                logger.debug(
-                    "Skipping eager CI warmup for async sandbox %s because "
-                    "no sync handle was available; starting background "
-                    "symbol index build",
-                    sandbox_id,
-                )
-                # Full ensure_initialized is unsafe (LSP bootstrap may
-                # corrupt the async event loop), but the symbol index
-                # build runs in its own daemon thread and is safe to
-                # start eagerly.  This gives the index a head start so
-                # it is more likely to be ready by the time the first
-                # code-intelligence consumer queries it.
-                try:
-                    svc.symbol_index.ensure_built(wait=False)
-                except Exception:
-                    logger.debug(
-                        "Background symbol index start failed for %s",
-                        sandbox_id,
-                        exc_info=True,
-                    )
+                svc.ensure_initialized(wait=True)
         except Exception:
             logger.debug(
                 "CI service warmup skipped for sandbox %s",
@@ -277,10 +253,9 @@ def ensure_code_intelligence_runtime(
     CI services are obtained through :class:`sandbox.service.SandboxService`.
 
     This constructs the provider-neutral :class:`SandboxApi` /
-    :class:`CodeIntelligenceApi` / :class:`SandboxTransport` surface and
-    attaches them to the context. Sandbox and CI tools consume these directly;
-    the provider-specific handles remain available for runtime construction
-    paths that still own the concrete Daytona sandbox object.
+    :class:`SandboxTransport` surface and attaches it to the context. The
+    provider-specific handles remain available for runtime construction paths
+    that still own the concrete Daytona sandbox object.
     """
     if sandbox is not None:
         context["daytona_sandbox"] = sandbox
@@ -332,16 +307,15 @@ def _attach_provider_neutral_api(
     *,
     transport: Any | None = None,
 ) -> None:
-    """Attach the Phase-1 ``SandboxApi`` / ``CodeIntelligenceApi`` surface.
+    """Attach the provider-neutral ``SandboxApi`` surface.
 
-    Constructs one :class:`DaytonaTransport`, one :class:`AuditedSandboxApi`,
-    and one :class:`SvcCodeIntelligence` per context. Failures are swallowed
-    so provider-neutral attachment does not widen the runtime preparation
-    failure surface.
+    Constructs one :class:`DaytonaTransport` and one
+    :class:`AuditedSandboxApi` per context. Failures are swallowed so
+    provider-neutral attachment does not widen the runtime preparation failure
+    surface.
     """
     try:
         from sandbox.api.audited_sandbox_api import AuditedSandboxApi
-        from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
 
         svc = context.get("ci_service")
         resolved_transport = (
@@ -356,7 +330,6 @@ def _attach_provider_neutral_api(
             context["sandbox_api"] = AuditedSandboxApi(
                 transport=resolved_transport, svc=svc, sandbox=sandbox,
             )
-        context["code_intelligence_api"] = SvcCodeIntelligence(svc)
     except Exception:
         logger.debug(
             "Provider-neutral API attachment failed for sandbox %s",

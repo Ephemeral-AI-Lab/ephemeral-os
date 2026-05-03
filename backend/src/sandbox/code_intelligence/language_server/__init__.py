@@ -1,1 +1,0 @@
-"""Language-server query package."""

@@ -22,12 +22,7 @@ from pathlib import Path
 import pytest
 
 from sandbox import api as sandbox_api
-from sandbox.api import (
-    CodeIntelligenceApi,
-    RequestActor,
-    SandboxApi,
-    SandboxTransport,
-)
+from sandbox.api import RequestActor, SandboxApi, SandboxTransport
 
 
 _API_ROOT = Path(sandbox_api.__file__).parent
@@ -91,12 +86,12 @@ def test_no_provider_or_engine_imports(module_path: Path) -> None:
 
 
 def test_protocols_declare_methods() -> None:
-    """The three contract Protocols expose at least one async method.
+    """The contract Protocols expose at least one async method.
 
     Catches regressions where a Protocol body is accidentally emptied or
     replaced with a stub that can't actually be implemented.
     """
-    for proto in (SandboxApi, SandboxTransport, CodeIntelligenceApi):
+    for proto in (SandboxApi, SandboxTransport):
         members = [
             name
             for name, fn in inspect.getmembers(proto, predicate=inspect.isfunction)

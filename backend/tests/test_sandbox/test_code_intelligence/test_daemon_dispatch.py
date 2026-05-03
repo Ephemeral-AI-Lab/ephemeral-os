@@ -79,17 +79,10 @@ def test_dispatch_table_includes_phase3_ops() -> None:
         "write_file",
         "edit_file",
         "undo_last_edit",
-        "index_refresh",
-        "index_ready",
         "_set_guard_mode",
     }
     missing = expected - DISPATCH.keys()
     assert missing == set(), f"DISPATCH missing ops: {missing}"
-
-
-# ---------------------------------------------------------------------------
-# Query handlers
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -97,13 +90,6 @@ async def test_status_returns_initialized_field(daemon_state: Path) -> None:
     response = await _dispatch_request(_make_request("status"))
     assert response["ok"] is True
     assert "initialized" in response["result"]
-
-
-@pytest.mark.asyncio
-async def test_index_ready_responds(daemon_state: Path) -> None:
-    response = await _dispatch_request(_make_request("index_ready"))
-    assert response["ok"] is True
-    assert "ready" in response["result"]
 
 
 @pytest.mark.asyncio

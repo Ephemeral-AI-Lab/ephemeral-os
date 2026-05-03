@@ -8,8 +8,7 @@ internals along. CI engine types and provider primitives live elsewhere.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Literal
+from dataclasses import dataclass
 
 
 # -- Shared identity --------------------------------------------------------
@@ -154,82 +153,6 @@ class ShellResult:
     warnings: tuple[str, ...] = ()
 
 
-# -- CodeIntelligenceApi: status -------------------------------------------
-
-@dataclass(frozen=True, kw_only=True)
-class WorkspaceStatus:
-    """Read-only snapshot of code intelligence readiness for a sandbox."""
-
-    sandbox_id: str
-    workspace_root: str
-    initialized: bool
-    symbol_index: dict[str, Any] = field(default_factory=dict)
-    arbiter: dict[str, Any] = field(default_factory=dict)
-    edit_buffer: dict[str, Any] = field(default_factory=dict)
-    edit_hotspots: dict[str, Any] | None = None
-
-
-# -- CodeIntelligenceApi: symbols ------------------------------------------
-
-@dataclass(frozen=True, kw_only=True)
-class SymbolDefinition:
-    name: str
-    kind: str             # serialized SymbolKind: function|class|method|variable|...
-    file_path: str
-    line: int
-    character: int = 0
-    signature: str = ""
-    container: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class SymbolQueryRequest:
-    """Query for a symbol by name or by file path.
-
-    The implementation chooses how to interpret ``query``: a short name
-    triggers a symbol search; a file path returns all symbols in that
-    file. Tools rely on the file-path bootstrap, so the API surface
-    accepts both modes through a single request type.
-    """
-
-    query: str
-    actor: RequestActor
-    kind: str = ""                 # filter by SymbolKind value, "" = any
-
-
-SymbolQueryConfidence = Literal[
-    "file_symbols",  # bootstrapped from file-path query
-    "none",          # no matches
-    "",              # references not requested
-]
-
-
-@dataclass(frozen=True, kw_only=True)
-class SymbolQueryResult:
-    definitions: tuple[SymbolDefinition, ...] = ()
-    confidence: SymbolQueryConfidence = ""
-    matched_file: str | None = None     # set when query was a file path
-
-
-# -- CodeIntelligenceApi: workspace structure ------------------------------
-
-WorkspaceStructureSource = Literal["index", "local", "remote", "none"]
-
-
-@dataclass(frozen=True, kw_only=True)
-class WorkspaceStructureRequest:
-    actor: RequestActor
-    path: str = ""
-    max_depth: int = 3
-
-
-@dataclass(frozen=True, kw_only=True)
-class WorkspaceStructureResult:
-    paths: tuple[str, ...] = ()
-    source: WorkspaceStructureSource = "none"
-    workspace_root: str = ""
-
-
 __all__ = [
     "CheckedWriteResult",
     "CheckedWriteSpec",
@@ -242,14 +165,6 @@ __all__ = [
     "SearchReplaceEdit",
     "ShellRequest",
     "ShellResult",
-    "SymbolDefinition",
-    "SymbolQueryConfidence",
-    "SymbolQueryRequest",
-    "SymbolQueryResult",
-    "WorkspaceStatus",
-    "WorkspaceStructureRequest",
-    "WorkspaceStructureResult",
-    "WorkspaceStructureSource",
     "WriteFileRequest",
     "WriteFileResult",
 ]

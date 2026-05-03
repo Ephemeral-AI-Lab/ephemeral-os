@@ -8,8 +8,6 @@ layering and dependency rules.
 from __future__ import annotations
 
 from sandbox.api.audited_sandbox_api import AuditedSandboxApi
-from sandbox.api.code_intelligence_api import CodeIntelligenceApi
-from sandbox.api.code_intelligence_impl import SvcCodeIntelligence
 from sandbox.api.errors import (
     SandboxApiError,
     SandboxConflictError,
@@ -29,14 +27,6 @@ from sandbox.api.models import (
     SearchReplaceEdit,
     ShellRequest,
     ShellResult,
-    SymbolDefinition,
-    SymbolQueryConfidence,
-    SymbolQueryRequest,
-    SymbolQueryResult,
-    WorkspaceStatus,
-    WorkspaceStructureRequest,
-    WorkspaceStructureResult,
-    WorkspaceStructureSource,
     WriteFileRequest,
     WriteFileResult,
 )
@@ -47,7 +37,6 @@ __all__ = [
     "AuditedSandboxApi",
     "CheckedWriteResult",
     "CheckedWriteSpec",
-    "CodeIntelligenceApi",
     "EditFileRequest",
     "EditFileResult",
     "RawExecResult",
@@ -64,15 +53,6 @@ __all__ = [
     "SearchReplaceEdit",
     "ShellRequest",
     "ShellResult",
-    "SvcCodeIntelligence",
-    "SymbolDefinition",
-    "SymbolQueryConfidence",
-    "SymbolQueryRequest",
-    "SymbolQueryResult",
-    "WorkspaceStatus",
-    "WorkspaceStructureRequest",
-    "WorkspaceStructureResult",
-    "WorkspaceStructureSource",
     "WriteFileRequest",
     "WriteFileResult",
 ]

@@ -63,12 +63,10 @@ class ExecutionMetadata:
     daytona_sandbox: Any | None = None
     ci_service: Any | None = None
 
-    # Provider-neutral sandbox API surface. Sandbox and CI tools reach the
-    # sandbox through these handles instead of provider-specific tool handles.
-    # ``daytona_sandbox`` / ``ci_service`` remain runtime internals for code
-    # intelligence construction and legacy-compatible tests.
+    # Provider-neutral sandbox API surface. Sandbox tools reach the sandbox
+    # through this handle instead of provider-specific tool handles.
+    # ``daytona_sandbox`` / ``ci_service`` remain runtime internals.
     sandbox_api: Any | None = None
-    code_intelligence_api: Any | None = None
     sandbox_transport: Any | None = None
 
     # Per-call tool id (set by the streaming executor so progress events
@@ -108,7 +106,6 @@ class ExecutionMetadata:
             "daytona_sandbox",
             "ci_service",
             "sandbox_api",
-            "code_intelligence_api",
             "sandbox_transport",
             "tool_id",
             "system_notification_service",

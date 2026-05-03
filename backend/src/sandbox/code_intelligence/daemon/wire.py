@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Sequence
 from typing import Any
 
 from sandbox.code_intelligence.core.types import (
-    CITelemetry,
     EditRequest,
     EditResult,
     EditSpec,
@@ -88,18 +86,3 @@ def operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
         conflict_reason=str(d.get("conflict_reason", "")),
         timings=dict(d.get("timings") or {}),
     )
-
-
-def telemetry_from_dict(d: dict[str, Any]) -> CITelemetry:
-    """Reconstruct a :class:`CITelemetry` from its asdict() shape."""
-    if isinstance(d, CITelemetry):
-        return d
-    init = {
-        f.name: d.get(f.name)
-        for f in dataclasses.fields(CITelemetry)
-        if f.name in d
-    }
-    try:
-        return CITelemetry(**init)  # type: ignore[arg-type]
-    except TypeError:
-        return CITelemetry()

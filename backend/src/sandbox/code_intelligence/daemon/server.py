@@ -117,26 +117,21 @@ def _configure_file_logging(log_path: Path) -> None:
     logger.setLevel(logging.INFO)
 
 
-def _build_service(state: Path, workspace_root: str) -> tuple[Any, Any, Any]:
-    """Construct the daemon-resident service, ledger, and symbol index store."""
-    from sandbox.code_intelligence.daemon.storage import (
-        IndexStore,
-        LedgerStore,
-    )
+def _build_service(state: Path, workspace_root: str) -> tuple[Any, Any]:
+    """Construct the daemon-resident service and ledger."""
+    from sandbox.code_intelligence.daemon.storage import LedgerStore
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
     ledger = LedgerStore(state_dir_path=state)
-    index_store = IndexStore(state_dir_path=state)
     svc = CodeIntelligenceService(
         sandbox_id="local",
         workspace_root=workspace_root,
         sandbox=None,
         transport=None,
         edit_history=ledger,
-        symbol_index_persistence=index_store,
         daemon_local=True,
     )
-    return svc, ledger, index_store
+    return svc, ledger
 
 
 def _populate_state(
@@ -145,12 +140,10 @@ def _populate_state(
     workspace_root: str,
     svc: Any,
     ledger: Any,
-    index_store: Any = None,
 ) -> None:
     """Wire process state for request dispatch."""
     DAEMON_STATE.svc = svc
     DAEMON_STATE.ledger = ledger
-    DAEMON_STATE.index_store = index_store
     DAEMON_STATE.workspace_root = workspace_root
     DAEMON_STATE.started_at = time.time()
     DAEMON_STATE.guard_enabled = True
@@ -162,31 +155,18 @@ def _populate_state(
     )
 
 
-def _kick_background_index(svc: Any) -> None:
-    """Start query-state warmup in the background."""
-    si = getattr(svc, "symbol_index", None)
-    if si is None:
-        return
-    try:
-        si.ensure_built(wait=False)
-    except Exception:  # pragma: no cover - defensive
-        logger.debug("background symbol_index.ensure_built failed", exc_info=True)
-
-
 async def run_daemon(workspace_root: str) -> None:
     """Start the CI daemon and return after graceful shutdown."""
     state, socket_path, pid_path, log_path = _prepare_state_paths(workspace_root)
     _configure_file_logging(log_path)
 
-    svc, ledger, index_store = _build_service(state, workspace_root)
+    svc, ledger = _build_service(state, workspace_root)
     _populate_state(
         state=state,
         workspace_root=workspace_root,
         svc=svc,
         ledger=ledger,
-        index_store=index_store,
     )
-    _kick_background_index(svc)
 
     shutdown_event = asyncio.Event()
     active_tasks: set[asyncio.Task[None]] = set()
@@ -281,8 +261,3 @@ def _close_daemon_services() -> None:
             DAEMON_STATE.ledger.close()
         except Exception:  # pragma: no cover - defensive
             logger.debug("ledger close failed", exc_info=True)
-    if DAEMON_STATE.index_store is not None:
-        try:
-            DAEMON_STATE.index_store.close()
-        except Exception:  # pragma: no cover - defensive
-            logger.debug("index_store close failed", exc_info=True)

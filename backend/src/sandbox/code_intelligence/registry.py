@@ -97,9 +97,3 @@ def dispose_all_code_intelligence() -> None:
     for service in services:
         service.dispose()
 
-
-def get_all_services_status() -> dict[str, dict[str, Any]]:
-    """Return status for all active services."""
-    with _SERVICES_LOCK:
-        services = dict(_SERVICES)
-    return {sid: svc.status() for sid, svc in services.items()}

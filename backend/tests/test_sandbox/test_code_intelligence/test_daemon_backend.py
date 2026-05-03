@@ -1,9 +1,7 @@
 """Unit tests for ``DaemonBackend.ensure_initialized`` and daemon commands.
 
-Phase 3.5 retired the orchestrator-side pickle-snapshot fallback. These tests
-exercise the daemon-route contract: ``ensure_initialized`` launches the daemon
-(mocked) and polls ``index_ready``; command calls route through the daemon and
-surface errors instead of falling back to stale orchestrator state.
+These tests exercise the daemon-route contract: ``ensure_initialized`` launches
+the daemon (mocked); command calls route through the daemon and surface errors.
 """
 
 from __future__ import annotations
@@ -33,12 +31,10 @@ class _FakeDaemon:
     def __init__(
         self,
         *,
-        index_ready: bool = True,
         cmd_response: dict[str, Any] | None = None,
         raise_for_op: dict[str, Exception] | None = None,
     ) -> None:
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
-        self._index_ready = index_ready
         self._cmd_response = cmd_response or {}
         self._raise_for_op = dict(raise_for_op or {})
 
@@ -53,8 +49,6 @@ class _FakeDaemon:
         self.calls.append((op, args))
         if op in self._raise_for_op:
             raise self._raise_for_op[op]
-        if op == "index_ready":
-            return {"ready": self._index_ready}
         if op == "svc_cmd":
             return self._cmd_response
         return None
@@ -90,9 +84,8 @@ class _FakeLauncher:
         self.shutdown_calls += 1
 
 
-def test_ensure_initialized_polls_index_ready_until_built() -> None:
-    """Daemon launches; we poll ``index_ready`` and flip is_initialized once true."""
-    daemon = _FakeDaemon(index_ready=True)
+def test_ensure_initialized_launches_daemon() -> None:
+    daemon = _FakeDaemon()
     backend = _backend_with_fake_daemon(daemon)
     _FakeLauncher.instances.clear()
     with patch(
@@ -102,12 +95,10 @@ def test_ensure_initialized_polls_index_ready_until_built() -> None:
     assert ok is True
     assert backend.is_initialized is True
     assert _FakeLauncher.instances and _FakeLauncher.instances[-1].ensure_calls == 1
-    # The poll should have called index_ready at least once.
-    assert any(call[0] == "index_ready" for call in daemon.calls)
 
 
 def test_ensure_initialized_idempotent() -> None:
-    daemon = _FakeDaemon(index_ready=True)
+    daemon = _FakeDaemon()
     backend = _backend_with_fake_daemon(daemon)
     _FakeLauncher.instances.clear()
     with patch(
@@ -118,23 +109,6 @@ def test_ensure_initialized_idempotent() -> None:
         backend.ensure_initialized(wait=True)
     # Second call short-circuits; no new launcher constructed.
     assert len(_FakeLauncher.instances) == n
-
-
-def test_ensure_initialized_returns_true_even_if_index_ready_times_out() -> None:
-    """When the index-ready poll times out, ensure_initialized still flips
-    is_initialized so callers can attempt queries (which return [] until the
-    background build completes)."""
-    daemon = _FakeDaemon(index_ready=False)
-    backend = _backend_with_fake_daemon(daemon)
-    backend._INDEX_READY_TIMEOUT_S = 0.05  # type: ignore[assignment]
-    backend._INDEX_READY_POLL_S = 0.01  # type: ignore[assignment]
-    _FakeLauncher.instances.clear()
-    with patch(
-        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
-    ):
-        ok = backend.ensure_initialized(wait=True)
-    assert ok is True
-    assert backend.is_initialized is True
 
 
 def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
