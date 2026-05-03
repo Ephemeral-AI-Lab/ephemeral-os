@@ -35,6 +35,11 @@ from sandbox.code_intelligence.mutations.write_coordinator.results import (
     edit_result,
     operation_abort,
 )
+from sandbox.code_intelligence.mutations.changeset import (
+    ChangesetResult,
+    UpperChangeLike,
+    apply_changeset as apply_raw_changeset,
+)
 from sandbox.code_intelligence.core.types import (
     EditResult,
     OperationChange,
@@ -64,6 +69,31 @@ class WriteCoordinator:
         self._resolver = ChangeResolver()
 
     # -- Semantic operation primitives ---------------------------------------
+
+    def apply_changeset(
+        self,
+        upper_changes: Sequence[UpperChangeLike],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+    ) -> ChangesetResult:
+        """Apply raw overlay changes with OCC-owned routing policy."""
+
+        def _commit(changes: Sequence[OperationChange]) -> OperationResult:
+            return self.commit_operation_against_base(
+                changes,
+                agent_id=agent_id,
+                edit_type=edit_type,
+                description=description,
+            )
+
+        return apply_raw_changeset(
+            upper_changes,
+            workspace_root=self._content.workspace_root,
+            content=self._content,
+            commit=_commit,
+        )
 
     def commit_operation_against_base(
         self,

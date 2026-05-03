@@ -10,13 +10,10 @@ the frozen interface between the sandbox-side ``overlay_run.py`` script
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
-
-if TYPE_CHECKING:
-    from sandbox.code_intelligence.core.types import OperationChange
+from typing import Literal
 
 
-OverlayChangeKind = Literal["create", "modify", "delete"]
+UpperChangeKind = Literal["regular", "whiteout", "symlink", "opaque_dir"]
 
 
 class OverlayError(RuntimeError):
@@ -30,12 +27,7 @@ class OverlayRunError(OverlayError):
 class OverlayPolicyReject(OverlayError):
     """Raised when the sandbox-side script refused the run via policy.
 
-    ``reason`` is one of the plan-defined reasons, e.g.
-    ``overlay_rejected_dotgit_writes``,
-    ``overlay_refused_gitignore_whiteout``,
-    ``overlay_unsupported_symlink``,
-    ``overlay_unsupported_opaque_dir``,
-    ``overlay_non_utf8_gitinclude``,
+    ``reason`` is one of the overlay structural reject reasons, e.g.
     ``overlay_upper_full``.
     ``paths`` is the (optional) offending path list.
     """
@@ -68,25 +60,14 @@ class OverlayLease:
 
 
 @dataclass(frozen=True)
-class OverlayChange:
-    """One gitinclude-route change emitted by ``overlay_run.py`` for OCC.
+class UpperChange:
+    """One raw upperdir change emitted by ``overlay_run.py`` for OCC."""
 
-    Routing is keyed by ``git check-ignore`` against the live workspace,
-    not by git index membership: brand-new files that are not matched by
-    any ``.gitignore`` rule appear here too. Concurrent writers to the
-    same path are resolved by strict-base OCC → first-writer-wins.
-
-    Gitignore-route changes are direct-merged inside the namespace and
-    do not appear here — they are summarized in
-    :class:`OverlayDiff.gitignore_paths` (per-file last-writer-wins, not
-    per-tree atomic).
-    """
-
-    path: str
-    kind: OverlayChangeKind
-    base_content: str
+    rel: str
+    kind: UpperChangeKind
+    base_bytes: bytes | None
+    upper_bytes: bytes | None
     base_existed: bool
-    final_content: str | None
 
 
 @dataclass(frozen=True)
@@ -98,43 +79,15 @@ class OverlayCommandResult:
 
 
 @dataclass(frozen=True)
-class OverlayDiff:
-    """Full payload parsed from ``diff.ndjson`` after one overlay op."""
+class OverlayCapture:
+    """Parsed ``diff.ndjson`` payload after one overlay op."""
 
     exit_code: int
     upper_bytes: int
     upper_files: int
-    gitinclude_changes: tuple[OverlayChange, ...]
-    gitignore_paths: tuple[str, ...]
-    gitignore_truncated: bool
-    direct_merged_bytes: int
-    whiteouts_gitinclude: int
-    whiteouts_gitignore_refused: int
-    dotgit_rejects: int
+    upper_changes: tuple[UpperChange, ...]
     run_timings: dict[str, float] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class OverlayAuditResult:
-    """Full orchestrator-side result, before the ``SimpleNamespace`` adapter.
-
-    Downstream code (``shell`` etc.) reads through the
-    ``SimpleNamespace`` the auditor returns, so this record is internal.
-    It carries the additive fields called out in plan §4.5 that the
-    auditor surfaces on the response.
-    """
-
-    command: OverlayCommandResult
-    gitinclude_committed: tuple[str, ...]
-    gitignore_merged: tuple[str, ...]
-    gitignore_merged_count: int
-    mixed_gitinclude_gitignore: bool
-    mixed_partial_apply: bool
-    git_commit_status: str | None
-    git_conflict_file: str | None
-    git_conflict_reason: str | None
-    warnings: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -162,8 +115,8 @@ class OverlayRunOutcome:
     """In-process handoff between OverlayAuditor and its caller.
 
     The auditor produces this; the caller (today's
-    ``AuditedCommandExecutor``) drives OCC commit on
-    :attr:`dirty_changes` and assembles the downstream
+    ``AuditedCommandExecutor``) drives OCC merge policy on
+    :attr:`upper_changes` and assembles the downstream
     ``SimpleNamespace`` response. Slice 5a's correctness fix is exactly
     this seam: overlay never invokes OCC.
 
@@ -175,12 +128,9 @@ class OverlayRunOutcome:
 
     exit_code: int
     stdout: str
-    dirty_changes: tuple["OperationChange", ...]
+    upper_changes: tuple[UpperChange, ...]
     overlay_rejected: bool
     conflict: ConflictInfo | None
-    gitignore_paths: tuple[str, ...]
-    gitinclude_live_paths: tuple[str, ...]
-    mixed_gitinclude_gitignore: bool
     warnings: tuple[str, ...] = ()
     overlay_run_timings: dict[str, float] = field(default_factory=dict)
     overlay_stage_timings: dict[str, float] = field(default_factory=dict)
@@ -189,14 +139,13 @@ class OverlayRunOutcome:
 
 __all__ = [
     "ConflictInfo",
-    "OverlayAuditResult",
-    "OverlayChange",
-    "OverlayChangeKind",
+    "OverlayCapture",
     "OverlayCommandResult",
-    "OverlayDiff",
     "OverlayError",
     "OverlayLease",
     "OverlayPolicyReject",
     "OverlayRunError",
     "OverlayRunOutcome",
+    "UpperChange",
+    "UpperChangeKind",
 ]

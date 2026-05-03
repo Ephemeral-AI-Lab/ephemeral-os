@@ -113,12 +113,17 @@ sandbox/occ/
 ├── client.py                      # host-side typed request client
 ├── setup.sh                       # OCC setup submitted by runtime/setup_orchestrator.py
 ├── bootstrap.py                   # registers setup.sh + server handlers
-├── handlers/                      # in-sandbox OCC implementation
-│   ├── apply.py
-│   ├── commit.py
-│   ├── undo.py
+├── handlers/                      # thin server op adapters
 │   ├── write.py
-│   └── arbiter.py
+│   ├── edit.py
+│   ├── apply_changeset.py
+│   ├── commit.py
+│   └── undo.py
+├── changeset.py                   # UpperChange classification + direct merge
+├── arbiter.py
+├── content_manager.py
+├── patcher.py
+├── time_machine.py
 ├── write_coordinator/             # unchanged structure, relocated
 ├── ledger_store.py                # was daemon/ledger_store.py — edit history
 ├── types.py                       # was core/types.py (EditSpec, WriteSpec, MoveSpec, OperationResult)
@@ -147,8 +152,7 @@ sandbox/overlay/
 ├── handlers/
 │   └── run.py                     # in-sandbox overlay implementation
 ├── capture.py                     # pure upperdir capture
-├── command_executor.py            # user command execution inside overlay namespace
-├── auditor.py                     # audit/event shaping retained if still useful
+├── command_executor.py            # temporary execution shim only until Step 6 split
 ├── process_exec.py                # low-level process execution
 ├── daemon_exec.py                 # renamed from daemon_local.py if a daemon-local path remains
 ├── results.py
@@ -161,6 +165,11 @@ handlers. Inside the sandbox, `runtime/pipelines.py::shell_pipeline` calls the
 overlay `run` handler first, then forwards captured `UpperChange` records to
 OCC. Overlay never imports OCC and never classifies gitignored vs gitincluded
 paths itself.
+
+No `auditor.py` remains in the target overlay package. The audit name implied
+policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
+`gitignore_*` response projection belongs outside `overlay/` during the
+compatibility window and disappears when public `sandbox.api.shell` takes over.
 
 ### 2.3 Shared `sandbox/runtime/` Support
 

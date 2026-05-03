@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import json
+import shutil
 import shlex
 from pathlib import Path
 from types import SimpleNamespace
@@ -61,6 +63,10 @@ class ContentManager:
     def bind_sandbox(self, sandbox: Any) -> None:
         """Update the sandbox handle for subsequent reads/writes."""
         self._sandbox = sandbox
+
+    @property
+    def workspace_root(self) -> str:
+        return self._workspace_root
 
     def _use_transport(self) -> bool:
         return self._transport is not None and bool(self._sandbox_id)
@@ -121,6 +127,20 @@ class ContentManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
 
+    def write_bytes(self, file_path: str, content: bytes) -> None:
+        """Write raw bytes to *file_path*, preferring the sandbox when bound."""
+        resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            run_sync(self._transport.write_bytes(self._sandbox_id, resolved_path, content))
+            return
+        fs = getattr(self._sandbox, "fs", None) if self._sandbox is not None else None
+        if fs is not None and callable(getattr(fs, "upload_file", None)):
+            run_sync(fs.upload_file(content, resolved_path))
+            return
+        path = Path(resolved_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+
     def delete(self, file_path: str) -> None:
         """Delete *file_path*, preferring the sandbox when one is bound."""
         resolved_path = self._resolve_path(file_path)
@@ -145,6 +165,77 @@ class ContentManager:
             path.unlink()
         except FileNotFoundError:
             return
+
+    def delete_path(self, file_path: str) -> None:
+        """Delete a file, symlink, or directory tree."""
+        resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            result = run_sync(
+                self._transport.exec(
+                    self._sandbox_id, f"rm -rf -- {shlex.quote(resolved_path)}",
+                )
+            )
+            if result.exit_code not in (0, None):
+                raise RuntimeError(result.stdout or f"delete failed for {file_path}")
+            return
+        path = Path(resolved_path)
+        try:
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                shutil.rmtree(path)
+        except FileNotFoundError:
+            return
+
+    def make_symlink(self, file_path: str, target: str) -> None:
+        """Replace *file_path* with a symlink to *target*."""
+        resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            script = (
+                "import pathlib,shutil,sys; "
+                "p=pathlib.Path(sys.argv[1]); target=sys.argv[2]; "
+                "p.parent.mkdir(parents=True, exist_ok=True); "
+                "\nif p.is_symlink() or p.is_file(): p.unlink()"
+                "\nelif p.is_dir(): shutil.rmtree(p)"
+                "\np.symlink_to(target)"
+            )
+            result = run_sync(
+                self._transport.exec(
+                    self._sandbox_id,
+                    f"python3 -c {shlex.quote(script)} "
+                    f"{shlex.quote(resolved_path)} {shlex.quote(target)}",
+                )
+            )
+            if result.exit_code not in (0, None):
+                raise RuntimeError(result.stdout or f"symlink failed for {file_path}")
+            return
+        path = Path(resolved_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.delete_path(file_path)
+        path.symlink_to(target)
+
+    def list_child_names(self, file_path: str) -> list[str]:
+        """Return direct child names for a directory, or an empty list."""
+        resolved_path = self._resolve_path(file_path)
+        if self._use_transport():
+            script = (
+                "import json,pathlib,sys; "
+                "p=pathlib.Path(sys.argv[1]); "
+                "print(json.dumps(sorted(x.name for x in p.iterdir()) if p.is_dir() else []))"
+            )
+            result = run_sync(
+                self._transport.exec(
+                    self._sandbox_id,
+                    f"python3 -c {shlex.quote(script)} {shlex.quote(resolved_path)}",
+                )
+            )
+            if result.exit_code not in (0, None):
+                raise RuntimeError(result.stdout or f"list failed for {file_path}")
+            return [str(item) for item in json.loads(result.stdout or "[]")]
+        path = Path(resolved_path)
+        if not path.is_dir():
+            return []
+        return sorted(child.name for child in path.iterdir())
 
     def apply_many(self, changes: list[tuple[str, str | None]]) -> None:
         """Apply many writes/deletes through one sandbox round trip when possible."""

@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
-from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
+from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
+from sandbox.code_intelligence.overlay.capture_runner import OverlayCaptureRunner
 from sandbox.code_intelligence.overlay.types import OverlayRunOutcome
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
@@ -34,7 +34,7 @@ async def test_executor_builds_overlay_auditor_by_default(tmp_path) -> None:
 
     auditor = await executor._ensure_overlay_auditor()
 
-    assert isinstance(auditor, OverlayAuditor)
+    assert isinstance(auditor, OverlayCaptureRunner)
 
 
 @pytest.mark.asyncio
@@ -60,12 +60,9 @@ async def test_cmd_delegates_to_overlay_auditor_with_stdin(tmp_path) -> None:
             return OverlayRunOutcome(
                 exit_code=0,
                 stdout="ok",
-                dirty_changes=(),
+                upper_changes=(),
                 overlay_rejected=False,
                 conflict=None,
-                gitignore_paths=(),
-                gitinclude_live_paths=(),
-                mixed_gitinclude_gitignore=False,
             )
 
     async def _fake_ensure_overlay_auditor():

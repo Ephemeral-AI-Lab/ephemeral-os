@@ -7,8 +7,12 @@
 ## Files
 
 ### Move
-- `backend/src/sandbox/code_intelligence/mutations/` → `backend/src/sandbox/occ/handlers/`.
+- `backend/src/sandbox/code_intelligence/mutations/` → `backend/src/sandbox/occ/`.
+  Do not dump the whole package under `handlers/`: `handlers/` is only the
+  server-facing request adapter layer.
 - OCC-relevant pieces of `backend/src/sandbox/code_intelligence/core/types.py` → `backend/src/sandbox/occ/types.py`. Non-OCC pieces stay (or migrate under `plugins-refactor.md`).
+- `backend/src/sandbox/code_intelligence/core/hashing.py` → `backend/src/sandbox/occ/hashing.py`.
+- `backend/src/sandbox/code_intelligence/daemon/ledger_store.py` → `backend/src/sandbox/occ/ledger_store.py`.
 
 ### Add
 - `backend/src/sandbox/occ/__init__.py`
@@ -16,6 +20,33 @@
 - `backend/src/sandbox/occ/setup.sh` — OCC setup submitted to the runtime/daemon by `occ/bootstrap.py` after bundle upload.
 - `backend/src/sandbox/occ/engine.py` — `OCCEngine` Protocol; today's concrete engine becomes one impl.
 - `backend/src/sandbox/occ/bootstrap.py` — registers `setup.sh`, bundle contributions, and OCC handlers at import time.
+- `backend/src/sandbox/occ/handlers/` — thin server op adapters only:
+  `write`, `edit`, `apply_changeset`, `commit`, `undo`.
+
+Expected OCC shape after this step:
+
+```
+sandbox/occ/
+    setup.sh
+    client.py              # host-side typed OCC request client
+    bootstrap.py           # registers setup.sh + server handlers
+    handlers/              # server op adapters, no core OCC policy
+        write.py
+        edit.py
+        apply_changeset.py
+        commit.py
+        undo.py
+    changeset.py           # UpperChange classification + direct-merge decisions
+    arbiter.py
+    content_manager.py
+    patcher.py
+    time_machine.py
+    write_coordinator/
+    ledger_store.py
+    hashing.py
+    engine.py
+    types.py
+```
 
 ### Modify
 - `sandbox/runtime/server.py` — import `sandbox.occ.bootstrap` / handlers so OCC ops register at import time. Server dispatch remains `OP_TABLE`-based; no per-OCC branch is added.
@@ -32,7 +63,10 @@
 
 ## Implementation tasks
 
-1. `git mv` mutations → `sandbox/occ/handlers/`. Update imports across the codebase.
+1. `git mv` mutations → `sandbox/occ/`. Update imports across the codebase.
+   Keep policy/coordination files at the OCC package root or existing
+   subpackages (`changeset.py`, `arbiter.py`, `write_coordinator/`, etc.).
+   Create `occ/handlers/` only for server request adapters.
 2. Extract OCC types into `sandbox/occ/types.py`. If anything still imports from `core/types.py`, leave a re-export there until Slice 7.
 3. Define `OCCEngine` Protocol with the minimal surface: `apply(...)`, `commit(...)`, `undo(...)`, `arbiter(...)`. Today's concrete engine implements it as-is.
 4. Rename OCC verbs and audit every internal caller. Add a temporary lint check that grep-fails on `apply_edit` / `undo_last_edit` — remove the check at end of slice once zero hits.
@@ -47,7 +81,7 @@
    ledger directories or OCC-local state, but it must not run shell/user
    commands.
 7. Implement `edit_pipeline` and `write_pipeline` inside `runtime/pipelines.py`. They run in-process inside the sandbox, dispatched by `server.py`.
-8. Register OCC handlers in `OP_TABLE` at module import time (via `sandbox/occ/handlers/__init__.py`).
+8. Register OCC handlers in `OP_TABLE` at module import time (via `sandbox/occ/handlers/__init__.py`). Handler modules call into OCC internals; they do not own policy themselves.
 
 ## Tests
 
@@ -72,6 +106,9 @@
 - `sandbox/occ/client.py` is the only host-side route for OCC server
   requests; `sandbox/api.write/edit` are not wired yet in this slice.
 - `sandbox/occ/setup.sh` is registered through `occ/bootstrap.py`.
+- `sandbox/occ/handlers/` contains request adapters only; core OCC policy
+  remains in `changeset.py`, `arbiter.py`, `write_coordinator/`, and sibling
+  OCC internals.
 - The two new pipelines are dispatch-reachable through `server.py`; `sandbox.api` does not yet expose them.
 - `grep -r "apply_edit\|undo_last_edit" backend/src/` returns zero hits.
 

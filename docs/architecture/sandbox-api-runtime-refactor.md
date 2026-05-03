@@ -115,7 +115,15 @@ backend/src/sandbox/
         setup.sh
         client.py        # host-side typed OCC request client
         bootstrap.py
-        handlers/        # in-sandbox OCC implementation: apply, commit, undo, edit, write, arbiter
+        handlers/        # server op adapters: write, edit, apply_changeset, commit, undo
+        changeset.py     # overlay UpperChange -> OCC/direct-merge decision
+        arbiter.py
+        content_manager.py
+        patcher.py
+        time_machine.py
+        write_coordinator/
+        ledger_store.py
+        hashing.py
         engine.py
         types.py
 

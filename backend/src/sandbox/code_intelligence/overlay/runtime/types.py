@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Literal
+
+UpperChangeKind = Literal["regular", "whiteout", "symlink", "opaque_dir"]
 
 
 @dataclass(frozen=True)
 class UpperEntry:
-    """One upperdir entry handed to the classifier."""
+    """One raw upperdir entry."""
 
     rel: str
     st: os.stat_result
@@ -17,24 +20,14 @@ class UpperEntry:
 
 
 @dataclass(frozen=True)
-class GitincludeChange:
-    """One gitinclude-route change to emit to NDJSON for OCC."""
+class UpperChange:
+    """One captured upperdir change emitted to OCC."""
 
-    path: str
-    kind: str
-    base_content: str
+    rel: str
+    kind: UpperChangeKind
+    base_bytes: bytes | None
+    upper_bytes: bytes | None
     base_existed: bool
-    final_content: str | None
-
-
-@dataclass(frozen=True)
-class ClassifyOutcome:
-    gitinclude: tuple[GitincludeChange, ...]
-    gitignore_paths: tuple[str, ...]
-    direct_merged_bytes: int
-    whiteouts_gitinclude: int
-    whiteouts_gitignore_refused: int
-    dotgit_rejects: int
 
 
 @dataclass(frozen=True)
@@ -43,51 +36,9 @@ class PolicyRejectOutcome:
     paths: tuple[str, ...]
 
 
-@dataclass(frozen=True)
-class DirectMergeOp:
-    rel: str
-    upper_path: str
-    st: os.stat_result
-
-
-@dataclass(frozen=True)
-class OpaquePruneOp:
-    rel: str
-    upper_path: str
-
-
-@dataclass(frozen=True)
-class ClassificationPlan:
-    gitinclude: tuple[GitincludeChange, ...]
-    gitignore_paths: tuple[str, ...]
-    direct_merge_ops: tuple[DirectMergeOp, ...]
-    opaque_prune_ops: tuple[OpaquePruneOp, ...]
-    whiteouts_gitinclude: int
-    whiteouts_gitignore_refused: int
-    dotgit_rejects: int
-
-    def to_outcome(self, *, direct_merged_bytes: int) -> ClassifyOutcome:
-        return ClassifyOutcome(
-            gitinclude=self.gitinclude,
-            gitignore_paths=self.gitignore_paths,
-            direct_merged_bytes=direct_merged_bytes,
-            whiteouts_gitinclude=self.whiteouts_gitinclude,
-            whiteouts_gitignore_refused=self.whiteouts_gitignore_refused,
-            dotgit_rejects=self.dotgit_rejects,
-        )
-
-
-class ClassifierIOError(RuntimeError):
-    """Raised when the classifier cannot read an expected upperdir file."""
-
-
 __all__ = [
-    "ClassificationPlan",
-    "ClassifierIOError",
-    "ClassifyOutcome",
-    "DirectMergeOp",
-    "GitincludeChange",
-    "OpaquePruneOp",
     "PolicyRejectOutcome",
+    "UpperChange",
+    "UpperChangeKind",
     "UpperEntry",
 ]

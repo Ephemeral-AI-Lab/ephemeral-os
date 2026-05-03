@@ -2,16 +2,7 @@
 
 from __future__ import annotations
 
-from .classifier import Classifier
-from .command import run_user_command
-from .direct_routes import (
-    DirectRouteApplier,
-    direct_merge_factory,
-    narrow_prune_opaque_factory,
-)
-from .gitignore import check_ignore_factory, has_git_routing_metadata
-from .lowerdir import lowerdir_base_factory
-from .namespace import (
+from .mounts import (
     OverlayMountError,
     _NS_LOWER,
     _NS_MERGED,
@@ -21,45 +12,26 @@ from .namespace import (
     _NS_WORK,
     setup_mounts,
 )
-from .ndjson import write_diff_ndjson, write_reject_ndjson
-from .overlay_kinds import is_opaque_dir, is_symlink, is_whiteout
-from .policy import (
-    REJECT_DOTGIT,
-    REJECT_GITIGNORE_WHITEOUT,
-    REJECT_NON_UTF8_GITINCLUDE,
-    REJECT_UNSUPPORTED_OPAQUE_DIR,
-    REJECT_UNSUPPORTED_SYMLINK,
+from .ndjson import write_diff_ndjson
+from .runner import (
     REJECT_UPPER_FULL,
+    _parse_args,
+    _write_result_json,
+    is_opaque_dir,
+    is_whiteout,
+    main,
     reject_exit_code,
+    run_user_command,
+    walk_upperdir,
 )
-from .runner import _parse_args, _write_result_json, main
-from .types import (
-    ClassificationPlan,
-    ClassifyOutcome,
-    DirectMergeOp,
-    GitincludeChange,
-    OpaquePruneOp,
-    PolicyRejectOutcome,
-    UpperEntry,
-)
-from .upperdir import walk_upperdir
+from .types import PolicyRejectOutcome, UpperChange, UpperChangeKind, UpperEntry
 
 __all__ = [
-    "ClassificationPlan",
-    "Classifier",
-    "ClassifyOutcome",
-    "DirectMergeOp",
-    "DirectRouteApplier",
-    "GitincludeChange",
-    "OpaquePruneOp",
     "OverlayMountError",
     "PolicyRejectOutcome",
-    "REJECT_DOTGIT",
-    "REJECT_GITIGNORE_WHITEOUT",
-    "REJECT_NON_UTF8_GITINCLUDE",
-    "REJECT_UNSUPPORTED_OPAQUE_DIR",
-    "REJECT_UNSUPPORTED_SYMLINK",
     "REJECT_UPPER_FULL",
+    "UpperChange",
+    "UpperChangeKind",
     "UpperEntry",
     "_NS_LOWER",
     "_NS_MERGED",
@@ -69,19 +41,12 @@ __all__ = [
     "_NS_WORK",
     "_parse_args",
     "_write_result_json",
-    "check_ignore_factory",
-    "direct_merge_factory",
-    "has_git_routing_metadata",
     "is_opaque_dir",
-    "is_symlink",
     "is_whiteout",
-    "lowerdir_base_factory",
     "main",
-    "narrow_prune_opaque_factory",
     "reject_exit_code",
     "run_user_command",
     "setup_mounts",
     "walk_upperdir",
     "write_diff_ndjson",
-    "write_reject_ndjson",
 ]

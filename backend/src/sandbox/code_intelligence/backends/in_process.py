@@ -22,7 +22,7 @@ from sandbox.code_intelligence.mutations.mutation_service import MutationService
 from sandbox.code_intelligence.mutations.patcher import Patcher
 from sandbox.code_intelligence.mutations.time_machine import TimeMachine
 from sandbox.code_intelligence.mutations.write_coordinator import WriteCoordinator
-from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
+from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
 
 __all__ = ["InProcessBackend"]
 

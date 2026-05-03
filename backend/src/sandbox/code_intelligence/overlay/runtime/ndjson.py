@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 
-from .types import ClassifyOutcome, PolicyRejectOutcome
+from .types import PolicyRejectOutcome, UpperChange
 
 
 def write_diff_ndjson(
     *,
     run_dir: str,
     exit_code: int,
-    outcome: ClassifyOutcome,
+    upper_changes: tuple[UpperChange, ...],
     upper_bytes: int,
     upper_files: int,
     warnings: list[str] | None = None,
@@ -27,28 +28,21 @@ def write_diff_ndjson(
             "exit_code": exit_code,
             "upper_bytes": upper_bytes,
             "upper_files": upper_files,
-            "gitinclude_changes": len(outcome.gitinclude),
-            "gitignore_changes": len(outcome.gitignore_paths),
-            "gitignore_paths": list(outcome.gitignore_paths),
-            "whiteouts_gitinclude": outcome.whiteouts_gitinclude,
-            "whiteouts_gitignore_refused": outcome.whiteouts_gitignore_refused,
-            "dotgit_rejects": outcome.dotgit_rejects,
-            "direct_merged_bytes": outcome.direct_merged_bytes,
+            "upper_changes": len(upper_changes),
             "run_timings": dict(run_timings or {}),
             "warnings": list(warnings or ()),
         }
     }
     lines.append(json.dumps(meta, separators=(",", ":")))
-    for change in outcome.gitinclude:
+    for change in upper_changes:
         lines.append(
             json.dumps(
                 {
-                    "path": change.path,
+                    "rel": change.rel,
                     "kind": change.kind,
-                    "base_content": change.base_content,
+                    "base_bytes_b64": _encode_bytes(change.base_bytes),
+                    "upper_bytes_b64": _encode_bytes(change.upper_bytes),
                     "base_existed": change.base_existed,
-                    "final_content": change.final_content,
-                    "strict_base": True,
                 },
                 separators=(",", ":"),
             )
@@ -57,6 +51,12 @@ def write_diff_ndjson(
         fh.write("\n".join(lines))
         fh.write("\n")
     return path
+
+
+def _encode_bytes(value: bytes | None) -> str | None:
+    if value is None:
+        return None
+    return base64.b64encode(value).decode("ascii")
 
 
 def write_reject_ndjson(

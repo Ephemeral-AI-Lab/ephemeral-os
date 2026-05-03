@@ -55,7 +55,10 @@ Bytes are base64-encoded on the wire so binaries cross the seam unchanged. **`ki
 utf-8 enforcement on regular-file content happens at the OCC seam, not in the runtime.
 
 Orchestrator-side overlay — `backend/src/sandbox/code_intelligence/overlay/`:
-- `auditor.py`:
+- `auditor.py` → `capture_runner.py`:
+  - Rename `OverlayAuditor` → `OverlayCaptureRunner`. The old name implied
+    policy/audit ownership; after this slice overlay only captures upperdir
+    state.
   - Drop the OCC commit invocation.
   - Drop the gitinclude/gitignore split fields.
   - New return shape: `OverlayRunOutcome { exit_code, stdout, upper_changes: tuple[UpperChange, ...], overlay_rejected: bool, conflict: ConflictInfo | None, warnings, overlay_run_timings, overlay_stage_timings, policy_reject }`.
@@ -67,10 +70,15 @@ Orchestrator-side overlay — `backend/src/sandbox/code_intelligence/overlay/`:
   files are not durable overlay policy modules; later runtime/client slices
   replace this plumbing with `runtime/server.py` plus `overlay/client.py`.
 - `types.py`: add `UpperChange`; drop `OverlayChange`, `OverlayAuditResult` (unused after the shift), and the rich `OverlayDiff` classification fields. `OverlayRunOutcome` slims to the new return shape above.
-- `results.py`: parser-only — `parse_diff_ndjson` returns `UpperChange` records. Move `audit_result` / `reject_result` SimpleNamespace builders into `command_executor.py` (caller-side projection, not overlay output).
+- `results.py`: parser-only — `parse_diff_ndjson` returns `UpperChange` records. Do not keep `audit_result` / `reject_result` SimpleNamespace builders in `overlay/`; they are git/OCC compatibility projection and belong in the caller layer below.
 
-Caller — `backend/src/sandbox/code_intelligence/overlay/command_executor.py`:
+Caller compatibility layer — `backend/src/sandbox/code_intelligence/shell_command_executor.py`:
+- Move `overlay/command_executor.py` out of the overlay package. It is allowed
+  to be git/OCC-aware because it is not overlay; it is the temporary legacy
+  shell-command compatibility layer used until the public `sandbox.api.shell`
+  route lands.
 - `_render_outcome` calls a new OCC changeset entry on `upper_changes` and projects the verdict onto the legacy `SimpleNamespace` shape so upstream callers (`InProcessBackend.cmd`, agent tools) see `gitinclude_committed`, `gitignore_merged`, `git_commit_status`, etc., unchanged.
+- Move `audit_result` / `reject_result` SimpleNamespace builders here.
 
 OCC — `backend/src/sandbox/code_intelligence/mutations/`:
 - New entry `WriteCoordinator.apply_changeset(upper_changes, *, agent_id, edit_type, description) -> ChangesetResult`.
@@ -91,6 +99,11 @@ OCC — `backend/src/sandbox/code_intelligence/mutations/`:
 
 ### Delete
 - `backend/src/sandbox/code_intelligence/overlay/command_committer.py`.
+- `backend/src/sandbox/code_intelligence/overlay/auditor.py` — renamed to
+  `overlay/capture_runner.py`.
+- `backend/src/sandbox/code_intelligence/overlay/command_executor.py` — moved
+  to `code_intelligence/shell_command_executor.py` because it remains
+  git/OCC-aware during the legacy compatibility window.
 - `backend/src/sandbox/code_intelligence/overlay/runtime/classifier.py` — entire file; classification moves to OCC.
 - `backend/src/sandbox/code_intelligence/overlay/runtime/direct_routes.py` — lifted into OCC `mutations/changeset.py`.
 - `backend/src/sandbox/code_intelligence/overlay/runtime/gitignore.py` — lifted into OCC.
@@ -119,6 +132,8 @@ OCC — `backend/src/sandbox/code_intelligence/mutations/`:
    - **Gitincluded whiteout, base existed**: strict-base ledger delete.
    - **Gitincluded non-utf8 / symlink / opaque-dir**: per-file conflict → aggregate `success=False, conflict_reason="patch_failed"`. Direct-merges already ran; gitinclude partition does not commit.
 4. Wire `AuditedCommandExecutor._render_outcome`:
+   - Move `AuditedCommandExecutor` out of `overlay/` first; its new temporary
+     home is `code_intelligence/shell_command_executor.py`.
    - On `overlay_rejected=True` → render rejection verdict, no OCC call.
    - On overlay success → call `apply_changeset` with `outcome.upper_changes`. Project the verdict onto the legacy SimpleNamespace.
 5. Replace `_apply_remote_batch_checked`'s bare-string failure with structured `ConflictInfo(reason="argv_too_large", ...)`. Streaming the payload via stdin is the proper fix and is tracked separately; this slice's job is only to surface the condition cleanly.
@@ -143,6 +158,11 @@ OCC — `backend/src/sandbox/code_intelligence/mutations/`:
 - Build / ruff / tests green.
 - `grep -rn "git check-ignore\|check_ignore\|direct_merge\|narrow_prune\|gitignore\|REJECT_DOTGIT\|IGNORABLE_DOTGIT\|has_git_routing_metadata\|\\.git" backend/src/sandbox/code_intelligence/overlay/` returns zero hits — overlay knows nothing about git, including `.git/` as a path string.
 - `grep -rn "from sandbox.code_intelligence.mutations\|from sandbox.occ" backend/src/sandbox/code_intelligence/overlay/` returns zero hits — overlay never imports OCC.
+- `grep -rn "gitinclude\|gitignore\|git_commit\|apply_changeset\|SimpleNamespace" backend/src/sandbox/code_intelligence/overlay/` returns zero hits — legacy response projection is outside overlay.
+- `backend/src/sandbox/code_intelligence/overlay/auditor.py` and
+  `backend/src/sandbox/code_intelligence/overlay/command_executor.py` do not
+  exist after Step 1. The remaining overlay-side runner is named for capture,
+  not audit.
 - The OCC coordinator — not overlay — is the only place that calls `git check-ignore` or writes to the live workspace.
 - The caller — not overlay — drives `apply_changeset`.
 

@@ -25,7 +25,7 @@ from sandbox.code_intelligence.overlay.support import (
     overlay_runtime_bundle_bytes,
 )
 from sandbox.code_intelligence.overlay.types import (
-    OverlayDiff,
+    OverlayCapture,
     OverlayLease,
     OverlayPolicyReject,
     OverlayRunError,
@@ -271,7 +271,7 @@ class OverlayProcessExecMixin:
         *,
         overlay_stdout: str = "",
         overlay_exit_code: int | None = None,
-    ) -> OverlayDiff | OverlayPolicyReject:
+    ) -> OverlayCapture | OverlayPolicyReject:
         diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
         if self._can_use_local_run_dir(sandbox):
             try:

@@ -1,31 +1,26 @@
-"""Orchestrator-side overlay shell auditor."""
+"""Orchestrator-side overlay capture runner."""
 
 from __future__ import annotations
 
 import asyncio
 import base64
 import logging
-import subprocess as subprocess
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sandbox.api.transport import SandboxTransport
-from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter
 from sandbox.code_intelligence.overlay.config import (
     overlay_max_concurrent,
     overlay_upper_size_mb,
 )
 from sandbox.code_intelligence.overlay.daemon_local import OverlayDaemonLocalMixin
 from sandbox.code_intelligence.overlay.process_exec import OverlayProcessExecMixin
-from sandbox.code_intelligence.overlay.results import (
-    live_path,
-    parse_diff_ndjson,
-)
+from sandbox.code_intelligence.overlay.results import parse_diff_ndjson
 from sandbox.code_intelligence.overlay import support as _overlay_support
 from sandbox.code_intelligence.overlay.types import (
     ConflictInfo,
-    OverlayDiff,
+    OverlayCapture,
     OverlayLease,
     OverlayPolicyReject,
     OverlayRunOutcome,
@@ -41,8 +36,8 @@ def _overlay_runtime_bundle_bytes() -> bytes:
     return _overlay_support.overlay_runtime_bundle_bytes()
 
 
-class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
-    """Run one command under a fresh ``unshare -Urm`` overlay and commit via OCC."""
+class OverlayCaptureRunner(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
+    """Run one command under a fresh ``unshare -Urm`` overlay and capture upperdir."""
 
     def __init__(
         self,
@@ -66,7 +61,6 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         self._upper_size_mb = (
             upper_size_mb if upper_size_mb is not None else overlay_upper_size_mb()
         )
-        self._committer = OverlayCommandCommitter(workspace_root=self._workspace_root)
         self._script_upload_lock = asyncio.Lock()
         self._script_uploaded = False
         self._fingerprint_lock = asyncio.Lock()
@@ -250,32 +244,19 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         self,
         *,
         stdout: str,
-        diff: OverlayDiff,
+        diff: OverlayCapture,
     ) -> OverlayRunOutcome:
         """Build the OCC-free :class:`OverlayRunOutcome` from a parsed diff.
 
-        The auditor never invokes OCC; the caller drives commit on
-        :attr:`OverlayRunOutcome.dirty_changes`.
+        The auditor never invokes OCC; the caller drives merge policy on
+        :attr:`OverlayRunOutcome.upper_changes`.
         """
-        gitignore_paths = tuple(
-            live_path(self._workspace_root, p) for p in diff.gitignore_paths
-        )
-        gitinclude_live_paths = tuple(
-            live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
-        )
-        dirty_changes = tuple(
-            self._committer.to_operation_changes(diff.gitinclude_changes)
-        )
-        mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
         return OverlayRunOutcome(
             exit_code=diff.exit_code,
             stdout=stdout,
-            dirty_changes=dirty_changes,
+            upper_changes=diff.upper_changes,
             overlay_rejected=False,
             conflict=None,
-            gitignore_paths=gitignore_paths,
-            gitinclude_live_paths=gitinclude_live_paths,
-            mixed_gitinclude_gitignore=mixed,
             warnings=tuple(diff.warnings),
             overlay_run_timings=dict(diff.run_timings),
             policy_reject=None,
@@ -301,16 +282,13 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         return OverlayRunOutcome(
             exit_code=exit_code,
             stdout=stdout,
-            dirty_changes=(),
+            upper_changes=(),
             overlay_rejected=True,
             conflict=conflict,
-            gitignore_paths=(),
-            gitinclude_live_paths=(),
-            mixed_gitinclude_gitignore=False,
             warnings=(detail,),
             overlay_run_timings=dict(reject.run_timings),
             policy_reject=reject,
         )
 
 
-__all__ = ["OverlayAuditor", "parse_diff_ndjson"]
+__all__ = ["OverlayCaptureRunner", "parse_diff_ndjson"]

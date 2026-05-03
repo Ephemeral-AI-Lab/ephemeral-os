@@ -38,7 +38,7 @@ def overlay_runtime_bundle_bytes() -> bytes:
 
 def workspace_fingerprint(workspace_root: str) -> WorkspaceFingerprint:
     root = Path(workspace_root)
-    paths = (root, root / ".git" / "index", root / ".git" / "HEAD")
+    paths = (root,)
     rows: list[tuple[str, int, int, int, int]] = []
     for path in paths:
         try:

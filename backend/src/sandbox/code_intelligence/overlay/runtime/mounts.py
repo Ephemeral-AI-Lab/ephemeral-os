@@ -1,4 +1,4 @@
-"""Namespace mount setup for the sandbox-side overlay runtime."""
+"""Mount setup for the sandbox-side overlay runtime."""
 
 from __future__ import annotations
 
