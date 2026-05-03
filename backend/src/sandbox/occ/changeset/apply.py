@@ -7,7 +7,8 @@ import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
+from sandbox.occ.changeset.legacy import LegacyChangesetResult
+from sandbox.occ.changeset.types import UpperChangeLike
 from sandbox.occ.content.hashing import content_hash
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.types import OperationChange, OperationResult
@@ -17,6 +18,11 @@ CommitFn = Callable[
     [Sequence[OperationChange]],
     OperationResult,
 ]
+
+
+# Local alias preserves the long-standing apply_changeset return type while the
+# new gate's ChangesetResult shape lives in changeset/types.py.
+ChangesetResult = LegacyChangesetResult
 
 _ARGV_OVERFLOW_SIGNALS = (
     "argument list too long",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.occ.changeset import ChangesetResult
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
 from sandbox.overlay.types import UpperChange
 from sandbox.runtime.registry import dispose_all_code_intelligence
 from sandbox.runtime.service import CodeIntelligenceService

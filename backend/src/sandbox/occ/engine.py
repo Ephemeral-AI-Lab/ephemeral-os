@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
+from sandbox.occ.changeset.types import UpperChangeLike
 from sandbox.occ.commit import WriteCoordinator
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.operations.service import OCCOperationService

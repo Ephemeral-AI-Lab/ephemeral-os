@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from contextlib import contextmanager
 from typing import Any
 
-from sandbox.occ.changeset import ChangesetResult
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
 from sandbox.occ.engine import LocalOCCEngine
 from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.overlay.types import OverlayRunOutcome

@@ -35,10 +35,10 @@ from sandbox.occ.commit.results import (
     operation_abort,
 )
 from sandbox.occ.changeset import (
-    ChangesetResult,
     UpperChangeLike,
     apply_changeset as apply_raw_changeset,
 )
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
 from sandbox.occ.types import (
     EditResult,
     OperationChange,

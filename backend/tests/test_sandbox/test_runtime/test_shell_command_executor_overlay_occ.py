@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sandbox.occ.changeset import ChangesetResult
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
 from sandbox.overlay.types import (
     OverlayRunOutcome,

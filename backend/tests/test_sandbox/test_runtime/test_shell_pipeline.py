@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset import ChangesetResult
+from sandbox.occ.changeset.legacy import LegacyChangesetResult as ChangesetResult
 from sandbox.overlay.types import OverlayRunOutcome, UpperChange
 from sandbox.runtime.pipelines import shell_pipeline
 
