@@ -97,7 +97,8 @@ Phase C — Public surface + cleanup
 - **Entry.** Steps 1 and 5 both merged.
 - **Exit gate.** Overlay at `sandbox/overlay/` with `client.py` and `setup.sh`.
   `OverlayClient` is the only host-side route for overlay/shell server
-  ops; `setup.sh` is registered by `overlay/bootstrap.py`. `shell_pipeline`
+  ops; public shell may still bypass it for simple read-only pipelines.
+  `setup.sh` is registered by `overlay/bootstrap.py`. `shell_pipeline`
   composes overlay→OCC. One-wire-trip-per-op assertion holds for every shell
   pipeline test. Peer-isolation lint passes (overlay ↔ OCC mutual non-import).
   5a's stripped dead code deleted.
@@ -105,7 +106,8 @@ Phase C — Public surface + cleanup
 ### Step 7 — Slice 6 (public verbs)
 - **Entry.** Steps 5 and 6 merged.
 - **Exit gate.** `sandbox.api.{shell, read, write, edit}` live. Guarded API
-  modules delegate to peer clients (`shell` → `OverlayClient`, `write/edit` →
+  modules delegate to peer clients (`shell` → `raw_exec` only for simple
+  read-only pipelines and `OverlayClient` otherwise, `write/edit` →
   `OCCClient`) instead of constructing server envelopes directly. Agent
   tools are ≤10-line pass-throughs. §1.6 result hierarchy is the only result
   surface; `OperationResult`, overlay `SimpleNamespace` builders, and

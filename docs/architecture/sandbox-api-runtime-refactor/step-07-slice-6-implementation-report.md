@@ -22,7 +22,8 @@ earlier runtime slices:
 
 - `sandbox.api.write.write_file` -> `OCCClient.write`
 - `sandbox.api.edit.edit_file` -> `OCCClient.edit`
-- `sandbox.api.shell.shell` -> `OverlayClient.shell`
+- `sandbox.api.shell.shell` -> `raw_exec` for simple read-only pipelines,
+  otherwise `OverlayClient.shell`
 
 `sandbox.api.read.read_file` intentionally stays unguarded and uses `raw_exec`
 directly. Missing files return `ReadFileResult(exists=False, content="")`
@@ -39,7 +40,7 @@ rather than a guarded conflict.
 | `backend/src/sandbox/api/read.py` | Public read verb over `raw_exec`; distinguishes missing files from empty files |
 | `backend/src/sandbox/api/write.py` | Public write verb over `OCCClient.write`; maps OCC results to `WriteFileResult` |
 | `backend/src/sandbox/api/edit.py` | Public edit verb over `OCCClient.edit`; maps OCC results to `EditFileResult` |
-| `backend/src/sandbox/api/shell.py` | Public shell verb over `OverlayClient.shell`; maps overlay/OCC verdicts to `ShellResult` |
+| `backend/src/sandbox/api/shell.py` | Public shell verb with a read-only `raw_exec` fast path; maps overlay/OCC verdicts to `ShellResult` for guarded commands |
 
 ### Updated Public API Contract
 
@@ -132,8 +133,9 @@ OCC `OperationResult` values are projected onto the public result hierarchy:
 
 ### Shell API
 
-`shell` delegates to `OverlayClient.shell`, preserving the Overlay/OCC pipeline
-as the only guarded command execution path. The public shell result preserves:
+`shell` routes simple read-only pipelines to `raw_exec`; all other commands
+delegate to `OverlayClient.shell`, preserving the Overlay/OCC pipeline as the
+guarded command execution path. The public shell result preserves:
 
 - `exit_code`
 - `stdout`

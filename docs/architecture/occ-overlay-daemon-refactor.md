@@ -157,11 +157,11 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes to `OverlayClient`, not directly to overlay
-handlers. Inside the sandbox, `runtime/pipelines.py::shell_pipeline` calls the
-overlay `run` handler first, then forwards captured `UpperChange` records to
-OCC. Overlay never imports OCC and never classifies gitignored vs gitincluded
-paths itself.
+External API: public shell routes simple read-only pipelines to `raw_exec` and
+all other commands to `OverlayClient`, not directly to overlay handlers. Inside
+the sandbox, `runtime/pipelines.py::shell_pipeline` calls the overlay `run`
+handler first, then forwards captured `UpperChange` records to OCC. Overlay
+never imports OCC and never classifies gitignored vs gitincluded paths itself.
 
 No `auditor.py` remains in the target overlay package. The audit name implied
 policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /

@@ -214,3 +214,34 @@ async def test_shell_keeps_control_operator_pipeline_on_overlay_route() -> None:
 
     assert result.stdout == "blocked by overlay path\n"
     assert len(adapter.calls) == 1
+
+
+async def test_shell_keeps_command_substitution_on_overlay_route() -> None:
+    command = 'grep "$(rm -rf /tmp/project)" pyproject.toml | wc -l'
+    adapter = _Adapter(
+        expected_command=command,
+        response={
+            "result": "0\n",
+            "exit_code": 0,
+            "changed_paths": [],
+            "warnings": [],
+            "overlay_run_timings": {},
+            "overlay_stage_timings": {},
+            "conflict": None,
+        },
+    )
+    register_adapter("sb-shell-substitution", adapter)
+    try:
+        result = await shell(
+            "sb-shell-substitution",
+            ShellRequest(
+                command=command,
+                cwd="/workspace",
+                actor=RequestActor(agent_id="agent-1"),
+            ),
+        )
+    finally:
+        dispose_adapter("sb-shell-substitution")
+
+    assert result.stdout == "0\n"
+    assert len(adapter.calls) == 1

@@ -39,7 +39,14 @@ This refactor settles those by (a) defining a 5-verb public `sandbox.api`, (b) p
 └────────────────────────────────────────────────────────┘
 ```
 
-**Wire-trip contract.** Every `sandbox.api.{shell,write,edit}` call resolves to exactly one peer-client call and exactly one `adapter.exec` invocation. `sandbox.api.shell` routes through `overlay/client.py`; `sandbox.api.write` and `sandbox.api.edit` route through `occ/client.py`. Composition (overlay→OCC chain for shell, multi-edit OCC apply+commit for edit, OCC write+commit for write, conflict resolution, audit attribution) happens entirely inside `runtime/server.py` after the bundle is deployed. The host never makes a follow-up call to "complete" an op.
+**Wire-trip contract.** Every `sandbox.api.{shell,write,edit}` call resolves
+to exactly one `adapter.exec` invocation. `sandbox.api.shell` routes simple
+read-only pipelines through `raw_exec` and all other commands through
+`overlay/client.py`; `sandbox.api.write` and `sandbox.api.edit` route through
+`occ/client.py`. Composition (overlay→OCC chain for guarded shell, multi-edit
+OCC apply+commit for edit, OCC write+commit for write, conflict resolution,
+audit attribution) happens entirely inside `runtime/server.py` after the bundle
+is deployed. The host never makes a follow-up call to "complete" an op.
 
 **Server contract.** `runtime/server.py` is generic dispatcher infrastructure, not a peer-specific policy module. It owns request-envelope parsing, validation, `OP_TABLE` lookup, handler invocation, result serialization, and structured error formatting. It does **not** grow an `if op == ...` branch for every OCC or Overlay request. Peer `bootstrap.py` / `handlers/__init__.py` modules register operations into `OP_TABLE`; `server.py` may import known peer bootstraps to load registrations, but dispatch remains table-driven.
 
@@ -52,7 +59,7 @@ that hosts and composes those modules; it is not a third peer domain module.
 ```
 sandbox/api/
     raw_exec.py # un-guarded — runtime/setup/lifecycle/debug only
-    shell.py    # overlay + OCC guarded — agent shell tool
+    shell.py    # read-only fast path, otherwise overlay + OCC guarded shell
     read.py     # un-guarded read — agent read tool
     write.py    # OCC guarded — agent write tool
     edit.py     # OCC guarded — agent edit tool
@@ -63,8 +70,9 @@ sandbox/api/
 
 The verb modules are still the public surface, but they do not build server
 envelopes themselves. Guarded verbs delegate to their owning peer client:
-`sandbox.api.shell` → `OverlayClient`, `sandbox.api.write/edit` → `OCCClient`.
-Those clients are internal route points; agent tools never import them directly.
+`sandbox.api.shell` → `raw_exec` for simple read-only pipelines and
+`OverlayClient` otherwise, `sandbox.api.write/edit` → `OCCClient`. Those
+clients are internal route points; agent tools never import them directly.
 
 `apply_changeset` is **OCC-internal** — reachable only inside pipelines,
 never through `sandbox.api`.
@@ -154,8 +162,8 @@ handlers in-process inside the sandbox.
 | Invariant | Enforcement |
 |---|---|
 | Agent tools see only `sandbox.api.{shell, read, write, edit}` | Tool files import only those four. Lint allowlist. |
-| `sandbox.api.raw_exec` is un-guarded; agents never see it | Allowlisted importers: `sandbox/runtime/{bundle,setup_orchestrator}.py`, `sandbox/lifecycle/*`, debug paths only. |
-| Guarded requests route through peer clients | `sandbox.api.shell` imports `sandbox.overlay.client.OverlayClient`; `sandbox.api.write/edit` import `sandbox.occ.client.OCCClient`. Tests fail if public APIs build server envelopes directly. |
+| `sandbox.api.raw_exec` is un-guarded; agents never see it | Allowlisted importers: `sandbox/api/shell.py` for the read-only pipeline fast path, `sandbox/runtime/{bundle,setup_orchestrator}.py`, `sandbox/lifecycle/*`, debug paths only. |
+| Guarded requests route through peer clients | `sandbox.api.shell` routes simple read-only pipelines to `raw_exec` and otherwise imports `sandbox.overlay.client.OverlayClient`; `sandbox.api.write/edit` import `sandbox.occ.client.OCCClient`. Tests fail if public APIs build server envelopes directly. |
 | Peer setup is explicit | `sandbox/occ/setup.sh` and `sandbox/overlay/setup.sh` are registered by peer `bootstrap.py` files and submitted by `runtime/setup_orchestrator.py` after bundle upload. |
 | Pipelines are the only sequencer | `runtime/pipelines.py` owns every multi-step or cross-peer op: `shell_pipeline` chains `overlay.run` → `occ.apply_changeset` (overlay-rejection short-circuits before OCC); `edit_pipeline` plans and commits multi-edit OCC operations atomically; `write_pipeline` plans and commits OCC writes atomically. Overlay handlers return captured upperdir changes to the caller and never invoke OCC. Lint allowlist forbids `from sandbox.occ` inside `sandbox/overlay/` and vice versa. |
 | Runtime server is generic | `runtime/server.py` has request decoding, `OP_TABLE` lookup, result encoding, and structured errors only. Peer-specific request behavior is registered by `occ/bootstrap.py`, `overlay/bootstrap.py`, and handler modules. |

@@ -139,8 +139,9 @@ should remain in the final structure.
   `raw_exec`; reads stay direct and do not go through `runtime/server.py`.
   It returns `ReadFileResult` and can use a small inline Python/JSON command to
   distinguish missing files from empty files.
-- `backend/src/sandbox/api/shell.py` — public shell verb. Delegates to
-  `sandbox.overlay.client.OverlayClient.shell`; maps the peer result into
+- `backend/src/sandbox/api/shell.py` — public shell verb. Routes simple
+  read-only pipelines directly through `raw_exec`; all other commands delegate
+  to `sandbox.overlay.client.OverlayClient.shell` and map the peer result into
   `sandbox.api.models.ShellResult`.
 - `backend/src/sandbox/api/write.py` — public write verb. Delegates to
   `sandbox.occ.client.OCCClient.write`; maps the OCC result into
@@ -228,7 +229,9 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
      `WriteFileResult` / `EditFileResult`.
    - Populate `ConflictInfo` only on guarded failure.
 4. Implement `sandbox.api.shell`.
-   - Call `OverlayClient.shell`.
+   - Split simple pipelines on `|`; when every segment matches the explicit
+     read-only command allowlist, call `raw_exec`.
+   - Call `OverlayClient.shell` for every other command.
    - Map overlay/runtime `ShellResult` into public `ShellResult`.
    - Preserve `changed_paths` and conflict details exactly as returned by the
      pipeline/OCC verdict.
@@ -269,12 +272,14 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
   - Exactly one adapter exec through `OCCClient`.
   - Applied edit count and conflict mapping are correct.
 - New `backend/tests/test_sandbox/test_api/test_shell.py`
-  - Exactly one adapter exec through `OverlayClient.shell`.
+  - Exactly one adapter exec through `raw_exec` for read-only pipelines.
+  - Exactly one adapter exec through `OverlayClient.shell` for guarded shell.
   - `changed_paths` and conflict details round-trip from the runtime result.
   - Overlay/OCC rejection maps to `ConflictInfo`.
 - Updated import-fence tests:
   - Agent tool imports are restricted to public verb modules.
-  - `raw_exec` is unreachable from agent paths.
+  - `raw_exec` is unreachable from agent tool paths and only imported by the
+    allowlisted public/runtime/lifecycle modules.
   - Public verb modules may import peer clients; tools may not.
 - Updated tool tests:
   - Tools no longer require `context.sandbox_api`.
@@ -291,7 +296,8 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
 - `sandbox.api.{shell, read, write, edit}` exist and are the only agent-tool
   sandbox operation imports.
 - Guarded API modules route through peer clients:
-  - `shell` -> `OverlayClient`
+  - `shell` -> `raw_exec` only for simple read-only pipelines, otherwise
+    `OverlayClient`
   - `write` / `edit` -> `OCCClient`
 - Agent tools do not import `raw_exec`, `providers`, `occ`, `overlay`,
   `runtime`, `daytona`, or `code_intelligence`.
