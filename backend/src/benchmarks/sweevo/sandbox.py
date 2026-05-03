@@ -11,8 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.client.async_ import get_async_sandbox
-from sandbox.api.bash import wrap_bash_command
-from sandbox.api.file_commands import build_write_text_file_command
+from sandbox.runtime.bash import wrap_bash_command
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -237,7 +236,7 @@ async def _upload_file_compat(
     if callable(getattr(process, "exec", None)):
         text = content.decode("utf-8")
         response = await process.exec(
-            wrap_bash_command(build_write_text_file_command(path, text)),
+            wrap_bash_command(_build_write_text_file_command(path, text)),
             timeout=60,
         )
         if getattr(response, "exit_code", 0) not in (0, None):
@@ -337,6 +336,23 @@ async def _write_file_via_chunked_base64_exec(
     await _exec(
         sandbox_id,
         f"base64 -d {shlex.quote(encoded_path)} > {shlex.quote(path)} && rm -f {shlex.quote(encoded_path)}",
+    )
+
+
+def _build_write_text_file_command(file_path: str, content: str) -> str:
+    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
     )
 
 

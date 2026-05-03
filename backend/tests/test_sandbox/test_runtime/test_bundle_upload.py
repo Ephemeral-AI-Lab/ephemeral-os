@@ -51,11 +51,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
 
     required = [
         "sandbox/__init__.py",
-        "sandbox/api/transport.py",
-        "sandbox/api/bash.py",
         "sandbox/api/models.py",
         "sandbox/client/async_bridge.py",
         "sandbox/runtime/server.py",
+        "sandbox/runtime/bash.py",
         "sandbox/runtime/pipelines.py",
         "sandbox/runtime/setup_orchestrator.py",
         "sandbox/runtime/command_client.py",

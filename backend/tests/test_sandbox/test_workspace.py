@@ -338,49 +338,40 @@ class TestCodeIntelligenceRuntime:
         assert mock_context["ci_service"] == mock_svc
 
 
-class TestProviderNeutralApiAttachment:
-    """``_attach_provider_neutral_api`` wires the sandbox API context fields."""
+class TestProviderAdapterRegistration:
+    """Workspace context registers provider adapters without API handles."""
 
-    def test_wires_transport_and_sandbox_api(self):
-        from sandbox.api.audited_sandbox_api import AuditedSandboxApi
-        from sandbox.daytona.transport import DaytonaTransport
-        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
+    def test_registers_daytona_provider_adapter(self):
+        from sandbox.lifecycle.workspace import _register_provider_adapter_if_missing
+        from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+        from sandbox.providers.registry import dispose_adapter, get_adapter
 
-        mock_sandbox = MagicMock()
-        mock_svc = MagicMock()
+        sandbox_id = "workspace-provider-registration"
+        dispose_adapter(sandbox_id)
+
+        _register_provider_adapter_if_missing(sandbox_id)
+
+        assert isinstance(get_adapter(sandbox_id), DaytonaProviderAdapter)
+        dispose_adapter(sandbox_id)
+
+    def test_context_runtime_does_not_attach_legacy_api_handles(self, monkeypatch):
+        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
+        from sandbox.providers.registry import dispose_adapter
+
+        sandbox_id = "workspace-no-legacy-api"
+        dispose_adapter(sandbox_id)
         mock_context = ToolExecutionContextService(
             cwd="/tmp",
-            services={"ci_service": mock_svc},
+            services={"skip_code_intelligence": True},
         )
 
-        _attach_provider_neutral_api(mock_context, "sb-123", mock_sandbox)
-
-        assert isinstance(mock_context["sandbox_transport"], DaytonaTransport)
-        assert isinstance(mock_context["sandbox_api"], AuditedSandboxApi)
-
-    def test_returns_silently_when_ci_service_missing(self):
-        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
-
-        mock_context = ToolExecutionContextService(cwd="/tmp")
-        mock_sandbox = MagicMock()
-
-        # Should not raise — early return when ci_service unavailable.
-        _attach_provider_neutral_api(mock_context, "sb-123", mock_sandbox)
+        ensure_code_intelligence_runtime(
+            mock_context,
+            sandbox_id=sandbox_id,
+            sandbox=MagicMock(),
+            workspace_root="/workspace",
+        )
 
         assert mock_context.get("sandbox_api") is None
         assert mock_context.get("sandbox_transport") is None
-
-    def test_skips_sandbox_api_when_sandbox_handle_missing(self):
-        """``sandbox_api`` requires the live sandbox handle because audit needs it."""
-        from sandbox.lifecycle.workspace import _attach_provider_neutral_api
-
-        mock_svc = MagicMock()
-        mock_context = ToolExecutionContextService(
-            cwd="/tmp",
-            services={"ci_service": mock_svc},
-        )
-
-        _attach_provider_neutral_api(mock_context, "sb-123", None)
-
-        assert mock_context.get("sandbox_api") is None
-        assert mock_context.get("sandbox_transport") is not None
+        dispose_adapter(sandbox_id)

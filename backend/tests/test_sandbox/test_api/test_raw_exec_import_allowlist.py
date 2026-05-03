@@ -29,7 +29,9 @@ def test_raw_exec_imports_are_allowlisted() -> None:
 
 def _is_allowlisted(path: Path) -> bool:
     return (
-        path == Path("sandbox/runtime/bundle.py")
+        path == Path("sandbox/api/__init__.py")
+        or path == Path("sandbox/api/read.py")
+        or path == Path("sandbox/runtime/bundle.py")
         or path == Path("sandbox/runtime/setup_orchestrator.py")
         or path.parts[:2] == ("sandbox", "lifecycle")
         or path in _DEBUG_IMPORTERS

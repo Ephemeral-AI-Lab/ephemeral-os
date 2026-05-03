@@ -1,12 +1,12 @@
-"""Provider-neutral bash command helpers for exec-style transports."""
+"""Bash wrapping helpers shared by host adapters and bundled runtime code."""
 
 from __future__ import annotations
 
 import re
 import shlex
 
+EXIT_MARKER = "__CODEX_EXIT_CODE__="
 
-_EXIT_MARKER = "__CODEX_EXIT_CODE__="
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
 _PYTHON3_SHIM = (
@@ -19,7 +19,6 @@ _TRAILING_TERM_NOISE_RE = re.compile(
 
 
 def wrap_bash_command(command: str, *, cwd: str | None = None) -> str:
-    """Wrap *command* so callers can recover the exit code from stdout."""
     cd_command = f"cd {shlex.quote(cwd)}\n" if cwd else ""
     script = (
         f"{_USER_LOCAL_BIN_EXPORT}\n"
@@ -28,7 +27,7 @@ def wrap_bash_command(command: str, *, cwd: str | None = None) -> str:
         f"{_PYTHON3_SHIM}\n"
         f"{command}\n"
         "__codex_exit_code=$?\n"
-        f'printf "\\n{_EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'
+        f'printf "\\n{EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'
         'exit "$__codex_exit_code"'
     )
     return f"env -u LC_ALL bash -o pipefail -lc {shlex.quote(script)}"
@@ -39,9 +38,10 @@ def extract_exit_code(
     *,
     fallback_exit_code: int | str | None,
 ) -> tuple[str, int]:
-    """Strip the synthetic exit marker and return ``(stdout, exit_code)``."""
     sanitized = _TRAILING_TERM_NOISE_RE.sub("", output or "").rstrip()
-    matches = list(re.finditer(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)", sanitized, flags=re.S))
+    matches = list(
+        re.finditer(rf"\n?{re.escape(EXIT_MARKER)}(-?\d+)", sanitized, flags=re.S)
+    )
     if matches:
         marker = matches[-1]
         resolved = int(marker.group(1))
@@ -59,8 +59,4 @@ def extract_exit_code(
     return sanitized, 0
 
 
-__all__ = [
-    "_EXIT_MARKER",
-    "extract_exit_code",
-    "wrap_bash_command",
-]
+__all__ = ["EXIT_MARKER", "extract_exit_code", "wrap_bash_command"]

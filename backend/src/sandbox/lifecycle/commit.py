@@ -1,7 +1,7 @@
 """Shared commit helpers for sandbox API write operations.
 
-Decoupled from tool execution contexts: callers resolve attribution and the CI
-service themselves, then pass resolved values in.
+Decoupled from tool execution contexts: callers resolve actor identity and the
+CI service themselves, then pass resolved values in.
 """
 
 from __future__ import annotations
@@ -204,13 +204,13 @@ async def submit_commit(
     """Submit one write/edit/delete/move commit through *svc*.
 
     *svc* must be an active CodeIntelligenceService. *agent_id* is the ledger
-    attribution label. *sandbox*, when not ``None``, is rebound onto the service
+    actor label. *sandbox*, when not ``None``, is rebound onto the service
     before the sync OCC dispatch so reads see the current handle.
     """
     if svc is None:
         raise RuntimeError(
             "submit_commit requires an active ci_service; "
-            "caller must require SandboxApi before submitting commits",
+            "caller must initialize the sandbox commit service before submitting commits",
         )
 
     result = await _batcher_for(svc).submit(

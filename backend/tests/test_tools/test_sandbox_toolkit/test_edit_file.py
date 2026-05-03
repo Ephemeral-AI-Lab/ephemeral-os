@@ -128,7 +128,6 @@ def test_aborted_version_is_surfaced_to_caller(
         EditFileResult(
             success=False,
             changed_paths=("/ws/file.py",),
-            status="aborted_version",
             conflict_reason="drift",
         )
     )

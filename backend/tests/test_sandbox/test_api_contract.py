@@ -118,7 +118,12 @@ def test_legacy_api_modules_are_deleted() -> None:
         "sandbox.api.attribution",
         "sandbox.api.transport",
         "sandbox.daytona.transport",
-        "tools.sandbox_toolkit._mutation_result",
         "tools.core.op_result_to_tool_result",
     ):
         assert importlib.util.find_spec(module_name) is None
+
+
+def test_sandbox_toolkit_keeps_shared_mutation_tool_result() -> None:
+    from tools.sandbox_toolkit._mutation_result import mutation_tool_result
+
+    assert callable(mutation_tool_result)

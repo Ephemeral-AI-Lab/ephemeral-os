@@ -15,7 +15,6 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.overlay.engine.constants import (
     PROGRESS_READ_CHUNK_BYTES,
     SLOW_OVERLAY_STAGE_SECONDS,
@@ -31,6 +30,7 @@ from sandbox.overlay.types import (
     OverlayRunOutcome,
 )
 from sandbox.overlay.wire import parse_diff_ndjson
+from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 
 logger = logging.getLogger(__name__)
 

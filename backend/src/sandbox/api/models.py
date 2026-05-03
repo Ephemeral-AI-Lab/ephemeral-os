@@ -15,7 +15,7 @@ from dataclasses import dataclass
 class RequestActor:
     """Caller identity threaded onto every audit-aware request.
 
-    ``agent_id`` is the ledger attribution label and is the only required
+    ``agent_id`` is the ledger actor label and is the only required
     field; the others are populated when the runtime knows them. Keeping
     the optional fields defaulted lets call sites that have only an agent
     name still construct a valid actor.
@@ -64,7 +64,7 @@ class RawExecResult(SandboxResultBase):
     stderr: str = ""
 
 
-# -- SandboxApi: file I/O ---------------------------------------------------
+# -- Public file I/O --------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
 class ReadFileRequest:
@@ -114,9 +114,9 @@ class EditFileResult(GuardedResultBase):
     applied_edits: int = 0
 
 
-# -- SandboxApi: search -----------------------------------------------------
+# -- Public search ----------------------------------------------------------
 
-# -- SandboxApi: shell ------------------------------------------------------
+# -- Public shell -----------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
 class ShellRequest:

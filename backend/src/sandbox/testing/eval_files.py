@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import shlex
 from pathlib import Path
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
-from sandbox.api.bash import wrap_bash_command
-from sandbox.api.file_commands import build_write_text_file_command
+from sandbox.runtime.bash import wrap_bash_command
 
 
 EVAL_SANDBOX_FILES: dict[str, str] = {
@@ -212,7 +212,7 @@ def populate_sandbox_files(sandbox_id: str) -> None:
     for file_path, content in resolved_files.items():
         try:
             raw_sandbox.process.exec(
-                wrap_bash_command(build_write_text_file_command(file_path, content)),
+                wrap_bash_command(_build_write_text_file_command(file_path, content)),
                 timeout=10,
             )
         except Exception:
@@ -221,6 +221,23 @@ def populate_sandbox_files(sandbox_id: str) -> None:
                 raw_sandbox.process.exec(f"printf %s {escaped} > {file_path}", timeout=10)
             except Exception as exc:
                 print(f"Warning: Failed to write {file_path}: {exc}")
+
+
+def _build_write_text_file_command(file_path: str, content: str) -> str:
+    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
+    )
 
 
 __all__ = ["EVAL_SANDBOX_FILES", "populate_sandbox_files"]

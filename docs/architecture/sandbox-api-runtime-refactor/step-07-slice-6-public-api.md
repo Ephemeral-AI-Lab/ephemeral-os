@@ -30,8 +30,8 @@ durable API:
 - old service facade/backend/registry compatibility paths if any remain outside
   `sandbox/runtime`.
 - tool-side result mappers tied to old shapes:
-  `tools/sandbox_toolkit/_mutation_result.py` and
-  `tools/core/op_result_to_tool_result.py`.
+  `tools/core/op_result_to_tool_result.py`. The sandbox toolkit keeps the
+  small `mutation_tool_result` formatter for public guarded results.
 
 Step 7 should therefore not add another adapter layer. The target is flatter:
 
@@ -123,6 +123,7 @@ backend/src/tools/sandbox_toolkit/
     edit_file.py
     shell.py
     _file_tool_helpers.py
+    _mutation_result.py
     _shell_prehooks.py
 ```
 
@@ -206,7 +207,6 @@ legacy-delete slice.
 - `backend/src/sandbox/runtime/legacy_command_client.py`
 - any remaining legacy service facade files if Step 6 did not already delete
   them
-- `backend/src/tools/sandbox_toolkit/_mutation_result.py`
 - `backend/src/tools/core/op_result_to_tool_result.py`
 
 Also delete or relocate any `sandbox.api.errors` usage that exists only to
@@ -240,10 +240,9 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
    `tools.core.sandbox_session.actor_from_context` can construct
    `RequestActor` directly.
 7. Collapse tool result mappers.
-   `tools/sandbox_toolkit/_mutation_result.py` and
-   `tools/core/op_result_to_tool_result.py` are old-shape helpers; inline the
-   small formatting needed by `write_file.py` / `edit_file.py` or use a helper
-   named around public guarded results, not `OperationResult`.
+   `tools/core/op_result_to_tool_result.py` is an old-shape helper. Keep the
+   sandbox toolkit's shared `mutation_tool_result` formatter for the stable
+   public guarded result payload used by `write_file.py` and `edit_file.py`.
 8. Remove the deprecated transport stack from production imports.
    `providers/daytona/adapter.py` should not instantiate
    `DaytonaTransport`; it should be the Daytona exec adapter.
@@ -251,7 +250,7 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
    - `rg "sandbox\\.code_intelligence" backend/src`
    - `rg "SandboxTransport|DaytonaTransport" backend/src`
    - `rg "audited_sandbox_api|sandbox_api|sandbox\\.api\\.audit|sandbox\\.api\\.attribution" backend/src`
-   - `rg "op_result_to_tool_result|_mutation_result" backend/src`
+   - `rg "op_result_to_tool_result" backend/src`
 10. Delete zero-hit legacy files in dependency order. Do not keep compatibility
     wrappers under the new public API.
 
@@ -301,8 +300,7 @@ objects with `ConflictInfo`; peer-client exceptions stay peer-local.
   shape and expose `changed_paths` plus conflict.
 - No production import depends on `AuditedSandboxApi`, `SandboxApi`,
   `SandboxTransport`, `DaytonaTransport`, `legacy_command_client`,
-  `sandbox.code_intelligence`, old `OperationResult` tool mappers, or
-  `_mutation_result`.
+  `sandbox.code_intelligence`, or old `OperationResult` tool mappers.
 - If any legacy file is not physically deleted in this slice, the doc must name
   the remaining production importer and Step 8 / Slice 7 must delete it.
 

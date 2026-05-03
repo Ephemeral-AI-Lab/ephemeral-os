@@ -45,7 +45,7 @@ def test_write_file_success_returns_changed_paths_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     api = _WriteApi(
-        WriteFileResult(success=True, changed_paths=("/ws/new.py",), status="committed")
+        WriteFileResult(success=True, changed_paths=("/ws/new.py",))
     )
     ctx = _ctx_with_api(api)
     monkeypatch.setattr(write_file_module, "sandbox_write_file", api.write_file)

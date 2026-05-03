@@ -41,10 +41,7 @@ from dotenv import load_dotenv
 
 from sandbox.runtime.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContextService
-from sandbox.api.bash import (
-    extract_exit_code,
-    wrap_bash_command,
-)
+from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 from tools.sandbox_toolkit.shell import shell
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]

@@ -1,52 +1,87 @@
-"""Import-fence tests for the sandbox API adapter migration."""
+"""Import-fence tests for the sandbox public API cutover."""
 
 from __future__ import annotations
 
 import ast
+import importlib
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
+_TOOL_ALLOWED = {
+    "sandbox.api.edit",
+    "sandbox.api.models",
+    "sandbox.api.read",
+    "sandbox.api.shell",
+    "sandbox.api.write",
+}
+_TOOL_FORBIDDEN_PREFIXES = (
+    "sandbox.api.raw_exec",
+    "sandbox.providers",
+    "sandbox.occ",
+    "sandbox.overlay",
+    "sandbox.runtime",
+    "sandbox.daytona",
+    "sandbox.code_intelligence",
+)
 
 
-def test_no_forbidden_daytona_imports() -> None:
-    forbidden_for_tools = (
-        "sandbox.daytona",
-        "sandbox.runtime",
-        "tools.core.ci_adapter",
-        "tools.core.sandbox_commit",
-        "tools.core.ci_attribution",
-    )
-    forbidden_for_ci_internals = ("sandbox.daytona", "daytona_sdk")
-
+def test_agent_sandbox_tools_import_only_public_api_verbs() -> None:
+    offenders: list[str] = []
     for module in _python_files(SRC_ROOT / "tools" / "sandbox_toolkit"):
-        _assert_no_imports(module, forbidden_for_tools)
-    for module in _python_files(SRC_ROOT / "sandbox" / "code_intelligence"):
-        _assert_no_imports(module, forbidden_for_ci_internals)
+        for imported in _imports(module):
+            if not imported.startswith("sandbox."):
+                continue
+            if imported in _TOOL_ALLOWED:
+                continue
+            if any(
+                imported == prefix or imported.startswith(f"{prefix}.")
+                for prefix in _TOOL_FORBIDDEN_PREFIXES
+            ):
+                offenders.append(
+                    f"{module.relative_to(SRC_ROOT)} imports {imported}"
+                )
+                continue
+            offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
 
 
-def test_sandbox_code_intelligence_package_is_deleted() -> None:
-    assert importlib.util.find_spec("sandbox.code_intelligence") is None
+def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
+    for module_name in (
+        "sandbox.code_intelligence",
+        "sandbox.api.bash",
+        "sandbox.api.file_commands",
+        "sandbox.api.transport",
+        "sandbox.api.audited_sandbox_api",
+        "sandbox.daytona.transport",
+    ):
+        assert importlib.util.find_spec(module_name) is None
+
+
+def test_deleted_code_intelligence_package_raises_module_not_found() -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("sandbox.code_intelligence")
+
+
+def test_deleted_sandbox_transport_symbol_raises_import_error() -> None:
+    with pytest.raises(ImportError):
+        __import__("sandbox.api.transport", fromlist=["SandboxTransport"])
 
 
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
 
 
-def _assert_no_imports(path: Path, forbidden: tuple[str, ...]) -> None:
+def _imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    names: set[str] = set()
     for node in ast.walk(tree):
-        for imported in _imported_modules(node):
-            for prefix in forbidden:
-                assert imported != prefix and not imported.startswith(f"{prefix}."), (
-                    f"{path.relative_to(SRC_ROOT)} imports forbidden module {imported!r}"
-                )
-
-
-def _imported_modules(node: ast.AST) -> tuple[str, ...]:
-    if isinstance(node, ast.Import):
-        return tuple(alias.name for alias in node.names)
-    if isinstance(node, ast.ImportFrom):
-        return (node.module,) if node.module else ()
-    return ()
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module)
+    return names
