@@ -1,9 +1,9 @@
-"""Unit tests for the CiBackend Protocol selection + in-process/RPC backends.
+"""Unit tests for the CiBackend Protocol selection + in-process/daemon backends.
 
-Covers the four-truth-table selection logic in
+Covers the four-entry truth table selection logic in
 ``CodeIntelligenceService._select_backend`` (transport x sandbox_id),
 the InProcessCiBackend behavioral defaults (e.g. empty workspace returns no
-symbols), and that RpcCiBackend exposes the full protocol shape.
+symbols), and that DaemonCiBackend exposes the full protocol shape.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import pytest
 from sandbox.code_intelligence.backend import (
     CiBackend,
     InProcessCiBackend,
-    RpcCiBackend,
+    DaemonCiBackend,
 )
 from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
@@ -74,7 +74,7 @@ def test_select_inprocess_with_no_transport(tmp_path: Path) -> None:
     assert type(svc._impl) is InProcessCiBackend
 
 
-def test_select_rpc_with_transport_and_id(tmp_path: Path) -> None:
+def test_select_daemon_with_transport_and_id(tmp_path: Path) -> None:
     """Transport + sandbox id always selects the daemon backend."""
     transport = MagicMock(name="SandboxTransport")
     svc = CodeIntelligenceService(
@@ -82,10 +82,10 @@ def test_select_rpc_with_transport_and_id(tmp_path: Path) -> None:
         workspace_root=str(tmp_path),
         transport=transport,
     )
-    assert type(svc._impl) is RpcCiBackend
+    assert type(svc._impl) is DaemonCiBackend
 
 
-def test_select_rpc_ignores_legacy_env_flag(
+def test_select_daemon_ignores_legacy_env_flag(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("EOS_CI_IN_SANDBOX", "0")
@@ -95,7 +95,7 @@ def test_select_rpc_ignores_legacy_env_flag(
         workspace_root=str(tmp_path),
         transport=transport,
     )
-    assert type(svc._impl) is RpcCiBackend
+    assert type(svc._impl) is DaemonCiBackend
 
 
 def test_select_inprocess_with_no_transport_and_sandbox_id(tmp_path: Path) -> None:
@@ -144,35 +144,55 @@ def test_registry_replaces_service_when_transport_is_removed(tmp_path: Path) -> 
     assert second is not first
 
 
+def test_registry_disposes_service_when_transport_is_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    disposed: list[str] = []
+    original_dispose = CodeIntelligenceService.dispose
+
+    def _spy_dispose(self: CodeIntelligenceService) -> None:
+        disposed.append(self.sandbox_id)
+        original_dispose(self)
+
+    monkeypatch.setattr(CodeIntelligenceService, "dispose", _spy_dispose)
+
+    transport = MagicMock(name="transport")
+    first = get_code_intelligence("registry-dispose", str(tmp_path), transport=transport)
+    second = get_code_intelligence("registry-dispose", str(tmp_path))
+
+    assert second is not first
+    assert disposed == ["registry-dispose"]
+
+
 # ---------------------------------------------------------------------------
-# RpcCiBackend
+# DaemonCiBackend
 # ---------------------------------------------------------------------------
 
 
-def _build_rpc_backend() -> RpcCiBackend:
+def _build_daemon_backend() -> DaemonCiBackend:
     transport = MagicMock(name="SandboxTransport")
-    return RpcCiBackend(
-        sandbox_id="sb-rpc",
+    return DaemonCiBackend(
+        sandbox_id="sb-daemon",
         workspace_root="/workspace",
         transport=transport,
     )
 
 
-def test_rpc_backend_init_attributes() -> None:
-    backend = _build_rpc_backend()
-    assert backend.sandbox_id == "sb-rpc"
+def test_daemon_backend_init_attributes() -> None:
+    backend = _build_daemon_backend()
+    assert backend.sandbox_id == "sb-daemon"
     assert backend.workspace_root == "/workspace"
     assert backend.is_initialized is False
     assert backend._transport is not None
 
 
 @pytest.mark.asyncio
-async def test_rpc_backend_cmd_routes_to_daemon() -> None:
-    backend = _build_rpc_backend()
+async def test_daemon_backend_cmd_routes_to_daemon() -> None:
+    backend = _build_daemon_backend()
     calls: list[tuple[str, dict[str, object]]] = []
 
-    class _FakeClient:
-        async def call(
+    class _FakeDaemon:
+        async def _call_daemon_command(
             self,
             op: str,
             args: dict[str, object],
@@ -183,7 +203,7 @@ async def test_rpc_backend_cmd_routes_to_daemon() -> None:
             calls.append((op, args))
             return {"result": "hi\n", "exit_code": 0}
 
-    backend._client = _FakeClient()  # type: ignore[assignment]
+    backend._call_daemon_command = _FakeDaemon()._call_daemon_command  # type: ignore[method-assign]
     sandbox = MagicMock()
     result = await backend.cmd(sandbox, "echo hi")
 
@@ -192,10 +212,10 @@ async def test_rpc_backend_cmd_routes_to_daemon() -> None:
     assert calls == [("svc_cmd", {"command": "echo hi"})]
 
 
-def test_rpc_backend_rebind_sandbox_is_noop() -> None:
+def test_daemon_backend_rebind_sandbox_is_noop() -> None:
     """Daemon's CodeIntelligenceService is constructed with sandbox=None;
-    rebinding from the orchestrator side is a no-op on the RPC backend."""
-    backend = _build_rpc_backend()
+    rebinding from the orchestrator side is a no-op on the daemon backend."""
+    backend = _build_daemon_backend()
     backend.rebind_sandbox(MagicMock(name="sandbox"))
 
 
@@ -220,8 +240,8 @@ def test_inprocess_satisfies_protocol_shape() -> None:
     assert missing == set(), f"InProcessCiBackend missing methods: {missing}"
 
 
-def test_rpc_satisfies_protocol_shape() -> None:
-    """Every public method declared on CiBackend exists on RpcCiBackend."""
+def test_daemon_satisfies_protocol_shape() -> None:
+    """Every public method declared on CiBackend exists on DaemonCiBackend."""
     declared = {
         name
         for name, value in inspect.getmembers(CiBackend)
@@ -229,8 +249,8 @@ def test_rpc_satisfies_protocol_shape() -> None:
     }
     implemented = {
         name
-        for name, value in inspect.getmembers(RpcCiBackend)
+        for name, value in inspect.getmembers(DaemonCiBackend)
         if not name.startswith("_") and callable(value)
     }
     missing = declared - implemented
-    assert missing == set(), f"RpcCiBackend missing methods: {missing}"
+    assert missing == set(), f"DaemonCiBackend missing methods: {missing}"

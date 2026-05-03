@@ -1,10 +1,10 @@
-"""Asyncio Unix-socket daemon for sandbox-local code intelligence RPC.
+"""Asyncio Unix-socket daemon for sandbox-local code intelligence daemon command.
 
 Phase 2 shipped the lifecycle (spawn / ping / shutdown / kill-respawn).
 Phase 3 wires the daemon to a process-resident
 :class:`CodeIntelligenceService` constructed with ``sandbox=None,
 transport=None`` so all local-FS branches activate, then exposes every
-mutation / query / overlay verb as an RPC dispatch entry.
+mutation / query / overlay verb as an daemon command dispatch entry.
 
 The same package code that the orchestrator's in-process backend runs is
 reused verbatim — the daemon imports
@@ -620,7 +620,7 @@ def _scan_unledgered_changes(
 
 
 async def _dispatch_request(body: dict[str, Any]) -> dict[str, Any]:
-    """Run one validated RPC request and return a response envelope."""
+    """Run one validated daemon command request and return a response envelope."""
     try:
         request = parse_request(body)
     except SchemaError as exc:

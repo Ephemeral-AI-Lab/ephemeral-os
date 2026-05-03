@@ -1,4 +1,4 @@
-# Phase 7 — RPC transport probe + persistent overlay supervisor
+# Phase 7 — daemon command transport probe + persistent overlay supervisor
 
 **Estimated effort:** 0.5d probes + 1.5–3d implementation (depends on which probe path lands)
 **Risk profile:** MEDIUM — probes are bounded; supervisor-fork has well-defined failure modes; transport changes have larger blast radius if track 7.1(a) is taken
@@ -11,7 +11,7 @@
 > buckets that are addressable without touching OCC semantics or
 > overlayfs internals:
 >
-> 1. **Orchestrator ↔ daemon RPC gap (~0.51s at 10× p50).** End-to-end
+> 1. **Orchestrator ↔ daemon daemon command gap (~0.51s at 10× p50).** End-to-end
 >    `svc_cmd_10x_latency` p50 = 1.805s; daemon-side `overlay_stage_total`
 >    p50 = 1.298s. The delta is the host-side `transport.exec` HTTP
 >    roundtrip carrying one `svc.cmd` call.
@@ -37,7 +37,7 @@ ordering, overlayfs layout, or `result.json` envelope shape.
 **In scope.**
 - Two parallel probes (Tasks 7.0.A, 7.0.B) before any code change.
 - Up to two implementation tracks gated on probe outcomes:
-  - **Task 7.1** — persistent RPC path; one of three sub-tracks
+  - **Task 7.1** — persistent daemon command path; one of three sub-tracks
     (a)/(b)/(c) chosen by the Daytona transport probe.
   - **Task 7.2** — persistent overlay supervisor with per-request
     fork + `os.unshare` (no setns gymnastics, no shared user-ns).
@@ -80,7 +80,7 @@ sandbox that bypasses `transport.exec` per-call HTTP overhead?
    (persistent stdin/stdout pipe) → daemon binds an internal unix
    socket; one persistent `exec` proxies bytes between host and the
    unix socket.
-3. **(c)** Neither (a) nor (b) is available → fall back to RPC
+3. **(c)** Neither (a) nor (b) is available → fall back to daemon command
    batching at the orchestrator.
 
 **Procedure.**
@@ -161,7 +161,7 @@ abandonment).
 
 ## Implementation tracks (probe-conditional)
 
-### Task 7.1 — Persistent RPC path
+### Task 7.1 — Persistent daemon command path
 
 Open exactly one of (a)/(b)/(c) based on Task 7.0.A.
 
@@ -170,10 +170,10 @@ Open exactly one of (a)/(b)/(c) based on Task 7.0.A.
 | Artifact | File | Purpose |
 |---|---|---|
 | Daemon TCP bind | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | bind a TCP listener on a fixed loopback port in addition to the existing unix socket |
-| Daytona port reservation | `backend/src/sandbox/code_intelligence/rpc/launcher.py` | request port-forward at sandbox bring-up; resolve host-visible URL |
-| Persistent HTTP/2 client | `backend/src/sandbox/code_intelligence/rpc/client.py` | replace per-call `transport.exec` dispatch with a kept-alive httpx (or h2) client; one connection per sandbox lifetime |
-| Reconnect / fallback | `backend/src/sandbox/code_intelligence/rpc/client.py` | reconnect on EPIPE; fall back to `transport.exec` if 3× consecutive reconnects fail within 1 minute |
-| Live perf E2E | `backend/tests/test_e2e/test_live_ci_phase7_persistent_rpc.py` (new) | 1×/5×/10× `svc.cmd` against the dask fixture; assert 10× p50 < track-(a) target |
+| Daytona port reservation | `backend/src/sandbox/code_intelligence/daemon/launcher.py` | request port-forward at sandbox bring-up; resolve host-visible URL |
+| Persistent HTTP/2 daemon command transport | `backend/src/sandbox/code_intelligence/backend.py` | replace per-command `transport.exec` dispatch with a kept-alive httpx (or h2) client; one connection per sandbox lifetime |
+| Reconnect / fallback | `backend/src/sandbox/code_intelligence/backend.py` | reconnect on EPIPE; fall back to `transport.exec` if 3× consecutive reconnects fail within 1 minute |
+| Live perf E2E | `backend/tests/test_e2e/test_live_ci_phase7_persistent_transport.py` (new) | 1×/5×/10× `svc.cmd` against the dask fixture; assert 10× p50 < track-(a) target |
 
 #### Track 7.1(b) — Streaming exec proxy
 
@@ -181,14 +181,14 @@ Open exactly one of (a)/(b)/(c) based on Task 7.0.A.
 |---|---|---|
 | Stream wrapper | `backend/src/sandbox/daytona/transport.py` | `exec_stream()` over Daytona's long-lived exec verb |
 | Daemon stdio loop | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | newline-delimited JSON requests on stdin → responses on stdout, request_id-tagged |
-| Persistent client | `backend/src/sandbox/code_intelligence/rpc/client.py` | one persistent stream; route responses by request_id |
+| Persistent daemon command transport | `backend/src/sandbox/code_intelligence/backend.py` | one persistent stream; route responses by request_id |
 | E2E | same as 7.1(a) | |
 
 #### Track 7.1(c) — Orchestrator-side batching (fallback)
 
 | Artifact | File | Purpose |
 |---|---|---|
-| Batch dispatch | `backend/src/sandbox/code_intelligence/rpc/client.py` | coalesce concurrent `svc.cmd` calls within a 5–20ms window into one `transport.exec` carrying N requests |
+| Batch dispatch | `backend/src/sandbox/code_intelligence/backend.py` | coalesce concurrent `svc.cmd` calls within a 5–20ms window into one `transport.exec` carrying N requests |
 | Daemon batch handler | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | receive batch envelope; dispatch each item to `OverlayAuditor.execute` concurrently (existing semaphore still bounds concurrency) |
 | E2E | sequence of 10 commands fired with 0/5/15ms gaps; assert amortized p50 |
 
@@ -258,10 +258,10 @@ on its own and the other track is blocked or deferred.
 |---|---|---|
 | Phase 7 probe reports | `phase-07-probe-A-report.md`, `phase-07-probe-B-report.md` | new, written before any implementation |
 | Phase 7 implementation report | `phase-07-implementation-report.md` | new, written at landing |
-| Persistent RPC path | one of `rpc/client.py`, `rpc/launcher.py`, `daytona/transport.py`, `in_sandbox/ci_daemon.py` | modified per chosen 7.1 track |
+| Persistent daemon command path | one of `backend.py`, `daemon/launcher.py`, `daytona/transport.py`, `in_sandbox/ci_daemon.py` | modified per chosen 7.1 track |
 | Overlay supervisor | `overlay/runtime/supervisor.py` (new), `overlay/runtime/runner.py`, `overlay/auditor.py`, `in_sandbox/ci_daemon.py` | new + modified per Task 7.2 |
 | Parity test | `test_sandbox/test_code_intelligence/test_supervisor_parity.py` | new (only if 7.2 lands) |
-| Live perf E2Es | `test_e2e/test_live_ci_phase7_persistent_rpc.py`, `test_e2e/test_live_ci_phase7_supervisor.py` | new |
+| Live perf E2Es | `test_e2e/test_live_ci_phase7_persistent_transport.py`, `test_e2e/test_live_ci_phase7_supervisor.py` | new |
 | Probe harness | `test_sandbox/test_code_intelligence/test_supervisor_fork_probe.py` | new (kept after probe; doubles as a regression guard) |
 
 ## Sequencing summary

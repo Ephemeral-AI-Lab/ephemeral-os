@@ -104,7 +104,7 @@ def state_dir(workspace_root: str) -> Path:
 def _confine(state: Path, name: str) -> Path:
     """Resolve ``name`` under ``state`` and reject path traversal.
 
-    Load-bearing for the storage boundary: an RPC handler must not be able
+    Load-bearing for the storage boundary: a daemon handler must not be able
     to write outside the per-workspace state directory. Rejects ``..``,
     absolute paths, and symlink-traversal targets that escape ``state`` after
     resolution.

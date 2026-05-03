@@ -1,4 +1,4 @@
-"""Unit tests for ``RpcCiBackend.ensure_initialized`` + ``query_symbols``.
+"""Unit tests for ``DaemonCiBackend.ensure_initialized`` + ``query_symbols``.
 
 Phase 3.5 retired the orchestrator-side pickle-snapshot fallback. These tests
 now exercise the daemon-route contract: ``ensure_initialized`` launches the
@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from sandbox.code_intelligence.backend import RpcCiBackend
+from sandbox.code_intelligence.backend import DaemonCiBackend
 from sandbox.code_intelligence.core.types import SymbolInfo, SymbolKind
 
 
@@ -28,19 +28,17 @@ def _sym(name: str, line: int = 1) -> SymbolInfo:
 
 
 class _NullTransport:
-    """Minimal stub — RpcCiBackend never calls ``transport.exec`` directly
-    after Phase 3.5 retired the snapshot bootstrap. The daemon launcher is
-    mocked at the boundary instead."""
+    """Minimal stub — DaemonCiBackend transport execution is bypassed here by injecting a fake daemon command handler. The daemon launcher is mocked at the boundary."""
 
     name = "null"
 
     async def exec(self, *args: Any, **kwargs: Any) -> Any:
         del args, kwargs
-        raise AssertionError("RpcCiBackend should not call transport.exec post-3.5")
+        raise AssertionError("DaemonCiBackend should not call transport.exec post-3.5")
 
 
-class _FakeRpcClient:
-    """Stand-in for :class:`CiRpcClient` returning canned daemon responses."""
+class _FakeDaemon:
+    """Stand-in for :class:`DaemonCiBackend` returning canned daemon responses."""
 
     def __init__(
         self,
@@ -56,7 +54,7 @@ class _FakeRpcClient:
         self._cmd_response = cmd_response or {}
         self._raise_for_op = dict(raise_for_op or {})
 
-    async def call(
+    async def _call_daemon_command(
         self,
         op: str,
         args: dict[str, Any] | None = None,
@@ -76,13 +74,14 @@ class _FakeRpcClient:
         return None
 
 
-def _backend_with_fake_client(client: _FakeRpcClient) -> RpcCiBackend:
-    backend = RpcCiBackend(
+def _backend_with_fake_daemon(daemon: _FakeDaemon) -> DaemonCiBackend:
+    backend = DaemonCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
         transport=_NullTransport(),  # type: ignore[arg-type]
     )
-    backend._client = client  # type: ignore[assignment]
+    backend._call_daemon_command = daemon._call_daemon_command  # type: ignore[method-assign]
+    backend._launcher = _FakeLauncher()  # type: ignore[assignment]
     return backend
 
 
@@ -97,6 +96,8 @@ class _FakeLauncher:
         self.shutdown_calls = 0
 
     async def ensure_daemon(self) -> None:
+        if self not in type(self).instances:
+            type(self).instances.append(self)
         self.ensure_calls += 1
 
     async def shutdown(self) -> None:
@@ -105,26 +106,26 @@ class _FakeLauncher:
 
 def test_ensure_initialized_polls_index_ready_until_built() -> None:
     """Daemon launches; we poll ``index_ready`` and flip is_initialized once true."""
-    client = _FakeRpcClient(index_ready=True)
-    backend = _backend_with_fake_client(client)
+    daemon = _FakeDaemon(index_ready=True)
+    backend = _backend_with_fake_daemon(daemon)
     _FakeLauncher.instances.clear()
     with patch(
-        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
     ):
         ok = backend.ensure_initialized(wait=True)
     assert ok is True
     assert backend.is_initialized is True
     assert _FakeLauncher.instances and _FakeLauncher.instances[-1].ensure_calls == 1
     # The poll should have called index_ready at least once.
-    assert any(call[0] == "index_ready" for call in client.calls)
+    assert any(call[0] == "index_ready" for call in daemon.calls)
 
 
 def test_ensure_initialized_idempotent() -> None:
-    client = _FakeRpcClient(index_ready=True)
-    backend = _backend_with_fake_client(client)
+    daemon = _FakeDaemon(index_ready=True)
+    backend = _backend_with_fake_daemon(daemon)
     _FakeLauncher.instances.clear()
     with patch(
-        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
     ):
         backend.ensure_initialized(wait=True)
         n = len(_FakeLauncher.instances)
@@ -137,13 +138,13 @@ def test_ensure_initialized_returns_true_even_if_index_ready_times_out() -> None
     """When the index-ready poll times out, ensure_initialized still flips
     is_initialized so callers can attempt queries (which return [] until the
     background build completes)."""
-    client = _FakeRpcClient(index_ready=False)
-    backend = _backend_with_fake_client(client)
+    daemon = _FakeDaemon(index_ready=False)
+    backend = _backend_with_fake_daemon(daemon)
     backend._INDEX_READY_TIMEOUT_S = 0.05  # type: ignore[assignment]
     backend._INDEX_READY_POLL_S = 0.01  # type: ignore[assignment]
     _FakeLauncher.instances.clear()
     with patch(
-        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher", _FakeLauncher
+        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
     ):
         ok = backend.ensure_initialized(wait=True)
     assert ok is True
@@ -155,21 +156,21 @@ def test_query_symbols_routes_through_daemon() -> None:
         {"name": "Bag", "kind": "function", "file_path": "/ws/foo.py", "line": 1},
         {"name": "Bagel", "kind": "function", "file_path": "/ws/foo.py", "line": 2},
     ]
-    client = _FakeRpcClient(query_response=response)
-    backend = _backend_with_fake_client(client)
+    daemon = _FakeDaemon(query_response=response)
+    backend = _backend_with_fake_daemon(daemon)
     results = backend.query_symbols("bag")
     names = sorted(s.name for s in results)
     assert names == ["Bag", "Bagel"]
-    assert any(call[0] == "query_symbols" for call in client.calls)
+    assert any(call[0] == "query_symbols" for call in daemon.calls)
 
 
 def test_query_symbols_propagates_daemon_error() -> None:
     """Phase 3.5 intentionally retired the orchestrator-side cache fallback.
     A daemon error surfaces — no silent fallback to stale data."""
-    client = _FakeRpcClient(
+    daemon = _FakeDaemon(
         raise_for_op={"query_symbols": RuntimeError("daemon down")},
     )
-    backend = _backend_with_fake_client(client)
+    backend = _backend_with_fake_daemon(daemon)
     with pytest.raises(RuntimeError, match="daemon down"):
         backend.query_symbols("Bag")
 
@@ -177,8 +178,8 @@ def test_query_symbols_propagates_daemon_error() -> None:
 def test_query_symbols_empty_query_returns_empty_via_daemon() -> None:
     """Empty queries route to the daemon (which returns []) — orchestrator
     no longer special-cases the substring."""
-    client = _FakeRpcClient(query_response=[])
-    backend = _backend_with_fake_client(client)
+    daemon = _FakeDaemon(query_response=[])
+    backend = _backend_with_fake_daemon(daemon)
     assert backend.query_symbols("") == []
     assert backend.query_symbols("   ") == []
 
@@ -188,7 +189,7 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
     import asyncio
     from unittest.mock import MagicMock
 
-    client = _FakeRpcClient(
+    daemon = _FakeDaemon(
         cmd_response={
             "result": "hi\n",
             "exit_code": 0,
@@ -207,7 +208,7 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
             "overlay_run_timings": {"total": 0.2},
         }
     )
-    backend = _backend_with_fake_client(client)
+    backend = _backend_with_fake_daemon(daemon)
     progress: list[str] = []
 
     async def _run() -> None:
@@ -222,11 +223,11 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
         assert result.exit_code == 0
         assert result.changed_paths == ["/ws/a.py"]
         assert result.overlay_run_timings == {"total": 0.2}
-        assert result.rpc_call_timings["total"] >= 0.0
+        assert result.daemon_call_timings["total"] >= 0.0
 
     asyncio.run(_run())
     assert progress == ["hi\n"]
-    assert client.calls == [
+    assert daemon.calls == [
         (
             "svc_cmd",
             {
@@ -239,7 +240,7 @@ def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
 
 
 def test_rebind_sandbox_is_noop() -> None:
-    backend = RpcCiBackend(
+    backend = DaemonCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
         transport=_NullTransport(),  # type: ignore[arg-type]
@@ -250,7 +251,7 @@ def test_rebind_sandbox_is_noop() -> None:
 def test_init_drops_legacy_cache_attributes() -> None:
     """Cleanup invariant: the orchestrator-side snapshot cache attributes
     are gone (Phase 3.5 retirement)."""
-    backend = RpcCiBackend(
+    backend = DaemonCiBackend(
         sandbox_id="sb-test",
         workspace_root="/ws",
         transport=_NullTransport(),  # type: ignore[arg-type]
@@ -262,5 +263,5 @@ def test_init_drops_legacy_cache_attributes() -> None:
         "_snapshot_bytes",
     ):
         assert not hasattr(backend, attr), (
-            f"Phase 3.5 cleanup regression: {attr} still on RpcCiBackend"
+            f"Phase 3.5 cleanup regression: {attr} still on DaemonCiBackend"
         )

@@ -2,7 +2,7 @@
 
 The facade delegates every public op to a :class:`CiBackend` selected at
 construction time. Transport-backed sandbox services use
-:class:`RpcCiBackend`; sandboxless/local flows keep using
+:class:`DaemonCiBackend`; sandboxless/local flows keep using
 :class:`InProcessCiBackend`.
 """
 
@@ -16,7 +16,7 @@ from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.backend import (
     CiBackend,
     InProcessCiBackend,
-    RpcCiBackend,
+    DaemonCiBackend,
 )
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
@@ -57,11 +57,11 @@ def _select_backend(
 
     ``edit_history`` and ``symbol_index_persistence`` are only meaningful for
     the in-process backend (the daemon owns the canonical SQLite ledger and
-    SQLite IndexStore when the RPC backend is in use).
+    SQLite IndexStore when the daemon backend is in use).
     """
     if transport is not None and sandbox_id:
         assert transport is not None  # narrow for type-checker
-        return RpcCiBackend(
+        return DaemonCiBackend(
             sandbox_id=sandbox_id,
             workspace_root=workspace_root,
             transport=transport,

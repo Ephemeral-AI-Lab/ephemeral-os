@@ -12,7 +12,7 @@ Introduce the `CiBackend` Protocol and route every existing `CodeIntelligenceSer
 
 Three reasons:
 
-1. **The seam unblocks every later phase.** Once `CodeIntelligenceService` delegates to a swappable backend, Phases 1-5 only ever change the backend selection or add to `RpcCiBackend` — they never touch the public facade or callers.
+1. **The seam unblocks every later phase.** Once `CodeIntelligenceService` delegates to a swappable backend, Phases 1-5 only ever change the backend selection or add to `DaemonCiBackend` — they never touch the public facade or callers.
 2. **The harness must exist before the first measurement.** Phase 0 produces the canonical baseline JSON (`phase_0_baseline_<ts>.json`) that every later phase's `compare_to(baseline)` references. If the harness lands in Phase 1 instead, Phase 1's deltas have nothing to compare against.
 3. **It proves "flag off = byte-identical" mechanically.** With the seam in place but no daemon code shipped, the regression suite running flag-off is a hard contract: every later phase's `flag-off` path must continue to pass it.
 
@@ -22,7 +22,7 @@ Three reasons:
 |---|---|---|
 | Protocol | `backend/src/sandbox/code_intelligence/backend.py` (`CiBackend`) | Single shape that every backend implements |
 | In-process backend | `backend/src/sandbox/code_intelligence/backend.py` (`InProcessCiBackend`) | Wraps today's logic, default selection |
-| Stub RPC backend | `backend/src/sandbox/code_intelligence/backend.py` (`RpcCiBackend`) | Raises `NotImplementedError`; placeholder for Phase 1+ |
+| Stub daemon backend | `backend/src/sandbox/code_intelligence/backend.py` (`DaemonCiBackend`) | Raises `NotImplementedError`; placeholder for Phase 1+ |
 | Service delegation | `backend/src/sandbox/code_intelligence/service.py` (modified) | Constructor selects backend; methods forward |
 | Registry passthrough | `backend/src/sandbox/code_intelligence/registry.py` (modified) | Threads flag/transport through `code_intelligence_for(...)` |
 | Timing harness | `backend/tests/test_e2e/_timing_harness.py` | `TimingHarness` + `step()` + JSON dump + `compare_to()` |
@@ -129,11 +129,11 @@ class InProcessCiBackend:
 
 **Verify:** every existing test under `backend/tests/test_sandbox/test_code_intelligence/` that today constructs `CodeIntelligenceService` directly can be reparametrized to construct `InProcessCiBackend` and still pass.
 
-### Task 0.4 — Implement `RpcCiBackend` stub
+### Task 0.4 — Implement `DaemonCiBackend` stub
 
 **File:** same `backend.py`
 
-**Action:** Same Protocol shape, every method raises `NotImplementedError("RpcCiBackend lands in Phase 1+")`. Constructor takes `transport` and `sandbox_id` and stashes them.
+**Action:** Same Protocol shape, every method raises `NotImplementedError("DaemonCiBackend lands in Phase 1+")`. Constructor takes `transport` and `sandbox_id` and stashes them.
 
 **Why now:** locks in the selection logic (Task 0.5) so Phase 1 only has to flesh out method bodies, not also wire the constructor.
 
@@ -142,7 +142,7 @@ class InProcessCiBackend:
 **File to modify:** `backend/src/sandbox/code_intelligence/service.py`
 
 **Action:**
-- Constructor delegates to `_select_backend(...)` which returns `InProcessCiBackend` unless **all** of: `os.environ.get("EOS_CI_IN_SANDBOX") == "1"` AND `transport is not None` AND `sandbox_id != ""`. In that case returns `RpcCiBackend` (which will still raise on every method until Phase 1 ships).
+- Constructor delegates to `_select_backend(...)` which returns `InProcessCiBackend` unless **all** of: `os.environ.get("EOS_CI_IN_SANDBOX") == "1"` AND `transport is not None` AND `sandbox_id != ""`. In that case returns `DaemonCiBackend` (which will still raise on every method until Phase 1 ships).
 - Every public method becomes a one-line delegation: `return self._impl.method(...)`.
 - Properties `sandbox_id`, `workspace_root`, `is_initialized` forward to `_impl`.
 - `dispose()` forwards to `_impl.dispose()`.
@@ -291,9 +291,9 @@ def test_phase0_baseline_timings(live_sweevo_env):
 **`test_backend_inprocess.py`:**
 - Construct `InProcessCiBackend` with no sandbox bound; assert `query_symbols("foo")` returns `[]`.
 - Construct `CodeIntelligenceService(...)`; assert `type(svc._impl) is InProcessCiBackend` when env unset.
-- Set `EOS_CI_IN_SANDBOX=1` and pass a fake transport + non-empty `sandbox_id`; assert `type(svc._impl) is RpcCiBackend`.
+- Set `EOS_CI_IN_SANDBOX=1` and pass a fake transport + non-empty `sandbox_id`; assert `type(svc._impl) is DaemonCiBackend`.
 - Set `EOS_CI_IN_SANDBOX=1` but no transport; assert backend falls back to `InProcessCiBackend`.
-- Call every public method on `RpcCiBackend` and assert each raises `NotImplementedError`.
+- Call every public method on `DaemonCiBackend` and assert each raises `NotImplementedError`.
 
 **`test_timing_harness_unit.py`:**
 - `TimingHarness.step()` records elapsed time within ±10ms of a known sleep.
@@ -315,7 +315,7 @@ If any test fails: it's a bug in the delegation (Task 0.5), not in any backend l
 
 - [ ] `CiBackend` Protocol exists in `backend.py` and is `mypy --strict` clean.
 - [ ] `InProcessCiBackend` wraps today's logic with no behavior change.
-- [ ] `RpcCiBackend` stub raises `NotImplementedError` on every method.
+- [ ] `DaemonCiBackend` stub raises `NotImplementedError` on every method.
 - [ ] `CodeIntelligenceService.__init__` selects backend via `_select_backend(...)`; every public method is a one-line forward.
 - [ ] `EOS_CI_IN_SANDBOX` flag selection works as documented (4-truth-table tested in `test_backend_inprocess.py`).
 - [ ] `TimingHarness` API matches the spec (Task 0.6); unit tests pass.
@@ -337,6 +337,6 @@ If any test fails: it's a bug in the delegation (Task 0.5), not in any backend l
 ## Hand-off to Phase 1
 
 Phase 1 picks up with:
-- A working `RpcCiBackend` stub at `backend.py` ready to have its first method (`build_index`) implemented.
+- A working `DaemonCiBackend` stub at `backend.py` ready to have its first method (`build_index`) implemented.
 - A `TimingHarness` + baseline JSON ready to compare against.
 - The `EOS_CI_IN_SANDBOX=1` selection path proven (just raises `NotImplementedError` until Phase 1 fleshes it out).

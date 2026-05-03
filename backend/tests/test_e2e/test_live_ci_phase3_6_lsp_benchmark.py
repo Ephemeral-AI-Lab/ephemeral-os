@@ -51,7 +51,7 @@ _TIMINGS_DIR = (
     os.path.dirname(os.path.abspath(__file__)) + "/_timings"
 )
 _DAEMON_WARM_SAMPLES = 10
-_DAEMON_RPC_WARM_P99_CEILING_S = 10.0
+_DAEMON_COMMAND_WARM_P99_CEILING_S = 10.0
 
 
 def _flush(msg: str) -> None:
@@ -94,7 +94,7 @@ class LivePhase36Env:
         )
 
     def make_ci_service_daemon(self) -> CodeIntelligenceService:
-        """Daemon-path service (RpcCiBackend) — basedpyright runs IN the sandbox.
+        """Daemon-path service (DaemonCiBackend) — basedpyright runs IN the sandbox.
 
         Required by Phase 3.6 §6.2: the InProcess path's `LspBackendChild` runs
         on the test host (macOS) where ``basedpyright-langserver`` is missing,
@@ -296,7 +296,7 @@ def test_phase3_6_chosen_backend_benchmark(live_phase36_env: LivePhase36Env) -> 
 def test_phase3_6_chosen_backend_benchmark_daemon_path(
     live_phase36_env: LivePhase36Env,
 ) -> None:
-    """Daemon-path variant: basedpyright runs IN the sandbox via RpcCiBackend.
+    """Daemon-path variant: basedpyright runs IN the sandbox via DaemonCiBackend.
 
     The base ``test_phase3_6_chosen_backend_benchmark`` runs against
     InProcessCiBackend; on a host without ``basedpyright-langserver`` the
@@ -389,14 +389,14 @@ def test_phase3_6_chosen_backend_benchmark_daemon_path(
     _flush(f"\n[phase3.6-daemon] benchmark JSON saved at: {out_path}")
 
     # This is a public daemon-path measurement, so it includes Daytona
-    # ``transport.exec`` shim latency for every RPC. Keep it as a completion
+    # ``transport.exec`` shim latency for every daemon command. Keep it as a completion
     # gate for the previously-hung warm loop; the raw LSP-child SLO belongs in
     # an in-daemon batch probe that does not pay one provider exec per sample.
     if "find_definitions" in h.distributions:
         p99 = h.distributions["find_definitions"]["p99"]
-        assert p99 < _DAEMON_RPC_WARM_P99_CEILING_S, (
+        assert p99 < _DAEMON_COMMAND_WARM_P99_CEILING_S, (
             f"daemon-path find_definitions p99 ({p99:.3f}s) exceeded "
-            f"{_DAEMON_RPC_WARM_P99_CEILING_S:.1f}s; the warm loop may be "
+            f"{_DAEMON_COMMAND_WARM_P99_CEILING_S:.1f}s; the warm loop may be "
             "stuck behind the provider exec shim again"
         )
 

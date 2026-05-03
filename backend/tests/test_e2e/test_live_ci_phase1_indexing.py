@@ -195,7 +195,7 @@ def test_privilege_probe_home_cache(live_phase1_env: LivePhase1Env) -> None:
 
 
 def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
-    """Build the index in-sandbox via RpcCiBackend; assert symbol count parity."""
+    """Build the index in-sandbox via DaemonCiBackend; assert symbol count parity."""
     from sandbox.daytona.transport import DaytonaTransport
 
     h = TimingHarness(phase=1, test_name="indexing_parity")
@@ -427,7 +427,7 @@ def test_eager_bootstrap_timing(live_phase1_env: LivePhase1Env) -> None:
     the first ``ensure_runtime_uploaded`` (uploads bundle), warm run is the
     second (no-op when hash matches).
     """
-    from sandbox.code_intelligence.rpc.launcher import ensure_runtime_uploaded
+    from sandbox.code_intelligence.daemon.launcher import ensure_runtime_uploaded
     from sandbox.daytona.transport import DaytonaTransport
 
     h = TimingHarness(phase=1, test_name="eager_bootstrap_timing")

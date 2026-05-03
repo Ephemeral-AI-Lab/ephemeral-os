@@ -4,14 +4,14 @@ Status: implemented, then corrected on 2026-05-03 after Phase 3.5/3.6 and live P
 
 ## Correction
 
-The earlier Phase 5 plan promoted a first-class sandbox transport verb for code-intelligence RPC. That design has been retired.
+The earlier Phase 5 plan promoted a first-class sandbox transport verb for code-intelligence daemon command. That design has been retired.
 
 The active contract is simpler:
 
 1. The public sandbox transport exposes `process.exec` only.
-2. The code-intelligence RPC client reaches the in-sandbox Unix socket through a short Python bridge launched with `process.exec`.
+2. The code-intelligence daemon backend reaches the in-sandbox Unix socket through a short Python bridge launched with `process.exec`.
 3. No feature flag chooses between native transport and shim paths.
-4. No provider-specific code-intelligence RPC verb exists in Daytona or other transports.
+4. No provider-specific code-intelligence daemon command verb exists in Daytona or other transports.
 5. Future performance work should use batching, persistent sessions, or provider-native socket streaming only if it is genuinely lower overhead than `process.exec`.
 
 ## Why the native verb was removed
@@ -25,7 +25,7 @@ The attempted native transport verb wrapped the same `process.exec` path inside 
 Make daemon mode the default without adding a special transport verb:
 
 1. Route service calls through the daemon-backed code-intelligence backend by default.
-2. Keep the RPC bridge explicit and local to the code-intelligence client.
+2. Keep the daemon command bridge explicit and local to the code-intelligence client.
 3. Delete the native transport-verb branch and the forced-shim feature flag.
 4. Keep lifecycle, recovery, telemetry, and overlay behavior unchanged.
 
@@ -34,11 +34,11 @@ Make daemon mode the default without adding a special transport verb:
 | Component | File | Active behavior |
 | --- | --- | --- |
 | Transport protocol | `backend/src/sandbox/api/transport.py` | Only `exec` is required for command execution. |
-| Daytona transport | `backend/src/sandbox/daytona/transport.py` | No code-intelligence-specific RPC method; callers use `exec`. |
-| RPC client | `backend/src/sandbox/code_intelligence/rpc/client.py` | Always sends framed daemon requests through the Python Unix-socket bridge launched by `transport.exec`. |
+| Daytona transport | `backend/src/sandbox/daytona/transport.py` | No code-intelligence-specific daemon command method; callers use `exec`. |
+| daemon backend | `backend/src/sandbox/code_intelligence/backend.py` | Always sends framed daemon requests through the Python Unix-socket bridge launched by `transport.exec`. |
 | Backend selection | `backend/src/sandbox/code_intelligence/backend.py` | Daemon backend remains the default when sandbox daemon mode is enabled. |
 | Live Phase 5 test | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` | Verifies daemon-default behavior and warm/concurrent service calls, without native-vs-shim A/B branches. |
-| Unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py` | Covers framing, retry, daemon-unavailable, and process.exec bridge behavior. |
+| Unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | Covers framing, retry, daemon-unavailable, and process.exec bridge behavior. |
 
 ## Tasks
 
@@ -48,13 +48,13 @@ Make daemon mode the default without adding a special transport verb:
 
 Done criteria:
 
-1. No code-intelligence-specific RPC method exists on the transport protocol.
+1. No code-intelligence-specific daemon command method exists on the transport protocol.
 2. Daytona transport has no native bridge template for this path.
 3. Tests do not assert provider-specific code-intelligence verbs.
 
-### Task 5.2 — Make the RPC client shim-only
+### Task 5.2 — Make the daemon backend shim-only
 
-`CiRpcClient` owns the daemon wire protocol and process.exec bridge. It should not branch on provider capabilities or environment flags for the retired native verb.
+`DaemonCiBackend` owns the daemon wire protocol and process.exec bridge. It should not branch on provider capabilities or environment flags for the retired native verb.
 
 Done criteria:
 

@@ -10,18 +10,22 @@ Three artifacts live here:
 * :class:`CiBackend` — typing.Protocol that every backend implements.
 * :class:`InProcessCiBackend` — wraps local in-process logic for sandboxless
   flows.
-* :class:`RpcCiBackend` — the default transport-backed path. Phase 3.5 collapsed the
-  Phase 1 pickle-snapshot bootstrap and Phase 3 daemon dispatch into a single
-  ``ensure_daemon → index_ready → query`` pipeline; the orchestrator no
-  longer holds business state.
+* :class:`DaemonCiBackend` — the default transport-backed path. Phase 3.5
+  collapsed the Phase 1 pickle-snapshot bootstrap and Phase 3 daemon dispatch
+  into a single ``ensure_daemon → index_ready → query`` pipeline; the
+  orchestrator no longer holds business state.
 """
 
 from __future__ import annotations
 
+import asyncio
+import base64
 import dataclasses
 import logging
+import textwrap
 import threading
 import time
+import uuid
 from collections.abc import Sequence
 from pathlib import Path
 from types import SimpleNamespace
@@ -44,6 +48,12 @@ from sandbox.code_intelligence.core.types import (
     SymbolInfo,
     WriteSpec,
 )
+from sandbox.code_intelligence.in_sandbox.ci_protocol import (
+    CI_PROTOCOL_VERSION,
+    encode_frame,
+    parse_response,
+    read_frame,
+)
 from sandbox.code_intelligence.indexing.symbol_index import SymbolIndex
 from sandbox.code_intelligence.language_server.client import LspClient
 from sandbox.code_intelligence.mutations.arbiter import Arbiter
@@ -55,7 +65,12 @@ from sandbox.code_intelligence.mutations.write_coordinator import WriteCoordinat
 from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
 from sandbox.code_intelligence.telemetry import build_status, build_telemetry
 
-__all__ = ["CiBackend", "InProcessCiBackend", "RpcCiBackend"]
+__all__ = [
+    "CiBackend",
+    "CiDaemonCommandError",
+    "DaemonCiBackend",
+    "InProcessCiBackend",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -413,18 +428,32 @@ class InProcessCiBackend:
             logger.debug("lsp_client.close() failed during dispose", exc_info=True)
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
 
-class RpcCiBackend:
+class CiDaemonCommandError(Exception):
+    """Raised when the daemon returns an ``ok=False`` command envelope."""
+
+    def __init__(
+        self,
+        kind: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(f"{kind}: {message}")
+        self.kind = kind
+        self.message = message
+        self.details = details or {}
+
+
+class DaemonCiBackend:
     """Daemon-bound backend.
 
     Phase 1 shipped ``ensure_initialized`` + ``query_symbols`` against the
     orchestrator-side cache. Phase 2 added daemon lifecycle cleanup. Phase 3
     routed every code-intelligence verb through the daemon's framed-msgpack
-    RPC dispatch via :class:`CiRpcClient`. Phase 3.5 retired the
-    orchestrator-side pickle snapshot fallback now that the daemon serves
-    queries directly from the SQLite ``IndexStore``: the orchestrator no
-    longer pulls ``index.snapshot`` over the wire and no longer caches
-    symbols. ``ensure_initialized`` simply launches the daemon and polls
-    ``index_ready``.
+    command dispatch. Phase 3.5 retired the orchestrator-side pickle snapshot
+    fallback now that the daemon serves queries directly from the SQLite
+    ``IndexStore``: the orchestrator no longer pulls ``index.snapshot`` over
+    the wire and no longer caches symbols. ``ensure_initialized`` simply
+    launches the daemon and polls ``index_ready``.
 
     ``cmd`` routes through the same daemon dispatch path as query and mutation
     verbs so callers do not need a separate shell path.
@@ -441,27 +470,14 @@ class RpcCiBackend:
         *,
         transport: SandboxTransport,
     ) -> None:
+        from sandbox.code_intelligence.daemon.launcher import DaemonLauncher
+
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
         self._transport = transport
+        self._launcher = DaemonLauncher(transport, sandbox_id, workspace_root)
         self.is_initialized = False
         self._init_lock = threading.Lock()
-        self._client: Any = None  # lazily constructed CiRpcClient
-        self._client_lock = threading.Lock()
-
-    def _ensure_client(self) -> Any:
-        """Return a memoized :class:`CiRpcClient` over the configured transport."""
-        with self._client_lock:
-            if self._client is not None:
-                return self._client
-            from sandbox.code_intelligence.rpc.client import CiRpcClient
-
-            self._client = CiRpcClient(
-                self._transport,
-                self.sandbox_id,
-                self.workspace_root,
-            )
-            return self._client
 
     def ensure_initialized(self, wait: bool = True) -> bool:
         del wait  # The Phase 1 path always runs to completion.
@@ -480,23 +496,14 @@ class RpcCiBackend:
         owns the canonical SQLite ``IndexStore`` and serves queries directly
         from it.
         """
-        import asyncio
+        await self._launcher.ensure_daemon()
 
-        from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
-
-        await DaemonLauncher(
-            self._transport,
-            self.sandbox_id,
-            self.workspace_root,
-        ).ensure_daemon()
-
-        client = self._ensure_client()
         deadline = (
             asyncio.get_event_loop().time() + self._INDEX_READY_TIMEOUT_S
         )
         while True:
             try:
-                resp = await client.call("index_ready", {})
+                resp = await self._call_daemon_command("index_ready", {})
             except Exception as exc:  # pragma: no cover - exposed via tests
                 logger.debug(
                     "index_ready call failed during ensure_initialized: %s", exc
@@ -516,9 +523,8 @@ class RpcCiBackend:
     # ------------------------------------------------------------------ helpers
 
     def _call_sync(self, op: str, args: dict[str, Any] | None = None) -> Any:
-        """Send one RPC call synchronously (bridges asyncio internally)."""
-        client = self._ensure_client()
-        return run_sync(client.call(op, args or {}))
+        """Send one daemon command synchronously (bridges asyncio internally)."""
+        return run_sync(self._call_daemon_command(op, args or {}))
 
     async def _call_async(
         self,
@@ -527,8 +533,166 @@ class RpcCiBackend:
         *,
         timeout: float = 30.0,
     ) -> Any:
-        client = self._ensure_client()
-        return await client.call(op, args or {}, timeout=timeout)
+        return await self._call_daemon_command(op, args or {}, timeout=timeout)
+
+    async def _call_daemon_command(
+        self,
+        op: str,
+        args: dict[str, Any] | None = None,
+        *,
+        timeout: float = 30.0,
+    ) -> Any:
+        """Send one framed command to the in-sandbox daemon."""
+        from sandbox.code_intelligence.daemon.launcher import (
+            CiDaemonUnavailable,
+        )
+        started = time.perf_counter()
+        try:
+            result = await self._call_daemon_once(
+                self._launcher,
+                op,
+                args or {},
+                timeout=timeout,
+            )
+            logger.debug(
+                "ci daemon command done: op=%s elapsed=%.3fs retry=false",
+                op,
+                time.perf_counter() - started,
+            )
+            return result
+        except (ConnectionRefusedError, BrokenPipeError, FileNotFoundError, OSError):
+            retry_started = time.perf_counter()
+            await self._launcher.ensure_daemon()
+            logger.debug(
+                "ci daemon command retry after ensure_daemon: "
+                "op=%s ensure_elapsed=%.3fs",
+                op,
+                time.perf_counter() - retry_started,
+            )
+            try:
+                result = await self._call_daemon_once(
+                    self._launcher,
+                    op,
+                    args or {},
+                    timeout=timeout,
+                )
+                logger.debug(
+                    "ci daemon command done: op=%s elapsed=%.3fs retry=true",
+                    op,
+                    time.perf_counter() - started,
+                )
+                return result
+            except (
+                ConnectionRefusedError,
+                BrokenPipeError,
+                FileNotFoundError,
+                OSError,
+            ) as exc:
+                raise CiDaemonUnavailable(
+                    f"daemon unreachable after respawn: {exc}"
+                ) from exc
+
+    async def _call_daemon_once(
+        self,
+        launcher: Any,
+        op: str,
+        args: dict[str, Any],
+        *,
+        timeout: float,
+    ) -> Any:
+        request_id = uuid.uuid4().hex
+        frame = encode_frame(
+            {"v": CI_PROTOCOL_VERSION, "id": request_id, "op": op, "args": args}
+        )
+        socket_started = time.perf_counter()
+        socket_path = await launcher.socket_path()
+        socket_elapsed = time.perf_counter() - socket_started
+        send_started = time.perf_counter()
+        response_frame = await self._send_frame_via_process_exec(
+            socket_path,
+            frame,
+            timeout=timeout,
+        )
+        send_elapsed = time.perf_counter() - send_started
+        parse_started = time.perf_counter()
+        reader = asyncio.StreamReader()
+        reader.feed_data(response_frame)
+        reader.feed_eof()
+        response = parse_response(await read_frame(reader))
+        parse_elapsed = time.perf_counter() - parse_started
+        logger.debug(
+            "ci daemon command_once: op=%s request_id=%s socket_path_elapsed=%.3fs "
+            "send_frame_elapsed=%.3fs parse_elapsed=%.3fs "
+            "request_bytes=%d response_bytes=%d",
+            op,
+            request_id,
+            socket_elapsed,
+            send_elapsed,
+            parse_elapsed,
+            len(frame),
+            len(response_frame),
+        )
+        if response.id != request_id:
+            raise RuntimeError(
+                f"daemon response id mismatch: expected {request_id}, got {response.id}"
+            )
+        if not response.ok:
+            error = response.error or {}
+            raise CiDaemonCommandError(
+                kind=str(error.get("kind") or "InternalError"),
+                message=str(error.get("message") or ""),
+                details=error.get("details")
+                if isinstance(error.get("details"), dict)
+                else {},
+            )
+        return response.result
+
+    async def _send_frame_via_process_exec(
+        self,
+        socket_path: str,
+        frame: bytes,
+        *,
+        timeout: float,
+    ) -> bytes:
+        """Send ``frame`` through a sandbox-local Python Unix-socket bridge."""
+        encoded = base64.b64encode(frame).decode("ascii")
+        script = textwrap.dedent(
+            f"""
+            import base64
+            import socket
+            import sys
+
+            frame = base64.b64decode({encoded!r})
+            sock = socket.socket(socket.AF_UNIX)
+            sock.settimeout({float(timeout)!r})
+            sock.connect({socket_path!r})
+            sock.sendall(frame)
+            sock.shutdown(socket.SHUT_WR)
+            chunks = []
+            while True:
+                data = sock.recv(65536)
+                if not data:
+                    break
+                chunks.append(data)
+            sock.close()
+            sys.stdout.write(base64.b64encode(b"".join(chunks)).decode("ascii"))
+            """
+        ).strip()
+        command = f"python3 - <<'PY'\n{script}\nPY"
+        result = await self._transport.exec(
+            self.sandbox_id,
+            command,
+            timeout=max(1, int(timeout) + 5),
+        )
+        stdout = (getattr(result, "stdout", "") or "").strip()
+        if getattr(result, "exit_code", 1) != 0:
+            raise ConnectionRefusedError(stdout)
+        try:
+            return base64.b64decode(stdout)
+        except Exception as exc:
+            raise ConnectionRefusedError(
+                f"daemon bridge produced invalid base64: {stdout!r}"
+            ) from exc
 
     def warmup(self) -> None:
         # Warmup is just "make sure ensure_initialized has run"; daemon
@@ -538,7 +702,7 @@ class RpcCiBackend:
     def rebind_sandbox(self, sandbox: Any) -> None:
         # Daemon's CodeIntelligenceService is constructed with sandbox=None
         # and never needs an external sandbox handle — local-FS branches do
-        # the work. Rebinding is a no-op on the RPC side.
+        # the work. Rebinding is a no-op on the daemon side.
         del sandbox
         return None
 
@@ -546,13 +710,13 @@ class RpcCiBackend:
         del sandbox
         on_progress_line = kwargs.pop("on_progress_line", None)
         timeout = kwargs.get("timeout")
-        rpc_timeout = float(timeout if timeout is not None else 600) + 30.0
+        command_timeout = float(timeout if timeout is not None else 600) + 30.0
         payload = {"command": command, **kwargs}
-        rpc_started = time.perf_counter()
-        raw = await self._call_async("svc_cmd", payload, timeout=rpc_timeout)
-        rpc_elapsed = round(time.perf_counter() - rpc_started, 6)
+        command_started = time.perf_counter()
+        raw = await self._call_async("svc_cmd", payload, timeout=command_timeout)
+        command_elapsed = round(time.perf_counter() - command_started, 6)
         result = SimpleNamespace(**(raw or {}))
-        result.rpc_call_timings = {"total": rpc_elapsed}
+        result.daemon_call_timings = {"total": command_elapsed}
         if on_progress_line is not None:
             progress_text = str(getattr(result, "result", "") or "")
             if progress_text:
@@ -743,16 +907,8 @@ class RpcCiBackend:
         return _telemetry_from_dict(result or {})
 
     def dispose(self) -> None:
-        from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
-
         try:
-            run_sync(
-                DaemonLauncher(
-                    self._transport,
-                    self.sandbox_id,
-                    self.workspace_root,
-                ).shutdown()
-            )
+            run_sync(self._launcher.shutdown())
         except Exception:
             logger.debug(
                 "CI daemon shutdown skipped for sandbox %s",

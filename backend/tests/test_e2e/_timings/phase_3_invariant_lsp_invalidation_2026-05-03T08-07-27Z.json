@@ -1,0 +1,22 @@
+{
+  "phase": 3,
+  "test_name": "invariant_lsp_invalidation",
+  "timestamp": "2026-05-03T08:07:27.803359+00:00",
+  "steps": [
+    {
+      "name": "write_renamed_def",
+      "elapsed_s": 5.8750969160028035,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "query_post_edit",
+      "elapsed_s": 5.483085917003336,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 11.35818283300614,
+  "distributions": {},
+  "values": {}
+}

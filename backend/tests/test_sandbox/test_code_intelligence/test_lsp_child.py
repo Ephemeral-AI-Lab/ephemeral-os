@@ -370,4 +370,3 @@ async def test_outstanding_request_fails_with_crashed_on_eof() -> None:
             except asyncio.CancelledError:
                 pass
 
-

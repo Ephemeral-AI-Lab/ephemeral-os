@@ -28,7 +28,7 @@ async def bootstrap_in_sandbox_ci_runtime(
     Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
     the underlying Daytona sandbox is provisioned/resumed. Phase 2 makes this
     hook daemon-only; the Phase 1 indexer still runs from
-    ``RpcCiBackend.ensure_initialized`` when callers need symbol data.
+    ``DaemonCiBackend.ensure_initialized`` when callers need symbol data.
 
     Short-circuits as a no-op when ``EOS_CI_IN_SANDBOX`` != ``"1"``,
     when ``transport`` is ``None``, or when ``workspace_root`` is empty.
@@ -44,7 +44,7 @@ async def bootstrap_in_sandbox_ci_runtime(
     if transport is None or not sandbox_id or not str(workspace_root or "").strip():
         return
 
-    from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
+    from sandbox.code_intelligence.daemon.launcher import DaemonLauncher
 
     logger.info(
         "eager CI daemon bootstrap starting for sandbox %s at %s",
@@ -84,7 +84,7 @@ async def bootstrap_upload_runtime_bundle(
     if transport is None or not sandbox_id or not str(workspace_root or "").strip():
         return
 
-    from sandbox.code_intelligence.rpc.launcher import ensure_runtime_uploaded
+    from sandbox.code_intelligence.daemon.launcher import ensure_runtime_uploaded
 
     logger.info(
         "eager CI bundle upload (background) starting for sandbox %s",

@@ -1,4 +1,4 @@
-"""Unit tests for the Phase 2 CI RPC client and launcher retry path."""
+"""Unit tests for the Phase 2 CI daemon backend and launcher retry path."""
 
 from __future__ import annotations
 
@@ -14,12 +14,11 @@ from sandbox.code_intelligence.in_sandbox.ci_protocol import (
     CI_PROTOCOL_VERSION,
     encode_frame,
 )
-from sandbox.code_intelligence.rpc.client import (
-    CiDaemonRpcError,
-    CiDaemonUnavailable,
-    CiRpcClient,
+from sandbox.code_intelligence.backend import (
+    CiDaemonCommandError,
+    DaemonCiBackend,
 )
-from sandbox.code_intelligence.rpc.launcher import bundle_hash
+from sandbox.code_intelligence.daemon.launcher import CiDaemonUnavailable, bundle_hash
 
 
 class _FakeTransport:
@@ -102,33 +101,33 @@ async def test_call_returns_success_result() -> None:
     transport = _FakeTransport()
     transport.alive = True
     transport.socket_ready = True
-    client = CiRpcClient(transport, "sb-1", "/ws")  # type: ignore[arg-type]
+    backend = DaemonCiBackend(sandbox_id="sb-1", workspace_root="/ws", transport=transport)  # type: ignore[arg-type]
 
-    assert await client.call("ping") == {"pong": True, "op": "ping"}
+    assert await backend._call_daemon_command("ping") == {"pong": True, "op": "ping"}
     assert transport.spawn_count == 0
 
 
 @pytest.mark.asyncio
 async def test_connection_failure_ensures_daemon_then_retries() -> None:
     transport = _FakeTransport(fail_shim_attempts=1)
-    client = CiRpcClient(transport, "sb-1", "/ws")  # type: ignore[arg-type]
+    backend = DaemonCiBackend(sandbox_id="sb-1", workspace_root="/ws", transport=transport)  # type: ignore[arg-type]
 
-    assert await client.call("ping") == {"pong": True, "op": "ping"}
+    assert await backend._call_daemon_command("ping") == {"pong": True, "op": "ping"}
     assert transport.spawn_count == 1
 
 
 @pytest.mark.asyncio
 async def test_second_connection_failure_raises_unavailable() -> None:
     transport = _FakeTransport(fail_shim_attempts=2)
-    client = CiRpcClient(transport, "sb-1", "/ws")  # type: ignore[arg-type]
+    backend = DaemonCiBackend(sandbox_id="sb-1", workspace_root="/ws", transport=transport)  # type: ignore[arg-type]
 
     with pytest.raises(CiDaemonUnavailable, match="daemon unreachable after respawn"):
-        await client.call("ping")
+        await backend._call_daemon_command("ping")
     assert transport.spawn_count == 1
 
 
 @pytest.mark.asyncio
-async def test_error_envelope_raises_typed_rpc_error() -> None:
+async def test_error_envelope_raises_typed_daemon_command_error() -> None:
     transport = _FakeTransport(
         response_error={
             "kind": "UnsupportedOp",
@@ -138,10 +137,9 @@ async def test_error_envelope_raises_typed_rpc_error() -> None:
     )
     transport.alive = True
     transport.socket_ready = True
-    client = CiRpcClient(transport, "sb-1", "/ws")  # type: ignore[arg-type]
+    backend = DaemonCiBackend(sandbox_id="sb-1", workspace_root="/ws", transport=transport)  # type: ignore[arg-type]
 
-    with pytest.raises(CiDaemonRpcError) as exc:
-        await client.call("nope")
+    with pytest.raises(CiDaemonCommandError) as exc:
+        await backend._call_daemon_command("nope")
     assert exc.value.kind == "UnsupportedOp"
     assert exc.value.details == {"op": "nope"}
-

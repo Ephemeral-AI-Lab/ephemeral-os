@@ -1,0 +1,488 @@
+{
+  "phase": 6,
+  "test_name": "svc_cmd_fold_concurrency_1_5_10",
+  "timestamp": "2026-05-03T08:10:34.154441+00:00",
+  "steps": [
+    {
+      "name": "ci_service_construct",
+      "elapsed_s": 20.1362681669998,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_1x_wall",
+      "elapsed_s": 6.815168708999408,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_5x_wall",
+      "elapsed_s": 1.8962965000100667,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_10x_wall",
+      "elapsed_s": 2.0602817079925444,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 30.908015084001818,
+  "distributions": {
+    "svc_cmd_1x_latency": {
+      "p50": 6.374350541998865,
+      "p95": 6.374350541998865,
+      "p99": 6.374350541998865,
+      "min": 6.374350541998865,
+      "max": 6.374350541998865,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_apply_direct_routes": {
+      "p50": 1.5e-05,
+      "p95": 1.5e-05,
+      "p99": 1.5e-05,
+      "min": 1.5e-05,
+      "max": 1.5e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_build_classifier": {
+      "p50": 1.9e-05,
+      "p95": 1.9e-05,
+      "p99": 1.9e-05,
+      "min": 1.9e-05,
+      "max": 1.9e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_classify": {
+      "p50": 0.028804,
+      "p95": 0.028804,
+      "p99": 0.028804,
+      "min": 0.028804,
+      "max": 0.028804,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_decode_command": {
+      "p50": 0.000103,
+      "p95": 0.000103,
+      "p99": 0.000103,
+      "min": 0.000103,
+      "max": 0.000103,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_setup_mounts": {
+      "p50": 0.081963,
+      "p95": 0.081963,
+      "p99": 0.081963,
+      "min": 0.081963,
+      "max": 0.081963,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_total": {
+      "p50": 0.430697,
+      "p95": 0.430697,
+      "p99": 0.430697,
+      "min": 0.430697,
+      "max": 0.430697,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_user_command": {
+      "p50": 0.316179,
+      "p95": 0.316179,
+      "p99": 0.316179,
+      "min": 0.316179,
+      "max": 0.316179,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_run_walk_upperdir": {
+      "p50": 0.00091,
+      "p95": 0.00091,
+      "p99": 0.00091,
+      "min": 0.00091,
+      "max": 0.00091,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_cleanup": {
+      "p50": 0.000516,
+      "p95": 0.000516,
+      "p99": 0.000516,
+      "min": 0.000516,
+      "max": 0.000516,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_commit": {
+      "p50": 0.002235,
+      "p95": 0.002235,
+      "p99": 0.002235,
+      "min": 0.002235,
+      "max": 0.002235,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_diff": {
+      "p50": 0.000457,
+      "p95": 0.000457,
+      "p99": 0.000457,
+      "min": 0.000457,
+      "max": 0.000457,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_envelope": {
+      "p50": 0.000885,
+      "p95": 0.000885,
+      "p99": 0.000885,
+      "min": 0.000885,
+      "max": 0.000885,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_read_stdout": {
+      "p50": 6.6e-05,
+      "p95": 6.6e-05,
+      "p99": 6.6e-05,
+      "min": 6.6e-05,
+      "max": 6.6e-05,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_total": {
+      "p50": 0.921006,
+      "p95": 0.921006,
+      "p99": 0.921006,
+      "min": 0.921006,
+      "max": 0.921006,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_unshare": {
+      "p50": 0.901417,
+      "p95": 0.901417,
+      "p99": 0.901417,
+      "min": 0.901417,
+      "max": 0.901417,
+      "n": 1.0
+    },
+    "svc_cmd_1x_overlay_stage_upload_runtime": {
+      "p50": 0.013563,
+      "p95": 0.013563,
+      "p99": 0.013563,
+      "min": 0.013563,
+      "max": 0.013563,
+      "n": 1.0
+    },
+    "svc_cmd_1x_rpc_call_total": {
+      "p50": 6.37433,
+      "p95": 6.37433,
+      "p99": 6.37433,
+      "min": 6.37433,
+      "max": 6.37433,
+      "n": 1.0
+    },
+    "svc_cmd_5x_latency": {
+      "p50": 1.454868875007378,
+      "p95": 1.4607052079954883,
+      "p99": 1.4607052079954883,
+      "min": 1.4496489160083001,
+      "max": 1.4607052079954883,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_apply_direct_routes": {
+      "p50": 1.5e-05,
+      "p95": 1.6e-05,
+      "p99": 1.6e-05,
+      "min": 1.3e-05,
+      "max": 1.6e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_build_classifier": {
+      "p50": 2.2e-05,
+      "p95": 2.4e-05,
+      "p99": 2.4e-05,
+      "min": 2e-05,
+      "max": 2.4e-05,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_classify": {
+      "p50": 0.030081,
+      "p95": 0.037094,
+      "p99": 0.037094,
+      "min": 0.028365,
+      "max": 0.037094,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_decode_command": {
+      "p50": 0.000133,
+      "p95": 0.000136,
+      "p99": 0.000136,
+      "min": 0.000126,
+      "max": 0.000136,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_setup_mounts": {
+      "p50": 0.081915,
+      "p95": 0.083197,
+      "p99": 0.083197,
+      "min": 0.080664,
+      "max": 0.083197,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_total": {
+      "p50": 0.466695,
+      "p95": 0.467655,
+      "p99": 0.467655,
+      "min": 0.464486,
+      "max": 0.467655,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_user_command": {
+      "p50": 0.34947,
+      "p95": 0.352933,
+      "p99": 0.352933,
+      "min": 0.341499,
+      "max": 0.352933,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_run_walk_upperdir": {
+      "p50": 0.000865,
+      "p95": 0.001031,
+      "p99": 0.001031,
+      "min": 0.000862,
+      "max": 0.001031,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_cleanup": {
+      "p50": 0.008585,
+      "p95": 0.009984,
+      "p99": 0.009984,
+      "min": 0.002304,
+      "max": 0.009984,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_commit": {
+      "p50": 0.003735,
+      "p95": 0.005253,
+      "p99": 0.005253,
+      "min": 0.002412,
+      "max": 0.005253,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_diff": {
+      "p50": 0.00012,
+      "p95": 0.000505,
+      "p99": 0.000505,
+      "min": 9.4e-05,
+      "max": 0.000505,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_envelope": {
+      "p50": 0.000284,
+      "p95": 0.00107,
+      "p99": 0.00107,
+      "min": 0.000106,
+      "max": 0.00107,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_read_stdout": {
+      "p50": 0.000126,
+      "p95": 0.000496,
+      "p99": 0.000496,
+      "min": 5.8e-05,
+      "max": 0.000496,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_total": {
+      "p50": 0.995421,
+      "p95": 1.004592,
+      "p99": 1.004592,
+      "min": 0.992139,
+      "max": 1.004592,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_unshare": {
+      "p50": 0.986045,
+      "p95": 0.990845,
+      "p99": 0.990845,
+      "min": 0.976918,
+      "max": 0.990845,
+      "n": 5.0
+    },
+    "svc_cmd_5x_overlay_stage_upload_runtime": {
+      "p50": 0.0001,
+      "p95": 0.000134,
+      "p99": 0.000134,
+      "min": 2.6e-05,
+      "max": 0.000134,
+      "n": 5.0
+    },
+    "svc_cmd_5x_rpc_call_total": {
+      "p50": 1.454838,
+      "p95": 1.460659,
+      "p99": 1.460659,
+      "min": 1.449628,
+      "max": 1.460659,
+      "n": 5.0
+    },
+    "svc_cmd_10x_latency": {
+      "p50": 1.598650334010017,
+      "p95": 1.6300434170116205,
+      "p99": 1.6300434170116205,
+      "min": 1.5646929999929853,
+      "max": 1.6300434170116205,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_apply_direct_routes": {
+      "p50": 1.5e-05,
+      "p95": 1.8e-05,
+      "p99": 1.8e-05,
+      "min": 1.3e-05,
+      "max": 1.8e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_build_classifier": {
+      "p50": 2e-05,
+      "p95": 2.4e-05,
+      "p99": 2.4e-05,
+      "min": 1.8e-05,
+      "max": 2.4e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_classify": {
+      "p50": 0.030879,
+      "p95": 0.033231,
+      "p99": 0.033231,
+      "min": 0.029864,
+      "max": 0.033231,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_decode_command": {
+      "p50": 0.000131,
+      "p95": 0.000147,
+      "p99": 0.000147,
+      "min": 0.000125,
+      "max": 0.000147,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_setup_mounts": {
+      "p50": 0.095264,
+      "p95": 0.108069,
+      "p99": 0.108069,
+      "min": 0.094007,
+      "max": 0.108069,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_total": {
+      "p50": 0.510939,
+      "p95": 0.542803,
+      "p99": 0.542803,
+      "min": 0.489961,
+      "max": 0.542803,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_user_command": {
+      "p50": 0.378928,
+      "p95": 0.412054,
+      "p99": 0.412054,
+      "min": 0.361245,
+      "max": 0.412054,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_run_walk_upperdir": {
+      "p50": 0.000906,
+      "p95": 0.001137,
+      "p99": 0.001137,
+      "min": 0.000875,
+      "max": 0.001137,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_cleanup": {
+      "p50": 0.000263,
+      "p95": 0.000447,
+      "p99": 0.000447,
+      "min": 0.000217,
+      "max": 0.000447,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_commit": {
+      "p50": 0.0007,
+      "p95": 0.000987,
+      "p99": 0.000987,
+      "min": 0.000631,
+      "max": 0.000987,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_diff": {
+      "p50": 9.4e-05,
+      "p95": 0.000118,
+      "p99": 0.000118,
+      "min": 8.1e-05,
+      "max": 0.000118,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_envelope": {
+      "p50": 0.000153,
+      "p95": 0.000228,
+      "p99": 0.000228,
+      "min": 0.000122,
+      "max": 0.000228,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_read_stdout": {
+      "p50": 4.7e-05,
+      "p95": 6e-05,
+      "p99": 6e-05,
+      "min": 4.2e-05,
+      "max": 6e-05,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_total": {
+      "p50": 1.069746,
+      "p95": 1.094989,
+      "p99": 1.094989,
+      "min": 1.051081,
+      "max": 1.094989,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_unshare": {
+      "p50": 1.0679,
+      "p95": 1.093063,
+      "p99": 1.093063,
+      "min": 1.048781,
+      "max": 1.093063,
+      "n": 10.0
+    },
+    "svc_cmd_10x_overlay_stage_upload_runtime": {
+      "p50": 9.2e-05,
+      "p95": 0.000229,
+      "p99": 0.000229,
+      "min": 3.5e-05,
+      "max": 0.000229,
+      "n": 10.0
+    },
+    "svc_cmd_10x_rpc_call_total": {
+      "p50": 1.598636,
+      "p95": 1.629995,
+      "p99": 1.629995,
+      "min": 1.564664,
+      "max": 1.629995,
+      "n": 10.0
+    }
+  },
+  "values": {
+    "rss_at_start": 61.1,
+    "fds_at_start": 32.0,
+    "svc_cmd_1x_wall_s": 6.814883915998507,
+    "svc_cmd_1x_throughput": 0.14673764253744906,
+    "svc_cmd_1x_errors": 0.0,
+    "svc_cmd_1x_status_committed": 1.0,
+    "svc_cmd_5x_wall_s": 1.896040167004685,
+    "svc_cmd_5x_throughput": 2.6370749349149447,
+    "svc_cmd_5x_errors": 0.0,
+    "svc_cmd_5x_status_committed": 5.0,
+    "svc_cmd_10x_wall_s": 2.0600762910034973,
+    "svc_cmd_10x_throughput": 4.854189159727106,
+    "svc_cmd_10x_errors": 0.0,
+    "svc_cmd_10x_status_committed": 10.0,
+    "rss_at_end": 61.73,
+    "fds_at_end": 33.0,
+    "rss_growth_mb": 0.6299999999999955,
+    "fd_growth": 1.0,
+    "daemon_local_unshare_subprocess_count": 16.0,
+    "daemon_local_git_snapshot_stage_count": 0.0
+  }
+}

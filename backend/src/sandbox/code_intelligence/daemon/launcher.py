@@ -51,7 +51,7 @@ def _src_root() -> Path:
     """Return the orchestrator's ``backend/src/`` directory.
 
     ``__file__`` is at
-    ``backend/src/sandbox/code_intelligence/rpc/launcher.py``, so four
+    ``backend/src/sandbox/code_intelligence/daemon/launcher.py``, so four
     ``.parent`` hops climb back up to ``backend/src/``.
     """
     return Path(__file__).resolve().parent.parent.parent.parent

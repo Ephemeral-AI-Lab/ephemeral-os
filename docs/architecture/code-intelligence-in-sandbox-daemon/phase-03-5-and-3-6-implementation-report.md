@@ -33,9 +33,9 @@ INVARIANT 5 regression against the new backend.
 
 Live E2E was executed against the local Daytona stack; resulting JSONs are
 committed to ``_timings/``. The completed daemon-path runs were stable and
-also exposed a sync-bridge performance bug: public RPCs were paying a
+also exposed a sync-bridge performance bug: public daemon commands were paying a
 ~5.5 s fresh-event-loop cost per call. The follow-up stable-loop fix in
-``sandbox.client.async_bridge`` drops steady daemon RPC calls below one
+``sandbox.client.async_bridge`` drops steady daemon daemon command calls below one
 second and is recorded in §6.4 rather than deferred to Phase 4.
 
 ---
@@ -53,7 +53,7 @@ The user's `/oh-my-claudecode:ralph` invocation listed four tasks:
 Per advisor guidance the cleanup task is structurally Phase 3.5's IndexStore
 migration — the orchestrator-side ``_symbol_cache`` /
 ``pickle.loads(snapshot)`` / ``read_remote_file_via_exec`` path on
-``RpcCiBackend`` is vestigial only AFTER the daemon serves queries from
+``DaemonCiBackend`` is vestigial only AFTER the daemon serves queries from
 SQLite. Sequencing: 3.5 source + tests → cleanup falls out → Phase 3.6
 Stage A spike → Stage B implementation → Stage C benchmark → live E2E
 execution → this report with real numbers.
@@ -90,7 +90,7 @@ per LSP verb. Performance numbers in §6 are from real runs.
 | `backend/src/sandbox/code_intelligence/indexing/symbol_index.py` | Added keyword-only `persistence: IndexStore \| None` to `SymbolIndex.__init__`. `refresh` / `remove` / `_commit_batch` mirror writes to persistence when set. Behaviour without persistence is byte-identical. |
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | `_DaemonState.index_store` field; `_build_service` constructs `IndexStore(state)` and threads it through `CodeIntelligenceService(symbol_index_persistence=...)`; `migrate_pickle_to_sqlite` invoked at daemon start; index_store closed on shutdown; `svc_cmd` dispatch serializes the audited shell result shape. |
 | `backend/src/sandbox/code_intelligence/service.py` | `_select_backend` accepts `symbol_index_persistence` kwarg; `CodeIntelligenceService.__init__` threads it through to `InProcessCiBackend`. |
-| `backend/src/sandbox/code_intelligence/backend.py` | **Cleanup retirement**: `_symbol_cache`, `_cached_file_count`, `_cached_symbol_count`, `_snapshot_bytes` attributes removed from `RpcCiBackend`. `_ensure_initialized_async` no longer downloads `index.snapshot` — instead launches the daemon and polls `index_ready`. `query_symbols` routes daemon-only with no fallback. `RpcCiBackend.cmd` now routes through `svc_cmd` instead of raising `NotImplementedError`. `pickle` / `json` imports dropped. |
+| `backend/src/sandbox/code_intelligence/backend.py` | **Cleanup retirement**: `_symbol_cache`, `_cached_file_count`, `_cached_symbol_count`, `_snapshot_bytes` attributes removed from `DaemonCiBackend`. `_ensure_initialized_async` no longer downloads `index.snapshot` — instead launches the daemon and polls `index_ready`. `query_symbols` routes daemon-only with no fallback. `DaemonCiBackend.cmd` now routes through `svc_cmd` instead of raising `NotImplementedError`. `pickle` / `json` imports dropped. |
 | `backend/src/sandbox/code_intelligence/overlay/command_executor.py` | Added local subprocess execution when the daemon runs inside the sandbox without a provider sandbox object, letting daemon-resident `svc.cmd` use the same overlay auditor. |
 | `backend/src/sandbox/code_intelligence/language_server/client.py` | Full rewire: inherits `LspPathMixin` instead of `PythonBackendMixin`; routes every query through `LspAsyncHost.run(child)`; `close()` shuts down the host idempotently; `did_change` notification re-exposed for cache invalidation. |
 | `backend/src/sandbox/code_intelligence/language_server/transport.py` | Jedi shim deleted (`_run_python_script` removed). `_check_python_backend` now probes `command -v basedpyright-langserver`. `_install_python_backend` runs `pip install --no-cache-dir --retries 10 --timeout 300 basedpyright`. |
@@ -99,10 +99,10 @@ per LSP verb. Performance numbers in §6 are from real runs.
 | `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` | Compatibility probe extension: `basedpyright_native` + `basedpyright_langserver` checks added. Currently in the soft list (until the sandbox image bundles them); promoted to required once pre-baked. |
 | `backend/tests/test_e2e/test_timing_harness_unit.py` | 6 new Phase 3.5 unit tests covering `step_repeat`, `sample_rss_mb`, `sample_fds`, distribution rendering, JSON round-trip. |
 | `backend/tests/test_sandbox/test_code_intelligence/test_lsp_client.py` | Rewritten for the basedpyright path: dropped 16 jedi-shim tests, kept 14 covering cache contract, path helpers, readiness probe (now basedpyright), and routing through `LspAsyncHost`. |
-| `backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py` | Rewritten to drop the snapshot-pickle fixture; new tests assert daemon-route + `index_ready` polling + `svc_cmd` result reconstruction + the absence of legacy cache attrs (`_symbol_cache` etc.). |
+| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend.py` | Rewritten to drop the snapshot-pickle fixture; new tests assert daemon-route + `index_ready` polling + `svc_cmd` result reconstruction + the absence of legacy cache attrs (`_symbol_cache` etc.). |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_dispatch.py` | Extended to cover `svc_cmd` dispatch serialization and `SimpleNamespace` conversion. |
 | `backend/tests/test_sandbox/test_code_intelligence/test_overlay_dispatch.py` | Extended to cover local daemon subprocess execution without a sandbox handle. |
-| `backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend_dispatch.py` | `test_query_symbols_falls_back_to_cache_on_daemon_error` replaced with `test_query_symbols_propagates_daemon_error` — daemon errors must surface, no silent stale data. |
+| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_dispatch.py` | `test_query_symbols_falls_back_to_cache_on_daemon_error` replaced with `test_query_symbols_propagates_daemon_error` — daemon errors must surface, no silent stale data. |
 | `pyproject.toml` | `jedi>=0.19.0` runtime dep removed (Phase 3.6 rewire). |
 
 ### Deleted
@@ -120,9 +120,9 @@ per LSP verb. Performance numbers in §6 are from real runs.
 ```
                                       Daemon process
                                       ┌────────────────────────────────────┐
-RpcCiBackend.query_symbols("Bag")     │  CodeIntelligenceService           │
+DaemonCiBackend.query_symbols("Bag")     │  CodeIntelligenceService           │
        │                              │  (sandbox=None, transport=None)    │
-       │ client.call("query_symbols")─▶│                                    │
+       │ _call_daemon_command("query_symbols")─▶│                                    │
        │                              │  InProcessCiBackend                │
        │                              │   ▼                                │
        │                              │  SymbolIndex(persistence=IndexStore)│
@@ -183,7 +183,7 @@ partially initialized module 'typing'` because the spike's cwd
 | **P35-005** Index storage unit tests | PASS | 15 tests in `test_ci_storage_index.py` (WAL pragma, schema, integrity rotation, atomic bulk_replace, single-PK refresh/delete, query parity, concurrent writes, msgpack round-trip, migration idempotence). |
 | **P35-006** SymbolIndex persistence parity tests | PASS | 6 tests in `test_symbol_index_persistence_parity.py` confirming in-memory and SQLite-backed paths produce identical query/refresh/remove/indexed_paths/size results plus migration helper coverage. |
 | **P35-007** TimingHarness extensions | PASS | `step_repeat(name, n)` distribution sampler, `sample_rss_mb`, `sample_fds`. Report renders `--- DISTRIBUTIONS ---` and `--- RESOURCE SAMPLES ---`. 6 new harness unit tests. |
-| **P35-CLEANUP** RpcCiBackend snapshot fallback retired | PASS | `_symbol_cache`, `_cached_file_count`, `_cached_symbol_count`, `_snapshot_bytes` removed; `pickle` and `json` imports dropped from `backend.py`. `_ensure_initialized_async` polls `index_ready` instead of pulling pickle. `query_symbols` propagates daemon errors (no silent fallback). New `test_init_drops_legacy_cache_attributes` asserts the cleanup invariant. |
+| **P35-CLEANUP** DaemonCiBackend snapshot fallback retired | PASS | `_symbol_cache`, `_cached_file_count`, `_cached_symbol_count`, `_snapshot_bytes` removed; `pickle` and `json` imports dropped from `backend.py`. `_ensure_initialized_async` polls `index_ready` instead of pulling pickle. `query_symbols` propagates daemon errors (no silent fallback). New `test_init_drops_legacy_cache_attributes` asserts the cleanup invariant. |
 | **P35-008** Phase 3.5 live E2E suite | PASS | `test_live_ci_phase3_5_concurrent_perf.py` passes against real Daytona: sustained daemon-path workload, 2-agent query/edit/`svc.cmd`, multi-orchestrator arbitration, SQLite restart parity, and refresh efficiency. Final artifacts: `phase_3.5_sustained_mixed_workload_2026-05-02T17-27-29Z.json`, `phase_3.5_concurrent_agents_2x_2026-05-02T17-28-15Z.json`, `phase_3.5_multi_orchestrator_2026-05-02T17-28-51Z.json`, `phase_3.5_sqlite_index_restart_parity_2026-05-02T17-30-00Z.json`, `phase_3.5_refresh_efficiency_2026-05-02T17-30-57Z.json`. |
 | **P36-A** LSP qualification spike | PASS | `scripts/lsp_qualification_spike.py` ran against real Daytona. Verdict: **basedpyright QUALIFIED** with `basedpyright-langserver --stdio`. Result documented in `lsp-qualification-spike-result.md`. |
 | **P36-B1** JSON-RPC stdio adapter | PASS | `language_server/jsonrpc.py` with case-insensitive Content-Length framing, request/notification/response encoders, EOF-aware `read_frame`. Round-trip tested. |
@@ -212,7 +212,7 @@ partially initialized module 'typing'` because the spike's cwd
 | `pytest backend/tests/test_sandbox/test_code_intelligence/test_lsp_client.py -q` | **14 passed** (rewritten — was 30, dropped 16 obsolete jedi-shim tests) |
 | `pytest backend/tests/test_e2e/test_timing_harness_unit.py -q` | **14 passed** (was 8; +6 Phase 3.5 distribution/resource-sampling tests) |
 | `pytest backend/tests/test_e2e/test_live_ci_phase0_baseline.py::test_phase0_lsp_baseline_jedi -m live` | **PASSED** — `phase_0_lsp_baseline_2026-05-02T15-51-15Z.json` committed |
-| `pytest backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_dispatch.py backend/tests/test_sandbox/test_code_intelligence/test_overlay_dispatch.py -q` | **43 passed** (`svc_cmd` dispatch/reconstruction + local daemon subprocess coverage) |
+| `pytest backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend.py backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_dispatch.py backend/tests/test_sandbox/test_code_intelligence/test_overlay_dispatch.py -q` | **43 passed** (`svc_cmd` dispatch/reconstruction + local daemon subprocess coverage) |
 | `pytest backend/tests/test_e2e/test_live_ci_phase3_5_concurrent_perf.py -m live -v -s` | **5 passed in 338.87 s** — five final Phase 3.5 daemon-path timing JSONs committed |
 | `pytest backend/tests/test_e2e/test_live_ci_phase3_6_lsp_benchmark.py::test_phase3_6_chosen_backend_benchmark_daemon_path -m live -v -s` | **1 passed in 435.55 s** — daemon warm distribution completed with 10 samples per LSP verb |
 
@@ -270,7 +270,7 @@ fix described in §6.4:
 
 | step | elapsed |
 |---|---:|
-| `ci_service_construct` (RpcCiBackend) | 0.007 s |
+| `ci_service_construct` (DaemonCiBackend) | 0.007 s |
 | `index_build_in_sandbox` (daemon-side full dask index) | 25.293 s |
 | `lsp_cold_first_query` (orchestrator → transport → daemon → basedpyright → reply) | 6.732 s |
 | `ci_service_dispose` | 6.370 s |
@@ -283,12 +283,12 @@ fix described in §6.4:
 | diagnostics | 5499.6 | 5514.7 | 5514.7 | 10 |
 
 The 6.732 s cold first query is the headline correctness proof: the entire chain
-— `RpcCiBackend.find_definitions` → daytona HTTP → in-sandbox daemon
+— `DaemonCiBackend.find_definitions` → daytona HTTP → in-sandbox daemon
 → in-sandbox `LspBackendChild` (basedpyright) → `textDocument/definition`
 roundtrip — works end-to-end. The warm distribution is now complete,
 not deferred. At the time of the run it also exposed a sync-bridge
-performance bug: every public RPC paid roughly 5.5 s because
-`RpcCiBackend._call_sync` entered `run_sync(client.call(...))` without
+performance bug: every public daemon command paid roughly 5.5 s because
+`DaemonCiBackend._call_sync` entered `run_sync(_call_daemon_command(...))` without
 a registered `sandbox_io_loop`, so each call created a fresh event-loop /
 AsyncDaytona-client path. That was not basedpyright latency and not
 daemon-side work; the daemon socket work was later measured in the
@@ -316,9 +316,9 @@ Live `test_live_ci_phase3_5_concurrent_perf.py` ran as a full file on
 
 | Test | Artifact | Headline result |
 |---|---|---|
-| Sustained mixed workload | `phase_3.5_sustained_mixed_workload_2026-05-02T17-27-29Z.json` | 5 writes + 5 queries + 3 status calls through public daemon RPC; pre-stable-loop p99 5.50-5.56 s; daemon RSS stable at 61.52 MB and FD count stable at 33 |
+| Sustained mixed workload | `phase_3.5_sustained_mixed_workload_2026-05-02T17-27-29Z.json` | 5 writes + 5 queries + 3 status calls through public daemon daemon command; pre-stable-loop p99 5.50-5.56 s; daemon RSS stable at 61.52 MB and FD count stable at 33 |
 | Concurrent agents | `phase_3.5_concurrent_agents_2x_2026-05-02T17-28-15Z.json` | 2 agents completed query/edit/`svc.cmd` with zero errors; daemon RSS moved 64.75 → 65.50 MB |
-| Multi-orchestrator arbitration | `phase_3.5_multi_orchestrator_2026-05-02T17-28-51Z.json` | Two `CiRpcClient` writers raced the same strict-base file; exactly one commit succeeded and one aborted |
+| Multi-orchestrator arbitration | `phase_3.5_multi_orchestrator_2026-05-02T17-28-51Z.json` | Two `DaemonCiBackend` writers raced the same strict-base file; exactly one commit succeeded and one aborted |
 | SQLite restart parity | `phase_3.5_sqlite_index_restart_parity_2026-05-02T17-30-00Z.json` | Query results matched before and after daemon shutdown/restart; no legacy `index.snapshot` was recreated |
 | Refresh efficiency | `phase_3.5_refresh_efficiency_2026-05-02T17-30-57Z.json` | 5 daemon `index_refresh` calls completed; pre-stable-loop p99 5.861 s including sync-bridge carrier overhead |
 
@@ -330,7 +330,7 @@ not as current daemon, SQLite, LSP, or Daytona raw `process.exec` latency.
 ### 6.4 Stable sandbox I/O loop follow-up
 
 After the 2026-05-02 live run, a focused 2026-05-03 `process.exec`
-experiment split the public RPC latency into four layers:
+experiment split the public daemon command latency into four layers:
 
 | Layer | Measured result |
 |---|---:|
@@ -372,7 +372,7 @@ one live Daytona sandbox:
 | 30 | 1.183 s | 1.013 s | 1.176 s | 25.4 ops/s | 0 |
 | 50 | 1.943 s | 1.755 s | 1.903 s | 25.7 ops/s | 0 |
 
-Safety conclusion: the daemon RPC design stays intact. RPC remains the
+Safety conclusion: the daemon daemon command design stays intact. daemon command remains the
 service protocol; `process.exec` remains only the transport bridge into
 the sandbox. The stable-loop fix removes the accidental per-call async
 client/session churn. Throughput now plateaus around 25 ops/s at high
@@ -397,7 +397,7 @@ serialization.
 The user's "cleanup, remove unused/legacy code" task in iteration prompt
 is structurally Phase 3.5: the orchestrator-side `_symbol_cache` /
 `pickle.loads(snapshot)` / `read_remote_file_via_exec` path on
-`RpcCiBackend` exists *only* because Phase 1 had no daemon-side
+`DaemonCiBackend` exists *only* because Phase 1 had no daemon-side
 canonical store. Once Phase 3.5's `IndexStore` becomes the canonical
 store, that fallback is dead weight. P35-CLEANUP retires it without
 regressing any contract — the new `test_init_drops_legacy_cache_attributes`
@@ -483,14 +483,14 @@ REQUIRED list above.
 
 The 5-subtest Phase 3.5 perf suite now runs through the daemon path and
 passes live. The original high-count plan was reduced to a smaller
-public-RPC gate after the first live measurement showed each public daemon
+public-daemon command gate after the first live measurement showed each public daemon
 call paying roughly 5.5 s. Follow-up instrumentation traced that cost to
 the sync bridge's fresh-loop fallback, not to the daemon, SQLite, LSP, or
 raw Daytona `process.exec`. The suite still exercises the intended behavior
 surface — writes, queries, status, `svc.cmd`, multi-client arbitration,
 SQLite restart parity, refresh, RSS, and FD sampling — and the stable-loop
 fix in §6.4 demonstrates that the same sync facade now runs steady daemon
-RPCs below one second.
+daemon commands below one second.
 
 ---
 
@@ -501,7 +501,7 @@ Phase 3.5 / 3.6 closes with:
 - Daemon-resident `CodeIntelligenceService` with full mutations + queries
   + `svc_cmd` + LSP wired via the SQLite IndexStore + basedpyright child
   (no jedi fallback, no pickle snapshot transfer).
-- `RpcCiBackend` clean of legacy snapshot/cache state — query/mutation
+- `DaemonCiBackend` clean of legacy snapshot/cache state — query/mutation
   verbs and `svc.cmd` route through the daemon, errors propagate, no
   silent fallback.
 - `LspBackendChild` lifecycle owned by `LspClient` via `LspAsyncHost`;
@@ -513,7 +513,7 @@ Phase 3.5 / 3.6 closes with:
 There are no Phase 3.5 / 3.6 deferred items for Phase 4. The remaining
 work after this report is separate product/transport improvement work,
 not completion debt from these phases: pre-bake basedpyright into the
-sandbox image to remove cold install time, and consider true provider-native persistent transport or explicit batch RPC only if public per-call
+sandbox image to remove cold install time, and consider true provider-native persistent transport or explicit batch daemon command only if public per-call
 latency needs to drop below the current stable-loop `transport.exec`
 floor of roughly 0.3-0.5 s.
 
@@ -526,7 +526,7 @@ backend/src/sandbox/code_intelligence/in_sandbox/ci_storage.py            +291 -
 backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py             +svc_cmd dispatch/result serializer, +27 -7 from IndexStore wiring
 backend/src/sandbox/code_intelligence/indexing/symbol_index.py            +35 -3
 backend/src/sandbox/code_intelligence/service.py                          +6 -1
-backend/src/sandbox/code_intelligence/backend.py                          +svc_cmd RPC wiring, +25 -130 cleanup
+backend/src/sandbox/code_intelligence/backend.py                          +svc_cmd daemon command wiring, +25 -130 cleanup
 backend/src/sandbox/code_intelligence/overlay/command_executor.py         +local daemon subprocess execution
 backend/src/sandbox/code_intelligence/language_server/python_backend.py   -287 (deleted)
 backend/src/sandbox/code_intelligence/language_server/path_helpers.py     +99 (new)
@@ -546,18 +546,18 @@ backend/tests/test_sandbox/test_code_intelligence/test_ci_storage_index.py +227 
 backend/tests/test_sandbox/test_code_intelligence/test_symbol_index_persistence_parity.py +151 (new)
 backend/tests/test_sandbox/test_code_intelligence/test_lsp_child.py       +326 (new)
 backend/tests/test_sandbox/test_code_intelligence/test_lsp_client.py      -300 +275 (rewritten)
-backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py +RpcCiBackend.cmd route coverage
+backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py +DaemonCiBackend.cmd route coverage
 backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_dispatch.py +svc_cmd dispatch/serialization coverage
 backend/tests/test_sandbox/test_code_intelligence/test_overlay_dispatch.py +local subprocess coverage
-backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py  -200 +175 (rewritten)
-backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend_dispatch.py +5 -25
+backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend.py  -200 +175 (rewritten)
+backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_dispatch.py +5 -25
 scripts/lsp_qualification_spike.py                                        +304 (new)
 docs/architecture/code-intelligence-in-sandbox-daemon/lsp-qualification-spike-result.md +90 (new)
 docs/architecture/code-intelligence-in-sandbox-daemon/phase-03-5-and-3-6-implementation-report.md +THIS (new)
 ```
 
 Net (excluding the deletions): **~+3300 LoC of source + tests**, ~−700 LoC
-removed (python_backend.py + RpcCiBackend snapshot fallback + obsolete
+removed (python_backend.py + DaemonCiBackend snapshot fallback + obsolete
 jedi-era tests). One run-time dep deleted (`jedi`). One new sandbox-image
 recommendation surfaced (pre-bake basedpyright).
 
@@ -587,7 +587,7 @@ recommendation surfaced (pre-bake basedpyright).
    loop-local async SDK caches. `LspAsyncHost` runs the child's loop in a
    dedicated daemon thread; `run_sync(...)` now uses the registered parent
    loop when one exists and a reusable standalone sandbox I/O loop when it
-   does not. That boundary discipline is what keeps daemon RPC steady-state
+   does not. That boundary discipline is what keeps daemon daemon command steady-state
    calls at sub-second latency.
 
 4. **The LSP cache hides per-call cost.** The pre-rewire baseline showed

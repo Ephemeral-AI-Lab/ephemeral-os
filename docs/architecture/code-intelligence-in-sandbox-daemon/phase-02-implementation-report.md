@@ -16,14 +16,14 @@ The in-sandbox CI runtime now bundles and launches
 `python -m sandbox.code_intelligence.in_sandbox` as a long-lived asyncio
 Unix-socket daemon under
 `$HOME/.cache/eos-ci/<workspace_root_hash>/v1/daemon.sock`. The
-orchestrator has a `CiRpcClient` using the Phase 2 Python socket shim,
+orchestrator has a `DaemonCiBackend` using the Phase 2 Python socket shim,
 one retry-after-respawn path, and a `DaemonLauncher` that uploads the
 runtime bundle, starts the daemon, polls socket readiness, and shuts the
-daemon down from `RpcCiBackend.dispose()`.
+daemon down from `DaemonCiBackend.dispose()`.
 
 The eager lifecycle hook changed from Phase 1's bundle+indexer behavior
 to Phase 2's bundle+daemon behavior. The Phase 1 indexer still runs from
-`RpcCiBackend.ensure_initialized`; no mutation, overlay, LSP, or symbol
+`DaemonCiBackend.ensure_initialized`; no mutation, overlay, LSP, or symbol
 business logic moved into the daemon in this phase.
 
 Live Daytona verification passed against the dask SWE image. The main
@@ -72,7 +72,7 @@ where useful.
 
 #### First ping — observed 5.862 s, target 100 ms (warm)
 
-`CiRpcClient._send_frame_via_python_shim` (`client.py:116-161`)
+`DaemonCiBackend._send_frame_via_python_shim` (`client.py:116-161`)
 base64-encodes each frame into a heredoc and runs `python3 - <<PY` via
 `transport.exec` to reach the in-sandbox Unix socket. Each call pays:
 
@@ -84,7 +84,7 @@ base64-encodes each frame into a heredoc and runs `python3 - <<PY` via
 
 The 100 ms target presumed the retired first-class transport verb, which the
 plan explicitly pins to Phase 5: §2.4 ("Phase 5 replaces the entire shim
-with the process.exec-backed daemon RPC") and the §503 MEDIUM risk callout
+with the process.exec-backed daemon daemon command") and the §503 MEDIUM risk callout
 ("Document the shim as Phase 2-4 only; Phase 5 measures the corrected process.exec-backed daemon path
 verb against the shim"). **The Phase 2 implementation matches the plan's
 design — the shim was always going to fail this SLO**, and the plan said
@@ -172,7 +172,7 @@ callout explicitly named the shim cost as a Phase-2-through-4 problem
 that Phase 5 resolves. What the plan understated was the wall-time hit
 of stacking shim + chunked upload + Daytona's exec-proxy hold; this
 report makes that explicit so Phase 5 can re-target each component
-against the process.exec-backed daemon RPC.
+against the process.exec-backed daemon daemon command.
 
 ---
 
@@ -185,9 +185,9 @@ against the process.exec-backed daemon RPC.
 | `backend/src/sandbox/code_intelligence/in_sandbox/__main__.py` | 48 | `python -m sandbox.code_intelligence.in_sandbox` entrypoint |
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | 270 | asyncio Unix-socket daemon, control dispatch, PID/socket cleanup |
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_protocol.py` | 107 | 4-byte length-prefix + msgpack codec and schema validation |
-| `backend/src/sandbox/code_intelligence/rpc/client.py` | 161 | `CiRpcClient`, Python socket shim, retry-after-respawn, typed RPC errors |
+| `backend/src/sandbox/code_intelligence/backend.py` | 161 | `DaemonCiBackend`, Python socket shim, retry-after-respawn, typed daemon command errors |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py` | 207 | Protocol, dispatch, shutdown scheduling, local daemon lifecycle tests |
-| `backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py` | 146 | Client success/error/retry tests with fake transport |
+| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | 146 | Client success/error/retry tests with fake transport |
 | `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | 367 | Live Daytona spawn, ping, kill/respawn, shutdown, concurrency, dispose tests |
 | `backend/tests/test_e2e/_timings/phase_2_*.json` | n/a | Passing live timing artifacts for daemon-ready, kill/respawn, shutdown, dispose |
 
@@ -195,12 +195,12 @@ against the process.exec-backed daemon RPC.
 
 | Path | Change |
 |---|---|
-| `backend/src/sandbox/code_intelligence/rpc/launcher.py` | Adds `DaemonLauncher`, `CiDaemonUnavailable`, remote state-path helper, spawn/socket/shutdown logic; chunked uploader now decodes inline (no `.b64` staging file) |
+| `backend/src/sandbox/code_intelligence/daemon/launcher.py` | Adds `DaemonLauncher`, `CiDaemonUnavailable`, remote state-path helper, spawn/socket/shutdown logic; chunked uploader now decodes inline (no `.b64` staging file) |
 | `backend/src/sandbox/lifecycle/workspace.py` | Eager bootstrap now ensures daemon readiness instead of running `ci_index`; adds `bootstrap_upload_runtime_bundle` for the parallel-upload path (§6.5) |
-| `backend/src/sandbox/code_intelligence/backend.py` | `RpcCiBackend.ensure_initialized` ensures daemon lifecycle before Phase 1 indexing; `dispose()` shuts daemon down |
+| `backend/src/sandbox/code_intelligence/backend.py` | `DaemonCiBackend.ensure_initialized` ensures daemon lifecycle before Phase 1 indexing; `dispose()` shuts daemon down |
 | `backend/src/sandbox/lifecycle/service.py` | Adds lifecycle progress logs around create/refresh/git/bootstrap; adds `_maybe_start_eager_ci_bundle_upload` / `_finish_eager_ci_bundle_upload` helpers, wires them into `create_sandbox` and `start_sandbox` (§6.5) |
 | `backend/src/sandbox/lifecycle/proxy.py` | Adds `ensure_git` progress logs for live setup diagnosis |
-| Existing Phase 0/1 tests | Updated expectations for daemon lifecycle, bundle contents, `RpcCiBackend.dispose()`, and the inline-decode chunked upload |
+| Existing Phase 0/1 tests | Updated expectations for daemon lifecycle, bundle contents, `DaemonCiBackend.dispose()`, and the inline-decode chunked upload |
 
 ### Deleted
 
@@ -215,7 +215,7 @@ None.
 | **P2-001** Wire protocol | PASS | `ci_protocol.py` implements `CI_PROTOCOL_VERSION=1`, `MAX_FRAME_BYTES=64MB`, msgpack length frames, `FrameError`, `SchemaError`, request/response dataclasses, and parse helpers. Unit tests cover round-trip, oversized header/body, bad version, and bad request schema. |
 | **P2-002** Daemon server | PASS | `ci_daemon.py` starts an asyncio Unix server, writes `daemon.pid`, binds `daemon.sock`, sets socket mode `0600`, dispatches `ping`/`shutdown`/`version`, handles stale dead PID/socket cleanup, rejects live PID startup, and removes PID/socket on shutdown. |
 | **P2-003** Daemon entry | PASS | `__main__.py` parses `--workspace-root` and `--log-level`, returns 13 for `CiStorageUnavailable`, 11 for live stale daemon, 0 for normal shutdown. Bundle smoke test imports the daemon entry and dispatch table from extracted runtime. |
-| **P2-004** RPC client | PASS | `client.py` sends one frame through an inline Python Unix-socket shim over `transport.exec`, decodes the response frame, raises `CiDaemonRpcError` for error envelopes, and retries once through `DaemonLauncher.ensure_daemon()` after connection failure. |
+| **P2-004** daemon backend | PASS | `client.py` sends one frame through an inline Python Unix-socket shim over `transport.exec`, decodes the response frame, raises `CiDaemonCommandError` for error envelopes, and retries once through `DaemonLauncher.ensure_daemon()` after connection failure. |
 | **P2-005** Launcher + eager lifecycle | PASS | `DaemonLauncher.ensure_daemon()` checks pid/socket, uploads runtime if needed, spawns via `setsid nohup`, polls socket readiness, and exposes shutdown. `bootstrap_in_sandbox_ci_runtime()` now calls this launcher from create/start/restart hooks. |
 | **P2-006** Live E2E | PASS | `test_live_ci_phase2_daemon_lifecycle.py` passed as two live invocations: first daemon-ready test, then the remaining kill/respawn, clean shutdown, concurrent pings, and dispose tests. |
 | **P2-007** Unit tests | PASS | New daemon/client unit tests plus updated eager/bootstrap/backend/bundle tests pass in the sandbox suite. |
@@ -229,8 +229,8 @@ None.
 
 | Command | Result |
 |---|---|
-| `uv run pytest backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py -q` | **15 passed** |
-| `uv run pytest backend/tests/test_sandbox/test_eager_ci_bootstrap.py backend/tests/test_sandbox/test_code_intelligence/test_runtime_bundle.py backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py -q` | **59 passed** |
+| `uv run pytest backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py -q` | **15 passed** |
+| `uv run pytest backend/tests/test_sandbox/test_eager_ci_bootstrap.py backend/tests/test_sandbox/test_code_intelligence/test_runtime_bundle.py backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend.py backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py -q` | **59 passed** |
 | `uv run pytest backend/tests/test_sandbox -q` | **478 passed** |
 | `uv run ruff check backend/src/sandbox/code_intelligence backend/src/sandbox/lifecycle backend/tests/test_sandbox/test_code_intelligence backend/tests/test_sandbox/test_eager_ci_bootstrap.py backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | **All checks passed** |
 
@@ -293,7 +293,7 @@ daemon_respawn_via_call:  17.002s
 
 ```
 initial_spawn:            5.822s
-shutdown_rpc:             0.439s
+shutdown_daemon_command:             0.439s
 post_shutdown_settle:     0.501s
 verify_pid_cleanup:       0.366s
 verify_socket_cleanup:    0.330s
@@ -320,12 +320,12 @@ write a timing JSON.
 
 Phase 1's eager hook ran the indexer synchronously. Phase 2 changes that
 hook to upload the bundle and make the daemon reachable. Keeping the
-indexer in `RpcCiBackend.ensure_initialized` preserves the "no business
+indexer in `DaemonCiBackend.ensure_initialized` preserves the "no business
 logic moves" rule while satisfying the daemon-ready lifecycle contract.
 
 ### 6.2 Python socket shim, not `socat` or `nc`
 
-`CiRpcClient` uses an inline Python shim over `transport.exec` to connect
+`DaemonCiBackend` uses an inline Python shim over `transport.exec` to connect
 to the Unix socket and return a base64 response frame. This keeps Phase 2
 independent of `socat`/`nc` availability. The shim is intentionally
 the active Phase 5 path keeps it until batching or true provider-native persistent transport replaces the process.exec bridge.
@@ -344,7 +344,7 @@ The first live test originally looked hung because `create_sandbox()`
 wrapped Daytona provisioning, refresh, git bootstrap, eager CI bootstrap,
 and socket polling in one timing step. The live test now streams timestamped
 logs from `sandbox.lifecycle.service`, `sandbox.lifecycle.proxy`,
-`sandbox.lifecycle.workspace`, and `sandbox.code_intelligence.rpc.launcher`.
+`sandbox.lifecycle.workspace`, and `sandbox.code_intelligence.daemon.launcher`.
 The production code uses normal `logger.info`; only the live test installs
 a stdout handler.
 
@@ -383,7 +383,7 @@ Phase 3 can assume:
 - The runtime bundle can launch `python -m sandbox.code_intelligence.in_sandbox`.
 - The daemon owns `daemon.sock`, `daemon.pid`, and `daemon.log` under the
   workspace-hashed state dir.
-- The orchestrator can issue framed msgpack RPCs via `CiRpcClient.call`.
+- The orchestrator can issue framed msgpack daemon commands via `DaemonCiBackend._call_daemon_command`.
 - Daemon crash between calls is covered by one retry-after-respawn path.
 - `shutdown` removes the PID and socket files.
 

@@ -1,7 +1,7 @@
-# Phase 7 - RPC transport probe + supervisor fork: Implementation Report
+# Phase 7 - daemon command transport probe + supervisor fork: Implementation Report
 
 Companion to
-[`phase-07-rpc-transport-and-supervisor-fork.md`](./phase-07-rpc-transport-and-supervisor-fork.md).
+[`phase-07-transport-and-supervisor-fork.md`](./phase-07-transport-and-supervisor-fork.md).
 Records the probes, attempted implementation, live verification, and ship
 decision for Phase 7.
 
@@ -88,7 +88,7 @@ Timing artifact:
 | distribution | p50 | p95 | samples |
 |---|---:|---:|---:|
 | `svc_cmd_10x_latency` | `1.794s` | `1.837s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `1.794s` | `1.837s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `1.794s` | `1.837s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.278s` | `1.298s` | 10 |
 
 ### 4.2 Failed 7.1(b) live gate
@@ -104,10 +104,10 @@ Timing artifact:
 | distribution | p50 | p95 | samples |
 |---|---:|---:|---:|
 | `svc_cmd_10x_latency` | `5.377s` | `11.199s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `5.377s` | `11.199s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `5.377s` | `11.199s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.143s` | `1.169s` | 10 |
 
-The overlay stage remained healthy while RPC total regressed, so the
+The overlay stage remained healthy while daemon command total regressed, so the
 failure was in the session transport. The live run also reported the
 session log stream closing unexpectedly after the burst.
 
@@ -124,7 +124,7 @@ Timing artifact:
 | distribution | p50 | p95 | samples |
 |---|---:|---:|---:|
 | `svc_cmd_10x_latency` | `1.926s` | `2.442s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `1.926s` | `2.442s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `1.926s` | `2.442s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.352s` | `1.416s` | 10 |
 
 The final run passed the current Phase 6 gate (`10x p50 < 2.000s`) and
@@ -136,7 +136,7 @@ confirmed production did not keep the failed session bridge.
 
 ```bash
 uv run pytest backend/tests/test_sandbox/test_daytona_transport.py \
-  backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py -q
+  backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py -q
 # 29 passed
 ```
 
@@ -166,7 +166,7 @@ Phase 7 does not meet its ship gate:
 The correct production state remains Phase 6:
 
 ```text
-CiRpcClient -> transport.exec Python Unix-socket shim -> transport.exec inline Unix-socket bridge
+DaemonCiBackend -> transport.exec Python Unix-socket shim -> transport.exec inline Unix-socket bridge
 ```
 
 No overlay supervisor is introduced, and no persistent session transport is
@@ -179,7 +179,7 @@ enabled.
 1. Treat **7.1(c) batching** as the next transport candidate. It matches
    the observed failure mode because it amortizes `transport.exec` over a
    burst without relying on a single pseudo-interactive stream to behave as
-   a concurrent RPC transport.
+   a concurrent daemon command transport.
 2. Keep supervisor-fork abandoned unless the sandbox exposes a verified
    namespace primitive. The Python `os.unshare` prerequisite is absent in
    the current live Daytona Python.

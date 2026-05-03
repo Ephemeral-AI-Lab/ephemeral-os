@@ -6,7 +6,7 @@
 **Blocks on:** Phase 5 daemon-default selection lands and remains stable; Phase 4 svc_cmd dispatch remains the daemon entry point
 
 > **Background.** Phase 4 moved `OverlayAuditor.execute` from the orchestrator
-> into the daemon. One process.exec-backed RPC call per `svc.cmd`. The auditor's outer stage
+> into the daemon. One process.exec-backed daemon command call per `svc.cmd`. The auditor's outer stage
 > structure (`git_snapshot`, `upload_runtime`, `run_overlay`, `read_stdout`,
 > `read_diff`, `cleanup`) carried forward unchanged from the orchestrator era.
 > Each stage that still spawns a sandbox-local subprocess pays a fork/exec +
@@ -50,7 +50,7 @@ verification):
 | `run_overlay` | ~1.21s | subprocess + bash-wrap + 0.60s real overlay work |
 | `read_stdout` / `read_diff` / `cleanup` | ~0.000–0.001s each | already pure-Python file I/O if claim holds; subprocess if not |
 | in-process OCC commit | ~0.005s | local |
-| **sum (matches RPC total)** | **~2.61s** | |
+| **sum (matches daemon command total)** | **~2.61s** | |
 
 If the read/diff/cleanup claim holds, only `git_snapshot` and `run_overlay`
 remain as subprocess hops on the daemon-local path. Phase 6 folds them into
@@ -329,7 +329,7 @@ The remaining wall-time floor after Phase 6 lands (modeled, warm 10×):
 
 | Component | Floor |
 |---|---:|
-| Orchestrator → daemon process.exec-backed RPC | ~0.5s (process.exec bridge floor) |
+| Orchestrator → daemon process.exec-backed daemon command | ~0.5s (process.exec bridge floor) |
 | One unshare subprocess invocation | ~0.1–0.3s startup + ~0.5s real work (snapshot + setup_mounts + user_cmd + walk + classify) |
 | In-process OCC commit | ~0.005s |
 | Pure-Python file reads + rmtree | ~0.005–0.01s |
@@ -375,7 +375,7 @@ Overlayfs's contribution to wall time is ~0.5s of real work on the rebase
 baseline (`setup_mounts` 0.10s, `walk_upperdir` 0.001s, `classify` 0.07s,
 user command 0.30s, plus the unshare boundary ~0.1s). The remaining ~2.0s
 of the 10× p50 is daemon-internal subprocess multiplexing and the
-orchestrator→daemon RPC, not CoW.
+orchestrator→daemon daemon command, not CoW.
 
 A userland CoW would add cost, not remove it: FUSE pays a context switch
 per syscall in the user command's hot path; hardlink trees turn the diff

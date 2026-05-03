@@ -4,13 +4,13 @@ Five subtests against a real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
 
 A. ``test_sustained_mixed_workload_distribution`` — daemon-path writes,
    queries, and status calls; samples RSS/FDs at start/50%/100%; asserts
-   resource ceilings (RSS growth < 100 MB, FD growth < 10) and public-RPC
+   resource ceilings (RSS growth < 100 MB, FD growth < 10) and public daemon command
    p99 below the provider-shim stuck threshold.
 B. ``test_concurrent_agents_no_pathologies`` — asyncio agents looping
    query + edit + cmd through the daemon path; asserts zero errors and at
    least one op per kind per agent; RSS growth < 200 MB.
 C. ``test_multi_orchestrator_single_daemon_arbitration`` — two
-   :class:`CiRpcClient` instances commit to the same path; asserts exactly
+   :class:`DaemonCiBackend` instances commit to the same path; asserts exactly
    1 success + 1 abort.
 D. ``test_sqlite_index_survives_daemon_restart`` — capture symbol counts,
    restart the daemon, assert the SQLite-backed daemon returns identical
@@ -56,7 +56,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 _DASK_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _DASK_SWEEVO_REPO_DIR = "/testbed"
-_PUBLIC_DAEMON_RPC_P99_CEILING_S = 10.0
+_PUBLIC_DAEMON_COMMAND_P99_CEILING_S = 10.0
 _SUSTAINED_WRITE_SAMPLES = 5
 _SUSTAINED_QUERY_SAMPLES = 5
 _SUSTAINED_STATUS_SAMPLES = 3
@@ -143,7 +143,7 @@ class SvcCmdProbeResult:
     changed_paths: int
     overlay_run_timings: dict[str, float]
     overlay_stage_timings: dict[str, float]
-    rpc_call_timings: dict[str, float]
+    daemon_call_timings: dict[str, float]
     error: str | None = None
 
 
@@ -265,13 +265,13 @@ def test_sustained_mixed_workload_distribution(live_phase35_env: LivePhase35Env)
         f"FD count grew by {fd_growth:.0f} during 250 ops — possible leak"
     )
 
-    # Public daemon RPC currently pays the provider exec shim on every sample.
+    # Public daemon daemon command currently pays the provider exec shim on every sample.
     # This gate catches the old hang/pathological queueing case without
     # pretending the sample is raw SQLite or LSP latency.
     write_dist = h.distributions["write_file"]
-    assert write_dist["p99"] < _PUBLIC_DAEMON_RPC_P99_CEILING_S, (
+    assert write_dist["p99"] < _PUBLIC_DAEMON_COMMAND_P99_CEILING_S, (
         f"write_file p99 ({write_dist['p99']:.3f}s) exceeded "
-        f"{_PUBLIC_DAEMON_RPC_P99_CEILING_S:.1f}s — provider RPC may be stuck"
+        f"{_PUBLIC_DAEMON_COMMAND_P99_CEILING_S:.1f}s — provider daemon command may be stuck"
     )
 
     _flush("\n" + h.report())
@@ -369,12 +369,12 @@ async def test_multi_orchestrator_single_daemon_arbitration(
 
     base_hash = content_hash(base_content)
 
-    from sandbox.code_intelligence.rpc.client import CiRpcClient
+    from sandbox.code_intelligence.backend import DaemonCiBackend
     from sandbox.daytona.transport import DaytonaTransport
 
     transport = DaytonaTransport()
-    client_a = CiRpcClient(transport, env.sandbox_id, env.root_dir)
-    client_b = CiRpcClient(transport, env.sandbox_id, env.root_dir)
+    daemon_a = DaemonCiBackend(sandbox_id=env.sandbox_id, workspace_root=env.root_dir, transport=transport)
+    daemon_b = DaemonCiBackend(sandbox_id=env.sandbox_id, workspace_root=env.root_dir, transport=transport)
 
     def _change(value: str, agent: str) -> dict:
         return {
@@ -392,10 +392,10 @@ async def test_multi_orchestrator_single_daemon_arbitration(
             "agent_id": agent,
         }
 
-    with _trace(h, "two_clients_concurrent_commit"):
+    with _trace(h, "two_daemon_backends_concurrent_commit"):
         results = await asyncio.gather(
-            client_a.call("commit_operation_against_base", _change("vA\n", "client_a")),
-            client_b.call("commit_operation_against_base", _change("vB\n", "client_b")),
+            daemon_a._call_daemon_command("commit_operation_against_base", _change("vA\n", "daemon_a")),
+            daemon_b._call_daemon_command("commit_operation_against_base", _change("vB\n", "daemon_b")),
             return_exceptions=True,
         )
 
@@ -474,18 +474,18 @@ def test_refresh_file_does_not_rewrite_world(live_phase35_env: LivePhase35Env) -
     svc.ensure_initialized(wait=True)
 
     target = f"{env.root_dir}/dask/__init__.py"
-    from sandbox.code_intelligence.rpc.client import CiRpcClient
+    from sandbox.code_intelligence.backend import DaemonCiBackend
     from sandbox.daytona.transport import DaytonaTransport
 
-    client = CiRpcClient(DaytonaTransport(), env.sandbox_id, env.root_dir)
+    daemon_backend = DaemonCiBackend(sandbox_id=env.sandbox_id, workspace_root=env.root_dir, transport=DaytonaTransport())
     for step in h.step_repeat("refresh_file", n=_REFRESH_SAMPLES):
         with step:
-            asyncio.run(client.call("index_refresh", {"file_path": target}))
+            asyncio.run(daemon_backend._call_daemon_command("index_refresh", {"file_path": target}))
 
     p99 = h.distributions["refresh_file"]["p99"]
-    assert p99 < _PUBLIC_DAEMON_RPC_P99_CEILING_S, (
+    assert p99 < _PUBLIC_DAEMON_COMMAND_P99_CEILING_S, (
         f"refresh_file p99 ({p99:.3f}s) exceeded "
-        f"{_PUBLIC_DAEMON_RPC_P99_CEILING_S:.1f}s — provider RPC may be stuck"
+        f"{_PUBLIC_DAEMON_COMMAND_P99_CEILING_S:.1f}s — provider daemon command may be stuck"
     )
 
     _flush("\n" + h.report())
@@ -796,8 +796,8 @@ async def _run_svc_cmd_concurrency_batch(
         harness,
         concurrency=concurrency,
         results=results,
-        prefix="rpc_call",
-        timing_attr="rpc_call_timings",
+        prefix="daemon_call",
+        timing_attr="daemon_call_timings",
     )
     return results
 
@@ -844,8 +844,8 @@ async def _run_one_svc_cmd_probe(
         overlay_stage_timings = _timing_map(
             getattr(result, "overlay_stage_timings", {})
         )
-        rpc_call_timings = _timing_map(
-            getattr(result, "rpc_call_timings", {})
+        daemon_call_timings = _timing_map(
+            getattr(result, "daemon_call_timings", {})
         )
         changed_paths = len(getattr(result, "changed_paths", []) or [])
         exit_code = _optional_int(getattr(result, "exit_code", None))
@@ -856,7 +856,7 @@ async def _run_one_svc_cmd_probe(
             f"changed={changed_paths} "
             f"{_format_timing_map('overlay', overlay_timings)} "
             f"{_format_timing_map('stages', overlay_stage_timings)} "
-            f"{_format_timing_map('rpc', rpc_call_timings)}"
+            f"{_format_timing_map('daemon', daemon_call_timings)}"
         )
         return SvcCmdProbeResult(
             batch_size=concurrency,
@@ -867,7 +867,7 @@ async def _run_one_svc_cmd_probe(
             changed_paths=changed_paths,
             overlay_run_timings=overlay_timings,
             overlay_stage_timings=overlay_stage_timings,
-            rpc_call_timings=rpc_call_timings,
+            daemon_call_timings=daemon_call_timings,
         )
     except Exception as exc:
         elapsed = time.perf_counter() - started if started is not None else 0.0
@@ -884,7 +884,7 @@ async def _run_one_svc_cmd_probe(
             changed_paths=0,
             overlay_run_timings={},
             overlay_stage_timings={},
-            rpc_call_timings={},
+            daemon_call_timings={},
             error=repr(exc),
         )
     finally:

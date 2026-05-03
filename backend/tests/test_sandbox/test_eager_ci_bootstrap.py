@@ -79,7 +79,7 @@ def test_bootstrap_helper_noop_when_workspace_empty(flag_on: None) -> None:
 
 
 def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
-    from sandbox.code_intelligence.rpc.launcher import bundle_hash
+    from sandbox.code_intelligence.daemon.launcher import bundle_hash
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
     calls: list[tuple[str, str]] = []
@@ -117,14 +117,14 @@ def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
 
 
 def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
-    from sandbox.code_intelligence.rpc.launcher import CiDaemonUnavailable
+    from sandbox.code_intelligence.daemon.launcher import CiDaemonUnavailable
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
     async def fail_ensure(*_: Any, **__: Any) -> None:
         raise CiDaemonUnavailable("socket timeout")
 
     with patch(
-        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher.ensure_daemon",
+        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher.ensure_daemon",
         new=fail_ensure,
     ), pytest.raises(CiDaemonUnavailable, match="socket timeout"):
         asyncio.run(
@@ -291,10 +291,10 @@ def test_upload_helper_uploads_without_spawning_daemon(flag_on: None) -> None:
 
     fake_transport = object()
     with patch(
-        "sandbox.code_intelligence.rpc.launcher.ensure_runtime_uploaded",
+        "sandbox.code_intelligence.daemon.launcher.ensure_runtime_uploaded",
         new=fake_upload,
     ), patch(
-        "sandbox.code_intelligence.rpc.launcher.DaemonLauncher.spawn",
+        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher.spawn",
         new=fake_spawn,
     ):
         asyncio.run(

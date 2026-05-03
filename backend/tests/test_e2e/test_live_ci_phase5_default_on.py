@@ -1,13 +1,13 @@
-"""Phase 5 — daemon default live E2E over process.exec-backed RPC.
+"""Phase 5 — daemon default live E2E over process.exec-backed daemon command.
 
 Three subtests against the real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
 
 A. ``test_default_flag_on_smoke`` — every operation works through
-   ``RpcCiBackend`` over the process.exec socket shim. Asserts ``_select_backend``
+   ``DaemonCiBackend`` over the process.exec socket shim. Asserts ``_select_backend``
    returns the daemon path for transport-backed sandboxes.
 
 B. ``test_concurrent_query_symbols`` — 8 concurrent ``query_symbols`` calls
-   succeed with zero errors and finish in below the public-RPC ceiling.
+   succeed with zero errors and finish in below the public-daemon command ceiling.
 
 C. ``test_curated_cross_phase_regression`` — one assertion per prior phase
    (0/1/2/3/3.5/3.6/4) wired through the now-default daemon path. Catches
@@ -36,7 +36,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
-from sandbox.code_intelligence.backend import RpcCiBackend
+from sandbox.code_intelligence.backend import DaemonCiBackend
 from sandbox.code_intelligence.core.types import WriteSpec
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
@@ -46,7 +46,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 _DASK_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _DASK_SWEEVO_REPO_DIR = "/testbed"
-_PUBLIC_DAEMON_RPC_P99_CEILING_S = 10.0
+_PUBLIC_DAEMON_COMMAND_P99_CEILING_S = 10.0
 _CONCURRENT_QUERY_COUNT = 8
 
 
@@ -143,7 +143,7 @@ def live_phase5_env() -> LivePhase5Env:
 
 
 # ---------------------------------------------------------------------------
-# 5.6.A — daemon-default selector uses RpcCiBackend; full smoke
+# 5.6.A — daemon-default selector uses DaemonCiBackend; full smoke
 # ---------------------------------------------------------------------------
 
 
@@ -153,9 +153,9 @@ def test_default_flag_on_smoke(live_phase5_env: LivePhase5Env) -> None:
 
     with _trace(h, "ci_service_construct_default"):
         svc = env.make_ci_service()
-    # Phase 5 assertion: transport+sandbox_id present -> RpcCiBackend.
-    assert isinstance(svc._impl, RpcCiBackend), (
-        "transport-backed sandboxes must use RpcCiBackend"
+    # Phase 5 assertion: transport+sandbox_id present -> DaemonCiBackend.
+    assert isinstance(svc._impl, DaemonCiBackend), (
+        "transport-backed sandboxes must use DaemonCiBackend"
     )
 
     with _trace(h, "ensure_initialized"):
@@ -209,9 +209,9 @@ async def test_concurrent_query_symbols(live_phase5_env: LivePhase5Env) -> None:
         assert isinstance(rows, list), f"query {query!r} returned non-list: {rows!r}"
 
     total_s = h.values["concurrent_8_queries_total"]
-    assert total_s < _PUBLIC_DAEMON_RPC_P99_CEILING_S, (
+    assert total_s < _PUBLIC_DAEMON_COMMAND_P99_CEILING_S, (
         f"8 concurrent queries took {total_s:.3f}s (>"
-        f"{_PUBLIC_DAEMON_RPC_P99_CEILING_S:.1f}s ceiling)"
+        f"{_PUBLIC_DAEMON_COMMAND_P99_CEILING_S:.1f}s ceiling)"
     )
 
     _flush("\n" + h.report())
@@ -234,7 +234,7 @@ def test_curated_cross_phase_regression(live_phase5_env: LivePhase5Env) -> None:
     env = live_phase5_env
     svc = env.make_ci_service()
     svc.ensure_initialized(wait=True)
-    assert isinstance(svc._impl, RpcCiBackend)
+    assert isinstance(svc._impl, DaemonCiBackend)
 
     # Phase 0/1: query_symbols returns SymbolInfo rows for a known dask name.
     rows = svc.query_symbols("Bag")

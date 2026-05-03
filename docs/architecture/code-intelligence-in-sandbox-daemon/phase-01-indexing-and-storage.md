@@ -21,7 +21,7 @@ Three reasons:
 
 1. **Biggest network savings, lowest blast radius.** Indexing today downloads every `.py` file to feed `ast.parse`. Moving that into the sandbox eliminates the largest network cost in the migration. It does NOT touch the OCC pipeline, so even a regression here can't break edits.
 2. **Validates the storage-path privilege assumption against real Daytona.** `$HOME/.cache/eos-ci/` is the load-bearing assumption from the overview's gray-area decision #1. Phase 1's E2E asserts `mkdir -p $HOME/.cache/eos-ci/...` works without sudo on a real `dask` swe-evo sandbox. If it doesn't, we discover this BEFORE building a daemon on top of it.
-3. **One-shot script first, daemon later.** A standalone CLI is simpler than an asyncio event-loop server. Proving the bundle-shipping pattern, the storage layer, and the orchestrator-side `RpcCiBackend.build_index()` integration in Phase 1 reduces Phase 2's surface area to "just" the daemon lifecycle.
+3. **One-shot script first, daemon later.** A standalone CLI is simpler than an asyncio event-loop server. Proving the bundle-shipping pattern, the storage layer, and the orchestrator-side `DaemonCiBackend.build_index()` integration in Phase 1 reduces Phase 2's surface area to "just" the daemon lifecycle.
 
 ## Design choice — bundle the entire package, not hand-picked copies
 
@@ -35,7 +35,7 @@ svc = CodeIntelligenceService(
     sandbox_id="local",
     workspace_root=args.workspace_root,
     sandbox=None,         # → InProcessCiBackend's local-FS branches
-    transport=None,       # → no RPC roundtrips
+    transport=None,       # → no daemon command roundtrips
 )
 svc.ensure_initialized(wait=True)
 ```
@@ -54,11 +54,11 @@ svc.ensure_initialized(wait=True)
 
 | Artifact | File | Purpose |
 |---|---|---|
-| Bundle helper | `backend/src/sandbox/code_intelligence/rpc/launcher.py` | `_ci_runtime_bundle_bytes()` packs `sandbox/code_intelligence/` + `sandbox/client/async_bridge.py` + **vendored `msgpack/`** (~50KB) |
+| Bundle helper | `backend/src/sandbox/code_intelligence/daemon/launcher.py` | `_ci_runtime_bundle_bytes()` packs `sandbox/code_intelligence/` + `sandbox/client/async_bridge.py` + **vendored `msgpack/`** (~50KB) |
 | Indexing CLI | `backend/src/sandbox/code_intelligence/in_sandbox/ci_index.py` | Thin wrapper: instantiate `CodeIntelligenceService`, call `ensure_initialized`, dump snapshot via `ci_storage` |
 | Storage layer | `backend/src/sandbox/code_intelligence/in_sandbox/ci_storage.py` | `$HOME/.cache/eos-ci/<wh>/v1/` resolver, atomic snapshot writer, integrity check, **path-confinement guard** |
 | Package init | `backend/src/sandbox/code_intelligence/in_sandbox/__init__.py` | Empty marker |
-| `RpcCiBackend.build_index()` | `backend/src/sandbox/code_intelligence/backend.py` (extended) | Ships payload, runs CLI, downloads snapshot |
+| `DaemonCiBackend.build_index()` | `backend/src/sandbox/code_intelligence/backend.py` (extended) | Ships payload, runs CLI, downloads snapshot |
 | **Eager bootstrap hook** | `backend/src/sandbox/lifecycle/workspace.py` (`bootstrap_in_sandbox_ci_runtime`) | Bundle upload + indexer run, called from `create_sandbox` and `start_sandbox` |
 | **Lifecycle integration** | `backend/src/sandbox/lifecycle/service.py` (modified) | `create_sandbox(...)` and `start_sandbox(...)` call the hook before returning when `EOS_CI_IN_SANDBOX=1` |
 | Phase 1 live E2E | `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` | Privilege probe + **compatibility matrix probe** + indexing + corruption recovery + **eager-bootstrap timing** |
@@ -146,7 +146,7 @@ def read_snapshot(state: Path, name: str) -> Any | None:
 
 **Critical contracts:**
 - DO NOT silently fall back to `/tmp` on `PermissionError`. Surface `CiStorageUnavailable` so the Phase 1 E2E can fail loud with the exact errno + `$HOME` value.
-- `_confine` is load-bearing: it prevents an RPC handler from writing `../../../workspace_root/foo` and bypassing the storage boundary. Phase 3 adds a daemon-side bypass-attempt guard test on top of this.
+- `_confine` is load-bearing: it prevents an daemon command handler from writing `../../../workspace_root/foo` and bypassing the storage boundary. Phase 3 adds a daemon-side bypass-attempt guard test on top of this.
 
 **Note on Phase 3.5 SQLite migration:** the `write_snapshot/read_snapshot` API stays stable. Phase 3.5 swaps the implementation to back onto a SQLite table without changing the call sites in `ci_index.py` or `ci_daemon.py`.
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
 ### Task 1.3 — Bundle helper (with vendored msgpack)
 
-**File to create:** `backend/src/sandbox/code_intelligence/rpc/__init__.py` (empty) and `backend/src/sandbox/code_intelligence/rpc/launcher.py`
+**File to create:** `backend/src/sandbox/code_intelligence/daemon/__init__.py` (empty) and `backend/src/sandbox/code_intelligence/daemon/launcher.py`
 
 **Vendored msgpack:** the bundle includes msgpack so the daemon works on offline images without `pip install`. Ship the **pure-Python** msgpack (avoid C extension wheel-arch concerns). Locate via `python -c "import msgpack, os; print(os.path.dirname(msgpack.__file__))"` at bundle-build time.
 
@@ -346,14 +346,14 @@ def create_sandbox(self, ...) -> ...:
 cd /tmp/eos-ci-runtime && python3 -m sandbox.code_intelligence.in_sandbox.ci_index --workspace-root <root>
 ```
 
-### Task 1.4 — `RpcCiBackend.build_index()` and `query_symbols`
+### Task 1.4 — `DaemonCiBackend.build_index()` and `query_symbols`
 
 **File to modify:** `backend/src/sandbox/code_intelligence/backend.py`
 
 **Implementation:**
 
 ```python
-class RpcCiBackend:
+class DaemonCiBackend:
     async def _ensure_initialized_async(self, *, wait: bool = True) -> bool:
         await ensure_runtime_uploaded(self._transport, self._sandbox_id)
         cmd = (
@@ -384,7 +384,7 @@ class RpcCiBackend:
 
     def query_symbols(self, query: str) -> list[SymbolInfo]:
         # Phase 1: orchestrator-side cache (no daemon yet).
-        # Phase 2+: this becomes an RPC.
+        # Phase 2+: this becomes an daemon command.
         needle = query.lower().strip()
         if not needle:
             return []
@@ -396,7 +396,7 @@ class RpcCiBackend:
         return results
 ```
 
-**Note:** for Phase 1 we keep the cache orchestrator-side because there's no daemon yet. Phases 2-3 move the cache into daemon memory and `query_symbols` becomes an RPC. The Phase 0 baseline E2E captures `query_symbols_warm` so Phase 1 has a baseline to compare against.
+**Note:** for Phase 1 we keep the cache orchestrator-side because there's no daemon yet. Phases 2-3 move the cache into daemon memory and `query_symbols` becomes an daemon command. The Phase 0 baseline E2E captures `query_symbols_warm` so Phase 1 has a baseline to compare against.
 
 ### Task 1.5 — Phase 1 live E2E
 
@@ -445,7 +445,7 @@ async def test_indexing_parity_with_baseline(live_sweevo_env):
 
     with h.step("index_build_in_sandbox"):
         with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "1"}):
-            svc = env.make_ci_service()  # constructs RpcCiBackend
+            svc = env.make_ci_service()  # constructs DaemonCiBackend
             svc.ensure_initialized(wait=True)
     h.record("index_build_in_sandbox",
              count=svc._impl._cached_file_count,
@@ -779,7 +779,7 @@ exit $rc
 - [ ] `_ci_runtime_bundle_bytes()` produces a tar.gz containing the entire `sandbox/code_intelligence/` tree + `sandbox/client/async_bridge.py` + `sandbox/__init__.py` + **vendored `msgpack/`**.
 - [ ] Bundle size verified: < 1 MB total; reported in PR description.
 - [ ] Bundle hash idempotency: subsequent `ensure_runtime_uploaded` calls no-op when the marker matches.
-- [ ] `RpcCiBackend.ensure_initialized()` works end-to-end against a real `dask` swe-evo sandbox.
+- [ ] `DaemonCiBackend.ensure_initialized()` works end-to-end against a real `dask` swe-evo sandbox.
 - [ ] **Eager bootstrap hook wired into `SandboxService.create_sandbox` and `start_sandbox`; flag-off and missing-workspace no-op paths verified.**
 - [ ] **Phase 1 live E2E privilege probe (1.5.A) passes — `mkdir -p $HOME/.cache/eos-ci/...` succeeds without sudo on the sandbox image.**
 - [ ] **Phase 1 live E2E compatibility matrix probe (1.5.E) — all required deps green on `dask__dask_2023.3.2_2023.4.0`.**
@@ -808,7 +808,7 @@ exit $rc
 ## Hand-off to Phase 2
 
 Phase 2 picks up with:
-- A working orchestrator-side `RpcCiBackend.ensure_initialized()` that ships a payload and runs a script in-sandbox.
+- A working orchestrator-side `DaemonCiBackend.ensure_initialized()` that ships a payload and runs a script in-sandbox.
 - Storage layout proven on real Daytona (`$HOME/.cache/eos-ci/<wh>/v1/`).
 - Bundle helper (`_ci_runtime_bundle_bytes()`) and `ensure_runtime_uploaded()` ready to be reused for the daemon binary (Phase 2 just adds `__main__.py` to the same bundle).
 - Path-confinement guard already in `ci_storage` — Phase 3 builds a daemon-level workspace-write bypass guard on top.

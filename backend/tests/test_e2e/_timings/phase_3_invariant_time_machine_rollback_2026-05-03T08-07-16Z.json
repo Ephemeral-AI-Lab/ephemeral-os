@@ -1,0 +1,16 @@
+{
+  "phase": 3,
+  "test_name": "invariant_time_machine_rollback",
+  "timestamp": "2026-05-03T08:07:16.106702+00:00",
+  "steps": [
+    {
+      "name": "crash_batch",
+      "elapsed_s": 5.833664875011891,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 5.833664875011891,
+  "distributions": {},
+  "values": {}
+}

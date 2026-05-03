@@ -1,4 +1,4 @@
-"""Unit tests for ``sandbox.code_intelligence.rpc.launcher``.
+"""Unit tests for ``sandbox.code_intelligence.daemon.launcher``.
 
 The headline tests extract the bundle to a tmp dir and import the daemon
 entrypoint from the extracted tree in a fresh subprocess. That mechanically
@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from sandbox.code_intelligence.rpc.launcher import (
+from sandbox.code_intelligence.daemon.launcher import (
     BUNDLE_REMOTE_DIR,
     _ci_runtime_bundle_bytes,
     bundle_hash,

@@ -23,8 +23,8 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
-from sandbox.code_intelligence.rpc.client import CiRpcClient
-from sandbox.code_intelligence.rpc.launcher import DaemonLauncher
+from sandbox.code_intelligence.backend import DaemonCiBackend
+from sandbox.code_intelligence.daemon.launcher import DaemonLauncher
 
 from ._timing_harness import TimingHarness
 
@@ -76,7 +76,7 @@ def _stream_live_logs() -> Iterator[None]:
         logging.getLogger("sandbox.lifecycle.service"),
         logging.getLogger("sandbox.lifecycle.proxy"),
         logging.getLogger("sandbox.lifecycle.workspace"),
-        logging.getLogger("sandbox.code_intelligence.rpc.launcher"),
+        logging.getLogger("sandbox.code_intelligence.daemon.launcher"),
     ]
     old_levels = [logger.level for logger in loggers]
     old_propagate = [logger.propagate for logger in loggers]
@@ -155,8 +155,8 @@ class LivePhase2Env:
         )
         return exit_code, output
 
-    def client(self) -> CiRpcClient:
-        return CiRpcClient(self.transport, self.sandbox_id, self.repo_dir)
+    def daemon_backend(self) -> DaemonCiBackend:
+        return DaemonCiBackend(sandbox_id=self.sandbox_id, workspace_root=self.repo_dir, transport=self.transport)
 
     def launcher(self) -> DaemonLauncher:
         return DaemonLauncher(self.transport, self.sandbox_id, self.repo_dir)
@@ -229,12 +229,8 @@ def test_daemon_ready_after_create_sandbox() -> None:
 
         try:
             with _traced_step(h, "daemon_first_ping_no_retry"):
-                client = CiRpcClient(
-                    DaytonaTransport(),
-                    sandbox_id,
-                    _DASK_SWEEVO_REPO_DIR,
-                )
-                result = _asyncio_run(client.call("ping"))
+                daemon_backend = DaemonCiBackend(sandbox_id=sandbox_id, workspace_root=_DASK_SWEEVO_REPO_DIR, transport=DaytonaTransport())
+                result = _asyncio_run(daemon_backend._call_daemon_command("ping"))
             assert result["pong"] is True
 
             raw = get_sandbox_service().get_sandbox_object(sandbox_id)
@@ -269,11 +265,11 @@ def test_daemon_ready_after_create_sandbox() -> None:
 async def test_daemon_kill_and_respawn(live_phase2_env: LivePhase2Env) -> None:
     h = TimingHarness(phase=2, test_name="kill_and_respawn")
     env = live_phase2_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     launcher = env.launcher()
 
     with _traced_step(h, "initial_spawn_and_ping"):
-        assert (await client.call("ping"))["pong"] is True
+        assert (await daemon_backend._call_daemon_command("ping"))["pong"] is True
 
     pid_path = await launcher.pid_path()
     with _traced_step(h, "daemon_kill9"):
@@ -282,7 +278,7 @@ async def test_daemon_kill_and_respawn(live_phase2_env: LivePhase2Env) -> None:
         await asyncio.sleep(0.3)
 
     with _traced_step(h, "daemon_respawn_via_call"):
-        assert (await client.call("ping"))["pong"] is True
+        assert (await daemon_backend._call_daemon_command("ping"))["pong"] is True
 
     _flush_print(h.report())
     h.dump_json()
@@ -292,16 +288,16 @@ async def test_daemon_kill_and_respawn(live_phase2_env: LivePhase2Env) -> None:
 async def test_daemon_clean_shutdown(live_phase2_env: LivePhase2Env) -> None:
     h = TimingHarness(phase=2, test_name="clean_shutdown")
     env = live_phase2_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     launcher = env.launcher()
 
     with _traced_step(h, "initial_spawn"):
-        assert (await client.call("ping"))["pong"] is True
+        assert (await daemon_backend._call_daemon_command("ping"))["pong"] is True
 
     pid_path = await launcher.pid_path()
     socket_path = await launcher.socket_path()
-    with _traced_step(h, "shutdown_rpc"):
-        assert (await client.call("shutdown"))["shutting_down"] is True
+    with _traced_step(h, "shutdown_daemon_command"):
+        assert (await daemon_backend._call_daemon_command("shutdown"))["shutting_down"] is True
 
     with _traced_step(h, "post_shutdown_settle"):
         await asyncio.sleep(0.5)
@@ -320,8 +316,8 @@ async def test_daemon_clean_shutdown(live_phase2_env: LivePhase2Env) -> None:
 @pytest.mark.asyncio
 async def test_concurrent_pings(live_phase2_env: LivePhase2Env) -> None:
     env = live_phase2_env
-    client = env.client()
-    results = await asyncio.gather(*[client.call("ping") for _ in range(8)])
+    daemon_backend = env.daemon_backend()
+    results = await asyncio.gather(*[daemon_backend._call_daemon_command("ping") for _ in range(8)])
     assert all(r["pong"] is True for r in results)
 
 
@@ -350,12 +346,8 @@ def test_dispose_sandbox_no_orphan_daemon() -> None:
             sandbox_id = str(sandbox["id"])
 
         with _traced_step(h, "spawn_daemon"):
-            client = CiRpcClient(
-                DaytonaTransport(),
-                sandbox_id,
-                _DASK_SWEEVO_REPO_DIR,
-            )
-            assert _asyncio_run(client.call("ping"))["pong"] is True
+            daemon_backend = DaemonCiBackend(sandbox_id=sandbox_id, workspace_root=_DASK_SWEEVO_REPO_DIR, transport=DaytonaTransport())
+            assert _asyncio_run(daemon_backend._call_daemon_command("ping"))["pong"] is True
 
         with _traced_step(h, "dispose_sandbox"):
             delete_test_sandbox(sandbox_id)

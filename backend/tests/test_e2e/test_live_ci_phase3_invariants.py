@@ -31,7 +31,7 @@ import pytest
 from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.code_intelligence.core.types import WriteSpec
-from sandbox.code_intelligence.rpc.client import CiRpcClient
+from sandbox.code_intelligence.backend import DaemonCiBackend
 
 from ._timing_harness import TimingHarness
 
@@ -80,8 +80,8 @@ class LivePhase3Env:
         )
         return exit_code, output
 
-    def client(self) -> CiRpcClient:
-        return CiRpcClient(self.transport, self.sandbox_id, self.repo_dir)
+    def daemon_backend(self) -> DaemonCiBackend:
+        return DaemonCiBackend(sandbox_id=self.sandbox_id, workspace_root=self.repo_dir, transport=self.transport)
 
 
 @contextmanager
@@ -95,7 +95,7 @@ def _stream_live_logs() -> Iterator[None]:
     )
     loggers = [
         logging.getLogger("sandbox.lifecycle.service"),
-        logging.getLogger("sandbox.code_intelligence.rpc.launcher"),
+        logging.getLogger("sandbox.code_intelligence.daemon.launcher"),
         logging.getLogger("sandbox.code_intelligence.in_sandbox.ci_daemon"),
     ]
     old_levels = [logger.level for logger in loggers]
@@ -168,7 +168,7 @@ def test_invariant_sorted_path_locks(live_phase3_env: LivePhase3Env) -> None:
     """Two concurrent commits in opposite path orders must not deadlock."""
     h = TimingHarness(phase=3, test_name="invariant_sorted_locks")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
 
     files = [f"{env.repo_dir}/_phase3_a.txt", f"{env.repo_dir}/_phase3_b.txt"]
     env.exec(f"echo 'A' > {files[0]} && echo 'B' > {files[1]}")
@@ -186,7 +186,7 @@ def test_invariant_sorted_path_locks(live_phase3_env: LivePhase3Env) -> None:
         }
 
     async def commit_in_order(idx_a: int, idx_b: int, agent: str) -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -231,7 +231,7 @@ def test_invariant_strict_base_occ_aborts_on_drift(
     """A second strict-base commit against a stale base must abort."""
     h = TimingHarness(phase=3, test_name="invariant_strict_base_occ")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     target = f"{env.repo_dir}/_phase3_occ.txt"
 
     env.exec(f"echo 'v1' > {target}")
@@ -240,7 +240,7 @@ def test_invariant_strict_base_occ_aborts_on_drift(
     base_v1_hash = content_hash("v1\n")
 
     async def first_commit() -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -260,7 +260,7 @@ def test_invariant_strict_base_occ_aborts_on_drift(
 
     async def stale_commit() -> Any:
         # This second call is using v1 base after target is already v2.
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -302,7 +302,7 @@ def test_invariant_non_overlap_merge_converges(
     base via the merge fallback."""
     h = TimingHarness(phase=3, test_name="invariant_non_overlap_merge")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     target = f"{env.repo_dir}/_phase3_merge.txt"
     env.exec(f"printf 'line1\\nline2\\nline3\\n' > {target}")
 
@@ -312,7 +312,7 @@ def test_invariant_non_overlap_merge_converges(
     base_hash = content_hash(base)
 
     async def edit_top() -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -331,7 +331,7 @@ def test_invariant_non_overlap_merge_converges(
         )
 
     async def edit_bot() -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -370,7 +370,7 @@ def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None
     """A failed mid-batch commit must roll all participating files back."""
     h = TimingHarness(phase=3, test_name="invariant_time_machine_rollback")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     a = f"{env.repo_dir}/_phase3_tm_a.txt"
     b = f"{env.repo_dir}/_phase3_tm_b.txt"
     env.exec(f"echo 'A0' > {a} && echo 'B0' > {b}")
@@ -379,7 +379,7 @@ def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None
 
     # Mismatched base on file B forces the batch to abort mid-flight.
     async def crash_batch() -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "commit_operation_against_base",
             {
                 "changes": [
@@ -429,7 +429,7 @@ def test_invariant_lsp_cache_invalidates_on_commit(
     """Edit a file, then ``find_definitions`` must observe the post-edit symbols."""
     h = TimingHarness(phase=3, test_name="invariant_lsp_invalidation")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
     target = f"{env.repo_dir}/_phase3_lsp.py"
     env.exec(f"printf 'def foo():\\n    pass\\n' > {target}")
 
@@ -440,7 +440,7 @@ def test_invariant_lsp_cache_invalidates_on_commit(
     )
 
     async def write_new_def() -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "write_file",
             {
                 "specs": [
@@ -459,7 +459,7 @@ def test_invariant_lsp_cache_invalidates_on_commit(
     assert result.get("success") is True, result
 
     async def query() -> Any:
-        return await client.call("query_symbols", {"query": "bar"})
+        return await daemon_backend._call_daemon_command("query_symbols", {"query": "bar"})
 
     with _traced_step(h, "query_post_edit"):
         rows = _asyncio_run(query())
@@ -483,12 +483,12 @@ def test_ledger_persistence_across_daemon_restart(
     """
     h = TimingHarness(phase=3, test_name="ledger_persistence")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
 
     targets = [f"{env.repo_dir}/_phase3_ledger_{i}.txt" for i in range(5)]
 
     async def write(path: str, idx: int) -> Any:
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "write_file",
             {
                 "specs": [
@@ -502,7 +502,7 @@ def test_ledger_persistence_across_daemon_restart(
         for i, path in enumerate(targets):
             _asyncio_run(write(path, i))
 
-    pre_status = _asyncio_run(client.call("status"))
+    pre_status = _asyncio_run(daemon_backend._call_daemon_command("status"))
     pre_files = {
         entry["file"]
         for entry in (
@@ -520,7 +520,7 @@ def test_ledger_persistence_across_daemon_restart(
         time.sleep(0.5)
 
     with _traced_step(h, "respawn_via_call"):
-        post_status = _asyncio_run(client.call("status"))
+        post_status = _asyncio_run(daemon_backend._call_daemon_command("status"))
     post_files = {
         entry["file"]
         for entry in (
@@ -556,7 +556,7 @@ def test_workspace_bypass_guard_surfaces_violation(
     """
     h = TimingHarness(phase=3, test_name="bypass_guard")
     env = live_phase3_env
-    client = env.client()
+    daemon_backend = env.daemon_backend()
 
     target = f"{env.repo_dir}/_phase3_guard.txt"
     bypass_target = f"{env.repo_dir}/_phase3_unledgered.txt"
@@ -570,13 +570,13 @@ def test_workspace_bypass_guard_surfaces_violation(
     env.exec("touch $HOME/.cache/eos-ci/*/v1/.allow_test_bypass_op")
 
     with _traced_step(h, "set_strict_mode"):
-        _asyncio_run(client.call("_set_guard_mode", {"strict": True}))
+        _asyncio_run(daemon_backend._call_daemon_command("_set_guard_mode", {"strict": True}))
 
     async def write_with_bypass() -> Any:
         # Plant the bypass file just before the mutation so its mtime falls
         # inside the guard's request window.
         env.exec(f"touch {bypass_target}")
-        return await client.call(
+        return await daemon_backend._call_daemon_command(
             "write_file",
             {
                 "specs": [
@@ -594,13 +594,13 @@ def test_workspace_bypass_guard_surfaces_violation(
         try:
             result = _asyncio_run(write_with_bypass())
         except Exception as exc:
-            # CiDaemonRpcError carries the kind in .kind; surface for assertion.
+            # CiDaemonCommandError carries the kind in .kind; surface for assertion.
             assert "WorkspaceBypass" in str(exc), exc
             result = {"success": False, "error_repr": repr(exc)}
 
     # Cleanup strict mode + planted file regardless of outcome.
     env.exec("rm -f $HOME/.cache/eos-ci/*/v1/.allow_test_bypass_op || true")
-    _asyncio_run(client.call("_set_guard_mode", {"strict": False}))
+    _asyncio_run(daemon_backend._call_daemon_command("_set_guard_mode", {"strict": False}))
     env.exec(f"rm -f {bypass_target}")
 
     # The bypass file IS still present (detection, not prevention).

@@ -1,7 +1,7 @@
 # Phase 7 Probe A - Daytona transport channel report
 
 Companion to
-[`phase-07-rpc-transport-and-supervisor-fork.md`](./phase-07-rpc-transport-and-supervisor-fork.md).
+[`phase-07-transport-and-supervisor-fork.md`](./phase-07-transport-and-supervisor-fork.md).
 Records the live Daytona transport probes for Task 7.0.A.
 
 ---
@@ -12,7 +12,7 @@ Records the live Daytona transport probes for Task 7.0.A.
 
 The sandbox was healthy: Daytona command execution worked, the CI daemon
 path worked, and the final live E2E passed after production stayed on the
-Phase 6 `transport.exec` RPC bridge. The failing part was the attempted
+Phase 6 `transport.exec` daemon command bridge. The failing part was the attempted
 Phase 7 persistent transport, not sandbox availability.
 
 | Candidate | Probe result | Decision |
@@ -49,7 +49,7 @@ timing json: backend/tests/test_e2e/_timings/phase_6_svc_cmd_fold_concurrency_1_
 | distribution | p50 | p95 | samples |
 |---|---:|---:|---:|
 | `svc_cmd_10x_latency` | `1.794s` | `1.837s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `1.794s` | `1.837s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `1.794s` | `1.837s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.278s` | `1.298s` | 10 |
 
 ### 2.2 Basic Daytona exec overhead
@@ -121,13 +121,13 @@ Timing artifact:
 | distribution | p50 | p95 | max | samples |
 |---|---:|---:|---:|---:|
 | `svc_cmd_10x_latency` | `5.377s` | `11.199s` | `11.199s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `5.377s` | `11.199s` | `11.199s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `5.377s` | `11.199s` | `11.199s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.143s` | `1.169s` | `1.169s` | 10 |
 
-The daemon-side overlay work stayed near Phase 6, while RPC total exploded.
+The daemon-side overlay work stayed near Phase 6, while daemon command total exploded.
 That isolates the regression to the persistent session transport. The root
 cause is head-of-line blocking and stream instability: concurrent `svc.cmd`
-RPCs are serialized through one session stdin channel and correlated back
+daemon commands are serialized through one session stdin channel and correlated back
 through one websocket log stream.
 
 ---
@@ -148,7 +148,7 @@ Timing artifact:
 | distribution | p50 | p95 | samples |
 |---|---:|---:|---:|
 | `svc_cmd_10x_latency` | `1.926s` | `2.442s` | 10 |
-| `svc_cmd_10x_rpc_call_total` | `1.926s` | `2.442s` | 10 |
+| `svc_cmd_10x_daemon_call_total` | `1.926s` | `2.442s` | 10 |
 | `svc_cmd_10x_overlay_stage_total` | `1.352s` | `1.416s` | 10 |
 
 The test gate is `svc_cmd_10x_latency.p50 < 2.000s`; the verified value was

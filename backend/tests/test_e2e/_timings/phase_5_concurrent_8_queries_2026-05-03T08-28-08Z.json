@@ -1,0 +1,18 @@
+{
+  "phase": 5,
+  "test_name": "concurrent_8_queries",
+  "timestamp": "2026-05-03T08:28:08.154460+00:00",
+  "steps": [
+    {
+      "name": "concurrent_8_queries_total",
+      "elapsed_s": 0.6954882919962984,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 0.6954882919962984,
+  "distributions": {},
+  "values": {
+    "concurrent_8_queries_total": 0.6954882919962984
+  }
+}

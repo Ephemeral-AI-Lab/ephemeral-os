@@ -31,7 +31,7 @@ Three reasons:
 | `TimingHarness.step_repeat()` | `backend/tests/test_e2e/_timing_harness.py` (extended) | Collects N samples, reports p50/p95/p99 |
 | Resource sampler | `backend/tests/test_e2e/_timing_harness.py` (extended) | `harness.sample_rss(label)` and `harness.sample_fds(label)` via `transport.exec` reading `/proc/<pid>/status`, `/proc/<pid>/fd/` |
 | Phase 3.5 live E2E | `backend/tests/test_e2e/test_live_ci_phase3_5_concurrent_perf.py` | Sustained mixed workload, p50/p95/p99, RSS/FD ceilings |
-| Multi-orchestrator E2E | (same file) | Two `CiRpcClient` instances against the same daemon; verify lock arbitration |
+| Multi-orchestrator E2E | (same file) | Two `DaemonCiBackend` instances against the same daemon; verify lock arbitration |
 | Index storage unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_storage_index.py` | SQLite schema, migration path, query parity with pickle baseline |
 
 ## Detailed task list
@@ -297,30 +297,30 @@ async def test_concurrent_agents_no_pathologies(live_sweevo_env):
 
 ```python
 async def test_multi_orchestrator_single_daemon_arbitration(live_sweevo_env):
-    """Two CiRpcClient instances simulate two orchestrator processes hitting
+    """Two DaemonCiBackend instances simulate two orchestrator processes hitting
     the same daemon. Lock arbitration must be consistent."""
     h = TimingHarness(phase=3.5, test_name="multi_orchestrator")
     env = live_sweevo_env
 
-    client_a = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
-    client_b = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
+    daemon_a = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
+    daemon_b = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
 
     target = "/testbed/_phase3_5_multi.txt"
     env.exec(f"echo 'v0' > {target}")
 
     # Both clients try to commit to the same file in parallel
-    with h.step("two_clients_concurrent_commit"):
+    with h.step("two_daemon_backends_concurrent_commit"):
         results = await asyncio.gather(
-            client_a.call("commit_operation_against_base", {
+            daemon_a._call_daemon_command("commit_operation_against_base", {
                 "changes": [{"file_path": target, "base_content": "v0\n",
                              "base_hash": content_hash("v0\n"), "final_content": "vA\n",
                              "base_existed": True, "strict_base": True}],
-                "edit_type": "write_file", "agent_id": "client_a"}),
-            client_b.call("commit_operation_against_base", {
+                "edit_type": "write_file", "agent_id": "daemon_a"}),
+            daemon_b._call_daemon_command("commit_operation_against_base", {
                 "changes": [{"file_path": target, "base_content": "v0\n",
                              "base_hash": content_hash("v0\n"), "final_content": "vB\n",
                              "base_existed": True, "strict_base": True}],
-                "edit_type": "write_file", "agent_id": "client_b"}),
+                "edit_type": "write_file", "agent_id": "daemon_b"}),
         )
 
     # Exactly one must succeed (single-point lock arbitration)

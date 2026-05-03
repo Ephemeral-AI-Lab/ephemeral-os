@@ -20,7 +20,7 @@ The shipped model is:
 | Runner CLI | Removed `--snap`; the runner no longer accepts or emits a snapshot identifier. |
 | Base reads | Replaced `git show <snap>:path` with `lowerdir_base_factory(lower_root=_NS_LOWER)`, which reads base bytes from the filesystem. |
 | Module cleanup | Removed the legacy `git_adapters.py` boundary; lowerdir reads now live in `lowerdir.py`, and gitignore routing lives in `gitignore.py`. |
-| Envelope cleanup | Removed the legacy `snap`, `snapshot_timings`, and `git_snapshot_timings` fields from the active overlay/RPC result path. |
+| Envelope cleanup | Removed the legacy `snap`, `snapshot_timings`, and `git_snapshot_timings` fields from the active overlay/daemon command result path. |
 | Classifier | Renamed the base-read dependency from `git_show_base` to `read_base`. |
 | Gitignored base visibility | Lowerdir reads include gitignored content such as `.venv/pyvenv.cfg`; the snapshot layer no longer filters by `.gitignore`. |
 | Git routing preflight | Added a cheap lowerdir `.git` metadata check before the user command runs, preserving fail-closed behavior for non-git workspaces without rebuilding a snapshot. |
@@ -108,4 +108,4 @@ Compared with the existing Phase 6 timing artifact
 
 - The freshness guard is intentionally cheap: it detects idle-window changes to `workspace_root`, `.git/index`, and `.git/HEAD`, but it is not a full tree hash.
 - Historical replay of older lowerdir states is still out of scope. Phase 8 only fixes the current command's base-read semantics.
-- Historical timing artifacts and older phase docs still contain git snapshot terminology; the active overlay/RPC result path no longer emits snapshot timing fields.
+- Historical timing artifacts and older phase docs still contain git snapshot terminology; the active overlay/daemon command result path no longer emits snapshot timing fields.

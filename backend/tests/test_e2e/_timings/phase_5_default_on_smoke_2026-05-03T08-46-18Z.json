@@ -1,0 +1,46 @@
+{
+  "phase": 5,
+  "test_name": "default_on_smoke",
+  "timestamp": "2026-05-03T08:46:18.752448+00:00",
+  "steps": [
+    {
+      "name": "ci_service_construct_default",
+      "elapsed_s": 0.0017191660008393228,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "ensure_initialized",
+      "elapsed_s": 25.34184441700927,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "query_symbols_warm",
+      "elapsed_s": 0.7877276670042193,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "write_file",
+      "elapsed_s": 0.7623285000008764,
+      "count": null,
+      "bytes": null
+    },
+    {
+      "name": "svc_cmd_smoke",
+      "elapsed_s": 6.753255333998823,
+      "count": null,
+      "bytes": null
+    }
+  ],
+  "total_s": 33.64687508401403,
+  "distributions": {},
+  "values": {
+    "ci_service_construct_default": 0.0017191660008393228,
+    "ensure_initialized": 25.34184441700927,
+    "query_symbols_warm": 0.7877276670042193,
+    "write_file": 0.7623285000008764,
+    "svc_cmd_smoke": 6.753255333998823
+  }
+}

@@ -1,7 +1,7 @@
 # Phase 7 Probe B - supervisor fork feasibility report
 
 Companion to
-[`phase-07-rpc-transport-and-supervisor-fork.md`](./phase-07-rpc-transport-and-supervisor-fork.md).
+[`phase-07-transport-and-supervisor-fork.md`](./phase-07-transport-and-supervisor-fork.md).
 Records the live Daytona supervisor-fork feasibility probe for Task 7.0.B.
 
 ---

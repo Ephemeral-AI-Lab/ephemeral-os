@@ -17,7 +17,7 @@ local Daytona service was started). 10/10 PRD stories pass.**
 Phase 0 introduces a single seam — `CiBackend` Protocol — between the
 public `CodeIntelligenceService` facade and the concrete in-process
 implementation. With the seam in place, every later phase changes only
-the backend selection or fleshes out the daemon-bound `RpcCiBackend`;
+the backend selection or fleshes out the daemon-bound `DaemonCiBackend`;
 no caller of the public facade has to move. The default selection is
 byte-identical to today's logic, which the regression suite mechanically
 proves at 1070 default-suite tests passing.
@@ -38,13 +38,13 @@ ship the daemon's binary protocol without a dependency churn.
 
 | Path | LoC | Purpose |
 |---|---:|---|
-| `backend/src/sandbox/code_intelligence/backend.py` | 553 | `CiBackend` Protocol + `InProcessCiBackend` (verbatim re-home) + `RpcCiBackend` stub |
+| `backend/src/sandbox/code_intelligence/backend.py` | 553 | `CiBackend` Protocol + `InProcessCiBackend` (verbatim re-home) + `DaemonCiBackend` stub |
 | `backend/tests/test_e2e/_timing_harness.py` | 249 | `TimingHarness` (`step` / `record` / `report` / `dump_json` / `compare_to`) |
 | `backend/tests/test_e2e/_timings/.gitkeep` | 0 | Directory marker |
 | `backend/tests/test_e2e/_timings/phase_0_baseline_timings_2026-05-02T11-28-31Z.json` | n/a | Canonical Phase 0 baseline (12 steps, 16.146s total) |
 | `backend/tests/test_e2e/test_live_ci_phase0_baseline.py` | 234 | Live E2E baseline test against `dask__dask_2023.3.2_2023.4.0` |
 | `backend/tests/test_e2e/test_timing_harness_unit.py` | 203 | 8 harness unit tests (default suite) |
-| `backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py` | 284 | 33 backend tests (4-truth-table + Protocol shape + RPC stub raises) |
+| `backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py` | 284 | 33 backend tests (4-truth-table + Protocol shape + daemon command stub raises) |
 
 ### Modified
 
@@ -93,7 +93,7 @@ service.py implementation was relocated verbatim into
        ┌─────────────┴─────────────┐
        ▼                           ▼
 ┌──────────────────┐       ┌──────────────────────┐
-│ InProcessCiBackend │     │ RpcCiBackend          │
+│ InProcessCiBackend │     │ DaemonCiBackend          │
 │ ─────────────────  │     │ ────────────────────  │
 │ Verbatim re-home   │     │ Stub: every method    │
 │ of today's logic.  │     │ raises NotImplemented │
@@ -112,7 +112,7 @@ service.py implementation was relocated verbatim into
 | unset | any | any | InProcess |
 | `"1"` | None | any | InProcess |
 | `"1"` | not None | `""` | InProcess |
-| `"1"` | not None | non-empty | **Rpc** |
+| `"1"` | not None | non-empty | **Daemon** |
 | `"true"` (or any non-`"1"`) | not None | non-empty | InProcess |
 | unset | not None | non-empty | InProcess |
 
@@ -128,11 +128,11 @@ Every row is pinned by a test in
 | **P0-001** msgpack runtime dep | PASS | `pyproject.toml:37` adds `"msgpack>=1.0.0"`; `python -c 'import msgpack'` → `(1, 1, 2)`; `ruff check pyproject.toml` clean. |
 | **P0-002** `CiBackend` Protocol | PASS | `backend.py:57-130` declares `class CiBackend(Protocol)` with `sandbox_id: str`, `workspace_root: str`, `is_initialized: bool`, and 21 methods matching spec Task 0.1. Not `@runtime_checkable`. |
 | **P0-003** `InProcessCiBackend` | PASS | `backend.py:133-419`. Constructor builds the same component graph as the prior `CodeIntelligenceService`. **Method-body byte-equivalence verified** for all 23 methods/properties (mechanical diff after docstring strip). Threading semantics preserved: `_init_lock` retained at `backend.py:154`. `_is_python` re-homed at `backend.py:407-409`. |
-| **P0-004** `RpcCiBackend` stub | PASS | `backend.py:424-553`. Every method including `dispose` raises `NotImplementedError("RpcCiBackend lands in Phase 1+")`. Constructor takes required `transport=…` keyword. **21 raise sites total** (`grep -c "raise NotImplementedError"`). |
+| **P0-004** `DaemonCiBackend` stub | PASS | `backend.py:424-553`. Every method including `dispose` raises `NotImplementedError("DaemonCiBackend lands in Phase 1+")`. Constructor takes required `transport=…` keyword. **21 raise sites total** (`grep -c "raise NotImplementedError"`). |
 | **P0-005** Facade refactor | PASS | `service.py` now 281 LoC. `_select_backend(...)` enforces the 4-truth-table. Public methods are one-line forwards. Properties `sandbox_id` / `workspace_root` / `is_initialized` forward to `_impl`. Backward-compat properties for 11 internal accessors plus setters for `symbol_index` + `lsp_client` (three tests reassign these as `MagicMock`). |
 | **P0-006** `TimingHarness` | PASS | `_timing_harness.py:46-249`. `step()` ctx mgr uses `time.perf_counter()`. `record()` attaches metadata or creates bare entry. `report()` produces canonical `=== Phase N E2E timing breakdown for <test> ===` header + `--- TOTAL: <sum>s ---` footer. `dump_json()` writes atomically via `<path>.tmp` + `os.replace(...)`. `compare_to()` order-preserves new-run keys, marks NEW (`+0.789s (NEW cost, must be amortized)`) and REMOVED. |
 | **P0-007** Harness unit tests | PASS | `test_timing_harness_unit.py` ships 8 tests, all passing in default suite (~0.13s). Step bound check; record metadata; bare-entry creation; canonical-format assertion (with monkey-patched `perf_counter`); `dump_json` shape; `dump_json` atomicity (no `.tmp` leftover); `compare_to` signed deltas + NEW; `compare_to` REMOVED. |
-| **P0-008** Backend tests | PASS | `test_backend_inprocess.py` ships 33 tests. InProcess defaults; 4-truth-table backend selection (6 cases); RPC init attributes; 19 sync ops parametrized → each raises `NotImplementedError`; async `cmd` raises; Protocol-shape tests assert every public CiBackend method exists on both impls. |
+| **P0-008** Backend tests | PASS | `test_backend_inprocess.py` ships 33 tests. InProcess defaults; 4-truth-table backend selection (6 cases); daemon command init attributes; 19 sync ops parametrized → each raises `NotImplementedError`; async `cmd` raises; Protocol-shape tests assert every public CiBackend method exists on both impls. |
 | **P0-009** Live E2E baseline | PASS | `test_live_ci_phase0_baseline.py` ran end-to-end against a real `dask__dask_2023.3.2_2023.4.0` Daytona sandbox on 2026-05-02. All 12 documented steps recorded. Baseline JSON committed at `_timings/phase_0_baseline_timings_2026-05-02T11-28-31Z.json` (254 indexed files, 28.0 KB symbol index, 16.146s total). |
 | **P0-010** Regression sweep | PASS | `pytest backend/tests --ignore=…test_e2e --ignore=…test_benchmarks --ignore=…experiments -q` → **1070 passed in 18.49s** (post-deslop, post-test-reorder); `pytest backend/tests/test_sandbox backend/tests/test_tools -q` → 575 passed; `ruff check backend/src/sandbox/code_intelligence backend/tests/test_sandbox/test_code_intelligence backend/tests/test_e2e` clean. |
 
@@ -221,7 +221,7 @@ The 8s `svc_cmd_baseline` is the headline cost: `svc.cmd` is an audited
 fail-closed overlay that runs the user command in a fresh `unshare`
 namespace with git snapshot before/after for OCC tracking. On dask's
 ~10k-file working set, the namespace's `find` walk and post-run
-`git diff` dominate. Phase 4's hot-path daemon RPC is targeted at
+`git diff` dominate. Phase 4's hot-path daemon daemon command is targeted at
 collapsing this to ~0.6s.
 
 ---
@@ -260,14 +260,14 @@ preserved verbatim. This is intentional: P0-003's "no behavior change"
 requirement is mechanically auditable only when the bodies match
 character-for-character.
 
-### 7.3 RpcCiBackend.dispose raises, not no-op
+### 7.3 DaemonCiBackend.dispose raises, not no-op
 
 The spec Task 0.4 says "every method raises `NotImplementedError`."
 The PRD originally proposed `dispose` could be a no-op (since callers
 might invoke it on registry teardown), but the architect (in pre-flight
 review) flagged this as a soft-criterion violation. `dispose()` raises
 like every other method; once Phase 1 ships the daemon, `dispose()`
-gets a real implementation that closes the RPC channel.
+gets a real implementation that closes the daemon command channel.
 
 ### 7.4 Live test mutation/cmd ordering
 
@@ -319,7 +319,7 @@ Phase 0 and Phase 1. The dep is harmless on the in-process path
 
 Phase 1 picks up with these guarantees from Phase 0:
 
-1. **A working `RpcCiBackend` stub** at
+1. **A working `DaemonCiBackend` stub** at
    `backend/src/sandbox/code_intelligence/backend.py:424-553` ready to
    have its first method (`build_index` per the migration plan)
    implemented. The constructor signature is locked
@@ -354,7 +354,7 @@ Phase 1 picks up with these guarantees from Phase 0:
 
 - No `in_sandbox/` package.
 - No daemon code, socket, or storage layer.
-- No actual RPC implementation — `RpcCiBackend` is pure stub.
+- No actual daemon command implementation — `DaemonCiBackend` is pure stub.
 - No msgpack usage — only the dep declaration.
 - No CI for the live E2E test (it's manually invoked; gated on
   `has_daytona()` so default `pytest` skips cleanly).

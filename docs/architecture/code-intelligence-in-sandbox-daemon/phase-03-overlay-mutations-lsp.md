@@ -7,7 +7,7 @@
 
 ## Goal
 
-Make the daemon serve mutations, queries, and overlay commands by **reusing the existing `CodeIntelligenceService`** (instantiated with `sandbox=None, transport=None` so local-FS branches activate) and exposing each public method as an RPC dispatch entry. The edit history ledger becomes a SQLite WAL database at `$HOME/.cache/eos-ci/<wh>/v1/ledger.sqlite3`, replacing the in-memory `EditHistoryLedger`.
+Make the daemon serve mutations, queries, and overlay commands by **reusing the existing `CodeIntelligenceService`** (instantiated with `sandbox=None, transport=None` so local-FS branches activate) and exposing each public method as an daemon command dispatch entry. The edit history ledger becomes a SQLite WAL database at `$HOME/.cache/eos-ci/<wh>/v1/ledger.sqlite3`, replacing the in-memory `EditHistoryLedger`.
 
 This is the highest-risk phase. All five HARD INVARIANTS must continue to hold, and the live E2E reproduces each one against real edits on a real `dask` swe-evo sandbox. **Drift risk is eliminated by construction** — daemon and orchestrator's in-process backend run literally the same Python code.
 
@@ -23,7 +23,7 @@ Three reasons:
 
 **Rejected approach:** create new `in_sandbox/ci_overlay.py`, `ci_mutations.py`, `ci_lsp.py` files that copy or rewrite the OCC/overlay/LSP logic. Adds drift surface, requires drift-guard tests, doubles the maintenance for every change to `WriteCoordinator` etc.
 
-**Chosen approach (consistent with Phase 1):** the daemon constructs the existing `CodeIntelligenceService` and routes each RPC op to the corresponding method. The bundle from Phase 1 already ships the entire `sandbox.code_intelligence` package; Phase 3 just wires more of its methods into the dispatch table.
+**Chosen approach (consistent with Phase 1):** the daemon constructs the existing `CodeIntelligenceService` and routes each daemon command op to the corresponding method. The bundle from Phase 1 already ships the entire `sandbox.code_intelligence` package; Phase 3 just wires more of its methods into the dispatch table.
 
 ```python
 # In ci_daemon.py, at startup:
@@ -61,7 +61,7 @@ async def handle_write_file(args: dict) -> dict:
 | SQLite WAL ledger adapter | `backend/src/sandbox/code_intelligence/in_sandbox/ci_storage.py` (extended) | `LedgerStore` class implementing the existing `EditHistoryLedger` interface, persisting to `ledger.sqlite3` |
 | Ledger injection | `backend/src/sandbox/code_intelligence/mutations/arbiter.py` (modified) | Accepts an injected `edit_history` ledger; daemon passes the SQLite-backed `LedgerStore`; orchestrator-side keeps the in-memory default |
 | **Workspace-write bypass guard** | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` (new check) | Wrapper around dispatch that asserts no handler writes under `workspace_root` except via the `_svc` instance |
-| Orchestrator passthrough | `backend/src/sandbox/code_intelligence/backend.py` (extended) | Each `RpcCiBackend` method becomes one `client.call(op, args)` |
+| Orchestrator passthrough | `backend/src/sandbox/code_intelligence/backend.py` (extended) | Each `DaemonCiBackend` method becomes one `_call_daemon_command(op, args)` |
 | Phase 3 live E2E | `backend/tests/test_e2e/test_live_ci_phase3_invariants.py` | Five HARD INVARIANT subtests + ledger replay + bypass guard |
 | Mutation parity tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_mutations_parity.py` | Daemon vs in-process backend produce identical results on fixture workspaces |
 | Ledger unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_storage_ledger.py` | WAL config, schema, integrity check, replay, interface conformance |
@@ -282,7 +282,7 @@ async def handle_query_symbols(args: dict) -> dict:
 
 ### Task 3.5 — Workspace-write bypass guard (NEW, audit response)
 
-**Goal:** Make it impossible for an RPC handler to write directly under `workspace_root` without going through `_DAEMON_STATE.svc` (i.e. without going through `WriteCoordinator`). This enforces the storage-boundary invariant from the overview.
+**Goal:** Make it impossible for an daemon command handler to write directly under `workspace_root` without going through `_DAEMON_STATE.svc` (i.e. without going through `WriteCoordinator`). This enforces the storage-boundary invariant from the overview.
 
 **Implementation:** wrap `handle_client` in `ci_daemon.py` so dispatch is bracketed by an inotify-style mtime sample. After each handler returns, scan `workspace_root` for files mtime'd within the request window that don't appear in the ledger. Any such file is a bypass.
 
@@ -332,18 +332,18 @@ async def handle_client(reader, writer):
 
 **Test (3.7.G below):** craft a malicious dispatch handler that writes `workspace_root/__bypass__.txt` directly via `pathlib.Path.write_text` (NOT via `_DAEMON_STATE.svc.write_file`). With `guard_strict=True`, the daemon must respond `WorkspaceBypass` and the file must be visible (the guard doesn't prevent the write — it surfaces it).
 
-### Task 3.6 — Wire `RpcCiBackend` methods
+### Task 3.6 — Wire `DaemonCiBackend` methods
 
 **File:** `backend/src/sandbox/code_intelligence/backend.py` (extends Phase 1)
 
 Each method becomes a one-line client call:
 
 ```python
-class RpcCiBackend:
+class DaemonCiBackend:
     async def write_file_async(self, specs, *, agent_id="", description=""):
         args = {"specs": [_writespec_to_dict(s) for s in _normalize(specs)],
                 "agent_id": agent_id, "description": description}
-        raw = await self._client.call("write_file", args)
+        raw = await self.__call_daemon_command("write_file", args)
         return _operation_result_from_dict(raw)
 
     def write_file(self, specs, *, agent_id="", description=""):
@@ -447,15 +447,15 @@ async def test_workspace_write_bypass_guard_surfaces_violation(live_sweevo_env):
     svc = env.make_ci_service_flag_on()
 
     # Enable strict mode on the daemon
-    await svc._impl._client.call("_set_guard_mode", {"strict": True})
+    await svc._impl.__call_daemon_command("_set_guard_mode", {"strict": True})
 
     # Inject a test-only op that intentionally writes the workspace bypass
     # (this op is registered only when an env var is set on the daemon).
     env.exec("touch $HOME/.cache/eos-ci/<wh>/v1/.allow_test_bypass_op")
-    await svc._impl._client.call("ping")  # daemon picks up the env on next call
+    await svc._impl.__call_daemon_command("ping")  # daemon picks up the env on next call
 
     with pytest.raises(CiDaemonError) as exc_info:
-        await svc._impl._client.call("_test_bypass_handler",
+        await svc._impl.__call_daemon_command("_test_bypass_handler",
                                       {"path": "/testbed/__bypass_target__.txt",
                                        "content": "this should be flagged"})
 
@@ -513,7 +513,7 @@ This is a unit-test-style harness; it runs in CI without Daytona.
 - [ ] Daemon constructs `CodeIntelligenceService(sandbox=None, transport=None, edit_history=LedgerStore(...))` at startup.
 - [ ] Daemon dispatch table includes all mutation/query/internal ops listed in Task 3.4.
 - [ ] **Workspace-write bypass guard surfaces unledgered writes (3.7.G).**
-- [ ] `RpcCiBackend` methods all wired through `client.call(...)`.
+- [ ] `DaemonCiBackend` methods all wired through `_call_daemon_command(...)`.
 - [ ] **Phase 3 live E2E: all FIVE INVARIANT subtests + ledger replay + bypass guard pass against `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] Mutation parity tests green (daemon vs in-process).
 - [ ] `apply_edits` and `query_symbols` warm-path latency NOT >50ms slower than Phase 0 baseline.
@@ -528,7 +528,7 @@ This is a unit-test-style harness; it runs in CI without Daytona.
 | **HIGH** | Any of the 5 HARD INVARIANTS regresses silently — but with package-reuse approach, the daemon runs literally the same code | Drift risk eliminated by construction (no copies); 5-invariant E2E + parity tests catch any subtle integration bug |
 | **HIGH** | Daemon crash mid-write → in-flight commit lost; ledger inconsistent with FS | TimeMachine rollback on partial-apply (existing); SQLite WAL atomic; on respawn, daemon scans for files newer than last `committed` ledger entry and surfaces drift |
 | **HIGH** | Lock state in daemon RAM lost on crash → next request sees no held lock when it should | Locks today are advisory in-process; OCC base-hash check is the actual safety net. Document that daemon-RAM locks are PERFORMANCE optimization; correctness rests on OCC. 3.7.A and 3.7.B together verify this |
-| **HIGH** | RPC handler bypasses `WriteCoordinator` and writes `workspace_root` directly | Bypass guard (3.5) + 3.7.G test |
+| **HIGH** | daemon command handler bypasses `WriteCoordinator` and writes `workspace_root` directly | Bypass guard (3.5) + 3.7.G test |
 | **MEDIUM** | LSP cache corruption in daemon RAM serves stale results | Invariant 5 (E2E 3.7.E) catches this; `lsp_invalidate` op for forced eviction |
 | **MEDIUM** | SQLite WAL files (`ledger.sqlite3-wal`, `-shm`) not cleaned on dispose | Document; harmless if state dir is wiped by `dispose_sandbox` |
 | **MEDIUM** | jedi subprocess leak in daemon → slow growth | Worker pool sized to `min(4, cpu_count)`; recycle workers after N requests |

@@ -7,9 +7,9 @@
 
 ## Goal
 
-Spawn `ci_daemon` as a long-lived asyncio process inside the sandbox listening on `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`. Implement the wire protocol (length-prefixed msgpack frames), three control ops (`ping`, `shutdown`, `version`), the orchestrator-side `CiRpcClient` with retry-after-respawn semantics, and the launcher that handles spawn, health-check, and respawn-on-dead.
+Spawn `ci_daemon` as a long-lived asyncio process inside the sandbox listening on `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`. Implement the wire protocol (length-prefixed msgpack frames), three control ops (`ping`, `shutdown`, `version`), the orchestrator-side `DaemonCiBackend` with retry-after-respawn semantics, and the launcher that handles spawn, health-check, and respawn-on-dead.
 
-**Daemon spawn moves into the eager bootstrap hook from Phase 1.** `bootstrap_in_sandbox_ci_runtime` now: (1) uploads bundle (Phase 1), (2) spawns daemon and waits for socket readiness (Phase 2). This means by the time `create_sandbox` / `start_sandbox` returns, the daemon is reachable. `CiRpcClient.call`'s auto-respawn becomes a fallback for daemon-crash between calls — should rarely trigger in practice.
+**Daemon spawn moves into the eager bootstrap hook from Phase 1.** `bootstrap_in_sandbox_ci_runtime` now: (1) uploads bundle (Phase 1), (2) spawns daemon and waits for socket readiness (Phase 2). This means by the time `create_sandbox` / `start_sandbox` returns, the daemon is reachable. `DaemonCiBackend._call_daemon_command`'s auto-respawn becomes a fallback for daemon-crash between calls — should rarely trigger in practice.
 
 **No business logic moves in Phase 2.** Indexing from Phase 1 still runs (now via the daemon's `ping`-stub-then-replaced-in-Phase-3 path). Phase 2 is pure scaffolding around it. Phase 3 is when overlay/mutations/LSP move into the daemon.
 
@@ -19,20 +19,20 @@ Three reasons:
 
 1. **Process lifecycle is the riskiest single piece.** Async event-loop server, PID-file management, `kill -9` recovery, `dispose_sandbox` cleanup, `setsid` detachment, log redirection, socket polling — every one of these has subtle failure modes. Building it BEFORE moving business logic means failures here can't corrupt edits.
 2. **Phase 1's bundle/launcher pattern generalizes to the daemon.** Phase 1 already shipped a tar.gz and ran `python -m sandbox.code_intelligence.in_sandbox.ci_index ...`. Phase 2 reuses the same `_ci_runtime_bundle_bytes()` helper but adds `__main__.py` so the bundle is also runnable as `python -m sandbox.code_intelligence.in_sandbox` (the daemon entry).
-3. **Provides the RPC seam for Phase 3.** Phase 3 just adds methods to `ci_daemon.py`'s dispatch table — the connection, framing, retry, and lifecycle are all already proven.
+3. **Provides the daemon command seam for Phase 3.** Phase 3 just adds methods to `ci_daemon.py`'s dispatch table — the connection, framing, retry, and lifecycle are all already proven.
 
 ## What ships
 
 | Artifact | File | Purpose |
 |---|---|---|
 | Daemon entrypoint | `backend/src/sandbox/code_intelligence/in_sandbox/__main__.py` | `python -m sandbox.code_intelligence.in_sandbox` launches the asyncio server |
-| Daemon server | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | asyncio Unix-socket server, RPC dispatch, signal handling |
+| Daemon server | `backend/src/sandbox/code_intelligence/in_sandbox/ci_daemon.py` | asyncio Unix-socket server, daemon command dispatch, signal handling |
 | Wire protocol | `backend/src/sandbox/code_intelligence/in_sandbox/ci_protocol.py` | Length-prefix + msgpack codec, schema version, error envelopes |
-| RPC client | `backend/src/sandbox/code_intelligence/rpc/client.py` | `CiRpcClient`: connect, frame, retry-after-respawn, `CiDaemonUnavailable` |
-| Launcher | `backend/src/sandbox/code_intelligence/rpc/launcher.py` (extended from Phase 1) | `ensure_daemon(...)`: PID-file check, `kill -0` liveness, spawn, socket-readiness poll |
+| daemon backend | `backend/src/sandbox/code_intelligence/backend.py` | `DaemonCiBackend`: connect, frame, retry-after-respawn, `CiDaemonUnavailable` |
+| Launcher | `backend/src/sandbox/code_intelligence/daemon/launcher.py` (extended from Phase 1) | `ensure_daemon(...)`: PID-file check, `kill -0` liveness, spawn, socket-readiness poll |
 | Phase 2 live E2E | `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | Spawn, ping, kill -9, respawn, dispose cleanup |
 | Daemon unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py` | Frame codec, dispatch, signal handling |
-| Client unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py` | Retry semantics, `CiDaemonUnavailable`, frame round-trip |
+| Client unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | Retry semantics, `CiDaemonUnavailable`, frame round-trip |
 
 ## Detailed task list
 
@@ -228,9 +228,9 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-### Task 2.4 — RPC client
+### Task 2.4 — daemon backend
 
-**File to create:** `backend/src/sandbox/code_intelligence/rpc/client.py`
+**File to create:** `backend/src/sandbox/code_intelligence/backend.py`
 
 **API:**
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 class CiDaemonUnavailable(Exception):
     """Daemon could not be reached even after ensure_daemon retry."""
 
-class CiRpcClient:
+class DaemonCiBackend:
     def __init__(self, transport: SandboxTransport, sandbox_id: str, workspace_root: str) -> None:
         self._transport = transport
         self._sandbox_id = sandbox_id
@@ -264,21 +264,21 @@ class CiRpcClient:
         ...
 ```
 
-**Socket access via `transport.exec`:** The orchestrator cannot open a Unix socket inside the sandbox directly, so daemon RPC uses `transport.exec` to launch a short in-sandbox bridge. Phase 2 uses one of:
+**Socket access via `transport.exec`:** The orchestrator cannot open a Unix socket inside the sandbox directly, so daemon daemon command uses `transport.exec` to launch a short in-sandbox bridge. Phase 2 uses one of:
 
 - **(A) `socat` shim** — `transport.exec(sandbox_id, f"socat - UNIX-CONNECT:{socket_path}", stdin=encoded_frame_bytes)`. Pros: well-established. Cons: requires `socat` in the sandbox image; per-call shell overhead.
 - **(B) `nc -U` shim** — `transport.exec(sandbox_id, f"nc -U {socket_path}", stdin=encoded_frame_bytes)`. Pros: `nc` more universally available. Cons: `nc -U` flag varies across `nc` flavors (BSD vs GNU vs OpenBSD).
 - **(C) Inline Python shim** — `transport.exec(sandbox_id, f"python3 -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.connect({socket_path!r}); s.sendall(sys.stdin.buffer.read()); ... print(b64encode(...))'", stdin=...)`. Pros: zero external deps. Cons: more code in the shim.
 
-**Recommendation: (C).** Python is guaranteed in the sandbox image (we already use it for the indexing CLI and overlay runtime); `socat`/`nc` aren't. Document the shim as `_send_frame_via_python_shim()` in `client.py`. Phase 5 replaces the entire shim with the process.exec-backed daemon RPC.
+**Recommendation: (C).** Python is guaranteed in the sandbox image (we already use it for the indexing CLI and overlay runtime); `socat`/`nc` aren't. Document the shim as `_send_frame_via_python_shim()` in `client.py`. Phase 5 replaces the entire shim with the process.exec-backed daemon daemon command.
 
-### Task 2.5 — Launcher (eager from `create_sandbox`, fallback on RPC)
+### Task 2.5 — Launcher (eager from `create_sandbox`, fallback on daemon command)
 
-**File to extend:** `backend/src/sandbox/code_intelligence/rpc/launcher.py` (created in Phase 1; this phase adds daemon-spawn logic)
+**File to extend:** `backend/src/sandbox/code_intelligence/daemon/launcher.py` (created in Phase 1; this phase adds daemon-spawn logic)
 
 **Call sites (after Phase 2):**
 - **Eager (primary):** `bootstrap_in_sandbox_ci_runtime` — called from `SandboxService.create_sandbox`, `start_sandbox`, and restart recovery. Daemon is up by the time these return.
-- **Fallback (rare):** `CiRpcClient.call` retry path — covers daemon crash between calls. Should be a no-op in healthy runs.
+- **Fallback (rare):** `DaemonCiBackend._call_daemon_command` retry path — covers daemon crash between calls. Should be a no-op in healthy runs.
 
 **API:**
 
@@ -291,7 +291,7 @@ class DaemonLauncher:
         Polls socket readiness up to timeout_s. Raises CiDaemonUnavailable on timeout.
 
         After Phase 2, called eagerly from bootstrap_in_sandbox_ci_runtime; the
-        CiRpcClient retry path becomes a fallback for daemon-crash recovery."""
+        DaemonCiBackend retry path becomes a fallback for daemon-crash recovery."""
 
     async def is_alive(self) -> bool:
         """Read PID file via transport, kill -0 to check liveness."""
@@ -334,8 +334,8 @@ async def test_daemon_ready_after_create_sandbox(live_sweevo_env_factory):
 
     # No ensure_daemon retry should be needed — daemon already up
     with h.step("daemon_first_ping_no_retry"):
-        client = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
-        result = await client.call("ping")
+        client = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
+        result = await _call_daemon_command("ping")
     assert result["pong"] is True
 
     with h.step("ps_aux_check"):
@@ -363,10 +363,10 @@ async def test_daemon_ready_after_create_sandbox(live_sweevo_env_factory):
 def test_daemon_kill_and_respawn(live_sweevo_env):
     h = TimingHarness(phase=2, test_name="kill_and_respawn")
     env = live_sweevo_env
-    client = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
+    client = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
 
     with h.step("initial_spawn_and_ping"):
-        await client.call("ping")  # ensures daemon is up
+        await _call_daemon_command("ping")  # ensures daemon is up
 
     with h.step("daemon_kill9"):
         env.exec(f"kill -9 $(cat $HOME/.cache/eos-ci/{wh()}/v1/daemon.pid)")
@@ -375,7 +375,7 @@ def test_daemon_kill_and_respawn(live_sweevo_env):
         assert int(out.strip()) == 0
 
     with h.step("daemon_respawn_via_call"):
-        result = await client.call("ping")  # triggers ensure_daemon retry path
+        result = await _call_daemon_command("ping")  # triggers ensure_daemon retry path
     assert result["pong"] is True
 
     with h.step("verify_new_pid"):
@@ -392,13 +392,13 @@ def test_daemon_kill_and_respawn(live_sweevo_env):
 def test_daemon_clean_shutdown(live_sweevo_env):
     h = TimingHarness(phase=2, test_name="clean_shutdown")
     env = live_sweevo_env
-    client = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
+    client = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
 
     with h.step("initial_spawn"):
-        await client.call("ping")
+        await _call_daemon_command("ping")
 
-    with h.step("shutdown_rpc"):
-        result = await client.call("shutdown")
+    with h.step("shutdown_daemon_command"):
+        result = await _call_daemon_command("shutdown")
     assert result["shutting_down"] is True
 
     with h.step("post_shutdown_settle"):
@@ -426,8 +426,8 @@ def test_dispose_sandbox_no_orphan_daemon(live_sweevo_env_factory):
         env = live_sweevo_env_factory()  # fresh sandbox
 
     with h.step("spawn_daemon"):
-        client = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
-        await client.call("ping")
+        client = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
+        await _call_daemon_command("ping")
 
     with h.step("dispose_sandbox"):
         delete_test_sandbox(env.sandbox_id)
@@ -445,8 +445,8 @@ def test_dispose_sandbox_no_orphan_daemon(live_sweevo_env_factory):
 
 ```python
 async def test_concurrent_pings(live_sweevo_env):
-    client = CiRpcClient(env.transport, env.sandbox_id, env.repo_dir)
-    results = await asyncio.gather(*[client.call("ping") for _ in range(8)])
+    client = DaemonCiBackend(env.transport, env.sandbox_id, env.repo_dir)
+    results = await asyncio.gather(*[_call_daemon_command("ping") for _ in range(8)])
     assert all(r["pong"] is True for r in results)
 ```
 
@@ -466,7 +466,7 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 - Stale PID file detection: write a PID file with PID 999999 (likely dead); daemon startup unlinks it and proceeds.
 - Stale PID file with live PID: daemon exits with code 11.
 
-**`test_process_exec_rpc_client.py`:**
+**`test_daemon_ci_backend_process_exec.py`:**
 - `call("ping")` returns the success-envelope `result` field.
 - Connection failure triggers `ensure_daemon` then retries once.
 - Second connection failure raises `CiDaemonUnavailable`.
@@ -485,7 +485,7 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 - [ ] `ci_daemon.py` runs as `python -m sandbox.code_intelligence.in_sandbox`, accepts connections on `$HOME/.cache/eos-ci/<wh>/v1/daemon.sock`, dispatches `ping`/`shutdown`/`version`.
 - [ ] PID file + socket file cleanup on graceful shutdown.
 - [ ] Stale PID detection on startup (live → exit 11; dead → unlink and continue).
-- [ ] `CiRpcClient.call(...)` retries once after `ensure_daemon`; raises `CiDaemonUnavailable` on second failure.
+- [ ] `DaemonCiBackend._call_daemon_command(...)` retries once after `ensure_daemon`; raises `CiDaemonUnavailable` on second failure.
 - [ ] `DaemonLauncher.ensure_daemon()` spawns via `setsid nohup`, polls socket readiness, returns within 10s.
 - [ ] **Phase 2 live E2E (all 4 subtests A-D) passes against `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] `daemon_spawn` < 2s, `daemon_first_ping` < 100ms warm (per E2E assertions).
@@ -499,7 +499,7 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 |---|---|---|
 | **HIGH** | Daemon outlives orchestrator session because `setsid` failed silently | Explicit verification in 2.6.A that PPID is 1 (or sandbox init); `ps -o pid,ppid,cmd` post-spawn |
 | **HIGH** | Race between `kill -9` and `ensure_daemon` retry — multiple daemon processes spawned | Stale PID detection + `kill -0` check before spawning; document the race window |
-| **HIGH** | `socat`/`nc`/python shim is slow per-call (extra `transport.exec`) — masks real RPC latency | Document the shim cost; Phase 5 keeps the direct process.exec bridge unless a true provider-native persistent stream exists |
+| **HIGH** | `socat`/`nc`/python shim is slow per-call (extra `transport.exec`) — masks real daemon command latency | Document the shim cost; Phase 5 keeps the direct process.exec bridge unless a true provider-native persistent stream exists |
 | **MEDIUM** | Daemon log fills the disk over a long-lived sandbox | `RotatingFileHandler` (10MB × 3 backups) caps at 30MB |
 | **MEDIUM** | `msgpack` not pre-installed in sandbox image | Verify in 2.6.A: `python3 -c "import msgpack"` runs clean. If missing, add to bundle (vendored) or document `pip install` step |
 | **MEDIUM** | `asyncio.start_unix_server` permission issues on sandbox FS (e.g., socket on a tmpfs that doesn't support Unix sockets) | E2E 2.6.A would catch this — add explicit `test -S` check post-spawn |
@@ -509,8 +509,8 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 ## Hand-off to Phase 3
 
 Phase 3 picks up with:
-- A working daemon process accepting RPCs over a Unix socket.
+- A working daemon process accepting daemon commands over a Unix socket.
 - A wire protocol with extension room for new ops.
 - A retry-after-respawn client that already handles transient failures.
-- An `ensure_daemon` launcher Phase 3 can call from `RpcCiBackend.apply_edit`, `write_file`, etc.
+- An `ensure_daemon` launcher Phase 3 can call from `DaemonCiBackend.apply_edit`, `write_file`, etc.
 - Phase 0/1/2 E2Es as a regression suite — Phase 3 adds the OCC-invariant E2E on top.
