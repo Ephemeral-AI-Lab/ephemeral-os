@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 daemon-local overlay fold implemented and live-benchmarked
 **Date approved:** 2026-05-02
-**Last amended:** 2026-05-03 (recorded Phase 0-8 code review cleanup: SQLite index hydration, retired Phase 1 snapshot paths, and removed the ambient shell-write bypass)
+**Last amended:** 2026-05-03 (removed the retired Phase 0 plan and live baseline artifacts)
 **Predecessor:** [`code-intelligence-merged-into-sandbox.md`](../code-intelligence-merged-into-sandbox.md) — CI moved into the `sandbox/` package; still ran orchestrator-side
 **Estimated effort:** ~42-50 engineering days (≈8.5-10 weeks)
 
@@ -20,7 +20,6 @@ Moving the engine into the sandbox eliminates the network for hot paths, lets in
 
 | Phase | Title | Engineering | E2E + harness | Total |
 |---|---|---|---|---|
-| [0](./phase-00-backend-abstraction-and-harness.md) | Backend abstraction, feature flag, timing harness | 2 days | 3-4 days | 5-6 days |
 | [1](./phase-01-indexing-and-storage.md) | In-sandbox indexing + storage skeleton + **eager bootstrap hook** + compatibility probe | 3 days | 2-3 days | 5-6 days |
 | [2](./phase-02-daemon-lifecycle.md) | Daemon process + lifecycle (eager spawn from `create_sandbox` / `start_sandbox`) | 4 days | 2-3 days | 6-7 days |
 | [3](./phase-03-overlay-mutations-lsp.md) | Move OCC/overlay/LSP via package reuse + SQLite ledger + socket-first daemon startup | 3 days | 2-3 days | 5-6 days |
@@ -30,7 +29,7 @@ Moving the engine into the sandbox eliminates the network for hot paths, lets in
 | [5](./phase-05-process-exec-daemon-default.md) | process.exec-backed daemon default + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
 | [6](./phase-06-fold-daemon-overlay-stages.md) | Fold daemon-side overlay stages into one in-namespace process | 0.5-1 day | 0.5-1 day | 1.5-2.5 days |
 
-Phase order is **strict** (0 → 6, including 3.5 and 3.6). During the migration, each phase was independently mergeable because the flag-off path kept working; after the Phase 5 cleanup, transport-backed sandboxes are daemon-default.
+Phase order is **strict** (1 → 6, including 3.5 and 3.6). During the migration, each phase was independently mergeable because the flag-off path kept working; after the Phase 5 cleanup, transport-backed sandboxes are daemon-default.
 
 **Why Phase 3.5 between 3 and 4:** Phase 3 lands the OCC engine inside the daemon. Before pushing the highest-volume hot path (`svc.cmd`, Phase 4) through that engine, we want a perf safety net that proves the daemon survives sustained load without memory leak, FD leak, or contention pathologies. Phase 3.5 also migrates the index from pickle to SQLite so per-file `refresh()` doesn't rewrite the world.
 
@@ -133,9 +132,9 @@ After Phase 5 lands and transport-backed sandboxes become daemon-default:
 
 | Phase | `SandboxTransport.exec/read/write` role |
 |---|---|
-| Today (pre-Phase 0) | Primary mutation/query channel; every CI op rides on it |
-| Phase 0-4 (flag-off default) | Same as today |
-| Phase 0-4 (flag-on opt-in) | Bootstrap (upload bundle, spawn daemon at `create_sandbox`) + every daemon command via shim |
+| Pre-daemon | Primary mutation/query channel; every CI op rides on it |
+| Phases 1-4 (flag-off default) | Same as today |
+| Phases 1-4 (flag-on opt-in) | Bootstrap (upload bundle, spawn daemon at `create_sandbox`) + every daemon command via shim |
 | Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the process.exec-backed daemon command |
 | Post-Phase 6 (out of scope) | Bootstrap + recovery only; shim removed entirely |
 
@@ -244,7 +243,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies the durable workflow fiel
 - **Flag-off = byte-identical to today** for in-process behavior. **`create_sandbox` cost differs** even with flag off because the eager bootstrap hook is wired in Phase 1 (it just no-ops when flag is off — no daemon spawned).
 - **No root/sudo at any phase.** Daemon runs as the sandbox's default user. Phase 1 E2E asserts this with an explicit privilege probe.
 - **Tests that bind no sandbox** (the in-process path) keep using `InProcessCiBackend`; daemon-daemon command mode activates only when `transport` and `sandbox_id` are both bound.
-- **`pyproject.toml` updated** in Phase 0 to add `msgpack` as a runtime dependency.
+- **`pyproject.toml` includes `msgpack`** as a runtime dependency.
 
 ## Cross-phase success criteria
 
@@ -260,7 +259,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies the durable workflow fiel
 - [ ] Daemon survives sustained load: ≥200 mixed concurrent ops with bounded memory/FD growth (Phase 3.5 E2E).
 - [ ] `svc.cmd` warm-path latency strictly lower than today (proven by Phase 4 E2E timing report).
 - [ ] No root/sudo required in any phase (proven by Phase 1 E2E privilege assertion).
-- [ ] **Per-phase live E2E timing report shows expected delta vs Phase 0 baseline (no unexplained regressions in any sub-step >50ms).**
+- [ ] **Per-phase live E2E timing report shows expected deltas against the relevant prior benchmark artifacts.**
 - [ ] Per-op p50/p95/p99 latency reported across N=200 sustained calls (Phase 3.5 E2E).
 - [ ] No direct workspace writes from daemon command handlers (Phase 3 bypass-attempt guard test).
 - [ ] process.exec bridge floor faster than Phase 2 shim path (proven by Phase 5 E2E).
@@ -300,7 +299,7 @@ Every phase ships at least one live E2E test against a real Daytona sandbox prov
 - Sandbox: `dask__dask_2023.3.2_2023.4.0` from swe-evo, repo at `/testbed`
 - Provisioning: `sandbox.testing.create_test_sandbox` / `delete_test_sandbox`
 - Run command: `uv run pytest backend/tests/test_e2e/<file>.py -m live -v -s`
-- Timing instrumentation: every test uses the `TimingHarness` from `backend/tests/test_e2e/_timing_harness.py` (Phase 0 deliverable). Output JSON lands at `backend/tests/test_e2e/_timings/phase_N_<test>_<timestamp>.json` and gets `compare_to(baseline)`'d against Phase 0's report.
+- Timing instrumentation: every test uses the shared `TimingHarness` from `backend/tests/test_e2e/_timing_harness.py`. Output JSON lands at `backend/tests/test_e2e/_timings/phase_N_<test>_<timestamp>.json`; tests that need comparisons choose their own relevant benchmark artifact.
 - Phase 3.5 extends the harness with `step_repeat(name, n)` for collecting p50/p95/p99 distributions.
 
 ## File layout (full)
@@ -348,15 +347,14 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/code_intelligence/service.py` — delegates to backend; accepts optional `edit_history` kwarg (Phase 3)
 - `backend/src/sandbox/lifecycle/service.py` — `create_sandbox` and `start_sandbox` call the eager bootstrap hook (Phase 1)
 - `backend/src/sandbox/lifecycle/workspace.py` — `bootstrap_in_sandbox_ci_runtime` is the eager-bootstrap entry (Phase 1)
-- `pyproject.toml` — add `msgpack` as runtime dependency (Phase 0)
+- `pyproject.toml` — includes `msgpack` as runtime dependency
 - (Phase 5 cleanup) `mutations/content_manager.py`, `indexing/file_discovery.py`, `language_server/transport.py` — deleted dead remote branches after canary stabilization
 
-### New test infrastructure (Phase 0 deliverable)
+### Shared test infrastructure
 - `backend/tests/test_e2e/_timing_harness.py` — `TimingHarness` context manager, `step()` decorator, JSON dumper, `compare_to()` baseline differ; Phase 3.5 extends with distribution collection (`step_repeat`)
 - `backend/tests/test_e2e/_timings/` — directory holding `phase_N_<test>_<timestamp>.json`
 
 ### New live E2E tests (one per phase + the compatibility probe)
-- `backend/tests/test_e2e/test_live_ci_phase0_baseline.py`
 - `backend/tests/test_e2e/test_live_ci_phase1_indexing.py` (privilege probe + compatibility matrix probe + **overlay live mount probe** Task 1.5.G)
 - `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` (asserts daemon ready after `create_sandbox`)
 - `backend/tests/test_e2e/test_live_ci_phase3_invariants.py`
@@ -388,7 +386,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 
 ## Dependencies
 
-- `msgpack` (NEW runtime dep — added to `pyproject.toml` in Phase 0; vendored into bundle)
+- `msgpack` (runtime dep; vendored into bundle)
 - Python `sqlite3` (stdlib)
 - `setsid`, `nohup`, `kill`, `ps` available in sandbox image (standard Linux)
 - swe-evo harness (`backend/src/benchmarks/sweevo/sandbox.py`, `create_sweevo_test_sandbox`)
@@ -410,7 +408,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
   - Phase 3 amended: daemon binds socket FIRST, starts index build in background thread (was: blocked startup on `ensure_initialized(wait=True)`).
   - Added "Sandbox image compatibility" hard contract section with full dep matrix.
   - Phase 1 adds Task 1.5.E compatibility probe live E2E.
-  - Added msgpack as runtime dep in `pyproject.toml` (Phase 0) and vendored msgpack into bundle (Phase 1, ~50KB) for offline-image compatibility.
+  - Added msgpack as runtime dep in `pyproject.toml` and vendored msgpack into bundle (Phase 1, ~50KB) for offline-image compatibility.
   - Cross-cutting risks: cold-start latency risk migrates from "first call after `create_sandbox`" (lazy model) to "`create_sandbox` cost rises ~1-2s cold" (eager model). Test asserts `create_sandbox` < 3s.
 - **2026-05-02 (LSP upgrade experiment + stronger overlay probe):**
   - Added **Phase 3.6 — LSP backend experiment**. Qualifies basedpyright as the persistent LSP child of the daemon; if it can't run on `dask__dask_2023.3.2_2023.4.0`, qualifies pyright instead. Picks ONE; rewires `LspClient` to use only the qualified backend; deletes today's `python_backend.py` (jedi.Script per-call shim) and removes `jedi` from `pyproject.toml`. **No runtime fallback** — if the chosen backend can't start, `LspUnavailable` propagates; no silent degradation to a worse path. Three stages: (A) qualification spike, (B) implementation, (C) benchmark + regression.

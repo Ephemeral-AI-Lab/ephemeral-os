@@ -26,10 +26,13 @@ from sandbox.code_intelligence.core.types import (
 )
 from sandbox.code_intelligence.daemon_backend import (
     CiDaemonCommandError,
-    DaemonCiBackend,
+    DaemonCiTransportBackend,
 )
 from sandbox.code_intelligence.indexing.symbol_index import SymbolIndex
 from sandbox.code_intelligence.language_server.client import LspClient
+from sandbox.code_intelligence.language_server.daemon_backend import (
+    DaemonLanguageServerQueryBackend,
+)
 from sandbox.code_intelligence.mutations.arbiter import Arbiter
 from sandbox.code_intelligence.mutations.content_manager import ContentManager
 from sandbox.code_intelligence.mutations.mutation_service import MutationService
@@ -47,6 +50,10 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class DaemonCiBackend(DaemonLanguageServerQueryBackend, DaemonCiTransportBackend):
+    """Full daemon backend composed from transport and query adapters."""
 
 
 class CiBackend(Protocol):

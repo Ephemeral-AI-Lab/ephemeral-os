@@ -17,17 +17,14 @@ from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.backend_wire import (
     deletespec_to_dict,
-    diagnostic_from_dict,
     edit_request_to_dict,
     edit_result_from_dict,
     editspec_to_dict,
-    hover_result_from_dict,
     movespec_to_dict,
     normalize_edit_specs,
     normalize_write_specs,
     operation_change_to_dict,
     operation_result_from_dict,
-    reference_info_from_dict,
     symbol_info_from_dict,
     telemetry_from_dict,
     writespec_to_dict,
@@ -35,15 +32,12 @@ from sandbox.code_intelligence.backend_wire import (
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
     DeleteSpec,
-    Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
-    HoverResult,
     MoveSpec,
     OperationChange,
     OperationResult,
-    ReferenceInfo,
     SymbolInfo,
     WriteSpec,
 )
@@ -72,8 +66,8 @@ class CiDaemonCommandError(Exception):
         self.details = details or {}
 
 
-class DaemonCiBackend:
-    """Daemon-bound backend.
+class DaemonCiTransportBackend:
+    """Daemon-bound transport backend.
 
     The daemon owns the canonical SQLite ``IndexStore`` and serves every
     code-intelligence verb through framed msgpack command dispatch.
@@ -326,53 +320,6 @@ class DaemonCiBackend:
             if progress_text:
                 on_progress_line(progress_text)
         return result
-
-    def find_definitions(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[SymbolInfo]:
-        rows = self._call_sync(
-            "find_definitions",
-            {
-                "file_path": file_path,
-                "symbol": symbol,
-                "line": line,
-                "character": character,
-            },
-        )
-        return [symbol_info_from_dict(r) for r in (rows or [])]
-
-    def find_references(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[ReferenceInfo]:
-        rows = self._call_sync(
-            "find_references",
-            {
-                "file_path": file_path,
-                "symbol": symbol,
-                "line": line,
-                "character": character,
-            },
-        )
-        return [reference_info_from_dict(r) for r in (rows or [])]
-
-    def hover(self, file_path: str, line: int, character: int) -> HoverResult | None:
-        result = self._call_sync(
-            "hover",
-            {"file_path": file_path, "line": line, "character": character},
-        )
-        return hover_result_from_dict(result) if result else None
-
-    def diagnostics(self, file_path: str) -> list[Diagnostic]:
-        rows = self._call_sync("diagnostics", {"file_path": file_path})
-        return [diagnostic_from_dict(r) for r in (rows or [])]
 
     def query_symbols(self, query: str) -> list[SymbolInfo]:
         rows = self._call_sync("query_symbols", {"query": query})

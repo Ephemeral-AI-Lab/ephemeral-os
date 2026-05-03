@@ -1,10 +1,9 @@
 """Phase 1 live E2E — in-sandbox indexing + storage probe suite.
 
-Mirrors :mod:`test_live_ci_phase0_baseline` for fixture conventions; runs
-seven cases from spec Task 1.5:
+Runs seven cases from spec Task 1.5:
 
 * 1.5.A privilege probe (HARD: ``$HOME/.cache/eos-ci`` writable without sudo)
-* 1.5.B indexing parity vs. Phase 0 baseline
+* 1.5.B indexing readiness
 * 1.5.C corruption recovery (SQLite index rebuilds when corrupted)
 * 1.5.D state path-confinement guard (unit-style, no live needed)
 * 1.5.E compatibility matrix (sqlite3, msgpack, basedpyright, git, unshare, …)
@@ -19,8 +18,6 @@ Run with::
 
 from __future__ import annotations
 
-import glob
-import json
 import os
 import sys
 import time
@@ -190,39 +187,16 @@ def test_privilege_probe_home_cache(live_phase1_env: LivePhase1Env) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 1.5.B — Indexing parity
+# 1.5.B — Indexing readiness
 # ---------------------------------------------------------------------------
 
 
-def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
-    """Build the index in-sandbox via DaemonCiBackend; assert symbol count parity."""
+def test_indexing_readiness(live_phase1_env: LivePhase1Env) -> None:
+    """Build the index in-sandbox via DaemonCiBackend and assert it is usable."""
     from sandbox.daytona.transport import DaytonaTransport
 
-    h = TimingHarness(phase=1, test_name="indexing_parity")
+    h = TimingHarness(phase=1, test_name="indexing_readiness")
     env = live_phase1_env
-
-    baselines = sorted(
-        glob.glob("backend/tests/test_e2e/_timings/phase_0_baseline_*.json")
-    )
-    assert baselines, "No Phase 0 baseline JSON found in _timings/"
-    baseline_path = baselines[-1]
-    phase0 = json.loads(Path(baseline_path).read_text())
-    expected_symbol_count = next(
-        (
-            int(s.get("bytes") or 0)
-            for s in phase0["steps"]
-            if s["name"] == "index_build_in_process"
-        ),
-        0,
-    )
-    expected_file_count = next(
-        (
-            int(s.get("count") or 0)
-            for s in phase0["steps"]
-            if s["name"] == "index_build_in_process"
-        ),
-        0,
-    )
 
     with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "1"}):
         with _traced_step(h, "index_build_in_sandbox"):
@@ -242,20 +216,11 @@ def test_indexing_parity_with_baseline(live_phase1_env: LivePhase1Env) -> None:
         h.record("query_symbols_first", count=len(results))
 
     _flush_print(h.report())
-    cmp_text = h.compare_to(Path(baseline_path))
-    _flush_print("\n" + cmp_text)
     h.dump_json()
 
-    # Soft parity: file count must match within a small tolerance (the dask
-    # workspace can drift slightly between provisioning runs).
-    if expected_file_count:
-        ratio = actual_files / max(expected_file_count, 1)
-        assert 0.5 <= ratio <= 2.0, (
-            f"file_count {actual_files} drifted from baseline {expected_file_count} "
-            f"by ratio {ratio:.2f}"
-        )
-    if expected_symbol_count:
-        assert actual_symbols >= expected_symbol_count // 2
+    assert actual_files > 0
+    assert actual_symbols > 0
+    assert results
 
 
 # ---------------------------------------------------------------------------

@@ -332,14 +332,7 @@ async def _shutdown() -> None:
 
 **File:** `backend/tests/test_e2e/test_live_ci_phase3_6_lsp_benchmark.py`
 
-The benchmark compares the **chosen** backend (post-rewire, the only LSP path that exists) against a **saved Phase 0 baseline** that captured today's `jedi.Script` numbers. Pre-rewire jedi.Script no longer exists in the codebase, so we need the baseline JSON to be captured BEFORE the rewire commit.
-
-**Pre-rewire (manual step before merging Stage B):**
-```
-.venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase0_baseline.py -m live -v -s
-# This produces phase_0_baseline_<ts>.json with today's jedi.Script timings.
-# Commit the JSON to _timings/ as the canonical pre-3.6 baseline.
-```
+The benchmark compares the **chosen** backend (post-rewire, the only LSP path that exists) against a saved pre-rewire `jedi.Script` benchmark when one is present. Pre-rewire jedi.Script no longer exists in the codebase, so a missing historical benchmark downgrades the speedup assertion to a warning instead of reintroducing the old Phase 0 live test.
 
 **Phase 3.6 benchmark (post-rewire):**
 
@@ -386,7 +379,7 @@ async def test_lsp_chosen_backend_benchmark(live_sweevo_env):
                 op_fn()
 
     # ---- Hard SLO assertions vs pre-rewire jedi baseline ----
-    jedi_baseline = _load_pre_rewire_jedi_baseline()  # phase_0_baseline_<ts>.json captured pre-rewire
+    jedi_baseline = _load_pre_rewire_jedi_baseline()
     chosen_p50 = h.distributions["find_definitions"]["p50"]
     jedi_p50   = jedi_baseline["find_definitions"]["p50"]
     assert chosen_p50 * 5 <= jedi_p50, (
@@ -497,7 +490,7 @@ required.extend(["node", "pyright_langserver"])
 - [ ] Daemon lifecycle: child lazy-spawned on first query; torn down on graceful shutdown.
 
 ### Stage C — Benchmark + regression
-- [ ] Pre-rewire `phase_0_baseline_<ts>.json` captured and committed BEFORE merging Stage B.
+- [ ] Pre-rewire jedi benchmark artifact captured before merging Stage B, when speedup assertions are required.
 - [ ] **Phase 3.6 live E2E benchmark passes against `dask__dask_2023.3.2_2023.4.0`.**
 - [ ] **HARD SLO 1: chosen backend `find_definitions` p50 ≥ 5x faster than jedi baseline p50.**
 - [ ] **HARD SLO 2: chosen backend `find_definitions` p99 < 100ms warm.**

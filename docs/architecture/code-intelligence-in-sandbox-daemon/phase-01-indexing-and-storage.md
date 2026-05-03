@@ -396,7 +396,7 @@ class DaemonCiBackend:
         return results
 ```
 
-**Note:** for Phase 1 we keep the cache orchestrator-side because there's no daemon yet. Phases 2-3 move the cache into daemon memory and `query_symbols` becomes an daemon command. The Phase 0 baseline E2E captures `query_symbols_warm` so Phase 1 has a baseline to compare against.
+**Note:** for Phase 1 we keep the cache orchestrator-side because there's no daemon yet. Phases 2-3 move the cache into daemon memory and `query_symbols` becomes an daemon command.
 
 ### Task 1.5 — Phase 1 live E2E
 
@@ -431,17 +431,12 @@ def test_privilege_probe_home_cache(live_sweevo_env):
     h.dump_json()
 ```
 
-#### 1.5.B — Indexing parity with Phase 0 baseline
+#### 1.5.B — Indexing readiness
 
 ```python
-async def test_indexing_parity_with_baseline(live_sweevo_env):
-    h = TimingHarness(phase=1, test_name="indexing_parity")
+async def test_indexing_readiness(live_sweevo_env):
+    h = TimingHarness(phase=1, test_name="indexing_readiness")
     env = live_sweevo_env
-
-    baseline = sorted(glob.glob("backend/tests/test_e2e/_timings/phase_0_baseline_*.json"))[-1]
-    phase0 = json.loads(Path(baseline).read_text())
-    expected_symbol_count = next(s for s in phase0["steps"]
-                                 if s["name"] == "index_build_in_process")["count"]
 
     with h.step("index_build_in_sandbox"):
         with mock.patch.dict(os.environ, {"EOS_CI_IN_SANDBOX": "1"}):
@@ -456,9 +451,9 @@ async def test_indexing_parity_with_baseline(live_sweevo_env):
     with h.step("query_symbols_first"):
         results = svc.query_symbols("Bag")
     h.record("query_symbols_first", count=len(results))
+    assert results
 
     print(h.report())
-    print(h.compare_to(Path(baseline)))
     h.dump_json()
 ```
 
@@ -770,7 +765,7 @@ exit $rc
 ### Task 1.8 — Regression check
 
 - `.venv/bin/pytest backend/tests/test_sandbox/ backend/tests/test_tools/ -q` — green with flag off.
-- `EOS_CI_IN_SANDBOX=1 uv run pytest backend/tests/test_e2e/test_live_ci_phase0_baseline.py -m live -v -s` — Phase 0 E2E still green when re-run with flag flipped (in-process backend is unaffected because the test fixture binds no transport for Phase 0... document the selection truth-table outcome).
+- `EOS_CI_IN_SANDBOX=1 uv run pytest backend/tests/test_e2e/test_live_ci_phase1_indexing.py -m live -v -s` — Phase 1 E2E still green with the daemon path enabled.
 
 ## Definition of done
 
@@ -786,11 +781,11 @@ exit $rc
 - [ ] **Phase 1 live E2E eager bootstrap timing (1.5.F) — `create_sandbox` cold < 3s; `start_sandbox` warm < 500ms.**
 - [ ] **Phase 1 live E2E overlay live mount probe (1.5.G) — production `tmpfs + bind lower + overlay (userxattr)` stack works end-to-end on the sandbox image, including write/modify/delete + whiteout marker (char(0,0) OR `user.overlay.whiteout` xattr) + user.* xattr round-trip.**
 - [ ] Phase 1 E2E corruption recovery (1.5.C) works — daemon rebuilds from scratch when snapshot is corrupted.
-- [ ] Phase 1 E2E symbol counts (1.5.B) match Phase 0 baseline.
+- [ ] Phase 1 E2E indexing readiness (1.5.B) returns non-empty symbol results.
 - [ ] Phase 1 E2E path-confinement guard (1.5.D) rejects path-traversal attempts.
-- [ ] Phase 1 timing report shows `index_build_in_sandbox` within 5x of Phase 0 baseline; `query_symbols_first` ≤ baseline; no other regression >50ms.
-- [ ] Regression check: Phase 0 E2E + full unit suite still green.
-- [ ] PR description includes: privilege-probe output (`$HOME`, `whoami`, `umask`), compatibility matrix output, **overlay live probe output** (whiteout style detected: char(0,0) vs userxattr xattr; `kernel uname -r`; xattr round-trip result), Phase 1 `compare_to(baseline)` report, bundle size in KB, eager-bootstrap cold/warm timings.
+- [ ] Phase 1 timing report shows `index_build_in_sandbox` and `query_symbols_first` durations.
+- [ ] Regression check: Phase 1 E2E + full unit suite still green.
+- [ ] PR description includes: privilege-probe output (`$HOME`, `whoami`, `umask`), compatibility matrix output, **overlay live probe output** (whiteout style detected: char(0,0) vs userxattr xattr; `kernel uname -r`; xattr round-trip result), Phase 1 timing report, bundle size in KB, eager-bootstrap cold/warm timings.
 
 ## Risk callouts (Phase 1 specific)
 

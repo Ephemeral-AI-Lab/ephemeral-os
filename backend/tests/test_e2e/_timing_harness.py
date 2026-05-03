@@ -1,9 +1,9 @@
 """Live-E2E timing harness — measures, reports, persists, and compares phase timings.
 
-Each phase of the in-sandbox-daemon migration uses this harness to record a
-canonical baseline (`phase_<N>_<test>_<ts>.json`) and to render deltas against
-the previous phase's baseline. The format is fixed so that report output
-can be pasted into PR descriptions verbatim.
+Each phase of the in-sandbox-daemon migration uses this harness to record
+timing artifacts (`phase_<N>_<test>_<ts>.json`) and, where useful, render
+deltas against another benchmark artifact. The format is fixed so that report
+output can be pasted into PR descriptions verbatim.
 
 Public API (every method has a matching unit test in
 ``test_timing_harness_unit.py``):
@@ -82,7 +82,6 @@ class TimingHarness:
             yield
         finally:
             elapsed = time.perf_counter() - start
-            self.values[name] = elapsed
             existing = self._step_index.get(name)
             if existing is None:
                 ts = TimingStep(name=name, elapsed_s=elapsed)
@@ -188,7 +187,7 @@ class TimingHarness:
     def report(self) -> str:
         """Render the canonical report.
 
-        Format (reproduced verbatim from the phase-00 spec):
+        Fixed report format:
 
             === Phase N E2E timing breakdown for <test_name> ===
             <name>: <padded><elapsed>s<padding>(<bytes_human>, <count> files)

@@ -2,9 +2,8 @@
 
 These exercise the harness API contract: step timing, metadata recording,
 report formatting, JSON dump shape + atomicity, and baseline comparison.
-The live E2E baseline test (``test_live_ci_phase0_baseline.py``) shares
-the same harness; if these unit tests pass, that test only needs to verify
-the live integration.
+Live E2E phase tests share the same harness; if these unit tests pass, those
+tests only need to verify live integration.
 """
 
 from __future__ import annotations

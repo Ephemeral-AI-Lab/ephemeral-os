@@ -8,12 +8,15 @@ the daemon and surfaces errors instead of falling back to a stale cache.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
 
+from sandbox.code_intelligence import daemon_backend as daemon_transport_backend
 from sandbox.code_intelligence.backend import DaemonCiBackend
+from sandbox.code_intelligence.daemon_backend import DaemonCiTransportBackend
 from sandbox.code_intelligence.core.types import SymbolInfo, SymbolKind
 
 
@@ -265,3 +268,21 @@ def test_init_drops_legacy_cache_attributes() -> None:
         assert not hasattr(backend, attr), (
             f"Phase 3.5 cleanup regression: {attr} still on DaemonCiBackend"
         )
+
+
+def test_transport_backend_module_has_no_language_server_queries() -> None:
+    """Boundary invariant: daemon_backend.py stays transport-only."""
+    source = Path(daemon_transport_backend.__file__).read_text(encoding="utf-8")
+    forbidden = (
+        "find_definitions",
+        "find_references",
+        "hover_result_from_dict",
+        "reference_info_from_dict",
+        "diagnostic_from_dict",
+        "def hover(",
+        "def diagnostics(",
+    )
+    for token in forbidden:
+        assert token not in source
+    for method in ("find_definitions", "find_references", "hover", "diagnostics"):
+        assert not hasattr(DaemonCiTransportBackend, method)
