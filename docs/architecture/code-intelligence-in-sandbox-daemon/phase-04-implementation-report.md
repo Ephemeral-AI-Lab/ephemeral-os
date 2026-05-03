@@ -158,7 +158,7 @@ that explicit attribution.
 | `DaemonCiBackend.cmd` ships args + reconstructs `SimpleNamespace` | PASS | `backend.py:564-576`; the synchronous facade also exists via `_call_async` / `run_sync` boundary. |
 | `on_progress_line` behavior documented: final stdout replay implemented; true live streaming is future transport enhancement | PASS | `backend.py:572-575` replays final stdout to the callback; the spec status note + Task 4.4 (lines 178–198) document this as the deliberate decision. |
 | Phase 4 live E2E (all 4 subtests A-D) passes | **Disowned by spec note.** | The phase-04 spec note retires Task 4.5 as completion debt: "Future work should be framed as transport optimization, explicit batching, or streaming enhancement, not completion of this Phase 4 plan." Project memory `feedback_parallel_user_commits` plus Phase 3 §7.9 add the operational constraint: live Daytona runs require explicit user approval. Verification of the perf claim is satisfied by aggregating already-committed `_timings/` JSONs (§6 below). |
-| HEADLINE PERF ASSERTION (4.5.A): `svc_cmd_via_daemon < svc_cmd_baseline_inprocess` for the warm path | PASS structurally (§6) | Phase 0 in-process baseline: `svc_cmd_baseline = 8.047 s`; post-stable-loop daemon daemon commands run at p50 < 1 s; sandbox transport floor ≈ 0.336 s. Numbers come from the live `_timings/` JSONs and the 3.5/3.6 §6.4 follow-up. |
+| HEADLINE PERF ASSERTION (4.5.A): `svc_cmd_via_daemon < svc_cmd_baseline_inprocess` for the warm path | PASS structurally (§6) | Phase 0 in-process baseline: `svc_cmd_baseline = 8.047 s`; post-stable-loop daemon commands run at p50 < 1 s; sandbox transport floor ≈ 0.336 s. Numbers come from the live `_timings/` JSONs and the 3.5/3.6 §6.4 follow-up. |
 | Real `pytest` invocation succeeds end-to-end (4.5.B) | **Disowned by spec note.** | Same rationale as the Task 4.5 entry. |
 | Gitinclude OCC commit path verified live (4.5.C) — tracked file edit lands via OCC | **Disowned by spec note** at the live-run level; structurally PASS at the unit level. | The OCC commit path is exercised by Phase 3 dispatch coverage (`test_ci_daemon_dispatch.py`) and the 3.5 multi-orchestrator live test, which exercises a real OCC-mediated commit through the `DaemonCiBackend` — see `_timings/phase_3.5_multi_orchestrator_2026-05-02T17-28-51Z.json`. |
 | Gitignore direct-merge path verified live (4.5.D) — gitignored writes go through direct-merge | **Disowned by spec note.** | Same rationale; covered structurally by the package-reuse approach (Phase 3 §7.1) — daemon and orchestrator share the `OverlayAuditor` and `OverlayCommandCommitter` code. |
@@ -322,7 +322,7 @@ Reading the table:
   orchestrator round-trip.
 - The 3.5/3.6 §6.4 stable-loop fix removes a sync-bridge accident that
   was inflating every public daemon command by ~5.1 s of fresh-event-loop churn.
-  After the fix, daemon daemon commands are roughly **18× faster than the
+  After the fix, daemon commands are roughly **18× faster than the
   pre-migration baseline**: the live 2026-05-02T18:31Z run measured
   `write_file` p50 = 0.450 s, `query_symbols` p50 = 0.433 s, and
   `status` p50 = 0.436 s through the public daemon path (artifacts

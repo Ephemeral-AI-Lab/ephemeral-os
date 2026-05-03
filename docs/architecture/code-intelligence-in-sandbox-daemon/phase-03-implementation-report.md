@@ -421,7 +421,7 @@ provisioning + run time: 5–7 minutes.
 4. **Serializer symmetry pays off in tests.** Writing
    `_writespec_to_dict` / `_writespec_from_dict` as mirror pairs let
    the dispatch unit tests round-trip every dataclass without any
-   custom encoders. The fake-client tests in
+   custom encoders. The fake-daemon tests in
    `test_daemon_ci_backend_dispatch.py` exercise the serializer
    contract from both sides in a single assertion.
 5. **`SymbolKind` enum tolerance.** The orchestrator-side

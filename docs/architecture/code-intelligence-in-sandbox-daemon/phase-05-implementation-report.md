@@ -29,7 +29,7 @@ flowchart LR
 | `backend/src/sandbox/api/transport.py` | Removed the code-intelligence-specific daemon command method from the transport protocol. |
 | `backend/src/sandbox/daytona/transport.py` | Removed the Daytona native bridge wrapper and inline bridge template. |
 | `backend/src/sandbox/code_intelligence/backend.py` | Removed provider-capability and forced-shim branching; `_call_once` now always uses the process.exec-backed Python socket bridge. |
-| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | Kept client framing, retry, and daemon-unavailable coverage; removed native-verb selection tests. |
+| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | Kept daemon command framing, retry, and daemon-unavailable coverage; removed native-verb selection tests. |
 | `backend/tests/test_sandbox/test_daytona_transport.py` | Removed Daytona native-verb tests. |
 | `backend/tests/test_e2e/test_live_ci_phase5_default_on.py` | Removed native-vs-shim live A/B measurement; retained daemon-default, warm query, concurrent query, and cross-phase regression coverage. |
 | `docs/architecture/code-intelligence-in-sandbox-daemon/phase-05-process-exec-daemon-default.md` | Replaced the retired native-verb rollout plan with the process.exec-backed daemon-default contract. |

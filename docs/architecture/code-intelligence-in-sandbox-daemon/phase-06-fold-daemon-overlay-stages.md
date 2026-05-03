@@ -375,7 +375,7 @@ Overlayfs's contribution to wall time is ~0.5s of real work on the rebase
 baseline (`setup_mounts` 0.10s, `walk_upperdir` 0.001s, `classify` 0.07s,
 user command 0.30s, plus the unshare boundary ~0.1s). The remaining ~2.0s
 of the 10× p50 is daemon-internal subprocess multiplexing and the
-orchestrator→daemon daemon command, not CoW.
+orchestrator→daemon command, not CoW.
 
 A userland CoW would add cost, not remove it: FUSE pays a context switch
 per syscall in the user command's hot path; hardlink trees turn the diff

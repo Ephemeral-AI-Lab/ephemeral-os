@@ -221,7 +221,7 @@ The 8s `svc_cmd_baseline` is the headline cost: `svc.cmd` is an audited
 fail-closed overlay that runs the user command in a fresh `unshare`
 namespace with git snapshot before/after for OCC tracking. On dask's
 ~10k-file working set, the namespace's `find` walk and post-run
-`git diff` dominate. Phase 4's hot-path daemon daemon command is targeted at
+`git diff` dominate. Phase 4's hot-path daemon command is targeted at
 collapsing this to ~0.6s.
 
 ---

@@ -220,7 +220,7 @@ Per-step interpretation:
 - `query_symbols_after_eager` 0.002s — orchestrator cache lookup.
 
 The relaxed Phase-1 SLOs (`cold < 120s`, `warm < 15s`) account for the
-chunked-base64 round-trip cost; Phase 2's daemon daemon command eliminates the
+chunked-base64 round-trip cost; Phase 2's daemon command eliminates the
 snapshot transfer step, taking the cold cycle from ~50s to ~3s.
 
 ### 1.5.G overlay live probe — PASSED
@@ -459,8 +459,8 @@ Phase 2 picks up with these guarantees from Phase 1:
 
 | Item | Location | Severity |
 |---|---|---|
-| **Trust boundary on `pickle.loads(snapshot)`** at `backend.py:518` — orchestrator deserializes bytes produced inside the (potentially compromised) sandbox. Phase 2's daemon daemon command MUST migrate to a safe wire format (msgpack with schema, or json + reconstructed dataclass) so a malicious sandbox cannot achieve RCE on the orchestrator host | `backend.py:518` (DaemonCiBackend._ensure_initialized_async) | HARD — Phase 2 blocker |
-| **Snapshot-transfer cost erasure** — Phase 1's chunked-base64 download is ~34 s for a 3.2 MB pickle. Phase 2 daemon daemon command must close `index_build_in_sandbox` to ≤ 3x of Phase 0 by serving symbol queries from daemon memory instead of round-tripping the snapshot | `DaemonCiBackend.query_symbols` | HARD — replaces Phase 1's relaxed SLO |
+| **Trust boundary on `pickle.loads(snapshot)`** at `backend.py:518` — orchestrator deserializes bytes produced inside the (potentially compromised) sandbox. Phase 2's daemon command MUST migrate to a safe wire format (msgpack with schema, or json + reconstructed dataclass) so a malicious sandbox cannot achieve RCE on the orchestrator host | `backend.py:518` (DaemonCiBackend._ensure_initialized_async) | HARD — Phase 2 blocker |
+| **Snapshot-transfer cost erasure** — Phase 1's chunked-base64 download is ~34 s for a 3.2 MB pickle. Phase 2 daemon command must close `index_build_in_sandbox` to ≤ 3x of Phase 0 by serving symbol queries from daemon memory instead of round-tripping the snapshot | `DaemonCiBackend.query_symbols` | HARD — replaces Phase 1's relaxed SLO |
 
 ### Non-blocking follow-ups (LOW severity)
 

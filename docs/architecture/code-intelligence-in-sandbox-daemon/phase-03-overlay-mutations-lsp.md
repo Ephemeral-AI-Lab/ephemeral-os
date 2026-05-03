@@ -336,14 +336,14 @@ async def handle_client(reader, writer):
 
 **File:** `backend/src/sandbox/code_intelligence/backend.py` (extends Phase 1)
 
-Each method becomes a one-line client call:
+Each method becomes a daemon-command call:
 
 ```python
 class DaemonCiBackend:
     async def write_file_async(self, specs, *, agent_id="", description=""):
         args = {"specs": [_writespec_to_dict(s) for s in _normalize(specs)],
                 "agent_id": agent_id, "description": description}
-        raw = await self.__call_daemon_command("write_file", args)
+        raw = await self._call_daemon_command("write_file", args)
         return _operation_result_from_dict(raw)
 
     def write_file(self, specs, *, agent_id="", description=""):

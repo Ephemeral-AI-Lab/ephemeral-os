@@ -136,7 +136,7 @@ After Phase 5 lands and transport-backed sandboxes become daemon-default:
 | Today (pre-Phase 0) | Primary mutation/query channel; every CI op rides on it |
 | Phase 0-4 (flag-off default) | Same as today |
 | Phase 0-4 (flag-on opt-in) | Bootstrap (upload bundle, spawn daemon at `create_sandbox`) + every daemon command via shim |
-| Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the process.exec-backed daemon daemon command |
+| Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the process.exec-backed daemon command |
 | Post-Phase 6 (out of scope) | Bootstrap + recovery only; shim removed entirely |
 
 **Implication:** `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` became dead code by Phase 5 and were removed in the post-canary cleanup.
@@ -286,7 +286,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies the durable workflow fiel
 | **HIGH** | `svc.cmd` `SimpleNamespace` shape drift drops fields like `gitinclude_changed_paths` or `mixed_partial_apply` | Phase 4 result-shape parity test exercises every field; full field set documented above |
 | **HIGH** | Sandbox image lacks a required dep (msgpack, sqlite3, unshare) — daemon fails to start | Phase 1 compatibility probe runs first; surfaces full matrix; msgpack vendored to remove most-likely failure mode |
 | **MEDIUM** | Snapshot/ledger corruption | Write-temp-then-rename, SQLite WAL, integrity check on startup, rebuild-from-scratch (tested in Phase 1 with intentional corruption) |
-| **MEDIUM** | `process.exec` shim latency in Phases 2-4 | Phase 5 keeps direct process.exec-backed daemon daemon command; live E2E must compare any proposed replacement before new API surface is added |
+| **MEDIUM** | `process.exec` shim latency in Phases 2-4 | Phase 5 keeps direct process.exec-backed daemon command; live E2E must compare any proposed replacement before new API surface is added |
 | **MEDIUM** | Wire-format drift across versions | Explicit `{"v": 1}` schema, unknown-field reject, `UnsupportedOp` for unknown verbs |
 | **MEDIUM** | Sandbox image variance (`$HOME` differs across images) | Resolve `$HOME` at runtime via `os.path.expanduser`; never hardcode `/home/daytona` |
 | **DEFERRED** | `memory/git_workspace_gitignored_deps_blocker.md` (gitignored deps invisible to overlay snapshot) | Out of scope; needs its own ADR. Migration neither helps nor hurts this blocker |
@@ -341,7 +341,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/code_intelligence/daemon/__init__.py`
 - `backend/src/sandbox/code_intelligence/backend.py` — `DaemonCiBackend` (frame codec, retry, `CiDaemonUnavailable`)
 - `backend/src/sandbox/code_intelligence/daemon/launcher.py` — uploads payload, spawns daemon, waits for socket
-- `backend/src/sandbox/api/transport.py` — process.exec-backed daemon daemon command (Phase 5)
+- `backend/src/sandbox/api/transport.py` — process.exec-backed daemon command (Phase 5)
 
 ### Modified (orchestrator)
 - `backend/src/sandbox/code_intelligence/registry.py` — selects `CiBackend` based on flag

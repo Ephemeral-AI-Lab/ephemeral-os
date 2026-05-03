@@ -72,7 +72,7 @@ where useful.
 
 #### First ping — observed 5.862 s, target 100 ms (warm)
 
-`DaemonCiBackend._send_frame_via_python_shim` (`client.py:116-161`)
+`DaemonCiBackend._send_frame_via_process_exec` (`backend.py`)
 base64-encodes each frame into a heredoc and runs `python3 - <<PY` via
 `transport.exec` to reach the in-sandbox Unix socket. Each call pays:
 
@@ -84,7 +84,7 @@ base64-encodes each frame into a heredoc and runs `python3 - <<PY` via
 
 The 100 ms target presumed the retired first-class transport verb, which the
 plan explicitly pins to Phase 5: §2.4 ("Phase 5 replaces the entire shim
-with the process.exec-backed daemon daemon command") and the §503 MEDIUM risk callout
+with the process.exec-backed daemon command") and the §503 MEDIUM risk callout
 ("Document the shim as Phase 2-4 only; Phase 5 measures the corrected process.exec-backed daemon path
 verb against the shim"). **The Phase 2 implementation matches the plan's
 design — the shim was always going to fail this SLO**, and the plan said
@@ -172,7 +172,7 @@ callout explicitly named the shim cost as a Phase-2-through-4 problem
 that Phase 5 resolves. What the plan understated was the wall-time hit
 of stacking shim + chunked upload + Daytona's exec-proxy hold; this
 report makes that explicit so Phase 5 can re-target each component
-against the process.exec-backed daemon daemon command.
+against the process.exec-backed daemon command.
 
 ---
 
@@ -187,7 +187,7 @@ against the process.exec-backed daemon daemon command.
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_protocol.py` | 107 | 4-byte length-prefix + msgpack codec and schema validation |
 | `backend/src/sandbox/code_intelligence/backend.py` | 161 | `DaemonCiBackend`, Python socket shim, retry-after-respawn, typed daemon command errors |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py` | 207 | Protocol, dispatch, shutdown scheduling, local daemon lifecycle tests |
-| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | 146 | Client success/error/retry tests with fake transport |
+| `backend/tests/test_sandbox/test_code_intelligence/test_daemon_ci_backend_process_exec.py` | 146 | Daemon command success/error/retry tests with fake transport |
 | `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | 367 | Live Daytona spawn, ping, kill/respawn, shutdown, concurrency, dispose tests |
 | `backend/tests/test_e2e/_timings/phase_2_*.json` | n/a | Passing live timing artifacts for daemon-ready, kill/respawn, shutdown, dispose |
 
@@ -215,10 +215,10 @@ None.
 | **P2-001** Wire protocol | PASS | `ci_protocol.py` implements `CI_PROTOCOL_VERSION=1`, `MAX_FRAME_BYTES=64MB`, msgpack length frames, `FrameError`, `SchemaError`, request/response dataclasses, and parse helpers. Unit tests cover round-trip, oversized header/body, bad version, and bad request schema. |
 | **P2-002** Daemon server | PASS | `ci_daemon.py` starts an asyncio Unix server, writes `daemon.pid`, binds `daemon.sock`, sets socket mode `0600`, dispatches `ping`/`shutdown`/`version`, handles stale dead PID/socket cleanup, rejects live PID startup, and removes PID/socket on shutdown. |
 | **P2-003** Daemon entry | PASS | `__main__.py` parses `--workspace-root` and `--log-level`, returns 13 for `CiStorageUnavailable`, 11 for live stale daemon, 0 for normal shutdown. Bundle smoke test imports the daemon entry and dispatch table from extracted runtime. |
-| **P2-004** daemon backend | PASS | `client.py` sends one frame through an inline Python Unix-socket shim over `transport.exec`, decodes the response frame, raises `CiDaemonCommandError` for error envelopes, and retries once through `DaemonLauncher.ensure_daemon()` after connection failure. |
+| **P2-004** daemon backend | PASS | `backend.py` sends one frame through an inline Python Unix-socket shim over `transport.exec`, decodes the response frame, raises `CiDaemonCommandError` for error envelopes, and retries once through `DaemonLauncher.ensure_daemon()` after connection failure. |
 | **P2-005** Launcher + eager lifecycle | PASS | `DaemonLauncher.ensure_daemon()` checks pid/socket, uploads runtime if needed, spawns via `setsid nohup`, polls socket readiness, and exposes shutdown. `bootstrap_in_sandbox_ci_runtime()` now calls this launcher from create/start/restart hooks. |
 | **P2-006** Live E2E | PASS | `test_live_ci_phase2_daemon_lifecycle.py` passed as two live invocations: first daemon-ready test, then the remaining kill/respawn, clean shutdown, concurrent pings, and dispose tests. |
-| **P2-007** Unit tests | PASS | New daemon/client unit tests plus updated eager/bootstrap/backend/bundle tests pass in the sandbox suite. |
+| **P2-007** Unit tests | PASS | New daemon-backend unit tests plus updated eager/bootstrap/backend/bundle tests pass in the sandbox suite. |
 | **P2-008** Regression check | PASS | `uv run pytest backend/tests/test_sandbox -q` -> 478 passed. Ruff clean across changed source/tests. |
 
 ---

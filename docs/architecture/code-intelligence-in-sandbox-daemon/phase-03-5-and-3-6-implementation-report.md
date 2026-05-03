@@ -35,7 +35,7 @@ Live E2E was executed against the local Daytona stack; resulting JSONs are
 committed to ``_timings/``. The completed daemon-path runs were stable and
 also exposed a sync-bridge performance bug: public daemon commands were paying a
 ~5.5 s fresh-event-loop cost per call. The follow-up stable-loop fix in
-``sandbox.client.async_bridge`` drops steady daemon daemon command calls below one
+``sandbox.client.async_bridge`` drops steady daemon command calls below one
 second and is recorded in §6.4 rather than deferred to Phase 4.
 
 ---
@@ -316,7 +316,7 @@ Live `test_live_ci_phase3_5_concurrent_perf.py` ran as a full file on
 
 | Test | Artifact | Headline result |
 |---|---|---|
-| Sustained mixed workload | `phase_3.5_sustained_mixed_workload_2026-05-02T17-27-29Z.json` | 5 writes + 5 queries + 3 status calls through public daemon daemon command; pre-stable-loop p99 5.50-5.56 s; daemon RSS stable at 61.52 MB and FD count stable at 33 |
+| Sustained mixed workload | `phase_3.5_sustained_mixed_workload_2026-05-02T17-27-29Z.json` | 5 writes + 5 queries + 3 status calls through public daemon command; pre-stable-loop p99 5.50-5.56 s; daemon RSS stable at 61.52 MB and FD count stable at 33 |
 | Concurrent agents | `phase_3.5_concurrent_agents_2x_2026-05-02T17-28-15Z.json` | 2 agents completed query/edit/`svc.cmd` with zero errors; daemon RSS moved 64.75 → 65.50 MB |
 | Multi-orchestrator arbitration | `phase_3.5_multi_orchestrator_2026-05-02T17-28-51Z.json` | Two `DaemonCiBackend` writers raced the same strict-base file; exactly one commit succeeded and one aborted |
 | SQLite restart parity | `phase_3.5_sqlite_index_restart_parity_2026-05-02T17-30-00Z.json` | Query results matched before and after daemon shutdown/restart; no legacy `index.snapshot` was recreated |
@@ -372,7 +372,7 @@ one live Daytona sandbox:
 | 30 | 1.183 s | 1.013 s | 1.176 s | 25.4 ops/s | 0 |
 | 50 | 1.943 s | 1.755 s | 1.903 s | 25.7 ops/s | 0 |
 
-Safety conclusion: the daemon daemon command design stays intact. daemon command remains the
+Safety conclusion: the daemon command design stays intact. daemon command remains the
 service protocol; `process.exec` remains only the transport bridge into
 the sandbox. The stable-loop fix removes the accidental per-call async
 client/session churn. Throughput now plateaus around 25 ops/s at high
@@ -587,7 +587,7 @@ recommendation surfaced (pre-bake basedpyright).
    loop-local async SDK caches. `LspAsyncHost` runs the child's loop in a
    dedicated daemon thread; `run_sync(...)` now uses the registered parent
    loop when one exists and a reusable standalone sandbox I/O loop when it
-   does not. That boundary discipline is what keeps daemon daemon command steady-state
+   does not. That boundary discipline is what keeps daemon command steady-state
    calls at sub-second latency.
 
 4. **The LSP cache hides per-call cost.** The pre-rewire baseline showed

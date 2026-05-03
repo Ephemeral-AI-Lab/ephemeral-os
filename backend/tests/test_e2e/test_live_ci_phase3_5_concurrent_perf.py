@@ -265,7 +265,7 @@ def test_sustained_mixed_workload_distribution(live_phase35_env: LivePhase35Env)
         f"FD count grew by {fd_growth:.0f} during 250 ops — possible leak"
     )
 
-    # Public daemon daemon command currently pays the provider exec shim on every sample.
+    # Public daemon command currently pays the provider exec shim on every sample.
     # This gate catches the old hang/pathological queueing case without
     # pretending the sample is raw SQLite or LSP latency.
     write_dist = h.distributions["write_file"]

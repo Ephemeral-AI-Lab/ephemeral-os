@@ -18,14 +18,14 @@ The active contract is simpler:
 
 Phase 3.5/3.6 isolated the large regression to sync-bridge event-loop churn, not the socket protocol itself. After that was fixed, the remaining floor was the per-call `process.exec` launch and transport round trip.
 
-The attempted native transport verb wrapped the same `process.exec` path inside Daytona transport code. It added protocol surface, tests, feature flags, and A/B branches while preserving the same underlying cost. Live comparison showed it was slower/noisier than the direct client shim, so keeping it would make the codebase larger without improving the hot path.
+The attempted native transport verb wrapped the same `process.exec` path inside Daytona transport code. It added protocol surface, tests, feature flags, and A/B branches while preserving the same underlying cost. Live comparison showed it was slower/noisier than the direct `DaemonCiBackend` bridge, so keeping it would make the codebase larger without improving the hot path.
 
 ## Goal
 
 Make daemon mode the default without adding a special transport verb:
 
 1. Route service calls through the daemon-backed code-intelligence backend by default.
-2. Keep the daemon command bridge explicit and local to the code-intelligence client.
+2. Keep the daemon command bridge explicit and local to the `DaemonCiBackend`.
 3. Delete the native transport-verb branch and the forced-shim feature flag.
 4. Keep lifecycle, recovery, telemetry, and overlay behavior unchanged.
 

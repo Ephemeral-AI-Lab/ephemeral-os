@@ -11,7 +11,7 @@
 > buckets that are addressable without touching OCC semantics or
 > overlayfs internals:
 >
-> 1. **Orchestrator ↔ daemon daemon command gap (~0.51s at 10× p50).** End-to-end
+> 1. **Orchestrator ↔ daemon command gap (~0.51s at 10× p50).** End-to-end
 >    `svc_cmd_10x_latency` p50 = 1.805s; daemon-side `overlay_stage_total`
 >    p50 = 1.298s. The delta is the host-side `transport.exec` HTTP
 >    roundtrip carrying one `svc.cmd` call.
