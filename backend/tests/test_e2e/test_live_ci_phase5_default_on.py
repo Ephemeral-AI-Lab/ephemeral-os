@@ -1,20 +1,15 @@
-"""Phase 5 — first-class ci_rpc verb + daemon default live E2E.
+"""Phase 5 — daemon default live E2E over process.exec-backed RPC.
 
-Four subtests against the real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
+Three subtests against the real Daytona ``dask__dask_2023.3.2_2023.4.0`` sandbox:
 
 A. ``test_default_flag_on_smoke`` — every operation works through
-   ``RpcCiBackend`` and ``transport.ci_rpc``. Asserts ``_select_backend``
+   ``RpcCiBackend`` over the process.exec socket shim. Asserts ``_select_backend``
    returns the daemon path for transport-backed sandboxes.
 
-B. ``test_ci_rpc_verb_faster_than_shim`` — measures warm-path query latency
-   for the native verb vs the python shim (forced via
-   ``EOS_CI_FORCE_SHIM=1``). Hard assertion: verb total < shim total. This
-   is the headline perf claim that justifies the verb existing.
-
-C. ``test_concurrent_query_symbols`` — 8 concurrent ``query_symbols`` calls
+B. ``test_concurrent_query_symbols`` — 8 concurrent ``query_symbols`` calls
    succeed with zero errors and finish in below the public-RPC ceiling.
 
-D. ``test_curated_cross_phase_regression`` — one assertion per prior phase
+C. ``test_curated_cross_phase_regression`` — one assertion per prior phase
    (0/1/2/3/3.5/3.6/4) wired through the now-default daemon path. Catches
    any regression the daemon-default selector exposes that the per-phase
    suites missed.
@@ -29,7 +24,6 @@ Run with explicit user approval (do NOT auto-run; project memory
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 import time
 import uuid
@@ -37,7 +31,6 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
-from unittest import mock
 
 import pytest
 
@@ -54,8 +47,6 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 _DASK_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _DASK_SWEEVO_REPO_DIR = "/testbed"
 _PUBLIC_DAEMON_RPC_P99_CEILING_S = 10.0
-_VERB_VS_SHIM_WARMUP = 3
-_VERB_VS_SHIM_SAMPLES = 10
 _CONCURRENT_QUERY_COUNT = 8
 
 
@@ -194,50 +185,7 @@ def test_default_flag_on_smoke(live_phase5_env: LivePhase5Env) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5.6.B — native ci_rpc verb beats python shim
-# ---------------------------------------------------------------------------
-
-
-def test_ci_rpc_verb_faster_than_shim(live_phase5_env: LivePhase5Env) -> None:
-    h = TimingHarness(phase=5, test_name="ci_rpc_verb_vs_shim")
-    env = live_phase5_env
-
-    svc = env.make_ci_service()
-    svc.ensure_initialized(wait=True)
-    assert isinstance(svc._impl, RpcCiBackend)
-
-    # Warm both paths so the comparison measures steady-state, not first-call
-    # bookkeeping.
-    for _ in range(_VERB_VS_SHIM_WARMUP):
-        svc.query_symbols("Bag")
-
-    with _trace(h, "ci_rpc_verb_query_x10"):
-        for _ in range(_VERB_VS_SHIM_SAMPLES):
-            svc.query_symbols("Bag")
-
-    with mock.patch.dict(os.environ, {"EOS_CI_FORCE_SHIM": "1"}):
-        for _ in range(_VERB_VS_SHIM_WARMUP):
-            svc.query_symbols("Bag")
-        with _trace(h, "ci_rpc_shim_query_x10"):
-            for _ in range(_VERB_VS_SHIM_SAMPLES):
-                svc.query_symbols("Bag")
-
-    verb_total = h.values["ci_rpc_verb_query_x10"]
-    shim_total = h.values["ci_rpc_shim_query_x10"]
-    h.record("verb_vs_shim_speedup", count=round(shim_total / max(verb_total, 1e-6)))
-
-    assert verb_total < shim_total, (
-        f"native ci_rpc verb ({verb_total:.3f}s) NOT faster than shim "
-        f"({shim_total:.3f}s) — Phase 5 perf goal failed"
-    )
-
-    _flush("\n" + h.report())
-    h.dump_json()
-    svc.dispose()
-
-
-# ---------------------------------------------------------------------------
-# 5.6.C — 8-way concurrent query_symbols
+# 5.6.B — 8-way concurrent query_symbols
 # ---------------------------------------------------------------------------
 
 
@@ -272,7 +220,7 @@ async def test_concurrent_query_symbols(live_phase5_env: LivePhase5Env) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5.6.D — curated cross-phase regression (one assertion from each prior phase)
+# 5.6.C — curated cross-phase regression (one assertion from each prior phase)
 # ---------------------------------------------------------------------------
 
 

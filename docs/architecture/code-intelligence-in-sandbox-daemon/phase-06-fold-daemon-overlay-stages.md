@@ -6,7 +6,7 @@
 **Blocks on:** Phase 5 daemon-default selection lands and remains stable; Phase 4 svc_cmd dispatch remains the daemon entry point
 
 > **Background.** Phase 4 moved `OverlayAuditor.execute` from the orchestrator
-> into the daemon. One `ci_rpc` call per `svc.cmd`. The auditor's outer stage
+> into the daemon. One process.exec-backed RPC call per `svc.cmd`. The auditor's outer stage
 > structure (`git_snapshot`, `upload_runtime`, `run_overlay`, `read_stdout`,
 > `read_diff`, `cleanup`) carried forward unchanged from the orchestrator era.
 > Each stage that still spawns a sandbox-local subprocess pays a fork/exec +
@@ -329,7 +329,7 @@ The remaining wall-time floor after Phase 6 lands (modeled, warm 10×):
 
 | Component | Floor |
 |---|---:|
-| Orchestrator → daemon `ci_rpc` | ~0.5s (Phase 5 verb path) |
+| Orchestrator → daemon process.exec-backed RPC | ~0.5s (process.exec bridge floor) |
 | One unshare subprocess invocation | ~0.1–0.3s startup + ~0.5s real work (snapshot + setup_mounts + user_cmd + walk + classify) |
 | In-process OCC commit | ~0.005s |
 | Pure-Python file reads + rmtree | ~0.005–0.01s |

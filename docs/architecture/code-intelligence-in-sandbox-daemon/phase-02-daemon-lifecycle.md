@@ -32,7 +32,7 @@ Three reasons:
 | Launcher | `backend/src/sandbox/code_intelligence/rpc/launcher.py` (extended from Phase 1) | `ensure_daemon(...)`: PID-file check, `kill -0` liveness, spawn, socket-readiness poll |
 | Phase 2 live E2E | `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | Spawn, ping, kill -9, respawn, dispose cleanup |
 | Daemon unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py` | Frame codec, dispatch, signal handling |
-| Client unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py` | Retry semantics, `CiDaemonUnavailable`, frame round-trip |
+| Client unit tests | `backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py` | Retry semantics, `CiDaemonUnavailable`, frame round-trip |
 
 ## Detailed task list
 
@@ -264,13 +264,13 @@ class CiRpcClient:
         ...
 ```
 
-**Socket access via `transport.exec`:** Until Phase 5 promotes `ci_rpc` to a first-class verb, the orchestrator can't open a Unix socket inside the sandbox directly. Phase 2 uses one of:
+**Socket access via `transport.exec`:** The orchestrator cannot open a Unix socket inside the sandbox directly, so daemon RPC uses `transport.exec` to launch a short in-sandbox bridge. Phase 2 uses one of:
 
 - **(A) `socat` shim** — `transport.exec(sandbox_id, f"socat - UNIX-CONNECT:{socket_path}", stdin=encoded_frame_bytes)`. Pros: well-established. Cons: requires `socat` in the sandbox image; per-call shell overhead.
 - **(B) `nc -U` shim** — `transport.exec(sandbox_id, f"nc -U {socket_path}", stdin=encoded_frame_bytes)`. Pros: `nc` more universally available. Cons: `nc -U` flag varies across `nc` flavors (BSD vs GNU vs OpenBSD).
 - **(C) Inline Python shim** — `transport.exec(sandbox_id, f"python3 -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.connect({socket_path!r}); s.sendall(sys.stdin.buffer.read()); ... print(b64encode(...))'", stdin=...)`. Pros: zero external deps. Cons: more code in the shim.
 
-**Recommendation: (C).** Python is guaranteed in the sandbox image (we already use it for the indexing CLI and overlay runtime); `socat`/`nc` aren't. Document the shim as `_send_frame_via_python_shim()` in `client.py`. Phase 5 replaces the entire shim with the native `ci_rpc` verb.
+**Recommendation: (C).** Python is guaranteed in the sandbox image (we already use it for the indexing CLI and overlay runtime); `socat`/`nc` aren't. Document the shim as `_send_frame_via_python_shim()` in `client.py`. Phase 5 replaces the entire shim with the process.exec-backed daemon RPC.
 
 ### Task 2.5 — Launcher (eager from `create_sandbox`, fallback on RPC)
 
@@ -466,7 +466,7 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 - Stale PID file detection: write a PID file with PID 999999 (likely dead); daemon startup unlinks it and proceeds.
 - Stale PID file with live PID: daemon exits with code 11.
 
-**`test_ci_rpc_client.py`:**
+**`test_process_exec_rpc_client.py`:**
 - `call("ping")` returns the success-envelope `result` field.
 - Connection failure triggers `ensure_daemon` then retries once.
 - Second connection failure raises `CiDaemonUnavailable`.
@@ -499,7 +499,7 @@ This isn't a timing concern; it's a correctness check that the asyncio server ha
 |---|---|---|
 | **HIGH** | Daemon outlives orchestrator session because `setsid` failed silently | Explicit verification in 2.6.A that PPID is 1 (or sandbox init); `ps -o pid,ppid,cmd` post-spawn |
 | **HIGH** | Race between `kill -9` and `ensure_daemon` retry — multiple daemon processes spawned | Stale PID detection + `kill -0` check before spawning; document the race window |
-| **HIGH** | `socat`/`nc`/python shim is slow per-call (extra `transport.exec`) — masks real RPC latency | Document the shim as Phase 2-4 only; Phase 5 measures the real `ci_rpc` verb against the shim |
+| **HIGH** | `socat`/`nc`/python shim is slow per-call (extra `transport.exec`) — masks real RPC latency | Document the shim cost; Phase 5 keeps the direct process.exec bridge unless a true provider-native persistent stream exists |
 | **MEDIUM** | Daemon log fills the disk over a long-lived sandbox | `RotatingFileHandler` (10MB × 3 backups) caps at 30MB |
 | **MEDIUM** | `msgpack` not pre-installed in sandbox image | Verify in 2.6.A: `python3 -c "import msgpack"` runs clean. If missing, add to bundle (vendored) or document `pip install` step |
 | **MEDIUM** | `asyncio.start_unix_server` permission issues on sandbox FS (e.g., socket on a tmpfs that doesn't support Unix sockets) | E2E 2.6.A would catch this — add explicit `test -S` check post-spawn |

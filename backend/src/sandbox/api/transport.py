@@ -75,30 +75,5 @@ class SandboxTransport(Protocol):
         root: str | None = None,
     ) -> Sequence[str]: ...
 
-    async def ci_rpc(
-        self,
-        sandbox_id: str,
-        payload: bytes,
-        *,
-        socket_path: str,
-        timeout: int | None = None,
-    ) -> bytes:
-        """Round-trip a length-prefixed msgpack frame through the in-sandbox CI daemon.
-
-        Implementations bridge ``payload`` bytes-for-bytes to the daemon's Unix
-        socket at ``socket_path`` inside the sandbox and return the response
-        frame unchanged. The bridge MUST be binary-safe across every byte 0-255
-        (use base64 in transit if the underlying channel is text-only).
-
-        Implementations that cannot support the verb raise
-        :class:`NotImplementedError`; ``CiRpcClient`` falls back to the
-        orchestrator-side python shim transparently.
-
-        Raises ``ConnectionRefusedError`` (or a subclass-compatible
-        ``OSError``) when the socket is unreachable so the caller's
-        ``ensure_daemon`` retry path engages identically to the shim.
-        """
-        raise NotImplementedError("ci_rpc is not supported by this transport")
-
 
 __all__ = ["SandboxTransport"]

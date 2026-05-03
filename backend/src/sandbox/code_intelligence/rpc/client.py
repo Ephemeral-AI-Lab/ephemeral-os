@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import os
 import textwrap
 import time
 import uuid
@@ -118,7 +117,7 @@ class CiRpcClient:
         socket_path = await self._launcher.socket_path()
         socket_elapsed = time.perf_counter() - socket_started
         send_started = time.perf_counter()
-        response_frame = await self._send_frame(
+        response_frame = await self._send_frame_via_python_shim(
             socket_path,
             frame,
             timeout=timeout,
@@ -154,40 +153,6 @@ class CiRpcClient:
                 details=error.get("details") if isinstance(error.get("details"), dict) else {},
             )
         return response.result
-
-    async def _send_frame(
-        self,
-        socket_path: str,
-        frame: bytes,
-        *,
-        timeout: float,
-    ) -> bytes:
-        """Round-trip ``frame`` through the daemon socket.
-
-        Phase 5: prefers ``transport.ci_rpc`` when the transport implements
-        the native verb; falls back to the python shim. ``EOS_CI_FORCE_SHIM=1``
-        forces the shim path (re-checked per call so A/B tests can flip it
-        with ``mock.patch.dict(os.environ)`` inside one process).
-        """
-        force_shim = os.environ.get("EOS_CI_FORCE_SHIM") == "1"
-        verb = getattr(self._transport, "ci_rpc", None)
-        if callable(verb) and not force_shim:
-            try:
-                logger.debug("ci rpc send_frame using native verb")
-                return await verb(
-                    self._sandbox_id,
-                    frame,
-                    socket_path=socket_path,
-                    timeout=int(timeout),
-                )
-            except NotImplementedError:
-                pass
-        logger.debug("ci rpc send_frame using python shim")
-        return await self._send_frame_via_python_shim(
-            socket_path,
-            frame,
-            timeout=timeout,
-        )
 
     async def _send_frame_via_python_shim(
         self,

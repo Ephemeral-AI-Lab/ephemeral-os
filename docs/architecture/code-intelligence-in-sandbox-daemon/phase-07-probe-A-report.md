@@ -12,7 +12,7 @@ Records the live Daytona transport probes for Task 7.0.A.
 
 The sandbox was healthy: Daytona command execution worked, the CI daemon
 path worked, and the final live E2E passed after production stayed on the
-Phase 6 `transport.exec` ci_rpc bridge. The failing part was the attempted
+Phase 6 `transport.exec` RPC bridge. The failing part was the attempted
 Phase 7 persistent transport, not sandbox availability.
 
 | Candidate | Probe result | Decision |

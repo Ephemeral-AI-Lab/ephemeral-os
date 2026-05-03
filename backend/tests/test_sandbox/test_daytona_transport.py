@@ -325,58 +325,6 @@ async def test_list_paths_splits_lines(
     assert paths == ("/repo/a.py", "/repo/b.py")
 
 
-# -- ci_rpc (Phase 5 native verb) -------------------------------------------
-
-
-async def test_ci_rpc_round_trips_payload_bytes(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    """Bridge must round-trip every byte 0-255 (binary safety)."""
-    import base64
-
-    response_bytes = bytes(range(256)) * 4
-    encoded = base64.b64encode(response_bytes).decode("ascii")
-    fake_sandbox.process.exec.return_value = _exec_response(encoded, exit_code=0)
-
-    payload = b"\x00\x01\x02\xfd\xfe\xff" + bytes(range(256))
-    result = await transport.ci_rpc(
-        "sb-x",
-        payload,
-        socket_path="/home/u/.cache/eos-ci/abc/v1/daemon.sock",
-    )
-
-    assert result == response_bytes
-    cmd = fake_sandbox.process.exec.call_args.args[0]
-    assert "/home/u/.cache/eos-ci/abc/v1/daemon.sock" in cmd
-    assert base64.b64encode(payload).decode("ascii") in cmd
-
-
-async def test_ci_rpc_connect_failure_surfaces_as_connection_refused(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    fake_sandbox.process.exec.return_value = _exec_response(
-        "ci_rpc connect failed: ConnectionRefusedError", exit_code=1
-    )
-
-    with pytest.raises(ConnectionRefusedError):
-        await transport.ci_rpc(
-            "sb-x", b"frame", socket_path="/missing.sock",
-        )
-
-
-async def test_ci_rpc_invalid_response_raises_connection_refused(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    fake_sandbox.process.exec.return_value = _exec_response(
-        "not-base64!!!", exit_code=0
-    )
-
-    with pytest.raises(ConnectionRefusedError, match="invalid base64"):
-        await transport.ci_rpc(
-            "sb-x", b"frame", socket_path="/sock",
-        )
-
-
 # -- resolver injection ------------------------------------------------------
 
 

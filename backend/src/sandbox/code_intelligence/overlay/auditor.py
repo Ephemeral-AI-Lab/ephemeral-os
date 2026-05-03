@@ -998,26 +998,10 @@ class OverlayAuditor:
             _live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
         ]
 
-        if not attribute_changes:
-            # Treat every change as ambient — do not commit through OCC.
-            combined = sorted(set(gitinclude_live_paths + gitignore_paths))
-            return _audit_result(
-                result_text=stdout,
-                exit_code=diff.exit_code,
-                gitinclude_committed=[],
-                gitignore_merged=gitignore_paths,
-                gitignore_merged_count=len(gitignore_paths),
-                mixed_gitinclude_gitignore=bool(diff.gitinclude_changes) and bool(
-                    diff.gitignore_paths
-                ),
-                mixed_partial_apply=False,
-                ambient=combined,
-                git_commit_status=None,
-                git_conflict_reason=None,
-                git_conflict_file=None,
-                warnings=list(diff.warnings),
-                overlay_run_timings=overlay_run_timings,
-            )
+        # Retained only for API compatibility. The old ambient-write bypass is
+        # retired: gitinclude writes always go through OCC, and gitignored writes
+        # use the existing direct-merge route.
+        del attribute_changes
 
         mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
         if not diff.gitinclude_changes:

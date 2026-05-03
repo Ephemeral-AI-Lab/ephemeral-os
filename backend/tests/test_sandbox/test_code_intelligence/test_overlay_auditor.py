@@ -554,7 +554,9 @@ def test_overlay_runtime_bundle_contains_executable_facade_and_runtime_package(
 
 
 @pytest.mark.asyncio
-async def test_auditor_commits_gitinclude_changes_via_occ(tmp_path: Path) -> None:
+async def test_auditor_commits_gitinclude_changes_via_occ_when_legacy_attribute_flag_disabled(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_fixture_repo(repo)
@@ -592,11 +594,18 @@ async def test_auditor_commits_gitinclude_changes_via_occ(tmp_path: Path) -> Non
         max_concurrent=2,
     )
 
-    result = await auditor.execute(sandbox, "echo hi", agent_id="alice", timeout=60)
+    result = await auditor.execute(
+        sandbox,
+        "echo hi",
+        agent_id="alice",
+        timeout=60,
+        attribute_changes=False,
+    )
 
     assert result.exit_code == 0
     assert result.git_commit_status == "committed"
     assert result.changed_paths == [str(target)]
+    assert result.ambient_changed_paths == []
     assert result.mixed_gitinclude_gitignore is False
     assert result.mixed_partial_apply is False
     assert target.read_text(encoding="utf-8") == "new\n"

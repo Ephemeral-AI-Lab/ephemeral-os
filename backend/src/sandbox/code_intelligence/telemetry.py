@@ -84,6 +84,7 @@ def build_status(
             "generation": symbol_index.generation,
         },
         "arbiter": arbiter.status(),
+        "hotspots": arbiter.hotspots_summary(limit=20),
         "edit_buffer": {
             "entries": arbiter.metrics.total_edits,
             "generation": arbiter.generation,

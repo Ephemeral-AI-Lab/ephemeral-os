@@ -200,14 +200,15 @@ def test_invariant_sorted_path_locks(live_phase3_env: LivePhase3Env) -> None:
             },
         )
 
-    with _stream_live_logs(), _traced_step(h, "concurrent_opposite_orders"):
-        results = _asyncio_run(
-            asyncio.gather(
-                commit_in_order(0, 1, "agent-A"),
-                commit_in_order(1, 0, "agent-B"),
-                return_exceptions=True,
-            )
+    async def commit_both_orders() -> Any:
+        return await asyncio.gather(
+            commit_in_order(0, 1, "agent-A"),
+            commit_in_order(1, 0, "agent-B"),
+            return_exceptions=True,
         )
+
+    with _stream_live_logs(), _traced_step(h, "concurrent_opposite_orders"):
+        results = _asyncio_run(commit_both_orders())
 
     # At least one commit must succeed; no exception should propagate.
     successes = sum(

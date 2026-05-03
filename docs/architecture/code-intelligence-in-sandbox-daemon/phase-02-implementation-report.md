@@ -82,14 +82,14 @@ base64-encodes each frame into a heredoc and runs `python3 - <<PY` via
 - the daemon's own `read_frame` / `handle_ping` / `encode_frame` —
   microseconds against a Unix socket.
 
-The 100 ms target presumed the native `ci_rpc` transport verb, which the
+The 100 ms target presumed the retired first-class transport verb, which the
 plan explicitly pins to Phase 5: §2.4 ("Phase 5 replaces the entire shim
-with the native `ci_rpc` verb") and the §503 MEDIUM risk callout
-("Document the shim as Phase 2-4 only; Phase 5 measures the real `ci_rpc`
+with the process.exec-backed daemon RPC") and the §503 MEDIUM risk callout
+("Document the shim as Phase 2-4 only; Phase 5 measures the corrected process.exec-backed daemon path
 verb against the shim"). **The Phase 2 implementation matches the plan's
 design — the shim was always going to fail this SLO**, and the plan said
 so. Disposition: **structural debt — closes when Phase 5 lands**.
-Re-measure the SLO once `transport.ci_rpc` replaces the shim; gate Phase 5
+Re-measure the SLO once `transport.exec` replaces the shim; gate Phase 5
 acceptance on the shim-subtracted round-trip going under 100 ms.
 
 #### Spawn — target 2 s, observed not directly measured
@@ -114,7 +114,7 @@ Pure spawn cost can therefore be bounded but not measured from §5:
 The 2 s target conflicts with the plan's own §503 risk callout, which
 acknowledges shim/spawn slowness as a HIGH risk. Disposition: **plan
 target inconsistent with plan's own mitigation**. Action: in Phase 5,
-when the `ci_rpc` verb replaces `transport.exec` for spawn detection,
+when Phase 5 re-evaluates the process.exec bridge for spawn detection,
 re-measure pure spawn against a daemon-log–derived "first listen"
 timestamp.
 
@@ -131,7 +131,7 @@ Decomposing `phase_2_daemon_ready_after_create_*.json`'s
 | Of which: `is_alive` (home + pid lookup, 2 execs) | ~6 s | No — Daytona per-exec latency |
 | Of which: warm `.bundle-hash` check | ~1 s | Yes (was ~8 s cold; now warm because parallel upload landed first) |
 | Of which: spawn `timeout=5` cap | 5 s | Structural per §6.3 |
-| Of which: socket poll | ~10 s | Closes with Phase 5 native verb |
+| Of which: socket poll | ~10 s | Reduced by the stable-loop fix; Phase 5 keeps the process.exec bridge |
 | **Total** | **~31 s** | |
 
 Daytona create plus `ensure_git` (alone) exceed the 3 s target on their
@@ -172,7 +172,7 @@ callout explicitly named the shim cost as a Phase-2-through-4 problem
 that Phase 5 resolves. What the plan understated was the wall-time hit
 of stacking shim + chunked upload + Daytona's exec-proxy hold; this
 report makes that explicit so Phase 5 can re-target each component
-against the native `ci_rpc` verb.
+against the process.exec-backed daemon RPC.
 
 ---
 
@@ -187,7 +187,7 @@ against the native `ci_rpc` verb.
 | `backend/src/sandbox/code_intelligence/in_sandbox/ci_protocol.py` | 107 | 4-byte length-prefix + msgpack codec and schema validation |
 | `backend/src/sandbox/code_intelligence/rpc/client.py` | 161 | `CiRpcClient`, Python socket shim, retry-after-respawn, typed RPC errors |
 | `backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py` | 207 | Protocol, dispatch, shutdown scheduling, local daemon lifecycle tests |
-| `backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py` | 146 | Client success/error/retry tests with fake transport |
+| `backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py` | 146 | Client success/error/retry tests with fake transport |
 | `backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | 367 | Live Daytona spawn, ping, kill/respawn, shutdown, concurrency, dispose tests |
 | `backend/tests/test_e2e/_timings/phase_2_*.json` | n/a | Passing live timing artifacts for daemon-ready, kill/respawn, shutdown, dispose |
 
@@ -229,7 +229,7 @@ None.
 
 | Command | Result |
 |---|---|
-| `uv run pytest backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py -q` | **15 passed** |
+| `uv run pytest backend/tests/test_sandbox/test_code_intelligence/test_ci_daemon_unit.py backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py -q` | **15 passed** |
 | `uv run pytest backend/tests/test_sandbox/test_eager_ci_bootstrap.py backend/tests/test_sandbox/test_code_intelligence/test_runtime_bundle.py backend/tests/test_sandbox/test_code_intelligence/test_rpc_ci_backend.py backend/tests/test_sandbox/test_code_intelligence/test_backend_inprocess.py -q` | **59 passed** |
 | `uv run pytest backend/tests/test_sandbox -q` | **478 passed** |
 | `uv run ruff check backend/src/sandbox/code_intelligence backend/src/sandbox/lifecycle backend/tests/test_sandbox/test_code_intelligence backend/tests/test_sandbox/test_eager_ci_bootstrap.py backend/tests/test_e2e/test_live_ci_phase2_daemon_lifecycle.py` | **All checks passed** |
@@ -328,7 +328,7 @@ logic moves" rule while satisfying the daemon-ready lifecycle contract.
 `CiRpcClient` uses an inline Python shim over `transport.exec` to connect
 to the Unix socket and return a base64 response frame. This keeps Phase 2
 independent of `socat`/`nc` availability. The shim is intentionally
-temporary; Phase 5 replaces it with a first-class `ci_rpc` transport verb.
+the active Phase 5 path keeps it until batching or true provider-native persistent transport replaces the process.exec bridge.
 
 ### 6.3 Spawn timeout is treated as inconclusive on Daytona
 

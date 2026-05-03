@@ -513,8 +513,7 @@ Phase 3.5 / 3.6 closes with:
 There are no Phase 3.5 / 3.6 deferred items for Phase 4. The remaining
 work after this report is separate product/transport improvement work,
 not completion debt from these phases: pre-bake basedpyright into the
-sandbox image to remove cold install time, and consider a first-class
-`ci_rpc` transport verb or explicit batch RPC only if public per-call
+sandbox image to remove cold install time, and consider true provider-native persistent transport or explicit batch RPC only if public per-call
 latency needs to drop below the current stable-loop `transport.exec`
 floor of roughly 0.3-0.5 s.
 

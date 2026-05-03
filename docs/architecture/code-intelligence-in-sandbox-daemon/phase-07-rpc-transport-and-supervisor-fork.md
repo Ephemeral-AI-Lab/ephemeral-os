@@ -37,7 +37,7 @@ ordering, overlayfs layout, or `result.json` envelope shape.
 **In scope.**
 - Two parallel probes (Tasks 7.0.A, 7.0.B) before any code change.
 - Up to two implementation tracks gated on probe outcomes:
-  - **Task 7.1** — persistent ci_rpc path; one of three sub-tracks
+  - **Task 7.1** — persistent RPC path; one of three sub-tracks
     (a)/(b)/(c) chosen by the Daytona transport probe.
   - **Task 7.2** — persistent overlay supervisor with per-request
     fork + `os.unshare` (no setns gymnastics, no shared user-ns).
@@ -161,7 +161,7 @@ abandonment).
 
 ## Implementation tracks (probe-conditional)
 
-### Task 7.1 — Persistent ci_rpc path
+### Task 7.1 — Persistent RPC path
 
 Open exactly one of (a)/(b)/(c) based on Task 7.0.A.
 

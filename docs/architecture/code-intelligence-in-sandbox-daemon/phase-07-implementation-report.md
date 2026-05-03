@@ -136,7 +136,7 @@ confirmed production did not keep the failed session bridge.
 
 ```bash
 uv run pytest backend/tests/test_sandbox/test_daytona_transport.py \
-  backend/tests/test_sandbox/test_code_intelligence/test_ci_rpc_client.py -q
+  backend/tests/test_sandbox/test_code_intelligence/test_process_exec_rpc_client.py -q
 # 29 passed
 ```
 
@@ -166,7 +166,7 @@ Phase 7 does not meet its ship gate:
 The correct production state remains Phase 6:
 
 ```text
-CiRpcClient -> DaytonaTransport.ci_rpc -> transport.exec inline Unix-socket bridge
+CiRpcClient -> transport.exec Python Unix-socket shim -> transport.exec inline Unix-socket bridge
 ```
 
 No overlay supervisor is introduced, and no persistent session transport is

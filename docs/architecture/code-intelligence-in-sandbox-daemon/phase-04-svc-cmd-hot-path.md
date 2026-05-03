@@ -342,7 +342,7 @@ After all subtests run, programmatically load each `phase_4_*_<ts>.json` and pro
 
 | Severity | Risk | Mitigation |
 |---|---|---|
-| **HIGH** | `svc_cmd_via_daemon` is SLOWER than baseline → migration perf claim fails | Historical Phase 4 gate. Follow-up measurements traced the public-call floor to sync-bridge loop churn and fixed it; remaining sub-second transport cost belongs to Phase 5 `ci_rpc` / batching work if needed. |
+| **HIGH** | `svc_cmd_via_daemon` is SLOWER than baseline → migration perf claim fails | Historical Phase 4 gate. Follow-up measurements traced the public-call floor to sync-bridge loop churn and fixed it; remaining sub-second transport cost belongs to Phase 5 process.exec bridge / batching work if needed. |
 | **HIGH** | Result `SimpleNamespace` shape drift → downstream `commit/submit_shell_cmd` callers break in subtle ways | Result-shape parity test (4.3) catches this; downstream callers in `backend/src/sandbox/lifecycle/commit.py` should also have unit tests added |
 | **HIGH** | `on_progress_line` loses live streaming → CodeAct UI shows stdout only when the command completes | Current implementation replays final stdout; if product blocks, add a future streaming transport op such as option (B) |
 | **MEDIUM** | Daemon-resident `OverlayAuditor` doesn't share the orchestrator-side `_overlay_runtime_bundle_bytes()` upload | The overlay runtime under `/tmp/eos-shell-overlay/` is sandbox-resident already; no orchestrator dependency. Verify in 4.5.A that `overlay_run.py` is found |
@@ -357,4 +357,4 @@ Phase 5 picks up with:
 - The headline perf claim already validated by 4.5.A.
 - A complete `RpcCiBackend` — every method routed.
 - The `socat`/`nc`/python shim becoming the obvious next bottleneck (visible in Phase 4's timing reports).
-- Phase 5 promotes `ci_rpc` to a first-class transport verb, eliminating shim overhead, and flips the `EOS_CI_IN_SANDBOX` default to `1`.
+- Phase 5 keeps the process.exec-backed daemon path as the default, deletes the misleading transport-verb branch, and flips the `EOS_CI_IN_SANDBOX` default to `1`.

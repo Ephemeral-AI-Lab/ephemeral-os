@@ -331,8 +331,8 @@ Reading the table:
   `query_symbols("Array")` p50 = 0.540 s) recorded after the fix
   landed, now reproduced as machine-readable JSONs.
 - The `0.336 s` raw-transport floor sets the ceiling on what further
-  per-call shaving can buy. Below that, Phase 5's `ci_rpc` first-class
-  transport verb (or explicit batching) is the architectural lever; no
+  per-call shaving can buy. Below that, Phase 5.s process.exec bridge
+  batching or true provider-native persistent transport is the architectural lever; no
   further round-trip elimination is available without a transport-layer
   change.
 - Throughput plateaus around 25 ops/s at 50 parallel sync calls, with
@@ -388,9 +388,9 @@ debt:
    poll op (Task 4.4 option B) or a server-push frame extension
    (option C). Both are transport-layer changes; they are appropriate
    Phase 5 territory or later, not Phase 4 completion.
-2. **First-class `ci_rpc` transport verb.** The current public-path
+2. **process.exec bridge and batching.** The current public-path
    floor is the `~0.336 s` transport `process.exec` round-trip. A
-   first-class transport verb that elides the python shim could push
+   true provider-native persistent transport that elides command launch could push
    this lower; per the 3.5/3.6 report §8 closure note, this is
    explicit Phase 5 / future-product work, not Phase 4 deferral.
 3. **Phase 0/1/2/3 live E2E execution sweep.** The five HARD
@@ -455,7 +455,7 @@ edits to invalidate it.)
 ## 9. Hand-off to Phase 5
 
 Phase 5
-([`phase-05-ci-rpc-verb-and-flag-flip.md`](./phase-05-ci-rpc-verb-and-flag-flip.md))
+([`phase-05-process-exec-daemon-default.md`](./phase-05-process-exec-daemon-default.md))
 picks up with:
 
 - `svc.cmd` running through the daemon end-to-end with shape parity
@@ -466,7 +466,7 @@ picks up with:
   transport layer, not the bridge layer.
 - The `python_shim`-shaped `process.exec` boundary visible in the
   perf table (§6.3, ~0.325 s wrapped-bash floor) as the next
-  bottleneck a first-class `ci_rpc` transport verb would address.
+  bottleneck batching or true provider-native persistent transport would address.
 - A complete `RpcCiBackend` — every public method routed; legacy
   snapshot/cache attributes confirmed gone (regression test
   `test_init_drops_legacy_cache_attributes`).
@@ -520,5 +520,5 @@ five committed Phase 4 verification JSONs (live re-run 2026-05-02T18:31Z,
    floor (`~0.336 s` wrapped-bash `process.exec`) and the
    provider-side throughput ceiling (~25 ops/s saturation) are
    different optimization targets. Phase 4 cleared the bridge-level
-   regression; Phase 5's `ci_rpc` lever is the right tool for the
+   regression; batching or true provider-native persistent transport is the right tool for the
    transport floor.

@@ -2,7 +2,7 @@
 
 **Status:** Phase 6 daemon-local overlay fold implemented and live-benchmarked
 **Date approved:** 2026-05-02
-**Last amended:** 2026-05-03 (recorded Phase 0-8 code review cleanup: SQLite index hydration on daemon restart and retired Phase 1 snapshot runner/read paths)
+**Last amended:** 2026-05-03 (recorded Phase 0-8 code review cleanup: SQLite index hydration, retired Phase 1 snapshot paths, and removed the ambient shell-write bypass)
 **Predecessor:** [`code-intelligence-merged-into-sandbox.md`](../code-intelligence-merged-into-sandbox.md) — CI moved into the `sandbox/` package; still ran orchestrator-side
 **Estimated effort:** ~42-50 engineering days (≈8.5-10 weeks)
 
@@ -27,7 +27,7 @@ Moving the engine into the sandbox eliminates the network for hot paths, lets in
 | [3.5](./phase-03-5-concurrency-perf-and-sqlite-index.md) | Concurrency/perf E2E suite + SQLite-backed index storage | 3 days | 2 days | 5 days |
 | [3.6](./phase-03-6-lsp-server-upgrade.md) | LSP backend experiment — qualify basedpyright (alternative pyright); rewire `LspClient` to chosen backend; benchmark vs jedi.Script | 2-3 days (1d spike + 2d eng) | 2-3 days | 5-6 days |
 | [4](./phase-04-svc-cmd-hot-path.md) | `svc.cmd` hot path through the daemon (superseded by 3.5 / 3.6 closure pass) | 2 days | 2-3 days | 4-5 days |
-| [5](./phase-05-ci-rpc-verb-and-flag-flip.md) | First-class `ci_rpc` verb + daemon default + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
+| [5](./phase-05-process-exec-daemon-default.md) | process.exec-backed daemon default + dead-code cleanup | 3 days | 2-3 days | 5-6 days |
 | [6](./phase-06-fold-daemon-overlay-stages.md) | Fold daemon-side overlay stages into one in-namespace process | 0.5-1 day | 0.5-1 day | 1.5-2.5 days |
 
 Phase order is **strict** (0 → 6, including 3.5 and 3.6). During the migration, each phase was independently mergeable because the flag-off path kept working; after the Phase 5 cleanup, transport-backed sandboxes are daemon-default.
@@ -57,7 +57,7 @@ Phase order is **strict** (0 → 6, including 3.5 and 3.6). During the migration
 │   └─ RpcCiBackend ──────────────────────────────────►   ↓                                 │   │
 │           │   (CiRpcClient)          │         │   │  CodeIntelligenceService            │   │
 │           ▼                          │         │   │   (sandbox=None, transport=None)    │   │
-│  ci_rpc verb (Phase 5)               │         │   │   — same package, local-FS branches │   │
+│  process.exec-backed RPC (Phase 5)               │         │   │   — same package, local-FS branches │   │
 │   or python socket shim              │         │   │  Owns: SymbolIndex, LspClient,      │   │
 │   on stable run_sync loop            │         │   │        Arbiter, WriteCoordinator,   │   │
 │           ▼                          │         │   │        OverlayAuditor, …            │   │
@@ -136,7 +136,7 @@ After Phase 5 lands and transport-backed sandboxes become daemon-default:
 | Today (pre-Phase 0) | Primary mutation/query channel; every CI op rides on it |
 | Phase 0-4 (flag-off default) | Same as today |
 | Phase 0-4 (flag-on opt-in) | Bootstrap (upload bundle, spawn daemon at `create_sandbox`) + every RPC via shim |
-| Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the native `ci_rpc` verb |
+| Phase 5 (daemon-default) | Bootstrap + recovery only — daemon ops ride the process.exec-backed daemon RPC |
 | Post-Phase 6 (out of scope) | Bootstrap + recovery only; shim removed entirely |
 
 **Implication:** `_apply_remote_*`, `_read_remote*`, `_write_remote`, `_delete_remote`, `_stage_remote_payload`, `_collect_via_search`, `_collect_via_list`, `_read_text_via_exec`, `_batch_read_text_via_exec` became dead code by Phase 5 and were removed in the post-canary cleanup.
@@ -222,7 +222,7 @@ SimpleNamespace(
     result: str,                              # stdout from the user command
     exit_code: int,
     changed_paths: list[str],                 # gitinclude paths committed via OCC
-    ambient_changed_paths: list[str],         # paths whose changes were dropped (attribute_changes=False)
+    ambient_changed_paths: list[str],         # paths not committed because OCC aborted or policy rejected
     files_written: int,
     git_commit_status: str | None,            # "committed" | "noop" | "aborted_version" | "rejected" | None
     git_conflict_file: str | None,
@@ -263,7 +263,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies the durable workflow fiel
 - [ ] **Per-phase live E2E timing report shows expected delta vs Phase 0 baseline (no unexplained regressions in any sub-step >50ms).**
 - [ ] Per-op p50/p95/p99 latency reported across N=200 sustained calls (Phase 3.5 E2E).
 - [ ] No direct workspace writes from RPC handlers (Phase 3 bypass-attempt guard test).
-- [ ] Phase 5 verb path faster than Phase 2 shim path (proven by Phase 5 E2E).
+- [ ] process.exec bridge floor faster than Phase 2 shim path (proven by Phase 5 E2E).
 - [ ] All cross-phase regression checks green (each phase reruns prior phases' E2Es).
 - [ ] Full `svc.cmd` `SimpleNamespace` field set preserved (Phase 4 result-shape parity test).
 - [ ] `msgpack` vendored into bundle; daemon starts on offline image without `pip install`.
@@ -286,7 +286,7 @@ Phase 4's result-shape parity test (Task 4.3) verifies the durable workflow fiel
 | **HIGH** | `svc.cmd` `SimpleNamespace` shape drift drops fields like `gitinclude_changed_paths` or `mixed_partial_apply` | Phase 4 result-shape parity test exercises every field; full field set documented above |
 | **HIGH** | Sandbox image lacks a required dep (msgpack, sqlite3, unshare) — daemon fails to start | Phase 1 compatibility probe runs first; surfaces full matrix; msgpack vendored to remove most-likely failure mode |
 | **MEDIUM** | Snapshot/ledger corruption | Write-temp-then-rename, SQLite WAL, integrity check on startup, rebuild-from-scratch (tested in Phase 1 with intentional corruption) |
-| **MEDIUM** | `process.exec` shim latency in Phases 2-4 | Phase 5 promotes to first-class `ci_rpc` verb; live E2E confirms speedup |
+| **MEDIUM** | `process.exec` shim latency in Phases 2-4 | Phase 5 keeps direct process.exec-backed daemon RPC; live E2E must compare any proposed replacement before new API surface is added |
 | **MEDIUM** | Wire-format drift across versions | Explicit `{"v": 1}` schema, unknown-field reject, `UnsupportedOp` for unknown verbs |
 | **MEDIUM** | Sandbox image variance (`$HOME` differs across images) | Resolve `$HOME` at runtime via `os.path.expanduser`; never hardcode `/home/daytona` |
 | **DEFERRED** | `memory/git_workspace_gitignored_deps_blocker.md` (gitignored deps invisible to overlay snapshot) | Out of scope; needs its own ADR. Migration neither helps nor hurts this blocker |
@@ -341,7 +341,7 @@ The orchestrator ships the entire `backend/src/sandbox/code_intelligence/` tree 
 - `backend/src/sandbox/code_intelligence/rpc/__init__.py`
 - `backend/src/sandbox/code_intelligence/rpc/client.py` — `CiRpcClient` (frame codec, retry, `CiDaemonUnavailable`)
 - `backend/src/sandbox/code_intelligence/rpc/launcher.py` — uploads payload, spawns daemon, waits for socket
-- `backend/src/sandbox/api/ci_rpc.py` — first-class `ci_rpc` verb (Phase 5)
+- `backend/src/sandbox/api/transport.py` — process.exec-backed daemon RPC (Phase 5)
 
 ### Modified (orchestrator)
 - `backend/src/sandbox/code_intelligence/registry.py` — selects `CiBackend` based on flag

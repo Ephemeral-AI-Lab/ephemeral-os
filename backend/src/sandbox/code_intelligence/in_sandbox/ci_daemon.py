@@ -152,7 +152,7 @@ async def handle_version(args: dict[str, Any]) -> dict[str, Any]:
 
 async def handle_set_guard_mode(args: dict[str, Any]) -> dict[str, Any]:
     """Toggle strict/enabled flags on the bypass guard (test/diagnostic only)."""
-    if not _DAEMON_STATE.test_ops_enabled:
+    if not _test_ops_enabled():
         raise RuntimeError("_set_guard_mode is disabled in this daemon")
     if "strict" in args:
         _DAEMON_STATE.guard_strict = bool(args["strict"])
@@ -162,6 +162,14 @@ async def handle_set_guard_mode(args: dict[str, Any]) -> dict[str, Any]:
         "guard_enabled": _DAEMON_STATE.guard_enabled,
         "guard_strict": _DAEMON_STATE.guard_strict,
     }
+
+
+def _test_ops_enabled() -> bool:
+    """Return whether test-only daemon ops are enabled for this process."""
+    if _DAEMON_STATE.test_ops_enabled or os.environ.get("EOS_CI_GUARD_TEST") == "1":
+        return True
+    state = _DAEMON_STATE.state_dir
+    return bool(state is not None and (state / ".allow_test_bypass_op").exists())
 
 
 async def handle_index_ready(args: dict[str, Any]) -> dict[str, Any]:

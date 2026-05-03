@@ -43,6 +43,10 @@ The post-phase review found one implementation gap and one cleanup seam:
 - Phase 1 live E2E assertions were updated from retired `_cached_*` /
   `index.snapshot` fields to current daemon status and `index.sqlite3`
   recovery.
+- The legacy `attribute_changes=False` ambient-write bypass was removed
+  from the active overlay commit path. The argument remains accepted for
+  compatibility, but gitinclude writes now always go through OCC and
+  gitignored writes keep using direct merge.
 
 ## Probe Conclusions
 

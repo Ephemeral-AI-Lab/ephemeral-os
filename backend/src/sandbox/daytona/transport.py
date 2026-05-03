@@ -368,45 +368,6 @@ class DaytonaTransport:
             line for line in (result.stdout or "").splitlines() if line.strip()
         )
 
-    # -- ci daemon socket bridge --------------------------------------
-
-    async def ci_rpc(
-        self,
-        sandbox_id: str,
-        payload: bytes,
-        *,
-        socket_path: str,
-        timeout: int | None = None,
-    ) -> bytes:
-        """Bridge ``payload`` to the in-sandbox CI daemon Unix socket.
-
-        Co-located in the transport so the python shim's per-call wrap
-        cost is amortized inside one ``transport.exec`` round-trip
-        instead of being re-paid by ``CiRpcClient`` on every call.
-        """
-        request_b64 = base64.b64encode(payload).decode("ascii")
-        socket_timeout = float(timeout if timeout is not None else 30)
-        script = _CI_RPC_BRIDGE_TEMPLATE.format(
-            payload_b64=request_b64,
-            socket_path=repr(socket_path),
-            socket_timeout=repr(socket_timeout),
-        )
-        exec_timeout = max(1, int(socket_timeout) + 5)
-        result = await self.exec(
-            sandbox_id,
-            f"python3 - <<'PY'\n{script}\nPY",
-            timeout=exec_timeout,
-        )
-        stdout = (result.stdout or "").strip()
-        if result.exit_code not in (0, None):
-            raise ConnectionRefusedError(stdout or "ci_rpc bridge failed")
-        try:
-            return base64.b64decode(stdout)
-        except Exception as exc:
-            raise ConnectionRefusedError(
-                f"ci_rpc bridge produced invalid base64: {stdout[-200:]!r}"
-            ) from exc
-
     # -- internals -----------------------------------------------------
 
     async def _resolve(self, sandbox_id: str) -> Any:
@@ -504,32 +465,6 @@ import pathlib
 import sys
 
 ops = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-'''
-
-
-# Inline socket bridge for ci_rpc. base64 in/out preserves every byte 0-255.
-_CI_RPC_BRIDGE_TEMPLATE = '''import base64
-import socket
-import sys
-
-frame = base64.b64decode("{payload_b64}")
-sock = socket.socket(socket.AF_UNIX)
-sock.settimeout({socket_timeout})
-try:
-    sock.connect({socket_path})
-except Exception as exc:
-    sys.stderr.write("ci_rpc connect failed: " + repr(exc))
-    raise SystemExit(1)
-sock.sendall(frame)
-sock.shutdown(socket.SHUT_WR)
-chunks = []
-while True:
-    data = sock.recv(65536)
-    if not data:
-        break
-    chunks.append(data)
-sock.close()
-sys.stdout.write(base64.b64encode(b"".join(chunks)).decode("ascii"))
 '''
 
 

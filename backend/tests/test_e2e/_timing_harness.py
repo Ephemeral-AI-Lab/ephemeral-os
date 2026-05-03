@@ -82,6 +82,7 @@ class TimingHarness:
             yield
         finally:
             elapsed = time.perf_counter() - start
+            self.values[name] = elapsed
             existing = self._step_index.get(name)
             if existing is None:
                 ts = TimingStep(name=name, elapsed_s=elapsed)
