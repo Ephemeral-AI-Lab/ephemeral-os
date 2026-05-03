@@ -26,6 +26,13 @@
 
 ### Delete
 - `backend/src/sandbox/code_intelligence/overlay/` (after move).
+- `backend/src/sandbox/overlay/process_exec.py` if it was carried over by the
+  directory move. Its host-side request routing belongs in `overlay/client.py`;
+  bundle upload/setup belongs in `runtime/bundle.py`, `runtime/setup_orchestrator.py`,
+  and `overlay/setup.sh`.
+- `backend/src/sandbox/overlay/daemon_local.py` if it was carried over by the
+  directory move. Its in-sandbox execution/read-diff/cleanup responsibilities
+  belong in `overlay/handlers/run.py` behind `runtime/server.py`.
 
 ## Implementation tasks
 
@@ -42,7 +49,14 @@
 7. Add lint allowlist tests:
    - `from sandbox.occ` is forbidden inside `sandbox/overlay/`.
    - `from sandbox.overlay` is forbidden inside `sandbox/occ/`.
-8. Confirm 5a's reshaped overlay package transplants cleanly to `sandbox/overlay/` with no remaining gitignore / check-ignore surfaces.
+8. Split the Step 1 temporary execution shims:
+   - `process_exec.py` host-side request/envelope logic → `overlay/client.py`;
+     setup/upload logic → `runtime/bundle.py`, `runtime/setup_orchestrator.py`,
+     and `overlay/setup.sh`.
+   - `daemon_local.py` in-sandbox run/read-diff/cleanup logic →
+     `overlay/handlers/run.py`.
+   - Delete the shim files after those responsibilities are covered.
+9. Confirm 5a's reshaped overlay package transplants cleanly to `sandbox/overlay/` with no remaining gitignore / check-ignore surfaces.
 
 ## Tests
 
@@ -68,6 +82,9 @@
 - `sandbox/overlay/client.py` is the only host-side route for overlay/shell
   server requests.
 - `sandbox/overlay/setup.sh` is registered through `overlay/bootstrap.py`.
+- `process_exec.py` and `daemon_local.py` do not exist under
+  `sandbox/overlay/`; their responsibilities are represented by
+  `overlay/client.py`, `overlay/handlers/run.py`, and the runtime setup files.
 - Peer-isolation lint test passes (overlay ↔ OCC mutual non-import).
 - One-wire-trip assertion holds for every `shell_pipeline` test.
 

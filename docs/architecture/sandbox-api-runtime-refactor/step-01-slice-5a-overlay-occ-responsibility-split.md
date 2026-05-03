@@ -61,7 +61,11 @@ Orchestrator-side overlay — `backend/src/sandbox/code_intelligence/overlay/`:
   - New return shape: `OverlayRunOutcome { exit_code, stdout, upper_changes: tuple[UpperChange, ...], overlay_rejected: bool, conflict: ConflictInfo | None, warnings, overlay_run_timings, overlay_stage_timings, policy_reject }`.
   - Drop `_overlay_runtime_bundle_bytes` compatibility shim (former-monolith test wrapper; remove if those tests are gone).
 - `command_committer.py`: deleted. Its job was translating gitinclude `OverlayChange` → `OperationChange`; with overlay no longer producing OCC-shaped values, there is nothing to translate.
-- `daemon_local.py`, `process_exec.py`: prune the gitinclude/gitignore branches; carry `upper_changes` end-to-end.
+- `daemon_local.py`, `process_exec.py`: keep only as temporary execution shims
+  for the existing daemon-local and process-exec paths. Prune the
+  gitinclude/gitignore branches and carry `upper_changes` end-to-end. These
+  files are not durable overlay policy modules; later runtime/client slices
+  replace this plumbing with `runtime/server.py` plus `overlay/client.py`.
 - `types.py`: add `UpperChange`; drop `OverlayChange`, `OverlayAuditResult` (unused after the shift), and the rich `OverlayDiff` classification fields. `OverlayRunOutcome` slims to the new return shape above.
 - `results.py`: parser-only — `parse_diff_ndjson` returns `UpperChange` records. Move `audit_result` / `reject_result` SimpleNamespace builders into `command_executor.py` (caller-side projection, not overlay output).
 
