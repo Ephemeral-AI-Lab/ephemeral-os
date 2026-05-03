@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.occ.changeset import ChangesetResult
-from sandbox.code_intelligence.overlay.types import UpperChange
+from sandbox.overlay.types import UpperChange
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 from sandbox.code_intelligence.service import CodeIntelligenceService
 

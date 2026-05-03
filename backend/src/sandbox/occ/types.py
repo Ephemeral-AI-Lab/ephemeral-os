@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Literal
+
+from sandbox.occ.patching.patcher import SearchReplaceEdit
 
 
 @dataclass(frozen=True)
@@ -80,7 +82,7 @@ class EditSpec:
     """
 
     file_path: str
-    edits: Sequence[Any]  # Sequence[SearchReplaceEdit]
+    edits: Sequence[SearchReplaceEdit]
 
 
 OperationStatus = Literal[

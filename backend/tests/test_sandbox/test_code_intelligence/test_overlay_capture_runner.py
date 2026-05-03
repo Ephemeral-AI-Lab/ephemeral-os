@@ -9,11 +9,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.code_intelligence.overlay.capture_runner import (
-    OverlayCaptureRunner,
-    parse_diff_ndjson,
-)
-from sandbox.code_intelligence.overlay.types import (
+from sandbox.overlay.engine import LocalOverlayEngine
+from sandbox.overlay.wire import parse_diff_ndjson
+from sandbox.overlay.types import (
     OverlayCapture,
     OverlayPolicyReject,
     OverlayRunError,
@@ -134,7 +132,7 @@ async def test_read_diff_error_includes_overlay_output() -> None:
             exit_code=1,
         )
 
-    capture_runner = OverlayCaptureRunner(
+    capture_runner = LocalOverlayEngine(
         sandbox_id="overlay-missing-diff",
         workspace_root="/workspace",
         exec_process=_missing_diff_exec,
@@ -164,14 +162,17 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
     run_dir.mkdir()
     (run_dir / "stdout.bin").write_text("local stdout\n", encoding="utf-8")
     (run_dir / "diff.ndjson").write_text(_meta_line(exit_code=0), encoding="utf-8")
-    capture_runner = OverlayCaptureRunner(
+    capture_runner = LocalOverlayEngine(
         sandbox_id="local",
         workspace_root=str(tmp_path),
         exec_process=_should_not_exec,
     )
     lease = SimpleNamespace(run_dir=str(run_dir))
 
-    assert await capture_runner._read_stdout(None, lease, fallback="fallback") == "local stdout\n"
+    assert (
+        await capture_runner._read_stdout(None, lease, fallback="fallback")
+        == "local stdout\n"
+    )
     diff = await capture_runner._read_diff(
         None,
         lease,
@@ -184,11 +185,11 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
     assert not run_dir.exists()
 
 
-def _make_guarded_capture_runner(tmp_path: Path) -> OverlayCaptureRunner:
+def _make_guarded_capture_runner(tmp_path: Path) -> LocalOverlayEngine:
     async def _unused_exec(*_args, **_kwargs):
         raise AssertionError("freshness guard test should not execute commands")
 
-    return OverlayCaptureRunner(
+    return LocalOverlayEngine(
         sandbox_id=f"freshness-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_unused_exec,

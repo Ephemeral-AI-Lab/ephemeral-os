@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 from sandbox.occ.patching.patcher import Patcher
 from sandbox.occ.commit import CommitOperation, WriteCoordinator
@@ -20,6 +20,8 @@ from sandbox.occ.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+_CommitSpec = WriteSpec | EditSpec
 
 
 def _error_result(
@@ -63,7 +65,7 @@ class _CommitSpecRequest:
         self,
         *,
         op: str,
-        specs: Sequence[Any],
+        specs: Sequence[_CommitSpec],
         agent_id: str = "",
         description: str = "",
     ) -> None:
@@ -262,14 +264,16 @@ class OCCOperationService:
 
     def _commit_specs_direct(self, req: _CommitSpecRequest) -> OperationResult:
         if req.op == "write":
+            write_specs = cast("Sequence[WriteSpec]", req.specs)
             return self.write_file(
-                req.specs,
+                write_specs,
                 agent_id=req.agent_id,
                 description=req.description,
             )
         if req.op == "edit":
+            edit_specs = cast("Sequence[EditSpec]", req.specs)
             return self.edit_file(
-                req.specs,
+                edit_specs,
                 agent_id=req.agent_id,
                 description=req.description,
             )
@@ -297,9 +301,11 @@ class OCCOperationService:
         base_by_path: dict[str, tuple[str, bool]],
     ) -> tuple[list[OperationChange], OperationResult | None]:
         if req.op == "write":
-            return self._write_specs_to_changes_from_base(req.specs, base_by_path), None
+            write_specs = cast("Sequence[WriteSpec]", req.specs)
+            return self._write_specs_to_changes_from_base(write_specs, base_by_path), None
         if req.op == "edit":
-            return self._edit_specs_to_changes_from_base(req.specs, base_by_path)
+            edit_specs = cast("Sequence[EditSpec]", req.specs)
+            return self._edit_specs_to_changes_from_base(edit_specs, base_by_path)
         return [], OperationResult(
             success=False,
             status="failed",
@@ -311,7 +317,7 @@ class OCCOperationService:
 
     def _write_specs_to_changes_from_base(
         self,
-        specs: Sequence[Any],
+        specs: Sequence[WriteSpec],
         base_by_path: dict[str, tuple[str, bool]],
     ) -> list[OperationChange]:
         changes: list[OperationChange] = []
@@ -342,7 +348,7 @@ class OCCOperationService:
 
     def _edit_specs_to_changes_from_base(
         self,
-        specs: Sequence[Any],
+        specs: Sequence[EditSpec],
         base_by_path: dict[str, tuple[str, bool]],
     ) -> tuple[list[OperationChange], OperationResult | None]:
         changes: list[OperationChange] = []

@@ -1,1 +1,1 @@
-"""Audited overlay command execution package."""
+"""Overlay peer package."""

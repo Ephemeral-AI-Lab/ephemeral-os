@@ -5,8 +5,8 @@ from __future__ import annotations
 import io
 import tarfile
 
-from sandbox.code_intelligence.overlay import support
-from sandbox.code_intelligence.overlay.run import _NS_ROOT, _NS_TMP, _NS_UPPER
+from sandbox.overlay.engine import _overlay_runtime_bundle_bytes
+from sandbox.overlay.runtime.mounts import _NS_ROOT, _NS_TMP, _NS_UPPER
 
 
 def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
@@ -16,13 +16,14 @@ def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:
 
 
 def test_runtime_bundle_contains_only_capture_runtime_modules() -> None:
-    raw = support.overlay_runtime_bundle_bytes()
+    raw = _overlay_runtime_bundle_bytes()
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "overlay_run.py" in names
-    assert "overlay_runtime/runner.py" in names
+    assert "overlay_runtime/cli.py" in names
+    assert "overlay_runtime/capture.py" in names
+    assert "overlay_runtime/command.py" in names
     assert "overlay_runtime/mounts.py" in names
     assert "overlay_runtime/ndjson.py" in names
     assert "overlay_runtime/types.py" in names

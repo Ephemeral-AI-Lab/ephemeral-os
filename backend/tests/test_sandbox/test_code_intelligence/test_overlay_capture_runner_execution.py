@@ -1,22 +1,22 @@
-"""Execution-path tests for ``OverlayCaptureRunner``."""
+"""Execution-path tests for ``LocalOverlayEngine``."""
 
 from __future__ import annotations
 
 import base64
-import io
 import json
 import re
 import subprocess
-import tarfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from sandbox.code_intelligence.overlay import process_exec as overlay_process_exec_module
-from sandbox.code_intelligence.overlay import support as overlay_support
-from sandbox.code_intelligence.overlay.capture_runner import OverlayCaptureRunner
-from sandbox.code_intelligence.overlay.types import OverlayRunOutcome
+from sandbox.overlay.engine import (
+    RUN_DIR_PREFIX,
+    LocalOverlayEngine,
+    _overlay_runtime_bundle_bytes,
+)
+from sandbox.overlay.types import OverlayRunOutcome
 
 
 def _meta_line(**overrides) -> str:
@@ -48,13 +48,15 @@ def _change_line(rel: str, *, base: bytes | None, upper: bytes) -> str:
 
 
 def test_overlay_runtime_bundle_contains_capture_runtime_only() -> None:
-    raw = overlay_support.overlay_runtime_bundle_bytes()
+    raw = _overlay_runtime_bundle_bytes()
+
+    import io
+    import tarfile
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "overlay_run.py" in names
-    assert "overlay_runtime/runner.py" in names
+    assert "overlay_runtime/cli.py" in names
     assert "overlay_runtime/mounts.py" in names
     assert "overlay_runtime/classifier.py" not in names
 
@@ -95,13 +97,13 @@ async def test_capture_runner_returns_raw_upper_changes(tmp_path: Path) -> None:
     async def _exec(sandbox, command: str, *, timeout=None):
         return await sandbox.exec(command, timeout=timeout)
 
-    runner = OverlayCaptureRunner(
+    runner = LocalOverlayEngine(
         sandbox_id=f"capture-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_exec,
     )
 
-    outcome = await runner.execute(_ScriptedSandbox(), "echo hi")
+    outcome = await runner.execute("echo hi", sandbox=_ScriptedSandbox())
 
     assert isinstance(outcome, OverlayRunOutcome)
     assert outcome.stdout == "stdout\n"
@@ -114,7 +116,7 @@ def test_can_use_local_run_dir_requires_no_transport(tmp_path: Path) -> None:
     async def _unused(*_args, **_kwargs):
         raise AssertionError("unused")
 
-    runner = OverlayCaptureRunner(
+    runner = LocalOverlayEngine(
         sandbox_id=f"capture-local-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_unused,
@@ -122,4 +124,4 @@ def test_can_use_local_run_dir_requires_no_transport(tmp_path: Path) -> None:
     )
 
     assert runner._can_use_local_run_dir(None) is False
-    assert overlay_process_exec_module.RUN_DIR_PREFIX == "/tmp/eos-shell-overlay"
+    assert RUN_DIR_PREFIX == "/tmp/eos-shell-overlay"

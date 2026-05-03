@@ -6,15 +6,11 @@ import base64
 import json
 from pathlib import Path
 
-from sandbox.code_intelligence.overlay.capture_runner import parse_diff_ndjson
-from sandbox.code_intelligence.overlay.run import (
-    PolicyRejectOutcome,
-    UpperChange,
-    _parse_args,
-    write_diff_ndjson,
-    write_reject_ndjson,
-)
-from sandbox.code_intelligence.overlay.types import OverlayCapture, OverlayPolicyReject
+from sandbox.overlay.runtime.cli import parse_args
+from sandbox.overlay.runtime.ndjson import write_diff_ndjson, write_reject_ndjson
+from sandbox.overlay.runtime.types import PolicyRejectOutcome, UpperChange
+from sandbox.overlay.types import OverlayCapture, OverlayPolicyReject
+from sandbox.overlay.wire import parse_diff_ndjson
 
 
 def test_write_diff_ndjson_emits_base64_upper_changes(tmp_path: Path) -> None:
@@ -66,7 +62,7 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
 
 
 def test_parse_args_decodes_required_shape() -> None:
-    ns = _parse_args(
+    ns = parse_args(
         [
             "--workspace-root",
             "/workspace",

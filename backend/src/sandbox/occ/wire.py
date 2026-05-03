@@ -136,7 +136,7 @@ def operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
     status = d.get("status", "failed")
     return OperationResult(
         success=bool(d.get("success", False)),
-        status=status,  # type: ignore[arg-type]
+        status=status,
         files=files,
         conflict_file=d.get("conflict_file"),
         conflict_reason=str(d.get("conflict_reason", "")),
@@ -144,7 +144,7 @@ def operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
     )
 
 
-@dataclass(frozen=True)
+@dataclass
 class _UpperChange:
     rel: str
     kind: str

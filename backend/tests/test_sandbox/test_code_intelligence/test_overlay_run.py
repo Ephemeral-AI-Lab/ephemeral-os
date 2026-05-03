@@ -6,14 +6,16 @@ import os
 import stat
 from pathlib import Path
 
-from sandbox.code_intelligence.overlay.run import (
-    REJECT_UPPER_FULL,
-    UpperEntry,
+from sandbox.overlay.runtime.capture import (
     is_opaque_dir,
     is_whiteout,
-    reject_exit_code,
     walk_upperdir,
 )
+from sandbox.overlay.runtime.cli import (
+    REJECT_UPPER_FULL,
+    reject_exit_code,
+)
+from sandbox.overlay.runtime.types import UpperEntry
 
 
 def _fake_stat(*, mode: int, size: int = 0, rdev: int = 0) -> os.stat_result:

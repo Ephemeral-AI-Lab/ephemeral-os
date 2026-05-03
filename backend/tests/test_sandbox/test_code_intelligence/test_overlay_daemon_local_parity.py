@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
-from sandbox.code_intelligence.overlay import daemon_local as overlay_daemon_local
+from sandbox.overlay import engine as overlay_engine
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
@@ -173,7 +173,7 @@ def _install_daemon_subprocess(monkeypatch: pytest.MonkeyPatch, diff: str, stdou
         )
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(overlay_daemon_local.subprocess, "run", _fake_run)
+    monkeypatch.setattr(overlay_engine.subprocess, "run", _fake_run)
 
 
 async def _run_multistage(repo: Path, case: str) -> dict[str, Any]:

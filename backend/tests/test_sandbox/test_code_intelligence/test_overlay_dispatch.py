@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
-from sandbox.code_intelligence.overlay.capture_runner import OverlayCaptureRunner
-from sandbox.code_intelligence.overlay.types import OverlayRunOutcome
+from sandbox.overlay.engine import LocalOverlayEngine
+from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
 )
@@ -25,7 +25,7 @@ def _registry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_executor_builds_overlay_capture_runner_by_default(tmp_path) -> None:
+async def test_executor_builds_overlay_engine_by_default(tmp_path) -> None:
     svc = CodeIntelligenceService(
         sandbox_id=f"dispatch-overlay-{tmp_path.name}",
         workspace_root=str(tmp_path),
@@ -34,7 +34,7 @@ async def test_executor_builds_overlay_capture_runner_by_default(tmp_path) -> No
 
     capture_runner = await executor._ensure_capture_runner()
 
-    assert isinstance(capture_runner, OverlayCaptureRunner)
+    assert isinstance(capture_runner, LocalOverlayEngine)
 
 
 @pytest.mark.asyncio

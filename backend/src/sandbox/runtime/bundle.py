@@ -157,6 +157,9 @@ def _runtime_bundle_bytes() -> bytes:
         occ_dir = sandbox_dir / "occ"
         _add_python_tree(tar, occ_dir, sandbox_dir=sandbox_dir)
 
+        overlay_dir = sandbox_dir / "overlay"
+        _add_python_tree(tar, overlay_dir, sandbox_dir=sandbox_dir)
+
         ci_dir = sandbox_dir / "code_intelligence"
         _add_python_tree(
             tar,

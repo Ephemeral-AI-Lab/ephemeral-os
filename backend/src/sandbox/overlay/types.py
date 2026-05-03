@@ -14,7 +14,7 @@ class OverlayError(RuntimeError):
 
 
 class OverlayRunError(OverlayError):
-    """Raised when the sandbox-side ``overlay_run.py`` transport fails."""
+    """Raised when the sandbox-side overlay runtime transport fails."""
 
 
 class OverlayPolicyReject(OverlayError):
@@ -54,7 +54,7 @@ class OverlayLease:
 
 @dataclass(frozen=True)
 class UpperChange:
-    """One raw upperdir change emitted by ``overlay_run.py`` for OCC."""
+    """One raw upperdir change emitted by the overlay runtime for OCC."""
 
     rel: str
     kind: UpperChangeKind

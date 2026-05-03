@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from sandbox.code_intelligence.overlay.run import run_user_command
+from sandbox.overlay.runtime.command import run_user_command
 
 
 def test_run_user_command_writes_stdout_incrementally(tmp_path) -> None:
