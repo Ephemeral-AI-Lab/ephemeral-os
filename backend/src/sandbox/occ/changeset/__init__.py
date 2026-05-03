@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset.legacy import LegacyChangesetResult
 from sandbox.occ.changeset.types import (
     BinaryChange,
     Change,
@@ -29,7 +28,6 @@ __all__ = [
     "FileResult",
     "FileStatus",
     "GatedChange",
-    "LegacyChangesetResult",
     "OpaqueDirChange",
     "SymlinkChange",
     "UpperChangeLike",

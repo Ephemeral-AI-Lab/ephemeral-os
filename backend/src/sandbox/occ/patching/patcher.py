@@ -1,4 +1,4 @@
-"""Patcher — exact search/replace edit engine."""
+"""SearchReplaceEngine — exact search/replace edit engine."""
 
 from __future__ import annotations
 
@@ -94,5 +94,3 @@ class SearchReplaceEngine:
         return content.replace(edit.old_text, edit.new_text, 1)
 
 
-# Step 5 of the OCC simplification removes this alias once all callers migrate.
-Patcher = SearchReplaceEngine

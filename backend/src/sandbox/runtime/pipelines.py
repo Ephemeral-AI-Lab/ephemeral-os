@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
 
 from sandbox.occ.changeset.builders import overlay_changes_to_changeset
-from sandbox.occ.changeset.legacy import LegacyChangesetResult
-from sandbox.occ.changeset.types import ChangesetResult, FileStatus
+from sandbox.occ.changeset.types import Change, ChangesetResult, FileStatus
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.direct.direct_merge_coordinator import DirectMergeCoordinator
@@ -17,6 +16,12 @@ from sandbox.occ.orchestrator import ChangesetOrchestrator
 from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.runtime.types import ConflictInfo, ShellResult
+
+
+class _OrchestratorLike(Protocol):
+    """Subset of :class:`ChangesetOrchestrator` used by ``shell_pipeline``."""
+
+    async def apply(self, changes: list[Change]) -> ChangesetResult: ...
 
 
 async def shell_pipeline(
@@ -29,12 +34,16 @@ async def shell_pipeline(
     description: str = "",
     agent_id: str = "",
     overlay_engine: OverlayEngine | None = None,
-    occ_engine: Any | None = None,
-    occ_apply_changeset: Callable[..., Any] | None = None,
+    orchestrator: _OrchestratorLike | None = None,
     overlay_sandbox: Any = None,
     on_progress_line: Callable[[str], None] | None = None,
 ) -> ShellResult:
-    """Run shell through overlay capture, then project the gate's verdict."""
+    """Run shell through overlay capture, then project the gate's verdict.
+
+    The default *orchestrator* is a fresh :class:`ChangesetOrchestrator` built
+    per request. Tests inject a fake orchestrator to drive specific outcomes
+    without standing up the real gate.
+    """
     owns_overlay = overlay_engine is None
     overlay = overlay_engine or OverlayCaptureEngine(
         sandbox_id=sandbox_id,
@@ -53,44 +62,24 @@ async def shell_pipeline(
             on_progress_line=on_progress_line,
         )
 
-        # Test injection paths still expect the legacy upper_changes signature
-        # returning ``LegacyChangesetResult``.
-        if occ_engine is not None:
-            legacy = await _maybe_await(
-                occ_engine.apply_changeset(
-                    outcome.upper_changes,
-                    agent_id=agent_id,
-                    edit_type="svc_cmd_overlay",
-                    description=description or "shell overlay",
-                )
-            )
-            return _legacy_shell_result(outcome, legacy)
-        if occ_apply_changeset is not None:
-            legacy = await _maybe_await(
-                occ_apply_changeset(
-                    outcome.upper_changes,
-                    agent_id=agent_id,
-                    edit_type="svc_cmd_overlay",
-                    description=description or "shell overlay",
-                )
-            )
-            return _legacy_shell_result(outcome, legacy)
-
-        # Default path: build typed changes and run through the new gate.
+        gate = orchestrator if orchestrator is not None else _build_orchestrator(workspace_root)
         typed_changes = overlay_changes_to_changeset(outcome.upper_changes)
-        content = ContentManager(workspace_root)
-        orchestrator = ChangesetOrchestrator(
-            gitignore=GitignoreOracle(workspace_root),
-            direct=DirectMergeCoordinator(content),
-            gated=OCCGatedCoordinator(content),
-        )
-        result = await orchestrator.apply(typed_changes)
+        result = await gate.apply(typed_changes)
         return _shell_result_from_changeset(outcome, result, workspace_root=workspace_root)
     finally:
         if owns_overlay:
             dispose = getattr(overlay, "dispose", None)
             if callable(dispose):
                 dispose()
+
+
+def _build_orchestrator(workspace_root: str) -> ChangesetOrchestrator:
+    content = ContentManager(workspace_root)
+    return ChangesetOrchestrator(
+        gitignore=GitignoreOracle(workspace_root),
+        direct=DirectMergeCoordinator(content),
+        gated=OCCGatedCoordinator(content),
+    )
 
 
 async def _execute_overlay(
@@ -122,47 +111,13 @@ async def _maybe_await(value: Any) -> Any:
     return value
 
 
-def _legacy_shell_result(
-    outcome: OverlayRunOutcome,
-    changeset_result: LegacyChangesetResult,
-) -> ShellResult:
-    """Project the legacy ``LegacyChangesetResult`` shape (test-injection path)."""
-    changed_paths = tuple(
-        sorted({*changeset_result.ledgered, *changeset_result.direct_merged})
-    )
-    if changeset_result.success:
-        return ShellResult(
-            result=outcome.stdout,
-            exit_code=outcome.exit_code,
-            changed_paths=changed_paths,
-            warnings=tuple(outcome.warnings),
-            overlay_run_timings=dict(outcome.overlay_run_timings),
-            overlay_stage_timings=dict(outcome.overlay_stage_timings),
-        )
-    message = changeset_result.conflict_reason or changeset_result.status
-    conflict = ConflictInfo(
-        reason=changeset_result.conflict_reason or "occ_conflict",
-        conflict_file=changeset_result.conflict_file,
-        message=message,
-    )
-    return ShellResult(
-        result=outcome.stdout,
-        exit_code=outcome.exit_code,
-        changed_paths=changed_paths,
-        warnings=tuple(outcome.warnings),
-        overlay_run_timings=dict(outcome.overlay_run_timings),
-        overlay_stage_timings=dict(outcome.overlay_stage_timings),
-        conflict=conflict,
-    )
-
-
 def _shell_result_from_changeset(
     outcome: OverlayRunOutcome,
     result: ChangesetResult,
     *,
     workspace_root: str,
 ) -> ShellResult:
-    """Project the new ``ChangesetResult`` (per-file ``FileResult``) shape."""
+    """Project a :class:`ChangesetResult` into a :class:`ShellResult`."""
     committed = sorted({
         _absolutize(f.path, workspace_root)
         for f in result.files
