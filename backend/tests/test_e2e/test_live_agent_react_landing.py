@@ -40,11 +40,7 @@ KNOWN_SANDBOX_TOOLS = {
     "shell",
     "read_file",
     "write_file",
-    "grep",
-    "glob",
     "edit_file",
-    "ci_query_symbol",
-    "ci_diagnostics",
 }
 
 
@@ -174,14 +170,13 @@ async def test_tool_roundtrip_write_then_read(sandbox_id):
 class TestSkillAndToolAvailability:
     """Verify tool registration, tool schemas, skill registry, sandbox health."""
 
-    def test_available_tools_includes_sandbox_and_ci_tools(self, app_client):
-        """GET /api/agents/tools/available must include sandbox and CI tools."""
+    def test_available_tools_includes_sandbox_tools(self, app_client):
+        """GET /api/agents/tools/available must include sandbox tools."""
         client, _ = app_client
         resp = client.get("/api/agents/tools/available")
         assert resp.status_code == 200
         tools = {entry["name"] for entry in resp.json()}
         assert "shell" in tools, f"Missing shell. Got: {tools}"
-        assert "ci_query_symbol" in tools, f"Missing ci_query_symbol. Got: {tools}"
 
     def test_sandbox_operations_has_current_tools(self):
         """Daytona helpers should expose sandbox file/edit/exec tools."""
@@ -193,11 +188,7 @@ class TestSkillAndToolAvailability:
                 "shell",
                 "read_file",
                 "write_file",
-                "grep",
-                "glob",
                 "edit_file",
-                "remove_file",
-                "move_file",
             ]
         )
         assert names == expected, f"Tool mismatch.\nGot:      {names}\nExpected: {expected}"

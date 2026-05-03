@@ -25,17 +25,8 @@ from sandbox.api import audit
 from sandbox.api.models import (
     EditFileRequest,
     EditFileResult,
-    GlobRequest,
-    GlobResult,
-    GrepMatch,
-    GrepRequest,
-    GrepResult,
-    MoveFileRequest,
-    MoveFileResult,
     ReadFileRequest,
     ReadFileResult,
-    RemoveFileRequest,
-    RemoveFileResult,
     ShellRequest,
     ShellResult,
     WriteFileRequest,
@@ -73,31 +64,6 @@ class AuditedSandboxApi:
             return ReadFileResult(content="", exists=False)
         return ReadFileResult(content=payload.decode("utf-8"), exists=True)
 
-    async def grep(
-        self,
-        sandbox_id: str,
-        request: GrepRequest,
-    ) -> GrepResult:
-        matches = await self._transport.search(
-            sandbox_id, request.pattern, root=request.path,
-        )
-        return GrepResult(
-            matches=tuple(
-                GrepMatch(file_path=m.path, line=m.line, text=m.preview)
-                for m in matches
-            ),
-        )
-
-    async def glob(
-        self,
-        sandbox_id: str,
-        request: GlobRequest,
-    ) -> GlobResult:
-        files = await self._transport.list_paths(
-            sandbox_id, request.pattern, root=request.path,
-        )
-        return GlobResult(files=tuple(files))
-
     # -- mutation -----------------------------------------------------
 
     async def write_file(
@@ -128,36 +94,6 @@ class AuditedSandboxApi:
             success=change.success,
             changed_paths=tuple(change.changed_paths),
             applied_edits=len(request.edits) if change.success else 0,
-            conflict_reason=change.conflict_reason,
-        )
-
-    async def remove_file(
-        self,
-        sandbox_id: str,
-        request: RemoveFileRequest,
-    ) -> RemoveFileResult:
-        del sandbox_id
-        change = await audit.submit_remove_request(
-            self._svc, request=request, sandbox=self._sandbox,
-        )
-        return RemoveFileResult(
-            success=change.success,
-            changed_paths=tuple(change.changed_paths),
-            conflict_reason=change.conflict_reason,
-        )
-
-    async def move_file(
-        self,
-        sandbox_id: str,
-        request: MoveFileRequest,
-    ) -> MoveFileResult:
-        del sandbox_id
-        change = await audit.submit_move_request(
-            self._svc, request=request, sandbox=self._sandbox,
-        )
-        return MoveFileResult(
-            success=change.success,
-            changed_paths=tuple(change.changed_paths),
             conflict_reason=change.conflict_reason,
         )
 

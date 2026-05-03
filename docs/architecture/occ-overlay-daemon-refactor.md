@@ -3,7 +3,7 @@
 **Status:** Draft, awaiting execution
 **Author:** session 2026-05-03
 **Scope:** ~7K LoC, ~35 files across `backend/src/sandbox/code_intelligence/`, `backend/src/sandbox/api/`, `backend/src/sandbox/daemon/` (new), and tests under `backend/tests/test_sandbox/`.
-**Companion doc:** `plugins-refactor.md` covers the query-surface replacement (plugin host + basedpyright). Both refactors land together; query-side deletions are listed here for completeness but executed under the plugins plan.
+**Companion doc:** `plugins-refactor.md` covers the query-surface replacement (direct LSP plugin tools). Both refactors land together; query-side deletions are listed here for completeness but executed under the plugins plan.
 
 ## 0. Motivation
 
@@ -14,6 +14,44 @@ Today `sandbox/code_intelligence/` is an over-broad umbrella that bundles two un
 3. ~~Code intelligence queries~~ — moved out under `plugins-refactor.md`.
 
 The two guardrails serve different chokepoints (file edits vs sandbox cmd execution) and deserve to be peers, not siblings under a misleading `code_intelligence/` parent. The umbrella name is misleading once queries leave.
+
+## 0.1 Pre-step: collapse `move_file` / `remove_file` into shell
+
+Before the OCC/Overlay/daemon move starts, delete the two dedicated tools (`tools/sandbox_toolkit/move_file.py`, `tools/sandbox_toolkit/remove_file.py`) and route those operations through `svc.cmd` (`mv`, `rm`). The overlay commit path already funnels every non-gitignored upperdir change through OCC via `OverlayCommandCommitter`, so audit/ledger coverage is preserved.
+
+Doing this *before* the package move keeps OCC's external surface (§2.1) from inheriting verbs we're about to delete, and removes a layer of API plumbing (`AuditedSandboxApi.{move,remove}_file`, daemon RPC handlers, `MoveSpec`-batching code in `mutation_service`) that the refactor would otherwise have to relocate.
+
+**Files deleted in pre-step:**
+
+- `backend/src/tools/sandbox_toolkit/move_file.py`
+- `backend/src/tools/sandbox_toolkit/remove_file.py`
+
+**Call sites and downstream code to remove or update in the same change set:**
+
+- `tools/sandbox_toolkit/registry.py` — drop the two imports and registrations.
+- `tools/sandbox_toolkit/shell.py:174` and `tools/sandbox_toolkit/_shell_prehooks.py:63` — update guidance strings (no longer steer agents to `remove_file` / `move_file`).
+- `tools/submission/hooks/request_complex_task_before_edit_gate.py:19-20` — drop the two tool names from the gate's covered set, or expand the gate to cover `shell` if equivalent coverage is desired.
+- `agents/helper_agent/resolver/agent.md`, `agents/main_agent/entry_executor/agent.md`, `agents/main_agent/generator/executor/agent.md` — strip `remove_file` / `move_file` from each agent's tool list.
+- `engine/testing/eval_agent.py:384-385` — strip the two tool names from the eval allowlist.
+- `sandbox/api/audited_sandbox_api.py:134-162` — delete `remove_file` / `move_file` methods.
+- `sandbox/api/sandbox_api.py:49-53` — drop the corresponding protocol methods.
+- `sandbox/api/audit.py` — delete `submit_remove_request` / `submit_move_request` and the `RemoveFileRequest` / `MoveFileRequest` / `RemoveFileResult` / `MoveFileResult` models in `sandbox/api/models.py` if no other caller remains.
+- `sandbox/code_intelligence/service.py:270-277` — delete `move_file` (and `delete_file` if unused).
+- `sandbox/code_intelligence/mutations/mutation_service.py:282-334` — delete `move_file`; remove `op == "move"` / `op == "delete"` branches in `_commit_specs_direct` once verified unused.
+- `sandbox/code_intelligence/backends/{protocol.py:88, in_process.py:286-293}` — drop `move_file` from backend protocol + impl.
+- `sandbox/code_intelligence/daemon/handlers.py:337-398` — delete `handle_move_file` and remove `"move_file"` from the dispatch table; same for `delete_file` if present.
+- `sandbox/code_intelligence/daemon/client.py:414-422` — delete the daemon-client `move_file` / `delete_file` shims.
+- `sandbox/code_intelligence/core/types.py:169` — delete `MoveSpec` once mutation_service no longer references it.
+
+**Behavioral consequences (accepted, not mitigated):**
+
+- Agents lose the structured `dst_exists | not_found | aborted_version | aborted_overlap | aborted_lock` enum and read shell stderr / `audit_conflict_reason` instead.
+- `mv` clobbers by default; agents must use `mv -n` if non-overwrite is desired.
+- `rm -rf` of folders is the agent's responsibility — no `is_folder=True` typed switch.
+- Moves/removes of gitignored paths stop hitting OCC (overlay direct-merges gitignored writes); ledger sees only gitinclude-tracked paths.
+- Per-op cost rises from ~OCC-only to ~overlay+commit (~1.1s end-to-end vs ~0.65s commit-only).
+
+These are the trade-offs we are choosing in exchange for OCC surface reduction and one fewer tool family.
 
 ## 1. End-state architecture
 
@@ -69,7 +107,7 @@ sandbox/occ/
     └── daemon.py                  # OCC routed through sandbox daemon RPC
 ```
 
-External API: every file edit goes through `OCC.apply_edit(...)`, `OCC.write_file(...)`, `OCC.delete_file(...)`, `OCC.move_file(...)`, `OCC.commit_*(...)`, `OCC.undo_last_edit(...)`. No other surface accepts edit specs.
+External API: every file edit goes through `OCC.apply_edit(...)`, `OCC.write_file(...)`, `OCC.commit_*(...)`, `OCC.undo_last_edit(...)`. Move and delete verbs are removed from the external surface (see §0.1) — `mv` / `rm` flow through `svc.cmd` and commit via the overlay path. Internally, overlay commits still produce `OperationChange` rows with `delete=True` consumed by `WriteCoordinator`; that is not a public OCC method.
 
 ### 2.2 `sandbox/overlay/`
 
@@ -160,7 +198,7 @@ Per agreed scope: every external call site is rewritten in the same change set. 
 
 Found via grep:
 
-- `sandbox/lifecycle/workspace.py` — uses `service.symbol_index`, `service.lsp_client`, etc. (Replaced with OCC + plugin lookup; plugin lookup is wired per `plugins-refactor.md`.)
+- `sandbox/lifecycle/workspace.py` — uses `service.symbol_index`, `service.lsp_client`, etc. (Replaced with OCC + direct plugin-tool lookup wired per `plugins-refactor.md`.)
 - `sandbox/api/code_intelligence_api.py` — DELETE
 - `sandbox/api/code_intelligence_impl.py` — DELETE
 - `sandbox/api/models.py` — strip query types
@@ -170,9 +208,24 @@ Found via grep:
 
 ## 5. Sequenced execution
 
-This plan picks up after `plugins-refactor.md` steps 1–5 (plugin host + basedpyright authored, smoke-tested) so that `lifecycle/workspace.py` can swap to plugin lookup in one pass without an intermediate broken state.
+This plan picks up after `plugins-refactor.md` step 0 proves sandbox-hosted
+basedpyright connectivity and steps 1–5 author/smoke-test the direct LSP plugin
+tools, so that `lifecycle/workspace.py` can swap to plugin-tool lookup in one
+pass without an intermediate broken state.
 
 ```
+0. Pre-step: collapse move_file / remove_file into shell (per §0.1)
+   - Delete tools/sandbox_toolkit/{move_file.py, remove_file.py}
+   - Update tools/sandbox_toolkit/registry.py, shell.py, _shell_prehooks.py
+   - Update tools/submission/hooks/request_complex_task_before_edit_gate.py
+   - Strip remove_file / move_file from agent.md files and engine/testing/eval_agent.py
+   - Delete AuditedSandboxApi.{move,remove}_file + the SandboxApi protocol pair
+   - Delete audit.submit_{move,remove}_request and unreferenced request/result models
+   - Delete service.move_file, mutation_service.move_file, MoveSpec, backends move_file,
+     daemon handle_move_file, daemon client move_file (and delete_file equivalents
+     if no internal caller remains)
+   - make test + ruff check; iterate to green before starting step 1
+
 1. Move sandbox/code_intelligence/mutations/ → sandbox/occ/
    - Collapse arbiter + patcher + content_manager + mutation_service into OCC class
    - Keep write_coordinator/, time_machine.py, edit_history_ledger.py as internals
@@ -206,7 +259,7 @@ This plan picks up after `plugins-refactor.md` steps 1–5 (plugin host + basedp
    - Tests targeting deleted surface (coordinated with plugins-refactor.md §4)
 
 8. Rewrite call sites — no shims
-   - sandbox/lifecycle/workspace.py: replace service.symbol_index/lsp_client refs with OCC + plugin lookup
+   - sandbox/lifecycle/workspace.py: replace service.symbol_index/lsp_client refs with OCC + plugin-tool lookup
    - api/audit.py: route through OCC
    - Any remaining tools/* references: rewrite or delete
 
@@ -232,7 +285,7 @@ This plan picks up after `plugins-refactor.md` steps 1–5 (plugin host + basedp
 | External callers depending on mutation/overlay internals | All call sites enumerated in §4; rewritten in same change set. |
 | Lost edit history during move | `ledger_store.py` relocates as-is; no schema change. |
 | Tests fail to delete cleanly | Each test file inspected; deletion is line-item, not bulk. |
-| `lifecycle/workspace.py` rewrite blocked on plugin lookup not being ready | Sequencing: plugin half lands first; this plan starts at step 1 only after plugin smoke test passes. |
+| `lifecycle/workspace.py` rewrite blocked on plugin-tool lookup not being ready | Sequencing: plugin-tool half lands first; this plan starts at step 1 only after plugin smoke test passes. |
 
 ## 7. Out of scope
 

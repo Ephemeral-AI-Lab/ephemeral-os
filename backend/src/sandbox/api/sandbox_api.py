@@ -12,16 +12,8 @@ from typing import Protocol
 from sandbox.api.models import (
     EditFileRequest,
     EditFileResult,
-    GlobRequest,
-    GlobResult,
-    GrepRequest,
-    GrepResult,
-    MoveFileRequest,
-    MoveFileResult,
     ReadFileRequest,
     ReadFileResult,
-    RemoveFileRequest,
-    RemoveFileResult,
     ShellRequest,
     ShellResult,
     WriteFileRequest,
@@ -45,22 +37,6 @@ class SandboxApi(Protocol):
     async def edit_file(
         self, sandbox_id: str, request: EditFileRequest,
     ) -> EditFileResult: ...
-
-    async def remove_file(
-        self, sandbox_id: str, request: RemoveFileRequest,
-    ) -> RemoveFileResult: ...
-
-    async def move_file(
-        self, sandbox_id: str, request: MoveFileRequest,
-    ) -> MoveFileResult: ...
-
-    async def grep(
-        self, sandbox_id: str, request: GrepRequest,
-    ) -> GrepResult: ...
-
-    async def glob(
-        self, sandbox_id: str, request: GlobRequest,
-    ) -> GlobResult: ...
 
     async def shell(
         self, sandbox_id: str, request: ShellRequest,

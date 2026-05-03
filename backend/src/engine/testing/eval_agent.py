@@ -376,13 +376,9 @@ class EvalAgent:
         # auto-loaded skills, the raw test system prompt.
         if allowed_tools is None:
             allowed_tools = [
-                "grep",
-                "glob",
                 "read_file",
                 "write_file",
                 "edit_file",
-                "remove_file",
-                "move_file",
                 "shell",
                 "run_subagent",
             ]

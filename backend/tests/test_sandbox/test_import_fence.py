@@ -21,8 +21,6 @@ def test_no_forbidden_daytona_imports() -> None:
 
     for module in _python_files(SRC_ROOT / "tools" / "sandbox_toolkit"):
         _assert_no_imports(module, forbidden_for_tools)
-    for module in _python_files(SRC_ROOT / "tools" / "ci_toolkit"):
-        _assert_no_imports(module, forbidden_for_tools)
     for module in _python_files(SRC_ROOT / "sandbox" / "code_intelligence"):
         _assert_no_imports(module, forbidden_for_ci_internals)
 

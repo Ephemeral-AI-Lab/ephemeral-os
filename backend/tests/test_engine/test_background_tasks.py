@@ -191,22 +191,15 @@ def test_record_tool_trace_ignores_subagent_launches() -> None:
     assert meta.extras == {}
 
 
-def test_record_tool_trace_counts_note_ci_and_sandbox_reads() -> None:
+def test_record_tool_trace_counts_note_and_sandbox_reads() -> None:
     meta = ExecutionMetadata()
 
     _record_tool_trace(meta, "read_file_note", {"file_paths": ["pkg/core.py"]})
-    _record_tool_trace(meta, "ci_query_symbol", {"query": "Git"})
-    _record_tool_trace(meta, "ci_workspace_structure", {"path": "pkg"})
-    _record_tool_trace(meta, "ci_diagnostics", {"file_path": "pkg/core.py"})
     _record_tool_trace(meta, "shell", {"code": "shell('pytest -q')"})
     _record_tool_trace(meta, "read_file", {"file_path": "pkg/core.py"})
 
     assert meta["_read_file_note_calls"] == 1
     assert meta["_note_read_paths_this_response"] == ["pkg/core.py"]
-    assert meta["_ci_context_calls"] == 3
-    assert meta["_ci_query_symbol_calls"] == 1
-    assert meta["_ci_workspace_structure_calls"] == 1
-    assert meta["_ci_diagnostics_calls"] == 1
     assert meta["_shell_calls"] == 1
     assert meta["_read_file_calls"] == 1
     assert meta["_read_paths_this_response"] == ["pkg/core.py"]

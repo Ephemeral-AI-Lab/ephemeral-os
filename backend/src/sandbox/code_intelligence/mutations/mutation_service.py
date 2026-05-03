@@ -11,18 +11,13 @@ from sandbox.code_intelligence.mutations.write_coordinator import CommitOperatio
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.mutations.content_manager import ContentManager
 from sandbox.code_intelligence.mutations.mutation_results import (
-    dst_exists_result,
-    identical_paths_result,
-    not_a_directory_result,
     not_found_result,
     patch_failed_result,
 )
 from sandbox.code_intelligence.core.types import (
-    DeleteSpec,
     EditRequest,
     EditResult,
     EditSpec,
-    MoveSpec,
     OperationChange,
     OperationResult,
     WriteSpec,
@@ -134,8 +129,6 @@ class MutationService:
         ]
         if not normalized:
             return []
-        if any(_request_has_folder_spec(req) for req in normalized):
-            return [self._commit_specs_direct(req) for req in normalized]
         if len(normalized) == 1:
             req = normalized[0]
             return [self._commit_specs_direct(req)]
@@ -235,104 +228,6 @@ class MutationService:
             description=description,
         )
 
-    def delete_file(
-        self,
-        paths: Sequence[str | DeleteSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        """Delete one or more files through the OCC-gated commit path.
-
-        Reads each current content through :class:`ContentManager`, builds
-        one ``OperationChange(final_content=None)`` per path, and submits
-        the whole list as one batch. The coordinator's delete branch
-        requires ``current_hash == base_hash`` exactly — any drift aborts
-        with ``aborted_version`` (no merge fallback for deletes).
-        """
-        resolved_paths: list[str] = []
-        for item in paths:
-            if isinstance(item, DeleteSpec):
-                if item.is_folder:
-                    try:
-                        resolved_paths.extend(self._content.list_folder_files(item.path))
-                    except FileNotFoundError:
-                        return not_found_result(item.path)
-                    except NotADirectoryError:
-                        return not_a_directory_result(item.path)
-                    continue
-                resolved_paths.append(item.path)
-            else:
-                resolved_paths.append(str(item))
-
-        base_by_path = self._content.read_many(resolved_paths, allow_missing=True)
-        changes, early_failure = self._delete_paths_to_changes_from_base(
-            resolved_paths,
-            base_by_path,
-        )
-        if early_failure is not None:
-            return early_failure
-        return self._write_coordinator.commit_operation_against_base(
-            changes,
-            agent_id=agent_id,
-            edit_type="delete_file",
-            description=description,
-        )
-
-    def move_file(
-        self,
-        specs: Sequence[MoveSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        """Atomically move one or more files through the OCC-gated path.
-
-        Each :class:`MoveSpec` expands to a delete-src + create-dst pair
-        of :class:`OperationChange` entries; the whole list is submitted
-        as one batch so sorted-path locks, two-pass resolve-then-apply,
-        and TimeMachine rollback make the moves atomic across every
-        spec in the batch.
-        """
-        normalized: list[MoveSpec] = []
-        for spec in specs:
-            if not spec.is_folder:
-                normalized.append(spec)
-                continue
-            try:
-                members = self._content.list_folder_files(spec.src_path)
-            except FileNotFoundError:
-                return not_found_result(spec.src_path)
-            except NotADirectoryError:
-                return not_a_directory_result(spec.src_path)
-            src_prefix_len = len(spec.src_path)
-            normalized.extend(
-                MoveSpec(
-                    src_path=member,
-                    dst_path=spec.dst_path + member[src_prefix_len:],
-                    overwrite=spec.overwrite,
-                )
-                for member in members
-            )
-        read_paths: list[str] = []
-        for spec in normalized:
-            if spec.src_path == spec.dst_path:
-                return identical_paths_result(spec.src_path)
-            read_paths.extend((str(spec.src_path), str(spec.dst_path)))
-        base_by_path = self._content.read_many(read_paths, allow_missing=True)
-        changes, early_failure = self._move_specs_to_changes_from_base(
-            normalized,
-            base_by_path,
-        )
-        if early_failure is not None:
-            return early_failure
-        return self._write_coordinator.commit_operation_against_base(
-            changes,
-            agent_id=agent_id,
-            edit_type="move_file",
-            description=description,
-        )
-
     # -- Spec -> OperationChange adapters ------------------------------------
 
     def _commit_specs_direct(self, req: _CommitSpecRequest) -> OperationResult:
@@ -344,18 +239,6 @@ class MutationService:
             )
         if req.op == "edit":
             return self.edit_file(
-                req.specs,
-                agent_id=req.agent_id,
-                description=req.description,
-            )
-        if req.op == "delete":
-            return self.delete_file(
-                list(req.specs),
-                agent_id=req.agent_id,
-                description=req.description,
-            )
-        if req.op == "move":
-            return self.move_file(
                 req.specs,
                 agent_id=req.agent_id,
                 description=req.description,
@@ -376,12 +259,6 @@ class MutationService:
                 paths.extend(str(spec.file_path) for spec in req.specs)
             elif req.op == "edit":
                 paths.extend(str(spec.file_path) for spec in req.specs)
-            elif req.op == "delete":
-                paths.extend(_delete_spec_path(path) for path in req.specs)
-            elif req.op == "move":
-                for spec in req.specs:
-                    paths.append(str(spec.src_path))
-                    paths.append(str(spec.dst_path))
         return list(dict.fromkeys(paths))
 
     def _commit_spec_changes_from_base(
@@ -393,13 +270,6 @@ class MutationService:
             return self._write_specs_to_changes_from_base(req.specs, base_by_path), None
         if req.op == "edit":
             return self._edit_specs_to_changes_from_base(req.specs, base_by_path)
-        if req.op == "delete":
-            return self._delete_paths_to_changes_from_base(
-                [_delete_spec_path(path) for path in req.specs],
-                base_by_path,
-            )
-        if req.op == "move":
-            return self._move_specs_to_changes_from_base(req.specs, base_by_path)
         return [], OperationResult(
             success=False,
             status="failed",
@@ -464,91 +334,8 @@ class MutationService:
             )
         return changes, None
 
-    def _delete_paths_to_changes_from_base(
-        self,
-        paths: Sequence[str],
-        base_by_path: dict[str, tuple[str, bool]],
-    ) -> tuple[list[OperationChange], OperationResult | None]:
-        changes: list[OperationChange] = []
-        for path in paths:
-            current, existed = base_by_path.get(path, ("", False))
-            if not existed:
-                return [], not_found_result(path)
-            changes.append(
-                OperationChange(
-                    file_path=path,
-                    base_content=current,
-                    base_hash=content_hash(current),
-                    final_content=None,
-                    base_existed=True,
-                )
-            )
-        return changes, None
-
-    def _move_specs_to_changes_from_base(
-        self,
-        specs: Sequence[Any],
-        base_by_path: dict[str, tuple[str, bool]],
-    ) -> tuple[list[OperationChange], OperationResult | None]:
-        changes: list[OperationChange] = []
-        for spec in specs:
-            if spec.src_path == spec.dst_path:
-                return [], identical_paths_result(spec.src_path)
-            src_content, src_existed = base_by_path.get(str(spec.src_path), ("", False))
-            if not src_existed:
-                return [], not_found_result(spec.src_path)
-            dst_content, dst_existed = base_by_path.get(str(spec.dst_path), ("", False))
-            if dst_existed and not spec.overwrite:
-                return [], dst_exists_result(spec.dst_path)
-            changes.append(
-                OperationChange(
-                    file_path=spec.src_path,
-                    base_content=src_content,
-                    base_hash=content_hash(src_content),
-                    final_content=None,
-                    base_existed=True,
-                )
-            )
-            if dst_existed:
-                changes.append(
-                    OperationChange(
-                        file_path=spec.dst_path,
-                        base_content=dst_content,
-                        base_hash=content_hash(dst_content),
-                        final_content=src_content,
-                        base_existed=True,
-                        strict_base=True,
-                    )
-                )
-            else:
-                changes.append(
-                    OperationChange(
-                        file_path=spec.dst_path,
-                        base_content="",
-                        base_hash="",
-                        final_content=src_content,
-                        base_existed=False,
-                    )
-                )
-        return changes, None
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._write_coordinator.undo_last_edit(file_path)
 
 
-def _delete_spec_path(spec: Any) -> str:
-    return str(spec.path) if isinstance(spec, DeleteSpec) else str(spec)
-
-
-def _request_has_folder_spec(req: _CommitSpecRequest) -> bool:
-    if req.op == "delete":
-        return any(
-            isinstance(spec, DeleteSpec) and spec.is_folder
-            for spec in req.specs
-        )
-    if req.op == "move":
-        return any(
-            isinstance(spec, MoveSpec) and spec.is_folder
-            for spec in req.specs
-        )
-    return False

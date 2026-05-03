@@ -109,26 +109,6 @@ async def test_submit_commit_rejects_when_ci_service_missing() -> None:
         )
 
 
-async def test_submit_commit_dispatches_on_op_name() -> None:
-    # The façade should only touch the method it needs; mocks that don't
-    # implement the other three siblings must still work.
-    svc = MagicMock(spec=["rebind_sandbox", "move_file"])
-    svc.rebind_sandbox = MagicMock()
-    svc.move_file = MagicMock(return_value=_op_result(paths=["/ws/b"]))
-
-    change = await submit_commit(
-        svc,
-        op="move",
-        specs=[],
-        fallback_paths=["/ws/b"],
-        description="move",
-        agent_id="test-agent",
-    )
-
-    assert change.success is True
-    assert change.changed_paths == ("/ws/b",)
-
-
 async def test_submit_shell_cmd_normalizes_changed_paths() -> None:
     response = SimpleNamespace(
         result="ok",

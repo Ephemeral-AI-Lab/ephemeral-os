@@ -16,11 +16,9 @@ from typing import Any
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync
 from sandbox.code_intelligence.daemon.wire import (
-    deletespec_to_dict,
     edit_request_to_dict,
     edit_result_from_dict,
     editspec_to_dict,
-    movespec_to_dict,
     normalize_edit_specs,
     normalize_write_specs,
     operation_change_to_dict,
@@ -31,11 +29,9 @@ from sandbox.code_intelligence.daemon.wire import (
 )
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    DeleteSpec,
     EditRequest,
     EditResult,
     EditSpec,
-    MoveSpec,
     OperationChange,
     OperationResult,
     SymbolInfo,
@@ -395,38 +391,6 @@ class DaemonCommandClient:
         )
         return operation_result_from_dict(result)
 
-    def delete_file(
-        self,
-        paths: Sequence[str | DeleteSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        encoded: list[Any] = []
-        for entry in paths:
-            encoded.append(entry if isinstance(entry, str) else deletespec_to_dict(entry))
-        result = self._call_sync(
-            "delete_file",
-            {"paths": encoded, "agent_id": agent_id, "description": description},
-        )
-        return operation_result_from_dict(result)
-
-    def move_file(
-        self,
-        specs: Sequence[MoveSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        result = self._call_sync(
-            "move_file",
-            {
-                "specs": [movespec_to_dict(s) for s in specs],
-                "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         result = self._call_sync("undo_last_edit", {"file_path": file_path})

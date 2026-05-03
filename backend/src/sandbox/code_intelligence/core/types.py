@@ -156,24 +156,6 @@ class EditSpec:
     edits: Sequence[Any]  # Sequence[SearchReplaceEdit | LineRangeEdit]
 
 
-@dataclass(frozen=True)
-class DeleteSpec:
-    """One delete target inside a :meth:`svc.delete_file` batch."""
-
-    path: str
-    is_folder: bool = False
-
-
-@dataclass(frozen=True)
-class MoveSpec:
-    """One file slot inside a :meth:`svc.move_file` batch."""
-
-    src_path: str
-    dst_path: str
-    overwrite: bool = False
-    is_folder: bool = False
-
-
 OperationStatus = Literal[
     "committed",
     "aborted_version",

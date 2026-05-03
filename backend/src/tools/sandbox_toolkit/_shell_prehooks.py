@@ -60,7 +60,7 @@ _DESTRUCTIVE_GIT_MESSAGE = (
     "destructive git commands and other git mutation commands are forbidden. "
     "Detected filesystem mutation command or git metadata mutation. They mutate "
     "repository metadata or working-tree files outside the OCC/write-scope audit "
-    "path. Use edit_file, write_file, remove_file, or move_file instead."
+    "path. Use edit_file or write_file instead."
 )
 _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r"(?:^|[;&|]\s*)(?:"

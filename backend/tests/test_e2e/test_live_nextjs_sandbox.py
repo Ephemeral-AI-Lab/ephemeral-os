@@ -34,11 +34,7 @@ KNOWN_SANDBOX_TOOLS = {
     "shell",
     "read_file",
     "write_file",
-    "grep",
-    "glob",
     "edit_file",
-    "ci_query_symbol",
-    "ci_diagnostics",
 }
 
 NEXTJS_AGENT_PROMPT = (
@@ -462,47 +458,6 @@ class TestCodeIntelligenceOnProject:
         assert lsp._detect_language("layout.tsx") == "typescript"
         assert lsp._detect_language("app.py") == "python"
         assert lsp._detect_language("styles.css") == "unknown"
-
-
-# ===========================================================================
-# AREA 5: Agent Uses LSP Tools on Created Project
-# ===========================================================================
-
-
-@pytest.mark.asyncio
-async def test_hover_on_component(sandbox_id):
-    """Agent uses ci_query_symbol to inspect a React component."""
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
-    result = await agent.invoke(
-        "Use ci_query_symbol on /workspace/nextjs-app/src/app/page.tsx "
-        "at line 9, character 10 to get type info for the HeroSection function."
-    )
-    started = result.tools_started()
-    # Model may use lsp_hover or fall back to read_file — both acceptable
-    assert len(started) >= 1, f"Should use a tool. Tool names: {result.tool_names}"
-
-
-@pytest.mark.asyncio
-async def test_diagnostics_on_page(sandbox_id):
-    """Agent uses ci_diagnostics to check page.tsx for errors."""
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
-    result = await agent.invoke(
-        "Use ci_diagnostics on /workspace/nextjs-app/src/app/page.tsx "
-        "to check for any syntax or type errors."
-    )
-    started = result.tools_started()
-    assert len(started) >= 1, f"Should use a tool. Tool names: {result.tool_names}"
-
-
-@pytest.mark.asyncio
-async def test_query_symbols_on_interface(sandbox_id):
-    """Agent uses ci_query_symbol to find the PageProps interface."""
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
-    result = await agent.invoke(
-        "Use ci_query_symbol to find PageProps in /workspace/nextjs-app/src/app/page.tsx."
-    )
-    started = result.tools_started()
-    assert len(started) >= 1
 
 
 # ===========================================================================

@@ -7,13 +7,9 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 SANDBOX_TOOLS = {
-    "grep",
-    "glob",
     "read_file",
     "write_file",
     "edit_file",
-    "remove_file",
-    "move_file",
     "shell",
 }
 
@@ -125,7 +121,7 @@ class TestConfigBackedAgentApi:
                     {
                         "name": "direct",
                         "is_default": True,
-                        "allowed_tools": ["ci_query_symbol"],
+                        "allowed_tools": ["read_file"],
                         "terminals": ["submit_task_success"],
                     }
                 ],

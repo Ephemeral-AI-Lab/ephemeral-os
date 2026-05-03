@@ -11,13 +11,11 @@ from typing import Any
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    DeleteSpec,
     Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
     HoverResult,
-    MoveSpec,
     OperationChange,
     OperationResult,
     ReferenceInfo,
@@ -265,32 +263,6 @@ class InProcessBackend:
         description: str = "",
     ) -> OperationResult:
         return self._mutations.edit_file(
-            specs,
-            agent_id=agent_id,
-            description=description,
-        )
-
-    def delete_file(
-        self,
-        paths: Sequence[str | DeleteSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._mutations.delete_file(
-            paths,
-            agent_id=agent_id,
-            description=description,
-        )
-
-    def move_file(
-        self,
-        specs: Sequence[MoveSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._mutations.move_file(
             specs,
             agent_id=agent_id,
             description=description,

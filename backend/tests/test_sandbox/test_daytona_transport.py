@@ -271,60 +271,6 @@ async def test_read_bytes_batch_falls_back_when_no_batch_api(
     assert fake_sandbox.fs.download_file.await_count == 3
 
 
-# -- search ------------------------------------------------------------------
-
-
-async def test_search_parses_grep_results(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    fake_sandbox.process.exec.return_value = _exec_response(
-        json.dumps({
-            "ok": True,
-            "matches": [
-                {"file": "/foo.py", "line": 12, "content": "found it"},
-                {"file": "/bar.py", "line": 5, "content": "another"},
-            ],
-        }),
-        exit_code=0,
-    )
-
-    matches = await transport.search("sb-1", "needle", root="/repo")
-
-    assert len(matches) == 2
-    assert matches[0].path == "/foo.py"
-    assert matches[0].line == 12
-    assert matches[0].preview == "found it"
-    assert matches[1].path == "/bar.py"
-
-
-async def test_search_raises_on_grep_error(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    fake_sandbox.process.exec.return_value = _exec_response(
-        json.dumps({"ok": False, "error": "Path does not exist: /nope"}),
-        exit_code=0,
-    )
-
-    with pytest.raises(SandboxTransportError, match="reported failure"):
-        await transport.search("sb-1", "needle", root="/nope")
-
-
-# -- list_paths --------------------------------------------------------------
-
-
-async def test_list_paths_splits_lines(
-    transport: DaytonaTransport, fake_sandbox: SimpleNamespace,
-) -> None:
-    fake_sandbox.process.exec.return_value = _exec_response(
-        "/repo/a.py\n/repo/b.py\n",
-        exit_code=0,
-    )
-
-    paths = await transport.list_paths("sb-1", "**/*.py", root="/repo")
-
-    assert paths == ("/repo/a.py", "/repo/b.py")
-
-
 # -- resolver injection ------------------------------------------------------
 
 

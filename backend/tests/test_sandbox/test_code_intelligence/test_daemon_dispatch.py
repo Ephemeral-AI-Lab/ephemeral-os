@@ -84,8 +84,6 @@ def test_dispatch_table_includes_phase3_ops() -> None:
         "commit_specs_many",
         "write_file",
         "edit_file",
-        "delete_file",
-        "move_file",
         "undo_last_edit",
         "index_refresh",
         "lsp_invalidate",
@@ -349,23 +347,6 @@ def test_writespec_from_dict_round_trips() -> None:
     assert spec.file_path == "/x.py"
     assert spec.content == "y = 1\n"
     assert spec.overwrite is True
-
-
-def test_movespec_from_dict_round_trips() -> None:
-    from sandbox.code_intelligence.core.types import MoveSpec
-
-    spec = daemon_server._movespec_from_dict({"src_path": "/a", "dst_path": "/b"})
-    assert isinstance(spec, MoveSpec)
-    assert spec.src_path == "/a"
-    assert spec.dst_path == "/b"
-
-
-def test_deletespec_from_dict_round_trips() -> None:
-    from sandbox.code_intelligence.core.types import DeleteSpec
-
-    spec = daemon_server._deletespec_from_dict({"path": "/x.py"})
-    assert isinstance(spec, DeleteSpec)
-    assert spec.path == "/x.py"
 
 
 def test_operation_change_round_trip() -> None:

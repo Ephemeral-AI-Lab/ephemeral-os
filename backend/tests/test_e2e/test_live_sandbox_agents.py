@@ -31,9 +31,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 
 KNOWN_SANDBOX_TOOLS = {
     "shell", "read_file", "write_file",
-    "grep", "glob",
-    "edit_file", "ci_query_symbol",
-    "ci_diagnostics",
+    "edit_file",
 }
 
 AGENT_PROMPT = (

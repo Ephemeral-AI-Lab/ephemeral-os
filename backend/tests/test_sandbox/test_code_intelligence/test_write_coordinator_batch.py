@@ -275,20 +275,6 @@ def test_delete_create_shape_aborts_in_single_fast_path(tmp_path) -> None:
     assert not target.exists()
 
 
-def test_delete_removes_file_from_symbol_index(tmp_path) -> None:
-    target = tmp_path / "indexed.py"
-    target.write_text("def doomed():\n    return 1\n", encoding="utf-8")
-    svc = _svc(tmp_path)
-    svc.symbol_index.refresh(str(target))
-    assert svc.symbol_index.indexed_files == 1
-
-    result = svc.delete_file([str(target)])
-
-    assert result.success
-    assert svc.symbol_index.indexed_files == 0
-    assert svc.symbol_index.file_symbols(str(target)) == []
-
-
 def test_mixed_modify_create_delete_operation(tmp_path) -> None:
     mod_file = tmp_path / "mod.py"
     del_file = tmp_path / "del.py"

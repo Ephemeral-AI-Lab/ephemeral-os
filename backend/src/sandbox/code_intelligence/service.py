@@ -20,13 +20,11 @@ from sandbox.code_intelligence.backends import (
 )
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    DeleteSpec,
     Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
     HoverResult,
-    MoveSpec,
     OperationChange,
     OperationResult,
     ReferenceInfo,
@@ -257,24 +255,6 @@ class CodeIntelligenceService:
         description: str = "",
     ) -> OperationResult:
         return self._impl.edit_file(specs, agent_id=agent_id, description=description)
-
-    def delete_file(
-        self,
-        paths: Sequence[str | DeleteSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._impl.delete_file(paths, agent_id=agent_id, description=description)
-
-    def move_file(
-        self,
-        specs: Sequence[MoveSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._impl.move_file(specs, agent_id=agent_id, description=description)
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._impl.undo_last_edit(file_path)

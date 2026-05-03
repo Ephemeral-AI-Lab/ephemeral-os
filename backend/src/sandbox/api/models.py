@@ -71,16 +71,6 @@ class CheckedWriteResult:
     conflict_reason: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class SearchMatch:
-    """One result from ``SandboxTransport.search``."""
-
-    path: str
-    line: int
-    column: int = 0
-    preview: str = ""
-
-
 # -- SandboxApi: file I/O ---------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
@@ -136,74 +126,7 @@ class EditFileResult:
     conflict_reason: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class RemoveFileRequest:
-    path: str
-    actor: RequestActor
-    is_folder: bool = False
-    description: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class RemoveFileResult:
-    success: bool
-    changed_paths: tuple[str, ...] = ()
-    conflict_reason: str | None = None
-
-
-@dataclass(frozen=True, kw_only=True)
-class MoveFileRequest:
-    src_path: str
-    dst_path: str
-    actor: RequestActor
-    is_folder: bool = False
-    overwrite: bool = False
-    description: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class MoveFileResult:
-    success: bool
-    changed_paths: tuple[str, ...] = ()
-    conflict_reason: str | None = None
-
-
 # -- SandboxApi: search -----------------------------------------------------
-
-@dataclass(frozen=True, kw_only=True)
-class GrepMatch:
-    file_path: str
-    line: int
-    text: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class GrepRequest:
-    pattern: str
-    actor: RequestActor
-    path: str = "."
-    timeout: int | None = 60
-
-
-@dataclass(frozen=True, kw_only=True)
-class GrepResult:
-    matches: tuple[GrepMatch, ...] = ()
-    total_matches: int | None = None
-    truncated: bool = False
-
-
-@dataclass(frozen=True, kw_only=True)
-class GlobRequest:
-    pattern: str
-    actor: RequestActor
-    path: str = "."
-    timeout: int | None = 30
-
-
-@dataclass(frozen=True, kw_only=True)
-class GlobResult:
-    files: tuple[str, ...] = ()
-
 
 # -- SandboxApi: shell ------------------------------------------------------
 
@@ -373,22 +296,12 @@ __all__ = [
     "DiagnosticsResult",
     "EditFileRequest",
     "EditFileResult",
-    "GlobRequest",
-    "GlobResult",
-    "GrepMatch",
-    "GrepRequest",
-    "GrepResult",
-    "MoveFileRequest",
-    "MoveFileResult",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
     "ReferencesRequest",
     "ReferencesResult",
-    "RemoveFileRequest",
-    "RemoveFileResult",
     "RequestActor",
-    "SearchMatch",
     "SearchReplaceEdit",
     "ShellRequest",
     "ShellResult",

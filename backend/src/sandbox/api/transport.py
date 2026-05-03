@@ -19,7 +19,6 @@ from sandbox.api.models import (
     CheckedWriteResult,
     CheckedWriteSpec,
     RawExecResult,
-    SearchMatch,
 )
 
 
@@ -57,23 +56,6 @@ class SandboxTransport(Protocol):
         sandbox_id: str,
         specs: Sequence[CheckedWriteSpec],
     ) -> CheckedWriteResult: ...
-
-    async def search(
-        self,
-        sandbox_id: str,
-        pattern: str,
-        *,
-        root: str | None = None,
-        include: str | None = None,
-    ) -> Sequence[SearchMatch]: ...
-
-    async def list_paths(
-        self,
-        sandbox_id: str,
-        glob: str,
-        *,
-        root: str | None = None,
-    ) -> Sequence[str]: ...
 
 
 __all__ = ["SandboxTransport"]

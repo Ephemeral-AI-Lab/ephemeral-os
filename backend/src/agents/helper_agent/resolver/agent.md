@@ -5,17 +5,9 @@ model: inherit
 role: resolver
 agent_type: agent
 allowed_tools:
-  - ci_status
-  - ci_workspace_structure
-  - ci_query_symbol
-  - ci_diagnostics
-  - grep
-  - glob
   - read_file
   - write_file
   - edit_file
-  - remove_file
-  - move_file
   - shell
 terminals:
   - submit_resolver_result

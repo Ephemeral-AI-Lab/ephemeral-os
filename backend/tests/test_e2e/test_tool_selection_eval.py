@@ -103,31 +103,6 @@ EVAL_CASES = [
         expected_tools=["shell"],
         required_params={"shell": ["command"]},
     ),
-    # -- Code intelligence operations --
-    EvalCase(
-        name="check_diagnostics",
-        prompt="Check if src/main.py has any syntax or type errors.",
-        expected_tools=["ci_diagnostics"],
-        required_params={"ci_diagnostics": ["file_path"]},
-    ),
-    EvalCase(
-        name="goto_definition",
-        prompt="Find the definition of build_app in src/app.py",
-        expected_tools=["ci_query_symbol", "read_file"],
-        required_params={"ci_query_symbol": ["query"]},
-    ),
-    EvalCase(
-        name="find_references",
-        prompt="Find all usages of the User symbol across the codebase.",
-        expected_tools=["ci_query_symbol"],
-        required_params={"ci_query_symbol": ["query"]},
-    ),
-    EvalCase(
-        name="check_errors",
-        prompt="Check src/main.py for syntax errors and type errors.",
-        expected_tools=["ci_diagnostics"],
-        required_params={"ci_diagnostics": ["file_path"]},
-    ),
     # -- Behavioral --
     EvalCase(
         name="read_before_edit",

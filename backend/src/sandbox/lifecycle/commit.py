@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-CommitOp = Literal["write", "edit", "delete", "move"]
+CommitOp = Literal["write", "edit"]
 _BATCH_WINDOW_SECONDS = float(os.environ.get("CI_COMMIT_BATCH_WINDOW_MS", "5")) / 1000.0
 _BATCHERS: dict[tuple[int, int], "_CommitBatcher"] = {}
 

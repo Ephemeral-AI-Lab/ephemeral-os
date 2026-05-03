@@ -1,12 +1,10 @@
 # ruff: noqa
-"""Comprehensive sandbox and CI tool tests — audited edits, LSP, CI, conflict resolution.
+"""Comprehensive sandbox tool tests — audited edits, conflict resolution.
 
-Covers sandbox and CI concerns:
+Covers sandbox concerns:
   Audited Editing:     edit_file with Arbiter ledger/lock/conflict
-  CI tools:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
   shell:             shell multi-step execution
   Tool Selection:      ordering, schema validation, completeness
-  Code Intelligence:   CI service, LSP client, registry, types
   Conflict Resolution: Arbiter, TimeMachine, Ledger, audited edit flow
   Live Sandbox:        real Daytona execution
 
@@ -483,50 +481,6 @@ class TestDaytonaEditTool:
 # ===========================================================================
 
 
-class TestDaytonaCiTools:
-    """Test unified code intelligence tools: hover and diagnostics."""
-
-    # -- Diagnostics --
-
-    def test_lsp_diagnostics_no_ci(self):
-        from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
-
-        ctx = _make_context(_make_mock_sandbox())
-        result = _run(ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/test.py"), ctx))
-        assert result.is_error
-
-    def test_lsp_diagnostics_clean(self):
-        from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
-
-        svc = MagicMock()
-        svc.diagnostics.return_value = []
-        ctx = _make_context(_make_mock_sandbox(), ci_service=svc)
-        result = _run(ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/test.py"), ctx))
-        _assert_success(result)
-        assert "clean" in result.output
-
-    def test_lsp_diagnostics_with_errors(self):
-        from tools.ci_toolkit.ci_diagnostics import ci_diagnostics
-        from sandbox.code_intelligence.core.types import Diagnostic
-
-        svc = MagicMock()
-        svc.diagnostics.return_value = [
-            Diagnostic(
-                file_path="/test.py",
-                line=5,
-                character=10,
-                severity="error",
-                message="undefined name 'foo'",
-                source="pyright",
-            ),
-        ]
-        ctx = _make_context(_make_mock_sandbox(), ci_service=svc)
-        result = _run(ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/test.py"), ctx))
-        _assert_success(result)
-        assert "undefined name" in result.output
-        assert "error" in result.output
-
-
 # ===========================================================================
 # 12. ShellTool
 # ===========================================================================
@@ -549,17 +503,13 @@ class TestDaytonaToolIntegration:
         tools = self._tools()
         names = [tool.name for tool in tools]
 
-        assert len(tools) == 8, f"Expected 8 tools, got {len(tools)}: {names}"
+        assert len(tools) == 4, f"Expected 4 tools, got {len(tools)}: {names}"
 
         expected = {
             "shell",
             "read_file",
             "write_file",
-            "grep",
-            "glob",
             "edit_file",
-            "remove_file",
-            "move_file",
         }
         assert set(names) == expected, (
             f"Missing: {expected - set(names)}, Extra: {set(names) - expected}"
@@ -596,7 +546,7 @@ class TestDaytonaToolIntegration:
 
         assert registry.get("shell") is not None
         assert registry.get("shell") is not None
-        assert len(registry.to_api_schema()) == 8
+        assert len(registry.to_api_schema()) == 4
 
     def test_restrict_preserves_sandbox_tools(self):
         """restrict_to_tools should keep requested Daytona tools."""
@@ -925,21 +875,6 @@ class TestToolSelectionAndOrdering:
         assert "file_path" in required
         assert "old_text" in schema.get("properties", {})
         assert "new_text" in schema.get("properties", {})
-
-    def test_ci_query_symbol_requires_query(self):
-        from tools.ci_toolkit.ci_query_symbol import ci_query_symbol
-
-        schema = ci_query_symbol.to_api_schema()["input_schema"]
-        required = schema.get("required", [])
-        assert "query" in required
-
-    def test_lsp_diagnostics_requires_file_path_only(self):
-        from tools.ci_toolkit.ci_diagnostics import ci_diagnostics as DaytonaDiagnosticsTool
-
-        schema = DaytonaDiagnosticsTool.to_api_schema()["input_schema"]
-        required = schema.get("required", [])
-        assert "file_path" in required
-        assert "line" not in required
 
     def test_shell_requires_command(self):
         from tools.sandbox_toolkit.shell import shell as ShellTool

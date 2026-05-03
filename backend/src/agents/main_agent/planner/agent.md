@@ -5,12 +5,6 @@ model: inherit
 role: planner
 agent_type: agent
 allowed_tools:
-  - ci_status
-  - ci_workspace_structure
-  - ci_query_symbol
-  - ci_diagnostics
-  - grep
-  - glob
   - read_file
   - run_subagent
   - ask_advisor

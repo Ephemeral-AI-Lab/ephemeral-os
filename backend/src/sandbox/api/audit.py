@@ -24,8 +24,6 @@ from typing import Any
 
 from sandbox.api.models import (
     EditFileRequest,
-    MoveFileRequest,
-    RemoveFileRequest,
     RequestActor,
     ShellRequest,
     WriteFileRequest,
@@ -46,8 +44,6 @@ __all__ = [
     "failure_status",
     "submit_commit",
     "submit_edit_request",
-    "submit_move_request",
-    "submit_remove_request",
     "submit_shell_cmd",
     "submit_shell_request",
     "submit_write_request",
@@ -165,56 +161,6 @@ async def submit_edit_request(
         specs=[spec],
         fallback_paths=[request.path],
         description=request.description or f"edit {request.path}",
-        actor=request.actor,
-        sandbox=sandbox,
-    )
-
-
-async def submit_remove_request(
-    svc: Any,
-    *,
-    request: RemoveFileRequest,
-    sandbox: Any | None = None,
-) -> FileChangeResult:
-    """Forward a :class:`RemoveFileRequest` through the OCC pipeline."""
-    from sandbox.code_intelligence.core.types import DeleteSpec
-
-    spec = DeleteSpec(path=request.path, is_folder=request.is_folder)
-    return await submit_commit(
-        svc,
-        op="delete",
-        specs=[spec],
-        fallback_paths=[request.path],
-        description=request.description or f"delete {request.path}",
-        actor=request.actor,
-        sandbox=sandbox,
-    )
-
-
-async def submit_move_request(
-    svc: Any,
-    *,
-    request: MoveFileRequest,
-    sandbox: Any | None = None,
-) -> FileChangeResult:
-    """Forward a :class:`MoveFileRequest` through the OCC pipeline."""
-    from sandbox.code_intelligence.core.types import MoveSpec
-
-    spec = MoveSpec(
-        src_path=request.src_path,
-        dst_path=request.dst_path,
-        overwrite=request.overwrite,
-        is_folder=request.is_folder,
-    )
-    return await submit_commit(
-        svc,
-        op="move",
-        specs=[spec],
-        fallback_paths=[request.src_path, request.dst_path],
-        description=(
-            request.description
-            or f"move {request.src_path} -> {request.dst_path}"
-        ),
         actor=request.actor,
         sandbox=sandbox,
     )

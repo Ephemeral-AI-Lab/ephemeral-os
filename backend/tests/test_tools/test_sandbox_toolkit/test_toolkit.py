@@ -24,11 +24,7 @@ def test_sandbox_exports_expected_tools():
         "shell",
         "read_file",
         "write_file",
-        "grep",
-        "glob",
         "edit_file",
-        "remove_file",
-        "move_file",
     }
     assert names == expected
     assert not any(name.startswith("daytona_") for name in names)
@@ -46,19 +42,10 @@ async def test_registered_api_backed_tools_require_sandbox_api():
             "new_text": "new",
         },
         "shell": {"command": "echo hi"},
-        "remove_file": {"path": "/repo/app.py"},
-        "move_file": {
-            "src_path": "/repo/src.py",
-            "target_path": "/repo/dst.py",
-        },
     }
 
     assert set(api_inputs).issubset(tools_by_name)
-    assert set(tools_by_name) - set(api_inputs) == {
-        "read_file",
-        "grep",
-        "glob",
-    }
+    assert set(tools_by_name) - set(api_inputs) == {"read_file"}
 
     for tool_name, tool_input in api_inputs.items():
         ctx = _ctx({"sandbox_id": "sb-1", "repo_root": "/repo"})
@@ -104,7 +91,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 8
+    assert len(tools) == 4
 
 
 def test_sandbox_tools_omit_instruction_block():

@@ -14,10 +14,8 @@ import pytest
 
 from sandbox.code_intelligence.backends import DaemonBackend
 from sandbox.code_intelligence.core.types import (
-    DeleteSpec,
     EditRequest,
     EditSpec,
-    MoveSpec,
     OperationChange,
     SymbolKind,
     WriteSpec,
@@ -224,26 +222,6 @@ def test_edit_file_serializes_specs() -> None:
     backend.edit_file(spec)
     args = daemon.calls[0][1]
     assert args["specs"][0]["file_path"] == "/ws/x.py"
-
-
-def test_delete_file_supports_str_or_spec() -> None:
-    backend, daemon = _make_backend({"delete_file": _operation_result_payload()})
-    backend.delete_file([DeleteSpec(path="/ws/a.py"), "/ws/b.py"])
-    args = daemon.calls[0][1]
-    assert args["paths"][0] == {"path": "/ws/a.py", "is_folder": False}
-    assert args["paths"][1] == "/ws/b.py"
-
-
-def test_move_file_serializes_specs() -> None:
-    backend, daemon = _make_backend({"move_file": _operation_result_payload()})
-    backend.move_file([MoveSpec(src_path="/ws/a.py", dst_path="/ws/b.py")])
-    args = daemon.calls[0][1]
-    assert args["specs"][0] == {
-        "src_path": "/ws/a.py",
-        "dst_path": "/ws/b.py",
-        "overwrite": False,
-        "is_folder": False,
-    }
 
 
 def test_apply_edit_serializes_request() -> None:

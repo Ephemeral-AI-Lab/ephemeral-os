@@ -20,13 +20,8 @@ from sandbox.api import audit
 from sandbox.api.audited_sandbox_api import AuditedSandboxApi
 from sandbox.api.models import (
     EditFileRequest,
-    GlobRequest,
-    GrepRequest,
-    MoveFileRequest,
     ReadFileRequest,
-    RemoveFileRequest,
     RequestActor,
-    SearchMatch,
     SearchReplaceEdit,
     ShellRequest,
     WriteFileRequest,
@@ -39,8 +34,6 @@ class _FakeTransport:
 
     name: str = "fake"
     read_bytes_mock: AsyncMock = field(default_factory=AsyncMock)
-    search_mock: AsyncMock = field(default_factory=AsyncMock)
-    list_paths_mock: AsyncMock = field(default_factory=AsyncMock)
 
     async def exec(self, *args: Any, **kwargs: Any) -> Any:
         raise AssertionError("AuditedSandboxApi must not call transport.exec")
@@ -62,25 +55,6 @@ class _FakeTransport:
 
     async def apply_diff_batch_checked(self, *args: Any, **kwargs: Any) -> Any:
         raise AssertionError("AuditedSandboxApi writes go through audit, not transport")
-
-    async def search(
-        self,
-        sandbox_id: str,
-        pattern: str,
-        *,
-        root: str | None = None,
-        include: str | None = None,
-    ) -> Sequence[SearchMatch]:
-        return await self.search_mock(sandbox_id, pattern, root=root, include=include)
-
-    async def list_paths(
-        self,
-        sandbox_id: str,
-        glob: str,
-        *,
-        root: str | None = None,
-    ) -> Sequence[str]:
-        return await self.list_paths_mock(sandbox_id, glob, root=root)
 
 
 @pytest.fixture
@@ -146,46 +120,6 @@ async def test_read_file_returns_missing_on_file_not_found(
 
     assert result.exists is False
     assert result.content == ""
-
-
-async def test_grep_translates_search_matches(
-    api: AuditedSandboxApi,
-    transport: _FakeTransport,
-    actor: RequestActor,
-) -> None:
-    transport.search_mock.return_value = (
-        SearchMatch(path="/a.py", line=10, preview="foo"),
-        SearchMatch(path="/b.py", line=5, preview="bar"),
-    )
-
-    result = await api.grep(
-        "sb-1", GrepRequest(pattern="needle", path="/repo", actor=actor),
-    )
-
-    assert len(result.matches) == 2
-    assert result.matches[0].file_path == "/a.py"
-    assert result.matches[0].line == 10
-    assert result.matches[0].text == "foo"
-    transport.search_mock.assert_awaited_once_with(
-        "sb-1", "needle", root="/repo", include=None,
-    )
-
-
-async def test_glob_returns_paths(
-    api: AuditedSandboxApi,
-    transport: _FakeTransport,
-    actor: RequestActor,
-) -> None:
-    transport.list_paths_mock.return_value = ("/repo/a.py", "/repo/b.py")
-
-    result = await api.glob(
-        "sb-1", GlobRequest(pattern="**/*.py", path="/repo", actor=actor),
-    )
-
-    assert result.files == ("/repo/a.py", "/repo/b.py")
-    transport.list_paths_mock.assert_awaited_once_with(
-        "sb-1", "**/*.py", root="/repo",
-    )
 
 
 # -- mutation ----------------------------------------------------------------
@@ -277,62 +211,6 @@ async def test_edit_file_dispatches_through_audit(
     assert result.success is True
     assert result.applied_edits == 1
     assert captured["request"] is request
-
-
-async def test_remove_file_dispatches_through_audit(
-    api: AuditedSandboxApi,
-    actor: RequestActor,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, Any] = {}
-
-    async def fake_remove_request(
-        svc: Any, *, request: RemoveFileRequest, sandbox: Any,
-    ) -> Any:
-        captured["request"] = request
-        return SimpleNamespace(
-            success=True,
-            changed_paths=("/dead",),
-            ambient_changed_paths=(),
-            conflict_reason=None,
-            raw=None,
-        )
-
-    monkeypatch.setattr(audit, "submit_remove_request", fake_remove_request)
-
-    request = RemoveFileRequest(path="/dead", actor=actor, is_folder=True)
-    result = await api.remove_file("sb-1", request)
-
-    assert result.success is True
-    assert captured["request"].is_folder is True
-
-
-async def test_move_file_dispatches_through_audit(
-    api: AuditedSandboxApi,
-    actor: RequestActor,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, Any] = {}
-
-    async def fake_move_request(
-        svc: Any, *, request: MoveFileRequest, sandbox: Any,
-    ) -> Any:
-        captured["request"] = request
-        return SimpleNamespace(
-            success=True,
-            changed_paths=("/a", "/b"),
-            ambient_changed_paths=(),
-            conflict_reason=None,
-            raw=None,
-        )
-
-    monkeypatch.setattr(audit, "submit_move_request", fake_move_request)
-
-    request = MoveFileRequest(src_path="/a", dst_path="/b", actor=actor)
-    result = await api.move_file("sb-1", request)
-
-    assert result.success is True
-    assert result.changed_paths == ("/a", "/b")
 
 
 # -- shell -------------------------------------------------------------------

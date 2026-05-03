@@ -81,13 +81,11 @@ def _register_many(tools: list[BaseTool]) -> None:
 
 def _register_builtins() -> None:
     """Register built-in tool factories."""
-    from tools.ci_toolkit import make_code_intelligence_tools
     from tools.sandbox_toolkit import make_sandbox_tools
     from tools.submission import make_submission_tools
     from tools.subagent import make_subagent_tool_from_context
 
     _register_many(make_sandbox_tools())
-    _register_many(make_code_intelligence_tools())
     _register_many(make_submission_tools())
     register_tool_factory("run_subagent", make_subagent_tool_from_context)
 

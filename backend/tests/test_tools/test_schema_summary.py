@@ -40,12 +40,6 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Tool: ci_workspace_structure" in summary
-    assert "      - max_depth: int [default 3]" in summary
-    assert "      - paths: list[str] [default []]" in summary
-    assert "Tool: ci_query_symbol" in summary
-    assert "      - definitions: list[CiSymbolDefinitionOutput] [default []]" in summary
-
     assert "Tool: submit_task_completion" not in summary
     assert "Tool: submit_continue_work_handoff" not in summary
     assert "Tool: request_replan" not in summary
@@ -95,7 +89,7 @@ def test_schema_summary_omits_instruction_blocks(tmp_path):
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Tool: ci_query_symbol" in summary
+    assert "Tool: read_file" in summary
     assert "  instructions:" not in summary
 
 

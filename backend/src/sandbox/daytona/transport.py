@@ -27,12 +27,10 @@ from sandbox.api.models import (
     CheckedWriteResult,
     CheckedWriteSpec,
     RawExecResult,
-    SearchMatch,
 )
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.file_commands import REMOTE_WRITE_CHUNK_BYTES
 from sandbox.client.async_ import get_async_sandbox
-from sandbox.daytona.search_commands import build_glob_command, build_grep_command
 
 logger = logging.getLogger(__name__)
 
@@ -302,70 +300,6 @@ class DaytonaTransport:
             success=False,
             conflict_paths=(conflict_path,) if conflict_path else (),
             conflict_reason=str(payload.get("reason") or "failed"),
-        )
-
-    # -- search --------------------------------------------------------
-
-    async def search(
-        self,
-        sandbox_id: str,
-        pattern: str,
-        *,
-        root: str | None = None,
-        include: str | None = None,
-    ) -> Sequence[SearchMatch]:
-        del include  # transport returns the full grep stream; callers filter
-        target = root or "/"
-        command = build_grep_command(root=target, pattern=pattern)
-        result = await self.exec(sandbox_id, command, timeout=60)
-        if result.exit_code not in (0, None):
-            raise SandboxTransportError(
-                f"daytona search failed (exit={result.exit_code}): "
-                f"{result.stdout[-1000:]!r}"
-            )
-        try:
-            payload = json.loads(result.stdout or "{}")
-        except json.JSONDecodeError as exc:
-            raise SandboxTransportError(
-                f"daytona search returned invalid JSON: "
-                f"{result.stdout[-1000:]!r}"
-            ) from exc
-        if not bool(payload.get("ok")):
-            raise SandboxTransportError(
-                f"daytona search reported failure: "
-                f"{payload.get('error') or payload}"
-            )
-        matches: list[SearchMatch] = []
-        for raw in payload.get("matches") or ():
-            if not isinstance(raw, dict):
-                continue
-            file_path = str(raw.get("file") or "")
-            line = int(raw.get("line") or 0)
-            preview = str(raw.get("content") or "")
-            if not file_path or not line:
-                continue
-            matches.append(
-                SearchMatch(path=file_path, line=line, preview=preview),
-            )
-        return tuple(matches)
-
-    async def list_paths(
-        self,
-        sandbox_id: str,
-        glob: str,
-        *,
-        root: str | None = None,
-    ) -> Sequence[str]:
-        target = root or "/"
-        command = build_glob_command(root=target, pattern=glob)
-        result = await self.exec(sandbox_id, command, timeout=30)
-        if result.exit_code not in (0, None):
-            raise SandboxTransportError(
-                f"daytona list_paths failed (exit={result.exit_code}): "
-                f"{result.stdout[-1000:]!r}"
-            )
-        return tuple(
-            line for line in (result.stdout or "").splitlines() if line.strip()
         )
 
     # -- internals -----------------------------------------------------

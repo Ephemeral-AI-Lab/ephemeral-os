@@ -2,193 +2,395 @@
 
 **Status:** Draft, awaiting execution
 **Author:** session 2026-05-03
-**Scope:** ~3K LoC, ~15 files. Adds `backend/src/plugins/`; deletes the in-house code-intelligence query surface (`indexing/`, `language_server/`, `daemon/index_store.py`) and `tools/ci_toolkit/_query_runtime.py`. Tests under `backend/tests/test_plugins/`.
-**Companion doc:** `occ-overlay-daemon-refactor.md` covers the guardrail/daemon relocation. The plugin half lands first so `lifecycle/workspace.py` can swap to the new lookup in a single pass.
+**Scope:** Adds `backend/src/plugins/`; replaces the in-house code-intelligence query surface with directly agent-callable plugin tools. Deletes the in-house symbol index/LSP host cache/query runtime after the LSP plugin tools are wired.
+**Companion doc:** `occ-overlay-daemon-refactor.md` covers the guardrail/daemon relocation. This plan only owns the query-tool replacement.
 
 ## 0. Motivation
 
-Today the in-house symbol index, symbol extractor, file discovery, and LSP-host-with-cache reimplement what `basedpyright` already provides. Two costs:
+Today the in-house symbol index, symbol extractor, file discovery, and LSP-host-with-cache reimplement what `basedpyright` already provides as an LSP backend. Two costs:
 
 1. **Duplicated capability.** basedpyright owns a complete language server; the host-side cache and document-version tracking exist only because we wrap it.
-2. **Locked-in shape.** Everything lives under `code_intelligence/` and is sandbox-coupled. Future linters, formatters, search engines, or third-party tools have no clean place to plug in.
+2. **Wrong boundary.** Query capability is modeled as a backend service object instead of as tools agents can call directly. That makes sandbox connection and LSP lifecycle look like platform concerns when they are actually implementation details of the query tools.
 
-End state: a generic plugin host at `backend/src/plugins/`, with `basedpyright` as the first plugin. Plugins are not code-intelligence-specific; they're the standard way agents acquire toolkits inside a sandbox.
+End state: a plugin is just a source of tools, plus an optional sandbox setup script. Agents call those tools through the same registry and `allowed_tools` mechanism as built-in tools. If a plugin tool needs a process or server inside the sandbox, the tool owns the full path from agent invocation to sandbox connection.
 
-## 1. End-state shape
+## 1. Design principles
 
+### 1.1 Small plugin contract
+
+A plugin provides only:
+
+1. Agent-callable tools.
+2. An optional `setup.sh` if those tools require sandbox-side dependencies.
+
+That is the public contract. No `Plugin` lifecycle object, no host-owned `on_load`, no host-owned `on_teardown`, no framework-managed language-server handle, and no plugin-specific service facade.
+
+Private implementation modules are still fine inside a plugin, but they are free-form helper code, not part of the plugin contract. A plugin can add `client.py` or `session.py` if that shape is useful; those files are not mandatory.
+
+### 1.2 Tools are directly accessible by agents
+
+Plugin tools register into the existing tool registry as normal `BaseTool` instances. Agent definitions continue to expose tools through `allowed_tools` and `terminals`; there is no separate `plugin_toolkits` field.
+
+Example agent-facing names:
+
+```yaml
+allowed_tools:
+  - lsp.find_definitions
+  - lsp.find_references
+  - lsp.hover
+  - lsp.diagnostics
+  - lsp.query_symbols
 ```
+
+The plugin system is discovery and packaging. Permissioning remains tool-level.
+
+### 1.3 Tool-owned sandbox connection
+
+Each plugin tool encapsulates the sandbox path it needs:
+
+1. Read the current `ToolExecutionContext`.
+2. Require or resolve `sandbox_id` and the sandbox API/transport already present in the context.
+3. Verify that the plugin setup marker exists, or surface a clear setup error.
+4. Ensure any sandbox-local process/server needed for the tool is running.
+5. Connect to that sandbox-local process/server.
+6. Issue the request and normalize the result into a tool response.
+
+If a plugin server is hosted inside the sandbox, the tool must handle the full process from agent invocation to sandbox connection. The plugin framework does not pre-open the connection on behalf of the tool.
+
+Tools may share a small private connection cache keyed by sandbox id when the protocol benefits from a warm process, but the cache is owned by the plugin tool implementation and must be restartable after failure.
+
+## 2. End-state shape
+
+```text
 backend/src/
-├── plugins/                       # NEW: generic plugin host, NOT sandbox-coupled
-│   ├── core/                      # plugin protocol, manifest, registry, setup composer
+├── plugins/
+│   ├── core/
+│   │   ├── registry.py            # discover catalog plugin folders
+│   │   ├── tool_loader.py         # load plugin tool factories
+│   │   ├── setup_runner.py        # compose/run selected sandbox setup scripts
+│   │   └── errors.py
 │   └── catalog/
-│       └── basedpyright/          # first plugin: LSP for Python via basedpyright
+│       └── lsp/
+│           ├── setup.sh           # optional idempotent sandbox dependency setup
+│           ├── tools/             # required: package mirroring backend/src/tools/*
+│           └── plugin.md          # required: human-facing plugin contract and usage notes
 └── sandbox/                       # see occ-overlay-daemon-refactor.md
 ```
 
-`find_definitions`, `find_references`, `hover`, `diagnostics`, `query_symbols` are no longer methods on a service object. They are tools registered by the `basedpyright` plugin and exposed to agents through the plugin host's tool surface (MCP-style).
+`find_definitions`, `find_references`, `hover`, `diagnostics`, and `query_symbols` are no longer methods on `CodeIntelligenceService`. They are normal tools registered from `plugins/catalog/lsp/tools/`.
 
-## 2. Plugin host
+## 3. Plugin folder contract
 
-### 2.1 Layout
+There is no `manifest.toml` in v1. The catalog convention is filesystem-first:
 
+```text
+plugins/catalog/<plugin_name>/
+├── setup.sh                       # optional; only for sandbox dependency setup
+├── tools/                         # required; same package pattern as backend/src/tools/*
+│   ├── __init__.py                # re-export the package factory
+│   ├── registry.py                # collect/register plugin tools
+│   ├── <tool_name>.py             # one BaseTool per public tool
+│   └── _helpers.py                # optional private helpers, like backend/src/tools/*/_*.py
+└── plugin.md                      # required; describes tools, setup, limits, examples
 ```
-backend/src/plugins/
-├── __init__.py
-├── core/
+
+Rules:
+
+- The plugin name is the catalog directory name.
+- `tools/` is the only required code entrypoint package. It mirrors
+  `backend/src/tools/<toolkit>/`: `__init__.py` re-exports a factory,
+  `registry.py` collects `BaseTool` objects, and public tools live in
+  individual modules.
+- The generic plugin-loader contract is `tools.make_tools() -> list[BaseTool]`.
+  Internally, `registry.py` may use a more specific helper like
+  `make_lsp_tools()`, but `tools/__init__.py` must expose `make_tools()` for
+  discovery.
+- `setup.sh` is optional and only valid for sandbox plugins.
+- `plugin.md` is documentation and catalog metadata for humans. It is not a lifecycle hook and does not declare tool schemas.
+- Helper files should follow the existing `backend/src/tools` style: keep them
+  private inside the `tools/` package, usually as underscore-prefixed modules.
+  `client.py` and `session.py` are acceptable helper names when useful, but
+  they are not part of the required structure.
+- Setup scripts must be idempotent.
+- Setup scripts install prerequisites and write a readiness marker. They do not start long-lived tool servers; tool calls own server startup/connection.
+- Tool names are namespaced by plugin, unless a tool has a deliberate built-in replacement name.
+
+## 4. Agent and runtime wiring
+
+### 4.1 Tool registration
+
+The default tool catalog gains plugin tools during startup:
+
+1. `plugins.core.registry` discovers `catalog/*/tools/`.
+2. `plugins.core.tool_loader` imports each `tools.make_tools()` factory.
+3. Returned `BaseTool` instances register into the existing `ToolRegistry`.
+4. `AgentDefinitionValidator` validates plugin tool names the same way it validates built-in tool names.
+5. `_build_agent_tool_registry` filters to `allowed_tools ∪ terminals` exactly as it does today.
+
+The agent sees no plugin object. It sees callable tools.
+
+### 4.2 Sandbox setup
+
+Sandbox bootstrap resolves setup from the selected tool surface:
+
+1. Build the final tool surface for the agent.
+2. Map selected plugin tools back to their catalog directory.
+3. Compose each selected plugin's `setup.sh`, when present, in deterministic order.
+4. Run the composed setup before the agent starts.
+5. Fail the agent startup if a required setup script exits non-zero.
+
+Setup runs because a selected tool requires it, not because the agent selected an abstract plugin toolkit.
+
+### 4.3 Tool call path
+
+```text
+Agent
+  -> tool_registry["lsp.find_definitions"]
+  -> LspFindDefinitionsTool.execute(context, args)
+  -> private LSP helper code
+  -> sandbox API/transport from ToolExecutionContext
+  -> ensure LSP server/process in sandbox
+  -> connect/request/response
+  -> ToolResult
+```
+
+This keeps the sandbox connection hidden behind the tool. The platform only provides the normal tool context and sandbox API.
+
+### 4.4 Existing live evidence and connection model
+
+There is prior live evidence that a basedpyright child can run inside a Daytona
+sandbox and answer a real LSP request. The recorded path was:
+
+```text
+orchestrator
+  -> Daytona transport exec
+  -> in-sandbox Python bridge
+  -> in-sandbox Unix-socket CI daemon
+  -> basedpyright-langserver --stdio child
+  -> textDocument/definition response
+```
+
+That proves sandbox-resident basedpyright can launch and answer an LSP query.
+It does **not** prove that the host can or should connect directly to
+`basedpyright-langserver`. basedpyright is a stdio language-server process; the
+connection that crosses the sandbox boundary is the harness-owned transport
+call into an in-sandbox bridge/gateway.
+
+The LSP plugin must preserve this distinction:
+
+- The tool owns the agent-facing call.
+- The sandbox side owns the basedpyright process and JSON-RPC stdio session.
+- The cross-boundary connection goes through the sandbox API/transport, not a
+  direct host TCP/stdio handle to basedpyright.
+- The first implementation step is a plugin-specific live spike that installs
+  the LSP plugin setup, starts the sandbox-side basedpyright path, calls the
+  server from outside the sandbox, and records the connection shape plus
+  timings.
+
+## 5. LSP plugin
+
+### 5.1 Public files
+
+```text
+plugins/catalog/lsp/
+├── setup.sh
+├── tools/
 │   ├── __init__.py
-│   ├── manifest.py                # parse manifest.toml → PluginManifest dataclass
-│   ├── protocol.py                # Plugin Protocol: on_load(sandbox), on_teardown(), tools()
-│   ├── registry.py                # scan catalog/, build name→manifest map, load entrypoints
-│   ├── tool.py                    # ToolSpec(name, handler, schema, description)
-│   ├── setup_builder.py           # compose ordered, idempotent setup script from N plugins
-│   └── errors.py                  # PluginError, ManifestError, SetupError
-└── catalog/
-    ├── __init__.py
-    └── basedpyright/
-        ├── __init__.py
-        ├── manifest.toml          # plugin metadata only — tools come from code
-        ├── setup.sh               # installs basedpyright in sandbox
-        ├── plugin.py              # BasedpyrightPlugin: on_load spawns langserver, tools() returns ToolSpecs
-        └── lsp_rpc.py             # minimal jsonrpc stdio client (~80 LoC: framing + req/resp correlation)
+│   ├── registry.py
+│   ├── find_definitions.py
+│   ├── find_references.py
+│   ├── hover.py
+│   ├── diagnostics.py
+│   └── query_symbols.py
+└── plugin.md
 ```
 
-Tests live under `backend/tests/test_plugins/`.
+`tools/__init__.py` exports `make_tools()`, following the same package pattern
+as `backend/src/tools/sandbox_toolkit/__init__.py` and
+`backend/src/tools/sandbox_toolkit/registry.py`.
 
-### 2.2 Manifest format
+The public tool modules are:
 
-```toml
-name = "basedpyright"
-description = "basedpyright LSP for Python"
-languages = ["python"]
-setup = "setup.sh"
-entrypoint = "plugin:BasedpyrightPlugin"
+- `lsp.find_definitions`
+- `lsp.find_references`
+- `lsp.hover`
+- `lsp.diagnostics`
+- `lsp.query_symbols`
+
+### 5.2 Private implementation
+
+No helper file is mandatory. Do not pre-create `lsp_rpc.py`, `process.py`,
+`paths.py`, `client.py`, or `session.py` as part of the architecture. Start
+with the required `tools/` package and split out helper functions or modules
+only when the code actually needs them.
+
+```text
+plugins/catalog/lsp/
+├── setup.sh
+├── tools/
+│   ├── __init__.py
+│   ├── registry.py
+│   ├── <tool modules>
+│   └── _helpers.py                # optional
+└── plugin.md
 ```
 
-Tools are NOT declared in the manifest. The plugin's `tools()` method is the source of truth.
+The first implementation should make full use of `basedpyright-langserver` as
+the language-intelligence authority. The plugin may still need tiny plumbing for
+process startup, JSON-RPC framing, request correlation, or file-URI conversion,
+but that plumbing must stay thin and private. It is not a replacement query
+engine, cache, symbol index, or host-side LSP framework.
 
-### 2.3 Plugin protocol
+For the first basedpyright-backed implementation, the `tools/` package owns the
+full call path:
 
-```python
-class Plugin(Protocol):
-    name: str
+- detecting the active sandbox from tool context,
+- ensuring `basedpyright-langserver` is installed and runnable in the sandbox,
+- starting or reusing the sandbox-local basedpyright server/process,
+- initializing the server with the sandbox workspace,
+- sending `textDocument/didOpen` / `textDocument/didChange` so basedpyright's
+  in-memory model is authoritative,
+- using basedpyright LSP requests for the tool behavior:
+  `textDocument/definition`, `textDocument/references`, `textDocument/hover`,
+  diagnostics, and `workspace/symbol` or `textDocument/documentSymbol` for
+  symbol lookup,
+- reconnecting once after failure, then surfacing a clear tool error,
+- closing stale handles when the sandbox disappears.
 
-    def on_load(self, sandbox: Sandbox) -> None: ...
-    def on_teardown(self) -> None: ...
-    def tools(self) -> list[ToolSpec]: ...
-```
+No host-side symbol index, no document-version cache, no local syntax-check
+fallback that pretends to be diagnostics, and no `CodeIntelligenceService` query
+facade remain. If basedpyright cannot answer a query, the tool should return an
+explicit unavailable/unsupported result instead of falling back to the deleted
+in-house query surface.
 
-`on_load` is called once per sandbox bind. For `basedpyright`, this spawns `basedpyright-langserver --stdio` inside the sandbox via `sandbox.cmd` and holds the stdio channel open through `lsp_rpc.py`. No host-side cache, no document version tracking — basedpyright owns its own state inside the sandbox.
+## 6. Deletions
 
-### 2.4 Setup script composition
+### 6.1 Code
 
-`plugins.core.setup_builder.build(plugin_names: list[str]) → str` returns one ordered, idempotent shell script that bootstraps every requested plugin's setup fragment. Each plugin's `setup.sh` MUST be idempotent (safe to re-run). The builder handles dedup; ordering follows manifest declaration order (no dep graph in v1).
-
-### 2.5 Agent definition wiring
-
-```python
-# agent_definition (existing schema)
-plugin_toolkits: list[str]   # NEW field — names of required plugins
-```
-
-At sandbox bootstrap:
-
-1. Resolve `agent.plugin_toolkits` → manifests via `plugins.core.registry`.
-2. `setup_builder.build(...)` produces the composed setup script.
-3. Sandbox bootstrap runs the script (once, before agent starts).
-4. Each plugin's `on_load(sandbox)` is invoked; `tools()` results are registered on the agent's tool surface.
-5. Agent invokes plugin tools through the same surface as built-in tools.
-
-### 2.6 basedpyright lifecycle
-
-- **Long-lived inside the sandbox.** One langserver per sandbox, spawned at `on_load`, killed at `on_teardown`.
-- Host side keeps only the stdio handle and the jsonrpc correlator.
-- `cache.py`, `lsp_host.py`, document-version tracking — DELETED (see §3).
-
-## 3. Deletions
-
-### 3.1 Code
-
-- `sandbox/code_intelligence/indexing/` (entire directory: `symbol_index.py`, `symbol_extractor.py`, `file_discovery.py`)
-- `sandbox/code_intelligence/language_server/` (entire directory: `cache.py`, `client.py`, `daemon_queries.py`, `jsonrpc.py`, `lsp_child.py`, `lsp_host.py`, `models.py`, `path_helpers.py`, `telemetry.py`, `transport.py`, `utils.py`)
+- `sandbox/code_intelligence/indexing/`
+- `sandbox/code_intelligence/language_server/cache.py`
+- `sandbox/code_intelligence/language_server/client.py`
+- `sandbox/code_intelligence/language_server/daemon_queries.py`
+- `sandbox/code_intelligence/language_server/jsonrpc.py`
+- `sandbox/code_intelligence/language_server/lsp_child.py`
+- `sandbox/code_intelligence/language_server/lsp_host.py`
+- `sandbox/code_intelligence/language_server/models.py`
+- `sandbox/code_intelligence/language_server/path_helpers.py`
+- `sandbox/code_intelligence/language_server/telemetry.py`
+- `sandbox/code_intelligence/language_server/transport.py`
+- `sandbox/code_intelligence/language_server/utils.py`
 - `sandbox/code_intelligence/daemon/index_store.py`
 
-### 3.2 Tools
+Any unavoidable JSON-RPC/process/path plumbing needed by the LSP implementation
+moves into the plugin as private implementation. It should not preserve the old
+module split unless the code size justifies it.
 
-- `tools/ci_toolkit/_query_runtime.py` (entire file)
-- Anything else in `tools/ci_toolkit/` that calls deleted query methods — delete or rewrite as plugin tools
+### 6.2 Tools
 
-### 3.3 Tests
+- `tools/ci_toolkit/_query_runtime.py`
+- Any `tools/ci_toolkit/` wrappers that only forward into deleted query service methods
 
-- `backend/tests/test_sandbox/test_code_intelligence/test_*indexing*.py`
-- Tests targeting the deleted symbol query handlers
-- Tests for the deleted `language_server/` host/cache machinery
+The replacement query tools live under `plugins/catalog/lsp/tools/` and are registered directly.
 
-### 3.4 No backward-compat shims
+### 6.3 Tests
 
-Per agreed scope: every external call site is rewritten in the same change set. No re-export shims, no deprecation wrappers.
+- Tests targeting symbol-index extraction/storage.
+- Tests targeting the deleted language-server host/cache machinery.
+- Tests targeting deleted `CodeIntelligenceService` query methods.
 
-## 4. Sequenced execution
+Replacement tests should cover plugin discovery, setup selection, direct tool registration, and LSP tool execution against a real Python file.
 
-Plugin half lands first; OCC/Overlay/daemon relocation in the companion doc starts after step 5 here passes smoke test.
+### 6.4 No backward-compat shims
 
+Every external call site is rewritten in the same change set. No re-export shims, no deprecated query-service wrappers, and no temporary `plugin_toolkits` compatibility field.
+
+## 7. Sequenced execution
+
+Plugin work lands before the OCC/Overlay/daemon relocation so query call sites can switch to direct tools in one pass.
+
+```text
+0. Pre-step: prove sandbox-hosted basedpyright connectivity
+   - Create a throwaway live sandbox with a real Python checkout/file
+   - Run the candidate LSP plugin setup path, or an equivalent setup script,
+     to install basedpyright and verify `command -v basedpyright-langserver`
+   - Start `basedpyright-langserver --stdio` inside the sandbox through the
+     intended sandbox-side bridge/gateway shape
+   - Connect from outside the sandbox only through the sandbox API/transport
+     path; do not assume direct host stdio/TCP connectivity to basedpyright
+   - Send initialize/initialized, didOpen, then at least
+     textDocument/definition, textDocument/references, textDocument/hover,
+     diagnostics, and one symbol query request
+   - Record the exact process topology, bridge code shape, failure behavior,
+     and cold/warm timings in a timing artifact or architecture note
+   - Gate step 1 on this proof; if the bridge shape is awkward, update this
+     plan before building the plugin catalog
+
+1. Create the minimal plugin catalog infrastructure
+   - core/{registry.py, tool_loader.py, setup_runner.py, errors.py}
+   - no Plugin protocol, no lifecycle hooks
+   - tests for folder discovery, tool factory loading, setup selection
+
+2. Register plugin tools in the existing tool surface
+   - tools/core/factory.py discovers plugin tool factories
+   - tool validation accepts plugin tool names through the existing registry
+   - agent definitions keep using allowed_tools
+
+3. Wire selected-tool setup into sandbox bootstrap
+   - selected plugin tools -> unique setup.sh scripts
+   - setup scripts run idempotently before agent start
+   - non-zero setup exits fail startup with a clear error
+
+4. Author plugins/catalog/lsp/
+   - setup.sh
+   - tools/ package with __init__.py, registry.py, and the 5 namespaced tool modules
+   - plugin.md documenting tool behavior, setup, and limits
+   - helper functions/modules only where the tool implementation actually needs them
+
+5. Rewrite query call sites
+   - remove service.find_definitions/find_references/hover/diagnostics/query_symbols usage
+   - agent-facing query capability comes only from LSP plugin tools
+
+6. Delete the in-house query surface
+   - indexing/
+   - language_server/ host/cache/query modules
+   - daemon/index_store.py
+   - tools/ci_toolkit/_query_runtime.py and forwarding wrappers
+
+7. Smoke test
+   - run an agent with the 5 LSP tool names in allowed_tools
+   - verify setup runs
+   - verify each tool returns sensible output against a real Python file
+
+8. Hand off to occ-overlay-daemon-refactor.md
+   - lifecycle/workspace.py swaps remaining CI-service references to OCC/Overlay plus plugin tool lookup
+   - code_intelligence/ can be emptied and removed after both plans land
 ```
-1. Create backend/src/plugins/{core,catalog/basedpyright}/ skeleton
-   - core/{manifest.py, protocol.py, registry.py, tool.py, setup_builder.py, errors.py}
-   - Plugin protocol + ToolSpec dataclass + manifest schema
-   - Unit tests for manifest parsing, registry discovery, setup composition
 
-2. Implement plugins.core.registry + setup_builder
-   - Discover catalog/* directories with manifest.toml
-   - Validate entrypoints loadable
-   - setup_builder produces idempotent ordered shell script
-
-3. Author plugins/catalog/basedpyright/
-   - manifest.toml (5-line minimal)
-   - setup.sh (idempotent install of basedpyright in sandbox)
-   - lsp_rpc.py (~80 LoC stdio jsonrpc correlator)
-   - plugin.py (BasedpyrightPlugin with on_load, on_teardown, tools() returning 5 ToolSpecs)
-
-4. Add `plugin_toolkits: list[str]` to agent_definition schema
-   - Wire sandbox bootstrap: resolve manifests → setup_builder.build → run script
-   - Invoke plugin.on_load(sandbox), register tools() on agent surface
-
-5. Smoke test: run a sandbox with agent.plugin_toolkits = ["basedpyright"]; verify each of the 5 tools returns sensible output against a real Python file.
-
-6. Hand off to occ-overlay-daemon-refactor.md, which will:
-   - Rewrite sandbox/lifecycle/workspace.py to use plugin lookup instead of service.symbol_index/lsp_client
-   - Delete the in-house query surface listed in §3 above as part of its mass-deletion step
-
-7. After OCC/Overlay/daemon refactor merges:
-   - Add docs/architecture/plugins.md describing the plugin host
-   - Verify backend/tests/test_plugins/ is green and basedpyright tools are exercised end-to-end
-```
-
-## 5. Risks and mitigations
+## 8. Risks and mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| basedpyright cold start latency | Long-lived langserver per sandbox; `on_load` is paid once. |
-| Sandbox without basedpyright installed | Setup script is mandatory at bootstrap; agent fails to start if any plugin's `setup.sh` exits non-zero. |
-| External callers depending on `service.find_definitions` etc. | All call sites enumerated in companion doc §4; rewritten in same change set. |
-| Plugin process crash mid-session | Out of scope for v1 — surfaced as tool error; supervisor/restart deferred. |
-| Tests for indexing fail to delete cleanly | Each test file inspected; deletion is line-item, not bulk. |
+| LSP cold start latency | Tool-owned helper code lazily starts and reuses the server/process per sandbox. |
+| Setup script not run before tool call | Derive setup from the final selected tool surface during sandbox bootstrap; fail startup on setup failure. |
+| Sandbox-local server crashes mid-session | Tool-owned helper code reconnects once, then returns a clear tool error. |
+| Tool implementation leaks provider details | Tools consume the existing sandbox API/transport from `ToolExecutionContext`; provider-specific imports stay outside plugin tools. |
+| External callers still use query service methods | Enumerate and rewrite all query call sites before deleting the old service surface. |
 
-## 6. Out of scope
+## 9. Out of scope
 
-- Multi-language plugin support beyond basedpyright (deferred — plugin host is ready, no second plugin authored here).
-- Plugin dependency graph (v1 ships linear ordered list).
-- Plugin versioning / pinning beyond what `setup.sh` enforces.
-- MCP-protocol-compatible tool serving over a real socket (the "MCP-shaped" wording is about *plugin nature*, not wire compatibility).
-- Per-plugin config on agent definitions (today: bare `list[str]`; richer `PluginRef = {name, config}` deferred).
-- Out-of-tree plugin discovery via Python entry points (deferred; v1 is `catalog/` only).
-- Plugin capability/permission declaration (today: plugin sees full `Sandbox`).
-- Setup-script layered caching (today: re-run on every cold start).
-- Plugin test harness (`PluginTestHarness`) — authors hand-roll fixtures for now.
+- Multi-language LSP backend support beyond the first basedpyright-backed Python implementation.
+- Plugin dependency graph.
+- Plugin versioning/pinning beyond what `setup.sh` enforces.
+- External plugin distribution through Python entry points.
+- Host-managed plugin lifecycle hooks.
+- A separate MCP server/gateway owned by the plugin framework.
+- Per-plugin permissions beyond the existing tool-level `allowed_tools` surface.
+- Setup-script layered caching beyond idempotent scripts and readiness markers.
 
-## 7. Open questions deferred to execution
+## 10. Open questions deferred to execution
 
-- Manifest parser: hand-rolled vs pydantic v2 vs msgspec. Default to pydantic v2 for stack consistency with FastAPI; revisit if it pulls heavy deps.
-- Whether `on_load` should be `async def` from day one (FastAPI stack favors async; spawning a langserver is I/O-bound).
-- Where the plugin tool surface plugs into the existing agent tool registry — in-process call vs MCP-style RPC channel.
+- Whether old bare query-tool names should become aliases for the new `lsp.*` names.
+- Whether the LSP process/connection cache is process-local, run-local, or stored behind a sandbox lifecycle registry.
+- Exact readiness marker path for sandbox setup scripts.
 
 These do not change the plan shape; resolve in the relevant step.

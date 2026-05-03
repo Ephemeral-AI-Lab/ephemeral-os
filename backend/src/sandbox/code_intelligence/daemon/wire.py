@@ -8,13 +8,11 @@ from typing import Any
 
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    DeleteSpec,
     Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
     HoverResult,
-    MoveSpec,
     OperationChange,
     OperationResult,
     ReferenceInfo,
@@ -48,19 +46,6 @@ def editspec_to_dict(spec: EditSpec) -> dict[str, Any]:
         "file_path": spec.file_path,
         "edits": list(spec.edits),
     }
-
-
-def movespec_to_dict(spec: MoveSpec) -> dict[str, Any]:
-    return {
-        "src_path": spec.src_path,
-        "dst_path": spec.dst_path,
-        "overwrite": spec.overwrite,
-        "is_folder": spec.is_folder,
-    }
-
-
-def deletespec_to_dict(spec: DeleteSpec) -> dict[str, Any]:
-    return {"path": spec.path, "is_folder": spec.is_folder}
 
 
 def operation_change_to_dict(change: OperationChange) -> dict[str, Any]:

@@ -7,13 +7,11 @@ from typing import Any, Protocol
 
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    DeleteSpec,
     Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
     HoverResult,
-    MoveSpec,
     OperationChange,
     OperationResult,
     ReferenceInfo,
@@ -74,20 +72,6 @@ class CodeIntelligenceBackend(Protocol):
     def edit_file(
         self,
         specs: Sequence[EditSpec] | EditSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult: ...
-    def delete_file(
-        self,
-        paths: Sequence[str | DeleteSpec],
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult: ...
-    def move_file(
-        self,
-        specs: Sequence[MoveSpec],
         *,
         agent_id: str = "",
         description: str = "",

@@ -104,26 +104,6 @@ def _editspec_from_dict(d: dict[str, Any]) -> Any:
     )
 
 
-def _movespec_from_dict(d: dict[str, Any]) -> Any:
-    from sandbox.code_intelligence.core.types import MoveSpec
-
-    return MoveSpec(
-        src_path=str(d["src_path"]),
-        dst_path=str(d["dst_path"]),
-        overwrite=bool(d.get("overwrite", False)),
-        is_folder=bool(d.get("is_folder", False)),
-    )
-
-
-def _deletespec_from_dict(d: dict[str, Any]) -> Any:
-    from sandbox.code_intelligence.core.types import DeleteSpec
-
-    return DeleteSpec(
-        path=str(d["path"]),
-        is_folder=bool(d.get("is_folder", False)),
-    )
-
-
 def _operation_change_from_dict(d: dict[str, Any]) -> Any:
     from sandbox.code_intelligence.core.types import OperationChange
 
@@ -320,32 +300,6 @@ async def handle_edit_file(args: dict[str, Any]) -> Any:
     )
 
 
-async def handle_delete_file(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    paths: list[Any] = []
-    for entry in args.get("paths", []):
-        paths.append(_deletespec_from_dict(entry) if isinstance(entry, dict) else str(entry))
-    return _to_dict(
-        svc.delete_file(
-            paths,
-            agent_id=str(args.get("agent_id", "")),
-            description=str(args.get("description", "")),
-        )
-    )
-
-
-async def handle_move_file(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    specs = [_movespec_from_dict(s) for s in args.get("specs", [])]
-    return _to_dict(
-        svc.move_file(
-            specs,
-            agent_id=str(args.get("agent_id", "")),
-            description=str(args.get("description", "")),
-        )
-    )
-
-
 async def handle_undo_last_edit(args: dict[str, Any]) -> Any:
     svc = _require_svc()
     return _to_dict(svc.undo_last_edit(str(args["file_path"])))
@@ -394,8 +348,6 @@ DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "commit_specs_many": handle_commit_specs_many,
     "write_file": handle_write_file,
     "edit_file": handle_edit_file,
-    "delete_file": handle_delete_file,
-    "move_file": handle_move_file,
     "undo_last_edit": handle_undo_last_edit,
     "index_refresh": handle_index_refresh,
     "lsp_invalidate": handle_lsp_invalidate,
