@@ -1,8 +1,8 @@
-# Slice 6 — Public `sandbox.api.{shell, write, edit, read}`
+# Step 7 — Slice 6 — Public `sandbox.api.{shell, write, edit, read}`
 
 **Goal.** Expose the four public verbs. Migrate agent tools to one-line pass-throughs. Replace today's per-verb result dataclasses with the §1.6 hierarchy.
 
-**Depends on.** Slices 4 and 5b.
+**Depends on.** Step 5 / Slice 4 and Step 6 / Slice 5b.
 
 ## Files
 

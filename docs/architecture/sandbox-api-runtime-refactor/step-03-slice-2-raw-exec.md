@@ -1,8 +1,8 @@
-# Slice 2 — Public `sandbox.api.raw_exec`
+# Step 3 — Slice 2 — Public `sandbox.api.raw_exec`
 
 **Goal.** Introduce the un-guarded primitive used only by runtime/setup/lifecycle/debug paths. Migrate today's bundle upload + lifecycle to import it. Agent tools and `code_intelligence/daemon/client.py` are explicitly *not* migrated yet.
 
-**Depends on.** Slice 1.
+**Depends on.** Step 2 / Slice 1.
 
 ## Files
 

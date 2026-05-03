@@ -1,8 +1,8 @@
-# Slice 1 — Provider seam
+# Step 2 — Slice 1 — Provider seam
 
 **Goal.** Introduce `ProviderAdapter` Protocol and the Daytona adapter so callers can later route through `get_adapter(sid).exec`. No behavior change, no caller migration.
 
-**Depends on.** None (entry slice).
+**Depends on.** Step 1 merged for implementation order. Architecturally independent.
 
 ## Files
 

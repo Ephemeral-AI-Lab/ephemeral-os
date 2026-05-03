@@ -1,8 +1,8 @@
-# Slice 4 — OCC peer relocation
+# Step 5 — Slice 4 — OCC peer relocation
 
 **Goal.** Move OCC under `sandbox/occ/`; register its handlers with the entrypoint at import time. Wire `edit_pipeline` (multi-edit OCC apply + atomic commit) and `write_pipeline` (OCC write + commit) end-to-end inside the sandbox. Both are reachable through the entrypoint but **not yet exposed via `sandbox.api`** — that's Slice 6.
 
-**Depends on.** Slice 3.
+**Depends on.** Step 4 / Slice 3.
 
 ## Files
 

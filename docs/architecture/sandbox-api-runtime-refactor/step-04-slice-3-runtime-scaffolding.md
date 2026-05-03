@@ -1,8 +1,8 @@
-# Slice 3 — Runtime layer scaffolding
+# Step 4 — Slice 3 — Runtime layer scaffolding
 
 **Goal.** Rename `code_intelligence/daemon/` → `sandbox/runtime/`. Introduce `bundle.py`, `setup_orchestrator.py`, and `entrypoint.py` as the single deployed in-sandbox script with a peer-registered op table. `pipelines.py` exists but empty. The orchestrator still calls into the entrypoint via the legacy per-op snippet pathway.
 
-**Depends on.** Slice 2 (uses `raw_exec` to upload the bundle).
+**Depends on.** Step 3 / Slice 2 (uses `raw_exec` to upload the bundle).
 
 ## Files
 

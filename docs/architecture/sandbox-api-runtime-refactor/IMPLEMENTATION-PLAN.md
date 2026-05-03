@@ -1,20 +1,19 @@
 # Implementation Plan — Sandbox API + Runtime Refactor
 
-Sequences the nine slices so the correctness fix ships first, then the architecture chain, then the public-surface flip and cleanup. Each slice ends green: `make build`, `ruff check`, `make test` all pass. No broken intermediate states.
+Sequences the nine implementation steps so the correctness fix ships first, then the architecture chain, then the public-surface flip and cleanup. Each step ends green: `make build`, `ruff check`, `make test` all pass. No broken intermediate states.
 
-Per-slice scope (files, tasks, tests, exit criteria) lives in `slice-*.md` files in this directory. This document is **sequencing only**.
+Per-step scope (files, tasks, tests, exit criteria) lives in `step-*.md` files in this directory. The original slice IDs are retained in filenames and headings for traceability. This document is **sequencing only**.
 
 ## 0. Pre-flight
 
-- Amend `slice-5a-overlay-decouple.md`: change `Depends on. Slice 4.` → `Depends on. None (independent correctness fix; must land before Slice 5b).`
 - Confirm baseline green: `make build && ruff check && make test`.
 - Tag `git tag pre-sandbox-refactor` on `main` for emergency revert reference.
 
 ## 1. Sequence
 
 ```
-Phase A — Correctness fix
-  [1] Slice 5a — Decouple overlay from OCC (in place)
+Phase A — Correctness fix + responsibility split
+  [1] Slice 5a — Refactor overlay/OCC responsibility (in place)
 
 Phase B — Architecture chain
   [2] Slice 1  — Provider seam
@@ -29,15 +28,16 @@ Phase C — Public surface + cleanup
   [9] Slice 8  — Tests + docs
 ```
 
-5a runs first because it's a self-contained correctness fix (argv-overflow + decoupling); shipping it early delivers the bug fix regardless of the rest of the refactor's pace.
+5a runs first because it is the correctness fix and the architectural correction the rest of the chain assumes (overlay = pure upperdir capture; OCC = sole merge-policy decider). It is independent of slices 1–4 and must land before 5b. Per the design call (2026-05-03), overlay emits all upperdir bytes including would-be-gitignored content, and OCC routes per file: gitinclude → ledger; gitignore / external → direct-merge orchestrator-side. The previous in-namespace direct-merge moves to OCC.
 
 ## 2. Step-by-step
 
-### Step 1 — Slice 5a (correctness fix)
-- **Why first.** Independent of all relocation work; the argv-overflow papercut goes away today.
+### Step 1 — Slice 5a (responsibility split + correctness fix)
+- **Why first.** Independent of all relocation work; fixes the argv-overflow papercut today and lays the responsibility split the rest of the refactor (`shell_pipeline` in 5b, public `sandbox.api.shell` in 6) composes on top of.
 - **Entry.** Pre-flight done.
-- **Exit gate.** Three integration tests green: overlay-reject leaves OCC ledger untouched; overlay-success → OCC-conflict captures upper layer; argv-overflow surfaces as `ConflictInfo(reason="argv_too_large", ...)`.
-- **Production impact at end of step.** Bug fixed.
+- **Exit gate.** Integration tests green per `step-01-slice-5a-overlay-occ-responsibility-split.md` §Tests: `.git/` writes flow through overlay and are silently dropped by OCC; mixed change-set partitions correctly across ledger / direct-merge / external; in-namespace runtime is read-only on live workspace; gitinclude non-utf8 / symlink → conflict; gitignore binary → byte-identical direct-merge; argv-overflow surfaces as `ConflictInfo(reason="argv_too_large", ...)`.
+- **Slice-size note.** 5a is no longer the small in-place OCC-decoupling the original draft contracted on; it is a multi-file restructure (in-namespace runtime, orchestrator-side overlay, OCC `apply_changeset` entry, caller projection). It still ships as one PR and is revertible without touching slices 1–4 or 5b.
+- **Production impact at end of step.** Argv-overflow papercut fixed; `.git/` writes from commands like `git status` stay isolated in the namespace and are dropped by OCC; gitignored content (e.g. `.venv/` from `pip install`) now ships through NDJSON and lands on disk via OCC direct-merge instead of in-namespace; pytest/pip-install workloads continue to work end-to-end.
 
 ### Step 2 — Slice 1 (Provider seam)
 - **Entry.** Step 1 merged.
@@ -83,15 +83,15 @@ Phase C — Public surface + cleanup
 
 ## 3. Hard gates between phases
 
-- **A → B.** 5a's three integration tests green. Until then, Slice 1 does not start.
-- **B → C.** Steps 2–5 each merged green individually. Do not stack unmerged slices.
+- **A → B.** Step 1's 5a integration gates are green. Until then, Slice 1 does not start.
+- **B → C.** Steps 2–5 each merged green individually. Do not stack unmerged steps.
 - **Within C.** 5b's one-wire-trip assertion gates Step 7. Step 7's importer allowlist test gates Step 8. Step 8's grep audits gate the deletes.
 
 ## 4. Rollback strategy
 
 - Each step is a single PR; revert = `git revert <merge>`.
 - Slice 5a is independently revertible (in-place, no moves).
-- Slices 5b → 6 → 7 form a relocation chain — revert in reverse order if needed.
+- Steps 6 → 8 form a relocation and cleanup chain — revert in reverse order if needed.
 - `pre-sandbox-refactor` tag is the floor for emergency reset.
 
 ## 5. Out of scope — don't expand mid-flight

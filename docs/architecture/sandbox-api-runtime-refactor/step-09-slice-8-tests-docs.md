@@ -1,8 +1,8 @@
-# Slice 8 — Tests + docs
+# Step 9 — Slice 8 — Tests + docs
 
 **Goal.** Relocate tests into the new layout. Add coverage for runtime/pipelines that didn't exist in the old structure. Supersede earlier design docs.
 
-**Depends on.** Slice 7.
+**Depends on.** Step 8 / Slice 7.
 
 ## Files
 

@@ -13,7 +13,7 @@ Today the orchestrator reaches into the sandbox via `SandboxTransport.exec`, shi
 1. **Provider-leaky.** `process.exec` and base64-encoded snippets assume Daytona's shell-exec wire. Any future provider has to re-implement the entire dispatch path.
 2. **Misleading umbrella.** `code_intelligence/` bundles two unrelated guardrails (file edits, shell side-effects) plus a query surface that's already migrating out.
 3. **No clean public API.** Agent tools, runtime bootstrap, and debug paths all reach for the same low-level transport, with no enforced separation between guarded and un-guarded shell.
-4. **Cross-peer coupling.** `OverlayCommandCommitter` calls into OCC directly today. This makes overlay's failure semantics implicit (overlay can half-commit before OCC sees the change) and prevents either peer from being tested in isolation. The composer pattern is the fix: overlay returns `dirty_changes` to the pipeline, and the pipeline — never overlay — decides whether to invoke OCC commit.
+4. **Cross-peer coupling.** `OverlayCommandCommitter` calls into OCC directly today. This makes overlay's failure semantics implicit (overlay can half-commit before OCC sees the change) and prevents either peer from being tested in isolation. The composer pattern is the fix: overlay returns captured upperdir changes to the pipeline, and the pipeline — never overlay — decides whether to invoke OCC.
 
 This refactor settles those by (a) defining a 5-verb public `sandbox.api`, (b) putting all gating logic in a single deployed entrypoint script inside the sandbox, (c) reducing the provider seam to one method, and (d) making every guarded op explicit through an in-sandbox pipeline (`shell_pipeline`, `edit_pipeline`, `write_pipeline`).
 
@@ -87,7 +87,7 @@ sandbox/occ/
     types.py
 
 sandbox/overlay/
-    handlers/    # in-sandbox: run (overlay mount + capture dirty paths)
+    handlers/    # in-sandbox: run (overlay mount + capture upperdir changes)
     bootstrap.py # Overlay's contribution to setup orchestration
     engine.py    # OverlayEngine Protocol
     types.py
@@ -101,7 +101,7 @@ OCC and Overlay are **peers**. They never import each other. The only place thei
 |---|---|
 | Agent tools see only `sandbox.api.{shell, read, write, edit}` | Tool files import only those four. Lint allowlist. |
 | `sandbox.api.raw_exec` is un-guarded; agents never see it | Allowlisted importers: `sandbox/runtime/{bundle,setup_orchestrator}.py`, `sandbox/lifecycle/*`, debug paths only. |
-| Pipelines are the only sequencer | `runtime/pipelines.py` owns every multi-step or cross-peer op: `shell_pipeline` chains `overlay.run` → `occ.commit` (overlay-rejection short-circuits before the OCC ledger); `edit_pipeline` drives multi-edit OCC apply + commit atomically; `write_pipeline` drives OCC write + commit. Overlay handlers return `dirty_changes` to the caller and never invoke OCC. Lint allowlist forbids `from sandbox.occ` inside `sandbox/overlay/` and vice versa. |
+| Pipelines are the only sequencer | `runtime/pipelines.py` owns every multi-step or cross-peer op: `shell_pipeline` chains `overlay.run` → `occ.apply_changeset` (overlay-rejection short-circuits before OCC); `edit_pipeline` drives multi-edit OCC apply + commit atomically; `write_pipeline` drives OCC write + commit. Overlay handlers return captured upperdir changes to the caller and never invoke OCC. Lint allowlist forbids `from sandbox.occ` inside `sandbox/overlay/` and vice versa. |
 | Provider-specific code is one file | `sandbox/providers/<x>/adapter.py` + the lifecycle line that builds it. |
 | One wire trip per agent op | Entrypoint runs the full pipeline (overlay→OCC chain or multi-edit OCC apply+commit) in one Python process. |
 
@@ -170,32 +170,32 @@ class ShellResult(GuardedResultBase):
     stdout: str
     stderr: str = ""
     gitinclude_changed_paths: tuple[str, ...] = ()  # OCC-committed
-    gitignore_changed_paths: tuple[str, ...] = ()   # overlay-merged, not ledgered
+    gitignore_changed_paths: tuple[str, ...] = ()   # direct-merged, not ledgered
 ```
 
 These collapse today's `OperationResult`, the overlay `SimpleNamespace` builders, and the per-verb `mutation_results.py` helpers into a single shape per verb. Logging/audit code accepts `SandboxResultBase`; OCC-aware code accepts `GuardedResultBase`. `ConflictInfo` is reachable only on guarded verbs — the type system enforces the layering invariant.
 
-The `gitinclude_changed_paths` / `gitignore_changed_paths` split replaces today's `changed_paths` + `ambient_changed_paths` and applies uniformly across all three guarded verbs. A path is in `gitinclude_changed_paths` iff it was committed through OCC and recorded in the ledger; it's in `gitignore_changed_paths` iff it was written but lives under a `.gitignore` rule (so it bypasses OCC merge but is still surfaced to the caller for visibility).
+The `gitinclude_changed_paths` / `gitignore_changed_paths` split replaces today's `changed_paths` + `ambient_changed_paths` and applies uniformly across all three guarded verbs. A path is in `gitinclude_changed_paths` iff it was committed through OCC and recorded in the ledger; it's in `gitignore_changed_paths` iff OCC classified it as gitignored or external and direct-merged it without a ledger commit.
 
-## 2. Shippable slices
+## 2. Implementation steps
 
-Each slice ends green: build, ruff, and tests pass. No intermediate broken states. Old code paths are kept alongside new ones until the slice that deletes them.
+Each step ends green: build, ruff, and tests pass. No intermediate broken states. Old code paths are kept alongside new ones until the step that deletes them.
 
-Per-slice implementation plans (files added, tasks, tests, exit criteria, risks) live in [`./sandbox-api-runtime-refactor/`](./sandbox-api-runtime-refactor/README.md). Summary:
+Per-step implementation plans (files added, tasks, tests, exit criteria, risks) live in [`./sandbox-api-runtime-refactor/`](./sandbox-api-runtime-refactor/README.md). The `step-XX` prefix is the implementation order; the slice ID is retained for architectural traceability. Summary:
 
-| # | Slice | Plan |
+| Step | Slice | Plan |
 |---|---|---|
-| 1 | Provider seam | [slice-1-provider-seam.md](./sandbox-api-runtime-refactor/slice-1-provider-seam.md) |
-| 2 | `sandbox.api.raw_exec` | [slice-2-raw-exec.md](./sandbox-api-runtime-refactor/slice-2-raw-exec.md) |
-| 3 | Runtime scaffolding | [slice-3-runtime-scaffolding.md](./sandbox-api-runtime-refactor/slice-3-runtime-scaffolding.md) |
-| 4 | OCC peer relocation | [slice-4-occ-relocation.md](./sandbox-api-runtime-refactor/slice-4-occ-relocation.md) |
-| 5a | Overlay → OCC decouple (in place) | [slice-5a-overlay-decouple.md](./sandbox-api-runtime-refactor/slice-5a-overlay-decouple.md) |
-| 5b | Overlay peer relocation | [slice-5b-overlay-relocation.md](./sandbox-api-runtime-refactor/slice-5b-overlay-relocation.md) |
-| 6 | Public `sandbox.api.{shell,read,write,edit}` | [slice-6-public-api.md](./sandbox-api-runtime-refactor/slice-6-public-api.md) |
-| 7 | Delete legacy client + transport | [slice-7-delete-legacy.md](./sandbox-api-runtime-refactor/slice-7-delete-legacy.md) |
-| 8 | Tests + docs | [slice-8-tests-docs.md](./sandbox-api-runtime-refactor/slice-8-tests-docs.md) |
+| 1 | 5a | [Overlay/OCC responsibility split](./sandbox-api-runtime-refactor/step-01-slice-5a-overlay-occ-responsibility-split.md) |
+| 2 | 1 | [Provider seam](./sandbox-api-runtime-refactor/step-02-slice-1-provider-seam.md) |
+| 3 | 2 | [`sandbox.api.raw_exec`](./sandbox-api-runtime-refactor/step-03-slice-2-raw-exec.md) |
+| 4 | 3 | [Runtime scaffolding](./sandbox-api-runtime-refactor/step-04-slice-3-runtime-scaffolding.md) |
+| 5 | 4 | [OCC peer relocation](./sandbox-api-runtime-refactor/step-05-slice-4-occ-relocation.md) |
+| 6 | 5b | [Overlay peer relocation](./sandbox-api-runtime-refactor/step-06-slice-5b-overlay-relocation.md) |
+| 7 | 6 | [Public `sandbox.api.{shell,read,write,edit}`](./sandbox-api-runtime-refactor/step-07-slice-6-public-api.md) |
+| 8 | 7 | [Delete legacy client + transport](./sandbox-api-runtime-refactor/step-08-slice-7-delete-legacy.md) |
+| 9 | 8 | [Tests + docs](./sandbox-api-runtime-refactor/step-09-slice-8-tests-docs.md) |
 
-Ordering invariants: 5a ships before 5b and is independently revertible; 6 ships before 7; no slice both adds and deletes the same surface.
+Ordering invariants: Step 1 ships first and is independently revertible; Step 6 waits for Steps 1 and 5; Step 7 ships before Step 8; no step both adds and deletes the same surface.
 
 ## 3. Plugin integration
 
@@ -218,11 +218,11 @@ Sequencing: this refactor lands without plugins. `plugins-refactor.md` picks up 
 
 | Risk | Mitigation |
 |---|---|
-| Slice ordering deletes a path before its replacement is wired | Each slice keeps the old path alive until the slice after the migration completes; no slice both adds and deletes the same surface. |
+| Step ordering deletes a path before its replacement is wired | Each step keeps the old path alive until the step after the migration completes; no step both adds and deletes the same surface. |
 | Provider adapter loses fidelity vs today's transport | Slice 1 is a literal move — the Daytona adapter is today's transport-impl unchanged. Behavior parity is the test bar. |
 | Entrypoint deployment breaks the bootstrap sequence | `runtime/bundle.py` is idempotent and content-addressed; `setup_orchestrator.run_all` runs *after* bundle upload; LSP-style spawn scripts run last. |
 | Agent tools accidentally import un-guarded `sandbox.api.raw_exec` | Lint allowlist test runs in CI; CODEOWNERS covers `sandbox/api/_registry.py`. |
-| Overlay→OCC decoupling regresses today's transactional behavior | Slice 5a is gated on integration tests covering: overlay-reject path doesn't touch OCC ledger; overlay-success → OCC-conflict leaves overlay's upper layer captured for diagnosis; argv-overflow surfaces as `conflict.reason="argv_too_large"` not a bare-string failure. Slice 5b moves files only after 5a is green. |
+| Overlay→OCC responsibility split regresses today's behavior | Step 1 / Slice 5a is gated on integration tests covering silent OCC drop of `.git/` writes, mixed gitinclude/gitignore/external partitioning, read-only in-namespace runtime behavior, structural OCC conflicts, binary pass-through for gitignored files, and `argv_too_large` surfacing as structured conflict. Step 6 moves files only after Step 1 is green. |
 
 ## 6. Open questions deferred to execution
 

@@ -1,8 +1,8 @@
-# Slice 7 — Delete the old client + transport
+# Step 8 — Slice 7 — Delete the old client + transport
 
 **Goal.** Remove every superseded surface. After this slice, `code_intelligence/` is gone and `ProviderAdapter` is the only sandbox path.
 
-**Depends on.** Slice 6 (verbs and agent tools fully migrated).
+**Depends on.** Step 7 / Slice 6 (verbs and agent tools fully migrated).
 
 ## Files
 
