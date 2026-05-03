@@ -24,6 +24,13 @@ from sandbox.code_intelligence.mutations.write_coordinator.models import (
     CommitOperation,
     ResolvedChange,
 )
+from sandbox.code_intelligence.mutations.write_coordinator.metrics import (
+    log_checked_apply_fallback,
+    log_commit_summary,
+    log_lock_timeout,
+    log_resolve_conflict,
+    log_slow_phase,
+)
 from sandbox.code_intelligence.mutations.write_coordinator.resolver import ChangeResolver
 from sandbox.code_intelligence.mutations.write_coordinator.results import (
     edit_result,
@@ -37,90 +44,9 @@ from sandbox.code_intelligence.core.types import (
 
 logger = logging.getLogger(__name__)
 
-_PATH_SAMPLE_LIMIT = 5
-_SLOW_LOCK_WAIT_SECONDS = 1.0
-_SLOW_WRITE_PHASE_SECONDS = 1.0
-_SLOW_WRITE_TOTAL_SECONDS = 2.0
-
-
-def _change_count(ops: Sequence[CommitOperation]) -> int:
-    return sum(len(op.changes) for op in ops)
-
-
-def _strict_base_count(ops: Sequence[CommitOperation]) -> int:
-    return sum(1 for op in ops for change in op.changes if change.strict_base)
-
 
 def _paths_for_ops(ops: Sequence[CommitOperation]) -> list[str]:
     return sorted({change.file_path for op in ops for change in op.changes})
-
-
-def _path_sample(paths: Sequence[str]) -> str:
-    if not paths:
-        return ""
-    sample = list(paths[:_PATH_SAMPLE_LIMIT])
-    suffix = ""
-    remaining = len(paths) - len(sample)
-    if remaining > 0:
-        suffix = f", +{remaining} more"
-    return ", ".join(sample) + suffix
-
-
-def _status_counts(results: Sequence[OperationResult]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for result in results:
-        counts[result.status] = counts.get(result.status, 0) + 1
-    return counts
-
-
-def _log_slow_phase(
-    phase: str,
-    elapsed: float,
-    ops: Sequence[CommitOperation],
-    paths: Sequence[str],
-    timings: dict[str, float],
-) -> None:
-    threshold = (
-        _SLOW_LOCK_WAIT_SECONDS if phase == "lock_wait" else _SLOW_WRITE_PHASE_SECONDS
-    )
-    if elapsed < threshold:
-        return
-    logger.warning(
-        "code intelligence write phase slow: phase=%s elapsed=%.3fs ops=%d "
-        "changes=%d paths=%d strict_base_changes=%d path_sample=%s timings=%s",
-        phase,
-        elapsed,
-        len(ops),
-        _change_count(ops),
-        len(paths),
-        _strict_base_count(ops),
-        _path_sample(paths),
-        dict(timings),
-    )
-
-
-def _log_commit_summary(
-    ops: Sequence[CommitOperation],
-    paths: Sequence[str],
-    results: Sequence[OperationResult],
-    timings: dict[str, float],
-) -> None:
-    total = timings.get("total", 0.0)
-    has_abort = any(not result.success for result in results)
-    if total < _SLOW_WRITE_TOTAL_SECONDS and not has_abort:
-        return
-    logger.warning(
-        "code intelligence write commit summary: total=%.3fs ops=%d changes=%d "
-        "paths=%d strict_base_changes=%d statuses=%s path_sample=%s timings=%s",
-        total,
-        len(ops),
-        _change_count(ops),
-        len(paths),
-        _strict_base_count(ops),
-        _status_counts(results),
-        _path_sample(paths),
-        dict(timings),
-    )
 
 
 class WriteCoordinator:
@@ -225,22 +151,14 @@ class WriteCoordinator:
         lock_started = time.perf_counter()
         held, lock_conflict = self._acquire_locks(all_paths)
         timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
-        _log_slow_phase("lock_wait", timings["lock_wait"], ops, all_paths, timings)
+        log_slow_phase("lock_wait", timings["lock_wait"], ops, all_paths, timings)
         if lock_conflict is not None:
             timings["total"] = round(time.perf_counter() - started, 6)
-            logger.warning(
-                "code intelligence write lock timeout: wait=%.3fs total=%.3fs "
-                "conflict_file=%s ops=%d changes=%d paths=%d "
-                "strict_base_changes=%d path_sample=%s timings=%s",
-                timings["lock_wait"],
-                timings["total"],
-                lock_conflict,
-                len(ops),
-                _change_count(ops),
-                len(all_paths),
-                _strict_base_count(ops),
-                _path_sample(all_paths),
-                dict(timings),
+            log_lock_timeout(
+                timings=timings,
+                lock_conflict=lock_conflict,
+                ops=ops,
+                all_paths=all_paths,
             )
             results = [
                 operation_abort(
@@ -256,7 +174,7 @@ class WriteCoordinator:
                 )
                 for op in ops
             ]
-            _log_commit_summary(ops, all_paths, results, timings)
+            log_commit_summary(ops, all_paths, results, timings)
             return results
 
         try:
@@ -266,13 +184,13 @@ class WriteCoordinator:
                 started=started,
             )
             if fast_results is not None:
-                _log_commit_summary(ops, all_paths, fast_results, timings)
+                log_commit_summary(ops, all_paths, fast_results, timings)
                 return fast_results
 
             read_started = time.perf_counter()
             current_by_path = self._content.read_many(all_paths, allow_missing=True)
             timings["resolve_read"] = round(time.perf_counter() - read_started, 6)
-            _log_slow_phase(
+            log_slow_phase(
                 "resolve_read",
                 timings["resolve_read"],
                 ops,
@@ -307,28 +225,21 @@ class WriteCoordinator:
                             timings=timings,
                         )
                         aborted = True
-                        logger.warning(
-                            "code intelligence write conflict after resolve: "
-                            "status=%s conflict_file=%s reason=%s elapsed=%.3fs "
-                            "ops=%d changes=%d paths=%d strict_base_changes=%d "
-                            "path_sample=%s timings=%s",
-                            status,
-                            change.file_path,
-                            reason,
-                            time.perf_counter() - started,
-                            len(ops),
-                            _change_count(ops),
-                            len(all_paths),
-                            _strict_base_count(ops),
-                            _path_sample(all_paths),
-                            dict(timings),
+                        log_resolve_conflict(
+                            status=status,
+                            conflict_file=change.file_path,
+                            reason=reason,
+                            elapsed=time.perf_counter() - started,
+                            ops=ops,
+                            all_paths=all_paths,
+                            timings=timings,
                         )
                         break
                     assert resolved_change is not None
                     resolved.append(resolved_change)
                 resolved_by_op.append(None if aborted else resolved)
             timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
-            _log_slow_phase("resolve", timings["resolve"], ops, all_paths, timings)
+            log_slow_phase("resolve", timings["resolve"], ops, all_paths, timings)
 
             apply_items: list[tuple[str, str | None]] = []
             rollback_items: list[tuple[str, str | None]] = []
@@ -370,10 +281,10 @@ class WriteCoordinator:
                             timings=dict(timings),
                         )
                 final_results = [r for r in results if r is not None]
-                _log_commit_summary(ops, all_paths, final_results, timings)
+                log_commit_summary(ops, all_paths, final_results, timings)
                 return final_results
             timings["apply"] = round(time.perf_counter() - apply_started, 6)
-            _log_slow_phase("apply", timings["apply"], ops, all_paths, timings)
+            log_slow_phase("apply", timings["apply"], ops, all_paths, timings)
 
             record_started = time.perf_counter()
             for idx, op in enumerate(ops):
@@ -415,7 +326,7 @@ class WriteCoordinator:
                     timings=dict(timings),
                 )
             timings["apply_record"] = round(time.perf_counter() - record_started, 6)
-            _log_slow_phase(
+            log_slow_phase(
                 "apply_record",
                 timings["apply_record"],
                 ops,
@@ -436,7 +347,7 @@ class WriteCoordinator:
                         timings=dict(timings),
                     )
             final_results = [r for r in results if r is not None]
-            _log_commit_summary(ops, all_paths, final_results, timings)
+            log_commit_summary(ops, all_paths, final_results, timings)
             return final_results
         finally:
             for fp in reversed(held):
@@ -498,7 +409,7 @@ class WriteCoordinator:
             ]
             return results
         timings["checked_apply"] = round(time.perf_counter() - apply_started, 6)
-        _log_slow_phase(
+        log_slow_phase(
             "checked_apply",
             timings["checked_apply"],
             ops,
@@ -508,21 +419,14 @@ class WriteCoordinator:
 
         if not apply_result.success:
             if apply_result.conflict_reason in {"base_mismatch", "unsupported"}:
-                logger.warning(
-                    "code intelligence checked apply fell back: reason=%s "
-                    "conflict_file=%s message=%s checked_apply=%.3fs ops=%d "
-                    "changes=%d paths=%d strict_base_changes=%d path_sample=%s "
-                    "timings=%s",
-                    apply_result.conflict_reason,
-                    apply_result.conflict_path,
-                    apply_result.message,
-                    timings["checked_apply"],
-                    len(ops),
-                    _change_count(ops),
-                    len(all_paths),
-                    _strict_base_count(ops),
-                    _path_sample(all_paths),
-                    dict(timings),
+                log_checked_apply_fallback(
+                    reason=apply_result.conflict_reason,
+                    conflict_file=apply_result.conflict_path,
+                    message=apply_result.message,
+                    checked_apply=timings["checked_apply"],
+                    ops=ops,
+                    all_paths=all_paths,
+                    timings=timings,
                 )
                 return None
             timings["apply"] = timings["checked_apply"]
@@ -592,7 +496,7 @@ class WriteCoordinator:
                 )
             )
         timings["apply_record"] = round(time.perf_counter() - record_started, 6)
-        _log_slow_phase(
+        log_slow_phase(
             "apply_record",
             timings["apply_record"],
             ops,

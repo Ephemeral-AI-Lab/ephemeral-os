@@ -1,125 +1,49 @@
-"""Orchestrator-side overlay shell auditor.
-
-Coordinates one ``svc.cmd`` op per plan §1:
-
-1. Acquire per-sandbox semaphore.
-2. Ship the ``overlay_run.py`` runtime bundle into the sandbox and invoke it
-   under ``unshare -Urm`` with the user command.
-3. The sandbox-side runner treats the overlay lowerdir as the command-start
-   base and emits those base bytes for strict-base OCC.
-4. Read ``$RUN_DIR/diff.ndjson`` from the sandbox.
-5. If the script emitted a ``_reject`` meta line → surface via
-   ``git_commit_status`` + ``git_conflict_reason`` on the result.
-6. Otherwise parse the NDJSON, run OCC over the **gitinclude-route**
-   changes via :class:`OverlayCommandCommitter` (first-writer-wins;
-   gitignore-route writes were already direct-merged inside the
-   namespace with per-file last-writer-wins), and assemble the
-   downstream ``SimpleNamespace`` result.
-7. Cleanup ``$RUN_DIR``; release semaphore.
-
-Routing terminology: "gitinclude" = every upperdir path ``git
-check-ignore`` did *not* flag (OCC route, first-writer-wins).
-"gitignore" = every path it did flag (direct-merge, per-file
-last-writer-wins, not per-tree atomic). Git index membership is never
-consulted; brand-new files absent from the index still go through the
-gitinclude route as long as no ``.gitignore`` rule matches them.
-
-Downstream callers (``shell``, ``sandbox.commit.submit_shell_cmd``) read
-through a fixed ``SimpleNamespace`` shape:
-
-    result, exit_code, changed_paths, ambient_changed_paths,
-    git_commit_status, git_conflict_reason, git_conflict_file
-
-Plus the additive overlay metadata from §4.5 (``gitinclude_changed_paths``,
-``gitignore_direct_merged_paths``, ``gitignore_direct_merged_count``,
-``mixed_gitinclude_gitignore``, ``mixed_partial_apply``, ``warnings``).
-``git_commit_status`` values include ``"committed"`` (OCC succeeded),
-``"noop"`` (no gitinclude changes), ``"aborted_version"`` (OCC
-strict-base mismatch — first-writer-wins lost the race), and
-``"rejected"`` (policy reject from the sandbox-side script).
-"""
+"""Orchestrator-side overlay shell auditor."""
 
 from __future__ import annotations
 
 import asyncio
 import base64
-import io
-import json
 import logging
-import posixpath
-import shlex
-import shutil
-import subprocess
-import tarfile
+import subprocess as subprocess
 import time
-import uuid
 from collections.abc import Awaitable, Callable
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.api.transport import SandboxTransport
 from sandbox.code_intelligence.overlay.command_committer import OverlayCommandCommitter
 from sandbox.code_intelligence.overlay.config import (
     overlay_max_concurrent,
     overlay_upper_size_mb,
 )
+from sandbox.code_intelligence.overlay.daemon_local import OverlayDaemonLocalMixin
+from sandbox.code_intelligence.overlay.process_exec import OverlayProcessExecMixin
+from sandbox.code_intelligence.overlay.results import (
+    audit_result,
+    live_path,
+    parse_diff_ndjson,
+    reject_result,
+)
+from sandbox.code_intelligence.overlay import support as _overlay_support
 from sandbox.code_intelligence.overlay.types import (
-    OverlayChange,
     OverlayDiff,
     OverlayLease,
     OverlayPolicyReject,
-    OverlayRunError,
 )
 from sandbox.code_intelligence.telemetry import record_overlay_op
 
 logger = logging.getLogger(__name__)
 
-_RUN_DIR_PREFIX = "/tmp/eos-shell-overlay"
-_PROGRESS_POLL_INTERVAL_SECONDS = 2.0
-_PROGRESS_READ_CHUNK_BYTES = 64 * 1024
-_SLOW_OVERLAY_STAGE_SECONDS = 1.0
-_SLOW_OVERLAY_TOTAL_SECONDS = 5.0
-_COMMAND_SAMPLE_LIMIT = 160
-_WorkspaceFingerprint = tuple[tuple[str, int, int, int, int], ...]
-
-
-def _command_sample(command: str) -> str:
-    compact = " ".join(command.split())
-    if len(compact) <= _COMMAND_SAMPLE_LIMIT:
-        return compact
-    return compact[:_COMMAND_SAMPLE_LIMIT] + "..."
+_PROGRESS_POLL_INTERVAL_SECONDS = _overlay_support.PROGRESS_POLL_INTERVAL_SECONDS
 
 
 def _overlay_runtime_bundle_bytes() -> bytes:
-    """Return a tar.gz containing the sandbox-side overlay runtime."""
-    root = Path(__file__).parent
-    runtime_dir = root / "runtime"
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
-        tar.add(root / "run.py", arcname="overlay_run.py")
-        for path in sorted(runtime_dir.rglob("*.py")):
-            rel = path.relative_to(runtime_dir).as_posix()
-            tar.add(path, arcname=f"overlay_runtime/{rel}")
-    return buffer.getvalue()
+    """Compatibility wrapper for older tests around the former monolith."""
+    return _overlay_support.overlay_runtime_bundle_bytes()
 
 
-def _workspace_fingerprint(workspace_root: str) -> _WorkspaceFingerprint:
-    root = Path(workspace_root)
-    paths = (root, root / ".git" / "index", root / ".git" / "HEAD")
-    rows: list[tuple[str, int, int, int, int]] = []
-    for path in paths:
-        try:
-            st = path.stat()
-        except OSError:
-            rows.append((str(path), -1, -1, -1, -1))
-            continue
-        rows.append((str(path), st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size))
-    return tuple(rows)
-
-
-class OverlayAuditor:
+class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
     """Run one command under a fresh ``unshare -Urm`` overlay and commit via OCC."""
 
     def __init__(
@@ -152,7 +76,7 @@ class OverlayAuditor:
         self._script_uploaded = False
         self._fingerprint_lock = asyncio.Lock()
         self._active_fingerprint_guards = 0
-        self._last_workspace_fingerprint: _WorkspaceFingerprint | None = None
+        self._last_workspace_fingerprint: Any | None = None
 
     async def execute(
         self,
@@ -170,7 +94,7 @@ class OverlayAuditor:
         on_progress_line: Callable[[str], None] | None = None,
     ) -> SimpleNamespace:
         """Run *command* under overlay and return the downstream result shape."""
-        del run_id, agent_run_id, task_id  # reserved for ledger enrichment
+        del run_id, agent_run_id, task_id
         if self._daemon_local and sandbox is None and on_progress_line is None:
             return await self._execute_daemon_local(
                 command,
@@ -196,97 +120,17 @@ class OverlayAuditor:
                     command=command,
                     awaitable=self._ensure_script_uploaded(sandbox),
                 )
-                user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
-                stdin_b64 = (
-                    base64.b64encode(stdin.encode("utf-8")).decode("ascii")
-                    if stdin is not None
-                    else ""
-                )
-                if on_progress_line is None:
-                    stdout_text, script_exit = await self._timed_stage(
-                        "run_overlay",
-                        stage_timings=stage_timings,
-                        lease=lease,
-                        command=command,
-                        awaitable=self._run_overlay(
-                            sandbox,
-                            lease=lease,
-                            user_cmd_b64=user_cmd_b64,
-                            stdin_b64=stdin_b64,
-                            timeout=timeout,
-                        ),
-                    )
-                else:
-                    stdout_text, script_exit = await self._timed_stage(
-                        "run_overlay",
-                        stage_timings=stage_timings,
-                        lease=lease,
-                        command=command,
-                        awaitable=self._run_overlay_with_progress(
-                            sandbox,
-                            lease=lease,
-                            user_cmd_b64=user_cmd_b64,
-                            stdin_b64=stdin_b64,
-                            timeout=timeout,
-                            on_progress_line=on_progress_line,
-                        ),
-                    )
-                stdout_text = await self._timed_stage(
-                    "read_stdout",
-                    stage_timings=stage_timings,
-                    lease=lease,
+                result = await self._run_and_commit_remote(
+                    sandbox=sandbox,
                     command=command,
-                    awaitable=self._read_stdout(sandbox, lease, fallback=stdout_text),
-                )
-                diff_or_reject = await self._timed_stage(
-                    "read_diff",
-                    stage_timings=stage_timings,
                     lease=lease,
-                    command=command,
-                    awaitable=self._read_diff(
-                        sandbox,
-                        lease,
-                        overlay_stdout=stdout_text,
-                        overlay_exit_code=script_exit,
-                    ),
-                )
-                if isinstance(diff_or_reject, OverlayPolicyReject):
-                    record_overlay_op(
-                        ops_rejected=1,
-                        dotgit_rejects=(
-                            1 if diff_or_reject.reason.endswith("dotgit_writes") else 0
-                        ),
-                    )
-                    result = _reject_result(
-                        stdout=stdout_text,
-                        exit_code=script_exit,
-                        reject=diff_or_reject,
-                        overlay_run_timings=diff_or_reject.run_timings,
-                    )
-                    return result
-                diff = diff_or_reject
-                record_overlay_op(
-                    upper_bytes=diff.upper_bytes,
-                    upper_files=diff.upper_files,
-                    gitinclude_changes=len(diff.gitinclude_changes),
-                    gitignore_changes=len(diff.gitignore_paths),
-                    direct_merged_bytes=diff.direct_merged_bytes,
-                    whiteouts_gitinclude=diff.whiteouts_gitinclude,
-                    whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
-                )
-                result = await self._timed_stage(
-                    "commit",
                     stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._commit_and_assemble(
-                        stdout=stdout_text,
-                        diff=diff,
-                        agent_id=agent_id,
-                        description=description or "shell overlay",
-                        attribute_changes=attribute_changes,
-                        overlay_run_timings=diff.run_timings,
-                    ),
+                    timeout=timeout,
+                    stdin=stdin,
+                    agent_id=agent_id,
+                    description=description,
+                    attribute_changes=attribute_changes,
+                    on_progress_line=on_progress_line,
                 )
                 return result
             except BaseException as exc:
@@ -318,668 +162,137 @@ class OverlayAuditor:
                     error=error,
                 )
 
-    # -- internals -----------------------------------------------------------
-
-    async def _execute_daemon_local(
+    async def _run_and_commit_remote(
         self,
-        command: str,
         *,
+        sandbox: Any,
+        command: str,
+        lease: OverlayLease,
+        stage_timings: dict[str, float],
         timeout: int | None,
-        description: str,
-        agent_id: str,
         stdin: str | None,
+        agent_id: str,
+        description: str,
+        attribute_changes: bool,
+        on_progress_line: Callable[[str], None] | None,
+    ) -> SimpleNamespace:
+        user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
+        stdin_b64 = (
+            base64.b64encode(stdin.encode("utf-8")).decode("ascii")
+            if stdin is not None
+            else ""
+        )
+        if on_progress_line is None:
+            stdout_text, script_exit = await self._timed_stage(
+                "run_overlay",
+                stage_timings=stage_timings,
+                lease=lease,
+                command=command,
+                awaitable=self._run_overlay(
+                    sandbox,
+                    lease=lease,
+                    user_cmd_b64=user_cmd_b64,
+                    stdin_b64=stdin_b64,
+                    timeout=timeout,
+                ),
+            )
+        else:
+            stdout_text, script_exit = await self._timed_stage(
+                "run_overlay",
+                stage_timings=stage_timings,
+                lease=lease,
+                command=command,
+                awaitable=self._run_overlay_with_progress(
+                    sandbox,
+                    lease=lease,
+                    user_cmd_b64=user_cmd_b64,
+                    stdin_b64=stdin_b64,
+                    timeout=timeout,
+                    on_progress_line=on_progress_line,
+                ),
+            )
+        return await self._finish_remote_commit(
+            sandbox=sandbox,
+            command=command,
+            lease=lease,
+            stage_timings=stage_timings,
+            stdout_text=stdout_text,
+            script_exit=script_exit,
+            agent_id=agent_id,
+            description=description,
+            attribute_changes=attribute_changes,
+        )
+
+    async def _finish_remote_commit(
+        self,
+        *,
+        sandbox: Any,
+        command: str,
+        lease: OverlayLease,
+        stage_timings: dict[str, float],
+        stdout_text: str,
+        script_exit: int,
+        agent_id: str,
+        description: str,
         attribute_changes: bool,
     ) -> SimpleNamespace:
-        async with self._semaphore:
-            lease = self._new_lease()
-            stage_timings: dict[str, float] = {}
-            total_started = time.perf_counter()
-            result: SimpleNamespace | None = None
-            error: BaseException | None = None
-            fingerprint_guard_started = False
-            record_overlay_op(ops_total=1)
-            try:
-                await self._begin_workspace_fingerprint_guard()
-                fingerprint_guard_started = True
-                await self._timed_stage(
-                    "upload_runtime",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._ensure_script_uploaded(None),
-                )
-                user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
-                stdin_b64 = (
-                    base64.b64encode(stdin.encode("utf-8")).decode("ascii")
-                    if stdin is not None
-                    else ""
-                )
-                overlay_stdout, script_exit = await self._timed_stage(
-                    "unshare",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._run_overlay_daemon_local(
-                        lease=lease,
-                        user_cmd_b64=user_cmd_b64,
-                        stdin_b64=stdin_b64,
-                        timeout=timeout,
-                    ),
-                )
-                await self._timed_stage(
-                    "read_envelope",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._read_result_envelope(
-                        lease,
-                        overlay_stdout=overlay_stdout,
-                        overlay_exit_code=script_exit,
-                    ),
-                )
-                stdout_text = await self._timed_stage(
-                    "read_stdout",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._read_stdout(None, lease, fallback=overlay_stdout),
-                )
-                diff_or_reject = await self._timed_stage(
-                    "read_diff",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._read_diff(
-                        None,
-                        lease,
-                        overlay_stdout=stdout_text,
-                        overlay_exit_code=script_exit,
-                    ),
-                )
-                if isinstance(diff_or_reject, OverlayPolicyReject):
-                    record_overlay_op(
-                        ops_rejected=1,
-                        dotgit_rejects=(
-                            1 if diff_or_reject.reason.endswith("dotgit_writes") else 0
-                        ),
-                    )
-                    result = _reject_result(
-                        stdout=stdout_text,
-                        exit_code=script_exit,
-                        reject=diff_or_reject,
-                        overlay_run_timings=diff_or_reject.run_timings,
-                    )
-                    return result
-                diff = diff_or_reject
-                record_overlay_op(
-                    upper_bytes=diff.upper_bytes,
-                    upper_files=diff.upper_files,
-                    gitinclude_changes=len(diff.gitinclude_changes),
-                    gitignore_changes=len(diff.gitignore_paths),
-                    direct_merged_bytes=diff.direct_merged_bytes,
-                    whiteouts_gitinclude=diff.whiteouts_gitinclude,
-                    whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
-                )
-                result = await self._timed_stage(
-                    "commit",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._commit_and_assemble(
-                        stdout=stdout_text,
-                        diff=diff,
-                        agent_id=agent_id,
-                        description=description or "shell overlay",
-                        attribute_changes=attribute_changes,
-                        overlay_run_timings=diff.run_timings,
-                    ),
-                )
-                return result
-            except BaseException as exc:
-                error = exc
-                raise
-            finally:
-                try:
-                    await self._timed_stage(
-                        "cleanup",
-                        stage_timings=stage_timings,
-                        lease=lease,
-                        command=command,
-                        awaitable=self._cleanup_daemon_local_run_dir(lease),
-                    )
-                except OSError:
-                    logger.warning(
-                        "overlay daemon-local run-dir cleanup failed for %s",
-                        lease.run_dir,
-                        exc_info=True,
-                    )
-                except Exception:
-                    logger.debug(
-                        "overlay daemon-local run-dir cleanup failed for %s",
-                        lease.run_dir,
-                        exc_info=True,
-                    )
-                stage_timings["total"] = round(time.perf_counter() - total_started, 6)
-                if result is not None:
-                    result.overlay_stage_timings = dict(stage_timings)
-                if fingerprint_guard_started:
-                    await self._end_workspace_fingerprint_guard()
-                self._log_execution_summary(
-                    command=command,
-                    lease=lease,
-                    stage_timings=stage_timings,
-                    result=result,
-                    error=error,
-                )
-
-    async def _begin_workspace_fingerprint_guard(self) -> None:
-        async with self._fingerprint_lock:
-            if self._active_fingerprint_guards == 0:
-                current = _workspace_fingerprint(self._workspace_root)
-                previous = self._last_workspace_fingerprint
-                if previous is not None and current != previous:
-                    raise OverlayRunError(
-                        "workspace changed outside the overlay OCC path; "
-                        "refusing lowerdir snapshot"
-                    )
-            self._active_fingerprint_guards += 1
-
-    async def _end_workspace_fingerprint_guard(self) -> None:
-        async with self._fingerprint_lock:
-            if self._active_fingerprint_guards > 0:
-                self._active_fingerprint_guards -= 1
-            if self._active_fingerprint_guards == 0:
-                self._last_workspace_fingerprint = _workspace_fingerprint(
-                    self._workspace_root
-                )
-
-    async def _run_overlay_daemon_local(
-        self,
-        *,
-        lease: OverlayLease,
-        user_cmd_b64: str,
-        stdin_b64: str,
-        timeout: int | None,
-    ) -> tuple[str, int]:
-        script_path = posixpath.join(_RUN_DIR_PREFIX, "overlay_run.py")
-        Path(lease.run_dir).mkdir(parents=True, exist_ok=True)
-        args = [
-            "--workspace-root",
-            self._workspace_root,
-            "--run-dir",
-            lease.run_dir,
-            "--upper-size-mb",
-            str(self._upper_size_mb),
-            "--user-cmd-b64",
-            user_cmd_b64,
-        ]
-        if stdin_b64:
-            args.extend(["--stdin-b64", stdin_b64])
-        inner = f"python3 {shlex.quote(script_path)} " + " ".join(
-            shlex.quote(a) for a in args
+        stdout_text = await self._timed_stage(
+            "read_stdout",
+            stage_timings=stage_timings,
+            lease=lease,
+            command=command,
+            awaitable=self._read_stdout(sandbox, lease, fallback=stdout_text),
         )
-        argv = [
-            "unshare",
-            "-Urm",
-            "bash",
-            "-o",
-            "pipefail",
-            "-lc",
-            self._daemon_local_shell_script(inner),
-        ]
-        logger.debug(
-            "overlay daemon-local subprocess.run start: kind=unshare "
-            "sandbox_id=%s run_dir=%s command=%r",
-            self._sandbox_id,
-            lease.run_dir,
-            _command_sample(inner),
-        )
-        started = time.perf_counter()
-        completed = await asyncio.to_thread(
-            subprocess.run,
-            argv,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-        logger.debug(
-            "overlay daemon-local subprocess.run done: kind=unshare elapsed=%.3fs "
-            "exit_code=%s sandbox_id=%s run_dir=%s",
-            time.perf_counter() - started,
-            completed.returncode,
-            self._sandbox_id,
-            lease.run_dir,
-        )
-        return (completed.stdout or "") + (completed.stderr or ""), completed.returncode
-
-    def _daemon_local_shell_script(self, command: str) -> str:
-        return "\n".join(
-            [
-                "unset LC_ALL",
-                'export PATH="$HOME/.local/bin:$PATH"',
-                f"cd {shlex.quote(self._workspace_root)}",
-                'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi',
-                f"exec {command}",
-            ]
-        )
-
-    async def _read_result_envelope(
-        self,
-        lease: OverlayLease,
-        *,
-        overlay_stdout: str,
-        overlay_exit_code: int,
-    ) -> dict[str, Any]:
-        path = Path(lease.run_dir) / "result.json"
-        try:
-            raw = path.read_text(encoding="utf-8")
-        except OSError as exc:
-            raise OverlayRunError(
-                "overlay result.json missing at "
-                f"{path}: {exc} "
-                f"overlay_exit_code={overlay_exit_code!r} "
-                f"overlay_output={overlay_stdout[-2000:]!r}"
-            ) from exc
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise OverlayRunError(f"invalid overlay result.json at {path}: {exc}") from exc
-        if not isinstance(payload, dict):
-            raise OverlayRunError(
-                f"overlay result.json at {path} must be an object: {payload!r}"
-            )
-        logger.debug(
-            "overlay daemon-local result envelope read: sandbox_id=%s run_dir=%s "
-            "exit_code=%s rejected=%s",
-            self._sandbox_id,
-            lease.run_dir,
-            payload.get("exit_code"),
-            payload.get("rejected"),
-        )
-        return payload
-
-    async def _cleanup_daemon_local_run_dir(self, lease: OverlayLease) -> None:
-        await asyncio.to_thread(shutil.rmtree, lease.run_dir, ignore_errors=True)
-
-    async def _timed_stage(
-        self,
-        stage: str,
-        *,
-        stage_timings: dict[str, float],
-        lease: OverlayLease,
-        command: str,
-        awaitable: Awaitable[Any],
-    ) -> Any:
-        started = time.perf_counter()
-        logger.debug(
-            "overlay command stage start: stage=%s sandbox_id=%s run_dir=%s command=%r",
-            stage,
-            self._sandbox_id,
-            lease.run_dir,
-            _command_sample(command),
-        )
-        try:
-            return await awaitable
-        finally:
-            elapsed = round(time.perf_counter() - started, 6)
-            stage_timings[stage] = elapsed
-            logger.debug(
-                "overlay command stage done: stage=%s elapsed=%.3fs "
-                "sandbox_id=%s run_dir=%s command=%r timings=%s",
-                stage,
-                elapsed,
-                self._sandbox_id,
-                lease.run_dir,
-                _command_sample(command),
-                dict(stage_timings),
-            )
-            if elapsed >= _SLOW_OVERLAY_STAGE_SECONDS:
-                logger.warning(
-                    "overlay command stage slow: stage=%s elapsed=%.3fs "
-                    "sandbox_id=%s run_dir=%s command=%r timings=%s",
-                    stage,
-                    elapsed,
-                    self._sandbox_id,
-                    lease.run_dir,
-                    _command_sample(command),
-                    dict(stage_timings),
-                )
-
-    def _log_execution_summary(
-        self,
-        *,
-        command: str,
-        lease: OverlayLease,
-        stage_timings: dict[str, float],
-        result: SimpleNamespace | None,
-        error: BaseException | None,
-    ) -> None:
-        total = stage_timings.get("total", 0.0)
-        status = getattr(result, "git_commit_status", None)
-        failed_status = status not in (None, "committed", "noop")
-        if error is None and not failed_status and total < _SLOW_OVERLAY_TOTAL_SECONDS:
-            return
-        error_text = f"{type(error).__name__}: {error}" if error is not None else None
-        logger.warning(
-            "overlay command summary: total=%.3fs status=%s exit_code=%s "
-            "conflict_file=%s conflict_reason=%s error=%s sandbox_id=%s "
-            "run_dir=%s timings=%s overlay_run_timings=%s "
-            "command=%r",
-            total,
-            status,
-            getattr(result, "exit_code", None),
-            getattr(result, "git_conflict_file", None),
-            getattr(result, "git_conflict_reason", None),
-            error_text,
-            self._sandbox_id,
-            lease.run_dir,
-            dict(stage_timings),
-            dict(getattr(result, "overlay_run_timings", {}) or {}),
-            _command_sample(command),
-        )
-
-    def _new_lease(self) -> OverlayLease:
-        run_dir = posixpath.join(
-            _RUN_DIR_PREFIX, self._sandbox_id, f"run-{uuid.uuid4().hex}"
-        )
-        return OverlayLease(run_dir=run_dir)
-
-    async def _ensure_script_uploaded(self, sandbox: Any) -> None:
-        if self._script_uploaded:
-            return
-        async with self._script_upload_lock:
-            if self._script_uploaded:
-                return
-            if self._can_use_local_run_dir(sandbox):
-                root = Path(_RUN_DIR_PREFIX)
-                root.mkdir(parents=True, exist_ok=True)
-                with tarfile.open(
-                    fileobj=io.BytesIO(_overlay_runtime_bundle_bytes()),
-                    mode="r:gz",
-                ) as tar:
-                    try:
-                        tar.extractall(root, filter="data")
-                    except TypeError:
-                        tar.extractall(root)
-                self._script_uploaded = True
-                return
-            # Read the sandbox-side runtime bundle from the orchestrator
-            # package and ship it to /tmp/eos-shell-overlay.
-            encoded = base64.b64encode(_overlay_runtime_bundle_bytes()).decode("ascii")
-            upload_snippet = (
-                "import base64,io,pathlib,sys,tarfile; "
-                "root=pathlib.Path(sys.argv[1]); "
-                "root.mkdir(parents=True, exist_ok=True); "
-                "data=base64.b64decode(sys.argv[2]); "
-                "tar=tarfile.open(fileobj=io.BytesIO(data), mode='r:gz'); "
-                "\ntry:\n tar.extractall(root, filter='data')"
-                "\nexcept TypeError:\n tar.extractall(root)"
-            )
-            setup_cmd = (
-                f"mkdir -p {shlex.quote(_RUN_DIR_PREFIX)} && "
-                f"python3 -c {shlex.quote(upload_snippet)} "
-                f"{shlex.quote(_RUN_DIR_PREFIX)} {shlex.quote(encoded)}"
-            )
-            _stdout, exit_code = await self._do_exec(
-                sandbox, setup_cmd, timeout=60,
-            )
-            if exit_code != 0:
-                raise OverlayRunError(
-                    f"overlay_run.py upload failed: exit_code={exit_code}"
-                )
-            self._script_uploaded = True
-
-    async def _run_overlay(
-        self,
-        sandbox: Any,
-        *,
-        lease: OverlayLease,
-        user_cmd_b64: str,
-        stdin_b64: str,
-        timeout: int | None,
-    ) -> tuple[str, int]:
-        script_path = posixpath.join(_RUN_DIR_PREFIX, "overlay_run.py")
-        args = [
-            "--workspace-root", self._workspace_root,
-            "--run-dir", lease.run_dir,
-            "--upper-size-mb", str(self._upper_size_mb),
-            "--user-cmd-b64", user_cmd_b64,
-        ]
-        if stdin_b64:
-            args.extend(["--stdin-b64", stdin_b64])
-        inner = f"python3 {shlex.quote(script_path)} " + " ".join(
-            shlex.quote(a) for a in args
-        )
-        full = (
-            f"mkdir -p {shlex.quote(lease.run_dir)} && "
-            f"unshare -Urm bash -c {shlex.quote(inner)}"
-        )
-        return await self._do_exec(sandbox, full, timeout=timeout)
-
-    async def _run_overlay_with_progress(
-        self,
-        sandbox: Any,
-        *,
-        lease: OverlayLease,
-        user_cmd_b64: str,
-        stdin_b64: str,
-        timeout: int | None,
-        on_progress_line: Callable[[str], None],
-    ) -> tuple[str, int]:
-        task = asyncio.create_task(
-            self._run_overlay(
-                sandbox,
-                lease=lease,
-                user_cmd_b64=user_cmd_b64,
-                stdin_b64=stdin_b64,
-                timeout=timeout,
-            )
-        )
-        offset = 0
-        partial = ""
-        try:
-            while not task.done():
-                await asyncio.sleep(_PROGRESS_POLL_INTERVAL_SECONDS)
-                offset, partial = await self._emit_stdout_progress_delta(
-                    sandbox,
-                    lease,
-                    offset=offset,
-                    partial=partial,
-                    on_progress_line=on_progress_line,
-                )
-            stdout_text, exit_code = await task
-            offset, partial = await self._emit_stdout_progress_delta(
+        diff_or_reject = await self._timed_stage(
+            "read_diff",
+            stage_timings=stage_timings,
+            lease=lease,
+            command=command,
+            awaitable=self._read_diff(
                 sandbox,
                 lease,
-                offset=offset,
-                partial=partial,
-                on_progress_line=on_progress_line,
-            )
-            if partial:
-                on_progress_line(partial)
-            return stdout_text, exit_code
-        except BaseException:
-            if not task.done():
-                task.cancel()
-            raise
-
-    async def _emit_stdout_progress_delta(
-        self,
-        sandbox: Any,
-        lease: OverlayLease,
-        *,
-        offset: int,
-        partial: str,
-        on_progress_line: Callable[[str], None],
-    ) -> tuple[int, str]:
-        try:
-            chunk, new_offset = await self._read_stdout_delta(
-                sandbox,
-                lease,
-                offset=offset,
-                max_bytes=_PROGRESS_READ_CHUNK_BYTES,
-            )
-        except Exception:
-            logger.debug(
-                "overlay stdout progress read failed for %s",
-                lease.run_dir,
-                exc_info=True,
-            )
-            return offset, partial
-        if not chunk:
-            return new_offset, partial
-        text = partial + chunk.decode("utf-8", "replace")
-        if text.endswith(("\n", "\r")):
-            emit_text = text
-            partial = ""
-        else:
-            lines = text.splitlines(keepends=True)
-            if lines:
-                partial = lines[-1]
-                emit_text = "".join(lines[:-1])
-            else:
-                partial = text
-                emit_text = ""
-        if emit_text:
-            on_progress_line(emit_text)
-        return new_offset, partial
-
-    async def _read_stdout(
-        self, sandbox: Any, lease: OverlayLease, *, fallback: str
-    ) -> str:
-        stdout_path = posixpath.join(lease.run_dir, "stdout.bin")
-        if self._can_use_local_run_dir(sandbox):
-            try:
-                return Path(stdout_path).read_bytes().decode("utf-8", "replace")
-            except OSError:
-                return fallback
-        script = (
-            "import base64,pathlib,sys; "
-            "sys.stdout.write(base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode('ascii'))"
+                overlay_stdout=stdout_text,
+                overlay_exit_code=script_exit,
+            ),
         )
-        cmd = f"python3 -c {shlex.quote(script)} {shlex.quote(stdout_path)}"
-        encoded, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
-        if exit_code != 0:
-            return fallback
-        try:
-            return base64.b64decode(encoded.strip()).decode("utf-8", "replace")
-        except Exception:
-            logger.debug(
-                "overlay stdout decode failed for %s", stdout_path, exc_info=True
+        if isinstance(diff_or_reject, OverlayPolicyReject):
+            record_overlay_op(
+                ops_rejected=1,
+                dotgit_rejects=(
+                    1 if diff_or_reject.reason.endswith("dotgit_writes") else 0
+                ),
             )
-            return fallback
-
-    async def _read_stdout_delta(
-        self,
-        sandbox: Any,
-        lease: OverlayLease,
-        *,
-        offset: int,
-        max_bytes: int,
-    ) -> tuple[bytes, int]:
-        stdout_path = posixpath.join(lease.run_dir, "stdout.bin")
-        if self._can_use_local_run_dir(sandbox):
-            try:
-                data = Path(stdout_path).read_bytes()
-            except OSError:
-                return b"", offset
-            size = len(data)
-            start = offset if offset <= size else 0
-            start = max(start, size - max_bytes)
-            return data[start:size], size
-        script = (
-            "import base64,json,pathlib,sys; "
-            "path=pathlib.Path(sys.argv[1]); "
-            "offset=max(0,int(sys.argv[2])); "
-            "limit=max(1,int(sys.argv[3])); "
-            "data=path.read_bytes() if path.exists() else b''; "
-            "size=len(data); "
-            "start=offset if offset <= size else 0; "
-            "start=max(start, size-limit); "
-            "chunk=data[start:size]; "
-            "print(json.dumps({'start': start, 'size': size, "
-            "'chunk': base64.b64encode(chunk).decode('ascii')}))"
-        )
-        cmd = (
-            f"python3 -c {shlex.quote(script)} "
-            f"{shlex.quote(stdout_path)} {offset} {max_bytes}"
-        )
-        raw, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
-        if exit_code != 0:
-            return b"", offset
-        payload = json.loads(raw or "{}")
-        size = int(payload.get("size") or 0)
-        chunk_b64 = str(payload.get("chunk") or "")
-        if not chunk_b64:
-            return b"", size
-        return base64.b64decode(chunk_b64), size
-
-    async def _read_diff(
-        self,
-        sandbox: Any,
-        lease: OverlayLease,
-        *,
-        overlay_stdout: str = "",
-        overlay_exit_code: int | None = None,
-    ) -> OverlayDiff | OverlayPolicyReject:
-        diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
-        if self._can_use_local_run_dir(sandbox):
-            try:
-                return parse_diff_ndjson(Path(diff_path).read_text(encoding="utf-8"))
-            except OSError as exc:
-                raise OverlayRunError(
-                    "overlay diff.ndjson missing at "
-                    f"{diff_path}: {exc} "
-                    f"overlay_exit_code={overlay_exit_code!r} "
-                    f"overlay_output={overlay_stdout[-2000:]!r}"
-                ) from exc
-        cmd = f"cat {shlex.quote(diff_path)}"
-        stdout, exit_code = await self._do_exec(sandbox, cmd, timeout=60)
-        if exit_code != 0:
-            raise OverlayRunError(
-                "overlay diff.ndjson missing at "
-                f"{diff_path}: cat={stdout[-1000:]!r} "
-                f"overlay_exit_code={overlay_exit_code!r} "
-                f"overlay_output={overlay_stdout[-2000:]!r}"
+            return reject_result(
+                stdout=stdout_text,
+                exit_code=script_exit,
+                reject=diff_or_reject,
+                overlay_run_timings=diff_or_reject.run_timings,
             )
-        return parse_diff_ndjson(stdout)
 
-    async def _cleanup_run_dir(self, sandbox: Any, lease: OverlayLease) -> None:
-        if self._can_use_local_run_dir(sandbox):
-            await asyncio.to_thread(shutil.rmtree, lease.run_dir, ignore_errors=True)
-            return
-        cmd = f"rm -rf {shlex.quote(lease.run_dir)}"
-        await self._do_exec(sandbox, cmd, timeout=60)
-
-    def _can_use_local_run_dir(self, sandbox: Any) -> bool:
-        return sandbox is None and self._transport is None
-
-    async def _do_exec(
-        self,
-        sandbox: Any,
-        command: str,
-        *,
-        timeout: int | None,
-    ) -> tuple[str, int]:
-        """Exec ``command`` and return ``(stdout, exit_code)``.
-
-        Routes through the bound :class:`SandboxTransport` when set; otherwise
-        uses the injected ``exec_process`` callback for local/test callers.
-        """
-        if self._transport is not None and self._sandbox_id:
-            result = await self._transport.exec(
-                self._sandbox_id, command, timeout=timeout,
-            )
-            return result.stdout, result.exit_code
-        response = await self._exec_process(
-            sandbox, wrap_bash_command(command), timeout=timeout,
+        diff = diff_or_reject
+        record_overlay_op(
+            upper_bytes=diff.upper_bytes,
+            upper_files=diff.upper_files,
+            gitinclude_changes=len(diff.gitinclude_changes),
+            gitignore_changes=len(diff.gitignore_paths),
+            direct_merged_bytes=diff.direct_merged_bytes,
+            whiteouts_gitinclude=diff.whiteouts_gitinclude,
+            whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
         )
-        cleaned, exit_code = extract_exit_code(
-            str(getattr(response, "result", "") or ""),
-            fallback_exit_code=getattr(response, "exit_code", None),
+        return await self._timed_stage(
+            "commit",
+            stage_timings=stage_timings,
+            lease=lease,
+            command=command,
+            awaitable=self._commit_and_assemble(
+                stdout=stdout_text,
+                diff=diff,
+                agent_id=agent_id,
+                description=description or "shell overlay",
+                attribute_changes=attribute_changes,
+                overlay_run_timings=diff.run_timings,
+            ),
         )
-        return cleaned, exit_code
 
     async def _commit_and_assemble(
         self,
@@ -992,20 +305,17 @@ class OverlayAuditor:
         overlay_run_timings: dict[str, float] | None = None,
     ) -> SimpleNamespace:
         gitignore_paths = [
-            _live_path(self._workspace_root, p) for p in diff.gitignore_paths
+            live_path(self._workspace_root, p) for p in diff.gitignore_paths
         ]
         gitinclude_live_paths = [
-            _live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
+            live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
         ]
 
-        # Retained only for API compatibility. The old ambient-write bypass is
-        # retired: gitinclude writes always go through OCC, and gitignored writes
-        # use the existing direct-merge route.
         del attribute_changes
 
         mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
         if not diff.gitinclude_changes:
-            return _audit_result(
+            return audit_result(
                 result_text=stdout,
                 exit_code=diff.exit_code,
                 gitinclude_committed=[],
@@ -1028,7 +338,7 @@ class OverlayAuditor:
         )
         warnings = list(diff.warnings)
         if commit_result.success:
-            return _audit_result(
+            return audit_result(
                 result_text=stdout,
                 exit_code=diff.exit_code,
                 gitinclude_committed=gitinclude_live_paths,
@@ -1044,8 +354,6 @@ class OverlayAuditor:
                 overlay_run_timings=overlay_run_timings,
             )
 
-        # Tracked OCC aborted. Gitignored writes were already direct-merged
-        # into live — mixed partial-apply contract (plan §4.5).
         partial = mixed
         if partial:
             warnings.append(
@@ -1059,7 +367,7 @@ class OverlayAuditor:
             )
         elif mixed:
             record_overlay_op(mixed_gitinclude_gitignore_ops=1)
-        return _audit_result(
+        return audit_result(
             result_text=stdout,
             exit_code=diff.exit_code,
             gitinclude_committed=[],
@@ -1076,182 +384,4 @@ class OverlayAuditor:
         )
 
 
-# ---------------------------------------------------------------------------
-# NDJSON parser — decoupled so it can be unit-tested in isolation.
-# ---------------------------------------------------------------------------
-
-
-def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
-    """Parse the ``diff.ndjson`` body produced by ``overlay_run.py``.
-
-    Raises :class:`OverlayRunError` on malformed payloads. Returns a
-    :class:`OverlayPolicyReject` when the script emitted a ``_reject``
-    block, otherwise an :class:`OverlayDiff`.
-    """
-    lines = [line for line in (raw or "").splitlines() if line.strip()]
-    if not lines:
-        raise OverlayRunError("empty diff.ndjson payload")
-
-    try:
-        first = json.loads(lines[0])
-    except json.JSONDecodeError as exc:
-        raise OverlayRunError(f"invalid diff.ndjson meta line: {exc}") from exc
-
-    if isinstance(first, dict) and "_reject" in first:
-        reject_meta = first["_reject"]
-        if not isinstance(reject_meta, dict):
-            raise OverlayRunError(f"_reject block must be a dict, got {reject_meta!r}")
-        raw_run_timings = reject_meta.get("run_timings") or {}
-        return OverlayPolicyReject(
-            reason=str(reject_meta.get("reason") or ""),
-            paths=tuple(str(p) for p in reject_meta.get("paths") or ()),
-            run_timings=_parse_timing_dict(raw_run_timings),
-        )
-
-    if not (isinstance(first, dict) and "_meta" in first):
-        raise OverlayRunError(
-            f"diff.ndjson first line must be _meta or _reject: {first!r}"
-        )
-    meta = first["_meta"]
-    if not isinstance(meta, dict):
-        raise OverlayRunError(f"_meta block must be a dict, got {meta!r}")
-
-    changes: list[OverlayChange] = []
-    for idx, line in enumerate(lines[1:], start=1):
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise OverlayRunError(
-                f"invalid diff.ndjson entry at line {idx}: {exc}"
-            ) from exc
-        if not isinstance(entry, dict):
-            raise OverlayRunError(
-                f"diff.ndjson entry at line {idx} must be a dict: {entry!r}"
-            )
-        changes.append(
-            OverlayChange(
-                path=str(entry.get("path") or ""),
-                kind=str(entry.get("kind") or "modify"),  # type: ignore[arg-type]
-                base_content=str(entry.get("base_content") or ""),
-                base_existed=bool(entry.get("base_existed")),
-                final_content=(
-                    entry["final_content"]
-                    if entry.get("final_content") is not None
-                    else None
-                ),
-            )
-        )
-
-    gitignore_paths = tuple(str(p) for p in meta.get("gitignore_paths") or ())
-    raw_run_timings = meta.get("run_timings") or {}
-    return OverlayDiff(
-        exit_code=int(meta.get("exit_code") or 0),
-        upper_bytes=int(meta.get("upper_bytes") or 0),
-        upper_files=int(meta.get("upper_files") or 0),
-        gitinclude_changes=tuple(changes),
-        gitignore_paths=gitignore_paths,
-        gitignore_truncated=bool(meta.get("gitignore_truncated")),
-        direct_merged_bytes=int(meta.get("direct_merged_bytes") or 0),
-        whiteouts_gitinclude=int(meta.get("whiteouts_gitinclude") or 0),
-        whiteouts_gitignore_refused=int(
-            meta.get("whiteouts_gitignore_refused") or 0
-        ),
-        dotgit_rejects=int(meta.get("dotgit_rejects") or 0),
-        run_timings=_parse_timing_dict(raw_run_timings),
-        warnings=tuple(str(w) for w in meta.get("warnings") or ()),
-    )
-
-
-def _parse_timing_dict(raw: Any) -> dict[str, float]:
-    if not isinstance(raw, dict):
-        return {}
-    return {
-        str(key): round(float(value), 6)
-        for key, value in raw.items()
-        if isinstance(value, (int, float))
-    }
-
-
-# ---------------------------------------------------------------------------
-# Result assembly helpers.
-# ---------------------------------------------------------------------------
-
-
-def _live_path(workspace_root: str, rel: str) -> str:
-    rel = rel.replace("\\", "/").lstrip("/")
-    return f"{workspace_root}/{rel}"
-
-
-def _audit_result(
-    *,
-    result_text: str,
-    exit_code: int,
-    gitinclude_committed: list[str],
-    gitignore_merged: list[str],
-    gitignore_merged_count: int,
-    mixed_gitinclude_gitignore: bool,
-    mixed_partial_apply: bool,
-    ambient: list[str],
-    git_commit_status: str | None,
-    git_conflict_reason: str | None,
-    git_conflict_file: str | None,
-    warnings: list[str],
-    overlay_run_timings: dict[str, float] | None = None,
-) -> SimpleNamespace:
-    # Preserve the downstream SimpleNamespace contract (changed_paths,
-    # ambient_changed_paths, git_commit_status, git_conflict_reason,
-    # git_conflict_file). Everything else is additive metadata.
-    return SimpleNamespace(
-        result=result_text,
-        exit_code=exit_code,
-        changed_paths=sorted(gitinclude_committed),
-        ambient_changed_paths=sorted(ambient),
-        files_written=len(gitinclude_committed),
-        git_commit_status=git_commit_status,
-        git_conflict_file=git_conflict_file,
-        git_conflict_reason=git_conflict_reason,
-        gitinclude_changed_paths=sorted(gitinclude_committed),
-        gitignore_direct_merged_paths=sorted(gitignore_merged),
-        gitignore_direct_merged_count=gitignore_merged_count,
-        mixed_gitinclude_gitignore=mixed_gitinclude_gitignore,
-        mixed_partial_apply=mixed_partial_apply,
-        warnings=list(warnings),
-        overlay_run_timings=dict(overlay_run_timings or {}),
-    )
-
-
-def _reject_result(
-    *,
-    stdout: str,
-    exit_code: int,
-    reject: OverlayPolicyReject,
-    overlay_run_timings: dict[str, float] | None = None,
-) -> SimpleNamespace:
-    detail = (
-        f"{reject.reason}: {','.join(reject.paths)}"
-        if reject.paths
-        else reject.reason
-    )
-    return SimpleNamespace(
-        result=stdout,
-        exit_code=exit_code,
-        changed_paths=[],
-        ambient_changed_paths=[],
-        files_written=0,
-        git_commit_status="rejected",
-        git_conflict_file=reject.paths[0] if reject.paths else None,
-        git_conflict_reason=detail,
-        gitinclude_changed_paths=[],
-        gitignore_direct_merged_paths=[],
-        gitignore_direct_merged_count=0,
-        mixed_gitinclude_gitignore=False,
-        mixed_partial_apply=False,
-        warnings=[detail],
-        overlay_run_timings=dict(overlay_run_timings or {}),
-    )
-
-
-__all__ = [
-    "OverlayAuditor",
-    "parse_diff_ndjson",
-]
+__all__ = ["OverlayAuditor", "parse_diff_ndjson"]

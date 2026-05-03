@@ -10,6 +10,13 @@ from sandbox.code_intelligence.mutations.patcher import Patcher
 from sandbox.code_intelligence.mutations.write_coordinator import CommitOperation, WriteCoordinator
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.mutations.content_manager import ContentManager
+from sandbox.code_intelligence.mutations.mutation_results import (
+    dst_exists_result,
+    identical_paths_result,
+    not_a_directory_result,
+    not_found_result,
+    patch_failed_result,
+)
 from sandbox.code_intelligence.core.types import (
     DeleteSpec,
     EditRequest,
@@ -250,9 +257,9 @@ class MutationService:
                     try:
                         resolved_paths.extend(self._content.list_folder_files(item.path))
                     except FileNotFoundError:
-                        return _not_found_result(item.path)
+                        return not_found_result(item.path)
                     except NotADirectoryError:
-                        return _not_a_directory_result(item.path)
+                        return not_a_directory_result(item.path)
                     continue
                 resolved_paths.append(item.path)
             else:
@@ -295,9 +302,9 @@ class MutationService:
             try:
                 members = self._content.list_folder_files(spec.src_path)
             except FileNotFoundError:
-                return _not_found_result(spec.src_path)
+                return not_found_result(spec.src_path)
             except NotADirectoryError:
-                return _not_a_directory_result(spec.src_path)
+                return not_a_directory_result(spec.src_path)
             src_prefix_len = len(spec.src_path)
             normalized.extend(
                 MoveSpec(
@@ -310,7 +317,7 @@ class MutationService:
         read_paths: list[str] = []
         for spec in normalized:
             if spec.src_path == spec.dst_path:
-                return _identical_paths_result(spec.src_path)
+                return identical_paths_result(spec.src_path)
             read_paths.extend((str(spec.src_path), str(spec.dst_path)))
         base_by_path = self._content.read_many(read_paths, allow_missing=True)
         changes, early_failure = self._move_specs_to_changes_from_base(
@@ -442,10 +449,10 @@ class MutationService:
         for spec in specs:
             current, existed = base_by_path.get(str(spec.file_path), ("", False))
             if not existed:
-                return [], _not_found_result(spec.file_path)
+                return [], not_found_result(spec.file_path)
             patch = self.patcher.apply_edits(current, list(spec.edits))
             if not patch.success:
-                return [], _patch_failed_result(spec.file_path, patch.errors)
+                return [], patch_failed_result(spec.file_path, patch.errors)
             changes.append(
                 OperationChange(
                     file_path=spec.file_path,
@@ -466,7 +473,7 @@ class MutationService:
         for path in paths:
             current, existed = base_by_path.get(path, ("", False))
             if not existed:
-                return [], _not_found_result(path)
+                return [], not_found_result(path)
             changes.append(
                 OperationChange(
                     file_path=path,
@@ -486,13 +493,13 @@ class MutationService:
         changes: list[OperationChange] = []
         for spec in specs:
             if spec.src_path == spec.dst_path:
-                return [], _identical_paths_result(spec.src_path)
+                return [], identical_paths_result(spec.src_path)
             src_content, src_existed = base_by_path.get(str(spec.src_path), ("", False))
             if not src_existed:
-                return [], _not_found_result(spec.src_path)
+                return [], not_found_result(spec.src_path)
             dst_content, dst_existed = base_by_path.get(str(spec.dst_path), ("", False))
             if dst_existed and not spec.overwrite:
-                return [], _dst_exists_result(spec.dst_path)
+                return [], dst_exists_result(spec.dst_path)
             changes.append(
                 OperationChange(
                     file_path=spec.src_path,
@@ -545,63 +552,3 @@ def _request_has_folder_spec(req: _CommitSpecRequest) -> bool:
             for spec in req.specs
         )
     return False
-
-
-def _error_result(
-    file_path: str,
-    message: str,
-    *,
-    conflict_reason: str,
-    conflict_file: str | None = None,
-) -> OperationResult:
-    return OperationResult(
-        success=False,
-        status="failed",
-        files=(EditResult(success=False, file_path=file_path, message=message),),
-        conflict_file=conflict_file,
-        conflict_reason=conflict_reason,
-        timings={},
-    )
-
-
-def _not_found_result(file_path: str) -> OperationResult:
-    return _error_result(
-        file_path,
-        f"Path does not exist: {file_path}",
-        conflict_reason="not_found",
-    )
-
-
-def _not_a_directory_result(file_path: str) -> OperationResult:
-    return _error_result(
-        file_path,
-        f"Path is not a directory: {file_path}",
-        conflict_reason="not_a_directory",
-        conflict_file=file_path,
-    )
-
-
-def _identical_paths_result(file_path: str) -> OperationResult:
-    return _error_result(
-        file_path,
-        "src_path and dst_path are identical",
-        conflict_reason="identical_paths",
-    )
-
-
-def _dst_exists_result(dst_path: str) -> OperationResult:
-    return _error_result(
-        dst_path,
-        f"Destination exists: {dst_path} (pass overwrite=True to replace)",
-        conflict_reason="dst_exists",
-        conflict_file=dst_path,
-    )
-
-
-def _patch_failed_result(file_path: str, errors: list[str]) -> OperationResult:
-    return _error_result(
-        file_path,
-        "; ".join(errors) if errors else "edit apply failed",
-        conflict_reason="patch_failed",
-        conflict_file=file_path,
-    )
