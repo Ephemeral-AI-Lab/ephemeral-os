@@ -1,14 +1,13 @@
-"""Client for the sandbox-local code-intelligence daemon."""
+"""Client for sandbox-local code-intelligence commands."""
 
 from __future__ import annotations
 
-import asyncio
 import base64
+import json
 import logging
 import textwrap
 import threading
 import time
-import uuid
 from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import Any
@@ -33,12 +32,6 @@ from sandbox.code_intelligence.core.types import (
     OperationResult,
     WriteSpec,
 )
-from sandbox.code_intelligence.daemon.protocol import (
-    CI_PROTOCOL_VERSION,
-    encode_frame,
-    parse_response,
-    read_frame,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +52,7 @@ class DaemonCommandError(Exception):
 
 
 class DaemonCommandClient:
-    """Transport-backed client for daemon command dispatch.
-
-    The daemon serves mutation and shell verbs through framed msgpack command
-    dispatch.
-    """
+    """Transport-backed client for sandbox-local command dispatch."""
 
     is_initialized: bool = False
 
@@ -93,13 +82,13 @@ class DaemonCommandClient:
             return self.is_initialized
 
     async def _ensure_initialized_async(self) -> None:
-        """Launch the daemon and mark the command channel initialized."""
+        """Upload the command runtime and mark the channel initialized."""
         await self._launcher.ensure_daemon()
         with self._init_lock:
             self.is_initialized = True
 
     def _call_sync(self, op: str, args: dict[str, Any] | None = None) -> Any:
-        """Send one daemon command synchronously."""
+        """Run one sandbox-local command synchronously."""
         return run_sync(self._call_daemon_command(op, args or {}))
 
     async def _call_async(
@@ -118,7 +107,7 @@ class DaemonCommandClient:
         *,
         timeout: float = 30.0,
     ) -> Any:
-        """Send one framed command to the in-sandbox daemon."""
+        """Run one command in the sandbox via ``SandboxTransport.exec``."""
         from sandbox.code_intelligence.daemon.launcher import DaemonUnavailable
 
         started = time.perf_counter()
@@ -175,44 +164,15 @@ class DaemonCommandClient:
         *,
         timeout: float,
     ) -> Any:
-        request_id = uuid.uuid4().hex
-        frame = encode_frame(
-            {"v": CI_PROTOCOL_VERSION, "id": request_id, "op": op, "args": args}
-        )
-        socket_started = time.perf_counter()
-        socket_path = await launcher.socket_path()
-        socket_elapsed = time.perf_counter() - socket_started
-        send_started = time.perf_counter()
-        response_frame = await self._send_frame_via_process_exec(
-            socket_path,
-            frame,
-            timeout=timeout,
-        )
-        send_elapsed = time.perf_counter() - send_started
-        parse_started = time.perf_counter()
-        reader = asyncio.StreamReader()
-        reader.feed_data(response_frame)
-        reader.feed_eof()
-        response = parse_response(await read_frame(reader))
-        parse_elapsed = time.perf_counter() - parse_started
+        await launcher.ensure_daemon()
+        response = await self._run_command_via_process_exec(op, args, timeout=timeout)
         logger.debug(
-            "ci daemon command_once: op=%s request_id=%s socket_path_elapsed=%.3fs "
-            "send_frame_elapsed=%.3fs parse_elapsed=%.3fs "
-            "request_bytes=%d response_bytes=%d",
+            "ci daemon command_once: op=%s ok=%s",
             op,
-            request_id,
-            socket_elapsed,
-            send_elapsed,
-            parse_elapsed,
-            len(frame),
-            len(response_frame),
+            response.get("ok"),
         )
-        if response.id != request_id:
-            raise RuntimeError(
-                f"daemon response id mismatch: expected {request_id}, got {response.id}"
-            )
-        if not response.ok:
-            error = response.error or {}
+        if not response.get("ok"):
+            error = response.get("error") or {}
             raise DaemonCommandError(
                 kind=str(error.get("kind") or "InternalError"),
                 message=str(error.get("message") or ""),
@@ -220,40 +180,37 @@ class DaemonCommandClient:
                 if isinstance(error.get("details"), dict)
                 else {},
             )
-        return response.result
+        return response.get("result")
 
-    async def _send_frame_via_process_exec(
-        self,
-        socket_path: str,
-        frame: bytes,
-        *,
-        timeout: float,
-    ) -> bytes:
-        """Send ``frame`` through a sandbox-local Python Unix-socket bridge."""
-        encoded = base64.b64encode(frame).decode("ascii")
+    async def _run_command_via_process_exec(
+        self, op: str, args: dict[str, Any], *, timeout: float
+    ) -> dict[str, Any]:
+        """Run the command module in the sandbox and decode its response."""
+        payload = {"op": op, "args": args}
+        encoded = base64.b64encode(
+            json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        ).decode("ascii")
         script = textwrap.dedent(
             f"""
             import base64
-            import socket
+            import json
             import sys
+            from sandbox.code_intelligence.daemon.command import run_command
 
-            frame = base64.b64decode({encoded!r})
-            sock = socket.socket(socket.AF_UNIX)
-            sock.settimeout({float(timeout)!r})
-            sock.connect({socket_path!r})
-            sock.sendall(frame)
-            sock.shutdown(socket.SHUT_WR)
-            chunks = []
-            while True:
-                data = sock.recv(65536)
-                if not data:
-                    break
-                chunks.append(data)
-            sock.close()
-            sys.stdout.write(base64.b64encode(b"".join(chunks)).decode("ascii"))
+            payload = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
+            response = run_command(
+                workspace_root={self.workspace_root!r},
+                op=str(payload["op"]),
+                args=dict(payload.get("args") or {{}}),
+            )
+            raw = json.dumps(response, separators=(",", ":")).encode("utf-8")
+            sys.stdout.write(base64.b64encode(raw).decode("ascii"))
             """
         ).strip()
-        command = f"python3 - <<'PY'\n{script}\nPY"
+        command = (
+            f"cd /tmp/eos-ci-runtime && "
+            f"python3 - <<'PY'\n{script}\nPY"
+        )
         result = await self._transport.exec(
             self.sandbox_id,
             command,
@@ -263,11 +220,16 @@ class DaemonCommandClient:
         if getattr(result, "exit_code", 1) != 0:
             raise ConnectionRefusedError(stdout)
         try:
-            return base64.b64decode(stdout)
+            decoded = json.loads(base64.b64decode(stdout).decode("utf-8"))
         except Exception as exc:
             raise ConnectionRefusedError(
-                f"daemon bridge produced invalid base64: {stdout!r}"
+                f"daemon command produced invalid response: {stdout!r}"
             ) from exc
+        if not isinstance(decoded, dict):
+            raise ConnectionRefusedError(
+                f"daemon command produced non-object response: {decoded!r}"
+            )
+        return decoded
 
     def warmup(self) -> None:
         self.ensure_initialized(wait=True)

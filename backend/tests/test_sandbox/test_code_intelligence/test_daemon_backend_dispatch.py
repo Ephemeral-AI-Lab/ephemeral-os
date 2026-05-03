@@ -48,16 +48,6 @@ def _make_backend(response_map: dict[str, Any]) -> tuple[DaemonBackend, _FakeDae
 
 
 # ---------------------------------------------------------------------------
-# Queries
-# ---------------------------------------------------------------------------
-
-
-def test_status_returns_dict() -> None:
-    backend, _ = _make_backend({"status": {"initialized": True, "workspace": "/ws"}})
-    assert backend.status() == {"initialized": True, "workspace": "/ws"}
-
-
-# ---------------------------------------------------------------------------
 # Mutations
 # ---------------------------------------------------------------------------
 
@@ -185,17 +175,8 @@ def test_undo_last_edit_round_trips() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Telemetry / dispose / warmup contracts
+# Dispose / warmup contracts
 # ---------------------------------------------------------------------------
-
-
-def test_get_telemetry_round_trips_to_dataclass() -> None:
-    backend, _ = _make_backend({"get_telemetry": {}})
-    telemetry = backend.get_telemetry()
-    # Telemetry dataclass exists and is constructed without crashing.
-    from sandbox.code_intelligence.core.types import CITelemetry
-
-    assert isinstance(telemetry, CITelemetry)
 
 
 def test_warmup_calls_ensure_initialized(monkeypatch: pytest.MonkeyPatch) -> None:

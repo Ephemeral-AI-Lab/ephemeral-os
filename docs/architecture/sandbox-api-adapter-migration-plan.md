@@ -547,7 +547,6 @@ Replace every `get_ci_service(context)` and `svc.X(...)` in `ci_toolkit/`
 with `context.code_intelligence_api` and `await api.X(sandbox_id, request)`:
 
 - `_query_runtime.py:328` → `context.code_intelligence_api`
-- `_query_runtime.py:458` (`svc.status()`) → `await api.status(...)`
 - `_query_runtime.py:486` (`svc.symbol_index` raw access) → use a typed
   method on `CodeIntelligenceApi` that surfaces the actual data needed.
   **Do not** expose `symbol_index` as an attribute on the API.

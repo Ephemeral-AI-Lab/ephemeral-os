@@ -252,26 +252,6 @@ def _make_ci_service_for_sandbox(sandbox: Any, *, workspace: str = "/workspace")
     )
 
 
-def _make_lsp_sandbox(responses: dict[str, str] | None = None) -> MagicMock:
-    """Create a mock sandbox with synchronous process.exec responses for LSP."""
-    sandbox = MagicMock()
-    resp_map = responses or {}
-
-    def _exec(cmd, *, timeout=30, cwd=None):
-        result = MagicMock()
-        for pattern, output in resp_map.items():
-            if pattern in cmd:
-                result.result = output
-                result.exit_code = 0
-                return result
-        result.result = ""
-        result.exit_code = 0
-        return result
-
-    sandbox.process.exec = _exec
-    return sandbox
-
-
 _test_loop: asyncio.AbstractEventLoop | None = None
 
 
@@ -294,7 +274,7 @@ def _assert_success(result) -> None:
 
 
 # NOTE: Core I/O tool tests (bash, read_file, write_file, grep, glob)
-# removed — focus is on Daytona-specific concerns: audited edits, LSP, CI,
+# removed — focus is on Daytona-specific concerns: audited edits,
 # conflict resolution, tool selection/ordering.
 
 # ===========================================================================
@@ -474,11 +454,6 @@ class TestDaytonaEditTool:
         )
         assert result.is_error
         assert "write failed" in result.output
-
-
-# ===========================================================================
-# 8-11. LSP Tools
-# ===========================================================================
 
 
 # ===========================================================================
@@ -846,156 +821,6 @@ class TestToolSelectionAndOrdering:
 
 
 # ===========================================================================
-# LSP query routing through CI tools (ported from synthetic-os)
-# ===========================================================================
-
-
-class TestLspQueryRouting:
-    """Test LSP tool execution with fake sandbox process responses.
-
-    Ported from synthetic-os test_lsp.py and test_lsp_hybrid.py patterns.
-    """
-
-    def _make_ci_service(self, sandbox=None):
-        """Create a real CI service with a mock sandbox."""
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-
-        return CodeIntelligenceService(
-            sandbox_id="lsp-test",
-            workspace_root="/workspace",
-            sandbox=sandbox,
-        )
-
-    # -- LspClient direct tests --
-
-    def test_lsp_client_python_detection(self):
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient(workspace_root="/workspace")
-        assert lsp._detect_language("main.py") == "python"
-        assert lsp._detect_language("app.ts") == "unknown"
-        assert lsp._detect_language("style.css") == "unknown"
-
-    def test_lsp_client_cache_ttl(self):
-        """Cache entries should expire after TTL."""
-        from sandbox.code_intelligence.language_server.client import LspClient
-        import time as _time
-
-        lsp = LspClient(workspace_root="/ws", cache_ttl=0.1)
-        lsp._run_cached_query("key1", lambda: ["result"])
-        assert lsp._get_cached("key1") == ["result"]
-
-        _time.sleep(0.15)
-        assert lsp._get_cached("key1") is None  # expired
-
-    def test_lsp_client_cache_max_eviction(self):
-        """Cache should evict oldest entries when max is reached."""
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient(workspace_root="/ws", cache_max=3)
-        lsp._run_cached_query("a", lambda: 1)
-        lsp._run_cached_query("b", lambda: 2)
-        lsp._run_cached_query("c", lambda: 3)
-        lsp._run_cached_query("d", lambda: 4)  # should evict "a"
-
-        assert lsp._get_cached("a") is None
-        assert lsp._get_cached("b") == 2
-        assert lsp._get_cached("d") == 4
-
-    def test_lsp_telemetry_tracks_queries(self):
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient(workspace_root="/ws")
-        assert lsp.telemetry.queries == 0
-
-        # Call a query (will return empty since no backend)
-        lsp.goto_definition("/test.py", 1, 0)
-        assert lsp.telemetry.queries == 1
-
-    def test_lsp_telemetry_tracks_cache_hits(self):
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient(workspace_root="/ws")
-        lsp._run_cached_query("def:/test.py:1:0", lambda: [])
-
-        lsp.goto_definition("/test.py", 1, 0)  # cache hit
-        assert lsp.telemetry.cache_hits == 1
-
-    def test_lsp_invalidate_clears_file_entries(self):
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient(workspace_root="/ws")
-        lsp._run_cached_query("def:/ws/a.py:1:0", lambda: ["def_a"])
-        lsp._run_cached_query("ref:/ws/a.py:5:0", lambda: ["ref_a"])
-        lsp._run_cached_query("def:/ws/b.py:1:0", lambda: ["def_b"])
-
-        lsp.invalidate("/ws/a.py")
-
-        assert lsp._get_cached("def:/ws/a.py:1:0") is None
-        assert lsp._get_cached("ref:/ws/a.py:5:0") is None
-        assert lsp._get_cached("def:/ws/b.py:1:0") == ["def_b"]  # untouched
-
-    # -- CI service LSP delegation --
-
-    def test_ci_service_exposes_lsp_in_status(self):
-        svc = self._make_ci_service()
-        status = svc.status()
-        lsp = status["lsp"]
-        assert "connected" in lsp
-        assert "queries" in lsp
-        assert "cache_hits" in lsp
-
-    def test_ci_service_status_reports_not_initialized(self):
-        svc = self._make_ci_service()
-        assert svc.is_initialized is False
-        status = svc.status()
-        assert status["initialized"] is False
-
-    def test_ci_service_dispose_idempotent(self):
-        """Disposing twice should not raise."""
-        svc = self._make_ci_service()
-        svc.dispose()
-        svc.dispose()  # second call should be safe
-
-    # -- CI registry tests --
-
-    def test_ci_registry_dispose_removes_service(self):
-        from sandbox.code_intelligence.service import (
-            get_code_intelligence,
-            get_code_intelligence_if_exists,
-            dispose_code_intelligence,
-            dispose_all_code_intelligence,
-        )
-
-        dispose_all_code_intelligence()
-
-        get_code_intelligence("disposable", "/ws")
-        assert get_code_intelligence_if_exists("disposable") is not None
-
-        dispose_code_intelligence("disposable")
-        assert get_code_intelligence_if_exists("disposable") is None
-
-    def test_ci_registry_all_status(self):
-        from sandbox.code_intelligence.service import (
-            get_code_intelligence,
-            get_all_services_status,
-            dispose_all_code_intelligence,
-        )
-
-        dispose_all_code_intelligence()
-
-        get_code_intelligence("svc-a", "/ws")
-        get_code_intelligence("svc-b", "/ws")
-
-        statuses = get_all_services_status()
-        assert "svc-a" in statuses
-        assert "svc-b" in statuses
-        assert statuses["svc-a"]["sandbox_id"] == "svc-a"
-
-        dispose_all_code_intelligence()
-
-
-# ===========================================================================
 # CI types and data structures (ported from synthetic-os)
 # ===========================================================================
 
@@ -1032,53 +857,6 @@ class TestCITypesDeep:
         r = EditResult(success=False, file_path="/test.py", message="Conflict", conflict=True)
         assert r.success is False
         assert r.conflict is True
-
-    def test_hover_result_fields(self):
-        from sandbox.code_intelligence.core.types import HoverResult
-
-        h = HoverResult(content="def foo() -> int", language="python")
-        assert h.content == "def foo() -> int"
-        assert h.language == "python"
-
-    def test_symbol_info_fields(self):
-        from sandbox.code_intelligence.core.types import SymbolInfo
-
-        s = SymbolInfo(name="MyClass", kind="class", file_path="/ws/m.py", line=10, character=0)
-        assert s.name == "MyClass"
-        assert s.kind == "class"
-        assert s.line == 10
-
-    def test_reference_info_fields(self):
-        from sandbox.code_intelligence.core.types import ReferenceInfo
-
-        r = ReferenceInfo(file_path="/ws/a.py", line=5, character=3)
-        assert r.file_path == "/ws/a.py"
-
-    def test_diagnostic_fields(self):
-        from sandbox.code_intelligence.core.types import Diagnostic
-
-        d = Diagnostic(
-            file_path="/test.py",
-            line=5,
-            character=10,
-            severity="error",
-            message="Undefined 'x'",
-            source="pyright",
-        )
-        assert d.severity == "error"
-        assert d.source == "pyright"
-
-    def test_ci_telemetry_initial_values(self):
-        from sandbox.code_intelligence.core.types import CITelemetry
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-
-        svc = CodeIntelligenceService(sandbox_id="tel-test", workspace_root="/ws")
-        tel = svc.get_telemetry()
-        assert isinstance(tel, CITelemetry)
-        assert tel.symbol_index_size == 0
-        assert tel.arbiter_active_locks == 0
-        assert tel.total_edits == 0
-
 
 # ===========================================================================
 # Conflict resolution: Arbiter, TimeMachine, Ledger, audited edit flow

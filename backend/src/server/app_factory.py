@@ -42,7 +42,6 @@ from agents.api.router import create_agents_router
 from server.routers.core import create_core_router
 from server.routers.persistence import create_persistence_router
 from server.routers.sandboxes import create_sandbox_router
-from server.routers.code_intelligence import router as ci_router
 from skills.api.router import create_skills_router
 
 logger = logging.getLogger(__name__)
@@ -278,7 +277,6 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         )
     )
     app.include_router(create_sandbox_router())
-    app.include_router(ci_router)
     app.include_router(create_models_router(model_store))
     app.include_router(
         create_agents_router(

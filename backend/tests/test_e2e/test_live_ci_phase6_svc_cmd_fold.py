@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from ._timing_harness import TimingHarness
-from .test_live_ci_phase3_5_concurrent_perf import (
+from .test_live_ci_phase3_5_svc_cmd_perf import (
     _DaemonLogTailer,
     _SVC_CMD_CONCURRENCY_LEVELS,
     _SyncSandboxTransport,

@@ -9,7 +9,6 @@ Single-agent tests verify:
 - Tool events flow correctly (tool_started → tool_completed)
 - File roundtrips work (write → read with content verification)
 - Sequential invocations preserve sandbox state
-- CI-owned LSP tools are available in the schema when code intelligence is enabled
 
 Run with: pytest tests/test_e2e/test_live_sandbox_agents.py -m live -v
 """

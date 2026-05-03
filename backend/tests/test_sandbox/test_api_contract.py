@@ -36,7 +36,7 @@ _FORBIDDEN_PREFIXES: tuple[str, ...] = (
 # import engine spec types from ``sandbox.code_intelligence.core.types`` and
 # ``sandbox.code_intelligence.mutations.patcher``. Everything else under
 # ``sandbox.code_intelligence`` (services, mutations engine internals,
-# overlay, indexing) stays forbidden.
+# overlay) stays forbidden.
 _BRIDGE_MODULES: frozenset[str] = frozenset({"audit.py"})
 _BRIDGE_ALLOWED: tuple[str, ...] = (
     "sandbox.code_intelligence.core.types",

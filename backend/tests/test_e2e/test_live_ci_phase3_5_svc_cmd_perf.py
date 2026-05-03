@@ -10,30 +10,145 @@ import shlex
 import time
 import uuid
 from collections import Counter
-from typing import Any
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Any, Iterator
 
 import pytest
 
-from sandbox.api.bash import wrap_bash_command
+from engine.testing.eval_agent import EvalAgent
+from sandbox.api.bash import extract_exit_code, wrap_bash_command
 from sandbox.client.async_ import get_async_sandbox
 from sandbox.code_intelligence.core.types import OperationChange
+from sandbox.code_intelligence.daemon.storage import workspace_root_hash
 from sandbox.code_intelligence.service import CodeIntelligenceService
 
 from ._timing_harness import TimingHarness
-from .test_live_ci_phase3_5_concurrent_perf import (
-    LivePhase35Env,
-    SvcCmdProbeResult,
-    _SVC_CMD_BATCH_TIMEOUT_S,
-    _SVC_CMD_CONCURRENCY_LEVELS,
-    _SVC_CMD_DAEMON_LOG_TAIL_INTERVAL_S,
-    _SVC_CMD_MONITOR_INTERVAL_S,
-    _SVC_CMD_OP_TIMEOUT_S,
-    _flush,
-    _trace,
-    live_phase35_env,  # noqa: F401
-)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
+
+_DASK_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
+_DASK_SWEEVO_REPO_DIR = "/testbed"
+_SVC_CMD_CONCURRENCY_LEVELS = (1, 5, 10)
+_SVC_CMD_OP_TIMEOUT_S = 120
+_SVC_CMD_BATCH_TIMEOUT_S = 300
+_SVC_CMD_MONITOR_INTERVAL_S = 1.0
+_SVC_CMD_DAEMON_LOG_TAIL_INTERVAL_S = 2.0
+
+
+def _flush(msg: str) -> None:
+    print(msg, flush=True)
+
+
+@contextmanager
+def _trace(harness: TimingHarness, name: str) -> Iterator[None]:
+    _flush(f"  -> {name} ...")
+    t0 = time.perf_counter()
+    with harness.step(name):
+        yield
+    _flush(f"  ok {name} ({time.perf_counter() - t0:.3f}s)")
+
+
+@dataclass
+class LivePhase35Env:
+    sandbox_id: str
+    raw_sandbox: Any
+    home: str
+    root_dir: str
+
+    def exec(self, command: str, *, timeout: int = 60) -> tuple[int, str]:
+        response = self.raw_sandbox.process.exec(
+            wrap_bash_command(command),
+            timeout=timeout,
+        )
+        output, exit_code = extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        return exit_code, output
+
+    def make_ci_service(self) -> CodeIntelligenceService:
+        from sandbox.daytona.transport import DaytonaTransport
+
+        return CodeIntelligenceService(
+            sandbox_id=self.sandbox_id,
+            workspace_root=self.root_dir,
+            transport=DaytonaTransport(),
+        )
+
+    def daemon_state_dir(self) -> str:
+        wh = workspace_root_hash(self.root_dir)
+        return f"{self.home}/.cache/eos-ci/{wh}/v1"
+
+    def daemon_pid(self) -> int | None:
+        code, out = self.exec(f"cat {self.daemon_state_dir()}/daemon.pid 2>/dev/null")
+        if code != 0 or not out.strip():
+            return None
+        try:
+            return int(out.strip())
+        except ValueError:
+            return None
+
+
+@dataclass
+class SvcCmdProbeResult:
+    batch_size: int
+    op_index: int
+    elapsed_s: float
+    exit_code: int | None
+    git_commit_status: str | None
+    changed_paths: int
+    overlay_run_timings: dict[str, float]
+    overlay_stage_timings: dict[str, float]
+    daemon_call_timings: dict[str, float]
+    error: str | None = None
+
+
+@pytest.fixture(scope="module")
+def live_phase35_env() -> LivePhase35Env:
+    if not EvalAgent.has_daytona():
+        pytest.skip("Daytona credentials not configured")
+
+    from benchmarks.sweevo.dataset import select_sweevo_instance
+    from benchmarks.sweevo.models import _CONDA_ACTIVATE
+    from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
+    from sandbox.testing import delete_test_sandbox, get_sandbox_service
+
+    instance = select_sweevo_instance(instance_id=_DASK_SWEEVO_INSTANCE_ID)
+    sandbox_name = f"ci-phase35-{uuid.uuid4().hex[:8]}"
+    result = asyncio.run(
+        create_sweevo_test_sandbox(
+            instance,
+            sandbox_name=sandbox_name,
+            repo_dir=_DASK_SWEEVO_REPO_DIR,
+        )
+    )
+    sandbox_id = str(result["sandbox_id"])
+    try:
+        raw_sandbox = get_sandbox_service().get_sandbox_object(sandbox_id)
+        home_resp = raw_sandbox.process.exec(
+            wrap_bash_command("printf '%s' \"$HOME\""),
+            timeout=10,
+        )
+        home_text, home_code = extract_exit_code(
+            getattr(home_resp, "result", "") or "",
+            fallback_exit_code=getattr(home_resp, "exit_code", None),
+        )
+        home = home_text.strip() if home_code == 0 and home_text.strip() else "/home/daytona"
+        env = LivePhase35Env(
+            sandbox_id=sandbox_id,
+            raw_sandbox=raw_sandbox,
+            home=home,
+            root_dir=_DASK_SWEEVO_REPO_DIR,
+        )
+        exit_code, output = env.exec(
+            f"{_CONDA_ACTIVATE} && cd {_DASK_SWEEVO_REPO_DIR} && python --version",
+            timeout=60,
+        )
+        assert exit_code == 0, output
+        yield env
+    finally:
+        delete_test_sandbox(sandbox_id)
 
 
 @pytest.mark.asyncio

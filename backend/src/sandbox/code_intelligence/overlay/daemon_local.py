@@ -29,7 +29,6 @@ from sandbox.code_intelligence.overlay.types import (
     OverlayPolicyReject,
     OverlayRunError,
 )
-from sandbox.code_intelligence.overlay.counters import record_overlay_op
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,6 @@ class OverlayDaemonLocalMixin:
             result: SimpleNamespace | None = None
             error: BaseException | None = None
             fingerprint_guard_started = False
-            record_overlay_op(ops_total=1)
             try:
                 await self._begin_workspace_fingerprint_guard()
                 fingerprint_guard_started = True
@@ -174,12 +172,6 @@ class OverlayDaemonLocalMixin:
             ),
         )
         if isinstance(diff_or_reject, OverlayPolicyReject):
-            record_overlay_op(
-                ops_rejected=1,
-                dotgit_rejects=(
-                    1 if diff_or_reject.reason.endswith("dotgit_writes") else 0
-                ),
-            )
             return reject_result(
                 stdout=stdout_text,
                 exit_code=script_exit,
@@ -187,15 +179,6 @@ class OverlayDaemonLocalMixin:
                 overlay_run_timings=diff_or_reject.run_timings,
             )
         diff = diff_or_reject
-        record_overlay_op(
-            upper_bytes=diff.upper_bytes,
-            upper_files=diff.upper_files,
-            gitinclude_changes=len(diff.gitinclude_changes),
-            gitignore_changes=len(diff.gitignore_paths),
-            direct_merged_bytes=diff.direct_merged_bytes,
-            whiteouts_gitinclude=diff.whiteouts_gitinclude,
-            whiteouts_gitignore_refused=diff.whiteouts_gitignore_refused,
-        )
         return await self._timed_stage(
             "commit",
             stage_timings=stage_timings,

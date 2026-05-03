@@ -145,7 +145,6 @@ sandbox/occ/
 ├── types.py                       # was core/types.py (EditSpec, WriteSpec, MoveSpec, OperationResult)
 ├── hashing.py                     # was core/hashing.py
 ├── registry.py                    # get_occ(sandbox_id) → OCC
-├── telemetry.py                   # OCC-specific portion of code_intelligence/telemetry.py
 └── backends/
     ├── __init__.py
     ├── protocol.py
@@ -175,7 +174,6 @@ sandbox/overlay/
 ├── types.py
 ├── runtime/                       # unchanged
 ├── registry.py                    # get_overlay(sandbox_id) → Overlay
-├── telemetry.py                   # overlay-specific portion of code_intelligence/telemetry.py
 └── backends/
     ├── protocol.py
     ├── in_process.py
@@ -218,11 +216,11 @@ DELETED from daemon: `index_store.py`, all symbol-query RPC handlers, all symbol
 ### 4.1 Code
 
 - `sandbox/code_intelligence/indexing/` (entire directory: `symbol_index.py`, `symbol_extractor.py`, `file_discovery.py`)
-- `sandbox/code_intelligence/language_server/` (entire directory: `cache.py`, `client.py`, `daemon_queries.py`, `jsonrpc.py`, `lsp_child.py`, `lsp_host.py`, `models.py`, `path_helpers.py`, `telemetry.py`, `transport.py`, `utils.py`)
+- `sandbox/code_intelligence/language_server/` (entire directory: `cache.py`, `client.py`, `daemon_queries.py`, `jsonrpc.py`, `lsp_child.py`, `lsp_host.py`, `models.py`, `path_helpers.py`, `transport.py`, `utils.py`)
 - `sandbox/code_intelligence/daemon/index_store.py`
 - `sandbox/code_intelligence/service.py` (CodeIntelligenceService facade — replaced by `OCC` + `Overlay` separately)
 - `sandbox/code_intelligence/registry.py` (replaced by `occ/registry.py` + `overlay/registry.py`)
-- `sandbox/code_intelligence/__init__.py`, `telemetry.py`, `backends/` — all relocated or deleted
+- `sandbox/code_intelligence/__init__.py`, `backends/` — all relocated or deleted
 - `sandbox/code_intelligence/` (the directory itself, after everything inside has moved or been deleted)
 
 ### 4.2 API surface

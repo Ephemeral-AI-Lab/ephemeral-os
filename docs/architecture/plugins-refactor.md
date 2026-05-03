@@ -276,7 +276,6 @@ in-house query surface.
 - `sandbox/code_intelligence/language_server/lsp_host.py`
 - `sandbox/code_intelligence/language_server/models.py`
 - `sandbox/code_intelligence/language_server/path_helpers.py`
-- `sandbox/code_intelligence/language_server/telemetry.py`
 - `sandbox/code_intelligence/language_server/transport.py`
 - `sandbox/code_intelligence/language_server/utils.py`
 - `sandbox/code_intelligence/daemon/index_store.py`

@@ -1,8 +1,7 @@
-"""Request dispatch and workspace-write bypass guard for the CI daemon."""
+"""Command dispatch and workspace-write bypass guard for sandbox-local CI."""
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -11,14 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from sandbox.code_intelligence.daemon.handlers import DISPATCH
-from sandbox.code_intelligence.daemon.protocol import (
-    CI_PROTOCOL_VERSION,
-    FrameError,
-    SchemaError,
-    encode_frame,
-    parse_request,
-    read_frame,
-)
 from sandbox.code_intelligence.daemon.state import DAEMON_STATE, QUERY_OPS
 
 logger = logging.getLogger(__name__)
@@ -91,9 +82,25 @@ def _scan_unledgered_changes(
     return bypassed
 
 
-def _schema_error_response(body: dict[str, Any], exc: SchemaError) -> dict[str, Any]:
+class CommandSchemaError(Exception):
+    """Raised when a command body does not match the expected shape."""
+
+
+def _parse_command(body: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+    request_id = str(body.get("id") or "")
+    op = body.get("op")
+    args = body.get("args", {})
+    if not request_id:
+        request_id = "process-exec"
+    if not isinstance(op, str) or not op:
+        raise CommandSchemaError("request op must be a non-empty string")
+    if not isinstance(args, dict):
+        raise CommandSchemaError("request args must be a dict")
+    return request_id, op, args
+
+
+def _schema_error_response(body: dict[str, Any], exc: CommandSchemaError) -> dict[str, Any]:
     return {
-        "v": CI_PROTOCOL_VERSION,
         "id": str(body.get("id") or ""),
         "ok": False,
         "error": {"kind": "InvalidSchema", "message": str(exc), "details": {}},
@@ -102,7 +109,6 @@ def _schema_error_response(body: dict[str, Any], exc: SchemaError) -> dict[str, 
 
 def _unsupported_op_response(request_id: str, op: str) -> dict[str, Any]:
     return {
-        "v": CI_PROTOCOL_VERSION,
         "id": request_id,
         "ok": False,
         "error": {
@@ -115,7 +121,6 @@ def _unsupported_op_response(request_id: str, op: str) -> dict[str, Any]:
 
 def _handler_error_response(request_id: str, exc: Exception) -> dict[str, Any]:
     return {
-        "v": CI_PROTOCOL_VERSION,
         "id": request_id,
         "ok": False,
         "error": {
@@ -129,27 +134,26 @@ def _handler_error_response(request_id: str, exc: Exception) -> dict[str, Any]:
 async def _dispatch_request(body: dict[str, Any]) -> dict[str, Any]:
     """Run one validated daemon command request and return a response envelope."""
     try:
-        request = parse_request(body)
-    except SchemaError as exc:
+        request_id, op, args = _parse_command(body)
+    except CommandSchemaError as exc:
         return _schema_error_response(body, exc)
 
-    handler = DISPATCH.get(request.op) or DAEMON_STATE.extra_dispatch.get(request.op)
+    handler = DISPATCH.get(op) or DAEMON_STATE.extra_dispatch.get(op)
     if handler is None:
-        return _unsupported_op_response(request.id, request.op)
+        return _unsupported_op_response(request_id, op)
 
-    is_query = request.op in QUERY_OPS
+    is_query = op in QUERY_OPS
     window_start = time.time() - GUARD_SCAN_WINDOW
     pre_seq = 0 if is_query else _ledger_total_edits()
 
     try:
-        result = await handler(request.args)
+        result = await handler(args)
     except Exception as exc:  # pragma: no cover - defensive envelope path
-        logger.exception("ci daemon handler failed for op=%s", request.op)
-        return _handler_error_response(request.id, exc)
+        logger.exception("ci daemon handler failed for op=%s", op)
+        return _handler_error_response(request_id, exc)
 
     success_envelope = {
-        "v": CI_PROTOCOL_VERSION,
-        "id": request.id,
+        "id": request_id,
         "ok": True,
         "result": result,
     }
@@ -166,39 +170,18 @@ async def _dispatch_request(body: dict[str, Any]) -> dict[str, Any]:
     if not bypassed:
         return success_envelope
 
-    logger.error("WORKSPACE WRITE BYPASS: handler=%s bypassed paths=%s", request.op, bypassed)
+    logger.error("WORKSPACE WRITE BYPASS: handler=%s bypassed paths=%s", op, bypassed)
     if not DAEMON_STATE.guard_strict:
         return success_envelope
     return {
-        "v": CI_PROTOCOL_VERSION,
-        "id": request.id,
+        "id": request_id,
         "ok": False,
         "error": {
             "kind": "WorkspaceBypass",
-            "message": f"unledgered writes during op={request.op}: {bypassed}",
+            "message": f"unledgered writes during op={op}: {bypassed}",
             "details": {"paths": bypassed},
         },
     }
-
-
-async def handle_client(
-    reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-) -> None:
-    """Serve requests on one Unix-socket connection."""
-    peer = writer.get_extra_info("peername")
-    try:
-        while not reader.at_eof():
-            try:
-                body = await read_frame(reader)
-            except (FrameError, SchemaError, asyncio.IncompleteReadError):
-                logger.debug("closing malformed ci daemon connection from %r", peer)
-                break
-            response = await _dispatch_request(body)
-            writer.write(encode_frame(response))
-            await writer.drain()
-    finally:
-        writer.close()
-        await writer.wait_closed()
 
 
 def _reset_daemon_state_for_tests(extra_dispatch: dict[str, Any] | None = None) -> None:

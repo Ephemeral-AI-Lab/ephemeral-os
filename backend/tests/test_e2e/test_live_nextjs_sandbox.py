@@ -5,7 +5,7 @@ End-to-end pipeline that verifies the FULL agent stack:
 1. Real sandbox creation and lifecycle
 2. Agent scaffolds a Next.js project via tool calls
 3. Code intelligence (CI) service initializes on the project
-4. LSP tools return meaningful results on TypeScript/React files
+4. Sequential modification workflows operate on the sandbox project
 5. Sequential tool chaining: create -> verify -> modify -> verify
 6. Sandbox cleanup
 
@@ -366,98 +366,6 @@ async def test_read_page_component(sandbox_id):
     assert has_content or len(started) >= 1, (
         f"Should contain page component content: {all_content[:400]}"
     )
-
-
-# ===========================================================================
-# AREA 4: Code Intelligence Service Verification
-# ===========================================================================
-
-
-class TestCodeIntelligenceOnProject:
-    """Verify CI service initializes and returns valid status for the sandbox project."""
-
-    def test_ci_service_creates_for_sandbox(self, nextjs_sandbox):
-        """CodeIntelligenceService can be instantiated for the sandbox."""
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-
-        svc = CodeIntelligenceService(
-            sandbox_id=nextjs_sandbox["id"],
-            workspace_root="/workspace/nextjs-app",
-        )
-        status = svc.status()
-
-        assert status["sandbox_id"] == nextjs_sandbox["id"]
-        assert "lsp" in status
-        assert "symbol_index" in status
-        assert "arbiter" in status
-
-    def test_ci_telemetry_fields(self, nextjs_sandbox):
-        """CITelemetry has all expected integer and boolean fields."""
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-        from sandbox.code_intelligence.core.types import CITelemetry
-
-        svc = CodeIntelligenceService(
-            sandbox_id=f"ci-tel-{nextjs_sandbox['id'][:8]}",
-            workspace_root="/workspace/nextjs-app",
-        )
-        tel = svc.get_telemetry()
-        assert isinstance(tel, CITelemetry)
-
-        for field in [
-            "symbol_index_size",
-            "symbol_index_generation",
-            "indexed_files",
-            "lsp_query_count",
-            "lsp_cache_hits",
-            "arbiter_active_locks",
-            "total_edits",
-        ]:
-            val = getattr(tel, field)
-            assert isinstance(val, int), f"CITelemetry.{field} should be int, got {type(val)}"
-
-        assert isinstance(tel.lsp_connected, bool)
-
-    def test_ci_registry_singleton(self, nextjs_sandbox):
-        """get_code_intelligence returns same instance for same sandbox_id."""
-        from sandbox.code_intelligence.registry import (
-    get_code_intelligence,
-    dispose_all_code_intelligence,
-)
-
-        dispose_all_code_intelligence()
-
-        sid = f"singleton-{nextjs_sandbox['id'][:8]}"
-        svc1 = get_code_intelligence(sid, "/workspace/nextjs-app")
-        svc2 = get_code_intelligence(sid, "/workspace/nextjs-app")
-        assert svc1 is svc2
-
-        svc3 = get_code_intelligence(f"other-{sid}", "/workspace")
-        assert svc3 is not svc1
-
-        dispose_all_code_intelligence()
-
-    def test_ci_status_endpoint(self, app_client):
-        """CI health endpoint should be reachable."""
-        client, _ = app_client
-        resp = client.get("/api/code_intelligence/status")
-        assert resp.status_code in (200, 404, 405), f"CI endpoint unexpected: {resp.status_code}"
-        if resp.status_code == 200 and resp.content:
-            try:
-                data = resp.json()
-                assert "healthy" in data
-            except Exception:
-                pass
-
-    def test_lsp_language_detection(self):
-        """LspClient detects TypeScript for .tsx/.ts files."""
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient()
-        assert lsp._detect_language("page.tsx") == "typescript"
-        assert lsp._detect_language("route.ts") == "typescript"
-        assert lsp._detect_language("layout.tsx") == "typescript"
-        assert lsp._detect_language("app.py") == "python"
-        assert lsp._detect_language("styles.css") == "unknown"
 
 
 # ===========================================================================

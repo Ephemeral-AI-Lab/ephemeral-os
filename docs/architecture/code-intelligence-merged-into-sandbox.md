@@ -46,7 +46,6 @@ top-level since it coordinates sandbox I/O loops, not CI internals.
 | `code_intelligence_for(sandbox_id, …)`  | `get_code_intelligence(sandbox_id, …)` |
 | `code_intelligence_if_exists(id)`       | `get_code_intelligence_if_exists(id)`  |
 | `dispose_code_intelligence(id)`         | `dispose_code_intelligence(id)`        |
-| `all_code_intelligence_status()`        | `get_all_services_status()`            |
 
 `SandboxService.delete_sandbox(id)` automatically calls
 `dispose_code_intelligence(id)` so per-sandbox CI state cannot leak past

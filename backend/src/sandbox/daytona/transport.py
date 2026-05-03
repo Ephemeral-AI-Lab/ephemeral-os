@@ -8,8 +8,7 @@ acquired via :func:`sandbox.client.async_.get_async_sandbox`.
   is None``) and stages large payloads via tmp-file chunked uploads so it
   does not regress on ``ContentManager``-scale batches.
 * ``read_bytes_batch`` issues one Daytona ``download_files`` call when
-  the SDK exposes it, falling back to per-path reads otherwise. Mitigates
-  the indexing perf regression risk called out in the migration plan.
+  the SDK exposes it, falling back to per-path reads otherwise.
 """
 
 from __future__ import annotations

@@ -5,8 +5,7 @@ Verifies the FULL agent pipeline with deep assertions:
 1. Daytona tool use — tool_name, tool_input keys, tool_completed output content
 2. Skill & tool availability — sandbox/code intelligence tools, skill registry, sandbox health
 3. Reasoning/thinking blocks — ordering, content, API param exclusion
-4. Code intelligence — service status, LSP client, registry singleton
-5. Sequential tool chaining — create → read → modify with content verification
+4. Sequential tool chaining — create → read → modify with content verification
 
 Run with: pytest tests/test_e2e/test_live_agent_react_landing.py -m live -v
 """
@@ -298,118 +297,6 @@ def test_thinking_and_text_properties():
     )
     assert msg.thinking == "reasoning here"
     assert msg.text == "visible answer"
-
-
-# ===========================================================================
-# AREA 4: Code Intelligence Service Integration
-# ===========================================================================
-
-
-class TestCodeIntelligenceDeep:
-    """Deep verification of CI service, LSP client, and registry."""
-
-    def setup_method(self):
-        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
-
-        dispose_all_code_intelligence()
-
-    def teardown_method(self):
-        from sandbox.code_intelligence.registry import dispose_all_code_intelligence
-
-        dispose_all_code_intelligence()
-
-    def test_ci_status_has_all_subsystems(self):
-        """CI service status() must have lsp, symbol_index, arbiter, ledger."""
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-
-        svc = CodeIntelligenceService(sandbox_id="ci-deep-001", workspace_root="/workspace")
-        status = svc.status()
-
-        required_keys = {
-            "sandbox_id",
-            "initialized",
-            "workspace_root",
-            "lsp",
-            "symbol_index",
-            "arbiter",
-        }
-        missing = required_keys - set(status.keys())
-        assert not missing, f"CI status missing keys: {missing}. Got: {set(status.keys())}"
-
-        # LSP subsection must have connected, queries, cache_hits
-        lsp = status["lsp"]
-        assert "connected" in lsp, f"LSP status missing 'connected': {lsp}"
-        assert "queries" in lsp
-        assert "cache_hits" in lsp
-
-    def test_ci_telemetry_all_fields(self):
-        """CITelemetry must have all expected counters with correct types."""
-        from sandbox.code_intelligence.service import CodeIntelligenceService
-        from sandbox.code_intelligence.core.types import CITelemetry
-
-        svc = CodeIntelligenceService(sandbox_id="ci-tel-deep", workspace_root="/ws")
-        tel = svc.get_telemetry()
-        assert isinstance(tel, CITelemetry)
-
-        # Verify all fields are integers or bools
-        int_fields = [
-            "symbol_index_size",
-            "symbol_index_generation",
-            "indexed_files",
-            "lsp_query_count",
-            "lsp_cache_hits",
-            "arbiter_active_locks",
-            "total_edits",
-        ]
-        for field in int_fields:
-            val = getattr(tel, field)
-            assert isinstance(val, int), (
-                f"CITelemetry.{field} should be int, got {type(val)}: {val}"
-            )
-
-        assert isinstance(tel.lsp_connected, bool)
-
-    def test_lsp_detects_python_and_typescript(self):
-        """LspClient must detect Python for .py and TypeScript for .ts/.tsx."""
-        from sandbox.code_intelligence.language_server.client import LspClient
-
-        lsp = LspClient()
-        assert lsp._detect_language("app.py") == "python"
-        assert lsp._detect_language("models.py") == "python"
-        assert lsp._detect_language("index.ts") == "typescript"
-        assert lsp._detect_language("App.tsx") == "typescript"
-        assert lsp._detect_language("script.js") == "javascript"
-        assert lsp._detect_language("data.csv") == "unknown"
-
-    def test_ci_registry_singleton_per_sandbox(self):
-        """get_code_intelligence must return same instance for same sandbox_id."""
-        from sandbox.code_intelligence.registry import get_code_intelligence
-
-        svc1 = get_code_intelligence("singleton-deep", "/ws")
-        svc2 = get_code_intelligence("singleton-deep", "/ws")
-        assert svc1 is svc2, "Should return same instance"
-
-        svc3 = get_code_intelligence("other-deep", "/ws")
-        assert svc3 is not svc1, "Different sandbox_id should get different instance"
-
-    def test_ci_service_endpoint(self, app_client):
-        """CI health endpoint must be mounted and return JSON (not SPA fallback)."""
-        client, _ = app_client
-        resp = client.get("/api/code_intelligence/status")
-        assert resp.status_code == 200, f"CI endpoint should return 200. Got {resp.status_code}"
-        content_type = resp.headers.get("content-type", "")
-        if "application/json" not in content_type:
-            # SPA catch-all returned HTML instead of the API route — route may
-            # not be mounted in test config. Verify the router exists in code.
-            from server.routers.code_intelligence import router as ci_router
-
-            assert ci_router is not None, "CI router module should exist"
-            # Route exists in code but SPA fallback intercepted — acceptable in test env
-            return
-
-        data = resp.json()
-        assert "healthy" in data, f"Missing 'healthy' in CI status: {data}"
-        assert "active_services" in data, f"Missing 'active_services' in CI status: {data}"
 
 
 # ===========================================================================

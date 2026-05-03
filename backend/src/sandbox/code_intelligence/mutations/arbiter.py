@@ -76,7 +76,7 @@ class Arbiter:
         self._generation = 0
 
     def record_conflict(self, reason: str = "") -> None:
-        """Record one semantic write conflict for telemetry/observability."""
+        """Record one semantic write conflict."""
         with self._lock:
             self._metrics.conflicts_detected += 1
 

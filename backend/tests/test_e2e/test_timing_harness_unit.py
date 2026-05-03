@@ -150,7 +150,7 @@ def _baseline(tmp_path: Path) -> Path:
         "timestamp": "2026-05-02T00:00:00+00:00",
         "steps": [
             {"name": "sandbox_create", "elapsed_s": 1.234, "count": None, "bytes": None},
-            {"name": "query_symbols_first", "elapsed_s": 0.200, "count": None, "bytes": None},
+            {"name": "workspace_ready_first", "elapsed_s": 0.200, "count": None, "bytes": None},
             {"name": "svc_cmd", "elapsed_s": 1.420, "count": None, "bytes": None},
         ],
         "total_s": 2.854,
@@ -166,8 +166,8 @@ def test_compare_to_signed_deltas_and_new_keys(tmp_path: Path) -> None:
     # Force exact elapsed_s values via record() so the test is deterministic.
     h.record("sandbox_create")
     h._step_index["sandbox_create"].elapsed_s = 1.234  # type: ignore[attr-defined]
-    h.record("query_symbols_first")
-    h._step_index["query_symbols_first"].elapsed_s = 0.045
+    h.record("workspace_ready_first")
+    h._step_index["workspace_ready_first"].elapsed_s = 0.045
     h.record("svc_cmd")
     h._step_index["svc_cmd"].elapsed_s = 0.635
     h.record("daemon_spawn")
@@ -178,7 +178,7 @@ def test_compare_to_signed_deltas_and_new_keys(tmp_path: Path) -> None:
     # Unchanged step: no signed delta.
     assert "sandbox_create:" in out
     # Faster step: negative delta with "faster" annotation.
-    faster_lines = [line for line in out.splitlines() if "query_symbols_first:" in line]
+    faster_lines = [line for line in out.splitlines() if "workspace_ready_first:" in line]
     assert faster_lines and "-0.155s" in faster_lines[0]
     assert "faster" in faster_lines[0]
     # svc_cmd faster too.
@@ -199,7 +199,7 @@ def test_compare_to_marks_removed_keys(tmp_path: Path) -> None:
     out = h.compare_to(baseline)
     removed_lines = [line for line in out.splitlines() if "(REMOVED)" in line]
     removed_names = {line.split(":", 1)[0].strip() for line in removed_lines}
-    assert removed_names == {"query_symbols_first", "svc_cmd"}
+    assert removed_names == {"workspace_ready_first", "svc_cmd"}
 
 
 # ---------------------------------------------------------------------------

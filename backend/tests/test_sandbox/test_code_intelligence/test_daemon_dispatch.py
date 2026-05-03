@@ -70,8 +70,6 @@ def test_dispatch_table_includes_phase3_ops() -> None:
         "ping",
         "shutdown",
         "version",
-        "status",
-        "get_telemetry",
         "svc_cmd",
         "apply_edit",
         "commit_operation_against_base",
@@ -83,13 +81,6 @@ def test_dispatch_table_includes_phase3_ops() -> None:
     }
     missing = expected - DISPATCH.keys()
     assert missing == set(), f"DISPATCH missing ops: {missing}"
-
-
-@pytest.mark.asyncio
-async def test_status_returns_initialized_field(daemon_state: Path) -> None:
-    response = await _dispatch_request(_make_request("status"))
-    assert response["ok"] is True
-    assert "initialized" in response["result"]
 
 
 @pytest.mark.asyncio
@@ -265,14 +256,14 @@ async def test_guard_strict_mode_surfaces_workspace_bypass(
 
 
 @pytest.mark.asyncio
-async def test_guard_disabled_when_query_op(daemon_state: Path) -> None:
-    """Pure query ops should not trigger the bypass guard at all, even if a
+async def test_guard_disabled_for_read_only_op(daemon_state: Path) -> None:
+    """Read-only ops should not trigger the bypass guard at all, even if a
     malicious mtime sweep would otherwise flag a file."""
-    # Touch an un-ledgered file ahead of the query so its mtime is fresh.
+    # Touch an un-ledgered file ahead of the read so its mtime is fresh.
     (daemon_state / "untracked.txt").write_text("x", encoding="utf-8")
     time.sleep(0.01)
     daemon_server._DAEMON_STATE.guard_strict = True
-    response = await _dispatch_request(_make_request("status"))
+    response = await _dispatch_request(_make_request("version"))
     assert response["ok"] is True, response
 
 

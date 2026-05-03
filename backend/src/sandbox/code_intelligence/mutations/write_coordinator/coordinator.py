@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable, Sequence
-from typing import Any
 
 from sandbox.code_intelligence.core.hashing import content_hash
 from sandbox.code_intelligence.mutations.arbiter import Arbiter

@@ -9,9 +9,8 @@ Run with::
 
     .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase3_invariants.py -m live -v -s
 
-The suite exercises five HARD INVARIANTS plus the workspace-write bypass
-guard. See ``docs/architecture/code-intelligence-in-sandbox-daemon/phase-03-overlay-mutations-lsp.md``
-for the spec contract behind each subtest.
+The suite exercises daemon mutation invariants plus the workspace-write bypass
+guard.
 """
 
 from __future__ import annotations
@@ -30,7 +29,6 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from sandbox.api.bash import extract_exit_code, wrap_bash_command
-from sandbox.code_intelligence.core.types import WriteSpec
 from sandbox.code_intelligence.backends import DaemonBackend
 
 from ._timing_harness import TimingHarness
@@ -414,56 +412,6 @@ def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None
     code_b, content_b = env.exec(f"cat {b}")
     assert code_a == 0 and content_a.strip() == "A0"
     assert code_b == 0 and content_b.strip() == "B0"
-    print(h.report())
-    h.dump_json()
-
-
-# ---------------------------------------------------------------------------
-# 3.7.E — INVARIANT 5: Symbol/LSP cache invalidation on commit
-# ---------------------------------------------------------------------------
-
-
-def test_invariant_lsp_cache_invalidates_on_commit(
-    live_phase3_env: LivePhase3Env,
-) -> None:
-    """Edit a file, then ``find_definitions`` must observe the post-edit symbols."""
-    h = TimingHarness(phase=3, test_name="invariant_lsp_invalidation")
-    env = live_phase3_env
-    daemon_backend = env.daemon_backend()
-    target = f"{env.repo_dir}/_phase3_lsp.py"
-    env.exec(f"printf 'def foo():\\n    pass\\n' > {target}")
-
-    spec = WriteSpec(
-        file_path=target,
-        content="def bar():\n    pass\n",
-        overwrite=True,
-    )
-
-    async def write_new_def() -> Any:
-        return await daemon_backend._call_daemon_command(
-            "write_file",
-            {
-                "specs": [
-                    {
-                        "file_path": spec.file_path,
-                        "content": spec.content,
-                        "overwrite": spec.overwrite,
-                    }
-                ],
-                "agent_id": "agent-lsp",
-            },
-        )
-
-    with _traced_step(h, "write_renamed_def"):
-        result = _asyncio_run(write_new_def())
-    assert result.get("success") is True, result
-
-    async def query() -> Any:
-        return await daemon_backend._call_daemon_command("query_symbols", {"query": "bar"})
-
-    with _traced_step(h, "query_post_edit"):
-        rows = _asyncio_run(query())
-    assert any(s.get("name") == "bar" for s in rows or []), rows
     print(h.report())
     h.dump_json()
 

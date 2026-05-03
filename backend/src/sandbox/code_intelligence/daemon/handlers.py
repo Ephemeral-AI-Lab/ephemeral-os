@@ -12,7 +12,6 @@ from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.code_intelligence.daemon.protocol import CI_PROTOCOL_VERSION
 from sandbox.code_intelligence.daemon.state import (
     DAEMON_STATE,
     DAEMON_VERSION,
@@ -37,7 +36,7 @@ async def handle_version(args: dict[str, Any]) -> dict[str, Any]:
     """Return protocol and runtime version details."""
     del args
     return {
-        "protocol": CI_PROTOCOL_VERSION,
+        "command_schema": 1,
         "daemon": DAEMON_VERSION,
         "python": sys.version,
     }
@@ -117,7 +116,7 @@ def _edit_request_from_dict(d: dict[str, Any]) -> Any:
 
 
 def _to_dict(obj: Any) -> Any:
-    """Convert dataclasses recursively into msgpack-safe objects."""
+    """Convert dataclasses recursively into JSON-safe objects."""
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return {k: _to_dict(v) for k, v in dataclasses.asdict(obj).items()}
     if isinstance(obj, SimpleNamespace):
@@ -150,7 +149,7 @@ _SVC_CMD_RESULT_DEFAULTS: dict[str, Any] = {
 
 
 def _svc_cmd_result_to_dict(result: Any) -> dict[str, Any]:
-    """Preserve the audited shell ``SimpleNamespace`` contract over msgpack."""
+    """Preserve the audited shell ``SimpleNamespace`` contract."""
     return {
         field: _to_dict(getattr(result, field, default))
         for field, default in _SVC_CMD_RESULT_DEFAULTS.items()

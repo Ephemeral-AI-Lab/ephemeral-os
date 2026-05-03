@@ -276,8 +276,8 @@ async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
     Python 3.12's ``asyncio.to_thread`` wraps the call with
     ``contextvars.copy_context().run(func, ...)``, activating the asyncio
     task's contextvars inside the worker thread. That interacts badly
-    with the sync Daytona SDK (its ``@with_instrumentation`` OpenTelemetry
-    path serializes on shared state under propagated contextvars),
+    with the sync Daytona SDK instrumentation path, which serializes on shared
+    state under propagated contextvars,
     capping parallelism at ~6-7 concurrent regardless of executor size.
 
     This helper dispatches via ``loop.run_in_executor(None, ...)`` — which
