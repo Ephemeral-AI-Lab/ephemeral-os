@@ -219,8 +219,7 @@ Modules deleted by this migration:
   in `code_intelligence/mutations/` and `code_intelligence/overlay/` does not move.
 - `backend/src/tools/core/ci_attribution.py` — moved to `sandbox/api/attribution.py`.
 - `_is_real_daytona_fs()` and similar runtime type-sniffs in
-  `code_intelligence/mutations/content_manager.py:37` and
-  `code_intelligence/indexing/file_discovery.py:184`.
+  `code_intelligence/mutations/content_manager.py:37`.
 - `delete_file.py` (tool) — renamed to `remove_file.py`. No alias.
 
 ## Dependency Rules
@@ -430,15 +429,12 @@ instead of `sandbox.daytona.*`:
 |---|---|---|
 | `language_server/transport.py` | provider-specific bash command wrapping | uses `SandboxTransport.exec` |
 | `mutations/content_manager.py` | provider-specific bash/file helpers for OCC writes | uses `SandboxTransport.apply_diff_batch_checked` + `read_bytes` |
-| `indexing/file_discovery.py` | provider-specific bash and SDK filesystem helpers | uses `SandboxTransport.search` + `list_paths` + `read_bytes` |
 | `overlay/git_snapshot.py` | provider-specific bash helpers for snapshot scripts | uses `SandboxTransport.exec` |
 | `overlay/auditor.py` | provider-specific bash helpers for change tracking | uses `SandboxTransport.exec` |
 
 **Runtime introspection deleted:**
 
 - `code_intelligence/mutations/content_manager.py:37` — `_is_real_daytona_fs`
-- `code_intelligence/indexing/file_discovery.py:184` — `_is_real_daytona_fs`
-
 These exist today because CI didn't have an abstraction over the file
 backend; with `SandboxTransport` typed as a Protocol, the parameter is
 either a transport or it isn't. Tests pass a fake `SandboxTransport`
@@ -565,8 +561,7 @@ After Step 8 and Step 9 land and tests pass:
 - Confirm `tools/core/sandbox_commit.py` and `tools/core/ci_attribution.py`
   no longer exist (they moved in Step 2).
 - Confirm `_is_real_daytona_fs` is gone from
-  `code_intelligence/mutations/content_manager.py` and
-  `code_intelligence/indexing/file_discovery.py`.
+  `code_intelligence/mutations/content_manager.py`.
 
 ### Step 11 — Tests + import fence
 

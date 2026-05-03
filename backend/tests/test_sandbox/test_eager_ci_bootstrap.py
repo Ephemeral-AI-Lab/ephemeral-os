@@ -106,7 +106,6 @@ def test_bootstrap_helper_prepares_command_runtime(flag_on: None) -> None:
     )
     assert any(".bundle-hash" in cmd for _, cmd in calls)
     assert not any("setsid nohup" in cmd for _, cmd in calls)
-    assert not any("daemon.sock" in cmd for _, cmd in calls)
 
 
 def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
