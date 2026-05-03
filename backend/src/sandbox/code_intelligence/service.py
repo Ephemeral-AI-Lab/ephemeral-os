@@ -110,10 +110,6 @@ class CodeIntelligenceService:
         return self._impl.arbiter  # type: ignore[attr-defined]
 
     @property
-    def time_machine(self) -> Any:
-        return self._impl.time_machine  # type: ignore[attr-defined]
-
-    @property
     def patcher(self) -> Any:
         return self._impl.patcher  # type: ignore[attr-defined]
 
@@ -196,9 +192,6 @@ class CodeIntelligenceService:
         description: str = "",
     ) -> OperationResult:
         return self._impl.edit_file(specs, agent_id=agent_id, description=description)
-
-    def undo(self, file_path: str) -> EditResult:
-        return self._impl.undo(file_path)
 
     def dispose(self) -> None:
         self._impl.dispose()

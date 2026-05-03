@@ -5,7 +5,7 @@ Covers sandbox concerns:
   Audited Editing:     edit_file with Arbiter ledger/lock/conflict
   shell:             shell multi-step execution
   Tool Selection:      ordering, schema validation, completeness
-  Conflict Resolution: Arbiter, TimeMachine, Ledger, audited edit flow
+  Conflict Resolution: Arbiter, Ledger, audited edit flow
   Live Sandbox:        real Daytona execution
 
 Run with: pytest tests/test_e2e/test_daytona_tools_comprehensive.py -v
@@ -859,7 +859,7 @@ class TestCITypesDeep:
         assert r.conflict is True
 
 # ===========================================================================
-# Conflict resolution: Arbiter, TimeMachine, Ledger, audited edit flow
+# Conflict resolution: Arbiter, Ledger, audited edit flow
 # ===========================================================================
 
 
@@ -1026,94 +1026,11 @@ class TestArbiterAuditLedger:
         assert arbiter.metrics.total_edits == 1
 
 
-class TestTimeMachine:
-    """TimeMachine — per-file undo snapshots with global LRU capacity."""
-
-    def _make_tm(self, **kwargs):
-        from sandbox.occ.state.time_machine import TimeMachine
-
-        return TimeMachine(**kwargs)
-
-    def test_save_and_rollback(self):
-        tm = self._make_tm()
-        sid = tm.save("/ws/app.py", "original content")
-        assert sid  # non-empty snapshot ID
-
-        snap = tm.rollback("/ws/app.py")
-        assert snap is not None
-        assert snap.content == "original content"
-        assert snap.snapshot_id == sid
-
-    def test_rollback_empty_returns_none(self):
-        tm = self._make_tm()
-        assert tm.rollback("/ws/nonexistent.py") is None
-
-    def test_rollback_pops_most_recent(self):
-        tm = self._make_tm()
-        tm.save("/ws/app.py", "v1")
-        tm.save("/ws/app.py", "v2")
-        tm.save("/ws/app.py", "v3")
-
-        snap = tm.rollback("/ws/app.py")
-        assert snap.content == "v3"
-        snap = tm.rollback("/ws/app.py")
-        assert snap.content == "v2"
-        snap = tm.rollback("/ws/app.py")
-        assert snap.content == "v1"
-        assert tm.rollback("/ws/app.py") is None
-
-    def test_max_per_file_evicts_oldest(self):
-        tm = self._make_tm(max_per_file=3)
-        tm.save("/ws/app.py", "v1")
-        tm.save("/ws/app.py", "v2")
-        tm.save("/ws/app.py", "v3")
-        tm.save("/ws/app.py", "v4")  # should evict v1
-
-        # Rollback order: v4, v3, v2 — v1 is gone
-        assert tm.rollback("/ws/app.py").content == "v4"
-        assert tm.rollback("/ws/app.py").content == "v3"
-        assert tm.rollback("/ws/app.py").content == "v2"
-        assert tm.rollback("/ws/app.py") is None  # v1 evicted
-
-    def test_global_capacity_eviction(self):
-        """When global capacity is exceeded, oldest file's snapshots are evicted."""
-        tm = self._make_tm(max_global_bytes=20)  # tiny capacity
-        tm.save("/ws/a.py", "aaaaaaaaaa")  # 10 bytes
-        tm.save("/ws/b.py", "bbbbbbbbbb")  # 10 bytes — at capacity
-        tm.save("/ws/c.py", "cccccccccc")  # 10 bytes — should evict /ws/a.py
-
-        assert tm.rollback("/ws/a.py") is None  # evicted
-        assert tm.rollback("/ws/c.py") is not None
-
-    def test_clear_file(self):
-        tm = self._make_tm()
-        tm.save("/ws/a.py", "v1")
-        tm.save("/ws/b.py", "v2")
-        tm.clear("/ws/a.py")
-        assert tm.rollback("/ws/a.py") is None
-        assert tm.rollback("/ws/b.py") is not None  # untouched
-
-    def test_clear_all(self):
-        tm = self._make_tm()
-        tm.save("/ws/a.py", "v1")
-        tm.save("/ws/b.py", "v2")
-        tm.clear()
-        assert tm.rollback("/ws/a.py") is None
-        assert tm.rollback("/ws/b.py") is None
-
-    def test_content_hash_in_snapshot(self):
-        tm = self._make_tm()
-        tm.save("/ws/app.py", "test content")
-        snap = tm.rollback("/ws/app.py")
-        assert snap.content_hash  # non-empty hash
-        assert len(snap.content_hash) == 16  # SHA256 prefix
-
-
 class TestAuditedEditFlow:
-    """End-to-end audited edit flow via DaytonaEditTool with arbiter + time_machine."""
+    """End-to-end audited edit flow via DaytonaEditTool with arbiter."""
 
     def _make_audit_context(self, files: dict[str, str]):
-        """Create a context with mock sandbox + real arbiter + time_machine."""
+        """Create a context with mock sandbox + real arbiter."""
         from sandbox.code_intelligence.service import CodeIntelligenceService
 
         sandbox = _make_mock_sandbox(files=files)
@@ -1124,7 +1041,7 @@ class TestAuditedEditFlow:
         )
 
         ctx = _make_context(sandbox, ci_service=ci_service)
-        return ctx, sandbox, ci_service.arbiter, ci_service.time_machine
+        return ctx, sandbox, ci_service.arbiter
 
     def _edit(self, ctx, file_path, old_text, new_text, **kwargs):
         from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
@@ -1142,7 +1059,7 @@ class TestAuditedEditFlow:
         )
 
     def test_audited_edit_acquires_and_releases_lock(self):
-        ctx, sandbox, arbiter, _ = self._make_audit_context({"/ws/app.py": "x = 1"})
+        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "x = 1"})
         result = self._edit(ctx, "/ws/app.py", "x = 1", "x = 2")
         _assert_success(result)
         assert "edited" in result.output
@@ -1151,15 +1068,8 @@ class TestAuditedEditFlow:
         assert arbiter.acquire_file_lock("/ws/app.py") is True
         arbiter.release_file_lock("/ws/app.py")
 
-    def test_audited_edit_does_not_create_time_machine_snapshot(self):
-        ctx, _, _, time_machine = self._make_audit_context({"/ws/app.py": "original"})
-        self._edit(ctx, "/ws/app.py", "original", "modified")
-
-        snap = time_machine.rollback("/ws/app.py")
-        assert snap is None
-
     def test_audited_edit_records_in_arbiter(self):
-        ctx, _, arbiter, _ = self._make_audit_context({"/ws/app.py": "content"})
+        ctx, _, arbiter = self._make_audit_context({"/ws/app.py": "content"})
         self._edit(ctx, "/ws/app.py", "content", "new")
         assert arbiter.metrics.total_edits >= 1
 
@@ -1184,7 +1094,7 @@ class TestAuditedEditFlow:
 
     def test_sequential_audited_edits_both_succeed(self):
         """Two sequential edits to the same file should both succeed."""
-        ctx, sandbox, arbiter, _ = self._make_audit_context({"/ws/app.py": "a = 1\nb = 2"})
+        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "a = 1\nb = 2"})
 
         r1 = self._edit(ctx, "/ws/app.py", "a = 1", "a = 10")
         _assert_success(r1)
@@ -1196,12 +1106,11 @@ class TestAuditedEditFlow:
         assert arbiter.metrics.total_edits == 2
 
     def test_dry_run_does_not_acquire_lock(self):
-        """Dry run should preview without touching arbiter or time_machine."""
-        ctx, sandbox, arbiter, time_machine = self._make_audit_context({"/ws/app.py": "content"})
+        """Dry run should preview without touching arbiter."""
+        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "content"})
 
         result = self._edit(ctx, "/ws/app.py", "content", "new", dry_run=True)
         _assert_success(result)
         assert "dry_run" in result.output
         assert sandbox._file_store["/ws/app.py"] == "content"  # unchanged
         assert arbiter.metrics.total_edits == 0
-        assert time_machine.rollback("/ws/app.py") is None  # no snapshot

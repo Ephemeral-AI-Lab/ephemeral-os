@@ -130,6 +130,13 @@ def _to_jsonable(obj: Any) -> Any:
     return obj
 
 
+def _load_peer_bootstraps() -> None:
+    import sandbox.occ.bootstrap  # noqa: F401
+
+
+_load_peer_bootstraps()
+
+
 __all__ = [
     "Handler",
     "OP_TABLE",
@@ -138,4 +145,3 @@ __all__ = [
     "main",
     "register_op",
 ]
-

@@ -20,7 +20,6 @@ from sandbox.occ.state.arbiter import Arbiter
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.operations.service import OCCOperationService
 from sandbox.occ.patching.patcher import Patcher
-from sandbox.occ.state.time_machine import TimeMachine
 from sandbox.occ.commit import WriteCoordinator
 from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
 
@@ -53,7 +52,6 @@ class InProcessBackend:
             workspace_root=workspace_root,
             edit_history=edit_history,
         )
-        self.time_machine = TimeMachine()
         self.patcher = Patcher()
 
         self._content = ContentManager(
@@ -64,7 +62,6 @@ class InProcessBackend:
         )
         self._write_coordinator = WriteCoordinator(
             arbiter=self.arbiter,
-            time_machine=self.time_machine,
             content=self._content,
         )
         self._mutations = OCCOperationService(
@@ -165,10 +162,6 @@ class InProcessBackend:
             description=description,
         )
 
-    def undo(self, file_path: str) -> EditResult:
-        return self._mutations.undo(file_path)
-
     def dispose(self) -> None:
         self.arbiter.cleanup_locks()
-        self.time_machine.clear()
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)

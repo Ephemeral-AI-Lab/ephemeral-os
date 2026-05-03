@@ -339,12 +339,6 @@ class DaemonCommandClient:
         )
         return operation_result_from_dict(result)
 
-    def undo(self, file_path: str) -> EditResult:
-        from sandbox.occ.wire import edit_result_from_dict
-
-        result = self._call_sync("undo", {"file_path": file_path})
-        return edit_result_from_dict(result)
-
     def dispose(self) -> None:
         return None
 
@@ -429,8 +423,6 @@ def _dispatch_legacy(*, workspace_root: str, op: str, args: dict[str, Any]) -> A
                 agent_id=str(args.get("agent_id", "")),
                 description=str(args.get("description", "")),
             )
-        if op == "undo":
-            return svc.undo(str(args["file_path"]))
         raise KeyError(op)
     finally:
         try:
@@ -440,8 +432,8 @@ def _dispatch_legacy(*, workspace_root: str, op: str, args: dict[str, Any]) -> A
 
 
 def _build_service(workspace_root: str) -> tuple[Any, Any]:
-    from sandbox.code_intelligence.daemon.storage import LedgerStore, state_dir
     from sandbox.code_intelligence.service import CodeIntelligenceService
+    from sandbox.occ.state.ledger_store import LedgerStore, state_dir
 
     ledger = LedgerStore(state_dir_path=state_dir(workspace_root))
     svc = CodeIntelligenceService(

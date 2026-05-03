@@ -66,7 +66,7 @@ class Patcher:
         self._max_edits_per_batch = max_edits_per_batch
         self._max_diff_size = max_diff_size
 
-    def apply_edits(
+    def apply_many(
         self,
         content: str,
         edits: list[SearchReplaceEdit | LineRangeEdit],

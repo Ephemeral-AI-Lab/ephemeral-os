@@ -155,25 +155,6 @@ def test_commit_specs_many_round_trips() -> None:
     assert args["requests"] == [{"foo": "bar"}]
 
 
-def test_undo_last_edit_round_trips() -> None:
-    backend, _ = _make_backend(
-        {
-            "undo": {
-                "success": True,
-                "file_path": "/ws/x.py",
-                "message": "undone",
-                "conflict": False,
-                "conflict_reason": "",
-                "snapshot_id": "",
-                "timings": {},
-            }
-        }
-    )
-    result = backend.undo("/ws/x.py")
-    assert result.success is True
-    assert result.message == "undone"
-
-
 # ---------------------------------------------------------------------------
 # Dispose / warmup contracts
 # ---------------------------------------------------------------------------

@@ -14,7 +14,6 @@ from collections.abc import Iterable, Sequence
 
 from sandbox.occ.content.hashing import content_hash
 from sandbox.occ.state.arbiter import Arbiter
-from sandbox.occ.state.time_machine import TimeMachine
 from sandbox.occ.content.manager import (
     CheckedApplyChange,
     ContentManager,
@@ -60,11 +59,9 @@ class WriteCoordinator:
         self,
         *,
         arbiter: Arbiter,
-        time_machine: TimeMachine,
         content: ContentManager,
     ) -> None:
         self._arbiter = arbiter
-        self._time_machine = time_machine
         self._content = content
         self._resolver = ChangeResolver()
 
@@ -142,7 +139,6 @@ class WriteCoordinator:
             ]
         )
         return result
-
 
     def commit_many_operations_against_base(
         self,
@@ -272,11 +268,6 @@ class WriteCoordinator:
                 if resolved_items is None:
                     continue
                 for item in resolved_items:
-                    self._time_machine.save(
-                        item.change.file_path,
-                        item.current_content,
-                        existed=item.existed,
-                    )
                     apply_items.append((item.change.file_path, item.final_content))
                     rollback_items.append(
                         (item.change.file_path, item.current_content if item.existed else None),
@@ -493,11 +484,6 @@ class WriteCoordinator:
                     new_hash=new_hash,
                     description=op.description,
                 )
-                self._time_machine.save(
-                    change.file_path,
-                    change.base_content if change.base_existed else "",
-                    existed=change.base_existed,
-                )
                 commit_results.append(
                     edit_result(
                         change.file_path,
@@ -544,17 +530,3 @@ class WriteCoordinator:
                 return [], file_path
             held.append(file_path)
         return held, None
-
-    def undo(self, file_path: str) -> EditResult:
-        """Undo the last edit to *file_path* via TimeMachine."""
-        snapshot = self._time_machine.rollback(file_path)
-        if snapshot is None:
-            return edit_result(file_path, "No snapshot available for undo")
-        try:
-            if snapshot.existed:
-                self._content.write(file_path, snapshot.content)
-            else:
-                self._content.delete(file_path)
-        except Exception as exc:
-            return edit_result(file_path, f"Undo write failed: {exc}")
-        return edit_result(file_path, "Reverted to previous snapshot", success=True)

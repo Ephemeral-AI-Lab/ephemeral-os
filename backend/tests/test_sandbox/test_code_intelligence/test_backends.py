@@ -47,7 +47,6 @@ def test_inprocess_exposes_required_components(tmp_path: Path) -> None:
     backend = InProcessBackend(sandbox_id="sb-3", workspace_root=str(tmp_path))
     # Load-bearing attributes for mutation callers that read internals.
     assert backend.arbiter is not None
-    assert backend.time_machine is not None
     assert backend.patcher is not None
     assert backend._content is not None
     assert backend._write_coordinator is not None

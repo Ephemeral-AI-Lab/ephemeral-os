@@ -350,7 +350,7 @@ class OCCOperationService:
             current, existed = base_by_path.get(str(spec.file_path), ("", False))
             if not existed:
                 return [], _not_found_result(spec.file_path)
-            patch = self.patcher.apply_edits(current, list(spec.edits))
+            patch = self.patcher.apply_many(current, list(spec.edits))
             if not patch.success:
                 return [], _patch_failed_result(spec.file_path, patch.errors)
             changes.append(
@@ -363,8 +363,3 @@ class OCCOperationService:
                 )
             )
         return changes, None
-
-
-    def undo(self, file_path: str) -> EditResult:
-        return self._write_coordinator.undo(file_path)
-

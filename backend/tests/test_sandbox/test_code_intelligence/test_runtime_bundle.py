@@ -59,6 +59,13 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/pipelines.py",
         "sandbox/runtime/setup_orchestrator.py",
         "sandbox/runtime/legacy_command_client.py",
+        "sandbox/occ/bootstrap.py",
+        "sandbox/occ/client.py",
+        "sandbox/occ/engine.py",
+        "sandbox/occ/setup.sh",
+        "sandbox/occ/handlers/write.py",
+        "sandbox/occ/operations/service.py",
+        "sandbox/occ/commit/coordinator.py",
         "sandbox/code_intelligence/service.py",
         "sandbox/code_intelligence/backends/protocol.py",
         "sandbox/code_intelligence/daemon/storage.py",
@@ -67,6 +74,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     assert missing == [], f"bundle is missing required paths: {missing}"
     assert not (extract_dir / "sandbox/runtime/bundle.py").exists()
     assert not (extract_dir / "sandbox/code_intelligence/daemon/command.py").exists()
+    assert not (extract_dir / "sandbox/code_intelligence/mutations").exists()
 
 
 def test_bundle_excludes_pycache_and_compiled(tmp_path: Path) -> None:
@@ -88,6 +96,26 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
     assert "sandbox/api/raw_exec.py" not in names
     assert "sandbox/runtime/bundle.py" not in names
     assert all(not name.startswith("sandbox/providers/") for name in names)
+
+
+def test_bundle_includes_peer_setup_scripts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    src_root = tmp_path / "src"
+    setup_script = src_root / "sandbox" / "occ" / "setup.sh"
+    setup_script.parent.mkdir(parents=True)
+    setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
+
+    monkeypatch.setattr("sandbox.runtime.bundle._src_root", lambda: src_root)
+    monkeypatch.setattr("sandbox.runtime.bundle._BUNDLE_CACHE", None)
+    monkeypatch.setattr("sandbox.runtime.bundle._BUNDLE_HASH_CACHE", None)
+
+    bundle = _runtime_bundle_bytes()
+    with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
+        member = tar.extractfile("sandbox/occ/setup.sh")
+        assert member is not None
+        assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
 
 
 def test_bundle_extracted_runtime_modules_import_clean(tmp_path: Path) -> None:

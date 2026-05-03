@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from sandbox.api.errors import SandboxTransportError
 from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Sequence
+from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
 
+from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
 from sandbox.occ.types import (
     EditRequest,
     EditResult,
@@ -38,8 +41,53 @@ def writespec_to_dict(spec: WriteSpec) -> dict[str, Any]:
 def editspec_to_dict(spec: EditSpec) -> dict[str, Any]:
     return {
         "file_path": spec.file_path,
-        "edits": list(spec.edits),
+        "edits": [_edit_to_dict(edit) for edit in spec.edits],
     }
+
+
+def writespec_from_dict(d: dict[str, Any]) -> WriteSpec:
+    return WriteSpec(
+        file_path=str(d["file_path"]),
+        content=str(d.get("content", "")),
+        overwrite=bool(d.get("overwrite", True)),
+    )
+
+
+def editspec_from_dict(d: dict[str, Any]) -> EditSpec:
+    return EditSpec(
+        file_path=str(d["file_path"]),
+        edits=tuple(_edit_from_dict(edit) for edit in d.get("edits", ())),
+    )
+
+
+def _edit_to_dict(edit: Any) -> dict[str, Any]:
+    if is_dataclass(edit) and not isinstance(edit, type):
+        data = asdict(edit)
+    elif isinstance(edit, dict):
+        data = dict(edit)
+    else:
+        data = dict(vars(edit))
+    if "old_text" in data and "new_text" in data:
+        data.setdefault("kind", "search_replace")
+    elif {"start_line", "end_line", "new_text"} <= set(data):
+        data.setdefault("kind", "line_range")
+    return data
+
+
+def _edit_from_dict(d: dict[str, Any]) -> Any:
+    from sandbox.occ.patching.patcher import LineRangeEdit, SearchReplaceEdit
+
+    kind = str(d.get("kind") or "")
+    if kind == "line_range" or {"start_line", "end_line"} <= set(d):
+        return LineRangeEdit(
+            start_line=int(d["start_line"]),
+            end_line=int(d["end_line"]),
+            new_text=str(d.get("new_text", "")),
+        )
+    return SearchReplaceEdit(
+        old_text=str(d.get("old_text", "")),
+        new_text=str(d.get("new_text", "")),
+    )
 
 
 def operation_change_to_dict(change: OperationChange) -> dict[str, Any]:
@@ -53,6 +101,17 @@ def operation_change_to_dict(change: OperationChange) -> dict[str, Any]:
     }
 
 
+def operation_change_from_dict(d: dict[str, Any]) -> OperationChange:
+    return OperationChange(
+        file_path=str(d["file_path"]),
+        base_content=str(d.get("base_content", "")),
+        base_hash=str(d.get("base_hash", "")),
+        final_content=d.get("final_content"),
+        base_existed=bool(d.get("base_existed", True)),
+        strict_base=bool(d.get("strict_base", False)),
+    )
+
+
 def edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
     return {
         "file_path": request.file_path,
@@ -61,6 +120,16 @@ def edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
         "agent_id": request.agent_id,
         "description": request.description,
     }
+
+
+def edit_request_from_dict(d: dict[str, Any]) -> EditRequest:
+    return EditRequest(
+        file_path=str(d["file_path"]),
+        old_text=str(d.get("old_text", "")),
+        new_text=str(d.get("new_text", "")),
+        agent_id=str(d.get("agent_id", "")),
+        description=str(d.get("description", "")),
+    )
 
 
 def edit_result_from_dict(d: dict[str, Any]) -> EditResult:
@@ -84,5 +153,58 @@ def operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
         files=files,
         conflict_file=d.get("conflict_file"),
         conflict_reason=str(d.get("conflict_reason", "")),
+        timings=dict(d.get("timings") or {}),
+    )
+
+
+@dataclass(frozen=True)
+class _UpperChange:
+    rel: str
+    kind: str
+    base_bytes: bytes | None
+    upper_bytes: bytes | None
+    base_existed: bool
+
+
+def _bytes_to_wire(value: bytes | None) -> str | None:
+    if value is None:
+        return None
+    return base64.b64encode(value).decode("ascii")
+
+
+def _bytes_from_wire(value: Any) -> bytes | None:
+    if value is None:
+        return None
+    return base64.b64decode(str(value).encode("ascii"))
+
+
+def upper_change_to_dict(change: UpperChangeLike) -> dict[str, Any]:
+    return {
+        "rel": change.rel,
+        "kind": change.kind,
+        "base_bytes": _bytes_to_wire(change.base_bytes),
+        "upper_bytes": _bytes_to_wire(change.upper_bytes),
+        "base_existed": change.base_existed,
+    }
+
+
+def upper_change_from_dict(d: dict[str, Any]) -> UpperChangeLike:
+    return _UpperChange(
+        rel=str(d["rel"]),
+        kind=str(d["kind"]),
+        base_bytes=_bytes_from_wire(d.get("base_bytes")),
+        upper_bytes=_bytes_from_wire(d.get("upper_bytes")),
+        base_existed=bool(d.get("base_existed", True)),
+    )
+
+
+def changeset_result_from_dict(d: dict[str, Any]) -> ChangesetResult:
+    return ChangesetResult(
+        success=bool(d.get("success", False)),
+        status=str(d.get("status", "failed")),
+        ledgered=tuple(str(p) for p in (d.get("ledgered") or ())),
+        direct_merged=tuple(str(p) for p in (d.get("direct_merged") or ())),
+        conflict_reason=d.get("conflict_reason"),
+        conflict_file=d.get("conflict_file"),
         timings=dict(d.get("timings") or {}),
     )

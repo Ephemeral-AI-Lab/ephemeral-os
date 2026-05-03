@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.occ.state.ledger_store import LedgerStore
-from sandbox.code_intelligence.daemon.paths import (
+from sandbox.occ.state.ledger_store import (
+    LedgerStore,
     StoragePathEscape,
     StorageUnavailable,
     _confine,

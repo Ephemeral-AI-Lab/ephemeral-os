@@ -75,6 +75,43 @@ def _normalize_tarinfo(info: tarfile.TarInfo) -> tarfile.TarInfo:
     return info
 
 
+def _add_if_exists(tar: tarfile.TarFile, path: Path, *, arcname: str) -> None:
+    if path.exists():
+        tar.add(path, arcname=arcname, filter=_normalize_tarinfo)
+
+
+def _add_python_tree(
+    tar: tarfile.TarFile,
+    root: Path,
+    *,
+    sandbox_dir: Path,
+    exclude_parts: set[str] | None = None,
+) -> None:
+    excluded = exclude_parts or set()
+    for path in sorted(root.rglob("*.py")):
+        if _is_excluded(path):
+            continue
+        rel = path.relative_to(root)
+        if excluded.intersection(rel.parts):
+            continue
+        tar.add(
+            path,
+            arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
+            filter=_normalize_tarinfo,
+        )
+
+
+def _add_peer_setup_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
+    for path in sorted(sandbox_dir.rglob("setup.sh")):
+        if "__pycache__" in path.parts:
+            continue
+        tar.add(
+            path,
+            arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
+            filter=_normalize_tarinfo,
+        )
+
+
 _BUNDLE_CACHE: bytes | None = None
 
 
@@ -89,59 +126,46 @@ def _runtime_bundle_bytes() -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
         for filename in ("__init__.py", "errors.py"):
-            p = sandbox_dir / filename
-            if p.exists():
-                tar.add(p, arcname=f"sandbox/{filename}", filter=_normalize_tarinfo)
+            _add_if_exists(
+                tar,
+                sandbox_dir / filename,
+                arcname=f"sandbox/{filename}",
+            )
 
         api_dir = sandbox_dir / "api"
-        for path in sorted(api_dir.rglob("*.py")):
-            if _is_excluded(path):
-                continue
-            tar.add(
-                path,
-                arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
-                filter=_normalize_tarinfo,
-            )
+        _add_python_tree(tar, api_dir, sandbox_dir=sandbox_dir)
 
         client_dir = sandbox_dir / "client"
         for filename in ("__init__.py", "async_bridge.py"):
-            p = client_dir / filename
-            if p.exists():
-                tar.add(
-                    p,
-                    arcname=f"sandbox/client/{filename}",
-                    filter=_normalize_tarinfo,
-                )
+            _add_if_exists(
+                tar,
+                client_dir / filename,
+                arcname=f"sandbox/client/{filename}",
+            )
 
         lifecycle_dir = sandbox_dir / "lifecycle"
         for filename in ("__init__.py", "commit.py"):
-            p = lifecycle_dir / filename
-            if p.exists():
-                tar.add(
-                    p,
-                    arcname=f"sandbox/lifecycle/{filename}",
-                    filter=_normalize_tarinfo,
-                )
+            _add_if_exists(
+                tar,
+                lifecycle_dir / filename,
+                arcname=f"sandbox/lifecycle/{filename}",
+            )
 
         runtime_dir = sandbox_dir / "runtime"
-        for path in sorted(runtime_dir.rglob("*.py")):
-            if _is_excluded(path):
-                continue
-            tar.add(
-                path,
-                arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
-                filter=_normalize_tarinfo,
-            )
+        _add_python_tree(tar, runtime_dir, sandbox_dir=sandbox_dir)
+
+        occ_dir = sandbox_dir / "occ"
+        _add_python_tree(tar, occ_dir, sandbox_dir=sandbox_dir)
 
         ci_dir = sandbox_dir / "code_intelligence"
-        for path in sorted(ci_dir.rglob("*.py")):
-            if _is_excluded(path):
-                continue
-            tar.add(
-                path,
-                arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
-                filter=_normalize_tarinfo,
-            )
+        _add_python_tree(
+            tar,
+            ci_dir,
+            sandbox_dir=sandbox_dir,
+            exclude_parts={"mutations"},
+        )
+
+        _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)
 
     compressed = io.BytesIO()
     with gzip.GzipFile(fileobj=compressed, mode="wb", mtime=0) as gz:

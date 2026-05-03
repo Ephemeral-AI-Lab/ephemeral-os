@@ -359,13 +359,13 @@ def test_invariant_non_overlap_merge_converges(
 
 
 # ---------------------------------------------------------------------------
-# 3.7.D — INVARIANT 4: TimeMachine rollback on partial-apply failure
+# 3.7.D — INVARIANT 4: atomic rollback on partial-apply failure
 # ---------------------------------------------------------------------------
 
 
-def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None:
+def test_invariant_atomic_batch_rollback(live_phase3_env: LivePhase3Env) -> None:
     """A failed mid-batch commit must roll all participating files back."""
-    h = TimingHarness(phase=3, test_name="invariant_time_machine_rollback")
+    h = TimingHarness(phase=3, test_name="invariant_atomic_batch_rollback")
     env = live_phase3_env
     daemon_backend = env.daemon_backend()
     a = f"{env.repo_dir}/_phase3_tm_a.txt"

@@ -58,7 +58,11 @@ class SetupRegistry:
         self._scripts: list[SetupScript] = []
 
     def register(self, setup_script: SetupScript) -> None:
-        if any(script.name == setup_script.name for script in self._scripts):
+        for script in self._scripts:
+            if script.name != setup_script.name:
+                continue
+            if script == setup_script:
+                return
             raise ValueError(f"setup script already registered: {setup_script.name}")
         self._scripts.append(setup_script)
 
