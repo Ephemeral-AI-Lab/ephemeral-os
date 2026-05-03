@@ -9,21 +9,15 @@ from typing import Any
 
 from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
-    OperationChange,
     OperationResult,
     WriteSpec,
 )
 from sandbox.occ.wire import (
     changeset_result_from_dict,
-    edit_request_to_dict,
-    edit_result_from_dict,
     editspec_to_dict,
     normalize_edit_specs,
     normalize_write_specs,
-    operation_change_to_dict,
     operation_result_from_dict,
     upper_change_to_dict,
     writespec_to_dict,
@@ -61,13 +55,6 @@ class OCCClient:
         self.workspace_root = workspace_root
         self.timeout = timeout
 
-    async def apply(self, request: EditRequest) -> EditResult:
-        result = await self._call(
-            "occ.apply",
-            {"request": edit_request_to_dict(request)},
-        )
-        return edit_result_from_dict(result)
-
     async def write(
         self,
         specs: Sequence[WriteSpec] | WriteSpec,
@@ -85,15 +72,6 @@ class OCCClient:
         )
         return operation_result_from_dict(result)
 
-    async def write_file(
-        self,
-        specs: Sequence[WriteSpec] | WriteSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return await self.write(specs, agent_id=agent_id, description=description)
-
     async def edit(
         self,
         specs: Sequence[EditSpec] | EditSpec,
@@ -106,34 +84,6 @@ class OCCClient:
             {
                 "specs": [editspec_to_dict(s) for s in normalize_edit_specs(specs)],
                 "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
-
-    async def edit_file(
-        self,
-        specs: Sequence[EditSpec] | EditSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return await self.edit(specs, agent_id=agent_id, description=description)
-
-    async def commit(
-        self,
-        changes: Sequence[OperationChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> OperationResult:
-        result = await self._call(
-            "occ.commit",
-            {
-                "changes": [operation_change_to_dict(c) for c in changes],
-                "agent_id": agent_id,
-                "edit_type": edit_type,
                 "description": description,
             },
         )

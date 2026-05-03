@@ -67,26 +67,34 @@ def _edit_to_dict(edit: Any) -> dict[str, Any]:
         data = dict(edit)
     else:
         data = dict(vars(edit))
-    if "old_text" in data and "new_text" in data:
-        data.setdefault("kind", "search_replace")
-    elif {"start_line", "end_line", "new_text"} <= set(data):
-        data.setdefault("kind", "line_range")
+    if {"start_line", "end_line"} <= set(data):
+        raise ValueError("unsupported edit kind: line_range")
+    kind = str(data.get("kind") or "")
+    if kind and kind != "search_replace":
+        raise ValueError(f"unsupported edit kind: {kind}")
+    if "old_text" not in data:
+        raise ValueError("edit requires old_text")
+    if "new_text" not in data:
+        raise ValueError("edit requires new_text")
+    data["kind"] = "search_replace"
     return data
 
 
 def _edit_from_dict(d: dict[str, Any]) -> Any:
-    from sandbox.occ.patching.patcher import LineRangeEdit, SearchReplaceEdit
+    from sandbox.occ.patching.patcher import SearchReplaceEdit
 
     kind = str(d.get("kind") or "")
-    if kind == "line_range" or {"start_line", "end_line"} <= set(d):
-        return LineRangeEdit(
-            start_line=int(d["start_line"]),
-            end_line=int(d["end_line"]),
-            new_text=str(d.get("new_text", "")),
-        )
+    if {"start_line", "end_line"} <= set(d):
+        raise ValueError("unsupported edit kind: line_range")
+    if kind and kind != "search_replace":
+        raise ValueError(f"unsupported edit kind: {kind}")
+    if "old_text" not in d:
+        raise ValueError("edit requires old_text")
+    if "new_text" not in d:
+        raise ValueError("edit requires new_text")
     return SearchReplaceEdit(
-        old_text=str(d.get("old_text", "")),
-        new_text=str(d.get("new_text", "")),
+        old_text=str(d["old_text"]),
+        new_text=str(d["new_text"]),
     )
 
 
@@ -101,17 +109,6 @@ def operation_change_to_dict(change: OperationChange) -> dict[str, Any]:
     }
 
 
-def operation_change_from_dict(d: dict[str, Any]) -> OperationChange:
-    return OperationChange(
-        file_path=str(d["file_path"]),
-        base_content=str(d.get("base_content", "")),
-        base_hash=str(d.get("base_hash", "")),
-        final_content=d.get("final_content"),
-        base_existed=bool(d.get("base_existed", True)),
-        strict_base=bool(d.get("strict_base", False)),
-    )
-
-
 def edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
     return {
         "file_path": request.file_path,
@@ -120,16 +117,6 @@ def edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
         "agent_id": request.agent_id,
         "description": request.description,
     }
-
-
-def edit_request_from_dict(d: dict[str, Any]) -> EditRequest:
-    return EditRequest(
-        file_path=str(d["file_path"]),
-        old_text=str(d.get("old_text", "")),
-        new_text=str(d.get("new_text", "")),
-        agent_id=str(d.get("agent_id", "")),
-        description=str(d.get("description", "")),
-    )
 
 
 def edit_result_from_dict(d: dict[str, Any]) -> EditResult:

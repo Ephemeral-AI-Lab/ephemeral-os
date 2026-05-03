@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Protocol
+from typing import Any
 
 from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
 from sandbox.occ.commit import WriteCoordinator
@@ -13,31 +13,10 @@ from sandbox.occ.patching.patcher import Patcher
 from sandbox.occ.state.arbiter import Arbiter
 from sandbox.occ.state.ledger_store import LedgerStore, state_dir
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
-    OperationChange,
     OperationResult,
     WriteSpec,
 )
-
-
-class OCCEngine(Protocol):
-    """Minimal OCC mutation surface used by runtime adapters."""
-
-    @property
-    def arbiter(self) -> Arbiter: ...
-
-    def apply(self, request: EditRequest) -> EditResult: ...
-
-    def commit(
-        self,
-        changes: Sequence[OperationChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> OperationResult: ...
 
 
 class LocalOCCEngine:
@@ -72,39 +51,6 @@ class LocalOCCEngine:
     @property
     def arbiter(self) -> Arbiter:
         return self._arbiter
-
-    def apply(self, request: EditRequest) -> EditResult:
-        return self._operations.apply(request)
-
-    def commit(
-        self,
-        changes: Sequence[OperationChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> OperationResult:
-        return self._operations.commit_operation_against_base(
-            changes,
-            agent_id=agent_id,
-            edit_type=edit_type,
-            description=description,
-        )
-
-    def commit_operation_against_base(
-        self,
-        changes: Sequence[OperationChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> OperationResult:
-        return self.commit(
-            changes,
-            agent_id=agent_id,
-            edit_type=edit_type,
-            description=description,
-        )
 
     def write_file(
         self,
@@ -153,4 +99,4 @@ class LocalOCCEngine:
             self._ledger.close()
 
 
-__all__ = ["LocalOCCEngine", "OCCEngine"]
+__all__ = ["LocalOCCEngine"]

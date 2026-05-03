@@ -36,13 +36,12 @@ forward.
 | --- | --- |
 | `backend/src/sandbox/occ/bootstrap.py` | Registers OCC setup and handlers at import time |
 | `backend/src/sandbox/occ/client.py` | Host-side typed OCC route point; serializes exactly one request to `sandbox.runtime.server` per call |
-| `backend/src/sandbox/occ/engine.py` | `OCCEngine` protocol plus `LocalOCCEngine` composition root for in-sandbox OCC internals |
+| `backend/src/sandbox/occ/engine.py` | `LocalOCCEngine` composition root for in-sandbox OCC internals |
 | `backend/src/sandbox/occ/setup.sh` | Idempotent peer setup script for OCC-local state roots |
 | `backend/src/sandbox/occ/handlers/__init__.py` | Registers OCC server operations in `OP_TABLE` |
 | `backend/src/sandbox/occ/handlers/write.py` | Thin runtime adapter for `occ.write` |
-| `backend/src/sandbox/occ/handlers/edit.py` | Thin runtime adapter for `occ.edit` and internal `occ.apply` |
+| `backend/src/sandbox/occ/handlers/edit.py` | Thin runtime adapter for `occ.edit` |
 | `backend/src/sandbox/occ/handlers/apply_changeset.py` | Thin runtime adapter for raw overlay changeset application |
-| `backend/src/sandbox/occ/handlers/commit.py` | Thin runtime adapter for explicit OCC commit requests |
 
 ### Relocated OCC Internals
 
@@ -52,7 +51,7 @@ forward.
 | `backend/src/sandbox/occ/content/{manager,hashing,path_utils}.py` | Workspace content I/O, hashing, and path resolution |
 | `backend/src/sandbox/occ/commit/` | Commit coordination, merge resolution, metrics, models, and result helpers |
 | `backend/src/sandbox/occ/changeset/{apply,types}.py` | Overlay upperdir changeset classification and OCC/direct-merge policy |
-| `backend/src/sandbox/occ/patching/patcher.py` | Search/replace and line-range patch application |
+| `backend/src/sandbox/occ/patching/patcher.py` | Search/replace patch application |
 | `backend/src/sandbox/occ/state/{arbiter,edit_history_ledger,ledger_store,constants}.py` | Coordination state, ledger persistence, and OCC-owned constants |
 | `backend/src/sandbox/occ/types.py` | OCC request/result dataclasses |
 | `backend/src/sandbox/occ/wire.py` | JSON/wire serialization for OCC runtime requests and responses |
@@ -96,10 +95,8 @@ python3 -m sandbox.runtime.server '<json-envelope>'
 The client currently exposes internal OCC operations needed by migration and
 future public verbs:
 
-- `apply`
 - `write`
 - `edit`
-- `commit`
 - `apply_changeset`
 
 It does not import handlers or Overlay, and agent tools still do not import it.
@@ -143,10 +140,9 @@ exposed through `sandbox.api`.
 - `WriteCoordinator`
 - `OCCOperationService`
 
-The `OCCEngine` protocol is intentionally minimal: `apply`, `commit`, and
-`arbiter`. Implementation-specific helpers such as `write_file`,
-`edit_file`, and `apply_changeset` remain on the concrete engine for handlers
-and pipelines.
+No separate `OCCEngine` protocol is kept in this slice; `LocalOCCEngine` is the
+only implementation. `write_file`, `edit_file`, and `apply_changeset` remain on
+the concrete engine for handlers and pipelines.
 
 ### Bundle Boundary
 
@@ -176,9 +172,12 @@ separate reusable undo API.
 The post-implementation cleanup removed compatibility drag and duplicate route
 names:
 
-- Kept concrete `OCCClient.write_file` / `edit_file` and
-  `LocalOCCEngine.commit_operation_against_base` compatibility aliases for
-  migration callers.
+- Removed unused `OCCClient.write_file` / `edit_file` aliases.
+- Removed unused direct `occ.apply` and `occ.commit` runtime operations.
+- Removed the unused `OCCEngine` protocol and
+  `LocalOCCEngine.commit_operation_against_base` alias.
+- Removed the unused `LineRangeEdit` patching strategy; OCC edit wire helpers
+  now accept search/replace edits only.
 - Removed the old snapshot undo compatibility exposure from
   service/backends/tests.
 - Removed legacy `undo` server/client/backend routes.
@@ -242,7 +241,7 @@ Structural grep gates:
 rg -n "apply_edit" backend/src
 rg -n "sandbox\.code_intelligence|sandbox\.overlay" backend/src/sandbox/occ
 rg -n "from sandbox\.code_intelligence\.mutations|sandbox\.code_intelligence\.mutations|MutationService" backend/src
-rg -n "occ\.undo|def undo\(|\.undo\(" backend/src backend/tests/test_sandbox backend/tests/test_e2e/test_daytona_toolkit_comprehensive.py backend/tests/test_e2e/test_live_ci_phase3_invariants.py
+rg -n '"occ\.(apply|commit)"|occ\.undo|def undo\(|\.undo\(' backend/src backend/tests/test_sandbox backend/tests/test_e2e/test_daytona_toolkit_comprehensive.py backend/tests/test_e2e/test_live_ci_phase3_invariants.py
 ```
 
 All listed structural greps are clean. Live Daytona E2E/perf was not run for
@@ -277,6 +276,7 @@ These remain outside Step 5:
 - `sandbox.api.write/edit` are not wired yet.
 - The runtime bundle deploys `sandbox/occ/` and `occ/setup.sh`.
 - The runtime bundle no longer deploys `sandbox/code_intelligence/mutations/`.
-- Old `apply_edit` and snapshot undo routes are gone from active code/tests.
+- Old direct `apply`/`commit`, old `apply_edit`, and snapshot undo routes are
+  gone from active code/tests.
 - OCC package-boundary greps are clean.
 - Focused OCC/runtime tests and the broader sandbox suite pass.

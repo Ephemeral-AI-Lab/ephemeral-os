@@ -29,7 +29,8 @@ def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
         "wire.py",
     }
 
-    actual = {path.name for path in _occ_root().iterdir() if path.name != "__pycache__"}
+    ignored = {"__pycache__", ".DS_Store"}
+    actual = {path.name for path in _occ_root().iterdir() if path.name not in ignored}
 
     assert actual == expected
 

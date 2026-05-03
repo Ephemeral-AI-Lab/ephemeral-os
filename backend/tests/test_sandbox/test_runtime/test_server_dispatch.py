@@ -22,11 +22,11 @@ def restore_op_table() -> None:
 
 
 def test_empty_op_table_returns_unknown_op() -> None:
-    response = server.dispatch_envelope({"op": "occ.apply", "args": {}})
+    response = server.dispatch_envelope({"op": "occ.missing", "args": {}})
 
     assert response["success"] is False
     assert response["error"]["kind"] == "unknown_op"
-    assert response["error"]["details"] == {"op": "occ.apply"}
+    assert response["error"]["details"] == {"op": "occ.missing"}
 
 
 def test_bad_json_returns_structured_error() -> None:

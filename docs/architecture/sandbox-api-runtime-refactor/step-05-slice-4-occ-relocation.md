@@ -1,6 +1,6 @@
 # Step 5 — Slice 4 — OCC peer relocation
 
-**Goal.** Move OCC under `sandbox/occ/`; add OCC's `client.py` route point and `setup.sh`; register its setup and handlers with the runtime at import time. Wire `edit_pipeline` (multi-edit OCC apply + atomic commit) and `write_pipeline` (OCC write + commit) end-to-end inside the sandbox. Both are reachable through `runtime/server.py` but **not yet exposed via `sandbox.api`** — that's Slice 6.
+**Goal.** Move OCC under `sandbox/occ/`; add OCC's `client.py` route point and `setup.sh`; register its setup and handlers with the runtime at import time. Wire `edit_pipeline` (multi-edit OCC planning + atomic commit) and `write_pipeline` (OCC write planning + atomic commit) end-to-end inside the sandbox. Both are reachable through `runtime/server.py` but **not yet exposed via `sandbox.api`** — that's Slice 6.
 
 **Depends on.** Step 4 / Slice 3.
 
@@ -19,7 +19,7 @@ sandbox/occ/
     setup.sh
     bootstrap.py              # registers setup.sh + server handlers
     client.py                 # host-side typed OCC request client
-    engine.py                 # OCCEngine Protocol / concrete engine boundary
+    engine.py                 # concrete engine boundary
     types.py                  # OCC request/result dataclasses
     wire.py                   # JSON serialization for OCC server requests
 
@@ -28,7 +28,6 @@ sandbox/occ/
         write.py
         edit.py
         apply_changeset.py
-        commit.py
 
     operations/               # high-level write/edit operation planning
         __init__.py
@@ -109,15 +108,15 @@ sandbox/occ/
   the host client or heavy engine objects here.
 - `backend/src/sandbox/occ/client.py` — `OCCClient`, the host-side typed route for every OCC server request. It serializes the request, invokes `runtime/server.py` through exactly one adapter exec, and returns typed OCC/result objects.
 - `backend/src/sandbox/occ/setup.sh` — OCC setup submitted to the runtime/daemon by `occ/bootstrap.py` after bundle upload.
-- `backend/src/sandbox/occ/engine.py` — `OCCEngine` Protocol; today's concrete engine becomes one impl.
+- `backend/src/sandbox/occ/engine.py` — concrete in-sandbox OCC composition root.
 - `backend/src/sandbox/occ/bootstrap.py` — registers `setup.sh`, bundle contributions, and OCC handlers at import time.
 - `backend/src/sandbox/occ/handlers/` — thin server op adapters only:
-  `write`, `edit`, `apply_changeset`, `commit`.
+  `write`, `edit`, `apply_changeset`.
 
 ### Modify
 - `sandbox/runtime/server.py` — import `sandbox.occ.bootstrap` / handlers so OCC ops register at import time. Server dispatch remains `OP_TABLE`-based; no per-OCC branch is added.
 - `sandbox/runtime/pipelines.py`:
-  - `edit_pipeline`: take a list of edits, drive OCC `apply` per edit, then a single `commit`. Atomic — partial apply rolls back on conflict via OCC arbiter.
+  - `edit_pipeline`: take a list of edits, plan them through OCC, then commit once. Atomic — partial apply rolls back on conflict via OCC arbiter.
   - `write_pipeline`: drive OCC `write` then `commit` in one in-sandbox process; one wire trip total.
 - `sandbox/runtime/bundle.py` — include `sandbox/occ/**/*.py` and
   `sandbox/occ/setup.sh` in the runtime bundle. Do not keep bundling the old
@@ -165,17 +164,16 @@ remove those shims in Slice 7 when `code_intelligence/` is deleted.
 5. Move `daemon/wire.py` to `occ/wire.py` and update
    `runtime/legacy_command_client.py` plus temporary compatibility callers to
    use that path.
-6. Define `OCCEngine` Protocol with the minimal surface: `apply(...)`,
-   `commit(...)`, `arbiter(...)`. Today's concrete engine implements it as-is.
+6. Define `LocalOCCEngine` as the concrete composition root for handlers and
+   pipelines. Do not add a protocol until there is a second implementation.
 7. Rename OCC verbs and audit every internal caller. Add a temporary lint check
    that grep-fails on `apply_edit` — remove the check at end of slice once zero
    hits.
 8. Implement `OCCClient`. It owns all host-side OCC request routing and is the
    only place outside `runtime/` that constructs OCC server envelopes.
    It should expose typed methods for the operations that later back public
-   `sandbox.api.write/edit`, plus internal operations such as
-   `apply_changeset` and `commit` where needed by tests or migration shims. It
-   does not import Overlay.
+   `sandbox.api.write/edit`, plus `apply_changeset` for overlay composition.
+   It does not import Overlay.
 9. Add `occ/setup.sh` and make `occ/bootstrap.py` register it with
    `runtime/setup_orchestrator.py`. Keep setup idempotent; it may initialize
    ledger directories or OCC-local state, but it must not run shell/user
@@ -249,7 +247,7 @@ remove those shims in Slice 7 when `code_intelligence/` is deleted.
 - Over-structuring creates tiny one-line modules. Mitigation: keep the
   subpackage boundaries, but inline trivial helpers such as
   `mutation_results.py` into their nearest owner.
-- OCC arbiter rollback semantics differ between single-edit (legacy) and multi-edit (`edit_pipeline`) paths. Mitigation: the conflict test above is the gate.
+- OCC arbiter rollback semantics differ between legacy single-edit callers and multi-edit (`edit_pipeline`) paths. Mitigation: the conflict test above is the gate.
 - `OCCClient` becomes a second public API. Mitigation: importer allowlist
   permits it only from `sandbox.api.write`, `sandbox.api.edit`, runtime tests,
   and temporary migration shims; agent tools still import only `sandbox.api.*`.

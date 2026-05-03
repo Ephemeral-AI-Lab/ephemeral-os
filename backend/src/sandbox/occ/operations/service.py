@@ -232,7 +232,7 @@ class OCCOperationService:
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        """Apply search/replace (or line-range) edits to one or more files.
+        """Apply search/replace edits to one or more files.
 
         Each :class:`EditSpec` is resolved against a plan-time base read
         from :class:`ContentManager`; edits are applied host-side via

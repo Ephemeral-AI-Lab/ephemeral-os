@@ -80,4 +80,28 @@ def write_reject_ndjson(
     return path
 
 
-__all__ = ["write_diff_ndjson", "write_reject_ndjson"]
+def write_result_json(
+    *,
+    run_dir: str,
+    exit_code: int,
+    rejected: dict[str, object] | None,
+    run_timings: dict[str, float],
+) -> str:
+    """Write the atomic completion marker consumed by daemon-local callers."""
+    path = os.path.join(run_dir, "result.json")
+    tmp_path = f"{path}.tmp-{os.getpid()}"
+    payload = {
+        "exit_code": exit_code,
+        "rejected": rejected,
+        "run_timings": dict(run_timings),
+    }
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, separators=(",", ":"))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp_path, path)
+    return path
+
+
+__all__ = ["write_diff_ndjson", "write_reject_ndjson", "write_result_json"]

@@ -1,20 +1,10 @@
-"""Patcher — multi-strategy edit engine.
-
-Supports two edit strategies:
-- ``search_replace``: find-and-replace first occurrence
-- ``line_range``: replace a contiguous line range (1-indexed, inclusive)
-
-Tracks line origins through edits for accurate conflict detection.
-"""
+"""Patcher — exact search/replace edit engine."""
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 from sandbox.occ.state.constants import PATCHER_MAX_DIFF_SIZE
-
-logger = logging.getLogger(__name__)
 
 _MAX_EDITS_PER_BATCH = 100
 
@@ -24,15 +14,6 @@ class SearchReplaceEdit:
     """Find-and-replace edit."""
 
     old_text: str
-    new_text: str
-
-
-@dataclass(frozen=True)
-class LineRangeEdit:
-    """Line range replacement (1-indexed, inclusive)."""
-
-    start_line: int
-    end_line: int
     new_text: str
 
 
@@ -69,13 +50,9 @@ class Patcher:
     def apply_many(
         self,
         content: str,
-        edits: list[SearchReplaceEdit | LineRangeEdit],
+        edits: list[SearchReplaceEdit],
     ) -> PatchResult:
-        """Apply a batch of edits to content.
-
-        Edits are applied in order. search_replace edits replace the first
-        occurrence; line_range edits replace the specified lines.
-        """
+        """Apply a batch of exact search/replace edits to content."""
         if len(edits) > self._max_edits_per_batch:
             return PatchResult(
                 content=content,
@@ -91,28 +68,13 @@ class Patcher:
         warnings: list[str] = []
 
         for i, edit in enumerate(edits):
-            if isinstance(edit, SearchReplaceEdit):
-                new_result = self._apply_search_replace(result, edit)
-                if new_result is None:
-                    errors.append(
-                        f"Edit {i + 1}: search text not found"
-                    )
-                else:
-                    result = new_result
-                    applied += 1
+            new_result = self._apply_search_replace(result, edit)
+            if new_result is None:
+                errors.append(f"Edit {i + 1}: search text not found")
+            else:
+                result = new_result
+                applied += 1
 
-            elif isinstance(edit, LineRangeEdit):
-                new_result = self._apply_line_range(result, edit)
-                if new_result is None:
-                    errors.append(
-                        f"Edit {i + 1}: line range {edit.start_line}-{edit.end_line} "
-                        f"out of bounds"
-                    )
-                else:
-                    result = new_result
-                    applied += 1
-
-        # Check diff size
         if len(result) - len(content) > self._max_diff_size:
             warnings.append("Edit produced very large diff")
 
@@ -124,8 +86,6 @@ class Patcher:
             warnings=warnings,
         )
 
-    # -- Internal strategies --------------------------------------------------
-
     def _apply_search_replace(
         self, content: str, edit: SearchReplaceEdit,
     ) -> str | None:
@@ -133,24 +93,3 @@ class Patcher:
         if edit.old_text not in content:
             return None
         return content.replace(edit.old_text, edit.new_text, 1)
-
-    def _apply_line_range(
-        self, content: str, edit: LineRangeEdit,
-    ) -> str | None:
-        """Replace lines start_line..end_line (1-indexed, inclusive)."""
-        lines = content.splitlines(keepends=True)
-        total = len(lines)
-
-        start = edit.start_line - 1  # 0-indexed
-        end = edit.end_line  # exclusive (already 1-indexed end inclusive)
-
-        if start < 0 or end > total or start >= end:
-            return None
-
-        new_lines = edit.new_text.splitlines(keepends=True)
-        # Ensure trailing newline consistency
-        if new_lines and not new_lines[-1].endswith("\n"):
-            new_lines[-1] += "\n"
-
-        result_lines = lines[:start] + new_lines + lines[end:]
-        return "".join(result_lines)

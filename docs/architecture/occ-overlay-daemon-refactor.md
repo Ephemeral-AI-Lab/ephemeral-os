@@ -116,8 +116,7 @@ sandbox/occ/
 ├── handlers/                      # thin server op adapters
 │   ├── write.py
 │   ├── edit.py
-│   ├── apply_changeset.py
-│   └── commit.py
+│   └── apply_changeset.py
 ├── changeset.py                   # UpperChange classification + direct merge
 ├── arbiter.py
 ├── content_manager.py
@@ -126,12 +125,12 @@ sandbox/occ/
 ├── ledger_store.py                # was daemon/ledger_store.py — edit history
 ├── types.py                       # was core/types.py (EditSpec, WriteSpec, MoveSpec, OperationResult)
 ├── hashing.py                     # was core/hashing.py
-└── engine.py                      # OCCEngine Protocol
+└── engine.py                      # concrete OCC composition root
 ```
 
 External API: public write/edit verbs route to `OCCClient`, not directly to OCC
 handlers. Inside the sandbox, `runtime/pipelines.py` calls OCC handlers for
-`apply`, `commit`, `undo`, and `apply_changeset`. Move and delete verbs are
+`write`, `edit`, and `apply_changeset`. Move and delete verbs are
 removed from the external surface (see §0.1) — `mv` / `rm` flow through shell
 and commit via the overlay pipeline. Internally, overlay commits can still
 produce delete changes consumed by `WriteCoordinator`; that is not a public OCC

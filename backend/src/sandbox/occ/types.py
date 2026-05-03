@@ -73,14 +73,14 @@ class WriteSpec:
 class EditSpec:
     """One file slot inside a :meth:`svc.edit_file` batch.
 
-    Carries a list of :class:`SearchReplaceEdit` (or :class:`LineRangeEdit`,
-    in future) applied in order against the file's plan-time base. The
-    service assembles one :class:`OperationChange` per spec and submits the
-    whole list as a single OCC batch.
+    Carries a list of :class:`SearchReplaceEdit` values applied in order
+    against the file's plan-time base. The service assembles one
+    :class:`OperationChange` per spec and submits the whole list as a single
+    OCC batch.
     """
 
     file_path: str
-    edits: Sequence[Any]  # Sequence[SearchReplaceEdit | LineRangeEdit]
+    edits: Sequence[Any]  # Sequence[SearchReplaceEdit]
 
 
 OperationStatus = Literal[
@@ -102,4 +102,3 @@ class OperationResult:
     conflict_file: str | None = None
     conflict_reason: str = ""
     timings: dict[str, float] = field(default_factory=dict)
-

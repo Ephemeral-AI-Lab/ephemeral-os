@@ -104,6 +104,30 @@ class OverlayRunOutcome:
     policy_reject: OverlayPolicyReject | None = None
 
 
+@dataclass(frozen=True)
+class ShellResult:
+    """Runtime shell result after overlay capture and OCC projection."""
+
+    result: str
+    exit_code: int
+    changed_paths: tuple[str, ...] = ()
+    ambient_changed_paths: tuple[str, ...] = ()
+    files_written: int = 0
+    git_commit_status: str | None = None
+    git_conflict_file: str | None = None
+    git_conflict_reason: str | None = None
+    gitinclude_changed_paths: tuple[str, ...] = ()
+    gitignore_changed_paths: tuple[str, ...] = ()
+    gitignore_direct_merged_paths: tuple[str, ...] = ()
+    gitignore_direct_merged_count: int = 0
+    mixed_gitinclude_gitignore: bool = False
+    mixed_partial_apply: bool = False
+    warnings: tuple[str, ...] = ()
+    overlay_run_timings: dict[str, float] = field(default_factory=dict)
+    overlay_stage_timings: dict[str, float] = field(default_factory=dict)
+    conflict: ConflictInfo | None = None
+
+
 __all__ = [
     "ConflictInfo",
     "OverlayCapture",
@@ -112,6 +136,7 @@ __all__ = [
     "OverlayPolicyReject",
     "OverlayRunError",
     "OverlayRunOutcome",
+    "ShellResult",
     "UpperChange",
     "UpperChangeKind",
 ]
