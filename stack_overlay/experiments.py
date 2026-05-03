@@ -21,6 +21,7 @@ from stack_overlay.experiment_suite import PROFILES, run_experiment_suite
 from stack_overlay.layer_manager import LayerManager
 from stack_overlay.mounts import (
     DEFAULT_MAX_DEPTH,
+    OverlayMountSpec,
     build_mount_spec,
     mount_overlay_syscall,
     unmount_overlay_syscall,
@@ -56,6 +57,10 @@ def main() -> None:
         action="store_true",
         help="suppress in-flight progress logs on stderr",
     )
+    suite.add_argument(
+        "--record-jsonl",
+        help="append each experiment result as JSONL when that experiment finishes",
+    )
     args = parser.parse_args()
 
     if args.command == "mount-probe":
@@ -64,11 +69,13 @@ def main() -> None:
         print(json.dumps(run_simulation(), indent=2, sort_keys=True))
     elif args.command == "suite":
         progress_log = None if args.quiet else _log_progress
+        result_sink = _build_jsonl_sink(args.record_jsonl)
         print(
             json.dumps(
                 run_experiment_suite(
                     profile_name=args.profile,
                     progress_log=progress_log,
+                    result_sink=result_sink,
                 ),
                 indent=2,
                 sort_keys=True,
@@ -78,12 +85,13 @@ def main() -> None:
 
 def run_mount_probe(args: argparse.Namespace) -> dict[str, object]:
     root = Path(args.root)
+    probe_trigger = max(args.depth + 1, 3)
     manager = LayerManager.create(
         root / "session",
         {"shared.txt": "base\n"},
-        max_depth=max(args.depth + 1, DEFAULT_MAX_DEPTH),
-        squash_trigger=args.depth + 1,
-        squash_target=max(2, min(40, args.depth)),
+        max_depth=max(probe_trigger, DEFAULT_MAX_DEPTH),
+        squash_trigger=probe_trigger,
+        squash_target=max(2, min(40, probe_trigger - 1)),
     )
     for index in range(1, args.depth):
         manager.commit([LayerChange("shared.txt", "write", f"layer-{index}\n")])
@@ -99,7 +107,7 @@ def run_mount_probe(args: argparse.Namespace) -> dict[str, object]:
             manifest=manifest,
             run_dir=run_dir,
             relative_lowerdir=not args.absolute,
-            max_depth=max(args.depth, 10),
+            max_depth=max(args.depth, DEFAULT_MAX_DEPTH),
         )
         started = time.perf_counter()
         completed = _mount_probe_once(args.method, spec)
@@ -186,10 +194,10 @@ def _percentile(values: list[float], pct: int) -> float | None:
     return values[index]
 
 
-def _mount_probe_once(method: str, spec: object) -> dict[str, object]:
+def _mount_probe_once(method: str, spec: OverlayMountSpec) -> dict[str, object]:
     if method == "syscall":
         try:
-            mount_overlay_syscall(spec)  # type: ignore[arg-type]
+            mount_overlay_syscall(spec)
         except OSError as exc:
             return {"returncode": getattr(exc, "errno", 1) or 1, "stderr": str(exc)}
         return {"returncode": 0, "stderr": ""}
@@ -224,6 +232,19 @@ def _log_progress(message: str) -> None:
         file=sys.stderr,
         flush=True,
     )
+
+
+def _build_jsonl_sink(path: str | None):
+    if not path:
+        return None
+    record_path = Path(path)
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def sink(result: dict[str, object]) -> None:
+        with record_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(result, sort_keys=True) + "\n")
+
+    return sink
 
 
 if __name__ == "__main__":

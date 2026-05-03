@@ -17,6 +17,15 @@ from stack_overlay.models import (
     WriteChange,
 )
 from stack_overlay.occ import OccCommitter, content_hash
+from stack_overlay.policies import (
+    DirectMergePolicy,
+    LeaseBudget,
+    LeaseSnapshot,
+    ShellCommitGate,
+    ShellMode,
+    StalenessPolicy,
+    classify_shell_mode,
+)
 
 __all__ = [
     "ChangeStatus",
@@ -28,6 +37,13 @@ __all__ = [
     "Lease",
     "Manifest",
     "OccCommitter",
+    "DirectMergePolicy",
+    "LeaseBudget",
+    "LeaseSnapshot",
+    "ShellCommitGate",
+    "ShellMode",
+    "StalenessPolicy",
     "WriteChange",
+    "classify_shell_mode",
     "content_hash",
 ]
