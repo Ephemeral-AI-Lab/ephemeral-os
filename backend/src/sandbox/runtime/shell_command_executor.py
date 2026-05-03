@@ -109,7 +109,7 @@ class AuditedCommandExecutor:
         process = getattr(sandbox, "process", None)
         exec_fn = getattr(process, "exec", None) if process is not None else None
         if exec_fn is None and callable(getattr(sandbox, "exec", None)):
-            exec_fn = getattr(sandbox, "exec")
+            exec_fn = sandbox.exec
         if not callable(exec_fn):
             raise RuntimeError("Sandbox process.exec is unavailable")
         if not inspect.iscoroutinefunction(exec_fn):
