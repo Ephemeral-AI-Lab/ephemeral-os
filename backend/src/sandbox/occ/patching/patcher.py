@@ -28,7 +28,7 @@ class PatchResult:
     warnings: list[str]
 
 
-class Patcher:
+class SearchReplaceEngine:
     """Apply edits to file content with validation.
 
     Parameters
@@ -93,3 +93,7 @@ class Patcher:
         if edit.old_text not in content:
             return None
         return content.replace(edit.old_text, edit.new_text, 1)
+
+
+# Step 5 of the OCC simplification removes this alias once all callers migrate.
+Patcher = SearchReplaceEngine

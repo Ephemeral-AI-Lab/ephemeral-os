@@ -6,6 +6,7 @@ from sandbox.occ.patching.patcher import (
     PatchResult,
     Patcher,
     SearchReplaceEdit,
+    SearchReplaceEngine,
 )
 
-__all__ = ["PatchResult", "Patcher", "SearchReplaceEdit"]
+__all__ = ["PatchResult", "Patcher", "SearchReplaceEdit", "SearchReplaceEngine"]
