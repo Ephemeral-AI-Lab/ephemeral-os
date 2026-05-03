@@ -1,8 +1,8 @@
 """Unit tests for ``sandbox.code_intelligence.daemon.launcher``.
 
-The headline tests extract the bundle to a tmp dir and import the daemon
+The headline tests extract the bundle to a tmp dir and import the command
 entrypoint from the extracted tree in a fresh subprocess. That mechanically
-catches the "transitive-imports-not-bundled" failure mode the daemon would
+catches the "transitive-imports-not-bundled" failure mode the command would
 otherwise hit on a clean sandbox image.
 """
 
@@ -57,11 +57,8 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/client/async_bridge.py",
         "sandbox/code_intelligence/service.py",
         "sandbox/code_intelligence/backends/protocol.py",
-        "sandbox/code_intelligence/daemon/__main__.py",
-        "sandbox/code_intelligence/daemon/server.py",
-        "sandbox/code_intelligence/daemon/protocol.py",
+        "sandbox/code_intelligence/daemon/command.py",
         "sandbox/code_intelligence/daemon/storage.py",
-        "msgpack/__init__.py",
     ]
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"
@@ -88,9 +85,8 @@ def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
         "-c",
         (
             f"import sys; sys.path.insert(0, {str(extract_dir)!r}); "
-            "from sandbox.code_intelligence.daemon.__main__ import main; "
-            "from sandbox.code_intelligence.daemon.server import DISPATCH; "
-            "print('ok:', callable(main), sorted(DISPATCH))"
+            "from sandbox.code_intelligence.daemon.command import COMMAND_VERSION, main; "
+            "print('ok:', callable(main), COMMAND_VERSION)"
         ),
     ]
     result = subprocess.run(
@@ -104,7 +100,7 @@ def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
         f"daemon import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )
     assert "ok: True" in result.stdout
-    assert "ping" in result.stdout
+    assert "0.4.0" in result.stdout
 
 
 def test_bundle_hash_is_deterministic() -> None:

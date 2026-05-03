@@ -1,10 +1,10 @@
-"""Bundle helper + idempotent uploader for the in-sandbox CI runtime.
+"""Bundle helper + idempotent uploader for the sandbox-local CI runtime.
 
-The bundle is a tar.gz containing the minimal set of project modules needed
-to run ``python -m sandbox.code_intelligence.daemon.command`` inside a
-sandbox: the entire ``sandbox/code_intelligence/`` tree plus the transitive
-``sandbox.api``/``sandbox.client.async_bridge``/``sandbox.lifecycle.commit``
-imports it pulls in.
+The bundle is a tar.gz containing the project modules needed to import
+``sandbox.code_intelligence.daemon.command`` inside a sandbox: the
+``sandbox/code_intelligence/`` tree plus the transitive ``sandbox.api`` /
+``sandbox.client.async_bridge`` / ``sandbox.lifecycle.commit`` imports it
+pulls in.
 
 The companion :func:`ensure_runtime_uploaded` extracts the bundle under
 ``/tmp/eos-ci-runtime/`` once per ``(transport, sandbox_id)`` pair; subsequent
@@ -27,7 +27,6 @@ __all__ = [
     "BUNDLE_REMOTE_DIR",
     "DaemonUnavailable",
     "DaemonLauncher",
-    "remote_state_dir",
     "ensure_runtime_uploaded",
     "_runtime_bundle_bytes",
 ]
@@ -196,16 +195,6 @@ class DaemonUnavailable(Exception):
     """Raised when the in-sandbox command runtime cannot be prepared."""
 
 
-def remote_state_dir(home: str, workspace_root: str) -> str:
-    """Return the daemon state dir path as seen inside the sandbox."""
-    from sandbox.code_intelligence.daemon.storage import (
-        workspace_root_hash,
-    )
-
-    home = str(home or "").rstrip("/") or "/root"
-    return f"{home}/.cache/eos-ci/{workspace_root_hash(workspace_root)}/v1"
-
-
 async def ensure_runtime_uploaded(
     transport: SandboxTransport, sandbox_id: str
 ) -> str:
@@ -315,7 +304,6 @@ class DaemonLauncher:
         self._transport = transport
         self._sandbox_id = sandbox_id
         self._workspace_root = workspace_root
-        self._home_cache: str | None = None
 
     async def ensure_daemon(self, *, timeout_s: float = 10.0) -> None:
         """Ensure the command runtime is uploaded."""
@@ -343,18 +331,3 @@ class DaemonLauncher:
     async def shutdown(self) -> None:
         """No running daemon exists for the process-exec command path."""
         return None
-
-    async def state_dir(self) -> str:
-        home = await self._remote_home()
-        return remote_state_dir(home, self._workspace_root)
-
-    async def pid_path(self) -> str:
-        return f"{await self.state_dir()}/daemon.pid"
-
-    async def _remote_home(self) -> str:
-        if self._home_cache is not None:
-            return self._home_cache
-        result = await self._transport.exec(self._sandbox_id, 'printf %s "$HOME"', timeout=10)
-        home = (getattr(result, "stdout", "") or "").strip() or "/root"
-        self._home_cache = home
-        return home

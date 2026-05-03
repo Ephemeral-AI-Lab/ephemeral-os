@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def _ci_in_sandbox_enabled() -> bool:
-    """Return True when ``EOS_CI_IN_SANDBOX=1`` (the daemon migration flag)."""
+    """Return True when ``EOS_CI_IN_SANDBOX=1``."""
     return os.environ.get("EOS_CI_IN_SANDBOX") == "1"
 
 
@@ -23,16 +23,14 @@ async def bootstrap_in_sandbox_ci_runtime(
     *,
     transport: Any,
 ) -> None:
-    """Eager CI bootstrap — uploads the runtime bundle and starts the daemon.
+    """Eager CI bootstrap — uploads the runtime command bundle.
 
     Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
-    the underlying Daytona sandbox is provisioned/resumed. Phase 2 makes this
-    hook daemon-only; the Phase 1 indexer still runs from
-    ``DaemonBackend.ensure_initialized`` when callers need symbol data.
+    the underlying Daytona sandbox is provisioned/resumed.
 
     Short-circuits as a no-op when ``EOS_CI_IN_SANDBOX`` != ``"1"``,
     when ``transport`` is ``None``, or when ``workspace_root`` is empty.
-    Raises when the daemon cannot be spawned or its socket never appears.
+    Raises when the runtime bundle cannot be prepared.
 
     This helper is intentionally distinct from
     :func:`ensure_code_intelligence_runtime`, which owns the orchestrator-side
@@ -47,13 +45,13 @@ async def bootstrap_in_sandbox_ci_runtime(
     from sandbox.code_intelligence.daemon.launcher import DaemonLauncher
 
     logger.info(
-        "eager CI daemon bootstrap starting for sandbox %s at %s",
+        "eager CI command bootstrap starting for sandbox %s at %s",
         sandbox_id,
         workspace_root,
     )
     await DaemonLauncher(transport, sandbox_id, workspace_root).ensure_daemon()
     logger.info(
-        "eager CI daemon bootstrap completed for sandbox %s at %s",
+        "eager CI command bootstrap completed for sandbox %s at %s",
         sandbox_id,
         workspace_root,
     )
@@ -70,9 +68,9 @@ async def bootstrap_upload_runtime_bundle(
     Performs the chunked bundle upload without spawning the daemon. The
     create-sandbox path runs this concurrently with ``ensure_git`` (which
     is the other long pre-bootstrap step), then defers to the regular
-    :func:`bootstrap_in_sandbox_ci_runtime` afterwards — that call finds
-    the bundle already in place via ``.bundle-hash`` and only spawns the
-    daemon. Net effect: the upload's wall time overlaps with ``ensure_git``
+    :func:`bootstrap_in_sandbox_ci_runtime` afterwards. That call finds
+    the bundle already in place via ``.bundle-hash``. Net effect: the
+    upload's wall time overlaps with ``ensure_git``
     instead of stacking on top of it.
 
     Same gating as :func:`bootstrap_in_sandbox_ci_runtime`. Raises on

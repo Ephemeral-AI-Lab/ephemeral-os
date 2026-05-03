@@ -9,8 +9,7 @@ Run with::
 
     .venv/bin/pytest backend/tests/test_e2e/test_live_ci_phase3_invariants.py -m live -v -s
 
-The suite exercises daemon mutation invariants plus the workspace-write bypass
-guard.
+The suite exercises daemon mutation invariants.
 """
 
 from __future__ import annotations
@@ -94,7 +93,7 @@ def _stream_live_logs() -> Iterator[None]:
     loggers = [
         logging.getLogger("sandbox.lifecycle.service"),
         logging.getLogger("sandbox.code_intelligence.daemon.launcher"),
-        logging.getLogger("sandbox.code_intelligence.daemon.server"),
+        logging.getLogger("sandbox.code_intelligence.daemon.command"),
     ]
     old_levels = [logger.level for logger in loggers]
     old_propagate = [logger.propagate for logger in loggers]
@@ -412,77 +411,6 @@ def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None
     code_b, content_b = env.exec(f"cat {b}")
     assert code_a == 0 and content_a.strip() == "A0"
     assert code_b == 0 and content_b.strip() == "B0"
-    print(h.report())
-    h.dump_json()
-
-
-# ---------------------------------------------------------------------------
-# 3.7.F — Ledger persistence across daemon kill -9
-# ---------------------------------------------------------------------------
-
-
-def test_ledger_persistence_across_daemon_restart(
-    live_phase3_env: LivePhase3Env,
-) -> None:
-    """Edits persist in the SQLite ledger across a forced daemon restart.
-
-    Strict equality on the file set: the SQLite ledger must replay
-    every edit recorded before kill -9.
-    """
-    h = TimingHarness(phase=3, test_name="ledger_persistence")
-    env = live_phase3_env
-    daemon_backend = env.daemon_backend()
-
-    targets = [f"{env.repo_dir}/_phase3_ledger_{i}.txt" for i in range(5)]
-
-    async def write(path: str, idx: int) -> Any:
-        return await daemon_backend._call_daemon_command(
-            "write_file",
-            {
-                "specs": [
-                    {"file_path": path, "content": f"v{idx}\n", "overwrite": True}
-                ],
-                "agent_id": "agent-led",
-            },
-        )
-
-    with _traced_step(h, "five_edits"):
-        for i, path in enumerate(targets):
-            _asyncio_run(write(path, i))
-
-    pre_status = _asyncio_run(daemon_backend._call_daemon_command("status"))
-    pre_files = {
-        entry["file"]
-        for entry in (
-            ((pre_status or {}).get("hotspots") or {}).get("hotspots") or []
-        )
-    }
-    # Strict expectation: all five paths recorded BEFORE the kill.
-    assert set(targets) <= pre_files, {"missing_pre": set(targets) - pre_files}
-
-    with _traced_step(h, "kill_daemon"):
-        env.exec(
-            "kill -9 $(cat $HOME/.cache/eos-ci/*/v1/daemon.pid) || true",
-            timeout=30,
-        )
-        time.sleep(0.5)
-
-    with _traced_step(h, "respawn_via_call"):
-        post_status = _asyncio_run(daemon_backend._call_daemon_command("status"))
-    post_files = {
-        entry["file"]
-        for entry in (
-            ((post_status or {}).get("hotspots") or {}).get("hotspots") or []
-        )
-    }
-
-    # SQLite WAL must replay every pre-kill entry.
-    missing = pre_files - post_files
-    assert not missing, {
-        "missing_post": missing,
-        "pre": sorted(pre_files),
-        "post": sorted(post_files),
-    }
     print(h.report())
     h.dump_json()
 

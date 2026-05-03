@@ -59,11 +59,6 @@ intentionally absent from `sandbox.code_intelligence.service.__all__`.
 
 ## What is preserved
 
-- HTTP route prefix `"/api/code_intelligence"` (frontend contract — still
-  defined in `backend/src/server/routers/code_intelligence.py`).
-- FastAPI router tag `tags=["code_intelligence"]`.
-- The router filename `server/routers/code_intelligence.py` is unchanged
-  (renaming would have churned `app_factory.py` for no benefit).
 - `discover_workspace`-at-tool-dispatch-time timing — workspace discovery
   is still lazy. `create_sandbox` does NOT trigger CI bootstrap.
 - Lazy CI service creation. The registry is still hit only on first

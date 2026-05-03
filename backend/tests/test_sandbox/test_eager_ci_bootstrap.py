@@ -4,7 +4,7 @@ Covers:
 
 * :func:`bootstrap_in_sandbox_ci_runtime` no-ops when the flag is off,
   transport is missing, or workspace is empty.
-* :func:`bootstrap_in_sandbox_ci_runtime` starts the daemon when the flag is set.
+* :func:`bootstrap_in_sandbox_ci_runtime` prepares the command runtime when the flag is set.
 * :meth:`SandboxService.create_sandbox` (a) calls the hook when the flag is
   set, (b) skips when the flag is unset, (c) propagates errors from the hook.
 """
@@ -78,7 +78,7 @@ def test_bootstrap_helper_noop_when_workspace_empty(flag_on: None) -> None:
     )
 
 
-def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
+def test_bootstrap_helper_prepares_command_runtime(flag_on: None) -> None:
     from sandbox.code_intelligence.daemon.launcher import bundle_hash
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
@@ -87,10 +87,6 @@ def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
     class FakeTransport:
         async def exec(self, sandbox_id: str, command: str, **_: Any) -> Any:
             calls.append((sandbox_id, command))
-            if 'printf %s "$HOME"' in command:
-                return type("R", (), {"exit_code": 0, "stdout": "/home/u"})()
-            if "daemon.pid" in command and "kill -0" in command:
-                return type("R", (), {"exit_code": 1, "stdout": ""})()
             if ".bundle-hash" in command and "tar -xzf" not in command:
                 return type("R", (), {"exit_code": 0, "stdout": bundle_hash()})()
             return type("R", (), {"exit_code": 0, "stdout": "{\"ok\": true}"})()
@@ -108,12 +104,9 @@ def test_bootstrap_helper_starts_daemon(flag_on: None) -> None:
             transport=FakeTransport(),
         )
     )
-    assert any(
-        "setsid nohup python3 -m sandbox.code_intelligence.daemon" in cmd
-        for _, cmd in calls
-    )
-    assert any("--workspace-root /ws" in cmd for _, cmd in calls)
-    assert any("test -S" in cmd and "daemon.sock" in cmd for _, cmd in calls)
+    assert any(".bundle-hash" in cmd for _, cmd in calls)
+    assert not any("setsid nohup" in cmd for _, cmd in calls)
+    assert not any("daemon.sock" in cmd for _, cmd in calls)
 
 
 def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
@@ -121,12 +114,12 @@ def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
     from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
 
     async def fail_ensure(*_: Any, **__: Any) -> None:
-        raise DaemonUnavailable("socket timeout")
+        raise DaemonUnavailable("runtime unavailable")
 
     with patch(
         "sandbox.code_intelligence.daemon.launcher.DaemonLauncher.ensure_daemon",
         new=fail_ensure,
-    ), pytest.raises(DaemonUnavailable, match="socket timeout"):
+    ), pytest.raises(DaemonUnavailable, match="runtime unavailable"):
         asyncio.run(
             bootstrap_in_sandbox_ci_runtime(
                 sandbox_id="sb-1",

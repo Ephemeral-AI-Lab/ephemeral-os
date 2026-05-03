@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import json
 import sys
-import time
 import traceback
 from types import SimpleNamespace
 from typing import Any
@@ -37,6 +37,24 @@ def run_command(*, workspace_root: str, op: str, args: dict[str, Any]) -> dict[s
             },
         }
     return {"ok": True, "result": _to_dict(result)}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Small CLI wrapper for manual and bundle-import smoke checks."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        return 0
+    if len(args) < 2:
+        print("usage: command <workspace_root> <op> [json_args]", file=sys.stderr)
+        return 2
+    workspace_root, op, *rest = args
+    command_args = json.loads(rest[0]) if rest else {}
+    if not isinstance(command_args, dict):
+        print("json_args must decode to an object", file=sys.stderr)
+        return 2
+    response = run_command(workspace_root=workspace_root, op=op, args=command_args)
+    print(json.dumps(response, separators=(",", ":")))
+    return 0 if response.get("ok") else 1
 
 
 def _dispatch(*, workspace_root: str, op: str, args: dict[str, Any]) -> Any:
@@ -206,4 +224,4 @@ def _svc_cmd_result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
-__all__ = ["COMMAND_VERSION", "run_command"]
+__all__ = ["COMMAND_VERSION", "main", "run_command"]
