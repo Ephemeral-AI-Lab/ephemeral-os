@@ -5,22 +5,13 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from collections.abc import Sequence
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sandbox.client.async_bridge import run_sync
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime.bundle import ensure_runtime_uploaded
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
-
-if TYPE_CHECKING:
-    from sandbox.occ.types import (
-        EditSpec,
-        OperationChange,
-        OperationResult,
-        WriteSpec,
-    )
 
 logger = logging.getLogger(__name__)
 
@@ -185,96 +176,6 @@ class RuntimeCommandClient:
         if on_progress_line is not None and result.result:
             on_progress_line(result.result)
         return result
-
-    def commit_operation_against_base(
-        self,
-        changes: Sequence["OperationChange"],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> "OperationResult":
-        from sandbox.occ.wire import (
-            operation_change_to_dict,
-            operation_result_from_dict,
-        )
-
-        result = self._call_sync(
-            "occ.commit_against_base",
-            {
-                "workspace_root": self.workspace_root,
-                "changes": [operation_change_to_dict(c) for c in changes],
-                "agent_id": agent_id,
-                "edit_type": edit_type,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
-
-    def commit_specs_many(
-        self,
-        requests: Sequence[dict[str, Any]],
-    ) -> list["OperationResult"]:
-        from sandbox.occ.wire import operation_result_from_dict
-
-        rows = self._call_sync(
-            "occ.commit_many",
-            {
-                "workspace_root": self.workspace_root,
-                "requests": list(requests),
-            },
-        )
-        return [operation_result_from_dict(r) for r in (rows or [])]
-
-    def write_file(
-        self,
-        specs: Sequence["WriteSpec"] | "WriteSpec",
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> "OperationResult":
-        from sandbox.occ.wire import (
-            normalize_write_specs,
-            operation_result_from_dict,
-            writespec_to_dict,
-        )
-
-        normalized = normalize_write_specs(specs)
-        result = self._call_sync(
-            "occ.write",
-            {
-                "workspace_root": self.workspace_root,
-                "specs": [writespec_to_dict(s) for s in normalized],
-                "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
-
-    def edit_file(
-        self,
-        specs: Sequence["EditSpec"] | "EditSpec",
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> "OperationResult":
-        from sandbox.occ.wire import (
-            editspec_to_dict,
-            normalize_edit_specs,
-            operation_result_from_dict,
-        )
-
-        normalized = normalize_edit_specs(specs)
-        result = self._call_sync(
-            "occ.edit",
-            {
-                "workspace_root": self.workspace_root,
-                "specs": [editspec_to_dict(s) for s in normalized],
-                "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
 
     def dispose(self) -> None:
         return None

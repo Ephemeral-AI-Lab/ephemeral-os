@@ -4,22 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.occ.changeset.builders import (
-    edit_specs_to_changeset,
-    overlay_changes_to_changeset,
-    write_specs_to_changeset,
-)
+from sandbox.occ.changeset.builders import overlay_changes_to_changeset
 from sandbox.occ.changeset.types import (
     BinaryChange,
     DeleteChange,
-    EditChange,
     OpaqueDirChange,
     SymlinkChange,
     WriteChange,
 )
 from sandbox.occ.content.hashing import content_hash
-from sandbox.occ.patching.patcher import SearchReplaceEdit
-from sandbox.occ.types import EditSpec, WriteSpec
 
 
 @dataclass
@@ -29,78 +22,6 @@ class _UpperChange:
     base_bytes: bytes | None
     upper_bytes: bytes | None
     base_existed: bool
-
-
-class _StubContent:
-    """Minimal ContentManager double for write-spec base reads."""
-
-    def __init__(self, files: dict[str, str | None]) -> None:
-        self._files = files
-
-    def read_many(
-        self,
-        paths: list[str],
-        *,
-        allow_missing: bool = False,
-    ) -> dict[str, tuple[str, bool]]:
-        del allow_missing
-        out: dict[str, tuple[str, bool]] = {}
-        for path in paths:
-            content = self._files.get(path)
-            if content is None:
-                out[path] = ("", False)
-            else:
-                out[path] = (content, True)
-        return out
-
-
-# ---------------------------------------------------------------- write_specs
-
-
-def test_write_specs_overwrite_existing_pins_hash() -> None:
-    content = _StubContent({"a.py": "old"})
-    specs = [WriteSpec(file_path="a.py", content="new", overwrite=True)]
-    [change] = write_specs_to_changeset(specs, content=content)
-    assert isinstance(change, WriteChange)
-    assert change.path == "a.py"
-    assert change.base_existed is True
-    assert change.base_hash == content_hash("old")
-    assert change.final_content == "new"
-
-
-def test_write_specs_create_new_when_absent() -> None:
-    content = _StubContent({"new.py": None})
-    specs = [WriteSpec(file_path="new.py", content="hello", overwrite=True)]
-    [change] = write_specs_to_changeset(specs, content=content)
-    assert isinstance(change, WriteChange)
-    assert change.base_existed is False
-    assert change.base_hash == ""
-
-
-def test_write_specs_no_overwrite_pins_absent_state() -> None:
-    """``overwrite=False`` pins the absent state regardless of current existence."""
-    content = _StubContent({"a.py": "anything"})
-    specs = [WriteSpec(file_path="a.py", content="new", overwrite=False)]
-    [change] = write_specs_to_changeset(specs, content=content)
-    assert change.base_existed is False
-    # The hash is still captured for diagnostic completeness, but base_existed
-    # drives the gate's CAS.
-    assert change.base_hash == content_hash("anything")
-
-
-def test_write_specs_empty_returns_empty() -> None:
-    assert write_specs_to_changeset([], content=_StubContent({})) == []
-
-
-# ---------------------------------------------------------------- edit_specs
-
-
-def test_edit_specs_no_base_read_required() -> None:
-    edits = [SearchReplaceEdit(old_text="foo", new_text="bar")]
-    [change] = edit_specs_to_changeset([EditSpec(file_path="m.py", edits=edits)])
-    assert isinstance(change, EditChange)
-    assert change.path == "m.py"
-    assert change.edits == tuple(edits)
 
 
 # ---------------------------------------------------------------- overlay

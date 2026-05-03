@@ -1,15 +1,9 @@
 """Source-to-changeset converters for the OCC search/replace gate.
 
-Three boundary functions translate the existing API/overlay shapes into the
-strongly-typed ``Change`` union from :mod:`sandbox.occ.changeset.types`:
-
-* :func:`write_specs_to_changeset` — typed ``write_file`` request → ``WriteChange``.
-* :func:`edit_specs_to_changeset` — typed ``edit_file`` request → ``EditChange``.
-* :func:`overlay_changes_to_changeset` — overlay upperdir scan →
-  ``WriteChange``/``DeleteChange``/``SymlinkChange``/``OpaqueDirChange``/
-  ``BinaryChange``.
-
-See plan §Source-to-changeset mapping for capture-point semantics.
+After the OCC simplification, only the overlay-builder remains. The typed
+``write_file`` / ``edit_file`` API verbs build :class:`WriteChange` and
+:class:`EditChange` directly from the request shape — there is no
+intermediate spec layer.
 """
 
 from __future__ import annotations
@@ -20,58 +14,12 @@ from sandbox.occ.changeset.types import (
     BinaryChange,
     Change,
     DeleteChange,
-    EditChange,
     OpaqueDirChange,
     SymlinkChange,
     UpperChangeLike,
     WriteChange,
 )
 from sandbox.occ.content.hashing import content_hash
-from sandbox.occ.content.manager import ContentManager
-from sandbox.occ.types import EditSpec, WriteSpec
-
-
-def write_specs_to_changeset(
-    specs: Sequence[WriteSpec],
-    *,
-    content: ContentManager,
-) -> list[Change]:
-    """Translate ``write_file`` API specs into ``WriteChange``s.
-
-    Reads each path's current content via ``content`` to compute the
-    pre-mutation ``base_hash``. ``base_existed`` follows ``overwrite``: when the
-    caller forbids overwrite (``overwrite=False``) the change pins the absent
-    state, so the gate aborts if anything has appeared at the path by the time
-    it acquires the per-file lock.
-    """
-    if not specs:
-        return []
-    paths = [spec.file_path for spec in specs]
-    base = content.read_many(paths, allow_missing=True)
-    out: list[Change] = []
-    for spec in specs:
-        current, existed = base[spec.file_path]
-        out.append(
-            WriteChange(
-                path=spec.file_path,
-                base_hash=content_hash(current) if existed else "",
-                base_existed=existed if spec.overwrite else False,
-                final_content=spec.content,
-            )
-        )
-    return out
-
-
-def edit_specs_to_changeset(specs: Sequence[EditSpec]) -> list[Change]:
-    """Translate ``edit_file`` API specs into ``EditChange``s.
-
-    No base read is needed: the gate re-reads each file under its per-file lock
-    and uses ``old_text in current`` as the conflict signal.
-    """
-    return [
-        EditChange(path=spec.file_path, edits=tuple(spec.edits))
-        for spec in specs
-    ]
 
 
 def overlay_changes_to_changeset(
@@ -79,7 +27,7 @@ def overlay_changes_to_changeset(
 ) -> list[Change]:
     """Translate overlay upperdir kinds into typed ``Change``s.
 
-    Encoding rules (mirrors plan §Source-to-changeset mapping):
+    Encoding rules:
 
     * ``regular`` UTF-8 → ``WriteChange`` (gated)
     * ``regular`` non-UTF-8 → ``BinaryChange`` (direct)
@@ -152,8 +100,4 @@ def _kept_children_for(
     return kept
 
 
-__all__ = [
-    "edit_specs_to_changeset",
-    "overlay_changes_to_changeset",
-    "write_specs_to_changeset",
-]
+__all__ = ["overlay_changes_to_changeset"]

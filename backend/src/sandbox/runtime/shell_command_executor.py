@@ -10,7 +10,6 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.runtime.pipelines import shell_pipeline
 from sandbox.runtime.types import ShellResult
@@ -26,13 +25,11 @@ class AuditedCommandExecutor:
         *,
         sandbox_id: str,
         workspace_root: str,
-        write_coordinator: Any,
         rebind_sandbox: Callable[[Any], None],
         direct_runtime: bool = False,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
-        self._write_coordinator = write_coordinator
         self._rebind_sandbox = rebind_sandbox
         self._direct_runtime = direct_runtime
         self._overlay_engine: OverlayEngine | None = None
@@ -67,7 +64,6 @@ class AuditedCommandExecutor:
             agent_id=agent_id,
             overlay_engine=overlay,
             overlay_sandbox=sandbox,
-            occ_apply_changeset=_WriteCoordinatorChangeset(self._write_coordinator).apply_changeset,
             on_progress_line=on_progress_line,
         )
         return _simple_namespace_from_shell_result(result)
@@ -121,19 +117,6 @@ class AuditedCommandExecutor:
         if timeout is not None:
             return await exec_fn(command, timeout=timeout)
         return await exec_fn(command)
-
-
-class _WriteCoordinatorChangeset:
-    def __init__(self, write_coordinator: Any) -> None:
-        self._write_coordinator = write_coordinator
-
-    async def apply_changeset(self, *args: Any, **kwargs: Any) -> Any:
-        with use_sandbox_io_loop():
-            return await run_sync_in_executor(
-                self._write_coordinator.apply_changeset,
-                *args,
-                **kwargs,
-            )
 
 
 def _simple_namespace_from_shell_result(result: ShellResult) -> SimpleNamespace:

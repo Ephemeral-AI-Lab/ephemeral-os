@@ -30,8 +30,11 @@ def test_bootstrap_registers_occ_handlers() -> None:
         bootstrap.register()
 
         assert "occ.apply_changeset" in server.OP_TABLE
-        assert "occ.edit" in server.OP_TABLE
-        assert "occ.write" in server.OP_TABLE
+        # The OCC simplification collapses every mutation through the single
+        # ``occ.apply_changeset`` op; the legacy ``occ.write`` /
+        # ``occ.edit`` / ``occ.commit_*`` handlers are gone.
+        assert "occ.edit" not in server.OP_TABLE
+        assert "occ.write" not in server.OP_TABLE
     finally:
         server.OP_TABLE.clear()
         server.OP_TABLE.update(saved)

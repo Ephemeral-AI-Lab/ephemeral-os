@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from sandbox.runtime import server
-
-from . import apply_changeset, commit, edit, write
+from . import apply_changeset
 
 
 _HANDLERS = {
     "occ.apply_changeset": apply_changeset.handle,
-    "occ.commit_against_base": commit.handle_against_base,
-    "occ.commit_many": commit.handle_many,
-    "occ.edit": edit.handle,
-    "occ.write": write.handle,
 }
 
 
 def register_handlers() -> None:
+    # Imported lazily to avoid the bootstrap-time circular import:
+    # ``sandbox.occ.handlers`` is loaded from ``sandbox.runtime.server``'s
+    # ``_load_peer_bootstraps``, so importing ``server`` at module top
+    # would re-enter ``handlers`` while it is still partially initialized.
+    from sandbox.runtime import server
+
     for op, handler in _HANDLERS.items():
         existing = server.OP_TABLE.get(op)
         if existing is not None:

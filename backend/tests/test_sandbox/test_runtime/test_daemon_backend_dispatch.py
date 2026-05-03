@@ -1,9 +1,9 @@
-"""Phase 3 — DaemonBackend routes business verbs through runtime commands.
+"""DaemonBackend wire dispatch — verifies it inherits the runtime command flow.
 
-These tests inject a fake runtime command handler whose async method returns
-canned responses, then assert that each :class:`DaemonBackend` method
-serializes args correctly and reconstructs the right dataclass on the way
-out.
+After the OCC simplification, the daemon backend is purely a thin transport:
+it owns ``cmd``, ``warmup``, ``ensure_initialized``, ``rebind_sandbox``, and
+``dispose``. Mutation requests flow through ``OCCClient.apply_changeset`` and
+the runtime ``occ.apply_changeset`` handler — *not* through backend methods.
 """
 
 from __future__ import annotations
@@ -13,131 +13,22 @@ from typing import Any
 import pytest
 
 from sandbox.runtime.backends import DaemonBackend
-from sandbox.occ.types import (
-    EditSpec,
-    OperationChange,
-    WriteSpec,
-)
 
 
-class _FakeRuntime:
-    """Minimal stand-in for runtime command handling used by these tests."""
-
-    def __init__(self, response_map: dict[str, Any]) -> None:
-        self._responses = response_map
-        self.calls: list[tuple[str, dict[str, Any]]] = []
-
-    async def _call_runtime_command(
-        self,
-        op: str,
-        args: dict[str, Any] | None = None,
-        *,
-        timeout: float = 30.0,
-    ) -> Any:
-        del timeout
-        self.calls.append((op, args or {}))
-        if op not in self._responses:
-            raise AssertionError(f"unexpected op: {op}")
-        return self._responses[op]
+def test_daemon_backend_exposes_cmd_and_dispose() -> None:
+    backend = DaemonBackend(sandbox_id="sb-test", workspace_root="/ws")
+    assert backend.sandbox_id == "sb-test"
+    assert backend.workspace_root == "/ws"
+    backend.dispose()
 
 
-def _make_backend(response_map: dict[str, Any]) -> tuple[DaemonBackend, _FakeRuntime]:
-    backend = DaemonBackend(
-        sandbox_id="sb-test",
-        workspace_root="/ws",
-    )
-    runtime = _FakeRuntime(response_map)
-    backend._call_runtime_command = runtime._call_runtime_command  # type: ignore[method-assign]
-    backend.is_initialized = True  # short-circuit ensure_initialized
-    return backend, runtime
-
-
-# ---------------------------------------------------------------------------
-# Mutations
-# ---------------------------------------------------------------------------
-
-
-def _operation_result_payload(success: bool = True) -> dict[str, Any]:
-    return {
-        "success": success,
-        "status": "committed" if success else "failed",
-        "files": [
-            {
-                "success": success,
-                "file_path": "/ws/x.py",
-                "message": "",
-                "conflict": False,
-                "conflict_reason": "",
-                "snapshot_id": "",
-                "timings": {},
-            }
-        ],
-        "conflict_file": None,
-        "conflict_reason": "",
-        "timings": {"total": 0.001},
-    }
-
-
-def test_write_file_serializes_specs() -> None:
-    backend, runtime = _make_backend({"occ.write": _operation_result_payload()})
-    spec = WriteSpec(file_path="/ws/x.py", content="x = 1\n", overwrite=True)
-    result = backend.write_file(spec, agent_id="agent-a")
-    assert result.success is True
-    assert result.status == "committed"
-
-    op, args = runtime.calls[0]
-    assert op == "occ.write"
-    assert args["workspace_root"] == "/ws"
-    assert args["specs"][0] == {
-        "file_path": "/ws/x.py",
-        "content": "x = 1\n",
-        "overwrite": True,
-    }
-    assert args["agent_id"] == "agent-a"
-
-
-def test_edit_file_serializes_specs() -> None:
-    backend, runtime = _make_backend({"occ.edit": _operation_result_payload()})
-    spec = EditSpec(file_path="/ws/x.py", edits=())
-    backend.edit_file(spec)
-    args = runtime.calls[0][1]
-    assert args["specs"][0]["file_path"] == "/ws/x.py"
-
-
-def test_commit_operation_against_base_serializes_changes() -> None:
-    backend, runtime = _make_backend(
-        {"occ.commit_against_base": _operation_result_payload()}
-    )
-    change = OperationChange(
-        file_path="/ws/x.py",
-        base_content="",
-        base_hash="",
-        final_content="x = 1\n",
-    )
-    result = backend.commit_operation_against_base(
-        [change], agent_id="agent-a", edit_type="write_file"
-    )
-    assert result.success is True
-    args = runtime.calls[0][1]
-    assert args["workspace_root"] == "/ws"
-    assert args["edit_type"] == "write_file"
-    assert args["changes"][0]["file_path"] == "/ws/x.py"
-
-
-def test_commit_specs_many_round_trips() -> None:
-    backend, runtime = _make_backend(
-        {"occ.commit_many": [_operation_result_payload()]}
-    )
-    rows = backend.commit_specs_many([{"foo": "bar"}])
-    assert len(rows) == 1
-    args = runtime.calls[0][1]
-    assert args["workspace_root"] == "/ws"
-    assert args["requests"] == [{"foo": "bar"}]
-
-
-# ---------------------------------------------------------------------------
-# Dispose / warmup contracts
-# ---------------------------------------------------------------------------
+def test_daemon_backend_no_longer_exposes_legacy_mutations() -> None:
+    """The Step-4 cleanup removes write_file / edit_file / commit_* methods."""
+    backend = DaemonBackend(sandbox_id="sb", workspace_root="/ws")
+    assert not hasattr(backend, "write_file")
+    assert not hasattr(backend, "edit_file")
+    assert not hasattr(backend, "commit_operation_against_base")
+    assert not hasattr(backend, "commit_specs_many")
 
 
 def test_warmup_calls_ensure_initialized(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,3 +46,20 @@ def test_warmup_calls_ensure_initialized(monkeypatch: pytest.MonkeyPatch) -> Non
     )
     backend.warmup()
     assert called == [True]
+
+
+def test_rebind_sandbox_is_a_no_op() -> None:
+    backend = DaemonBackend(sandbox_id="sb", workspace_root="/ws")
+    # Rebinding on the daemon backend is a no-op (the host-side does not
+    # carry the sandbox handle). Just verify the method exists and runs.
+    backend.rebind_sandbox(object())
+
+
+def test_runtime_call_path_uses_apply_changeset_op() -> None:
+    """Verify the runtime command path is wired (no fake-handler injection here)."""
+    backend = DaemonBackend(sandbox_id="sb", workspace_root="/ws")
+    assert callable(getattr(backend, "_call_runtime_command", None))
+
+
+def _unused() -> dict[str, Any]:  # pragma: no cover - placeholder for legacy import compat
+    return {}

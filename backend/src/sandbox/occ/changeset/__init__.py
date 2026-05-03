@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset.apply import apply_changeset
 from sandbox.occ.changeset.legacy import LegacyChangesetResult
 from sandbox.occ.changeset.types import (
     BinaryChange,
@@ -35,5 +34,4 @@ __all__ = [
     "SymlinkChange",
     "UpperChangeLike",
     "WriteChange",
-    "apply_changeset",
 ]

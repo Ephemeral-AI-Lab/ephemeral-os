@@ -17,18 +17,13 @@ def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
         "bootstrap.py",
         "changeset",
         "client.py",
-        "commit",
         "content",
         "direct",
-        "engine.py",
         "gated",
         "handlers",
-        "operations",
         "orchestrator.py",
         "patching",
         "setup.sh",
-        "state",
-        "types.py",
         "wire.py",
     }
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-from collections.abc import Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
 
@@ -20,55 +19,6 @@ from sandbox.occ.changeset.types import (
     UpperChangeLike,
     WriteChange,
 )
-from sandbox.occ.types import (
-    EditResult,
-    EditSpec,
-    OperationChange,
-    OperationResult,
-    WriteSpec,
-)
-
-
-def normalize_write_specs(
-    specs: Sequence[WriteSpec] | WriteSpec,
-) -> list[WriteSpec]:
-    return [specs] if isinstance(specs, WriteSpec) else list(specs)
-
-
-def normalize_edit_specs(
-    specs: Sequence[EditSpec] | EditSpec,
-) -> list[EditSpec]:
-    return [specs] if isinstance(specs, EditSpec) else list(specs)
-
-
-def writespec_to_dict(spec: WriteSpec) -> dict[str, Any]:
-    return {
-        "file_path": spec.file_path,
-        "content": spec.content,
-        "overwrite": spec.overwrite,
-    }
-
-
-def editspec_to_dict(spec: EditSpec) -> dict[str, Any]:
-    return {
-        "file_path": spec.file_path,
-        "edits": [_edit_to_dict(edit) for edit in spec.edits],
-    }
-
-
-def writespec_from_dict(d: dict[str, Any]) -> WriteSpec:
-    return WriteSpec(
-        file_path=str(d["file_path"]),
-        content=str(d.get("content", "")),
-        overwrite=bool(d.get("overwrite", True)),
-    )
-
-
-def editspec_from_dict(d: dict[str, Any]) -> EditSpec:
-    return EditSpec(
-        file_path=str(d["file_path"]),
-        edits=tuple(_edit_from_dict(edit) for edit in d.get("edits", ())),
-    )
 
 
 def _edit_to_dict(edit: Any) -> dict[str, Any]:
@@ -109,53 +59,6 @@ def _edit_from_dict(d: dict[str, Any]) -> Any:
     )
 
 
-def operation_change_to_dict(change: OperationChange) -> dict[str, Any]:
-    return {
-        "file_path": change.file_path,
-        "base_content": change.base_content,
-        "base_hash": change.base_hash,
-        "final_content": change.final_content,
-        "base_existed": change.base_existed,
-        "strict_base": change.strict_base,
-    }
-
-
-def operation_change_from_dict(d: dict[str, Any]) -> OperationChange:
-    return OperationChange(
-        file_path=str(d["file_path"]),
-        base_content=str(d.get("base_content", "")),
-        base_hash=str(d.get("base_hash", "")),
-        final_content=d.get("final_content"),
-        base_existed=bool(d.get("base_existed", True)),
-        strict_base=bool(d.get("strict_base", False)),
-    )
-
-
-def edit_result_from_dict(d: dict[str, Any]) -> EditResult:
-    return EditResult(
-        success=bool(d.get("success", False)),
-        file_path=str(d.get("file_path", "")),
-        message=str(d.get("message", "")),
-        conflict=bool(d.get("conflict", False)),
-        conflict_reason=str(d.get("conflict_reason", "")),
-        snapshot_id=str(d.get("snapshot_id", "")),
-        timings=dict(d.get("timings") or {}),
-    )
-
-
-def operation_result_from_dict(d: dict[str, Any]) -> OperationResult:
-    files = tuple(edit_result_from_dict(f) for f in (d.get("files") or ()))
-    status = d.get("status", "failed")
-    return OperationResult(
-        success=bool(d.get("success", False)),
-        status=status,
-        files=files,
-        conflict_file=d.get("conflict_file"),
-        conflict_reason=str(d.get("conflict_reason", "")),
-        timings=dict(d.get("timings") or {}),
-    )
-
-
 @dataclass
 class _UpperChange:
     rel: str
@@ -181,11 +84,11 @@ def upper_change_from_dict(d: dict[str, Any]) -> UpperChangeLike:
     )
 
 
-# -- Typed Change codecs (new gate) ----------------------------------------
+# -- Typed Change codecs ---------------------------------------------------
 
 
 def change_to_dict(change: Change) -> dict[str, Any]:
-    """Encode a typed :class:`Change` for the new ``occ.apply_changeset`` wire op."""
+    """Encode a typed :class:`Change` for the ``occ.apply_changeset`` wire op."""
     if isinstance(change, WriteChange):
         return {
             "kind": "write",

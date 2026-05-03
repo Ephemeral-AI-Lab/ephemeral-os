@@ -138,10 +138,10 @@ def _make_executor(
     direct_runtime: bool,
     bridge,
 ) -> AuditedCommandExecutor:
+    del svc  # the executor no longer reaches into service internals
     executor = AuditedCommandExecutor(
         sandbox_id=sandbox_id,
         workspace_root=workspace_root,
-        write_coordinator=svc._write_coordinator,
         rebind_sandbox=lambda _sandbox: None,
         direct_runtime=direct_runtime,
     )

@@ -4,17 +4,8 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Sequence
 from typing import Any
 
-from sandbox.occ.engine import LocalOCCEngine
-from sandbox.occ.state.edit_history_ledger import EditHistoryLedger
-from sandbox.occ.types import (
-    EditSpec,
-    OperationChange,
-    OperationResult,
-    WriteSpec,
-)
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
 
 __all__ = ["InProcessBackend"]
@@ -23,7 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class InProcessBackend:
-    """In-process backend for local and sandboxless flows."""
+    """In-process backend for local and sandboxless flows.
+
+    Holds the per-sandbox shell pipeline (overlay → OCC orchestrator) and the
+    sandbox handle. The runtime ``occ.apply_changeset`` handler builds a
+    fresh :class:`ChangesetOrchestrator` per request; the backend itself
+    owns no long-lived gate state.
+    """
 
     def __init__(
         self,
@@ -31,7 +28,6 @@ class InProcessBackend:
         workspace_root: str = "/workspace",
         sandbox: Any = None,
         *,
-        edit_history: Any | None = None,
         direct_runtime: bool = False,
     ) -> None:
         self.sandbox_id = sandbox_id
@@ -39,19 +35,9 @@ class InProcessBackend:
         self._sandbox = sandbox
         self._initialized = False
         self._init_lock = threading.Lock()
-
-        history = edit_history if edit_history is not None else EditHistoryLedger()
-        self._occ = LocalOCCEngine(
-            workspace_root=workspace_root,
-            sandbox=sandbox,
-            edit_history=history,
-        )
-        self.arbiter = self._occ.arbiter
-        self._write_coordinator = self._occ.write_coordinator
         self._command_executor = AuditedCommandExecutor(
             sandbox_id=sandbox_id,
             workspace_root=workspace_root,
-            write_coordinator=self._write_coordinator,
             rebind_sandbox=self.rebind_sandbox,
             direct_runtime=direct_runtime,
         )
@@ -69,9 +55,7 @@ class InProcessBackend:
     @property
     def is_initialized(self) -> bool:
         with self._init_lock:
-            if self._initialized:
-                return True
-        return False
+            return self._initialized
 
     def warmup(self) -> None:
         if self.is_initialized:
@@ -85,58 +69,9 @@ class InProcessBackend:
         if sandbox is None:
             return
         self._sandbox = sandbox
-        self._occ.bind_sandbox(sandbox)
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
 
-    def commit_operation_against_base(
-        self,
-        changes: Sequence[OperationChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> OperationResult:
-        return self._occ.commit_operation_against_base(
-            changes,
-            agent_id=agent_id,
-            edit_type=edit_type,
-            description=description,
-        )
-
-    def commit_specs_many(
-        self,
-        requests: Sequence[dict[str, Any]],
-    ) -> list[OperationResult]:
-        return self._occ.commit_specs_many(requests)
-
-    def write_file(
-        self,
-        specs: Sequence[WriteSpec] | WriteSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._occ.write_file(
-            specs,
-            agent_id=agent_id,
-            description=description,
-        )
-
-    def edit_file(
-        self,
-        specs: Sequence[EditSpec] | EditSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        return self._occ.edit_file(
-            specs,
-            agent_id=agent_id,
-            description=description,
-        )
-
     def dispose(self) -> None:
-        self._occ.dispose()
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)

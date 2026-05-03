@@ -1,12 +1,10 @@
 """Legacy result type kept for the OCC simplification migration window.
 
-Step 1 of the OCC simplification (see
-``.omc/plans/occ-changeset-gate-simplification.md``) rewrites
-``changeset/types.py`` with the new search/replace gate result shape. Until
-the legacy gate is removed in Step 4, the existing
-``apply_changeset``/``LocalOCCEngine``/``WriteCoordinator`` chain and its
-tests still need the old result dataclass. They import it from here so the
-new types can land without breaking ``make test``.
+The new search/replace gate's result shape lives in ``changeset/types.py``.
+A small legacy surface remains to support shell-pipeline test injection that
+constructs the old shape directly: see ``runtime/pipelines.shell_pipeline``'s
+``occ_engine`` / ``occ_apply_changeset`` injection branches. Step 5 of the
+simplification will revisit whether these injections still need this type.
 """
 
 from __future__ import annotations

@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from sandbox.api.models import RawExecResult
+from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.client import OCCClient, OCCClientError
-from sandbox.occ.types import WriteSpec
 from sandbox.providers.registry import dispose_adapter, register_adapter
 from sandbox.runtime.bundle import BUNDLE_REMOTE_DIR
 
@@ -33,17 +33,20 @@ class _Adapter:
         argv = shlex.split(command)
         payload = json.loads(argv[-1])
         assert argv[:3] == ["python3", "-m", "sandbox.runtime.server"]
-        assert payload["op"] == "occ.write"
+        assert payload["op"] == "occ.apply_changeset"
         assert payload["args"]["workspace_root"] == "/workspace"
         return RawExecResult(
             exit_code=0,
             stdout=json.dumps(
                 {
-                    "success": True,
-                    "status": "committed",
-                    "files": [],
-                    "conflict_file": None,
-                    "conflict_reason": "",
+                    "files": [
+                        {
+                            "path": "/workspace/a.txt",
+                            "status": "committed",
+                            "message": "",
+                            "timings": {},
+                        }
+                    ],
                     "timings": {},
                 }
             ),
@@ -70,13 +73,21 @@ async def test_occ_client_uses_one_adapter_exec_per_request() -> None:
     adapter = _Adapter()
     register_adapter("sb-occ", adapter)
     try:
-        result = await OCCClient("sb-occ").write(
-            WriteSpec(file_path="/workspace/a.txt", content="a\n")
+        result = await OCCClient("sb-occ").apply_changeset(
+            [
+                WriteChange(
+                    path="/workspace/a.txt",
+                    base_hash="",
+                    base_existed=True,
+                    final_content="a\n",
+                )
+            ]
         )
     finally:
         dispose_adapter("sb-occ")
 
     assert result.success is True
+    assert result.files[0].status is FileStatus.COMMITTED
     assert len(adapter.calls) == 1
     assert adapter.calls[0][0] == "sb-occ"
     assert adapter.calls[0][2] == BUNDLE_REMOTE_DIR
@@ -87,8 +98,15 @@ async def test_occ_client_surfaces_exec_failure_before_json_errors() -> None:
     register_adapter("sb-occ-fail", _FailingAdapter())
     try:
         with pytest.raises(OCCClientError) as exc:
-            await OCCClient("sb-occ-fail").write(
-                WriteSpec(file_path="/workspace/a.txt", content="a\n")
+            await OCCClient("sb-occ-fail").apply_changeset(
+                [
+                    WriteChange(
+                        path="/workspace/a.txt",
+                        base_hash="",
+                        base_existed=True,
+                        final_content="a\n",
+                    )
+                ]
             )
     finally:
         dispose_adapter("sb-occ-fail")

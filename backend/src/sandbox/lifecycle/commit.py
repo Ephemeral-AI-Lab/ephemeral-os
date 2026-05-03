@@ -11,12 +11,9 @@ import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-
-if TYPE_CHECKING:
-    from sandbox.occ.types import OperationResult
 
 
 T = TypeVar("T")
@@ -200,7 +197,7 @@ async def submit_commit(
     description: str,
     agent_id: str,
     sandbox: Any | None = None,
-) -> FileChangeResult["OperationResult"]:
+) -> FileChangeResult[Any]:
     """Submit one write/edit/delete/move commit through *svc*.
 
     *svc* must be an active CodeIntelligenceService. *agent_id* is the ledger

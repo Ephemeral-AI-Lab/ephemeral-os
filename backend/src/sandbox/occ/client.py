@@ -6,20 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.types import (
-    EditSpec,
-    OperationResult,
-    WriteSpec,
-)
-from sandbox.occ.wire import (
-    change_to_dict,
-    changeset_result_from_dict,
-    editspec_to_dict,
-    normalize_edit_specs,
-    normalize_write_specs,
-    operation_result_from_dict,
-    writespec_to_dict,
-)
+from sandbox.occ.wire import change_to_dict, changeset_result_from_dict
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
 
@@ -53,40 +40,6 @@ class OCCClient:
         self.workspace_root = workspace_root
         self.timeout = timeout
 
-    async def write(
-        self,
-        specs: Sequence[WriteSpec] | WriteSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        result = await self._call(
-            "occ.write",
-            {
-                "specs": [writespec_to_dict(s) for s in normalize_write_specs(specs)],
-                "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
-
-    async def edit(
-        self,
-        specs: Sequence[EditSpec] | EditSpec,
-        *,
-        agent_id: str = "",
-        description: str = "",
-    ) -> OperationResult:
-        result = await self._call(
-            "occ.edit",
-            {
-                "specs": [editspec_to_dict(s) for s in normalize_edit_specs(specs)],
-                "agent_id": agent_id,
-                "description": description,
-            },
-        )
-        return operation_result_from_dict(result)
-
     async def apply_changeset(
         self,
         changes: Sequence[Change],
@@ -94,7 +47,7 @@ class OCCClient:
         agent_id: str = "",
         description: str = "",
     ) -> ChangesetResult:
-        """Apply a typed :class:`Change` batch through the new OCC gate."""
+        """Apply a typed :class:`Change` batch through the OCC gate."""
         result = await self._call(
             "occ.apply_changeset",
             {

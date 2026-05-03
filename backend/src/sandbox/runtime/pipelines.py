@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Sequence
-from contextlib import contextmanager
+from collections.abc import Callable
 from typing import Any
 
 from sandbox.occ.changeset.builders import overlay_changes_to_changeset
@@ -13,10 +12,8 @@ from sandbox.occ.changeset.types import ChangesetResult, FileStatus
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.direct.direct_merge_coordinator import DirectMergeCoordinator
-from sandbox.occ.engine import LocalOCCEngine
 from sandbox.occ.gated.gated_coordinator import OCCGatedCoordinator
 from sandbox.occ.orchestrator import ChangesetOrchestrator
-from sandbox.occ.types import EditSpec, OperationResult, WriteSpec
 from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.runtime.types import ConflictInfo, ShellResult
@@ -56,8 +53,8 @@ async def shell_pipeline(
             on_progress_line=on_progress_line,
         )
 
-        # Test injection paths still expect the legacy upper_changes
-        # signature returning LegacyChangesetResult.
+        # Test injection paths still expect the legacy upper_changes signature
+        # returning ``LegacyChangesetResult``.
         if occ_engine is not None:
             legacy = await _maybe_await(
                 occ_engine.apply_changeset(
@@ -79,7 +76,7 @@ async def shell_pipeline(
             )
             return _legacy_shell_result(outcome, legacy)
 
-        # Default path: build typed changes and run them through the new gate.
+        # Default path: build typed changes and run through the new gate.
         typed_changes = overlay_changes_to_changeset(outcome.upper_changes)
         content = ContentManager(workspace_root)
         orchestrator = ChangesetOrchestrator(
@@ -94,47 +91,6 @@ async def shell_pipeline(
             dispose = getattr(overlay, "dispose", None)
             if callable(dispose):
                 dispose()
-
-
-@contextmanager
-def _occ_engine(workspace_root: str):
-    engine = LocalOCCEngine(workspace_root=workspace_root)
-    try:
-        yield engine
-    finally:
-        engine.dispose()
-
-
-def edit_pipeline(
-    specs: Sequence[EditSpec] | EditSpec,
-    *,
-    workspace_root: str = "/workspace",
-    agent_id: str = "",
-    description: str = "",
-) -> OperationResult:
-    """Apply a batch of edit specs and commit once through OCC."""
-    with _occ_engine(workspace_root) as engine:
-        return engine.edit_file(
-            specs,
-            agent_id=agent_id,
-            description=description,
-        )
-
-
-def write_pipeline(
-    specs: Sequence[WriteSpec] | WriteSpec,
-    *,
-    workspace_root: str = "/workspace",
-    agent_id: str = "",
-    description: str = "",
-) -> OperationResult:
-    """Write files and commit once through OCC."""
-    with _occ_engine(workspace_root) as engine:
-        return engine.write_file(
-            specs,
-            agent_id=agent_id,
-            description=description,
-        )
 
 
 async def _execute_overlay(
@@ -259,4 +215,4 @@ def _absolutize(rel: str, workspace_root: str) -> str:
     return f"{root}/{rel}" if root else rel
 
 
-__all__ = ["edit_pipeline", "shell_pipeline", "write_pipeline"]
+__all__ = ["shell_pipeline"]

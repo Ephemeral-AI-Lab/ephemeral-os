@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.occ.state.constants import PATCHER_MAX_DIFF_SIZE
-
 _MAX_EDITS_PER_BATCH = 100
+PATCHER_MAX_DIFF_SIZE = 4 * 1024 * 1024  # bytes
 
 
 @dataclass(frozen=True)
