@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from sandbox.code_intelligence.core.constants import PATCHER_MAX_DIFF_SIZE
+from sandbox.occ.state.constants import PATCHER_MAX_DIFF_SIZE
 
 logger = logging.getLogger(__name__)
 

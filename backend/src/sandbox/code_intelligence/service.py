@@ -155,8 +155,8 @@ class CodeIntelligenceService:
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._impl.cmd(sandbox, command, **kwargs)
 
-    def apply_edit(self, request: EditRequest) -> EditResult:
-        return self._impl.apply_edit(request)
+    def apply(self, request: EditRequest) -> EditResult:
+        return self._impl.apply(request)
 
     def commit_operation_against_base(
         self,
@@ -197,8 +197,8 @@ class CodeIntelligenceService:
     ) -> OperationResult:
         return self._impl.edit_file(specs, agent_id=agent_id, description=description)
 
-    def undo_last_edit(self, file_path: str) -> EditResult:
-        return self._impl.undo_last_edit(file_path)
+    def undo(self, file_path: str) -> EditResult:
+        return self._impl.undo(file_path)
 
     def dispose(self) -> None:
         self._impl.dispose()

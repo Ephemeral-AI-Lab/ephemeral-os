@@ -545,7 +545,7 @@ class WriteCoordinator:
             held.append(file_path)
         return held, None
 
-    def undo_last_edit(self, file_path: str) -> EditResult:
+    def undo(self, file_path: str) -> EditResult:
         """Undo the last edit to *file_path* via TimeMachine."""
         snapshot = self._time_machine.rollback(file_path)
         if snapshot is None:

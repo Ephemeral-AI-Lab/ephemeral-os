@@ -58,9 +58,9 @@ def test_server_does_not_keep_legacy_peer_branch_switches() -> None:
 
     for legacy_op in (
         "svc_cmd",
-        "apply_edit",
+        "apply",
         "commit_operation_against_base",
-        "undo_last_edit",
+        "undo",
     ):
         assert legacy_op not in source
 

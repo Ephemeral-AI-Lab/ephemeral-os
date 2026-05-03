@@ -18,7 +18,7 @@ from sandbox.occ.types import (
 )
 from sandbox.occ.state.arbiter import Arbiter
 from sandbox.occ.content.manager import ContentManager
-from sandbox.code_intelligence.mutations.mutation_service import MutationService
+from sandbox.occ.operations.service import OCCOperationService
 from sandbox.occ.patching.patcher import Patcher
 from sandbox.occ.state.time_machine import TimeMachine
 from sandbox.occ.commit import WriteCoordinator
@@ -67,7 +67,7 @@ class InProcessBackend:
             time_machine=self.time_machine,
             content=self._content,
         )
-        self._mutations = MutationService(
+        self._mutations = OCCOperationService(
             content=self._content,
             write_coordinator=self._write_coordinator,
             patcher=self.patcher,
@@ -115,8 +115,8 @@ class InProcessBackend:
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
 
-    def apply_edit(self, request: EditRequest) -> EditResult:
-        return self._mutations.apply_edit(request)
+    def apply(self, request: EditRequest) -> EditResult:
+        return self._mutations.apply(request)
 
     def commit_operation_against_base(
         self,
@@ -165,8 +165,8 @@ class InProcessBackend:
             description=description,
         )
 
-    def undo_last_edit(self, file_path: str) -> EditResult:
-        return self._mutations.undo_last_edit(file_path)
+    def undo(self, file_path: str) -> EditResult:
+        return self._mutations.undo(file_path)
 
     def dispose(self) -> None:
         self.arbiter.cleanup_locks()

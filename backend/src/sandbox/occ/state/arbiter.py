@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from sandbox.code_intelligence.core.constants import (
+from sandbox.occ.state.constants import (
     ARBITER_LOCK_TIMEOUT,
     ARBITER_MAX_CONCURRENT_EDITS,
 )

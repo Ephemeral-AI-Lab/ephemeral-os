@@ -1,6 +1,6 @@
 """Attribution-aware façade over the lifecycle commit engine.
 
-The OCC machinery (``WriteCoordinator``, ``MutationService``,
+The OCC machinery (``WriteCoordinator``, ``OCCOperationService``,
 overlay capture, etc.) lives in :mod:`sandbox.code_intelligence` and
 is reached today through a ``CodeIntelligenceService`` handle. This
 module provides the thin attribution-aware façade that the

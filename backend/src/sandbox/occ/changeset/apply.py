@@ -5,32 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
-from typing import Protocol
 
 from sandbox.api.errors import SandboxTransportError
+from sandbox.occ.changeset.types import ChangesetResult, UpperChangeLike
 from sandbox.occ.content.hashing import content_hash
-from sandbox.occ.types import OperationChange, OperationResult
 from sandbox.occ.content.manager import ContentManager
-
-
-class UpperChangeLike(Protocol):
-    rel: str
-    kind: str
-    base_bytes: bytes | None
-    upper_bytes: bytes | None
-    base_existed: bool
-
-
-@dataclass(frozen=True)
-class ChangesetResult:
-    success: bool
-    status: str
-    ledgered: tuple[str, ...] = ()
-    direct_merged: tuple[str, ...] = ()
-    conflict_reason: str | None = None
-    conflict_file: str | None = None
-    timings: dict[str, float] = field(default_factory=dict)
+from sandbox.occ.types import OperationChange, OperationResult
 
 
 CommitFn = Callable[

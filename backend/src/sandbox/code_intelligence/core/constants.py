@@ -5,13 +5,6 @@ from __future__ import annotations
 # Symbol index
 SYMBOL_INDEX_MAX_FILES = 10_000
 SYMBOL_INDEX_BATCH_SIZE = 50
-# Arbiter
-ARBITER_LOCK_TIMEOUT = 30.0  # seconds
-ARBITER_MAX_CONCURRENT_EDITS = 10
-
-# Patcher
-PATCHER_MAX_DIFF_SIZE = 100_000  # characters
-
 # File scanning
 SKIP_DIRECTORIES = frozenset(
     {

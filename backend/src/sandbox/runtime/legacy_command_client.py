@@ -249,13 +249,13 @@ class DaemonCommandClient:
                 on_progress_line(progress_text)
         return result
 
-    def apply_edit(self, request: EditRequest) -> EditResult:
+    def apply(self, request: EditRequest) -> EditResult:
         from sandbox.occ.wire import (
             edit_request_to_dict,
             edit_result_from_dict,
         )
 
-        result = self._call_sync("apply_edit", {"request": edit_request_to_dict(request)})
+        result = self._call_sync("apply", {"request": edit_request_to_dict(request)})
         return edit_result_from_dict(result)
 
     def commit_operation_against_base(
@@ -339,10 +339,10 @@ class DaemonCommandClient:
         )
         return operation_result_from_dict(result)
 
-    def undo_last_edit(self, file_path: str) -> EditResult:
+    def undo(self, file_path: str) -> EditResult:
         from sandbox.occ.wire import edit_result_from_dict
 
-        result = self._call_sync("undo_last_edit", {"file_path": file_path})
+        result = self._call_sync("undo", {"file_path": file_path})
         return edit_result_from_dict(result)
 
     def dispose(self) -> None:
@@ -403,8 +403,8 @@ def _dispatch_legacy(*, workspace_root: str, op: str, args: dict[str, Any]) -> A
     try:
         if op == "svc_cmd":
             return _svc_cmd(svc, args)
-        if op == "apply_edit":
-            return svc.apply_edit(_edit_request_from_dict(args["request"]))
+        if op == "apply":
+            return svc.apply(_edit_request_from_dict(args["request"]))
         if op == "commit_operation_against_base":
             changes = [_operation_change_from_dict(c) for c in args.get("changes", [])]
             return svc.commit_operation_against_base(
@@ -429,8 +429,8 @@ def _dispatch_legacy(*, workspace_root: str, op: str, args: dict[str, Any]) -> A
                 agent_id=str(args.get("agent_id", "")),
                 description=str(args.get("description", "")),
             )
-        if op == "undo_last_edit":
-            return svc.undo_last_edit(str(args["file_path"]))
+        if op == "undo":
+            return svc.undo(str(args["file_path"]))
         raise KeyError(op)
     finally:
         try:

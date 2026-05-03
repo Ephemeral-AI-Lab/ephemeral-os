@@ -101,7 +101,7 @@ def test_edit_file_serializes_specs() -> None:
 def test_apply_edit_serializes_request() -> None:
     backend, daemon = _make_backend(
         {
-            "apply_edit": {
+            "apply": {
                 "success": True,
                 "file_path": "/ws/x.py",
                 "message": "",
@@ -118,7 +118,7 @@ def test_apply_edit_serializes_request() -> None:
         new_text="b",
         agent_id="ag",
     )
-    result = backend.apply_edit(request)
+    result = backend.apply(request)
     assert result.success is True
     args = daemon.calls[0][1]
     assert args["request"]["file_path"] == "/ws/x.py"
@@ -158,7 +158,7 @@ def test_commit_specs_many_round_trips() -> None:
 def test_undo_last_edit_round_trips() -> None:
     backend, _ = _make_backend(
         {
-            "undo_last_edit": {
+            "undo": {
                 "success": True,
                 "file_path": "/ws/x.py",
                 "message": "undone",
@@ -169,7 +169,7 @@ def test_undo_last_edit_round_trips() -> None:
             }
         }
     )
-    result = backend.undo_last_edit("/ws/x.py")
+    result = backend.undo("/ws/x.py")
     assert result.success is True
     assert result.message == "undone"
 

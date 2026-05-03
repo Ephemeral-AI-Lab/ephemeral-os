@@ -25,6 +25,7 @@ The `step-XX` filename prefix is the implementation order. The slice ID remains 
 - Step 1 / Slice 5a: [Overlay/OCC responsibility split report](./step-01-slice-5a-implementation-report.md)
 - Step 2 / Slice 1: [Provider seam report](./step-02-slice-1-implementation-report.md)
 - Step 3 / Slice 2: [`raw_exec` primitive report](./step-03-slice-2-implementation-report.md)
+- Step 4 / Slice 3: [Runtime scaffolding report](./step-04-slice-3-implementation-report.md)
 
 ## Ordering invariants
 
