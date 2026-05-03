@@ -272,7 +272,8 @@ def _read_xattrs(path: str) -> dict[bytes, bytes]:
 
 
 def is_whiteout(st: os.stat_result, xattrs: dict[bytes, bytes]) -> bool:
-    if stat.S_ISCHR(st.st_mode) and st.st_rdev == 0:
+    rdev = getattr(st, "st_rdev", None)
+    if stat.S_ISCHR(st.st_mode) and rdev in (0, None):
         return True
     return stat.S_ISREG(st.st_mode) and st.st_size == 0 and (
         b"user.overlay.whiteout" in xattrs

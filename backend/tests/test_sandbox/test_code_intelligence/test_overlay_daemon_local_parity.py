@@ -151,8 +151,11 @@ def _make_executor(
 
 
 def _install_daemon_subprocess(monkeypatch: pytest.MonkeyPatch, diff: str, stdout: str):
+    original_run = subprocess.run
+
     def _fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        del kwargs
+        if argv[0] != "unshare":
+            return original_run(argv, **kwargs)
         match = re.search(r"--run-dir\s+(\S+)", argv[-1])
         if match is None:
             return subprocess.CompletedProcess(argv, 1, "", "missing run-dir")
@@ -160,6 +163,14 @@ def _install_daemon_subprocess(monkeypatch: pytest.MonkeyPatch, diff: str, stdou
         run_dir.mkdir(parents=True, exist_ok=True)
         (run_dir / "diff.ndjson").write_text(diff, encoding="utf-8")
         (run_dir / "stdout.bin").write_text(stdout, encoding="utf-8")
+        (run_dir / "result.json").write_text(
+            json.dumps(
+                {"exit_code": 0, "rejected": None, "run_timings": {}},
+                separators=(",", ":"),
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         return subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(overlay_daemon_local.subprocess, "run", _fake_run)

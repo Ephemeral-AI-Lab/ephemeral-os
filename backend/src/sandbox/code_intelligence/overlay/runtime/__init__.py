@@ -12,7 +12,7 @@ from .mounts import (
     _NS_WORK,
     setup_mounts,
 )
-from .ndjson import write_diff_ndjson
+from .ndjson import write_diff_ndjson, write_reject_ndjson
 from .runner import (
     REJECT_UPPER_FULL,
     _parse_args,
@@ -49,4 +49,5 @@ __all__ = [
     "setup_mounts",
     "walk_upperdir",
     "write_diff_ndjson",
+    "write_reject_ndjson",
 ]

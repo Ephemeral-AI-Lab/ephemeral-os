@@ -1,7 +1,7 @@
 """Attribution-aware façade over the lifecycle commit engine.
 
 The OCC machinery (``WriteCoordinator``, ``MutationService``,
-``OverlayAuditor``, etc.) lives in :mod:`sandbox.code_intelligence` and
+overlay capture, etc.) lives in :mod:`sandbox.code_intelligence` and
 is reached today through a ``CodeIntelligenceService`` handle. This
 module provides the thin attribution-aware façade that the
 ``SandboxApi`` impl will compose: ``submit_commit`` and

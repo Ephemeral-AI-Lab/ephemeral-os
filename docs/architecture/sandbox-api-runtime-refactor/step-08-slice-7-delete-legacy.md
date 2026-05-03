@@ -15,9 +15,9 @@
 - `backend/src/sandbox/api/audit.py`
 - `backend/src/sandbox/api/bash.py`
 - `backend/src/sandbox/api/file_commands.py`
-- `backend/src/sandbox/api/transport.py` — `SandboxTransport` Protocol; every reference now uses `ProviderAdapter`.
+- `backend/src/sandbox/api/transport.py` — deprecated wide `SandboxTransport` Protocol; every reference now uses `ProviderAdapter` or verb-specific APIs.
 - `backend/src/sandbox/api/code_intelligence_api.py` and `code_intelligence_impl.py`, if present.
-- `backend/src/sandbox/daytona/transport.py` — `ProviderAdapter` is the only path.
+- `backend/src/sandbox/daytona/transport.py` — the legacy wide Daytona transport. `ProviderAdapter` / `providers/daytona/adapter.py` is the only remaining Daytona path.
 
 ### Modify
 - `backend/src/sandbox/api/models.py`: strip query-side types that were left as references during migration but no caller imports anymore. The query surface is migrating out under `plugins-refactor.md`; only delete here what shows zero hits.
@@ -45,7 +45,7 @@
 - Build / ruff / tests green.
 - `find backend/src/sandbox/code_intelligence -type f` returns empty (and the directory itself is removed).
 - `grep -r "SandboxTransport" backend/src/` returns zero production hits.
-- `sandbox/api/` contains only the verb modules + `_registry.py` + `models.py` + `raw_exec.py`.
+- `sandbox/api/` contains only the verb modules + `models.py` + `raw_exec.py`.
 
 ## Risks
 

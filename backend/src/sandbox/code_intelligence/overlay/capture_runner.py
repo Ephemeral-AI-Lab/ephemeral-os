@@ -248,7 +248,7 @@ class OverlayCaptureRunner(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
     ) -> OverlayRunOutcome:
         """Build the OCC-free :class:`OverlayRunOutcome` from a parsed diff.
 
-        The auditor never invokes OCC; the caller drives merge policy on
+        The capture runner never invokes OCC; the caller drives merge policy on
         :attr:`OverlayRunOutcome.upper_changes`.
         """
         return OverlayRunOutcome(

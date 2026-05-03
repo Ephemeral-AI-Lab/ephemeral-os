@@ -112,7 +112,7 @@ class AuditedSandboxApi:
         return ShellResult(
             exit_code=int(getattr(raw, "exit_code", 1) or 0),
             stdout=str(getattr(raw, "result", "") or ""),
-            stderr="",  # OverlayAuditor merges stderr into result
+            stderr="",  # Overlay capture merges stderr into result
             changed_paths=tuple(change.changed_paths),
             ambient_changed_paths=tuple(change.ambient_changed_paths),
             audit_success=change.success,

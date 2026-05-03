@@ -1,4 +1,4 @@
-"""Verify that ``svc.cmd`` uses the overlay auditor directly."""
+"""Verify that ``svc.cmd`` uses the overlay capture runner directly."""
 
 from __future__ import annotations
 
@@ -25,20 +25,20 @@ def _registry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_executor_builds_overlay_auditor_by_default(tmp_path) -> None:
+async def test_executor_builds_overlay_capture_runner_by_default(tmp_path) -> None:
     svc = CodeIntelligenceService(
         sandbox_id=f"dispatch-overlay-{tmp_path.name}",
         workspace_root=str(tmp_path),
     )
     executor: AuditedCommandExecutor = svc._command_executor  # type: ignore[attr-defined]
 
-    auditor = await executor._ensure_overlay_auditor()
+    capture_runner = await executor._ensure_capture_runner()
 
-    assert isinstance(auditor, OverlayCaptureRunner)
+    assert isinstance(capture_runner, OverlayCaptureRunner)
 
 
 @pytest.mark.asyncio
-async def test_cmd_delegates_to_overlay_auditor_with_stdin(tmp_path) -> None:
+async def test_cmd_delegates_to_overlay_capture_runner_with_stdin(tmp_path) -> None:
     sandbox = SimpleNamespace()
     svc = CodeIntelligenceService(
         sandbox_id=f"dispatch-cmd-{tmp_path.name}",
@@ -48,7 +48,7 @@ async def test_cmd_delegates_to_overlay_auditor_with_stdin(tmp_path) -> None:
     executor: AuditedCommandExecutor = svc._command_executor  # type: ignore[attr-defined]
     calls: list[dict[str, object]] = []
 
-    class _FakeOverlayAuditor:
+    class _FakeCaptureRunner:
         async def execute(self, sandbox_arg, command: str, **kwargs):
             calls.append(
                 {
@@ -65,10 +65,10 @@ async def test_cmd_delegates_to_overlay_auditor_with_stdin(tmp_path) -> None:
                 conflict=None,
             )
 
-    async def _fake_ensure_overlay_auditor():
-        return _FakeOverlayAuditor()
+    async def _fake_ensure_capture_runner():
+        return _FakeCaptureRunner()
 
-    executor._ensure_overlay_auditor = _fake_ensure_overlay_auditor  # type: ignore[method-assign]
+    executor._ensure_capture_runner = _fake_ensure_capture_runner  # type: ignore[method-assign]
 
     result = await svc.cmd(sandbox, "cat", stdin="payload")
 

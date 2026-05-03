@@ -25,6 +25,7 @@ from sandbox.client.credentials import load_credentials
 from sandbox.lifecycle.proxy import SandboxProxy
 from sandbox.lifecycle.workspace import (
     _ci_in_sandbox_enabled,
+    _build_sandbox_transport,
     _sandbox_project_root,
     bootstrap_in_sandbox_ci_runtime,
     bootstrap_upload_runtime_bundle,
@@ -34,6 +35,38 @@ if TYPE_CHECKING:
     from sandbox.code_intelligence.service import CodeIntelligenceService
 
 logger = logging.getLogger(__name__)
+
+
+def _register_daytona_provider_adapter(sandbox_id: str) -> None:
+    """Register the provider adapter for a Daytona-backed sandbox."""
+    if not sandbox_id:
+        return
+    try:
+        from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+        from sandbox.providers.registry import register_adapter
+
+        register_adapter(sandbox_id, DaytonaProviderAdapter())
+    except Exception:
+        logger.debug(
+            "Provider adapter registration failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
+
+
+def _dispose_provider_adapter(sandbox_id: str) -> None:
+    if not sandbox_id:
+        return
+    try:
+        from sandbox.providers.registry import dispose_adapter
+
+        dispose_adapter(sandbox_id)
+    except Exception:
+        logger.debug(
+            "Provider adapter disposal failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
 
 
 def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
@@ -54,16 +87,13 @@ def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
         )
         return
 
-    try:
-        from sandbox.daytona.transport import DaytonaTransport
-    except Exception:  # pragma: no cover - defensive
+    transport = _build_sandbox_transport(sandbox_id)
+    if transport is None:
         logger.debug(
-            "eager CI bootstrap skipped for sandbox %s — DaytonaTransport unavailable",
+            "eager CI bootstrap skipped for sandbox %s — transport unavailable",
             sandbox_id,
-            exc_info=True,
         )
         return
-    transport = DaytonaTransport()
 
     from sandbox.client.async_bridge import run_sync
 
@@ -101,18 +131,14 @@ def _maybe_start_eager_ci_bundle_upload(
     if not workspace_root or not sandbox_id:
         return None
 
-    try:
-        from sandbox.daytona.transport import DaytonaTransport
-    except Exception:  # pragma: no cover - defensive
+    transport = _build_sandbox_transport(sandbox_id)
+    if transport is None:
         logger.debug(
             "eager CI bundle upload (background) skipped for sandbox %s "
-            "— DaytonaTransport unavailable",
+            "— transport unavailable",
             sandbox_id,
-            exc_info=True,
         )
         return None
-
-    transport = DaytonaTransport()
 
     from sandbox.client.async_bridge import run_sync
 
@@ -312,6 +338,7 @@ class SandboxService:
         raw = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
         logger.info("create_sandbox(%s): Daytona create returned", normalized_name)
         sb = SandboxProxy(raw)
+        _register_daytona_provider_adapter(sb.id)
         logger.info("create_sandbox(%s): refresh starting", normalized_name)
         sb.refresh()
         # Kick off the runtime-bundle upload in a background thread so it
@@ -336,10 +363,12 @@ class SandboxService:
         """Start a stopped sandbox."""
         sb = self._get_proxy(sandbox_id)
         if sb.state == "started":
+            _register_daytona_provider_adapter(sb.id)
             return sb.serialize()
 
         sb._raw.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
         sb.refresh()
+        _register_daytona_provider_adapter(sb.id)
         # Same overlap as create_sandbox — bundle upload runs while the
         # sync ensure_git probe is in flight.
         upload_future = _maybe_start_eager_ci_bundle_upload(sb._raw, sb.id)
@@ -372,6 +401,7 @@ class SandboxService:
             resp = sb._raw.process.exec("pwd", timeout=10)
             exit_code = getattr(resp, "exit_code", 0)
             if exit_code in (None, 0):
+                _register_daytona_provider_adapter(sb.id)
                 return sb.serialize()
         except Exception:
             logger.warning(
@@ -398,6 +428,7 @@ class SandboxService:
         # ``EOS_CI_IN_SANDBOX`` is unset, so the cost only lands on
         # callers that actually opted into the daemon migration.
         _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
+        _register_daytona_provider_adapter(sb.id)
 
         return sb.serialize()
 
@@ -408,6 +439,7 @@ class SandboxService:
         # Dispose the per-sandbox CI service so it doesn't leak past the
         # underlying sandbox.
         self.dispose_code_intelligence(sandbox_id)
+        _dispose_provider_adapter(sandbox_id)
         logger.info("Sandbox deleted: %s", sandbox_id)
 
     # -- Code Intelligence ----------------------------------------------------
@@ -428,7 +460,7 @@ class SandboxService:
         tests; routers, benchmarks, and tool wiring must come through here.
 
         ``transport`` (Phase 1 Step 7) is optionally threaded through to the
-        registry so downstream CI subsystems (overlay auditor,
+        registry so downstream CI subsystems (overlay capture,
         ContentManager) take their Step 5 transport
         branches when invoked from production wiring.
         """

@@ -1,8 +1,8 @@
-"""Provider-neutral transport primitives consumed by SandboxApi and CI internals.
+"""Legacy wide transport primitives consumed by SandboxApi and CI internals.
 
-A single ``SandboxTransport`` implementation owns all coupling to a sandbox
-provider's SDK (Daytona today, Modal/Docker/etc. tomorrow). Callers above
-this layer never reference provider modules directly.
+``ProviderAdapter`` is the new narrow provider seam for raw runtime/setup
+execution. ``SandboxTransport`` remains as a deprecated superset while CI and
+the current audit-aware API still need byte I/O and checked-write primitives.
 
 This is the raw layer: no audit, no attribution, no policy. Audit-bearing
 flows live in ``SandboxApi``; CI internals consume ``SandboxTransport``
@@ -13,7 +13,7 @@ their own writes in audit would be a self-loop.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from sandbox.api.models import (
     CheckedWriteResult,
@@ -21,20 +21,26 @@ from sandbox.api.models import (
     RawExecResult,
 )
 
+if TYPE_CHECKING:
+    from sandbox.providers.protocol import ProviderAdapter
+else:
+    class ProviderAdapter(Protocol):
+        """Runtime stub; the daemon bundle does not ship provider adapters."""
 
-class SandboxTransport(Protocol):
-    """Raw provider-neutral primitives. All async."""
+        name: str
 
-    name: str
+        async def exec(
+            self,
+            sandbox_id: str,
+            command: str,
+            *,
+            cwd: str | None = None,
+            timeout: int | None = None,
+        ) -> RawExecResult: ...
 
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult: ...
+
+class SandboxTransport(ProviderAdapter, Protocol):
+    """Deprecated legacy transport superset. All methods are async."""
 
     async def read_bytes(self, sandbox_id: str, path: str) -> bytes: ...
 

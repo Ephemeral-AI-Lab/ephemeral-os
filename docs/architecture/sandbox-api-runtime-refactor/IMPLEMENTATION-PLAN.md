@@ -41,7 +41,11 @@ Phase C — Public surface + cleanup
 
 ### Step 2 — Slice 1 (Provider seam)
 - **Entry.** Step 1 merged.
-- **Exit gate.** Daytona adapter wraps today's transport; lifecycle wires register/dispose; `SandboxTransport` is a structural alias of `ProviderAdapter`; existing tests green.
+- **Exit gate.** Daytona provider adapter wraps today's transport for
+  `exec`; lifecycle wires register/dispose through
+  `sandbox.providers.registry`; legacy `SandboxTransport` remains a deprecated
+  wide superset of `ProviderAdapter` with byte I/O and checked batch write
+  methods intact; existing tests green.
 - **No caller migration.**
 
 ### Step 3 — Slice 2 (raw_exec)
@@ -96,7 +100,7 @@ Phase C — Public surface + cleanup
   - `grep -r "SandboxTransport" backend/src/`
   - `grep -r "audited_sandbox_api\|attribution\|sandbox.api.audit\|sandbox.api.bash\|file_commands" backend/src/`
   - `grep -r "from sandbox.daytona.transport" backend/src/`
-- **Exit gate.** `find backend/src/sandbox/code_intelligence -type f` empty. `import sandbox.code_intelligence` raises `ModuleNotFoundError`. `sandbox/api/` contains only verb modules + `_registry.py` + `models.py` + `raw_exec.py`.
+- **Exit gate.** `find backend/src/sandbox/code_intelligence -type f` empty. `import sandbox.code_intelligence` raises `ModuleNotFoundError`. `sandbox/api/` contains only verb modules + `models.py` + `raw_exec.py`.
 
 ### Step 9 — Slice 8 (tests + docs)
 - **Entry.** Step 8 merged.

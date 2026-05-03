@@ -1,4 +1,4 @@
-"""Daemon-local overlay execution helpers for OverlayAuditor."""
+"""Daemon-local overlay execution helpers for capture runs."""
 
 from __future__ import annotations
 

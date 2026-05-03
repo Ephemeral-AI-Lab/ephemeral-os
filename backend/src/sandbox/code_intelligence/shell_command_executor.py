@@ -1,10 +1,10 @@
-"""Audited sandbox command execution for code intelligence services.
+"""OCC-gated sandbox command execution for code intelligence services.
 
-Commands run through the overlay auditor. Each command executes inside a fresh
-``unshare -Urm`` namespace with a tmpfs upperdir over the live workspace. The
-auditor returns an :class:`OverlayRunOutcome` carrying raw upperdir changes;
-this executor — never overlay — drives the OCC changeset policy and
-assembles the downstream ``SimpleNamespace`` response so upstream callers
+Commands run through the overlay capture runner. Each command executes inside a
+fresh ``unshare -Urm`` namespace with a tmpfs upperdir over the live workspace.
+The capture runner returns an :class:`OverlayRunOutcome` carrying raw upperdir
+changes; this executor drives the OCC changeset policy and assembles the
+downstream ``SimpleNamespace`` response so upstream callers
 (``InProcessBackend.cmd``, agent tools) see an unchanged contract.
 """
 
@@ -100,7 +100,7 @@ def reject_result(
 class AuditedCommandExecutor:
     """Runs sandbox commands through the OCC-gated audit path.
 
-    The overlay auditor is initialized lazily on first use.
+    The overlay capture runner is initialized lazily on first use.
     """
 
     def __init__(
@@ -119,7 +119,7 @@ class AuditedCommandExecutor:
         self._rebind_sandbox = rebind_sandbox
         self._transport = transport
         self._daemon_local = daemon_local
-        self._overlay_auditor: OverlayCaptureRunner | None = None
+        self._capture_runner: OverlayCaptureRunner | None = None
         self._init_lock = asyncio.Lock()
 
     async def cmd(
@@ -140,7 +140,7 @@ class AuditedCommandExecutor:
         """Run one command through the fail-closed OCC audit path."""
         del attribute_changes  # legacy flag; OCC always gates writes now.
         self._rebind_sandbox(sandbox)
-        overlay = await self._ensure_overlay_auditor()
+        overlay = await self._ensure_capture_runner()
         outcome = await overlay.execute(
             sandbox,
             command,
@@ -261,22 +261,22 @@ class AuditedCommandExecutor:
             )
         return result
 
-    async def _ensure_overlay_auditor(self) -> OverlayCaptureRunner:
-        cached = self._overlay_auditor
+    async def _ensure_capture_runner(self) -> OverlayCaptureRunner:
+        cached = self._capture_runner
         if cached is not None:
             return cached
         async with self._init_lock:
-            cached = self._overlay_auditor
+            cached = self._capture_runner
             if cached is not None:
                 return cached
-            self._overlay_auditor = OverlayCaptureRunner(
+            self._capture_runner = OverlayCaptureRunner(
                 sandbox_id=self.sandbox_id,
                 workspace_root=self.workspace_root,
                 exec_process=self._exec_sandbox_process,
                 transport=self._transport,
                 daemon_local=self._daemon_local,
             )
-            return self._overlay_auditor
+            return self._capture_runner
 
     async def _exec_sandbox_process(
         self,

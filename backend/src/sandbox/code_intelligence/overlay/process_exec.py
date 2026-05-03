@@ -1,4 +1,4 @@
-"""Remote/local process-exec helpers for OverlayAuditor."""
+"""Remote/local process-exec helpers for overlay capture runs."""
 
 from __future__ import annotations
 

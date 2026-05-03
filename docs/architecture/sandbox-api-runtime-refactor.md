@@ -73,10 +73,17 @@ Those clients are internal route points; agent tools never import them directly.
 ```
 sandbox/providers/
     protocol.py        # ProviderAdapter: one method, exec
+    registry.py        # sandbox_id -> ProviderAdapter routing state
     daytona/adapter.py # process.exec impl
 ```
 
-The registry (`sandbox_id → ProviderAdapter`) is the only place sandbox routing happens. Lifecycle code names the provider once at sandbox creation; nothing else mentions Daytona.
+The registry (`sandbox_id → ProviderAdapter`) is the only place new provider
+routing happens. It lives under `sandbox/providers/`, not `sandbox/api/`,
+because it is provider infrastructure rather than public API surface. Lifecycle
+code names the provider once at sandbox creation; nothing else in new code
+mentions Daytona. During the migration, the legacy wide
+`sandbox.api.transport.SandboxTransport` remains available for existing callers
+that still need byte I/O or checked batch writes.
 
 ### 1.3 Runtime/Daemon Support Layer
 
@@ -274,7 +281,7 @@ Sequencing: this refactor lands without plugins. `plugins-refactor.md` picks up 
 | Server deployment breaks the bootstrap sequence | `runtime/bundle.py` is idempotent and content-addressed; `setup_orchestrator.run_all` runs *after* bundle upload; LSP-style spawn scripts run last. |
 | `server.py` becomes a hardcoded mega-router | Keep request dispatch table-driven. Peer modules register ops; server tests assert unknown-op handling and avoid per-peer dispatch branches. |
 | Peer clients drift into a second public API | Importer allowlist keeps agent tools on `sandbox.api.*`; peer clients remain internal route points used by API modules and tests. |
-| Agent tools accidentally import un-guarded `sandbox.api.raw_exec` | Lint allowlist test runs in CI; CODEOWNERS covers `sandbox/api/_registry.py`. |
+| Agent tools accidentally import un-guarded `sandbox.api.raw_exec` | Lint allowlist test runs in CI; CODEOWNERS covers `sandbox/providers/registry.py` and `sandbox/api/raw_exec.py`. |
 | Overlay→OCC responsibility split regresses today's behavior | Step 1 / Slice 5a is gated on integration tests covering silent OCC drop of `.git/` writes, mixed gitinclude/gitignore/external partitioning, read-only in-namespace runtime behavior, structural OCC conflicts, binary pass-through for gitignored files, and `argv_too_large` surfacing as structured conflict. Step 6 moves files only after Step 1 is green. |
 
 ## 6. Decisions Resolved For Execution

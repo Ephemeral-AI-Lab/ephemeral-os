@@ -81,7 +81,7 @@ async def test_overlay_reject_skips_occ_changeset(workspace: Path) -> None:
     fake_overlay = SimpleNamespace(execute=AsyncMock(return_value=reject_outcome))
 
     executor = _make_executor(workspace, write_coordinator=write_coordinator)
-    executor._ensure_overlay_auditor = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
+    executor._ensure_capture_runner = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
 
     result = await executor.cmd(SimpleNamespace(), "echo big")
 
@@ -107,7 +107,7 @@ async def test_overlay_success_then_occ_conflict_surfaces_patch_failed(
     fake_overlay = SimpleNamespace(execute=AsyncMock(return_value=_outcome_with_upper_change()))
 
     executor = _make_executor(workspace, write_coordinator=write_coordinator)
-    executor._ensure_overlay_auditor = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
+    executor._ensure_capture_runner = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
 
     result = await executor.cmd(SimpleNamespace(), "echo hi")
 
@@ -133,7 +133,7 @@ async def test_argv_overflow_surfaces_as_argv_too_large(workspace: Path) -> None
     fake_overlay = SimpleNamespace(execute=AsyncMock(return_value=_outcome_with_upper_change()))
 
     executor = _make_executor(workspace, write_coordinator=write_coordinator)
-    executor._ensure_overlay_auditor = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
+    executor._ensure_capture_runner = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
 
     result = await executor.cmd(SimpleNamespace(), "echo hi")
 
@@ -150,7 +150,7 @@ async def test_unrelated_runtime_error_propagates(workspace: Path) -> None:
     fake_overlay = SimpleNamespace(execute=AsyncMock(return_value=_outcome_with_upper_change()))
 
     executor = _make_executor(workspace, write_coordinator=write_coordinator)
-    executor._ensure_overlay_auditor = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
+    executor._ensure_capture_runner = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
 
     with pytest.raises(RuntimeError, match="disk full"):
         await executor.cmd(SimpleNamespace(), "echo hi")

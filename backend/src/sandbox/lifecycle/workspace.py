@@ -284,11 +284,43 @@ def ensure_code_intelligence_runtime(
         _attach_provider_neutral_api(context, sandbox_id, sandbox, transport=transport)
 
 
+def _register_provider_adapter_if_missing(sandbox_id: str, transport: Any) -> None:
+    if not sandbox_id:
+        return
+    try:
+        from sandbox.providers.registry import get_adapter
+
+        get_adapter(sandbox_id)
+        return
+    except KeyError:
+        pass
+    except Exception:
+        logger.debug(
+            "Provider adapter lookup failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
+        return
+    try:
+        from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+        from sandbox.providers.registry import register_adapter
+
+        register_adapter(sandbox_id, DaytonaProviderAdapter(transport=transport))
+    except Exception:
+        logger.debug(
+            "Provider adapter attachment failed for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
+
+
 def _build_sandbox_transport(sandbox_id: str) -> Any | None:
     try:
         from sandbox.daytona.transport import DaytonaTransport
 
-        return DaytonaTransport()
+        transport = DaytonaTransport()
+        _register_provider_adapter_if_missing(sandbox_id, transport)
+        return transport
     except Exception:
         logger.debug(
             "Sandbox transport attachment failed for sandbox %s",

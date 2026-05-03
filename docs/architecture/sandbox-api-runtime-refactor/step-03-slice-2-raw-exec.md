@@ -7,7 +7,7 @@
 ## Files
 
 ### Add
-- `backend/src/sandbox/api/raw_exec.py` — `def raw_exec(sid, cmd, ...) -> RawExecResult: return get_adapter(sid).exec(cmd, ...)`.
+- `backend/src/sandbox/api/raw_exec.py` — `def raw_exec(sid, cmd, ...) -> RawExecResult: return get_adapter(sid).exec(cmd, ...)`, where `get_adapter` comes from `sandbox.providers.registry`.
 - `backend/src/sandbox/api/models.py` — start with `SandboxResultBase` and `RawExecResult` only. The rest of §1.6 lands in Slice 6.
 - `test_sandbox/test_api/test_importer_allowlist.py` — AST-walk test (per parent doc §6: unit test, not custom ruff rule).
 

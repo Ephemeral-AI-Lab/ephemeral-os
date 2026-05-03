@@ -1,4 +1,4 @@
-"""Tests for overlay NDJSON parsing and auditor readback."""
+"""Tests for overlay NDJSON parsing and capture-runner readback."""
 
 from __future__ import annotations
 
@@ -134,14 +134,14 @@ async def test_read_diff_error_includes_overlay_output() -> None:
             exit_code=1,
         )
 
-    auditor = OverlayCaptureRunner(
+    capture_runner = OverlayCaptureRunner(
         sandbox_id="overlay-missing-diff",
         workspace_root="/workspace",
         exec_process=_missing_diff_exec,
     )
 
     with pytest.raises(OverlayRunError) as exc_info:
-        await auditor._read_diff(
+        await capture_runner._read_diff(
             object(),
             SimpleNamespace(run_dir="/tmp/run"),
             overlay_stdout="mount setup failed",
@@ -164,15 +164,15 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
     run_dir.mkdir()
     (run_dir / "stdout.bin").write_text("local stdout\n", encoding="utf-8")
     (run_dir / "diff.ndjson").write_text(_meta_line(exit_code=0), encoding="utf-8")
-    auditor = OverlayCaptureRunner(
+    capture_runner = OverlayCaptureRunner(
         sandbox_id="local",
         workspace_root=str(tmp_path),
         exec_process=_should_not_exec,
     )
     lease = SimpleNamespace(run_dir=str(run_dir))
 
-    assert await auditor._read_stdout(None, lease, fallback="fallback") == "local stdout\n"
-    diff = await auditor._read_diff(
+    assert await capture_runner._read_stdout(None, lease, fallback="fallback") == "local stdout\n"
+    diff = await capture_runner._read_diff(
         None,
         lease,
         overlay_stdout="local stdout\n",
@@ -180,11 +180,11 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
     )
     assert isinstance(diff, OverlayCapture)
 
-    await auditor._cleanup_run_dir(None, lease)
+    await capture_runner._cleanup_run_dir(None, lease)
     assert not run_dir.exists()
 
 
-def _make_guarded_auditor(tmp_path: Path) -> OverlayCaptureRunner:
+def _make_guarded_capture_runner(tmp_path: Path) -> OverlayCaptureRunner:
     async def _unused_exec(*_args, **_kwargs):
         raise AssertionError("freshness guard test should not execute commands")
 
@@ -198,24 +198,24 @@ def _make_guarded_auditor(tmp_path: Path) -> OverlayCaptureRunner:
 
 @pytest.mark.asyncio
 async def test_freshness_guard_rejects_external_idle_mutation(tmp_path: Path) -> None:
-    auditor = _make_guarded_auditor(tmp_path)
-    await auditor._begin_workspace_fingerprint_guard()
-    await auditor._end_workspace_fingerprint_guard()
+    capture_runner = _make_guarded_capture_runner(tmp_path)
+    await capture_runner._begin_workspace_fingerprint_guard()
+    await capture_runner._end_workspace_fingerprint_guard()
 
     (tmp_path / "external.txt").write_text("outside\n", encoding="utf-8")
 
     with pytest.raises(OverlayRunError, match="workspace changed outside"):
-        await auditor._begin_workspace_fingerprint_guard()
+        await capture_runner._begin_workspace_fingerprint_guard()
 
 
 @pytest.mark.asyncio
 async def test_freshness_guard_allows_concurrent_active_window(tmp_path: Path) -> None:
-    auditor = _make_guarded_auditor(tmp_path)
-    await auditor._begin_workspace_fingerprint_guard()
-    await auditor._end_workspace_fingerprint_guard()
+    capture_runner = _make_guarded_capture_runner(tmp_path)
+    await capture_runner._begin_workspace_fingerprint_guard()
+    await capture_runner._end_workspace_fingerprint_guard()
 
-    await auditor._begin_workspace_fingerprint_guard()
+    await capture_runner._begin_workspace_fingerprint_guard()
     (tmp_path / "during-active.txt").write_text("ok\n", encoding="utf-8")
-    await auditor._begin_workspace_fingerprint_guard()
-    await auditor._end_workspace_fingerprint_guard()
-    await auditor._end_workspace_fingerprint_guard()
+    await capture_runner._begin_workspace_fingerprint_guard()
+    await capture_runner._end_workspace_fingerprint_guard()
+    await capture_runner._end_workspace_fingerprint_guard()

@@ -1,11 +1,4 @@
-"""Dataclasses and exceptions for the overlay shell sandbox.
-
-See ``docs/architecture/overlay-sandbox-plan.md`` §4.1. These types form
-the frozen interface between the sandbox-side ``overlay_run.py`` script
-(which emits NDJSON) and the orchestrator-side ``overlay_auditor.py``
-(which parses NDJSON, invokes OCC, and assembles the downstream
-``SimpleNamespace`` response).
-"""
+"""Dataclasses and exceptions for overlay upperdir capture."""
 
 from __future__ import annotations
 
@@ -92,17 +85,7 @@ class OverlayCapture:
 
 @dataclass(frozen=True)
 class ConflictInfo:
-    """Structured failure surface for the overlay → caller boundary.
-
-    ``reason`` is a domain term ('argv_too_large', 'patch_failed', or an
-    overlay reject reason). Underlying raw OCC ``OperationStatus`` values
-    flow separately on the SimpleNamespace ``git_commit_status`` field
-    so callers can still read the precise OCC verdict; this struct is
-    the *normalized* reason the slice contracts on.
-
-    ``upper_layer_path`` captures the live workspace path the overlay
-    upperdir intended to write so the caller can inspect it on conflict.
-    """
+    """Structured failure surface for the overlay-to-caller boundary."""
 
     reason: str
     conflict_file: str | None = None
@@ -112,18 +95,11 @@ class ConflictInfo:
 
 @dataclass
 class OverlayRunOutcome:
-    """In-process handoff between OverlayAuditor and its caller.
+    """Capture-run handoff between overlay and its caller.
 
-    The auditor produces this; the caller (today's
-    ``AuditedCommandExecutor``) drives OCC merge policy on
-    :attr:`upper_changes` and assembles the downstream
-    ``SimpleNamespace`` response. Slice 5a's correctness fix is exactly
-    this seam: overlay never invokes OCC.
-
-    Not ``frozen``: ``overlay_stage_timings`` is set after lease cleanup
-    in the auditor's ``finally`` block, mirroring today's mutable
-    ``SimpleNamespace`` lifecycle. The struct is otherwise treated as
-    immutable by callers.
+    Overlay produces raw :attr:`upper_changes`; the caller drives merge
+    policy. Not ``frozen`` because ``overlay_stage_timings`` is set after
+    lease cleanup.
     """
 
     exit_code: int
