@@ -89,8 +89,9 @@ Phase C — Public surface + cleanup
   `OCCClient` is the only host-side route for OCC server ops; `setup.sh`
   is registered by `occ/bootstrap.py`. `edit_pipeline` and `write_pipeline`
   are reachable through server dispatch but **not** yet exposed via
-  `sandbox.api`. `apply_edit` / `undo_last_edit` renamed to `apply` / `undo`;
-  zero grep hits on the old names. `code_intelligence/mutations/` deleted.
+  `sandbox.api`. `apply_edit` is renamed to `apply`; the old snapshot-based
+  undo path is removed. Zero grep hits on the old names.
+  `code_intelligence/mutations/` deleted.
 
 ### Step 6 — Slice 5b (overlay peer + shell_pipeline)
 - **Entry.** Steps 1 and 5 both merged.

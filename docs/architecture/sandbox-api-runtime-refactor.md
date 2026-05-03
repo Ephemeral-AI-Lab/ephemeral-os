@@ -35,7 +35,7 @@ This refactor settles those by (a) defining a 5-verb public `sandbox.api`, (b) p
 │ runtime/server.py      (generic guarded dispatcher)    │
 │    └─► runtime/pipelines.py::<verb>_pipeline           │
 │            ├─► overlay/handlers/run.py    (shell only) │
-│            └─► occ/handlers/{apply,commit,undo,...}    │
+│            └─► occ/handlers/{apply,commit,edit,write}  │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -66,7 +66,8 @@ envelopes themselves. Guarded verbs delegate to their owning peer client:
 `sandbox.api.shell` → `OverlayClient`, `sandbox.api.write/edit` → `OCCClient`.
 Those clients are internal route points; agent tools never import them directly.
 
-`apply`, `undo`, `commit` are **OCC-internal** — reachable only inside pipelines, never through `sandbox.api`.
+`apply`, `commit`, and `apply_changeset` are **OCC-internal** — reachable
+only inside pipelines, never through `sandbox.api`.
 
 ### 1.2 Provider seam
 
@@ -122,12 +123,11 @@ backend/src/sandbox/
         setup.sh
         client.py        # host-side typed OCC request client
         bootstrap.py
-        handlers/        # server op adapters: write, edit, apply_changeset, commit, undo
+        handlers/        # server op adapters: write, edit, apply_changeset, commit
         changeset.py     # overlay UpperChange -> OCC/direct-merge decision
         arbiter.py
         content_manager.py
         patcher.py
-        time_machine.py
         write_coordinator/
         ledger_store.py
         hashing.py

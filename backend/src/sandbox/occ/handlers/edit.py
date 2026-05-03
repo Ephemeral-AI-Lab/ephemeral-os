@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from sandbox.occ.engine import LocalOCCEngine
-from sandbox.occ.wire import editspec_from_dict
-from sandbox.occ.wire import edit_request_from_dict
+from sandbox.occ.wire import edit_request_from_dict, editspec_from_dict
 from sandbox.runtime.pipelines import edit_pipeline
 
 

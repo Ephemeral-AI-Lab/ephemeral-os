@@ -29,7 +29,6 @@ sandbox/occ/
         edit.py
         apply_changeset.py
         commit.py
-        undo.py
 
     operations/               # high-level write/edit operation planning
         __init__.py
@@ -59,12 +58,11 @@ sandbox/occ/
         __init__.py
         patcher.py
 
-    state/                    # coordination, ledger, undo/time-machine state
+    state/                    # coordination and ledger state
         __init__.py
         arbiter.py
         edit_history_ledger.py
         ledger_store.py
-        time_machine.py
         constants.py
 ```
 
@@ -94,8 +92,6 @@ sandbox/occ/
   `backend/src/sandbox/occ/state/edit_history_ledger.py`.
 - `backend/src/sandbox/code_intelligence/daemon/ledger_store.py` →
   `backend/src/sandbox/occ/state/ledger_store.py`.
-- `backend/src/sandbox/code_intelligence/mutations/time_machine.py` →
-  `backend/src/sandbox/occ/state/time_machine.py`.
 - OCC-owned constants from `backend/src/sandbox/code_intelligence/core/constants.py`
   (`ARBITER_*`, `PATCHER_MAX_DIFF_SIZE`) →
   `backend/src/sandbox/occ/state/constants.py`. Query/index constants stay with
@@ -116,7 +112,7 @@ sandbox/occ/
 - `backend/src/sandbox/occ/engine.py` — `OCCEngine` Protocol; today's concrete engine becomes one impl.
 - `backend/src/sandbox/occ/bootstrap.py` — registers `setup.sh`, bundle contributions, and OCC handlers at import time.
 - `backend/src/sandbox/occ/handlers/` — thin server op adapters only:
-  `write`, `edit`, `apply_changeset`, `commit`, `undo`.
+  `write`, `edit`, `apply_changeset`, `commit`.
 
 ### Modify
 - `sandbox/runtime/server.py` — import `sandbox.occ.bootstrap` / handlers so OCC ops register at import time. Server dispatch remains `OP_TABLE`-based; no per-OCC branch is added.
@@ -130,10 +126,8 @@ sandbox/occ/
   `sandbox/api/audit.py`, `sandbox/lifecycle/commit.py`,
   `sandbox/runtime/legacy_command_client.py`, and `tools/core/` should import
   from `sandbox.occ.*` while those legacy surfaces still exist.
-- Rename OCC-internal verbs so they don't shadow the public ones:
-  - `apply_edit` → `apply`
-  - `undo_last_edit` → `undo`
-  Public `edit` / `write` verbs land in Slice 6.
+- Rename OCC-internal `apply_edit` to `apply` so it does not shadow the public
+  `edit` verb. Public `edit` / `write` verbs land in Slice 6.
 
 ### Delete
 - `backend/src/sandbox/code_intelligence/mutations/` (after move; this is the slice that retires the old location).
@@ -145,6 +139,8 @@ sandbox/occ/
 - `backend/src/sandbox/code_intelligence/mutations/mutation_results.py`.
   Inline these small planning-failure helpers into `occ/operations/service.py`
   instead of preserving another file.
+- The old snapshot undo stack. Runtime OCC keeps atomic commit rollback inside
+  `WriteCoordinator`; reusable user-facing undo state is not carried forward.
 
 Keep temporary re-export modules only where needed to keep this slice green;
 remove those shims in Slice 7 when `code_intelligence/` is deleted.
@@ -170,17 +166,16 @@ remove those shims in Slice 7 when `code_intelligence/` is deleted.
    `runtime/legacy_command_client.py` plus temporary compatibility callers to
    use that path.
 6. Define `OCCEngine` Protocol with the minimal surface: `apply(...)`,
-   `commit(...)`, `undo(...)`, `arbiter(...)`. Today's concrete engine
-   implements it as-is.
+   `commit(...)`, `arbiter(...)`. Today's concrete engine implements it as-is.
 7. Rename OCC verbs and audit every internal caller. Add a temporary lint check
-   that grep-fails on `apply_edit` / `undo_last_edit` — remove the check at end
-   of slice once zero hits.
+   that grep-fails on `apply_edit` — remove the check at end of slice once zero
+   hits.
 8. Implement `OCCClient`. It owns all host-side OCC request routing and is the
    only place outside `runtime/` that constructs OCC server envelopes.
    It should expose typed methods for the operations that later back public
    `sandbox.api.write/edit`, plus internal operations such as
-   `apply_changeset`, `commit`, and `undo` where needed by tests or migration
-   shims. It does not import Overlay.
+   `apply_changeset` and `commit` where needed by tests or migration shims. It
+   does not import Overlay.
 9. Add `occ/setup.sh` and make `occ/bootstrap.py` register it with
    `runtime/setup_orchestrator.py`. Keep setup idempotent; it may initialize
    ledger directories or OCC-local state, but it must not run shell/user
@@ -242,7 +237,8 @@ remove those shims in Slice 7 when `code_intelligence/` is deleted.
 - `runtime/bundle.py` deploys `sandbox/occ/` and `occ/setup.sh`; it does not
   deploy the retired `code_intelligence/mutations/` path.
 - The two new pipelines are dispatch-reachable through `server.py`; `sandbox.api` does not yet expose them.
-- `grep -r "apply_edit\|undo_last_edit" backend/src/` returns zero hits.
+- Grep confirms the old apply name and snapshot-undo route are gone from
+  `backend/src/`.
 
 ## Risks
 

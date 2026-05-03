@@ -95,7 +95,7 @@ backend/src/
 
 ### 1.2 OCC chokepoint
 
-Every file edit converges on a single OCC class. `mutation_service.py`, `arbiter.py`, `content_manager.py`, `patcher.py`, `time_machine.py`, and `write_coordinator/` collapse into OCC internals. External callers see one entry point.
+Every file edit converges on a single OCC class. `mutation_service.py`, `arbiter.py`, `content_manager.py`, `patcher.py`, and `write_coordinator/` collapse into OCC internals. External callers see one entry point.
 
 ### 1.3 Overlay chokepoint
 
@@ -117,13 +117,11 @@ sandbox/occ/
 │   ├── write.py
 │   ├── edit.py
 │   ├── apply_changeset.py
-│   ├── commit.py
-│   └── undo.py
+│   └── commit.py
 ├── changeset.py                   # UpperChange classification + direct merge
 ├── arbiter.py
 ├── content_manager.py
 ├── patcher.py
-├── time_machine.py
 ├── write_coordinator/             # unchanged structure, relocated
 ├── ledger_store.py                # was daemon/ledger_store.py — edit history
 ├── types.py                       # was core/types.py (EditSpec, WriteSpec, MoveSpec, OperationResult)
@@ -265,7 +263,7 @@ pass without an intermediate broken state.
 
 1. Move sandbox/code_intelligence/mutations/ → sandbox/occ/
    - Collapse arbiter + patcher + content_manager + mutation_service into OCC class
-   - Keep write_coordinator/, time_machine.py, edit_history_ledger.py as internals
+   - Keep write_coordinator/ and edit_history_ledger.py as internals
 
 2. Move sandbox/code_intelligence/overlay/ → sandbox/overlay/
    - Verify Overlay.cmd is the only entry; no other module invokes shell

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.api.models import RawExecResult
-from sandbox.occ.client import OCCClient
+from sandbox.occ.client import OCCClient, OCCClientError
 from sandbox.occ.types import WriteSpec
 from sandbox.providers.registry import dispose_adapter, register_adapter
 from sandbox.runtime.bundle import BUNDLE_REMOTE_DIR
@@ -50,6 +50,21 @@ class _Adapter:
         )
 
 
+class _FailingAdapter:
+    name = "failing"
+
+    async def exec(
+        self,
+        sandbox_id: str,
+        command: str,
+        *,
+        cwd: str | None = None,
+        timeout: int | None = None,
+    ) -> RawExecResult:
+        del sandbox_id, command, cwd, timeout
+        return RawExecResult(exit_code=127, stdout="", stderr="python3: not found")
+
+
 @pytest.mark.asyncio
 async def test_occ_client_uses_one_adapter_exec_per_request() -> None:
     adapter = _Adapter()
@@ -65,6 +80,21 @@ async def test_occ_client_uses_one_adapter_exec_per_request() -> None:
     assert len(adapter.calls) == 1
     assert adapter.calls[0][0] == "sb-occ"
     assert adapter.calls[0][2] == BUNDLE_REMOTE_DIR
+
+
+@pytest.mark.asyncio
+async def test_occ_client_surfaces_exec_failure_before_json_errors() -> None:
+    register_adapter("sb-occ-fail", _FailingAdapter())
+    try:
+        with pytest.raises(OCCClientError) as exc:
+            await OCCClient("sb-occ-fail").write(
+                WriteSpec(file_path="/workspace/a.txt", content="a\n")
+            )
+    finally:
+        dispose_adapter("sb-occ-fail")
+
+    assert exc.value.kind == "RuntimeExecFailed"
+    assert exc.value.details == {"exit_code": 127}
 
 
 def test_occ_client_does_not_import_handlers_or_overlay() -> None:

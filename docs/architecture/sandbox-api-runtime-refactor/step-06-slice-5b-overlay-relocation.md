@@ -9,13 +9,39 @@
 ### Move
 - `backend/src/sandbox/code_intelligence/overlay/` → `backend/src/sandbox/overlay/`.
 
-### Add
-- `backend/src/sandbox/overlay/__init__.py`.
-- `backend/src/sandbox/overlay/client.py` — `OverlayClient`, the host-side typed route for every overlay/shell server request. It serializes the request, invokes `runtime/server.py` through exactly one adapter exec, and returns typed overlay/result objects.
-- `backend/src/sandbox/overlay/setup.sh` — Overlay setup submitted to the runtime/daemon by `overlay/bootstrap.py` after bundle upload.
-- `backend/src/sandbox/overlay/engine.py` — `OverlayEngine` Protocol returning `OverlayRunOutcome { upper_changes, overlay_rejected, conflict, ... }`.
-- `backend/src/sandbox/overlay/bootstrap.py` — registers `setup.sh`, bundle contributions, and overlay handlers at import time.
-- `backend/src/sandbox/overlay/handlers/run.py` — single in-sandbox handler: walk upperdir, capture raw `UpperChange` records, return `OverlayRunOutcome`.
+### Target package layout
+
+The relocated overlay peer should be organized by boundary, not by the old
+temporary shim filenames. Root-level files are package entrypoints, host route
+points, contracts, wire helpers, and configuration only. Runtime-server adapters
+live under `handlers/`. Sandbox-side execution internals live under `runtime/`.
+
+```
+backend/src/sandbox/
+  overlay/
+    __init__.py                 # package marker only
+    bootstrap.py                # registers setup + ops
+    setup.sh                    # idempotent overlay setup
+    client.py                   # host-side route; one adapter.exec
+    engine.py                   # OverlayEngine / LocalOverlayEngine
+    types.py                    # OverlayRunOutcome, UpperChange, ConflictInfo
+    wire.py                     # JSON/base64 encode/decode
+    config.py                   # env knobs only
+
+    handlers/
+      __init__.py               # register_handlers()
+      run.py                    # OP: overlay.run
+      shell.py                  # OP: shell -> runtime.pipelines.shell_pipeline
+
+    runtime/
+      __init__.py
+      cli.py                    # script entrypoint, replaces old run.py facade
+      mounts.py                 # namespace + overlay mounts
+      capture.py                # walk upperdir, build UpperChange
+      command.py                # run user command, stdout handling
+      ndjson.py                 # diff/result file IO
+      types.py                  # sandbox-local runtime-only types
+```
 
 ### Modify
 - `sandbox/runtime/pipelines.py::shell_pipeline`:
@@ -32,20 +58,34 @@
   and `overlay/setup.sh`.
 - `backend/src/sandbox/overlay/daemon_local.py` if it was carried over by the
   directory move. Its in-sandbox execution/read-diff/cleanup responsibilities
-  belong in `overlay/handlers/run.py` behind `runtime/server.py`.
+  belong in `overlay/engine.py`, `overlay/handlers/run.py`, and
+  `overlay/runtime/{command,ndjson}.py` behind `runtime/server.py`.
+- `backend/src/sandbox/overlay/capture_runner.py` if it was carried over by the
+  directory move. The durable split is `overlay/engine.py` for orchestration,
+  `overlay/runtime/capture.py` for upperdir capture, and `overlay/client.py`
+  for host routing.
+- `backend/src/sandbox/overlay/run.py` if it was carried over by the directory
+  move. Its stable replacement is `overlay/runtime/cli.py`.
 
 ## Implementation tasks
 
-1. `git mv` overlay → `sandbox/overlay/`. Update imports.
-2. Extract `OverlayEngine` Protocol; today's concrete engine implements it.
+1. `git mv` overlay → `sandbox/overlay/`, then immediately reshape it into the
+   target layout above. Update imports to the new package paths.
+2. Extract `OverlayEngine` Protocol and `LocalOverlayEngine` in
+   `overlay/engine.py`. The engine owns one overlay run's orchestration:
+   lease creation/cleanup, timing, setup invocation, and call into the
+   sandbox-side runtime. It does not import OCC.
 3. Implement `OverlayClient`. It owns all host-side overlay/shell request
    routing and is the only place outside `runtime/` that constructs overlay
    server envelopes. It does not import OCC.
 4. Add `overlay/setup.sh` and make `overlay/bootstrap.py` register it with
    `runtime/setup_orchestrator.py`. Keep setup idempotent; mount/upperdir setup
-   belongs here, while user command execution stays in the overlay handler.
+   belongs here, while user command execution stays under `overlay/runtime/`.
 5. Implement `shell_pipeline` per §1.5. The pipeline does not classify — it forwards `upper_changes` to `occ.apply_changeset` and projects the verdict onto `ShellResult`. Any `git check-ignore` or `direct_merge` import in `runtime/pipelines.py` is a structural review red flag.
-6. Register overlay handlers in `server.OP_TABLE` at module import time.
+6. Register overlay handlers in `server.OP_TABLE` at module import time:
+   - `overlay.run` → `overlay/handlers/run.py`.
+   - `shell` → `overlay/handlers/shell.py`, which delegates to
+     `runtime.pipelines.shell_pipeline`.
 7. Add lint allowlist tests:
    - `from sandbox.occ` is forbidden inside `sandbox/overlay/`.
    - `from sandbox.overlay` is forbidden inside `sandbox/occ/`.
@@ -54,8 +94,13 @@
      setup/upload logic → `runtime/bundle.py`, `runtime/setup_orchestrator.py`,
      and `overlay/setup.sh`.
    - `daemon_local.py` in-sandbox run/read-diff/cleanup logic →
-     `overlay/handlers/run.py`.
-   - Delete the shim files after those responsibilities are covered.
+     `overlay/engine.py`, `overlay/handlers/run.py`, and
+     `overlay/runtime/{command,ndjson}.py`.
+   - `capture_runner.py` orchestration → `overlay/engine.py`; upperdir walk →
+     `overlay/runtime/capture.py`.
+   - `run.py` script facade → `overlay/runtime/cli.py`.
+   - Delete the shim files after those responsibilities are covered. Do not
+     preserve old names as compatibility wrappers inside the new package.
 9. Confirm 5a's reshaped overlay package transplants cleanly to `sandbox/overlay/` with no remaining gitignore / check-ignore surfaces.
 
 ## Tests
@@ -69,6 +114,20 @@
 - New `test_sandbox/test_overlay/test_bootstrap.py`:
   - `overlay/bootstrap.py` registers `overlay/setup.sh` with the setup orchestrator.
   - repeated setup registration/execution is idempotent.
+- New `test_sandbox/test_overlay/test_package_structure.py`:
+  - root `sandbox/overlay/` contains only the files and directories in the
+    target layout above.
+  - `process_exec.py`, `daemon_local.py`, `capture_runner.py`, and `run.py` do
+    not exist in `sandbox/overlay/`.
+  - no import in `sandbox/overlay/` reaches into `sandbox.occ.*`.
+- New `test_sandbox/test_overlay/test_wire.py`:
+  - `UpperChange` bytes round-trip through JSON/base64 encoding unchanged.
+  - overlay reject and success outcomes decode to typed result objects.
+- New `test_sandbox/test_overlay/test_runtime_capture.py`:
+  - upperdir walk emits raw `UpperChange` records with no git classification.
+- New `test_sandbox/test_overlay/test_runtime_command.py`:
+  - user command stdout/stderr capture and exit-code preservation remain
+    equivalent to the old runner path.
 - New `test_sandbox/test_runtime/test_shell_pipeline.py`:
   - **One wire trip per shell op** — assert exactly one `adapter.exec` invocation per pipeline call.
   - Overlay reject → no `occ.apply_changeset` invocation; `ShellResult.conflict` populated.
@@ -82,9 +141,14 @@
 - `sandbox/overlay/client.py` is the only host-side route for overlay/shell
   server requests.
 - `sandbox/overlay/setup.sh` is registered through `overlay/bootstrap.py`.
+- `sandbox/overlay/` follows the target package layout in this document.
 - `process_exec.py` and `daemon_local.py` do not exist under
   `sandbox/overlay/`; their responsibilities are represented by
-  `overlay/client.py`, `overlay/handlers/run.py`, and the runtime setup files.
+  `overlay/client.py`, `overlay/engine.py`, `overlay/handlers/run.py`,
+  `overlay/runtime/{command,ndjson}.py`, and the runtime setup files.
+- `capture_runner.py` and `run.py` do not exist under `sandbox/overlay/`;
+  their responsibilities are represented by `overlay/engine.py`,
+  `overlay/runtime/capture.py`, and `overlay/runtime/cli.py`.
 - Peer-isolation lint test passes (overlay ↔ OCC mutual non-import).
 - One-wire-trip assertion holds for every `shell_pipeline` test.
 

@@ -174,7 +174,16 @@ class OCCClient:
             cwd=BUNDLE_REMOTE_DIR,
             timeout=self.timeout,
         )
-        response = _decode_response(result.stdout)
+        try:
+            response = _decode_response(result.stdout)
+        except OCCClientError:
+            if result.exit_code != 0:
+                raise OCCClientError(
+                    kind="RuntimeExecFailed",
+                    message=result.stderr or result.stdout,
+                    details={"exit_code": result.exit_code},
+                ) from None
+            raise
         if "error" in response:
             error = response.get("error") or {}
             raise OCCClientError(

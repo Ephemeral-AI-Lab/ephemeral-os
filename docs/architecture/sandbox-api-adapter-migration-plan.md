@@ -174,10 +174,9 @@ backend/src/sandbox/
     language_server/
       transport.py             # uses SandboxTransport.exec
     mutations/                 # OCC ENGINE: WriteCoordinator, MutationService, Arbiter,
-      content_manager.py       # Patcher, TimeMachine, ContentManager — engine stays put;
+      content_manager.py       # Patcher, ContentManager — engine stays put;
       arbiter.py               # only imports change to SandboxTransport
       patcher.py
-      time_machine.py
       write_coordinator/
       mutation_service.py
     indexing/
@@ -413,8 +412,8 @@ that reads existing context fields. It does **not** import `ci_*`. The
 
 **OCC engine stays in `sandbox/code_intelligence/`.** The 7-class subsystem
 that performs OCC and audit (`WriteCoordinator`, `MutationService`,
-`Arbiter`, `Patcher`, `TimeMachine`, `ContentManager`,
-`AuditedCommandExecutor`) is not relocated. Only its bottom-edge imports
+`Arbiter`, `Patcher`, `ContentManager`, `AuditedCommandExecutor`) is not
+relocated. Only its bottom-edge imports
 flip from `sandbox.daytona.*` to `SandboxTransport`. OCC behavior,
 sequencing, conflict detection, and on-disk audit semantics are unchanged.
 
