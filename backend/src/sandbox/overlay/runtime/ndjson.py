@@ -6,7 +6,7 @@ import base64
 import json
 import os
 
-from .types import PolicyRejectOutcome, UpperChange
+from .types import UpperChange
 
 
 def write_diff_ndjson(
@@ -59,27 +59,6 @@ def _encode_bytes(value: bytes | None) -> str | None:
     return base64.b64encode(value).decode("ascii")
 
 
-def write_reject_ndjson(
-    *,
-    run_dir: str,
-    reject: PolicyRejectOutcome,
-    run_timings: dict[str, float] | None = None,
-) -> str:
-    path = os.path.join(run_dir, "diff.ndjson")
-    os.makedirs(run_dir, exist_ok=True)
-    payload = {
-        "_reject": {
-            "reason": reject.reason,
-            "paths": list(reject.paths),
-            "run_timings": dict(run_timings or {}),
-        }
-    }
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(json.dumps(payload, separators=(",", ":")))
-        fh.write("\n")
-    return path
-
-
 def write_result_json(
     *,
     run_dir: str,
@@ -104,4 +83,4 @@ def write_result_json(
     return path
 
 
-__all__ = ["write_diff_ndjson", "write_reject_ndjson", "write_result_json"]
+__all__ = ["write_diff_ndjson", "write_result_json"]

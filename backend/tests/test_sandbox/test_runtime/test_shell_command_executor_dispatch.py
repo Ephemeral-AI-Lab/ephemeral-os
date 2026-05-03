@@ -61,8 +61,6 @@ async def test_cmd_delegates_to_overlay_engine_with_stdin(tmp_path) -> None:
                 exit_code=0,
                 stdout="ok",
                 upper_changes=(),
-                overlay_rejected=False,
-                conflict=None,
             )
 
     async def _fake_ensure_overlay_engine():

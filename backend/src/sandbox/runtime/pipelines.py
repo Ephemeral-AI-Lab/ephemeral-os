@@ -10,8 +10,9 @@ from typing import Any
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.engine import LocalOCCEngine
 from sandbox.overlay.engine import LocalOverlayEngine, OverlayEngine
-from sandbox.overlay.types import ConflictInfo, OverlayRunOutcome, ShellResult
+from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.occ.types import EditSpec, OperationResult, WriteSpec
+from sandbox.runtime.types import ConflictInfo, ShellResult
 
 
 class _ApplyChangesetEngine:
@@ -65,8 +66,6 @@ async def shell_pipeline(
             agent_id=agent_id,
             on_progress_line=on_progress_line,
         )
-        if outcome.overlay_rejected:
-            return _overlay_reject_result(outcome)
 
         changeset_result = await _maybe_await(
             occ.apply_changeset(
@@ -156,26 +155,6 @@ async def _maybe_await(value: Any) -> Any:
     if inspect.isawaitable(value):
         return await value
     return value
-
-
-def _overlay_reject_result(outcome: OverlayRunOutcome) -> ShellResult:
-    conflict = outcome.conflict
-    reject = outcome.policy_reject
-    if conflict is None:
-        reason = reject.reason if reject is not None else "overlay_rejected"
-        conflict = ConflictInfo(
-            reason=reason,
-            conflict_file=reject.paths[0] if reject is not None and reject.paths else None,
-            message=reason,
-        )
-    return ShellResult(
-        result=outcome.stdout,
-        exit_code=outcome.exit_code,
-        warnings=tuple(outcome.warnings),
-        overlay_run_timings=dict(outcome.overlay_run_timings),
-        overlay_stage_timings=dict(outcome.overlay_stage_timings),
-        conflict=conflict,
-    )
 
 
 def _changeset_result(

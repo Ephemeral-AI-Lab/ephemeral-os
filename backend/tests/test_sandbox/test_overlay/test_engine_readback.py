@@ -13,7 +13,6 @@ from sandbox.overlay.engine import LocalOverlayEngine
 from sandbox.overlay.wire import parse_diff_ndjson
 from sandbox.overlay.types import (
     OverlayCapture,
-    OverlayPolicyReject,
     OverlayRunError,
 )
 from sandbox.runtime.registry import dispose_all_code_intelligence
@@ -66,25 +65,6 @@ def _change_line(
 def test_parse_ndjson_empty_body_raises() -> None:
     with pytest.raises(OverlayRunError):
         parse_diff_ndjson("")
-
-
-def test_parse_ndjson_returns_policy_reject() -> None:
-    raw = json.dumps(
-        {
-            "_reject": {
-                "reason": "overlay_upper_full",
-                "paths": [],
-                "run_timings": {"walk_upperdir": 0.2},
-            }
-        }
-    )
-
-    result = parse_diff_ndjson(raw)
-
-    assert isinstance(result, OverlayPolicyReject)
-    assert result.reason == "overlay_upper_full"
-    assert result.paths == ()
-    assert result.run_timings == {"walk_upperdir": 0.2}
 
 
 def test_parse_ndjson_meta_and_upper_change_bytes() -> None:

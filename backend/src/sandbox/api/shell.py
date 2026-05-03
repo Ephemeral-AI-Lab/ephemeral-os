@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from sandbox.api.models import ConflictInfo, ShellRequest, ShellResult
 from sandbox.overlay.client import OverlayClient
-from sandbox.overlay.types import ConflictInfo as OverlayConflictInfo
 
 
 async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
@@ -34,13 +33,13 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
     )
 
 
-def _conflict_from_overlay(conflict: OverlayConflictInfo | None) -> ConflictInfo | None:
+def _conflict_from_overlay(conflict: object | None) -> ConflictInfo | None:
     if conflict is None:
         return None
     return ConflictInfo(
-        reason=conflict.reason,
-        conflict_file=conflict.conflict_file,
-        message=conflict.message,
+        reason=str(getattr(conflict, "reason", "")),
+        conflict_file=getattr(conflict, "conflict_file", None),
+        message=str(getattr(conflict, "message", "")),
     )
 
 

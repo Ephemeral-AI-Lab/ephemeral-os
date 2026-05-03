@@ -30,14 +30,7 @@ class UpperChange:
     base_existed: bool
 
 
-@dataclass(frozen=True)
-class PolicyRejectOutcome:
-    reason: str
-    paths: tuple[str, ...]
-
-
 __all__ = [
-    "PolicyRejectOutcome",
     "UpperChange",
     "UpperChangeKind",
     "UpperEntry",

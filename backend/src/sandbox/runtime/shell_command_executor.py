@@ -12,8 +12,8 @@ from typing import Any
 
 from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from sandbox.overlay.engine import LocalOverlayEngine, OverlayEngine
-from sandbox.overlay.types import ShellResult
 from sandbox.runtime.pipelines import shell_pipeline
+from sandbox.runtime.types import ShellResult
 
 logger = logging.getLogger(__name__)
 

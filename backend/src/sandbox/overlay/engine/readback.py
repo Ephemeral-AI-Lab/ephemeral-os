@@ -25,7 +25,6 @@ from sandbox.overlay.engine.helpers import command_sample
 from sandbox.overlay.types import (
     OverlayCapture,
     OverlayLease,
-    OverlayPolicyReject,
     OverlayRunError,
     OverlayRunOutcome,
 )
@@ -150,7 +149,7 @@ class OverlayReadbackMixin:
         *,
         overlay_stdout: str = "",
         overlay_exit_code: int | None = None,
-    ) -> OverlayCapture | OverlayPolicyReject:
+    ) -> OverlayCapture:
         diff_path = posixpath.join(lease.run_dir, "diff.ndjson")
         if self._can_use_local_run_dir(sandbox):
             try:
@@ -307,21 +306,14 @@ class OverlayReadbackMixin:
         error: BaseException | None,
     ) -> None:
         total = stage_timings.get("total", 0.0)
-        rejected = bool(outcome and outcome.overlay_rejected)
-        conflict = outcome.conflict if outcome is not None else None
-        failed = rejected or conflict is not None
-        if error is None and not failed and total < SLOW_OVERLAY_TOTAL_SECONDS:
+        if error is None and total < SLOW_OVERLAY_TOTAL_SECONDS:
             return
         error_text = f"{type(error).__name__}: {error}" if error is not None else None
         logger.warning(
-            "overlay command summary: total=%.3fs rejected=%s exit_code=%s "
-            "conflict_file=%s conflict_reason=%s error=%s sandbox_id=%s "
-            "run_dir=%s timings=%s overlay_run_timings=%s command=%r",
+            "overlay command summary: total=%.3fs exit_code=%s error=%s "
+            "sandbox_id=%s run_dir=%s timings=%s overlay_run_timings=%s command=%r",
             total,
-            rejected,
             getattr(outcome, "exit_code", None),
-            getattr(conflict, "conflict_file", None),
-            getattr(conflict, "reason", None),
             error_text,
             self._sandbox_id,
             lease.run_dir,

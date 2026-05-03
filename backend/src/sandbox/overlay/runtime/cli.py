@@ -13,9 +13,6 @@ from .command import run_user_command
 from .mounts import _NS_UPPER, OverlayMountError, setup_mounts
 from .ndjson import write_diff_ndjson, write_result_json
 
-REJECT_UPPER_FULL = "overlay_upper_full"
-_REJECT_EXIT_BASE = 200
-
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -95,16 +92,10 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - e2e path
     return exit_code
 
 
-def reject_exit_code(reason: str) -> int:
-    return _REJECT_EXIT_BASE + 7 if reason == REJECT_UPPER_FULL else _REJECT_EXIT_BASE
-
-
 __all__ = [
-    "REJECT_UPPER_FULL",
     "main",
     "parse_args",
     "record_timing",
-    "reject_exit_code",
 ]
 
 

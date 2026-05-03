@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from sandbox.overlay.types import OverlayRunOutcome, ShellResult
-from sandbox.overlay.wire import overlay_outcome_from_dict, shell_result_from_dict
+from sandbox.overlay.types import OverlayRunOutcome
+from sandbox.overlay.wire import overlay_outcome_from_dict
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
+from sandbox.runtime.types import ShellResult
+from sandbox.runtime.wire import shell_result_from_dict
 
 
 class OverlayClientError(RuntimeError):

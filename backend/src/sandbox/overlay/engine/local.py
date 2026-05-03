@@ -21,10 +21,8 @@ from sandbox.overlay.engine.helpers import encode_command
 from sandbox.overlay.engine.readback import OverlayReadbackMixin
 from sandbox.overlay.engine.runner import OverlayRunnerMixin
 from sandbox.overlay.types import (
-    ConflictInfo,
     OverlayCapture,
     OverlayLease,
-    OverlayPolicyReject,
     OverlayRunOutcome,
 )
 
@@ -77,19 +75,66 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         """Run *command* under overlay and hand back an OCC-free outcome."""
         del run_id, agent_run_id, task_id, agent_id, description
         if self._direct_runtime and sandbox is None and on_progress_line is None:
-            return await self._execute_direct_runtime(
+            async def run_direct(
+                lease: OverlayLease,
+                stage_timings: dict[str, float],
+            ) -> OverlayRunOutcome:
+                return await self._run_direct_runtime_outcome(
+                    command=command,
+                    lease=lease,
+                    stage_timings=stage_timings,
+                    timeout=timeout,
+                    stdin=stdin,
+                )
+
+            return await self._execute_with_lease(
                 command,
-                timeout=timeout,
-                stdin=stdin,
+                sandbox=None,
+                run=run_direct,
+                fingerprint_guard=True,
             )
 
+        async def run(
+            lease: OverlayLease,
+            stage_timings: dict[str, float],
+        ) -> OverlayRunOutcome:
+            return await self._run_and_assemble_outcome(
+                sandbox=sandbox,
+                command=command,
+                lease=lease,
+                stage_timings=stage_timings,
+                timeout=timeout,
+                stdin=stdin,
+                on_progress_line=on_progress_line,
+            )
+
+        return await self._execute_with_lease(
+            command,
+            sandbox=sandbox,
+            run=run,
+        )
+
+    async def _execute_with_lease(
+        self,
+        command: str,
+        *,
+        sandbox: Any,
+        run: Callable[
+            [OverlayLease, dict[str, float]], Awaitable[OverlayRunOutcome]
+        ],
+        fingerprint_guard: bool = False,
+    ) -> OverlayRunOutcome:
         async with self._semaphore:
             lease = self._new_lease()
             stage_timings: dict[str, float] = {}
             total_started = time.perf_counter()
             outcome: OverlayRunOutcome | None = None
             error: BaseException | None = None
+            fingerprint_guard_started = False
             try:
+                if fingerprint_guard:
+                    await self._begin_workspace_fingerprint_guard()
+                    fingerprint_guard_started = True
                 await self._timed_stage(
                     "upload_runtime",
                     stage_timings=stage_timings,
@@ -97,15 +142,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                     command=command,
                     awaitable=self._ensure_runtime_available(sandbox),
                 )
-                outcome = await self._run_and_assemble_outcome(
-                    sandbox=sandbox,
-                    command=command,
-                    lease=lease,
-                    stage_timings=stage_timings,
-                    timeout=timeout,
-                    stdin=stdin,
-                    on_progress_line=on_progress_line,
-                )
+                outcome = await run(lease, stage_timings)
                 return outcome
             except BaseException as exc:
                 error = exc
@@ -128,98 +165,6 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
                 if outcome is not None:
                     outcome.overlay_stage_timings = dict(stage_timings)
-                self._log_execution_summary(
-                    command=command,
-                    lease=lease,
-                    stage_timings=stage_timings,
-                    outcome=outcome,
-                    error=error,
-                )
-
-    async def _execute_direct_runtime(
-        self,
-        command: str,
-        *,
-        timeout: int | None,
-        stdin: str | None,
-    ) -> OverlayRunOutcome:
-        async with self._semaphore:
-            lease = self._new_lease()
-            stage_timings: dict[str, float] = {}
-            total_started = time.perf_counter()
-            outcome: OverlayRunOutcome | None = None
-            error: BaseException | None = None
-            fingerprint_guard_started = False
-            try:
-                await self._begin_workspace_fingerprint_guard()
-                fingerprint_guard_started = True
-                await self._timed_stage(
-                    "upload_runtime",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._ensure_runtime_available(None),
-                )
-                user_cmd_b64, stdin_b64 = encode_command(command, stdin)
-                overlay_stdout, script_exit = await self._timed_stage(
-                    "unshare",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._run_overlay_direct_runtime(
-                        lease=lease,
-                        user_cmd_b64=user_cmd_b64,
-                        stdin_b64=stdin_b64,
-                        timeout=timeout,
-                    ),
-                )
-                await self._timed_stage(
-                    "read_envelope",
-                    stage_timings=stage_timings,
-                    lease=lease,
-                    command=command,
-                    awaitable=self._read_result_envelope(
-                        lease,
-                        overlay_stdout=overlay_stdout,
-                        overlay_exit_code=script_exit,
-                    ),
-                )
-                outcome = await self._finish_outcome(
-                    sandbox=None,
-                    command=command,
-                    lease=lease,
-                    stage_timings=stage_timings,
-                    overlay_stdout=overlay_stdout,
-                    script_exit=script_exit,
-                )
-                return outcome
-            except BaseException as exc:
-                error = exc
-                raise
-            finally:
-                try:
-                    await self._timed_stage(
-                        "cleanup",
-                        stage_timings=stage_timings,
-                        lease=lease,
-                        command=command,
-                        awaitable=self._cleanup_run_dir(None, lease),
-                    )
-                except OSError:
-                    logger.warning(
-                        "overlay direct-runtime run-dir cleanup failed for %s",
-                        lease.run_dir,
-                        exc_info=True,
-                    )
-                except Exception:
-                    logger.debug(
-                        "overlay direct-runtime run-dir cleanup failed for %s",
-                        lease.run_dir,
-                        exc_info=True,
-                    )
-                stage_timings["total"] = round(time.perf_counter() - total_started, 6)
-                if outcome is not None:
-                    outcome.overlay_stage_timings = dict(stage_timings)
                 if fingerprint_guard_started:
                     await self._end_workspace_fingerprint_guard()
                 self._log_execution_summary(
@@ -229,6 +174,48 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                     outcome=outcome,
                     error=error,
                 )
+
+    async def _run_direct_runtime_outcome(
+        self,
+        *,
+        command: str,
+        lease: OverlayLease,
+        stage_timings: dict[str, float],
+        timeout: int | None,
+        stdin: str | None,
+    ) -> OverlayRunOutcome:
+        user_cmd_b64, stdin_b64 = encode_command(command, stdin)
+        overlay_stdout, script_exit = await self._timed_stage(
+            "unshare",
+            stage_timings=stage_timings,
+            lease=lease,
+            command=command,
+            awaitable=self._run_overlay_direct_runtime(
+                lease=lease,
+                user_cmd_b64=user_cmd_b64,
+                stdin_b64=stdin_b64,
+                timeout=timeout,
+            ),
+        )
+        await self._timed_stage(
+            "read_envelope",
+            stage_timings=stage_timings,
+            lease=lease,
+            command=command,
+            awaitable=self._read_result_envelope(
+                lease,
+                overlay_stdout=overlay_stdout,
+                overlay_exit_code=script_exit,
+            ),
+        )
+        return await self._finish_outcome(
+            sandbox=None,
+            command=command,
+            lease=lease,
+            stage_timings=stage_timings,
+            overlay_stdout=overlay_stdout,
+            script_exit=script_exit,
+        )
 
     async def _run_and_assemble_outcome(
         self,
@@ -249,7 +236,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 lease=lease,
                 command=command,
                 awaitable=self._run_overlay(
-                    sandbox,
+                    sandbox=sandbox,
                     lease=lease,
                     user_cmd_b64=user_cmd_b64,
                     stdin_b64=stdin_b64,
@@ -297,7 +284,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
             command=command,
             awaitable=self._read_stdout(sandbox, lease, fallback=overlay_stdout),
         )
-        diff_or_reject = await self._timed_stage(
+        diff = await self._timed_stage(
             "read_diff",
             stage_timings=stage_timings,
             lease=lease,
@@ -309,13 +296,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 overlay_exit_code=script_exit,
             ),
         )
-        if isinstance(diff_or_reject, OverlayPolicyReject):
-            return self._reject_outcome(
-                stdout=stdout_text,
-                exit_code=script_exit,
-                reject=diff_or_reject,
-            )
-        return self._assemble_outcome(stdout=stdout_text, diff=diff_or_reject)
+        return self._assemble_outcome(stdout=stdout_text, diff=diff)
 
     def _assemble_outcome(
         self,
@@ -327,39 +308,8 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
             exit_code=diff.exit_code,
             stdout=stdout,
             upper_changes=diff.upper_changes,
-            overlay_rejected=False,
-            conflict=None,
             warnings=tuple(diff.warnings),
             overlay_run_timings=dict(diff.run_timings),
-            policy_reject=None,
-        )
-
-    def _reject_outcome(
-        self,
-        *,
-        stdout: str,
-        exit_code: int,
-        reject: OverlayPolicyReject,
-    ) -> OverlayRunOutcome:
-        detail = (
-            f"{reject.reason}: {','.join(reject.paths)}"
-            if reject.paths
-            else reject.reason
-        )
-        conflict = ConflictInfo(
-            reason=reject.reason,
-            conflict_file=reject.paths[0] if reject.paths else None,
-            message=detail,
-        )
-        return OverlayRunOutcome(
-            exit_code=exit_code,
-            stdout=stdout,
-            upper_changes=(),
-            overlay_rejected=True,
-            conflict=conflict,
-            warnings=(detail,),
-            overlay_run_timings=dict(reject.run_timings),
-            policy_reject=reject,
         )
 
     def _new_lease(self) -> OverlayLease:

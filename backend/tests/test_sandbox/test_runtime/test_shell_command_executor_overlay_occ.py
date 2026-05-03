@@ -11,7 +11,6 @@ import pytest
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
 from sandbox.overlay.types import (
-    OverlayPolicyReject,
     OverlayRunOutcome,
     UpperChange,
 )
@@ -36,12 +35,9 @@ def _outcome_with_upper_change() -> OverlayRunOutcome:
                 base_existed=True,
             ),
         ),
-        overlay_rejected=False,
-        conflict=None,
         warnings=(),
         overlay_run_timings={},
         overlay_stage_timings={},
-        policy_reject=None,
     )
 
 
@@ -58,36 +54,6 @@ def _make_executor(
         rebind_sandbox=lambda _sandbox: None,
         direct_runtime=False,
     )
-
-
-@pytest.mark.asyncio
-async def test_overlay_reject_skips_occ_changeset(workspace: Path) -> None:
-    write_coordinator = MagicMock()
-    write_coordinator.apply_changeset = MagicMock()
-
-    reject = OverlayPolicyReject(reason="overlay_upper_full", paths=())
-    reject_outcome = OverlayRunOutcome(
-        exit_code=207,
-        stdout="",
-        upper_changes=(),
-        overlay_rejected=True,
-        conflict=None,
-        warnings=("overlay_upper_full",),
-        overlay_run_timings={},
-        overlay_stage_timings={},
-        policy_reject=reject,
-    )
-    fake_overlay = SimpleNamespace(execute=AsyncMock(return_value=reject_outcome))
-
-    executor = _make_executor(workspace, write_coordinator=write_coordinator)
-    executor._ensure_overlay_engine = AsyncMock(return_value=fake_overlay)  # type: ignore[method-assign]
-
-    result = await executor.cmd(SimpleNamespace(), "echo big")
-
-    assert write_coordinator.apply_changeset.call_count == 0
-    assert result.conflict_reason == "overlay_upper_full"
-    assert result.conflict_file is None
-    assert result.changed_paths == []
 
 
 @pytest.mark.asyncio

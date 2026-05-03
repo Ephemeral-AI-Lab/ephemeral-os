@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sandbox.overlay.wire import shell_result_to_dict
 from sandbox.runtime.pipelines import shell_pipeline
+from sandbox.runtime.wire import shell_result_to_dict
 
 
 async def handle(args: dict[str, Any]) -> dict[str, Any]:

@@ -42,12 +42,9 @@ class _Adapter:
                     "exit_code": 0,
                     "stdout": "hi\n",
                     "upper_changes": [],
-                    "overlay_rejected": False,
-                    "conflict": None,
                     "warnings": [],
                     "overlay_run_timings": {},
                     "overlay_stage_timings": {},
-                    "policy_reject": None,
                 }
             ),
         )

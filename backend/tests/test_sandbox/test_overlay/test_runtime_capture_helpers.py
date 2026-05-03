@@ -11,10 +11,6 @@ from sandbox.overlay.runtime.capture import (
     is_whiteout,
     walk_upperdir,
 )
-from sandbox.overlay.runtime.cli import (
-    REJECT_UPPER_FULL,
-    reject_exit_code,
-)
 from sandbox.overlay.runtime.types import UpperEntry
 
 
@@ -52,8 +48,3 @@ def test_walk_upperdir_yields_regular_files(tmp_path: Path) -> None:
 
     assert [entry.rel for entry in entries] == ["pkg/app.py"]
     assert isinstance(entries[0], UpperEntry)
-
-
-def test_reject_exit_code_for_upper_full_is_distinct() -> None:
-    assert reject_exit_code(REJECT_UPPER_FULL) == 207
-    assert reject_exit_code("unknown") == 200
