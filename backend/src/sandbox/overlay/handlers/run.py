@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from sandbox.overlay.engine import LocalOverlayEngine
+from sandbox.overlay.engine import OverlayCaptureEngine
 from sandbox.overlay.wire import overlay_outcome_to_dict
 
 
 async def handle(args: dict[str, Any]) -> dict[str, Any]:
-    engine = LocalOverlayEngine(
+    engine = OverlayCaptureEngine(
         sandbox_id=str(args.get("sandbox_id") or "local"),
         workspace_root=str(args.get("workspace_root") or "/workspace"),
         direct_runtime=True,

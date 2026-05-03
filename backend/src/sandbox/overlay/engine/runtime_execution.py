@@ -1,4 +1,4 @@
-"""Overlay runtime upload and command execution helpers."""
+"""Overlay runtime upload and command execution."""
 
 from __future__ import annotations
 
@@ -18,15 +18,18 @@ from sandbox.overlay.engine.constants import (
     PROGRESS_POLL_INTERVAL_SECONDS,
     RUN_DIR_PREFIX,
 )
-from sandbox.overlay.engine.helpers import command_sample, runtime_command
-from sandbox.overlay.engine.runtime_bundle import overlay_runtime_bundle_bytes
+from sandbox.overlay.engine.command_codec import (
+    build_runtime_command,
+    format_command_sample,
+)
+from sandbox.overlay.engine.capture_runtime_bundle import capture_runtime_bundle_bytes
 from sandbox.overlay.types import OverlayLease, OverlayRunError
 
 logger = logging.getLogger(__name__)
 
 
-class OverlayRunnerMixin:
-    """Runtime upload and command execution for :class:`LocalOverlayEngine`."""
+class _RuntimeExecution:
+    """Runtime upload and command execution for the overlay capture engine."""
 
     async def _ensure_runtime_available(self, sandbox: Any) -> None:
         if self._script_uploaded:
@@ -38,7 +41,7 @@ class OverlayRunnerMixin:
                 root = Path(RUN_DIR_PREFIX)
                 root.mkdir(parents=True, exist_ok=True)
                 with tarfile.open(
-                    fileobj=io.BytesIO(overlay_runtime_bundle_bytes()),
+                    fileobj=io.BytesIO(capture_runtime_bundle_bytes()),
                     mode="r:gz",
                 ) as tar:
                     try:
@@ -48,7 +51,7 @@ class OverlayRunnerMixin:
                 self._script_uploaded = True
                 return
 
-            encoded = base64.b64encode(overlay_runtime_bundle_bytes()).decode("ascii")
+            encoded = base64.b64encode(capture_runtime_bundle_bytes()).decode("ascii")
             upload_snippet = (
                 "import base64,io,pathlib,sys,tarfile; "
                 "root=pathlib.Path(sys.argv[1]); "
@@ -84,7 +87,7 @@ class OverlayRunnerMixin:
             user_cmd_b64=user_cmd_b64,
             stdin_b64=stdin_b64,
         )
-        inner = runtime_command(args)
+        inner = build_runtime_command(args)
         full = (
             f"mkdir -p {shlex.quote(lease.run_dir)} && "
             f"unshare -Urm bash -c {shlex.quote(inner)}"
@@ -147,7 +150,7 @@ class OverlayRunnerMixin:
         timeout: int | None,
     ) -> tuple[str, int]:
         Path(lease.run_dir).mkdir(parents=True, exist_ok=True)
-        inner = runtime_command(
+        inner = build_runtime_command(
             self._runtime_args(
                 lease=lease,
                 user_cmd_b64=user_cmd_b64,
@@ -168,7 +171,7 @@ class OverlayRunnerMixin:
             "sandbox_id=%s run_dir=%s command=%r",
             self._sandbox_id,
             lease.run_dir,
-            command_sample(inner),
+            format_command_sample(inner),
         )
         started = time.perf_counter()
         completed = await asyncio.to_thread(
@@ -220,6 +223,3 @@ class OverlayRunnerMixin:
                 f"exec {command}",
             ]
         )
-
-
-__all__ = ["OverlayRunnerMixin"]

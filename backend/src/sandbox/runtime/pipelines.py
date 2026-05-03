@@ -9,7 +9,7 @@ from typing import Any
 
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.engine import LocalOCCEngine
-from sandbox.overlay.engine import LocalOverlayEngine, OverlayEngine
+from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.occ.types import EditSpec, OperationResult, WriteSpec
 from sandbox.runtime.types import ConflictInfo, ShellResult
@@ -44,7 +44,7 @@ async def shell_pipeline(
     """Run shell through overlay capture, then project OCC's changeset verdict."""
     owns_overlay = overlay_engine is None
     owns_occ = occ_engine is None and occ_apply_changeset is None
-    overlay = overlay_engine or LocalOverlayEngine(
+    overlay = overlay_engine or OverlayCaptureEngine(
         sandbox_id=sandbox_id,
         workspace_root=workspace_root,
         direct_runtime=True,

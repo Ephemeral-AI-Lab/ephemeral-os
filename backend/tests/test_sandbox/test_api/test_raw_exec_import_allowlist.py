@@ -31,6 +31,7 @@ def _is_allowlisted(path: Path) -> bool:
     return (
         path == Path("sandbox/api/__init__.py")
         or path == Path("sandbox/api/read.py")
+        or path == Path("sandbox/api/shell.py")
         or path == Path("sandbox/runtime/bundle.py")
         or path == Path("sandbox/runtime/setup_orchestrator.py")
         or path.parts[:2] == ("sandbox", "lifecycle")

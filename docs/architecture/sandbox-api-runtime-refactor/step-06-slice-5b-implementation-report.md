@@ -44,12 +44,11 @@ constructor expectations and fails before exercising the intended behavior.
 | New Path | Responsibility |
 | --- | --- |
 | `backend/src/sandbox/overlay/engine/protocol.py` | `OverlayEngine` Protocol |
-| `backend/src/sandbox/overlay/engine/local.py` | `LocalOverlayEngine` orchestration root |
-| `backend/src/sandbox/overlay/engine/runner.py` | Runtime upload and command execution helpers |
-| `backend/src/sandbox/overlay/engine/readback.py` | Stdout, diff, result-envelope, cleanup, and timing readback |
-| `backend/src/sandbox/overlay/engine/runtime_bundle.py` | Capture-runtime tarball builder |
-| `backend/src/sandbox/overlay/engine/fingerprint.py` | Local lowerdir freshness guard helpers |
-| `backend/src/sandbox/overlay/engine/helpers.py` | Command encoding and log sampling helpers |
+| `backend/src/sandbox/overlay/engine/capture_engine.py` | `OverlayCaptureEngine` orchestration root |
+| `backend/src/sandbox/overlay/engine/runtime_execution.py` | Runtime upload and command execution helpers |
+| `backend/src/sandbox/overlay/engine/run_artifacts.py` | Stdout, diff, result-envelope, cleanup, and timing readback |
+| `backend/src/sandbox/overlay/engine/capture_runtime_bundle.py` | Capture-runtime tarball builder |
+| `backend/src/sandbox/overlay/engine/command_codec.py` | Command encoding and log sampling helpers |
 | `backend/src/sandbox/overlay/engine/constants.py` | Shared overlay constants |
 
 ### Sandbox-Side Overlay Runtime
@@ -144,7 +143,7 @@ gitignore, or direct-routing runtime modules.
 
 `AuditedCommandExecutor` now lives under `sandbox/runtime/` and routes service
 commands through `shell_pipeline`. In-process service callers can provide a
-cached `LocalOverlayEngine` and a `WriteCoordinator.apply_changeset` adapter.
+cached `OverlayCaptureEngine` and a `WriteCoordinator.apply_changeset` adapter.
 
 ---
 

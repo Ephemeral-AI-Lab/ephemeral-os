@@ -6,14 +6,14 @@ import io
 import tarfile
 from pathlib import Path
 
-_OVERLAY_RUNTIME_BUNDLE_CACHE: bytes | None = None
+_CAPTURE_RUNTIME_BUNDLE_CACHE: bytes | None = None
 
 
-def overlay_runtime_bundle_bytes() -> bytes:
+def capture_runtime_bundle_bytes() -> bytes:
     """Return a tar.gz containing the sandbox-side overlay runtime."""
-    global _OVERLAY_RUNTIME_BUNDLE_CACHE
-    if _OVERLAY_RUNTIME_BUNDLE_CACHE is not None:
-        return _OVERLAY_RUNTIME_BUNDLE_CACHE
+    global _CAPTURE_RUNTIME_BUNDLE_CACHE
+    if _CAPTURE_RUNTIME_BUNDLE_CACHE is not None:
+        return _CAPTURE_RUNTIME_BUNDLE_CACHE
 
     root = Path(__file__).parents[1]
     runtime_dir = root / "runtime"
@@ -22,8 +22,8 @@ def overlay_runtime_bundle_bytes() -> bytes:
         for path in sorted(runtime_dir.rglob("*.py")):
             rel = path.relative_to(runtime_dir).as_posix()
             tar.add(path, arcname=f"overlay_runtime/{rel}")
-    _OVERLAY_RUNTIME_BUNDLE_CACHE = buffer.getvalue()
-    return _OVERLAY_RUNTIME_BUNDLE_CACHE
+    _CAPTURE_RUNTIME_BUNDLE_CACHE = buffer.getvalue()
+    return _CAPTURE_RUNTIME_BUNDLE_CACHE
 
 
-__all__ = ["overlay_runtime_bundle_bytes"]
+__all__ = ["capture_runtime_bundle_bytes"]

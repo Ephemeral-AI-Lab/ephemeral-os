@@ -30,16 +30,15 @@ backend/src/sandbox/
     bootstrap.py                # registers setup + ops
     setup.sh                    # idempotent overlay setup
     client.py                   # host-side route; one adapter.exec
-    engine/                     # OverlayEngine / LocalOverlayEngine split by role
+    engine/                     # OverlayEngine / OverlayCaptureEngine split by role
       __init__.py               # public re-exports
       constants.py              # shared knobs/constants
-      fingerprint.py            # workspace lowerdir guard helpers
-      helpers.py                # command encoding / samples
-      local.py                  # LocalOverlayEngine orchestration
+      command_codec.py          # command encoding / samples
+      capture_engine.py         # OverlayCaptureEngine orchestration
       protocol.py               # OverlayEngine Protocol
-      readback.py               # stdout/diff/envelope cleanup + timing
-      runner.py                 # runtime upload and command execution
-      runtime_bundle.py         # local overlay runtime tarball builder
+      run_artifacts.py          # stdout/diff/envelope cleanup + timing
+      runtime_execution.py      # runtime upload and command execution
+      capture_runtime_bundle.py # local overlay runtime tarball builder
     types.py                    # OverlayRunOutcome, UpperChange, ConflictInfo
     wire.py                     # JSON/base64 encode/decode
     config.py                   # env knobs only
@@ -94,7 +93,7 @@ backend/src/sandbox/
 
 1. `git mv` overlay → `sandbox/overlay/`, then immediately reshape it into the
    target layout above. Update imports to the new package paths.
-2. Extract `OverlayEngine` Protocol and `LocalOverlayEngine` under
+2. Extract `OverlayEngine` Protocol and `OverlayCaptureEngine` under
    `overlay/engine/`. The engine owns one overlay run's orchestration:
    lease creation/cleanup, timing, setup invocation, and call into the
    sandbox-side runtime. Split IO/readback/upload helpers into separate files;

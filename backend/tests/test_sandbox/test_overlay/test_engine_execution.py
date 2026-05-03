@@ -1,4 +1,4 @@
-"""Execution-path tests for ``LocalOverlayEngine``."""
+"""Execution-path tests for ``OverlayCaptureEngine``."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.overlay.engine import (
-    RUN_DIR_PREFIX,
-    LocalOverlayEngine,
+    OverlayCaptureEngine,
 )
-from sandbox.overlay.engine.runtime_bundle import overlay_runtime_bundle_bytes
+from sandbox.overlay.engine.constants import RUN_DIR_PREFIX
+from sandbox.overlay.engine.capture_runtime_bundle import capture_runtime_bundle_bytes
 from sandbox.overlay.types import OverlayRunOutcome
 
 
@@ -48,7 +48,7 @@ def _change_line(rel: str, *, base: bytes | None, upper: bytes) -> str:
 
 
 def test_overlay_runtime_bundle_contains_capture_runtime_only() -> None:
-    raw = overlay_runtime_bundle_bytes()
+    raw = capture_runtime_bundle_bytes()
 
     import io
     import tarfile
@@ -97,7 +97,7 @@ async def test_engine_returns_raw_upper_changes(tmp_path: Path) -> None:
     async def _exec(sandbox, command: str, *, timeout=None):
         return await sandbox.exec(command, timeout=timeout)
 
-    runner = LocalOverlayEngine(
+    runner = OverlayCaptureEngine(
         sandbox_id=f"capture-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_exec,
@@ -116,7 +116,7 @@ def test_can_use_local_run_dir_for_direct_runtime(tmp_path: Path) -> None:
     async def _unused(*_args, **_kwargs):
         raise AssertionError("unused")
 
-    runner = LocalOverlayEngine(
+    runner = OverlayCaptureEngine(
         sandbox_id=f"capture-local-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_unused,

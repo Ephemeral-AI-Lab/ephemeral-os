@@ -39,6 +39,27 @@ def test_overlay_root_contains_only_target_layout_entries() -> None:
     assert actual == expected
 
 
+def test_overlay_engine_contains_only_role_named_modules() -> None:
+    expected = {
+        "__init__.py",
+        "capture_engine.py",
+        "capture_runtime_bundle.py",
+        "command_codec.py",
+        "constants.py",
+        "protocol.py",
+        "run_artifacts.py",
+        "runtime_execution.py",
+    }
+
+    actual = {
+        path.name
+        for path in (_overlay_root() / "engine").iterdir()
+        if path.name not in {"__pycache__", ".DS_Store"}
+    }
+
+    assert actual == expected
+
+
 def test_overlay_shim_files_do_not_exist() -> None:
     forbidden = {
         "capture_runner.py",

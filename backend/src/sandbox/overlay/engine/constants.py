@@ -9,7 +9,7 @@ SLOW_OVERLAY_STAGE_SECONDS = 1.0
 SLOW_OVERLAY_TOTAL_SECONDS = 5.0
 COMMAND_SAMPLE_LIMIT = 160
 
-WorkspaceFingerprint = tuple[tuple[str, int, int, int, int], ...]
+LowerdirFingerprint = tuple[tuple[str, int, int, int, int], ...]
 
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "RUN_DIR_PREFIX",
     "SLOW_OVERLAY_STAGE_SECONDS",
     "SLOW_OVERLAY_TOTAL_SECONDS",
-    "WorkspaceFingerprint",
+    "LowerdirFingerprint",
 ]

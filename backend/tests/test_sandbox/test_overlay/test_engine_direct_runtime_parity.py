@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
-from sandbox.overlay.engine import runner as overlay_runner
+from sandbox.overlay.engine import runtime_execution as overlay_runtime_execution
 from sandbox.runtime.registry import dispose_all_code_intelligence
 from sandbox.runtime.service import CodeIntelligenceService
 
@@ -176,7 +176,7 @@ def _install_direct_runtime_subprocess(
         )
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(overlay_runner.subprocess, "run", _fake_run)
+    monkeypatch.setattr(overlay_runtime_execution.subprocess, "run", _fake_run)
 
 
 async def _run_multistage(repo: Path, case: str) -> dict[str, Any]:

@@ -11,7 +11,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-from sandbox.overlay.engine import LocalOverlayEngine, OverlayEngine
+from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.runtime.pipelines import shell_pipeline
 from sandbox.runtime.types import ShellResult
 
@@ -81,7 +81,7 @@ class AuditedCommandExecutor:
             cached = self._overlay_engine
             if cached is not None:
                 return cached
-            self._overlay_engine = LocalOverlayEngine(
+            self._overlay_engine = OverlayCaptureEngine(
                 sandbox_id=self.sandbox_id,
                 workspace_root=self.workspace_root,
                 exec_process=self._exec_sandbox_process,

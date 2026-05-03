@@ -1,4 +1,4 @@
-"""Overlay execution engine.
+"""Concrete overlay capture engine.
 
 The engine owns overlay capture only: lease lifecycle, runtime setup, command
 execution, readback, cleanup, and timing. OCC policy is intentionally outside
@@ -16,10 +16,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sandbox.overlay.config import overlay_max_concurrent, overlay_upper_size_mb
-from sandbox.overlay.engine.constants import RUN_DIR_PREFIX, WorkspaceFingerprint
-from sandbox.overlay.engine.helpers import encode_command
-from sandbox.overlay.engine.readback import OverlayReadbackMixin
-from sandbox.overlay.engine.runner import OverlayRunnerMixin
+from sandbox.overlay.engine.constants import LowerdirFingerprint, RUN_DIR_PREFIX
+from sandbox.overlay.engine.command_codec import encode_command_payload
+from sandbox.overlay.engine.run_artifacts import _RunArtifacts
+from sandbox.overlay.engine.runtime_execution import _RuntimeExecution
 from sandbox.overlay.types import (
     OverlayCapture,
     OverlayLease,
@@ -29,7 +29,7 @@ from sandbox.overlay.types import (
 logger = logging.getLogger(__name__)
 
 
-class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
+class OverlayCaptureEngine(_RuntimeExecution, _RunArtifacts):
     """Run one command under a fresh overlay namespace and capture upperdir."""
 
     def __init__(
@@ -54,9 +54,9 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         )
         self._script_upload_lock = asyncio.Lock()
         self._script_uploaded = False
-        self._fingerprint_lock = asyncio.Lock()
-        self._active_fingerprint_guards = 0
-        self._last_workspace_fingerprint: WorkspaceFingerprint | None = None
+        self._lowerdir_guard_lock = asyncio.Lock()
+        self._active_lowerdir_guards = 0
+        self._last_lowerdir_fingerprint: LowerdirFingerprint | None = None
 
     async def execute(
         self,
@@ -79,7 +79,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 lease: OverlayLease,
                 stage_timings: dict[str, float],
             ) -> OverlayRunOutcome:
-                return await self._run_direct_runtime_outcome(
+                return await self._run_local_overlay_capture(
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
@@ -91,14 +91,14 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 command,
                 sandbox=None,
                 run=run_direct,
-                fingerprint_guard=True,
+                lowerdir_guard=True,
             )
 
         async def run(
             lease: OverlayLease,
             stage_timings: dict[str, float],
         ) -> OverlayRunOutcome:
-            return await self._run_and_assemble_outcome(
+            return await self._run_sandbox_overlay_capture(
                 sandbox=sandbox,
                 command=command,
                 lease=lease,
@@ -122,7 +122,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         run: Callable[
             [OverlayLease, dict[str, float]], Awaitable[OverlayRunOutcome]
         ],
-        fingerprint_guard: bool = False,
+        lowerdir_guard: bool = False,
     ) -> OverlayRunOutcome:
         async with self._semaphore:
             lease = self._new_lease()
@@ -130,11 +130,11 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
             total_started = time.perf_counter()
             outcome: OverlayRunOutcome | None = None
             error: BaseException | None = None
-            fingerprint_guard_started = False
+            lowerdir_guard_started = False
             try:
-                if fingerprint_guard:
-                    await self._begin_workspace_fingerprint_guard()
-                    fingerprint_guard_started = True
+                if lowerdir_guard:
+                    await self._begin_lowerdir_guard()
+                    lowerdir_guard_started = True
                 await self._timed_stage(
                     "upload_runtime",
                     stage_timings=stage_timings,
@@ -165,8 +165,8 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
                 if outcome is not None:
                     outcome.overlay_stage_timings = dict(stage_timings)
-                if fingerprint_guard_started:
-                    await self._end_workspace_fingerprint_guard()
+                if lowerdir_guard_started:
+                    await self._end_lowerdir_guard()
                 self._log_execution_summary(
                     command=command,
                     lease=lease,
@@ -175,7 +175,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                     error=error,
                 )
 
-    async def _run_direct_runtime_outcome(
+    async def _run_local_overlay_capture(
         self,
         *,
         command: str,
@@ -184,7 +184,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         timeout: int | None,
         stdin: str | None,
     ) -> OverlayRunOutcome:
-        user_cmd_b64, stdin_b64 = encode_command(command, stdin)
+        user_cmd_b64, stdin_b64 = encode_command_payload(command, stdin)
         overlay_stdout, script_exit = await self._timed_stage(
             "unshare",
             stage_timings=stage_timings,
@@ -208,7 +208,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                 overlay_exit_code=script_exit,
             ),
         )
-        return await self._finish_outcome(
+        return await self._read_capture_outcome(
             sandbox=None,
             command=command,
             lease=lease,
@@ -217,7 +217,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
             script_exit=script_exit,
         )
 
-    async def _run_and_assemble_outcome(
+    async def _run_sandbox_overlay_capture(
         self,
         *,
         sandbox: Any,
@@ -228,7 +228,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         stdin: str | None,
         on_progress_line: Callable[[str], None] | None,
     ) -> OverlayRunOutcome:
-        user_cmd_b64, stdin_b64 = encode_command(command, stdin)
+        user_cmd_b64, stdin_b64 = encode_command_payload(command, stdin)
         if on_progress_line is None:
             stdout_text, script_exit = await self._timed_stage(
                 "run_overlay",
@@ -258,7 +258,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
                     on_progress_line=on_progress_line,
                 ),
             )
-        return await self._finish_outcome(
+        return await self._read_capture_outcome(
             sandbox=sandbox,
             command=command,
             lease=lease,
@@ -267,7 +267,7 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
             script_exit=script_exit,
         )
 
-    async def _finish_outcome(
+    async def _read_capture_outcome(
         self,
         *,
         sandbox: Any,
@@ -319,4 +319,4 @@ class LocalOverlayEngine(OverlayRunnerMixin, OverlayReadbackMixin):
         return OverlayLease(run_dir=run_dir)
 
 
-__all__ = ["LocalOverlayEngine"]
+__all__ = ["OverlayCaptureEngine"]

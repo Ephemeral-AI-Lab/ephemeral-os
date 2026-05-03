@@ -65,7 +65,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/occ/commit/coordinator.py",
         "sandbox/overlay/bootstrap.py",
         "sandbox/overlay/engine/__init__.py",
-        "sandbox/overlay/engine/local.py",
+        "sandbox/overlay/engine/capture_engine.py",
         "sandbox/overlay/setup.sh",
         "sandbox/overlay/handlers/run.py",
         "sandbox/overlay/runtime/cli.py",

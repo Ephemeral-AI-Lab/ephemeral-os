@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
-from sandbox.overlay.engine import LocalOverlayEngine
+from sandbox.overlay.engine import OverlayCaptureEngine
 from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.runtime.service import (
     CodeIntelligenceService,
@@ -34,7 +34,7 @@ async def test_executor_builds_overlay_engine_by_default(tmp_path) -> None:
 
     overlay_engine = await executor._ensure_overlay_engine()
 
-    assert isinstance(overlay_engine, LocalOverlayEngine)
+    assert isinstance(overlay_engine, OverlayCaptureEngine)
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""Overlay run readback, cleanup, and instrumentation helpers."""
+"""Overlay run artifact readback, cleanup, and instrumentation."""
 
 from __future__ import annotations
 
@@ -19,9 +19,9 @@ from sandbox.overlay.engine.constants import (
     PROGRESS_READ_CHUNK_BYTES,
     SLOW_OVERLAY_STAGE_SECONDS,
     SLOW_OVERLAY_TOTAL_SECONDS,
+    LowerdirFingerprint,
 )
-from sandbox.overlay.engine.fingerprint import workspace_fingerprint
-from sandbox.overlay.engine.helpers import command_sample
+from sandbox.overlay.engine.command_codec import format_command_sample
 from sandbox.overlay.types import (
     OverlayCapture,
     OverlayLease,
@@ -34,7 +34,20 @@ from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 logger = logging.getLogger(__name__)
 
 
-class OverlayReadbackMixin:
+def _workspace_root_fingerprint(workspace_root: str) -> LowerdirFingerprint:
+    root = Path(workspace_root)
+    rows: list[tuple[str, int, int, int, int]] = []
+    for path in (root,):
+        try:
+            st = path.stat()
+        except OSError:
+            rows.append((str(path), -1, -1, -1, -1))
+            continue
+        rows.append((str(path), st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size))
+    return tuple(rows)
+
+
+class _RunArtifacts:
     """Read runtime artifacts and manage local/remote cleanup."""
 
     async def _emit_stdout_progress_delta(
@@ -231,24 +244,24 @@ class OverlayReadbackMixin:
         )
         return cleaned, exit_code
 
-    async def _begin_workspace_fingerprint_guard(self) -> None:
-        async with self._fingerprint_lock:
-            if self._active_fingerprint_guards == 0:
-                current = workspace_fingerprint(self._workspace_root)
-                previous = self._last_workspace_fingerprint
+    async def _begin_lowerdir_guard(self) -> None:
+        async with self._lowerdir_guard_lock:
+            if self._active_lowerdir_guards == 0:
+                current = _workspace_root_fingerprint(self._workspace_root)
+                previous = self._last_lowerdir_fingerprint
                 if previous is not None and current != previous:
                     raise OverlayRunError(
                         "workspace changed outside the overlay OCC path; "
                         "refusing lowerdir snapshot"
                     )
-            self._active_fingerprint_guards += 1
+            self._active_lowerdir_guards += 1
 
-    async def _end_workspace_fingerprint_guard(self) -> None:
-        async with self._fingerprint_lock:
-            if self._active_fingerprint_guards > 0:
-                self._active_fingerprint_guards -= 1
-            if self._active_fingerprint_guards == 0:
-                self._last_workspace_fingerprint = workspace_fingerprint(
+    async def _end_lowerdir_guard(self) -> None:
+        async with self._lowerdir_guard_lock:
+            if self._active_lowerdir_guards > 0:
+                self._active_lowerdir_guards -= 1
+            if self._active_lowerdir_guards == 0:
+                self._last_lowerdir_fingerprint = _workspace_root_fingerprint(
                     self._workspace_root
                 )
 
@@ -267,7 +280,7 @@ class OverlayReadbackMixin:
             stage,
             self._sandbox_id,
             lease.run_dir,
-            command_sample(command),
+            format_command_sample(command),
         )
         try:
             return await awaitable
@@ -281,7 +294,7 @@ class OverlayReadbackMixin:
                 elapsed,
                 self._sandbox_id,
                 lease.run_dir,
-                command_sample(command),
+                format_command_sample(command),
                 dict(stage_timings),
             )
             if elapsed >= SLOW_OVERLAY_STAGE_SECONDS:
@@ -292,7 +305,7 @@ class OverlayReadbackMixin:
                     elapsed,
                     self._sandbox_id,
                     lease.run_dir,
-                    command_sample(command),
+                    format_command_sample(command),
                     dict(stage_timings),
                 )
 
@@ -319,7 +332,7 @@ class OverlayReadbackMixin:
             lease.run_dir,
             dict(stage_timings),
             dict(getattr(outcome, "overlay_run_timings", {}) or {}),
-            command_sample(command),
+            format_command_sample(command),
         )
 
     async def _local_exec_process(
@@ -346,6 +359,3 @@ class OverlayReadbackMixin:
                 "exit_code": completed.returncode,
             },
         )()
-
-
-__all__ = ["OverlayReadbackMixin"]
