@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import pytest
-from sandbox.code_intelligence.core.hashing import content_hash
+from sandbox.occ.content.hashing import content_hash
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
 )
 from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
-from sandbox.code_intelligence.mutations.write_coordinator import CommitOperation
-from sandbox.code_intelligence.core.types import OperationChange
+from sandbox.occ.commit import CommitOperation
+from sandbox.occ.types import OperationChange
 
 
 @pytest.fixture(autouse=True)

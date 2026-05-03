@@ -23,7 +23,7 @@ from sandbox.code_intelligence.core.constants import (
     ARBITER_LOCK_TIMEOUT,
     ARBITER_MAX_CONCURRENT_EDITS,
 )
-from sandbox.code_intelligence.mutations.edit_history_ledger import EditHistoryLedger
+from sandbox.occ.state.edit_history_ledger import EditHistoryLedger
 
 logger = logging.getLogger(__name__)
 

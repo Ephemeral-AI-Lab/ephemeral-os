@@ -20,7 +20,7 @@ from typing import Any
 
 from sandbox.api.transport import SandboxTransport
 from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-from sandbox.code_intelligence.mutations.changeset import ChangesetResult
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.code_intelligence.overlay.capture_runner import OverlayCaptureRunner
 from sandbox.code_intelligence.overlay.types import (
     OverlayPolicyReject,

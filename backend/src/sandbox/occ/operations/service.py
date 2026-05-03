@@ -1,4 +1,4 @@
-"""OCC-gated mutation facade helpers for CodeIntelligenceService."""
+"""OCC-gated operation facade helpers for CodeIntelligenceService."""
 
 from __future__ import annotations
 
@@ -6,15 +6,11 @@ import logging
 from collections.abc import Sequence
 from typing import Any
 
-from sandbox.code_intelligence.mutations.patcher import Patcher
-from sandbox.code_intelligence.mutations.write_coordinator import CommitOperation, WriteCoordinator
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.mutations.content_manager import ContentManager
-from sandbox.code_intelligence.mutations.mutation_results import (
-    not_found_result,
-    patch_failed_result,
-)
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.patching.patcher import Patcher
+from sandbox.occ.commit import CommitOperation, WriteCoordinator
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.content.manager import ContentManager
+from sandbox.occ.types import (
     EditRequest,
     EditResult,
     EditSpec,
@@ -24,6 +20,40 @@ from sandbox.code_intelligence.core.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _error_result(
+    file_path: str,
+    message: str,
+    *,
+    conflict_reason: str,
+    conflict_file: str | None = None,
+) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(EditResult(success=False, file_path=file_path, message=message),),
+        conflict_file=conflict_file,
+        conflict_reason=conflict_reason,
+        timings={},
+    )
+
+
+def _not_found_result(file_path: str) -> OperationResult:
+    return _error_result(
+        file_path,
+        f"Path does not exist: {file_path}",
+        conflict_reason="not_found",
+    )
+
+
+def _patch_failed_result(file_path: str, errors: list[str]) -> OperationResult:
+    return _error_result(
+        file_path,
+        "; ".join(errors) if errors else "edit apply failed",
+        conflict_reason="patch_failed",
+        conflict_file=file_path,
+    )
 
 
 class _CommitSpecRequest:
@@ -43,7 +73,7 @@ class _CommitSpecRequest:
         self.description = description
 
 
-class MutationService:
+class OCCOperationService:
     """Plans and commits file mutations through WriteCoordinator."""
 
     def __init__(
@@ -57,7 +87,7 @@ class MutationService:
         self._write_coordinator = write_coordinator
         self.patcher = patcher
 
-    def apply_edit(self, request: EditRequest) -> EditResult:
+    def apply(self, request: EditRequest) -> EditResult:
         """Apply a single search/replace edit through the service helper path."""
         current, existed = self._content.read(request.file_path, allow_missing=True)
         if not existed:
@@ -319,10 +349,10 @@ class MutationService:
         for spec in specs:
             current, existed = base_by_path.get(str(spec.file_path), ("", False))
             if not existed:
-                return [], not_found_result(spec.file_path)
+                return [], _not_found_result(spec.file_path)
             patch = self.patcher.apply_edits(current, list(spec.edits))
             if not patch.success:
-                return [], patch_failed_result(spec.file_path, patch.errors)
+                return [], _patch_failed_result(spec.file_path, patch.errors)
             changes.append(
                 OperationChange(
                     file_path=spec.file_path,
@@ -335,7 +365,6 @@ class MutationService:
         return changes, None
 
 
-    def undo_last_edit(self, file_path: str) -> EditResult:
-        return self._write_coordinator.undo_last_edit(file_path)
-
+    def undo(self, file_path: str) -> EditResult:
+        return self._write_coordinator.undo(file_path)
 

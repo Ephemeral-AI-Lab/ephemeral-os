@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sandbox.code_intelligence.mutations.changeset import ChangesetResult
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
 from sandbox.code_intelligence.overlay.types import (
     OverlayPolicyReject,

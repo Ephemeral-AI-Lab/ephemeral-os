@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from sandbox.api.errors import SandboxTransportError
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.core.types import OperationChange, OperationResult
-from sandbox.code_intelligence.mutations.content_manager import ContentManager
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.types import OperationChange, OperationResult
+from sandbox.occ.content.manager import ContentManager
 
 
 class UpperChangeLike(Protocol):

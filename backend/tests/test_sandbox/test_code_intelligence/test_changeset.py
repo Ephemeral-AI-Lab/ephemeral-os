@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.code_intelligence.mutations.changeset import ChangesetResult
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.code_intelligence.overlay.types import UpperChange
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 from sandbox.code_intelligence.service import CodeIntelligenceService
@@ -202,8 +202,8 @@ def test_apply_changeset_maps_argv_overflow_to_result(tmp_path: Path) -> None:
     def _raise(_changes):
         raise RuntimeError("checked batch apply failed: argument list too long")
 
-    from sandbox.code_intelligence.mutations.changeset import apply_changeset
-    from sandbox.code_intelligence.mutations.content_manager import ContentManager
+    from sandbox.occ.changeset import apply_changeset
+    from sandbox.occ.content.manager import ContentManager
 
     result = apply_changeset(
         [_regular("src/foo.py", base=None, upper=b"x\n")],

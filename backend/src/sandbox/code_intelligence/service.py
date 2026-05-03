@@ -18,7 +18,7 @@ from sandbox.code_intelligence.backends import (
     InProcessBackend,
     DaemonBackend,
 )
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.types import (
     EditRequest,
     EditResult,
     EditSpec,

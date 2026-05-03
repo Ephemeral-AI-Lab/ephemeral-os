@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shlex
 from typing import Any
 
 from sandbox.client.sync import (
@@ -113,16 +112,30 @@ class SandboxProxy:
     def ensure_git(self) -> None:
         """Install git in the sandbox if missing."""
         try:
+            from sandbox.api.raw_exec import raw_exec
+            from sandbox.client.async_bridge import run_sync
+
             logger.info("ensure_git(%s): probe starting", self.id)
-            resp = self._raw.process.exec(
-                'bash -lc "command -v git >/dev/null 2>&1 && echo ok || echo missing"',
-                timeout=10,
+            resp = run_sync(
+                raw_exec(
+                    self.id,
+                    "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+                    timeout=10,
+                )
             )
-            if "ok" in (resp.result or ""):
+            if "ok" in (resp.stdout or ""):
                 logger.info("ensure_git(%s): git already available", self.id)
                 return
             logger.info("ensure_git(%s): installing git", self.id)
-            self._raw.process.exec(f"bash -lc {shlex.quote(_GIT_BOOTSTRAP)}", timeout=120)
+            install = run_sync(
+                raw_exec(self.id, _GIT_BOOTSTRAP, timeout=120)
+            )
+            if getattr(install, "exit_code", 1) not in (0, None):
+                raise RuntimeError(
+                    getattr(install, "stderr", "")
+                    or getattr(install, "stdout", "")
+                    or "git install failed"
+                )
             logger.info("ensure_git(%s): install completed", self.id)
         except Exception as exc:
             logger.warning("Git bootstrap failed for sandbox %s: %s", self.id, exc)

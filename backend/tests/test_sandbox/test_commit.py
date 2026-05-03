@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sandbox.code_intelligence.core.types import OperationResult
+from sandbox.occ.types import OperationResult
 from sandbox.lifecycle.commit import (
     FileChangeResult,
     submit_commit,

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.core.types import OperationChange
-from sandbox.code_intelligence.mutations.merge import (
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.types import OperationChange
+from sandbox.occ.commit.merge import (
     detect_edit_window,
     merge_non_overlapping_edit,
 )
-from sandbox.code_intelligence.mutations.write_coordinator.models import ResolvedChange
+from sandbox.occ.commit.models import ResolvedChange
 
 
 class ChangeResolver:

@@ -829,7 +829,7 @@ class TestCITypesDeep:
     """Deep tests for code intelligence types — ported from synthetic-os patterns."""
 
     def test_edit_request_all_fields(self):
-        from sandbox.code_intelligence.core.types import EditRequest
+        from sandbox.occ.types import EditRequest
 
         req = EditRequest(
             file_path="/ws/app.py",
@@ -845,14 +845,14 @@ class TestCITypesDeep:
         assert req.description == "Fix bug"
 
     def test_edit_result_success(self):
-        from sandbox.code_intelligence.core.types import EditResult
+        from sandbox.occ.types import EditResult
 
         r = EditResult(success=True, file_path="/test.py", message="Applied")
         assert r.success is True
         assert r.conflict is not True
 
     def test_edit_result_conflict(self):
-        from sandbox.code_intelligence.core.types import EditResult
+        from sandbox.occ.types import EditResult
 
         r = EditResult(success=False, file_path="/test.py", message="Conflict", conflict=True)
         assert r.success is False
@@ -867,12 +867,12 @@ class TestArbiterAuditLedger:
     """Arbiter — per-file locks, edit ledger, and conflict tracking."""
 
     def _make_arbiter(self, **kwargs):
-        from sandbox.code_intelligence.mutations.arbiter import Arbiter
+        from sandbox.occ.state.arbiter import Arbiter
 
         return Arbiter(workspace_root="/workspace", **kwargs)
 
     def _make_arbiter_with_store(self):
-        from sandbox.code_intelligence.mutations.arbiter import Arbiter
+        from sandbox.occ.state.arbiter import Arbiter
 
         return Arbiter(workspace_root="/workspace")
 
@@ -1030,7 +1030,7 @@ class TestTimeMachine:
     """TimeMachine — per-file undo snapshots with global LRU capacity."""
 
     def _make_tm(self, **kwargs):
-        from sandbox.code_intelligence.mutations.time_machine import TimeMachine
+        from sandbox.occ.state.time_machine import TimeMachine
 
         return TimeMachine(**kwargs)
 

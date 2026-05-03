@@ -100,7 +100,7 @@ class LedgerStore:
                 pass
 
     def _row_to_record(self, row: sqlite3.Row | tuple) -> Any:
-        from sandbox.code_intelligence.mutations.edit_history_ledger import (
+        from sandbox.occ.state.edit_history_ledger import (
             EditRecord,
         )
 
@@ -164,7 +164,7 @@ class LedgerStore:
                 ),
             )
             seq = int(cur.lastrowid or 0)
-        from sandbox.code_intelligence.mutations.edit_history_ledger import (
+        from sandbox.occ.state.edit_history_ledger import (
             EditRecord,
         )
 
@@ -298,7 +298,7 @@ class LedgerStore:
         days: int = 7,
         run_id: str | None = None,
     ) -> list[Any]:
-        from sandbox.code_intelligence.mutations.edit_history_ledger import (
+        from sandbox.occ.state.edit_history_ledger import (
             ContentionHotspot,
         )
 

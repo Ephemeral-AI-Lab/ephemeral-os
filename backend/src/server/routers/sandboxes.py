@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
+from sandbox.api.raw_exec import raw_exec
 from sandbox.lifecycle.service import SandboxService
 
 logger = logging.getLogger(__name__)
@@ -109,11 +110,11 @@ def create_sandbox_router(service: SandboxService | None = None) -> APIRouter:
     async def exec_in_sandbox(sandbox_id: str, req: ExecRequest):
         """Execute a command in a sandbox."""
         try:
-            sb = await asyncio.to_thread(svc.get_sandbox_object, sandbox_id)
-            resp = sb.process.exec(req.command, timeout=req.timeout)
+            await asyncio.to_thread(svc.ensure_sandbox_running, sandbox_id)
+            resp = await raw_exec(sandbox_id, req.command, timeout=req.timeout)
             return JSONResponse(
                 content={
-                    "result": resp.result,
+                    "result": resp.stdout,
                     "exit_code": resp.exit_code,
                 }
             )

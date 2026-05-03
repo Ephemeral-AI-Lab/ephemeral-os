@@ -1,0 +1,66 @@
+"""Tests for the generic sandbox runtime dispatcher."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from sandbox.runtime import server
+
+
+@pytest.fixture(autouse=True)
+def restore_op_table() -> None:
+    saved = dict(server.OP_TABLE)
+    server.OP_TABLE.clear()
+    try:
+        yield
+    finally:
+        server.OP_TABLE.clear()
+        server.OP_TABLE.update(saved)
+
+
+def test_empty_op_table_returns_unknown_op() -> None:
+    response = server.dispatch_envelope({"op": "occ.apply", "args": {}})
+
+    assert response["success"] is False
+    assert response["error"]["kind"] == "unknown_op"
+    assert response["error"]["details"] == {"op": "occ.apply"}
+
+
+def test_bad_json_returns_structured_error() -> None:
+    response = server.dispatch_json("{not json")
+
+    assert response["success"] is False
+    assert response["error"]["kind"] == "bad_json"
+    assert response["warnings"] == []
+    assert response["timings"] == {}
+
+
+def test_registered_handler_dispatches_through_op_table() -> None:
+    calls: list[dict[str, Any]] = []
+
+    def handler(args: dict[str, Any]) -> dict[str, Any]:
+        calls.append(args)
+        return {"success": True, "value": args["value"]}
+
+    server.register_op("test.echo", handler)
+
+    response = server.dispatch_envelope({"op": "test.echo", "args": {"value": 3}})
+
+    assert response == {"success": True, "value": 3}
+    assert calls == [{"value": 3}]
+
+
+def test_server_does_not_keep_legacy_peer_branch_switches() -> None:
+    source = Path(server.__file__).read_text(encoding="utf-8")
+
+    for legacy_op in (
+        "svc_cmd",
+        "apply_edit",
+        "commit_operation_against_base",
+        "undo_last_edit",
+    ):
+        assert legacy_op not in source
+

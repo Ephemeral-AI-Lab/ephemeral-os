@@ -14,8 +14,8 @@ from typing import Any
 from sandbox.api.errors import SandboxTransportError
 from sandbox.api.models import CheckedWriteSpec
 from sandbox.api.transport import SandboxTransport
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.core.path_utils import resolve_workspace_path
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.content.path_utils import resolve_workspace_path
 
 from sandbox.client.async_bridge import run_sync
 

@@ -92,8 +92,8 @@ def _stream_live_logs() -> Iterator[None]:
     )
     loggers = [
         logging.getLogger("sandbox.lifecycle.service"),
-        logging.getLogger("sandbox.code_intelligence.daemon.launcher"),
-        logging.getLogger("sandbox.code_intelligence.daemon.command"),
+        logging.getLogger("sandbox.runtime.bundle"),
+        logging.getLogger("sandbox.runtime.legacy_command_client"),
     ]
     old_levels = [logger.level for logger in loggers]
     old_propagate = [logger.propagate for logger in loggers]
@@ -170,7 +170,7 @@ def test_invariant_sorted_path_locks(live_phase3_env: LivePhase3Env) -> None:
     files = [f"{env.repo_dir}/_phase3_a.txt", f"{env.repo_dir}/_phase3_b.txt"]
     env.exec(f"echo 'A' > {files[0]} && echo 'B' > {files[1]}")
 
-    from sandbox.code_intelligence.core.hashing import content_hash
+    from sandbox.occ.content.hashing import content_hash
 
     def _make_change(path: str, base: str, final: str) -> dict[str, Any]:
         return {
@@ -232,7 +232,7 @@ def test_invariant_strict_base_occ_aborts_on_drift(
     target = f"{env.repo_dir}/_phase3_occ.txt"
 
     env.exec(f"echo 'v1' > {target}")
-    from sandbox.code_intelligence.core.hashing import content_hash
+    from sandbox.occ.content.hashing import content_hash
 
     base_v1_hash = content_hash("v1\n")
 
@@ -303,7 +303,7 @@ def test_invariant_non_overlap_merge_converges(
     target = f"{env.repo_dir}/_phase3_merge.txt"
     env.exec(f"printf 'line1\\nline2\\nline3\\n' > {target}")
 
-    from sandbox.code_intelligence.core.hashing import content_hash
+    from sandbox.occ.content.hashing import content_hash
 
     base = "line1\nline2\nline3\n"
     base_hash = content_hash(base)
@@ -372,7 +372,7 @@ def test_invariant_time_machine_rollback(live_phase3_env: LivePhase3Env) -> None
     b = f"{env.repo_dir}/_phase3_tm_b.txt"
     env.exec(f"echo 'A0' > {a} && echo 'B0' > {b}")
 
-    from sandbox.code_intelligence.core.hashing import content_hash
+    from sandbox.occ.content.hashing import content_hash
 
     # Mismatched base on file B forces the batch to abort mid-flight.
     async def crash_batch() -> Any:

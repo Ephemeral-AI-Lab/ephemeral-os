@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from sandbox.api.transport import SandboxTransport
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.types import (
     EditRequest,
     EditResult,
     EditSpec,
@@ -16,12 +16,12 @@ from sandbox.code_intelligence.core.types import (
     OperationResult,
     WriteSpec,
 )
-from sandbox.code_intelligence.mutations.arbiter import Arbiter
-from sandbox.code_intelligence.mutations.content_manager import ContentManager
+from sandbox.occ.state.arbiter import Arbiter
+from sandbox.occ.content.manager import ContentManager
 from sandbox.code_intelligence.mutations.mutation_service import MutationService
-from sandbox.code_intelligence.mutations.patcher import Patcher
-from sandbox.code_intelligence.mutations.time_machine import TimeMachine
-from sandbox.code_intelligence.mutations.write_coordinator import WriteCoordinator
+from sandbox.occ.patching.patcher import Patcher
+from sandbox.occ.state.time_machine import TimeMachine
+from sandbox.occ.commit import WriteCoordinator
 from sandbox.code_intelligence.shell_command_executor import AuditedCommandExecutor
 
 __all__ = ["InProcessBackend"]

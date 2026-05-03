@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Protocol
 
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.types import (
     EditRequest,
     EditResult,
     EditSpec,

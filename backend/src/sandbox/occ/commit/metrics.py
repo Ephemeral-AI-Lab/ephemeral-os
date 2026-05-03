@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 
-from sandbox.code_intelligence.core.types import OperationResult
-from sandbox.code_intelligence.mutations.write_coordinator.models import CommitOperation
+from sandbox.occ.types import OperationResult
+from sandbox.occ.commit.models import CommitOperation
 
 logger = logging.getLogger(__name__)
 

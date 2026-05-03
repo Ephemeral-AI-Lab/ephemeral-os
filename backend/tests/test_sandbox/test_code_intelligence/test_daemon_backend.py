@@ -61,54 +61,45 @@ def _backend_with_fake_daemon(daemon: _FakeDaemon) -> DaemonBackend:
         transport=_NullTransport(),  # type: ignore[arg-type]
     )
     backend._call_daemon_command = daemon._call_daemon_command  # type: ignore[method-assign]
-    backend._launcher = _FakeLauncher()  # type: ignore[assignment]
     return backend
-
-
-class _FakeLauncher:
-    """Stand-in for :class:`DaemonLauncher` — ``ensure_daemon`` is a no-op."""
-
-    instances: list[_FakeLauncher] = []
-
-    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
-        type(self).instances.append(self)
-        self.ensure_calls = 0
-        self.shutdown_calls = 0
-
-    async def ensure_daemon(self) -> None:
-        if self not in type(self).instances:
-            type(self).instances.append(self)
-        self.ensure_calls += 1
-
-    async def shutdown(self) -> None:
-        self.shutdown_calls += 1
 
 
 def test_ensure_initialized_launches_daemon() -> None:
     daemon = _FakeDaemon()
     backend = _backend_with_fake_daemon(daemon)
-    _FakeLauncher.instances.clear()
+    calls: list[tuple[Any, str]] = []
+
+    async def fake_upload(transport: Any, sandbox_id: str) -> str:
+        calls.append((transport, sandbox_id))
+        return "digest"
+
     with patch(
-        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
+        "sandbox.runtime.legacy_command_client._ensure_runtime_uploaded_via_transport",
+        fake_upload,
     ):
         ok = backend.ensure_initialized(wait=True)
     assert ok is True
     assert backend.is_initialized is True
-    assert _FakeLauncher.instances and _FakeLauncher.instances[-1].ensure_calls == 1
+    assert calls == [(backend._transport, "sb-test")]
 
 
 def test_ensure_initialized_idempotent() -> None:
     daemon = _FakeDaemon()
     backend = _backend_with_fake_daemon(daemon)
-    _FakeLauncher.instances.clear()
+    calls = 0
+
+    async def fake_upload(*_: Any, **__: Any) -> str:
+        nonlocal calls
+        calls += 1
+        return "digest"
+
     with patch(
-        "sandbox.code_intelligence.daemon.launcher.DaemonLauncher", _FakeLauncher
+        "sandbox.runtime.legacy_command_client._ensure_runtime_uploaded_via_transport",
+        fake_upload,
     ):
         backend.ensure_initialized(wait=True)
-        n = len(_FakeLauncher.instances)
         backend.ensure_initialized(wait=True)
-    # Second call short-circuits; no new launcher constructed.
-    assert len(_FakeLauncher.instances) == n
+    assert calls == 1
 
 
 def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:

@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from sandbox.code_intelligence.backends import DaemonBackend
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.types import (
     EditRequest,
     EditSpec,
     OperationChange,

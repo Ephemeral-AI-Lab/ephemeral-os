@@ -12,35 +12,35 @@ import logging
 import time
 from collections.abc import Iterable, Sequence
 
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.mutations.arbiter import Arbiter
-from sandbox.code_intelligence.mutations.time_machine import TimeMachine
-from sandbox.code_intelligence.mutations.content_manager import (
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.state.arbiter import Arbiter
+from sandbox.occ.state.time_machine import TimeMachine
+from sandbox.occ.content.manager import (
     CheckedApplyChange,
     ContentManager,
 )
-from sandbox.code_intelligence.mutations.write_coordinator.models import (
+from sandbox.occ.commit.models import (
     CommitOperation,
     ResolvedChange,
 )
-from sandbox.code_intelligence.mutations.write_coordinator.metrics import (
+from sandbox.occ.commit.metrics import (
     log_checked_apply_fallback,
     log_commit_summary,
     log_lock_timeout,
     log_resolve_conflict,
     log_slow_phase,
 )
-from sandbox.code_intelligence.mutations.write_coordinator.resolver import ChangeResolver
-from sandbox.code_intelligence.mutations.write_coordinator.results import (
+from sandbox.occ.commit.resolver import ChangeResolver
+from sandbox.occ.commit.results import (
     edit_result,
     operation_abort,
 )
-from sandbox.code_intelligence.mutations.changeset import (
+from sandbox.occ.changeset import (
     ChangesetResult,
     UpperChangeLike,
     apply_changeset as apply_raw_changeset,
 )
-from sandbox.code_intelligence.core.types import (
+from sandbox.occ.types import (
     EditResult,
     OperationChange,
     OperationResult,

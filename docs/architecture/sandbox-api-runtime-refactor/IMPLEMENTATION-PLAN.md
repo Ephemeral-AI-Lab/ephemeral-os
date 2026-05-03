@@ -68,9 +68,20 @@ Phase C — Public surface + cleanup
   - Importer allowlist = unit test (not custom ruff rule).
 - **Boundary.** Runtime scaffolding is shared daemon/server infrastructure, not
   a third peer module. The two refactored domain modules remain OCC and
-  Overlay.
+  Overlay. Do not move daemon `storage.py`, `ledger_store.py`, or `paths.py`
+  into runtime; those are legacy/OCC-owned until Slice 4.
 - **Entry.** Step 3 merged.
-- **Exit gate.** `runtime/{bundle,setup_orchestrator,server,pipelines}.py` exist. `bundle.py` is the Step 3 host-side upload module; this slice adds setup orchestration, server dispatch, and empty pipeline stubs. `server.py` is a generic OP_TABLE dispatcher. Peer setup registration can submit a bundled `setup.sh` in order. Compat shim at `code_intelligence/daemon/client.py` keeps legacy callers working. Empty `OP_TABLE` returns a clean `unknown_op` envelope.
+- **Exit gate.** `runtime/{bundle,setup_orchestrator,server,pipelines}.py`
+  exist. `bundle.py` is the Step 3 host-side upload module; this slice updates
+  it to bundle runtime files and adds setup orchestration, server dispatch, and
+  empty pipeline stubs. `server.py` is a generic OP_TABLE dispatcher. If old
+  daemon callers still need `{ok,result,error}`, that compatibility lives in a
+  temporary `runtime/legacy_command_client.py`, not in `server.py`. Peer setup
+  registration can submit a bundled `setup.sh` in order. Compat shim at
+  `code_intelligence/daemon/client.py` keeps legacy callers working.
+  `code_intelligence/daemon/command.py` is gone; daemon
+  `{storage,ledger_store,paths}.py` did not move to runtime. Empty `OP_TABLE`
+  returns a clean `unknown_op` envelope.
 
 ### Step 5 — Slice 4 (OCC peer)
 - **Entry.** Step 4 merged.

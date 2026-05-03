@@ -1,8 +1,8 @@
-"""Unit tests for ``sandbox.code_intelligence.daemon.launcher``.
+"""Unit tests for the sandbox runtime bundle.
 
-The headline tests extract the bundle to a tmp dir and import the command
+The headline tests extract the bundle to a tmp dir and import the runtime
 entrypoint from the extracted tree in a fresh subprocess. That mechanically
-catches the "transitive-imports-not-bundled" failure mode the command would
+catches the "transitive-imports-not-bundled" failure mode the runtime would
 otherwise hit on a clean sandbox image.
 """
 
@@ -18,11 +18,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from sandbox.code_intelligence.daemon.launcher import (
+from sandbox.runtime.bundle import (
     BUNDLE_REMOTE_DIR,
+    _ensure_runtime_uploaded_with_exec,
     _runtime_bundle_bytes,
     bundle_hash,
-    ensure_runtime_uploaded,
 )
 
 
@@ -55,13 +55,18 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/bash.py",
         "sandbox/api/models.py",
         "sandbox/client/async_bridge.py",
+        "sandbox/runtime/server.py",
+        "sandbox/runtime/pipelines.py",
+        "sandbox/runtime/setup_orchestrator.py",
+        "sandbox/runtime/legacy_command_client.py",
         "sandbox/code_intelligence/service.py",
         "sandbox/code_intelligence/backends/protocol.py",
-        "sandbox/code_intelligence/daemon/command.py",
         "sandbox/code_intelligence/daemon/storage.py",
     ]
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"
+    assert not (extract_dir / "sandbox/runtime/bundle.py").exists()
+    assert not (extract_dir / "sandbox/code_intelligence/daemon/command.py").exists()
 
 
 def test_bundle_excludes_pycache_and_compiled(tmp_path: Path) -> None:
@@ -75,7 +80,17 @@ def test_bundle_excludes_pycache_and_compiled(tmp_path: Path) -> None:
     assert all(not n.endswith((".pyc", ".pyo")) for n in names)
 
 
-def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
+def test_bundle_excludes_host_only_raw_exec_modules() -> None:
+    bundle = _runtime_bundle_bytes()
+    with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
+        names = set(tar.getnames())
+
+    assert "sandbox/api/raw_exec.py" not in names
+    assert "sandbox/runtime/bundle.py" not in names
+    assert all(not name.startswith("sandbox/providers/") for name in names)
+
+
+def test_bundle_extracted_runtime_modules_import_clean(tmp_path: Path) -> None:
     bundle = _runtime_bundle_bytes()
     extract_dir = tmp_path / "extracted"
     _extract_bundle(bundle, extract_dir)
@@ -85,8 +100,13 @@ def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
         "-c",
         (
             f"import sys; sys.path.insert(0, {str(extract_dir)!r}); "
-            "from sandbox.code_intelligence.daemon.command import COMMAND_VERSION, main; "
-            "print('ok:', callable(main), COMMAND_VERSION)"
+            "from sandbox.runtime.server import OP_TABLE, dispatch_envelope, main; "
+            "from sandbox.runtime.setup_orchestrator import SetupRegistry, SetupScript; "
+            "from sandbox.runtime.legacy_command_client import run_legacy_command; "
+            "print('ok:', callable(main), isinstance(OP_TABLE, dict), "
+            "dispatch_envelope({'op':'missing'})['error']['kind'], "
+            "SetupRegistry().scripts, "
+            "run_legacy_command(workspace_root='/w', op='ping', args={})['result']['pong'])"
         ),
     ]
     result = subprocess.run(
@@ -97,10 +117,9 @@ def test_bundle_extracted_daemon_imports_clean(tmp_path: Path) -> None:
         env={"PATH": "/usr/bin:/bin"},
     )
     assert result.returncode == 0, (
-        f"daemon import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+        f"runtime import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )
-    assert "ok: True" in result.stdout
-    assert "0.4.0" in result.stdout
+    assert "ok: True True unknown_op () True" in result.stdout
 
 
 def test_bundle_hash_is_deterministic() -> None:
@@ -125,7 +144,7 @@ async def test_ensure_runtime_uploaded_uploads_when_marker_missing() -> None:
         return type("R", (), {"exit_code": 1, "stdout": ""})()
 
     transport.exec.side_effect = fake_marker_check
-    digest = await ensure_runtime_uploaded(transport, "sb-1")
+    digest = await _ensure_runtime_uploaded_with_exec("sb-1", transport.exec)
     assert digest == bundle_hash()
     # Marker-check + setup + ≥1 chunk + finalize == ≥4 calls.
     assert transport.exec.await_count >= 4
@@ -161,7 +180,7 @@ async def test_ensure_runtime_uploaded_no_op_when_hash_matches() -> None:
     transport.exec.side_effect = [
         type("R", (), {"exit_code": 0, "stdout": digest + "\n"})(),
     ]
-    out = await ensure_runtime_uploaded(transport, "sb-1")
+    out = await _ensure_runtime_uploaded_with_exec("sb-1", transport.exec)
     assert out == digest
     # Only the marker check ran; no upload.
     assert transport.exec.await_count == 1
@@ -190,7 +209,7 @@ async def test_ensure_runtime_uploaded_raises_on_upload_failure() -> None:
 
     transport.exec.side_effect = script
     with pytest.raises(RuntimeError, match="runtime bundle upload failed"):
-        await ensure_runtime_uploaded(transport, "sb-broken")
+        await _ensure_runtime_uploaded_with_exec("sb-broken", transport.exec)
 
 
 @pytest.mark.asyncio
@@ -212,7 +231,7 @@ async def test_ensure_runtime_uploaded_re_uploads_when_hash_mismatches() -> None
         return type("R", (), {"exit_code": 0, "stdout": ""})()
 
     transport.exec.side_effect = script
-    digest = await ensure_runtime_uploaded(transport, "sb-1")
+    digest = await _ensure_runtime_uploaded_with_exec("sb-1", transport.exec)
     assert digest == bundle_hash()
     # Marker-check + setup + chunks + finalize ≥ 4 calls.
     assert transport.exec.await_count >= 4

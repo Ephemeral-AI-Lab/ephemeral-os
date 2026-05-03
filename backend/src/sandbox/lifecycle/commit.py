@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 
 if TYPE_CHECKING:
-    from sandbox.code_intelligence.core.types import OperationResult
+    from sandbox.occ.types import OperationResult
 
 
 T = TypeVar("T")

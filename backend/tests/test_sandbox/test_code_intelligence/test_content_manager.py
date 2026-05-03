@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from sandbox.code_intelligence.core.hashing import content_hash
-from sandbox.code_intelligence.mutations.content_manager import (
+from sandbox.occ.content.hashing import content_hash
+from sandbox.occ.content.manager import (
     CheckedApplyChange,
     ContentManager,
 )

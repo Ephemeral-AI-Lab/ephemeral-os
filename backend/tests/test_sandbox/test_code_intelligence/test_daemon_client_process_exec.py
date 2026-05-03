@@ -10,7 +10,7 @@ import pytest
 
 from sandbox.code_intelligence.backends import DaemonBackend
 from sandbox.code_intelligence.daemon.client import DaemonCommandError
-from sandbox.code_intelligence.daemon.launcher import bundle_hash
+from sandbox.runtime.bundle import bundle_hash
 
 
 class _FakeTransport:
@@ -38,7 +38,7 @@ class _FakeTransport:
         self.exec_calls.append(command)
         if ".bundle-hash" in command and "tar -xzf" not in command:
             return _result(0, bundle_hash() + "\n")
-        if "sandbox.code_intelligence.daemon.command" in command:
+        if "sandbox.runtime.legacy_command_client" in command:
             if self.bad_response:
                 return _result(0, "not-base64")
             if self.response_error is not None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.code_intelligence.core.types import EditResult, OperationChange, OperationResult
+from sandbox.occ.types import EditResult, OperationChange, OperationResult
 
 
 def edit_result(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.code_intelligence.core.types import OperationChange
+from sandbox.occ.types import OperationChange
 
 
 @dataclass(frozen=True)

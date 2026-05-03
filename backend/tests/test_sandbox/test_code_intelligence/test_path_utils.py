@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.code_intelligence.core.path_utils import relativize_workspace_path
+from sandbox.occ.content.path_utils import relativize_workspace_path
 
 
 def test_relativize_workspace_path_preserves_dot_prefixed_segments() -> None:

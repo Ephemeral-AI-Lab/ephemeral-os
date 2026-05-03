@@ -13,7 +13,7 @@ import uuid
 from collections import OrderedDict
 from dataclasses import dataclass
 
-from sandbox.code_intelligence.core.hashing import content_hash as _content_hash
+from sandbox.occ.content.hashing import content_hash as _content_hash
 
 logger = logging.getLogger(__name__)
 

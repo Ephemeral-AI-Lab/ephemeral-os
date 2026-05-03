@@ -25,7 +25,6 @@ from sandbox.client.credentials import load_credentials
 from sandbox.lifecycle.proxy import SandboxProxy
 from sandbox.lifecycle.workspace import (
     _ci_in_sandbox_enabled,
-    _build_sandbox_transport,
     _sandbox_project_root,
     bootstrap_in_sandbox_ci_runtime,
     bootstrap_upload_runtime_bundle,
@@ -72,10 +71,10 @@ def _dispose_provider_adapter(sandbox_id: str) -> None:
 def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
     """Best-effort eager-CI bootstrap on ``create``/``start``.
 
-    No-op when the ``EOS_CI_IN_SANDBOX`` flag is unset. Resolves a transport
-    via :class:`DaytonaTransport` and the workspace via
-    :func:`_sandbox_project_root`. Bootstrap failures intentionally propagate
-    so the caller sees the indexer error.
+    No-op when the ``EOS_CI_IN_SANDBOX`` flag is unset. Uses the registered
+    provider adapter and the workspace from :func:`_sandbox_project_root`.
+    Bootstrap failures intentionally propagate so the caller sees the indexer
+    error.
     """
     if not _ci_in_sandbox_enabled():
         return
@@ -87,21 +86,12 @@ def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
         )
         return
 
-    transport = _build_sandbox_transport(sandbox_id)
-    if transport is None:
-        logger.debug(
-            "eager CI bootstrap skipped for sandbox %s — transport unavailable",
-            sandbox_id,
-        )
-        return
-
     from sandbox.client.async_bridge import run_sync
 
     run_sync(
         bootstrap_in_sandbox_ci_runtime(
             sandbox_id=sandbox_id,
             workspace_root=workspace_root,
-            transport=transport,
         )
     )
 
@@ -120,7 +110,7 @@ def _maybe_start_eager_ci_bundle_upload(
     :func:`_finish_eager_ci_bundle_upload` before invoking
     :func:`_maybe_run_eager_ci_bootstrap`. Returns ``None`` when the
     background path is not enabled — same gating as the sequential
-    bootstrap (flag off, no project_dir, transport unavailable).
+    bootstrap (flag off, no project_dir).
 
     Best-effort by design: the matching join helper swallows errors and
     timeouts so the sequential bootstrap can retry from scratch.
@@ -131,15 +121,6 @@ def _maybe_start_eager_ci_bundle_upload(
     if not workspace_root or not sandbox_id:
         return None
 
-    transport = _build_sandbox_transport(sandbox_id)
-    if transport is None:
-        logger.debug(
-            "eager CI bundle upload (background) skipped for sandbox %s "
-            "— transport unavailable",
-            sandbox_id,
-        )
-        return None
-
     from sandbox.client.async_bridge import run_sync
 
     def _do_upload() -> None:
@@ -147,7 +128,6 @@ def _maybe_start_eager_ci_bundle_upload(
             bootstrap_upload_runtime_bundle(
                 sandbox_id=sandbox_id,
                 workspace_root=workspace_root,
-                transport=transport,
             )
         )
 
@@ -397,11 +377,14 @@ class SandboxService:
         execution is unhealthy, try a targeted restart once.
         """
         sb = self._get_proxy(sandbox_id)
+        _register_daytona_provider_adapter(sb.id)
         try:
-            resp = sb._raw.process.exec("pwd", timeout=10)
+            from sandbox.api.raw_exec import raw_exec
+            from sandbox.client.async_bridge import run_sync
+
+            resp = run_sync(raw_exec(sb.id, "pwd", timeout=10))
             exit_code = getattr(resp, "exit_code", 0)
             if exit_code in (None, 0):
-                _register_daytona_provider_adapter(sb.id)
                 return sb.serialize()
         except Exception:
             logger.warning(
@@ -420,6 +403,7 @@ class SandboxService:
             )
 
         sb.refresh()
+        _register_daytona_provider_adapter(sb.id)
         sb.ensure_git()
         sb.refresh()
 
@@ -428,7 +412,6 @@ class SandboxService:
         # ``EOS_CI_IN_SANDBOX`` is unset, so the cost only lands on
         # callers that actually opted into the daemon migration.
         _maybe_run_eager_ci_bootstrap(sb._raw, sb.id)
-        _register_daytona_provider_adapter(sb.id)
 
         return sb.serialize()
 

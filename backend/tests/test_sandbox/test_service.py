@@ -92,21 +92,45 @@ class TestSandboxProxy:
         assert result["assigned_agents"] == ["agent-1"]
         assert result["managed_by_app"] is True
 
-    def test_ensure_git_skips_when_git_present(self):
-        resp = MagicMock()
-        resp.configure_mock(result="ok")
-        exec_mock = MagicMock(return_value=resp)
-        proxy = _make_proxy(process=MagicMock(exec=exec_mock))
-        proxy.ensure_git()
-        assert exec_mock.call_count == 1
+    def test_ensure_git_skips_when_git_present(self, monkeypatch):
+        from sandbox.api.models import RawExecResult
 
-    def test_ensure_git_installs_when_missing(self):
-        resp_missing = MagicMock()
-        resp_missing.configure_mock(result="missing")
-        exec_mock = MagicMock(side_effect=[resp_missing, MagicMock()])
-        proxy = _make_proxy(process=MagicMock(exec=exec_mock))
+        calls: list[tuple[str, str, int | None]] = []
+
+        async def fake_raw_exec(sandbox_id, command, *, timeout=None, cwd=None):
+            del cwd
+            calls.append((sandbox_id, command, timeout))
+            return RawExecResult(exit_code=0, stdout="ok")
+
+        monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+        proxy = _make_proxy(id="sb-123")
         proxy.ensure_git()
-        assert exec_mock.call_count == 2
+        assert calls == [
+            (
+                "sb-123",
+                "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+                10,
+            )
+        ]
+
+    def test_ensure_git_installs_when_missing(self, monkeypatch):
+        from sandbox.api.models import RawExecResult
+
+        calls: list[tuple[str, str, int | None]] = []
+
+        async def fake_raw_exec(sandbox_id, command, *, timeout=None, cwd=None):
+            del cwd
+            calls.append((sandbox_id, command, timeout))
+            if len(calls) == 1:
+                return RawExecResult(exit_code=0, stdout="missing")
+            return RawExecResult(exit_code=0, stdout="installed")
+
+        monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+        proxy = _make_proxy(id="sb-123")
+        proxy.ensure_git()
+        assert len(calls) == 2
+        assert calls[1][0] == "sb-123"
+        assert calls[1][2] == 120
 
 
 class TestNormalizeHelpers:

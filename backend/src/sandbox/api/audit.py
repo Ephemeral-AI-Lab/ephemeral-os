@@ -118,7 +118,7 @@ async def submit_write_request(
     sandbox: Any | None = None,
 ) -> FileChangeResult:
     """Forward a :class:`WriteFileRequest` through the OCC pipeline."""
-    from sandbox.code_intelligence.core.types import WriteSpec
+    from sandbox.occ.types import WriteSpec
 
     spec = WriteSpec(
         file_path=request.path,
@@ -143,8 +143,8 @@ async def submit_edit_request(
     sandbox: Any | None = None,
 ) -> FileChangeResult:
     """Forward an :class:`EditFileRequest` through the OCC pipeline."""
-    from sandbox.code_intelligence.core.types import EditSpec
-    from sandbox.code_intelligence.mutations.patcher import (
+    from sandbox.occ.types import EditSpec
+    from sandbox.occ.patching.patcher import (
         SearchReplaceEdit as _EngineSREdit,
     )
 

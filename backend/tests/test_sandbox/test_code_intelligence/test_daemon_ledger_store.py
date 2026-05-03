@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.code_intelligence.daemon.storage import LedgerStore
-from sandbox.code_intelligence.mutations.edit_history_ledger import (
+from sandbox.occ.state.edit_history_ledger import (
     ContentionHotspot,
     EditHistoryLedger,
     EditRecord,
