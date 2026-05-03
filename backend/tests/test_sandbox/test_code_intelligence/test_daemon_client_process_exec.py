@@ -14,10 +14,8 @@ from sandbox.code_intelligence.daemon.protocol import (
     CI_PROTOCOL_VERSION,
     encode_frame,
 )
-from sandbox.code_intelligence.backends import (
-    DaemonCommandError,
-    DaemonBackend,
-)
+from sandbox.code_intelligence.backends import DaemonBackend
+from sandbox.code_intelligence.daemon.client import DaemonCommandError
 from sandbox.code_intelligence.daemon.launcher import DaemonUnavailable, bundle_hash
 
 

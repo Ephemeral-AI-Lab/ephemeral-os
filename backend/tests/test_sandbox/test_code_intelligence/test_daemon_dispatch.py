@@ -351,19 +351,19 @@ def test_writespec_from_dict_round_trips() -> None:
     assert spec.overwrite is True
 
 
-def test_movespec_accepts_legacy_aliases() -> None:
+def test_movespec_from_dict_round_trips() -> None:
     from sandbox.code_intelligence.core.types import MoveSpec
 
-    spec = daemon_server._movespec_from_dict({"source": "/a", "destination": "/b"})
+    spec = daemon_server._movespec_from_dict({"src_path": "/a", "dst_path": "/b"})
     assert isinstance(spec, MoveSpec)
     assert spec.src_path == "/a"
     assert spec.dst_path == "/b"
 
 
-def test_deletespec_accepts_legacy_field() -> None:
+def test_deletespec_from_dict_round_trips() -> None:
     from sandbox.code_intelligence.core.types import DeleteSpec
 
-    spec = daemon_server._deletespec_from_dict({"file_path": "/x.py"})
+    spec = daemon_server._deletespec_from_dict({"path": "/x.py"})
     assert isinstance(spec, DeleteSpec)
     assert spec.path == "/x.py"
 

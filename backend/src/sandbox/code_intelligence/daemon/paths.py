@@ -4,13 +4,8 @@ from __future__ import annotations
 
 import errno
 import hashlib
-import logging
 import os
-import pickle
 from pathlib import Path
-from typing import Any
-
-logger = logging.getLogger(__name__)
 
 
 class StorageUnavailable(Exception):
@@ -73,24 +68,3 @@ def _confine(state: Path, name: str) -> Path:
             f"path {target} escapes state dir {state_real}"
         )
     return target
-
-
-def _read_pickle_snapshot(state: Path, name: str) -> Any | None:
-    """Load a one-shot legacy pickle snapshot, unlinking corrupt files."""
-    target = _confine(state, name)
-    if not target.exists():
-        return None
-    try:
-        with open(target, "rb") as f:
-            return pickle.load(f)
-    except (EOFError, pickle.UnpicklingError, OSError) as exc:
-        logger.warning(
-            "storage: corrupt snapshot at %s (%s); unlinking",
-            target,
-            exc,
-        )
-        try:
-            target.unlink()
-        except OSError:
-            pass
-        return None

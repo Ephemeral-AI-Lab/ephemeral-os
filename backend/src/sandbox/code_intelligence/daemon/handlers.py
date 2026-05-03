@@ -108,8 +108,8 @@ def _movespec_from_dict(d: dict[str, Any]) -> Any:
     from sandbox.code_intelligence.core.types import MoveSpec
 
     return MoveSpec(
-        src_path=str(d.get("src_path") or d.get("source") or ""),
-        dst_path=str(d.get("dst_path") or d.get("destination") or ""),
+        src_path=str(d["src_path"]),
+        dst_path=str(d["dst_path"]),
         overwrite=bool(d.get("overwrite", False)),
         is_folder=bool(d.get("is_folder", False)),
     )
@@ -119,7 +119,7 @@ def _deletespec_from_dict(d: dict[str, Any]) -> Any:
     from sandbox.code_intelligence.core.types import DeleteSpec
 
     return DeleteSpec(
-        path=str(d.get("path") or d.get("file_path") or ""),
+        path=str(d["path"]),
         is_folder=bool(d.get("is_folder", False)),
     )
 

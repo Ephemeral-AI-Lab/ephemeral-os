@@ -36,10 +36,10 @@ The post-phase review found one implementation gap and one cleanup seam:
   without a full rebuild: a new `SymbolIndex(..., persistence=IndexStore(...))`
   loads persisted rows into memory and marks the index ready.
 - The active daemon path no longer needs the Phase 1 standalone
-  index runner, the orchestrator-side remote snapshot downloader, or
-  the public pickle `write_snapshot/read_snapshot` API. Those paths were
-  removed; only a private pickle reader remains for the one-shot
-  `index.snapshot` to `index.sqlite3` migration.
+  index runner, the orchestrator-side remote snapshot downloader, the
+  public pickle `write_snapshot/read_snapshot` API, or the private
+  `index.snapshot` migration reader. Those paths were removed; stale
+  pickle snapshots are ignored and the daemon rebuilds the SQLite index.
 - Phase 1 live E2E assertions were updated from retired `_cached_*` /
   `index.snapshot` fields to current daemon status and `index.sqlite3`
   recovery.

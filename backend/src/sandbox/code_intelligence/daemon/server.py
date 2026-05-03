@@ -182,11 +182,6 @@ async def run_daemon(workspace_root: str) -> None:
     state, socket_path, pid_path, log_path = _prepare_state_paths(workspace_root)
     _configure_file_logging(log_path)
 
-    try:
-        storage.migrate_pickle_to_sqlite(state)
-    except Exception:  # pragma: no cover - defensive
-        logger.debug("migrate_pickle_to_sqlite failed", exc_info=True)
-
     svc, ledger, index_store = _build_service(state, workspace_root)
     _populate_state(
         state=state,

@@ -9,8 +9,6 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from sandbox.code_intelligence.daemon.paths import _read_pickle_snapshot
-
 logger = logging.getLogger(__name__)
 
 _INDEX_FILE = "index.sqlite3"
@@ -226,28 +224,3 @@ class IndexStore:
                 "SELECT file_path FROM index_files ORDER BY file_path"
             ).fetchall()
         return [str(r[0]) for r in rows]
-
-
-def migrate_pickle_to_sqlite(state: Path) -> int:
-    """One-shot pickle ``index.snapshot`` to SQLite ``index.sqlite3`` migration."""
-    pickle_path = state / "index.snapshot"
-    if not pickle_path.exists():
-        return 0
-    snapshot = _read_pickle_snapshot(state, "index.snapshot")
-    if not isinstance(snapshot, dict) or not snapshot:
-        try:
-            pickle_path.unlink()
-        except OSError:
-            pass
-        return 0
-    store = IndexStore(state_dir_path=state)
-    try:
-        store.bulk_replace(snapshot)
-    finally:
-        store.close()
-    try:
-        pickle_path.unlink()
-    except OSError:
-        pass
-    logger.info("storage: migrated %d files from pickle to sqlite", len(snapshot))
-    return len(snapshot)

@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import pickle
 import threading
 from pathlib import Path
 
 
 from sandbox.code_intelligence.core.types import SymbolInfo, SymbolKind
-from sandbox.code_intelligence.daemon.storage import (
+from sandbox.code_intelligence.daemon.index_store import (
     IndexStore,
     _decode_symbols,
     _encode_symbols,
-    migrate_pickle_to_sqlite,
 )
 
 
@@ -156,47 +154,6 @@ def test_msgpack_round_trip_unknown_kind() -> None:
     blob = _encode_symbols([])
     out = _decode_symbols(blob)
     assert out == []
-
-
-def test_migrate_pickle_to_sqlite_only_pickle(tmp_path: Path) -> None:
-    snapshot = {
-        "/a.py": [_mk_symbol("foo", "/a.py")],
-        "/b.py": [_mk_symbol("bar", "/b.py")],
-    }
-    with open(tmp_path / "index.snapshot", "wb") as f:
-        pickle.dump(snapshot, f, protocol=5)
-    assert (tmp_path / "index.snapshot").exists()
-    n = migrate_pickle_to_sqlite(tmp_path)
-    assert n == 2
-    assert not (tmp_path / "index.snapshot").exists()
-    store = IndexStore(state_dir_path=tmp_path)
-    try:
-        assert sorted(store.indexed_paths()) == ["/a.py", "/b.py"]
-    finally:
-        store.close()
-
-
-def test_migrate_pickle_to_sqlite_only_sqlite(tmp_path: Path) -> None:
-    store = IndexStore(state_dir_path=tmp_path)
-    try:
-        store.refresh_file("/x.py", [_mk_symbol("foo", "/x.py")])
-    finally:
-        store.close()
-    n = migrate_pickle_to_sqlite(tmp_path)
-    assert n == 0
-
-
-def test_migrate_pickle_to_sqlite_neither(tmp_path: Path) -> None:
-    n = migrate_pickle_to_sqlite(tmp_path)
-    assert n == 0
-
-
-def test_migrate_pickle_to_sqlite_corrupt_pickle(tmp_path: Path) -> None:
-    (tmp_path / "index.snapshot").write_bytes(b"not a pickle")
-    n = migrate_pickle_to_sqlite(tmp_path)
-    assert n == 0
-    # corrupt legacy pickle is unlinked by migrate_pickle_to_sqlite
-    assert not (tmp_path / "index.snapshot").exists()
 
 
 def test_close_idempotent(tmp_path: Path) -> None:
