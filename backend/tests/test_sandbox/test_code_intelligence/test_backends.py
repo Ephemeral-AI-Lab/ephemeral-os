@@ -2,8 +2,8 @@
 
 Covers the four-entry truth table selection logic in
 ``CodeIntelligenceService._select_backend`` (transport x sandbox_id),
-the InProcessBackend behavioral defaults (e.g. empty workspace returns no
-symbols), and that DaemonBackend exposes the full protocol shape.
+the InProcessBackend behavioral defaults, and that DaemonBackend exposes
+the full protocol shape.
 """
 
 from __future__ import annotations

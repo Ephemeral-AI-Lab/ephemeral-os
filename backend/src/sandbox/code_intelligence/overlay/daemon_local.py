@@ -29,7 +29,7 @@ from sandbox.code_intelligence.overlay.types import (
     OverlayPolicyReject,
     OverlayRunError,
 )
-from sandbox.code_intelligence.telemetry import record_overlay_op
+from sandbox.code_intelligence.overlay.counters import record_overlay_op
 
 logger = logging.getLogger(__name__)
 

@@ -99,22 +99,6 @@ async def undo_edit(sandbox_id: str, file_path: str = Query(...)) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Telemetry
-# ---------------------------------------------------------------------------
-
-
-@router.get("/{sandbox_id}/telemetry")
-async def telemetry(sandbox_id: str) -> dict:
-    """Get CI telemetry for a sandbox."""
-    service = _get_service_if_exists(sandbox_id)
-    tel = service.get_telemetry()
-    return {
-        "arbiter_active_locks": tel.arbiter_active_locks,
-        "total_edits": tel.total_edits,
-    }
-
-
-# ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
 

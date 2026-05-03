@@ -194,26 +194,17 @@ def test_init_drops_legacy_cache_attributes() -> None:
         )
 
 
-def test_daemon_client_module_has_no_language_server_queries() -> None:
+def test_daemon_client_module_has_no_semantic_query_methods() -> None:
     """Boundary invariant: daemon/client.py stays transport-only."""
     source = Path(daemon_client.__file__).read_text(encoding="utf-8")
     forbidden = (
-        "find_definitions",
-        "find_references",
-        "query_symbols",
         "hover_result_from_dict",
         "reference_info_from_dict",
         "diagnostic_from_dict",
-        "def hover(",
-        "def diagnostics(",
+        "semantic_query",
+        "symbol_query",
     )
     for token in forbidden:
         assert token not in source
-    for method in (
-        "find_definitions",
-        "find_references",
-        "query_symbols",
-        "hover",
-        "diagnostics",
-    ):
+    for method in ("semantic_query", "symbol_query"):
         assert not hasattr(DaemonCommandClient, method)

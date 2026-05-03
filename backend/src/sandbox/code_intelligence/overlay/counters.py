@@ -1,20 +1,14 @@
-"""Status and telemetry shaping for code intelligence services."""
+"""Per-process counters for audited overlay shell operations."""
 
 from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from sandbox.code_intelligence.core.types import CITelemetry
 
 
 @dataclass
 class OverlayCounters:
-    """Per-process counters for the overlay shell backend.
-
-    See ``docs/architecture/overlay-sandbox-plan.md`` §6. Incremented by
-    :class:`OverlayAuditor` when it finishes one op; surfaced on the
-    service status for the operator dashboard.
-    """
+    """Aggregate counters surfaced to overlay callers and tests."""
 
     snap_build_ms: int = 0
     mount_setup_ms: int = 0
@@ -48,19 +42,12 @@ def overlay_counters_snapshot() -> OverlayCounters:
 
 
 def record_overlay_op(**fields: int) -> None:
-    """Additive increment for one overlay op's counters.
+    """Additively record one overlay operation.
 
-    Unknown keys are ignored so the auditor can evolve its metadata
-    without tripping the telemetry recorder.
+    Unknown keys are ignored so overlay metadata can evolve without breaking
+    older callers.
     """
     with _OVERLAY_LOCK:
         for key, value in fields.items():
             if hasattr(_OVERLAY_COUNTERS, key):
                 setattr(_OVERLAY_COUNTERS, key, getattr(_OVERLAY_COUNTERS, key) + int(value))
-
-
-def build_telemetry(*, arbiter: object) -> CITelemetry:
-    return CITelemetry(
-        arbiter_active_locks=getattr(arbiter, "active_lock_count", 0),
-        total_edits=getattr(getattr(arbiter, "metrics", None), "total_edits", 0),
-    )

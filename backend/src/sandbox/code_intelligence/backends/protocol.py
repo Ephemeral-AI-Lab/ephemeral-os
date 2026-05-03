@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from typing import Any, Protocol
 
 from sandbox.code_intelligence.core.types import (
-    CITelemetry,
     EditRequest,
     EditResult,
     EditSpec,
@@ -55,7 +54,6 @@ class CodeIntelligenceBackend(Protocol):
         description: str = "",
     ) -> OperationResult: ...
     def undo_last_edit(self, file_path: str) -> EditResult: ...
-    def get_telemetry(self) -> CITelemetry: ...
     def dispose(self) -> None: ...
 
 

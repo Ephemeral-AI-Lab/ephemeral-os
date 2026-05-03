@@ -103,11 +103,3 @@ class OperationResult:
     conflict_reason: str = ""
     timings: dict[str, float] = field(default_factory=dict)
 
-
-@dataclass
-class CITelemetry:
-    """Runtime telemetry for the code intelligence service."""
-
-    arbiter_active_locks: int = 0
-    total_edits: int = 0
-    extra: dict[str, Any] = field(default_factory=dict)

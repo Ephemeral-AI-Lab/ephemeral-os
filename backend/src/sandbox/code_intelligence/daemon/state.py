@@ -32,6 +32,5 @@ QUERY_OPS = frozenset(
     {
         "ping",
         "version",
-        "get_telemetry",
     }
 )

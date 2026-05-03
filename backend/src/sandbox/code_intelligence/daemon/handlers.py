@@ -157,12 +157,6 @@ def _svc_cmd_result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
-async def handle_get_telemetry(args: dict[str, Any]) -> Any:
-    del args
-    svc = _require_svc()
-    return _to_dict(svc.get_telemetry())
-
-
 async def handle_svc_cmd(args: dict[str, Any]) -> Any:
     svc = _require_svc()
     timeout_raw = args.get("timeout")
@@ -239,7 +233,6 @@ DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "ping": handle_ping,
     "shutdown": handle_shutdown,
     "version": handle_version,
-    "get_telemetry": handle_get_telemetry,
     "svc_cmd": handle_svc_cmd,
     "apply_edit": handle_apply_edit,
     "commit_operation_against_base": handle_commit_operation_against_base,

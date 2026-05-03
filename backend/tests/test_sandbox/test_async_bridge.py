@@ -1,8 +1,7 @@
 """Tests for the loop-aware sync bridge.
 
 These exercise the contract that keeps the async Daytona SDK alive when
-sync CI code (``ContentManager``, ``LspClient``) is called from a worker
-thread launched via ``asyncio.to_thread``.
+sync CI code is called from a worker thread launched via ``asyncio.to_thread``.
 """
 
 from __future__ import annotations

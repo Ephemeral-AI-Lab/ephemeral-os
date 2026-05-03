@@ -26,7 +26,6 @@ from sandbox.code_intelligence.daemon.wire import (
     writespec_to_dict,
 )
 from sandbox.code_intelligence.core.types import (
-    CITelemetry,
     EditRequest,
     EditResult,
     EditSpec,
@@ -62,8 +61,8 @@ class DaemonCommandError(Exception):
 class DaemonCommandClient:
     """Transport-backed client for daemon command dispatch.
 
-    The daemon serves mutation, shell, and telemetry verbs through framed
-    msgpack command dispatch.
+    The daemon serves mutation and shell verbs through framed msgpack command
+    dispatch.
     """
 
     is_initialized: bool = False
@@ -367,16 +366,6 @@ class DaemonCommandClient:
     def undo_last_edit(self, file_path: str) -> EditResult:
         result = self._call_sync("undo_last_edit", {"file_path": file_path})
         return edit_result_from_dict(result)
-
-    def get_telemetry(self) -> CITelemetry:
-        result = self._call_sync("get_telemetry")
-        if isinstance(result, dict):
-            return CITelemetry(
-                arbiter_active_locks=int(result.get("arbiter_active_locks") or 0),
-                total_edits=int(result.get("total_edits") or 0),
-                extra=dict(result.get("extra") or {}),
-            )
-        return CITelemetry()
 
     def dispose(self) -> None:
         try:
