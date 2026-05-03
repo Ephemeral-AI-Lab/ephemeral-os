@@ -98,8 +98,8 @@ sandbox/occ/
 - OCC request/result dataclasses from
   `backend/src/sandbox/code_intelligence/core/types.py` →
   `backend/src/sandbox/occ/types.py`. In this checkout, the current file is
-  OCC-owned (`EditRequest`, `EditResult`, `OperationChange`, `OperationResult`,
-  `WriteSpec`, `EditSpec`).
+  OCC-owned (`EditResult`, `OperationChange`, `OperationResult`, `WriteSpec`,
+  `EditSpec`).
 - `backend/src/sandbox/code_intelligence/daemon/wire.py` →
   `backend/src/sandbox/occ/wire.py`.
 

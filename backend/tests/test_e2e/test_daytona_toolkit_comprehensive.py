@@ -828,21 +828,17 @@ class TestToolSelectionAndOrdering:
 class TestCITypesDeep:
     """Deep tests for code intelligence types — ported from synthetic-os patterns."""
 
-    def test_edit_request_all_fields(self):
-        from sandbox.occ.types import EditRequest
+    def test_edit_spec_all_fields(self):
+        from sandbox.occ.patching.patcher import SearchReplaceEdit
+        from sandbox.occ.types import EditSpec
 
-        req = EditRequest(
+        spec = EditSpec(
             file_path="/ws/app.py",
-            old_text="old",
-            new_text="new",
-            agent_id="agent-1",
-            description="Fix bug",
+            edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
         )
-        assert req.file_path == "/ws/app.py"
-        assert req.old_text == "old"
-        assert req.new_text == "new"
-        assert req.agent_id == "agent-1"
-        assert req.description == "Fix bug"
+        assert spec.file_path == "/ws/app.py"
+        assert spec.edits[0].old_text == "old"
+        assert spec.edits[0].new_text == "new"
 
     def test_edit_result_success(self):
         from sandbox.occ.types import EditResult

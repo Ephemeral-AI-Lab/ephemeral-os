@@ -6,8 +6,6 @@ from collections.abc import Sequence
 from typing import Any, Protocol
 
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
     OperationChange,
     OperationResult,
@@ -26,7 +24,6 @@ class CodeIntelligenceBackend(Protocol):
     def warmup(self) -> None: ...
     def rebind_sandbox(self, sandbox: Any) -> None: ...
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any: ...
-    def apply(self, request: EditRequest) -> EditResult: ...
     def commit_operation_against_base(
         self,
         changes: Sequence[OperationChange],

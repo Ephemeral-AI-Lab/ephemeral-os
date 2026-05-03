@@ -18,8 +18,6 @@ from sandbox.runtime.backends import (
     DaemonBackend,
 )
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
     OperationChange,
     OperationResult,
@@ -149,9 +147,6 @@ class CodeIntelligenceService:
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._impl.cmd(sandbox, command, **kwargs)
-
-    def apply(self, request: EditRequest) -> EditResult:
-        return self._impl.apply(request)
 
     def commit_operation_against_base(
         self,

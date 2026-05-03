@@ -14,7 +14,6 @@ import pytest
 
 from sandbox.runtime.backends import DaemonBackend
 from sandbox.occ.types import (
-    EditRequest,
     EditSpec,
     OperationChange,
     WriteSpec,
@@ -103,35 +102,6 @@ def test_edit_file_serializes_specs() -> None:
     backend.edit_file(spec)
     args = runtime.calls[0][1]
     assert args["specs"][0]["file_path"] == "/ws/x.py"
-
-
-def test_apply_edit_serializes_request() -> None:
-    backend, runtime = _make_backend(
-        {
-            "occ.apply": {
-                "success": True,
-                "file_path": "/ws/x.py",
-                "message": "",
-                "conflict": False,
-                "conflict_reason": "",
-                "snapshot_id": "",
-                "timings": {},
-            }
-        }
-    )
-    request = EditRequest(
-        file_path="/ws/x.py",
-        old_text="a",
-        new_text="b",
-        agent_id="ag",
-    )
-    result = backend.apply(request)
-    assert result.success is True
-    args = runtime.calls[0][1]
-    assert args["workspace_root"] == "/ws"
-    assert args["request"]["file_path"] == "/ws/x.py"
-    assert args["request"]["old_text"] == "a"
-    assert args["request"]["new_text"] == "b"
 
 
 def test_commit_operation_against_base_serializes_changes() -> None:

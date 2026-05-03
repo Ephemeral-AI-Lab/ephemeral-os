@@ -10,17 +10,6 @@ from sandbox.occ.patching.patcher import SearchReplaceEdit
 
 
 @dataclass(frozen=True)
-class EditRequest:
-    """A request to edit a file through the service edit helper."""
-
-    file_path: str
-    old_text: str
-    new_text: str
-    agent_id: str = ""
-    description: str = ""
-
-
-@dataclass(frozen=True)
 class EditResult:
     """Result of an edit operation."""
 

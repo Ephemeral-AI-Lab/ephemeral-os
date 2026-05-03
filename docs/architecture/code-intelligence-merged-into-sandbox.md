@@ -18,14 +18,14 @@ It is now `sandbox/code_intelligence/` — a subpackage of `sandbox/`.
 ```python
 from code_intelligence.service import CodeIntelligenceService, get_code_intelligence
 from code_intelligence.core.async_bridge import run_sync_in_executor
-from code_intelligence.core.types import EditRequest
+from code_intelligence.core.types import EditSpec
 ```
 
 **After**
 ```python
 from sandbox.code_intelligence.service import CodeIntelligenceService
 from sandbox.async_bridge import run_sync_in_executor
-from sandbox.code_intelligence.core.types import EditRequest
+from sandbox.occ.types import EditSpec
 
 # External code (routers, benchmarks, anything outside sandbox/) MUST use
 # SandboxService rather than the registry directly:

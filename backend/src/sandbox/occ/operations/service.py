@@ -11,7 +11,6 @@ from sandbox.occ.commit import CommitOperation, WriteCoordinator
 from sandbox.occ.content.hashing import content_hash
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.types import (
-    EditRequest,
     EditResult,
     EditSpec,
     OperationChange,
@@ -88,47 +87,6 @@ class OCCOperationService:
         self._content = content
         self._write_coordinator = write_coordinator
         self.patcher = patcher
-
-    def apply(self, request: EditRequest) -> EditResult:
-        """Apply a single search/replace edit through the service helper path."""
-        current, existed = self._content.read(request.file_path, allow_missing=True)
-        if not existed:
-            return EditResult(
-                success=False,
-                file_path=request.file_path,
-                message=f"Path does not exist: {request.file_path}",
-            )
-        if request.old_text not in current:
-            return EditResult(
-                success=False,
-                file_path=request.file_path,
-                message="Search text not found",
-            )
-        new_content = current.replace(request.old_text, request.new_text, 1)
-        operation = self._write_coordinator.commit_operation_against_base(
-            [
-                OperationChange(
-                    file_path=request.file_path,
-                    base_content=current,
-                    base_hash=content_hash(current),
-                    final_content=new_content,
-                    base_existed=True,
-                )
-            ],
-            agent_id=request.agent_id,
-            edit_type="edit",
-            description=request.description,
-        )
-        if operation.files:
-            return operation.files[0]
-        return EditResult(
-            success=operation.success,
-            file_path=request.file_path,
-            message=operation.conflict_reason,
-            conflict=bool(operation.conflict_file),
-            conflict_reason=operation.status if operation.conflict_file else "",
-            timings=dict(operation.timings),
-        )
 
     def commit_operation_against_base(
         self,

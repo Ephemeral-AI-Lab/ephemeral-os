@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from sandbox.runtime import server
 
-from . import apply, apply_changeset, commit, edit, write
+from . import apply_changeset, commit, edit, write
 
 
 _HANDLERS = {
-    "occ.apply": apply.handle,
     "occ.apply_changeset": apply_changeset.handle,
     "occ.commit_against_base": commit.handle_against_base,
     "occ.commit_many": commit.handle_many,

@@ -13,8 +13,6 @@ from sandbox.occ.patching.patcher import Patcher
 from sandbox.occ.state.arbiter import Arbiter
 from sandbox.occ.state.ledger_store import LedgerStore, state_dir
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
     OperationChange,
     OperationResult,
@@ -29,16 +27,17 @@ class LocalOCCEngine:
         self,
         *,
         workspace_root: str,
+        sandbox: Any = None,
         edit_history: Any | None = None,
     ) -> None:
         self.workspace_root = workspace_root
         self._ledger = None if edit_history is not None else LedgerStore(
             state_dir(workspace_root)
         )
-        self._content = ContentManager(workspace_root)
+        self._content = ContentManager(workspace_root, sandbox=sandbox)
         self._arbiter = Arbiter(
             workspace_root=workspace_root,
-            edit_history=edit_history or self._ledger,
+            edit_history=edit_history if edit_history is not None else self._ledger,
         )
         self._patcher = Patcher()
         self._write_coordinator = WriteCoordinator(
@@ -55,8 +54,24 @@ class LocalOCCEngine:
     def arbiter(self) -> Arbiter:
         return self._arbiter
 
-    def apply(self, request: EditRequest) -> EditResult:
-        return self._operations.apply(request)
+    @property
+    def patcher(self) -> Patcher:
+        return self._patcher
+
+    @property
+    def content(self) -> ContentManager:
+        return self._content
+
+    @property
+    def write_coordinator(self) -> WriteCoordinator:
+        return self._write_coordinator
+
+    @property
+    def operations(self) -> OCCOperationService:
+        return self._operations
+
+    def bind_sandbox(self, sandbox: Any) -> None:
+        self._content.bind_sandbox(sandbox)
 
     def commit_operation_against_base(
         self,

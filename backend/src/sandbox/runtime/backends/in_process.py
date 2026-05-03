@@ -7,19 +7,14 @@ import threading
 from collections.abc import Sequence
 from typing import Any
 
+from sandbox.occ.engine import LocalOCCEngine
+from sandbox.occ.state.edit_history_ledger import EditHistoryLedger
 from sandbox.occ.types import (
-    EditRequest,
-    EditResult,
     EditSpec,
     OperationChange,
     OperationResult,
     WriteSpec,
 )
-from sandbox.occ.state.arbiter import Arbiter
-from sandbox.occ.content.manager import ContentManager
-from sandbox.occ.operations.service import OCCOperationService
-from sandbox.occ.patching.patcher import Patcher
-from sandbox.occ.commit import WriteCoordinator
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
 
 __all__ = ["InProcessBackend"]
@@ -45,25 +40,17 @@ class InProcessBackend:
         self._initialized = False
         self._init_lock = threading.Lock()
 
-        self.arbiter = Arbiter(
+        history = edit_history if edit_history is not None else EditHistoryLedger()
+        self._occ = LocalOCCEngine(
             workspace_root=workspace_root,
-            edit_history=edit_history,
-        )
-        self.patcher = Patcher()
-
-        self._content = ContentManager(
-            workspace_root,
             sandbox=sandbox,
+            edit_history=history,
         )
-        self._write_coordinator = WriteCoordinator(
-            arbiter=self.arbiter,
-            content=self._content,
-        )
-        self._mutations = OCCOperationService(
-            content=self._content,
-            write_coordinator=self._write_coordinator,
-            patcher=self.patcher,
-        )
+        self.arbiter = self._occ.arbiter
+        self.patcher = self._occ.patcher
+        self._content = self._occ.content
+        self._write_coordinator = self._occ.write_coordinator
+        self._mutations = self._occ.operations
         self._command_executor = AuditedCommandExecutor(
             sandbox_id=sandbox_id,
             workspace_root=workspace_root,
@@ -101,13 +88,10 @@ class InProcessBackend:
         if sandbox is None:
             return
         self._sandbox = sandbox
-        self._content.bind_sandbox(sandbox)
+        self._occ.bind_sandbox(sandbox)
 
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
-
-    def apply(self, request: EditRequest) -> EditResult:
-        return self._mutations.apply(request)
 
     def commit_operation_against_base(
         self,
@@ -157,5 +141,5 @@ class InProcessBackend:
         )
 
     def dispose(self) -> None:
-        self.arbiter.cleanup_locks()
+        self._occ.dispose()
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)

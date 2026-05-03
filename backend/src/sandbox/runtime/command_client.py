@@ -16,8 +16,6 @@ from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_
 
 if TYPE_CHECKING:
     from sandbox.occ.types import (
-        EditRequest,
-        EditResult,
         EditSpec,
         OperationChange,
         OperationResult,
@@ -187,21 +185,6 @@ class RuntimeCommandClient:
         if on_progress_line is not None and result.result:
             on_progress_line(result.result)
         return result
-
-    def apply(self, request: "EditRequest") -> "EditResult":
-        from sandbox.occ.wire import (
-            edit_request_to_dict,
-            edit_result_from_dict,
-        )
-
-        result = self._call_sync(
-            "occ.apply",
-            {
-                "workspace_root": self.workspace_root,
-                "request": edit_request_to_dict(request),
-            },
-        )
-        return edit_result_from_dict(result)
 
     def commit_operation_against_base(
         self,
