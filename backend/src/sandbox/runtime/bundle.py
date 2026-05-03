@@ -1,8 +1,8 @@
 """Bundle helper + idempotent uploader for the sandbox-local runtime.
 
 The bundle is a tar.gz containing the project modules needed to import
-the deployed runtime server, setup orchestrator contract, and temporary legacy
-command adapter inside a sandbox. This module is host-side bootstrap code;
+the deployed runtime server and setup orchestrator contract inside a sandbox.
+This module is host-side bootstrap code;
 bundle upload goes through ``sandbox.api.raw_exec`` by sandbox id.
 """
 

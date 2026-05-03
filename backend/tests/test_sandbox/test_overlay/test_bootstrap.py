@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import sandbox.overlay.bootstrap as bootstrap
+from sandbox.runtime import server
 from sandbox.runtime import setup_orchestrator
 
 
@@ -20,6 +21,19 @@ def test_bootstrap_registers_overlay_setup_script() -> None:
         and script.relative_path == "sandbox/overlay/setup.sh"
         for script in scripts
     )
+
+
+def test_bootstrap_registers_overlay_handlers() -> None:
+    saved = dict(server.OP_TABLE)
+    server.OP_TABLE.clear()
+    try:
+        bootstrap.register()
+
+        assert "overlay.run" in server.OP_TABLE
+        assert "shell" in server.OP_TABLE
+    finally:
+        server.OP_TABLE.clear()
+        server.OP_TABLE.update(saved)
 
 
 def test_bootstrap_registration_is_idempotent() -> None:

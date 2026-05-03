@@ -24,7 +24,4 @@ def register_handlers() -> None:
         server.register_op(op, handler)
 
 
-register_handlers()
-
-
 __all__ = ["register_handlers"]

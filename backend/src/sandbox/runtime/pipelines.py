@@ -140,26 +140,15 @@ async def _execute_overlay(
     agent_id: str,
     on_progress_line: Callable[[str], None] | None,
 ) -> OverlayRunOutcome:
-    try:
-        result = overlay.execute(
-            command,
-            sandbox=sandbox,
-            timeout=timeout,
-            stdin=stdin,
-            description=description,
-            agent_id=agent_id,
-            on_progress_line=on_progress_line,
-        )
-    except TypeError:
-        result = overlay.execute(  # type: ignore[misc,call-arg]
-            sandbox,
-            command,
-            timeout=timeout,
-            stdin=stdin,
-            description=description,
-            agent_id=agent_id,
-            on_progress_line=on_progress_line,
-        )
+    result = overlay.execute(
+        command,
+        sandbox=sandbox,
+        timeout=timeout,
+        stdin=stdin,
+        description=description,
+        agent_id=agent_id,
+        on_progress_line=on_progress_line,
+    )
     return await _maybe_await(result)
 
 

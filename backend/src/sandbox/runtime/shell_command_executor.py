@@ -59,7 +59,7 @@ class AuditedCommandExecutor:
         """Run one command through the fail-closed OCC audit path."""
         del attribute_changes, run_id, agent_run_id, task_id
         self._rebind_sandbox(sandbox)
-        overlay = await self._ensure_capture_runner()
+        overlay = await self._ensure_overlay_engine()
         result = await shell_pipeline(
             command=command,
             workspace_root=self.workspace_root,
@@ -75,12 +75,8 @@ class AuditedCommandExecutor:
         )
         return _simple_namespace_from_shell_result(result)
 
-    async def _ensure_capture_runner(self) -> OverlayEngine:
-        """Return the lazily initialized overlay engine.
-
-        The method name stays for compatibility with existing tests and callers
-        that patch this private boundary.
-        """
+    async def _ensure_overlay_engine(self) -> OverlayEngine:
+        """Return the lazily initialized overlay engine."""
         cached = self._overlay_engine
         if cached is not None:
             return cached

@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import sandbox.occ.bootstrap as bootstrap
+from sandbox.runtime import server
 from sandbox.runtime import setup_orchestrator
 
 
@@ -20,6 +21,20 @@ def test_bootstrap_registers_occ_setup_script() -> None:
         and script.relative_path == "sandbox/occ/setup.sh"
         for script in scripts
     )
+
+
+def test_bootstrap_registers_occ_handlers() -> None:
+    saved = dict(server.OP_TABLE)
+    server.OP_TABLE.clear()
+    try:
+        bootstrap.register()
+
+        assert "occ.apply_changeset" in server.OP_TABLE
+        assert "occ.edit" in server.OP_TABLE
+        assert "occ.write" in server.OP_TABLE
+    finally:
+        server.OP_TABLE.clear()
+        server.OP_TABLE.update(saved)
 
 
 def test_bootstrap_registration_is_idempotent() -> None:

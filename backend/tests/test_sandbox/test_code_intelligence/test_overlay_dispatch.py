@@ -1,4 +1,4 @@
-"""Verify that ``svc.cmd`` uses the overlay capture runner directly."""
+"""Verify that ``svc.cmd`` uses the overlay engine directly."""
 
 from __future__ import annotations
 
@@ -32,13 +32,13 @@ async def test_executor_builds_overlay_engine_by_default(tmp_path) -> None:
     )
     executor: AuditedCommandExecutor = svc._command_executor  # type: ignore[attr-defined]
 
-    capture_runner = await executor._ensure_capture_runner()
+    overlay_engine = await executor._ensure_overlay_engine()
 
-    assert isinstance(capture_runner, LocalOverlayEngine)
+    assert isinstance(overlay_engine, LocalOverlayEngine)
 
 
 @pytest.mark.asyncio
-async def test_cmd_delegates_to_overlay_capture_runner_with_stdin(tmp_path) -> None:
+async def test_cmd_delegates_to_overlay_engine_with_stdin(tmp_path) -> None:
     sandbox = SimpleNamespace()
     svc = CodeIntelligenceService(
         sandbox_id=f"dispatch-cmd-{tmp_path.name}",
@@ -48,11 +48,11 @@ async def test_cmd_delegates_to_overlay_capture_runner_with_stdin(tmp_path) -> N
     executor: AuditedCommandExecutor = svc._command_executor  # type: ignore[attr-defined]
     calls: list[dict[str, object]] = []
 
-    class _FakeCaptureRunner:
-        async def execute(self, sandbox_arg, command: str, **kwargs):
+    class _FakeOverlayEngine:
+        async def execute(self, command: str, **kwargs):
             calls.append(
                 {
-                    "sandbox": sandbox_arg,
+                    "sandbox": kwargs.get("sandbox"),
                     "command": command,
                     "stdin": kwargs.get("stdin"),
                 }
@@ -65,10 +65,10 @@ async def test_cmd_delegates_to_overlay_capture_runner_with_stdin(tmp_path) -> N
                 conflict=None,
             )
 
-    async def _fake_ensure_capture_runner():
-        return _FakeCaptureRunner()
+    async def _fake_ensure_overlay_engine():
+        return _FakeOverlayEngine()
 
-    executor._ensure_capture_runner = _fake_ensure_capture_runner  # type: ignore[method-assign]
+    executor._ensure_overlay_engine = _fake_ensure_overlay_engine  # type: ignore[method-assign]
 
     result = await svc.cmd(sandbox, "cat", stdin="payload")
 

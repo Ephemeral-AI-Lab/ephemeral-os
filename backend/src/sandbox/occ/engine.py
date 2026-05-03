@@ -13,7 +13,10 @@ from sandbox.occ.patching.patcher import Patcher
 from sandbox.occ.state.arbiter import Arbiter
 from sandbox.occ.state.ledger_store import LedgerStore, state_dir
 from sandbox.occ.types import (
+    EditRequest,
+    EditResult,
     EditSpec,
+    OperationChange,
     OperationResult,
     WriteSpec,
 )
@@ -51,6 +54,30 @@ class LocalOCCEngine:
     @property
     def arbiter(self) -> Arbiter:
         return self._arbiter
+
+    def apply(self, request: EditRequest) -> EditResult:
+        return self._operations.apply(request)
+
+    def commit_operation_against_base(
+        self,
+        changes: Sequence[OperationChange],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+    ) -> OperationResult:
+        return self._operations.commit_operation_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type=edit_type,
+            description=description,
+        )
+
+    def commit_specs_many(
+        self,
+        requests: Sequence[dict[str, Any]],
+    ) -> list[OperationResult]:
+        return self._operations.commit_specs_many(requests)
 
     def write_file(
         self,

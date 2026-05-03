@@ -5,9 +5,9 @@ Host-to-guest contract: callers send a JSON object such as
 return JSON-safe values or dataclasses matching the public result types from
 the sandbox API refactor plan. stdout receives that JSON result directly.
 
-This dispatcher intentionally does not emit the legacy ``{ok, result, error}``
-daemon envelope. Temporary legacy callers use
-``sandbox.runtime.legacy_command_client`` until the old daemon path is deleted.
+This dispatcher intentionally does not emit the old daemon
+``{ok, result, error}`` envelope. Host callers use
+``sandbox.runtime.command_client`` and receive handler results directly.
 """
 
 from __future__ import annotations

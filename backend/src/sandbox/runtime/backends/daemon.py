@@ -1,12 +1,12 @@
-"""Daemon-backed CodeIntelligenceService backend."""
+"""Transport-backed runtime service backend."""
 
 from __future__ import annotations
 
-from sandbox.runtime.legacy_command_client import DaemonCommandClient
+from sandbox.runtime.command_client import RuntimeCommandClient
 
 
-class DaemonBackend(DaemonCommandClient):
-    """Transport-backed backend for daemon-owned mutation and status commands."""
+class DaemonBackend(RuntimeCommandClient):
+    """Backend for runtime-owned mutation and status commands."""
 
 
 __all__ = ["DaemonBackend"]
