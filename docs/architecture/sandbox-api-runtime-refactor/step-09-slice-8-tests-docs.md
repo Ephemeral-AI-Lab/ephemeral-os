@@ -14,10 +14,10 @@
 ### Add
 - `test_sandbox/test_runtime/test_bundle.py` — idempotent + content-addressed upload contract.
 - `test_sandbox/test_runtime/test_setup_orchestrator.py` — registry behavior + `run_all` ordering.
-- `test_sandbox/test_runtime/test_entrypoint.py` — op dispatch, unknown-op error, JSON envelope contract on stdout.
+- `test_sandbox/test_runtime/test_server.py` — generic OP_TABLE dispatch, unknown-op error, JSON envelope contract on stdout.
 - `test_sandbox/test_runtime/test_shell_pipeline.py` (if not landed in Slice 5b) — overlay→OCC composition + one-wire-trip property.
 - `test_sandbox/test_runtime/test_edit_pipeline.py` — atomic multi-edit; conflict rollback.
-- `test_sandbox/test_runtime/test_write_pipeline.py` — write+commit in one entrypoint call.
+- `test_sandbox/test_runtime/test_write_pipeline.py` — write+commit in one server call.
 
 ### Modify
 - `docs/architecture/sandbox-api-runtime-refactor.md`: add a "Status: shipped" header line.

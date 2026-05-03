@@ -51,22 +51,43 @@ Phase C — Public surface + cleanup
 ### Step 4 — Slice 3 (runtime scaffolding)
 - **Resolve in this step (per parent doc §6 deferrals).**
   - Host↔guest envelope = §1.6 result types as JSON on stdout.
-  - `SetupScript` shape = frozen dataclass `SetupScript(name: str, run: Callable[[str], None])`.
+  - `SetupScript` shape = frozen dataclass
+    `SetupScript(name: str, package: str, relative_path: str)` pointing to a
+    bundled peer `setup.sh`. `setup_orchestrator.run_all(sid)` submits each
+    script to the sandbox runtime/daemon after bundle upload.
   - Importer allowlist = unit test (not custom ruff rule).
+- **Boundary.** Runtime scaffolding is shared daemon/server infrastructure, not
+  a third peer module. The two refactored domain modules remain OCC and
+  Overlay.
 - **Entry.** Step 3 merged.
-- **Exit gate.** `runtime/{bundle,setup_orchestrator,entrypoint,pipelines}.py` exist. `pipelines.py` is empty stubs. Compat shim at `code_intelligence/daemon/client.py` keeps legacy callers working. Empty `OP_TABLE` returns a clean `unknown_op` envelope.
+- **Exit gate.** `runtime/{bundle,setup_orchestrator,server,pipelines}.py` exist. `server.py` is a generic OP_TABLE dispatcher, and `pipelines.py` is empty stubs. Peer setup registration can submit a bundled `setup.sh` in order. Compat shim at `code_intelligence/daemon/client.py` keeps legacy callers working. Empty `OP_TABLE` returns a clean `unknown_op` envelope.
 
 ### Step 5 — Slice 4 (OCC peer)
 - **Entry.** Step 4 merged.
-- **Exit gate.** OCC at `sandbox/occ/`. `edit_pipeline` and `write_pipeline` reachable through entrypoint dispatch but **not** yet exposed via `sandbox.api`. `apply_edit` / `undo_last_edit` renamed to `apply` / `undo`; zero grep hits on the old names. `code_intelligence/mutations/` deleted.
+- **Exit gate.** OCC at `sandbox/occ/` with `client.py` and `setup.sh`.
+  `OCCClient` is the only host-side route for OCC server ops; `setup.sh`
+  is registered by `occ/bootstrap.py`. `edit_pipeline` and `write_pipeline`
+  are reachable through server dispatch but **not** yet exposed via
+  `sandbox.api`. `apply_edit` / `undo_last_edit` renamed to `apply` / `undo`;
+  zero grep hits on the old names. `code_intelligence/mutations/` deleted.
 
 ### Step 6 — Slice 5b (overlay peer + shell_pipeline)
 - **Entry.** Steps 1 and 5 both merged.
-- **Exit gate.** Overlay at `sandbox/overlay/`. `shell_pipeline` composes overlay→OCC. One-wire-trip-per-op assertion holds for every shell pipeline test. Peer-isolation lint passes (overlay ↔ OCC mutual non-import). 5a's stripped dead code deleted.
+- **Exit gate.** Overlay at `sandbox/overlay/` with `client.py` and `setup.sh`.
+  `OverlayClient` is the only host-side route for overlay/shell server
+  ops; `setup.sh` is registered by `overlay/bootstrap.py`. `shell_pipeline`
+  composes overlay→OCC. One-wire-trip-per-op assertion holds for every shell
+  pipeline test. Peer-isolation lint passes (overlay ↔ OCC mutual non-import).
+  5a's stripped dead code deleted.
 
 ### Step 7 — Slice 6 (public verbs)
 - **Entry.** Steps 5 and 6 merged.
-- **Exit gate.** `sandbox.api.{shell, read, write, edit}` live. Agent tools are ≤10-line pass-throughs. §1.6 result hierarchy is the only result surface; `OperationResult`, overlay `SimpleNamespace` builders, and `mutation_results.py` shape helpers gone.
+- **Exit gate.** `sandbox.api.{shell, read, write, edit}` live. Guarded API
+  modules delegate to peer clients (`shell` → `OverlayClient`, `write/edit` →
+  `OCCClient`) instead of constructing server envelopes directly. Agent
+  tools are ≤10-line pass-throughs. §1.6 result hierarchy is the only result
+  surface; `OperationResult`, overlay `SimpleNamespace` builders, and
+  `mutation_results.py` shape helpers gone.
 
 ### Step 8 — Slice 7 (delete legacy)
 - **Entry.** Step 7 merged.
@@ -98,5 +119,5 @@ Phase C — Public surface + cleanup
 
 - Multi-daemon-process topologies.
 - Batched public `write` / `edit` across multiple files.
-- Reads through the entrypoint script.
+- Reads through the server script.
 - LSP plugin migration — separate work tracked in `plugins-refactor.md`, picks up after Step 4 (Slice 3) lands `runtime/setup_orchestrator.py`.

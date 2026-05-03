@@ -66,10 +66,10 @@ Orchestrator-side overlay — `backend/src/sandbox/code_intelligence/overlay/`:
 - `results.py`: parser-only — `parse_diff_ndjson` returns `UpperChange` records. Move `audit_result` / `reject_result` SimpleNamespace builders into `command_executor.py` (caller-side projection, not overlay output).
 
 Caller — `backend/src/sandbox/code_intelligence/overlay/command_executor.py`:
-- `_render_outcome` calls a new OCC entrypoint on `upper_changes` and projects the verdict onto the legacy `SimpleNamespace` shape so upstream callers (`InProcessBackend.cmd`, agent tools) see `gitinclude_committed`, `gitignore_merged`, `git_commit_status`, etc., unchanged.
+- `_render_outcome` calls a new OCC changeset entry on `upper_changes` and projects the verdict onto the legacy `SimpleNamespace` shape so upstream callers (`InProcessBackend.cmd`, agent tools) see `gitinclude_committed`, `gitignore_merged`, `git_commit_status`, etc., unchanged.
 
 OCC — `backend/src/sandbox/code_intelligence/mutations/`:
-- New entrypoint `WriteCoordinator.apply_changeset(upper_changes, *, agent_id, edit_type, description) -> ChangesetResult`.
+- New entry `WriteCoordinator.apply_changeset(upper_changes, *, agent_id, edit_type, description) -> ChangesetResult`.
 - `ChangesetResult { success, status, ledgered: tuple[str, ...], direct_merged: tuple[str, ...], conflict_reason: str | None, conflict_file: str | None, ... }`.
 - Internally:
   1. **Drop `.git/` writes silently.** Filter every `upper_change` whose `rel == ".git"` or starts with `.git/` before classification. No conflict, no warning surfaces. Covers benign cases (`git status` mutating `.git/index` / `.git/index.lock`) and hostile cases (`echo > .git/HEAD`); the live `.git/` was always safe because the namespace upperdir absorbed the writes.
@@ -118,7 +118,7 @@ OCC — `backend/src/sandbox/code_intelligence/mutations/`:
    - On `overlay_rejected=True` → render rejection verdict, no OCC call.
    - On overlay success → call `apply_changeset` with `outcome.upper_changes`. Project the verdict onto the legacy SimpleNamespace.
 5. Replace `_apply_remote_batch_checked`'s bare-string failure with structured `ConflictInfo(reason="argv_too_large", ...)`. Streaming the payload via stdin is the proper fix and is tracked separately; this slice's job is only to surface the condition cleanly.
-6. Keep the wire shape compatible with existing daemon dispatch — entrypoint relocation lands in 5b.
+6. Keep the wire shape compatible with existing daemon dispatch — server relocation lands later in the runtime scaffolding steps.
 
 ## Tests (gating — step doesn't merge without these green)
 
