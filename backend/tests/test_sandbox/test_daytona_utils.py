@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from sandbox.daytona.recovery import _run_with_recovery
 from tools.core.base import ToolExecutionContextService
 from tools.core.sandbox_session import (
     get_repo_root,
@@ -237,46 +236,3 @@ def test_normalized_path_preserves_root():
 def test_normalized_path_strips_trailing_separators():
     assert normalized_path("/workspace/src/") == "/workspace/src"
     assert normalized_path("relative/path///") == "relative/path"
-
-
-# ---------------------------------------------------------------------------
-# _run_with_recovery
-# ---------------------------------------------------------------------------
-
-
-async def test_run_with_recovery_uses_context_sandbox():
-    sandbox = object()
-    seen: list[object] = []
-
-    async def operation(candidate: object) -> str:
-        seen.append(candidate)
-        return "ok"
-
-    result = await _run_with_recovery(_ctx({"daytona_sandbox": sandbox}), operation)
-
-    assert result == "ok"
-    assert seen == [sandbox]
-
-
-async def test_run_with_recovery_retries_with_recovered_sandbox(monkeypatch):
-    original = object()
-    recovered = object()
-    seen: list[object] = []
-
-    async def fake_recover_sandbox(context, exc):
-        assert context["daytona_sandbox"] is original
-        assert str(exc) == "container not found"
-        return recovered
-
-    async def operation(candidate: object) -> str:
-        seen.append(candidate)
-        if candidate is original:
-            raise RuntimeError("container not found")
-        return "ok"
-
-    monkeypatch.setattr("sandbox.daytona.recovery._recover_sandbox", fake_recover_sandbox)
-
-    result = await _run_with_recovery(_ctx({"daytona_sandbox": original}), operation)
-
-    assert result == "ok"
-    assert seen == [original, recovered]

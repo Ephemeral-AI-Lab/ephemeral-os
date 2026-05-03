@@ -23,7 +23,7 @@ directly. Tools never see Daytona; CI never sees Daytona.
 | 4 | `AuditedSandboxApi` (13 dispatch tests) | **Done** |
 | 5 prep | `CheckedWriteSpec.content` widened to `bytes \| None` (deletes); `SandboxTransport.read_bytes_batch` added; staged-payload support for `apply_diff_batch_checked` | **Done** |
 | 5.1 | `language_server/transport.py` + `LspClient` + `CodeIntelligenceService` + `registry` accept `transport=` kwarg (2 transport-path tests) | **Done (additive)** |
-| 5.2 | `OverlayAuditor` + `git_snapshot` + `AuditedCommandExecutor` accept `transport=` kwarg | **Done (additive)** |
+| 5.2 | `OverlayCaptureRunner` + `git_snapshot` + `AuditedCommandExecutor` accept `transport=` kwarg | **Done (additive)** |
 | 5.3 | `file_discovery.py` + `SymbolIndex` accept `transport=` kwarg | **Done (additive)** |
 | 5.4 | `ContentManager` accepts `transport=` kwarg with branches for `read`/`read_many`/`write`/`delete`/`apply_many_with_base_check` | **Done (additive)** |
 | 6 | `SvcCodeIntelligence` (13 contract tests) | **Done** |
@@ -160,7 +160,6 @@ backend/src/sandbox/
     process.py                 # exec, process handle, kill, tail
     search.py                  # grep/glob scripts and parsing
     scripts.py                 # uploaded script helpers
-    recovery.py
     paths.py
 
   lifecycle/                   # existing; rename DaytonaContextPreparer → SandboxContextPreparer
@@ -184,10 +183,10 @@ backend/src/sandbox/
     indexing/
       file_discovery.py        # uses SandboxTransport.search / read_bytes
       symbol_index.py
-    overlay/                   # AUDIT MACHINERY: AuditedCommandExecutor, git_snapshot,
-      git_snapshot.py          # auditor — also stays put; imports change to SandboxTransport
-      auditor.py
-      command_executor.py
+    overlay/                   # capture machinery: OverlayCaptureRunner, git_snapshot
+      git_snapshot.py          # stays put; imports change to SandboxTransport
+      capture_runner.py
+    shell_command_executor.py  # temporary legacy shell/OCC projection layer
     core/
       ...
 
@@ -430,7 +429,7 @@ instead of `sandbox.daytona.*`:
 | `language_server/transport.py` | provider-specific bash command wrapping | uses `SandboxTransport.exec` |
 | `mutations/content_manager.py` | provider-specific bash/file helpers for OCC writes | uses `SandboxTransport.apply_diff_batch_checked` + `read_bytes` |
 | `overlay/git_snapshot.py` | provider-specific bash helpers for snapshot scripts | uses `SandboxTransport.exec` |
-| `overlay/auditor.py` | provider-specific bash helpers for change tracking | uses `SandboxTransport.exec` |
+| `overlay/capture_runner.py` | provider-specific bash helpers for upperdir capture | uses `SandboxTransport.exec` |
 
 **Runtime introspection deleted:**
 
@@ -501,7 +500,7 @@ work in phase 1.** Land it in its own PR with full CI test coverage.
 Suggested sub-order:
 
 1. `language_server/transport.py` — smallest, exercises `exec`.
-2. `overlay/auditor.py` and `overlay/git_snapshot.py` — exec-only, simple.
+2. `overlay/capture_runner.py` and `overlay/git_snapshot.py` — exec-only, simple.
 3. `indexing/file_discovery.py` — search + read_bytes; verify performance.
 4. `mutations/content_manager.py` — OCC apply; highest risk, land last.
 

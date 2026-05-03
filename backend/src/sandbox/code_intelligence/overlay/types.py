@@ -64,14 +64,6 @@ class UpperChange:
 
 
 @dataclass(frozen=True)
-class OverlayCommandResult:
-    """Result of running the user command under overlay."""
-
-    stdout: str
-    exit_code: int
-
-
-@dataclass(frozen=True)
 class OverlayCapture:
     """Parsed ``diff.ndjson`` payload after one overlay op."""
 
@@ -90,7 +82,6 @@ class ConflictInfo:
     reason: str
     conflict_file: str | None = None
     message: str = ""
-    upper_layer_path: str | None = None
 
 
 @dataclass
@@ -116,7 +107,6 @@ class OverlayRunOutcome:
 __all__ = [
     "ConflictInfo",
     "OverlayCapture",
-    "OverlayCommandResult",
     "OverlayError",
     "OverlayLease",
     "OverlayPolicyReject",

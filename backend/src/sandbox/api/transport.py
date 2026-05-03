@@ -13,7 +13,7 @@ their own writes in audit would be a self-loop.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from sandbox.api.models import (
     CheckedWriteResult,
@@ -21,26 +21,20 @@ from sandbox.api.models import (
     RawExecResult,
 )
 
-if TYPE_CHECKING:
-    from sandbox.providers.protocol import ProviderAdapter
-else:
-    class ProviderAdapter(Protocol):
-        """Runtime stub; the daemon bundle does not ship provider adapters."""
 
-        name: str
-
-        async def exec(
-            self,
-            sandbox_id: str,
-            command: str,
-            *,
-            cwd: str | None = None,
-            timeout: int | None = None,
-        ) -> RawExecResult: ...
-
-
-class SandboxTransport(ProviderAdapter, Protocol):
+class SandboxTransport(Protocol):
     """Deprecated legacy transport superset. All methods are async."""
+
+    name: str
+
+    async def exec(
+        self,
+        sandbox_id: str,
+        command: str,
+        *,
+        cwd: str | None = None,
+        timeout: int | None = None,
+    ) -> RawExecResult: ...
 
     async def read_bytes(self, sandbox_id: str, path: str) -> bytes: ...
 

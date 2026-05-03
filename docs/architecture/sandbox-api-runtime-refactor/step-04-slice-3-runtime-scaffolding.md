@@ -1,20 +1,20 @@
 # Step 4 — Slice 3 — Runtime layer scaffolding
 
-**Goal.** Rename `code_intelligence/daemon/` → `sandbox/runtime/`. Introduce `bundle.py`, `setup_orchestrator.py`, and `server.py` as the single deployed in-sandbox guarded service with a peer-registered op table. `pipelines.py` exists but empty. The runtime also defines the peer setup contract: OCC, Overlay, and future plugins submit bundled `setup.sh` scripts through `setup_orchestrator.py`. The orchestrator still calls into the server via the legacy per-op snippet pathway.
+**Goal.** Finish the runtime scaffolding started in Step 3. Move the remaining `code_intelligence/daemon/` server/dispatch pieces under `sandbox/runtime/`. Introduce `setup_orchestrator.py` and `server.py` as the single deployed in-sandbox guarded service with a peer-registered op table. `pipelines.py` exists but empty. The runtime also defines the peer setup contract: OCC, Overlay, and future plugins submit bundled `setup.sh` scripts through `setup_orchestrator.py`. The orchestrator still calls into the server via the legacy per-op snippet pathway.
 
 **Boundary.** This step creates shared daemon/server infrastructure. It is not
 a third domain module; the two peer modules are still `sandbox/occ/` and
 `sandbox/overlay/`.
 
-**Depends on.** Step 3 / Slice 2 (uses `raw_exec` to upload the bundle).
+**Depends on.** Step 3 / Slice 2 (`runtime/bundle.py` exists and uses `raw_exec` to upload the bundle).
 
 ## Files
 
-### Move (git mv to preserve history)
-- `backend/src/sandbox/code_intelligence/daemon/` → `backend/src/sandbox/runtime/`.
+### Move / Split
+- Remaining `backend/src/sandbox/code_intelligence/daemon/` server/dispatch pieces → `backend/src/sandbox/runtime/`.
+- `backend/src/sandbox/runtime/bundle.py` already exists from Step 3. Do not recreate it in this slice.
 
 ### Add
-- `backend/src/sandbox/runtime/bundle.py` — relocated from today's launcher; idempotent + content-addressed upload.
 - `backend/src/sandbox/runtime/setup_orchestrator.py` — `SetupRegistry` with `register(setup_script)` and `run_all(sid)`. A setup script is a peer-owned bundled `setup.sh`; empty registry to start.
 - `backend/src/sandbox/runtime/server.py` — replaces `command.py`'s switch. Generic guarded dispatcher: reads the JSON op envelope from stdin/argv, validates it, looks up `OP_TABLE: dict[str, Handler]`, invokes the handler, and writes the JSON result to stdout per §1.6. Peer modules populate `OP_TABLE` at import time.
 - `backend/src/sandbox/runtime/pipelines.py` — empty stubs: `shell_pipeline`, `edit_pipeline`, `write_pipeline`. Filled in slices 4 and 5b.
@@ -25,7 +25,8 @@ a third domain module; the two peer modules are still `sandbox/occ/` and
 
 ## Implementation tasks
 
-1. `git mv` the daemon directory.
+1. Move/split the remaining daemon server/dispatch code into `sandbox/runtime/`.
+   Preserve `runtime/bundle.py` from Step 3.
 2. Replace `command.py`'s switch with `server.py`. Initial `OP_TABLE` is empty — peers register in slices 4 and 5b. Until then, the orchestrator keeps using the per-op snippet pathway.
 3. Keep `server.py` generic: envelope decode/validate, `OP_TABLE` lookup,
    handler invocation, result encoding, and structured errors only. Do not add
@@ -64,5 +65,5 @@ a third domain module; the two peer modules are still `sandbox/occ/` and
 
 ## Risks
 
-- Bundle deployment broken by the move. Mitigation: `bundle.py` is idempotent + content-addressed; `setup_orchestrator.run_all` runs *after* bundle upload; ordering is fixed.
+- Bundle deployment broken by the move. Mitigation: `bundle.py` was isolated in Step 3 and remains idempotent + content-addressed; `setup_orchestrator.run_all` runs *after* bundle upload; ordering is fixed.
 - Compat shim drift if the `runtime/` API changes. Mitigation: shim is a re-export only; no logic.

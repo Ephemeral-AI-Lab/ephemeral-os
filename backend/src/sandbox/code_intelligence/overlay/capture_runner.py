@@ -17,7 +17,6 @@ from sandbox.code_intelligence.overlay.config import (
 from sandbox.code_intelligence.overlay.daemon_local import OverlayDaemonLocalMixin
 from sandbox.code_intelligence.overlay.process_exec import OverlayProcessExecMixin
 from sandbox.code_intelligence.overlay.results import parse_diff_ndjson
-from sandbox.code_intelligence.overlay import support as _overlay_support
 from sandbox.code_intelligence.overlay.types import (
     ConflictInfo,
     OverlayCapture,
@@ -27,13 +26,6 @@ from sandbox.code_intelligence.overlay.types import (
 )
 
 logger = logging.getLogger(__name__)
-
-_PROGRESS_POLL_INTERVAL_SECONDS = _overlay_support.PROGRESS_POLL_INTERVAL_SECONDS
-
-
-def _overlay_runtime_bundle_bytes() -> bytes:
-    """Compatibility wrapper for older tests around the former monolith."""
-    return _overlay_support.overlay_runtime_bundle_bytes()
 
 
 class OverlayCaptureRunner(OverlayDaemonLocalMixin, OverlayProcessExecMixin):

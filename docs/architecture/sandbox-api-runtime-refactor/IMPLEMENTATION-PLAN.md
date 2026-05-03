@@ -50,7 +50,13 @@ Phase C — Public surface + cleanup
 
 ### Step 3 — Slice 2 (raw_exec)
 - **Entry.** Step 2 merged.
-- **Exit gate.** Bundle upload + lifecycle + debug paths import `sandbox.api.raw_exec`. Importer-allowlist test green. Agent tools and `daemon/client.py` remain on legacy.
+- **Exit gate.** `sandbox.api.raw_exec` exists as a thin wrapper over
+  `sandbox.providers.registry.get_adapter(sid).exec(...)`. Host-side bundle
+  upload lives in `runtime/bundle.py` and uses `raw_exec`. Allowlisted
+  lifecycle/debug raw exec callers use `raw_exec` only after provider adapter
+  registration. Importer-allowlist test green. Existing `api/models.py` is not
+  stripped. Agent tools, audited API, CI internals, OCC content management, and
+  `daemon/client.py` remain on legacy `SandboxTransport`.
 
 ### Step 4 — Slice 3 (runtime scaffolding)
 - **Resolve in this step (per parent doc §6 deferrals).**
@@ -64,7 +70,7 @@ Phase C — Public surface + cleanup
   a third peer module. The two refactored domain modules remain OCC and
   Overlay.
 - **Entry.** Step 3 merged.
-- **Exit gate.** `runtime/{bundle,setup_orchestrator,server,pipelines}.py` exist. `server.py` is a generic OP_TABLE dispatcher, and `pipelines.py` is empty stubs. Peer setup registration can submit a bundled `setup.sh` in order. Compat shim at `code_intelligence/daemon/client.py` keeps legacy callers working. Empty `OP_TABLE` returns a clean `unknown_op` envelope.
+- **Exit gate.** `runtime/{bundle,setup_orchestrator,server,pipelines}.py` exist. `bundle.py` is the Step 3 host-side upload module; this slice adds setup orchestration, server dispatch, and empty pipeline stubs. `server.py` is a generic OP_TABLE dispatcher. Peer setup registration can submit a bundled `setup.sh` in order. Compat shim at `code_intelligence/daemon/client.py` keeps legacy callers working. Empty `OP_TABLE` returns a clean `unknown_op` envelope.
 
 ### Step 5 — Slice 4 (OCC peer)
 - **Entry.** Step 4 merged.

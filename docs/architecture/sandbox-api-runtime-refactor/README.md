@@ -12,13 +12,17 @@ The `step-XX` filename prefix is the implementation order. The slice ID remains 
 |---|---|---|---|
 | 1 | 5a | [Overlay/OCC responsibility split](./step-01-slice-5a-overlay-occ-responsibility-split.md) | Overlay → pure upperdir capture; OCC → sole merge-policy decider (ledger gitinclude, direct-merge gitignore/external). In place. |
 | 2 | 1 | [Provider seam](./step-02-slice-1-provider-seam.md) | Add `ProviderAdapter` Protocol + Daytona adapter; no caller changes. |
-| 3 | 2 | [`raw_exec` primitive](./step-03-slice-2-raw-exec.md) | Public `sandbox.api.raw_exec` over the adapter; importer-allowlist test. |
-| 4 | 3 | [Runtime scaffolding](./step-04-slice-3-runtime-scaffolding.md) | `daemon/` → `runtime/`; add `bundle.py`, `setup_orchestrator.py`, `server.py`, peer setup-script contract. |
+| 3 | 2 | [`raw_exec` primitive](./step-03-slice-2-raw-exec.md) | Public `sandbox.api.raw_exec` over the adapter; move host-side bundle upload to `runtime/bundle.py`; importer-allowlist test. |
+| 4 | 3 | [Runtime scaffolding](./step-04-slice-3-runtime-scaffolding.md) | Remaining `daemon/` dispatch → `runtime/`; add `setup_orchestrator.py`, `server.py`, peer setup-script contract. |
 | 5 | 4 | [OCC peer relocation](./step-05-slice-4-occ-relocation.md) | `mutations/` → `sandbox/occ/`; add `client.py`, `setup.sh`, `edit_pipeline`, `write_pipeline`. |
 | 6 | 5b | [Overlay peer relocation](./step-06-slice-5b-overlay-relocation.md) | `overlay/` → `sandbox/overlay/`; add `client.py`, `setup.sh`, `shell_pipeline`. |
 | 7 | 6 | [Public verb API](./step-07-slice-6-public-api.md) | `sandbox.api.{shell,read,write,edit}`; §1.6 result hierarchy. |
 | 8 | 7 | [Delete legacy](./step-08-slice-7-delete-legacy.md) | Remove `code_intelligence/`, old API modules, `SandboxTransport`. |
 | 9 | 8 | [Tests + docs](./step-09-slice-8-tests-docs.md) | Relocate tests; add runtime/pipeline coverage; supersede prior docs. |
+
+## Implementation Reports
+
+- Step 1 / Slice 5a: [Overlay/OCC responsibility split report](./step-01-slice-5a-implementation-report.md)
 
 ## Ordering invariants
 

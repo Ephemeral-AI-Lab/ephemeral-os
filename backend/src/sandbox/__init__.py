@@ -5,7 +5,7 @@ Sub-packages:
 - ``sandbox.lifecycle``        — :class:`SandboxService`, :class:`SandboxProxy`,
                                   context preparation, workspace discovery, and
                                   shell/commit submission helpers
-- ``sandbox.daytona``          — bash/exec/path/recovery primitives
+- ``sandbox.daytona``          — Daytona transport/provider primitives
 - ``sandbox.code_intelligence``— per-sandbox CI service
 - ``sandbox.testing``          — sandbox factories and eval-file fixtures
 - ``sandbox.errors``           — :class:`DaytonaUnavailableError`,
