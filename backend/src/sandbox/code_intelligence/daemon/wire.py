@@ -8,15 +8,11 @@ from typing import Any
 
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
-    HoverResult,
     OperationChange,
     OperationResult,
-    ReferenceInfo,
-    SymbolInfo,
     WriteSpec,
 )
 
@@ -67,77 +63,6 @@ def edit_request_to_dict(request: EditRequest) -> dict[str, Any]:
         "agent_id": request.agent_id,
         "description": request.description,
     }
-
-
-def symbol_info_from_dict(d: dict[str, Any]) -> SymbolInfo:
-    from sandbox.code_intelligence.core.types import SymbolKind
-
-    kind_raw = d.get("kind")
-    if isinstance(kind_raw, SymbolKind):
-        kind = kind_raw
-    elif isinstance(kind_raw, str):
-        try:
-            kind = SymbolKind(kind_raw)
-        except ValueError:
-            kind = SymbolKind.OTHER if hasattr(SymbolKind, "OTHER") else SymbolKind.CLASS
-    else:
-        kind = SymbolKind.CLASS
-    return SymbolInfo(
-        name=str(d.get("name", "")),
-        kind=kind,
-        file_path=str(d.get("file_path", "")),
-        line=int(d.get("line", 0)),
-        end_line=d.get("end_line"),
-        character=int(d.get("character", 0)),
-        signature=str(d.get("signature", "")),
-        docstring=str(d.get("docstring", "")),
-        container=str(d.get("container", "")),
-    )
-
-
-def reference_info_from_dict(d: dict[str, Any]) -> ReferenceInfo:
-    return ReferenceInfo(
-        file_path=str(d.get("file_path", "")),
-        line=int(d.get("line", 0)),
-        character=int(d.get("character", 0)),
-        text=str(d.get("text", "")),
-    )
-
-
-def hover_result_from_dict(d: dict[str, Any]) -> HoverResult:
-    sym_dict = d.get("symbol")
-    symbol = symbol_info_from_dict(sym_dict) if sym_dict else None
-    return HoverResult(
-        content=str(d.get("content", "")),
-        language=str(d.get("language", "")),
-        symbol=symbol,
-    )
-
-
-def diagnostic_from_dict(d: dict[str, Any]) -> Diagnostic:
-    from sandbox.code_intelligence.core.types import DiagnosticSeverity
-
-    severity_raw = d.get("severity")
-    if isinstance(severity_raw, DiagnosticSeverity):
-        severity = severity_raw
-    elif isinstance(severity_raw, str):
-        try:
-            severity = DiagnosticSeverity(severity_raw)
-        except ValueError:
-            severity = DiagnosticSeverity.ERROR
-    else:
-        severity = DiagnosticSeverity.ERROR
-    return Diagnostic(
-        file_path=str(d.get("file_path", "")),
-        line=int(d.get("line", 0)),
-        character=int(d.get("character", 0)),
-        end_line=d.get("end_line"),
-        end_character=d.get("end_character"),
-        severity=severity,
-        message=str(d.get("message", "")),
-        source=str(d.get("source", "")),
-        code=str(d.get("code", "")),
-    )
 
 
 def edit_result_from_dict(d: dict[str, Any]) -> EditResult:

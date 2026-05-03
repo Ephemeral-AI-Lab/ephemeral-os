@@ -34,12 +34,6 @@ QUERY_OPS = frozenset(
         "ping",
         "version",
         "index_ready",
-        "query_symbols",
-        "find_definitions",
-        "find_references",
-        "hover",
-        "diagnostics",
-        "list_folder_files",
         "status",
         "get_telemetry",
     }

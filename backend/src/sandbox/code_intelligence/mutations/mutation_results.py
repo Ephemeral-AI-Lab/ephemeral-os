@@ -30,32 +30,6 @@ def not_found_result(file_path: str) -> OperationResult:
     )
 
 
-def not_a_directory_result(file_path: str) -> OperationResult:
-    return error_result(
-        file_path,
-        f"Path is not a directory: {file_path}",
-        conflict_reason="not_a_directory",
-        conflict_file=file_path,
-    )
-
-
-def identical_paths_result(file_path: str) -> OperationResult:
-    return error_result(
-        file_path,
-        "src_path and dst_path are identical",
-        conflict_reason="identical_paths",
-    )
-
-
-def dst_exists_result(dst_path: str) -> OperationResult:
-    return error_result(
-        dst_path,
-        f"Destination exists: {dst_path} (pass overwrite=True to replace)",
-        conflict_reason="dst_exists",
-        conflict_file=dst_path,
-    )
-
-
 def patch_failed_result(file_path: str, errors: list[str]) -> OperationResult:
     return error_result(
         file_path,

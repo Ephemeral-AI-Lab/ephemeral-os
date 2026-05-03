@@ -57,14 +57,10 @@ class WriteCoordinator:
         *,
         arbiter: Arbiter,
         time_machine: TimeMachine,
-        symbol_index: Any,
-        lsp_client: Any,
         content: ContentManager,
     ) -> None:
         self._arbiter = arbiter
         self._time_machine = time_machine
-        self._symbol_index = symbol_index
-        self._lsp_client = lsp_client
         self._content = content
         self._resolver = ChangeResolver()
 
@@ -307,8 +303,6 @@ class WriteCoordinator:
                         new_hash=new_hash,
                         description=op.description,
                     )
-                    self._symbol_index.refresh(change.file_path, item.final_content)
-                    self._lsp_client.invalidate(change.file_path)
                     commit_results.append(
                         edit_result(
                             change.file_path,
@@ -475,8 +469,6 @@ class WriteCoordinator:
                     change.base_content if change.base_existed else "",
                     existed=change.base_existed,
                 )
-                self._symbol_index.refresh(change.file_path, change.final_content)
-                self._lsp_client.invalidate(change.file_path)
                 commit_results.append(
                     edit_result(
                         change.file_path,
@@ -536,6 +528,4 @@ class WriteCoordinator:
                 self._content.delete(file_path)
         except Exception as exc:
             return edit_result(file_path, f"Undo write failed: {exc}")
-        self._symbol_index.refresh(file_path, snapshot.content if snapshot.existed else None)
-        self._lsp_client.invalidate(file_path)
         return edit_result(file_path, "Reverted to previous snapshot", success=True)

@@ -561,44 +561,6 @@ class TestDaytonaToolIntegration:
 
 
 # ===========================================================================
-# CI integration helpers
-# ===========================================================================
-
-
-class TestCIIntegrationHelpers:
-    """Test shared CI runtime helper functions."""
-
-    def test_get_ci_service_returns_none_when_missing(self):
-        from tools.core.ci_runtime import get_ci_service
-
-        ctx = ToolExecutionContextService(cwd=Path("/ws"), services={})
-        assert get_ci_service(ctx) is None
-
-    def test_get_ci_service_returns_service(self):
-        from tools.core.ci_runtime import get_ci_service
-
-        svc = MagicMock()
-        ctx = ToolExecutionContextService(cwd=Path("/ws"), services={"ci_service": svc})
-        assert get_ci_service(ctx) is svc
-
-    def test_ci_required_result_marks_ci_requirement(self):
-        from tools.core.ci_runtime import ci_required_result
-
-        result = ci_required_result("tool", "detail")
-        assert result.is_error
-        assert result.metadata["ci_required"] is True
-        assert "Code intelligence service is unavailable" in result.output
-
-    def test_ci_write_required_result_marks_disabled_write(self):
-        from tools.core.ci_runtime import ci_write_required_result
-
-        result = ci_write_required_result("edit_file", "/test.py")
-        assert result.is_error
-        assert result.metadata["ci_required"] is True
-        assert "Direct sandbox write fallback is disabled" in result.output
-
-
-# ===========================================================================
 # Live sandbox tests (require DAYTONA_API_KEY)
 # ===========================================================================
 

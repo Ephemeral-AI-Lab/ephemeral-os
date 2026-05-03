@@ -103,16 +103,6 @@ class ContentManager:
             return {path: via_fs[resolved_by_path[path]] for path in unique_paths}
         return {path: self.read(path, allow_missing=allow_missing) for path in unique_paths}
 
-    def list_folder_files(self, folder: str) -> list[str]:
-        """Return every regular file under *folder* as absolute paths."""
-        resolved_folder = self._resolve_path(folder)
-        root = Path(resolved_folder)
-        if not root.exists():
-            raise FileNotFoundError(folder)
-        if not root.is_dir():
-            raise NotADirectoryError(folder)
-        return sorted(str(path) for path in root.rglob("*") if path.is_file())
-
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
         resolved_path = self._resolve_path(file_path)

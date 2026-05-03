@@ -23,7 +23,7 @@ class SymbolKind(str, Enum):
 
 
 class DiagnosticSeverity(str, Enum):
-    """LSP-style diagnostic severity."""
+    """Diagnostic severity."""
 
     ERROR = "error"
     WARNING = "warning"
@@ -54,30 +54,6 @@ class ReferenceInfo:
     line: int
     character: int = 0
     text: str = ""
-
-
-@dataclass(frozen=True)
-class HoverResult:
-    """Hover information for a position."""
-
-    content: str
-    language: str = ""
-    symbol: SymbolInfo | None = None
-
-
-@dataclass(frozen=True)
-class Diagnostic:
-    """A single diagnostic (error, warning, etc.)."""
-
-    file_path: str
-    line: int
-    character: int = 0
-    end_line: int | None = None
-    end_character: int | None = None
-    severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
-    message: str = ""
-    source: str = ""
-    code: str = ""
 
 
 @dataclass(frozen=True)
@@ -184,9 +160,6 @@ class CITelemetry:
     symbol_index_size: int = 0
     symbol_index_generation: int = 0
     indexed_files: int = 0
-    lsp_connected: bool = False
-    lsp_query_count: int = 0
-    lsp_cache_hits: int = 0
     arbiter_active_locks: int = 0
     total_edits: int = 0
     extra: dict[str, Any] = field(default_factory=dict)

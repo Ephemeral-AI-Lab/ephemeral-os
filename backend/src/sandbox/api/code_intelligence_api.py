@@ -10,10 +10,6 @@ from __future__ import annotations
 from typing import Protocol
 
 from sandbox.api.models import (
-    DiagnosticsRequest,
-    DiagnosticsResult,
-    ReferencesRequest,
-    ReferencesResult,
     SymbolQueryRequest,
     SymbolQueryResult,
     WorkspaceStatus,
@@ -37,14 +33,6 @@ class CodeIntelligenceApi(Protocol):
     async def query_symbols(
         self, sandbox_id: str, request: SymbolQueryRequest,
     ) -> SymbolQueryResult: ...
-
-    async def find_references(
-        self, sandbox_id: str, request: ReferencesRequest,
-    ) -> ReferencesResult: ...
-
-    async def diagnostics(
-        self, sandbox_id: str, request: DiagnosticsRequest,
-    ) -> DiagnosticsResult: ...
 
     async def workspace_structure(
         self, sandbox_id: str, request: WorkspaceStructureRequest,

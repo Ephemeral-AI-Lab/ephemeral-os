@@ -68,10 +68,8 @@ def build_status(
     initialized: bool,
     symbol_index: Any,
     arbiter: Any,
-    lsp_client: Any,
 ) -> dict[str, Any]:
     """Return service status summary."""
-    lsp = lsp_telemetry_fields(lsp_client)
     overlay = overlay_counters_snapshot()
     return {
         "sandbox_id": sandbox_id,
@@ -89,31 +87,15 @@ def build_status(
             "entries": arbiter.metrics.total_edits,
             "generation": arbiter.generation,
         },
-        "lsp": lsp,
         "overlay": overlay.__dict__,
     }
 
 
-def build_telemetry(*, symbol_index: Any, arbiter: Any, lsp_client: Any) -> CITelemetry:
-    lsp = lsp_telemetry_fields(lsp_client)
+def build_telemetry(*, symbol_index: Any, arbiter: Any) -> CITelemetry:
     return CITelemetry(
         symbol_index_size=symbol_index.size,
         symbol_index_generation=symbol_index.generation,
         indexed_files=symbol_index.indexed_files,
-        lsp_connected=lsp["connected"],
-        lsp_query_count=lsp["queries"],
-        lsp_cache_hits=lsp["cache_hits"],
         arbiter_active_locks=arbiter.active_lock_count,
         total_edits=arbiter.metrics.total_edits,
     )
-
-
-def lsp_telemetry_fields(lsp_client: Any) -> dict[str, Any]:
-    tel = lsp_client.telemetry
-    return {
-        "connected": lsp_client.connected,
-        "queries": tel.queries,
-        "successes": tel.successes,
-        "errors": tel.errors,
-        "cache_hits": tel.cache_hits,
-    }

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import logging
 import os
 import signal
 import sys
@@ -19,9 +18,6 @@ from sandbox.code_intelligence.daemon.state import (
     DAEMON_VERSION,
     STARTED_AT,
 )
-
-logger = logging.getLogger(__name__)
-
 
 async def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
     """Return daemon health."""
@@ -170,57 +166,6 @@ def _svc_cmd_result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
-async def handle_query_symbols(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    return [_to_dict(s) for s in svc.query_symbols(str(args.get("query", "")))]
-
-
-async def handle_find_definitions(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    return [
-        _to_dict(s)
-        for s in svc.find_definitions(
-            str(args["file_path"]),
-            str(args.get("symbol", "")),
-            int(args.get("line", 0)),
-            int(args.get("character", 0)),
-        )
-    ]
-
-
-async def handle_find_references(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    return [
-        _to_dict(s)
-        for s in svc.find_references(
-            str(args["file_path"]),
-            str(args.get("symbol", "")),
-            int(args.get("line", 0)),
-            int(args.get("character", 0)),
-        )
-    ]
-
-
-async def handle_hover(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    result = svc.hover(
-        str(args["file_path"]),
-        int(args["line"]),
-        int(args.get("character", 0)),
-    )
-    return _to_dict(result) if result is not None else None
-
-
-async def handle_diagnostics(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    return [_to_dict(d) for d in svc.diagnostics(str(args["file_path"]))]
-
-
-async def handle_list_folder_files(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    return list(svc.list_folder_files(str(args["folder"])))
-
-
 async def handle_status(args: dict[str, Any]) -> Any:
     del args
     svc = _require_svc()
@@ -314,32 +259,10 @@ async def handle_index_refresh(args: dict[str, Any]) -> Any:
     return {"generation": int(gen)}
 
 
-async def handle_lsp_invalidate(args: dict[str, Any]) -> Any:
-    svc = _require_svc()
-    lsp = getattr(svc, "lsp_client", None)
-    file_path = args.get("file_path")
-    if lsp is None or not hasattr(lsp, "invalidate_file"):
-        return {"invalidated": False}
-    if file_path is None:
-        return {"invalidated": False, "reason": "no file_path supplied"}
-    try:
-        lsp.invalidate_file(str(file_path))
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("lsp_invalidate failed for %s: %s", file_path, exc)
-        return {"invalidated": False, "error": str(exc)}
-    return {"invalidated": True, "file_path": str(file_path)}
-
-
 DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "ping": handle_ping,
     "shutdown": handle_shutdown,
     "version": handle_version,
-    "query_symbols": handle_query_symbols,
-    "find_definitions": handle_find_definitions,
-    "find_references": handle_find_references,
-    "hover": handle_hover,
-    "diagnostics": handle_diagnostics,
-    "list_folder_files": handle_list_folder_files,
     "status": handle_status,
     "get_telemetry": handle_get_telemetry,
     "svc_cmd": handle_svc_cmd,
@@ -350,7 +273,6 @@ DISPATCH: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
     "edit_file": handle_edit_file,
     "undo_last_edit": handle_undo_last_edit,
     "index_refresh": handle_index_refresh,
-    "lsp_invalidate": handle_lsp_invalidate,
     "index_ready": handle_index_ready,
     "_set_guard_mode": handle_set_guard_mode,
 }

@@ -15,15 +15,9 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from sandbox.api.models import (
-    Diagnostic,
-    DiagnosticsRequest,
-    DiagnosticsResult,
-    ReferencesRequest,
-    ReferencesResult,
     SymbolDefinition,
     SymbolQueryRequest,
     SymbolQueryResult,
-    SymbolReference,
     WorkspaceStatus,
     WorkspaceStructureRequest,
     WorkspaceStructureResult,
@@ -48,12 +42,6 @@ def _kind_str(symbol: Any) -> str:
     return getattr(kind, "value", None) or str(kind or "")
 
 
-def _severity_str(diag: Any) -> str:
-    sev = getattr(diag, "severity", None)
-    value = getattr(sev, "value", None) or str(sev or "")
-    return value if value in {"error", "warning", "information", "hint"} else "error"
-
-
 def _to_symbol_definition(sym: Any) -> SymbolDefinition:
     return SymbolDefinition(
         name=str(getattr(sym, "name", "") or ""),
@@ -63,26 +51,6 @@ def _to_symbol_definition(sym: Any) -> SymbolDefinition:
         character=int(getattr(sym, "character", 0) or 0),
         signature=str(getattr(sym, "signature", "") or ""),
         container=str(getattr(sym, "container", "") or ""),
-    )
-
-
-def _to_symbol_reference(ref: Any) -> SymbolReference:
-    return SymbolReference(
-        file_path=str(getattr(ref, "file_path", "") or ""),
-        line=int(getattr(ref, "line", 0) or 0),
-        character=int(getattr(ref, "character", 0) or 0),
-        text=str(getattr(ref, "text", "") or ""),
-    )
-
-
-def _to_diagnostic(diag: Any) -> Diagnostic:
-    return Diagnostic(
-        line=int(getattr(diag, "line", 0) or 0),
-        character=int(getattr(diag, "character", 0) or 0),
-        severity=_severity_str(diag),  # type: ignore[arg-type]
-        message=str(getattr(diag, "message", "") or ""),
-        source=str(getattr(diag, "source", "") or ""),
-        code=str(getattr(diag, "code", "") or ""),
     )
 
 
@@ -109,7 +77,6 @@ class SvcCodeIntelligence:
             symbol_index=dict(raw.get("symbol_index") or {}),
             arbiter=dict(raw.get("arbiter") or {}),
             edit_buffer=dict(raw.get("edit_buffer") or {}),
-            lsp=dict(raw.get("lsp") or {}),
             edit_hotspots=(
                 dict(raw["edit_hotspots"])
                 if isinstance(raw.get("edit_hotspots"), dict)
@@ -124,40 +91,6 @@ class SvcCodeIntelligence:
         if _looks_like_file_query(request.query):
             return await self._file_path_query(request)
         return await self._symbol_name_query(request)
-
-    async def find_references(
-        self, sandbox_id: str, request: ReferencesRequest,
-    ) -> ReferencesResult:
-        del sandbox_id
-        from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-
-        with use_sandbox_io_loop():
-            raw_refs = await run_sync_in_executor(
-                self._svc.find_references,
-                request.file_path,
-                request.symbol,
-                request.line,
-                request.character,
-            )
-        return ReferencesResult(
-            references=tuple(_to_symbol_reference(r) for r in raw_refs or ()),
-        )
-
-    async def diagnostics(
-        self, sandbox_id: str, request: DiagnosticsRequest,
-    ) -> DiagnosticsResult:
-        del sandbox_id
-        from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
-
-        with use_sandbox_io_loop():
-            raw_diags = await run_sync_in_executor(
-                self._svc.diagnostics, request.file_path,
-            )
-        diagnostics = tuple(_to_diagnostic(d) for d in raw_diags or ())
-        return DiagnosticsResult(
-            diagnostics=diagnostics,
-            clean=not diagnostics,
-        )
 
     async def workspace_structure(
         self, sandbox_id: str, request: WorkspaceStructureRequest,
@@ -230,7 +163,7 @@ class SvcCodeIntelligence:
             )
         return SymbolQueryResult(
             definitions=definitions,
-            confidence="" if not request.include_references else "unavailable",
+            confidence="",
         )
 
     async def _file_path_query(self, request: SymbolQueryRequest) -> SymbolQueryResult:

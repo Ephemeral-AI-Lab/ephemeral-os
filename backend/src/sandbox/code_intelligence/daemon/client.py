@@ -23,7 +23,6 @@ from sandbox.code_intelligence.daemon.wire import (
     normalize_write_specs,
     operation_change_to_dict,
     operation_result_from_dict,
-    symbol_info_from_dict,
     telemetry_from_dict,
     writespec_to_dict,
 )
@@ -34,7 +33,6 @@ from sandbox.code_intelligence.core.types import (
     EditSpec,
     OperationChange,
     OperationResult,
-    SymbolInfo,
     WriteSpec,
 )
 from sandbox.code_intelligence.daemon.protocol import (
@@ -99,7 +97,7 @@ class DaemonCommandClient:
             return self.is_initialized
 
     async def _ensure_initialized_async(self) -> None:
-        """Launch the daemon and wait for the background SymbolIndex build."""
+        """Launch the daemon and wait until query state is ready."""
         await self._launcher.ensure_daemon()
 
         deadline = asyncio.get_event_loop().time() + self._INDEX_READY_TIMEOUT_S
@@ -317,10 +315,6 @@ class DaemonCommandClient:
                 on_progress_line(progress_text)
         return result
 
-    def query_symbols(self, query: str) -> list[SymbolInfo]:
-        rows = self._call_sync("query_symbols", {"query": query})
-        return [symbol_info_from_dict(r) for r in (rows or [])]
-
     def apply_edit(self, request: EditRequest) -> EditResult:
         result = self._call_sync("apply_edit", {"request": edit_request_to_dict(request)})
         return edit_result_from_dict(result)
@@ -350,10 +344,6 @@ class DaemonCommandClient:
     ) -> list[OperationResult]:
         rows = self._call_sync("commit_specs_many", {"requests": list(requests)})
         return [operation_result_from_dict(r) for r in (rows or [])]
-
-    def list_folder_files(self, folder: str) -> list[str]:
-        rows = self._call_sync("list_folder_files", {"folder": folder})
-        return list(rows or [])
 
     def write_file(
         self,

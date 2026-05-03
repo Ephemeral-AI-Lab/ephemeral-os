@@ -1,9 +1,9 @@
-"""Unit tests for ``DaemonBackend.ensure_initialized`` + ``query_symbols``.
+"""Unit tests for ``DaemonBackend.ensure_initialized`` and daemon commands.
 
 Phase 3.5 retired the orchestrator-side pickle-snapshot fallback. These tests
-now exercise the daemon-route contract: ``ensure_initialized`` launches the
-daemon (mocked) and polls ``index_ready``; ``query_symbols`` routes through
-the daemon and surfaces errors instead of falling back to a stale cache.
+exercise the daemon-route contract: ``ensure_initialized`` launches the daemon
+(mocked) and polls ``index_ready``; command calls route through the daemon and
+surface errors instead of falling back to stale orchestrator state.
 """
 
 from __future__ import annotations
@@ -12,22 +12,9 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-import pytest
-
 from sandbox.code_intelligence.backends import DaemonBackend
 from sandbox.code_intelligence.daemon import client as daemon_client
 from sandbox.code_intelligence.daemon.client import DaemonCommandClient
-from sandbox.code_intelligence.core.types import SymbolInfo, SymbolKind
-
-
-def _sym(name: str, line: int = 1) -> SymbolInfo:
-    return SymbolInfo(
-        name=name,
-        kind=SymbolKind.FUNCTION,
-        file_path="/ws/foo.py",
-        line=line,
-        signature=f"def {name}()",
-    )
 
 
 class _NullTransport:
@@ -47,13 +34,11 @@ class _FakeDaemon:
         self,
         *,
         index_ready: bool = True,
-        query_response: list[dict[str, Any]] | None = None,
         cmd_response: dict[str, Any] | None = None,
         raise_for_op: dict[str, Exception] | None = None,
     ) -> None:
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
         self._index_ready = index_ready
-        self._query_response = query_response or []
         self._cmd_response = cmd_response or {}
         self._raise_for_op = dict(raise_for_op or {})
 
@@ -70,8 +55,6 @@ class _FakeDaemon:
             raise self._raise_for_op[op]
         if op == "index_ready":
             return {"ready": self._index_ready}
-        if op == "query_symbols":
-            return self._query_response
         if op == "svc_cmd":
             return self._cmd_response
         return None
@@ -152,39 +135,6 @@ def test_ensure_initialized_returns_true_even_if_index_ready_times_out() -> None
         ok = backend.ensure_initialized(wait=True)
     assert ok is True
     assert backend.is_initialized is True
-
-
-def test_query_symbols_routes_through_daemon() -> None:
-    response = [
-        {"name": "Bag", "kind": "function", "file_path": "/ws/foo.py", "line": 1},
-        {"name": "Bagel", "kind": "function", "file_path": "/ws/foo.py", "line": 2},
-    ]
-    daemon = _FakeDaemon(query_response=response)
-    backend = _backend_with_fake_daemon(daemon)
-    results = backend.query_symbols("bag")
-    names = sorted(s.name for s in results)
-    assert names == ["Bag", "Bagel"]
-    assert any(call[0] == "query_symbols" for call in daemon.calls)
-
-
-def test_query_symbols_propagates_daemon_error() -> None:
-    """Phase 3.5 intentionally retired the orchestrator-side cache fallback.
-    A daemon error surfaces — no silent fallback to stale data."""
-    daemon = _FakeDaemon(
-        raise_for_op={"query_symbols": RuntimeError("daemon down")},
-    )
-    backend = _backend_with_fake_daemon(daemon)
-    with pytest.raises(RuntimeError, match="daemon down"):
-        backend.query_symbols("Bag")
-
-
-def test_query_symbols_empty_query_returns_empty_via_daemon() -> None:
-    """Empty queries route to the daemon (which returns []) — orchestrator
-    no longer special-cases the substring."""
-    daemon = _FakeDaemon(query_response=[])
-    backend = _backend_with_fake_daemon(daemon)
-    assert backend.query_symbols("") == []
-    assert backend.query_symbols("   ") == []
 
 
 def test_cmd_routes_through_daemon_and_reconstructs_namespace() -> None:
@@ -276,6 +226,7 @@ def test_daemon_client_module_has_no_language_server_queries() -> None:
     forbidden = (
         "find_definitions",
         "find_references",
+        "query_symbols",
         "hover_result_from_dict",
         "reference_info_from_dict",
         "diagnostic_from_dict",
@@ -284,5 +235,11 @@ def test_daemon_client_module_has_no_language_server_queries() -> None:
     )
     for token in forbidden:
         assert token not in source
-    for method in ("find_definitions", "find_references", "hover", "diagnostics"):
+    for method in (
+        "find_definitions",
+        "find_references",
+        "query_symbols",
+        "hover",
+        "diagnostics",
+    ):
         assert not hasattr(DaemonCommandClient, method)

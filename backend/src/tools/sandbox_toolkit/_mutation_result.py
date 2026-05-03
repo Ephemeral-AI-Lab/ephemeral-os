@@ -64,8 +64,6 @@ def _failure_status(conflict_reason: str | None) -> str:
         return "aborted_version"
     if conflict_reason in {"lock_conflict", "locked"}:
         return "aborted_lock"
-    if conflict_reason in {"dst_exists", "destination_exists", "exists"}:
-        return "dst_exists"
     if conflict_reason in {"not_found", "missing"}:
         return "not_found"
     return "failed"

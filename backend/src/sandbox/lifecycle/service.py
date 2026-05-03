@@ -429,7 +429,7 @@ class SandboxService:
 
         ``transport`` (Phase 1 Step 7) is optionally threaded through to the
         registry so downstream CI subsystems (LSP transport, overlay
-        auditor, file_discovery, ContentManager) take their Step 5 transport
+        auditor, ContentManager) take their Step 5 transport
         branches when invoked from production wiring.
         """
         from sandbox.code_intelligence.registry import get_code_intelligence

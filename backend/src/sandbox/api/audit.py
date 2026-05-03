@@ -32,7 +32,6 @@ from sandbox.lifecycle.commit import (
     CommitOp,
     FileChangeResult,
     commit_metadata,
-    failure_status,
     submit_commit as _engine_submit_commit,
     submit_shell_cmd as _engine_submit_shell_cmd,
 )
@@ -41,7 +40,6 @@ __all__ = [
     "CommitOp",
     "FileChangeResult",
     "commit_metadata",
-    "failure_status",
     "submit_commit",
     "submit_edit_request",
     "submit_shell_cmd",

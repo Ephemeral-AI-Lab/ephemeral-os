@@ -17,7 +17,6 @@ from sandbox.code_intelligence.core.types import (
     EditRequest,
     EditSpec,
     OperationChange,
-    SymbolKind,
     WriteSpec,
 )
 
@@ -51,121 +50,6 @@ def _make_backend(response_map: dict[str, Any]) -> tuple[DaemonBackend, _FakeDae
 # ---------------------------------------------------------------------------
 # Queries
 # ---------------------------------------------------------------------------
-
-
-def test_find_definitions_round_trips() -> None:
-    backend, daemon = _make_backend(
-        {
-            "find_definitions": [
-                {
-                    "name": "foo",
-                    "kind": "function",
-                    "file_path": "/ws/x.py",
-                    "line": 10,
-                    "character": 4,
-                    "signature": "def foo()",
-                    "docstring": "",
-                    "container": "",
-                    "end_line": 12,
-                }
-            ]
-        }
-    )
-    rows = backend.find_definitions("/ws/x.py", "foo", line=10, character=4)
-    assert len(rows) == 1
-    assert rows[0].name == "foo"
-    assert rows[0].kind == SymbolKind.FUNCTION
-    op, args = daemon.calls[0]
-    assert op == "find_definitions"
-    assert args["file_path"] == "/ws/x.py"
-
-
-def test_find_references_round_trips() -> None:
-    backend, _ = _make_backend(
-        {
-            "find_references": [
-                {"file_path": "/ws/y.py", "line": 3, "character": 0, "text": "foo()"}
-            ]
-        }
-    )
-    rows = backend.find_references("/ws/x.py", "foo", line=1, character=0)
-    assert len(rows) == 1
-    assert rows[0].file_path == "/ws/y.py"
-    assert rows[0].text == "foo()"
-
-
-def test_hover_returns_none_for_falsy_response() -> None:
-    backend, _ = _make_backend({"hover": None})
-    assert backend.hover("/ws/x.py", 1, 0) is None
-
-
-def test_hover_returns_dataclass_when_populated() -> None:
-    backend, _ = _make_backend(
-        {"hover": {"content": "def foo()", "language": "python"}}
-    )
-    result = backend.hover("/ws/x.py", 1, 0)
-    assert result is not None
-    assert result.content == "def foo()"
-    assert result.language == "python"
-
-
-def test_diagnostics_round_trips() -> None:
-    backend, _ = _make_backend(
-        {
-            "diagnostics": [
-                {
-                    "file_path": "/ws/x.py",
-                    "line": 7,
-                    "severity": "error",
-                    "message": "boom",
-                }
-            ]
-        }
-    )
-    rows = backend.diagnostics("/ws/x.py")
-    assert len(rows) == 1
-    assert rows[0].message == "boom"
-
-
-def test_query_symbols_uses_daemon_when_initialized() -> None:
-    backend, daemon = _make_backend(
-        {
-            "query_symbols": [
-                {"name": "Bag", "kind": "class", "file_path": "/ws/x.py", "line": 5}
-            ]
-        }
-    )
-    rows = backend.query_symbols("Bag")
-    assert [s.name for s in rows] == ["Bag"]
-    assert daemon.calls[0][0] == "query_symbols"
-
-
-def test_query_symbols_propagates_daemon_error() -> None:
-    """Phase 3.5 retired the orchestrator-side snapshot cache fallback.
-    A daemon error MUST surface to the caller — no silent stale data."""
-    backend = DaemonBackend(
-        sandbox_id="sb-test",
-        workspace_root="/ws",
-        transport=object(),  # type: ignore[arg-type]
-    )
-
-    class _BrokenDaemon:
-        async def _call_daemon_command(self, op: str, args: Any | None = None) -> Any:
-            del op, args
-            raise RuntimeError("daemon down")
-
-    backend._call_daemon_command = _BrokenDaemon()._call_daemon_command  # type: ignore[method-assign]
-    backend.is_initialized = True
-
-    import pytest
-
-    with pytest.raises(RuntimeError, match="daemon down"):
-        backend.query_symbols("Bag")
-
-
-def test_list_folder_files_returns_list() -> None:
-    backend, _ = _make_backend({"list_folder_files": ["/a.py", "/b.py"]})
-    assert backend.list_folder_files("/ws") == ["/a.py", "/b.py"]
 
 
 def test_status_returns_dict() -> None:

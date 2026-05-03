@@ -297,22 +297,10 @@ def commit_metadata(change: Any, paths: list[str] | None = None) -> dict[str, An
     }
 
 
-def failure_status(result: Any, *, move: bool) -> tuple[str, str]:
-    """Map a sandbox commit failure into a (status, conflict_reason) pair."""
-    status = str(getattr(result, "status", "") or "failed")
-    conflict_reason = str(getattr(result, "conflict_reason", "") or "")
-    if conflict_reason == "not_found":
-        return "not_found", "not_found"
-    if move and conflict_reason == "dst_exists":
-        return "dst_exists", "dst_exists"
-    return status, conflict_reason or status
-
-
 __all__ = [
     "CommitOp",
     "FileChangeResult",
     "commit_metadata",
-    "failure_status",
     "submit_commit",
     "submit_shell_cmd",
 ]

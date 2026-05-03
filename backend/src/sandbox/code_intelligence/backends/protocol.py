@@ -7,15 +7,11 @@ from typing import Any, Protocol
 
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
-    HoverResult,
     OperationChange,
     OperationResult,
-    ReferenceInfo,
-    SymbolInfo,
     WriteSpec,
 )
 
@@ -31,23 +27,6 @@ class CodeIntelligenceBackend(Protocol):
     def warmup(self) -> None: ...
     def rebind_sandbox(self, sandbox: Any) -> None: ...
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any: ...
-    def find_definitions(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[SymbolInfo]: ...
-    def find_references(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[ReferenceInfo]: ...
-    def hover(self, file_path: str, line: int, character: int) -> HoverResult | None: ...
-    def diagnostics(self, file_path: str) -> list[Diagnostic]: ...
-    def query_symbols(self, query: str) -> list[SymbolInfo]: ...
     def apply_edit(self, request: EditRequest) -> EditResult: ...
     def commit_operation_against_base(
         self,
@@ -61,7 +40,6 @@ class CodeIntelligenceBackend(Protocol):
         self,
         requests: Sequence[dict[str, Any]],
     ) -> list[OperationResult]: ...
-    def list_folder_files(self, folder: str) -> list[str]: ...
     def write_file(
         self,
         specs: Sequence[WriteSpec] | WriteSpec,

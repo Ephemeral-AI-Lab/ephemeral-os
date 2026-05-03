@@ -20,15 +20,11 @@ from sandbox.code_intelligence.backends import (
 )
 from sandbox.code_intelligence.core.types import (
     CITelemetry,
-    Diagnostic,
     EditRequest,
     EditResult,
     EditSpec,
-    HoverResult,
     OperationChange,
     OperationResult,
-    ReferenceInfo,
-    SymbolInfo,
     WriteSpec,
 )
 
@@ -44,7 +40,6 @@ def _select_backend(
     *,
     transport: SandboxTransport | None,
     edit_history: Any | None = None,
-    symbol_index_persistence: Any | None = None,
     daemon_local: bool = False,
 ) -> CodeIntelligenceBackend:
     """Pick a backend based on transport availability and sandbox identity.
@@ -53,9 +48,8 @@ def _select_backend(
     sandboxless flows (no transport / empty sandbox_id) keep using
     :class:`InProcessBackend`.
 
-    ``edit_history`` and ``symbol_index_persistence`` are only meaningful for
-    the in-process backend (the daemon owns the canonical SQLite ledger and
-    SQLite IndexStore when the daemon backend is in use).
+    ``edit_history`` is only meaningful for the in-process backend. The daemon
+    owns the canonical SQLite ledger when the daemon backend is in use.
     """
     if transport is not None and sandbox_id:
         assert transport is not None  # narrow for type-checker
@@ -70,7 +64,6 @@ def _select_backend(
         sandbox=sandbox,
         transport=transport,
         edit_history=edit_history,
-        symbol_index_persistence=symbol_index_persistence,
         daemon_local=daemon_local,
     )
 
@@ -86,7 +79,6 @@ class CodeIntelligenceService:
         *,
         transport: SandboxTransport | None = None,
         edit_history: Any | None = None,
-        symbol_index_persistence: Any | None = None,
         daemon_local: bool = False,
     ) -> None:
         self._impl: CodeIntelligenceBackend = _select_backend(
@@ -95,7 +87,6 @@ class CodeIntelligenceService:
             sandbox,
             transport=transport,
             edit_history=edit_history,
-            symbol_index_persistence=symbol_index_persistence,
             daemon_local=daemon_local,
         )
 
@@ -113,18 +104,7 @@ class CodeIntelligenceService:
     def is_initialized(self) -> bool:
         return self._impl.is_initialized
 
-    # -- Internal-component pass-through (load-bearing for callers) ----------
-    # workspace.py, code_intelligence_api.py, and several tests read these
-    # attributes directly. They forward to the in-process impl; the daemon
-    # backend will surface equivalents in a future phase.
-
-    @property
-    def symbol_index(self) -> Any:
-        return self._impl.symbol_index  # type: ignore[attr-defined]
-
-    @symbol_index.setter
-    def symbol_index(self, value: Any) -> None:
-        self._impl.symbol_index = value  # type: ignore[attr-defined]
+    # -- Internal-component pass-through (load-bearing for mutation callers) -
 
     @property
     def arbiter(self) -> Any:
@@ -137,14 +117,6 @@ class CodeIntelligenceService:
     @property
     def patcher(self) -> Any:
         return self._impl.patcher  # type: ignore[attr-defined]
-
-    @property
-    def lsp_client(self) -> Any:
-        return self._impl.lsp_client  # type: ignore[attr-defined]
-
-    @lsp_client.setter
-    def lsp_client(self, value: Any) -> None:
-        self._impl.lsp_client = value  # type: ignore[attr-defined]
 
     @property
     def _content(self) -> Any:
@@ -184,33 +156,6 @@ class CodeIntelligenceService:
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._impl.cmd(sandbox, command, **kwargs)
 
-    def find_definitions(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[SymbolInfo]:
-        return self._impl.find_definitions(file_path, symbol, line, character)
-
-    def find_references(
-        self,
-        file_path: str,
-        symbol: str,
-        line: int = 0,
-        character: int = 0,
-    ) -> list[ReferenceInfo]:
-        return self._impl.find_references(file_path, symbol, line, character)
-
-    def hover(self, file_path: str, line: int, character: int) -> HoverResult | None:
-        return self._impl.hover(file_path, line, character)
-
-    def diagnostics(self, file_path: str) -> list[Diagnostic]:
-        return self._impl.diagnostics(file_path)
-
-    def query_symbols(self, query: str) -> list[SymbolInfo]:
-        return self._impl.query_symbols(query)
-
     def apply_edit(self, request: EditRequest) -> EditResult:
         return self._impl.apply_edit(request)
 
@@ -234,9 +179,6 @@ class CodeIntelligenceService:
         requests: Sequence[dict[str, Any]],
     ) -> list[OperationResult]:
         return self._impl.commit_specs_many(requests)
-
-    def list_folder_files(self, folder: str) -> list[str]:
-        return self._impl.list_folder_files(folder)
 
     def write_file(
         self,

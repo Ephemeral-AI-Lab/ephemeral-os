@@ -20,8 +20,6 @@ from sandbox.code_intelligence.daemon.guard import (
 )
 from sandbox.code_intelligence.daemon.handlers import (
     DISPATCH,
-    _deletespec_from_dict,
-    _movespec_from_dict,
     _operation_change_from_dict,
     _to_dict,
     _writespec_from_dict,
@@ -39,9 +37,7 @@ __all__ = [
     "DISPATCH",
     "DaemonAlreadyRunning",
     "_DAEMON_STATE",
-    "_deletespec_from_dict",
     "_dispatch_request",
-    "_movespec_from_dict",
     "_operation_change_from_dict",
     "_reset_daemon_state_for_tests",
     "_to_dict",
@@ -167,7 +163,7 @@ def _populate_state(
 
 
 def _kick_background_index(svc: Any) -> None:
-    """Start the SymbolIndex build in the background."""
+    """Start query-state warmup in the background."""
     si = getattr(svc, "symbol_index", None)
     if si is None:
         return

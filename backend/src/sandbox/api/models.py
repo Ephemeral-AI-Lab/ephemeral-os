@@ -166,7 +166,6 @@ class WorkspaceStatus:
     symbol_index: dict[str, Any] = field(default_factory=dict)
     arbiter: dict[str, Any] = field(default_factory=dict)
     edit_buffer: dict[str, Any] = field(default_factory=dict)
-    lsp: dict[str, Any] = field(default_factory=dict)
     edit_hotspots: dict[str, Any] | None = None
 
 
@@ -184,14 +183,6 @@ class SymbolDefinition:
 
 
 @dataclass(frozen=True, kw_only=True)
-class SymbolReference:
-    file_path: str
-    line: int
-    character: int = 0
-    text: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
 class SymbolQueryRequest:
     """Query for a symbol by name or by file path.
 
@@ -204,13 +195,10 @@ class SymbolQueryRequest:
     query: str
     actor: RequestActor
     kind: str = ""                 # filter by SymbolKind value, "" = any
-    include_references: bool = False
 
 
 SymbolQueryConfidence = Literal[
-    "full",          # references resolved via LSP
     "file_symbols",  # bootstrapped from file-path query
-    "unavailable",   # references requested but LSP could not serve
     "none",          # no matches
     "",              # references not requested
 ]
@@ -219,53 +207,8 @@ SymbolQueryConfidence = Literal[
 @dataclass(frozen=True, kw_only=True)
 class SymbolQueryResult:
     definitions: tuple[SymbolDefinition, ...] = ()
-    references: tuple[SymbolReference, ...] = ()
-    total_references: int = 0
     confidence: SymbolQueryConfidence = ""
     matched_file: str | None = None     # set when query was a file path
-    reference_status: str | None = None
-    reference_unavailable_reason: str | None = None
-
-
-@dataclass(frozen=True, kw_only=True)
-class ReferencesRequest:
-    file_path: str
-    symbol: str
-    actor: RequestActor
-    line: int = 0
-    character: int = 0
-
-
-@dataclass(frozen=True, kw_only=True)
-class ReferencesResult:
-    references: tuple[SymbolReference, ...] = ()
-
-
-# -- CodeIntelligenceApi: diagnostics --------------------------------------
-
-DiagnosticSeverity = Literal["error", "warning", "information", "hint"]
-
-
-@dataclass(frozen=True, kw_only=True)
-class Diagnostic:
-    line: int
-    character: int = 0
-    severity: DiagnosticSeverity = "error"
-    message: str = ""
-    source: str = ""
-    code: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class DiagnosticsRequest:
-    file_path: str
-    actor: RequestActor
-
-
-@dataclass(frozen=True, kw_only=True)
-class DiagnosticsResult:
-    diagnostics: tuple[Diagnostic, ...] = ()
-    clean: bool = True
 
 
 # -- CodeIntelligenceApi: workspace structure ------------------------------
@@ -290,17 +233,11 @@ class WorkspaceStructureResult:
 __all__ = [
     "CheckedWriteResult",
     "CheckedWriteSpec",
-    "Diagnostic",
-    "DiagnosticSeverity",
-    "DiagnosticsRequest",
-    "DiagnosticsResult",
     "EditFileRequest",
     "EditFileResult",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
-    "ReferencesRequest",
-    "ReferencesResult",
     "RequestActor",
     "SearchReplaceEdit",
     "ShellRequest",
@@ -309,7 +246,6 @@ __all__ = [
     "SymbolQueryConfidence",
     "SymbolQueryRequest",
     "SymbolQueryResult",
-    "SymbolReference",
     "WorkspaceStatus",
     "WorkspaceStructureRequest",
     "WorkspaceStructureResult",

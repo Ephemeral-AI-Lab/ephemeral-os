@@ -171,7 +171,7 @@ def test_audit_module_re_exports_engine_helpers() -> None:
 
     Locks the public surface so the tools/core/sandbox_commit.py shim
     keeps compiling: it does ``from sandbox.api.audit import (CommitOp,
-    FileChangeResult, commit_metadata, failure_status, submit_commit,
+    FileChangeResult, commit_metadata, submit_commit,
     submit_shell_cmd)``.
     """
     from sandbox.api import audit
@@ -180,7 +180,6 @@ def test_audit_module_re_exports_engine_helpers() -> None:
         "CommitOp",
         "FileChangeResult",
         "commit_metadata",
-        "failure_status",
         "submit_commit",
         "submit_shell_cmd",
     ):

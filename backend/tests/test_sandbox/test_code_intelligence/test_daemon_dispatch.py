@@ -70,12 +70,6 @@ def test_dispatch_table_includes_phase3_ops() -> None:
         "ping",
         "shutdown",
         "version",
-        "query_symbols",
-        "find_definitions",
-        "find_references",
-        "hover",
-        "diagnostics",
-        "list_folder_files",
         "status",
         "get_telemetry",
         "svc_cmd",
@@ -86,7 +80,6 @@ def test_dispatch_table_includes_phase3_ops() -> None:
         "edit_file",
         "undo_last_edit",
         "index_refresh",
-        "lsp_invalidate",
         "index_ready",
         "_set_guard_mode",
     }
@@ -104,15 +97,6 @@ async def test_status_returns_initialized_field(daemon_state: Path) -> None:
     response = await _dispatch_request(_make_request("status"))
     assert response["ok"] is True
     assert "initialized" in response["result"]
-
-
-@pytest.mark.asyncio
-async def test_query_symbols_returns_list(daemon_state: Path) -> None:
-    response = await _dispatch_request(
-        _make_request("query_symbols", {"query": "nonexistent"})
-    )
-    assert response["ok"] is True
-    assert isinstance(response["result"], list)
 
 
 @pytest.mark.asyncio
@@ -302,9 +286,7 @@ async def test_guard_disabled_when_query_op(daemon_state: Path) -> None:
     (daemon_state / "untracked.txt").write_text("x", encoding="utf-8")
     time.sleep(0.01)
     daemon_server._DAEMON_STATE.guard_strict = True
-    response = await _dispatch_request(
-        _make_request("query_symbols", {"query": "anything"})
-    )
+    response = await _dispatch_request(_make_request("status"))
     assert response["ok"] is True, response
 
 
