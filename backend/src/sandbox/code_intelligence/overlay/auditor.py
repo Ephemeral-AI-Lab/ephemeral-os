@@ -8,7 +8,6 @@ import logging
 import subprocess as subprocess
 import time
 from collections.abc import Awaitable, Callable
-from types import SimpleNamespace
 from typing import Any
 
 from sandbox.api.transport import SandboxTransport
@@ -20,16 +19,16 @@ from sandbox.code_intelligence.overlay.config import (
 from sandbox.code_intelligence.overlay.daemon_local import OverlayDaemonLocalMixin
 from sandbox.code_intelligence.overlay.process_exec import OverlayProcessExecMixin
 from sandbox.code_intelligence.overlay.results import (
-    audit_result,
     live_path,
     parse_diff_ndjson,
-    reject_result,
 )
 from sandbox.code_intelligence.overlay import support as _overlay_support
 from sandbox.code_intelligence.overlay.types import (
+    ConflictInfo,
     OverlayDiff,
     OverlayLease,
     OverlayPolicyReject,
+    OverlayRunOutcome,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +50,6 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         sandbox_id: str,
         workspace_root: str,
         exec_process: Callable[..., Awaitable[Any]],
-        write_coordinator: Any,
         max_concurrent: int | None = None,
         upper_size_mb: int | None = None,
         transport: SandboxTransport | None = None,
@@ -68,9 +66,7 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         self._upper_size_mb = (
             upper_size_mb if upper_size_mb is not None else overlay_upper_size_mb()
         )
-        self._committer = OverlayCommandCommitter(
-            write_coordinator, workspace_root=self._workspace_root
-        )
+        self._committer = OverlayCommandCommitter(workspace_root=self._workspace_root)
         self._script_upload_lock = asyncio.Lock()
         self._script_uploaded = False
         self._fingerprint_lock = asyncio.Lock()
@@ -91,24 +87,21 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         stdin: str | None = None,
         attribute_changes: bool = True,
         on_progress_line: Callable[[str], None] | None = None,
-    ) -> SimpleNamespace:
-        """Run *command* under overlay and return the downstream result shape."""
-        del run_id, agent_run_id, task_id
+    ) -> OverlayRunOutcome:
+        """Run *command* under overlay and hand back an OCC-free outcome."""
+        del run_id, agent_run_id, task_id, agent_id, description, attribute_changes
         if self._daemon_local and sandbox is None and on_progress_line is None:
             return await self._execute_daemon_local(
                 command,
                 timeout=timeout,
-                description=description,
-                agent_id=agent_id,
                 stdin=stdin,
-                attribute_changes=attribute_changes,
             )
 
         async with self._semaphore:
             lease = self._new_lease()
             stage_timings: dict[str, float] = {}
             total_started = time.perf_counter()
-            result: SimpleNamespace | None = None
+            outcome: OverlayRunOutcome | None = None
             error: BaseException | None = None
             try:
                 await self._timed_stage(
@@ -118,19 +111,16 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
                     command=command,
                     awaitable=self._ensure_script_uploaded(sandbox),
                 )
-                result = await self._run_and_commit_remote(
+                outcome = await self._run_and_assemble_outcome(
                     sandbox=sandbox,
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
                     timeout=timeout,
                     stdin=stdin,
-                    agent_id=agent_id,
-                    description=description,
-                    attribute_changes=attribute_changes,
                     on_progress_line=on_progress_line,
                 )
-                return result
+                return outcome
             except BaseException as exc:
                 error = exc
                 raise
@@ -150,17 +140,17 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
                         exc_info=True,
                     )
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
-                if result is not None:
-                    result.overlay_stage_timings = dict(stage_timings)
+                if outcome is not None:
+                    outcome.overlay_stage_timings = dict(stage_timings)
                 self._log_execution_summary(
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
-                    result=result,
+                    outcome=outcome,
                     error=error,
                 )
 
-    async def _run_and_commit_remote(
+    async def _run_and_assemble_outcome(
         self,
         *,
         sandbox: Any,
@@ -169,11 +159,8 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         stage_timings: dict[str, float],
         timeout: int | None,
         stdin: str | None,
-        agent_id: str,
-        description: str,
-        attribute_changes: bool,
         on_progress_line: Callable[[str], None] | None,
-    ) -> SimpleNamespace:
+    ) -> OverlayRunOutcome:
         user_cmd_b64 = base64.b64encode(command.encode("utf-8")).decode("ascii")
         stdin_b64 = (
             base64.b64encode(stdin.encode("utf-8")).decode("ascii")
@@ -209,19 +196,16 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
                     on_progress_line=on_progress_line,
                 ),
             )
-        return await self._finish_remote_commit(
+        return await self._finish_remote_outcome(
             sandbox=sandbox,
             command=command,
             lease=lease,
             stage_timings=stage_timings,
             stdout_text=stdout_text,
             script_exit=script_exit,
-            agent_id=agent_id,
-            description=description,
-            attribute_changes=attribute_changes,
         )
 
-    async def _finish_remote_commit(
+    async def _finish_remote_outcome(
         self,
         *,
         sandbox: Any,
@@ -230,10 +214,7 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
         stage_timings: dict[str, float],
         stdout_text: str,
         script_exit: int,
-        agent_id: str,
-        description: str,
-        attribute_changes: bool,
-    ) -> SimpleNamespace:
+    ) -> OverlayRunOutcome:
         stdout_text = await self._timed_stage(
             "read_stdout",
             stage_timings=stage_timings,
@@ -254,109 +235,81 @@ class OverlayAuditor(OverlayDaemonLocalMixin, OverlayProcessExecMixin):
             ),
         )
         if isinstance(diff_or_reject, OverlayPolicyReject):
-            return reject_result(
+            return self._reject_outcome(
                 stdout=stdout_text,
                 exit_code=script_exit,
                 reject=diff_or_reject,
-                overlay_run_timings=diff_or_reject.run_timings,
             )
 
-        diff = diff_or_reject
-        return await self._timed_stage(
-            "commit",
-            stage_timings=stage_timings,
-            lease=lease,
-            command=command,
-            awaitable=self._commit_and_assemble(
-                stdout=stdout_text,
-                diff=diff,
-                agent_id=agent_id,
-                description=description or "shell overlay",
-                attribute_changes=attribute_changes,
-                overlay_run_timings=diff.run_timings,
-            ),
+        return self._assemble_outcome(
+            stdout=stdout_text,
+            diff=diff_or_reject,
         )
 
-    async def _commit_and_assemble(
+    def _assemble_outcome(
         self,
         *,
         stdout: str,
         diff: OverlayDiff,
-        agent_id: str,
-        description: str,
-        attribute_changes: bool,
-        overlay_run_timings: dict[str, float] | None = None,
-    ) -> SimpleNamespace:
-        gitignore_paths = [
+    ) -> OverlayRunOutcome:
+        """Build the OCC-free :class:`OverlayRunOutcome` from a parsed diff.
+
+        The auditor never invokes OCC; the caller drives commit on
+        :attr:`OverlayRunOutcome.dirty_changes`.
+        """
+        gitignore_paths = tuple(
             live_path(self._workspace_root, p) for p in diff.gitignore_paths
-        ]
-        gitinclude_live_paths = [
-            live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
-        ]
-
-        del attribute_changes
-
-        mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
-        if not diff.gitinclude_changes:
-            return audit_result(
-                result_text=stdout,
-                exit_code=diff.exit_code,
-                gitinclude_committed=[],
-                gitignore_merged=gitignore_paths,
-                gitignore_merged_count=len(gitignore_paths),
-                mixed_gitinclude_gitignore=mixed,
-                mixed_partial_apply=False,
-                ambient=[],
-                git_commit_status="noop",
-                git_conflict_reason=None,
-                git_conflict_file=None,
-                warnings=list(diff.warnings),
-                overlay_run_timings=overlay_run_timings,
-            )
-
-        commit_result = await self._committer.commit(
-            diff.gitinclude_changes,
-            agent_id=agent_id,
-            description=description,
         )
-        warnings = list(diff.warnings)
-        if commit_result.success:
-            return audit_result(
-                result_text=stdout,
-                exit_code=diff.exit_code,
-                gitinclude_committed=gitinclude_live_paths,
-                gitignore_merged=gitignore_paths,
-                gitignore_merged_count=len(gitignore_paths),
-                mixed_gitinclude_gitignore=mixed,
-                mixed_partial_apply=False,
-                ambient=[],
-                git_commit_status=commit_result.status,
-                git_conflict_reason=None,
-                git_conflict_file=None,
-                warnings=warnings,
-                overlay_run_timings=overlay_run_timings,
-            )
-
-        partial = mixed
-        if partial:
-            warnings.append(
-                "gitinclude changes aborted by OCC; gitignore runtime changes "
-                "were already applied"
-            )
-        return audit_result(
-            result_text=stdout,
+        gitinclude_live_paths = tuple(
+            live_path(self._workspace_root, c.path) for c in diff.gitinclude_changes
+        )
+        dirty_changes = tuple(
+            self._committer.to_operation_changes(diff.gitinclude_changes)
+        )
+        mixed = bool(diff.gitinclude_changes) and bool(diff.gitignore_paths)
+        return OverlayRunOutcome(
             exit_code=diff.exit_code,
-            gitinclude_committed=[],
-            gitignore_merged=gitignore_paths,
-            gitignore_merged_count=len(gitignore_paths),
+            stdout=stdout,
+            dirty_changes=dirty_changes,
+            overlay_rejected=False,
+            conflict=None,
+            gitignore_paths=gitignore_paths,
+            gitinclude_live_paths=gitinclude_live_paths,
             mixed_gitinclude_gitignore=mixed,
-            mixed_partial_apply=partial,
-            ambient=gitinclude_live_paths,
-            git_commit_status=commit_result.status,
-            git_conflict_reason=commit_result.conflict_reason or None,
-            git_conflict_file=commit_result.conflict_file,
-            warnings=warnings,
-            overlay_run_timings=overlay_run_timings,
+            warnings=tuple(diff.warnings),
+            overlay_run_timings=dict(diff.run_timings),
+            policy_reject=None,
+        )
+
+    def _reject_outcome(
+        self,
+        *,
+        stdout: str,
+        exit_code: int,
+        reject: OverlayPolicyReject,
+    ) -> OverlayRunOutcome:
+        detail = (
+            f"{reject.reason}: {','.join(reject.paths)}"
+            if reject.paths
+            else reject.reason
+        )
+        conflict = ConflictInfo(
+            reason=reject.reason,
+            conflict_file=reject.paths[0] if reject.paths else None,
+            message=detail,
+        )
+        return OverlayRunOutcome(
+            exit_code=exit_code,
+            stdout=stdout,
+            dirty_changes=(),
+            overlay_rejected=True,
+            conflict=conflict,
+            gitignore_paths=(),
+            gitinclude_live_paths=(),
+            mixed_gitinclude_gitignore=False,
+            warnings=(detail,),
+            overlay_run_timings=dict(reject.run_timings),
+            policy_reject=reject,
         )
 
 

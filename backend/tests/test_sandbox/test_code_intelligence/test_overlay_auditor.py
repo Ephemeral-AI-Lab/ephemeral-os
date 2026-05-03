@@ -26,9 +26,6 @@ from sandbox.code_intelligence.overlay.types import (
     OverlayPolicyReject,
     OverlayRunError,
 )
-from sandbox.code_intelligence.service import (
-    CodeIntelligenceService,
-)
 from sandbox.code_intelligence.registry import (
     dispose_all_code_intelligence,
 )
@@ -168,7 +165,6 @@ async def test_read_diff_error_includes_overlay_output() -> None:
         sandbox_id="overlay-missing-diff",
         workspace_root="/workspace",
         exec_process=_missing_diff_exec,
-        write_coordinator=object(),
     )
 
     with pytest.raises(OverlayRunError) as exc_info:
@@ -202,7 +198,6 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
         sandbox_id="local",
         workspace_root=str(tmp_path),
         exec_process=_should_not_exec,
-        write_coordinator=object(),
     )
     lease = SimpleNamespace(run_dir=str(run_dir))
 
@@ -220,22 +215,17 @@ async def test_local_daemon_readback_uses_filesystem_without_exec(
 
 
 # ---------------------------------------------------------------------------
-# OverlayCommandCommitter end-to-end against a real WriteCoordinator.
+# OverlayCommandCommitter as a pure data translator (no OCC).
+#
+# Slice 5a stripped the OCC commit out of OverlayCommandCommitter; the
+# committer's only remaining responsibility is shape conversion. The
+# strict-base contract is now exercised by AuditedCommandExecutor →
+# WriteCoordinator integration tests in test_overlay_occ_decoupling.py.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_committer_applies_strict_base_modify(tmp_path: Path) -> None:
-    target = tmp_path / "app.py"
-    target.write_text("old\n", encoding="utf-8")
-    svc = CodeIntelligenceService(
-        sandbox_id=f"overlay-committer-{tmp_path.name}",
-        workspace_root=str(tmp_path),
-    )
-    committer = OverlayCommandCommitter(
-        svc._write_coordinator, workspace_root=str(tmp_path)
-    )
-
+def test_committer_translates_modify_to_strict_base_op_change(tmp_path: Path) -> None:
+    committer = OverlayCommandCommitter(workspace_root=str(tmp_path))
     change = OverlayChange(
         path="app.py",
         kind="modify",
@@ -243,49 +233,16 @@ async def test_committer_applies_strict_base_modify(tmp_path: Path) -> None:
         base_existed=True,
         final_content="new\n",
     )
-    result = await committer.commit([change])
-    assert result.success is True
-    assert result.status == "committed"
-    assert target.read_text(encoding="utf-8") == "new\n"
+    [op_change] = committer.to_operation_changes([change])
+    assert op_change.file_path == f"{tmp_path}/app.py"
+    assert op_change.base_content == "old\n"
+    assert op_change.final_content == "new\n"
+    assert op_change.base_existed is True
+    assert op_change.strict_base is True
 
 
-@pytest.mark.asyncio
-async def test_committer_aborts_on_strict_base_mismatch(tmp_path: Path) -> None:
-    target = tmp_path / "app.py"
-    target.write_text("old\n", encoding="utf-8")
-    svc = CodeIntelligenceService(
-        sandbox_id=f"overlay-committer-abort-{tmp_path.name}",
-        workspace_root=str(tmp_path),
-    )
-    committer = OverlayCommandCommitter(
-        svc._write_coordinator, workspace_root=str(tmp_path)
-    )
-    change = OverlayChange(
-        path="app.py",
-        kind="modify",
-        base_content="old\n",
-        base_existed=True,
-        final_content="new\n",
-    )
-
-    # Peer write lands between SNAP and commit.
-    target.write_text("peer-changed\n", encoding="utf-8")
-    result = await committer.commit([change])
-    assert result.success is False
-    assert result.status == "aborted_version"
-    # Peer write remains live.
-    assert target.read_text(encoding="utf-8") == "peer-changed\n"
-
-
-@pytest.mark.asyncio
-async def test_committer_creates_new_gitinclude_file(tmp_path: Path) -> None:
-    svc = CodeIntelligenceService(
-        sandbox_id=f"overlay-committer-create-{tmp_path.name}",
-        workspace_root=str(tmp_path),
-    )
-    committer = OverlayCommandCommitter(
-        svc._write_coordinator, workspace_root=str(tmp_path)
-    )
+def test_committer_translates_create_with_empty_base_hash(tmp_path: Path) -> None:
+    committer = OverlayCommandCommitter(workspace_root=str(tmp_path))
     change = OverlayChange(
         path="new.py",
         kind="create",
@@ -293,22 +250,13 @@ async def test_committer_creates_new_gitinclude_file(tmp_path: Path) -> None:
         base_existed=False,
         final_content="print('hi')\n",
     )
-    result = await committer.commit([change])
-    assert result.success is True
-    assert (tmp_path / "new.py").read_text(encoding="utf-8") == "print('hi')\n"
+    [op_change] = committer.to_operation_changes([change])
+    assert op_change.base_existed is False
+    assert op_change.base_hash == ""
 
 
-@pytest.mark.asyncio
-async def test_committer_deletes_gitinclude_file(tmp_path: Path) -> None:
-    target = tmp_path / "gone.py"
-    target.write_text("bye\n", encoding="utf-8")
-    svc = CodeIntelligenceService(
-        sandbox_id=f"overlay-committer-delete-{tmp_path.name}",
-        workspace_root=str(tmp_path),
-    )
-    committer = OverlayCommandCommitter(
-        svc._write_coordinator, workspace_root=str(tmp_path)
-    )
+def test_committer_translates_delete_to_none_final_content(tmp_path: Path) -> None:
+    committer = OverlayCommandCommitter(workspace_root=str(tmp_path))
     change = OverlayChange(
         path="gone.py",
         kind="delete",
@@ -316,9 +264,9 @@ async def test_committer_deletes_gitinclude_file(tmp_path: Path) -> None:
         base_existed=True,
         final_content=None,
     )
-    result = await committer.commit([change])
-    assert result.success is True
-    assert not target.exists()
+    [op_change] = committer.to_operation_changes([change])
+    assert op_change.final_content is None
+    assert op_change.base_existed is True
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +287,6 @@ def _make_guarded_auditor(tmp_path: Path) -> OverlayAuditor:
         sandbox_id=f"freshness-{tmp_path.name}",
         workspace_root=str(tmp_path),
         exec_process=_unused_exec,
-        write_coordinator=object(),
         daemon_local=True,
     )
 

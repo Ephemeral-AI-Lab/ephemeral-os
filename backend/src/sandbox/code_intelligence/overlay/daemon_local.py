@@ -13,10 +13,8 @@ import subprocess
 import time
 from collections.abc import Awaitable
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
-from sandbox.code_intelligence.overlay.results import reject_result
 from sandbox.code_intelligence.overlay.support import (
     RUN_DIR_PREFIX,
     SLOW_OVERLAY_STAGE_SECONDS,
@@ -28,6 +26,7 @@ from sandbox.code_intelligence.overlay.types import (
     OverlayLease,
     OverlayPolicyReject,
     OverlayRunError,
+    OverlayRunOutcome,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,16 +40,13 @@ class OverlayDaemonLocalMixin:
         command: str,
         *,
         timeout: int | None,
-        description: str,
-        agent_id: str,
         stdin: str | None,
-        attribute_changes: bool,
-    ) -> SimpleNamespace:
+    ) -> OverlayRunOutcome:
         async with self._semaphore:
             lease = self._new_lease()
             stage_timings: dict[str, float] = {}
             total_started = time.perf_counter()
-            result: SimpleNamespace | None = None
+            outcome: OverlayRunOutcome | None = None
             error: BaseException | None = None
             fingerprint_guard_started = False
             try:
@@ -92,17 +88,14 @@ class OverlayDaemonLocalMixin:
                         overlay_exit_code=script_exit,
                     ),
                 )
-                result = await self._finish_daemon_local_commit(
+                outcome = await self._finish_daemon_local_outcome(
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
                     overlay_stdout=overlay_stdout,
                     script_exit=script_exit,
-                    agent_id=agent_id,
-                    description=description,
-                    attribute_changes=attribute_changes,
                 )
-                return result
+                return outcome
             except BaseException as exc:
                 error = exc
                 raise
@@ -128,19 +121,19 @@ class OverlayDaemonLocalMixin:
                         exc_info=True,
                     )
                 stage_timings["total"] = round(time.perf_counter() - total_started, 6)
-                if result is not None:
-                    result.overlay_stage_timings = dict(stage_timings)
+                if outcome is not None:
+                    outcome.overlay_stage_timings = dict(stage_timings)
                 if fingerprint_guard_started:
                     await self._end_workspace_fingerprint_guard()
                 self._log_execution_summary(
                     command=command,
                     lease=lease,
                     stage_timings=stage_timings,
-                    result=result,
+                    outcome=outcome,
                     error=error,
                 )
 
-    async def _finish_daemon_local_commit(
+    async def _finish_daemon_local_outcome(
         self: Any,
         *,
         command: str,
@@ -148,10 +141,7 @@ class OverlayDaemonLocalMixin:
         stage_timings: dict[str, float],
         overlay_stdout: str,
         script_exit: int,
-        agent_id: str,
-        description: str,
-        attribute_changes: bool,
-    ) -> SimpleNamespace:
+    ) -> OverlayRunOutcome:
         stdout_text = await self._timed_stage(
             "read_stdout",
             stage_timings=stage_timings,
@@ -172,27 +162,12 @@ class OverlayDaemonLocalMixin:
             ),
         )
         if isinstance(diff_or_reject, OverlayPolicyReject):
-            return reject_result(
+            return self._reject_outcome(
                 stdout=stdout_text,
                 exit_code=script_exit,
                 reject=diff_or_reject,
-                overlay_run_timings=diff_or_reject.run_timings,
             )
-        diff = diff_or_reject
-        return await self._timed_stage(
-            "commit",
-            stage_timings=stage_timings,
-            lease=lease,
-            command=command,
-            awaitable=self._commit_and_assemble(
-                stdout=stdout_text,
-                diff=diff,
-                agent_id=agent_id,
-                description=description or "shell overlay",
-                attribute_changes=attribute_changes,
-                overlay_run_timings=diff.run_timings,
-            ),
-        )
+        return self._assemble_outcome(stdout=stdout_text, diff=diff_or_reject)
 
     async def _begin_workspace_fingerprint_guard(self: Any) -> None:
         async with self._fingerprint_lock:
@@ -373,28 +348,29 @@ class OverlayDaemonLocalMixin:
         command: str,
         lease: OverlayLease,
         stage_timings: dict[str, float],
-        result: SimpleNamespace | None,
+        outcome: OverlayRunOutcome | None,
         error: BaseException | None,
     ) -> None:
         total = stage_timings.get("total", 0.0)
-        status = getattr(result, "git_commit_status", None)
-        failed_status = status not in (None, "committed", "noop")
-        if error is None and not failed_status and total < SLOW_OVERLAY_TOTAL_SECONDS:
+        rejected = bool(outcome and outcome.overlay_rejected)
+        conflict = outcome.conflict if outcome is not None else None
+        failed = rejected or conflict is not None
+        if error is None and not failed and total < SLOW_OVERLAY_TOTAL_SECONDS:
             return
         error_text = f"{type(error).__name__}: {error}" if error is not None else None
         logger.warning(
-            "overlay command summary: total=%.3fs status=%s exit_code=%s "
+            "overlay command summary: total=%.3fs rejected=%s exit_code=%s "
             "conflict_file=%s conflict_reason=%s error=%s sandbox_id=%s "
             "run_dir=%s timings=%s overlay_run_timings=%s command=%r",
             total,
-            status,
-            getattr(result, "exit_code", None),
-            getattr(result, "git_conflict_file", None),
-            getattr(result, "git_conflict_reason", None),
+            rejected,
+            getattr(outcome, "exit_code", None),
+            getattr(conflict, "conflict_file", None),
+            getattr(conflict, "reason", None),
             error_text,
             self._sandbox_id,
             lease.run_dir,
             dict(stage_timings),
-            dict(getattr(result, "overlay_run_timings", {}) or {}),
+            dict(getattr(outcome, "overlay_run_timings", {}) or {}),
             command_sample(command),
         )

@@ -13,9 +13,29 @@ from typing import Any
 import pytest
 
 from sandbox.code_intelligence.overlay import auditor as overlay_auditor_module
-from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
+from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
 from sandbox.code_intelligence.service import CodeIntelligenceService
+
+
+def _make_executor(
+    svc: CodeIntelligenceService,
+    sandbox_id: str,
+    workspace_root: str,
+    *,
+    daemon_local: bool,
+    bridge,
+) -> AuditedCommandExecutor:
+    executor = AuditedCommandExecutor(
+        sandbox_id=sandbox_id,
+        workspace_root=workspace_root,
+        write_coordinator=svc._write_coordinator,
+        rebind_sandbox=lambda _sandbox: None,
+        transport=None,
+        daemon_local=daemon_local,
+    )
+    executor._exec_sandbox_process = bridge  # type: ignore[assignment]
+    return executor
 
 
 @pytest.fixture(autouse=True)
@@ -300,19 +320,19 @@ async def _run_multistage(
         sandbox_id=f"phase6-multi-{repo.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"phase6-multi-{repo.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
+    executor = _make_executor(
+        svc,
+        f"phase6-multi-{repo.name}",
+        str(repo),
+        daemon_local=False,
+        bridge=_noop_exec,
     )
     sandbox = _ScriptedSandbox(
         diff_contents=diff_contents,
         user_exit=user_exit,
         stdout=stdout,
     )
-    return await auditor.execute(sandbox, "echo phase6", timeout=60)
+    return await executor.cmd(sandbox, "echo phase6", timeout=60)
 
 
 async def _run_daemon_local(
@@ -329,15 +349,14 @@ async def _run_daemon_local(
         workspace_root=str(repo),
         daemon_local=True,
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"phase6-daemon-{repo.name}",
-        workspace_root=str(repo),
-        exec_process=_should_not_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
+    executor = _make_executor(
+        svc,
+        f"phase6-daemon-{repo.name}",
+        str(repo),
         daemon_local=True,
+        bridge=_should_not_exec,
     )
-    return await auditor.execute(None, "echo phase6", timeout=60)
+    return await executor.cmd(None, "echo phase6", timeout=60)
 
 
 @pytest.mark.parametrize(

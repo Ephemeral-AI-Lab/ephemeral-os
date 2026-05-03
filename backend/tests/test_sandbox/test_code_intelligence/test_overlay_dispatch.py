@@ -8,6 +8,7 @@ import pytest
 
 from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
 from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
+from sandbox.code_intelligence.overlay.types import OverlayRunOutcome
 from sandbox.code_intelligence.service import (
     CodeIntelligenceService,
 )
@@ -56,7 +57,16 @@ async def test_cmd_delegates_to_overlay_auditor_with_stdin(tmp_path) -> None:
                     "stdin": kwargs.get("stdin"),
                 }
             )
-            return SimpleNamespace(result="ok", exit_code=0)
+            return OverlayRunOutcome(
+                exit_code=0,
+                stdout="ok",
+                dirty_changes=(),
+                overlay_rejected=False,
+                conflict=None,
+                gitignore_paths=(),
+                gitinclude_live_paths=(),
+                mixed_gitinclude_gitignore=False,
+            )
 
     async def _fake_ensure_overlay_auditor():
         return _FakeOverlayAuditor()

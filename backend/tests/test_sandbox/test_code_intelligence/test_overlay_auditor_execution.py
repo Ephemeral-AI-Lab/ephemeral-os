@@ -14,9 +14,33 @@ import pytest
 
 from sandbox.code_intelligence.overlay import auditor as overlay_auditor_module
 from sandbox.code_intelligence.overlay import process_exec as overlay_process_exec_module
-from sandbox.code_intelligence.overlay.auditor import OverlayAuditor
+from sandbox.code_intelligence.overlay.command_executor import AuditedCommandExecutor
 from sandbox.code_intelligence.service import CodeIntelligenceService
 from sandbox.code_intelligence.registry import dispose_all_code_intelligence
+
+
+def _make_executor(svc: CodeIntelligenceService, sandbox_id: str, workspace_root: str) -> AuditedCommandExecutor:
+    """Build an AuditedCommandExecutor wired to the service's WriteCoordinator.
+
+    Slice 5a moves OCC commit out of overlay; tests that exercise the
+    overlay→OCC integration drive ``executor.cmd`` (which preserves the
+    legacy SimpleNamespace contract) instead of ``auditor.execute``
+    (which now returns the OCC-free ``OverlayRunOutcome``).
+    """
+    executor = AuditedCommandExecutor(
+        sandbox_id=sandbox_id,
+        workspace_root=workspace_root,
+        write_coordinator=svc._write_coordinator,
+        rebind_sandbox=lambda _sandbox: None,
+        transport=None,
+        daemon_local=False,
+    )
+
+    async def _bridge(_sandbox, command, *, timeout=None):
+        return await _sandbox.exec(command, timeout=timeout)
+
+    executor._exec_sandbox_process = _bridge  # type: ignore[assignment]
+    return executor
 
 
 @pytest.fixture(autouse=True)
@@ -190,10 +214,6 @@ def _commit_all(path: Path) -> None:
     )
 
 
-async def _noop_exec(sandbox, command, *, timeout=None):
-    return await sandbox.exec(command, timeout=timeout)
-
-
 def test_overlay_runtime_bundle_contains_executable_facade_and_runtime_package(
     tmp_path: Path,
 ) -> None:
@@ -253,15 +273,13 @@ async def test_auditor_commits_gitinclude_changes_via_occ_when_legacy_attribute_
         sandbox_id=f"overlay-auditor-commit-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-auditor-commit-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
+    executor = _make_executor(
+        svc,
+        f"overlay-auditor-commit-{tmp_path.name}",
+        str(repo),
     )
 
-    result = await auditor.execute(
+    result = await executor.cmd(
         sandbox,
         "echo hi",
         agent_id="alice",
@@ -298,15 +316,9 @@ async def test_auditor_returns_user_command_stdout_from_overlay_run_dir(
         sandbox_id=f"overlay-stdout-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-stdout-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
-    )
+    executor = _make_executor(svc, f"overlay-stdout-{tmp_path.name}", str(repo))
 
-    result = await auditor.execute(sandbox, "echo hello from overlay", timeout=60)
+    result = await executor.cmd(sandbox, "echo hello from overlay", timeout=60)
 
     assert result.result == "hello from overlay\n"
 
@@ -340,13 +352,7 @@ async def test_auditor_forwards_live_stdout_progress(
         sandbox_id=f"overlay-progress-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-progress-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
-    )
+    executor = _make_executor(svc, f"overlay-progress-{tmp_path.name}", str(repo))
     progress: list[str] = []
 
     def on_progress(line: str) -> None:
@@ -354,7 +360,7 @@ async def test_auditor_forwards_live_stdout_progress(
         if "first" in line:
             first_progress_seen.set()
 
-    result = await auditor.execute(
+    result = await executor.cmd(
         sandbox,
         "echo first && sleep 1 && echo second",
         timeout=60,
@@ -393,15 +399,11 @@ async def test_auditor_reports_noop_for_gitignore_only_changes(
         sandbox_id=f"overlay-gitignore-only-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-gitignore-only-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
+    executor = _make_executor(
+        svc, f"overlay-gitignore-only-{tmp_path.name}", str(repo)
     )
 
-    result = await auditor.execute(sandbox, "python -m venv .venv", timeout=60)
+    result = await executor.cmd(sandbox, "python -m venv .venv", timeout=60)
 
     assert result.git_commit_status == "noop"
     assert result.changed_paths == []
@@ -459,13 +461,7 @@ async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
         sandbox_id=f"overlay-partial-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-partial-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
-    )
+    executor = _make_executor(svc, f"overlay-partial-{tmp_path.name}", str(repo))
 
     # Before building SNAP, reset gitinclude file to its committed content
     # so SNAP captures "foo==0.1\n" as base, then apply the peer write
@@ -485,7 +481,7 @@ async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
 
     sandbox.exec = _exec_with_peer  # type: ignore[assignment]
 
-    result = await auditor.execute(sandbox, "pip install foo && echo foo >> requirements.txt", timeout=60)
+    result = await executor.cmd(sandbox, "pip install foo && echo foo >> requirements.txt", timeout=60)
 
     assert result.mixed_gitinclude_gitignore is True
     assert result.mixed_partial_apply is True
@@ -521,15 +517,9 @@ async def test_auditor_surfaces_policy_reject(tmp_path: Path) -> None:
         sandbox_id=f"overlay-reject-{tmp_path.name}",
         workspace_root=str(repo),
     )
-    auditor = OverlayAuditor(
-        sandbox_id=f"overlay-reject-{tmp_path.name}",
-        workspace_root=str(repo),
-        exec_process=_noop_exec,
-        write_coordinator=svc._write_coordinator,
-        max_concurrent=2,
-    )
+    executor = _make_executor(svc, f"overlay-reject-{tmp_path.name}", str(repo))
 
-    result = await auditor.execute(sandbox, "echo .git/hack", timeout=30)
+    result = await executor.cmd(sandbox, "echo .git/hack", timeout=30)
 
     assert result.git_commit_status == "rejected"
     assert result.git_conflict_reason

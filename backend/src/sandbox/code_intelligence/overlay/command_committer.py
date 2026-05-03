@@ -1,78 +1,32 @@
-"""Adapt overlay NDJSON gitinclude changes to the OCC write coordinator.
+"""Adapt overlay NDJSON gitinclude changes into OCC ``OperationChange`` values.
 
-See ``docs/architecture/overlay-sandbox-plan.md`` §4.1. The committer is
-deliberately decoupled from the auditor / sandbox transport: given a
-sequence of :class:`OverlayChange` items (every upperdir entry that
-``git check-ignore`` did *not* flag — first-writer-wins under
-concurrency), it builds strict-base ``OperationChange`` values and
-delegates to ``WriteCoordinator``. Gitignored writes were already
-direct-merged inside the namespace and do not pass through here.
+See ``docs/architecture/overlay-sandbox-plan.md`` §4.1 and Slice 5a of the
+sandbox-api-runtime-refactor. Overlay never invokes OCC: the auditor
+produces ``OperationChange`` values via :meth:`to_operation_changes`
+and hands them off to its caller through ``OverlayRunOutcome``. The
+caller drives :meth:`WriteCoordinator.commit_operation_against_base`.
 """
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
-from typing import Any
 
-from sandbox.client.async_bridge import run_sync_in_executor, use_sandbox_io_loop
 from sandbox.code_intelligence.core.hashing import content_hash
+from sandbox.code_intelligence.core.types import OperationChange
 from sandbox.code_intelligence.overlay.types import OverlayChange
-from sandbox.code_intelligence.core.types import OperationChange, OperationResult
-
-logger = logging.getLogger(__name__)
 
 
 class OverlayCommandCommitter:
-    """Commit the gitinclude slice of one overlay op through OCC.
+    """Translate one overlay op's gitinclude changes into OCC inputs.
 
-    Every change that ``git check-ignore`` did *not* flag is committed
-    here; index membership is irrelevant to routing. The strict-base
-    contract (``strict_base=True``) matches the plan's invariant that
-    ``base_content`` always comes from the command-start overlay lowerdir — peer
-    edits between lowerdir read and commit abort the op with ``aborted_version``,
-    never produce a silent merge. Concurrent writers to the same path
-    therefore resolve as first-writer-wins.
+    Strict-base only: ``base_content`` always comes from the command-start
+    overlay lowerdir (plan §4.1 invariant). The class is now purely a
+    data-shape translator — the actual OCC commit happens in the
+    auditor's caller (Slice 5a's correctness boundary).
     """
 
-    def __init__(self, write_coordinator: Any, *, workspace_root: str) -> None:
-        self._write_coordinator = write_coordinator
+    def __init__(self, *, workspace_root: str) -> None:
         self._workspace_root = workspace_root.rstrip("/")
-
-    async def commit(
-        self,
-        changes: Sequence[OverlayChange],
-        *,
-        agent_id: str = "",
-        edit_type: str = "svc_cmd_overlay",
-        description: str = "shell overlay",
-    ) -> OperationResult:
-        op_changes = self.to_operation_changes(changes)
-        if not op_changes:
-            return OperationResult(
-                success=True,
-                status="committed",
-                files=(),
-                conflict_file=None,
-                conflict_reason="",
-                timings={"total": 0.0},
-            )
-        with use_sandbox_io_loop():
-            result: OperationResult = await run_sync_in_executor(
-                self._write_coordinator.commit_operation_against_base,
-                op_changes,
-                agent_id=agent_id,
-                edit_type=edit_type,
-                description=description,
-            )
-        if not result.success:
-            logger.warning(
-                "overlay commit aborted: status=%s reason=%s file=%s",
-                result.status,
-                result.conflict_reason,
-                result.conflict_file,
-            )
-        return result
 
     def to_operation_changes(
         self, changes: Sequence[OverlayChange]

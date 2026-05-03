@@ -10,7 +10,10 @@ the frozen interface between the sandbox-side ``overlay_run.py`` script
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from sandbox.code_intelligence.core.types import OperationChange
 
 
 OverlayChangeKind = Literal["create", "modify", "delete"]
@@ -134,7 +137,58 @@ class OverlayAuditResult:
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class ConflictInfo:
+    """Structured failure surface for the overlay → caller boundary.
+
+    ``reason`` is a domain term ('argv_too_large', 'patch_failed', or an
+    overlay reject reason). Underlying raw OCC ``OperationStatus`` values
+    flow separately on the SimpleNamespace ``git_commit_status`` field
+    so callers can still read the precise OCC verdict; this struct is
+    the *normalized* reason the slice contracts on.
+
+    ``upper_layer_path`` captures the live workspace path the overlay
+    upperdir intended to write so the caller can inspect it on conflict.
+    """
+
+    reason: str
+    conflict_file: str | None = None
+    message: str = ""
+    upper_layer_path: str | None = None
+
+
+@dataclass
+class OverlayRunOutcome:
+    """In-process handoff between OverlayAuditor and its caller.
+
+    The auditor produces this; the caller (today's
+    ``AuditedCommandExecutor``) drives OCC commit on
+    :attr:`dirty_changes` and assembles the downstream
+    ``SimpleNamespace`` response. Slice 5a's correctness fix is exactly
+    this seam: overlay never invokes OCC.
+
+    Not ``frozen``: ``overlay_stage_timings`` is set after lease cleanup
+    in the auditor's ``finally`` block, mirroring today's mutable
+    ``SimpleNamespace`` lifecycle. The struct is otherwise treated as
+    immutable by callers.
+    """
+
+    exit_code: int
+    stdout: str
+    dirty_changes: tuple["OperationChange", ...]
+    overlay_rejected: bool
+    conflict: ConflictInfo | None
+    gitignore_paths: tuple[str, ...]
+    gitinclude_live_paths: tuple[str, ...]
+    mixed_gitinclude_gitignore: bool
+    warnings: tuple[str, ...] = ()
+    overlay_run_timings: dict[str, float] = field(default_factory=dict)
+    overlay_stage_timings: dict[str, float] = field(default_factory=dict)
+    policy_reject: OverlayPolicyReject | None = None
+
+
 __all__ = [
+    "ConflictInfo",
     "OverlayAuditResult",
     "OverlayChange",
     "OverlayChangeKind",
@@ -144,4 +198,5 @@ __all__ = [
     "OverlayLease",
     "OverlayPolicyReject",
     "OverlayRunError",
+    "OverlayRunOutcome",
 ]
