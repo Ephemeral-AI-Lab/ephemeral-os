@@ -129,3 +129,87 @@ def test_facade_module_accessible_via_package_import() -> None:
 
     assert callable(sb_lifecycle.create_sandbox)
     assert callable(sb_lifecycle.ensure_sandbox_running)
+
+
+def test_create_sandbox_invokes_ensure_git_via_setup_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: setup_after_create must call ensure_git, not just bootstrap.
+
+    The pre-refactor DaytonaSandboxLifecycle.create_sandbox ran four steps:
+    start eager upload, ensure_git, finish upload, run bootstrap. Skipping
+    ensure_git breaks downstream code that assumes git is installed (sweevo,
+    any consumer running ``git ...`` on a minimal-image sandbox).
+    """
+    from sandbox.api import lifecycle as sb_lifecycle
+    from sandbox.control.ops import setup as setup_mod
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+
+    calls: list[str] = []
+    monkeypatch.setattr(
+        setup_mod, "maybe_start_eager_runtime_bundle_upload",
+        lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
+    )
+    monkeypatch.setattr(
+        "sandbox.control.ops.git.ensure_git",
+        lambda sid: calls.append(f"ensure_git({sid})"),
+    )
+    monkeypatch.setattr(
+        setup_mod, "finish_eager_runtime_bundle_upload",
+        lambda fut, sid: calls.append(f"finish_upload({sid})"),
+    )
+    monkeypatch.setattr(
+        setup_mod, "maybe_run_eager_runtime_bootstrap",
+        lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
+    )
+
+    sb_lifecycle.create_sandbox(name="demo")
+
+    assert calls == [
+        "start_upload(sb-1,/workspace/demo)",
+        "ensure_git(sb-1)",
+        "finish_upload(sb-1)",
+        "run_bootstrap(sb-1,/workspace/demo)",
+    ]
+
+
+def test_start_sandbox_invokes_ensure_git_via_setup_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same regression guard for the start path."""
+    from sandbox.api import lifecycle as sb_lifecycle
+    from sandbox.control.ops import setup as setup_mod
+    from sandbox.providers.registry import register_adapter
+
+    provider = _stub_provider()
+    register_adapter("sb-1", provider)
+
+    calls: list[str] = []
+    monkeypatch.setattr(
+        setup_mod, "maybe_start_eager_runtime_bundle_upload",
+        lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
+    )
+    monkeypatch.setattr(
+        "sandbox.control.ops.git.ensure_git",
+        lambda sid: calls.append(f"ensure_git({sid})"),
+    )
+    monkeypatch.setattr(
+        setup_mod, "finish_eager_runtime_bundle_upload",
+        lambda fut, sid: calls.append(f"finish_upload({sid})"),
+    )
+    monkeypatch.setattr(
+        setup_mod, "maybe_run_eager_runtime_bootstrap",
+        lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
+    )
+
+    sb_lifecycle.start_sandbox("sb-1")
+
+    assert calls == [
+        "start_upload(sb-1,/workspace/demo)",
+        "ensure_git(sb-1)",
+        "finish_upload(sb-1)",
+        "run_bootstrap(sb-1,/workspace/demo)",
+    ]

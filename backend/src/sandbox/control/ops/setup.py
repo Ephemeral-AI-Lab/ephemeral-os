@@ -190,19 +190,32 @@ def finish_eager_runtime_bundle_upload(
 
 
 def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
-    """Post-create hook: run the eager runtime bootstrap once.
+    """Post-create hook: ensure_git + eager runtime bootstrap with upload overlap.
 
-    Called from the create-sandbox path after the sandbox exists and a
-    workspace has been resolved. The two-phase upload (background upload +
-    sequential daemon spawn) is the responsibility of provider-aware code
-    that overlaps the upload with ``ensure_git`` — this hook is the simple
-    sequential variant.
+    Reproduces the four-step sequence the legacy DaytonaSandboxLifecycle.
+    create_sandbox ran:
+
+    1. Start the bundle upload in the background (overlaps with ensure_git).
+    2. Run ensure_git synchronously — installs git in minimal images that
+       don't have it.
+    3. Join the upload future (errors swallowed; sequential bootstrap retries).
+    4. Run the sequential eager runtime bootstrap.
     """
+    from sandbox.control.ops.git import ensure_git
+
+    upload_future = maybe_start_eager_runtime_bundle_upload(sandbox_id, workspace_root)
+    ensure_git(sandbox_id)
+    finish_eager_runtime_bundle_upload(upload_future, sandbox_id)
     maybe_run_eager_runtime_bootstrap(sandbox_id, workspace_root)
 
 
 def setup_after_start(sandbox_id: str, workspace_root: str | None) -> None:
-    """Post-start hook: re-run the eager runtime bootstrap on resume."""
+    """Post-start hook: same four-step ensure_git + eager bootstrap as create."""
+    from sandbox.control.ops.git import ensure_git
+
+    upload_future = maybe_start_eager_runtime_bundle_upload(sandbox_id, workspace_root)
+    ensure_git(sandbox_id)
+    finish_eager_runtime_bundle_upload(upload_future, sandbox_id)
     maybe_run_eager_runtime_bootstrap(sandbox_id, workspace_root)
 
 
