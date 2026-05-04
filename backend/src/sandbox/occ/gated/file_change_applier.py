@@ -103,7 +103,7 @@ class FileChangeApplier:
                     message="content changed",
                 )
         try:
-            self._content.write(self._path, change.final_content)
+            self._content.write(self._path, change.final_text)
         except Exception as exc:
             return FileResult(
                 path=self._path,

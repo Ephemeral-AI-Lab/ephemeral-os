@@ -57,7 +57,7 @@ class DirectMergeCoordinator:
                 return FileResult(path=change.path, status=FileStatus.COMMITTED)
             if isinstance(change, WriteChange):
                 await asyncio.to_thread(
-                    self._content.write, change.path, change.final_content
+                    self._content.write, change.path, change.final_text
                 )
                 return FileResult(path=change.path, status=FileStatus.COMMITTED)
             if isinstance(change, EditChange):

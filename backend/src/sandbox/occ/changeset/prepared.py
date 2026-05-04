@@ -1,0 +1,53 @@
+"""Prepared OCC changesets after path routing and base-hash inference."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+from sandbox.layer_stack.manifest import Manifest
+from sandbox.occ.changeset.types import Change
+
+
+class RouteDecision(StrEnum):
+    TRACKED = "tracked"
+    DIRECT = "direct"
+    DROP = "drop"
+    REJECT = "reject"
+
+
+@dataclass(frozen=True)
+class PreparedPathGroup:
+    """Ordered changes for one normalized path and route decision."""
+
+    path: str
+    route: RouteDecision
+    changes: tuple[Change, ...]
+    base_hash: str | None = None
+    message: str | None = None
+
+
+@dataclass(frozen=True)
+class ChangesetOptions:
+    """Request-level OCC preparation options."""
+
+    atomic: bool = False
+    caller_id: str = ""
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class PreparedChangeset:
+    """Phase 03 output consumed by the future commit transaction."""
+
+    snapshot: Manifest | None
+    path_groups: tuple[PreparedPathGroup, ...]
+    atomic: bool
+
+
+__all__ = [
+    "ChangesetOptions",
+    "PreparedChangeset",
+    "PreparedPathGroup",
+    "RouteDecision",
+]

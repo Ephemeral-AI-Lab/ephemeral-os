@@ -1,4 +1,4 @@
-"""OCC package boundary tests for Slice 4 relocation."""
+"""OCC package boundary tests."""
 
 from __future__ import annotations
 
@@ -18,12 +18,16 @@ def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
         "changeset",
         "client.py",
         "content",
+        # Legacy live-root apply modules remain until the Phase 06 cutover.
         "direct",
         "gated",
         "handlers",
         "orchestrator.py",
         "patching",
+        "routing",
+        "runtime_ops.py",
         "setup.sh",
+        "service.py",
         "wire.py",
     }
 

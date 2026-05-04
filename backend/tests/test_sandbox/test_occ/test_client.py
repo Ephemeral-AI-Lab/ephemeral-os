@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.api.models import RawExecResult
+from sandbox.occ.changeset.prepared import PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.client import OCCClient, OCCClientError
 from sandbox.providers.registry import dispose_adapter, register_adapter
@@ -68,6 +69,15 @@ class _FailingAdapter:
         return RawExecResult(exit_code=127, stdout="", stderr="python3: not found")
 
 
+class _Service:
+    def __init__(self) -> None:
+        self.calls: list[tuple[tuple[object, ...], object, object]] = []
+
+    async def apply_changeset(self, changes, *, snapshot=None, options=None):
+        self.calls.append((tuple(changes), snapshot, options))
+        return PreparedChangeset(snapshot=snapshot, path_groups=(), atomic=False)
+
+
 @pytest.mark.asyncio
 async def test_occ_client_uses_one_adapter_exec_per_request() -> None:
     adapter = _Adapter()
@@ -122,3 +132,21 @@ def test_occ_client_does_not_import_handlers_or_overlay() -> None:
 
     assert "sandbox.occ.handlers" not in source
     assert "sandbox.overlay" not in source
+
+
+@pytest.mark.asyncio
+async def test_occ_client_can_call_phase03_service_directly() -> None:
+    service = _Service()
+    change = WriteChange(path="a.txt", source="api_write", final_content=b"x")
+
+    result = await OCCClient(service=service).apply_changeset(
+        [change],
+        agent_id="agent-a",
+        description="write a",
+        snapshot="manifest",
+    )
+
+    assert isinstance(result, PreparedChangeset)
+    assert service.calls[0][0] == (change,)
+    assert service.calls[0][1] == "manifest"
+    assert service.calls[0][2].caller_id == "agent-a"

@@ -26,7 +26,7 @@ _MODEL_ONLY_MODULES = {
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "read.py": {"sandbox.api.raw_exec"},
     "write.py": {
-        "sandbox.occ.changeset.types",
+        "sandbox.occ.changeset.builders",
         "sandbox.occ.client",
     },
     "edit.py": {

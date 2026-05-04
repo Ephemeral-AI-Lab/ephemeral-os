@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sandbox.api._changeset_projection import committed_paths, conflict_and_status
 from sandbox.api.models import WriteFileRequest, WriteFileResult
-from sandbox.occ.changeset.types import WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.client import OCCClient
 
 
@@ -17,11 +17,10 @@ async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileRes
     ``.omc/plans/occ-changeset-gate-simplification.md`` §"How base_hash is
     obtained".
     """
-    change = WriteChange(
+    change = build_api_write_change(
         path=request.path,
-        base_hash="",
-        base_existed=request.overwrite,
         final_content=request.content,
+        create_only=not request.overwrite,
     )
     result = await OCCClient(sandbox_id).apply_changeset(
         [change],

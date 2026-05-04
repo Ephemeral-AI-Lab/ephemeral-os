@@ -57,6 +57,8 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/bash.py",
         "sandbox/runtime/pipelines.py",
         "sandbox/runtime/setup_orchestrator.py",
+        "sandbox/layer_stack/manifest.py",
+        "sandbox/layer_stack/stack_manager.py",
         "sandbox/occ/bootstrap.py",
         "sandbox/occ/orchestrator.py",
         "sandbox/occ/setup.sh",

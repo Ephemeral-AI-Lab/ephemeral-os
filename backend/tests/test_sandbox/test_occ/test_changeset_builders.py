@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.occ.changeset.builders import overlay_changes_to_changeset
+from sandbox.occ.changeset.builders import (
+    build_api_edit_change,
+    build_api_write_change,
+    build_shell_delete_change,
+    build_shell_write_change,
+    overlay_changes_to_changeset,
+)
 from sandbox.occ.changeset.types import (
     BinaryChange,
     DeleteChange,
@@ -173,3 +179,46 @@ def test_overlay_opaque_dir_records_first_segment_kept_children() -> None:
     opaque = next(c for c in out if isinstance(c, OpaqueDirChange))
     assert opaque.path == "dir"
     assert opaque.kept_children == frozenset({"keep.py", "sub"})
+
+
+# ---------------------------------------------------------------- phase 03 source builders
+
+
+def test_api_write_builder_tags_api_source_and_bytes_payload() -> None:
+    change = build_api_write_change(
+        path="src/a.py",
+        final_content="hello",
+        base_hash="abc",
+        create_only=True,
+    )
+
+    assert isinstance(change, WriteChange)
+    assert change.source == "api_write"
+    assert isinstance(change.final_content, bytes)
+    assert change.final_content == b"hello"
+    assert change.base_hash == "abc"
+    assert change.create_only is True
+
+
+def test_api_edit_builder_keeps_anchor_contract() -> None:
+    change = build_api_edit_change(
+        path="src/a.py",
+        old_text="old",
+        new_text="new",
+        expected_occurrences=2,
+    )
+
+    assert change.source == "api_edit"
+    assert change.old_text == "old"
+    assert change.new_text == "new"
+    assert change.expected_occurrences == 2
+
+
+def test_shell_builders_defer_base_hash_to_preparation() -> None:
+    write = build_shell_write_change(path="src/a.py", final_content=b"new")
+    delete = build_shell_delete_change(path="src/gone.py")
+
+    assert write.source == "shell_capture"
+    assert write.base_hash is None
+    assert delete.source == "shell_capture"
+    assert delete.base_hash is None

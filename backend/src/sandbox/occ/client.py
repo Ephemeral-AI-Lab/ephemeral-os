@@ -1,11 +1,15 @@
-"""Host-side client for OCC runtime server operations."""
+"""Host-side client for OCC changeset operations."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any
 
+from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.occ.changeset.prepared import ChangesetOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
+from sandbox.occ.routing.gitignore import GitignoreOracle
+from sandbox.occ.service import OccService
 from sandbox.occ.wire import change_to_dict, changeset_result_from_dict
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
@@ -27,18 +31,43 @@ class OCCClientError(RuntimeError):
 
 
 class OCCClient:
-    """Typed host route for OCC requests dispatched through runtime/server.py."""
+    """Public OCC changeset client.
+
+    Phase 03 callers can bind an :class:`OccService` and receive a
+    :class:`PreparedChangeset`. Legacy callers still dispatch to the runtime
+    ``occ.apply_changeset`` handler until the Phase 06 cutover removes the
+    live-root apply path.
+    """
 
     def __init__(
         self,
-        sandbox_id: str,
+        sandbox_id: str | None = None,
         *,
         workspace_root: str = "/workspace",
         timeout: int = 300,
+        service: OccService | None = None,
     ) -> None:
         self.sandbox_id = sandbox_id
         self.workspace_root = workspace_root
         self.timeout = timeout
+        self._service = service
+
+    @classmethod
+    def for_layer_stack(
+        cls,
+        *,
+        layer_stack: LayerStackManager,
+        workspace_root: str,
+        gitignore: GitignoreOracle | None = None,
+    ) -> "OCCClient":
+        """Create a service-backed Phase 03 client."""
+        return cls(
+            workspace_root=workspace_root,
+            service=OccService(
+                gitignore=gitignore or GitignoreOracle(workspace_root),
+                layer_stack=layer_stack,
+            ),
+        )
 
     async def apply_changeset(
         self,
@@ -46,8 +75,26 @@ class OCCClient:
         *,
         agent_id: str = "",
         description: str = "",
-    ) -> ChangesetResult:
-        """Apply a typed :class:`Change` batch through the OCC gate."""
+        snapshot=None,
+        options: ChangesetOptions | None = None,
+    ) -> ChangesetResult | PreparedChangeset:
+        """Apply or prepare a typed :class:`Change` batch through OCC."""
+        if self._service is not None:
+            opts = options or ChangesetOptions(
+                caller_id=agent_id,
+                description=description,
+            )
+            return await self._service.apply_changeset(
+                changes,
+                snapshot=snapshot,
+                options=opts,
+            )
+
+        if self.sandbox_id is None:
+            raise OCCClientError(
+                "MissingClientTarget",
+                "OCCClient requires either sandbox_id or service",
+            )
         result = await self._call(
             "occ.apply_changeset",
             {
@@ -59,6 +106,11 @@ class OCCClient:
         return changeset_result_from_dict(result)
 
     async def _call(self, op: str, args: dict[str, Any]) -> dict[str, Any]:
+        if self.sandbox_id is None:
+            raise OCCClientError(
+                "MissingSandboxId",
+                "runtime OCC calls require sandbox_id",
+            )
         try:
             return await call_runtime_server(
                 exec_fn=get_adapter(self.sandbox_id).exec,

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from sandbox.occ.changeset.types import (
+    AnyChange,
     BinaryChange,
     Change,
+    ChangeSource,
     ChangesetResult,
     DeleteChange,
     DirectChange,
@@ -19,8 +21,10 @@ from sandbox.occ.changeset.types import (
 )
 
 __all__ = [
+    "AnyChange",
     "BinaryChange",
     "Change",
+    "ChangeSource",
     "ChangesetResult",
     "DeleteChange",
     "DirectChange",

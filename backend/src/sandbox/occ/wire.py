@@ -9,6 +9,7 @@ from typing import Any
 from sandbox.occ.changeset.types import (
     BinaryChange,
     Change,
+    ChangeSource,
     ChangesetResult,
     DeleteChange,
     EditChange,
@@ -74,6 +75,16 @@ def _bytes_from_wire(value: Any) -> bytes | None:
     return base64.b64decode(str(value).encode("ascii"))
 
 
+def _optional_str(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
+def _source_from_wire(value: Any, default: ChangeSource) -> ChangeSource:
+    if value in ("api_write", "api_edit", "shell_capture"):
+        return value
+    return default
+
+
 def upper_change_from_dict(d: dict[str, Any]) -> UpperChangeLike:
     return _UpperChange(
         rel=str(d["rel"]),
@@ -93,32 +104,41 @@ def change_to_dict(change: Change) -> dict[str, Any]:
         return {
             "kind": "write",
             "path": change.path,
+            "source": change.source,
             "base_hash": change.base_hash,
             "base_existed": change.base_existed,
-            "final_content": change.final_content,
+            "create_only": change.create_only,
+            "final_content": change.final_text,
         }
     if isinstance(change, EditChange):
         return {
             "kind": "edit",
             "path": change.path,
+            "source": change.source,
+            "old_text": change.old_text,
+            "new_text": change.new_text,
+            "expected_occurrences": change.expected_occurrences,
             "edits": [_edit_to_dict(edit) for edit in change.edits],
         }
     if isinstance(change, DeleteChange):
         return {
             "kind": "delete",
             "path": change.path,
+            "source": change.source,
             "base_hash": change.base_hash,
         }
     if isinstance(change, SymlinkChange):
         return {
             "kind": "symlink",
             "path": change.path,
+            "source": change.source,
             "target": change.target,
         }
     if isinstance(change, OpaqueDirChange):
         return {
             "kind": "opaque_dir",
             "path": change.path,
+            "source": change.source,
             "kept_children": sorted(change.kept_children),
         }
     if isinstance(change, BinaryChange):
@@ -126,6 +146,7 @@ def change_to_dict(change: Change) -> dict[str, Any]:
         return {
             "kind": "binary",
             "path": change.path,
+            "source": change.source,
             "final_bytes": (
                 base64.b64encode(final_bytes).decode("ascii") if final_bytes is not None else None
             ),
@@ -137,25 +158,60 @@ def change_from_dict(d: dict[str, Any]) -> Change:
     """Decode a wire-format change record into the typed :class:`Change` union."""
     kind = str(d.get("kind") or "")
     path = str(d["path"])
+    source = d.get("source")
     if kind == "write":
         return WriteChange(
             path=path,
-            base_hash=str(d.get("base_hash", "")),
-            base_existed=bool(d.get("base_existed", False)),
+            base_hash=_optional_str(d.get("base_hash", "")),
+            base_existed=(
+                bool(d["base_existed"])
+                if "base_existed" in d
+                else not bool(d.get("create_only", False))
+            ),
             final_content=str(d.get("final_content", "")),
+            source=_source_from_wire(source, "api_write"),
         )
     if kind == "edit":
-        edits = tuple(_edit_from_dict(edit) for edit in d.get("edits", ()))
-        return EditChange(path=path, edits=edits)
+        if "edits" in d:
+            edits = tuple(_edit_from_dict(edit) for edit in d.get("edits", ()))
+            return EditChange(
+                path=path,
+                edits=edits,
+                source=_source_from_wire(source, "api_edit"),
+                expected_occurrences=int(d.get("expected_occurrences", 1)),
+            )
+        return EditChange(
+            path=path,
+            old_text=str(d.get("old_text", "")),
+            new_text=str(d.get("new_text", "")),
+            expected_occurrences=int(d.get("expected_occurrences", 1)),
+            source=_source_from_wire(source, "api_edit"),
+        )
     if kind == "delete":
-        return DeleteChange(path=path, base_hash=str(d.get("base_hash", "")))
+        return DeleteChange(
+            path=path,
+            base_hash=_optional_str(d.get("base_hash", "")),
+            source=_source_from_wire(source, "api_write"),
+        )
     if kind == "symlink":
-        return SymlinkChange(path=path, target=str(d.get("target", "")))
+        return SymlinkChange(
+            path=path,
+            target=str(d.get("target", "")),
+            source=_source_from_wire(source, "shell_capture"),
+        )
     if kind == "opaque_dir":
         kept = frozenset(str(child) for child in d.get("kept_children", ()))
-        return OpaqueDirChange(path=path, kept_children=kept)
+        return OpaqueDirChange(
+            path=path,
+            kept_children=kept,
+            source=_source_from_wire(source, "shell_capture"),
+        )
     if kind == "binary":
-        return BinaryChange(path=path, final_bytes=_bytes_from_wire(d.get("final_bytes")))
+        return BinaryChange(
+            path=path,
+            final_bytes=_bytes_from_wire(d.get("final_bytes")),
+            source=_source_from_wire(source, "shell_capture"),
+        )
     raise ValueError(f"unsupported change kind: {kind!r}")
 
 
