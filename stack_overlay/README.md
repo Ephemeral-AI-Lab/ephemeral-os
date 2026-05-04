@@ -10,7 +10,8 @@ The prototype validates:
 - lease/refcount retention for old shell snapshots,
 - squash to a compact checkpoint,
 - OCC-style same-path conflict rejection,
-- non-conflicting stale-shell writes accepted by default.
+- non-conflicting stale-shell writes accepted by default,
+- upperdir capture into OCC for large files and package-install-shaped trees.
 
 Run local model tests:
 
@@ -37,6 +38,25 @@ report on stdout. Use `--quiet` to suppress progress logs. Profiles:
 - `standard`: larger synthetic run.
 - `doc-count`: uses the documented iteration counts where practical; expect it
   to be slow because this prototype squashes synchronously.
+
+Reference local run from 2026-05-04:
+
+```bash
+uv run python -m stack_overlay.experiments suite --profile standard
+```
+
+Result: `11 passed` in `79.74s`.
+
+| Workload | Result |
+| --- | --- |
+| E8 shell-op proxy | p50 `10.945ms`, p99 `204.046ms` against a `250ms` p99 budget |
+| Large upperdir file -> OCC | `2 MiB` file, capture `0.816ms`, OCC merge `1.781ms` |
+| Large JSON diff -> OCC | `100` changes in `18.516ms`; `1,000` in `202.454ms`; `5,000` in `1.101s` |
+| npm-install-shaped upperdir -> OCC | `1,601` changes, capture `95.089ms`, OCC merge `377.309ms` |
+| pip-target-install-shaped upperdir -> OCC | `1,440` changes, capture `83.310ms`, OCC merge `277.595ms` |
+
+The install workloads are deterministic synthetic upperdirs shaped like package
+manager output. They do not run networked `npm install` or `pip install`.
 
 Run a live Linux mount probe inside a namespace-capable sandbox:
 
