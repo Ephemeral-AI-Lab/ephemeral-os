@@ -60,10 +60,6 @@ class LeaseRegistry:
                     del self._refcounts[layer]
             return lease
 
-    def get(self, lease_id: str) -> Lease | None:
-        with self._lock:
-            return self._leases.get(lease_id)
-
     def refcount(self, layer: LayerRef) -> int:
         with self._lock:
             return self._refcounts.get(layer, 0)
@@ -71,8 +67,3 @@ class LeaseRegistry:
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         with self._lock:
             return tuple(sorted(self._refcounts))
-
-    def active_leases(self) -> tuple[Lease, ...]:
-        with self._lock:
-            return tuple(self._leases.values())
-

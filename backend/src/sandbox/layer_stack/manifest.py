@@ -66,9 +66,6 @@ class Manifest:
             raise ValueError("manifest layers must be a list")
         layers: list[LayerRef] = []
         for item in raw_layers:
-            if isinstance(item, str):
-                layers.append(LayerRef(layer_id=item, path=f"{LAYERS_DIR}/{item}"))
-                continue
             if not isinstance(item, dict):
                 raise ValueError("manifest layer entries must be objects")
             layers.append(LayerRef.from_dict(item))
@@ -102,4 +99,3 @@ def write_manifest_atomic(path: str | Path, manifest: Manifest) -> None:
         encoding="utf-8",
     )
     os.replace(tmp, manifest_file)
-

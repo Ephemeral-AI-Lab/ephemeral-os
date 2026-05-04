@@ -26,10 +26,9 @@ def test_manifest_round_trips_layer_refs_newest_first(tmp_path: Path) -> None:
     assert read_manifest(manifest_file).layers[0].layer_id == "L000002"
 
 
-def test_manifest_accepts_legacy_string_layer_refs() -> None:
-    manifest = Manifest.from_dict({"version": 1, "layers": ["L000001"]})
-
-    assert manifest.layers == (LayerRef("L000001", "layers/L000001"),)
+def test_manifest_rejects_legacy_string_layer_refs() -> None:
+    with pytest.raises(ValueError, match="manifest layer entries must be objects"):
+        Manifest.from_dict({"version": 1, "layers": ["L000001"]})
 
 
 def test_layer_paths_are_normalized_and_cannot_escape_stack() -> None:
@@ -56,4 +55,3 @@ def test_layer_change_validates_storage_level_payload_shape(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="delete changes must not carry source_path"):
         LayerChange(path="old.py", kind="delete", source_path=str(source))
-

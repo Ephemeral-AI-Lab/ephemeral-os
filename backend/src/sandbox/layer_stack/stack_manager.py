@@ -14,6 +14,7 @@ from sandbox.layer_stack.manifest import (
     STAGING_DIR,
     LayerRef,
     Manifest,
+    empty_manifest,
     manifest_path,
     read_manifest,
     write_manifest_atomic,
@@ -33,7 +34,7 @@ class LayerStackManager:
 
         self._manifest_file = manifest_path(self.storage_root)
         if not self._manifest_file.exists():
-            write_manifest_atomic(self._manifest_file, read_manifest(self._manifest_file))
+            write_manifest_atomic(self._manifest_file, empty_manifest())
 
         self._lock = threading.RLock()
         self._leases = LeaseRegistry()
@@ -138,4 +139,3 @@ class LayerStackTransaction:
         if not self._entered or self._manifest is None:
             raise RuntimeError("layer-stack transaction is not active")
         return self._manifest
-

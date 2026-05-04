@@ -11,7 +11,6 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.merged_view import LayerStackStorageError, MergedView
 from sandbox.layer_stack.publisher import LayerPublisher
-from sandbox.layer_stack.runtime_ops import LayerStackReadResult, LayerStackRuntimeOps
 from sandbox.layer_stack.stack_manager import LayerStackManager, LayerStackTransaction
 
 __all__ = [
@@ -20,8 +19,6 @@ __all__ = [
     "LayerPublisher",
     "LayerRef",
     "LayerStackManager",
-    "LayerStackReadResult",
-    "LayerStackRuntimeOps",
     "LayerStackStorageError",
     "LayerStackTransaction",
     "Lease",
@@ -30,4 +27,3 @@ __all__ = [
     "ManifestConflictError",
     "MergedView",
 ]
-

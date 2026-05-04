@@ -96,7 +96,6 @@ backend/src/sandbox/
     +-- lease_registry.py
     +-- merged_view.py
     +-- publisher.py
-    +-- runtime_ops.py
 ```
 
 Initial tests:
@@ -116,8 +115,8 @@ sandbox/overlay/layer_manager.py
 sandbox/layer_stack/wire.py
 ```
 
-The prototype `stack_overlay/` may be read as evidence, but production code is
-rewritten into the `sandbox/layer_stack/` shape.
+The prototype evidence was ported into the `sandbox/layer_stack/` shape. The
+old `stack_overlay/` package is not part of the production tree.
 
 ## 4. Workflow Demonstration
 
@@ -163,4 +162,3 @@ Later OCC phases infer base_hash from this leased manifest, not from active.
 | `merged_view.py` | Names read/list/materialize semantics through a manifest layer list. |
 | `publisher.py` | Names immutable layer creation and manifest CAS publish. |
 | `lease_registry.py` | Makes exact layer-ref pinning visible. |
-| `runtime_ops.py` | Boundary-local dispatch shaping; avoids a vague generic `wire.py`. |
