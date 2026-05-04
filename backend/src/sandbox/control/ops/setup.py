@@ -14,6 +14,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 
+from sandbox.control.ops.git import ensure_git
 from sandbox.control.ops.workspace import _sandbox_runtime_bootstrap_enabled
 
 logger = logging.getLogger(__name__)
@@ -201,8 +202,6 @@ def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
     3. Join the upload future (errors swallowed; sequential bootstrap retries).
     4. Run the sequential eager runtime bootstrap.
     """
-    from sandbox.control.ops.git import ensure_git
-
     upload_future = maybe_start_eager_runtime_bundle_upload(sandbox_id, workspace_root)
     ensure_git(sandbox_id)
     finish_eager_runtime_bundle_upload(upload_future, sandbox_id)
@@ -211,8 +210,6 @@ def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
 
 def setup_after_start(sandbox_id: str, workspace_root: str | None) -> None:
     """Post-start hook: same four-step ensure_git + eager bootstrap as create."""
-    from sandbox.control.ops.git import ensure_git
-
     upload_future = maybe_start_eager_runtime_bundle_upload(sandbox_id, workspace_root)
     ensure_git(sandbox_id)
     finish_eager_runtime_bundle_upload(upload_future, sandbox_id)

@@ -154,7 +154,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
-        "sandbox.control.ops.git.ensure_git",
+        setup_mod, "ensure_git",
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
@@ -193,7 +193,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
-        "sandbox.control.ops.git.ensure_git",
+        setup_mod, "ensure_git",
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
