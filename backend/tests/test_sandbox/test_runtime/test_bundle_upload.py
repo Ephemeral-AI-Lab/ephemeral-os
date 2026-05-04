@@ -54,7 +54,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/__init__.py",
         "sandbox/api/utils/__init__.py",
         "sandbox/api/utils/models.py",
-        "sandbox/providers/daytona/client/async_bridge.py",
+        "sandbox/runtime/async_bridge.py",
         "sandbox/runtime/server.py",
         "sandbox/runtime/bash.py",
         "sandbox/runtime/setup_orchestrator.py",
@@ -131,13 +131,7 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
         "sandbox/runtime/overlay_shell/pipeline.py",
     }
     assert excluded.isdisjoint(names)
-    allowed_provider_paths = {
-        "sandbox/providers/daytona/client/__init__.py",
-        "sandbox/providers/daytona/client/async_bridge.py",
-    }
-    assert {
-        name for name in names if name.startswith("sandbox/providers/")
-    } <= allowed_provider_paths
+    assert all(not name.startswith("sandbox/providers/") for name in names)
     assert all(not name.startswith("sandbox/runtime/backends/") for name in names)
 
 

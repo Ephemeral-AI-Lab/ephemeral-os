@@ -66,6 +66,19 @@ def test_non_api_production_code_does_not_import_private_api_utils() -> None:
     assert offenders == []
 
 
+def test_runtime_code_does_not_import_daytona_provider_modules() -> None:
+    offenders: list[str] = []
+    runtime_root = SRC_ROOT / "sandbox" / "runtime"
+    for module in _python_files(runtime_root):
+        for imported in _imports(module):
+            if imported == "sandbox.providers.daytona" or imported.startswith(
+                "sandbox.providers.daytona."
+            ):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
 def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
     for module_name in (
         "sandbox.code_intelligence",

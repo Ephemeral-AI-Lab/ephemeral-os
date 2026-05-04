@@ -84,7 +84,7 @@ def _maybe_run_eager_runtime_bootstrap(raw_sandbox: Any, sandbox_id: str) -> Non
         )
         return
 
-    from sandbox.providers.daytona.client.async_bridge import run_sync
+    from sandbox.runtime.async_bridge import run_sync
 
     run_sync(
         bootstrap_in_sandbox_runtime(
@@ -119,7 +119,7 @@ def _maybe_start_eager_runtime_bundle_upload(
     if not workspace_root or not sandbox_id:
         return None
 
-    from sandbox.providers.daytona.client.async_bridge import run_sync
+    from sandbox.runtime.async_bridge import run_sync
 
     def _do_upload() -> None:
         run_sync(
@@ -378,7 +378,7 @@ class DaytonaSandboxLifecycle:
         _register_daytona_provider_adapter(sb.id)
         try:
             from sandbox.api.raw_exec import raw_exec
-            from sandbox.providers.daytona.client.async_bridge import run_sync
+            from sandbox.runtime.async_bridge import run_sync
 
             resp = run_sync(raw_exec(sb.id, "pwd", timeout=10))
             exit_code = getattr(resp, "exit_code", 0)
@@ -499,11 +499,8 @@ class DaytonaSandboxLifecycle:
         return results
 
 
-SandboxService = DaytonaSandboxLifecycle
-
 __all__ = [
     "DaytonaSandboxLifecycle",
-    "SandboxService",
     "_finish_eager_runtime_bundle_upload",
     "_maybe_run_eager_runtime_bootstrap",
     "_maybe_start_eager_runtime_bundle_upload",

@@ -1,6 +1,6 @@
 """Tests for the loop-aware sync bridge.
 
-These exercise the contract that keeps the async Daytona SDK alive when
+These exercise the contract that keeps async provider clients alive when
 sync sandbox helper code is called from a worker thread launched via
 ``asyncio.to_thread``.
 """
@@ -13,7 +13,7 @@ import threading
 
 import pytest
 
-from sandbox.providers.daytona.client.async_bridge import (
+from sandbox.runtime.async_bridge import (
     DEFAULT_RUN_SYNC_TIMEOUT_SECONDS,
     configure_default_executor,
     current_sandbox_io_loop,

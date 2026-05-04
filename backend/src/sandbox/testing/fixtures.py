@@ -6,9 +6,9 @@ import time
 
 
 def get_sandbox_service():
-    from sandbox.providers.daytona.lifecycle import SandboxService
+    from sandbox.lifecycle.factory import lifecycle_provider_for
 
-    return SandboxService()
+    return lifecycle_provider_for()
 
 
 def create_test_sandbox(name: str = "e2e-test") -> dict:

@@ -1,4 +1,4 @@
-"""Sandbox (Daytona) API routes — delegates to SandboxService."""
+"""Sandbox API routes."""
 
 from __future__ import annotations
 
@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 from sandbox.api.raw_exec import raw_exec
-from sandbox.providers.daytona.lifecycle import SandboxService
+from sandbox.lifecycle.factory import lifecycle_provider_for
+from sandbox.providers.protocol import SandboxLifecycleProvider
 
 logger = logging.getLogger(__name__)
 
@@ -40,21 +41,21 @@ async def _call(func, *args, status: int = 200, **kwargs) -> JSONResponse:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
 
-def create_sandbox_router(service: SandboxService | None = None) -> APIRouter:
+def create_sandbox_router(service: SandboxLifecycleProvider | None = None) -> APIRouter:
     """Build the sandbox API router."""
     router = APIRouter(prefix="/api/sandboxes")
-    svc = service or SandboxService()
+    svc = service or lifecycle_provider_for()
 
     # --- Static path routes MUST be registered before parameterized routes ---
 
     @router.get("/health")
     async def sandbox_health():
-        """Check Daytona connection health."""
+        """Check sandbox provider connection health."""
         return await _call(svc.get_health)
 
     @router.get("/available/snapshots")
     async def list_snapshots():
-        """List available Daytona snapshots."""
+        """List available sandbox snapshots."""
         try:
             items = await asyncio.to_thread(svc.list_snapshots)
             return JSONResponse(content=items)
@@ -64,14 +65,14 @@ def create_sandbox_router(service: SandboxService | None = None) -> APIRouter:
 
     @router.get("")
     async def list_sandboxes():
-        """List all Daytona sandboxes."""
+        """List all sandboxes."""
         return await _call(svc.list_sandboxes)
 
     # --- Parameterized routes below ---
 
     @router.post("")
     async def create_sandbox(req: CreateSandboxRequest):
-        """Create a new Daytona sandbox."""
+        """Create a new sandbox."""
         return await _call(
             svc.create_sandbox,
             name=req.name,

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from sandbox.providers.registry import get_adapter
-from sandbox.providers.daytona.client.async_bridge import run_sync
+from sandbox.runtime.async_bridge import run_sync
 from sandbox.runtime.bundle import ensure_runtime_uploaded
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
 

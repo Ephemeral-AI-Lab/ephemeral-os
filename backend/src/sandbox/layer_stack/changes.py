@@ -1,7 +1,7 @@
 """Storage-level layer change objects.
 
 These values describe already-accepted filesystem mutations. They deliberately
-do not encode OCC policy, gitignore policy, or overlay runtime details.
+do not encode OCC policy, ignore-file policy, or overlay runtime details.
 """
 
 from __future__ import annotations
@@ -55,4 +55,3 @@ class LayerDelta:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "changes", tuple(self.changes))
-

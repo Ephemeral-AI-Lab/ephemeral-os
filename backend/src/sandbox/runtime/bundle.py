@@ -46,7 +46,7 @@ _OVERLAY_EXCLUDE_PARTS = {"client.py"}
 _BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"
 _BUNDLE_REMOTE_TARBALL = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz"
 
-# Keep chunks below observed Daytona argv limits while preserving base64
+# Keep chunks below observed provider argv limits while preserving base64
 # alignment so each chunk decodes independently.
 _CHUNK_SIZE = 32 * 1024
 
@@ -151,14 +151,6 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir / "api" / "utils",
             sandbox_dir=sandbox_dir,
         )
-
-        client_dir = sandbox_dir / "providers" / "daytona" / "client"
-        for filename in ("__init__.py", "async_bridge.py"):
-            _add_if_exists(
-                tar,
-                client_dir / filename,
-                arcname=f"sandbox/providers/daytona/client/{filename}",
-            )
 
         runtime_dir = sandbox_dir / "runtime"
         _add_python_tree(

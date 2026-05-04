@@ -76,7 +76,9 @@ backend/src/
 ### 1.1 Naming decisions
 
 - **No `guardrail/` umbrella.** OCC and Overlay are two separate modules.
-- The OCC/Overlay split is the contract: edits go through OCC, shell goes through Overlay. No third path.
+- The OCC/Overlay split is the contract: edits go through OCC, shell goes
+  through Overlay and then the host-side overlay shell pipeline commits capture
+  through OCC. No third mutation path.
 - **Two modules, one shared runtime.** Count `sandbox/occ/` and
   `sandbox/overlay/` as the refactored modules. `sandbox/runtime/` exists
   because both modules need a deployed server/daemon, setup orchestration, and
@@ -157,10 +159,12 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes simple read-only pipelines to `raw_exec`.
-Mutating shell no longer falls back to the removed live-root overlay runtime;
-it must use the layer-stack snapshot path. Overlay never imports OCC and never
-classifies gitignored vs gitincluded paths itself.
+External API: public shell routes through `OverlayClient`, receives a
+`RuntimeResultEnvelope`, and projects captured upperdir changes through
+`runtime.overlay_shell.pipeline` into `OCCClient.apply_changeset`. Shell no
+longer has a read-only `raw_exec` bypass and no longer falls back to the removed
+live-root overlay runtime. Overlay never imports OCC and never classifies
+gitignored vs gitincluded paths itself.
 
 No `auditor.py` remains in the target overlay package. The audit name implied
 policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
@@ -180,7 +184,11 @@ support for the two-module refactor, not a third peer module.
 sandbox/runtime/
 ├── __init__.py
 ├── server.py
-├── pipelines.py
+├── overlay_shell/
+│   ├── capture_to_changeset.py
+│   ├── cli.py
+│   ├── pipeline.py
+│   └── result_envelope.py
 ├── bundle.py
 └── setup_orchestrator.py
 ```

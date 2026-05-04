@@ -49,15 +49,15 @@ def _progress(on_progress: ProgressCallback | None, message: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Sandbox service accessor (EphemeralOS SandboxService)
+# Sandbox lifecycle accessor
 # ---------------------------------------------------------------------------
 
 
 def _service() -> Any:
-    """Return a SandboxService instance (lazy import to avoid cycles)."""
-    from sandbox.providers.daytona.lifecycle import SandboxService
+    """Return the configured sandbox lifecycle provider."""
+    from sandbox.lifecycle.factory import lifecycle_provider_for
 
-    return SandboxService()
+    return lifecycle_provider_for()
 
 
 def _default_sweevo_sandbox_name(instance: SWEEvoInstance) -> str:

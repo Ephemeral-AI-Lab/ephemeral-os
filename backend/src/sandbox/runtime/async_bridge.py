@@ -1,14 +1,13 @@
-"""Loop-aware sync bridge for possibly-awaitable sandbox results.
+"""Loop-aware sync bridge for possibly-awaitable sandbox runtime results.
 
-Several sandbox subsystems call SDK methods that return either sync values
-(local tests / in-process sandboxes) or coroutines bound to a parent event
-loop (the async Daytona client). They all need one shim that can resolve a
-coroutine synchronously without destroying the SDK's aiohttp session by
-running it on a different event loop.
+Several sandbox subsystems call provider methods that return either sync values
+(local tests / in-process sandboxes) or coroutines bound to a parent event loop.
+They all need one shim that can resolve a coroutine synchronously without
+running it on a different event loop from its owning provider client.
 
 The old bridge spun up a fresh event loop for calls without a registered
 parent loop. That defeated loop-local async SDK caches and made each sync
-daemon command re-enter Daytona's slow client/session setup path.
+runtime command re-enter slow provider client/session setup paths.
 
 The fix is **loop-aware**: async tools publish the parent loop to a
 ``ContextVar`` before handing off to ``asyncio.to_thread``; the worker
@@ -39,6 +38,7 @@ import contextvars
 import inspect
 import logging
 import threading
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ so coroutines are resubmitted onto the correct loop.
 DEFAULT_RUN_SYNC_TIMEOUT_SECONDS = 120.0
 """Upper bound for a single ``run_sync`` call.
 
-Picked slightly above the longest individual Daytona exec timeout used by
+Picked slightly above the longest individual provider exec timeout used by
 sandbox mutation tools so timeouts surface as timeouts, not as silent hangs.
 Callers that need longer budgets should pass ``timeout=`` explicitly.
 """
@@ -122,11 +122,12 @@ def run_sync(result: Any, *, timeout: float | None = None) -> Any:
     1. A sandbox I/O loop is registered in the current context and it is
        running on another thread → submit via
        ``run_coroutine_threadsafe`` and wait for the result. This is the
-       common path for sync sandbox helper code
-       reached from ``asyncio.to_thread``.
+       common path for sync sandbox helper code reached from
+       ``asyncio.to_thread``.
     2. No parent loop is registered → schedule on a reusable standalone
        sandbox I/O loop. This keeps loop-local async SDK clients warm for
-       sync callers that need a one-shot bridge into the async Daytona client.
+       sync callers that need one-shot bridge access into an async provider
+       client.
 
     ``timeout`` bounds the wait on paths 1 and 2; defaults to
     :data:`DEFAULT_RUN_SYNC_TIMEOUT_SECONDS`.
@@ -259,14 +260,17 @@ def _shutdown_standalone_loop() -> None:
 
 
 async def _shutdown_standalone_loop_clients() -> None:
-    try:
-        from sandbox.providers.daytona.client.async_shutdown import (
-            shutdown_cached_client_async,
-        )
-    except ImportError:
-        return
+    for cleanup in list(_STANDALONE_LOOP_CLEANUPS):
+        await cleanup()
 
-    await shutdown_cached_client_async()
+
+_STANDALONE_LOOP_CLEANUPS: list[Callable[[], Awaitable[None]]] = []
+
+
+def register_standalone_loop_cleanup(cleanup: Callable[[], Awaitable[None]]) -> None:
+    """Register a provider cleanup hook for the standalone sandbox I/O loop."""
+    if cleanup not in _STANDALONE_LOOP_CLEANUPS:
+        _STANDALONE_LOOP_CLEANUPS.append(cleanup)
 
 
 atexit.register(_shutdown_standalone_loop)
@@ -278,21 +282,21 @@ async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
     Python 3.12's ``asyncio.to_thread`` wraps the call with
     ``contextvars.copy_context().run(func, ...)``, activating the asyncio
     task's contextvars inside the worker thread. That interacts badly
-    with the sync Daytona SDK instrumentation path, which serializes on shared
+    with some sync provider SDK instrumentation paths, which serialize on shared
     state under propagated contextvars,
     capping parallelism at ~6-7 concurrent regardless of executor size.
 
     This helper dispatches via ``loop.run_in_executor(None, ...)`` — which
     does NOT copy contextvars by default — but explicitly re-seeds the
-    one contextvar :mod:`sandbox.async_bridge` *does* need in
+    one contextvar :mod:`sandbox.runtime.async_bridge` *does* need in
     the worker thread: :data:`sandbox_io_loop`. Without that seed,
     :func:`run_sync` (called transitively from ``ContentManager``) would
     fall through to ``asyncio.run(coro)`` in the worker, creating a
-    fresh event loop disconnected from any AsyncDaytona aiohttp client
+    fresh event loop disconnected from any async provider client
     bound to the caller's loop — surfacing as "Future attached to a
     different loop".
 
-    Verified at N=72 against live Daytona: ``asyncio.to_thread`` → 6.4x
+    Verified at N=72 against live sandbox I/O: ``asyncio.to_thread`` → 6.4x
     parallelism; this helper → 45x.
 
     Use everywhere a sandbox-bound sync call is dispatched from an async
@@ -340,6 +344,7 @@ __all__ = [
     "DEFAULT_RUN_SYNC_TIMEOUT_SECONDS",
     "configure_default_executor",
     "current_sandbox_io_loop",
+    "register_standalone_loop_cleanup",
     "run_sync",
     "run_sync_in_executor",
     "sandbox_io_loop",

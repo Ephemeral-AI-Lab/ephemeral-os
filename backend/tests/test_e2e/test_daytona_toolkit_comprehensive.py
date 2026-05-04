@@ -506,9 +506,9 @@ class TestDaytonaToolLive:
 
     @pytest.fixture(scope="class")
     def live_sandbox(self):
-        from sandbox.providers.daytona.lifecycle import SandboxService
+        from sandbox.lifecycle.factory import lifecycle_provider_for
 
-        svc = SandboxService()
+        svc = lifecycle_provider_for()
         sb = svc.create_sandbox(
             name=f"tools-test-{int(time.time())}",
             language="python",

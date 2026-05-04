@@ -14,8 +14,16 @@ from typing import Any
 
 from sandbox.errors import AsyncDaytonaUnavailableError
 from sandbox.providers.daytona.client.credentials import load_credentials
+from sandbox.runtime.async_bridge import register_standalone_loop_cleanup
 
 logger = logging.getLogger(__name__)
+
+try:
+    from sandbox.providers.daytona.client.async_shutdown import shutdown_cached_client_async
+
+    register_standalone_loop_cleanup(shutdown_cached_client_async)
+except Exception:
+    logger.debug("Failed to register Daytona async-client cleanup", exc_info=True)
 
 _client_lock = threading.Lock()
 _cached_clients: weakref.WeakKeyDictionary[
@@ -39,9 +47,12 @@ async def _attempt_sandbox_recovery(sandbox_id: str, *, cause: Exception | None)
     if not _looks_recoverable(cause):
         return
     try:
-        from sandbox.providers.daytona.lifecycle import SandboxService
+        from sandbox.providers.daytona.lifecycle import DaytonaSandboxLifecycle
 
-        await asyncio.to_thread(SandboxService().ensure_sandbox_running, sandbox_id)
+        await asyncio.to_thread(
+            DaytonaSandboxLifecycle().ensure_sandbox_running,
+            sandbox_id,
+        )
         logger.warning("Recovered sandbox %s after async fetch failure", sandbox_id)
     except Exception:
         logger.debug(

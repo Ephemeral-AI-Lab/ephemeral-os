@@ -22,8 +22,8 @@ async def bootstrap_in_sandbox_runtime(
 ) -> None:
     """Upload the runtime command bundle during sandbox lifecycle events.
 
-    Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
-    the underlying Daytona sandbox is provisioned/resumed.
+    Called by provider lifecycle implementations after a sandbox is
+    provisioned/resumed.
 
     Short-circuits as a no-op when eager bootstrap is disabled, or when
     ``sandbox_id`` or ``workspace_root`` is empty. Raises when the runtime

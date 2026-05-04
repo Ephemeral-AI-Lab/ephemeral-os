@@ -113,7 +113,7 @@ class SandboxProxy:
         """Install git in the sandbox if missing."""
         try:
             from sandbox.api.raw_exec import raw_exec
-            from sandbox.providers.daytona.client.async_bridge import run_sync
+            from sandbox.runtime.async_bridge import run_sync
 
             logger.info("ensure_git(%s): probe starting", self.id)
             resp = run_sync(
