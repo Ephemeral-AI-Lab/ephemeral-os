@@ -31,14 +31,14 @@ async def test_run_all_uploads_once_and_executes_setup_scripts_in_order() -> Non
     registry = SetupRegistry()
     registry.register(
         SetupScript(
-            name="occ",
-            package="sandbox.occ",
-            relative_path="sandbox/occ/setup.sh",
+            name="overlay_capture_a",
+            package="sandbox.runtime.overlay_capture",
+            relative_path="sandbox/runtime/overlay_capture/setup.sh",
         )
     )
     registry.register(
         SetupScript(
-            name="overlay_capture",
+            name="overlay_capture_b",
             package="sandbox.runtime.overlay_capture",
             relative_path="sandbox/runtime/overlay_capture/setup.sh",
         )
@@ -64,7 +64,12 @@ async def test_run_all_uploads_once_and_executes_setup_scripts_in_order() -> Non
 
     assert uploads == ["sb-1"]
     assert calls == [
-        ("sb-1", "bash sandbox/occ/setup.sh", BUNDLE_REMOTE_DIR, 300),
+        (
+            "sb-1",
+            "bash sandbox/runtime/overlay_capture/setup.sh",
+            BUNDLE_REMOTE_DIR,
+            300,
+        ),
         (
             "sb-1",
             "bash sandbox/runtime/overlay_capture/setup.sh",

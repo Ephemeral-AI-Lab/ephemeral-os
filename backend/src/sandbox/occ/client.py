@@ -66,8 +66,8 @@ class OCCClient:
     """Public OCC changeset client.
 
     Callers either bind a service directly or resolve one by sandbox id through
-    the local service registry. The old runtime ``occ.apply_changeset`` wire
-    dispatch path has been removed from this client.
+    the local service registry. The old runtime OCC wire dispatch path has
+    been removed from this client.
     """
 
     def __init__(

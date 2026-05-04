@@ -9,7 +9,7 @@ import pytest
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
-from sandbox.overlay.types import OverlayShellRequest
+from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
 from sandbox.runtime.server import dispatch_envelope
 
 

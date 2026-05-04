@@ -22,14 +22,14 @@ class _Overlay:
         return self.outcome
 
 
-class _Orchestrator:
-    """Fake orchestrator returning a canned :class:`ChangesetResult`."""
+class _ChangesetApplier:
+    """Fake applier returning a canned :class:`ChangesetResult`."""
 
     def __init__(self, result: ChangesetResult) -> None:
         self.result = result
         self.received: list[tuple[object, ...]] = []
 
-    async def apply(self, changes):
+    async def apply_changeset(self, changes):
         self.received.append(tuple(changes))
         return self.result
 
@@ -50,9 +50,9 @@ def _success_outcome() -> OverlayRunOutcome:
     )
 
 
-async def test_shell_pipeline_projects_committed_paths_through_orchestrator() -> None:
+async def test_shell_pipeline_projects_committed_paths_through_applier() -> None:
     overlay = _Overlay(_success_outcome())
-    orchestrator = _Orchestrator(
+    applier = _ChangesetApplier(
         ChangesetResult(
             files=(
                 FileResult(path="app.py", status=FileStatus.COMMITTED),
@@ -63,18 +63,18 @@ async def test_shell_pipeline_projects_committed_paths_through_orchestrator() ->
     result = await shell_pipeline(
         command="printf ok",
         overlay_engine=overlay,
-        orchestrator=orchestrator,
+        changeset_applier=applier,
         agent_id="agent-a",
     )
 
-    assert orchestrator.received  # the orchestrator received the typed changes
+    assert applier.received  # the applier received the typed changes
     assert result.changed_paths == ("/workspace/app.py",)
     assert result.conflict is None
 
 
-async def test_shell_pipeline_surfaces_conflict_from_orchestrator() -> None:
+async def test_shell_pipeline_surfaces_conflict_from_applier() -> None:
     overlay = _Overlay(_success_outcome())
-    orchestrator = _Orchestrator(
+    applier = _ChangesetApplier(
         ChangesetResult(
             files=(
                 FileResult(
@@ -89,7 +89,7 @@ async def test_shell_pipeline_surfaces_conflict_from_orchestrator() -> None:
     result = await shell_pipeline(
         command="printf ok",
         overlay_engine=overlay,
-        orchestrator=orchestrator,
+        changeset_applier=applier,
     )
 
     assert result.changed_paths == ()
@@ -101,7 +101,7 @@ async def test_shell_pipeline_surfaces_conflict_from_orchestrator() -> None:
 
 async def test_shell_pipeline_aborted_overlap_maps_to_patch_failed() -> None:
     overlay = _Overlay(_success_outcome())
-    orchestrator = _Orchestrator(
+    applier = _ChangesetApplier(
         ChangesetResult(
             files=(
                 FileResult(
@@ -116,7 +116,7 @@ async def test_shell_pipeline_aborted_overlap_maps_to_patch_failed() -> None:
     result = await shell_pipeline(
         command="printf ok",
         overlay_engine=overlay,
-        orchestrator=orchestrator,
+        changeset_applier=applier,
     )
 
     assert result.conflict is not None

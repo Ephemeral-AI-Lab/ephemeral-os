@@ -34,7 +34,7 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.occ.changeset.types",
         "sandbox.occ.client",
     },
-    "shell.py": {"sandbox.overlay.client", "sandbox.overlay.types"},
+    "shell.py": {"sandbox.overlay.client"},
 }
 _FORBIDDEN_FOR_MODELS = (
     "sandbox.providers",

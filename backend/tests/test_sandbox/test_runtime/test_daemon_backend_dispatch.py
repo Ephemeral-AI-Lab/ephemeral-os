@@ -2,8 +2,8 @@
 
 After the OCC simplification, the daemon backend is purely a thin transport:
 it owns ``cmd``, ``warmup``, ``ensure_initialized``, ``rebind_sandbox``, and
-``dispose``. Mutation requests flow through ``OCCClient.apply_changeset`` and
-the runtime ``occ.apply_changeset`` handler — *not* through backend methods.
+``dispose``. Write/edit mutation requests flow through typed OCC services, not
+backend methods or runtime OCC wire handlers.
 """
 
 from __future__ import annotations

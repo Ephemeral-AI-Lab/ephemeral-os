@@ -6,13 +6,17 @@ from pathlib import Path
 import tarfile
 import io
 
-import sandbox.overlay
+import sandbox.overlay.client
 import sandbox.runtime.overlay_shell
 from sandbox.overlay.runner.runtime_bundle import snapshot_overlay_runtime_bundle_bytes
 
 
+def _overlay_root() -> Path:
+    return Path(sandbox.overlay.client.__file__).resolve().parent
+
+
 def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
-    overlay_root = Path(sandbox.overlay.__file__).resolve().parent
+    overlay_root = _overlay_root()
     runtime_root = Path(sandbox.runtime.overlay_shell.__file__).resolve().parent
     checked_roots = (
         overlay_root / "capture",
@@ -42,7 +46,7 @@ def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
 
 
 def test_phase02_forbidden_overlay_modules_do_not_exist() -> None:
-    overlay_root = Path(sandbox.overlay.__file__).resolve().parent
+    overlay_root = _overlay_root()
 
     for rel in (
         "layer_manager.py",

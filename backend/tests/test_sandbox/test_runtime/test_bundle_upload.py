@@ -59,14 +59,12 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/setup_orchestrator.py",
         "sandbox/layer_stack/manifest.py",
         "sandbox/layer_stack/stack_manager.py",
-        "sandbox/occ/bootstrap.py",
-        "sandbox/occ/orchestrator.py",
-        "sandbox/occ/setup.sh",
-        "sandbox/occ/handlers/apply_changeset.py",
         "sandbox/occ/changeset/builders.py",
-        "sandbox/occ/direct/direct_merge_coordinator.py",
-        "sandbox/occ/gated/gated_coordinator.py",
-        "sandbox/occ/gated/file_change_applier.py",
+        "sandbox/occ/changeset/types.py",
+        "sandbox/occ/merge/transaction.py",
+        "sandbox/occ/merge/tracked.py",
+        "sandbox/occ/merge/direct.py",
+        "sandbox/occ/merge/hashing.py",
         "sandbox/occ/routing/gitignore.py",
         "sandbox/overlay/handlers/run.py",
         "sandbox/runtime/overlay_capture/bootstrap.py",
@@ -78,6 +76,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"
     assert not (extract_dir / "sandbox/runtime/bundle.py").exists()
+    assert not (extract_dir / "sandbox/occ/wire.py").exists()
+    assert not (extract_dir / "sandbox/occ/handlers").exists()
+    assert not (extract_dir / "sandbox/occ/direct").exists()
+    assert not (extract_dir / "sandbox/occ/gated").exists()
     assert not (extract_dir / "sandbox/code_intelligence").exists()
 
 
@@ -152,7 +154,7 @@ def test_bundle_includes_peer_setup_scripts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     src_root = tmp_path / "src"
-    setup_script = src_root / "sandbox" / "occ" / "setup.sh"
+    setup_script = src_root / "sandbox" / "runtime" / "overlay_capture" / "setup.sh"
     setup_script.parent.mkdir(parents=True)
     setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
 
@@ -162,7 +164,7 @@ def test_bundle_includes_peer_setup_scripts(
 
     bundle = _runtime_bundle_bytes()
     with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
-        member = tar.extractfile("sandbox/occ/setup.sh")
+        member = tar.extractfile("sandbox/runtime/overlay_capture/setup.sh")
         assert member is not None
         assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
 

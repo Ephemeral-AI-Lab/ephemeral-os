@@ -5,30 +5,33 @@ from __future__ import annotations
 from pathlib import Path
 
 import sandbox.occ
-import sandbox.overlay
+import sandbox.overlay.client
 import sandbox.runtime.overlay_capture
 
 
 def _overlay_root() -> Path:
-    return Path(sandbox.overlay.__file__).resolve().parent
+    return Path(sandbox.overlay.client.__file__).resolve().parent
 
 
 def _occ_root() -> Path:
     return Path(sandbox.occ.__file__).resolve().parent
 
 
-def test_overlay_root_contains_only_target_layout_entries() -> None:
+def test_overlay_contains_only_target_layout_files() -> None:
     expected = {
-        "__init__.py",
-        "capture",
         "client.py",
-        "handlers",
-        "namespace",
-        "runner",
-        "types.py",
+        "capture/changes.py",
+        "capture/upperdir.py",
+        "handlers/run.py",
+        "handlers/shell.py",
+        "namespace/command.py",
+        "namespace/mounts.py",
+        "runner/runtime_bundle.py",
+        "runner/runtime_invoker.py",
+        "runner/snapshot_overlay_runner.py",
     }
 
-    actual = _source_entries(_overlay_root())
+    actual = _source_files(_overlay_root())
 
     assert actual == expected
 
@@ -68,6 +71,7 @@ def test_overlay_shim_files_do_not_exist() -> None:
         "runtime",
         "setup.sh",
         "support.py",
+        "types.py",
         "wire.py",
     }
 
@@ -107,3 +111,13 @@ def _source_entries(root: Path) -> set[str]:
             continue
         entries.add(path.name)
     return entries
+
+
+def _source_files(root: Path) -> set[str]:
+    files: set[str] = set()
+    for path in root.rglob("*"):
+        if "__pycache__" in path.parts or path.name == ".DS_Store":
+            continue
+        if path.is_file():
+            files.add(path.relative_to(root).as_posix())
+    return files
