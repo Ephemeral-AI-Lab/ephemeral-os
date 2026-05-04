@@ -9,19 +9,17 @@ The old bridge spun up a fresh event loop for calls without a registered
 parent loop. That defeated loop-local async SDK caches and made each sync
 runtime command re-enter slow provider client/session setup paths.
 
-The fix is **loop-aware**: async tools publish the parent loop to a
-``ContextVar`` before handing off to ``asyncio.to_thread``; the worker
-thread inherits the contextvar (``to_thread`` copies the current
-``Context`` automatically on Python 3.9+); ``run_sync`` submits the
-coroutine back to the parent loop via ``run_coroutine_threadsafe``.
-Pure sync callers use one reusable standalone sandbox I/O loop instead of
-creating a loop per call.
+The fix is **loop-aware**: async tools dispatch sync work through
+``run_sync_in_executor``; that helper explicitly publishes the parent loop to a
+``ContextVar`` inside the worker; ``run_sync`` submits provider coroutines back
+to the parent loop via ``run_coroutine_threadsafe``. Pure sync callers use one
+reusable standalone sandbox I/O loop instead of creating a loop per call.
 
 Public surface:
 
 * :func:`run_sync` — resolve a sync value or a coroutine synchronously.
 * :func:`use_sandbox_io_loop` — context manager for tool/helper code to
-  register the current event loop before ``to_thread`` dispatch.
+  register the current event loop around custom worker dispatch.
 * :func:`current_sandbox_io_loop` — accessor (useful in tests).
 * :func:`configure_default_executor` — raise the default
   ``ThreadPoolExecutor`` size so bulk svc ops aren't capped at ~32
@@ -50,8 +48,8 @@ sandbox_io_loop: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
 """Parent loop that owns sandbox I/O (e.g., the agent's event loop).
 
 Set by async tools via :func:`use_sandbox_io_loop` before dispatching to
-``asyncio.to_thread``. Read by :func:`run_sync` inside the worker thread
-so coroutines are resubmitted onto the correct loop.
+worker threads. Read by :func:`run_sync` inside the worker thread so coroutines
+are resubmitted onto the correct loop.
 """
 
 
@@ -70,6 +68,8 @@ _STANDALONE_LOOP_LOCK = threading.Lock()
 _STANDALONE_LOOP: asyncio.AbstractEventLoop | None = None
 _STANDALONE_THREAD: threading.Thread | None = None
 _STANDALONE_LOOP_READY_TIMEOUT_SECONDS = 5.0
+_SANDBOX_EXECUTOR_LOCK = threading.Lock()
+_SANDBOX_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
 
 
 def use_sandbox_io_loop(
@@ -77,12 +77,12 @@ def use_sandbox_io_loop(
 ) -> contextlib.AbstractContextManager[None]:
     """Register *loop* as the sandbox I/O loop for the current context.
 
-    Intended usage from an async tool that is about to call
-    ``asyncio.to_thread(svc.xxx, ...)`` where ``svc.xxx`` internally uses
+    Intended usage from async tool code that uses a custom worker dispatcher
+    around a sync function where that sync function internally calls
     :func:`run_sync` on coroutines returned by an async sandbox SDK::
 
         with use_sandbox_io_loop():
-            await asyncio.to_thread(svc.write_file, specs, ...)
+            await run_sync_in_executor(svc.write_file, specs, ...)
 
     Passing ``loop=None`` uses ``asyncio.get_running_loop()`` (the common
     case). Tests may pass an explicit loop.
@@ -122,8 +122,7 @@ def run_sync(result: Any, *, timeout: float | None = None) -> Any:
     1. A sandbox I/O loop is registered in the current context and it is
        running on another thread → submit via
        ``run_coroutine_threadsafe`` and wait for the result. This is the
-       common path for sync sandbox helper code reached from
-       ``asyncio.to_thread``.
+       common path for sync sandbox helper code reached from executor workers.
     2. No parent loop is registered → schedule on a reusable standalone
        sandbox I/O loop. This keeps loop-local async SDK clients warm for
        sync callers that need one-shot bridge access into an async provider
@@ -259,6 +258,17 @@ def _shutdown_standalone_loop() -> None:
         _shutdown_standalone_loop_clients_sync()
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=2.0)
+    _shutdown_sandbox_executor()
+
+
+def _shutdown_sandbox_executor() -> None:
+    global _SANDBOX_EXECUTOR
+
+    with _SANDBOX_EXECUTOR_LOCK:
+        executor = _SANDBOX_EXECUTOR
+        _SANDBOX_EXECUTOR = None
+    if executor is not None:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _shutdown_standalone_loop_clients_sync() -> None:
@@ -297,8 +307,8 @@ async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
     state under propagated contextvars,
     capping parallelism at ~6-7 concurrent regardless of executor size.
 
-    This helper dispatches via ``loop.run_in_executor(None, ...)`` — which
-    does NOT copy contextvars by default — but explicitly re-seeds the
+    This helper dispatches via a dedicated sandbox executor — which does NOT
+    copy contextvars by default — but explicitly re-seeds the
     one contextvar :mod:`sandbox.runtime.async_bridge` *does* need in
     the worker thread: :data:`sandbox_io_loop`. Without that seed,
     :func:`run_sync` (called transitively from ``ContentManager``) would
@@ -321,7 +331,19 @@ async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
         finally:
             sandbox_io_loop.reset(token)
 
-    return await loop.run_in_executor(None, _call)
+    return await loop.run_in_executor(_sandbox_executor(), _call)
+
+
+def _sandbox_executor() -> concurrent.futures.ThreadPoolExecutor:
+    global _SANDBOX_EXECUTOR
+
+    with _SANDBOX_EXECUTOR_LOCK:
+        if _SANDBOX_EXECUTOR is None:
+            _SANDBOX_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+                max_workers=_DEFAULT_EXECUTOR_WORKERS,
+                thread_name_prefix="sandbox-io",
+            )
+        return _SANDBOX_EXECUTOR
 
 
 def configure_default_executor(

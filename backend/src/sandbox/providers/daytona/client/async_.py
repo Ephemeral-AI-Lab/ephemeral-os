@@ -14,7 +14,10 @@ from typing import Any
 
 from sandbox.providers.daytona.client.credentials import load_credentials
 from sandbox.providers.daytona.errors import AsyncDaytonaUnavailableError
-from sandbox.runtime.async_bridge import register_standalone_loop_cleanup
+from sandbox.runtime.async_bridge import (
+    register_standalone_loop_cleanup,
+    run_sync_in_executor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +54,7 @@ async def _attempt_sandbox_recovery(sandbox_id: str, *, cause: Exception | None)
         # cycle out of module-load time.
         from sandbox.api import lifecycle as sb_lifecycle
 
-        await asyncio.to_thread(sb_lifecycle.ensure_sandbox_running, sandbox_id)
+        await run_sync_in_executor(sb_lifecycle.ensure_sandbox_running, sandbox_id)
         logger.warning("Recovered sandbox %s after async fetch failure", sandbox_id)
     except Exception:
         logger.debug(

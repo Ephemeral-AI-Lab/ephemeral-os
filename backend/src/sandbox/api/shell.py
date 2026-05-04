@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 from uuid import uuid4
 
 from sandbox.api.utils.changeset_projection import conflict_and_status, published_paths
 from sandbox.api.utils.models import ConflictInfo, ShellRequest, ShellResult
-from sandbox.occ.client import OCCClient, OCCClientError
-from sandbox.overlay.client import OverlayClient, OverlayClientError
+from sandbox.occ.client import OCCClient, OCCClientError, get_occ_service
+from sandbox.occ.service import OccService
+from sandbox.overlay.client import OverlayClientError, get_overlay_client
+from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.runtime.overlay_shell.pipeline import (
     apply_captured_changes,
     read_output_ref,
+)
+from sandbox.runtime.overlay_shell.transaction import (
+    ShellTransactionResult,
+    run_shell_transaction,
 )
 
 
@@ -26,15 +34,44 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
         )
 
     try:
-        overlay_client = OverlayClient(sandbox_id)
-        occ_client = OCCClient(sandbox_id)
+        overlay_client = get_overlay_client(sandbox_id)
+        occ_service = get_occ_service(sandbox_id)
     except (OverlayClientError, OCCClientError) as exc:
         return _error_result(
             reason=getattr(exc, "kind", "overlay_snapshot_required"),
             message=getattr(exc, "message", str(exc)),
             timings={"api.shell.total_s": time.perf_counter() - total_start},
-        )
+    )
 
+    if isinstance(occ_service, OccService) and overlay_client.runner.supports_sync:
+        transaction_start = time.perf_counter()
+        transaction = await run_sync_in_executor(
+            run_shell_transaction,
+            runner=overlay_client.runner,
+            occ_service=occ_service,
+            request=OverlayShellRequest(
+                request_id=uuid4().hex,
+                command=("bash", "-lc", request.command),
+                cwd=_overlay_cwd(request.cwd),
+                env={},
+                timeout_seconds=(
+                    float(request.timeout) if request.timeout is not None else None
+                ),
+            ),
+            agent_id=request.actor.agent_id,
+            description=request.description or "shell",
+        )
+        outer_elapsed = time.perf_counter() - transaction_start
+        timings = dict(transaction.timings)
+        worker_elapsed = timings.get("api.shell.worker_total_s", 0.0)
+        timings["api.shell.transaction_dispatch_s"] = max(
+            0.0,
+            outer_elapsed - worker_elapsed,
+        )
+        timings["api.shell.total_s"] = time.perf_counter() - total_start
+        return _success_result(replace(transaction, timings=timings))
+
+    occ_client = OCCClient(service=occ_service)
     overlay_start = time.perf_counter()
     envelope = await overlay_client.shell(
         ("bash", "-lc", request.command),
@@ -51,28 +88,40 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
         description=request.description or "shell",
     )
     occ_elapsed = time.perf_counter() - occ_start
+    transaction = ShellTransactionResult(
+        envelope=envelope,
+        changeset=changeset,
+        stdout=read_output_ref(envelope.stdout_ref),
+        stderr=read_output_ref(envelope.stderr_ref),
+        timings={
+            **envelope.timings,
+            **changeset.timings,
+            "api.shell.overlay_s": overlay_elapsed,
+            "api.shell.occ_apply_s": occ_elapsed,
+            "api.shell.total_s": time.perf_counter() - total_start,
+        },
+    )
+    return _success_result(transaction)
+
+
+def _success_result(transaction: ShellTransactionResult) -> ShellResult:
+    envelope = transaction.envelope
+    changeset = transaction.changeset
     conflict, conflict_status = conflict_and_status(changeset.files)
     command_failed = envelope.exit_code != 0
     success = not command_failed and changeset.success
     status = "ok" if success else conflict_status if conflict is not None else "error"
-    timings = {
-        **envelope.timings,
-        **changeset.timings,
-        "api.shell.overlay_s": overlay_elapsed,
-        "api.shell.occ_apply_s": occ_elapsed,
-        "api.shell.total_s": time.perf_counter() - total_start,
-    }
     return ShellResult(
         success=success,
         exit_code=envelope.exit_code,
-        stdout=read_output_ref(envelope.stdout_ref),
-        stderr=read_output_ref(envelope.stderr_ref),
+        stdout=transaction.stdout,
+        stderr=transaction.stderr,
         changed_paths=published_paths(changeset.files),
         status=status,
         conflict=conflict,
         conflict_reason=conflict.message if conflict is not None else None,
         warnings=(),
-        timings=timings,
+        timings=transaction.timings,
     )
 
 

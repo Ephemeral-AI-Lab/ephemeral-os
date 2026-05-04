@@ -73,6 +73,10 @@ class OverlayClient:
             )
         self._runner = runner
 
+    @property
+    def runner(self) -> SnapshotOverlayRunner:
+        return self._runner
+
     async def run(
         self,
         command: tuple[str, ...],

@@ -9,9 +9,15 @@ across read, write, edit, shell, and mixed mutation workloads.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import logging
+import os
 import shlex
+import shutil
+import subprocess
+import sys
+import tarfile
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Mapping, Sequence
@@ -53,11 +59,16 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
     SnapshotOverlayRunner,
 )
 from sandbox.providers.registry import dispose_adapter, register_adapter
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 
 
 LOGGER = logging.getLogger(__name__)
 CONCURRENCY_LEVELS = (1, 5, 10, 20, 50)
+INSTALL_PACKAGE_COUNT = 3
+INSTALL_FILES_PER_PACKAGE = 8
+VERBOSE_OP_TIMINGS = os.environ.get("EOS_SANDBOX_API_LOAD_VERBOSE_OPS") == "1"
+VERBOSE_OP_LAYER_STACK = os.environ.get("EOS_SANDBOX_API_LOAD_VERBOSE_STACK") == "1"
 
 
 class _Gitignore:
@@ -137,7 +148,7 @@ class _BarrierOccService:
         wait_start = time.perf_counter()
         await self._barrier.wait()
         wait_elapsed = time.perf_counter() - wait_start
-        result = await asyncio.to_thread(
+        result = await run_sync_in_executor(
             OccCommitTransaction(self._layer_stack).revalidate_and_publish,
             prepared,
         )
@@ -262,6 +273,16 @@ class ApiLoadEnv:
             "layer_dirs": len(layer_dirs),
             "staging_dirs": len(staging_dirs),
             "storage_bytes": total_bytes,
+        }
+
+    def layer_stack_progress_metrics(self) -> dict[str, int]:
+        if VERBOSE_OP_LAYER_STACK:
+            return self.layer_stack_metrics()
+        manifest = self.manager.read_active_manifest()
+        return {
+            "manifest_version": manifest.version,
+            "manifest_depth": manifest.depth,
+            "active_leases": len(self.manager.lease_snapshots()),
         }
 
 
@@ -835,15 +856,6 @@ async def test_occ_global_serial_merger_prepare_writes_levels_1_5_10_20_50(
     recorder = LoadRecorder("occ_global_serial_merger")
     seen = set()
     for level in CONCURRENCY_LEVELS:
-        register_occ_service(
-            api_load_env.sandbox_id,
-            _BarrierOccService(
-                OccService(gitignore=_Gitignore(), layer_stack=api_load_env.manager),
-                layer_stack=api_load_env.manager,
-                parties=level,
-            ),
-        )
-
         async def op(index: int):
             return await write_file(
                 api_load_env.sandbox_id,
@@ -868,8 +880,14 @@ async def test_occ_global_serial_merger_prepare_writes_levels_1_5_10_20_50(
                 "occ.prepare.total_s",
                 "occ.commit.total_s",
                 "occ.commit.publish_layer_s",
+                "occ.serial.batch_size",
             ),
         )
+        if level > 1:
+            assert max(
+                sample.timings.get("occ.serial.batch_size", 0.0)
+                for sample in report.samples
+            ) > 1.0
         for index in range(level):
             assert api_load_env.manager.read_text(f"serial/{level}/item-{index}.txt") == (
                 f"serial-{level}-{index}\n",
@@ -916,7 +934,7 @@ async def _run_load_batch(
             concurrency=concurrency,
             index=index,
             in_flight=current_in_flight,
-            layer_stack=env.layer_stack_metrics(),
+            **_op_layer_stack_payload(env),
         )
         start = time.perf_counter()
         result = await operation(index)
@@ -949,9 +967,9 @@ async def _run_load_batch(
             index=index,
             elapsed_s=elapsed,
             status=sample.status,
-            timings=sample.timings,
+            **_op_done_timing_payload(sample),
             **progress,
-            layer_stack=env.layer_stack_metrics(),
+            **_op_layer_stack_payload(env),
         )
         return sample
 
@@ -993,6 +1011,18 @@ async def _run_load_batch(
 def _assert_all_success(report: LoadBatchReport) -> None:
     assert report.failures == 0, _summary(report)
     assert report.successes == report.concurrency
+
+
+def _op_done_timing_payload(sample: OperationSample) -> dict[str, Any]:
+    if VERBOSE_OP_TIMINGS:
+        return {"timings": sample.timings}
+    return {"timing_keys": sorted(sample.timings)}
+
+
+def _op_layer_stack_payload(env: ApiLoadEnv) -> dict[str, Any]:
+    if VERBOSE_OP_LAYER_STACK:
+        return {"layer_stack": env.layer_stack_progress_metrics()}
+    return {}
 
 
 def _assert_single_winner(

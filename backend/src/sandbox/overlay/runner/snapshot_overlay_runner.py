@@ -79,6 +79,15 @@ class _RuntimeInvoker(Protocol):
     ) -> RuntimeResultEnvelope: ...
 
 
+class _SyncRuntimeInvoker(Protocol):
+    def invoke_sync(
+        self,
+        *,
+        request: OverlayShellRequest,
+        manifest: Manifest,
+    ) -> RuntimeResultEnvelope: ...
+
+
 class SnapshotOverlayRunner:
     """Lease a snapshot, invoke runtime capture, and release the lease."""
 
@@ -108,6 +117,32 @@ class SnapshotOverlayRunner:
                 request=request,
                 manifest=lease.manifest,
             )
+        finally:
+            timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
+            release_start = time.perf_counter()
+            self._layer_stack.release_lease(lease.lease_id)
+            timings["overlay.lease_release_s"] = time.perf_counter() - release_start
+            timings["overlay.runner_total_s"] = time.perf_counter() - total_start
+        return replace(envelope, timings={**envelope.timings, **timings})
+
+    @property
+    def supports_sync(self) -> bool:
+        return callable(getattr(self._invoker, "invoke_sync", None))
+
+    def shell_sync(self, request: OverlayShellRequest) -> RuntimeResultEnvelope:
+        invoke_sync = getattr(self._invoker, "invoke_sync", None)
+        if not callable(invoke_sync):
+            raise RuntimeError("overlay runner invoker does not support sync shell")
+
+        total_start = time.perf_counter()
+        lease_start = time.perf_counter()
+        lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
+        timings = {
+            "overlay.lease_acquire_s": time.perf_counter() - lease_start,
+        }
+        try:
+            invoke_start = time.perf_counter()
+            envelope = invoke_sync(request=request, manifest=lease.manifest)
         finally:
             timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
             release_start = time.perf_counter()

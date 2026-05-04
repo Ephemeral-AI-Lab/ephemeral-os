@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 
@@ -20,6 +19,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.runtime.async_bridge import run_sync_in_executor
 
 BaseHashReader = Callable[[str], str | None]
 
@@ -39,23 +39,37 @@ class OccOrchestrator:
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes concurrently by path."""
+        return await run_sync_in_executor(
+            self.prepare_sync,
+            changes,
+            snapshot=snapshot,
+            intent=intent,
+            base_hash_reader=base_hash_reader,
+        )
+
+    def prepare_sync(
+        self,
+        changes: Sequence[Change],
+        *,
+        snapshot,
+        intent: CommitIntent,
+        base_hash_reader: BaseHashReader | None = None,
+    ) -> PreparedChangeset:
+        """Route changes and infer gated base hashes synchronously by path."""
         grouped = self._group_by_route(changes)
-        prepared = await asyncio.gather(
-            *(
-                asyncio.to_thread(
-                    self._prepare_group,
-                    path,
-                    route,
-                    tuple(path_changes),
-                    message,
-                    base_hash_reader,
-                )
-                for path, route, path_changes, message in grouped
+        prepared = tuple(
+            self._prepare_group(
+                path,
+                route,
+                tuple(path_changes),
+                message,
+                base_hash_reader,
             )
+            for path, route, path_changes, message in grouped
         )
         return PreparedChangeset(
             snapshot=snapshot,
-            path_groups=tuple(prepared),
+            path_groups=prepared,
             atomic=intent.atomic,
         )
 

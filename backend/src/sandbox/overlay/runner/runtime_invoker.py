@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from collections.abc import Mapping
 from dataclasses import replace
@@ -17,6 +16,7 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
 )
 from sandbox.runtime.overlay_shell.cli import execute_request
 from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
 class RuntimeInvoker:
@@ -41,8 +41,37 @@ class RuntimeInvoker:
     ) -> RuntimeResultEnvelope:
         run_dir = self._run_dir(request)
         invoke_start = time.perf_counter()
-        envelope, worker_start, worker_elapsed = await asyncio.to_thread(
+        envelope, worker_start, worker_elapsed = await run_sync_in_executor(
             _execute_request_with_timings,
+            request_payload=overlay_shell_request_to_dict(request),
+            manifest_payload=manifest.to_dict(),
+            storage_root=self.storage_root,
+            run_dir=run_dir,
+        )
+        invoke_elapsed = time.perf_counter() - invoke_start
+        return replace(
+            envelope,
+            timings={
+                **envelope.timings,
+                "overlay.invoker.queue_wait_s": worker_start - invoke_start,
+                "overlay.invoker.worker_total_s": worker_elapsed,
+                "overlay.invoker.resume_wait_s": max(
+                    0.0,
+                    invoke_elapsed - (worker_start - invoke_start) - worker_elapsed,
+                ),
+                "overlay.invoker.total_s": invoke_elapsed,
+            },
+        )
+
+    def invoke_sync(
+        self,
+        *,
+        request: OverlayShellRequest,
+        manifest: Manifest,
+    ) -> RuntimeResultEnvelope:
+        run_dir = self._run_dir(request)
+        invoke_start = time.perf_counter()
+        envelope, worker_start, worker_elapsed = _execute_request_with_timings(
             request_payload=overlay_shell_request_to_dict(request),
             manifest_payload=manifest.to_dict(),
             storage_root=self.storage_root,

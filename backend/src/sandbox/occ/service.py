@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from collections.abc import Sequence
 from dataclasses import replace
@@ -15,6 +14,8 @@ from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.orchestrator import OccOrchestrator
 from sandbox.occ.runtime_ops import infer_manifest_base_hash
+from sandbox.occ.serial_merger import OccSerialMerger
+from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
 class OccService:
@@ -30,6 +31,11 @@ class OccService:
         self._orchestrator = OccOrchestrator(gitignore)
         self._transaction = (
             OccCommitTransaction(layer_stack) if layer_stack is not None else None
+        )
+        self._serial_merger = (
+            OccSerialMerger(self._transaction)
+            if self._transaction is not None
+            else None
         )
 
     async def apply_changeset(
@@ -55,23 +61,67 @@ class OccService:
                 },
             )
         commit_start = time.perf_counter()
-        result, worker_start, worker_elapsed = await asyncio.to_thread(
-            _revalidate_and_publish_with_timings,
-            self._transaction,
-            prepared,
-        )
+        assert self._serial_merger is not None
+        result = await self._serial_merger.apply(prepared)
         commit_elapsed = time.perf_counter() - commit_start
+        result_timings, resume_wait = _result_timings_with_resume(result)
         return ChangesetResult(
             files=result.files,
             timings={
-                **prepared.timings,
-                **result.timings,
-                "occ.apply.commit_queue_wait_s": worker_start - commit_start,
-                "occ.apply.commit_worker_s": worker_elapsed,
-                "occ.apply.commit_resume_wait_s": max(
+                **result_timings,
+                "occ.apply.commit_queue_wait_s": result_timings.get(
+                    "occ.serial.queue_wait_s",
                     0.0,
-                    commit_elapsed - (worker_start - commit_start) - worker_elapsed,
                 ),
+                "occ.apply.commit_worker_s": result_timings.get(
+                    "occ.commit.total_s",
+                    0.0,
+                ),
+                "occ.apply.commit_resume_wait_s": resume_wait,
+                "occ.apply.commit_s": commit_elapsed,
+                "occ.apply.total_s": time.perf_counter() - total_start,
+            },
+            published_manifest_version=result.published_manifest_version,
+        )
+
+    def apply_changeset_sync(
+        self,
+        changes: Sequence[Change],
+        *,
+        snapshot: Manifest | None = None,
+        options: CommitIntent | None = None,
+    ) -> ChangesetResult | PreparedChangeset:
+        total_start = time.perf_counter()
+        prepared = self.prepare_changeset_sync(
+            changes,
+            snapshot=snapshot,
+            options=options,
+        )
+        if self._transaction is None or self._serial_merger is None:
+            return replace(
+                prepared,
+                timings={
+                    **prepared.timings,
+                    "occ.apply.total_s": time.perf_counter() - total_start,
+                },
+            )
+        commit_start = time.perf_counter()
+        result = self._serial_merger.apply_sync(prepared)
+        commit_elapsed = time.perf_counter() - commit_start
+        result_timings, _resume_wait = _result_timings_with_resume(result)
+        return ChangesetResult(
+            files=result.files,
+            timings={
+                **result_timings,
+                "occ.apply.commit_queue_wait_s": result_timings.get(
+                    "occ.serial.queue_wait_s",
+                    0.0,
+                ),
+                "occ.apply.commit_worker_s": result_timings.get(
+                    "occ.commit.total_s",
+                    0.0,
+                ),
+                "occ.apply.commit_resume_wait_s": 0.0,
                 "occ.apply.commit_s": commit_elapsed,
                 "occ.apply.total_s": time.perf_counter() - total_start,
             },
@@ -86,6 +136,21 @@ class OccService:
         options: CommitIntent | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer leased-snapshot base hashes."""
+        return await run_sync_in_executor(
+            self.prepare_changeset_sync,
+            changes,
+            snapshot=snapshot,
+            options=options,
+        )
+
+    def prepare_changeset_sync(
+        self,
+        changes: Sequence[Change],
+        *,
+        snapshot: Manifest | None = None,
+        options: CommitIntent | None = None,
+    ) -> PreparedChangeset:
+        """Route changes and infer leased-snapshot base hashes synchronously."""
         total_start = time.perf_counter()
         timings: dict[str, float] = {}
         intent = options or CommitIntent()
@@ -108,7 +173,7 @@ class OccService:
                 )
 
         prepare_start = time.perf_counter()
-        prepared = await self._orchestrator.prepare(
+        prepared = self._orchestrator.prepare_sync(
             changes,
             snapshot=effective_snapshot,
             intent=intent,
@@ -121,13 +186,12 @@ class OccService:
         return replace(prepared, timings={**prepared.timings, **timings})
 
 
-def _revalidate_and_publish_with_timings(
-    transaction: OccCommitTransaction,
-    prepared: PreparedChangeset,
-) -> tuple[ChangesetResult, float, float]:
-    worker_start = time.perf_counter()
-    result = transaction.revalidate_and_publish(prepared)
-    return result, worker_start, time.perf_counter() - worker_start
+def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, float], float]:
+    timings = dict(result.timings)
+    ready_at = timings.pop("_occ.serial.result_ready_at_s", None)
+    if ready_at is None:
+        return timings, 0.0
+    return timings, max(0.0, time.perf_counter() - ready_at)
 
 
 __all__ = ["OccService"]
