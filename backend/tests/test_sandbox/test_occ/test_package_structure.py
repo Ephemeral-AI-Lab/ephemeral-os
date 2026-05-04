@@ -22,6 +22,7 @@ def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
         "gated",
         "orchestrator.py",
         "runtime_ops.py",
+        "serial_merger.py",
         "service.py",
     }
 

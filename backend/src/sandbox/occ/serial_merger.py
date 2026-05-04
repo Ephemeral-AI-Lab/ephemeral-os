@@ -146,7 +146,7 @@ def _combine_prepared(items: list[PreparedChangeset]) -> PreparedChangeset:
         path_groups=tuple(
             group for prepared in items for group in prepared.path_groups
         ),
-        atomic=False,
+        atomic=any(prepared.atomic for prepared in items),
     )
 
 

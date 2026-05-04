@@ -36,6 +36,8 @@ class MergedView:
                 return os.readlink(candidate).encode("utf-8"), True
             if candidate.is_file():
                 return candidate.read_bytes(), True
+            if _has_file_ancestor(layer_dir, rel):
+                return None, False
             if _has_opaque_ancestor(layer_dir, rel):
                 return None, False
         return None, False
@@ -59,6 +61,8 @@ class MergedView:
                 return os.readlink(candidate), True
             if candidate.exists():
                 return "", False
+            if _has_file_ancestor(layer_dir, rel):
+                return "", False
             if _has_opaque_ancestor(layer_dir, rel):
                 return "", False
         return "", False
@@ -70,10 +74,11 @@ class MergedView:
 
         for layer in manifest.layers:
             layer_dir = self._layer_dir(layer)
-            if rel and _whiteout_path(layer_dir, rel).exists():
-                return tuple(sorted(names))
-
             base = _join_rel(layer_dir, rel)
+            if rel and _whiteout_path(layer_dir, rel).exists() and not base.is_dir():
+                return tuple(sorted(names))
+            if base.is_symlink() or base.is_file() or _has_file_ancestor(layer_dir, rel):
+                return tuple(sorted(names))
             if base.is_dir():
                 for child in sorted(base.iterdir(), key=lambda item: item.name):
                     if child.name == OPAQUE_MARKER:
@@ -135,6 +140,7 @@ class MergedView:
                 target.mkdir(parents=True, exist_ok=True)
             elif entry.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
+                _remove_path(target)
                 shutil.copy2(entry, target)
 
 
@@ -163,6 +169,15 @@ def _has_opaque_ancestor(layer_dir: Path, rel: str) -> bool:
     return False
 
 
+def _has_file_ancestor(layer_dir: Path, rel: str) -> bool:
+    parts = PurePosixPath(rel).parts
+    for index in range(1, len(parts)):
+        ancestor = _join_rel(layer_dir, "/".join(parts[:index]))
+        if ancestor.is_symlink() or ancestor.is_file():
+            return True
+    return False
+
+
 def _is_whiteout(name: str) -> bool:
     return name.startswith(WHITEOUT_PREFIX) and name != OPAQUE_MARKER
 
@@ -184,4 +199,3 @@ def _replace_symlink(path: Path, target: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _remove_path(path)
     os.symlink(target, path)
-

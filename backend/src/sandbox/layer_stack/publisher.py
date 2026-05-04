@@ -191,6 +191,7 @@ class LayerPublisher:
             raise ValueError(f"content hash mismatch for {change.path}")
         target = _join_rel(layer_dir, change.path)
         target.parent.mkdir(parents=True, exist_ok=True)
+        _remove_path(target)
         target.write_bytes(content)
 
     def _write_symlink(self, layer_dir: Path, change: LayerChange) -> None:
@@ -215,6 +216,13 @@ def _whiteout_path(layer_dir: Path, rel: str) -> Path:
     whiteout = layer_dir.joinpath(*parent_parts, f"{WHITEOUT_PREFIX}{target.name}")
     whiteout.parent.mkdir(parents=True, exist_ok=True)
     return whiteout
+
+
+def _remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
 
 
 def _record(timings: dict[str, float] | None, key: str, value: float) -> None:

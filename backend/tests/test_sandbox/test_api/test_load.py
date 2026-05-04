@@ -9,15 +9,10 @@ across read, write, edit, shell, and mixed mutation workloads.
 from __future__ import annotations
 
 import asyncio
-import io
 import json
 import logging
 import os
 import shlex
-import shutil
-import subprocess
-import sys
-import tarfile
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Mapping, Sequence

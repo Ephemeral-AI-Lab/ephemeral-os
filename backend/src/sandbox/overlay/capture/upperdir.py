@@ -63,6 +63,8 @@ def _populate_upperdir_from_diff(
     merged_paths = _payload_paths(workspace_root)
 
     for rel in sorted(lower_paths - merged_paths):
+        if _has_payload_ancestor(rel, merged_paths):
+            continue
         _write_whiteout(upperdir, rel)
 
     for rel in sorted(merged_paths):
@@ -72,6 +74,7 @@ def _populate_upperdir_from_diff(
             continue
         target = upperdir / rel
         target.parent.mkdir(parents=True, exist_ok=True)
+        _remove_path(target)
         if merged_entry.is_symlink():
             os.symlink(os.readlink(merged_entry), target)
         elif merged_entry.is_file():
@@ -95,6 +98,14 @@ def _entries_match(left: Path, right: Path) -> bool:
         return left.is_symlink() and right.is_symlink() and os.readlink(left) == os.readlink(right)
     if left.is_file() and right.is_file():
         return left.read_bytes() == right.read_bytes()
+    return False
+
+
+def _has_payload_ancestor(rel: Path, payload_paths: set[Path]) -> bool:
+    parts = rel.parts
+    for index in range(1, len(parts)):
+        if Path(*parts[:index]) in payload_paths:
+            return True
     return False
 
 
@@ -155,6 +166,13 @@ def _write_whiteout(upperdir: Path, rel: Path) -> None:
     marker = upperdir / rel.parent / f"{WHITEOUT_PREFIX}{rel.name}"
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text("", encoding="utf-8")
+
+
+def _remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
 
 
 def _is_whiteout_marker(entry: Path) -> bool:
