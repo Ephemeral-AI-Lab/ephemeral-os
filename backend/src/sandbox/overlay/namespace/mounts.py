@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +24,7 @@ def mount_snapshot(
     manifest: Manifest,
     storage_root: str | Path,
     run_dir: str | Path,
+    timings: dict[str, float] | None = None,
 ) -> MountedSnapshot:
     """Create a runtime-local merged workspace for a leased manifest.
 
@@ -37,13 +39,27 @@ def mount_snapshot(
     workdir = run_root / "work"
     merged = run_root / "merged"
 
+    prepare_start = time.perf_counter()
     for directory in (upperdir, workdir, merged):
         if directory.exists():
             shutil.rmtree(directory)
         directory.mkdir(parents=True)
+    if timings is not None:
+        timings["overlay.mount.prepare_dirs_s"] = time.perf_counter() - prepare_start
 
+    materialize_start = time.perf_counter()
     MergedView(storage_root).materialize(lowerdir, manifest)
+    if timings is not None:
+        timings["overlay.mount.materialize_lower_s"] = (
+            time.perf_counter() - materialize_start
+        )
+
+    copy_start = time.perf_counter()
     _copy_tree(lowerdir, merged)
+    if timings is not None:
+        timings["overlay.mount.copy_lower_to_merged_s"] = (
+            time.perf_counter() - copy_start
+        )
     return MountedSnapshot(
         manifest=manifest,
         workspace_root=str(merged),

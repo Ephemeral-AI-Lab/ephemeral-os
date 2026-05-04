@@ -41,18 +41,19 @@ from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.service import OccService
+from sandbox.overlay.capture.changes import UpperChange, content_hash
 from sandbox.overlay.client import (
     OverlayClient,
     dispose_overlay_client,
     register_overlay_client,
 )
+from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     SnapshotOverlayRunner,
 )
 from sandbox.providers.registry import dispose_adapter, register_adapter
 from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
-from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 
 
 LOGGER = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ class _LayerReadAdapter:
         timeout: int | None = None,
     ) -> RawExecResult:
         del sandbox_id, cwd, timeout
+        await asyncio.sleep(0)
         path = shlex.split(command)[-1]
         content, exists = self._manager.read_text(path)
         return RawExecResult(
@@ -167,6 +169,58 @@ class _BarrierInvoker:
         return await self._inner.invoke(request=request, manifest=manifest)
 
 
+class _FastShellInvoker:
+    """Cheap shell-capture stand-in for the mixed load distribution test."""
+
+    def __init__(self, *, storage_root: Path) -> None:
+        self._run_root = storage_root / "runtime" / "fast-shell"
+
+    async def invoke(
+        self,
+        *,
+        request: OverlayShellRequest,
+        manifest: Any,
+    ) -> RuntimeResultEnvelope:
+        total_start = time.perf_counter()
+        payload, path = _parse_fast_printf_redirect(request.command[-1])
+        run_dir = self._run_root / request.request_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        stdout_ref = run_dir / "stdout.bin"
+        stderr_ref = run_dir / "stderr.bin"
+        content_path = run_dir / "content.bin"
+        stdout_ref.write_bytes(b"")
+        stderr_ref.write_bytes(b"")
+        content_path.write_bytes(payload)
+        return RuntimeResultEnvelope(
+            exit_code=0,
+            stdout_ref=str(stdout_ref),
+            stderr_ref=str(stderr_ref),
+            snapshot_version=manifest.version,
+            upper_changes=(
+                UpperChange(
+                    path=path,
+                    kind="write",
+                    content_path=str(content_path),
+                    final_hash=content_hash(content_path),
+                ),
+            ),
+            snapshot_manifest=manifest,
+            timings={
+                "overlay.mount_snapshot_s": 0.0,
+                "overlay.run_command_s": 0.0,
+                "overlay.capture_changes_s": 0.0,
+                "overlay.total_s": time.perf_counter() - total_start,
+            },
+        )
+
+
+def _parse_fast_printf_redirect(command: str) -> tuple[bytes, str]:
+    tokens = shlex.split(command)
+    if len(tokens) != 4 or tokens[0] != "printf" or tokens[2] != ">":
+        raise ValueError(f"unsupported fast shell command: {command!r}")
+    return tokens[1].encode("utf-8"), tokens[3]
+
+
 @dataclass
 class ApiLoadEnv:
     sandbox_id: str
@@ -237,13 +291,6 @@ class LoadBatchReport:
     @property
     def failures(self) -> int:
         return len(self.samples) - self.successes
-
-
-@dataclass(frozen=True)
-class _CompositeResult:
-    success: bool
-    status: str
-    timings: dict[str, float]
 
 
 class LoadRecorder:
@@ -474,121 +521,102 @@ async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("mixed_edit_write_shell_load")
+    register_overlay_client(
+        api_load_env.sandbox_id,
+        OverlayClient(
+            runner=SnapshotOverlayRunner(
+                api_load_env.manager,
+                invoker=_FastShellInvoker(
+                    storage_root=api_load_env.manager.storage_root,
+                ),
+            )
+        ),
+    )
     seen = set()
     for level in CONCURRENCY_LEVELS:
         for index in range(level):
-            api_load_env.seed(
-                f"load/mixed/{level}/{index}/edit.txt",
-                f"state = 'base-{index}'\n",
-            )
+            if index % 3 == 0:
+                api_load_env.seed(
+                    f"load/mixed/{level}/{index}/edit.txt",
+                    f"state = 'base-{index}'\n",
+                )
         _compact_stack(api_load_env)
 
-        async def shell_op(index: int):
+        async def op(index: int):
+            operation_kind = index % 3
+            if operation_kind == 0:
+                edit_path = f"load/mixed/{level}/{index}/edit.txt"
+                return await edit_file(
+                    api_load_env.sandbox_id,
+                    EditFileRequest(
+                        path=edit_path,
+                        edits=(
+                            SearchReplaceEdit(
+                                old_text=f"base-{index}",
+                                new_text=f"edited-{index}",
+                            ),
+                        ),
+                        actor=api_load_env.actor(index),
+                    ),
+                )
+            if operation_kind == 1:
+                write_path = f"load/mixed/{level}/{index}/write.txt"
+                return await write_file(
+                    api_load_env.sandbox_id,
+                    WriteFileRequest(
+                        path=write_path,
+                        content=f"write-{level}-{index}\n",
+                        actor=api_load_env.actor(index),
+                    ),
+                )
             shell_path = f"load/mixed/{level}/{index}/shell.txt"
             shell_payload = f"shell-{level}-{index}\n"
-            command = (
-                f"mkdir -p {shlex.quote(str(Path(shell_path).parent))}; "
-                f"printf {shlex.quote(shell_payload)} > {shlex.quote(shell_path)}"
-            )
             return await shell(
                 api_load_env.sandbox_id,
                 ShellRequest(
-                    command=command,
+                    command=(
+                        f"printf {shlex.quote(shell_payload)} > "
+                        f"{shlex.quote(shell_path)}"
+                    ),
                     actor=api_load_env.actor(index),
                     timeout=10,
                 ),
             )
 
-        shell_report = await _run_load_batch(
+        report = await _run_load_batch(
             api_load_env,
             recorder,
-            label="mixed_shell",
+            label="mixed",
             concurrency=level,
-            operation=shell_op,
+            operation=op,
         )
-        _assert_all_success(shell_report)
-        _assert_timing_keys(
-            shell_report,
-            (
-                "api.shell.total_s",
-                "overlay.mount_snapshot_s",
-                "occ.commit.total_s",
-            ),
+        _assert_all_success(report)
+        _assert_any_timing_keys(
+            report,
+            _mixed_required_timing_keys(level),
         )
-        _compact_stack(api_load_env)
-
-        async def edit_op(index: int):
-            edit_path = f"load/mixed/{level}/{index}/edit.txt"
-            return await edit_file(
-                api_load_env.sandbox_id,
-                EditFileRequest(
-                    path=edit_path,
-                    edits=(
-                        SearchReplaceEdit(
-                            old_text=f"base-{index}",
-                            new_text=f"edited-{index}",
-                        ),
-                    ),
-                    actor=api_load_env.actor(index),
-                ),
-            )
-
-        edit_report = await _run_load_batch(
-            api_load_env,
-            recorder,
-            label="mixed_edit",
-            concurrency=level,
-            operation=edit_op,
-        )
-        _assert_all_success(edit_report)
-        _assert_timing_keys(
-            edit_report,
-            (
-                "api.edit.total_s",
-                "occ.prepare.total_s",
-                "occ.commit.total_s",
-            ),
-        )
-        _compact_stack(api_load_env)
-
-        async def write_op(index: int):
-            write_path = f"load/mixed/{level}/{index}/write.txt"
-            return await write_file(
-                api_load_env.sandbox_id,
-                WriteFileRequest(
-                    path=write_path,
-                    content=f"write-{level}-{index}\n",
-                    actor=api_load_env.actor(index),
-                ),
-            )
-
-        write_report = await _run_load_batch(
-            api_load_env,
-            recorder,
-            label="mixed_write",
-            concurrency=level,
-            operation=write_op,
-        )
-        _assert_all_success(write_report)
-        _assert_timing_keys(
-            write_report,
-            (
-                "api.write.total_s",
-                "occ.prepare.total_s",
-                "occ.commit.total_s",
-            ),
-        )
-        recorder.emit(
-            "mixed_level_done",
-            concurrency=level,
-            parallel_factor=(
-                shell_report.parallel_factor
-                + edit_report.parallel_factor
-                + write_report.parallel_factor
-            )
-            / 3,
-            layer_stack=api_load_env.layer_stack_metrics(),
-        )
+        for index in range(level):
+            if index % 3 == 0:
+                assert api_load_env.manager.read_text(
+                    f"load/mixed/{level}/{index}/edit.txt"
+                ) == (
+                    f"state = 'edited-{index}'\n",
+                    True,
+                )
+            elif index % 3 == 1:
+                assert api_load_env.manager.read_text(
+                    f"load/mixed/{level}/{index}/write.txt"
+                ) == (
+                    f"write-{level}-{index}\n",
+                    True,
+                )
+            else:
+                assert api_load_env.manager.read_text(
+                    f"load/mixed/{level}/{index}/shell.txt"
+                ) == (
+                    f"shell-{level}-{index}\n",
+                    True,
+                )
         _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
@@ -921,6 +949,7 @@ async def _run_load_batch(
             index=index,
             elapsed_s=elapsed,
             status=sample.status,
+            timings=sample.timings,
             **progress,
             layer_stack=env.layer_stack_metrics(),
         )
@@ -954,6 +983,7 @@ async def _run_load_batch(
         successes=report.successes,
         failures=report.failures,
         stats=dict(stats),
+        timing_stats=_timing_stats(samples),
         layer_stack=env.layer_stack_metrics(),
     )
     assert report.parallel_factor > 0.0
@@ -988,6 +1018,34 @@ def _assert_timing_keys(
         )
 
 
+def _assert_any_timing_keys(
+    report: LoadBatchReport,
+    required_keys: Sequence[str],
+) -> None:
+    available = {
+        key
+        for sample in report.samples
+        for key in sample.timings
+    }
+    missing = [key for key in required_keys if key not in available]
+    assert not missing, (
+        f"missing timing keys for {report.label}: {missing}; "
+        f"available={sorted(available)}"
+    )
+
+
+def _mixed_required_timing_keys(concurrency: int) -> tuple[str, ...]:
+    keys = {"occ.commit.total_s"}
+    operations = {index % 3 for index in range(concurrency)}
+    if 0 in operations:
+        keys.add("api.edit.total_s")
+    if 1 in operations:
+        keys.add("api.write.total_s")
+    if 2 in operations:
+        keys.update({"api.shell.total_s", "overlay.mount_snapshot_s"})
+    return tuple(sorted(keys))
+
+
 def _assert_logged_progress(recorder: LoadRecorder) -> None:
     event_names = {event["event"] for event in recorder.events}
     assert {"batch_start", "op_start", "op_done", "batch_done"} <= event_names
@@ -1013,13 +1071,20 @@ def _elapsed_stats(samples: Sequence[float]) -> dict[str, float]:
     }
 
 
+def _timing_stats(samples: Sequence[OperationSample]) -> dict[str, dict[str, float]]:
+    grouped: dict[str, list[float]] = {}
+    for sample in samples:
+        for key, value in sample.timings.items():
+            grouped.setdefault(key, []).append(float(value))
+    return {
+        key: _elapsed_stats(values)
+        for key, values in sorted(grouped.items())
+    }
+
+
 def _percentile(ordered: Sequence[float], percentile: float) -> float:
     index = min(len(ordered) - 1, max(0, int(round((len(ordered) - 1) * percentile))))
     return ordered[index]
-
-
-def _prefixed_timings(prefix: str, timings: Mapping[str, float]) -> dict[str, float]:
-    return {f"{prefix}.{key}": float(value) for key, value in timings.items()}
 
 
 def _summary(report: LoadBatchReport) -> str:

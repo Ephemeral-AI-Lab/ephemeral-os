@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import stat
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -19,6 +20,7 @@ def capture_changes(
     snapshot_manifest: Manifest,
     lowerdir: str | Path | None = None,
     workspace_root: str | Path | None = None,
+    timings: dict[str, float] | None = None,
 ) -> tuple[UpperChange, ...]:
     """Return raw upperdir changes for one leased snapshot shell call.
 
@@ -30,12 +32,21 @@ def capture_changes(
     upper_root = Path(upperdir)
     upper_root.mkdir(parents=True, exist_ok=True)
     if lowerdir is not None and workspace_root is not None:
+        populate_start = time.perf_counter()
         _populate_upperdir_from_diff(
             lowerdir=Path(lowerdir),
             workspace_root=Path(workspace_root),
             upperdir=upper_root,
         )
-    return tuple(_walk_upperdir(upper_root))
+        if timings is not None:
+            timings["overlay.capture.populate_upperdir_s"] = (
+                time.perf_counter() - populate_start
+            )
+    walk_start = time.perf_counter()
+    changes = tuple(_walk_upperdir(upper_root))
+    if timings is not None:
+        timings["overlay.capture.walk_upperdir_s"] = time.perf_counter() - walk_start
+    return changes
 
 
 def _populate_upperdir_from_diff(

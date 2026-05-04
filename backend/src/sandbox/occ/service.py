@@ -55,16 +55,24 @@ class OccService:
                 },
             )
         commit_start = time.perf_counter()
-        result = await asyncio.to_thread(
-            self._transaction.revalidate_and_publish,
+        result, worker_start, worker_elapsed = await asyncio.to_thread(
+            _revalidate_and_publish_with_timings,
+            self._transaction,
             prepared,
         )
+        commit_elapsed = time.perf_counter() - commit_start
         return ChangesetResult(
             files=result.files,
             timings={
                 **prepared.timings,
                 **result.timings,
-                "occ.apply.commit_s": time.perf_counter() - commit_start,
+                "occ.apply.commit_queue_wait_s": worker_start - commit_start,
+                "occ.apply.commit_worker_s": worker_elapsed,
+                "occ.apply.commit_resume_wait_s": max(
+                    0.0,
+                    commit_elapsed - (worker_start - commit_start) - worker_elapsed,
+                ),
+                "occ.apply.commit_s": commit_elapsed,
                 "occ.apply.total_s": time.perf_counter() - total_start,
             },
             published_manifest_version=result.published_manifest_version,
@@ -111,6 +119,15 @@ class OccService:
         )
         timings["occ.prepare.total_s"] = time.perf_counter() - total_start
         return replace(prepared, timings={**prepared.timings, **timings})
+
+
+def _revalidate_and_publish_with_timings(
+    transaction: OccCommitTransaction,
+    prepared: PreparedChangeset,
+) -> tuple[ChangesetResult, float, float]:
+    worker_start = time.perf_counter()
+    result = transaction.revalidate_and_publish(prepared)
+    return result, worker_start, time.perf_counter() - worker_start
 
 
 __all__ = ["OccService"]

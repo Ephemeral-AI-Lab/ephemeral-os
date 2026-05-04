@@ -331,9 +331,16 @@ class LayerStackTransaction:
         self._manager = manager
         self._manifest: Manifest | None = None
         self._entered = False
+        self._lock_acquired_at: float | None = None
+        self._lock_held_s = 0.0
+        self._lock_wait_s = 0.0
 
     def __enter__(self) -> "LayerStackTransaction":
+        wait_start = time.perf_counter()
         self._manager._lock.acquire()
+        acquired_at = time.perf_counter()
+        self._lock_wait_s = acquired_at - wait_start
+        self._lock_acquired_at = acquired_at
         self._entered = True
         self._manifest = read_manifest(self._manager._manifest_file)
         return self
@@ -347,19 +354,38 @@ class LayerStackTransaction:
         del exc_type, exc, traceback
         self._entered = False
         self._manifest = None
+        if self._lock_acquired_at is not None:
+            self._lock_held_s = time.perf_counter() - self._lock_acquired_at
+            self._lock_acquired_at = None
         self._manager._lock.release()
 
     def snapshot(self) -> Manifest:
         return self._require_manifest()
 
-    def publish_layer(self, changes: Sequence[LayerChange]) -> Manifest:
+    def publish_layer(
+        self,
+        changes: Sequence[LayerChange],
+        *,
+        timings: dict[str, float] | None = None,
+    ) -> Manifest:
         current = self._require_manifest()
         new_manifest = self._manager._publisher.publish_layer_locked(
             tuple(changes),
             expected_manifest=current,
+            timings=timings,
         )
         self._manifest = new_manifest
         return new_manifest
+
+    @property
+    def lock_wait_s(self) -> float:
+        return self._lock_wait_s
+
+    @property
+    def lock_held_s(self) -> float:
+        if self._lock_acquired_at is not None:
+            return time.perf_counter() - self._lock_acquired_at
+        return self._lock_held_s
 
     def _require_manifest(self) -> Manifest:
         if not self._entered or self._manifest is None:

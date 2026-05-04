@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import time
+from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from sandbox.layer_stack.manifest import Manifest
@@ -36,12 +40,27 @@ class RuntimeInvoker:
         manifest: Manifest,
     ) -> RuntimeResultEnvelope:
         run_dir = self._run_dir(request)
-        return await asyncio.to_thread(
-            execute_request,
+        invoke_start = time.perf_counter()
+        envelope, worker_start, worker_elapsed = await asyncio.to_thread(
+            _execute_request_with_timings,
             request_payload=overlay_shell_request_to_dict(request),
             manifest_payload=manifest.to_dict(),
             storage_root=self.storage_root,
             run_dir=run_dir,
+        )
+        invoke_elapsed = time.perf_counter() - invoke_start
+        return replace(
+            envelope,
+            timings={
+                **envelope.timings,
+                "overlay.invoker.queue_wait_s": worker_start - invoke_start,
+                "overlay.invoker.worker_total_s": worker_elapsed,
+                "overlay.invoker.resume_wait_s": max(
+                    0.0,
+                    invoke_elapsed - (worker_start - invoke_start) - worker_elapsed,
+                ),
+                "overlay.invoker.total_s": invoke_elapsed,
+            },
         )
 
     def _run_dir(self, request: OverlayShellRequest) -> Path:
@@ -51,6 +70,23 @@ class RuntimeInvoker:
         ).strip("-")
         suffix = uuid4().hex[:8]
         return self.runtime_root / f"{safe_id or 'request'}-{suffix}"
+
+
+def _execute_request_with_timings(
+    *,
+    request_payload: Mapping[str, Any],
+    manifest_payload: Mapping[str, Any],
+    storage_root: Path,
+    run_dir: Path,
+) -> tuple[RuntimeResultEnvelope, float, float]:
+    worker_start = time.perf_counter()
+    envelope = execute_request(
+        request_payload=dict(request_payload),
+        manifest_payload=dict(manifest_payload),
+        storage_root=storage_root,
+        run_dir=run_dir,
+    )
+    return envelope, worker_start, time.perf_counter() - worker_start
 
 
 __all__ = ["RuntimeInvoker"]

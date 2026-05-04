@@ -45,6 +45,7 @@ def execute_request(
         manifest=manifest,
         storage_root=storage_root,
         run_dir=run_dir,
+        timings=timings,
     )
     timings["overlay.mount_snapshot_s"] = time.perf_counter() - mount_start
     stdout_ref = Path(run_dir) / "stdout.bin"
@@ -66,6 +67,7 @@ def execute_request(
         snapshot_manifest=mounted.manifest,
         lowerdir=lowerdir_for(mounted),
         workspace_root=mounted.workspace_root,
+        timings=timings,
     )
     timings["overlay.capture_changes_s"] = time.perf_counter() - capture_start
     timings["overlay.total_s"] = time.perf_counter() - total_start

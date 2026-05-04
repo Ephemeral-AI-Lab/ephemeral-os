@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import time
 import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path, PurePosixPath
@@ -52,8 +53,16 @@ class LayerPublisher:
         changes: Sequence[LayerChange],
         *,
         expected_manifest: Manifest,
+        timings: dict[str, float] | None = None,
     ) -> Manifest:
+        total_start = time.perf_counter()
+        read_active_start = time.perf_counter()
         active = read_manifest(self._manifest_file)
+        _record(
+            timings,
+            "layer_stack.publish.read_active_manifest_s",
+            time.perf_counter() - read_active_start,
+        )
         if active != expected_manifest:
             raise ManifestConflictError(
                 "active manifest changed before layer publish: "
@@ -61,16 +70,51 @@ class LayerPublisher:
                 f"found version {active.version}"
             )
         if not changes:
+            _record(
+                timings,
+                "layer_stack.publish.total_s",
+                time.perf_counter() - total_start,
+            )
             return active
 
+        backpressure_start = time.perf_counter()
         self._check_backpressure(active)
+        _record(
+            timings,
+            "layer_stack.publish.check_backpressure_s",
+            time.perf_counter() - backpressure_start,
+        )
+        allocate_start = time.perf_counter()
         layer_id, staging_dir, layer_dir = self._allocate_layer_paths(active.version + 1)
+        _record(
+            timings,
+            "layer_stack.publish.allocate_layer_paths_s",
+            time.perf_counter() - allocate_start,
+        )
+        create_staging_start = time.perf_counter()
         staging_dir.mkdir(parents=True)
+        _record(
+            timings,
+            "layer_stack.publish.create_staging_s",
+            time.perf_counter() - create_staging_start,
+        )
         try:
+            write_changes_start = time.perf_counter()
             for change in changes:
                 self._write_change(staging_dir, change)
+            _record(
+                timings,
+                "layer_stack.publish.write_changes_s",
+                time.perf_counter() - write_changes_start,
+            )
+            replace_start = time.perf_counter()
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
+            _record(
+                timings,
+                "layer_stack.publish.replace_staging_s",
+                time.perf_counter() - replace_start,
+            )
         except Exception:
             shutil.rmtree(staging_dir, ignore_errors=True)
             raise
@@ -82,13 +126,30 @@ class LayerPublisher:
                 *active.layers,
             ),
         )
+        read_latest_start = time.perf_counter()
         latest = read_manifest(self._manifest_file)
+        _record(
+            timings,
+            "layer_stack.publish.read_latest_manifest_s",
+            time.perf_counter() - read_latest_start,
+        )
         if latest != active:
             raise ManifestConflictError(
                 "active manifest changed during layer publish: "
                 f"expected version {active.version}, found version {latest.version}"
             )
+        write_manifest_start = time.perf_counter()
         write_manifest_atomic(self._manifest_file, new_manifest)
+        _record(
+            timings,
+            "layer_stack.publish.write_manifest_s",
+            time.perf_counter() - write_manifest_start,
+        )
+        _record(
+            timings,
+            "layer_stack.publish.total_s",
+            time.perf_counter() - total_start,
+        )
         return new_manifest
 
     def _check_backpressure(self, active: Manifest) -> None:
@@ -154,3 +215,8 @@ def _whiteout_path(layer_dir: Path, rel: str) -> Path:
     whiteout = layer_dir.joinpath(*parent_parts, f"{WHITEOUT_PREFIX}{target.name}")
     whiteout.parent.mkdir(parents=True, exist_ok=True)
     return whiteout
+
+
+def _record(timings: dict[str, float] | None, key: str, value: float) -> None:
+    if timings is not None:
+        timings[key] = value

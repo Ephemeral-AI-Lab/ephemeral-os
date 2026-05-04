@@ -46,6 +46,7 @@ class OccCommitTransaction:
         total_start = time.perf_counter()
         timings: dict[str, float] = {}
         with self._layer_stack.commit_transaction() as transaction:
+            timings["layer_stack.transaction.lock_wait_s"] = transaction.lock_wait_s
             snapshot_start = time.perf_counter()
             active_manifest = transaction.snapshot()
             timings["occ.commit.snapshot_s"] = time.perf_counter() - snapshot_start
@@ -80,7 +81,11 @@ class OccCommitTransaction:
                 ):
                     return ChangesetResult(
                         files=tuple(_mark_unpublished(files, prepared)),
-                        timings=_finish_timings(timings, total_start),
+                        timings=_finish_timings(
+                            timings,
+                            total_start,
+                            transaction=transaction,
+                        ),
                         published_manifest_version=None,
                     )
 
@@ -97,18 +102,26 @@ class OccCommitTransaction:
                 if not changes:
                     return ChangesetResult(
                         files=files,
-                        timings=_finish_timings(timings, total_start),
+                        timings=_finish_timings(
+                            timings,
+                            total_start,
+                            transaction=transaction,
+                        ),
                         published_manifest_version=None,
                     )
 
                 publish_start = time.perf_counter()
-                published = transaction.publish_layer(changes)
+                published = transaction.publish_layer(changes, timings=timings)
                 timings["occ.commit.publish_layer_s"] = (
                     time.perf_counter() - publish_start
                 )
                 return ChangesetResult(
                     files=files,
-                    timings=_finish_timings(timings, total_start),
+                    timings=_finish_timings(
+                        timings,
+                        total_start,
+                        transaction=transaction,
+                    ),
                     published_manifest_version=published.version,
                 )
 
@@ -255,11 +268,18 @@ def _mark_unpublished(
 def _finish_timings(
     timings: dict[str, float],
     total_start: float,
+    *,
+    transaction: object | None = None,
 ) -> dict[str, float]:
-    return {
+    result = {
         **timings,
         "occ.commit.total_s": time.perf_counter() - total_start,
     }
+    if transaction is not None:
+        lock_held_s = getattr(transaction, "lock_held_s", None)
+        if lock_held_s is not None:
+            result["layer_stack.transaction.lock_held_s"] = float(lock_held_s)
+    return result
 
 
 __all__ = ["OccCommitTransaction", "PathValidation"]
