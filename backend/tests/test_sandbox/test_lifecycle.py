@@ -71,7 +71,7 @@ class TestAsyncCloseClient:
 
 
 class TestShutdownCachedClient:
-    def test_clears_async_client_cached_state(self):
+    def test_async_shutdown_closes_fallback_loop_clients(self):
         import sandbox.providers.daytona.client.async_ as async_client_mod
         import sandbox.providers.daytona.client.async_shutdown as mod
 
@@ -84,7 +84,7 @@ class TestShutdownCachedClient:
         async_client_mod._cached_clients[loop] = (("key", "url", "target"), mock_client)
 
         try:
-            mod.shutdown_cached_client()
+            asyncio.run(mod.shutdown_cached_client_async())
         finally:
             loop.close()
 

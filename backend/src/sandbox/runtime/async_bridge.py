@@ -81,7 +81,7 @@ def use_sandbox_io_loop(
     ``asyncio.to_thread(svc.xxx, ...)`` where ``svc.xxx`` internally uses
     :func:`run_sync` on coroutines returned by an async sandbox SDK::
 
-        async with use_sandbox_io_loop():
+        with use_sandbox_io_loop():
             await asyncio.to_thread(svc.write_file, specs, ...)
 
     Passing ``loop=None`` uses ``asyncio.get_running_loop()`` (the common
@@ -255,8 +255,19 @@ def _shutdown_standalone_loop() -> None:
         except Exception:
             logger.debug("standalone sandbox I/O client cleanup failed", exc_info=True)
         loop.call_soon_threadsafe(loop.stop)
+    else:
+        _shutdown_standalone_loop_clients_sync()
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=2.0)
+
+
+def _shutdown_standalone_loop_clients_sync() -> None:
+    if not _STANDALONE_LOOP_CLEANUPS:
+        return
+    try:
+        asyncio.run(_shutdown_standalone_loop_clients())
+    except Exception:
+        logger.debug("standalone sandbox I/O client cleanup failed", exc_info=True)
 
 
 async def _shutdown_standalone_loop_clients() -> None:
@@ -291,10 +302,9 @@ async def run_sync_in_executor(func: Any, /, *args: Any, **kwargs: Any) -> Any:
     one contextvar :mod:`sandbox.runtime.async_bridge` *does* need in
     the worker thread: :data:`sandbox_io_loop`. Without that seed,
     :func:`run_sync` (called transitively from ``ContentManager``) would
-    fall through to ``asyncio.run(coro)`` in the worker, creating a
-    fresh event loop disconnected from any async provider client
-    bound to the caller's loop — surfacing as "Future attached to a
-    different loop".
+    fall through to the standalone sandbox I/O loop in the worker, which
+    may be disconnected from an async provider client bound to the caller's
+    loop — surfacing as "Future attached to a different loop".
 
     Verified at N=72 against live sandbox I/O: ``asyncio.to_thread`` → 6.4x
     parallelism; this helper → 45x.

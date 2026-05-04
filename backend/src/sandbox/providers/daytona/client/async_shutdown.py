@@ -1,8 +1,7 @@
-"""Async client lifecycle — cleanup on interpreter shutdown."""
+"""Async client lifecycle cleanup helpers."""
 
 from __future__ import annotations
 
-import atexit
 import asyncio
 import inspect
 import logging
@@ -83,22 +82,8 @@ async def shutdown_cached_client_async() -> None:
         close_client(client)
 
 
-def shutdown_cached_client() -> None:
-    from sandbox.providers.daytona.client import async_ as async_client_mod
-
-    with async_client_mod._client_lock:
-        clients = [client for _, client in async_client_mod._cached_clients.values()]
-        async_client_mod._cached_clients.clear()
-    for client in clients:
-        close_client(client)
-
-
-atexit.register(shutdown_cached_client)
-
-
 __all__ = [
     "async_close_client",
     "close_client",
-    "shutdown_cached_client",
     "shutdown_cached_client_async",
 ]

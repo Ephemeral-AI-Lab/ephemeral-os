@@ -23,7 +23,7 @@ class _Gitignore:
         return False
 
 
-async def test_shell_routes_through_overlay_capture_and_occ_commit(tmp_path: Path) -> None:
+async def test_shell_routes_through_overlay_shell_and_occ_commit(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / "stack")
     register_occ_service(
         "sb-shell-cutover",
