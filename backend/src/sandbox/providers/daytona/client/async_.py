@@ -39,7 +39,7 @@ async def _attempt_sandbox_recovery(sandbox_id: str, *, cause: Exception | None)
     if not _looks_recoverable(cause):
         return
     try:
-        from sandbox.lifecycle.service import SandboxService
+        from sandbox.providers.daytona.lifecycle import SandboxService
 
         await asyncio.to_thread(SandboxService().ensure_sandbox_running, sandbox_id)
         logger.warning("Recovered sandbox %s after async fetch failure", sandbox_id)

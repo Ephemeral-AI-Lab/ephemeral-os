@@ -65,6 +65,7 @@ def execute_request(
         stderr_ref=command.stderr_ref,
         snapshot_version=manifest.version,
         upper_changes=upper_changes,
+        snapshot_manifest=manifest,
     )
     write_result_envelope(run_dir, envelope)
     return envelope

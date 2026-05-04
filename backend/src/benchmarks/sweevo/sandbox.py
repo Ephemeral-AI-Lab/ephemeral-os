@@ -55,7 +55,7 @@ def _progress(on_progress: ProgressCallback | None, message: str) -> None:
 
 def _service() -> Any:
     """Return a SandboxService instance (lazy import to avoid cycles)."""
-    from sandbox.lifecycle.service import SandboxService
+    from sandbox.providers.daytona.lifecycle import SandboxService
 
     return SandboxService()
 

@@ -21,13 +21,13 @@ from sandbox.providers.daytona.client.sync import (
     acquire_client,
     fetch_sandbox,
 )
-from sandbox.lifecycle.proxy import SandboxProxy
 from sandbox.lifecycle.workspace import (
     _sandbox_runtime_bootstrap_enabled,
     _sandbox_project_root,
     bootstrap_in_sandbox_runtime,
     bootstrap_upload_runtime_bundle,
 )
+from sandbox.providers.daytona.proxy import SandboxProxy
 from sandbox.providers.daytona.client.credentials import load_credentials
 
 logger = logging.getLogger(__name__)
@@ -70,8 +70,8 @@ def _maybe_run_eager_runtime_bootstrap(raw_sandbox: Any, sandbox_id: str) -> Non
 
     No-op when the runtime bootstrap flag is unset. Uses the registered
     provider adapter and the workspace from :func:`_sandbox_project_root`.
-    Bootstrap failures intentionally propagate so the caller sees the indexer
-    error.
+    Bootstrap failures intentionally propagate so the caller sees the runtime
+    setup error.
     """
     if not _sandbox_runtime_bootstrap_enabled():
         return

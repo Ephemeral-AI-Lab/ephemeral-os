@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from sandbox.layer_stack.manifest import Manifest
 from sandbox.overlay.capture.changes import UpperChange
 
 
@@ -18,6 +19,7 @@ class RuntimeResultEnvelope:
     stderr_ref: str
     snapshot_version: int
     upper_changes: tuple[UpperChange, ...]
+    snapshot_manifest: Manifest | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "exit_code", int(self.exit_code))
@@ -31,6 +33,11 @@ class RuntimeResultEnvelope:
             "stderr_ref": self.stderr_ref,
             "snapshot_version": self.snapshot_version,
             "upper_changes": [change.to_dict() for change in self.upper_changes],
+            "snapshot_manifest": (
+                self.snapshot_manifest.to_dict()
+                if self.snapshot_manifest is not None
+                else None
+            ),
         }
 
     @classmethod
@@ -47,6 +54,11 @@ class RuntimeResultEnvelope:
             snapshot_version=int(payload["snapshot_version"]),
             upper_changes=tuple(
                 UpperChange.from_dict(change) for change in raw_changes
+            ),
+            snapshot_manifest=(
+                Manifest.from_dict(payload["snapshot_manifest"])
+                if payload.get("snapshot_manifest") is not None
+                else None
             ),
         )
 

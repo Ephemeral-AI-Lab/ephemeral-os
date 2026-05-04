@@ -87,7 +87,7 @@ class TestDiscoverWorkspaceAsync:
         assert result is None
 
 
-class TestCodeIntelligenceRuntime:
+class TestSandboxRuntimeContext:
     def test_sets_runtime_metadata_and_registers_provider_adapter(self, monkeypatch):
         import sandbox.lifecycle.workspace as workspace_module
 
@@ -102,7 +102,7 @@ class TestCodeIntelligenceRuntime:
             workspace_module, "_register_provider_adapter_if_missing", fake_register
         )
 
-        workspace_module.ensure_code_intelligence_runtime(
+        workspace_module.prepare_sandbox_runtime_context(
             mock_context,
             sandbox_id="sb-123",
             sandbox=mock_sandbox,
@@ -112,19 +112,18 @@ class TestCodeIntelligenceRuntime:
         assert mock_context["daytona_sandbox"] is mock_sandbox
         assert mock_context["repo_root"] == "/workspace"
         assert mock_context["exec_cwd"] == "/workspace"
-        assert "ci_service" not in mock_context
         assert registered == ["sb-123"]
 
     def test_respects_existing_repo_root(self):
-        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import prepare_sandbox_runtime_context
 
-        mock_context = ToolExecutionContextService(cwd="/tmp", services={
-            "repo_root": "/testbed",
-            "ci_workspace_root": "/ci-root",
-        })
+        mock_context = ToolExecutionContextService(
+            cwd="/tmp",
+            services={"repo_root": "/testbed"},
+        )
         mock_sandbox = MagicMock()
 
-        ensure_code_intelligence_runtime(
+        prepare_sandbox_runtime_context(
             mock_context,
             sandbox_id=None,
             sandbox=mock_sandbox,
@@ -133,7 +132,6 @@ class TestCodeIntelligenceRuntime:
 
         assert mock_context["repo_root"] == "/testbed"
         assert mock_context["exec_cwd"] == "/testbed"
-        assert "ci_service" not in mock_context
 
 
 class TestProviderAdapterRegistration:
@@ -153,14 +151,14 @@ class TestProviderAdapterRegistration:
         dispose_adapter(sandbox_id)
 
     def test_context_runtime_does_not_attach_legacy_api_handles(self, monkeypatch):
-        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import prepare_sandbox_runtime_context
         from sandbox.providers.registry import dispose_adapter
 
         sandbox_id = "workspace-no-legacy-api"
         dispose_adapter(sandbox_id)
         mock_context = ToolExecutionContextService(cwd="/tmp")
 
-        ensure_code_intelligence_runtime(
+        prepare_sandbox_runtime_context(
             mock_context,
             sandbox_id=sandbox_id,
             sandbox=MagicMock(),

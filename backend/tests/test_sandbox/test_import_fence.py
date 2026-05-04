@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import importlib
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -94,6 +95,23 @@ def test_deleted_code_intelligence_package_raises_module_not_found() -> None:
 def test_deleted_sandbox_transport_symbol_raises_import_error() -> None:
     with pytest.raises(ImportError):
         __import__("sandbox.api.transport", fromlist=["SandboxTransport"])
+
+
+def test_sandbox_source_has_no_code_intelligence_terms() -> None:
+    forbidden = {
+        "code_intelligence": re.compile(r"code_intelligence", re.IGNORECASE),
+        "code intelligence": re.compile(r"code intelligence", re.IGNORECASE),
+        "code-intelligence": re.compile(r"code-intelligence", re.IGNORECASE),
+        "standalone ci": re.compile(r"\bci\b", re.IGNORECASE),
+    }
+    offenders: list[str] = []
+    for module in _python_files(SRC_ROOT / "sandbox"):
+        text = module.read_text(encoding="utf-8")
+        for label, pattern in forbidden.items():
+            if pattern.search(text):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} contains {label}")
+
+    assert offenders == []
 
 
 def _python_files(root: Path) -> list[Path]:

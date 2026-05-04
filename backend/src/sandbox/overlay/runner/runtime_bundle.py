@@ -31,11 +31,12 @@ def snapshot_overlay_runtime_bundle_bytes() -> bytes:
         for package in (
             sandbox_dir / "layer_stack",
             sandbox_dir / "overlay" / "capture",
+            sandbox_dir / "overlay" / "handlers",
             sandbox_dir / "overlay" / "namespace",
             runtime_overlay_shell,
         ):
             for path in sorted(package.rglob("*.py")):
-                if path.name == "capture_to_changeset.py":
+                if path.name in {"capture_to_changeset.py", "pipeline.py"}:
                     continue
                 rel = path.relative_to(sandbox_dir).as_posix()
                 tar.add(path, arcname=f"sandbox/{rel}")

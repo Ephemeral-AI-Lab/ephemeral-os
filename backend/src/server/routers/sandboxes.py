@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 from sandbox.api.raw_exec import raw_exec
-from sandbox.lifecycle.service import SandboxService
+from sandbox.providers.daytona.lifecycle import SandboxService
 
 logger = logging.getLogger(__name__)
 

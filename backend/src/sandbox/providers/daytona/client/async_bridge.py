@@ -1,10 +1,10 @@
 """Loop-aware sync bridge for possibly-awaitable sandbox results.
 
-Several code-intelligence subsystems call SDK methods that return either
-sync values (local tests / in-process sandboxes) or coroutines bound to a
-parent event loop (the async Daytona client). They all need one shim that
-can resolve a coroutine synchronously without destroying the SDK's aiohttp
-session by running it on a different event loop.
+Several sandbox subsystems call SDK methods that return either sync values
+(local tests / in-process sandboxes) or coroutines bound to a parent event
+loop (the async Daytona client). They all need one shim that can resolve a
+coroutine synchronously without destroying the SDK's aiohttp session by
+running it on a different event loop.
 
 The old bridge spun up a fresh event loop for calls without a registered
 parent loop. That defeated loop-local async SDK caches and made each sync
@@ -59,7 +59,7 @@ DEFAULT_RUN_SYNC_TIMEOUT_SECONDS = 120.0
 """Upper bound for a single ``run_sync`` call.
 
 Picked slightly above the longest individual Daytona exec timeout used by
-CI mutation tools so timeouts surface as timeouts, not as silent hangs.
+sandbox mutation tools so timeouts surface as timeouts, not as silent hangs.
 Callers that need longer budgets should pass ``timeout=`` explicitly.
 """
 
@@ -122,7 +122,7 @@ def run_sync(result: Any, *, timeout: float | None = None) -> Any:
     1. A sandbox I/O loop is registered in the current context and it is
        running on another thread → submit via
        ``run_coroutine_threadsafe`` and wait for the result. This is the
-       common path for sync CI code (for example ``ContentManager``)
+       common path for sync sandbox helper code
        reached from ``asyncio.to_thread``.
     2. No parent loop is registered → schedule on a reusable standalone
        sandbox I/O loop. This keeps loop-local async SDK clients warm for

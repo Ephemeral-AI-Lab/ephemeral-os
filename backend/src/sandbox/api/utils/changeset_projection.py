@@ -37,6 +37,11 @@ def committed_paths(
     return (fallback_path,) if not files else ()
 
 
+def published_paths(files: Sequence[FileResult]) -> tuple[str, ...]:
+    """Return paths of every published ``FileResult``."""
+    return tuple(f.path for f in files if is_published_status(f.status) and f.path)
+
+
 def conflict_and_status(
     files: Sequence[FileResult],
 ) -> tuple[ConflictInfo | None, str]:
@@ -56,4 +61,5 @@ def conflict_and_status(
         status,
     )
 
-__all__ = ["committed_paths", "conflict_and_status"]
+
+__all__ = ["committed_paths", "conflict_and_status", "published_paths"]

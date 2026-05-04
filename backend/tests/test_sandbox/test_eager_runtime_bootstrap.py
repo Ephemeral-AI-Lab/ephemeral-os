@@ -1,10 +1,10 @@
-"""Unit tests for the eager in-sandbox CI bootstrap hook + lifecycle wiring.
+"""Unit tests for the eager in-sandbox runtime bootstrap hook + lifecycle wiring.
 
 Covers:
 
-* :func:`bootstrap_in_sandbox_ci_runtime` no-ops when the flag is off,
+* :func:`bootstrap_in_sandbox_runtime` no-ops when the flag is off,
   sandbox id is missing, or workspace is empty.
-* :func:`bootstrap_in_sandbox_ci_runtime` prepares the command runtime when the flag is set.
+* :func:`bootstrap_in_sandbox_runtime` uploads the command runtime when the flag is set.
 * :meth:`SandboxService.create_sandbox` (a) calls the hook when the flag is
   set, (b) skips when the flag is unset, (c) propagates errors from the hook.
 """
@@ -20,24 +20,24 @@ import pytest
 
 @pytest.fixture
 def flag_on(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("EOS_CI_IN_SANDBOX", "1")
+    monkeypatch.setenv("EOS_SANDBOX_RUNTIME_BOOTSTRAP", "1")
 
 
 @pytest.fixture
 def flag_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("EOS_CI_IN_SANDBOX", raising=False)
+    monkeypatch.delenv("EOS_SANDBOX_RUNTIME_BOOTSTRAP", raising=False)
 
 
 # ---------------------------------------------------------------------------
-# bootstrap_in_sandbox_ci_runtime
+# bootstrap_in_sandbox_runtime
 # ---------------------------------------------------------------------------
 
 
 def test_bootstrap_helper_noop_when_flag_off(flag_off: None) -> None:
-    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
+    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_runtime
 
     asyncio.run(
-        bootstrap_in_sandbox_ci_runtime(
+        bootstrap_in_sandbox_runtime(
             sandbox_id="sb-1",
             workspace_root="/ws",
         )
@@ -45,7 +45,7 @@ def test_bootstrap_helper_noop_when_flag_off(flag_off: None) -> None:
 
 
 def test_bootstrap_helper_uploads_by_sandbox_id(flag_on: None) -> None:
-    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
+    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_runtime
 
     calls: list[str] = []
 
@@ -55,7 +55,7 @@ def test_bootstrap_helper_uploads_by_sandbox_id(flag_on: None) -> None:
 
     with patch("sandbox.runtime.bundle.ensure_runtime_uploaded", new=fake_upload):
         asyncio.run(
-            bootstrap_in_sandbox_ci_runtime(
+            bootstrap_in_sandbox_runtime(
                 sandbox_id="sb-1",
                 workspace_root="/ws",
             )
@@ -65,37 +65,18 @@ def test_bootstrap_helper_uploads_by_sandbox_id(flag_on: None) -> None:
 
 
 def test_bootstrap_helper_noop_when_workspace_empty(flag_on: None) -> None:
-    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
+    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_runtime
 
     asyncio.run(
-        bootstrap_in_sandbox_ci_runtime(
+        bootstrap_in_sandbox_runtime(
             sandbox_id="sb-1",
             workspace_root="",
         )
     )
 
 
-def test_bootstrap_helper_prepares_command_runtime(flag_on: None) -> None:
-    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
-
-    calls: list[str] = []
-
-    async def fake_upload(sandbox_id: str) -> str:
-        calls.append(sandbox_id)
-        return "deadbeef"
-
-    with patch("sandbox.runtime.bundle.ensure_runtime_uploaded", new=fake_upload):
-        asyncio.run(
-            bootstrap_in_sandbox_ci_runtime(
-                sandbox_id="sb-1",
-                workspace_root="/ws",
-            )
-        )
-    assert calls == ["sb-1"]
-
-
-def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
-    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_ci_runtime
+def test_bootstrap_helper_raises_on_runtime_upload_failure(flag_on: None) -> None:
+    from sandbox.lifecycle.workspace import bootstrap_in_sandbox_runtime
 
     async def fail_upload(*_: Any, **__: Any) -> str:
         raise RuntimeError("runtime unavailable")
@@ -104,7 +85,7 @@ def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
         RuntimeError, match="runtime unavailable"
     ):
         asyncio.run(
-            bootstrap_in_sandbox_ci_runtime(
+            bootstrap_in_sandbox_runtime(
                 sandbox_id="sb-1",
                 workspace_root="/ws",
             )
@@ -112,7 +93,7 @@ def test_bootstrap_helper_raises_on_daemon_failure(flag_on: None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _maybe_run_eager_ci_bootstrap (lifecycle entry point)
+# _maybe_run_eager_runtime_bootstrap (lifecycle entry point)
 # ---------------------------------------------------------------------------
 
 
@@ -125,7 +106,7 @@ def _make_raw_sandbox(project_dir: str | None) -> Any:
 
 
 def test_maybe_bootstrap_skips_when_flag_off(flag_off: None) -> None:
-    from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
+    from sandbox.lifecycle.service import _maybe_run_eager_runtime_bootstrap
 
     sentinel_called = {"called": False}
 
@@ -133,17 +114,17 @@ def test_maybe_bootstrap_skips_when_flag_off(flag_off: None) -> None:
         sentinel_called["called"] = True
 
     with patch(
-        "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
+        "sandbox.lifecycle.service.bootstrap_in_sandbox_runtime",
         new=boom,
     ):
-        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
+        _maybe_run_eager_runtime_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
     assert sentinel_called["called"] is False
 
 
 def test_maybe_bootstrap_skips_when_workspace_unresolvable(
     flag_on: None,
 ) -> None:
-    from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
+    from sandbox.lifecycle.service import _maybe_run_eager_runtime_bootstrap
 
     sentinel_called = {"called": False}
 
@@ -151,17 +132,17 @@ def test_maybe_bootstrap_skips_when_workspace_unresolvable(
         sentinel_called["called"] = True
 
     with patch(
-        "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
+        "sandbox.lifecycle.service.bootstrap_in_sandbox_runtime",
         new=boom,
     ):
-        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox(None), "sb-1")
+        _maybe_run_eager_runtime_bootstrap(_make_raw_sandbox(None), "sb-1")
     assert sentinel_called["called"] is False
 
 
 def test_maybe_bootstrap_invokes_helper_when_flag_on(
     flag_on: None,
 ) -> None:
-    from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
+    from sandbox.lifecycle.service import _maybe_run_eager_runtime_bootstrap
 
     calls: list[dict[str, Any]] = []
 
@@ -174,27 +155,27 @@ def test_maybe_bootstrap_invokes_helper_when_flag_on(
         )
 
     with patch(
-        "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
+        "sandbox.lifecycle.service.bootstrap_in_sandbox_runtime",
         new=fake_helper,
     ):
-        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
+        _maybe_run_eager_runtime_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
 
     assert len(calls) == 1
     assert calls[0]["sandbox_id"] == "sb-1"
     assert calls[0]["workspace_root"] == "/ws"
 
 
-def test_maybe_bootstrap_propagates_runtime_error(flag_on: None) -> None:
-    from sandbox.lifecycle.service import _maybe_run_eager_ci_bootstrap
+def test_maybe_bootstrap_propagates_runtime_upload_error(flag_on: None) -> None:
+    from sandbox.lifecycle.service import _maybe_run_eager_runtime_bootstrap
 
     async def fake_helper(*_: Any, **__: Any) -> None:
-        raise RuntimeError("daemon crashed")
+        raise RuntimeError("runtime crashed")
 
     with patch(
-        "sandbox.lifecycle.service.bootstrap_in_sandbox_ci_runtime",
+        "sandbox.lifecycle.service.bootstrap_in_sandbox_runtime",
         new=fake_helper,
-    ), pytest.raises(RuntimeError, match="daemon crashed"):
-        _maybe_run_eager_ci_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
+    ), pytest.raises(RuntimeError, match="runtime crashed"):
+        _maybe_run_eager_runtime_bootstrap(_make_raw_sandbox("/ws"), "sb-1")
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +206,9 @@ def test_upload_helper_noop_on_missing_inputs(flag_on: None) -> None:
         asyncio.run(bootstrap_upload_runtime_bundle(**kwargs))
 
 
-def test_upload_helper_uploads_without_spawning_daemon(flag_on: None) -> None:
+def test_upload_helper_uploads_without_running_lifecycle_bootstrap(
+    flag_on: None,
+) -> None:
     """Background upload runs ensure_runtime_uploaded directly."""
     from sandbox.lifecycle.workspace import bootstrap_upload_runtime_bundle
 
@@ -250,23 +233,23 @@ def test_upload_helper_uploads_without_spawning_daemon(flag_on: None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _maybe_start_eager_ci_bundle_upload / _finish_eager_ci_bundle_upload
+# _maybe_start_eager_runtime_bundle_upload / _finish_eager_runtime_bundle_upload
 # ---------------------------------------------------------------------------
 
 
 def test_start_upload_returns_none_when_flag_off(flag_off: None) -> None:
-    from sandbox.lifecycle.service import _maybe_start_eager_ci_bundle_upload
+    from sandbox.lifecycle.service import _maybe_start_eager_runtime_bundle_upload
 
     assert (
-        _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        _maybe_start_eager_runtime_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
         is None
     )
 
 
 def test_start_upload_returns_none_when_workspace_missing(flag_on: None) -> None:
-    from sandbox.lifecycle.service import _maybe_start_eager_ci_bundle_upload
+    from sandbox.lifecycle.service import _maybe_start_eager_runtime_bundle_upload
 
-    assert _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox(None), "sb-1") is None
+    assert _maybe_start_eager_runtime_bundle_upload(_make_raw_sandbox(None), "sb-1") is None
 
 
 def test_start_upload_submits_future_and_invokes_helper(flag_on: None) -> None:
@@ -274,8 +257,8 @@ def test_start_upload_submits_future_and_invokes_helper(flag_on: None) -> None:
     import threading
 
     from sandbox.lifecycle.service import (
-        _finish_eager_ci_bundle_upload,
-        _maybe_start_eager_ci_bundle_upload,
+        _finish_eager_runtime_bundle_upload,
+        _maybe_start_eager_runtime_bundle_upload,
     )
 
     helper_done = threading.Event()
@@ -292,10 +275,10 @@ def test_start_upload_submits_future_and_invokes_helper(flag_on: None) -> None:
         "sandbox.lifecycle.service.bootstrap_upload_runtime_bundle",
         new=fake_helper,
     ):
-        future = _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        future = _maybe_start_eager_runtime_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
         assert future is not None
         # Caller drains the future; success path must not raise.
-        _finish_eager_ci_bundle_upload(future, "sb-1")
+        _finish_eager_runtime_bundle_upload(future, "sb-1")
 
     assert helper_done.is_set()
     assert helper_args == {
@@ -307,8 +290,8 @@ def test_start_upload_submits_future_and_invokes_helper(flag_on: None) -> None:
 def test_finish_upload_swallows_helper_failure(flag_on: None) -> None:
     """Background failure must not propagate — sequential bootstrap retries."""
     from sandbox.lifecycle.service import (
-        _finish_eager_ci_bundle_upload,
-        _maybe_start_eager_ci_bundle_upload,
+        _finish_eager_runtime_bundle_upload,
+        _maybe_start_eager_runtime_bundle_upload,
     )
 
     async def boom(*_: Any, **__: Any) -> None:
@@ -318,12 +301,12 @@ def test_finish_upload_swallows_helper_failure(flag_on: None) -> None:
         "sandbox.lifecycle.service.bootstrap_upload_runtime_bundle",
         new=boom,
     ):
-        future = _maybe_start_eager_ci_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
+        future = _maybe_start_eager_runtime_bundle_upload(_make_raw_sandbox("/ws"), "sb-1")
         assert future is not None
-        _finish_eager_ci_bundle_upload(future, "sb-1")  # MUST NOT raise
+        _finish_eager_runtime_bundle_upload(future, "sb-1")  # MUST NOT raise
 
 
 def test_finish_upload_noop_when_future_none() -> None:
-    from sandbox.lifecycle.service import _finish_eager_ci_bundle_upload
+    from sandbox.lifecycle.service import _finish_eager_runtime_bundle_upload
 
-    _finish_eager_ci_bundle_upload(None, "sb-1")  # MUST NOT raise
+    _finish_eager_runtime_bundle_upload(None, "sb-1")  # MUST NOT raise

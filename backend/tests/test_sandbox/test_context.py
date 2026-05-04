@@ -138,7 +138,7 @@ def test_prepare_context_no_cwd_skips_metadata_key() -> None:
 def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
-    ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
+    ctx = _ctx({"repo_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
@@ -200,7 +200,7 @@ async def test_prepare_context_async_no_cwd() -> None:
 async def test_prepare_context_async_respects_preseeded_workspace_root_override() -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-test")
     fake_sb = MagicMock()
-    ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
+    ctx = _ctx({"repo_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),

@@ -6,7 +6,7 @@ import time
 
 
 def get_sandbox_service():
-    from sandbox.lifecycle.service import SandboxService
+    from sandbox.providers.daytona.lifecycle import SandboxService
 
     return SandboxService()
 
