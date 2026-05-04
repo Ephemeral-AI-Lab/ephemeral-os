@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from sandbox.client.sync import (
+from sandbox.providers.daytona.client.sync import (
     _APP_CREATED_VIA,
     _APP_MANAGED_BY,
     _IMAGE_LABEL,
@@ -21,7 +21,6 @@ from sandbox.client.sync import (
     acquire_client,
     fetch_sandbox,
 )
-from sandbox.client.credentials import load_credentials
 from sandbox.lifecycle.proxy import SandboxProxy
 from sandbox.lifecycle.workspace import (
     _ci_in_sandbox_enabled,
@@ -29,9 +28,7 @@ from sandbox.lifecycle.workspace import (
     bootstrap_in_sandbox_ci_runtime,
     bootstrap_upload_runtime_bundle,
 )
-
-if TYPE_CHECKING:
-    from sandbox.runtime.backends import DaemonBackend
+from sandbox.providers.daytona.client.credentials import load_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +83,7 @@ def _maybe_run_eager_ci_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
         )
         return
 
-    from sandbox.client.async_bridge import run_sync
+    from sandbox.providers.daytona.client.async_bridge import run_sync
 
     run_sync(
         bootstrap_in_sandbox_ci_runtime(
@@ -121,7 +118,7 @@ def _maybe_start_eager_ci_bundle_upload(
     if not workspace_root or not sandbox_id:
         return None
 
-    from sandbox.client.async_bridge import run_sync
+    from sandbox.providers.daytona.client.async_bridge import run_sync
 
     def _do_upload() -> None:
         run_sync(
@@ -380,7 +377,7 @@ class SandboxService:
         _register_daytona_provider_adapter(sb.id)
         try:
             from sandbox.api.raw_exec import raw_exec
-            from sandbox.client.async_bridge import run_sync
+            from sandbox.providers.daytona.client.async_bridge import run_sync
 
             resp = run_sync(raw_exec(sb.id, "pwd", timeout=10))
             exit_code = getattr(resp, "exit_code", 0)
@@ -416,59 +413,11 @@ class SandboxService:
         return sb.serialize()
 
     def delete_sandbox(self, sandbox_id: str) -> None:
-        """Delete a sandbox and dispose its code-intelligence service."""
+        """Delete a sandbox and dispose its provider adapter."""
         sb = self._get_proxy(sandbox_id)
         sb._raw.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
-        # Dispose the per-sandbox CI service so it doesn't leak past the
-        # underlying sandbox.
-        self.dispose_code_intelligence(sandbox_id)
         _dispose_provider_adapter(sandbox_id)
         logger.info("Sandbox deleted: %s", sandbox_id)
-
-    # -- Code Intelligence ----------------------------------------------------
-
-    def code_intelligence_for(
-        self,
-        sandbox_id: str,
-        *,
-        workspace_root: str | None = None,
-        sandbox: Any | None = None,
-    ) -> DaemonBackend:
-        """Return the per-sandbox CI service, creating it lazily if needed.
-
-        This is the only public way to obtain the runtime daemon backend for
-        code outside the ``sandbox`` package. The internal registry under
-        :mod:`sandbox.runtime.registry` is reserved for whitebox tests;
-        routers, benchmarks, and tool wiring must come through here.
-
-        Runtime services require a registered provider adapter. Missing
-        adapters fail closed instead of falling back to an in-process backend.
-        """
-        from sandbox.runtime.registry import get_code_intelligence
-
-        return get_code_intelligence(
-            sandbox_id=sandbox_id,
-            workspace_root=workspace_root or "/workspace",
-            sandbox=sandbox,
-        )
-
-    def code_intelligence_if_exists(
-        self, sandbox_id: str
-    ) -> DaemonBackend | None:
-        """Return the existing CI service for *sandbox_id*, or ``None``."""
-        from sandbox.runtime.registry import (
-            get_code_intelligence_if_exists,
-        )
-
-        return get_code_intelligence_if_exists(sandbox_id)
-
-    def dispose_code_intelligence(self, sandbox_id: str) -> None:
-        """Dispose the per-sandbox CI service. No-op if nothing exists."""
-        from sandbox.runtime.registry import (
-            dispose_code_intelligence as _dispose,
-        )
-
-        _dispose(sandbox_id)
 
     # -- Snapshots ------------------------------------------------------------
 

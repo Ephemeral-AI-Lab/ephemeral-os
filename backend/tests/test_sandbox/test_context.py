@@ -64,10 +64,17 @@ async def test_get_sandbox_async_caches_per_loop() -> None:
     async def fake_get_async(sandbox_id):
         return fake_sb
 
-    with patch("sandbox.client.async_.get_async_sandbox", new=fake_get_async, create=True):
+    with patch(
+        "sandbox.providers.daytona.client.async_.get_async_sandbox",
+        new=fake_get_async,
+        create=True,
+    ):
         mock_module = MagicMock()
         mock_module.get_async_sandbox = fake_get_async
-        with patch.dict("sys.modules", {"sandbox.client.async_": mock_module}):
+        with patch.dict(
+            "sys.modules",
+            {"sandbox.providers.daytona.client.async_": mock_module},
+        ):
             result = await tk._get_sandbox_async()
             assert result is fake_sb
             result2 = await tk._get_sandbox_async()
@@ -86,7 +93,10 @@ async def test_get_sandbox_async_invalidates_on_new_loop() -> None:
 
     mock_module = MagicMock()
     mock_module.get_async_sandbox = fake_get_async
-    with patch.dict("sys.modules", {"sandbox.client.async_": mock_module}):
+    with patch.dict(
+        "sys.modules",
+        {"sandbox.providers.daytona.client.async_": mock_module},
+    ):
         result = await tk._get_sandbox_async()
         assert result is new_sb
 
@@ -99,7 +109,7 @@ def test_prepare_context_injects_sandbox_and_cwd() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"),
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         tk.prepare_context(ctx)
 
@@ -116,7 +126,7 @@ def test_prepare_context_no_cwd_skips_metadata_key() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaContextPreparer, "_resolve_cwd_sync", return_value=None),
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         tk.prepare_context(ctx)
 
@@ -135,12 +145,11 @@ def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_sync", return_value="/workspace"
         ) as resolve_mock,
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence") as inject_mock,
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         tk.prepare_context(ctx)
 
     resolve_mock.assert_not_called()
-    inject_mock.assert_called_once_with(ctx, "sb-test", fake_sb, "/testbed")
     assert ctx["daytona_sandbox"] is fake_sb
     assert ctx["repo_root"] == "/testbed"
     assert ctx["exec_cwd"] == "/testbed"
@@ -158,7 +167,7 @@ async def test_prepare_context_async_injects_sandbox_and_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value="/async/workspace"),
         ),
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -179,7 +188,7 @@ async def test_prepare_context_async_no_cwd() -> None:
             "_resolve_cwd_async",
             new=AsyncMock(return_value=None),
         ),
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence"),
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -198,12 +207,11 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
         patch.object(
             DaytonaContextPreparer, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
         ) as resolve_mock,
-        patch("sandbox.lifecycle.workspace._attach_code_intelligence") as inject_mock,
+        patch("sandbox.lifecycle.workspace._register_provider_adapter_if_missing"),
     ):
         await tk.prepare_context_async(ctx)
 
     resolve_mock.assert_not_called()
-    inject_mock.assert_called_once_with(ctx, "sb-test", fake_sb, "/testbed")
     assert ctx["daytona_sandbox"] is fake_sb
     assert ctx["repo_root"] == "/testbed"
     assert ctx["exec_cwd"] == "/testbed"

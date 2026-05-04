@@ -132,11 +132,9 @@ def _to_jsonable(obj: Any) -> Any:
 
 def _load_peer_bootstraps() -> None:
     from sandbox.overlay.handlers import run as overlay_run
-    from sandbox.overlay.handlers import shell as overlay_shell
 
     for op, handler in {
         "overlay.run": overlay_run.handle,
-        "shell": overlay_shell.handle,
     }.items():
         existing = OP_TABLE.get(op)
         if existing is handler:

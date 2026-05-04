@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sandbox.api.edit import edit_file
-from sandbox.api.utils.models import (
+from sandbox.api import (
     EditFileRequest,
     RequestActor,
     SearchReplaceEdit,

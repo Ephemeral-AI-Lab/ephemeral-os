@@ -1,4 +1,4 @@
-"""Daytona credentials — API key, URL, and target resolution."""
+"""Daytona SDK credentials — API key, URL, and target resolution."""
 
 from __future__ import annotations
 

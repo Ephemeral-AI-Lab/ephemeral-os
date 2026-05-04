@@ -50,6 +50,21 @@ def test_agent_sandbox_tools_import_only_public_api_verbs() -> None:
     assert offenders == []
 
 
+def test_non_api_production_code_does_not_import_private_api_utils() -> None:
+    offenders: list[str] = []
+    api_root = SRC_ROOT / "sandbox" / "api"
+    for module in _python_files(SRC_ROOT):
+        if module.is_relative_to(api_root):
+            continue
+        for imported in _imports(module):
+            if imported == "sandbox.api.utils" or imported.startswith(
+                "sandbox.api.utils."
+            ):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
 def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
     for module_name in (
         "sandbox.code_intelligence",
@@ -60,6 +75,11 @@ def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
         "sandbox.api.file_commands",
         "sandbox.api.transport",
         "sandbox.api.audited_sandbox_api",
+        "sandbox.client.async_",
+        "sandbox.client.async_bridge",
+        "sandbox.client.async_shutdown",
+        "sandbox.client.credentials",
+        "sandbox.client.sync",
         "sandbox.daytona.transport",
     ):
         assert importlib.util.find_spec(module_name) is None

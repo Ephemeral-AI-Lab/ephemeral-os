@@ -12,8 +12,8 @@ import threading
 import weakref
 from typing import Any
 
-from sandbox.client.credentials import load_credentials
 from sandbox.errors import AsyncDaytonaUnavailableError
+from sandbox.providers.daytona.client.credentials import load_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ def get_async_daytona_client() -> Any:
         _cached_clients[loop] = (current_key, client)
 
     if stale_clients:
-        from sandbox.client.async_shutdown import close_client
+        from sandbox.providers.daytona.client.async_shutdown import close_client
 
         for stale_client in stale_clients:
             close_client(stale_client)

@@ -1,11 +1,10 @@
 # ruff: noqa
-"""Comprehensive sandbox tool tests — audited edits, conflict resolution.
+"""Comprehensive sandbox tool tests for public sandbox tools.
 
 Covers sandbox concerns:
-  Audited Editing:     edit_file with Arbiter ledger/lock/conflict
   shell:             shell multi-step execution
   Tool Selection:      ordering, schema validation, completeness
-  Conflict Resolution: Arbiter, Ledger, audited edit flow
+  Conflict Resolution: OCC-backed write/edit flow
   Live Sandbox:        real Daytona execution
 
 Run with: pytest tests/test_e2e/test_daytona_tools_comprehensive.py -v
@@ -195,16 +194,14 @@ def _mock_edit_exec(command: str, file_store: dict[str, str]) -> tuple[str, int]
     if errors:
         return json.dumps({"ok": False, "file_path": file_path, "errors": errors}), 1
 
-    dry_run = "DAYTONA_EDIT_DRY_RUN=1" in command
-    if not dry_run:
-        file_store[file_path] = next_content
+    file_store[file_path] = next_content
 
     return (
         json.dumps(
             {
                 "ok": True,
                 "file_path": file_path,
-                "status": "dry_run" if dry_run else "edited",
+                "status": "edited",
                 "applied_edits": len(edits),
                 "warnings": [],
             }
@@ -273,12 +270,8 @@ def _assert_success(result) -> None:
     assert not result.is_error, result.output
 
 
-# NOTE: Core I/O tool tests (bash, read_file, write_file, grep, glob)
-# removed — focus is on Daytona-specific concerns: audited edits,
-# conflict resolution, tool selection/ordering.
-
 # ===========================================================================
-# 7. DaytonaEditTool — audited editing
+# 7. DaytonaEditTool — OCC-backed editing
 # ===========================================================================
 
 
@@ -307,26 +300,6 @@ class TestDaytonaEditTool:
         _assert_success(result)
         assert "edited" in result.output
         assert sandbox._file_store["/workspace/app.py"] == "def foo():\n    return 42"
-
-    def test_edit_dry_run(self):
-        sandbox = _make_mock_sandbox(files={"/workspace/app.py": "old_value = 1"})
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
-        tool = self._tool()
-        result = _run(
-            tool.execute(
-                tool.input_model(
-                    file_path="/workspace/app.py",
-                    old_text="old_value",
-                    new_text="new_value",
-                    dry_run=True,
-                ),
-                ctx,
-            )
-        )
-        _assert_success(result)
-        assert "dry_run" in result.output
-        # File should NOT be modified
-        assert sandbox._file_store["/workspace/app.py"] == "old_value = 1"
 
     def test_edit_first_occurrence_only(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "aaa\naaa\naaa"})
@@ -556,7 +529,7 @@ class TestDaytonaToolLive:
             labels={"purpose": "tools-e2e"},
         )
         # Get async sandbox — tools use `await sandbox.process.exec(...)` etc.
-        from sandbox.client.async_ import get_async_sandbox
+        from sandbox.providers.daytona.client.async_ import get_async_sandbox
 
         async_sb = _run(get_async_sandbox(sb["id"]))
         yield {"info": sb, "raw": async_sb}
@@ -817,94 +790,3 @@ class TestToolSelectionAndOrdering:
 
         schema = ShellTool.to_api_schema()["input_schema"]
         assert schema["oneOf"] == [{"required": ["command"]}, {"required": ["code"]}]
-
-
-# ===========================================================================
-
-class TestAuditedEditFlow:
-    """End-to-end audited edit flow via DaytonaEditTool with arbiter."""
-
-    def _make_audit_context(self, files: dict[str, str]):
-        """Create a context with mock sandbox + real arbiter."""
-        from sandbox.runtime.backends import DaemonBackend
-
-        sandbox = _make_mock_sandbox(files=files)
-        ci_service = DaemonBackend(
-            sandbox_id="audit-edit-test",
-            workspace_root="/ws",
-        )
-
-        ctx = _make_context(sandbox, ci_service=ci_service)
-        return ctx, sandbox, ci_service.arbiter
-
-    def _edit(self, ctx, file_path, old_text, new_text, **kwargs):
-        from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
-
-        return _run(
-            _edit_file.execute(
-                _edit_file.input_model(
-                    file_path=file_path,
-                    old_text=old_text,
-                    new_text=new_text,
-                    **kwargs,
-                ),
-                ctx,
-            )
-        )
-
-    def test_audited_edit_acquires_and_releases_lock(self):
-        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "x = 1"})
-        result = self._edit(ctx, "/ws/app.py", "x = 1", "x = 2")
-        _assert_success(result)
-        assert "edited" in result.output
-
-        # Lock should be released (can re-acquire)
-        assert arbiter.acquire_file_lock("/ws/app.py") is True
-        arbiter.release_file_lock("/ws/app.py")
-
-    def test_audited_edit_records_in_arbiter(self):
-        ctx, _, arbiter = self._make_audit_context({"/ws/app.py": "content"})
-        self._edit(ctx, "/ws/app.py", "content", "new")
-        assert arbiter.metrics.total_edits >= 1
-
-    def test_audited_edit_without_ci_returns_error(self):
-        """Coordinated edits must fail instead of raw-writing without CI."""
-        from tools.sandbox_toolkit.edit_file import edit_file as _edit_file
-
-        sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
-        ctx = _make_context(sandbox)  # no ci_service
-        ctx["agent_name"] = "developer"
-
-        result = _run(
-            _edit_file.execute(
-                _edit_file.input_model(file_path="/ws/app.py", old_text="old", new_text="new"),
-                ctx,
-            )
-        )
-        assert result.is_error
-        assert result.metadata["ci_required"] is True
-        assert "Code intelligence service is unavailable" in result.output
-        assert sandbox._file_store["/ws/app.py"] == "old"
-
-    def test_sequential_audited_edits_both_succeed(self):
-        """Two sequential edits to the same file should both succeed."""
-        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "a = 1\nb = 2"})
-
-        r1 = self._edit(ctx, "/ws/app.py", "a = 1", "a = 10")
-        _assert_success(r1)
-
-        r2 = self._edit(ctx, "/ws/app.py", "b = 2", "b = 20")
-        _assert_success(r2)
-
-        assert sandbox._file_store["/ws/app.py"] == "a = 10\nb = 20"
-        assert arbiter.metrics.total_edits == 2
-
-    def test_dry_run_does_not_acquire_lock(self):
-        """Dry run should preview without touching arbiter."""
-        ctx, sandbox, arbiter = self._make_audit_context({"/ws/app.py": "content"})
-
-        result = self._edit(ctx, "/ws/app.py", "content", "new", dry_run=True)
-        _assert_success(result)
-        assert "dry_run" in result.output
-        assert sandbox._file_store["/ws/app.py"] == "content"  # unchanged
-        assert arbiter.metrics.total_edits == 0

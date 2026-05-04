@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sandbox.client.sync import (
+from sandbox.providers.daytona.client.sync import (
     _APP_MANAGED_BY,
     _IMAGE_LABEL,
     _SNAPSHOT_LABEL,
@@ -113,7 +113,7 @@ class SandboxProxy:
         """Install git in the sandbox if missing."""
         try:
             from sandbox.api.raw_exec import raw_exec
-            from sandbox.client.async_bridge import run_sync
+            from sandbox.providers.daytona.client.async_bridge import run_sync
 
             logger.info("ensure_git(%s): probe starting", self.id)
             resp = run_sync(

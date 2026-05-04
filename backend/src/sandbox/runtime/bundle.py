@@ -18,7 +18,7 @@ import tarfile
 from pathlib import Path
 from typing import Protocol
 
-from sandbox.api.utils.models import RawExecResult
+from sandbox.api import RawExecResult
 from sandbox.api.raw_exec import raw_exec
 
 __all__ = [
@@ -38,8 +38,6 @@ _RUNTIME_EXCLUDE_PARTS = {
     "_server_dispatch.py",
     "backends",
     "command_client.py",
-    "registry.py",
-    "service.py",
 }
 _OCC_EXCLUDE_PARTS = {"client.py"}
 _OVERLAY_EXCLUDE_PARTS = {"client.py"}
@@ -144,16 +142,21 @@ def _runtime_bundle_bytes() -> bytes:
 
         _add_if_exists(
             tar,
-            sandbox_dir / "api" / "models.py",
-            arcname="sandbox/api/models.py",
+            sandbox_dir / "api" / "__init__.py",
+            arcname="sandbox/api/__init__.py",
+        )
+        _add_python_tree(
+            tar,
+            sandbox_dir / "api" / "utils",
+            sandbox_dir=sandbox_dir,
         )
 
-        client_dir = sandbox_dir / "client"
+        client_dir = sandbox_dir / "providers" / "daytona" / "client"
         for filename in ("__init__.py", "async_bridge.py"):
             _add_if_exists(
                 tar,
                 client_dir / filename,
-                arcname=f"sandbox/client/{filename}",
+                arcname=f"sandbox/providers/daytona/client/{filename}",
             )
 
         runtime_dir = sandbox_dir / "runtime"

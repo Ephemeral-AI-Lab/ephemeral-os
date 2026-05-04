@@ -260,7 +260,9 @@ def _shutdown_standalone_loop() -> None:
 
 async def _shutdown_standalone_loop_clients() -> None:
     try:
-        from sandbox.client.async_shutdown import shutdown_cached_client_async
+        from sandbox.providers.daytona.client.async_shutdown import (
+            shutdown_cached_client_async,
+        )
     except ImportError:
         return
 

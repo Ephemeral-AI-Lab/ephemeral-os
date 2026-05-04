@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.api.utils.models import RawExecResult
+from sandbox.api import RawExecResult
 from sandbox.runtime.bundle import BUNDLE_REMOTE_DIR
 from sandbox.runtime.setup_orchestrator import SetupRegistry, SetupScript
 

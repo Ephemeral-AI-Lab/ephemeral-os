@@ -10,7 +10,7 @@ class TestLoadCredentials:
         monkeypatch.setenv("DAYTONA_API_URL", "https://url-from-env")
         monkeypatch.setenv("DAYTONA_TARGET", "target-from-env")
 
-        from sandbox.client.credentials import load_credentials
+        from sandbox.providers.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "key-from-env"
@@ -39,7 +39,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.client.credentials import load_credentials
+        from sandbox.providers.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "key-from-settings"
@@ -66,7 +66,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.client.credentials import load_credentials
+        from sandbox.providers.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "env-key"
@@ -93,7 +93,7 @@ class TestLoadCredentials:
         monkeypatch.setitem(sys.modules, "config", fake_settings)
         monkeypatch.setitem(sys.modules, "config.settings", fake_settings)
 
-        from sandbox.client.credentials import load_credentials
+        from sandbox.providers.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == ""

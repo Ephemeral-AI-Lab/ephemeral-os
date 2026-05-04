@@ -20,7 +20,6 @@ import re
 import shlex
 import threading
 import uuid
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -222,12 +221,6 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
     assert shell_payload["status"] == "ok"
     stdout = shell_payload["stdout"]
     assert "VALUE = 'edited'" in stdout
-    counts = Counter(
-        str(getattr(item, "edit_type", "") or "")
-        for item in svc.arbiter.recent_edits(seconds=300)
-    )
-    assert {"write", "edit"}.issubset(counts)
-    assert counts["shell"] == 0
 
 
 def test_live_two_concurrent_same_file_overlap_has_single_winner(

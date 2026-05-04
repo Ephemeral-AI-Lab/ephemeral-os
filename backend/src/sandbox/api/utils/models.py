@@ -126,7 +126,6 @@ class ShellRequest:
     timeout: int | None = None
     stdin: str | None = None
     description: str = ""
-    attribute_changes: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)

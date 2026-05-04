@@ -65,7 +65,7 @@ async def shutdown_cached_client_async() -> None:
     the client before ``asyncio.run`` tears down the loop that owns aiohttp's
     underlying sessions, avoiding unclosed-session warnings at interpreter exit.
     """
-    from sandbox.client import async_ as async_client_mod
+    from sandbox.providers.daytona.client import async_ as async_client_mod
 
     running_loop = asyncio.get_running_loop()
     active_loop_clients: list[Any] = []
@@ -84,7 +84,7 @@ async def shutdown_cached_client_async() -> None:
 
 
 def shutdown_cached_client() -> None:
-    from sandbox.client import async_ as async_client_mod
+    from sandbox.providers.daytona.client import async_ as async_client_mod
 
     with async_client_mod._client_lock:
         clients = [client for _, client in async_client_mod._cached_clients.values()]

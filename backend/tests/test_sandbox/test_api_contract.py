@@ -41,7 +41,7 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.occ.changeset.types",
         "sandbox.occ.client",
     },
-    "shell.py": {"sandbox.overlay.client"},
+    "shell.py": set(),
 }
 _FORBIDDEN_FOR_MODELS = (
     "sandbox.providers",
@@ -134,6 +134,11 @@ def test_legacy_api_modules_are_deleted() -> None:
         "sandbox.api.models",
         "sandbox.api.shell_routing",
         "sandbox.api.transport",
+        "sandbox.client.async_",
+        "sandbox.client.async_bridge",
+        "sandbox.client.async_shutdown",
+        "sandbox.client.credentials",
+        "sandbox.client.sync",
         "sandbox.daytona.transport",
         "tools.core.op_result_to_tool_result",
     ):

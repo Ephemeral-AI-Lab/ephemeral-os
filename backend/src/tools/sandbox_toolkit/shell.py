@@ -186,7 +186,6 @@ async def shell(
                 timeout=timeout,
                 actor=actor_from_context(context),
                 description="shell",
-                attribute_changes=True,
             ),
         )
     except Exception as exc:

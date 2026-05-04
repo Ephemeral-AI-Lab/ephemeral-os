@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
-from sandbox.client.async_ import get_async_sandbox
+from sandbox.providers.daytona.client.async_ import get_async_sandbox
 from sandbox.runtime.bash import wrap_bash_command
 
 from benchmarks.sweevo.dataset import (
@@ -247,21 +247,6 @@ async def _upload_file_compat(
     if not callable(upload_fn):
         raise RuntimeError("Sandbox text upload transport is unavailable")
     await upload_fn(content, path)
-
-
-def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
-    """Dispose code intelligence for a sandbox, logging debug on failure."""
-    try:
-        from sandbox.lifecycle.service import SandboxService
-
-        SandboxService().dispose_code_intelligence(sandbox_id)
-    except Exception:
-        logger.debug(
-            "CI disposal skipped after %s for sandbox %s",
-            context,
-            sandbox_id,
-            exc_info=True,
-        )
 
 
 def _is_transient_sandbox_exec_error(exc: Exception) -> bool:
@@ -604,9 +589,6 @@ async def ensure_sweevo_test_patch(
             instance.instance_id,
             patch_status[:300],
         )
-
-    _dispose_code_intelligence_quietly(sandbox_id, "test patch")
-
 
 async def create_sweevo_test_sandbox(
     instance: SWEEvoInstance,
