@@ -14,26 +14,20 @@ def _occ_root() -> Path:
 def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
     expected = {
         "__init__.py",
-        "bootstrap.py",
         "changeset",
         "client.py",
-        "content",
-        # Legacy live-root apply modules remain until the Phase 06 cutover.
-        "direct",
-        "gated",
-        "handlers",
         "merge",
-        "orchestrator.py",
-        "patching",
         "routing",
         "runtime_ops.py",
-        "setup.sh",
         "service.py",
-        "wire.py",
     }
 
     ignored = {"__pycache__", ".DS_Store"}
-    actual = {path.name for path in _occ_root().iterdir() if path.name not in ignored}
+    actual = {
+        path.name
+        for path in _occ_root().iterdir()
+        if path.name not in ignored and not _generated_only_dir(path)
+    }
 
     assert actual == expected
 
@@ -48,3 +42,9 @@ def test_occ_does_not_import_code_intelligence_or_overlay() -> None:
                 hits.append((path.relative_to(_occ_root()), token))
 
     assert hits == []
+
+
+def _generated_only_dir(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    return all(child.name in {"__pycache__", ".DS_Store"} for child in path.iterdir())

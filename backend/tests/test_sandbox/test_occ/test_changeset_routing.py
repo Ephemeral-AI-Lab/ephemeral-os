@@ -6,8 +6,8 @@ import asyncio
 
 from sandbox.occ.changeset.prepared import ChangesetOptions, RouteDecision
 from sandbox.occ.changeset.types import (
-    BinaryChange,
     EditChange,
+    SymlinkChange,
     WriteChange,
 )
 from sandbox.occ.routing.router import ChangeRouter
@@ -59,7 +59,7 @@ def test_direct_change_kinds_stay_direct_without_gitignore_lookup() -> None:
     router = ChangeRouter(gitignore)
     prepared = asyncio.run(
         router.prepare(
-            [BinaryChange(path="bin/data.dat", final_bytes=b"\0")],
+            [SymlinkChange(path="bin/data.dat", target="/tmp/data")],
             snapshot=None,
             options=ChangesetOptions(),
         )

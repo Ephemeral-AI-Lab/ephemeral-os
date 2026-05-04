@@ -30,9 +30,9 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.occ.client",
     },
     "edit.py": {
+        "sandbox.occ.changeset.builders",
         "sandbox.occ.changeset.types",
         "sandbox.occ.client",
-        "sandbox.occ.patching.patcher",
     },
     "shell.py": {"sandbox.overlay.client", "sandbox.overlay.types"},
 }
