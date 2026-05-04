@@ -1,9 +1,8 @@
-"""Shared fixtures and probes for live per-call snapshot experiments.
+"""Shared fixtures and probes for per-call snapshot layer-stack experiments.
 
-These tests intentionally use a real Daytona sandbox and raw
-``sandbox.process.exec`` as the live substrate. Production layer-stack/OCC
-binding tests are marked xfail until the typed sandbox API is wired to real
-Daytona sandboxes.
+The experiments exercise the public ``sandbox.api`` verbs against the same
+OCC + overlay binding used by production tool calls. Raw provider exec stays
+out of the test path except where lower-level lifecycle tests cover it directly.
 """
 
 from __future__ import annotations
@@ -16,10 +15,18 @@ import shlex
 import textwrap
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Iterable
 
 import pytest
+
+from sandbox.api import SearchReplaceEdit
+from sandbox.control.ops.runtime_services import (
+    RemoteRuntimeServiceBinding,
+    ShellBatchCall,
+    create_remote_runtime_services,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +37,20 @@ class LiveExecResult:
     stdout: str
     exit_code: int
     elapsed_ms: float
+    success: bool = True
+    stderr: str = ""
+    status: str = ""
+    changed_paths: tuple[str, ...] = ()
+    conflict_reason: str | None = None
+    timings: dict[str, float] | None = None
     error: str | None = None
 
 
-@dataclass(frozen=True)
-class LiveSnapshotSandbox:
-    sandbox_id: str
-    sandbox: Any
+LiveSnapshotSandbox = RemoteRuntimeServiceBinding
+
+
+def barrier_overlay(env: LiveSnapshotSandbox, *, parties: int):
+    return env.barrier_overlay(parties=parties)
 
 
 def full_experiment_enabled() -> bool:
@@ -68,8 +82,8 @@ def _daytona_configured() -> bool:
     return bool(api_key and api_url)
 
 
-@pytest.fixture(scope="session")
-def live_snapshot_sandbox_info() -> dict[str, Any]:
+@pytest.fixture()
+def daytona_snapshot_sandbox_info() -> dict[str, object]:
     if not _daytona_configured():
         pytest.skip("Daytona credentials are not configured")
 
@@ -78,21 +92,41 @@ def live_snapshot_sandbox_info() -> dict[str, Any]:
 
     bootstrap_daytona_provider()
     info = create_test_sandbox("per-call-snapshot-live")
-    print_live_metric("sandbox.created", sandbox_id=info["id"])
+    sandbox_id = str(info["id"])
+    env = create_remote_runtime_services(
+        sandbox_id=sandbox_id,
+        layer_stack_root=f"/tmp/eos-layer-stack-{uuid.uuid4().hex[:8]}",
+    )
+    print_live_metric(
+        "sandbox.created",
+        backend="daytona",
+        sandbox_id=sandbox_id,
+        layer_stack_root=env.layer_stack_root,
+    )
     try:
-        yield info
+        yield {"id": sandbox_id, "env": env}
     finally:
-        delete_test_sandbox(str(info["id"]))
-        print_live_metric("sandbox.deleted", sandbox_id=info["id"])
+        try:
+            delete_test_sandbox(sandbox_id)
+        finally:
+            env.dispose()
+            print_live_metric("sandbox.deleted", backend="daytona", sandbox_id=sandbox_id)
 
 
 @pytest.fixture()
-async def live_snapshot_sandbox(live_snapshot_sandbox_info: dict[str, Any]) -> LiveSnapshotSandbox:
-    from sandbox.providers.daytona.client.async_ import get_async_sandbox
+def live_snapshot_sandbox_info(
+    request: pytest.FixtureRequest,
+) -> dict[str, object]:
+    yield request.getfixturevalue("daytona_snapshot_sandbox_info")
 
-    sandbox_id = str(live_snapshot_sandbox_info["id"])
-    sandbox = await get_async_sandbox(sandbox_id)
-    return LiveSnapshotSandbox(sandbox_id=sandbox_id, sandbox=sandbox)
+
+@pytest.fixture()
+async def live_snapshot_sandbox(
+    live_snapshot_sandbox_info: dict[str, object],
+) -> LiveSnapshotSandbox:
+    env = live_snapshot_sandbox_info["env"]
+    assert isinstance(env, RemoteRuntimeServiceBinding)
+    return env
 
 
 async def run_live_command(
@@ -102,10 +136,16 @@ async def run_live_command(
     timeout: int = 60,
     label: str,
 ) -> LiveExecResult:
-    wrapped = f"env LC_ALL=C LANG=C bash -lc {shlex.quote(command)}"
+    api_command = f"export LC_ALL=C LANG=C; {command}"
     start = time.monotonic()
     try:
-        response = await env.sandbox.process.exec(wrapped, timeout=timeout)
+        response = await env.shell(
+            command=api_command,
+            timeout=timeout,
+            cwd=".",
+            actor=env.actor(label),
+            description=label,
+        )
     except Exception as exc:
         elapsed_ms = (time.monotonic() - start) * 1000
         result = LiveExecResult(
@@ -113,10 +153,11 @@ async def run_live_command(
             stdout="",
             exit_code=-99,
             elapsed_ms=elapsed_ms,
+            success=False,
             error=str(exc)[:500],
         )
         print_live_metric(
-            "live.exec",
+            "sandbox.api.shell",
             label=label,
             exit_code=result.exit_code,
             elapsed_ms=round(elapsed_ms, 2),
@@ -125,27 +166,120 @@ async def run_live_command(
         return result
 
     elapsed_ms = (time.monotonic() - start) * 1000
-    stdout = str(getattr(response, "result", "") or "")
     result = LiveExecResult(
         command=command,
-        stdout=stdout,
-        exit_code=int(getattr(response, "exit_code", 0) or 0),
+        stdout=response.stdout,
+        stderr=response.stderr,
+        exit_code=response.exit_code,
         elapsed_ms=elapsed_ms,
+        success=response.success and response.exit_code == 0,
+        status=response.status,
+        changed_paths=tuple(response.changed_paths),
+        conflict_reason=response.conflict_reason,
+        timings=dict(response.timings),
     )
     print_live_metric(
-        "live.exec",
+        "sandbox.api.shell",
         label=label,
         exit_code=result.exit_code,
+        success=result.success,
+        status=result.status,
+        changed_paths=list(result.changed_paths),
+        conflict_reason=result.conflict_reason,
         elapsed_ms=round(elapsed_ms, 2),
         stdout_tail=result.stdout[-300:],
+        stderr_tail=result.stderr[-300:],
     )
     return result
 
 
+async def run_live_commands(
+    env: LiveSnapshotSandbox,
+    commands: Sequence[str],
+    *,
+    timeout: int = 60,
+    label: str,
+    labels: Sequence[str] | None = None,
+    max_concurrency: int = 32,
+) -> list[LiveExecResult]:
+    item_labels = list(labels or ())
+    if not item_labels:
+        item_labels = [f"{label}.{index}" for index in range(len(commands))]
+    if len(item_labels) != len(commands):
+        raise ValueError("labels must match commands")
+
+    api_commands = [f"export LC_ALL=C LANG=C; {command}" for command in commands]
+    start = time.monotonic()
+    try:
+        responses = await env.shell_batch(
+            [
+                ShellBatchCall(
+                    command=api_command,
+                    timeout=timeout,
+                    cwd=".",
+                    actor=env.actor(item_label),
+                    description=item_label,
+                )
+                for api_command, item_label in zip(api_commands, item_labels)
+            ],
+            max_concurrency=max_concurrency,
+        )
+    except Exception as exc:
+        elapsed_ms = (time.monotonic() - start) * 1000
+        error = str(exc)[:500]
+        print_live_metric(
+            "sandbox.api.shell_batch",
+            label=label,
+            total=len(commands),
+            elapsed_ms=round(elapsed_ms, 2),
+            error=error,
+        )
+        return [
+            LiveExecResult(
+                command=command,
+                stdout="",
+                exit_code=-99,
+                elapsed_ms=elapsed_ms,
+                success=False,
+                error=error,
+            )
+            for command in commands
+        ]
+
+    elapsed_ms = (time.monotonic() - start) * 1000
+    results = [
+        LiveExecResult(
+            command=command,
+            stdout=response.stdout,
+            stderr=response.stderr,
+            exit_code=response.exit_code,
+            elapsed_ms=elapsed_ms,
+            success=response.success and response.exit_code == 0,
+            status=response.status,
+            changed_paths=tuple(response.changed_paths),
+            conflict_reason=response.conflict_reason,
+            timings=dict(response.timings),
+        )
+        for command, response in zip(commands, responses)
+    ]
+    print_live_metric(
+        "sandbox.api.shell_batch",
+        label=label,
+        total=len(commands),
+        successes=sum(1 for result in results if result.success),
+        failures=sum(1 for result in results if not result.success),
+        elapsed_ms=round(elapsed_ms, 2),
+        max_concurrency=max_concurrency,
+    )
+    return results
+
+
 def assert_success(result: LiveExecResult) -> None:
-    assert result.exit_code == 0, (
-        f"command failed with exit={result.exit_code} error={result.error}\n"
+    assert result.success and result.exit_code == 0, (
+        f"command failed with exit={result.exit_code} status={result.status} "
+        f"conflict={result.conflict_reason} error={result.error}\n"
         f"stdout tail:\n{result.stdout[-2000:]}"
+        f"\nstderr tail:\n{result.stderr[-2000:]}"
     )
 
 
@@ -177,17 +311,75 @@ async def require_commands(env: LiveSnapshotSandbox, *names: str) -> None:
         timeout=30,
         label="require_commands:" + ",".join(names),
     )
-    if result.exit_code != 0:
-        missing = ", ".join(line.strip() for line in result.stdout.splitlines() if line.strip())
+    if not result.success or result.exit_code != 0:
+        missing = ", ".join(
+            line.strip() for line in result.stdout.splitlines() if line.strip()
+        )
         pytest.skip(f"live sandbox image is missing required command(s): {missing}")
 
 
 async def make_workdir(env: LiveSnapshotSandbox, prefix: str) -> str:
     safe_prefix = "".join(ch for ch in prefix if ch.isalnum() or ch in "-_")
-    command = f"mktemp -d /tmp/eos_{safe_prefix}_{uuid.uuid4().hex[:8]}_XXXXXX"
-    result = await run_live_command(env, command, timeout=30, label=f"{prefix}.mktemp")
+    workdir = f"work/{safe_prefix}_{uuid.uuid4().hex[:8]}"
+    result = await run_live_command(
+        env,
+        (
+            f"mkdir -p {shlex.quote(workdir)} && "
+            f": > {shlex.quote(workdir)}/.eos_keep && "
+            f"printf '%s\\n' {shlex.quote(workdir)}"
+        ),
+        timeout=30,
+        label=f"{prefix}.mkdir",
+    )
     assert_success(result)
-    return result.stdout.strip().splitlines()[-1]
+    return workdir
+
+
+async def write_live_file(
+    env: LiveSnapshotSandbox,
+    path: str,
+    content: str,
+    *,
+    label: str,
+) -> None:
+    result = await env.write_file(
+        path=path,
+        content=content,
+        actor=env.actor(label),
+        description=label,
+    )
+    assert result.success, result.conflict_reason
+
+
+async def edit_live_file(
+    env: LiveSnapshotSandbox,
+    path: str,
+    *,
+    old_text: str,
+    new_text: str,
+    label: str,
+) -> None:
+    result = await env.edit_file(
+        path=path,
+        edits=(SearchReplaceEdit(old_text=old_text, new_text=new_text),),
+        actor=env.actor(label),
+        description=label,
+    )
+    assert result.success, result.conflict_reason
+
+
+async def read_live_file(env: LiveSnapshotSandbox, path: str, *, label: str) -> str:
+    result = await env.read_file(path=path, actor=env.actor(label))
+    assert result.success and result.exists
+    return result.content
+
+
+def mark_ignored(env: LiveSnapshotSandbox, paths: Sequence[str]) -> None:
+    env.mark_ignored(paths)
+
+
+async def pinned_layers(env: LiveSnapshotSandbox) -> tuple[str, ...]:
+    return await env.pinned_layers()
 
 
 def p95_ms(samples: Iterable[float]) -> float:
@@ -204,13 +396,6 @@ def _percentile(samples: Iterable[float], q: int) -> float:
         return 0.0
     index = min(len(values) - 1, max(0, math.ceil(len(values) * (q / 100)) - 1))
     return values[index]
-
-
-def xfail_production_binding_missing(experiment: str) -> None:
-    pytest.xfail(
-        f"{experiment}: production sandbox.api layer-stack/OCC live binding is not wired "
-        "to real Daytona sandboxes yet"
-    )
 
 
 def overlay_probe_command(
@@ -282,9 +467,9 @@ def unmount_overlay(target):
 
 def build_layers(root, depth):
     layers = []
-    layer_root = root / "layers"
+    layer_root = root / "l"
     for index in range(depth):
-        layer = layer_root / f"l{index}"
+        layer = layer_root / f"{index:x}"
         layer.mkdir(parents=True, exist_ok=True)
         if index == 0:
             (layer / "base.txt").write_text("base\n", encoding="utf-8")
@@ -318,19 +503,24 @@ def read_tree(merged):
 
 
 def run_depth(depth):
-    root = pathlib.Path(tempfile.mkdtemp(prefix=f"eos_overlay_depth_{depth}_"))
+    root = pathlib.Path(f"/tmp/o{os.getpid() % 4096:x}{depth:x}")
     mount_samples = []
     read_passes = []
     tmpfs_mounted = False
+    lowerdir_len = 0
     try:
+        shutil.rmtree(root, ignore_errors=True)
+        root.mkdir(parents=True)
         mount_tmpfs(root)
         tmpfs_mounted = True
         layers = build_layers(root, depth)
         lowerdir = ":".join(str(layer) for layer in reversed(layers))
+        lowerdir_len = len(lowerdir)
         for iteration in range(ITERATIONS):
-            upper = root / f"upper_{iteration}"
-            work = root / f"work_{iteration}"
-            merged = root / f"merged_{iteration}"
+            iteration_id = f"{iteration:x}"
+            upper = root / f"u{iteration_id}"
+            work = root / f"w{iteration_id}"
+            merged = root / f"m{iteration_id}"
             upper.mkdir()
             work.mkdir()
             merged.mkdir()
@@ -357,6 +547,7 @@ def run_depth(depth):
             "mount_p99_ms": percentile(mount_samples, 99),
             "mount_samples_ms": mount_samples,
             "read_passes": read_passes,
+            "lowerdir_len": lowerdir_len,
             "error": None,
         }
     except BaseException as exc:
@@ -365,6 +556,7 @@ def run_depth(depth):
             "iterations": ITERATIONS,
             "mount_samples_ms": mount_samples,
             "read_passes": read_passes,
+            "lowerdir_len": lowerdir_len,
             "error": f"{type(exc).__name__}: {exc}",
             "traceback": traceback.format_exc(limit=5),
         }

@@ -37,6 +37,8 @@ BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
 _RUNTIME_EXCLUDE_PARTS = {
     "backends",
     "pipeline.py",
+    "testing.py",
+    "transaction.py",
 }
 _OCC_EXCLUDE_PARTS = {"client.py"}
 _OVERLAY_EXCLUDE_PARTS = {"client.py"}

@@ -2,20 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-from .conftest import run_live_command, xfail_production_binding_missing
+from .conftest import pinned_layers, run_live_command
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 
 
-async def test_e12_process_exec_timeout_is_not_layer_lease_enforcement(live_snapshot_sandbox):
+async def test_e12_api_shell_timeout_releases_snapshot_lease(live_snapshot_sandbox):
     result = await run_live_command(
         live_snapshot_sandbox,
         "sleep 5",
         timeout=1,
-        label="e12.process_timeout",
+        label="e12.api_shell_timeout",
     )
-    assert result.exit_code != 0 or result.error
-
-
-async def test_e12_production_lease_budget_contract_required():
-    xfail_production_binding_missing("E12 lease budget enforcement")
+    assert not result.success or result.error
+    assert await pinned_layers(live_snapshot_sandbox) == ()

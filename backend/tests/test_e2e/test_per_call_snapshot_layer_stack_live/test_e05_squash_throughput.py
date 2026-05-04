@@ -10,7 +10,6 @@ from .conftest import (
     print_live_metric,
     python_json_command,
     run_live_command,
-    xfail_production_binding_missing,
 )
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
@@ -46,7 +45,3 @@ async def test_e05_live_append_rate_measurement(live_snapshot_sandbox):
     print_live_metric("e05.summary", **payload)
     assert payload["writes"] == writes
     assert payload["writes_per_s"] > 50
-
-
-async def test_e05_production_squash_worker_contract_required():
-    xfail_production_binding_missing("E5 squash throughput vs append rate")

@@ -7,8 +7,8 @@ import pytest
 from .conftest import (
     assert_success,
     make_workdir,
+    pinned_layers,
     run_live_command,
-    xfail_production_binding_missing,
 )
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
@@ -54,7 +54,4 @@ async def test_e06_long_shell_survives_unrelated_file_churn(live_snapshot_sandbo
     assert_success(long_result)
     assert_success(churn_result)
     assert "stable" in long_result.stdout
-
-
-async def test_e06_production_layer_gc_refcount_contract_required():
-    xfail_production_binding_missing("E6 layer GC under contention")
+    assert await pinned_layers(live_snapshot_sandbox) == ()

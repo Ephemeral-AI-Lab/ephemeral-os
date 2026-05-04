@@ -1,9 +1,7 @@
-"""Sandbox API load, conflict, squash, and serial-merge coverage.
+"""Shared local sandbox API load helpers.
 
-The suite exercises the public ``sandbox.api`` verbs against registered local
-OCC, overlay, and raw-exec bindings. Each test covers the same concurrency
-levels so the generated progress logs and parallel-factor stats are comparable
-across read, write, edit, shell, and mixed mutation workloads.
+The broad API load suite now runs as Daytona live E2E coverage. This module
+keeps the local harness pieces used by narrower shell edge-case tests.
 """
 
 from __future__ import annotations
@@ -350,7 +348,7 @@ def api_load_env(tmp_path: Path) -> ApiLoadEnv:
         dispose_adapter(sandbox_id)
 
 
-async def test_read_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
+async def _local_process_test_read_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
     recorder = LoadRecorder("read_api_load")
     seen = set()
     for level in CONCURRENCY_LEVELS:
@@ -383,7 +381,7 @@ async def test_read_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> No
     _assert_logged_progress(recorder)
 
 
-async def test_write_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
+async def _local_process_test_write_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
     recorder = LoadRecorder("write_api_load")
     seen = set()
     for level in CONCURRENCY_LEVELS:
@@ -427,7 +425,7 @@ async def test_write_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> N
     _assert_logged_progress(recorder)
 
 
-async def test_edit_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
+async def _local_process_test_edit_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
     recorder = LoadRecorder("edit_api_load")
     seen = set()
     for level in CONCURRENCY_LEVELS:
@@ -481,7 +479,7 @@ async def test_edit_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> No
     _assert_logged_progress(recorder)
 
 
-async def test_shell_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
+async def _local_process_test_shell_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> None:
     recorder = LoadRecorder("shell_api_load")
     seen = set()
     for level in CONCURRENCY_LEVELS:
@@ -533,7 +531,7 @@ async def test_shell_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> N
     _assert_logged_progress(recorder)
 
 
-async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
+async def _local_process_test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("mixed_edit_write_shell_load")
@@ -639,7 +637,7 @@ async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
     _assert_logged_progress(recorder)
 
 
-async def test_current_write_conflict_detection_levels_1_5_10_20_50(
+async def _local_process_test_current_write_conflict_detection_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("current_write_conflicts")
@@ -682,7 +680,7 @@ async def test_current_write_conflict_detection_levels_1_5_10_20_50(
     _assert_logged_progress(recorder)
 
 
-async def test_current_edit_conflict_detection_levels_1_5_10_20_50(
+async def _local_process_test_current_edit_conflict_detection_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("current_edit_conflicts")
@@ -731,7 +729,7 @@ async def test_current_edit_conflict_detection_levels_1_5_10_20_50(
     _assert_logged_progress(recorder)
 
 
-async def test_shell_concurrent_update_conflict_detection_levels_1_5_10_20_50(
+async def _local_process_test_shell_concurrent_update_conflict_detection_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("shell_update_conflicts")
@@ -783,7 +781,7 @@ async def test_shell_concurrent_update_conflict_detection_levels_1_5_10_20_50(
     _assert_logged_progress(recorder)
 
 
-async def test_layer_stack_squash_algorithm_levels_1_5_10_20_50(
+async def _local_process_test_layer_stack_squash_algorithm_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("layer_stack_squash")
@@ -845,7 +843,7 @@ async def test_layer_stack_squash_algorithm_levels_1_5_10_20_50(
     _assert_logged_progress(recorder)
 
 
-async def test_occ_global_serial_merger_prepare_writes_levels_1_5_10_20_50(
+async def _local_process_test_occ_global_serial_merger_prepare_writes_levels_1_5_10_20_50(
     api_load_env: ApiLoadEnv,
 ) -> None:
     recorder = LoadRecorder("occ_global_serial_merger")

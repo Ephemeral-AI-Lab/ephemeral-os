@@ -55,6 +55,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/utils/__init__.py",
         "sandbox/api/utils/models.py",
         "sandbox/bash.py",
+        "sandbox/runtime/api_handlers.py",
         "sandbox/runtime/async_bridge.py",
         "sandbox/runtime/server.py",
         "sandbox/runtime/overlay_shell/__init__.py",
@@ -128,6 +129,8 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
         "sandbox/control/daemon/command.py",
         "sandbox/control/daemon/install.py",
         "sandbox/runtime/overlay_shell/pipeline.py",
+        "sandbox/runtime/overlay_shell/testing.py",
+        "sandbox/runtime/overlay_shell/transaction.py",
     }
     assert excluded.isdisjoint(names)
     assert all(not name.startswith("sandbox/providers/") for name in names)

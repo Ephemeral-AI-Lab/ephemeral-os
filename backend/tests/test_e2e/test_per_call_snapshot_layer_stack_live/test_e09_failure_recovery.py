@@ -9,7 +9,6 @@ from .conftest import (
     print_live_metric,
     python_json_command,
     run_live_command,
-    xfail_production_binding_missing,
 )
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
@@ -50,7 +49,3 @@ async def test_e09_write_then_rename_recovery_oracle(live_snapshot_sandbox):
     print_live_metric("e09.summary", **payload)
     assert payload["dangling"] == []
     assert payload["leaked_partials"] == ["layer_0002.partial"]
-
-
-async def test_e09_production_crash_recovery_contract_required():
-    xfail_production_binding_missing("E9 squash/mid-commit crash recovery")

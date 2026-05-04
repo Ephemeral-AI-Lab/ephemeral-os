@@ -60,12 +60,14 @@ async def test_e14_production_image_records_runtime_contract(live_snapshot_sandb
     commands = payload["commands"]
     required = ["bash", "python3", "find", "du", "mktemp", "stat", "rm"]
     missing_required = [name for name in required if not commands[name]["path"]]
-    missing_experiment = [name for name in ["unshare", "git", "mount"] if not commands[name]["path"]]
+    missing_experiment = [name for name in ["unshare", "mount"] if not commands[name]["path"]]
+    missing_optional = [name for name in ["git"] if not commands[name]["path"]]
     print_live_metric(
         "e14.summary",
         kernel=payload["kernel"],
         missing_required=missing_required,
         missing_experiment=missing_experiment,
+        missing_optional=missing_optional,
         commands=commands,
     )
     assert not missing_required
