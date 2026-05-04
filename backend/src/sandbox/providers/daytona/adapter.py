@@ -54,5 +54,11 @@ class DaytonaProviderAdapter:
     async def _resolve(self, sandbox_id: str) -> Any:
         return await self._resolver(sandbox_id)
 
+    def context_preparer(self, sandbox_id: str) -> Any:
+        """Return the daytona-specific context preparer for *sandbox_id*."""
+        from sandbox.providers.daytona.context import DaytonaContextPreparer
+
+        return DaytonaContextPreparer(sandbox_id)
+
 
 __all__ = ["DaytonaProviderAdapter", "_EXIT_MARKER", "_extract_exit_code", "_wrap_bash_command"]

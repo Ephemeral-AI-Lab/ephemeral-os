@@ -34,6 +34,7 @@ def _is_allowlisted(path: Path) -> bool:
         or path == Path("sandbox/api/shell.py")
         or path == Path("sandbox/control/daemon/bundle.py")
         or path == Path("sandbox/control/daemon/install.py")
+        or path == Path("sandbox/control/ops/git.py")
         or path in {
             Path("sandbox/providers/daytona/lifecycle.py"),
             Path("sandbox/providers/daytona/proxy.py"),

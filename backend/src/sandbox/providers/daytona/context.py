@@ -50,13 +50,13 @@ class DaytonaContextPreparer:
 
     @staticmethod
     def _resolve_cwd_sync(sandbox: Any) -> str | None:
-        from sandbox.lifecycle.workspace import discover_workspace
+        from sandbox.control.ops.workspace import discover_workspace
 
         return discover_workspace(sandbox)
 
     @staticmethod
     async def _resolve_cwd_async(sandbox: Any) -> str | None:
-        from sandbox.lifecycle.workspace import discover_workspace_async
+        from sandbox.control.ops.workspace import discover_workspace_async
 
         return await discover_workspace_async(sandbox)
 
@@ -96,7 +96,7 @@ def prepare_daytona_runtime_context(
     if sandbox is not None:
         context["daytona_sandbox"] = sandbox
 
-    from sandbox.lifecycle.workspace import prepare_sandbox_runtime_context
+    from sandbox.control.ops.workspace import prepare_sandbox_runtime_context
 
     prepare_sandbox_runtime_context(
         context,

@@ -63,19 +63,6 @@ class ProviderAdapter(Protocol):
     ) -> "RawExecResult": ...
 
 
-class SandboxContextPreparer(Protocol):
-    """Provider-owned context hook used by agent runtime setup.
-
-    Will move to :mod:`sandbox.control.ops.context` in a follow-up step. Kept
-    here for now so :mod:`sandbox.lifecycle.context` (still alive as a
-    transitional shim) keeps importing this from a stable location.
-    """
-
-    def prepare_context(self, context: Any) -> None: ...
-    async def prepare_context_async(self, context: Any) -> None: ...
-
-
 __all__ = [
     "ProviderAdapter",
-    "SandboxContextPreparer",
 ]

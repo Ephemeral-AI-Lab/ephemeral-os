@@ -1,11 +1,28 @@
-"""Daytona sandbox lifecycle orchestration."""
+"""Daytona sandbox lifecycle orchestration (transitional shim).
+
+S3 will shrink the public ``DaytonaProviderAdapter`` to the primitive surface
+and replace this class with that adapter; S5 deletes ``DaytonaSandboxLifecycle``
+and ``SandboxProxy`` once every caller has migrated to ``sandbox.api.lifecycle``.
+
+For now, the class continues to back the ``lifecycle_provider_for`` shim used
+by routers / fixtures / benchmarks. Orchestration helpers (eager bundle
+upload, ensure_git) come from :mod:`sandbox.control.ops`; this module no
+longer redefines them locally.
+"""
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 from typing import Any
 
+from sandbox.control.ops.git import ensure_git as _ensure_git
+from sandbox.control.ops.setup import (
+    finish_eager_runtime_bundle_upload,
+    maybe_run_eager_runtime_bootstrap,
+    maybe_start_eager_runtime_bundle_upload,
+)
+from sandbox.control.ops.workspace import _sandbox_project_root
+from sandbox.providers.daytona.client.credentials import load_credentials
 from sandbox.providers.daytona.client.sync import (
     _APP_CREATED_VIA,
     _APP_MANAGED_BY,
@@ -21,14 +38,7 @@ from sandbox.providers.daytona.client.sync import (
     acquire_client,
     fetch_sandbox,
 )
-from sandbox.lifecycle.workspace import (
-    _sandbox_runtime_bootstrap_enabled,
-    _sandbox_project_root,
-    bootstrap_in_sandbox_runtime,
-    bootstrap_upload_runtime_bundle,
-)
 from sandbox.providers.daytona.proxy import SandboxProxy
-from sandbox.providers.daytona.client.credentials import load_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -60,118 +70,6 @@ def _dispose_provider_adapter(sandbox_id: str) -> None:
     except Exception:
         logger.debug(
             "Provider adapter disposal failed for sandbox %s",
-            sandbox_id,
-            exc_info=True,
-        )
-
-
-def _maybe_run_eager_runtime_bootstrap(raw_sandbox: Any, sandbox_id: str) -> None:
-    """Best-effort eager runtime bootstrap on ``create``/``start``.
-
-    No-op when the runtime bootstrap flag is unset. Uses the registered
-    provider adapter and the workspace from :func:`_sandbox_project_root`.
-    Bootstrap failures intentionally propagate so the caller sees the runtime
-    setup error.
-    """
-    if not _sandbox_runtime_bootstrap_enabled():
-        return
-    workspace_root = _sandbox_project_root(raw_sandbox) or ""
-    if not workspace_root:
-        logger.debug(
-            "eager sandbox-runtime bootstrap skipped for sandbox %s: "
-            "no project_dir on handle",
-            sandbox_id,
-        )
-        return
-
-    from sandbox.runtime.async_bridge import run_sync
-
-    run_sync(
-        bootstrap_in_sandbox_runtime(
-            sandbox_id=sandbox_id,
-            workspace_root=workspace_root,
-        )
-    )
-
-
-_BUNDLE_UPLOAD_THREAD_PREFIX = "eos-runtime-upload"
-_BUNDLE_UPLOAD_JOIN_TIMEOUT_S = 60.0
-
-
-def _maybe_start_eager_runtime_bundle_upload(
-    raw_sandbox: Any, sandbox_id: str
-) -> concurrent.futures.Future[None] | None:
-    """Kick off the runtime-bundle upload in a background thread.
-
-    Designed to overlap with the ~7 s ``sb.ensure_git()`` step in the create
-    pipeline. Returns a future the caller MUST drain via
-    :func:`_finish_eager_runtime_bundle_upload` before invoking
-    :func:`_maybe_run_eager_runtime_bootstrap`. Returns ``None`` when the
-    background path is not enabled — same gating as the sequential
-    bootstrap (flag off, no project_dir).
-
-    Best-effort by design: the matching join helper swallows errors and
-    timeouts so the sequential bootstrap can retry from scratch.
-    """
-    if not _sandbox_runtime_bootstrap_enabled():
-        return None
-    workspace_root = _sandbox_project_root(raw_sandbox) or ""
-    if not workspace_root or not sandbox_id:
-        return None
-
-    from sandbox.runtime.async_bridge import run_sync
-
-    def _do_upload() -> None:
-        run_sync(
-            bootstrap_upload_runtime_bundle(
-                sandbox_id=sandbox_id,
-                workspace_root=workspace_root,
-            )
-        )
-
-    pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=1, thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
-    )
-    try:
-        future = pool.submit(_do_upload)
-    finally:
-        # The pool is single-shot; shutdown(wait=False) lets the worker
-        # finish without keeping the executor alive.
-        pool.shutdown(wait=False)
-    return future
-
-
-def _finish_eager_runtime_bundle_upload(
-    future: concurrent.futures.Future[None] | None,
-    sandbox_id: str,
-) -> None:
-    """Join the background bundle-upload future. Errors do not propagate.
-
-    A failed background upload is recoverable: the subsequent sequential
-    :func:`_maybe_run_eager_runtime_bootstrap` call will re-run
-    ``ensure_runtime_uploaded`` and either find the bundle in place
-    (best case) or retry the upload (worst case). Surfacing background
-    failures here would mask that retry path.
-    """
-    if future is None:
-        return
-    try:
-        future.result(timeout=_BUNDLE_UPLOAD_JOIN_TIMEOUT_S)
-        logger.info(
-            "eager sandbox-runtime bundle upload joined for sandbox %s",
-            sandbox_id,
-        )
-    except concurrent.futures.TimeoutError:
-        logger.warning(
-            "eager sandbox-runtime bundle upload did not complete within %.0fs "
-            "for sandbox %s; sequential bootstrap will retry",
-            _BUNDLE_UPLOAD_JOIN_TIMEOUT_S,
-            sandbox_id,
-        )
-    except Exception:
-        logger.warning(
-            "eager sandbox-runtime bundle upload failed for sandbox %s; "
-            "sequential bootstrap will retry",
             sandbox_id,
             exc_info=True,
         )
@@ -322,17 +220,18 @@ class DaytonaSandboxLifecycle:
         # Kick off the runtime-bundle upload in a background thread so it
         # overlaps with `ensure_git`. Both depend only on the sandbox
         # existing; sequencing them serially leaves ~7s on the table.
-        upload_future = _maybe_start_eager_runtime_bundle_upload(sb._raw, sb.id)
+        workspace_root = _sandbox_project_root(sb._raw) or ""
+        upload_future = maybe_start_eager_runtime_bundle_upload(sb.id, workspace_root)
         logger.info("create_sandbox(%s): ensure_git starting", normalized_name)
-        sb.ensure_git()
-        _finish_eager_runtime_bundle_upload(upload_future, sb.id)
+        _ensure_git(sb.id)
+        finish_eager_runtime_bundle_upload(upload_future, sb.id)
         logger.info(
             "create_sandbox(%s): eager runtime bootstrap check starting for %s",
             normalized_name,
             sb.id,
         )
 
-        _maybe_run_eager_runtime_bootstrap(sb._raw, sb.id)
+        maybe_run_eager_runtime_bootstrap(sb.id, workspace_root)
         logger.info("create_sandbox(%s): completed", normalized_name)
 
         return sb.serialize(assigned_agents=[])
@@ -349,12 +248,13 @@ class DaytonaSandboxLifecycle:
         _register_daytona_provider_adapter(sb.id)
         # Same overlap as create_sandbox — bundle upload runs while the
         # sync ensure_git probe is in flight.
-        upload_future = _maybe_start_eager_runtime_bundle_upload(sb._raw, sb.id)
-        sb.ensure_git()
-        _finish_eager_runtime_bundle_upload(upload_future, sb.id)
+        workspace_root = _sandbox_project_root(sb._raw) or ""
+        upload_future = maybe_start_eager_runtime_bundle_upload(sb.id, workspace_root)
+        _ensure_git(sb.id)
+        finish_eager_runtime_bundle_upload(upload_future, sb.id)
         sb.refresh()
 
-        _maybe_run_eager_runtime_bootstrap(sb._raw, sb.id)
+        maybe_run_eager_runtime_bootstrap(sb.id, workspace_root)
 
         return sb.serialize()
 
@@ -402,13 +302,14 @@ class DaytonaSandboxLifecycle:
 
         sb.refresh()
         _register_daytona_provider_adapter(sb.id)
-        sb.ensure_git()
+        _ensure_git(sb.id)
         sb.refresh()
 
         # Restart-recovery path: re-upload the runtime bundle so sandbox-local
         # commands see the post-restart workspace. The hook is a no-op unless
         # callers explicitly enable eager runtime bootstrap.
-        _maybe_run_eager_runtime_bootstrap(sb._raw, sb.id)
+        workspace_root = _sandbox_project_root(sb._raw) or ""
+        maybe_run_eager_runtime_bootstrap(sb.id, workspace_root)
 
         return sb.serialize()
 
@@ -501,7 +402,4 @@ class DaytonaSandboxLifecycle:
 
 __all__ = [
     "DaytonaSandboxLifecycle",
-    "_finish_eager_runtime_bundle_upload",
-    "_maybe_run_eager_runtime_bootstrap",
-    "_maybe_start_eager_runtime_bundle_upload",
 ]

@@ -269,7 +269,7 @@ def _build_context_preparers(
     if SANDBOX_CONTEXT not in requirements:
         return []
 
-    from sandbox.lifecycle.context import context_preparer_for
+    from sandbox.control.ops.context import context_preparer_for
 
     return [context_preparer_for(sandbox_id)]
 
