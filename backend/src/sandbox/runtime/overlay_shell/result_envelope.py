@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -20,11 +20,17 @@ class RuntimeResultEnvelope:
     snapshot_version: int
     upper_changes: tuple[UpperChange, ...]
     snapshot_manifest: Manifest | None = None
+    timings: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "exit_code", int(self.exit_code))
         object.__setattr__(self, "snapshot_version", int(self.snapshot_version))
         object.__setattr__(self, "upper_changes", tuple(self.upper_changes))
+        object.__setattr__(
+            self,
+            "timings",
+            {str(key): float(value) for key, value in self.timings.items()},
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -38,6 +44,7 @@ class RuntimeResultEnvelope:
                 if self.snapshot_manifest is not None
                 else None
             ),
+            "timings": dict(self.timings),
         }
 
     @classmethod
@@ -60,6 +67,10 @@ class RuntimeResultEnvelope:
                 if payload.get("snapshot_manifest") is not None
                 else None
             ),
+            timings={
+                str(key): float(value)
+                for key, value in (payload.get("timings") or {}).items()
+            },
         )
 
 

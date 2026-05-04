@@ -112,12 +112,10 @@ def _register_provider_adapter_if_missing(sandbox_id: str) -> None:
     if not sandbox_id:
         return
     try:
-        from sandbox.providers.registry import get_adapter
+        from sandbox.providers.registry import has_registered_adapter
 
-        get_adapter(sandbox_id)
-        return
-    except KeyError:
-        pass
+        if has_registered_adapter(sandbox_id):
+            return
     except Exception:
         logger.debug(
             "Provider adapter lookup failed for sandbox %s",

@@ -56,6 +56,22 @@ def test_default_and_id_keyed_registries_are_independent() -> None:
     assert get_adapter("sb-1") is per_id
 
 
+def test_get_adapter_falls_back_to_default_provider_for_unknown_id() -> None:
+    from sandbox.providers.registry import (
+        get_adapter,
+        has_registered_adapter,
+        set_default_provider,
+    )
+
+    default = MagicMock(name="default_adapter")
+    set_default_provider(default)
+
+    assert has_registered_adapter("sb-existing") is False
+    assert get_adapter("sb-existing") is default
+    assert has_registered_adapter("sb-existing") is True
+    assert get_adapter("sb-existing") is default
+
+
 # ---------------------------------------------------------------------------
 # DaytonaProviderAdapter dict shape
 # ---------------------------------------------------------------------------
@@ -162,6 +178,25 @@ def test_adapter_delete_calls_raw_delete() -> None:
         adapter.delete("sb-del")
 
     raw.delete.assert_called_once()
+
+
+def test_adapter_set_labels_calls_raw_set_labels_and_serializes() -> None:
+    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+
+    raw = _fake_raw(labels={"managed_by": "ephemeralos"})
+    raw.set_labels = MagicMock()
+    raw.refresh_data = MagicMock()
+
+    with patch(
+        "sandbox.providers.daytona.adapter.fetch_sandbox",
+        return_value=raw,
+    ):
+        adapter = DaytonaProviderAdapter()
+        info = adapter.set_labels("sb-abc", {" project_dir ": " /testbed "})
+
+    raw.set_labels.assert_called_once_with({"project_dir": "/testbed"})
+    raw.refresh_data.assert_called_once()
+    assert info["id"] == "sb-abc"
 
 
 def test_bootstrap_registers_daytona_as_default() -> None:

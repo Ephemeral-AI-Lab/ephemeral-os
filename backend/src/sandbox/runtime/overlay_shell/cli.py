@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,15 +36,20 @@ def execute_request(
     storage_root: str | Path,
     run_dir: str | Path,
 ) -> RuntimeResultEnvelope:
+    total_start = time.perf_counter()
+    timings: dict[str, float] = {}
     request = overlay_shell_request_from_dict(request_payload)
     manifest = Manifest.from_dict(manifest_payload)
+    mount_start = time.perf_counter()
     mounted = mount_snapshot(
         manifest=manifest,
         storage_root=storage_root,
         run_dir=run_dir,
     )
+    timings["overlay.mount_snapshot_s"] = time.perf_counter() - mount_start
     stdout_ref = Path(run_dir) / "stdout.bin"
     stderr_ref = Path(run_dir) / "stderr.bin"
+    command_start = time.perf_counter()
     command = run_user_command(
         command=request.command,
         workspace_root=mounted.workspace_root,
@@ -53,12 +59,16 @@ def execute_request(
         stdout_ref=stdout_ref,
         stderr_ref=stderr_ref,
     )
+    timings["overlay.run_command_s"] = time.perf_counter() - command_start
+    capture_start = time.perf_counter()
     upper_changes = capture_changes(
         mounted.upperdir,
         snapshot_manifest=mounted.manifest,
         lowerdir=lowerdir_for(mounted),
         workspace_root=mounted.workspace_root,
     )
+    timings["overlay.capture_changes_s"] = time.perf_counter() - capture_start
+    timings["overlay.total_s"] = time.perf_counter() - total_start
     envelope = RuntimeResultEnvelope(
         exit_code=command.exit_code,
         stdout_ref=command.stdout_ref,
@@ -66,6 +76,7 @@ def execute_request(
         snapshot_version=manifest.version,
         upper_changes=upper_changes,
         snapshot_manifest=manifest,
+        timings=timings,
     )
     write_result_envelope(run_dir, envelope)
     return envelope

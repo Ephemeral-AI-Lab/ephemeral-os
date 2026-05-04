@@ -7,6 +7,7 @@ from sandbox.providers.registry import (
     dispose_adapter,
     get_adapter,
     get_default_provider,
+    has_registered_adapter,
     register_adapter,
     set_default_provider,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "dispose_adapter",
     "get_adapter",
     "get_default_provider",
+    "has_registered_adapter",
     "register_adapter",
     "set_default_provider",
 ]

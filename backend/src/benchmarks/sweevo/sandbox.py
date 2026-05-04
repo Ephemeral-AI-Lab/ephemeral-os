@@ -11,9 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.api import lifecycle as sb_lifecycle
-from sandbox.bash import wrap_bash_command
-from sandbox.providers.daytona.client.async_ import get_async_sandbox
-from sandbox.providers.daytona.client.sync import fetch_sandbox as _fetch_raw_sandbox
+from sandbox.api.raw_exec import raw_exec
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -195,64 +193,13 @@ def _cleanup_failed_sandbox(service: Any, sandbox: dict[str, Any] | None) -> Non
 # ---------------------------------------------------------------------------
 
 
-async def _get_sandbox(sandbox_id: str) -> Any:
-    """Get the async Daytona sandbox object."""
-    import asyncio
-
-    last_exc: Exception | None = None
-    for attempt in range(1, 4):
-        try:
-            return await get_async_sandbox(sandbox_id)
-        except Exception as exc:
-            last_exc = exc
-            if attempt < 3:
-                logger.warning(
-                    "Fetching SWE-EVO async sandbox %s failed (attempt %s/3): %s",
-                    sandbox_id,
-                    attempt,
-                    exc,
-                )
-                await asyncio.sleep(1.0)
-    assert last_exc is not None
-    raise last_exc
-
-
 async def _upload_file_with_fallback(
     sandbox_id: str,
     path: str,
     content: bytes,
 ) -> None:
-    """Upload a text file to the sandbox via exec, falling back to chunked exec."""
-    try:
-        sandbox = await _get_sandbox(sandbox_id)
-        await _upload_file_compat(sandbox, content, path)
-    except UnicodeDecodeError:
-        await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
-    except Exception:
-        await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
-
-
-async def _upload_file_compat(
-    sandbox: Any,
-    content: bytes,
-    path: str,
-) -> None:
-    """Upload a text file via exec when available, otherwise use sandbox.fs."""
-    process = getattr(sandbox, "process", None)
-    if callable(getattr(process, "exec", None)):
-        text = content.decode("utf-8")
-        response = await process.exec(
-            wrap_bash_command(_build_write_text_file_command(path, text)),
-            timeout=60,
-        )
-        if getattr(response, "exit_code", 0) not in (0, None):
-            raise RuntimeError(getattr(response, "result", "") or f"write failed for {path}")
-        return
-    fs = getattr(sandbox, "fs", None)
-    upload_fn = getattr(fs, "upload_file", None)
-    if not callable(upload_fn):
-        raise RuntimeError("Sandbox text upload transport is unavailable")
-    await upload_fn(content, path)
+    """Upload a file through provider-neutral raw exec."""
+    await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
 
 
 def _is_transient_sandbox_exec_error(exc: Exception) -> bool:
@@ -279,15 +226,8 @@ async def _wait_for_sandbox_exec_ready(
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
-            sandbox = await _get_sandbox(sandbox_id)
-            response = await sandbox.process.exec("pwd", cwd="/", timeout=10)
-            exit_code = getattr(response, "exit_code", None)
-            if exit_code in (None, 0):
-                return
-            last_exc = RuntimeError(
-                f"Sandbox readiness probe exited with code {exit_code}: "
-                f"{getattr(response, 'result', '')}"
-            )
+            await _exec(sandbox_id, "pwd", cwd="/", timeout=10)
+            return
         except Exception as exc:
             last_exc = exc
             if not _is_transient_sandbox_exec_error(exc):
@@ -330,23 +270,6 @@ async def _write_file_via_chunked_base64_exec(
     )
 
 
-def _build_write_text_file_command(file_path: str, content: str) -> str:
-    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
-    script = """
-import base64
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
-"""
-    return (
-        f"python3 -c {shlex.quote(script)} "
-        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
-    )
-
-
 async def _exec(
     sandbox_id: str,
     cmd: str,
@@ -355,17 +278,18 @@ async def _exec(
     *,
     check: bool = True,
 ) -> str:
-    """Execute a command in the sandbox via the async Daytona SDK, returning stdout."""
-    sandbox = await _get_sandbox(sandbox_id)
-    wrapped_cmd = f"bash -lc {shlex.quote(cmd)}"
+    """Execute a command in the sandbox via provider raw exec, returning output."""
     try:
-        response = await sandbox.process.exec(
-            wrapped_cmd,
+        response = await raw_exec(
+            sandbox_id,
+            cmd,
             cwd=cwd or "/",
             timeout=timeout,
         )
-        result_text = response.result if hasattr(response, "result") else str(response)
-        exit_code = getattr(response, "exit_code", None)
+        stdout = getattr(response, "stdout", "") or ""
+        stderr = getattr(response, "stderr", "") or ""
+        result_text = stdout if not stderr else f"{stdout}\n{stderr}" if stdout else stderr
+        exit_code = response.exit_code
         if exit_code not in (None, 0):
             message = (
                 f"Sandbox command failed with exit code {exit_code}: {cmd[:100]}\n"
@@ -517,14 +441,15 @@ async def setup_sweevo_sandbox(
     )
 
     try:
-        # Daytona-specific direct SDK access for setting labels — no equivalent
-        # primitive on ProviderAdapter today. Best-effort path; failure is
-        # non-fatal and logged.
-        raw_sandbox = _fetch_raw_sandbox(sandbox_id)
-        existing_labels = getattr(raw_sandbox, "labels", None) or {}
-        merged_labels = {str(k): str(v) for k, v in dict(existing_labels).items()}
+        sandbox_info = sb_lifecycle.get_sandbox(sandbox_id)
+        existing_labels = sandbox_info.get("labels", {})
+        merged_labels = (
+            {str(k): str(v) for k, v in existing_labels.items()}
+            if isinstance(existing_labels, dict)
+            else {}
+        )
         merged_labels["project_dir"] = repo_dir
-        raw_sandbox.set_labels(merged_labels)
+        sb_lifecycle.set_sandbox_labels(sandbox_id, merged_labels)
         logger.info("Set project_dir label to %s", repo_dir)
     except Exception as exc:
         logger.warning("Could not set project_dir label: %s", exc)

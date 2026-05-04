@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from sandbox.layer_stack.manifest import Manifest
@@ -43,6 +43,7 @@ class PreparedChangeset:
     snapshot: Manifest | None
     path_groups: tuple[PreparedPathGroup, ...]
     atomic: bool
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 __all__ = [

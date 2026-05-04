@@ -107,6 +107,10 @@ def delete_sandbox(sandbox_id: str) -> None:
     dispose_adapter(sandbox_id)
 
 
+def set_sandbox_labels(sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
+    return get_adapter(sandbox_id).set_labels(sandbox_id, labels)
+
+
 def ensure_sandbox_running(sandbox_id: str) -> dict[str, Any]:
     """Probe the sandbox; restart + re-run setup hook if the probe fails."""
     return _ensure_running(sandbox_id)
@@ -122,6 +126,7 @@ __all__ = [
     "get_signed_preview_url",
     "list_sandboxes",
     "list_snapshots",
+    "set_sandbox_labels",
     "start_sandbox",
     "stop_sandbox",
 ]

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import time
 from typing import Any
 from typing import Protocol
 
@@ -95,14 +96,25 @@ class SnapshotOverlayRunner:
         self._invoker = invoker
 
     async def shell(self, request: OverlayShellRequest) -> RuntimeResultEnvelope:
+        total_start = time.perf_counter()
+        lease_start = time.perf_counter()
         lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
+        timings = {
+            "overlay.lease_acquire_s": time.perf_counter() - lease_start,
+        }
         try:
-            return await self._invoker.invoke(
+            invoke_start = time.perf_counter()
+            envelope = await self._invoker.invoke(
                 request=request,
                 manifest=lease.manifest,
             )
         finally:
+            timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
+            release_start = time.perf_counter()
             self._layer_stack.release_lease(lease.lease_id)
+            timings["overlay.lease_release_s"] = time.perf_counter() - release_start
+            timings["overlay.runner_total_s"] = time.perf_counter() - total_start
+        return replace(envelope, timings={**envelope.timings, **timings})
 
 
 __all__ = [

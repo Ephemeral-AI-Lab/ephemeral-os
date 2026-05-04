@@ -42,6 +42,10 @@ def _stub_provider() -> MagicMock:
     provider.list_snapshots.return_value = [{"name": "snap"}]
     provider.get_signed_preview_url.return_value = {"url": "https://"}
     provider.get_build_logs_url.return_value = "https://logs"
+    provider.set_labels.return_value = {
+        "id": "sb-1",
+        "labels": {"project_dir": "/testbed"},
+    }
     return provider
 
 
@@ -121,6 +125,31 @@ def test_read_helpers_route_through_registry() -> None:
     per_id.get.assert_called_once_with("sb-1")
     assert sb_lifecycle.get_signed_preview_url("sb-1", 3000) == {"url": "https://"}
     assert sb_lifecycle.get_build_logs_url("sb-1") == "https://logs"
+
+
+def test_instance_scoped_helpers_fall_back_to_default_provider() -> None:
+    from sandbox.api import lifecycle as sb_lifecycle
+    from sandbox.providers.registry import get_adapter, set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+
+    assert sb_lifecycle.get_sandbox("sb-existing")["id"] == "sb-1"
+    assert get_adapter("sb-existing") is provider
+    provider.get.assert_called_once_with("sb-existing")
+
+
+def test_set_sandbox_labels_routes_through_provider() -> None:
+    from sandbox.api import lifecycle as sb_lifecycle
+    from sandbox.providers.registry import register_adapter
+
+    provider = _stub_provider()
+    register_adapter("sb-1", provider)
+
+    result = sb_lifecycle.set_sandbox_labels("sb-1", {"project_dir": "/testbed"})
+
+    assert result["labels"] == {"project_dir": "/testbed"}
+    provider.set_labels.assert_called_once_with("sb-1", {"project_dir": "/testbed"})
 
 
 def test_facade_module_accessible_via_package_import() -> None:

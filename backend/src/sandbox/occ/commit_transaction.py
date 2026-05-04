@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,12 +43,17 @@ class OccCommitTransaction:
 
     def revalidate_and_publish(self, prepared: PreparedChangeset) -> ChangesetResult:
         """Validate against the current active manifest and publish accepted deltas."""
+        total_start = time.perf_counter()
+        timings: dict[str, float] = {}
         with self._layer_stack.commit_transaction() as transaction:
+            snapshot_start = time.perf_counter()
             active_manifest = transaction.snapshot()
+            timings["occ.commit.snapshot_s"] = time.perf_counter() - snapshot_start
             with _LayerChangeStager(
                 self._layer_stack.storage_root,
                 hasher=self._hasher,
             ) as stager:
+                validate_start = time.perf_counter()
                 validations: list[PathValidation] = []
                 tracked_failed = False
                 for group in prepared.path_groups:
@@ -62,6 +68,9 @@ class OccCommitTransaction:
                         and validation.result.status is not FileStatus.ACCEPTED
                     ):
                         tracked_failed = True
+                timings["occ.commit.validate_groups_s"] = (
+                    time.perf_counter() - validate_start
+                )
 
                 files = tuple(validation.result for validation in validations)
                 if _must_skip_publish(
@@ -71,21 +80,35 @@ class OccCommitTransaction:
                 ):
                     return ChangesetResult(
                         files=tuple(_mark_unpublished(files, prepared)),
+                        timings=_finish_timings(timings, total_start),
                         published_manifest_version=None,
                     )
 
+                collect_start = time.perf_counter()
                 changes = tuple(
                     change
                     for validation in validations
                     if validation.accepted_delta is not None
                     for change in validation.accepted_delta.changes
                 )
+                timings["occ.commit.collect_changes_s"] = (
+                    time.perf_counter() - collect_start
+                )
                 if not changes:
-                    return ChangesetResult(files=files, published_manifest_version=None)
+                    return ChangesetResult(
+                        files=files,
+                        timings=_finish_timings(timings, total_start),
+                        published_manifest_version=None,
+                    )
 
+                publish_start = time.perf_counter()
                 published = transaction.publish_layer(changes)
+                timings["occ.commit.publish_layer_s"] = (
+                    time.perf_counter() - publish_start
+                )
                 return ChangesetResult(
                     files=files,
+                    timings=_finish_timings(timings, total_start),
                     published_manifest_version=published.version,
                 )
 
@@ -227,6 +250,16 @@ def _mark_unpublished(
         else:
             marked.append(result)
     return tuple(marked)
+
+
+def _finish_timings(
+    timings: dict[str, float],
+    total_start: float,
+) -> dict[str, float]:
+    return {
+        **timings,
+        "occ.commit.total_s": time.perf_counter() - total_start,
+    }
 
 
 __all__ = ["OccCommitTransaction", "PathValidation"]

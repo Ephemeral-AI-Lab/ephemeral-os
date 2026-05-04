@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -61,11 +62,16 @@ class _SandboxContextTool(_DummyTool):
 
 
 @pytest.fixture(autouse=True)
-def _isolate_tool_factories():
+def _isolate_tool_factories(monkeypatch: pytest.MonkeyPatch):
     original = dict(_factories)
     _factories.clear()
     _factories.update(original)
     _CapturingTool.captured_contexts.clear()
+    from sandbox.providers import registry as provider_registry
+
+    monkeypatch.setattr(provider_registry, "_ADAPTERS", {}, raising=False)
+    monkeypatch.setattr(provider_registry, "_DEFAULT", None, raising=False)
+    monkeypatch.setattr(provider_registry, "_LOCK", threading.Lock(), raising=False)
     yield
     _factories.clear()
     _factories.update(original)
@@ -264,6 +270,9 @@ def test_default_sandbox_agent_registers_daytona_tools() -> None:
 
 
 def test_default_sandbox_agent_builds_daytona_context_preparer() -> None:
+    from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
+
+    bootstrap_daytona_provider()
     registry = _build_agent_tool_registry(
         _make_config(cwd=str(Path("/tmp/project"))),
         None,
@@ -287,6 +296,9 @@ def test_context_preparers_not_added_without_declared_requirement() -> None:
 
 
 def test_context_preparers_follow_tool_declared_requirement() -> None:
+    from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
+
+    bootstrap_daytona_provider()
     registry = ToolRegistry()
     registry.register(_SandboxContextTool())
 

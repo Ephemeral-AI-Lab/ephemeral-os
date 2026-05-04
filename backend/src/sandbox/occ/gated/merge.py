@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
@@ -58,24 +59,32 @@ class GatedMerge:
         active_manifest: Manifest,
         stage_write: StageWrite,
     ) -> tuple[FileResult, LayerDelta | None]:
+        timings: dict[str, float] = {}
+        read_start = time.perf_counter()
         current_content, current_exists = self._content.read_bytes(
             group.path,
             active_manifest,
         )
+        timings["occ.gated.read_current_s"] = time.perf_counter() - read_start
         initial_exists = current_exists
         content = current_content or b""
         exists = current_exists
 
+        apply_start = time.perf_counter()
         for change in group.changes:
             current_hash = self._hasher.hash_current(content, exists=exists)
             if isinstance(change, WriteChange):
                 expected_hash = _base_hash(change.base_hash)
                 if current_hash != expected_hash:
+                    timings["occ.gated.apply_changes_s"] = (
+                        time.perf_counter() - apply_start
+                    )
                     return (
                         FileResult(
                             path=group.path,
                             status=FileStatus.ABORTED_VERSION,
                             message="content changed",
+                            timings=timings,
                         ),
                         None,
                     )
@@ -86,11 +95,15 @@ class GatedMerge:
             if isinstance(change, DeleteChange):
                 expected_hash = _base_hash(change.base_hash)
                 if current_hash != expected_hash:
+                    timings["occ.gated.apply_changes_s"] = (
+                        time.perf_counter() - apply_start
+                    )
                     return (
                         FileResult(
                             path=group.path,
                             status=FileStatus.ABORTED_VERSION,
                             message="content changed before delete",
+                            timings=timings,
                         ),
                         None,
                     )
@@ -106,20 +119,27 @@ class GatedMerge:
                     change,
                 )
                 if isinstance(edit_result, FileResult):
-                    return edit_result, None
+                    timings["occ.gated.apply_changes_s"] = (
+                        time.perf_counter() - apply_start
+                    )
+                    return _with_timings(edit_result, timings), None
                 content = edit_result
                 exists = True
                 continue
 
+            timings["occ.gated.apply_changes_s"] = time.perf_counter() - apply_start
             return (
                 FileResult(
                     path=group.path,
                     status=FileStatus.REJECTED,
                     message=f"unsupported tracked change kind: {type(change).__name__}",
+                    timings=timings,
                 ),
                 None,
             )
 
+        timings["occ.gated.apply_changes_s"] = time.perf_counter() - apply_start
+        stage_start = time.perf_counter()
         delta = _delta_for_final_state(
             path=group.path,
             content=content,
@@ -127,7 +147,15 @@ class GatedMerge:
             initial_exists=initial_exists,
             stage_write=stage_write,
         )
-        return FileResult(path=group.path, status=FileStatus.ACCEPTED), delta
+        timings["occ.gated.stage_delta_s"] = time.perf_counter() - stage_start
+        return (
+            FileResult(
+                path=group.path,
+                status=FileStatus.ACCEPTED,
+                timings=timings,
+            ),
+            delta,
+        )
 
 
 def _base_hash(value: str | None) -> str | None:
@@ -184,6 +212,15 @@ def _delta_for_final_state(
     if initial_exists:
         return LayerDelta(changes=(LayerChange(path=path, kind="delete"),))
     return None
+
+
+def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
+    return FileResult(
+        path=result.path,
+        status=result.status,
+        message=result.message,
+        timings={**result.timings, **timings},
+    )
 
 
 __all__ = ["GatedMerge"]

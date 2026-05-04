@@ -6,7 +6,7 @@ runtime, OCC, or overlay internals.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 # -- Shared identity --------------------------------------------------------
@@ -34,6 +34,7 @@ class SandboxResultBase:
     """Base result shape for public sandbox operations."""
 
     success: bool = True
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, kw_only=True)

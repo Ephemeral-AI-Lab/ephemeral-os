@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from typing import Literal
 
@@ -55,15 +56,19 @@ class DirectMerge:
         active_manifest: Manifest,
         stage_write: StageWrite,
     ) -> tuple[FileResult, LayerDelta | None]:
+        timings: dict[str, float] = {}
+        read_start = time.perf_counter()
         current_content, current_exists = self._content.read_bytes(
             group.path,
             active_manifest,
         )
+        timings["occ.direct.read_current_s"] = time.perf_counter() - read_start
         initial_exists = current_exists
         content = current_content or b""
         final_kind: _FinalKind = "write" if current_exists else "delete"
         symlink_target: str | None = None
 
+        apply_start = time.perf_counter()
         for change in group.changes:
             if isinstance(change, OpaqueDirChange):
                 content = b""
@@ -97,18 +102,27 @@ class DirectMerge:
                 content = text.encode("utf-8")
                 continue
 
+            timings["occ.direct.apply_changes_s"] = time.perf_counter() - apply_start
             return (
                 FileResult(
                     path=group.path,
                     status=FileStatus.REJECTED,
                     message=f"unsupported direct change kind: {type(change).__name__}",
+                    timings=timings,
                 ),
                 None,
             )
 
+        timings["occ.direct.apply_changes_s"] = time.perf_counter() - apply_start
+        stage_start = time.perf_counter()
         if final_kind == "opaque_dir":
+            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
             return (
-                FileResult(path=group.path, status=FileStatus.ACCEPTED),
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.ACCEPTED,
+                    timings=timings,
+                ),
                 LayerDelta(changes=(LayerChange(path=group.path, kind="opaque_dir"),)),
             )
         if final_kind == "symlink" and symlink_target is not None:
@@ -121,18 +135,45 @@ class DirectMerge:
                     ),
                 )
             )
-            return FileResult(path=group.path, status=FileStatus.ACCEPTED), delta
-        if final_kind == "write":
+            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
             return (
-                FileResult(path=group.path, status=FileStatus.ACCEPTED),
-                LayerDelta(changes=(stage_write(group.path, content),)),
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.ACCEPTED,
+                    timings=timings,
+                ),
+                delta,
+            )
+        if final_kind == "write":
+            delta = LayerDelta(changes=(stage_write(group.path, content),))
+            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+            return (
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.ACCEPTED,
+                    timings=timings,
+                ),
+                delta,
             )
         if final_kind == "delete" and initial_exists:
+            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
             return (
-                FileResult(path=group.path, status=FileStatus.ACCEPTED),
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.ACCEPTED,
+                    timings=timings,
+                ),
                 LayerDelta(changes=(LayerChange(path=group.path, kind="delete"),)),
             )
-        return FileResult(path=group.path, status=FileStatus.ACCEPTED), None
+        timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+        return (
+            FileResult(
+                path=group.path,
+                status=FileStatus.ACCEPTED,
+                timings=timings,
+            ),
+            None,
+        )
 
 
 __all__ = ["DirectMerge"]

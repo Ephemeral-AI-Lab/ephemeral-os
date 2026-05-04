@@ -33,8 +33,10 @@ async def _call(func, *args, status: int = 200, **kwargs) -> JSONResponse:
     try:
         result = await asyncio.to_thread(func, *args, **kwargs)
         return JSONResponse(status_code=status, content=result)
-    except ValueError as exc:
+    except KeyError as exc:
         return JSONResponse(status_code=404, content={"error": str(exc)})
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
@@ -101,6 +103,10 @@ def create_sandbox_router() -> APIRouter:
         try:
             await asyncio.to_thread(sb_lifecycle.delete_sandbox, sandbox_id)
             return JSONResponse(status_code=204, content=None)
+        except KeyError as exc:
+            return JSONResponse(status_code=404, content={"error": str(exc)})
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
         except Exception as exc:
             return JSONResponse(status_code=500, content={"error": str(exc)})
 
@@ -116,6 +122,10 @@ def create_sandbox_router() -> APIRouter:
                     "exit_code": resp.exit_code,
                 }
             )
+        except KeyError as exc:
+            return JSONResponse(status_code=404, content={"error": str(exc)})
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
         except Exception as exc:
             return JSONResponse(status_code=500, content={"error": str(exc)})
 

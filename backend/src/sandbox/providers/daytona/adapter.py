@@ -256,6 +256,12 @@ class DaytonaProviderAdapter:
         raw.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
         logger.info("Sandbox deleted: %s", sandbox_id)
 
+    def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
+        raw = fetch_sandbox(sandbox_id)
+        raw.set_labels(_normalize_dict(labels))
+        _refresh(raw)
+        return _serialize_raw(raw)
+
     # -- Preview / observability ---------------------------------------------
 
     def get_signed_preview_url(self, sandbox_id: str, port: int) -> dict[str, Any]:

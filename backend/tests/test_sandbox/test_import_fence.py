@@ -84,28 +84,10 @@ def test_runtime_code_does_not_import_daytona_provider_modules() -> None:
 # ---------------------------------------------------------------------------
 
 
-# Allowlisted importers of sandbox.providers.daytona.* outside the daytona
-# package itself.
-#
-# AUTHORIZED EXCEPTION (per .omc/plans/sandbox-provider-agnostic-lifecycle.md
-# §Success criteria, lines 21-26):
-#   `server/app_factory.py` — the single startup bootstrap call to
-#   `bootstrap_daytona_provider()`.
-#
-# DEVIATION FROM PLAN (scope reduction — needs follow-up):
-#   `benchmarks/sweevo/sandbox.py` retains two daytona imports because it
-#   uses raw SDK semantics that aren't on the ProviderAdapter primitive
-#   surface today: `set_labels()` on the raw sandbox and direct
-#   `sandbox.process.exec(...)` for streaming/binary upload paths. The
-#   plan's §Step 6 expected sweevo to migrate fully; that's deferred to
-#   a follow-up because the primitive gap (a) is not in the plan's
-#   §Out of scope list and (b) requires either a new `set_labels`
-#   primitive or rebuilding sweevo's exec helpers on top of `provider.exec`.
-#   Architect verification should explicitly approve or reject this
-#   carve-out.
+# Allowlisted importer of sandbox.providers.daytona.* outside the daytona
+# package itself: the single startup bootstrap call.
 _DAYTONA_IMPORT_ALLOWLIST = {
     Path("server/app_factory.py"),
-    Path("benchmarks/sweevo/sandbox.py"),
 }
 
 

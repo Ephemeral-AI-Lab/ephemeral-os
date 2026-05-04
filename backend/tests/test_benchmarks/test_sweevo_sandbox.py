@@ -29,27 +29,23 @@ def _instance() -> SWEEvoInstance:
 async def test_ensure_sweevo_test_patch_uploads_bytes_before_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    uploaded: list[tuple[bytes, str]] = []
+    commands: list[str] = []
 
-    class _FakeFS:
-        async def upload_file(self, content, path):  # type: ignore[no-untyped-def]
-            uploaded.append((content, path))
+    async def fake_exec(_sandbox_id: str, command: str, **_kwargs) -> str:
+        commands.append(command)
+        if "git apply --check" in command:
+            return "APPLYABLE"
+        return ""
 
-    monkeypatch.setattr(
-        sweevo_sandbox,
-        "_get_sandbox",
-        AsyncMock(return_value=SimpleNamespace(fs=_FakeFS())),
-    )
-    exec_mock = AsyncMock(side_effect=["APPLYABLE", ""])
-    monkeypatch.setattr(sweevo_sandbox, "_exec", exec_mock)
+    monkeypatch.setattr(sweevo_sandbox, "_exec", fake_exec)
 
     await sweevo_sandbox.ensure_sweevo_test_patch(_instance(), "sbx-1")
 
-    assert uploaded == [(b"diff --git a/foo b/foo\n", "/tmp/sweevo_test.patch")]
-    assert not any(
-        'base64 -d > /tmp/sweevo_test.patch' in call.args[1]
-        for call in exec_mock.await_args_list
-    )
+    assert commands[:3] == [
+        ": > /tmp/sweevo_test.patch.b64",
+        "printf %s ZGlmZiAtLWdpdCBhL2ZvbyBiL2Zvbwo= >> /tmp/sweevo_test.patch.b64",
+        "base64 -d /tmp/sweevo_test.patch.b64 > /tmp/sweevo_test.patch && rm -f /tmp/sweevo_test.patch.b64",
+    ]
 
 
 @pytest.mark.asyncio

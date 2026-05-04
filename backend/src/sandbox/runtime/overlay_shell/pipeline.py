@@ -21,7 +21,11 @@ async def apply_captured_changes(
     """Convert upperdir capture to typed OCC changes and commit them."""
     changes = capture_to_changeset(envelope.upper_changes)
     if not changes:
-        return ChangesetResult(files=(), published_manifest_version=None)
+        return ChangesetResult(
+            files=(),
+            timings=dict(envelope.timings),
+            published_manifest_version=None,
+        )
     if envelope.snapshot_manifest is None:
         raise ValueError("overlay shell envelope is missing its leased manifest")
 
@@ -33,7 +37,11 @@ async def apply_captured_changes(
     )
     if isinstance(result, PreparedChangeset):
         raise TypeError("shell capture OCC service returned an uncommitted changeset")
-    return result
+    return ChangesetResult(
+        files=result.files,
+        timings={**envelope.timings, **result.timings},
+        published_manifest_version=result.published_manifest_version,
+    )
 
 
 def read_output_ref(path: str) -> str:
