@@ -67,7 +67,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/occ/direct/direct_merge_coordinator.py",
         "sandbox/occ/gated/gated_coordinator.py",
         "sandbox/occ/gated/file_change_applier.py",
-        "sandbox/occ/content/gitignore_oracle.py",
+        "sandbox/occ/routing/gitignore.py",
         "sandbox/overlay/bootstrap.py",
         "sandbox/overlay/engine/__init__.py",
         "sandbox/overlay/engine/capture_engine.py",

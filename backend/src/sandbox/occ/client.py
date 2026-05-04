@@ -5,10 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import ChangesetOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.routing.gitignore import GitignoreOracle
 from sandbox.occ.service import OccService
 from sandbox.occ.wire import change_to_dict, changeset_result_from_dict
 from sandbox.providers.registry import get_adapter
@@ -51,23 +49,6 @@ class OCCClient:
         self.workspace_root = workspace_root
         self.timeout = timeout
         self._service = service
-
-    @classmethod
-    def for_layer_stack(
-        cls,
-        *,
-        layer_stack: LayerStackManager,
-        workspace_root: str,
-        gitignore: GitignoreOracle | None = None,
-    ) -> "OCCClient":
-        """Create a service-backed Phase 03 client."""
-        return cls(
-            workspace_root=workspace_root,
-            service=OccService(
-                gitignore=gitignore or GitignoreOracle(workspace_root),
-                layer_stack=layer_stack,
-            ),
-        )
 
     async def apply_changeset(
         self,

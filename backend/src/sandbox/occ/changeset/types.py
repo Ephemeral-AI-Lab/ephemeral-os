@@ -18,24 +18,6 @@ from sandbox.occ.patching.patcher import SearchReplaceEdit
 ChangeSource = Literal["api_write", "api_edit", "shell_capture"]
 
 
-class _Utf8Bytes(bytes):
-    """Bytes payload that remains equal to the legacy UTF-8 string form."""
-
-    def __new__(cls, value: bytes | str) -> "_Utf8Bytes":
-        payload = value if isinstance(value, bytes) else value.encode("utf-8")
-        return bytes.__new__(cls, payload)
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, str):
-            return bytes(self) == other.encode("utf-8")
-        return bytes.__eq__(self, other)
-
-    __hash__ = bytes.__hash__
-
-    def text(self) -> str:
-        return bytes(self).decode("utf-8")
-
-
 class UpperChangeLike(Protocol):
     """Duck-typed legacy overlay upperdir change carried into ``builders.py``."""
 
@@ -67,7 +49,7 @@ class WriteChange(Change):
     are removed once Phase 04/06 replace the old live-root gate.
     """
 
-    final_content: _Utf8Bytes
+    final_content: bytes
     base_hash: str | None
     create_only: bool
 
@@ -84,7 +66,8 @@ class WriteChange(Change):
         Change.__init__(self, path, source=source)
         if base_existed is not None:
             create_only = not base_existed
-        object.__setattr__(self, "final_content", _Utf8Bytes(final_content))
+        payload = final_content if isinstance(final_content, bytes) else final_content.encode("utf-8")
+        object.__setattr__(self, "final_content", payload)
         object.__setattr__(self, "base_hash", base_hash)
         object.__setattr__(self, "create_only", bool(create_only))
 
@@ -94,13 +77,13 @@ class WriteChange(Change):
 
     @property
     def final_text(self) -> str:
-        return self.final_content.text()
+        return self.final_content.decode("utf-8")
 
     def with_base_hash(self, base_hash: str | None) -> "WriteChange":
         return WriteChange(
             path=self.path,
             source=self.source,
-            final_content=bytes(self.final_content),
+            final_content=self.final_content,
             base_hash=base_hash,
             create_only=self.create_only,
         )
@@ -141,12 +124,8 @@ class EditChange(Change):
             raise ValueError("EditChange requires at least one edit")
 
         first = edits[0]
-        if isinstance(first, dict):
-            first_old = str(first.get("old_text", ""))
-            first_new = str(first.get("new_text", ""))
-        else:
-            first_old = str(getattr(first, "old_text", ""))
-            first_new = str(getattr(first, "new_text", ""))
+        first_old = str(getattr(first, "old_text", ""))
+        first_new = str(getattr(first, "new_text", ""))
         object.__setattr__(self, "old_text", first_old)
         object.__setattr__(self, "new_text", first_new)
         object.__setattr__(self, "expected_occurrences", int(expected_occurrences))
@@ -232,13 +211,15 @@ class BinaryChange(Change):
 
 
 DirectChange = SymlinkChange | OpaqueDirChange | BinaryChange
-AnyChange = GatedChange | DirectChange
 
 
 class FileStatus(StrEnum):
+    ACCEPTED = "accepted"
     COMMITTED = "committed"
     ABORTED_VERSION = "aborted_version"
     ABORTED_OVERLAP = "aborted_overlap"
+    DROPPED = "dropped"
+    REJECTED = "rejected"
     FAILED = "failed"
 
 
@@ -254,14 +235,15 @@ class FileResult:
 class ChangesetResult:
     files: tuple[FileResult, ...]
     timings: dict[str, float] = field(default_factory=dict)
+    published_manifest_version: int | None = None
 
     @property
     def success(self) -> bool:
-        return all(f.status is FileStatus.COMMITTED for f in self.files)
+        accepted = {FileStatus.ACCEPTED, FileStatus.COMMITTED, FileStatus.DROPPED}
+        return all(f.status in accepted for f in self.files)
 
 
 __all__ = [
-    "AnyChange",
     "BinaryChange",
     "Change",
     "ChangeSource",

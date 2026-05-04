@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import pytest
 
 from sandbox.occ.changeset.types import (
@@ -14,6 +16,13 @@ from sandbox.occ.changeset.types import (
 )
 from sandbox.occ.patching.patcher import SearchReplaceEdit
 from sandbox.occ.wire import change_from_dict, change_to_dict
+
+
+@dataclass(frozen=True)
+class _UnknownEdit:
+    kind: str
+    old_text: str
+    new_text: str
 
 
 def test_edit_change_from_dict_rejects_line_range_edit() -> None:
@@ -78,7 +87,7 @@ def test_edit_change_to_dict_rejects_unknown_edit_kind() -> None:
         change_to_dict(
             EditChange(
                 path="/ws/a.py",
-                edits=({"kind": "insert", "old_text": "a", "new_text": "b"},),  # type: ignore[arg-type]
+                edits=(_UnknownEdit(kind="insert", old_text="a", new_text="b"),),
             )
         )
 

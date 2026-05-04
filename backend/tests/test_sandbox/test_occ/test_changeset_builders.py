@@ -46,7 +46,7 @@ def test_overlay_regular_utf8_becomes_write_change() -> None:
     [change] = overlay_changes_to_changeset(upper)
     assert isinstance(change, WriteChange)
     assert change.path == "src/a.py"
-    assert change.final_content == "new"
+    assert change.final_content == b"new"
     assert change.base_hash == content_hash("old")
     assert change.base_existed is True
 
@@ -65,7 +65,7 @@ def test_overlay_regular_create_has_empty_base_hash() -> None:
     assert isinstance(change, WriteChange)
     assert change.base_existed is False
     assert change.base_hash == ""
-    assert change.final_content == "hello"
+    assert change.final_content == b"hello"
 
 
 def test_overlay_regular_non_utf8_becomes_binary_change() -> None:

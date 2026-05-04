@@ -12,7 +12,7 @@ async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileRes
     """Write one UTF-8 file through the OCC runtime peer.
 
     The host does not pin a base hash; the gate's per-file lock guards the
-    write atomically. ``base_existed=False`` (when ``overwrite=False``) is
+    write atomically. ``create_only=True`` (when ``overwrite=False``) is
     the only case where the gate aborts on existence — see
     ``.omc/plans/occ-changeset-gate-simplification.md`` §"How base_hash is
     obtained".

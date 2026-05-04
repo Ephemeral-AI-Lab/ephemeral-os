@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from sandbox.occ.changeset.types import (
@@ -17,7 +17,6 @@ from sandbox.occ.changeset.types import (
     FileStatus,
     OpaqueDirChange,
     SymlinkChange,
-    UpperChangeLike,
     WriteChange,
 )
 
@@ -60,15 +59,6 @@ def _edit_from_dict(d: dict[str, Any]) -> Any:
     )
 
 
-@dataclass
-class _UpperChange:
-    rel: str
-    kind: str
-    base_bytes: bytes | None
-    upper_bytes: bytes | None
-    base_existed: bool
-
-
 def _bytes_from_wire(value: Any) -> bytes | None:
     if value is None:
         return None
@@ -83,16 +73,6 @@ def _source_from_wire(value: Any, default: ChangeSource) -> ChangeSource:
     if value in ("api_write", "api_edit", "shell_capture"):
         return value
     return default
-
-
-def upper_change_from_dict(d: dict[str, Any]) -> UpperChangeLike:
-    return _UpperChange(
-        rel=str(d["rel"]),
-        kind=str(d["kind"]),
-        base_bytes=_bytes_from_wire(d.get("base_bytes")),
-        upper_bytes=_bytes_from_wire(d.get("upper_bytes")),
-        base_existed=bool(d.get("base_existed", True)),
-    )
 
 
 # -- Typed Change codecs ---------------------------------------------------
@@ -237,9 +217,15 @@ def changeset_result_to_dict(result: ChangesetResult) -> dict[str, Any]:
     return {
         "files": [file_result_to_dict(f) for f in result.files],
         "timings": dict(result.timings),
+        "published_manifest_version": result.published_manifest_version,
     }
 
 
 def changeset_result_from_dict(d: dict[str, Any]) -> ChangesetResult:
     files = tuple(file_result_from_dict(f) for f in (d.get("files") or ()))
-    return ChangesetResult(files=files, timings=dict(d.get("timings") or {}))
+    published = d.get("published_manifest_version")
+    return ChangesetResult(
+        files=files,
+        timings=dict(d.get("timings") or {}),
+        published_manifest_version=int(published) if published is not None else None,
+    )

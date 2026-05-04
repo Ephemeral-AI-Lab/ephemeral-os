@@ -20,9 +20,9 @@ from sandbox.occ.changeset.types import (
     DirectChange,
     GatedChange,
 )
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.direct.direct_merge_coordinator import DirectMergeCoordinator
 from sandbox.occ.gated.gated_coordinator import OCCGatedCoordinator
+from sandbox.occ.routing.gitignore import GitignoreOracle
 
 
 class ChangesetOrchestrator:

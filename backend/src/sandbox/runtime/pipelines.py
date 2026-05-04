@@ -8,11 +8,11 @@ from typing import Any, Protocol
 
 from sandbox.occ.changeset.builders import overlay_changes_to_changeset
 from sandbox.occ.changeset.types import Change, ChangesetResult, FileStatus
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.content.manager import ContentManager
 from sandbox.occ.direct.direct_merge_coordinator import DirectMergeCoordinator
 from sandbox.occ.gated.gated_coordinator import OCCGatedCoordinator
 from sandbox.occ.orchestrator import ChangesetOrchestrator
+from sandbox.occ.routing.gitignore import GitignoreOracle
 from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
 from sandbox.overlay.types import OverlayRunOutcome
 from sandbox.runtime.types import ConflictInfo, ShellResult
