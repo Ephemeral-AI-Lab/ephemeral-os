@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import logging
 
-from sandbox.api.raw_exec import raw_exec
-from sandbox.runtime.async_bridge import run_sync
-
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +54,9 @@ def ensure_git(sandbox_id: str) -> None:
     if not sandbox_id:
         return
     try:
+        from sandbox.api.raw_exec import raw_exec
+        from sandbox.runtime.async_bridge import run_sync
+
         logger.info("ensure_git(%s): probe starting", sandbox_id)
         resp = run_sync(
             raw_exec(
