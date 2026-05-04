@@ -1,4 +1,4 @@
-"""Daytona sandbox exceptions."""
+"""Daytona provider exceptions."""
 
 
 class DaytonaUnavailableError(RuntimeError):

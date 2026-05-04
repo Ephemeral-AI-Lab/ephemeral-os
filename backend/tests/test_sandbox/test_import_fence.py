@@ -97,6 +97,7 @@ def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
         "sandbox.client.sync",
         "sandbox.daytona",
         "sandbox.daytona.transport",
+        "sandbox.errors",
         "sandbox.lifecycle.proxy",
         "sandbox.lifecycle.service",
     ):

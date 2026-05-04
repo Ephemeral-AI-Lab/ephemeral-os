@@ -134,12 +134,11 @@ def _runtime_bundle_bytes() -> bytes:
     sandbox_dir = src / "sandbox"
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        for filename in ("__init__.py", "errors.py"):
-            _add_if_exists(
-                tar,
-                sandbox_dir / filename,
-                arcname=f"sandbox/{filename}",
-            )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "__init__.py",
+            arcname="sandbox/__init__.py",
+        )
 
         _add_if_exists(
             tar,
