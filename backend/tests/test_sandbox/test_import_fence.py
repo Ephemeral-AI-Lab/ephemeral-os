@@ -79,6 +79,119 @@ def test_runtime_code_does_not_import_daytona_provider_modules() -> None:
     assert offenders == []
 
 
+# ---------------------------------------------------------------------------
+# Provider-agnostic lifecycle fence (locks the seam from the plan)
+# ---------------------------------------------------------------------------
+
+
+# Allowlisted importers of sandbox.providers.daytona.* outside the daytona
+# package itself.
+#
+# `server/app_factory.py` holds the single startup-time bootstrap call to
+# `bootstrap_daytona_provider()`.
+#
+# `benchmarks/sweevo/sandbox.py` is a daytona-specific benchmark harness
+# that needs raw SDK access (set_labels, async sandbox.process.exec).
+# Lifting it onto provider primitives is a separate plan; documented as
+# Out of scope for the provider-agnostic-lifecycle refactor.
+_DAYTONA_IMPORT_ALLOWLIST = {
+    Path("server/app_factory.py"),
+    Path("benchmarks/sweevo/sandbox.py"),
+}
+
+
+def test_no_daytona_imports_outside_provider_package_or_bootstrap() -> None:
+    """Daytona is exposed only through the adapter — the provider-agnostic seam."""
+    offenders: list[str] = []
+    daytona_root = SRC_ROOT / "sandbox" / "providers" / "daytona"
+    for module in _python_files(SRC_ROOT):
+        rel = module.relative_to(SRC_ROOT)
+        if module.is_relative_to(daytona_root):
+            continue
+        if rel in _DAYTONA_IMPORT_ALLOWLIST:
+            continue
+        for imported in _imports(module):
+            if imported == "sandbox.providers.daytona" or imported.startswith(
+                "sandbox.providers.daytona."
+            ):
+                offenders.append(f"{rel} imports {imported}")
+
+    assert offenders == [], (
+        "Modules must not import sandbox.providers.daytona.* outside the "
+        f"daytona package: {offenders}"
+    )
+
+
+def test_control_runtime_api_do_not_import_daytona_sdk() -> None:
+    """control/, runtime/, api/ stay free of any direct daytona_sdk usage."""
+    offenders: list[str] = []
+    for sub in ("control", "runtime", "api"):
+        root = SRC_ROOT / "sandbox" / sub
+        for module in _python_files(root):
+            for imported in _imports(module):
+                if imported == "daytona_sdk" or imported.startswith("daytona_sdk."):
+                    offenders.append(
+                        f"{module.relative_to(SRC_ROOT)} imports {imported}"
+                    )
+
+    assert offenders == [], (
+        "control/, runtime/, api/ must not import any daytona SDK module: "
+        f"{offenders}"
+    )
+
+
+def test_control_runtime_api_lifecycle_do_not_import_daytona_provider() -> None:
+    """The plan's locked seam: control/, runtime/, and api/lifecycle.py are
+    provider-neutral — none of them imports sandbox.providers.daytona.*."""
+    offenders: list[str] = []
+    for path in (
+        SRC_ROOT / "sandbox" / "control",
+        SRC_ROOT / "sandbox" / "runtime",
+        SRC_ROOT / "sandbox" / "api" / "lifecycle.py",
+    ):
+        if path.is_file():
+            modules = [path]
+        else:
+            modules = _python_files(path)
+        for module in modules:
+            for imported in _imports(module):
+                if imported == "sandbox.providers.daytona" or imported.startswith(
+                    "sandbox.providers.daytona."
+                ):
+                    offenders.append(
+                        f"{module.relative_to(SRC_ROOT)} imports {imported}"
+                    )
+
+    assert offenders == [], (
+        "control/, runtime/, and api/lifecycle.py must not import "
+        f"sandbox.providers.daytona.*: {offenders}"
+    )
+
+
+def test_no_sandbox_lifecycle_package_remains() -> None:
+    """sandbox.lifecycle is gone — the name is reserved for sandbox.api.lifecycle."""
+    assert _find_spec_or_none("sandbox.lifecycle") is None
+    assert _find_spec_or_none("sandbox.lifecycle.factory") is None
+    assert _find_spec_or_none("sandbox.lifecycle.workspace") is None
+    assert _find_spec_or_none("sandbox.lifecycle.context") is None
+
+
+def test_no_sandbox_service_symbol_in_src() -> None:
+    """grep -r 'SandboxService' backend/src returns zero hits in non-daytona files."""
+    offenders: list[str] = []
+    for module in _python_files(SRC_ROOT):
+        text = module.read_text(encoding="utf-8")
+        if "SandboxService" in text:
+            offenders.append(str(module.relative_to(SRC_ROOT)))
+    assert offenders == [], f"SandboxService symbol still present: {offenders}"
+
+
+def test_legacy_lifecycle_classes_are_unimportable() -> None:
+    """SandboxProxy and DaytonaSandboxLifecycle are deleted."""
+    assert _find_spec_or_none("sandbox.providers.daytona.lifecycle") is None
+    assert _find_spec_or_none("sandbox.providers.daytona.proxy") is None
+
+
 def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
     for module_name in (
         "sandbox.code_intelligence",
