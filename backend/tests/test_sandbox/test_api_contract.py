@@ -22,6 +22,7 @@ _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_MODULES = {
     "__init__.py",
     "edit.py",
+    "lifecycle.py",
     "raw_exec.py",
     "read.py",
     "shell.py",
@@ -46,6 +47,11 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.occ.client",
         "sandbox.overlay.client",
         "sandbox.runtime.overlay_shell.pipeline",
+    },
+    "lifecycle.py": {
+        "sandbox.control.ops.recovery",
+        "sandbox.control.ops.setup",
+        "sandbox.providers.registry",
     },
 }
 _FORBIDDEN_FOR_MODELS = (

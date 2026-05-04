@@ -41,6 +41,10 @@ def __getattr__(name: str) -> object:
         from sandbox.api.write import write_file
 
         return write_file
+    if name == "lifecycle":
+        import importlib
+
+        return importlib.import_module("sandbox.api.lifecycle")
     raise AttributeError(name)
 
 __all__ = [
