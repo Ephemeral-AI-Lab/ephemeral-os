@@ -1,72 +1,19 @@
-"""Tests for the host-side OCC runtime client."""
+"""Tests for the host-side typed OCC client."""
 
 from __future__ import annotations
 
-import json
-import shlex
 from pathlib import Path
 
 import pytest
 
-from sandbox.api.models import RawExecResult
 from sandbox.occ.changeset.prepared import PreparedChangeset
-from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.client import OCCClient, OCCClientError
-from sandbox.providers.registry import dispose_adapter, register_adapter
-from sandbox.runtime.bundle import BUNDLE_REMOTE_DIR
-
-
-class _Adapter:
-    name = "fake"
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str | None, int | None]] = []
-
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult:
-        self.calls.append((sandbox_id, command, cwd, timeout))
-        argv = shlex.split(command)
-        payload = json.loads(argv[-1])
-        assert argv[:3] == ["python3", "-m", "sandbox.runtime.server"]
-        assert payload["op"] == "occ.apply_changeset"
-        assert payload["args"]["workspace_root"] == "/workspace"
-        return RawExecResult(
-            exit_code=0,
-            stdout=json.dumps(
-                {
-                    "files": [
-                        {
-                            "path": "/workspace/a.txt",
-                            "status": "committed",
-                            "message": "",
-                            "timings": {},
-                        }
-                    ],
-                    "timings": {},
-                }
-            ),
-        )
-
-
-class _FailingAdapter:
-    name = "failing"
-
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult:
-        del sandbox_id, command, cwd, timeout
-        return RawExecResult(exit_code=127, stdout="", stderr="python3: not found")
+from sandbox.occ.changeset.types import WriteChange
+from sandbox.occ.client import (
+    OCCClient,
+    OCCClientError,
+    dispose_occ_service,
+    register_occ_service,
+)
 
 
 class _Service:
@@ -79,50 +26,24 @@ class _Service:
 
 
 @pytest.mark.asyncio
-async def test_occ_client_uses_one_adapter_exec_per_request() -> None:
-    adapter = _Adapter()
-    register_adapter("sb-occ", adapter)
+async def test_occ_client_resolves_registered_service_by_sandbox_id() -> None:
+    service = _Service()
+    change = WriteChange(path="/workspace/a.txt", final_content=b"a\n")
+    register_occ_service("sb-occ", service)
     try:
-        result = await OCCClient("sb-occ").apply_changeset(
-            [
-                WriteChange(
-                    path="/workspace/a.txt",
-                    base_hash="",
-                    base_existed=True,
-                    final_content="a\n",
-                )
-            ]
-        )
+        result = await OCCClient("sb-occ").apply_changeset([change])
     finally:
-        dispose_adapter("sb-occ")
+        dispose_occ_service("sb-occ")
 
-    assert result.success is True
-    assert result.files[0].status is FileStatus.COMMITTED
-    assert len(adapter.calls) == 1
-    assert adapter.calls[0][0] == "sb-occ"
-    assert adapter.calls[0][2] == BUNDLE_REMOTE_DIR
+    assert isinstance(result, PreparedChangeset)
+    assert service.calls[0][0] == (change,)
 
 
-@pytest.mark.asyncio
-async def test_occ_client_surfaces_exec_failure_before_json_errors() -> None:
-    register_adapter("sb-occ-fail", _FailingAdapter())
-    try:
-        with pytest.raises(OCCClientError) as exc:
-            await OCCClient("sb-occ-fail").apply_changeset(
-                [
-                    WriteChange(
-                        path="/workspace/a.txt",
-                        base_hash="",
-                        base_existed=True,
-                        final_content="a\n",
-                    )
-                ]
-            )
-    finally:
-        dispose_adapter("sb-occ-fail")
+def test_occ_client_requires_service_binding() -> None:
+    with pytest.raises(OCCClientError) as exc:
+        OCCClient("missing-sandbox")
 
-    assert exc.value.kind == "RuntimeExecFailed"
-    assert exc.value.details == {"exit_code": 127}
+    assert exc.value.kind == "MissingOccService"
 
 
 def test_occ_client_does_not_import_handlers_or_overlay() -> None:
@@ -131,6 +52,8 @@ def test_occ_client_does_not_import_handlers_or_overlay() -> None:
     source = Path(client_module.__file__).read_text(encoding="utf-8")
 
     assert "sandbox.occ.handlers" not in source
+    assert "sandbox.occ.wire" not in source
+    assert "sandbox.runtime._server_dispatch" not in source
     assert "sandbox.overlay" not in source
 
 

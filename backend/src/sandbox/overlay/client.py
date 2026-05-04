@@ -6,10 +6,12 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
-from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
-from sandbox.overlay.types import OverlayRunOutcome
-from sandbox.overlay.types import OverlayShellRequest
-from sandbox.overlay.wire import overlay_outcome_from_dict
+from sandbox.overlay.runner.snapshot_overlay_runner import (
+    OverlayShellRequest,
+    SnapshotOverlayRunner,
+)
+from sandbox.runtime.overlay_capture.wire import overlay_outcome_from_dict
+from sandbox.runtime.overlay_capture.types import OverlayRunOutcome
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
 from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope

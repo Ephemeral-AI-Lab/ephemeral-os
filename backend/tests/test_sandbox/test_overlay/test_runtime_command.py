@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.overlay.runtime.command import run_user_command
+from sandbox.runtime.overlay_capture_runtime.command import run_user_command
 
 
 def test_run_user_command_preserves_stdout_stderr_and_exit_code(tmp_path: Path) -> None:

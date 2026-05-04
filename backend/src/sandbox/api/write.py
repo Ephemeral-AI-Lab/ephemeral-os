@@ -9,13 +9,11 @@ from sandbox.occ.client import OCCClient
 
 
 async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileResult:
-    """Write one UTF-8 file through the OCC runtime peer.
+    """Write one UTF-8 file through the typed OCC service path.
 
-    The host does not pin a base hash; the gate's per-file lock guards the
-    write atomically. ``create_only=True`` (when ``overwrite=False``) is
-    the only case where the gate aborts on existence — see
-    ``.omc/plans/occ-changeset-gate-simplification.md`` §"How base_hash is
-    obtained".
+    The service infers base hashes from the leased snapshot when one is bound
+    to the request path. ``create_only=True`` (when ``overwrite=False``) still
+    prevents accidental creation-overwrite.
     """
     change = build_api_write_change(
         path=request.path,

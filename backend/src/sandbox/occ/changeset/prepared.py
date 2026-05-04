@@ -38,7 +38,7 @@ class ChangesetOptions:
 
 @dataclass(frozen=True)
 class PreparedChangeset:
-    """Phase 03 output consumed by the future commit transaction."""
+    """Routed changeset consumed by the commit transaction."""
 
     snapshot: Manifest | None
     path_groups: tuple[PreparedPathGroup, ...]

@@ -16,10 +16,8 @@ logger = logging.getLogger(__name__)
 class InProcessBackend:
     """In-process backend for local and sandboxless flows.
 
-    Holds the per-sandbox shell pipeline (overlay → OCC orchestrator) and the
-    sandbox handle. The runtime ``occ.apply_changeset`` handler builds a
-    fresh :class:`ChangesetOrchestrator` per request; the backend itself
-    owns no long-lived gate state.
+    Holds the per-sandbox shell executor and sandbox handle. The backend owns
+    no write/edit mutation methods.
     """
 
     def __init__(

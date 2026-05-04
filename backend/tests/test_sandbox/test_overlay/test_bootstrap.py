@@ -1,11 +1,11 @@
-"""Tests for overlay runtime bootstrap registration."""
+"""Tests for legacy overlay capture runtime bootstrap registration."""
 
 from __future__ import annotations
 
 import subprocess
 from pathlib import Path
 
-import sandbox.overlay.bootstrap as bootstrap
+import sandbox.runtime.overlay_capture.bootstrap as bootstrap
 from sandbox.runtime import server
 from sandbox.runtime import setup_orchestrator
 
@@ -16,9 +16,9 @@ def test_bootstrap_registers_overlay_setup_script() -> None:
     scripts = setup_orchestrator._REGISTRY.scripts  # type: ignore[attr-defined]
 
     assert any(
-        script.name == "overlay"
-        and script.package == "sandbox.overlay"
-        and script.relative_path == "sandbox/overlay/setup.sh"
+        script.name == "overlay_capture"
+        and script.package == "sandbox.runtime.overlay_capture"
+        and script.relative_path == "sandbox/runtime/overlay_capture/setup.sh"
         for script in scripts
     )
 

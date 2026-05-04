@@ -12,7 +12,7 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.overlay.capture.upperdir import capture_changes
 from sandbox.overlay.namespace.command import run_user_command
 from sandbox.overlay.namespace.mounts import lowerdir_for, mount_snapshot
-from sandbox.overlay.types import overlay_shell_request_from_dict
+from sandbox.overlay.runner.snapshot_overlay_runner import overlay_shell_request_from_dict
 from sandbox.runtime.overlay_shell.result_envelope import (
     RuntimeResultEnvelope,
     write_result_envelope,

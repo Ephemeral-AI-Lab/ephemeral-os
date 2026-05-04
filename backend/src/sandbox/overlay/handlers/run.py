@@ -6,10 +6,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.overlay.engine import OverlayCaptureEngine
-from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
-from sandbox.overlay.types import overlay_shell_request_from_dict
-from sandbox.overlay.wire import overlay_outcome_to_dict
+from sandbox.runtime.overlay_capture import OverlayCaptureEngine
+from sandbox.overlay.runner.snapshot_overlay_runner import (
+    SnapshotOverlayRunner,
+    overlay_shell_request_from_dict,
+)
+from sandbox.runtime.overlay_capture.wire import overlay_outcome_to_dict
 from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 
 

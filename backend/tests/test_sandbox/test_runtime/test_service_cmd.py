@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.overlay.types import OverlayRunError
+from sandbox.runtime.overlay_capture.types import OverlayRunError
 from sandbox.runtime.service import (
     CodeIntelligenceService,
 )

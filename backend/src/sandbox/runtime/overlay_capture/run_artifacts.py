@@ -15,20 +15,20 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from sandbox.overlay.engine.constants import (
+from sandbox.runtime.overlay_capture.constants import (
     PROGRESS_READ_CHUNK_BYTES,
     SLOW_OVERLAY_STAGE_SECONDS,
     SLOW_OVERLAY_TOTAL_SECONDS,
     LowerdirFingerprint,
 )
-from sandbox.overlay.engine.command_codec import format_command_sample
-from sandbox.overlay.types import (
+from sandbox.runtime.overlay_capture.command_codec import format_command_sample
+from sandbox.runtime.overlay_capture.types import (
     OverlayCapture,
     OverlayLease,
     OverlayRunError,
     OverlayRunOutcome,
 )
-from sandbox.overlay.wire import parse_diff_ndjson
+from sandbox.runtime.overlay_capture.wire import parse_diff_ndjson
 from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 
 logger = logging.getLogger(__name__)

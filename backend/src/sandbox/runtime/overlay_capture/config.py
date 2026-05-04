@@ -1,4 +1,4 @@
-"""Configuration for the overlay shell sandbox.
+"""Configuration for the legacy overlay capture runtime.
 
 See ``docs/architecture/overlay-sandbox-plan.md`` §0. Two knobs:
 

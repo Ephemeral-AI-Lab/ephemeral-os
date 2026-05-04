@@ -14,6 +14,14 @@ def test_committed_paths_returns_committed_when_present() -> None:
     assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/a.py",)
 
 
+def test_committed_paths_treats_accepted_as_published() -> None:
+    files = (
+        FileResult(path="/ws/a.py", status=FileStatus.ACCEPTED),
+        FileResult(path="/ws/.git/config", status=FileStatus.DROPPED),
+    )
+    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/a.py",)
+
+
 def test_committed_paths_falls_back_to_aborted_path() -> None:
     files = (
         FileResult(
@@ -32,6 +40,17 @@ def test_committed_paths_uses_fallback_when_no_files() -> None:
 def test_conflict_and_status_returns_committed_when_no_failures() -> None:
     conflict, status = conflict_and_status(
         (FileResult(path="/ws/a.py", status=FileStatus.COMMITTED),)
+    )
+    assert conflict is None
+    assert status == "committed"
+
+
+def test_conflict_and_status_treats_accepted_and_dropped_as_success() -> None:
+    conflict, status = conflict_and_status(
+        (
+            FileResult(path="/ws/a.py", status=FileStatus.ACCEPTED),
+            FileResult(path="/ws/.git/config", status=FileStatus.DROPPED),
+        )
     )
     assert conflict is None
     assert status == "committed"

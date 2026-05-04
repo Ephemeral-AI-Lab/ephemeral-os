@@ -1,4 +1,4 @@
-"""Overlay runtime bootstrap registration."""
+"""Legacy overlay capture runtime bootstrap registration."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from sandbox.runtime import setup_orchestrator
 from sandbox.runtime.setup_orchestrator import SetupScript
 
 _SETUP = SetupScript(
-    name="overlay",
-    package="sandbox.overlay",
-    relative_path="sandbox/overlay/setup.sh",
+    name="overlay_capture",
+    package="sandbox.runtime.overlay_capture",
+    relative_path="sandbox/runtime/overlay_capture/setup.sh",
 )
 
 

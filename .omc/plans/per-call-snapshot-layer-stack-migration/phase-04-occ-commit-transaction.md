@@ -18,6 +18,7 @@ apply EditChange anchors against active/staged content
 publish one layer for accepted changes
 return per-file ChangesetResult
 enforce stricter shell all-or-nothing tracked conflict rule
+keep occ package shape aligned with the Phase 03/04 target
 ```
 
 Out of scope:
@@ -27,6 +28,9 @@ no global lock around shell execution
 no global lock around upperdir capture
 no global lock around changeset prepare
 no squash planning
+no legacy runtime wire codec
+no legacy in-sandbox occ.apply_changeset handler
+no live-root direct/gated/orchestrator apply path
 ```
 
 Exit condition:
@@ -35,6 +39,11 @@ Exit condition:
 Ten concurrent agents may prepare at the same time, but each commit transaction
 sees the latest active manifest before publishing. Overlapping tracked writes
 cannot overwrite each other without revalidation.
+
+The `occ/` package also matches the Phase 03/04 target structure: `client.py`,
+`runtime_ops.py`, `service.py`, `changeset/`, `routing/`, and `merge/`. Legacy
+runtime files such as `wire.py`, `handlers/`, `orchestrator.py`, `direct/`, and
+`gated/` are not part of the Phase 04 result.
 ```
 
 ## 2. Main Data Objects
@@ -72,17 +81,43 @@ LayerStackTransaction # active-manifest lock and publish boundary
 
 ## 3. File/Folder Structure Change
 
-Create:
+Target `occ/` shape after Phase 04:
 
 ```text
 backend/src/sandbox/
 +-- occ/
+    +-- __init__.py
+    +-- client.py
+    +-- runtime_ops.py
+    +-- service.py
+    +-- changeset/
+    |   +-- types.py
+    |   +-- builders.py
+    |   +-- prepared.py
+    +-- routing/
+    |   +-- router.py
+    |   +-- gitignore.py
     +-- merge/
         +-- transaction.py
         +-- tracked.py
         +-- direct.py
         +-- hashing.py
 ```
+
+Delete or avoid from the Phase 04 OCC package:
+
+```text
+backend/src/sandbox/occ/wire.py
+backend/src/sandbox/occ/handlers/
+backend/src/sandbox/occ/orchestrator.py
+backend/src/sandbox/occ/direct/
+backend/src/sandbox/occ/gated/
+backend/src/sandbox/occ/runtime/apply_overlay_capture.py
+```
+
+These paths describe the old live-root runtime-dispatch apply flow. They should
+not be moved under `merge/` or preserved as compatibility wrappers; route
+callers to `OccService.apply_changeset(...)` and remove the old path.
 
 Wire existing Phase 03 files:
 
@@ -163,3 +198,4 @@ shell-captured tracked write:
 | `ChangesetResult` | Names the whole request outcome. |
 | `ABORTED_VERSION` | Current active content no longer matches the leased snapshot base hash. |
 | `ABORTED_OVERLAP` | Anchor edit cannot apply uniquely to the active/staged content. |
+| no `wire.py` | Phase 04 validates typed `PreparedChangeset` objects in process; generic JSON wire codecs are obsolete once public callers route through `OccService`. |

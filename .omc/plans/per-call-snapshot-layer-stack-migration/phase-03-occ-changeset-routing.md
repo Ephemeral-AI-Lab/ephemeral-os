@@ -10,7 +10,7 @@ leased-snapshot base hashes where required.
 Implementation scope:
 
 ```text
-create occ/client.py as host write/edit/apply client
+create occ/client.py as host write/edit/apply client for the typed service path
 create typed changeset data objects
 create builders for API write/edit and shell capture sources
 create ChangeRouter and GitignoreOracle
@@ -26,14 +26,17 @@ no overlay capture API inside occ
 no layer publish
 no final active-manifest validation
 no squash or lease pressure policy
+no runtime wire codec or in-sandbox occ.apply_changeset handler
+no live-root apply coordinator path
 ```
 
 Exit condition:
 
 ```text
 Every mutation source enters through OCCClient.apply_changeset as typed Change
-objects. OCCClient calls OccService internally. OCC preparation can run
-concurrently and never imports overlay.
+objects. OCCClient calls OccService internally; it must not route through a
+sandbox-id runtime wire codec. OCC preparation can run concurrently and never
+imports overlay.
 ```
 
 ## 2. Main Data Objects
@@ -100,6 +103,10 @@ backend/src/sandbox/
         +-- gitignore.py
 ```
 
+The Phase 03 `occ/` package should contain only entrypoints, changeset objects,
+routing policy, and small runtime helpers. It should not contain runtime
+dispatch codecs, live-root content managers, or alternate apply coordinators.
+
 Extend runtime bridge from Phase 02:
 
 ```text
@@ -121,11 +128,16 @@ backend/tests/sandbox/occ/
 Do not create:
 
 ```text
+backend/src/sandbox/occ/wire.py
+backend/src/sandbox/occ/handlers/
 backend/src/sandbox/occ/runtime/apply_overlay_capture.py
 backend/src/sandbox/occ/orchestrator.py
 backend/src/sandbox/occ/direct/
 backend/src/sandbox/occ/gated/
 ```
+
+If the live tree still has these files from an older path, treat them as
+cutover debt: Phase 03 should not add tests or callers that depend on them.
 
 ## 4. Workflow Demonstration
 
@@ -176,3 +188,4 @@ external path    -> reject by explicit policy
 | `routing.router` | Names path policy selection directly. |
 | `routing.gitignore` | Keeps gitignore policy under OCC, not overlay or layer_stack. |
 | `tracked` and `direct` routes | Name the policy result, replacing vague `gated` and folder-level `direct/` buckets. |
+| no `wire.py` | The service path is in-process and typed; generic JSON codecs belong to obsolete sandbox runtime dispatch, not the Phase 03/04 OCC design. |

@@ -2,53 +2,32 @@
 
 from __future__ import annotations
 
-import json
-import shlex
-
-from sandbox.api.models import RawExecResult, RequestActor, WriteFileRequest
+from sandbox.api.models import RequestActor, WriteFileRequest
 from sandbox.api.write import write_file
-from sandbox.providers.registry import dispose_adapter, register_adapter
+from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
+from sandbox.occ.client import dispose_occ_service, register_occ_service
 
 
-class _Adapter:
+class _Service:
     name = "write-api"
 
-    def __init__(self, *, response: dict) -> None:
+    def __init__(self, *, response: ChangesetResult) -> None:
         self.response = response
-        self.calls: list[tuple[str, str, str | None, int | None]] = []
+        self.calls: list[tuple[tuple[object, ...], object]] = []
 
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult:
-        self.calls.append((sandbox_id, command, cwd, timeout))
-        payload = json.loads(shlex.split(command)[-1])
-        assert payload["op"] == "occ.apply_changeset"
-        change = payload["args"]["changes"][0]
-        assert change["kind"] == "write"
-        assert change["path"] == "/workspace/a.py"
-        return RawExecResult(exit_code=0, stdout=json.dumps(self.response))
+    async def apply_changeset(self, changes, *, snapshot=None, options=None):
+        del snapshot
+        self.calls.append((tuple(changes), options))
+        return self.response
 
 
 async def test_write_file_delegates_once_through_occ_client() -> None:
-    adapter = _Adapter(
-        response={
-            "files": [
-                {
-                    "path": "/workspace/a.py",
-                    "status": "committed",
-                    "message": "",
-                    "timings": {},
-                }
-            ],
-            "timings": {},
-        }
+    service = _Service(
+        response=ChangesetResult(
+            files=(FileResult(path="/workspace/a.py", status=FileStatus.COMMITTED),)
+        )
     )
-    register_adapter("sb-write", adapter)
+    register_occ_service("sb-write", service)
     try:
         result = await write_file(
             "sb-write",
@@ -59,29 +38,30 @@ async def test_write_file_delegates_once_through_occ_client() -> None:
             ),
         )
     finally:
-        dispose_adapter("sb-write")
+        dispose_occ_service("sb-write")
 
     assert result.success is True
     assert result.changed_paths == ("/workspace/a.py",)
     assert result.conflict is None
-    assert len(adapter.calls) == 1
+    assert len(service.calls) == 1
+    change = service.calls[0][0][0]
+    assert change.path == "/workspace/a.py"
+    assert change.final_content == b"x"
 
 
 async def test_write_file_guard_failure_maps_conflict_info() -> None:
-    adapter = _Adapter(
-        response={
-            "files": [
-                {
-                    "path": "/workspace/a.py",
-                    "status": "aborted_version",
-                    "message": "base_mismatch",
-                    "timings": {},
-                }
-            ],
-            "timings": {},
-        }
+    service = _Service(
+        response=ChangesetResult(
+            files=(
+                FileResult(
+                    path="/workspace/a.py",
+                    status=FileStatus.ABORTED_VERSION,
+                    message="base_mismatch",
+                ),
+            )
+        )
     )
-    register_adapter("sb-write-conflict", adapter)
+    register_occ_service("sb-write-conflict", service)
     try:
         result = await write_file(
             "sb-write-conflict",
@@ -92,7 +72,7 @@ async def test_write_file_guard_failure_maps_conflict_info() -> None:
             ),
         )
     finally:
-        dispose_adapter("sb-write-conflict")
+        dispose_occ_service("sb-write-conflict")
 
     assert result.success is False
     assert result.status == "aborted_version"

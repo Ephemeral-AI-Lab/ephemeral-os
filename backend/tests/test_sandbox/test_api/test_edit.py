@@ -2,59 +2,36 @@
 
 from __future__ import annotations
 
-import json
-import shlex
-
 from sandbox.api.edit import edit_file
 from sandbox.api.models import (
     EditFileRequest,
-    RawExecResult,
     RequestActor,
     SearchReplaceEdit,
 )
-from sandbox.providers.registry import dispose_adapter, register_adapter
+from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
+from sandbox.occ.client import dispose_occ_service, register_occ_service
 
 
-class _Adapter:
+class _Service:
     name = "edit-api"
 
-    def __init__(self, *, response: dict) -> None:
+    def __init__(self, *, response: ChangesetResult) -> None:
         self.response = response
-        self.calls: list[tuple[str, str, str | None, int | None]] = []
+        self.calls: list[tuple[tuple[object, ...], object]] = []
 
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult:
-        self.calls.append((sandbox_id, command, cwd, timeout))
-        payload = json.loads(shlex.split(command)[-1])
-        assert payload["op"] == "occ.apply_changeset"
-        change = payload["args"]["changes"][0]
-        assert change["kind"] == "edit"
-        assert change["path"] == "/workspace/a.py"
-        assert change["edits"][0]["old_text"] == "old"
-        return RawExecResult(exit_code=0, stdout=json.dumps(self.response))
+    async def apply_changeset(self, changes, *, snapshot=None, options=None):
+        del snapshot
+        self.calls.append((tuple(changes), options))
+        return self.response
 
 
 async def test_edit_file_delegates_once_and_counts_applied_edits() -> None:
-    adapter = _Adapter(
-        response={
-            "files": [
-                {
-                    "path": "/workspace/a.py",
-                    "status": "committed",
-                    "message": "",
-                    "timings": {},
-                }
-            ],
-            "timings": {},
-        }
+    service = _Service(
+        response=ChangesetResult(
+            files=(FileResult(path="/workspace/a.py", status=FileStatus.COMMITTED),)
+        )
     )
-    register_adapter("sb-edit", adapter)
+    register_occ_service("sb-edit", service)
     try:
         result = await edit_file(
             "sb-edit",
@@ -65,29 +42,30 @@ async def test_edit_file_delegates_once_and_counts_applied_edits() -> None:
             ),
         )
     finally:
-        dispose_adapter("sb-edit")
+        dispose_occ_service("sb-edit")
 
     assert result.success is True
     assert result.changed_paths == ("/workspace/a.py",)
     assert result.applied_edits == 1
-    assert len(adapter.calls) == 1
+    assert len(service.calls) == 1
+    change = service.calls[0][0][0]
+    assert change.path == "/workspace/a.py"
+    assert change.old_text == "old"
 
 
 async def test_edit_file_guard_failure_maps_conflict_info() -> None:
-    adapter = _Adapter(
-        response={
-            "files": [
-                {
-                    "path": "/workspace/a.py",
-                    "status": "aborted_overlap",
-                    "message": "patch_failed",
-                    "timings": {},
-                }
-            ],
-            "timings": {},
-        }
+    service = _Service(
+        response=ChangesetResult(
+            files=(
+                FileResult(
+                    path="/workspace/a.py",
+                    status=FileStatus.ABORTED_OVERLAP,
+                    message="patch_failed",
+                ),
+            )
+        )
     )
-    register_adapter("sb-edit-conflict", adapter)
+    register_occ_service("sb-edit-conflict", service)
     try:
         result = await edit_file(
             "sb-edit-conflict",
@@ -98,7 +76,7 @@ async def test_edit_file_guard_failure_maps_conflict_info() -> None:
             ),
         )
     finally:
-        dispose_adapter("sb-edit-conflict")
+        dispose_occ_service("sb-edit-conflict")
 
     assert result.success is False
     assert result.applied_edits == 0

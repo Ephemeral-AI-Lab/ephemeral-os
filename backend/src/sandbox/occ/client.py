@@ -3,18 +3,52 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Protocol
 
 from sandbox.occ.changeset.prepared import ChangesetOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.service import OccService
-from sandbox.occ.wire import change_to_dict, changeset_result_from_dict
-from sandbox.providers.registry import get_adapter
-from sandbox.runtime._server_dispatch import RuntimeDispatchError, call_runtime_server
+
+
+class OccApplyService(Protocol):
+    async def apply_changeset(
+        self,
+        changes: Sequence[Change],
+        *,
+        snapshot: Any = None,
+        options: ChangesetOptions | None = None,
+    ) -> ChangesetResult | PreparedChangeset: ...
+
+
+_SERVICES: dict[str, OccApplyService] = {}
+
+
+def register_occ_service(sandbox_id: str, service: OccApplyService) -> None:
+    """Bind a sandbox id to the typed OCC service path."""
+    key = str(sandbox_id).strip()
+    if not key:
+        raise ValueError("sandbox_id must not be empty")
+    _SERVICES[key] = service
+
+
+def dispose_occ_service(sandbox_id: str) -> None:
+    """Remove a typed OCC service binding."""
+    _SERVICES.pop(str(sandbox_id), None)
+
+
+def get_occ_service(sandbox_id: str) -> OccApplyService:
+    """Return the typed OCC service bound to *sandbox_id*."""
+    try:
+        return _SERVICES[str(sandbox_id)]
+    except KeyError as exc:
+        raise OCCClientError(
+            "MissingOccService",
+            f"no typed OCC service is registered for sandbox {sandbox_id!r}",
+        ) from exc
 
 
 class OCCClientError(RuntimeError):
-    """Raised when the OCC runtime server returns a transport/error envelope."""
+    """Raised when the typed OCC client is not bound to a service."""
 
     def __init__(
         self,
@@ -31,23 +65,24 @@ class OCCClientError(RuntimeError):
 class OCCClient:
     """Public OCC changeset client.
 
-    Phase 03 callers can bind an :class:`OccService` and receive a
-    :class:`PreparedChangeset`. Legacy callers still dispatch to the runtime
-    ``occ.apply_changeset`` handler until the Phase 06 cutover removes the
-    live-root apply path.
+    Callers either bind a service directly or resolve one by sandbox id through
+    the local service registry. The old runtime ``occ.apply_changeset`` wire
+    dispatch path has been removed from this client.
     """
 
     def __init__(
         self,
         sandbox_id: str | None = None,
         *,
-        workspace_root: str = "/workspace",
-        timeout: int = 300,
-        service: OccService | None = None,
+        service: OccApplyService | OccService | None = None,
     ) -> None:
-        self.sandbox_id = sandbox_id
-        self.workspace_root = workspace_root
-        self.timeout = timeout
+        if service is None and sandbox_id is not None:
+            service = get_occ_service(sandbox_id)
+        if service is None:
+            raise OCCClientError(
+                "MissingOccService",
+                "OCCClient requires a typed OccService or registered sandbox binding",
+            )
         self._service = service
 
     async def apply_changeset(
@@ -60,48 +95,22 @@ class OCCClient:
         options: ChangesetOptions | None = None,
     ) -> ChangesetResult | PreparedChangeset:
         """Apply or prepare a typed :class:`Change` batch through OCC."""
-        if self._service is not None:
-            opts = options or ChangesetOptions(
-                caller_id=agent_id,
-                description=description,
-            )
-            return await self._service.apply_changeset(
-                changes,
-                snapshot=snapshot,
-                options=opts,
-            )
-
-        if self.sandbox_id is None:
-            raise OCCClientError(
-                "MissingClientTarget",
-                "OCCClient requires either sandbox_id or service",
-            )
-        result = await self._call(
-            "occ.apply_changeset",
-            {
-                "changes": [change_to_dict(c) for c in changes],
-                "agent_id": agent_id,
-                "description": description,
-            },
+        opts = options or ChangesetOptions(
+            caller_id=agent_id,
+            description=description,
         )
-        return changeset_result_from_dict(result)
-
-    async def _call(self, op: str, args: dict[str, Any]) -> dict[str, Any]:
-        if self.sandbox_id is None:
-            raise OCCClientError(
-                "MissingSandboxId",
-                "runtime OCC calls require sandbox_id",
-            )
-        try:
-            return await call_runtime_server(
-                exec_fn=get_adapter(self.sandbox_id).exec,
-                sandbox_id=self.sandbox_id,
-                op=op,
-                args={"workspace_root": self.workspace_root, **args},
-                timeout=self.timeout,
-            )
-        except RuntimeDispatchError as exc:
-            raise OCCClientError(exc.kind, exc.message, exc.details) from exc
+        return await self._service.apply_changeset(
+            changes,
+            snapshot=snapshot,
+            options=opts,
+        )
 
 
-__all__ = ["OCCClient", "OCCClientError"]
+__all__ = [
+    "OCCClient",
+    "OCCClientError",
+    "OccApplyService",
+    "dispose_occ_service",
+    "get_occ_service",
+    "register_occ_service",
+]

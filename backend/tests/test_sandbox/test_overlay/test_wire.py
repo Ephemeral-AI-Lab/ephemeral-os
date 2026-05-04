@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from sandbox.overlay.types import (
+from sandbox.runtime.overlay_capture.types import (
     OverlayRunOutcome,
     UpperChange,
 )
-from sandbox.overlay.wire import (
+from sandbox.runtime.overlay_capture.wire import (
     overlay_outcome_from_dict,
     overlay_outcome_to_dict,
     upper_change_from_dict,

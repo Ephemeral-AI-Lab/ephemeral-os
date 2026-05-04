@@ -131,8 +131,7 @@ def _to_jsonable(obj: Any) -> Any:
 
 
 def _load_peer_bootstraps() -> None:
-    import sandbox.occ.bootstrap  # noqa: F401
-    import sandbox.overlay.bootstrap  # noqa: F401
+    import sandbox.runtime.overlay_capture.bootstrap  # noqa: F401
 
 
 _load_peer_bootstraps()

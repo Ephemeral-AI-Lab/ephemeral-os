@@ -15,8 +15,8 @@ def capture_runtime_bundle_bytes() -> bytes:
     if _CAPTURE_RUNTIME_BUNDLE_CACHE is not None:
         return _CAPTURE_RUNTIME_BUNDLE_CACHE
 
-    root = Path(__file__).parents[1]
-    runtime_dir = root / "runtime"
+    sandbox_dir = Path(__file__).resolve().parents[2]
+    runtime_dir = sandbox_dir / "runtime" / "overlay_capture_runtime"
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
         for path in sorted(runtime_dir.rglob("*.py")):

@@ -32,7 +32,8 @@ class SetupScript:
     """Peer-owned bundled setup script.
 
     ``relative_path`` is the path inside the extracted runtime bundle, for
-    example ``sandbox/occ/setup.sh`` or ``sandbox/overlay/setup.sh``.
+    example ``sandbox/occ/setup.sh`` or
+    ``sandbox/runtime/overlay_capture/setup.sh``.
     """
 
     name: str

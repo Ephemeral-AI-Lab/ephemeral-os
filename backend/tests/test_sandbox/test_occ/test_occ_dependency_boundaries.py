@@ -31,6 +31,10 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
         occ_root / "changeset" / "types.py",
         occ_root / "routing" / "router.py",
         occ_root / "routing" / "gitignore.py",
+        occ_root / "merge" / "direct.py",
+        occ_root / "merge" / "hashing.py",
+        occ_root / "merge" / "tracked.py",
+        occ_root / "merge" / "transaction.py",
     ]
 
     forbidden = {

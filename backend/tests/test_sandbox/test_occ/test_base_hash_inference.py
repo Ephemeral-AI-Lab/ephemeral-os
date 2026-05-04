@@ -56,7 +56,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
 
     service = OccService(gitignore=_never_ignored(), layer_stack=stack)
     prepared = asyncio.run(
-        service.apply_changeset(
+        service.prepare_changeset(
             [
                 WriteChange(
                     path="src/app.py",
@@ -83,7 +83,7 @@ def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
     service = OccService(gitignore=_never_ignored(), layer_stack=stack)
 
     prepared = asyncio.run(
-        service.apply_changeset(
+        service.prepare_changeset(
             [WriteChange(path="new.py", source="api_write", final_content=b"x")],
             snapshot=snapshot,
         )
@@ -102,7 +102,7 @@ def test_edit_changes_keep_anchor_contract_without_base_hash(tmp_path) -> None:
     service = OccService(gitignore=_never_ignored(), layer_stack=stack)
 
     prepared = asyncio.run(
-        service.apply_changeset(
+        service.prepare_changeset(
             [EditChange(path="src/app.py", old_text="old", new_text="new")],
             snapshot=snapshot,
         )
@@ -122,7 +122,7 @@ def test_shell_delete_can_infer_base_hash_from_snapshot(tmp_path) -> None:
     service = OccService(gitignore=_never_ignored(), layer_stack=stack)
 
     prepared = asyncio.run(
-        service.apply_changeset(
+        service.prepare_changeset(
             [DeleteChange(path="src/gone.py", source="shell_capture")],
             snapshot=snapshot,
         )

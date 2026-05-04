@@ -11,12 +11,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.overlay.engine import (
+from sandbox.runtime.overlay_capture import (
     OverlayCaptureEngine,
 )
-from sandbox.overlay.engine.constants import RUN_DIR_PREFIX
-from sandbox.overlay.engine.capture_runtime_bundle import capture_runtime_bundle_bytes
-from sandbox.overlay.types import OverlayRunOutcome
+from sandbox.runtime.overlay_capture.constants import RUN_DIR_PREFIX
+from sandbox.runtime.overlay_capture.capture_runtime_bundle import capture_runtime_bundle_bytes
+from sandbox.runtime.overlay_capture.types import OverlayRunOutcome
 
 
 def _meta_line(**overrides) -> str:

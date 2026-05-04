@@ -5,8 +5,8 @@ from __future__ import annotations
 import io
 import tarfile
 
-from sandbox.overlay.engine.capture_runtime_bundle import capture_runtime_bundle_bytes
-from sandbox.overlay.runtime.mounts import _NS_ROOT, _NS_TMP, _NS_UPPER
+from sandbox.runtime.overlay_capture.capture_runtime_bundle import capture_runtime_bundle_bytes
+from sandbox.runtime.overlay_capture_runtime.mounts import _NS_ROOT, _NS_TMP, _NS_UPPER
 
 
 def test_namespace_mount_root_uses_writable_tmp_prefix() -> None:

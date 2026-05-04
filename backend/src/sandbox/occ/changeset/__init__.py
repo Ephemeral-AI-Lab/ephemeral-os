@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from sandbox.occ.changeset.types import (
-    BinaryChange,
     Change,
     ChangeSource,
     ChangesetResult,
@@ -14,13 +13,12 @@ from sandbox.occ.changeset.types import (
     FileStatus,
     GatedChange,
     OpaqueDirChange,
+    SearchReplaceEdit,
     SymlinkChange,
-    UpperChangeLike,
     WriteChange,
 )
 
 __all__ = [
-    "BinaryChange",
     "Change",
     "ChangeSource",
     "ChangesetResult",
@@ -31,7 +29,7 @@ __all__ = [
     "FileStatus",
     "GatedChange",
     "OpaqueDirChange",
+    "SearchReplaceEdit",
     "SymlinkChange",
-    "UpperChangeLike",
     "WriteChange",
 ]

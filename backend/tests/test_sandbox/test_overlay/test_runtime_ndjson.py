@@ -6,11 +6,11 @@ import base64
 import json
 from pathlib import Path
 
-from sandbox.overlay.runtime.cli import parse_args
-from sandbox.overlay.runtime.ndjson import write_diff_ndjson
-from sandbox.overlay.runtime.types import UpperChange
-from sandbox.overlay.types import OverlayCapture
-from sandbox.overlay.wire import parse_diff_ndjson
+from sandbox.runtime.overlay_capture_runtime.cli import parse_args
+from sandbox.runtime.overlay_capture_runtime.ndjson import write_diff_ndjson
+from sandbox.runtime.overlay_capture_runtime.types import UpperChange
+from sandbox.runtime.overlay_capture.types import OverlayCapture
+from sandbox.runtime.overlay_capture.wire import parse_diff_ndjson
 
 
 def test_write_diff_ndjson_emits_base64_upper_changes(tmp_path: Path) -> None:

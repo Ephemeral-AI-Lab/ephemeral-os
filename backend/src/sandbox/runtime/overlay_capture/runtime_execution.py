@@ -14,16 +14,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from sandbox.overlay.engine.constants import (
+from sandbox.runtime.overlay_capture.constants import (
     PROGRESS_POLL_INTERVAL_SECONDS,
     RUN_DIR_PREFIX,
 )
-from sandbox.overlay.engine.command_codec import (
+from sandbox.runtime.overlay_capture.command_codec import (
     build_runtime_command,
     format_command_sample,
 )
-from sandbox.overlay.engine.capture_runtime_bundle import capture_runtime_bundle_bytes
-from sandbox.overlay.types import OverlayLease, OverlayRunError
+from sandbox.runtime.overlay_capture.capture_runtime_bundle import capture_runtime_bundle_bytes
+from sandbox.runtime.overlay_capture.types import OverlayLease, OverlayRunError
 
 logger = logging.getLogger(__name__)
 

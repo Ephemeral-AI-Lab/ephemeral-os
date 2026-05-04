@@ -22,6 +22,7 @@ def test_occ_root_contains_only_entrypoints_and_subpackages() -> None:
         "direct",
         "gated",
         "handlers",
+        "merge",
         "orchestrator.py",
         "patching",
         "routing",

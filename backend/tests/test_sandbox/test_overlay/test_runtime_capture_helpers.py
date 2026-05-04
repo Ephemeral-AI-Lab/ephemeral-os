@@ -6,12 +6,12 @@ import os
 import stat
 from pathlib import Path
 
-from sandbox.overlay.runtime.capture import (
+from sandbox.runtime.overlay_capture_runtime.capture import (
     is_opaque_dir,
     is_whiteout,
     walk_upperdir,
 )
-from sandbox.overlay.runtime.types import UpperEntry
+from sandbox.runtime.overlay_capture_runtime.types import UpperEntry
 
 
 def _fake_stat(*, mode: int, size: int = 0, rdev: int = 0) -> os.stat_result:

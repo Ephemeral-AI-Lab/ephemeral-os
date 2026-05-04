@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import shlex
 
-from sandbox.overlay.engine.constants import COMMAND_SAMPLE_LIMIT, RUN_DIR_PREFIX
+from sandbox.runtime.overlay_capture.constants import COMMAND_SAMPLE_LIMIT, RUN_DIR_PREFIX
 
 
 def format_command_sample(command: str) -> str:

@@ -1,31 +1,23 @@
 """Typed OCC changeset objects.
 
-Phase 03 introduces source-tagged mutation intent objects for the layer-stack
-OCC preparation path. The current runtime still has legacy direct/gated apply
-coordinators until the cutover phase, so these values keep compatibility
-properties such as ``base_existed`` and ``edits`` while exposing the new
-``source`` and byte-oriented write contract.
+Source-tagged mutation intent objects for the layer-stack OCC path.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Literal, Protocol
-
-from sandbox.occ.patching.patcher import SearchReplaceEdit
+from typing import Literal
 
 ChangeSource = Literal["api_write", "api_edit", "shell_capture"]
 
 
-class UpperChangeLike(Protocol):
-    """Duck-typed legacy overlay upperdir change carried into ``builders.py``."""
+@dataclass(frozen=True, kw_only=True)
+class SearchReplaceEdit:
+    """One exact-match edit anchor."""
 
-    rel: str
-    kind: str
-    base_bytes: bytes | None
-    upper_bytes: bytes | None
-    base_existed: bool
+    old_text: str
+    new_text: str
 
 
 @dataclass(frozen=True, init=False)
@@ -44,9 +36,7 @@ class Change:
 class WriteChange(Change):
     """Whole-file write intent.
 
-    ``final_content`` is bytes for the layer-stack path. Legacy callers may
-    still pass a UTF-8 string and ``base_existed``; the compatibility properties
-    are removed once Phase 04/06 replace the old live-root gate.
+    ``final_content`` is stored as bytes for layer-stack staging.
     """
 
     final_content: bytes
@@ -61,23 +51,16 @@ class WriteChange(Change):
         create_only: bool = False,
         *,
         source: ChangeSource = "api_write",
-        base_existed: bool | None = None,
     ) -> None:
         Change.__init__(self, path, source=source)
-        if base_existed is not None:
-            create_only = not base_existed
-        payload = final_content if isinstance(final_content, bytes) else final_content.encode("utf-8")
+        payload = (
+            final_content
+            if isinstance(final_content, bytes)
+            else final_content.encode("utf-8")
+        )
         object.__setattr__(self, "final_content", payload)
         object.__setattr__(self, "base_hash", base_hash)
         object.__setattr__(self, "create_only", bool(create_only))
-
-    @property
-    def base_existed(self) -> bool:
-        return not self.create_only
-
-    @property
-    def final_text(self) -> str:
-        return self.final_content.decode("utf-8")
 
     def with_base_hash(self, base_hash: str | None) -> "WriteChange":
         return WriteChange(
@@ -91,17 +74,11 @@ class WriteChange(Change):
 
 @dataclass(frozen=True, init=False)
 class EditChange(Change):
-    """Search/replace edit intent.
-
-    The new public shape is one anchor per ``EditChange``. Legacy callers may
-    still pass ``edits=(SearchReplaceEdit(...), ...)``; the ``edits`` property
-    preserves the old coordinator contract.
-    """
+    """Search/replace edit intent."""
 
     old_text: str
     new_text: str
     expected_occurrences: int
-    _edits: tuple[object, ...] = field(repr=False, compare=True)
 
     def __init__(
         self,
@@ -111,29 +88,19 @@ class EditChange(Change):
         expected_occurrences: int = 1,
         *,
         source: ChangeSource = "api_edit",
-        edits: tuple[object, ...] | None = None,
     ) -> None:
         Change.__init__(self, path, source=source)
-        if edits is None:
-            if old_text is None:
-                raise ValueError("EditChange requires old_text")
-            if new_text is None:
-                raise ValueError("EditChange requires new_text")
-            edits = (SearchReplaceEdit(old_text=old_text, new_text=new_text),)
-        elif not edits:
-            raise ValueError("EditChange requires at least one edit")
-
-        first = edits[0]
-        first_old = str(getattr(first, "old_text", ""))
-        first_new = str(getattr(first, "new_text", ""))
-        object.__setattr__(self, "old_text", first_old)
-        object.__setattr__(self, "new_text", first_new)
+        if old_text is None:
+            raise ValueError("EditChange requires old_text")
+        if new_text is None:
+            raise ValueError("EditChange requires new_text")
+        object.__setattr__(self, "old_text", str(old_text))
+        object.__setattr__(self, "new_text", str(new_text))
         object.__setattr__(self, "expected_occurrences", int(expected_occurrences))
-        object.__setattr__(self, "_edits", tuple(edits))
 
     @property
-    def edits(self) -> tuple[object, ...]:
-        return self._edits
+    def edits(self) -> tuple[SearchReplaceEdit, ...]:
+        return (SearchReplaceEdit(old_text=self.old_text, new_text=self.new_text),)
 
 
 @dataclass(frozen=True, init=False)
@@ -193,24 +160,7 @@ class OpaqueDirChange(Change):
         object.__setattr__(self, "kept_children", frozenset(kept_children))
 
 
-@dataclass(frozen=True, init=False)
-class BinaryChange(Change):
-    """Legacy binary write/delete carried until the live-root gate is removed."""
-
-    final_bytes: bytes | None
-
-    def __init__(
-        self,
-        path: str,
-        final_bytes: bytes | None,
-        *,
-        source: ChangeSource = "shell_capture",
-    ) -> None:
-        Change.__init__(self, path, source=source)
-        object.__setattr__(self, "final_bytes", final_bytes)
-
-
-DirectChange = SymlinkChange | OpaqueDirChange | BinaryChange
+DirectChange = SymlinkChange | OpaqueDirChange
 
 
 class FileStatus(StrEnum):
@@ -221,6 +171,18 @@ class FileStatus(StrEnum):
     DROPPED = "dropped"
     REJECTED = "rejected"
     FAILED = "failed"
+
+
+def is_published_status(status: FileStatus) -> bool:
+    return status in {FileStatus.ACCEPTED, FileStatus.COMMITTED}
+
+
+def is_success_status(status: FileStatus) -> bool:
+    return status in {
+        FileStatus.ACCEPTED,
+        FileStatus.COMMITTED,
+        FileStatus.DROPPED,
+    }
 
 
 @dataclass(frozen=True)
@@ -239,12 +201,10 @@ class ChangesetResult:
 
     @property
     def success(self) -> bool:
-        accepted = {FileStatus.ACCEPTED, FileStatus.COMMITTED, FileStatus.DROPPED}
-        return all(f.status in accepted for f in self.files)
+        return all(is_success_status(f.status) for f in self.files)
 
 
 __all__ = [
-    "BinaryChange",
     "Change",
     "ChangeSource",
     "ChangesetResult",
@@ -255,7 +215,9 @@ __all__ = [
     "FileStatus",
     "GatedChange",
     "OpaqueDirChange",
+    "SearchReplaceEdit",
     "SymlinkChange",
-    "UpperChangeLike",
     "WriteChange",
+    "is_published_status",
+    "is_success_status",
 ]

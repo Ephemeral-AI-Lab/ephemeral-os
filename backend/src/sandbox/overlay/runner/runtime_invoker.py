@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.overlay.types import (
+from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     overlay_shell_request_to_dict,
 )

@@ -28,7 +28,10 @@ def snapshot_overlay_runtime_bundle_bytes() -> bytes:
             sandbox_dir / "overlay" / "__init__.py",
             arcname="sandbox/overlay/__init__.py",
         )
-        tar.add(sandbox_dir / "overlay" / "types.py", arcname="sandbox/overlay/types.py")
+        tar.add(
+            sandbox_dir / "overlay" / "runner" / "snapshot_overlay_runner.py",
+            arcname="sandbox/overlay/runner/snapshot_overlay_runner.py",
+        )
         for package in (
             sandbox_dir / "layer_stack",
             sandbox_dir / "overlay" / "capture",

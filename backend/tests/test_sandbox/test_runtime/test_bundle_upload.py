@@ -68,12 +68,12 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/occ/gated/gated_coordinator.py",
         "sandbox/occ/gated/file_change_applier.py",
         "sandbox/occ/routing/gitignore.py",
-        "sandbox/overlay/bootstrap.py",
-        "sandbox/overlay/engine/__init__.py",
-        "sandbox/overlay/engine/capture_engine.py",
-        "sandbox/overlay/setup.sh",
         "sandbox/overlay/handlers/run.py",
-        "sandbox/overlay/runtime/cli.py",
+        "sandbox/runtime/overlay_capture/bootstrap.py",
+        "sandbox/runtime/overlay_capture/__init__.py",
+        "sandbox/runtime/overlay_capture/capture_engine.py",
+        "sandbox/runtime/overlay_capture/setup.sh",
+        "sandbox/runtime/overlay_capture_runtime/cli.py",
     ]
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"

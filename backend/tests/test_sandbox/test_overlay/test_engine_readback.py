@@ -9,9 +9,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.overlay.engine import OverlayCaptureEngine
-from sandbox.overlay.wire import parse_diff_ndjson
-from sandbox.overlay.types import (
+from sandbox.runtime.overlay_capture import OverlayCaptureEngine
+from sandbox.runtime.overlay_capture.wire import parse_diff_ndjson
+from sandbox.runtime.overlay_capture.types import (
     OverlayCapture,
     OverlayRunError,
 )

@@ -15,12 +15,12 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from sandbox.overlay.config import overlay_max_concurrent, overlay_upper_size_mb
-from sandbox.overlay.engine.constants import LowerdirFingerprint, RUN_DIR_PREFIX
-from sandbox.overlay.engine.command_codec import encode_command_payload
-from sandbox.overlay.engine.run_artifacts import _RunArtifacts
-from sandbox.overlay.engine.runtime_execution import _RuntimeExecution
-from sandbox.overlay.types import (
+from sandbox.runtime.overlay_capture.config import overlay_max_concurrent, overlay_upper_size_mb
+from sandbox.runtime.overlay_capture.constants import LowerdirFingerprint, RUN_DIR_PREFIX
+from sandbox.runtime.overlay_capture.command_codec import encode_command_payload
+from sandbox.runtime.overlay_capture.run_artifacts import _RunArtifacts
+from sandbox.runtime.overlay_capture.runtime_execution import _RuntimeExecution
+from sandbox.runtime.overlay_capture.types import (
     OverlayCapture,
     OverlayLease,
     OverlayRunOutcome,

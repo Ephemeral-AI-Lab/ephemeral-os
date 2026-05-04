@@ -6,22 +6,31 @@ import inspect
 from collections.abc import Callable
 from typing import Any, Protocol
 
-from sandbox.occ.changeset.builders import overlay_changes_to_changeset
-from sandbox.occ.changeset.types import Change, ChangesetResult, FileStatus
-from sandbox.occ.content.manager import ContentManager
-from sandbox.occ.direct.direct_merge_coordinator import DirectMergeCoordinator
-from sandbox.occ.gated.gated_coordinator import OCCGatedCoordinator
-from sandbox.occ.orchestrator import ChangesetOrchestrator
-from sandbox.occ.routing.gitignore import GitignoreOracle
-from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
-from sandbox.overlay.types import OverlayRunOutcome
+from sandbox.occ.changeset.prepared import PreparedChangeset
+from sandbox.occ.changeset.types import (
+    Change,
+    ChangesetResult,
+    DeleteChange,
+    FileResult,
+    FileStatus,
+    OpaqueDirChange,
+    SymlinkChange,
+    WriteChange,
+    is_published_status,
+    is_success_status,
+)
+from sandbox.runtime.overlay_capture import OverlayCaptureEngine, OverlayEngine
+from sandbox.runtime.overlay_capture.types import OverlayRunOutcome
 from sandbox.runtime.types import ConflictInfo, ShellResult
 
 
-class _OrchestratorLike(Protocol):
-    """Subset of :class:`ChangesetOrchestrator` used by ``shell_pipeline``."""
+class _ChangesetApplier(Protocol):
+    """Commit service subset used by ``shell_pipeline``."""
 
-    async def apply(self, changes: list[Change]) -> ChangesetResult: ...
+    async def apply_changeset(
+        self,
+        changes: list[Change],
+    ) -> ChangesetResult | PreparedChangeset: ...
 
 
 async def shell_pipeline(
@@ -34,15 +43,14 @@ async def shell_pipeline(
     description: str = "",
     agent_id: str = "",
     overlay_engine: OverlayEngine | None = None,
-    orchestrator: _OrchestratorLike | None = None,
+    changeset_applier: _ChangesetApplier | None = None,
     overlay_sandbox: Any = None,
     on_progress_line: Callable[[str], None] | None = None,
 ) -> ShellResult:
     """Run shell through overlay capture, then project the gate's verdict.
 
-    The default *orchestrator* is a fresh :class:`ChangesetOrchestrator` built
-    per request. Tests inject a fake orchestrator to drive specific outcomes
-    without standing up the real gate.
+    Overlay capture is policy-blind. Mutating commands require an explicit
+    typed OCC changeset applier supplied by the layer-stack integration path.
     """
     owns_overlay = overlay_engine is None
     overlay = overlay_engine or OverlayCaptureEngine(
@@ -62,25 +70,17 @@ async def shell_pipeline(
             on_progress_line=on_progress_line,
         )
 
-        gate = orchestrator if orchestrator is not None else _build_orchestrator(workspace_root)
-        typed_changes = overlay_changes_to_changeset(outcome.upper_changes)
-        result = await gate.apply(typed_changes)
+        typed_changes = _overlay_changes_to_changeset(outcome.upper_changes)
+        result = await _apply_changeset(
+            typed_changes,
+            changeset_applier=changeset_applier,
+        )
         return _shell_result_from_changeset(outcome, result, workspace_root=workspace_root)
     finally:
         if owns_overlay:
             dispose = getattr(overlay, "dispose", None)
             if callable(dispose):
                 dispose()
-
-
-def _build_orchestrator(workspace_root: str) -> ChangesetOrchestrator:
-    content = ContentManager(workspace_root)
-    return ChangesetOrchestrator(
-        gitignore=GitignoreOracle(workspace_root),
-        direct=DirectMergeCoordinator(content),
-        gated=OCCGatedCoordinator(content),
-    )
-
 
 async def _execute_overlay(
     overlay: OverlayEngine,
@@ -111,6 +111,88 @@ async def _maybe_await(value: Any) -> Any:
     return value
 
 
+def _overlay_changes_to_changeset(upper_changes) -> list[Change]:
+    changes: list[Change] = []
+    for upper in upper_changes:
+        if upper.kind == "whiteout":
+            if upper.base_existed:
+                changes.append(DeleteChange(path=upper.rel, source="shell_capture"))
+            continue
+        if upper.kind == "regular":
+            changes.append(
+                WriteChange(
+                    path=upper.rel,
+                    source="shell_capture",
+                    final_content=upper.upper_bytes or b"",
+                )
+            )
+            continue
+        if upper.kind == "symlink":
+            changes.append(
+                SymlinkChange(
+                    path=upper.rel,
+                    target=(upper.upper_bytes or b"").decode("utf-8", errors="replace"),
+                    source="shell_capture",
+                )
+            )
+            continue
+        if upper.kind == "opaque_dir":
+            changes.append(
+                OpaqueDirChange(
+                    path=upper.rel,
+                    kept_children=frozenset(_kept_children_for(upper.rel, upper_changes)),
+                    source="shell_capture",
+                )
+            )
+    return changes
+
+
+def _kept_children_for(rel: str, upper_changes) -> set[str]:
+    prefix = f"{rel}/"
+    kept: set[str] = set()
+    for item in upper_changes:
+        if not item.rel.startswith(prefix):
+            continue
+        rest = item.rel[len(prefix):]
+        if rest:
+            kept.add(rest.split("/", 1)[0])
+    return kept
+
+
+async def _apply_changeset(
+    changes: list[Change],
+    *,
+    changeset_applier: _ChangesetApplier | None,
+) -> ChangesetResult:
+    if not changes:
+        return ChangesetResult(files=())
+    if changeset_applier is None:
+        return _pipeline_failure(
+            changes[0].path,
+            "OCC changeset applier is not configured",
+        )
+
+    result = await changeset_applier.apply_changeset(changes)
+    if isinstance(result, ChangesetResult):
+        return result
+    return _pipeline_failure(
+        changes[0].path,
+        "OCC service prepared but did not commit the changeset",
+    )
+
+
+def _pipeline_failure(path: str, message: str) -> ChangesetResult:
+    return ChangesetResult(
+        files=(
+            FileResult(
+                path=path,
+                status=FileStatus.FAILED,
+                message=message,
+            ),
+        )
+    )
+
+
 def _shell_result_from_changeset(
     outcome: OverlayRunOutcome,
     result: ChangesetResult,
@@ -121,7 +203,7 @@ def _shell_result_from_changeset(
     committed = sorted({
         _absolutize(f.path, workspace_root)
         for f in result.files
-        if f.status is FileStatus.COMMITTED and f.path
+        if is_published_status(f.status) and f.path
     })
     changed_paths = tuple(committed)
 
@@ -135,7 +217,7 @@ def _shell_result_from_changeset(
             overlay_stage_timings=dict(outcome.overlay_stage_timings),
         )
 
-    bad = next((f for f in result.files if f.status is not FileStatus.COMMITTED), None)
+    bad = next((f for f in result.files if not is_success_status(f.status)), None)
     if bad is None:
         return ShellResult(  # pragma: no cover - success/failure mismatch guard
             result=outcome.stdout,

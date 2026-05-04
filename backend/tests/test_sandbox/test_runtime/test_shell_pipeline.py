@@ -7,7 +7,7 @@ from sandbox.occ.changeset.types import (
     FileResult,
     FileStatus,
 )
-from sandbox.overlay.types import OverlayRunOutcome, UpperChange
+from sandbox.runtime.overlay_capture.types import OverlayRunOutcome, UpperChange
 from sandbox.runtime.pipelines import shell_pipeline
 
 

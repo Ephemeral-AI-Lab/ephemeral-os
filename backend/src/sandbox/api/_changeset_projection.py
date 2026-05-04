@@ -12,7 +12,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sandbox.api.models import ConflictInfo
-from sandbox.occ.changeset.types import FileResult, FileStatus
+from sandbox.occ.changeset.types import (
+    FileResult,
+    is_published_status,
+    is_success_status,
+)
 
 
 def committed_paths(
@@ -21,10 +25,13 @@ def committed_paths(
     fallback_path: str,
 ) -> tuple[str, ...]:
     """Return paths of every COMMITTED ``FileResult``, or a single-path fallback."""
-    committed = tuple(f.path for f in files if f.status is FileStatus.COMMITTED and f.path)
+    committed = tuple(f.path for f in files if is_published_status(f.status) and f.path)
     if committed:
         return committed
-    aborted = next((f for f in files if f.status is not FileStatus.COMMITTED and f.path), None)
+    aborted = next(
+        (f for f in files if not is_published_status(f.status) and f.path),
+        None,
+    )
     if aborted is not None:
         return (aborted.path,)
     return (fallback_path,) if not files else ()
@@ -36,7 +43,7 @@ def conflict_and_status(
     """Surface the first non-COMMITTED ``FileResult`` as a ``ConflictInfo`` + status."""
     if not files:
         return None, "committed"
-    bad = next((f for f in files if f.status is not FileStatus.COMMITTED), None)
+    bad = next((f for f in files if not is_success_status(f.status)), None)
     if bad is None:
         return None, "committed"
     status = bad.status.value
@@ -48,6 +55,5 @@ def conflict_and_status(
         ),
         status,
     )
-
 
 __all__ = ["committed_paths", "conflict_and_status"]

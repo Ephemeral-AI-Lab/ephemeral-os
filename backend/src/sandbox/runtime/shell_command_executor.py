@@ -10,7 +10,7 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox.overlay.engine import OverlayCaptureEngine, OverlayEngine
+from sandbox.runtime.overlay_capture import OverlayCaptureEngine, OverlayEngine
 from sandbox.runtime.pipelines import shell_pipeline
 from sandbox.runtime.types import ShellResult
 

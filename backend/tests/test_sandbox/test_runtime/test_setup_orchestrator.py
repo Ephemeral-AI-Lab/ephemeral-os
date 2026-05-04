@@ -38,9 +38,9 @@ async def test_run_all_uploads_once_and_executes_setup_scripts_in_order() -> Non
     )
     registry.register(
         SetupScript(
-            name="overlay",
-            package="sandbox.overlay",
-            relative_path="sandbox/overlay/setup.sh",
+            name="overlay_capture",
+            package="sandbox.runtime.overlay_capture",
+            relative_path="sandbox/runtime/overlay_capture/setup.sh",
         )
     )
     calls: list[tuple[str, str, str | None, int | None]] = []
@@ -65,7 +65,12 @@ async def test_run_all_uploads_once_and_executes_setup_scripts_in_order() -> Non
     assert uploads == ["sb-1"]
     assert calls == [
         ("sb-1", "bash sandbox/occ/setup.sh", BUNDLE_REMOTE_DIR, 300),
-        ("sb-1", "bash sandbox/overlay/setup.sh", BUNDLE_REMOTE_DIR, 300),
+        (
+            "sb-1",
+            "bash sandbox/runtime/overlay_capture/setup.sh",
+            BUNDLE_REMOTE_DIR,
+            300,
+        ),
     ]
 
 
@@ -76,4 +81,3 @@ def test_setup_script_must_point_to_bundled_setup_sh() -> None:
             package="sandbox.bad",
             relative_path="sandbox/bad/install.sh",
         )
-

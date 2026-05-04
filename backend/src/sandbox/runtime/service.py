@@ -5,8 +5,8 @@ time. Sandboxes with a registered provider adapter use :class:`DaemonBackend`;
 sandboxless/local flows keep using :class:`InProcessBackend`.
 
 After the OCC simplification this surface is intentionally minimal:
-mutation requests flow through ``OCCClient.apply_changeset`` and the runtime
-``occ.apply_changeset`` handler, not through service-level methods.
+mutation requests flow through typed OCC services, not through service-level
+write/edit methods or runtime OCC wire handlers.
 """
 
 from __future__ import annotations

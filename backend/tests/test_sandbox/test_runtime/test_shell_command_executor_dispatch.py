@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
-from sandbox.overlay.engine import OverlayCaptureEngine
-from sandbox.overlay.types import OverlayRunOutcome
+from sandbox.runtime.overlay_capture import OverlayCaptureEngine
+from sandbox.runtime.overlay_capture.types import OverlayRunOutcome
 from sandbox.runtime.service import (
     CodeIntelligenceService,
 )

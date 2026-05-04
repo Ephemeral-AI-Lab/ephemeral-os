@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from sandbox.runtime.shell_command_executor import AuditedCommandExecutor
-from sandbox.overlay.engine import runtime_execution as overlay_runtime_execution
+from sandbox.runtime.overlay_capture import runtime_execution as overlay_runtime_execution
 from sandbox.runtime.registry import dispose_all_code_intelligence
 from sandbox.runtime.service import CodeIntelligenceService
 
