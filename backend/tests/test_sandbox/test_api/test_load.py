@@ -36,7 +36,7 @@ from sandbox.api.shell import shell
 from sandbox.api.write import write_file
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
-from sandbox.occ.changeset.types import Change, ChangesetResult, FileStatus
+from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.hashing import ContentHasher
@@ -358,6 +358,7 @@ async def test_write_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> N
                 f"write-{level}-{index}\n",
                 True,
             )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -411,6 +412,7 @@ async def test_edit_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> No
                 f"name = 'edited-{index}'\n",
                 True,
             )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -462,6 +464,7 @@ async def test_shell_api_load_levels_1_5_10_20_50(api_load_env: ApiLoadEnv) -> N
                 f"shell-{level}-{index}\n",
                 True,
             )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -478,12 +481,45 @@ async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
                 f"load/mixed/{level}/{index}/edit.txt",
                 f"state = 'base-{index}'\n",
             )
+        _compact_stack(api_load_env)
 
-        async def op(index: int) -> _CompositeResult:
-            edit_path = f"load/mixed/{level}/{index}/edit.txt"
-            write_path = f"load/mixed/{level}/{index}/write.txt"
+        async def shell_op(index: int):
             shell_path = f"load/mixed/{level}/{index}/shell.txt"
-            edit_result = await edit_file(
+            shell_payload = f"shell-{level}-{index}\n"
+            command = (
+                f"mkdir -p {shlex.quote(str(Path(shell_path).parent))}; "
+                f"printf {shlex.quote(shell_payload)} > {shlex.quote(shell_path)}"
+            )
+            return await shell(
+                api_load_env.sandbox_id,
+                ShellRequest(
+                    command=command,
+                    actor=api_load_env.actor(index),
+                    timeout=10,
+                ),
+            )
+
+        shell_report = await _run_load_batch(
+            api_load_env,
+            recorder,
+            label="mixed_shell",
+            concurrency=level,
+            operation=shell_op,
+        )
+        _assert_all_success(shell_report)
+        _assert_timing_keys(
+            shell_report,
+            (
+                "api.shell.total_s",
+                "overlay.mount_snapshot_s",
+                "occ.commit.total_s",
+            ),
+        )
+        _compact_stack(api_load_env)
+
+        async def edit_op(index: int):
+            edit_path = f"load/mixed/{level}/{index}/edit.txt"
+            return await edit_file(
                 api_load_env.sandbox_id,
                 EditFileRequest(
                     path=edit_path,
@@ -496,7 +532,28 @@ async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
                     actor=api_load_env.actor(index),
                 ),
             )
-            write_result = await write_file(
+
+        edit_report = await _run_load_batch(
+            api_load_env,
+            recorder,
+            label="mixed_edit",
+            concurrency=level,
+            operation=edit_op,
+        )
+        _assert_all_success(edit_report)
+        _assert_timing_keys(
+            edit_report,
+            (
+                "api.edit.total_s",
+                "occ.prepare.total_s",
+                "occ.commit.total_s",
+            ),
+        )
+        _compact_stack(api_load_env)
+
+        async def write_op(index: int):
+            write_path = f"load/mixed/{level}/{index}/write.txt"
+            return await write_file(
                 api_load_env.sandbox_id,
                 WriteFileRequest(
                     path=write_path,
@@ -504,48 +561,35 @@ async def test_mixed_edit_write_shell_load_levels_1_5_10_20_50(
                     actor=api_load_env.actor(index),
                 ),
             )
-            shell_payload = f"shell-{level}-{index}\n"
-            command = (
-                f"mkdir -p {shlex.quote(str(Path(shell_path).parent))}; "
-                f"printf {shlex.quote(shell_payload)} > {shlex.quote(shell_path)}"
-            )
-            shell_result = await shell(
-                api_load_env.sandbox_id,
-                ShellRequest(
-                    command=command,
-                    actor=api_load_env.actor(index),
-                    timeout=10,
-                ),
-            )
-            timings = _prefixed_timings("edit", edit_result.timings)
-            timings.update(_prefixed_timings("write", write_result.timings))
-            timings.update(_prefixed_timings("shell", shell_result.timings))
-            return _CompositeResult(
-                success=edit_result.success and write_result.success and shell_result.success,
-                status="ok"
-                if edit_result.success and write_result.success and shell_result.success
-                else "failed",
-                timings=timings,
-            )
 
-        report = await _run_load_batch(
+        write_report = await _run_load_batch(
             api_load_env,
             recorder,
-            label="mixed",
+            label="mixed_write",
             concurrency=level,
-            operation=op,
+            operation=write_op,
         )
-        _assert_all_success(report)
+        _assert_all_success(write_report)
         _assert_timing_keys(
-            report,
+            write_report,
             (
-                "edit.api.edit.total_s",
-                "write.api.write.total_s",
-                "shell.api.shell.total_s",
-                "shell.overlay.mount_snapshot_s",
-                "shell.occ.commit.total_s",
+                "api.write.total_s",
+                "occ.prepare.total_s",
+                "occ.commit.total_s",
             ),
         )
+        recorder.emit(
+            "mixed_level_done",
+            concurrency=level,
+            parallel_factor=(
+                shell_report.parallel_factor
+                + edit_report.parallel_factor
+                + write_report.parallel_factor
+            )
+            / 3,
+            layer_stack=api_load_env.layer_stack_metrics(),
+        )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -588,6 +632,7 @@ async def test_current_write_conflict_detection_levels_1_5_10_20_50(
         content, exists = api_load_env.manager.read_text(path)
         assert exists is True
         assert content in {f"winner-{index}\n" for index in range(level)}
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -636,6 +681,7 @@ async def test_current_edit_conflict_detection_levels_1_5_10_20_50(
         content, exists = api_load_env.manager.read_text(path)
         assert exists is True
         assert content in {f"value = 'winner-{index}'\n" for index in range(level)}
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -687,6 +733,7 @@ async def test_shell_concurrent_update_conflict_detection_levels_1_5_10_20_50(
         content, exists = api_load_env.manager.read_text(path)
         assert exists is True
         assert content in {f"shell-winner-{index}\n" for index in range(level)}
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -748,6 +795,7 @@ async def test_layer_stack_squash_algorithm_levels_1_5_10_20_50(
             after_depth=after.depth,
             layer_stack=api_load_env.layer_stack_metrics(),
         )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -799,6 +847,7 @@ async def test_occ_global_serial_merger_prepare_writes_levels_1_5_10_20_50(
                 f"serial-{level}-{index}\n",
                 True,
             )
+        _compact_stack(api_load_env)
         seen.add(level)
     assert seen == set(CONCURRENCY_LEVELS)
     _assert_logged_progress(recorder)
@@ -944,6 +993,11 @@ def _assert_logged_progress(recorder: LoadRecorder) -> None:
     assert {"batch_start", "op_start", "op_done", "batch_done"} <= event_names
     assert any("layer_stack" in event for event in recorder.events)
     assert any("parallel_factor" in event for event in recorder.events)
+
+
+def _compact_stack(env: ApiLoadEnv, *, max_depth: int = 4) -> None:
+    env.manager.squash(max_depth=max_depth)
+    env.manager.collect_garbage(young_staging_age_seconds=0)
 
 
 def _elapsed_stats(samples: Sequence[float]) -> dict[str, float]:
