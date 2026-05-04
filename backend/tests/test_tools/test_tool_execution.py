@@ -241,14 +241,12 @@ def _context() -> ToolExecutionContextService:
 
 
 async def test_tool_execution_context_service_unfolds_metadata_fields() -> None:
-    svc = object()
     context = ToolExecutionContextService(
         cwd="/tmp",
-        services={"ci_service": svc, "agent_name": "worker", "custom": "value"},
+        services={"agent_name": "worker", "custom": "value"},
     )
 
     assert context.cwd == Path("/tmp")
-    assert context.ci_service is svc
     assert context.agent_name == "worker"
     assert context.get("custom") == "value"
 

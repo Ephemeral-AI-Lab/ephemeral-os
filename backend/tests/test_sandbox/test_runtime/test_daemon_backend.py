@@ -1,4 +1,4 @@
-"""Unit tests for ``DaemonBackend.ensure_initialized`` and runtime commands.
+"""Unit tests for ``RuntimeCommandClient.ensure_initialized`` and runtime commands.
 
 These tests exercise the runtime-route contract: ``ensure_initialized`` uploads
 the runtime bundle (mocked); command calls route through the dispatcher.
@@ -10,13 +10,12 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from sandbox.runtime.backends import DaemonBackend
 from sandbox.runtime import command_client
 from sandbox.runtime.command_client import RuntimeCommandClient
 
 
 class _FakeRuntime:
-    """Stand-in for :class:`DaemonBackend` returning canned runtime responses."""
+    """Stand-in for :class:`RuntimeCommandClient` returning canned responses."""
 
     def __init__(
         self,
@@ -44,8 +43,8 @@ class _FakeRuntime:
         return None
 
 
-def _backend_with_fake_runtime(runtime: _FakeRuntime) -> DaemonBackend:
-    backend = DaemonBackend(
+def _backend_with_fake_runtime(runtime: _FakeRuntime) -> RuntimeCommandClient:
+    backend = RuntimeCommandClient(
         sandbox_id="sb-test",
         workspace_root="/ws",
     )
@@ -141,7 +140,7 @@ def test_cmd_routes_through_runtime_and_reconstructs_namespace() -> None:
 
 
 def test_rebind_sandbox_is_noop() -> None:
-    backend = DaemonBackend(
+    backend = RuntimeCommandClient(
         sandbox_id="sb-test",
         workspace_root="/ws",
     )
@@ -151,7 +150,7 @@ def test_rebind_sandbox_is_noop() -> None:
 def test_init_drops_snapshot_cache_attributes() -> None:
     """Cleanup invariant: the orchestrator-side snapshot cache attributes
     are gone (Phase 3.5 retirement)."""
-    backend = DaemonBackend(
+    backend = RuntimeCommandClient(
         sandbox_id="sb-test",
         workspace_root="/ws",
     )
@@ -162,7 +161,7 @@ def test_init_drops_snapshot_cache_attributes() -> None:
         "_snapshot_bytes",
     ):
         assert not hasattr(backend, attr), (
-            f"Phase 3.5 cleanup regression: {attr} still on DaemonBackend"
+            f"Phase 3.5 cleanup regression: {attr} still on RuntimeCommandClient"
         )
 
 

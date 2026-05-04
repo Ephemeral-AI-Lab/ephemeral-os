@@ -79,8 +79,7 @@ async def test_shell_rejects_mutating_command_without_live_root_runtime() -> Non
     assert result.conflict is not None
     assert result.conflict.reason == "overlay_snapshot_required"
     assert result.conflict_reason == (
-        "legacy live-root shell runtime was removed; "
         "shell mutation requests must use the layer-stack snapshot path"
     )
-    assert result.warnings == ("legacy live-root shell runtime was removed",)
+    assert result.warnings == ()
     assert adapter.calls == []

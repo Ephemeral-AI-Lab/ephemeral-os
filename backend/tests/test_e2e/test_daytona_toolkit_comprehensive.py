@@ -226,27 +226,13 @@ def _decode_write_payload(command: str) -> dict[str, Any] | None:
     return None
 
 
-def _make_context(
-    sandbox: Any, *, cwd: str = "/workspace", ci_service: Any = None
-) -> ToolExecutionContextService:
+def _make_context(sandbox: Any, *, cwd: str = "/workspace") -> ToolExecutionContextService:
     """Create a ToolExecutionContextService with sandbox injected."""
     metadata: dict[str, Any] = {
         "daytona_sandbox": sandbox,
         "repo_root": cwd,
     }
-    if ci_service is not None:
-        metadata["ci_service"] = ci_service
     return ToolExecutionContextService(cwd=Path(cwd), services=metadata)
-
-
-def _make_ci_service_for_sandbox(sandbox: Any, *, workspace: str = "/workspace"):
-    from sandbox.runtime.backends import DaemonBackend
-
-    del sandbox
-    return DaemonBackend(
-        sandbox_id="daytona-tools-comprehensive",
-        workspace_root=workspace,
-    )
 
 
 _test_loop: asyncio.AbstractEventLoop | None = None
@@ -285,7 +271,7 @@ class TestDaytonaEditTool:
 
     def test_edit_basic_replace(self):
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "def foo():\n    return 1"})
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -303,7 +289,7 @@ class TestDaytonaEditTool:
 
     def test_edit_first_occurrence_only(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "aaa\naaa\naaa"})
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -322,7 +308,7 @@ class TestDaytonaEditTool:
 
     def test_edit_text_not_found(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "hello"})
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -339,7 +325,7 @@ class TestDaytonaEditTool:
 
     def test_edit_file_not_found(self):
         sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -370,7 +356,7 @@ class TestDaytonaEditTool:
 
     def test_edit_with_description(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "x = 1"})
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -389,7 +375,7 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox(
             files={"/workspace/f.py": "def foo():\n    pass\n\ndef bar():\n    pass"}
         )
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -413,7 +399,7 @@ class TestDaytonaEditTool:
             },
             exec_exit_code=1,
         )
-        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
+        ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -539,8 +525,6 @@ class TestDaytonaToolLive:
             pass
 
     def _ctx(self, live_sandbox) -> ToolExecutionContextService:
-        from sandbox.runtime.backends import DaemonBackend
-
         sandbox = live_sandbox["raw"]
         cwd = "/home/daytona"
         return ToolExecutionContextService(
@@ -548,10 +532,6 @@ class TestDaytonaToolLive:
             services={
                 "daytona_sandbox": sandbox,
                 "repo_root": cwd,
-                "ci_service": DaemonBackend(
-                    sandbox_id=str(live_sandbox["info"]["id"]),
-                    workspace_root=cwd,
-                ),
             },
         )
 

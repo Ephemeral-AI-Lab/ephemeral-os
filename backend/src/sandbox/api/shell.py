@@ -14,10 +14,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
 
     conflict = ConflictInfo(
         reason="overlay_snapshot_required",
-        message=(
-            "legacy live-root shell runtime was removed; "
-            "shell mutation requests must use the layer-stack snapshot path"
-        ),
+        message="shell mutation requests must use the layer-stack snapshot path",
     )
     return ShellResult(
         success=False,
@@ -28,7 +25,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
         status="error",
         conflict=conflict,
         conflict_reason=conflict.message,
-        warnings=("legacy live-root shell runtime was removed",),
+        warnings=(),
     )
 
 

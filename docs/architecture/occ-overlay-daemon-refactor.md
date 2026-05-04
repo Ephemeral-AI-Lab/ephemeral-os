@@ -1,9 +1,9 @@
 # OCC + Overlay Two-Module Refactor Plan
 
-**Status:** Superseded reference draft. The active execution plan is
-[`sandbox-api-runtime-refactor.md`](./sandbox-api-runtime-refactor.md). This
-document is retained for the OCC/Overlay responsibility split research and uses
-the updated naming below: `sandbox/runtime/server.py` is the generic in-sandbox
+**Status:** Superseded reference draft. The later sandbox API/runtime execution
+plan has been retired from the docs tree. This document is retained for the
+OCC/Overlay responsibility split research and uses the updated naming below:
+`sandbox/runtime/server.py` is the generic in-sandbox
 guarded service; OCC and Overlay each own a host-side `client.py` plus bundled
 `setup.sh`. The refactored domain modules are only `sandbox/occ/` and
 `sandbox/overlay/`; `sandbox/runtime/` is daemon/server support.
@@ -41,7 +41,7 @@ Doing this *before* the package move keeps OCC's external surface (§2.1) from i
 - `engine/testing/eval_agent.py:384-385` — strip the two tool names from the eval allowlist.
 - `sandbox/api/audited_sandbox_api.py:134-162` — delete `remove_file` / `move_file` methods.
 - `sandbox/api/sandbox_api.py:49-53` — drop the corresponding protocol methods.
-- `sandbox/api/audit.py` — delete `submit_remove_request` / `submit_move_request` and the `RemoveFileRequest` / `MoveFileRequest` / `RemoveFileResult` / `MoveFileResult` models in `sandbox/api/models.py` if no other caller remains.
+- `sandbox/api/audit.py` — delete `submit_remove_request` / `submit_move_request` and the `RemoveFileRequest` / `MoveFileRequest` / `RemoveFileResult` / `MoveFileResult` models from the public `sandbox.api` model contract if no other caller remains.
 - `sandbox/code_intelligence/service.py:270-277` — delete `move_file` (and `delete_file` if unused).
 - `sandbox/code_intelligence/mutations/mutation_service.py:282-334` — delete `move_file`; remove `op == "move"` / `op == "delete"` branches in `_commit_specs_direct` once verified unused.
 - `sandbox/code_intelligence/backends/{protocol.py:88, in_process.py:286-293}` — drop `move_file` from backend protocol + impl.
@@ -157,11 +157,10 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes simple read-only pipelines to `raw_exec` and
-all other commands to `OverlayClient`, not directly to overlay handlers. Inside
-the sandbox, `runtime/pipelines.py::shell_pipeline` calls the overlay `run`
-handler first, then forwards captured `UpperChange` records to OCC. Overlay
-never imports OCC and never classifies gitignored vs gitincluded paths itself.
+External API: public shell routes simple read-only pipelines to `raw_exec`.
+Mutating shell no longer falls back to the removed live-root overlay runtime;
+it must use the layer-stack snapshot path. Overlay never imports OCC and never
+classifies gitignored vs gitincluded paths itself.
 
 No `auditor.py` remains in the target overlay package. The audit name implied
 policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
@@ -212,7 +211,7 @@ replacement.)
 
 - `sandbox/api/code_intelligence_api.py` (entire file)
 - `sandbox/api/code_intelligence_impl.py` (entire file)
-- Query-related types in `sandbox/api/models.py` (`SymbolInfo`, `ReferenceInfo`, `HoverResult`, `Diagnostic`, etc. — relocated only if still referenced; otherwise deleted)
+- Query-related types in the public `sandbox.api` model contract (`SymbolInfo`, `ReferenceInfo`, `HoverResult`, `Diagnostic`, etc. — relocated only if still referenced; otherwise deleted)
 - New: `sandbox/api/occ_api.py` and `sandbox/api/overlay_api.py` if external HTTP/RPC surface is needed
 
 ### 3.3 Tests
@@ -223,10 +222,8 @@ replacement.)
 
 ### 3.4 Compatibility shims
 
-This earlier draft originally assumed no shims. The active
-`sandbox-api-runtime-refactor.md` plan uses a short-lived compatibility shim at
-`sandbox/code_intelligence/daemon/client.py` during runtime scaffolding, then
-deletes it after public `sandbox.api.*` verbs own all callers.
+This earlier draft originally assumed no shims. Public `sandbox.api.*` verbs now
+own the caller-facing sandbox API surface.
 
 ## 4. External call sites to rewrite
 
@@ -235,7 +232,7 @@ Found via grep:
 - `sandbox/lifecycle/workspace.py` — uses `service.symbol_index`, `service.lsp_client`, etc. (Replaced with OCC + direct plugin-tool lookup wired per `plugins-refactor.md`.)
 - `sandbox/api/code_intelligence_api.py` — DELETE
 - `sandbox/api/code_intelligence_impl.py` — DELETE
-- `sandbox/api/models.py` — strip query types
+- public `sandbox.api` model contract — strip query types
 - `sandbox/api/audit.py` — references mutations module → route through OCC
 - `backend/tests/test_sandbox/test_code_intelligence/*` — relocate or delete
 - `backend/tests/test_sandbox/test_daemon_*.py` — move under runtime tests and update for `server.py` dispatch

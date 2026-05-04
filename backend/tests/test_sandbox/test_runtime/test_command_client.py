@@ -8,8 +8,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.runtime.backends import DaemonBackend
-from sandbox.runtime.command_client import RuntimeCommandError
+from sandbox.runtime.command_client import RuntimeCommandClient, RuntimeCommandError
 from sandbox.runtime.bundle import bundle_hash
 from sandbox.providers.registry import dispose_adapter, register_adapter
 
@@ -70,7 +69,7 @@ def _extract_op(command: str) -> str:
 async def test_call_returns_success_result() -> None:
     transport = _FakeTransport()
     register_adapter("sb-1", transport)
-    backend = DaemonBackend(sandbox_id="sb-1", workspace_root="/ws")
+    backend = RuntimeCommandClient(sandbox_id="sb-1", workspace_root="/ws")
 
     try:
         assert await backend._call_runtime_command("ping") == {
@@ -93,7 +92,7 @@ async def test_error_envelope_raises_typed_runtime_command_error() -> None:
         }
     )
     register_adapter("sb-1", transport)
-    backend = DaemonBackend(sandbox_id="sb-1", workspace_root="/ws")
+    backend = RuntimeCommandClient(sandbox_id="sb-1", workspace_root="/ws")
 
     try:
         with pytest.raises(RuntimeCommandError) as exc:
@@ -108,7 +107,7 @@ async def test_error_envelope_raises_typed_runtime_command_error() -> None:
 async def test_invalid_runtime_server_response_raises_typed_error() -> None:
     transport = _FakeTransport(bad_response=True)
     register_adapter("sb-1", transport)
-    backend = DaemonBackend(sandbox_id="sb-1", workspace_root="/ws")
+    backend = RuntimeCommandClient(sandbox_id="sb-1", workspace_root="/ws")
 
     try:
         with pytest.raises(RuntimeCommandError) as exc:

@@ -80,9 +80,10 @@ def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
         "sandbox.client.async_shutdown",
         "sandbox.client.credentials",
         "sandbox.client.sync",
+        "sandbox.daytona",
         "sandbox.daytona.transport",
     ):
-        assert importlib.util.find_spec(module_name) is None
+        assert _find_spec_or_none(module_name) is None
 
 
 def test_deleted_code_intelligence_package_raises_module_not_found() -> None:
@@ -97,6 +98,13 @@ def test_deleted_sandbox_transport_symbol_raises_import_error() -> None:
 
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
+
+
+def _find_spec_or_none(module_name: str) -> object | None:
+    try:
+        return importlib.util.find_spec(module_name)
+    except ModuleNotFoundError:
+        return None
 
 
 def _imports(path: Path) -> set[str]:

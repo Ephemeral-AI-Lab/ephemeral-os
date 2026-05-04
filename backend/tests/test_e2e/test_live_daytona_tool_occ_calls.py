@@ -28,7 +28,6 @@ from typing import Any
 import pytest
 from dotenv import load_dotenv
 
-from sandbox.runtime.backends import DaemonBackend
 from tools.core.base import ToolExecutionContextService
 from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 from tools.sandbox_toolkit.shell import shell
@@ -123,15 +122,8 @@ class LiveToolEnv:
         if exit_code != 0:
             pytest.skip(f"Sandbox image missing required command: {name}")
 
-    def make_ci_service(self) -> DaemonBackend:
-        return DaemonBackend(
-            sandbox_id=self.sandbox_id,
-            workspace_root=self.home,
-        )
-
     def make_ctx(
         self,
-        ci_service: DaemonBackend,
         *,
         agent_run_id: str,
     ) -> ToolExecutionContextService:
@@ -140,7 +132,6 @@ class LiveToolEnv:
             services={
                 "daytona_sandbox": self.async_sandbox,
                 "repo_root": self.home,
-                "ci_service": ci_service,
                 "agent_run_id": agent_run_id,
             },
         )
@@ -180,10 +171,9 @@ def _json_output(result) -> dict[str, Any]:
 
 
 def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
-    svc = live_tool_env.make_ci_service()
     file_path = f"{live_tool_env.root_dir}/roundtrip_{uuid.uuid4().hex[:8]}.py"
 
-    write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"write-{uuid.uuid4().hex[:8]}")
+    write_ctx = live_tool_env.make_ctx(agent_run_id=f"write-{uuid.uuid4().hex[:8]}")
     write_result = asyncio.run(
         write_file.execute(
             write_file.input_model(
@@ -196,7 +186,7 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
     write_payload = _json_output(write_result)
     assert write_payload["file_path"] == file_path
 
-    edit_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"edit-{uuid.uuid4().hex[:8]}")
+    edit_ctx = live_tool_env.make_ctx(agent_run_id=f"edit-{uuid.uuid4().hex[:8]}")
     edit_result = asyncio.run(
         edit_file.execute(
             edit_file.input_model(
@@ -210,7 +200,7 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
     edit_payload = _json_output(edit_result)
     assert edit_payload["status"] == "edited"
 
-    shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
+    shell_ctx = live_tool_env.make_ctx(agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     shell_result = asyncio.run(
         shell.execute(
             shell.input_model(command=f"cat {shlex.quote(file_path)}"),
@@ -226,11 +216,10 @@ def test_live_tool_roundtrip_write_edit_shell(live_tool_env: LiveToolEnv):
 def test_live_two_concurrent_same_file_overlap_has_single_winner(
     live_tool_env: LiveToolEnv,
 ):
-    svc = live_tool_env.make_ci_service()
     file_path = f"{live_tool_env.root_dir}/two_conflict_{uuid.uuid4().hex[:8]}.py"
     original = "def shared_conflict():\n    return 'base'\n"
 
-    write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
+    write_ctx = live_tool_env.make_ctx(agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
     seed_result = asyncio.run(
         write_file.execute(
             write_file.input_model(file_path=file_path, content=original),
@@ -246,7 +235,7 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
     barrier = threading.Barrier(len(edits), timeout=20)
 
     def _worker(agent_id: str, search: str, replace: str):
-        ctx = live_tool_env.make_ctx(svc, agent_run_id=agent_id)
+        ctx = live_tool_env.make_ctx(agent_run_id=agent_id)
         try:
             barrier.wait(timeout=20)
         except threading.BrokenBarrierError as exc:  # pragma: no cover - defensive
@@ -287,7 +276,7 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
     assert successes, f"Expected at least one overlapping process write to land, got {results}"
     assert len(successes) + len(expected_errors) == len(edits)
 
-    shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
+    shell_ctx = live_tool_env.make_ctx(agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     verify_result = asyncio.run(
         shell.execute(
             shell.input_model(command=f"cat {shlex.quote(file_path)}"),
@@ -307,7 +296,6 @@ def test_live_two_concurrent_same_file_overlap_has_single_winner(
 
 
 def test_live_five_concurrent_same_file_edit_file_calls(live_tool_env: LiveToolEnv):
-    svc = live_tool_env.make_ci_service()
     file_path = f"{live_tool_env.root_dir}/concurrent_{uuid.uuid4().hex[:8]}.py"
     original = (
         "\n\n".join(
@@ -317,7 +305,7 @@ def test_live_five_concurrent_same_file_edit_file_calls(live_tool_env: LiveToolE
         + "def shared_conflict():\n    return 'base'\n"
     )
 
-    write_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
+    write_ctx = live_tool_env.make_ctx(agent_run_id=f"seed-{uuid.uuid4().hex[:8]}")
     seed_result = asyncio.run(
         write_file.execute(
             write_file.input_model(file_path=file_path, content=original),
@@ -337,7 +325,7 @@ def test_live_five_concurrent_same_file_edit_file_calls(live_tool_env: LiveToolE
     barrier = threading.Barrier(len(edits), timeout=20)
 
     def _worker(agent_id: str, search: str, replace: str):
-        ctx = live_tool_env.make_ctx(svc, agent_run_id=agent_id)
+        ctx = live_tool_env.make_ctx(agent_run_id=agent_id)
         try:
             barrier.wait(timeout=20)
         except threading.BrokenBarrierError as exc:  # pragma: no cover - defensive
@@ -388,7 +376,7 @@ def test_live_five_concurrent_same_file_edit_file_calls(live_tool_env: LiveToolE
         f"Expected at least one overlapping process edit to complete. successes={overlap_successes}"
     )
 
-    shell_ctx = live_tool_env.make_ctx(svc, agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
+    shell_ctx = live_tool_env.make_ctx(agent_run_id=f"verify-{uuid.uuid4().hex[:8]}")
     verify_result = asyncio.run(
         shell.execute(
             shell.input_model(

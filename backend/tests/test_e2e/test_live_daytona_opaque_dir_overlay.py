@@ -39,7 +39,6 @@ from typing import Any
 import pytest
 from dotenv import load_dotenv
 
-from sandbox.runtime.backends import DaemonBackend
 from tools.core.base import ToolExecutionContextService
 from sandbox.runtime.bash import extract_exit_code, wrap_bash_command
 from tools.sandbox_toolkit.shell import shell
@@ -134,21 +133,12 @@ class _OpaqueEnv:
             )
         return stdout
 
-    def make_ci_service(self) -> DaemonBackend:
-        return DaemonBackend(
-            sandbox_id=self.sandbox_id,
-            workspace_root=self.workspace_root,
-        )
-
-    def make_ctx(
-        self, ci_service: DaemonBackend, *, agent_run_id: str
-    ) -> ToolExecutionContextService:
+    def make_ctx(self, *, agent_run_id: str) -> ToolExecutionContextService:
         return ToolExecutionContextService(
             cwd=Path(self.workspace_root),
             services={
                 "daytona_sandbox": self.async_sandbox,
                 "repo_root": self.workspace_root,
-                "ci_service": ci_service,
                 "agent_run_id": agent_run_id,
             },
         )
@@ -232,8 +222,7 @@ def _assert_shell_succeeded(result, *, scenario: str) -> dict[str, Any]:
 
 
 async def _run_shell(env: _OpaqueEnv, command: str, *, scenario: str) -> dict[str, Any]:
-    svc = env.make_ci_service()
-    ctx = env.make_ctx(svc, agent_run_id=f"{scenario}-{uuid.uuid4().hex[:8]}")
+    ctx = env.make_ctx(agent_run_id=f"{scenario}-{uuid.uuid4().hex[:8]}")
     result = await shell.execute(
         shell.input_model(command=command),
         ctx,

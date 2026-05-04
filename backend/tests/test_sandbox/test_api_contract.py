@@ -125,6 +125,12 @@ def test_result_hierarchy_exposes_conflict_only_on_guarded_results() -> None:
 def test_legacy_api_modules_are_deleted() -> None:
     import importlib.util
 
+    def find_spec_or_none(module_name: str) -> object | None:
+        try:
+            return importlib.util.find_spec(module_name)
+        except ModuleNotFoundError:
+            return None
+
     for module_name in (
         "sandbox.api._changeset_projection",
         "sandbox.api.audited_sandbox_api",
@@ -139,10 +145,11 @@ def test_legacy_api_modules_are_deleted() -> None:
         "sandbox.client.async_shutdown",
         "sandbox.client.credentials",
         "sandbox.client.sync",
+        "sandbox.daytona",
         "sandbox.daytona.transport",
         "tools.core.op_result_to_tool_result",
     ):
-        assert importlib.util.find_spec(module_name) is None
+        assert find_spec_or_none(module_name) is None
 
 
 def test_sandbox_toolkit_keeps_shared_mutation_tool_result() -> None:
