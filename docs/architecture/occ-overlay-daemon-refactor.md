@@ -201,7 +201,7 @@ replacement.)
 
 ### 3.1 Code
 
-- `sandbox/code_intelligence/service.py` (CodeIntelligenceService facade — replaced by `OCC` + `Overlay` separately)
+- `sandbox/code_intelligence/service.py` (old code-intelligence facade — replaced by `OCC` + `Overlay` separately)
 - `sandbox/code_intelligence/registry.py` (replaced by provider adapter lookup plus peer clients, not by a new shared code-intelligence facade)
 - `sandbox/code_intelligence/__init__.py`, `backends/` — all relocated or deleted
 - `sandbox/code_intelligence/` (the directory itself, after everything inside has moved or been deleted)

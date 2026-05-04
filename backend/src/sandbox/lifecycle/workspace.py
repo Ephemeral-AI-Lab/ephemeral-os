@@ -8,31 +8,28 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-
-def _ci_in_sandbox_enabled() -> bool:
-    """Return True when ``EOS_CI_IN_SANDBOX=1``."""
-    return os.environ.get("EOS_CI_IN_SANDBOX") == "1"
+SANDBOX_RUNTIME_BOOTSTRAP_ENV = "EOS_SANDBOX_RUNTIME_BOOTSTRAP"
 
 
-async def bootstrap_in_sandbox_ci_runtime(
+def _sandbox_runtime_bootstrap_enabled() -> bool:
+    """Return True when eager sandbox-runtime bootstrap is enabled."""
+    return os.environ.get(SANDBOX_RUNTIME_BOOTSTRAP_ENV) == "1"
+
+
+async def bootstrap_in_sandbox_runtime(
     sandbox_id: str,
     workspace_root: str,
 ) -> None:
-    """Eager CI bootstrap — uploads the runtime command bundle.
+    """Upload the runtime command bundle during sandbox lifecycle events.
 
     Called by ``SandboxService.create_sandbox`` and ``start_sandbox`` after
     the underlying Daytona sandbox is provisioned/resumed.
 
-    Short-circuits as a no-op when ``EOS_CI_IN_SANDBOX`` != ``"1"``,
-    when ``sandbox_id`` or ``workspace_root`` is empty. Raises when the runtime
+    Short-circuits as a no-op when eager bootstrap is disabled, or when
+    ``sandbox_id`` or ``workspace_root`` is empty. Raises when the runtime
     bundle cannot be prepared.
-
-    This helper is intentionally distinct from
-    :func:`ensure_code_intelligence_runtime`, which owns the orchestrator-side
-    context preparation path. The two run in different contexts and must
-    not collide.
     """
-    if not _ci_in_sandbox_enabled():
+    if not _sandbox_runtime_bootstrap_enabled():
         return
     if not sandbox_id or not str(workspace_root or "").strip():
         return
@@ -40,13 +37,13 @@ async def bootstrap_in_sandbox_ci_runtime(
     from sandbox.runtime.bundle import ensure_runtime_uploaded
 
     logger.info(
-        "eager CI command bootstrap starting for sandbox %s at %s",
+        "eager sandbox-runtime bootstrap starting for sandbox %s at %s",
         sandbox_id,
         workspace_root,
     )
     await ensure_runtime_uploaded(sandbox_id)
     logger.info(
-        "eager CI command bootstrap completed for sandbox %s at %s",
+        "eager sandbox-runtime bootstrap completed for sandbox %s at %s",
         sandbox_id,
         workspace_root,
     )
@@ -61,16 +58,16 @@ async def bootstrap_upload_runtime_bundle(
     Performs the chunked bundle upload without spawning the daemon. The
     create-sandbox path runs this concurrently with ``ensure_git`` (which
     is the other long pre-bootstrap step), then defers to the regular
-    :func:`bootstrap_in_sandbox_ci_runtime` afterwards. That call finds
+    :func:`bootstrap_in_sandbox_runtime` afterwards. That call finds
     the bundle already in place via ``.bundle-hash``. Net effect: the
     upload's wall time overlaps with ``ensure_git``
     instead of stacking on top of it.
 
-    Same gating as :func:`bootstrap_in_sandbox_ci_runtime`. Raises on upload
+    Same gating as :func:`bootstrap_in_sandbox_runtime`. Raises on upload
     failure; callers running this in a background thread are expected to
     swallow and let the sequential bootstrap retry.
     """
-    if not _ci_in_sandbox_enabled():
+    if not _sandbox_runtime_bootstrap_enabled():
         return
     if not sandbox_id or not str(workspace_root or "").strip():
         return
@@ -78,12 +75,12 @@ async def bootstrap_upload_runtime_bundle(
     from sandbox.runtime.bundle import ensure_runtime_uploaded
 
     logger.info(
-        "eager CI bundle upload (background) starting for sandbox %s",
+        "eager sandbox-runtime bundle upload starting for sandbox %s",
         sandbox_id,
     )
     await ensure_runtime_uploaded(sandbox_id)
     logger.info(
-        "eager CI bundle upload (background) completed for sandbox %s",
+        "eager sandbox-runtime bundle upload completed for sandbox %s",
         sandbox_id,
     )
 
@@ -126,7 +123,7 @@ async def discover_workspace_async(sandbox: Any) -> str | None:
     return None
 
 
-def ensure_code_intelligence_runtime(
+def prepare_sandbox_runtime_context(
     context: Any,
     *,
     sandbox_id: str | None,

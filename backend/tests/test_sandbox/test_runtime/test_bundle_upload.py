@@ -58,8 +58,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/server.py",
         "sandbox/runtime/bash.py",
         "sandbox/runtime/setup_orchestrator.py",
-        "sandbox/runtime/types.py",
-        "sandbox/runtime/wire.py",
         "sandbox/runtime/overlay_shell/__init__.py",
         "sandbox/runtime/overlay_shell/capture_to_changeset.py",
         "sandbox/runtime/overlay_shell/cli.py",

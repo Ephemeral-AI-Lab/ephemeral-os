@@ -77,7 +77,7 @@ backend/src/
 └── sandbox/                       # see occ-overlay-daemon-refactor.md
 ```
 
-`find_definitions`, `find_references`, `hover`, `diagnostics`, and `query_symbols` are no longer methods on `CodeIntelligenceService`. They are normal tools registered from `plugins/catalog/lsp/tools/`.
+`find_definitions`, `find_references`, `hover`, `diagnostics`, and `query_symbols` are no longer methods on a shared code-intelligence query facade. They are normal tools registered from `plugins/catalog/lsp/tools/`.
 
 ## 3. Plugin folder contract
 
@@ -258,10 +258,10 @@ full call path:
 - closing stale handles when the sandbox disappears.
 
 No host-side symbol index, no document-version cache, no local syntax-check
-fallback that pretends to be diagnostics, and no `CodeIntelligenceService` query
-facade remain. If basedpyright cannot answer a query, the tool should return an
-explicit unavailable/unsupported result instead of falling back to the deleted
-in-house query surface.
+fallback that pretends to be diagnostics, and no shared query facade remain. If
+basedpyright cannot answer a query, the tool should return an explicit
+unavailable/unsupported result instead of falling back to the deleted in-house
+query surface.
 
 ## 6. Deletions
 
@@ -295,7 +295,7 @@ The replacement query tools live under `plugins/catalog/lsp/tools/` and are regi
 
 - Tests targeting symbol-index extraction/storage.
 - Tests targeting the deleted language-server host/cache machinery.
-- Tests targeting deleted `CodeIntelligenceService` query methods.
+- Tests targeting deleted shared query-facade methods.
 
 Replacement tests should cover plugin discovery, setup selection, direct tool registration, and LSP tool execution against a real Python file.
 

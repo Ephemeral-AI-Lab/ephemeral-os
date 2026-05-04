@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class DaytonaContextPreparer:
-    """Inject sandbox and code-intelligence runtime state for sandbox tools."""
+    """Inject sandbox runtime state for sandbox tools."""
 
     def __init__(self, sandbox_id: str) -> None:
         self.sandbox_id = sandbox_id
@@ -62,9 +62,9 @@ class DaytonaContextPreparer:
         """Add the sandbox and repo root to tool execution metadata."""
         sandbox = self._get_sandbox()
         repo_root = context.get("repo_root") or self._resolve_cwd_sync(sandbox)
-        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import prepare_sandbox_runtime_context
 
-        ensure_code_intelligence_runtime(
+        prepare_sandbox_runtime_context(
             context,
             sandbox_id=self.sandbox_id,
             sandbox=sandbox,
@@ -75,9 +75,9 @@ class DaytonaContextPreparer:
         """Add the async sandbox and repo root to tool execution metadata."""
         sandbox = await self._get_sandbox_async()
         repo_root = context.get("repo_root") or await self._resolve_cwd_async(sandbox)
-        from sandbox.lifecycle.workspace import ensure_code_intelligence_runtime
+        from sandbox.lifecycle.workspace import prepare_sandbox_runtime_context
 
-        ensure_code_intelligence_runtime(
+        prepare_sandbox_runtime_context(
             context,
             sandbox_id=self.sandbox_id,
             sandbox=sandbox,

@@ -9,7 +9,7 @@ from typing import Protocol
 
 from sandbox.api import RawExecResult
 
-_BUNDLE_REMOTE_DIR = "/tmp/eos-ci-runtime"
+_BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
 
 
 class _RawExecCallable(Protocol):

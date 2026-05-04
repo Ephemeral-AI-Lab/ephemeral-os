@@ -31,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-BUNDLE_REMOTE_DIR = "/tmp/eos-ci-runtime"
+BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
 """Remote directory the bundle is extracted into."""
 
 _RUNTIME_EXCLUDE_PARTS = {
@@ -232,7 +232,7 @@ async def _ensure_runtime_uploaded_with_exec(
     existing = (getattr(marker_check, "stdout", "") or "").strip()
     if getattr(marker_check, "exit_code", 1) == 0 and existing == digest:
         logger.debug(
-            "ci runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id
+            "sandbox runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id
         )
         return digest
 
@@ -279,7 +279,7 @@ async def _ensure_runtime_uploaded_with_exec(
             f"{getattr(result, 'stdout', '')}"
         )
     logger.info(
-        "ci runtime bundle uploaded (%d bytes, %d chunks, sha=%s) to %s",
+        "sandbox runtime bundle uploaded (%d bytes, %d chunks, sha=%s) to %s",
         len(bundle),
         (len(encoded) + _CHUNK_SIZE - 1) // _CHUNK_SIZE,
         digest[:8],
