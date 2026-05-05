@@ -1,25 +1,25 @@
 """SQLAlchemy ORM models for EphemeralOS persistence."""
 
 from db.models.agent_run import AgentRunRecord
-from db.models.complex_task_request import ComplexTaskRequestRecord
+from db.models.mission import MissionRecord
 from db.models.context_packet import ContextPacketRecord
-from db.models.harness_graph import HarnessGraphRecord
+from db.models.attempt import AttemptRecord
 from db.models.model_registration import ModelRegistrationRecord
 from db.models.task_center import (
     TaskCenterRequestRecord,
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
 )
-from db.models.task_segment import TaskSegmentRecord
+from db.models.episode import EpisodeRecord
 
 __all__ = [
     "AgentRunRecord",
-    "ComplexTaskRequestRecord",
+    "MissionRecord",
     "ContextPacketRecord",
-    "HarnessGraphRecord",
+    "AttemptRecord",
     "ModelRegistrationRecord",
     "TaskCenterRequestRecord",
     "TaskCenterRunRecord",
     "TaskCenterTaskRecord",
-    "TaskSegmentRecord",
+    "EpisodeRecord",
 ]

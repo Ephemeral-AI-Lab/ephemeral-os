@@ -1,6 +1,6 @@
 """TaskCenter request/run/task persistence store.
 
-Harness-graph persistence has moved to ``db.stores.harness_graph_store``
+Harness-graph persistence has moved to ``db.stores.attempt_store``
 and is owned by the new three-axis (request / segment / graph) schema.
 """
 
@@ -51,7 +51,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
         "status": record.status,
         "summaries": record.summaries or [],
         "needs": record.needs or [],
-        "task_center_harness_graph_id": record.task_center_harness_graph_id,
+        "task_center_attempt_id": record.task_center_attempt_id,
         "context_packet_id": record.context_packet_id,
         "fix_target_id": record.fix_target_id,
         "spawn_reason": record.spawn_reason,
@@ -155,7 +155,7 @@ class TaskCenterStore(SyncStoreMixin):
         status: str,
         summaries: list[SerializedRow],
         needs: list[str],
-        task_center_harness_graph_id: str | None,
+        task_center_attempt_id: str | None,
         agent_name: str | None = None,
         context_packet_id: str | None = None,
         fix_target_id: str | None = None,
@@ -174,7 +174,7 @@ class TaskCenterStore(SyncStoreMixin):
                     status=status,
                     summaries=summaries,
                     needs=needs,
-                    task_center_harness_graph_id=task_center_harness_graph_id,
+                    task_center_attempt_id=task_center_attempt_id,
                     context_packet_id=context_packet_id,
                     fix_target_id=fix_target_id,
                     spawn_reason=spawn_reason,
@@ -189,7 +189,7 @@ class TaskCenterStore(SyncStoreMixin):
                 record.status = status
                 record.summaries = summaries
                 record.needs = needs
-                record.task_center_harness_graph_id = task_center_harness_graph_id
+                record.task_center_attempt_id = task_center_attempt_id
                 record.context_packet_id = context_packet_id
                 record.fix_target_id = fix_target_id
                 record.spawn_reason = spawn_reason
@@ -210,56 +210,56 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_tasks_for_harness_graph(
-        self, harness_graph_id: str
+    def list_tasks_for_attempt(
+        self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
                 .filter(
-                    TaskCenterTaskRecord.task_center_harness_graph_id
-                    == harness_graph_id
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id
                 )
                 .order_by(TaskCenterTaskRecord.created_at.asc())
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_tasks_for_harness_graphs(
-        self, harness_graph_ids: list[str]
+    def list_tasks_for_attempts(
+        self, attempt_ids: list[str]
     ) -> list[SerializedRow]:
-        if not harness_graph_ids:
+        if not attempt_ids:
             return []
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
                 .filter(
-                    TaskCenterTaskRecord.task_center_harness_graph_id.in_(
-                        harness_graph_ids
+                    TaskCenterTaskRecord.task_center_attempt_id.in_(
+                        attempt_ids
                     )
                 )
                 .order_by(
-                    TaskCenterTaskRecord.task_center_harness_graph_id.asc(),
+                    TaskCenterTaskRecord.task_center_attempt_id.asc(),
                     TaskCenterTaskRecord.created_at.asc(),
                 )
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_generator_tasks_for_harness_graph(
-        self, harness_graph_id: str
+    def list_generator_tasks_for_attempt(
+        self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
                 .filter(
-                    TaskCenterTaskRecord.task_center_harness_graph_id
-                    == harness_graph_id,
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id,
                     TaskCenterTaskRecord.role == "generator",
                 )
                 .order_by(TaskCenterTaskRecord.created_at.asc())
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def get_evaluator_pass_summary(self, harness_graph_id: str) -> str:
+    def get_evaluator_pass_summary(self, attempt_id: str) -> str:
         """Return the evaluator's latest success-summary text for *graph*.
 
         Used by the segment manager to denormalize the closing evaluator's
@@ -272,8 +272,8 @@ class TaskCenterStore(SyncStoreMixin):
             record = (
                 db.query(TaskCenterTaskRecord)
                 .filter(
-                    TaskCenterTaskRecord.task_center_harness_graph_id
-                    == harness_graph_id,
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id,
                     TaskCenterTaskRecord.role == "evaluator",
                 )
                 .order_by(TaskCenterTaskRecord.created_at.desc())

@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class HarnessLifecycleConfig:
-    """Configurable knobs for the request/segment/graph lifecycle.
+    """Configurable knobs for the request/episode/attempt lifecycle.
 
-    ``default_attempt_budget`` is applied to every TaskSegment created by
-    ``ComplexTaskRequestHandler`` unless overridden per-call.
+    ``default_attempt_budget`` is applied to every Episode created by
+    ``MissionHandler`` unless overridden per-call.
     """
 
     default_attempt_budget: int = 2

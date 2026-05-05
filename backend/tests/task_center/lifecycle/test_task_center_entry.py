@@ -1,12 +1,12 @@
 """TaskCenter-backed server entry tests.
 
-The entry executor is graph-less (per phase-06 *Sources of truth*: an entry
-segment may have zero ``HarnessGraph`` rows). These tests pin:
+The entry executor is attempt-less (per phase-06 *Sources of truth*: an entry
+episode may have zero ``Attempt`` rows). These tests pin:
 
-    - the entry task row writes ``task_center_harness_graph_id=None``;
-    - the entry segment exists but contains zero ``HarnessGraph`` rows;
+    - the entry task row writes ``task_center_attempt_id=None``;
+    - the entry episode exists but contains zero ``Attempt`` rows;
     - run exhaustion via :class:`EntryTaskController` finishes the run and
-      closes the entry segment + complex_request.
+      closes the entry episode + complex_request.
 """
 
 from __future__ import annotations
@@ -27,9 +27,9 @@ def _fake_sandbox_bridge() -> TaskCenterSandboxBridge:
 
 @pytest.mark.asyncio
 async def test_entry_executor_runs_in_graph_less_mode(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     context_packet_store,
     tmp_path,
@@ -75,9 +75,9 @@ async def test_entry_executor_runs_in_graph_less_mode(
             sandbox_id=None,
             on_agent_event=None,
             task_store=task_store,
-            request_store=request_store,
-            segment_store=segment_store,
-            graph_store=graph_store,
+            mission_store=mission_store,
+            episode_store=episode_store,
+            attempt_store=attempt_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
             sandbox_bridge=_fake_sandbox_bridge(),
@@ -89,7 +89,7 @@ async def test_entry_executor_runs_in_graph_less_mode(
             if definition is not None:
                 register_definition(definition)
 
-    request = request_store.get(entry.complex_task_request_id)
+    request = mission_store.get(entry.mission_id)
     task = task_store.get_task(entry.entry_task_id)
     run = task_store.get_run(entry.task_center_run_id)
     persisted_request = task_store.get_request(entry.request_id)
@@ -101,8 +101,8 @@ async def test_entry_executor_runs_in_graph_less_mode(
     assert task is not None
     assert task["role"] == "generator"
     assert task["agent_name"] == "entry_executor"
-    # Carve-out invariant: entry task is graph-less.
-    assert task["task_center_harness_graph_id"] is None
+    # Carve-out invariant: entry task is attempt-less.
+    assert task["task_center_attempt_id"] is None
     assert task["context_packet_id"] is not None
     packet = context_packet_store.get(task["context_packet_id"])
     assert packet is not None
@@ -115,23 +115,23 @@ async def test_entry_executor_runs_in_graph_less_mode(
     assert "# Entry request" in captured[0]["input_query"]
     assert "do a complex thing" in captured[0]["input_query"]
     assert captured[0]["extra_tool_metadata"].task_center_task_id == entry.entry_task_id
-    # Entry-mode tasks have no graph id but the runtime is always attached
+    # Entry-mode tasks have no attempt id but the runtime is always attached
     # so executor-shaped submissions can resolve through the unified
     # ``resolve_executor_submission_context`` path.
-    assert captured[0]["extra_tool_metadata"].task_center_harness_graph_id is None
-    assert captured[0]["extra_tool_metadata"].harness_graph_runtime is not None
+    assert captured[0]["extra_tool_metadata"].task_center_attempt_id is None
+    assert captured[0]["extra_tool_metadata"].attempt_runtime is not None
 
 
 @pytest.mark.asyncio
-async def test_entry_segment_has_zero_harness_graph_rows(
-    request_store,
-    segment_store,
-    graph_store,
+async def test_entry_segment_has_zero_attempt_rows(
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     context_packet_store,
     tmp_path,
 ) -> None:
-    """Regression: confirm the carve-out — entry segment contains 0 graphs."""
+    """Regression: confirm the carve-out — entry episode contains 0 attempts."""
     previous = {
         name: get_definition(name)
         for name in ("entry_executor", "planner")
@@ -172,9 +172,9 @@ async def test_entry_segment_has_zero_harness_graph_rows(
             sandbox_id=None,
             on_agent_event=None,
             task_store=task_store,
-            request_store=request_store,
-            segment_store=segment_store,
-            graph_store=graph_store,
+            mission_store=mission_store,
+            episode_store=episode_store,
+            attempt_store=attempt_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
             sandbox_bridge=_fake_sandbox_bridge(),
@@ -186,37 +186,37 @@ async def test_entry_segment_has_zero_harness_graph_rows(
             if definition is not None:
                 register_definition(definition)
 
-    # Phase-06 *Sources of truth*: an entry segment may have zero HarnessGraph rows.
-    assert graph_store.list_for_segment(entry.task_segment_id) == []
-    segment = segment_store.get(entry.task_segment_id)
-    assert segment is not None
-    assert segment.harness_graph_ids == ()
+    # Phase-06 *Sources of truth*: an entry episode may have zero Attempt rows.
+    assert attempt_store.list_for_episode(entry.episode_id) == []
+    episode = episode_store.get(entry.episode_id)
+    assert episode is not None
+    assert episode.attempt_ids == ()
 
 
 @pytest.mark.asyncio
 async def test_entry_executor_submit_execution_success_finishes_run(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     context_packet_store,
     tmp_path,
 ) -> None:
     """E2E: an agent that calls ``submit_execution_success`` from the entry
     executor must successfully resolve the unified executor submission
-    context, transition the entry task to DONE, close the entry segment +
+    context, transition the entry task to DONE, close the entry episode +
     request, and finish the run as 'done'.
 
     This pins the contract that the launcher attaches the runtime to entry
-    launches even though there is no harness graph — without it, the
+    launches even though there is no harness attempt — without it, the
     unified ``resolve_executor_submission_context`` would error on a missing
     runtime and the entry executor could never call any of its terminals.
     """
     from pathlib import Path
 
-    from db.stores.complex_task_request_store import ComplexTaskRequestStore  # noqa: F401
-    from task_center.mission.mission import ComplexTaskRequestStatus
-    from task_center.episode.episode import TaskSegmentStatus
+    from db.stores.mission_store import MissionStore  # noqa: F401
+    from task_center.mission.mission import MissionStatus
+    from task_center.episode.episode import EpisodeStatus
     from task_center.task import HarnessTaskStatus
     from tools.core.context import ToolExecutionContextService
     from tools.core.tool_execution import execute_tool_once
@@ -283,9 +283,9 @@ async def test_entry_executor_submit_execution_success_finishes_run(
             sandbox_id=None,
             on_agent_event=None,
             task_store=task_store,
-            request_store=request_store,
-            segment_store=segment_store,
-            graph_store=graph_store,
+            mission_store=mission_store,
+            episode_store=episode_store,
+            attempt_store=attempt_store,
             context_packet_store=context_packet_store,
             runner=runner_that_submits_success,
             sandbox_bridge=_fake_sandbox_bridge(),
@@ -298,16 +298,16 @@ async def test_entry_executor_submit_execution_success_finishes_run(
                 register_definition(definition)
 
     task = task_store.get_task(entry.entry_task_id)
-    fresh_segment = segment_store.get(entry.task_segment_id)
-    fresh_request = request_store.get(entry.complex_task_request_id)
+    fresh_segment = episode_store.get(entry.episode_id)
+    fresh_request = mission_store.get(entry.mission_id)
     run = task_store.get_run(entry.task_center_run_id)
     assert task is not None
     assert task["status"] == HarnessTaskStatus.DONE.value
     assert fresh_segment is not None
-    assert fresh_segment.status == TaskSegmentStatus.SUCCEEDED
+    assert fresh_segment.status == EpisodeStatus.SUCCEEDED
     assert fresh_request is not None
-    assert fresh_request.status == ComplexTaskRequestStatus.SUCCEEDED
+    assert fresh_request.status == MissionStatus.SUCCEEDED
     assert run is not None
     assert run["status"] == "done"
-    # And no synthetic graph appeared along the way.
-    assert graph_store.list_for_segment(entry.task_segment_id) == []
+    # And no synthetic attempt appeared along the way.
+    assert attempt_store.list_for_episode(entry.episode_id) == []

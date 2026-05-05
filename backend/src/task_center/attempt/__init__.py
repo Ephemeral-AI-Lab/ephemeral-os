@@ -1,15 +1,15 @@
-"""Harness graph lifecycle package."""
+"""Harness attempt lifecycle package."""
 
 from task_center.attempt.state import (
-    HarnessGraph,
-    HarnessGraphFailReason,
-    HarnessGraphStage,
-    HarnessGraphStatus,
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
 
 __all__ = [
-    "HarnessGraph",
-    "HarnessGraphFailReason",
-    "HarnessGraphStage",
-    "HarnessGraphStatus",
+    "Attempt",
+    "AttemptFailReason",
+    "AttemptStage",
+    "AttemptStatus",
 ]

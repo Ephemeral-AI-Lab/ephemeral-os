@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
-    HarnessSubmissionContextError,
+    AttemptSubmissionContextError,
     resolve_executor_submission_context,
 )
 from tools.submission.hooks import HarnessAgentProfileGate, HarnessRoleGate
@@ -46,7 +46,7 @@ async def submit_execution_success(
         submission_context.submit_executor_success(
             summary=summary, artifacts=artifacts
         )
-    except (HarnessSubmissionContextError, GraphInvariantViolation) as exc:
+    except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
@@ -54,6 +54,6 @@ async def submit_execution_success(
         metadata={
             "submission_kind": "generator_executor_success",
             "task_center_task_id": submission_context.task_center_task_id,
-            "harness_graph_id": submission_context.graph_id,
+            "attempt_id": submission_context.attempt_id,
         },
     )

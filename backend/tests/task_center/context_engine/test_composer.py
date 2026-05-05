@@ -67,15 +67,15 @@ def _ok_recipe(recipe_id: str):
     def _build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
         return ContextPacket(
             target_role="planner",
-            target_id=scope.harness_graph_id,
+            target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
-                request_id=scope.request_id,
-                segment_id=scope.segment_id,
-                harness_graph_id=scope.harness_graph_id,
+                mission_id=scope.mission_id,
+                episode_id=scope.episode_id,
+                attempt_id=scope.attempt_id,
             ),
             blocks=[
                 ContextBlock(
-                    kind="segment_goal",
+                    kind="episode_goal",
                     priority=ContextPriority.REQUIRED,
                     text="goal",
                 )
@@ -85,7 +85,7 @@ def _ok_recipe(recipe_id: str):
     return ContextRecipe(
         id=recipe_id,
         required_scope_fields=frozenset(
-            {"request_id", "segment_id", "harness_graph_id"}
+            {"mission_id", "episode_id", "attempt_id"}
         ),
         build=_build,
     )
@@ -97,9 +97,9 @@ def _stub_deps(packet_store) -> ContextEngineDeps:
             return None
 
     return ContextEngineDeps(
-        request_store=_S(),  # type: ignore[arg-type]
-        segment_store=_S(),  # type: ignore[arg-type]
-        graph_store=_S(),  # type: ignore[arg-type]
+        mission_store=_S(),  # type: ignore[arg-type]
+        episode_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
         context_packet_store=packet_store,
     )
@@ -119,7 +119,7 @@ def test_compose_threads_calls_in_order(packet_store):
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            request_id="r", segment_id="s", harness_graph_id="g"
+            mission_id="r", episode_id="s", attempt_id="g"
         ),
     )
     assert isinstance(bundle, LaunchBundle)
@@ -166,7 +166,7 @@ def test_required_context_blocks_appended_before_render(packet_store):
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            request_id="r", segment_id="s", harness_graph_id="g"
+            mission_id="r", episode_id="s", attempt_id="g"
         ),
     )
     assert bundle.agent_def.name == "planner_full_only"
@@ -190,9 +190,9 @@ def test_compose_persists_packet_only_with_store():
             return None
 
     deps = ContextEngineDeps(
-        request_store=_S(),  # type: ignore[arg-type]
-        segment_store=_S(),  # type: ignore[arg-type]
-        graph_store=_S(),  # type: ignore[arg-type]
+        mission_store=_S(),  # type: ignore[arg-type]
+        episode_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
         context_packet_store=None,
     )
@@ -200,7 +200,7 @@ def test_compose_persists_packet_only_with_store():
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            request_id="r", segment_id="s", harness_graph_id="g"
+            mission_id="r", episode_id="s", attempt_id="g"
         ),
     )
     assert bundle.context_packet_id is None
@@ -228,7 +228,7 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
     )
 
     scope = ContextScope(
-        request_id="r", segment_id="s", harness_graph_id="g"
+        mission_id="r", episode_id="s", attempt_id="g"
     )
     bundle = composer.compose(base_agent_name="planner", scope=scope)
     renderer.render.assert_called_once()
@@ -245,5 +245,5 @@ def test_missing_context_recipe_raises_before_render(packet_store):
     with pytest.raises(MissingContextRecipeError):
         composer.compose(
             base_agent_name="bare",
-            scope=ContextScope(request_id="r"),
+            scope=ContextScope(mission_id="r"),
         )

@@ -1,32 +1,32 @@
-"""TaskSegment-layer invariants. All raise ``GraphInvariantViolation``."""
+"""Episode-layer invariants. All raise ``TaskCenterInvariantViolation``."""
 
 from __future__ import annotations
 
-from task_center.exceptions import GraphInvariantViolation
-from task_center.attempt import HarnessGraph
-from task_center.episode.episode import TaskSegment
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt import Attempt
+from task_center.episode.episode import Episode
 
 
-def assert_episode_open(segment: TaskSegment) -> None:
-    if not segment.is_open:
-        raise GraphInvariantViolation(
-            f"TaskSegment {segment.id!r} is not open (status={segment.status})"
+def assert_episode_open(episode: Episode) -> None:
+    if not episode.is_open:
+        raise TaskCenterInvariantViolation(
+            f"Episode {episode.id!r} is not open (status={episode.status})"
         )
 
 
-def assert_episode_has_budget(segment: TaskSegment) -> None:
-    if not segment.has_budget_remaining:
-        raise GraphInvariantViolation(
-            f"TaskSegment {segment.id!r} attempt budget exhausted "
-            f"({segment.attempt_count}/{segment.attempt_budget})"
+def assert_episode_has_budget(episode: Episode) -> None:
+    if not episode.has_budget_remaining:
+        raise TaskCenterInvariantViolation(
+            f"Episode {episode.id!r} attempt budget exhausted "
+            f"({episode.attempt_count}/{episode.attempt_budget})"
         )
 
 
 def assert_attempt_belongs_to_episode(
-    graph: HarnessGraph, segment: TaskSegment
+    attempt: Attempt, episode: Episode
 ) -> None:
-    if graph.task_segment_id != segment.id:
-        raise GraphInvariantViolation(
-            f"HarnessGraph {graph.id!r} (segment {graph.task_segment_id!r}) "
-            f"does not belong to TaskSegment {segment.id!r}"
+    if attempt.episode_id != episode.id:
+        raise TaskCenterInvariantViolation(
+            f"Attempt {attempt.id!r} (episode {attempt.episode_id!r}) "
+            f"does not belong to Episode {episode.id!r}"
         )

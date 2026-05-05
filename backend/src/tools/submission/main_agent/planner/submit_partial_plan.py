@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pydantic import Field, field_validator
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
-    HarnessSubmissionContextError,
-    resolve_harness_submission_context,
+    AttemptSubmissionContextError,
+    resolve_attempt_submission_context,
 )
 from tools.submission.hooks import HarnessRoleGate
 from tools.submission.main_agent.planner._schemas import (
@@ -33,7 +33,7 @@ class SubmitPartialPlanInput(PlannerSubmissionBaseInput):
 
 @tool(
     name="submit_partial_plan",
-    description="Submit a bounded harness graph plan with a continuation goal.",
+    description="Submit a bounded harness attempt plan with a continuation goal.",
     input_model=SubmitPartialPlanInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
@@ -51,8 +51,8 @@ async def submit_partial_plan(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
-        submission_context = resolve_harness_submission_context(context)
-    except HarnessSubmissionContextError as exc:
+        submission_context = resolve_attempt_submission_context(context)
+    except AttemptSubmissionContextError as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     submission, error = build_planner_submission(
@@ -69,7 +69,7 @@ async def submit_partial_plan(
 
     try:
         submission_context.orchestrator.apply_plan_submission(submission)
-    except GraphInvariantViolation as exc:
+    except TaskCenterInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
@@ -77,6 +77,6 @@ async def submit_partial_plan(
         metadata={
             "submission_kind": "planner_partial",
             "task_center_task_id": submission_context.task_center_task_id,
-            "harness_graph_id": submission_context.graph.id,
+            "attempt_id": submission_context.attempt.id,
         },
     )

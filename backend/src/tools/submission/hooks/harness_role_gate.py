@@ -1,4 +1,4 @@
-"""Role and ownership gate for harness graph terminal tools."""
+"""Role and ownership gate for harness attempt terminal tools."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from task_center.attempt.runtime import HarnessGraphRuntime
+from task_center.attempt.runtime import AttemptRuntime
 from task_center.task import HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.hooks import HookResult
@@ -23,10 +23,10 @@ class HarnessRoleGate:
         tool_input: BaseModel,
         context: ToolExecutionContextService,
     ) -> HookResult[Any]:
-        runtime = context.get("harness_graph_runtime")
-        if not isinstance(runtime, HarnessGraphRuntime):
+        runtime = context.get("attempt_runtime")
+        if not isinstance(runtime, AttemptRuntime):
             return HookResult.fail(
-                "Missing harness graph runtime for this TaskCenter submission."
+                "Missing harness attempt runtime for this TaskCenter submission."
             )
         task_id = str(context.get("task_center_task_id") or "")
         if not task_id or task_id.isspace():
@@ -44,21 +44,21 @@ class HarnessRoleGate:
                 f"{self.expected_role.value} tasks."
             )
 
-        # Generator-role tasks may be the graph-less entry executor; the
-        # closed-graph check only applies when there's a graph.
-        graph_id = str(task.get("task_center_harness_graph_id") or "")
-        if self.expected_role != HarnessTaskRole.GENERATOR and not graph_id:
+        # Generator-role tasks may be the attempt-less entry executor; the
+        # closed-attempt check only applies when there's a attempt.
+        attempt_id = str(task.get("task_center_attempt_id") or "")
+        if self.expected_role != HarnessTaskRole.GENERATOR and not attempt_id:
             return HookResult.fail(
-                f"TaskCenter task {task_id!r} is not attached to a harness graph."
+                f"TaskCenter task {task_id!r} is not attached to a harness attempt."
             )
-        if graph_id:
-            graph = runtime.graph_store.get(graph_id)
-            if graph is None:
+        if attempt_id:
+            attempt = runtime.attempt_store.get(attempt_id)
+            if attempt is None:
                 return HookResult.fail(
-                    f"HarnessGraph {graph_id!r} was not found."
+                    f"Attempt {attempt_id!r} was not found."
                 )
-            if graph.is_closed:
+            if attempt.is_closed:
                 return HookResult.fail(
-                    "This harness graph is already closed; terminal submissions are disabled."
+                    "This harness attempt is already closed; terminal submissions are disabled."
                 )
         return HookResult.pass_(tool_input)

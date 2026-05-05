@@ -10,7 +10,7 @@ from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from notification.rules import dispatch_rules
 from notification.service import SystemNotificationService
 from tools.submission.notification_triggers import (
-    make_request_after_edit_reminder,
+    make_mission_request_after_edit_reminder,
     make_resolver_limit_reminder,
     resolve_harness_notification_triggers,
 )
@@ -62,13 +62,13 @@ async def test_after_edit_reminder_fires_once() -> None:
     ctx = SimpleNamespace(tool_metadata=None, cwd="/tmp")
 
     notifications = await _dispatch(
-        make_request_after_edit_reminder(),
+        make_mission_request_after_edit_reminder(),
         _edit_messages(),
         ctx,
     )
 
     assert len(notifications) == 1
-    assert "request_complex_task_solution is disabled" in notifications[0].text
+    assert "request_mission_solution is disabled" in notifications[0].text
 
 
 async def test_resolver_limit_reminder_fires_at_four() -> None:

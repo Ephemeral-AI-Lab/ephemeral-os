@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import (
     GeneratorSubmission,
     PlannedGeneratorTask,
@@ -27,11 +27,11 @@ from tools.core.runtime import ExecutionMetadata
 
 @dataclass
 class HarnessFixture:
-    runtime: HarnessGraphRuntime
-    orchestrator: HarnessGraphOrchestrator
-    graph_id: str
+    runtime: AttemptRuntime
+    orchestrator: AttemptOrchestrator
+    attempt_id: str
     request_id: str
-    segment_id: str
+    episode_id: str
 
 
 class FakeLauncher:
@@ -44,52 +44,52 @@ class FakeLauncher:
 
 def build_harness_fixture(
     *,
-    request_store: Any,
-    segment_store: Any,
-    graph_store: Any,
+    mission_store: Any,
+    episode_store: Any,
+    attempt_store: Any,
     task_store: Any,
     composer: Any,
 ) -> HarnessFixture:
-    request = request_store.insert(
+    request = mission_store.insert(
         task_center_run_id="run1",
         requested_by_task_id="outer-task",
         goal="solve the task",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="solve the task",
         attempt_budget=2,
     )
-    request_store.append_segment_id(request.id, segment.id)
-    graph = graph_store.insert(task_segment_id=segment.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment.id, graph.id)
+    mission_store.append_episode_id(request.id, episode.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(episode.id, attempt.id)
 
     launcher = FakeLauncher()
-    registry = HarnessGraphOrchestratorRegistry()
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    registry = AttemptOrchestratorRegistry()
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=SegmentManagerRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph,
-        on_graph_closed=lambda graph_id: None,
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt,
+        on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
     )
     registry.register(orchestrator)
     return HarnessFixture(
         runtime=runtime,
         orchestrator=orchestrator,
-        graph_id=graph.id,
+        attempt_id=attempt.id,
         request_id=request.id,
-        segment_id=segment.id,
+        episode_id=episode.id,
     )
 
 
@@ -103,8 +103,8 @@ def make_tool_context(
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(
         task_center_task_id=task_id,
-        task_center_harness_graph_id=fixture.graph_id,
-        harness_graph_runtime=fixture.runtime,
+        task_center_attempt_id=fixture.attempt_id,
+        attempt_runtime=fixture.runtime,
         conversation_messages=list(messages or []),
     )
     if role is not None:
@@ -116,14 +116,14 @@ def make_tool_context(
 
 def start_planner(fixture: HarnessFixture) -> str:
     fixture.orchestrator.start()
-    return planner_task_id(fixture.graph_id)
+    return planner_task_id(fixture.attempt_id)
 
 
 def apply_single_generator_plan(fixture: HarnessFixture, *, agent_name: str = "executor") -> str:
     planner_id = start_planner(fixture)
     fixture.orchestrator.apply_plan_submission(
         PlannerSubmission(
-            graph_id=fixture.graph_id,
+            attempt_id=fixture.attempt_id,
             planner_task_id=planner_id,
             kind="full",
             task_specification="spec",
@@ -140,18 +140,18 @@ def apply_single_generator_plan(fixture: HarnessFixture, *, agent_name: str = "e
             summary="plan",
         )
     )
-    return generator_task_id(fixture.graph_id, "a")
+    return generator_task_id(fixture.attempt_id, "a")
 
 
 def spawn_evaluator(fixture: HarnessFixture) -> str:
     generator_id = apply_single_generator_plan(fixture)
     fixture.orchestrator.apply_generator_submission(
         GeneratorSubmission(
-            graph_id=fixture.graph_id,
+            attempt_id=fixture.attempt_id,
             task_id=generator_id,
             outcome="success",
             summary="done",
             payload={},
         )
     )
-    return evaluator_task_id(fixture.graph_id)
+    return evaluator_task_id(fixture.attempt_id)

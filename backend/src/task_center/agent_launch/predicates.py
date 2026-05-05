@@ -29,10 +29,10 @@ class ResolverContext:
         """Convenience delegate — keeps recipe / predicate / prehook on one
         function object so structural drift fails the test, not silently."""
         return has_partial_planned_caller_ancestor(
-            request_id=self.scope.request_id,
-            request_store=self.deps.request_store,
-            segment_store=self.deps.segment_store,
-            graph_store=self.deps.graph_store,
+            mission_id=self.scope.mission_id,
+            mission_store=self.deps.mission_store,
+            episode_store=self.deps.episode_store,
+            attempt_store=self.deps.attempt_store,
             task_store=self.deps.task_store,
         )
 
@@ -75,10 +75,10 @@ class PredicateRegistry:
 def _partial_plan_caller_ancestor(ctx: ResolverContext) -> bool:
     """Shim → canonical ancestry function. Same kwargs, no extra logic."""
     return has_partial_planned_caller_ancestor(
-        request_id=ctx.scope.request_id,
-        request_store=ctx.deps.request_store,
-        segment_store=ctx.deps.segment_store,
-        graph_store=ctx.deps.graph_store,
+        mission_id=ctx.scope.mission_id,
+        mission_store=ctx.deps.mission_store,
+        episode_store=ctx.deps.episode_store,
+        attempt_store=ctx.deps.attempt_store,
         task_store=ctx.deps.task_store,
     )
 

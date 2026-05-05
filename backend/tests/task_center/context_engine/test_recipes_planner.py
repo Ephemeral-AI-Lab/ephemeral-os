@@ -19,243 +19,243 @@ from task_center.context_engine.recipes.planner import (
 )
 from task_center.context_engine.scope import ContextScope
 from task_center.attempt import (
-    HarnessGraphFailReason,
-    HarnessGraphStatus,
+    AttemptFailReason,
+    AttemptStatus,
 )
 from task_center.episode.episode import (
-    TaskSegmentCreationReason,
-    TaskSegmentStatus,
+    EpisodeCreationReason,
+    EpisodeStatus,
 )
 
 
 @pytest.fixture
 def deps_with_stores(
-    request_store, segment_store, graph_store, task_store
+    mission_store, episode_store, attempt_store, task_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
 
 
-def _seed_request(request_store, task_center_run_id, goal="goal"):
-    return request_store.insert(
+def _seed_mission(mission_store, task_center_run_id, goal="goal"):
+    return mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal=goal,
     )
 
 
-def _seed_segment(
-    segment_store,
+def _seed_episode(
+    episode_store,
     *,
-    request_id: str,
+    mission_id: str,
     sequence_no: int,
     goal: str = "g",
 ):
-    return segment_store.insert(
-        complex_task_request_id=request_id,
+    return episode_store.insert(
+        mission_id=mission_id,
         sequence_no=sequence_no,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal=goal,
         attempt_budget=2,
     )
 
 
-def _close_segment_succeeded(
-    segment_store, segment_id, *, spec: str, summary: str
+def _close_episode_succeeded(
+    episode_store, episode_id, *, spec: str, summary: str
 ):
-    return segment_store.close_succeeded(
-        segment_id,
+    return episode_store.close_succeeded(
+        episode_id,
         task_specification=spec,
         task_summary=summary,
         closed_at=datetime.now(UTC),
     )
 
 
-def _seed_failed_attempt(graph_store, segment_id, *, sequence_no: int):
-    g = graph_store.insert(
-        task_segment_id=segment_id, graph_sequence_no=sequence_no
+def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
+    g = attempt_store.insert(
+        episode_id=episode_id, attempt_sequence_no=sequence_no
     )
-    graph_store.set_plan_contract(
+    attempt_store.set_plan_contract(
         g.id,
         task_specification=f"spec-{sequence_no}",
         evaluation_criteria=[f"crit-{sequence_no}-a", f"crit-{sequence_no}-b"],
         continuation_goal=None,
     )
-    return graph_store.close(
+    return attempt_store.close(
         g.id,
-        status=HarnessGraphStatus.FAILED,
-        fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
+        status=AttemptStatus.FAILED,
+        fail_reason=AttemptFailReason.GENERATOR_FAILED,
         closed_at=datetime.now(UTC),
     )
 
 
-def _seed_running_graph(graph_store, segment_id, *, sequence_no: int):
-    return graph_store.insert(
-        task_segment_id=segment_id, graph_sequence_no=sequence_no
+def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
+    return attempt_store.insert(
+        episode_id=episode_id, attempt_sequence_no=sequence_no
     )
 
 
 # ---------------------------------------------------------------------------
-# seg-1 branch
+# episode-1 branch
 # ---------------------------------------------------------------------------
 
 
 def test_episode1_emits_one_merged_mission_episode_block(
-    deps_with_stores, request_store, segment_store, graph_store,
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_request(request_store, task_center_run_id, goal="overall")
-    seg = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="overall"
+    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
+    episode = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="overall"
     )
-    g = _seed_running_graph(graph_store, seg.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, episode.id, sequence_no=1)
 
     packet = _planner_v1_build(
         ContextScope(
-            request_id=request.id, segment_id=seg.id, harness_graph_id=g.id
+            mission_id=request.id, episode_id=episode.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["segment_goal"]
-    segment_goal = packet.blocks[0]
-    assert segment_goal.metadata["heading"] == "# Mission / Current Episode"
+    assert kinds == ["episode_goal"]
+    episode_goal = packet.blocks[0]
+    assert episode_goal.metadata["heading"] == "# Mission / Current Episode"
     assert packet.target_id == g.id
 
 
 # ---------------------------------------------------------------------------
-# seg-2 / seg-N branch
+# episode-2 / episode-N branch
 # ---------------------------------------------------------------------------
 
 
 def test_episode2_emits_mission_prior_results_and_current_episode(
-    deps_with_stores, request_store, segment_store, graph_store,
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_request(request_store, task_center_run_id, goal="overall")
-    seg1 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="seg1 goal"
+    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
+    episode1 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="episode1 goal"
     )
-    _close_segment_succeeded(
-        segment_store, seg1.id, spec="seg1 spec", summary="seg1 summary"
+    _close_episode_succeeded(
+        episode_store, episode1.id, spec="episode1 spec", summary="episode1 summary"
     )
-    seg2 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=2, goal="seg2 goal"
+    episode2 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=2, goal="episode2 goal"
     )
-    g = _seed_running_graph(graph_store, seg2.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
 
     packet = _planner_v1_build(
         ContextScope(
-            request_id=request.id, segment_id=seg2.id, harness_graph_id=g.id
+            mission_id=request.id, episode_id=episode2.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
     assert kinds == [
-        "complex_task_goal",
-        "prior_segment_specification",
-        "prior_segment_summary",
-        "segment_goal",
+        "mission_goal",
+        "prior_episode_specification",
+        "prior_episode_summary",
+        "episode_goal",
     ]
     assert packet.blocks[0].metadata["heading"] == "# Mission"
     prior_spec = packet.blocks[1]
     assert prior_spec.priority == ContextPriority.HIGH
-    assert prior_spec.metadata["segment_sequence_no"] == "1"
+    assert prior_spec.metadata["episode_sequence_no"] == "1"
     assert prior_spec.metadata["group_heading"] == "# Previous Episode Results"
-    assert prior_spec.text == "seg1 spec"
-    segment_goal = packet.blocks[3]
-    assert segment_goal.metadata["heading"] == "# Current Episode"
+    assert prior_spec.text == "episode1 spec"
+    episode_goal = packet.blocks[3]
+    assert episode_goal.metadata["heading"] == "# Current Episode"
 
 
-def test_seg3_emits_two_pairs_with_priority_split(
-    deps_with_stores, request_store, segment_store, graph_store,
+def test_episode3_emits_two_pairs_with_priority_split(
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_request(request_store, task_center_run_id, goal="overall")
-    seg1 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="g1"
+    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
+    episode1 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="g1"
     )
-    _close_segment_succeeded(segment_store, seg1.id, spec="s1", summary="sum1")
-    seg2 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=2, goal="g2"
+    _close_episode_succeeded(episode_store, episode1.id, spec="s1", summary="sum1")
+    episode2 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=2, goal="g2"
     )
-    _close_segment_succeeded(segment_store, seg2.id, spec="s2", summary="sum2")
-    seg3 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=3, goal="g3"
+    _close_episode_succeeded(episode_store, episode2.id, spec="s2", summary="sum2")
+    episode3 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=3, goal="g3"
     )
-    g = _seed_running_graph(graph_store, seg3.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, episode3.id, sequence_no=1)
 
     packet = _planner_v1_build(
         ContextScope(
-            request_id=request.id, segment_id=seg3.id, harness_graph_id=g.id
+            mission_id=request.id, episode_id=episode3.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
     # Two prior episodes in sequence order; immediate prior is HIGH.
     prior_specs = [
-        b for b in packet.blocks if b.kind == "prior_segment_specification"
+        b for b in packet.blocks if b.kind == "prior_episode_specification"
     ]
     assert len(prior_specs) == 2
-    assert prior_specs[0].metadata["segment_sequence_no"] == "1"
+    assert prior_specs[0].metadata["episode_sequence_no"] == "1"
     assert prior_specs[0].priority == ContextPriority.MEDIUM
-    assert prior_specs[1].metadata["segment_sequence_no"] == "2"
+    assert prior_specs[1].metadata["episode_sequence_no"] == "2"
     assert prior_specs[1].priority == ContextPriority.HIGH
 
 
 def test_missing_prior_spec_raises_context_engine_error(
-    deps_with_stores, request_store, segment_store, graph_store,
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    """Closed seg-1 with task_specification still null is an invariant
+    """Closed episode-1 with task_specification still null is an invariant
     violation; recipe must raise."""
-    request = _seed_request(request_store, task_center_run_id)
-    seg1 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="g1"
+    request = _seed_mission(mission_store, task_center_run_id)
+    episode1 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="g1"
     )
     # Close via legacy set_status (does not write denormalized fields).
-    segment_store.set_status(
-        seg1.id, status=TaskSegmentStatus.SUCCEEDED, closed_at=datetime.now(UTC)
+    episode_store.set_status(
+        episode1.id, status=EpisodeStatus.SUCCEEDED, closed_at=datetime.now(UTC)
     )
-    seg2 = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=2, goal="g2"
+    episode2 = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=2, goal="g2"
     )
-    g = _seed_running_graph(graph_store, seg2.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
 
     with pytest.raises(ContextEngineError):
         _planner_v1_build(
             ContextScope(
-                request_id=request.id, segment_id=seg2.id, harness_graph_id=g.id
+                mission_id=request.id, episode_id=episode2.id, attempt_id=g.id
             ),
             deps_with_stores,
         )
 
 
 # ---------------------------------------------------------------------------
-# Failed-graph landscape blocks (current segment retries)
+# Failed-attempt landscape blocks (current episode retries)
 # ---------------------------------------------------------------------------
 
 
 def test_three_failed_attempts_emit_three_high_priority_blocks(
-    deps_with_stores, request_store, segment_store, graph_store,
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_request(request_store, task_center_run_id)
-    seg = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="g"
+    request = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="g"
     )
     for n in (1, 2, 3):
-        _seed_failed_attempt(graph_store, seg.id, sequence_no=n)
-    current = _seed_running_graph(graph_store, seg.id, sequence_no=4)
+        _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
+    current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=4)
 
     packet = _planner_v1_build(
         ContextScope(
-            request_id=request.id,
-            segment_id=seg.id,
-            harness_graph_id=current.id,
+            mission_id=request.id,
+            episode_id=episode.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )
@@ -265,7 +265,7 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     assert len(failed_blocks) == 3
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
-    assert [b.metadata["graph_sequence_no"] for b in failed_blocks] == [
+    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
         "1",
         "2",
         "3",
@@ -273,25 +273,25 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
 
 
 def test_more_than_cap_failed_attempts_truncates_with_medium_summary(
-    deps_with_stores, request_store, segment_store, graph_store,
+    deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_request(request_store, task_center_run_id)
-    seg = _seed_segment(
-        segment_store, request_id=request.id, sequence_no=1, goal="g"
+    request = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="g"
     )
     total = MAX_FAILED_ATTEMPTS_RENDERED + 2
     for n in range(1, total + 1):
-        _seed_failed_attempt(graph_store, seg.id, sequence_no=n)
-    current = _seed_running_graph(
-        graph_store, seg.id, sequence_no=total + 1
+        _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
+    current_attempt = _seed_running_attempt(
+        attempt_store, episode.id, sequence_no=total + 1
     )
 
     packet = _planner_v1_build(
         ContextScope(
-            request_id=request.id,
-            segment_id=seg.id,
-            harness_graph_id=current.id,
+            mission_id=request.id,
+            episode_id=episode.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )

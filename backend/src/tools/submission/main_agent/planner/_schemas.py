@@ -7,10 +7,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents.registry import get_definition
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.generator_dag import ordered_generator_tasks
 from task_center.task import PlannedGeneratorTask, PlannerSubmission
-from tools.submission.context import HarnessSubmissionContext
+from tools.submission.context import AttemptSubmissionContext
 
 
 class PlanTaskInput(BaseModel):
@@ -82,7 +82,7 @@ def _is_generator_capable_agent(agent_name: str) -> bool:
 
 def build_planner_submission(
     *,
-    submission_context: HarnessSubmissionContext,
+    submission_context: AttemptSubmissionContext,
     kind: Literal["full", "partial"],
     task_specification: str,
     evaluation_criteria: list[str],
@@ -91,8 +91,8 @@ def build_planner_submission(
     continuation_goal: str | None,
 ) -> tuple[PlannerSubmission | None, str | None]:
     task_id = submission_context.task_center_task_id
-    if task_id != submission_context.graph.planner_task_id:
-        return None, "Current TaskCenter task is not this graph's planner task."
+    if task_id != submission_context.attempt.planner_task_id:
+        return None, "Current TaskCenter task is not this attempt's planner task."
 
     seen: set[str] = set()
     for task in tasks:
@@ -126,7 +126,7 @@ def build_planner_submission(
     )
     try:
         planned = ordered_generator_tasks(planned)
-    except GraphInvariantViolation as exc:
+    except TaskCenterInvariantViolation as exc:
         message = str(exc)
         if "unknown deps" in message:
             return None, message
@@ -136,7 +136,7 @@ def build_planner_submission(
 
     return (
         PlannerSubmission(
-            graph_id=submission_context.graph.id,
+            attempt_id=submission_context.attempt.id,
             planner_task_id=task_id,
             kind=kind,
             task_specification=task_specification,

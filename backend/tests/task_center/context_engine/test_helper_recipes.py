@@ -41,12 +41,12 @@ def packet_store():
 
 @pytest.fixture
 def deps_with_packet_store(
-    request_store, segment_store, graph_store, task_store, packet_store
+    mission_store, episode_store, attempt_store, task_store, packet_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=packet_store,
     )
@@ -56,15 +56,15 @@ def _seed_parent_packet(packet_store) -> ContextPacket:
     packet = ContextPacket(
         target_role="planner",
         target_id="g-parent",
-        canonical_refs=ContextRefs(request_id="req-A", harness_graph_id="g-parent"),
+        canonical_refs=ContextRefs(mission_id="req-A", attempt_id="g-parent"),
         blocks=[
             ContextBlock(
-                kind="segment_goal",
+                kind="episode_goal",
                 priority=ContextPriority.REQUIRED,
                 text="parent goal",
             ),
             ContextBlock(
-                kind="prior_segment_summary",
+                kind="prior_episode_summary",
                 priority=ContextPriority.HIGH,
                 text="parent summary",
             ),
@@ -94,8 +94,8 @@ def _seed_parent_task(task_store, *, task_center_run_id, task_id, question):
         status="running",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id="g-parent",
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id="g-parent",
+        spawn_reason="attempt_generator",
     )
 
 
@@ -117,7 +117,7 @@ def test_advisor_v1_emits_only_demoted_inherited_parent_context(
         question="advise me on X",
     )
     scope = ContextScope(
-        request_id="req-A",
+        mission_id="req-A",
         task_id="helper-1",
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
@@ -150,14 +150,14 @@ def test_resolver_v1_same_shape_target_role_resolver(
         question="resolve question",
     )
     scope = ContextScope(
-        request_id="req-A",
+        mission_id="req-A",
         task_id="resolver-1",
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
     )
     packet = _resolver_v1_build(scope, deps_with_packet_store)
     assert packet.target_role == "resolver"
-    assert packet.blocks[0].kind == "segment_goal"
+    assert packet.blocks[0].kind == "episode_goal"
 
 
 def test_missing_parent_packet_raises_context_engine_error(
@@ -170,7 +170,7 @@ def test_missing_parent_packet_raises_context_engine_error(
         question="q",
     )
     scope = ContextScope(
-        request_id="req-A",
+        mission_id="req-A",
         task_id="helper-1",
         parent_packet_id="missing-packet",
         parent_task_id="t-parent",
@@ -180,12 +180,12 @@ def test_missing_parent_packet_raises_context_engine_error(
 
 
 def test_missing_packet_store_raises_context_engine_error(
-    request_store, segment_store, graph_store, task_store, task_center_run_id
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     deps = ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=None,
     )
@@ -196,7 +196,7 @@ def test_missing_packet_store_raises_context_engine_error(
         question="q",
     )
     scope = ContextScope(
-        request_id="req-A",
+        mission_id="req-A",
         task_id="helper-1",
         parent_packet_id="any",
         parent_task_id="t-parent",
@@ -212,6 +212,6 @@ def test_helper_required_scope_fields_enforced():
         RESOLVER_V1_RECIPE,
     )
     for recipe in (ADVISOR_V1_RECIPE, RESOLVER_V1_RECIPE):
-        scope = ContextScope(request_id="r")
+        scope = ContextScope(mission_id="r")
         with pytest.raises(RecipeScopeError):
             scope.assert_fields(recipe.required_scope_fields)

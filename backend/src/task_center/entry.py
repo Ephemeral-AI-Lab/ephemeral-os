@@ -1,12 +1,12 @@
 """TaskCenter entrypoint for top-level user requests.
 
-The entry executor is launched in **graph-less** mode: it lives in a
-:class:`TaskSegment` with zero ``HarnessGraph`` rows (per phase-06
-*Sources of truth*: an entry segment may have zero ``HarnessGraph`` rows).
+The entry executor is launched in **attempt-less** mode: it lives in a
+:class:`Episode` with zero ``Attempt`` rows (per phase-06
+*Sources of truth*: an entry episode may have zero ``Attempt`` rows).
 Lifecycle events flow through :class:`EntryTaskController`, which is
-attached to :class:`HarnessGraphRuntime.entry_task_controller` so that the
+attached to :class:`AttemptRuntime.entry_task_controller` so that the
 launcher exhaustion path, close-report router, and submission tools can
-dispatch into it without knowing whether the spawn was graph-bound or
+dispatch into it without knowing whether the spawn was attempt-bound or
 entry-mode.
 """
 
@@ -17,15 +17,15 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from db.stores import (
-    ComplexTaskRequestStore,
+    MissionStore,
     ContextPacketStore,
-    HarnessGraphStore,
+    AttemptStore,
     TaskCenterStore,
-    TaskSegmentStore,
+    EpisodeStore,
 )
 from agents.registry import validate_agent_definitions_resolved
-from task_center.mission.handler import ComplexTaskRequestHandler
-from task_center.mission.mission import ComplexTaskCloseReport
+from task_center.mission.handler import MissionHandler
+from task_center.mission.mission import MissionCloseReport
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
@@ -36,18 +36,18 @@ from task_center.entry_task_controller import EntryTaskController
 from task_center.attempt.factory import make_attempt_orchestrator_factory
 from task_center.attempt.launcher import (
     AgentStreamEmitter,
-    EphemeralHarnessAgentLauncher,
-    HarnessAgentRunner,
+    EphemeralAttemptAgentLauncher,
+    AttemptAgentRunner,
 )
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, HarnessGraphRuntime
+from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
 from task_center.sandbox_bridge import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxBridge,
 )
-from task_center.episode.registry import SegmentManagerRegistry
+from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.task import HarnessTaskRole, HarnessTaskStatus
 
 if TYPE_CHECKING:
@@ -63,10 +63,10 @@ class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
-    complex_task_request_id: str
-    task_segment_id: str
+    mission_id: str
+    episode_id: str
     entry_task_id: str
-    launcher: EphemeralHarnessAgentLauncher
+    launcher: EphemeralAttemptAgentLauncher
 
     @property
     def sandbox_id(self) -> str:
@@ -80,23 +80,23 @@ def start_task_center_entry_run(
     sandbox_id: str | None,
     on_agent_event: AgentStreamEmitter | None,
     task_store: TaskCenterStore,
-    request_store: ComplexTaskRequestStore,
-    segment_store: TaskSegmentStore,
-    graph_store: HarnessGraphStore,
-    runner: HarnessAgentRunner | None = None,
+    mission_store: MissionStore,
+    episode_store: EpisodeStore,
+    attempt_store: AttemptStore,
+    runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
 ) -> TaskCenterEntryHandle:
-    """Create a graph-less entry executor task for a user request."""
+    """Create a attempt-less entry executor task for a user request."""
     return TaskCenterEntryCoordinator(
         config=config,
         prompt=prompt,
         sandbox_id=sandbox_id,
         on_agent_event=on_agent_event,
         task_store=task_store,
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         runner=runner,
         context_packet_store=context_packet_store,
         sandbox_bridge=sandbox_bridge,
@@ -114,10 +114,10 @@ class TaskCenterEntryCoordinator:
         sandbox_id: str | None,
         on_agent_event: AgentStreamEmitter | None,
         task_store: TaskCenterStore,
-        request_store: ComplexTaskRequestStore,
-        segment_store: TaskSegmentStore,
-        graph_store: HarnessGraphStore,
-        runner: HarnessAgentRunner | None = None,
+        mission_store: MissionStore,
+        episode_store: EpisodeStore,
+        attempt_store: AttemptStore,
+        runner: AttemptAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
         sandbox_bridge: TaskCenterSandboxBridge | None = None,
     ) -> None:
@@ -126,45 +126,45 @@ class TaskCenterEntryCoordinator:
         self._sandbox_id = sandbox_id
         self._on_agent_event = on_agent_event
         self._task_store = task_store
-        self._request_store = request_store
-        self._segment_store = segment_store
-        self._graph_store = graph_store
+        self._mission_store = mission_store
+        self._episode_store = episode_store
+        self._attempt_store = attempt_store
         self._runner = runner
         self._context_packet_store = context_packet_store
         self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
 
     def start(self) -> TaskCenterEntryHandle:
-        """Create and launch the entry executor (graph-less)."""
+        """Create and launch the entry executor (attempt-less)."""
         self._assert_stores_ready()
         request_id, run_id, entry_task_id, binding = self._create_top_level_run()
 
-        manager_registry = SegmentManagerRegistry()
+        manager_registry = EpisodeManagerRegistry()
         # The handler created here is reused twice: once to seed the entry
-        # request + segment, and again — wrapped on the runtime — to drive
+        # mission + episode, and again — wrapped on the runtime — to drive
         # delegated mission starts originating from the entry task.
-        handler = self._build_request_handler(
+        handler = self._build_mission_handler(
             manager_registry=manager_registry,
             task_center_run_id=run_id,
         )
-        complex_request = handler.create_mission_request(
+        complex_request = handler.create_mission(
             task_center_run_id=run_id,
             requested_by_task_id=entry_task_id,
             goal=self._prompt,
         )
-        entry_segment, _segment_manager = (
+        entry_segment, _episode_manager = (
             handler.create_initial_episode_with_manager(
-                complex_task_request_id=complex_request.id,
+                mission_id=complex_request.id,
             )
         )
 
         controller = EntryTaskController(
             task_id=entry_task_id,
             task_center_run_id=run_id,
-            complex_task_request_id=complex_request.id,
-            task_segment_id=entry_segment.id,
+            mission_id=complex_request.id,
+            episode_id=entry_segment.id,
             task_store=self._task_store,
-            segment_store=self._segment_store,
-            request_handler=handler,
+            episode_store=self._episode_store,
+            mission_handler=handler,
             manager_registry=manager_registry,
         )
         runtime, launcher = self._create_runtime(
@@ -184,8 +184,8 @@ class TaskCenterEntryCoordinator:
             request_id=request_id,
             task_center_run_id=run_id,
             binding=binding,
-            complex_task_request_id=complex_request.id,
-            task_segment_id=entry_segment.id,
+            mission_id=complex_request.id,
+            episode_id=entry_segment.id,
             entry_task_id=entry_task_id,
             launcher=launcher,
         )
@@ -195,9 +195,9 @@ class TaskCenterEntryCoordinator:
     def _assert_stores_ready(self) -> None:
         _assert_stores_ready(
             task_store=self._task_store,
-            request_store=self._request_store,
-            segment_store=self._segment_store,
-            graph_store=self._graph_store,
+            mission_store=self._mission_store,
+            episode_store=self._episode_store,
+            attempt_store=self._attempt_store,
         )
 
     def _create_top_level_run(
@@ -223,20 +223,20 @@ class TaskCenterEntryCoordinator:
         )
         return request_id, run_id, entry_task_id, binding
 
-    def _build_request_handler(
+    def _build_mission_handler(
         self,
         *,
-        manager_registry: SegmentManagerRegistry,
+        manager_registry: EpisodeManagerRegistry,
         task_center_run_id: str,
-    ) -> ComplexTaskRequestHandler:
-        """Build the handler reused for entry-segment + delegated requests.
+    ) -> MissionHandler:
+        """Build the handler reused for entry-episode + delegated requests.
 
         ``deliver_close_report`` is the run-finalization callback: when any
-        complex_task_request closes (the entry's own, or a delegated child),
+        mission closes (the entry's own, or a delegated child),
         the handler delivers the close report here, which finishes the run.
         """
 
-        def _finish_entry_run(report: ComplexTaskCloseReport) -> None:
+        def _finish_entry_run(report: MissionCloseReport) -> None:
             del report  # outcome already persisted to the entry task row
             existing_runs = self._task_store.get_run(task_center_run_id)
             if existing_runs is None or existing_runs.get("status") in (
@@ -256,10 +256,10 @@ class TaskCenterEntryCoordinator:
             )
             self._task_store.finish_run(task_center_run_id, status=status)
 
-        return ComplexTaskRequestHandler(
-            request_store=self._request_store,
-            segment_store=self._segment_store,
-            graph_store=self._graph_store,
+        return MissionHandler(
+            mission_store=self._mission_store,
+            episode_store=self._episode_store,
+            attempt_store=self._attempt_store,
             manager_registry=manager_registry,
             config=HarnessLifecycleConfig(),
             deliver_close_report=_finish_entry_run,
@@ -270,11 +270,11 @@ class TaskCenterEntryCoordinator:
     def _create_runtime(
         self,
         *,
-        manager_registry: SegmentManagerRegistry,
+        manager_registry: EpisodeManagerRegistry,
         entry_task_controller: EntryTaskController,
-    ) -> tuple[HarnessGraphRuntime, EphemeralHarnessAgentLauncher]:
-        runtime_ref: HarnessGraphRuntime | None = None
-        launcher = EphemeralHarnessAgentLauncher(
+    ) -> tuple[AttemptRuntime, EphemeralAttemptAgentLauncher]:
+        runtime_ref: AttemptRuntime | None = None
+        launcher = EphemeralAttemptAgentLauncher(
             config=self._config,
             runtime=lambda: runtime_ref,
             sandbox_id=self._sandbox_id,
@@ -282,13 +282,13 @@ class TaskCenterEntryCoordinator:
             runner=self._runner,
         )
         composer = self._build_composer()
-        runtime = HarnessGraphRuntime(
-            request_store=self._request_store,
-            segment_store=self._segment_store,
-            graph_store=self._graph_store,
+        runtime = AttemptRuntime(
+            mission_store=self._mission_store,
+            episode_store=self._episode_store,
+            attempt_store=self._attempt_store,
             task_store=self._task_store,
             agent_launcher=launcher,
-            orchestrator_registry=HarnessGraphOrchestratorRegistry(),
+            orchestrator_registry=AttemptOrchestratorRegistry(),
             manager_registry=manager_registry,
             lifecycle_config=HarnessLifecycleConfig(),
             composer=composer,
@@ -296,8 +296,8 @@ class TaskCenterEntryCoordinator:
         )
         runtime_ref = runtime
         # Late-bind the orchestrator factory on the controller's handler so
-        # delegated complex-task requests can spawn real harness graphs.
-        entry_task_controller.request_handler.set_orchestrator_factory(
+        # delegated missions can spawn real attempts.
+        entry_task_controller.mission_handler.set_orchestrator_factory(
             make_attempt_orchestrator_factory(runtime=runtime)
         )
         return runtime, launcher
@@ -316,9 +316,9 @@ class TaskCenterEntryCoordinator:
         register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(
-            request_store=self._request_store,
-            segment_store=self._segment_store,
-            graph_store=self._graph_store,
+            mission_store=self._mission_store,
+            episode_store=self._episode_store,
+            attempt_store=self._attempt_store,
             task_store=self._task_store,
             context_packet_store=self._context_packet_store,
         )
@@ -330,7 +330,7 @@ class TaskCenterEntryCoordinator:
         entry_task_id: str,
         task_center_run_id: str,
     ) -> None:
-        """Write the entry task row with ``task_center_harness_graph_id=None``."""
+        """Write the entry task row with ``task_center_attempt_id=None``."""
         self._task_store.upsert_task(
             task_id=entry_task_id,
             task_center_run_id=task_center_run_id,
@@ -340,7 +340,7 @@ class TaskCenterEntryCoordinator:
             status=HarnessTaskStatus.RUNNING.value,
             summaries=[],
             needs=[],
-            task_center_harness_graph_id=None,
+            task_center_attempt_id=None,
             spawn_reason=ENTRY_SPAWN_REASON,
         )
 
@@ -349,7 +349,7 @@ class TaskCenterEntryCoordinator:
     def _launch_entry_executor(
         self,
         *,
-        runtime: HarnessGraphRuntime,
+        runtime: AttemptRuntime,
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> None:
@@ -372,7 +372,7 @@ class TaskCenterEntryCoordinator:
     def _build_entry_launch(
         self,
         *,
-        runtime: HarnessGraphRuntime,
+        runtime: AttemptRuntime,
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> AgentLaunch:
@@ -380,21 +380,21 @@ class TaskCenterEntryCoordinator:
         bundle = composer.compose(
             base_agent_name=ENTRY_AGENT_NAME,
             scope=ContextScope(
-                request_id=controller.complex_task_request_id,
+                mission_id=controller.mission_id,
                 task_id=controller.task_id,
             ),
         )
         return AgentLaunch(
             task_id=controller.task_id,
             task_center_run_id=task_center_run_id,
-            harness_graph_id=None,
+            attempt_id=None,
             role=HarnessTaskRole.GENERATOR,
             agent_name=bundle.agent_def.name,
             task_input=bundle.task_input,
             needs=(),
             system_prompt=bundle.system_prompt,
             context_packet_id=bundle.context_packet_id,
-            complex_task_request_id=controller.complex_task_request_id,
+            mission_id=controller.mission_id,
         )
 
     def _compensate_startup_failure(
@@ -418,15 +418,15 @@ class TaskCenterEntryCoordinator:
 def _assert_stores_ready(
     *,
     task_store: TaskCenterStore,
-    request_store: ComplexTaskRequestStore,
-    segment_store: TaskSegmentStore,
-    graph_store: HarnessGraphStore,
+    mission_store: MissionStore,
+    episode_store: EpisodeStore,
+    attempt_store: AttemptStore,
 ) -> None:
     if not (
         task_store.is_ready
-        and request_store.is_ready
-        and segment_store.is_ready
-        and graph_store.is_ready
+        and mission_store.is_ready
+        and episode_store.is_ready
+        and attempt_store.is_ready
     ):
         raise RuntimeError("TaskCenter stores are not ready.")
 

@@ -1,31 +1,31 @@
-"""Process-local registry: one ``TaskSegmentManager`` per open ``TaskSegment``."""
+"""Process-local registry: one ``EpisodeManager`` per open ``Episode``."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 
 if TYPE_CHECKING:
-    from task_center.episode.manager import TaskSegmentManager
+    from task_center.episode.manager import EpisodeManager
 
 
-class SegmentManagerRegistry:
-    """In-memory registry enforcing one-manager-per-open-segment."""
+class EpisodeManagerRegistry:
+    """In-memory registry enforcing one-manager-per-open-episode."""
 
     def __init__(self) -> None:
-        self._by_segment_id: dict[str, "TaskSegmentManager"] = {}
+        self._by_episode_id: dict[str, "EpisodeManager"] = {}
 
-    def register(self, manager: "TaskSegmentManager") -> None:
-        segment_id = manager.task_segment_id
-        if segment_id in self._by_segment_id:
-            raise GraphInvariantViolation(
-                f"TaskSegmentManager already registered for segment {segment_id!r}"
+    def register(self, manager: "EpisodeManager") -> None:
+        episode_id = manager.episode_id
+        if episode_id in self._by_episode_id:
+            raise TaskCenterInvariantViolation(
+                f"EpisodeManager already registered for episode {episode_id!r}"
             )
-        self._by_segment_id[segment_id] = manager
+        self._by_episode_id[episode_id] = manager
 
-    def get(self, task_segment_id: str) -> "TaskSegmentManager | None":
-        return self._by_segment_id.get(task_segment_id)
+    def get(self, episode_id: str) -> "EpisodeManager | None":
+        return self._by_episode_id.get(episode_id)
 
-    def deregister(self, task_segment_id: str) -> None:
-        self._by_segment_id.pop(task_segment_id, None)
+    def deregister(self, episode_id: str) -> None:
+        self._by_episode_id.pop(episode_id, None)

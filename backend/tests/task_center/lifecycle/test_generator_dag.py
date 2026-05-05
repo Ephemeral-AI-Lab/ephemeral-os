@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.generator_dag import (
     all_generators_done,
     all_generators_quiescent,
@@ -34,7 +34,7 @@ def test_ordered_generator_tasks_topological_and_stable():
 def test_ordered_generator_tasks_rejects_dangling_dep():
     task = PlannedGeneratorTask("a", "executor", ("missing",), "A")
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         ordered_generator_tasks((task,))
 
 
@@ -42,7 +42,7 @@ def test_ordered_generator_tasks_rejects_cycle():
     a = PlannedGeneratorTask("a", "executor", ("b",), "A")
     b = PlannedGeneratorTask("b", "executor", ("a",), "B")
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         ordered_generator_tasks((a, b))
 
 
@@ -75,12 +75,12 @@ def test_running_dependent_of_failed_task_is_invariant_violation():
         _task("b", "running", ("a",)),
     ]
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         blocked_descendant_ids(failed_task_id="a", task_records=records)
 
 
-def test_waiting_complex_task_is_not_quiescent_or_done():
-    records = [_task("a", "waiting_complex_task")]
+def test_waiting_mission_is_not_quiescent_or_done():
+    records = [_task("a", "waiting_mission")]
 
     assert not all_generators_quiescent(records)
     assert not all_generators_done(records)

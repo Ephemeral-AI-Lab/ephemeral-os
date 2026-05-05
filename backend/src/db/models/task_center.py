@@ -1,6 +1,6 @@
 """TaskCenter request/run/task persistence models.
 
-Harness-graph persistence has been moved to ``db.models.harness_graph`` and
+Harness-graph persistence has been moved to ``db.models.attempt`` and
 is owned by the new three-axis (request / segment / graph) schema.
 """
 
@@ -86,7 +86,7 @@ class TaskCenterTaskRecord(Base):
     status: Mapped[str] = mapped_column(String(32))
     summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)
     needs: Mapped[list[str]] = mapped_column(JSON, default=list)
-    task_center_harness_graph_id: Mapped[str | None] = mapped_column(
+    task_center_attempt_id: Mapped[str | None] = mapped_column(
         String(96), nullable=True
     )
     context_packet_id: Mapped[str | None] = mapped_column(String(36), nullable=True)

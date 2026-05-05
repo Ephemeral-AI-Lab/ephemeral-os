@@ -76,7 +76,7 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
     "task_center_runs": {
         "root_task_id",
     },
-    "task_center_harness_graph": {
+    "task_center_attempt": {
         "evaluator_task_id",
         "run_id",
     },
@@ -86,14 +86,14 @@ _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
     "task_center_tasks": {
         "run_id": "task_center_run_id",
     },
-    "task_center_harness_graph": {
+    "task_center_attempt": {
         "run_id": "task_center_run_id",
     },
 }
 
 
 _LEGACY_TABLES_TO_DROP: set[str] = {
-    "task_center_harness_graph",
+    "task_center_attempt",
 }
 
 

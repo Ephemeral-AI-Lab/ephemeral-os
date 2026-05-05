@@ -10,23 +10,23 @@ from agents.registry import get_definition, register_definition, unregister_defi
 from agents.types import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
 from server.app_factory import RuntimeConfig
-from task_center.attempt import HarnessGraphFailReason, HarnessGraphStatus
-from task_center.attempt.launcher import EphemeralHarnessAgentLauncher
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.launcher import EphemeralAttemptAgentLauncher
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import HarnessTaskRole, HarnessTaskStatus, planner_task_id
 
 
 @pytest.mark.asyncio
 async def test_launcher_passes_metadata_and_routes_planner_exhaustion(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
     tmp_path,
@@ -55,44 +55,44 @@ async def test_launcher_passes_metadata_and_routes_planner_exhaustion(
             event_count=0,
         )
 
-    runtime_ref: HarnessGraphRuntime | None = None
-    launcher = EphemeralHarnessAgentLauncher(
+    runtime_ref: AttemptRuntime | None = None
+    launcher = EphemeralAttemptAgentLauncher(
         config=RuntimeConfig(cwd=str(tmp_path)),
         runtime=lambda: runtime_ref,
         runner=fake_runner,
     )
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
-        manager_registry=SegmentManagerRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
     )
     runtime_ref = runtime
 
-    request = request_store.insert(
+    request = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="entry",
         goal="plan this",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="plan this",
         attempt_budget=1,
     )
-    request_store.append_segment_id(request.id, segment.id)
-    graph = graph_store.insert(task_segment_id=segment.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment.id, graph.id)
+    mission_store.append_episode_id(request.id, episode.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(episode.id, attempt.id)
 
     closed: list[str] = []
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph,
-        on_graph_closed=closed.append,
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt,
+        on_attempt_closed=closed.append,
         runtime=runtime,
     )
 
@@ -107,18 +107,18 @@ async def test_launcher_passes_metadata_and_routes_planner_exhaustion(
 
     assert len(captured) == 1
     metadata = captured[0]["extra_tool_metadata"]
-    assert metadata.task_center_task_id == planner_task_id(graph.id)
-    assert metadata.task_center_harness_graph_id == graph.id
-    assert metadata.harness_graph_runtime is runtime
+    assert metadata.task_center_task_id == planner_task_id(attempt.id)
+    assert metadata.task_center_attempt_id == attempt.id
+    assert metadata.attempt_runtime is runtime
 
-    planner_task = task_store.get_task(planner_task_id(graph.id))
-    latest_graph = graph_store.get(graph.id)
+    planner_task = task_store.get_task(planner_task_id(attempt.id))
+    latest_graph = attempt_store.get(attempt.id)
     assert planner_task is not None
     assert planner_task["status"] == HarnessTaskStatus.FAILED.value
     assert latest_graph is not None
-    assert latest_graph.status == HarnessGraphStatus.FAILED
-    assert latest_graph.fail_reason == HarnessGraphFailReason.PLANNER_FAILED
-    assert closed == [graph.id]
+    assert latest_graph.status == AttemptStatus.FAILED
+    assert latest_graph.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert closed == [attempt.id]
 
 
 @dataclass
@@ -141,9 +141,9 @@ class _SpyEntryController:
 @pytest.mark.asyncio
 async def test_launcher_routes_entry_mode_exhaustion_through_controller(
     task_store,
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_center_run_id,
     tmp_path,
 ) -> None:
@@ -167,7 +167,7 @@ async def test_launcher_routes_entry_mode_exhaustion_through_controller(
         status=HarnessTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=None,
+        task_center_attempt_id=None,
         spawn_reason="entry_executor",
     )
 
@@ -181,21 +181,21 @@ async def test_launcher_routes_entry_mode_exhaustion_through_controller(
             event_count=0,
         )
 
-    runtime_ref: HarnessGraphRuntime | None = None
-    launcher = EphemeralHarnessAgentLauncher(
+    runtime_ref: AttemptRuntime | None = None
+    launcher = EphemeralAttemptAgentLauncher(
         config=RuntimeConfig(cwd=str(tmp_path)),
         runtime=lambda: runtime_ref,
         runner=fake_runner,
     )
     spy = _SpyEntryController(task_id=entry_task_id)
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
-        manager_registry=SegmentManagerRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         entry_task_controller=spy,  # type: ignore[arg-type]
     )
     runtime_ref = runtime
@@ -205,7 +205,7 @@ async def test_launcher_routes_entry_mode_exhaustion_through_controller(
             AgentLaunch(
                 task_id=entry_task_id,
                 task_center_run_id=task_center_run_id,
-                harness_graph_id=None,
+                attempt_id=None,
                 role=HarnessTaskRole.GENERATOR,
                 agent_name="entry_executor",
                 task_input="entry input",
@@ -227,9 +227,9 @@ async def test_launcher_routes_entry_mode_exhaustion_through_controller(
 @pytest.mark.asyncio
 async def test_launcher_marks_entry_task_failed_when_no_controller_wired(
     task_store,
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_center_run_id,
     tmp_path,
 ) -> None:
@@ -253,7 +253,7 @@ async def test_launcher_marks_entry_task_failed_when_no_controller_wired(
         status=HarnessTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=None,
+        task_center_attempt_id=None,
         spawn_reason="entry_executor",
     )
 
@@ -267,20 +267,20 @@ async def test_launcher_marks_entry_task_failed_when_no_controller_wired(
             event_count=0,
         )
 
-    runtime_ref: HarnessGraphRuntime | None = None
-    launcher = EphemeralHarnessAgentLauncher(
+    runtime_ref: AttemptRuntime | None = None
+    launcher = EphemeralAttemptAgentLauncher(
         config=RuntimeConfig(cwd=str(tmp_path)),
         runtime=lambda: runtime_ref,
         runner=fake_runner,
     )
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
-        manager_registry=SegmentManagerRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
     )
     runtime_ref = runtime
 
@@ -289,7 +289,7 @@ async def test_launcher_marks_entry_task_failed_when_no_controller_wired(
             AgentLaunch(
                 task_id=entry_task_id,
                 task_center_run_id=task_center_run_id,
-                harness_graph_id=None,
+                attempt_id=None,
                 role=HarnessTaskRole.GENERATOR,
                 agent_name="entry_executor",
                 task_input="entry input",

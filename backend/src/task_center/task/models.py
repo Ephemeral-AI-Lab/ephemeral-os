@@ -1,4 +1,4 @@
-"""Harness graph task roles, statuses, and submission DTOs."""
+"""Harness attempt task roles, statuses, and submission DTOs."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ class HarnessTaskRole(StrEnum):
 class HarnessTaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
-    WAITING_COMPLEX_TASK = "waiting_complex_task"
+    WAITING_COMPLEX_TASK = "waiting_mission"
     DONE = "done"
     FAILED = "failed"
     BLOCKED = "blocked"
@@ -45,7 +45,7 @@ class PlannedGeneratorTask:
 class PlannerSubmission:
     """Validated planner submission from a full or partial plan tool."""
 
-    graph_id: str
+    attempt_id: str
     planner_task_id: str
     kind: Literal["full", "partial"]
     task_specification: str
@@ -59,7 +59,7 @@ class PlannerSubmission:
 class PlannerFailureSubmission:
     """Runtime-synthesized planner failure."""
 
-    graph_id: str
+    attempt_id: str
     planner_task_id: str
     fail_reason: Literal["run_exhausted"]
     summary: str
@@ -69,7 +69,7 @@ class PlannerFailureSubmission:
 class GeneratorSubmission:
     """Validated terminal outcome for one generator task."""
 
-    graph_id: str
+    attempt_id: str
     task_id: str
     outcome: Literal["success", "failure"]
     summary: str
@@ -80,7 +80,7 @@ class GeneratorSubmission:
 class EvaluatorSubmission:
     """Validated terminal outcome for one evaluator task."""
 
-    graph_id: str
+    attempt_id: str
     task_id: str
     outcome: Literal["success", "failure"]
     summary: str

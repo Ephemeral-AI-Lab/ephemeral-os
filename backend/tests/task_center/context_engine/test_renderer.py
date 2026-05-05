@@ -15,7 +15,7 @@ def _packet(blocks: list[ContextBlock], **metadata: str) -> ContextPacket:
     return ContextPacket(
         target_role="planner",
         target_id="g-1",
-        canonical_refs=ContextRefs(request_id="r"),
+        canonical_refs=ContextRefs(mission_id="r"),
         blocks=blocks,
         metadata=dict(metadata),
     )
@@ -42,7 +42,7 @@ def test_required_blocks_never_compressed_under_budget():
     big_required = "A" * 4_000  # ≈1000 tokens
     blocks = [
         ContextBlock(
-            kind="segment_goal",
+            kind="episode_goal",
             priority=ContextPriority.REQUIRED,
             text=big_required,
             source_id="seg-1",
@@ -96,13 +96,13 @@ def test_inherited_blocks_grouped_under_parent_context_section():
             text="helper assignment",
         ),
         ContextBlock(
-            kind="segment_goal",
+            kind="episode_goal",
             priority=ContextPriority.HIGH,
             text="parent goal",
             metadata={"inherited_from_parent": "true"},
         ),
         ContextBlock(
-            kind="prior_segment_summary",
+            kind="prior_episode_summary",
             priority=ContextPriority.MEDIUM,
             text="parent summary",
             metadata={"inherited_from_parent": "true"},
@@ -120,14 +120,14 @@ def test_inherited_blocks_grouped_under_parent_context_section():
 def test_block_subtitle_metadata_renders_under_heading():
     blocks = [
         ContextBlock(
-            kind="segment_goal",
+            kind="episode_goal",
             priority=ContextPriority.REQUIRED,
             text="g",
-            metadata={"subtitle": "*(first segment)*"},
+            metadata={"subtitle": "*(first episode)*"},
         )
     ]
     out = MarkdownPromptRenderer().render(_packet(blocks))
-    assert "*(first segment)*" in out
+    assert "*(first episode)*" in out
 
 
 def test_block_heading_metadata_overrides_default_heading():

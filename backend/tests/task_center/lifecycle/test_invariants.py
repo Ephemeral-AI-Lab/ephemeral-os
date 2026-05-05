@@ -1,4 +1,4 @@
-"""Invariant tests across request, segment, and graph levels."""
+"""Invariant tests across request, episode, and attempt levels."""
 
 from __future__ import annotations
 
@@ -8,50 +8,50 @@ import pytest
 
 from task_center.mission.validation import (
     assert_continuation_episode_predecessor,
-    assert_mission_request_open,
+    assert_mission_open,
     assert_episode_id_unique_in_mission,
     assert_episode_sequence_contiguous,
 )
 from task_center.attempt.validation import (
     assert_fail_reason_present_on_failure,
-    assert_graph_sequence_contiguous,
+    assert_attempt_sequence_contiguous,
 )
 from task_center.episode.validation import (
     assert_attempt_belongs_to_episode,
     assert_episode_has_budget,
     assert_episode_open,
 )
-from task_center.episode.registry import SegmentManagerRegistry
+from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.mission.mission import (
-    ComplexTaskRequest,
-    ComplexTaskRequestStatus,
+    Mission,
+    MissionStatus,
 )
 from task_center.attempt import (
-    HarnessGraph,
-    HarnessGraphFailReason,
-    HarnessGraphStage,
-    HarnessGraphStatus,
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
 from task_center.episode.episode import (
-    TaskSegment,
-    TaskSegmentCreationReason,
-    TaskSegmentStatus,
+    Episode,
+    EpisodeCreationReason,
+    EpisodeStatus,
 )
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 
 
 def _request(
-    status: ComplexTaskRequestStatus = ComplexTaskRequestStatus.OPEN,
-    task_segment_ids: tuple[str, ...] = (),
-) -> ComplexTaskRequest:
+    status: MissionStatus = MissionStatus.OPEN,
+    episode_ids: tuple[str, ...] = (),
+) -> Mission:
     now = datetime.now(UTC)
-    return ComplexTaskRequest(
+    return Mission(
         id="r1",
         task_center_run_id="run1",
         requested_by_task_id="t1",
         goal="g",
         status=status,
-        task_segment_ids=task_segment_ids,
+        episode_ids=episode_ids,
         final_outcome=None,
         created_at=now,
         updated_at=now,
@@ -61,22 +61,22 @@ def _request(
 
 def _segment(
     *,
-    status: TaskSegmentStatus = TaskSegmentStatus.OPEN,
-    harness_graph_ids: tuple[str, ...] = (),
+    status: EpisodeStatus = EpisodeStatus.OPEN,
+    attempt_ids: tuple[str, ...] = (),
     continuation_goal: str | None = None,
     attempt_budget: int = 2,
     sid: str = "s1",
-) -> TaskSegment:
+) -> Episode:
     now = datetime.now(UTC)
-    return TaskSegment(
+    return Episode(
         id=sid,
-        complex_task_request_id="r1",
+        mission_id="r1",
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="g",
         attempt_budget=attempt_budget,
         status=status,
-        harness_graph_ids=harness_graph_ids,
+        attempt_ids=attempt_ids,
         continuation_goal=continuation_goal,
         created_at=now,
         updated_at=now,
@@ -86,17 +86,17 @@ def _segment(
 
 def _graph(
     *,
-    status: HarnessGraphStatus = HarnessGraphStatus.RUNNING,
-    fail_reason: HarnessGraphFailReason | None = None,
-    task_segment_id: str = "s1",
+    status: AttemptStatus = AttemptStatus.RUNNING,
+    fail_reason: AttemptFailReason | None = None,
+    episode_id: str = "s1",
     gid: str = "g1",
-) -> HarnessGraph:
+) -> Attempt:
     now = datetime.now(UTC)
-    return HarnessGraph(
+    return Attempt(
         id=gid,
-        task_segment_id=task_segment_id,
-        graph_sequence_no=1,
-        stage=HarnessGraphStage.PLANNING,
+        episode_id=episode_id,
+        attempt_sequence_no=1,
+        stage=AttemptStage.PLANNING,
         status=status,
         planner_task_id=None,
         task_specification=None,
@@ -114,52 +114,52 @@ def _graph(
 # ---- Request-level ------------------------------------------------------
 
 
-def test_assert_mission_request_open_passes_for_open():
-    assert_mission_request_open(_request(status=ComplexTaskRequestStatus.OPEN))
+def test_assert_mission_open_passes_for_open():
+    assert_mission_open(_request(status=MissionStatus.OPEN))
 
 
-def test_assert_mission_request_open_fails_for_closed():
+def test_assert_mission_open_fails_for_closed():
     for status in (
-        ComplexTaskRequestStatus.SUCCEEDED,
-        ComplexTaskRequestStatus.FAILED,
-        ComplexTaskRequestStatus.CANCELLED,
+        MissionStatus.SUCCEEDED,
+        MissionStatus.FAILED,
+        MissionStatus.CANCELLED,
     ):
-        with pytest.raises(GraphInvariantViolation):
-            assert_mission_request_open(_request(status=status))
+        with pytest.raises(TaskCenterInvariantViolation):
+            assert_mission_open(_request(status=status))
 
 
 def test_assert_episode_id_unique_in_mission():
     assert_episode_id_unique_in_mission(
-        _request(task_segment_ids=("s1", "s2")), "s3"
+        _request(episode_ids=("s1", "s2")), "s3"
     )
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_episode_id_unique_in_mission(
-            _request(task_segment_ids=("s1",)), "s1"
+            _request(episode_ids=("s1",)), "s1"
         )
 
 
 def test_assert_episode_sequence_contiguous():
-    assert_episode_sequence_contiguous(_request(task_segment_ids=()), 1)
-    assert_episode_sequence_contiguous(_request(task_segment_ids=("s1",)), 2)
-    with pytest.raises(GraphInvariantViolation):
-        assert_episode_sequence_contiguous(_request(task_segment_ids=("s1",)), 1)
-    with pytest.raises(GraphInvariantViolation):
-        assert_episode_sequence_contiguous(_request(task_segment_ids=("s1",)), 3)
+    assert_episode_sequence_contiguous(_request(episode_ids=()), 1)
+    assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 2)
+    with pytest.raises(TaskCenterInvariantViolation):
+        assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 1)
+    with pytest.raises(TaskCenterInvariantViolation):
+        assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 3)
 
 
 def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
     succeeded_with_goal = _segment(
-        status=TaskSegmentStatus.SUCCEEDED, continuation_goal="next"
+        status=EpisodeStatus.SUCCEEDED, continuation_goal="next"
     )
     assert_continuation_episode_predecessor(succeeded_with_goal)
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_continuation_episode_predecessor(
-            _segment(status=TaskSegmentStatus.OPEN, continuation_goal="next")
+            _segment(status=EpisodeStatus.OPEN, continuation_goal="next")
         )
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_continuation_episode_predecessor(
-            _segment(status=TaskSegmentStatus.SUCCEEDED, continuation_goal=None)
+            _segment(status=EpisodeStatus.SUCCEEDED, continuation_goal=None)
         )
 
 
@@ -167,70 +167,70 @@ def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
 
 
 def test_assert_episode_open():
-    assert_episode_open(_segment(status=TaskSegmentStatus.OPEN))
-    with pytest.raises(GraphInvariantViolation):
-        assert_episode_open(_segment(status=TaskSegmentStatus.SUCCEEDED))
+    assert_episode_open(_segment(status=EpisodeStatus.OPEN))
+    with pytest.raises(TaskCenterInvariantViolation):
+        assert_episode_open(_segment(status=EpisodeStatus.SUCCEEDED))
 
 
 def test_assert_episode_has_budget():
-    assert_episode_has_budget(_segment(attempt_budget=2, harness_graph_ids=()))
+    assert_episode_has_budget(_segment(attempt_budget=2, attempt_ids=()))
     assert_episode_has_budget(
-        _segment(attempt_budget=2, harness_graph_ids=("g1",))
+        _segment(attempt_budget=2, attempt_ids=("g1",))
     )
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_episode_has_budget(
-            _segment(attempt_budget=2, harness_graph_ids=("g1", "g2"))
+            _segment(attempt_budget=2, attempt_ids=("g1", "g2"))
         )
 
 
 def test_assert_attempt_belongs_to_episode():
     assert_attempt_belongs_to_episode(
-        _graph(task_segment_id="s1"), _segment(sid="s1")
+        _graph(episode_id="s1"), _segment(sid="s1")
     )
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_attempt_belongs_to_episode(
-            _graph(task_segment_id="s1"), _segment(sid="s2")
+            _graph(episode_id="s1"), _segment(sid="s2")
         )
 
 
 # ---- Graph-level --------------------------------------------------------
 
 
-def test_assert_graph_sequence_contiguous():
-    assert_graph_sequence_contiguous(_segment(harness_graph_ids=()), 1)
-    assert_graph_sequence_contiguous(_segment(harness_graph_ids=("g1",)), 2)
-    with pytest.raises(GraphInvariantViolation):
-        assert_graph_sequence_contiguous(_segment(harness_graph_ids=("g1",)), 1)
+def test_assert_attempt_sequence_contiguous():
+    assert_attempt_sequence_contiguous(_segment(attempt_ids=()), 1)
+    assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
+    with pytest.raises(TaskCenterInvariantViolation):
+        assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
 
 
 def test_assert_fail_reason_present_on_failure():
     assert_fail_reason_present_on_failure(
-        _graph(status=HarnessGraphStatus.PASSED)
+        _graph(status=AttemptStatus.PASSED)
     )
     assert_fail_reason_present_on_failure(
         _graph(
-            status=HarnessGraphStatus.FAILED,
-            fail_reason=HarnessGraphFailReason.GENERATOR_FAILED,
+            status=AttemptStatus.FAILED,
+            fail_reason=AttemptFailReason.GENERATOR_FAILED,
         )
     )
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         assert_fail_reason_present_on_failure(
-            _graph(status=HarnessGraphStatus.FAILED, fail_reason=None)
+            _graph(status=AttemptStatus.FAILED, fail_reason=None)
         )
 
 
 # ---- Manager registry ---------------------------------------------------
 
 
-def test_segment_manager_registry_enforces_uniqueness():
-    reg = SegmentManagerRegistry()
+def test_episode_manager_registry_enforces_uniqueness():
+    reg = EpisodeManagerRegistry()
 
     class _Fake:
-        task_segment_id = "s1"
+        episode_id = "s1"
 
     reg.register(_Fake())  # type: ignore[arg-type]
     assert reg.get("s1") is not None
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         reg.register(_Fake())  # type: ignore[arg-type]
     reg.deregister("s1")
     assert reg.get("s1") is None

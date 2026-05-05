@@ -31,10 +31,10 @@ class ContextPriority(StrEnum):
 class ContextBlockKind(StrEnum):
     """Convenience handles for known kinds. Recipes may use any string."""
 
-    COMPLEX_TASK_GOAL = "complex_task_goal"
-    SEGMENT_GOAL = "segment_goal"
-    PRIOR_SEGMENT_SPECIFICATION = "prior_segment_specification"
-    PRIOR_SEGMENT_SUMMARY = "prior_segment_summary"
+    MISSION_GOAL = "mission_goal"
+    EPISODE_GOAL = "episode_goal"
+    PRIOR_EPISODE_SPECIFICATION = "prior_episode_specification"
+    PRIOR_EPISODE_SUMMARY = "prior_episode_summary"
     FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
@@ -48,12 +48,12 @@ class ContextBlockKind(StrEnum):
 class ContextRefs(BaseModel):
     """Canonical row references attached to every packet.
 
-    ``request_id`` is always present; the rest depend on the recipe scope.
+    ``mission_id`` is always present; the rest depend on the recipe scope.
     """
 
-    request_id: str
-    segment_id: str | None = None
-    harness_graph_id: str | None = None
+    mission_id: str
+    episode_id: str | None = None
+    attempt_id: str | None = None
     task_id: str | None = None
 
     model_config = ConfigDict(extra="forbid")

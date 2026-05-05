@@ -18,10 +18,10 @@ from task_center.context_engine.recipes_registry import (
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from db.stores.complex_task_request_store import ComplexTaskRequestStore
-    from db.stores.harness_graph_store import HarnessGraphStore
+    from db.stores.mission_store import MissionStore
+    from db.stores.attempt_store import AttemptStore
     from db.stores.task_center_store import TaskCenterStore
-    from db.stores.task_segment_store import TaskSegmentStore
+    from db.stores.episode_store import EpisodeStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,9 +32,9 @@ class ContextEngineDeps:
     runtime objects, so swapping a store in tests is one keyword argument.
     """
 
-    request_store: "ComplexTaskRequestStore"
-    segment_store: "TaskSegmentStore"
-    graph_store: "HarnessGraphStore"
+    mission_store: "MissionStore"
+    episode_store: "EpisodeStore"
+    attempt_store: "AttemptStore"
     task_store: "TaskCenterStore"
 
     # Optional: when supplied, the composer persists rendered packet inputs.

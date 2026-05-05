@@ -15,7 +15,7 @@ from tools.submission.main_agent.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.main_agent.generator import request_complex_task_solution
+from tools.submission.main_agent.generator import request_mission_solution
 from tools.submission.main_agent.generator.executor import (
     submit_execution_failure,
     submit_execution_success,
@@ -35,7 +35,7 @@ def make_submission_tools() -> list[BaseTool]:
     return [
         submit_full_plan,
         submit_partial_plan,
-        request_complex_task_solution,
+        request_mission_solution,
         submit_execution_success,
         submit_execution_failure,
         submit_verification_success,

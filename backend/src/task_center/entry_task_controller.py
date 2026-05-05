@@ -1,19 +1,19 @@
-"""EntryTaskController — lifecycle controller for the graph-less entry executor.
+"""EntryTaskController — lifecycle controller for the attempt-less entry executor.
 
-Receives the lifecycle events that a :class:`HarnessGraphOrchestrator` would
-handle in graph mode (terminal submissions, run exhaustion, delegated
+Receives the lifecycle events that a :class:`AttemptOrchestrator` would
+handle in attempt mode (terminal submissions, run exhaustion, delegated
 complex-task close reports). The entry executor lives in a
-:class:`TaskSegment` with **zero** ``HarnessGraph`` rows (per phase-06
-*Sources of truth*: an entry segment may have zero ``HarnessGraph`` rows);
+:class:`Episode` with **zero** ``Attempt`` rows (per phase-06
+*Sources of truth*: an entry episode may have zero ``Attempt`` rows);
 this controller is the single owner of:
 
     - entry-task status transitions (RUNNING ↔ WAITING_COMPLEX_TASK ↔ DONE/FAILED)
-    - entry-segment close (no graph rows to drive the manager retry path)
-    - entry-request close via :class:`ComplexTaskRequestHandler`
+    - entry-episode close (no attempt rows to drive the manager retry path)
+    - entry-request close via :class:`MissionHandler`
     - run finalization via the handler's ``deliver_close_report`` callback
 
 Construction is owned by :class:`TaskCenterEntryCoordinator`; the controller
-is attached to :class:`HarnessGraphRuntime.entry_task_controller` so the
+is attached to :class:`AttemptRuntime.entry_task_controller` so the
 close-report router and launcher can dispatch into it without further
 plumbing.
 """
@@ -25,27 +25,27 @@ from datetime import UTC, datetime
 from typing import Any
 
 from db.stores.task_center_store import TaskCenterStore
-from db.stores.task_segment_store import TaskSegmentStore
-from task_center.mission.handler import ComplexTaskRequestHandler
-from task_center.mission.mission import ComplexTaskCloseReport
-from task_center.exceptions import GraphInvariantViolation
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentStatus
+from db.stores.episode_store import EpisodeStore
+from task_center.mission.handler import MissionHandler
+from task_center.mission.mission import MissionCloseReport
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeStatus
 from task_center.task import HarnessTaskStatus
 
 
 @dataclass(frozen=True, slots=True)
 class EntryTaskController:
-    """Single lifecycle owner for the graph-less entry executor task."""
+    """Single lifecycle owner for the attempt-less entry executor task."""
 
     task_id: str
     task_center_run_id: str
-    complex_task_request_id: str
-    task_segment_id: str
+    mission_id: str
+    episode_id: str
     task_store: TaskCenterStore
-    segment_store: TaskSegmentStore
-    request_handler: ComplexTaskRequestHandler
-    manager_registry: SegmentManagerRegistry
+    episode_store: EpisodeStore
+    mission_handler: MissionHandler
+    manager_registry: EpisodeManagerRegistry
 
     # ---- terminal events --------------------------------------------------
 
@@ -54,7 +54,7 @@ class EntryTaskController:
     ) -> None:
         """Entry executor called ``submit_execution_success``.
 
-        Marks the entry task DONE, closes the entry segment as succeeded,
+        Marks the entry task DONE, closes the entry episode as succeeded,
         and closes the entry request — which in turn finalizes the run via
         the handler's ``deliver_close_report`` callback.
         """
@@ -70,7 +70,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_segment_and_request(
+        self._close_episode_and_request(
             succeeded=True,
             task_specification=summary,
             task_summary=summary,
@@ -93,7 +93,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_segment_and_request(
+        self._close_episode_and_request(
             succeeded=False,
             task_specification=summary,
             task_summary=summary,
@@ -109,7 +109,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_segment_and_request(
+        self._close_episode_and_request(
             succeeded=False,
             task_specification=summary,
             task_summary=summary,
@@ -117,10 +117,10 @@ class EntryTaskController:
 
     # ---- delegated-complex-task resume ------------------------------------
 
-    def apply_complex_task_close_report(
-        self, report: ComplexTaskCloseReport
+    def apply_mission_close_report(
+        self, report: MissionCloseReport
     ) -> None:
-        """Resume the entry task waiting on a delegated complex-task request.
+        """Resume the entry task waiting on a delegated mission.
 
         Idempotent: the CAS with ``expected_status=WAITING_COMPLEX_TASK``
         returns ``None`` when the entry task has already moved off (earlier
@@ -130,13 +130,13 @@ class EntryTaskController:
         if succeeded:
             status = HarnessTaskStatus.DONE
             text = (
-                f"Delegated complex task {report.complex_task_request_id} "
+                f"Delegated mission {report.mission_id} "
                 "succeeded."
             )
         else:
             status = HarnessTaskStatus.FAILED
             text = (
-                f"Delegated complex task {report.complex_task_request_id} "
+                f"Delegated mission {report.mission_id} "
                 "failed."
             )
 
@@ -149,46 +149,46 @@ class EntryTaskController:
                     "outcome": report.outcome,
                     "summary": text,
                     "payload": {
-                        "complex_task_close_report": asdict(report),
-                        "submission_kind": "complex_task_close_report",
+                        "mission_close_report": asdict(report),
+                        "submission_kind": "mission_close_report",
                     },
                 },
             )
         except LookupError as exc:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Entry task {self.task_id!r} not found"
             ) from exc
         if updated is None:
             return  # CAS miss: already delivered or already terminal.
-        self._close_segment_and_request(
+        self._close_episode_and_request(
             succeeded=succeeded,
             task_specification=text,
             task_summary=text,
         )
 
-    # ---- waiting-on-delegated-request -------------------------------------
+    # ---- waiting-on-delegated-mission -------------------------------------
 
-    def mark_waiting_complex_task(
+    def mark_waiting_mission(
         self,
         *,
-        delegated_request_id: str,
-        delegated_segment_id: str,
-        delegated_graph_id: str,
+        delegated_mission_id: str,
+        delegated_episode_id: str,
+        delegated_attempt_id: str,
         goal: str,
     ) -> None:
         """Park the entry task in ``WAITING_COMPLEX_TASK``.
 
         Called by the mission starter when the entry executor invokes
-        ``request_complex_task_solution``.
+        ``request_mission_solution``.
         """
         summary = {
-            "outcome": "complex_task_request_start",
-            "summary": "Waiting on delegated complex task solution.",
+            "outcome": "mission_start",
+            "summary": "Waiting on delegated mission solution.",
             "payload": {
-                "complex_task_request_id": delegated_request_id,
-                "initial_segment_id": delegated_segment_id,
-                "initial_harness_graph_id": delegated_graph_id,
-                "parent_harness_graph_id": None,
+                "mission_id": delegated_mission_id,
+                "initial_episode_id": delegated_episode_id,
+                "initial_attempt_id": delegated_attempt_id,
+                "parent_attempt_id": None,
                 "goal": goal,
             },
         }
@@ -199,7 +199,7 @@ class EntryTaskController:
             summary=summary,
         )
         if updated is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Entry task {self.task_id!r} was not running when the "
                 "delegated mission start tried to mark it waiting."
             )
@@ -207,7 +207,7 @@ class EntryTaskController:
     def restore_running_after_failed_mission_start(self) -> None:
         """Roll the entry task back to RUNNING after a failed mission start.
 
-        Mirror image of :meth:`mark_waiting_complex_task` for compensation.
+        Mirror image of :meth:`mark_waiting_mission` for compensation.
         """
         self.task_store.set_task_status_if_current(
             self.task_id,
@@ -238,19 +238,19 @@ class EntryTaskController:
                 summary=summary,
             )
         except LookupError as exc:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Entry task {self.task_id!r} not found"
             ) from exc
         return updated is not None
 
-    def _close_segment_and_request(
+    def _close_episode_and_request(
         self,
         *,
         succeeded: bool,
         task_specification: str,
         task_summary: str,
     ) -> None:
-        """Close the entry segment + entry complex_request.
+        """Close the entry episode + entry complex_request.
 
         Closing the request triggers ``deliver_close_report`` (wired by the
         entry coordinator) which finishes the run.
@@ -260,12 +260,12 @@ class EntryTaskController:
             task_specification=task_specification,
             task_summary=task_summary,
         )
-        self.manager_registry.deregister(self.task_segment_id)
-        self.request_handler.close_mission_request(
-            complex_task_request_id=self.complex_task_request_id,
+        self.manager_registry.deregister(self.episode_id)
+        self.mission_handler.close_mission(
+            mission_id=self.mission_id,
             succeeded=succeeded,
-            final_segment_id=self.task_segment_id,
-            final_harness_graph_id=None,
+            final_episode_id=self.episode_id,
+            final_attempt_id=None,
         )
 
     def _close_entry_segment(
@@ -275,28 +275,28 @@ class EntryTaskController:
         task_specification: str,
         task_summary: str,
     ) -> None:
-        """Atomically close the entry segment.
+        """Atomically close the entry episode.
 
-        Idempotent: if the segment is already closed, no-op.
+        Idempotent: if the episode is already closed, no-op.
         """
-        segment = self.segment_store.get(self.task_segment_id)
-        if segment is None:
-            raise GraphInvariantViolation(
-                f"Entry segment {self.task_segment_id!r} not found"
+        episode = self.episode_store.get(self.episode_id)
+        if episode is None:
+            raise TaskCenterInvariantViolation(
+                f"Entry episode {self.episode_id!r} not found"
             )
-        if segment.status != TaskSegmentStatus.OPEN:
+        if episode.status != EpisodeStatus.OPEN:
             return
         now = datetime.now(UTC)
         if succeeded:
-            self.segment_store.close_succeeded(
-                self.task_segment_id,
+            self.episode_store.close_succeeded(
+                self.episode_id,
                 task_specification=task_specification,
                 task_summary=task_summary,
                 closed_at=now,
             )
         else:
-            self.segment_store.set_status(
-                self.task_segment_id,
-                status=TaskSegmentStatus.FAILED,
+            self.episode_store.set_status(
+                self.episode_id,
+                status=EpisodeStatus.FAILED,
                 closed_at=now,
             )

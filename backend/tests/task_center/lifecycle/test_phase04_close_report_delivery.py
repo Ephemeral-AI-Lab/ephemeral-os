@@ -5,17 +5,17 @@ from __future__ import annotations
 import pytest
 
 from task_center.mission.close_report_delivery import (
-    ComplexTaskCloseReportRouter,
+    MissionCloseReportRouter,
 )
-from task_center.mission.mission import ComplexTaskCloseReport
-from task_center.exceptions import GraphInvariantViolation
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+from task_center.mission.mission import MissionCloseReport
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import (
     HarnessTaskStatus,
     PlannedGeneratorTask,
@@ -34,50 +34,50 @@ class _FakeLauncher:
 
 def _build_runtime_with_open_graph(
     *,
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id: str,
     composer,
 ):
-    request = request_store.insert(
+    request = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="root",
         goal="outer",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="outer",
         attempt_budget=2,
     )
-    request_store.append_segment_id(request.id, segment.id)
-    graph = graph_store.insert(task_segment_id=segment.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment.id, graph.id)
-    registry = HarnessGraphOrchestratorRegistry()
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    mission_store.append_episode_id(request.id, episode.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(episode.id, attempt.id)
+    registry = AttemptOrchestratorRegistry()
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=SegmentManagerRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph,
-        on_graph_closed=lambda graph_id: None,
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt,
+        on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
     )
     registry.register(orchestrator)
     orchestrator.start()
     orchestrator.apply_plan_submission(
         PlannerSubmission(
-            graph_id=graph.id,
-            planner_task_id=f"{graph.id}:planner",
+            attempt_id=attempt.id,
+            planner_task_id=f"{attempt.id}:planner",
             kind="full",
             task_specification="spec",
             evaluation_criteria=("c",),
@@ -93,8 +93,8 @@ def _build_runtime_with_open_graph(
             summary="plan",
         )
     )
-    parent_task_id = generator_task_id(graph.id, "a")
-    return runtime, graph.id, parent_task_id
+    parent_task_id = generator_task_id(attempt.id, "a")
+    return runtime, attempt.id, parent_task_id
 
 
 def _set_parent_waiting(task_store, parent_task_id: str) -> None:
@@ -105,76 +105,76 @@ def _set_parent_waiting(task_store, parent_task_id: str) -> None:
 
 
 def test_router_delivers_success_to_waiting_parent(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    runtime, parent_graph_id, parent_task_id = _build_runtime_with_open_graph(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
     )
     _set_parent_waiting(task_store, parent_task_id)
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    router = MissionCloseReportRouter(runtime=runtime)
 
     result = router.deliver(
-        ComplexTaskCloseReport(
-            complex_task_request_id="delegated-1",
+        MissionCloseReport(
+            mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
-            final_segment_id="seg-1",
-            final_harness_graph_id="graph-1",
+            final_episode_id="seg-1",
+            final_attempt_id="attempt-1",
         )
     )
 
     assert result.status == "delivered"
-    assert result.parent_harness_graph_id == parent_graph_id
+    assert result.parent_attempt_id == parent_attempt_id
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
     assert parent_task["status"] == HarnessTaskStatus.DONE.value
 
 
 def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    request = request_store.insert(
+    request = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="root",
         goal="outer",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="outer",
         attempt_budget=2,
     )
-    request_store.append_segment_id(request.id, segment.id)
-    graph = graph_store.insert(task_segment_id=segment.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment.id, graph.id)
-    registry = HarnessGraphOrchestratorRegistry()
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    mission_store.append_episode_id(request.id, episode.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(episode.id, attempt.id)
+    registry = AttemptOrchestratorRegistry()
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=SegmentManagerRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph,
-        on_graph_closed=lambda graph_id: None,
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt,
+        on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
     )
     registry.register(orchestrator)
     orchestrator.start()
     orchestrator.apply_plan_submission(
         PlannerSubmission(
-            graph_id=graph.id,
-            planner_task_id=f"{graph.id}:planner",
+            attempt_id=attempt.id,
+            planner_task_id=f"{attempt.id}:planner",
             kind="full",
             task_specification="spec",
             evaluation_criteria=("c",),
@@ -186,18 +186,18 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
             summary="plan",
         )
     )
-    parent_task_id = generator_task_id(graph.id, "a")
-    dependent_id = generator_task_id(graph.id, "b")
+    parent_task_id = generator_task_id(attempt.id, "a")
+    dependent_id = generator_task_id(attempt.id, "b")
     _set_parent_waiting(task_store, parent_task_id)
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    router = MissionCloseReportRouter(runtime=runtime)
 
     result = router.deliver(
-        ComplexTaskCloseReport(
-            complex_task_request_id="delegated-1",
+        MissionCloseReport(
+            mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="failed",
-            final_segment_id="seg-1",
-            final_harness_graph_id="graph-1",
+            final_episode_id="seg-1",
+            final_attempt_id="attempt-1",
         )
     )
 
@@ -211,12 +211,12 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
 
 
 def test_router_treats_done_parent_as_already_delivered(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -224,15 +224,15 @@ def test_router_treats_done_parent_as_already_delivered(
     task_store.set_task_status(
         parent_task_id, status=HarnessTaskStatus.DONE.value
     )
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    router = MissionCloseReportRouter(runtime=runtime)
 
     result = router.deliver(
-        ComplexTaskCloseReport(
-            complex_task_request_id="delegated-1",
+        MissionCloseReport(
+            mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
-            final_segment_id="seg-1",
-            final_harness_graph_id="graph-1",
+            final_episode_id="seg-1",
+            final_attempt_id="attempt-1",
         )
     )
 
@@ -240,31 +240,31 @@ def test_router_treats_done_parent_as_already_delivered(
 
 
 def test_router_raises_when_parent_orchestrator_missing(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """No-restart invariant: while a parent task is in WAITING_COMPLEX_TASK
     its orchestrator must remain registered. A missing orchestrator at
-    delivery time is a hard ``GraphInvariantViolation``."""
-    runtime, parent_graph_id, parent_task_id = _build_runtime_with_open_graph(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    delivery time is a hard ``TaskCenterInvariantViolation``."""
+    runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
     )
     _set_parent_waiting(task_store, parent_task_id)
-    runtime.orchestrator_registry.deregister(parent_graph_id)
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    runtime.orchestrator_registry.deregister(parent_attempt_id)
+    router = MissionCloseReportRouter(runtime=runtime)
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            ComplexTaskCloseReport(
-                complex_task_request_id="delegated-1",
+            MissionCloseReport(
+                mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
-                final_segment_id="seg-1",
-                final_harness_graph_id="graph-1",
+                final_episode_id="seg-1",
+                final_attempt_id="attempt-1",
             )
         )
 
@@ -274,38 +274,38 @@ def test_router_raises_when_parent_orchestrator_missing(
 
 
 def test_router_rejects_running_parent(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
     )
     # Parent is RUNNING (not waiting) — illegal report state.
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    router = MissionCloseReportRouter(runtime=runtime)
 
-    with pytest.raises(GraphInvariantViolation):
+    with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            ComplexTaskCloseReport(
-                complex_task_request_id="delegated-1",
+            MissionCloseReport(
+                mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
-                final_segment_id="seg-1",
-                final_harness_graph_id="graph-1",
+                final_episode_id="seg-1",
+                final_attempt_id="attempt-1",
             )
         )
 
 
 def test_apply_close_report_is_idempotent_on_second_delivery(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -315,19 +315,19 @@ def test_apply_close_report_is_idempotent_on_second_delivery(
     assert parent_task_before is not None
     summary_count_before = len(parent_task_before["summaries"])
 
-    report = ComplexTaskCloseReport(
-        complex_task_request_id="delegated-1",
+    report = MissionCloseReport(
+        mission_id="delegated-1",
         requested_by_task_id=parent_task_id,
         outcome="success",
-        final_segment_id="seg-1",
-        final_harness_graph_id="graph-1",
+        final_episode_id="seg-1",
+        final_attempt_id="attempt-1",
     )
     # Find the orchestrator and apply the close report twice. Second call
     # must be silently idempotent (CAS miss).
-    parent_graph_id = parent_task_before["task_center_harness_graph_id"]
-    orchestrator = runtime.orchestrator_registry.get_or_raise(parent_graph_id)
-    orchestrator.apply_complex_task_close_report(report)
-    orchestrator.apply_complex_task_close_report(report)
+    parent_attempt_id = parent_task_before["task_center_attempt_id"]
+    orchestrator = runtime.orchestrator_registry.get_or_raise(parent_attempt_id)
+    orchestrator.apply_mission_close_report(report)
+    orchestrator.apply_mission_close_report(report)
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
@@ -337,20 +337,20 @@ def test_apply_close_report_is_idempotent_on_second_delivery(
 
 
 def test_router_routes_entry_mode_close_report_through_controller(
-    request_store, segment_store, graph_store, task_store, task_center_run_id, composer
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """Entry-mode close-report dispatch.
 
-    When the parent task has ``task_center_harness_graph_id=None``, the
-    router must look up :attr:`HarnessGraphRuntime.entry_task_controller`
+    When the parent task has ``task_center_attempt_id=None``, the
+    router must look up :attr:`AttemptRuntime.entry_task_controller`
     instead of the orchestrator registry, and route the close report into
-    the controller's ``apply_complex_task_close_report``.
+    the controller's ``apply_mission_close_report``.
     """
-    from task_center.mission.handler import ComplexTaskRequestHandler
-    from task_center.mission.mission import ComplexTaskRequestStatus
+    from task_center.mission.handler import MissionHandler
+    from task_center.mission.mission import MissionStatus
     from task_center.config import HarnessLifecycleConfig
     from task_center.entry_task_controller import EntryTaskController
-    from task_center.episode.episode import TaskSegmentStatus
+    from task_center.episode.episode import EpisodeStatus
     from task_center.task import HarnessTaskRole
 
     # Seed entry-mode caller in WAITING_COMPLEX_TASK.
@@ -360,21 +360,21 @@ def test_router_routes_entry_mode_close_report_through_controller(
     def _finish(report):
         finished_runs.append(report)
 
-    handler = ComplexTaskRequestHandler(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
-        manager_registry=SegmentManagerRegistry(),
+    handler = MissionHandler(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
+        manager_registry=EpisodeManagerRegistry(),
         config=HarnessLifecycleConfig(),
         deliver_close_report=_finish,
     )
-    entry_request = handler.create_mission_request(
+    entry_request = handler.create_mission(
         task_center_run_id=task_center_run_id,
         requested_by_task_id=entry_task_id,
         goal="entry goal",
     )
     entry_segment, _ = handler.create_initial_episode_with_manager(
-        complex_task_request_id=entry_request.id
+        mission_id=entry_request.id
     )
     task_store.upsert_task(
         task_id=entry_task_id,
@@ -385,53 +385,53 @@ def test_router_routes_entry_mode_close_report_through_controller(
         status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=None,
+        task_center_attempt_id=None,
         spawn_reason="entry_executor",
     )
     controller = EntryTaskController(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
-        complex_task_request_id=entry_request.id,
-        task_segment_id=entry_segment.id,
+        mission_id=entry_request.id,
+        episode_id=entry_segment.id,
         task_store=task_store,
-        segment_store=segment_store,
-        request_handler=handler,
+        episode_store=episode_store,
+        mission_handler=handler,
         manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
     )
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
-        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
         composer=composer,
         entry_task_controller=controller,
     )
 
-    router = ComplexTaskCloseReportRouter(runtime=runtime)
+    router = MissionCloseReportRouter(runtime=runtime)
     result = router.deliver(
-        ComplexTaskCloseReport(
-            complex_task_request_id="delegated-x",
+        MissionCloseReport(
+            mission_id="delegated-x",
             requested_by_task_id=entry_task_id,
             outcome="success",
-            final_segment_id="delegated-seg",
-            final_harness_graph_id="delegated-graph",
+            final_episode_id="delegated-seg",
+            final_attempt_id="delegated-attempt",
         )
     )
 
     assert result.status == "delivered"
-    assert result.parent_harness_graph_id is None
+    assert result.parent_attempt_id is None
     entry_task = task_store.get_task(entry_task_id)
-    fresh_segment = segment_store.get(entry_segment.id)
-    fresh_request = request_store.get(entry_request.id)
+    fresh_segment = episode_store.get(entry_segment.id)
+    fresh_request = mission_store.get(entry_request.id)
     assert entry_task is not None
     assert entry_task["status"] == HarnessTaskStatus.DONE.value
     assert fresh_segment is not None
-    assert fresh_segment.status == TaskSegmentStatus.SUCCEEDED
+    assert fresh_segment.status == EpisodeStatus.SUCCEEDED
     assert fresh_request is not None
-    assert fresh_request.status == ComplexTaskRequestStatus.SUCCEEDED
+    assert fresh_request.status == MissionStatus.SUCCEEDED
     # The close-report sink fires once; the run can finalize via that.
     assert len(finished_runs) == 1
     assert finished_runs[0].outcome == "success"

@@ -13,11 +13,11 @@ from agents.types import AgentDefinition
 from db.base import Base
 import db.models  # noqa: F401
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
-from db.stores.complex_task_request_store import ComplexTaskRequestStore
+from db.stores.mission_store import MissionStore
 from db.stores.context_packet_store import ContextPacketStore
-from db.stores.harness_graph_store import HarnessGraphStore
+from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
-from db.stores.task_segment_store import TaskSegmentStore
+from db.stores.episode_store import EpisodeStore
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.agent_launch.predicates import (
@@ -58,22 +58,22 @@ def session_factory():
 
 
 @pytest.fixture
-def request_store(session_factory) -> ComplexTaskRequestStore:
-    store = ComplexTaskRequestStore()
+def mission_store(session_factory) -> MissionStore:
+    store = MissionStore()
     store.initialize(session_factory)
     return store
 
 
 @pytest.fixture
-def segment_store(session_factory) -> TaskSegmentStore:
-    store = TaskSegmentStore()
+def episode_store(session_factory) -> EpisodeStore:
+    store = EpisodeStore()
     store.initialize(session_factory)
     return store
 
 
 @pytest.fixture
-def graph_store(session_factory) -> HarnessGraphStore:
-    store = HarnessGraphStore()
+def attempt_store(session_factory) -> AttemptStore:
+    store = AttemptStore()
     store.initialize(session_factory)
     return store
 
@@ -131,7 +131,7 @@ def register_test_agents(isolated_agent_registries):
             role="executor",
             context_recipe="generator_v1",
             terminals=[
-                "request_complex_task_solution",
+                "request_mission_solution",
                 "submit_execution_success",
                 "submit_execution_failure",
             ],
@@ -169,17 +169,17 @@ def register_test_agents(isolated_agent_registries):
 
 @pytest.fixture
 def composer(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     context_packet_store,
     register_test_agents,
 ) -> ContextComposer:
     deps = ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=context_packet_store,
     )

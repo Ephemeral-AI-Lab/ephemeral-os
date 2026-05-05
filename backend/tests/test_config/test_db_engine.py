@@ -116,7 +116,7 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
                     status VARCHAR(32) NOT NULL,
                     summaries JSON NOT NULL,
                     needs JSON NOT NULL,
-                    task_center_harness_graph_id VARCHAR(96),
+                    task_center_attempt_id VARCHAR(96),
                     fix_target_id VARCHAR(96),
                     spawn_reason VARCHAR(64),
                     created_at DATETIME NOT NULL,
@@ -129,7 +129,7 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
         conn.execute(
             text(
                 """
-                CREATE TABLE task_center_harness_graph (
+                CREATE TABLE task_center_attempt (
                     id VARCHAR(96) NOT NULL,
                     run_id VARCHAR(36) NOT NULL,
                     root_task_id VARCHAR(96) NOT NULL,
@@ -178,7 +178,7 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
                 """
                 INSERT INTO task_center_tasks (
                     id, run_id, role, task_input, status, summaries, needs,
-                    task_center_harness_graph_id, fix_target_id, spawn_reason,
+                    task_center_attempt_id, fix_target_id, spawn_reason,
                     created_at, updated_at
                 )
                 VALUES (
@@ -192,7 +192,7 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
         conn.execute(
             text(
                 """
-                INSERT INTO task_center_harness_graph (
+                INSERT INTO task_center_attempt (
                     id, run_id, root_task_id, planner_task_id, executor_task_ids,
                     dag_nodes, plan_shape, what_to_do_next, prior_graph_id,
                     created_at, updated_at
@@ -219,9 +219,9 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
     assert "agent_name" in columns
     assert "run_id" not in columns
     assert "root_task_id" not in run_columns
-    # Phase 01 drops the legacy task_center_harness_graph table after init.
-    assert not insp.has_table("task_center_harness_graph")
-    assert insp.has_table("harness_graphs")
+    # Phase 01 drops the legacy task_center_attempt table after init.
+    assert not insp.has_table("task_center_attempt")
+    assert insp.has_table("attempts")
     with engine.connect() as conn:
         task_run_id = conn.execute(
             text('SELECT task_center_run_id FROM task_center_tasks WHERE id = :id'),
@@ -308,7 +308,7 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
         status="running",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=None,
+        task_center_attempt_id=None,
     )
 
     agent_run_store.create_run(

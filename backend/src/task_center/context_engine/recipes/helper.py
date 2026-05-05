@@ -29,7 +29,7 @@ ADVISOR_V1 = "advisor_v1"
 RESOLVER_V1 = "resolver_v1"
 
 _HELPER_REQUIRED_FIELDS = frozenset(
-    {"request_id", "task_id", "parent_packet_id"}
+    {"mission_id", "task_id", "parent_packet_id"}
 )
 
 _DEMOTION = {
@@ -81,7 +81,7 @@ def _build_helper_packet(
         target_role=target_role,
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
-            request_id=scope.request_id,
+            mission_id=scope.mission_id,
             task_id=scope.task_id,
         ),
         blocks=blocks,

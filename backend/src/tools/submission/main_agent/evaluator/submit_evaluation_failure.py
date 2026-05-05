@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.task import EvaluatorSubmission, HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
-    HarnessSubmissionContextError,
-    resolve_harness_submission_context,
+    AttemptSubmissionContextError,
+    resolve_attempt_submission_context,
 )
 from tools.submission.hooks import HarnessRoleGate
 
@@ -23,7 +23,7 @@ class SubmitEvaluationFailureInput(BaseModel):
 
 @tool(
     name="submit_evaluation_failure",
-    description="Submit graph-level evaluation failure.",
+    description="Submit attempt-level evaluation failure.",
     input_model=SubmitEvaluationFailureInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
@@ -38,17 +38,17 @@ async def submit_evaluation_failure(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
-        submission_context = resolve_harness_submission_context(context)
+        submission_context = resolve_attempt_submission_context(context)
         submission_context.orchestrator.apply_evaluator_submission(
             EvaluatorSubmission(
-                graph_id=submission_context.graph.id,
+                attempt_id=submission_context.attempt.id,
                 task_id=submission_context.task_center_task_id,
                 outcome="failure",
                 summary=summary,
                 payload={"failed_criteria": failed_criteria},
             )
         )
-    except (HarnessSubmissionContextError, GraphInvariantViolation) as exc:
+    except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
@@ -56,6 +56,6 @@ async def submit_evaluation_failure(
         metadata={
             "submission_kind": "evaluator_failure",
             "task_center_task_id": submission_context.task_center_task_id,
-            "harness_graph_id": submission_context.graph.id,
+            "attempt_id": submission_context.attempt.id,
         },
     )

@@ -1,4 +1,4 @@
-"""HarnessGraphOrchestrator state machine."""
+"""AttemptOrchestrator state machine."""
 
 from __future__ import annotations
 
@@ -7,19 +7,19 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from task_center.mission.mission import ComplexTaskCloseReport
-from task_center.exceptions import GraphInvariantViolation
-from task_center.attempt.dispatcher import HarnessGraphDispatcher
+from task_center.mission.mission import MissionCloseReport
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt.dispatcher import AttemptDispatcher
 from task_center.attempt.state import (
-    HarnessGraph,
-    HarnessGraphFailReason,
-    HarnessGraphStage,
-    HarnessGraphStatus,
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
 from task_center.context_engine.scope import ContextScope
 from task_center.attempt.runtime import (
     AgentLaunch,
-    HarnessGraphRuntime,
+    AttemptRuntime,
 )
 from task_center.task import (
     EvaluatorSubmission,
@@ -39,63 +39,63 @@ from task_center.attempt.generator_dag import (
 from task_center.attempt.validation import (
     assert_evaluator_task_for_submission,
     assert_generator_task_for_submission,
-    assert_graph_not_closed,
-    assert_graph_stage,
-    assert_task_belongs_to_graph,
-    assert_valid_graph_close,
+    assert_attempt_not_closed,
+    assert_attempt_stage,
+    assert_task_belongs_to_attempt,
+    assert_valid_attempt_close,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class HarnessGraphOrchestrator:
-    """Runs one planner -> generator DAG -> evaluator harness graph."""
+class AttemptOrchestrator:
+    """Runs one planner -> generator DAG -> evaluator harness attempt."""
 
     def __init__(
         self,
         *,
-        harness_graph: HarnessGraph,
-        on_graph_closed: Callable[[str], None],
-        runtime: HarnessGraphRuntime,
+        attempt: Attempt,
+        on_attempt_closed: Callable[[str], None],
+        runtime: AttemptRuntime,
     ) -> None:
-        self._harness_graph = harness_graph
-        self._on_graph_closed = on_graph_closed
+        self._attempt = attempt
+        self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        def _close_graph_callback(
-            status: HarnessGraphStatus,
-            fail_reason: HarnessGraphFailReason | None,
+        def _close_attempt_callback(
+            status: AttemptStatus,
+            fail_reason: AttemptFailReason | None,
         ) -> None:
-            self._close_graph(status=status, fail_reason=fail_reason)
+            self._close_attempt(status=status, fail_reason=fail_reason)
 
-        self._dispatcher = HarnessGraphDispatcher(
-            harness_graph_id=harness_graph.id,
+        self._dispatcher = AttemptDispatcher(
+            attempt_id=attempt.id,
             runtime=runtime,
-            close_graph=_close_graph_callback,
+            close_attempt=_close_attempt_callback,
         )
 
     @property
-    def harness_graph_id(self) -> str:
-        return self._harness_graph.id
+    def attempt_id(self) -> str:
+        return self._attempt.id
 
     def start(self) -> None:
         runtime = self._runtime
-        graph = self._assert_stage(HarnessGraphStage.PLANNING)
-        if graph.status != HarnessGraphStatus.RUNNING:
-            raise GraphInvariantViolation(
-                f"HarnessGraph {graph.id!r} is not running"
+        attempt = self._assert_stage(AttemptStage.PLANNING)
+        if attempt.status != AttemptStatus.RUNNING:
+            raise TaskCenterInvariantViolation(
+                f"Attempt {attempt.id!r} is not running"
             )
-        if graph.planner_task_id is not None:
-            raise GraphInvariantViolation(
-                f"HarnessGraph {graph.id!r} already has a planner task"
+        if attempt.planner_task_id is not None:
+            raise TaskCenterInvariantViolation(
+                f"Attempt {attempt.id!r} already has a planner task"
             )
 
-        task_id = planner_task_id(graph.id)
+        task_id = planner_task_id(attempt.id)
         runtime.orchestrator_registry.register(self)
         try:
-            task_center_run_id = runtime.task_center_run_id_for_graph(graph)
+            task_center_run_id = runtime.task_center_run_id_for_attempt(attempt)
             launch = self._build_planner_launch(
-                graph=graph,
+                attempt=attempt,
                 task_id=task_id,
                 task_center_run_id=task_center_run_id,
             )
@@ -108,11 +108,11 @@ class HarnessGraphOrchestrator:
                 status=HarnessTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=[],
-                task_center_harness_graph_id=graph.id,
+                task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason="harness_graph_planner",
+                spawn_reason="attempt_planner",
             )
-            runtime.graph_store.set_planner_task_id(graph.id, task_id)
+            runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
             self._dispatcher.dispatch_ready_work()
         except Exception:
@@ -122,61 +122,61 @@ class HarnessGraphOrchestrator:
     def _build_planner_launch(
         self,
         *,
-        graph,  # type: ignore[no-untyped-def]
+        attempt,  # type: ignore[no-untyped-def]
         task_id: str,
         task_center_run_id: str,
     ) -> AgentLaunch:
         """Compose the planner launch via :class:`ContextComposer`."""
         runtime = self._runtime
         composer = runtime.require_composer()
-        segment = runtime.segment_store.get(graph.task_segment_id)
-        if segment is None:
-            raise GraphInvariantViolation(
-                f"TaskSegment {graph.task_segment_id!r} not found"
+        episode = runtime.episode_store.get(attempt.episode_id)
+        if episode is None:
+            raise TaskCenterInvariantViolation(
+                f"Episode {attempt.episode_id!r} not found"
             )
         bundle = composer.compose(
             base_agent_name="planner",
             scope=ContextScope(
-                request_id=segment.complex_task_request_id,
-                segment_id=segment.id,
-                harness_graph_id=graph.id,
+                mission_id=episode.mission_id,
+                episode_id=episode.id,
+                attempt_id=attempt.id,
             ),
         )
         return AgentLaunch(
             task_id=task_id,
             task_center_run_id=task_center_run_id,
-            harness_graph_id=graph.id,
+            attempt_id=attempt.id,
             role=HarnessTaskRole.PLANNER,
             agent_name=bundle.agent_def.name,
             task_input=bundle.task_input,
             needs=(),
             system_prompt=bundle.system_prompt,
             context_packet_id=bundle.context_packet_id,
-            complex_task_request_id=segment.complex_task_request_id,
+            mission_id=episode.mission_id,
         )
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
-        self._assert_submission_graph(submission.graph_id)
-        graph = self._assert_stage(HarnessGraphStage.PLANNING)
-        if graph.planner_task_id != submission.planner_task_id:
-            raise GraphInvariantViolation(
+        self._assert_submission_attempt(submission.attempt_id)
+        attempt = self._assert_stage(AttemptStage.PLANNING)
+        if attempt.planner_task_id != submission.planner_task_id:
+            raise TaskCenterInvariantViolation(
                 f"Planner submission task {submission.planner_task_id!r} does "
-                f"not match graph planner {graph.planner_task_id!r}"
+                f"not match attempt planner {attempt.planner_task_id!r}"
             )
         if submission.kind == "full" and submission.continuation_goal is not None:
-            raise GraphInvariantViolation("Full plans cannot set continuation_goal")
+            raise TaskCenterInvariantViolation("Full plans cannot set continuation_goal")
         if submission.kind == "partial" and submission.continuation_goal is None:
-            raise GraphInvariantViolation("Partial plans require continuation_goal")
+            raise TaskCenterInvariantViolation("Partial plans require continuation_goal")
 
         runtime = self._runtime
         planner_task = runtime.task_store.get_task(submission.planner_task_id)
         if planner_task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Planner task {submission.planner_task_id!r} not found"
             )
-        assert_task_belongs_to_graph(planner_task, graph)
+        assert_task_belongs_to_attempt(planner_task, attempt)
         if planner_task["role"] != HarnessTaskRole.PLANNER.value:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Task {submission.planner_task_id!r} is not a planner task"
             )
 
@@ -190,27 +190,27 @@ class HarnessGraphOrchestrator:
         )
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
-        runtime.graph_store.set_generator_task_ids(graph.id, list(generator_ids))
-        runtime.graph_store.set_stage(graph.id, HarnessGraphStage.GENERATING)
+        runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
+        runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATING)
         self._dispatcher.dispatch_ready_work()
 
     def apply_planner_failure(
         self, submission: PlannerFailureSubmission
     ) -> None:
-        self._assert_submission_graph(submission.graph_id)
-        graph = self._assert_stage(HarnessGraphStage.PLANNING)
-        if graph.planner_task_id != submission.planner_task_id:
-            raise GraphInvariantViolation(
+        self._assert_submission_attempt(submission.attempt_id)
+        attempt = self._assert_stage(AttemptStage.PLANNING)
+        if attempt.planner_task_id != submission.planner_task_id:
+            raise TaskCenterInvariantViolation(
                 f"Planner failure task {submission.planner_task_id!r} does not "
-                f"match graph planner {graph.planner_task_id!r}"
+                f"match attempt planner {attempt.planner_task_id!r}"
             )
         runtime = self._runtime
         planner_task = runtime.task_store.get_task(submission.planner_task_id)
         if planner_task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Planner task {submission.planner_task_id!r} not found"
             )
-        assert_task_belongs_to_graph(planner_task, graph)
+        assert_task_belongs_to_attempt(planner_task, attempt)
         runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=HarnessTaskStatus.FAILED.value,
@@ -219,15 +219,15 @@ class HarnessGraphOrchestrator:
                 "summary": submission.summary,
             },
         )
-        self._close_graph(
-            status=HarnessGraphStatus.FAILED,
-            fail_reason=HarnessGraphFailReason.PLANNER_FAILED,
+        self._close_attempt(
+            status=AttemptStatus.FAILED,
+            fail_reason=AttemptFailReason.PLANNER_FAILED,
         )
 
     def apply_generator_submission(
         self, submission: GeneratorSubmission
     ) -> None:
-        self._assert_submission_graph(submission.graph_id)
+        self._assert_submission_attempt(submission.attempt_id)
         self._mark_generator(submission)
         if submission.outcome == "failure":
             self._dispatcher.block_failed_descendants(submission.task_id)
@@ -236,39 +236,39 @@ class HarnessGraphOrchestrator:
     def apply_evaluator_submission(
         self, submission: EvaluatorSubmission
     ) -> None:
-        self._assert_submission_graph(submission.graph_id)
+        self._assert_submission_attempt(submission.attempt_id)
         self._mark_evaluator(submission)
         self._dispatcher.dispatch_ready_work()
 
-    def apply_complex_task_close_report(self, report: ComplexTaskCloseReport) -> None:
-        """Resume a generator task waiting on a delegated complex-task request.
+    def apply_mission_close_report(self, report: MissionCloseReport) -> None:
+        """Resume a generator task waiting on a delegated mission.
 
         Idempotent: if the parent has already been resumed (status moved off
-        ``waiting_complex_task`` by an earlier delivery), return silently
-        without re-asserting graph stage or appending another summary.
+        ``waiting_mission`` by an earlier delivery), return silently
+        without re-asserting attempt stage or appending another summary.
         """
         runtime = self._runtime
         task = runtime.task_store.get_task(report.requested_by_task_id)
         if task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Generator task {report.requested_by_task_id!r} not found"
             )
         if task.get("status") != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
             # Already delivered; no further action.
             return
 
-        graph = self._assert_stage(HarnessGraphStage.GENERATING)
-        assert_generator_task_for_submission(task, graph)
+        attempt = self._assert_stage(AttemptStage.GENERATING)
+        assert_generator_task_for_submission(task, attempt)
 
         if report.outcome == "success":
             status = HarnessTaskStatus.DONE
             summary = (
-                f"Delegated complex task {report.complex_task_request_id} succeeded."
+                f"Delegated mission {report.mission_id} succeeded."
             )
         else:
             status = HarnessTaskStatus.FAILED
             summary = (
-                f"Delegated complex task {report.complex_task_request_id} failed."
+                f"Delegated mission {report.mission_id} failed."
             )
 
         updated = runtime.task_store.set_task_status_if_current(
@@ -279,8 +279,8 @@ class HarnessGraphOrchestrator:
                 "outcome": report.outcome,
                 "summary": summary,
                 "payload": {
-                    "complex_task_close_report": asdict(report),
-                    "submission_kind": "complex_task_close_report",
+                    "mission_close_report": asdict(report),
+                    "submission_kind": "mission_close_report",
                 },
             },
         )
@@ -292,8 +292,8 @@ class HarnessGraphOrchestrator:
         self._dispatcher.dispatch_ready_work()
 
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
-        self._runtime.graph_store.set_plan_contract(
-            submission.graph_id,
+        self._runtime.attempt_store.set_plan_contract(
+            submission.attempt_id,
             task_specification=submission.task_specification,
             evaluation_criteria=list(submission.evaluation_criteria),
             continuation_goal=submission.continuation_goal,
@@ -303,14 +303,14 @@ class HarnessGraphOrchestrator:
         self, tasks: tuple[PlannedGeneratorTask, ...]
     ) -> tuple[str, ...]:
         runtime = self._runtime
-        graph = self._fresh_graph()
+        attempt = self._fresh_attempt()
         ordered = ordered_generator_tasks(tasks)
-        task_center_run_id = runtime.task_center_run_id_for_graph(graph)
+        task_center_run_id = runtime.task_center_run_id_for_attempt(attempt)
         task_ids: list[str] = []
         for task in ordered:
-            task_id = generator_task_id(graph.id, task.local_id)
+            task_id = generator_task_id(attempt.id, task.local_id)
             needs = dependency_task_ids(
-                harness_graph_id=graph.id,
+                attempt_id=attempt.id,
                 local_deps=task.deps,
             )
             runtime.task_store.upsert_task(
@@ -322,23 +322,23 @@ class HarnessGraphOrchestrator:
                 status=HarnessTaskStatus.PENDING.value,
                 summaries=[],
                 needs=list(needs),
-                task_center_harness_graph_id=graph.id,
-                spawn_reason="harness_graph_generator",
+                task_center_attempt_id=attempt.id,
+                spawn_reason="attempt_generator",
             )
             task_ids.append(task_id)
         return tuple(task_ids)
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
         runtime = self._runtime
-        graph = self._assert_stage(HarnessGraphStage.GENERATING)
+        attempt = self._assert_stage(AttemptStage.GENERATING)
         task = runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Generator task {submission.task_id!r} not found"
             )
-        assert_generator_task_for_submission(task, graph)
+        assert_generator_task_for_submission(task, attempt)
         if task["status"] != HarnessTaskStatus.RUNNING.value:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Generator task {submission.task_id!r} is not running"
             )
         status = (
@@ -358,20 +358,20 @@ class HarnessGraphOrchestrator:
 
     def _mark_evaluator(self, submission: EvaluatorSubmission) -> None:
         runtime = self._runtime
-        graph = self._assert_stage(HarnessGraphStage.EVALUATING)
-        if graph.evaluator_task_id != submission.task_id:
-            raise GraphInvariantViolation(
+        attempt = self._assert_stage(AttemptStage.EVALUATING)
+        if attempt.evaluator_task_id != submission.task_id:
+            raise TaskCenterInvariantViolation(
                 f"Evaluator submission task {submission.task_id!r} does not "
-                f"match graph evaluator {graph.evaluator_task_id!r}"
+                f"match attempt evaluator {attempt.evaluator_task_id!r}"
             )
         task = runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Evaluator task {submission.task_id!r} not found"
             )
-        assert_evaluator_task_for_submission(task, graph)
+        assert_evaluator_task_for_submission(task, attempt)
         if task["status"] != HarnessTaskStatus.RUNNING.value:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Evaluator task {submission.task_id!r} is not running"
             )
         status = (
@@ -389,79 +389,79 @@ class HarnessGraphOrchestrator:
             },
         )
 
-    def _close_graph(
+    def _close_attempt(
         self,
         *,
-        status: HarnessGraphStatus,
-        fail_reason: HarnessGraphFailReason | None,
+        status: AttemptStatus,
+        fail_reason: AttemptFailReason | None,
     ) -> None:
-        assert_valid_graph_close(status=status, fail_reason=fail_reason)
-        graph = self._fresh_graph()
-        assert_graph_not_closed(graph)
-        if graph.status != HarnessGraphStatus.RUNNING:
-            raise GraphInvariantViolation(
-                f"HarnessGraph {graph.id!r} is not running"
+        assert_valid_attempt_close(status=status, fail_reason=fail_reason)
+        attempt = self._fresh_attempt()
+        assert_attempt_not_closed(attempt)
+        if attempt.status != AttemptStatus.RUNNING:
+            raise TaskCenterInvariantViolation(
+                f"Attempt {attempt.id!r} is not running"
             )
-        self._runtime.graph_store.close(
-            graph.id,
+        self._runtime.attempt_store.close(
+            attempt.id,
             status=status,
             fail_reason=fail_reason,
             closed_at=datetime.now(UTC),
         )
-        self._runtime.orchestrator_registry.deregister(graph.id)
-        self._on_graph_closed(graph.id)
+        self._runtime.orchestrator_registry.deregister(attempt.id)
+        self._on_attempt_closed(attempt.id)
 
     def _mark_startup_failed(self, *, planner_task_id: str) -> None:
         runtime = self._runtime
-        runtime.orchestrator_registry.deregister(self._harness_graph.id)
+        runtime.orchestrator_registry.deregister(self._attempt.id)
         try:
             runtime.task_store.set_task_status_if_current(
                 planner_task_id,
                 expected_status=HarnessTaskStatus.RUNNING.value,
                 status=HarnessTaskStatus.FAILED.value,
                 summary={
-                    "fail_reason": HarnessGraphFailReason.STARTUP_FAILED.value,
+                    "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
                 },
             )
         except LookupError:
             pass
         except Exception:
             logger.exception(
-                "HarnessGraphOrchestrator: startup task cleanup failed",
+                "AttemptOrchestrator: startup task cleanup failed",
             )
 
         try:
-            graph = runtime.graph_store.get(self._harness_graph.id)
-            if graph is not None and not graph.is_closed:
-                runtime.graph_store.close(
-                    graph.id,
-                    status=HarnessGraphStatus.FAILED,
-                    fail_reason=HarnessGraphFailReason.STARTUP_FAILED,
+            attempt = runtime.attempt_store.get(self._attempt.id)
+            if attempt is not None and not attempt.is_closed:
+                runtime.attempt_store.close(
+                    attempt.id,
+                    status=AttemptStatus.FAILED,
+                    fail_reason=AttemptFailReason.STARTUP_FAILED,
                     closed_at=datetime.now(UTC),
                 )
         except Exception:
             logger.exception(
-                "HarnessGraphOrchestrator: startup graph cleanup failed",
+                "AttemptOrchestrator: startup attempt cleanup failed",
             )
 
-    def _fresh_graph(self) -> HarnessGraph:
-        graph = self._runtime.graph_store.get(self._harness_graph.id)
-        if graph is None:
-            raise GraphInvariantViolation(
-                f"HarnessGraph {self._harness_graph.id!r} not found"
+    def _fresh_attempt(self) -> Attempt:
+        attempt = self._runtime.attempt_store.get(self._attempt.id)
+        if attempt is None:
+            raise TaskCenterInvariantViolation(
+                f"Attempt {self._attempt.id!r} not found"
             )
-        self._harness_graph = graph
-        return graph
+        self._attempt = attempt
+        return attempt
 
-    def _assert_stage(self, expected: HarnessGraphStage) -> HarnessGraph:
-        graph = self._fresh_graph()
-        assert_graph_not_closed(graph)
-        assert_graph_stage(graph, expected)
-        return graph
+    def _assert_stage(self, expected: AttemptStage) -> Attempt:
+        attempt = self._fresh_attempt()
+        assert_attempt_not_closed(attempt)
+        assert_attempt_stage(attempt, expected)
+        return attempt
 
-    def _assert_submission_graph(self, graph_id: str) -> None:
-        if graph_id != self._harness_graph.id:
-            raise GraphInvariantViolation(
-                f"Submission graph {graph_id!r} does not match orchestrator "
-                f"graph {self._harness_graph.id!r}"
+    def _assert_submission_attempt(self, attempt_id: str) -> None:
+        if attempt_id != self._attempt.id:
+            raise TaskCenterInvariantViolation(
+                f"Submission attempt {attempt_id!r} does not match orchestrator "
+                f"attempt {self._attempt.id!r}"
             )

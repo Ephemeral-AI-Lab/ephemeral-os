@@ -1,1 +1,1 @@
-"""TaskCenter harness lifecycle (request / segment / graph)."""
+"""TaskCenter harness lifecycle (request / episode / attempt)."""

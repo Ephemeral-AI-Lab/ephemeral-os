@@ -7,31 +7,31 @@ from task_center.context_engine.packet import (
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.attempt import HarnessGraph, HarnessGraphStatus
+from task_center.attempt import Attempt, AttemptStatus
 
 MAX_FAILED_ATTEMPTS_RENDERED = 6
 
 
 def failed_attempt_landscape_blocks(
     *,
-    current_graph_id: str | None,
-    graphs: list[HarnessGraph],
+    current_attempt_id: str | None,
+    attempts: list[Attempt],
 ) -> list[ContextBlock]:
     failed = sorted(
         (
             g
-            for g in graphs
-            if g.status == HarnessGraphStatus.FAILED
-            and g.id != current_graph_id
+            for g in attempts
+            if g.status == AttemptStatus.FAILED
+            and g.id != current_attempt_id
         ),
-        key=lambda g: g.graph_sequence_no,
+        key=lambda g: g.attempt_sequence_no,
     )
     if not failed:
         return []
 
     if len(failed) <= MAX_FAILED_ATTEMPTS_RENDERED:
         rendered = failed
-        truncated: list[HarnessGraph] = []
+        truncated: list[Attempt] = []
     else:
         rendered = failed[-MAX_FAILED_ATTEMPTS_RENDERED:]
         truncated = failed[:-MAX_FAILED_ATTEMPTS_RENDERED]
@@ -42,11 +42,11 @@ def failed_attempt_landscape_blocks(
             priority=ContextPriority.HIGH,
             text=_render_failed_attempt(g),
             source_id=g.id,
-            source_kind="harness_graph",
+            source_kind="attempt",
             metadata={
-                "graph_sequence_no": str(g.graph_sequence_no),
+                "attempt_sequence_no": str(g.attempt_sequence_no),
                 "group_heading": "# Failed Attempts",
-                "subheading": f"Attempt {g.graph_sequence_no}",
+                "subheading": f"Attempt {g.attempt_sequence_no}",
             },
         )
         for g in rendered
@@ -59,9 +59,9 @@ def failed_attempt_landscape_blocks(
                 priority=ContextPriority.MEDIUM,
                 text=(
                     f"{len(truncated)} earlier failed attempts omitted "
-                    f"(graph_sequence_no "
-                    f"{truncated[0].graph_sequence_no}-"
-                    f"{truncated[-1].graph_sequence_no}). "
+                    f"(attempt_sequence_no "
+                    f"{truncated[0].attempt_sequence_no}-"
+                    f"{truncated[-1].attempt_sequence_no}). "
                     f"Most recent {MAX_FAILED_ATTEMPTS_RENDERED} attempts "
                     f"shown above."
                 ),
@@ -77,14 +77,14 @@ def failed_attempt_landscape_blocks(
     return blocks
 
 
-def _render_failed_attempt(graph: HarnessGraph) -> str:
+def _render_failed_attempt(attempt: Attempt) -> str:
     criteria_block = (
-        "\n".join(f"  - {c}" for c in graph.evaluation_criteria) or "  (none)"
+        "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
     )
     return (
-        f"task_specification: {graph.task_specification or '(missing)'}\n"
+        f"task_specification: {attempt.task_specification or '(missing)'}\n"
         f"evaluation_criteria:\n{criteria_block}\n"
-        f"fail_reason: {graph.fail_reason.value if graph.fail_reason else 'unknown'}"
+        f"fail_reason: {attempt.fail_reason.value if attempt.fail_reason else 'unknown'}"
     )
 
 

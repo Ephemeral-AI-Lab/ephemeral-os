@@ -1,4 +1,4 @@
-"""ComplexTaskRequest domain DTO and enums."""
+"""Mission domain DTO and enums."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Any, Literal
 
 
-class ComplexTaskRequestStatus(StrEnum):
+class MissionStatus(StrEnum):
     OPEN = "open"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -16,15 +16,15 @@ class ComplexTaskRequestStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class ComplexTaskRequest:
-    """Immutable view of a persisted ComplexTaskRequest."""
+class Mission:
+    """Immutable view of a persisted Mission."""
 
     id: str
     task_center_run_id: str
     requested_by_task_id: str
     goal: str
-    status: ComplexTaskRequestStatus
-    task_segment_ids: tuple[str, ...]
+    status: MissionStatus
+    episode_ids: tuple[str, ...]
     final_outcome: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
@@ -32,27 +32,27 @@ class ComplexTaskRequest:
 
     @property
     def is_open(self) -> bool:
-        return self.status == ComplexTaskRequestStatus.OPEN
+        return self.status == MissionStatus.OPEN
 
 
 @dataclass(frozen=True, slots=True)
-class ComplexTaskCloseReport:
+class MissionCloseReport:
     """Final report attached to ``requested_by_task_id`` when the request closes.
 
-    ``final_harness_graph_id`` is ``None`` for graph-less entry segments — the
-    entry executor lives in a segment with zero ``HarnessGraph`` rows and
-    closes via the entry-task controller rather than a passing graph.
+    ``final_attempt_id`` is ``None`` for attempt-less entry episodes — the
+    entry executor lives in a episode with zero ``Attempt`` rows and
+    closes via the entry-task controller rather than a passing attempt.
     """
 
-    complex_task_request_id: str
+    mission_id: str
     requested_by_task_id: str
     outcome: Literal["success", "failed"]
-    final_segment_id: str
-    final_harness_graph_id: str | None
+    final_episode_id: str
+    final_attempt_id: str | None
 
     def to_final_outcome(self) -> dict[str, str | None]:
         return {
             "outcome": self.outcome,
-            "final_segment_id": self.final_segment_id,
-            "final_harness_graph_id": self.final_harness_graph_id,
+            "final_episode_id": self.final_episode_id,
+            "final_attempt_id": self.final_attempt_id,
         }

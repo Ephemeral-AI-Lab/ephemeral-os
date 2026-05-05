@@ -40,9 +40,9 @@ def deps() -> ContextEngineDeps:
             return None
 
     return ContextEngineDeps(
-        request_store=_Stub(),  # type: ignore[arg-type]
-        segment_store=_Stub(),  # type: ignore[arg-type]
-        graph_store=_Stub(),  # type: ignore[arg-type]
+        mission_store=_Stub(),  # type: ignore[arg-type]
+        episode_store=_Stub(),  # type: ignore[arg-type]
+        attempt_store=_Stub(),  # type: ignore[arg-type]
         task_store=_Stub(),  # type: ignore[arg-type]
     )
 
@@ -51,15 +51,15 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
     def _build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
         return ContextPacket(
             target_role="planner",
-            target_id=scope.harness_graph_id,
+            target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
-                request_id=scope.request_id,
-                segment_id=scope.segment_id,
-                harness_graph_id=scope.harness_graph_id,
+                mission_id=scope.mission_id,
+                episode_id=scope.episode_id,
+                attempt_id=scope.attempt_id,
             ),
             blocks=[
                 ContextBlock(
-                    kind="segment_goal",
+                    kind="episode_goal",
                     priority=ContextPriority.REQUIRED,
                     text="ok",
                 )
@@ -72,30 +72,30 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
 def test_unknown_recipe_id_raises_at_build(deps):
     engine = ContextEngine(deps)
     with pytest.raises(ContextEngineError):
-        engine.build("missing", ContextScope(request_id="r"))
+        engine.build("missing", ContextScope(mission_id="r"))
 
 
 def test_engine_validates_scope_before_calling_recipe(deps):
     RecipeRegistry.register(
-        _ok_recipe("r1", required=frozenset({"request_id", "segment_id"}))
+        _ok_recipe("r1", required=frozenset({"mission_id", "episode_id"}))
     )
     with pytest.raises(RecipeScopeError):
-        ContextEngine(deps).build("r1", ContextScope(request_id="r"))
+        ContextEngine(deps).build("r1", ContextScope(mission_id="r"))
 
 
 def test_engine_dispatches_to_registered_recipe(deps):
     RecipeRegistry.register(
         _ok_recipe(
             "r1",
-            required=frozenset({"request_id", "segment_id", "harness_graph_id"}),
+            required=frozenset({"mission_id", "episode_id", "attempt_id"}),
         )
     )
     packet = ContextEngine(deps).build(
         "r1",
-        ContextScope(request_id="r", segment_id="s", harness_graph_id="g"),
+        ContextScope(mission_id="r", episode_id="s", attempt_id="g"),
     )
     assert packet.target_id == "g"
-    assert packet.canonical_refs.request_id == "r"
+    assert packet.canonical_refs.mission_id == "r"
 
 
 def test_recipe_registry_list_ids_returns_sorted():

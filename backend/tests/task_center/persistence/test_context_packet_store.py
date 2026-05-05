@@ -34,30 +34,30 @@ def _make_packet(packet_id: str = "pkt-1") -> ContextPacket:
         target_role="planner",
         target_id="g-1",
         canonical_refs=ContextRefs(
-            request_id="req-A", segment_id="seg-1", harness_graph_id="g-1"
+            mission_id="req-A", episode_id="episode-1", attempt_id="g-1"
         ),
         blocks=[
             ContextBlock(
-                kind="segment_goal",
+                kind="episode_goal",
                 priority=ContextPriority.REQUIRED,
                 text="goal",
-                source_id="seg-1",
-                source_kind="task_segment",
+                source_id="episode-1",
+                source_kind="episode",
             ),
             ContextBlock(
-                kind="prior_segment_summary",
+                kind="prior_episode_summary",
                 priority=ContextPriority.HIGH,
                 text="summary",
-                source_id="seg-prior",
-                source_kind="task_segment",
+                source_id="episode-prior",
+                source_kind="episode",
                 metadata={
-                    "segment_sequence_no": "1",
+                    "episode_sequence_no": "1",
                     "source_label": "accepted",
                 },
             ),
         ],
-        metadata={"is_initial_segment": "false"},
-        source_ids=["seg-1", "seg-prior"],
+        metadata={"is_initial_episode": "false"},
+        source_ids=["episode-1", "episode-prior"],
     )
 
 
@@ -68,13 +68,13 @@ def test_round_trip_preserves_blocks_and_metadata(packet_store):
     loaded = packet_store.get(stored_id)
     assert loaded is not None
     assert loaded.target_role == "planner"
-    assert loaded.canonical_refs.request_id == "req-A"
+    assert loaded.canonical_refs.mission_id == "req-A"
     assert len(loaded.blocks) == 2
     prior = loaded.blocks[1]
-    assert prior.metadata["segment_sequence_no"] == "1"
+    assert prior.metadata["episode_sequence_no"] == "1"
     assert prior.metadata["source_label"] == "accepted"
-    assert loaded.metadata["is_initial_segment"] == "false"
-    assert loaded.source_ids == ["seg-1", "seg-prior"]
+    assert loaded.metadata["is_initial_episode"] == "false"
+    assert loaded.source_ids == ["episode-1", "episode-prior"]
 
 
 def test_unknown_id_returns_none(packet_store):

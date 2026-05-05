@@ -14,44 +14,44 @@ from task_center.context_engine.recipes.entry_executor import (
 from task_center.context_engine.recipes.evaluator import _evaluator_v1_build
 from task_center.context_engine.recipes.generator import _generator_v1_build
 from task_center.context_engine.scope import ContextScope
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.episode.episode import EpisodeCreationReason
 
 
 @pytest.fixture
 def deps(
-    request_store, segment_store, graph_store, task_store
+    mission_store, episode_store, attempt_store, task_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
 
 
-def _seed_request(request_store, task_center_run_id):
-    return request_store.insert(
+def _seed_mission(mission_store, task_center_run_id):
+    return mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="overall",
     )
 
 
-def _seed_segment(segment_store, *, request_id):
-    return segment_store.insert(
-        complex_task_request_id=request_id,
+def _seed_episode(episode_store, *, mission_id):
+    return episode_store.insert(
+        mission_id=mission_id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="g",
         attempt_budget=2,
     )
 
 
-def _seed_continuation_segment(segment_store, *, request_id):
-    return segment_store.insert(
-        complex_task_request_id=request_id,
+def _seed_continuation_episode(episode_store, *, mission_id):
+    return episode_store.insert(
+        mission_id=mission_id,
         sequence_no=2,
-        creation_reason=TaskSegmentCreationReason.PARTIAL_CONTINUATION,
+        creation_reason=EpisodeCreationReason.PARTIAL_CONTINUATION,
         goal="g2",
         attempt_budget=2,
     )
@@ -63,14 +63,14 @@ def _seed_continuation_segment(segment_store, *, request_id):
 
 
 def test_generator_v1_emits_planned_task_spec_required_block(
-    deps, request_store, segment_store, graph_store, task_store, task_center_run_id
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_request(request_store, task_center_run_id)
-    seg = _seed_segment(segment_store, request_id=req.id)
-    graph = graph_store.insert(task_segment_id=seg.id, graph_sequence_no=1)
-    graph_store.set_plan_contract(
-        graph.id,
-        task_specification="graph spec framing",
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="attempt spec framing",
         evaluation_criteria=["c1"],
         continuation_goal=None,
     )
@@ -84,13 +84,13 @@ def test_generator_v1_emits_planned_task_spec_required_block(
         status="pending",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=graph.id,
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
     )
     packet = _generator_v1_build(
         ContextScope(
-            request_id=req.id,
-            harness_graph_id=graph.id,
+            mission_id=req.id,
+            attempt_id=attempt.id,
             task_id=task_id,
         ),
         deps,
@@ -103,11 +103,11 @@ def test_generator_v1_emits_planned_task_spec_required_block(
 
 
 def test_generator_v1_dependency_summary_blocks(
-    deps, request_store, segment_store, graph_store, task_store, task_center_run_id
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_request(request_store, task_center_run_id)
-    seg = _seed_segment(segment_store, request_id=req.id)
-    graph = graph_store.insert(task_segment_id=seg.id, graph_sequence_no=1)
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
     # Upstream task with a recorded summary.
     task_store.upsert_task(
         task_id="t-up",
@@ -118,8 +118,8 @@ def test_generator_v1_dependency_summary_blocks(
         status="done",
         summaries=[{"outcome": "success", "summary": "produced X"}],
         needs=[],
-        task_center_harness_graph_id=graph.id,
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
     )
     task_store.upsert_task(
         task_id="t-down",
@@ -130,13 +130,13 @@ def test_generator_v1_dependency_summary_blocks(
         status="pending",
         summaries=[],
         needs=["t-up"],
-        task_center_harness_graph_id=graph.id,
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
     )
 
     packet = _generator_v1_build(
         ContextScope(
-            request_id=req.id, harness_graph_id=graph.id, task_id="t-down"
+            mission_id=req.id, attempt_id=attempt.id, task_id="t-down"
         ),
         deps,
     )
@@ -154,18 +154,18 @@ def test_generator_v1_dependency_summary_blocks(
 
 
 def test_evaluator_v1_emits_required_spec_and_criteria(
-    deps, request_store, segment_store, graph_store, task_store, task_center_run_id
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_request(request_store, task_center_run_id)
-    seg = _seed_segment(segment_store, request_id=req.id)
-    graph = graph_store.insert(task_segment_id=seg.id, graph_sequence_no=1)
-    graph_store.set_plan_contract(
-        graph.id,
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
         task_specification="evaluator spec",
         evaluation_criteria=["c1", "c2"],
         continuation_goal=None,
     )
-    graph_store.set_generator_task_ids(graph.id, ["t-a"])
+    attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
     task_store.upsert_task(
         task_id="t-a",
         task_center_run_id=task_center_run_id,
@@ -175,18 +175,18 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
         status="done",
         summaries=[{"outcome": "success", "summary": "good output"}],
         needs=[],
-        task_center_harness_graph_id=graph.id,
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
     )
     packet = _evaluator_v1_build(
         ContextScope(
-            request_id=req.id, segment_id=seg.id, harness_graph_id=graph.id
+            mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
         ),
         deps,
     )
     kinds = [b.kind for b in packet.blocks]
     assert kinds == [
-        "segment_goal",
+        "episode_goal",
         "task_specification",
         "completed_task_summary",
         "evaluation_criteria",
@@ -200,20 +200,20 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
 
 
 def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
-    deps, request_store, segment_store, graph_store, task_store, task_center_run_id
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_request(request_store, task_center_run_id)
-    seg1 = _seed_segment(segment_store, request_id=req.id)
-    segment_store.close_succeeded(
-        seg1.id,
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode1 = _seed_episode(episode_store, mission_id=req.id)
+    episode_store.close_succeeded(
+        episode1.id,
         task_specification="accepted plan",
         task_summary="accepted summary",
         closed_at=datetime.now(UTC),
     )
-    seg2 = _seed_continuation_segment(segment_store, request_id=req.id)
-    graph = graph_store.insert(task_segment_id=seg2.id, graph_sequence_no=1)
-    graph_store.set_plan_contract(
-        graph.id,
+    episode2 = _seed_continuation_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode2.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
         task_specification="attempt plan",
         evaluation_criteria=["criterion"],
         continuation_goal=None,
@@ -221,16 +221,16 @@ def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
 
     packet = _evaluator_v1_build(
         ContextScope(
-            request_id=req.id, segment_id=seg2.id, harness_graph_id=graph.id
+            mission_id=req.id, episode_id=episode2.id, attempt_id=attempt.id
         ),
         deps,
     )
 
     assert [b.kind for b in packet.blocks] == [
-        "complex_task_goal",
-        "prior_segment_specification",
-        "prior_segment_summary",
-        "segment_goal",
+        "mission_goal",
+        "prior_episode_specification",
+        "prior_episode_summary",
+        "episode_goal",
         "task_specification",
         "evaluation_criteria",
     ]
@@ -246,9 +246,9 @@ def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
 
 
 def test_entry_executor_v1_emits_one_required_entry_request_block(
-    deps, request_store, task_store, task_center_run_id
+    deps, mission_store, task_store, task_center_run_id
 ):
-    req = _seed_request(request_store, task_center_run_id)
+    req = _seed_mission(mission_store, task_center_run_id)
     task_store.upsert_task(
         task_id="entry",
         task_center_run_id=task_center_run_id,
@@ -258,11 +258,11 @@ def test_entry_executor_v1_emits_one_required_entry_request_block(
         status="running",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=None,
+        task_center_attempt_id=None,
         spawn_reason="entry_executor",
     )
     packet = _entry_executor_v1_build(
-        ContextScope(request_id=req.id, task_id="entry"),
+        ContextScope(mission_id=req.id, task_id="entry"),
         deps,
     )
     assert len(packet.blocks) == 1
@@ -270,8 +270,8 @@ def test_entry_executor_v1_emits_one_required_entry_request_block(
     assert block.kind == "entry_request"
     assert block.priority == ContextPriority.REQUIRED
     assert block.text == "user prompt"
-    # No complex_task_summary in entry-time context — it ships at close.
-    assert all(b.kind != "complex_task_summary" for b in packet.blocks)
+    # No mission_summary in entry-time context — it ships at close.
+    assert all(b.kind != "mission_summary" for b in packet.blocks)
 
 
 # ---------------------------------------------------------------------------

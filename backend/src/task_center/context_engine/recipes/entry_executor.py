@@ -1,7 +1,7 @@
 """``entry_executor_v1`` recipe — context for the top-level entry executor.
 
 Emits one ``entry_request`` block (priority=required) sourced from the
-entry task row's ``task_input``. No ``complex_task_summary`` block — that
+entry task row's ``task_input``. No ``mission_summary`` block — that
 only ships at request close, after this recipe's lifetime.
 """
 
@@ -20,7 +20,7 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 ENTRY_EXECUTOR_V1 = "entry_executor_v1"
-_REQUIRED_FIELDS = frozenset({"request_id", "task_id"})
+_REQUIRED_FIELDS = frozenset({"mission_id", "task_id"})
 
 
 def _entry_executor_v1_build(
@@ -43,7 +43,7 @@ def _entry_executor_v1_build(
         target_role="executor",
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
-            request_id=scope.request_id,
+            mission_id=scope.mission_id,
             task_id=scope.task_id,
         ),
         blocks=[block],

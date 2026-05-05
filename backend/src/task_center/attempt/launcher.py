@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 from agents.registry import get_definition
 from engine.runtime.lifecycle import EphemeralRunResult
 from message.stream_events import StreamEvent
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.runtime import (
     AgentLaunch,
-    HarnessGraphRuntime,
+    AttemptRuntime,
 )
 from task_center.task import (
     EvaluatorSubmission,
@@ -27,19 +27,19 @@ from tools.core.base import ExecutionMetadata
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from server.app_factory import RuntimeConfig
-    from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+    from task_center.attempt.orchestrator import AttemptOrchestrator
 
 logger = logging.getLogger(__name__)
 
-HarnessRuntimeProvider = Callable[[], HarnessGraphRuntime | None]
-HarnessAgentRunner = Callable[..., Awaitable[EphemeralRunResult]]
+AttemptRuntimeProvider = Callable[[], AttemptRuntime | None]
+AttemptAgentRunner = Callable[..., Awaitable[EphemeralRunResult]]
 AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
 
 
-class EphemeralHarnessAgentLauncher:
-    """Schedules graph-scoped ephemeral agents and reports run exhaustion.
+class EphemeralAttemptAgentLauncher:
+    """Schedules attempt-scoped ephemeral agents and reports run exhaustion.
 
-    Terminal submission tools mutate the harness graph during the agent run.
+    Terminal submission tools mutate the harness attempt during the agent run.
     If an agent exits or crashes while its task is still ``running``, the
     launcher synthesizes the matching harness failure submission so lifecycle
     ownership remains in the orchestrator.
@@ -49,10 +49,10 @@ class EphemeralHarnessAgentLauncher:
         self,
         *,
         config: "RuntimeConfig",
-        runtime: HarnessRuntimeProvider,
+        runtime: AttemptRuntimeProvider,
         sandbox_id: str | None = None,
         on_event: AgentStreamEmitter | None = None,
-        runner: HarnessAgentRunner | None = None,
+        runner: AttemptAgentRunner | None = None,
     ) -> None:
         self._config = config
         self._runtime = runtime
@@ -66,7 +66,7 @@ class EphemeralHarnessAgentLauncher:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError as exc:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 "Harness agent launcher requires an active asyncio event loop."
             ) from exc
 
@@ -83,7 +83,7 @@ class EphemeralHarnessAgentLauncher:
     def _resolve_agent_definition(agent_name: str) -> "AgentDefinition":
         agent_def = get_definition(agent_name)
         if agent_def is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Harness agent definition {agent_name!r} is not registered."
             )
         return agent_def
@@ -100,14 +100,14 @@ class EphemeralHarnessAgentLauncher:
 
             runner = run_ephemeral_agent
 
-        # Runtime is always attached: graph-mode tools resolve via the
-        # graph id, entry-mode tools branch on ``runtime.entry_task_controller``.
+        # Runtime is always attached: attempt-mode tools resolve via the
+        # attempt id, entry-mode tools branch on ``runtime.entry_task_controller``.
         metadata = ExecutionMetadata(
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
-            task_center_harness_graph_id=launch.harness_graph_id,
-            task_center_request_id=launch.complex_task_request_id,
-            harness_graph_runtime=runtime,
+            task_center_attempt_id=launch.attempt_id,
+            task_center_request_id=launch.mission_id,
+            attempt_runtime=runtime,
             composer=runtime.composer,
         )
         result: EphemeralRunResult | None = None
@@ -124,10 +124,10 @@ class EphemeralHarnessAgentLauncher:
             )
         except Exception as exc:  # pragma: no cover - defensive runner boundary
             logger.exception(
-                "EphemeralHarnessAgentLauncher: agent run failed",
+                "EphemeralAttemptAgentLauncher: agent run failed",
                 extra={
                     "task_id": launch.task_id,
-                    "harness_graph_id": launch.harness_graph_id,
+                    "attempt_id": launch.attempt_id,
                     "agent_name": launch.agent_name,
                 },
             )
@@ -143,10 +143,10 @@ class EphemeralHarnessAgentLauncher:
             summary = "Agent run ended without a terminal submission."
         await self._report_unfinished_running_task(launch, summary=summary)
 
-    def _require_runtime(self) -> HarnessGraphRuntime:
+    def _require_runtime(self) -> AttemptRuntime:
         runtime = self._runtime()
         if runtime is None:
-            raise GraphInvariantViolation("Harness graph runtime is not initialized.")
+            raise TaskCenterInvariantViolation("Harness attempt runtime is not initialized.")
         return runtime
 
     async def _report_unfinished_running_task(
@@ -166,7 +166,7 @@ class EphemeralHarnessAgentLauncher:
             # there's nothing to do.
             return
 
-        if launch.harness_graph_id is None:
+        if launch.attempt_id is None:
             # Entry mode — dispatch through the controller instead of the
             # orchestrator registry. Missing controller is a hard error: the
             # entry task is RUNNING and the run cannot finalize without it.
@@ -179,7 +179,7 @@ class EphemeralHarnessAgentLauncher:
             controller.apply_run_exhausted(summary=summary)
             return
 
-        orchestrator = runtime.orchestrator_registry.get(launch.harness_graph_id)
+        orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
         if orchestrator is None:
             self._mark_unowned_task_exhausted(runtime, launch, summary=summary)
             return
@@ -191,20 +191,20 @@ class EphemeralHarnessAgentLauncher:
         elif launch.role == HarnessTaskRole.EVALUATOR:
             self._report_evaluator_exhaustion(orchestrator, launch, summary=summary)
         else:  # pragma: no cover - exhaustive over HarnessTaskRole
-            raise GraphInvariantViolation(f"Unknown harness role: {launch.role!r}")
+            raise TaskCenterInvariantViolation(f"Unknown harness role: {launch.role!r}")
 
     @staticmethod
     def _mark_unowned_task_exhausted(
-        runtime: HarnessGraphRuntime,
+        runtime: AttemptRuntime,
         launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
         logger.error(
-            "EphemeralHarnessAgentLauncher: missing orchestrator for unfinished task",
+            "EphemeralAttemptAgentLauncher: missing orchestrator for unfinished task",
             extra={
                 "task_id": launch.task_id,
-                "harness_graph_id": launch.harness_graph_id,
+                "attempt_id": launch.attempt_id,
             },
         )
         runtime.task_store.set_task_status(
@@ -215,14 +215,14 @@ class EphemeralHarnessAgentLauncher:
 
     @staticmethod
     def _report_planner_exhaustion(
-        orchestrator: "HarnessGraphOrchestrator",
+        orchestrator: "AttemptOrchestrator",
         launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
         orchestrator.apply_planner_failure(
             PlannerFailureSubmission(
-                graph_id=launch.harness_graph_id,
+                attempt_id=launch.attempt_id,
                 planner_task_id=launch.task_id,
                 fail_reason="run_exhausted",
                 summary=summary,
@@ -231,14 +231,14 @@ class EphemeralHarnessAgentLauncher:
 
     @staticmethod
     def _report_generator_exhaustion(
-        orchestrator: "HarnessGraphOrchestrator",
+        orchestrator: "AttemptOrchestrator",
         launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
         orchestrator.apply_generator_submission(
             GeneratorSubmission(
-                graph_id=launch.harness_graph_id,
+                attempt_id=launch.attempt_id,
                 task_id=launch.task_id,
                 outcome="failure",
                 summary=summary,
@@ -248,14 +248,14 @@ class EphemeralHarnessAgentLauncher:
 
     @staticmethod
     def _report_evaluator_exhaustion(
-        orchestrator: "HarnessGraphOrchestrator",
+        orchestrator: "AttemptOrchestrator",
         launch: AgentLaunch,
         *,
         summary: str,
     ) -> None:
         orchestrator.apply_evaluator_submission(
             EvaluatorSubmission(
-                graph_id=launch.harness_graph_id,
+                attempt_id=launch.attempt_id,
                 task_id=launch.task_id,
                 outcome="failure",
                 summary=summary,

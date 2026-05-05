@@ -46,8 +46,8 @@ def deps() -> ContextEngineDeps:
             return None
 
     return ContextEngineDeps(
-        request_store=_S(), segment_store=_S(),  # type: ignore[arg-type]
-        graph_store=_S(), task_store=_S(),  # type: ignore[arg-type]
+        mission_store=_S(), episode_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(), task_store=_S(),  # type: ignore[arg-type]
     )
 
 
@@ -93,7 +93,7 @@ def test_empty_variants_returns_base_fast_path(deps):
     agents_registry.register_definition(base)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="generator",
-        scope=ContextScope(request_id="r"),
+        scope=ContextScope(mission_id="r"),
         deps=deps,
     )
     assert isinstance(sel, AgentSelection)
@@ -106,7 +106,7 @@ def test_variant_predicate_match_picks_target(deps, planner_with_variant):
     PredicateRegistry.register("needs_full_only", lambda ctx: True)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="planner",
-        scope=ContextScope(request_id="r"),
+        scope=ContextScope(mission_id="r"),
         deps=deps,
     )
     assert sel.agent_def.name == "planner_full_only"
@@ -120,7 +120,7 @@ def test_predicate_no_match_falls_back_to_base(deps, planner_with_variant):
     PredicateRegistry.register("needs_full_only", lambda ctx: False)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="planner",
-        scope=ContextScope(request_id="r"),
+        scope=ContextScope(mission_id="r"),
         deps=deps,
     )
     assert sel.agent_def.name == "planner"
@@ -146,7 +146,7 @@ def test_declared_order_priority(deps):
     for d in (base, alt_a, alt_b, alt_c):
         agents_registry.register_definition(d)
     sel = RuleBasedAgentResolver().resolve(
-        base_agent_name="x", scope=ContextScope(request_id="r"), deps=deps
+        base_agent_name="x", scope=ContextScope(mission_id="r"), deps=deps
     )
     assert sel.agent_def.name == "alt_b", "first matching variant wins"
 
@@ -171,7 +171,7 @@ def test_nested_variant_target_rejected(deps):
     with pytest.raises(AgentDefinitionValidationError):
         RuleBasedAgentResolver().resolve(
             base_agent_name="base",
-            scope=ContextScope(request_id="r"),
+            scope=ContextScope(mission_id="r"),
             deps=deps,
         )
 
@@ -184,7 +184,7 @@ def test_predicate_exception_propagates_no_fail_open(deps, planner_with_variant)
     with pytest.raises(RuntimeError):
         RuleBasedAgentResolver().resolve(
             base_agent_name="planner",
-            scope=ContextScope(request_id="r"),
+            scope=ContextScope(mission_id="r"),
             deps=deps,
         )
 
@@ -195,6 +195,6 @@ def test_missing_context_recipe_raises(deps):
     with pytest.raises(MissingContextRecipeError):
         RuleBasedAgentResolver().resolve(
             base_agent_name="bare",
-            scope=ContextScope(request_id="r"),
+            scope=ContextScope(mission_id="r"),
             deps=deps,
         )

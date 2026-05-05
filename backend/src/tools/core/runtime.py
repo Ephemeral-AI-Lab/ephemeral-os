@@ -36,9 +36,9 @@ class ExecutionMetadata:
     exec_cwd: str = ""
     task_center_run_id: str | None = None
     task_center_task_id: str | None = None
-    task_center_harness_graph_id: str | None = None
+    task_center_attempt_id: str | None = None
     task_center_request_id: str | None = None
-    harness_graph_runtime: Any | None = None
+    attempt_runtime: Any | None = None
     # Per-request ContextComposer used by helper tools (ask_advisor /
     # ask_resolver) to build the parent-inheriting prompt for the helper agent.
     composer: Any | None = None
@@ -83,9 +83,9 @@ class ExecutionMetadata:
             "exec_cwd",
             "task_center_run_id",
             "task_center_task_id",
-            "task_center_harness_graph_id",
+            "task_center_attempt_id",
             "task_center_request_id",
-            "harness_graph_runtime",
+            "attempt_runtime",
             "composer",
             "conversation_messages",
             "tool_registry",

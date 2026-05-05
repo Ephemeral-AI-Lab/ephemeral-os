@@ -1,6 +1,6 @@
 """US-014: orchestrator + dispatcher composer wiring.
 
-Confirms that when ``HarnessGraphRuntime.composer`` is set, the orchestrator
+Confirms that when ``AttemptRuntime.composer`` is set, the orchestrator
 asks the composer for the planner agent name and task_input, and that
 ``planner_full_only`` is selected when ancestry has a partial-plan caller.
 """
@@ -24,15 +24,15 @@ from task_center.agent_launch.predicates import (
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import (
     AgentLaunch,
-    HarnessGraphRuntime,
+    AttemptRuntime,
 )
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.episode.episode import EpisodeCreationReason
 
 
 class _RecordingLauncher:
@@ -66,23 +66,23 @@ def _isolate_global_registries():
 
 @pytest.fixture
 def composer_runtime(
-    request_store, segment_store, graph_store, task_store
-) -> tuple[HarnessGraphRuntime, _RecordingLauncher]:
+    mission_store, episode_store, attempt_store, task_store
+) -> tuple[AttemptRuntime, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=HarnessGraphOrchestratorRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=None,
         lifecycle_config=HarnessLifecycleConfig(),
         composer=composer,
@@ -116,51 +116,51 @@ def _register_planner_agents() -> None:
 
 
 def _seed_request_segment_graph(
-    request_store, segment_store, graph_store, task_center_run_id
+    mission_store, episode_store, attempt_store, task_center_run_id
 ):
-    request = request_store.insert(
+    request = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="overall",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="seg goal",
         attempt_budget=2,
     )
-    graph = graph_store.insert(
-        task_segment_id=segment.id, graph_sequence_no=1
+    attempt = attempt_store.insert(
+        episode_id=episode.id, attempt_sequence_no=1
     )
-    return request, segment, graph
+    return request, episode, attempt
 
 
 def _setup_partial_plan_ancestor(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
 ):
     """Ancestor caller submitted a partial plan → child planner should fork."""
-    parent_req = request_store.insert(
+    parent_req = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="parent",
     )
-    parent_seg = segment_store.insert(
-        complex_task_request_id=parent_req.id,
+    parent_seg = episode_store.insert(
+        mission_id=parent_req.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="parent seg",
         attempt_budget=2,
     )
-    caller_graph = graph_store.insert(
-        task_segment_id=parent_seg.id, graph_sequence_no=1
+    caller_attempt = attempt_store.insert(
+        episode_id=parent_seg.id, attempt_sequence_no=1
     )
-    graph_store.set_plan_contract(
-        caller_graph.id,
+    attempt_store.set_plan_contract(
+        caller_attempt.id,
         task_specification="caller spec",
         evaluation_criteria=["c"],
         continuation_goal="continue here",   # ← partial plan
@@ -174,27 +174,27 @@ def _setup_partial_plan_ancestor(
         status="running",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id=caller_graph.id,
-        spawn_reason="harness_graph_generator",
+        task_center_attempt_id=caller_attempt.id,
+        spawn_reason="attempt_generator",
     )
     return parent_req
 
 
 def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     composer_runtime,
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
-    request, segment, graph = _seed_request_segment_graph(
-        request_store, segment_store, graph_store, task_center_run_id
+    request, episode, attempt = _seed_request_segment_graph(
+        mission_store, episode_store, attempt_store, task_center_run_id
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph, on_graph_closed=lambda _id: None, runtime=runtime
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
     )
     orchestrator.start()
     assert len(launcher.launches) == 1
@@ -207,40 +207,40 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     composer_runtime,
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
     _setup_partial_plan_ancestor(
-        request_store,
-        segment_store,
-        graph_store,
+        mission_store,
+        episode_store,
+        attempt_store,
         task_store,
         task_center_run_id,
     )
     # Child request is spawned by the partial-plan caller task.
-    child_req = request_store.insert(
+    child_req = mission_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-caller",
         goal="child",
     )
-    child_seg = segment_store.insert(
-        complex_task_request_id=child_req.id,
+    child_seg = episode_store.insert(
+        mission_id=child_req.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="child seg",
         attempt_budget=2,
     )
-    child_graph = graph_store.insert(
-        task_segment_id=child_seg.id, graph_sequence_no=1
+    child_graph = attempt_store.insert(
+        episode_id=child_seg.id, attempt_sequence_no=1
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=child_graph,
-        on_graph_closed=lambda _id: None,
+    orchestrator = AttemptOrchestrator(
+        attempt=child_graph,
+        on_attempt_closed=lambda _id: None,
         runtime=runtime,
     )
     orchestrator.start()

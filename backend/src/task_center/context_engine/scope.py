@@ -1,6 +1,6 @@
 """ContextScope — discriminated-union surface every recipe sees.
 
-The scope carries identity (request / segment / graph / task ids) and helper
+The scope carries identity (mission / episode / attempt / task ids) and helper
 parent references. It does **not** carry store handles; those live on
 :class:`ContextEngineDeps` so recipes can be swapped without touching call
 sites.
@@ -17,11 +17,11 @@ from task_center.context_engine.errors import RecipeScopeError
 class ContextScope:
     """Identity surface threaded through resolver + engine + recipes."""
 
-    request_id: str
+    mission_id: str
 
     # Optional identity fields — recipes declare which of these they need.
-    segment_id: str | None = None
-    harness_graph_id: str | None = None
+    episode_id: str | None = None
+    attempt_id: str | None = None
     task_id: str | None = None
 
     # Helper-spawn fields — present only when a helper (advisor / resolver) is

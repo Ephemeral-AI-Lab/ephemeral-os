@@ -14,7 +14,7 @@ from tools.submission.main_agent.planner import PlanTaskInput
 PHASE03_TOOLS = (
     "submit_full_plan",
     "submit_partial_plan",
-    "request_complex_task_solution",
+    "request_mission_solution",
     "submit_execution_success",
     "submit_execution_failure",
     "submit_verification_success",
@@ -43,12 +43,12 @@ def test_submission_tools_are_terminal_except_helper_requests() -> None:
         assert tool.is_terminal_tool is (name not in non_terminal)
 
 
-def test_custom_generator_agent_can_declare_complex_task_solution_terminal() -> None:
+def test_custom_generator_agent_can_declare_mission_solution_terminal() -> None:
     agent = AgentDefinition(
         name="custom_generator",
         description="Custom generator agent.",
         role="custom_generator",
-        terminals=["request_complex_task_solution"],
+        terminals=["request_mission_solution"],
     )
 
     result = AgentDefinitionValidator(None).validate(agent)

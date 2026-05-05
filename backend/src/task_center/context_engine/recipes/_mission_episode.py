@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from task_center.mission.mission import ComplexTaskRequest
+from task_center.mission.mission import Mission
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.episode.episode import TaskSegment
+from task_center.episode.episode import Episode
 
 MISSION_EPISODE_HEADING = "# Mission / Current Episode"
 MISSION_HEADING = "# Mission"
@@ -19,56 +19,56 @@ PREVIOUS_EPISODE_RESULTS_HEADING = "# Previous Episode Results"
 
 def mission_episode_blocks(
     *,
-    request: ComplexTaskRequest,
-    current_segment: TaskSegment,
-    segments: list[TaskSegment],
+    mission: Mission,
+    current_episode: Episode,
+    episodes: list[Episode],
 ) -> list[ContextBlock]:
     """Return the mission/episode frame in LLM-facing semantic order."""
-    if current_segment.sequence_no == 1:
-        return [_episode_goal_block(current_segment, heading=MISSION_EPISODE_HEADING)]
+    if current_episode.sequence_no == 1:
+        return [_episode_goal_block(current_episode, heading=MISSION_EPISODE_HEADING)]
 
     return [
-        _mission_goal_block(request),
+        _mission_goal_block(mission),
         *_previous_episode_result_blocks(
-            current=current_segment,
-            segments=segments,
+            current=current_episode,
+            episodes=episodes,
         ),
         _episode_goal_block(
-            current_segment,
+            current_episode,
             heading=CURRENT_EPISODE_HEADING,
         ),
     ]
 
 
-def _episode_goal_block(segment: TaskSegment, *, heading: str) -> ContextBlock:
+def _episode_goal_block(episode: Episode, *, heading: str) -> ContextBlock:
     return ContextBlock(
-        kind=ContextBlockKind.SEGMENT_GOAL,
+        kind=ContextBlockKind.EPISODE_GOAL,
         priority=ContextPriority.REQUIRED,
-        text=segment.goal,
-        source_id=segment.id,
-        source_kind="task_segment",
+        text=episode.goal,
+        source_id=episode.id,
+        source_kind="episode",
         metadata={"heading": heading},
     )
 
 
-def _mission_goal_block(request: ComplexTaskRequest) -> ContextBlock:
+def _mission_goal_block(mission: Mission) -> ContextBlock:
     return ContextBlock(
-        kind=ContextBlockKind.COMPLEX_TASK_GOAL,
+        kind=ContextBlockKind.MISSION_GOAL,
         priority=ContextPriority.REQUIRED,
-        text=request.goal,
-        source_id=request.id,
-        source_kind="complex_task_request",
+        text=mission.goal,
+        source_id=mission.id,
+        source_kind="mission",
         metadata={"heading": MISSION_HEADING},
     )
 
 
 def _previous_episode_result_blocks(
     *,
-    current: TaskSegment,
-    segments: list[TaskSegment],
+    current: Episode,
+    episodes: list[Episode],
 ) -> list[ContextBlock]:
     priors = sorted(
-        (s for s in segments if s.sequence_no < current.sequence_no),
+        (s for s in episodes if s.sequence_no < current.sequence_no),
         key=lambda s: s.sequence_no,
     )
     out: list[ContextBlock] = []
@@ -76,7 +76,7 @@ def _previous_episode_result_blocks(
     for prior in priors:
         if prior.task_specification is None or prior.task_summary is None:
             raise ContextEngineError(
-                f"Prior segment {prior.id!r} (seq={prior.sequence_no}) is "
+                f"Prior episode {prior.id!r} (seq={prior.sequence_no}) is "
                 "missing task_specification or task_summary; chain "
                 "integrity violated."
             )
@@ -91,28 +91,28 @@ def _previous_episode_result_blocks(
         }
         out.append(
             ContextBlock(
-                kind=ContextBlockKind.PRIOR_SEGMENT_SPECIFICATION,
+                kind=ContextBlockKind.PRIOR_EPISODE_SPECIFICATION,
                 priority=priority,
                 text=prior.task_specification,
                 source_id=prior.id,
-                source_kind="task_segment",
+                source_kind="episode",
                 metadata={
                     **base_meta,
-                    "segment_sequence_no": str(prior.sequence_no),
+                    "episode_sequence_no": str(prior.sequence_no),
                     "subheading": f"Episode {prior.sequence_no} accepted plan",
                 },
             )
         )
         out.append(
             ContextBlock(
-                kind=ContextBlockKind.PRIOR_SEGMENT_SUMMARY,
+                kind=ContextBlockKind.PRIOR_EPISODE_SUMMARY,
                 priority=priority,
                 text=prior.task_summary,
                 source_id=prior.id,
-                source_kind="task_segment",
+                source_kind="episode",
                 metadata={
                     **base_meta,
-                    "segment_sequence_no": str(prior.sequence_no),
+                    "episode_sequence_no": str(prior.sequence_no),
                     "subheading": f"Episode {prior.sequence_no} summary",
                 },
             )

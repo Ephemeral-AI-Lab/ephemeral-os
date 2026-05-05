@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from task_center.config import HarnessLifecycleConfig
-from task_center.mission.handler import ComplexTaskRequestHandler
-from task_center.mission.mission import ComplexTaskRequestStatus
+from task_center.mission.handler import MissionHandler
+from task_center.mission.mission import MissionStatus
 from task_center.attempt.factory import (
     make_attempt_orchestrator_factory,
 )
-from task_center.attempt import HarnessGraphStatus
+from task_center.attempt import AttemptStatus
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import (
     AgentLaunch,
-    HarnessGraphRuntime,
+    AttemptRuntime,
 )
 from task_center.task import (
     EvaluatorSubmission,
@@ -25,8 +25,8 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentStatus
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeStatus
 
 
 class _FakeLauncher:
@@ -38,30 +38,30 @@ class _FakeLauncher:
 
 
 def _build_handler(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     *,
     composer,
 ):
     launcher = _FakeLauncher()
-    orchestrator_registry = HarnessGraphOrchestratorRegistry()
-    manager_registry = SegmentManagerRegistry()
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    orchestrator_registry = AttemptOrchestratorRegistry()
+    manager_registry = EpisodeManagerRegistry()
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
         manager_registry=manager_registry,
         composer=composer,
     )
-    handler = ComplexTaskRequestHandler(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    handler = MissionHandler(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         manager_registry=manager_registry,
         config=HarnessLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=make_attempt_orchestrator_factory(
@@ -71,10 +71,10 @@ def _build_handler(
     return handler, manager_registry, orchestrator_registry
 
 
-def _plan(graph_id: str) -> PlannerSubmission:
+def _plan(attempt_id: str) -> PlannerSubmission:
     return PlannerSubmission(
-        graph_id=graph_id,
-        planner_task_id=planner_task_id(graph_id),
+        attempt_id=attempt_id,
+        planner_task_id=planner_task_id(attempt_id),
         kind="full",
         task_specification="spec",
         evaluation_criteria=("criterion",),
@@ -84,30 +84,30 @@ def _plan(graph_id: str) -> PlannerSubmission:
     )
 
 
-def _generator_success(graph_id: str) -> GeneratorSubmission:
+def _generator_success(attempt_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
-        graph_id=graph_id,
-        task_id=generator_task_id(graph_id, "a"),
+        attempt_id=attempt_id,
+        task_id=generator_task_id(attempt_id, "a"),
         outcome="success",
         summary="done",
         payload={},
     )
 
 
-def _generator_failure(graph_id: str) -> GeneratorSubmission:
+def _generator_failure(attempt_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
-        graph_id=graph_id,
-        task_id=generator_task_id(graph_id, "a"),
+        attempt_id=attempt_id,
+        task_id=generator_task_id(attempt_id, "a"),
         outcome="failure",
         summary="failed",
         payload={},
     )
 
 
-def _evaluator_success(graph_id: str) -> EvaluatorSubmission:
+def _evaluator_success(attempt_id: str) -> EvaluatorSubmission:
     return EvaluatorSubmission(
-        graph_id=graph_id,
-        task_id=evaluator_task_id(graph_id),
+        attempt_id=attempt_id,
+        task_id=evaluator_task_id(attempt_id),
         outcome="success",
         summary="pass",
         payload={},
@@ -115,60 +115,60 @@ def _evaluator_success(graph_id: str) -> EvaluatorSubmission:
 
 
 def test_full_plan_execution_success_closes_request_success(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
     composer,
 ):
     handler, manager_registry, orchestrator_registry = _build_handler(
-        request_store, segment_store, graph_store, task_store, composer=composer
+        mission_store, episode_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_mission_request(
+    request = handler.create_mission(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    segment = handler.create_initial_episode(complex_task_request_id=request.id)
-    manager = manager_registry.get(segment.id)
+    episode = handler.create_initial_episode(mission_id=request.id)
+    manager = manager_registry.get(episode.id)
     assert manager is not None
-    graph = manager.create_initial_attempt()
-    orchestrator = orchestrator_registry.get_or_raise(graph.id)
+    attempt = manager.create_initial_attempt()
+    orchestrator = orchestrator_registry.get_or_raise(attempt.id)
 
-    orchestrator.apply_plan_submission(_plan(graph.id))
-    orchestrator.apply_generator_submission(_generator_success(graph.id))
-    orchestrator.apply_evaluator_submission(_evaluator_success(graph.id))
+    orchestrator.apply_plan_submission(_plan(attempt.id))
+    orchestrator.apply_generator_submission(_generator_success(attempt.id))
+    orchestrator.apply_evaluator_submission(_evaluator_success(attempt.id))
 
-    final_request = request_store.get(request.id)
-    final_segment = segment_store.get(segment.id)
-    final_graph = graph_store.get(graph.id)
+    final_request = mission_store.get(request.id)
+    final_segment = episode_store.get(episode.id)
+    final_graph = attempt_store.get(attempt.id)
     assert final_request is not None and final_segment is not None
     assert final_graph is not None
-    assert final_request.status == ComplexTaskRequestStatus.SUCCEEDED
-    assert final_segment.status == TaskSegmentStatus.SUCCEEDED
-    assert final_graph.status == HarnessGraphStatus.PASSED
-    assert manager_registry.get(segment.id) is None
+    assert final_request.status == MissionStatus.SUCCEEDED
+    assert final_segment.status == EpisodeStatus.SUCCEEDED
+    assert final_graph.status == AttemptStatus.PASSED
+    assert manager_registry.get(episode.id) is None
 
 
 def test_generator_failure_retry_then_evaluator_success(
-    request_store,
-    segment_store,
-    graph_store,
+    mission_store,
+    episode_store,
+    attempt_store,
     task_store,
     task_center_run_id,
     composer,
 ):
     handler, manager_registry, orchestrator_registry = _build_handler(
-        request_store, segment_store, graph_store, task_store, composer=composer
+        mission_store, episode_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_mission_request(
+    request = handler.create_mission(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    segment = handler.create_initial_episode(complex_task_request_id=request.id)
-    manager = manager_registry.get(segment.id)
+    episode = handler.create_initial_episode(mission_id=request.id)
+    manager = manager_registry.get(episode.id)
     assert manager is not None
     graph1 = manager.create_initial_attempt()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
@@ -176,21 +176,21 @@ def test_generator_failure_retry_then_evaluator_success(
     orchestrator1.apply_plan_submission(_plan(graph1.id))
     orchestrator1.apply_generator_submission(_generator_failure(graph1.id))
 
-    refreshed_segment = segment_store.get(segment.id)
+    refreshed_segment = episode_store.get(episode.id)
     assert refreshed_segment is not None
-    assert len(refreshed_segment.harness_graph_ids) == 2
-    graph2_id = refreshed_segment.harness_graph_ids[1]
+    assert len(refreshed_segment.attempt_ids) == 2
+    graph2_id = refreshed_segment.attempt_ids[1]
     orchestrator2 = orchestrator_registry.get_or_raise(graph2_id)
 
     orchestrator2.apply_plan_submission(_plan(graph2_id))
     orchestrator2.apply_generator_submission(_generator_success(graph2_id))
     orchestrator2.apply_evaluator_submission(_evaluator_success(graph2_id))
 
-    final_request = request_store.get(request.id)
-    final_segment = segment_store.get(segment.id)
-    final_graph2 = graph_store.get(graph2_id)
+    final_request = mission_store.get(request.id)
+    final_segment = episode_store.get(episode.id)
+    final_graph2 = attempt_store.get(graph2_id)
     assert final_request is not None and final_segment is not None
     assert final_graph2 is not None
-    assert final_request.status == ComplexTaskRequestStatus.SUCCEEDED
-    assert final_segment.status == TaskSegmentStatus.SUCCEEDED
-    assert final_graph2.status == HarnessGraphStatus.PASSED
+    assert final_request.status == MissionStatus.SUCCEEDED
+    assert final_segment.status == EpisodeStatus.SUCCEEDED
+    assert final_graph2.status == AttemptStatus.PASSED

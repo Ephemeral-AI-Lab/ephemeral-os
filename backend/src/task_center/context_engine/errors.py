@@ -8,7 +8,7 @@ from __future__ import annotations
 
 
 class ContextEngineError(Exception):
-    """Generic context engine failure (e.g. missing prior-segment fields)."""
+    """Generic context engine failure (e.g. missing prior-episode fields)."""
 
 
 class RecipeScopeError(ContextEngineError):

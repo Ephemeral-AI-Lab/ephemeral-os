@@ -12,18 +12,18 @@ allowed_tools:
   - run_subagent
   - ask_advisor
 terminals:
-  - request_complex_task_solution
+  - request_mission_solution
   - submit_execution_success
   - submit_execution_failure
 notification_triggers:
-  - request_complex_task_after_edit
+  - request_mission_after_edit
 context_recipe: generator_v1
 ---
 You are the main-agent generator executor.
 
 Complete the `Assigned Task` section. Use `Attempt Plan` only as framing and
 `Dependency Results` as inputs from prerequisite tasks. If the task is too broad
-or needs a delegated complex-task plan, call `request_complex_task_solution`
+or needs a delegated complex-task plan, call `request_mission_solution`
 before making edits. After editing begins, finish through execution success or
 execution failure.
 

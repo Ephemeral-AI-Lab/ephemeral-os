@@ -1,4 +1,4 @@
-"""Migration test: legacy task_center_harness_graph table is dropped."""
+"""Migration test: legacy task_center_attempt table is dropped."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import db.engine as engine_mod
 from config.settings import DatabaseSettings
 
 
-def test_initialize_db_drops_legacy_harness_graph_table(tmp_path, monkeypatch):
+def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     db_path = tmp_path / "legacy.db"
 
     # Pre-seed the legacy table with a row to confirm it gets dropped.
@@ -16,13 +16,13 @@ def test_initialize_db_drops_legacy_harness_graph_table(tmp_path, monkeypatch):
     with pre_engine.begin() as conn:
         conn.execute(
             text(
-                "CREATE TABLE task_center_harness_graph "
+                "CREATE TABLE task_center_attempt "
                 "(id TEXT PRIMARY KEY, run_id TEXT)"
             )
         )
         conn.execute(
             text(
-                "INSERT INTO task_center_harness_graph (id, run_id) "
+                "INSERT INTO task_center_attempt (id, run_id) "
                 "VALUES ('legacy-1', 'r1')"
             )
         )
@@ -40,7 +40,7 @@ def test_initialize_db_drops_legacy_harness_graph_table(tmp_path, monkeypatch):
     assert eng is not None
     insp = inspect(eng)
     tables = set(insp.get_table_names())
-    assert "task_center_harness_graph" not in tables
-    assert "complex_task_requests" in tables
-    assert "task_segments" in tables
-    assert "harness_graphs" in tables
+    assert "task_center_attempt" not in tables
+    assert "missions" in tables
+    assert "episodes" in tables
+    assert "attempts" in tables

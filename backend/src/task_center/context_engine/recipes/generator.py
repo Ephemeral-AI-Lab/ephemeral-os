@@ -21,16 +21,16 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 GENERATOR_V1 = "generator_v1"
-_REQUIRED_FIELDS = frozenset({"request_id", "harness_graph_id", "task_id"})
+_REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
 
 
 def _generator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    graph = deps.graph_store.get(scope.harness_graph_id)
-    if graph is None:
+    attempt = deps.attempt_store.get(scope.attempt_id)
+    if attempt is None:
         raise ContextEngineError(
-            f"HarnessGraph {scope.harness_graph_id!r} not found"
+            f"Attempt {scope.attempt_id!r} not found"
         )
     task = deps.task_store.get_task(scope.task_id)
     if task is None:
@@ -39,14 +39,14 @@ def _generator_v1_build(
         )
 
     blocks: list[ContextBlock] = []
-    if graph.task_specification:
+    if attempt.task_specification:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.TASK_SPECIFICATION,
                 priority=ContextPriority.HIGH,
-                text=graph.task_specification,
-                source_id=graph.id,
-                source_kind="harness_graph",
+                text=attempt.task_specification,
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
 
@@ -70,9 +70,9 @@ def _generator_v1_build(
         target_role="generator",
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
-            request_id=scope.request_id,
-            segment_id=scope.segment_id or graph.task_segment_id,
-            harness_graph_id=scope.harness_graph_id,
+            mission_id=scope.mission_id,
+            episode_id=scope.episode_id or attempt.episode_id,
+            attempt_id=scope.attempt_id,
             task_id=scope.task_id,
         ),
         blocks=blocks,

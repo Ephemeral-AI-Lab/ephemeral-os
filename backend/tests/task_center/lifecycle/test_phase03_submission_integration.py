@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import HarnessGraphStatus
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
+from task_center.attempt import AttemptStatus
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
-    HarnessGraphOrchestratorRegistry,
+    AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.episode.registry import SegmentManagerRegistry
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
+from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import evaluator_task_id, generator_task_id, planner_task_id
 from tools.core.context import ToolExecutionContextService
 from tools.core.runtime import ExecutionMetadata
@@ -36,65 +36,65 @@ async def _noop_emit(event) -> None:
 
 
 def _tool_context(
-    runtime: HarnessGraphRuntime,
-    graph_id: str,
+    runtime: AttemptRuntime,
+    attempt_id: str,
     task_id: str,
     *,
     role: str = "executor",
 ):
     metadata = ExecutionMetadata(
         task_center_task_id=task_id,
-        task_center_harness_graph_id=graph_id,
-        harness_graph_runtime=runtime,
+        task_center_attempt_id=attempt_id,
+        attempt_runtime=runtime,
     )
     metadata["role"] = role
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
-def _build_runtime(request_store, segment_store, graph_store, task_store, *, composer):
-    request = request_store.insert(
+def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, composer):
+    request = mission_store.insert(
         task_center_run_id="run1",
         requested_by_task_id="outer-task",
         goal="solve task",
     )
-    segment = segment_store.insert(
-        complex_task_request_id=request.id,
+    episode = episode_store.insert(
+        mission_id=request.id,
         sequence_no=1,
-        creation_reason=TaskSegmentCreationReason.INITIAL,
+        creation_reason=EpisodeCreationReason.INITIAL,
         goal="solve task",
         attempt_budget=2,
     )
-    request_store.append_segment_id(request.id, segment.id)
-    graph = graph_store.insert(task_segment_id=segment.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment.id, graph.id)
+    mission_store.append_episode_id(request.id, episode.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(episode.id, attempt.id)
     launcher = _FakeLauncher()
-    registry = HarnessGraphOrchestratorRegistry()
-    runtime = HarnessGraphRuntime(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+    registry = AttemptOrchestratorRegistry()
+    runtime = AttemptRuntime(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=SegmentManagerRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
     )
-    orchestrator = HarnessGraphOrchestrator(
-        harness_graph=graph,
-        on_graph_closed=lambda graph_id: None,
+    orchestrator = AttemptOrchestrator(
+        attempt=attempt,
+        on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
     )
     registry.register(orchestrator)
-    return runtime, orchestrator, graph.id
+    return runtime, orchestrator, attempt.id
 
 
 async def test_phase03_full_plan_through_evaluator_success(
-    request_store, segment_store, graph_store, task_store, composer
+    mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
-    runtime, orchestrator, graph_id = _build_runtime(
-        request_store,
-        segment_store,
-        graph_store,
+    runtime, orchestrator, attempt_id = _build_runtime(
+        mission_store,
+        episode_store,
+        attempt_store,
         task_store,
         composer=composer,
     )
@@ -108,25 +108,25 @@ async def test_phase03_full_plan_through_evaluator_success(
             "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
             "task_specs": {"a": "Do the work."},
         },
-        _tool_context(runtime, graph_id, planner_task_id(graph_id)),
+        _tool_context(runtime, attempt_id, planner_task_id(attempt_id)),
         emit=_noop_emit,
     )
     generator_result = await execute_tool_once(
         submit_execution_success,
         {"summary": "done", "artifacts": []},
-        _tool_context(runtime, graph_id, generator_task_id(graph_id, "a")),
+        _tool_context(runtime, attempt_id, generator_task_id(attempt_id, "a")),
         emit=_noop_emit,
     )
     evaluator_result = await execute_tool_once(
         submit_evaluation_success,
         {"summary": "passed", "passed_criteria": ["generator passed"]},
-        _tool_context(runtime, graph_id, evaluator_task_id(graph_id)),
+        _tool_context(runtime, attempt_id, evaluator_task_id(attempt_id)),
         emit=_noop_emit,
     )
 
-    graph = graph_store.get(graph_id)
+    attempt = attempt_store.get(attempt_id)
     assert not planner_result.is_error
     assert not generator_result.is_error
     assert not evaluator_result.is_error
-    assert graph is not None
-    assert graph.status == HarnessGraphStatus.PASSED
+    assert attempt is not None
+    assert attempt.status == AttemptStatus.PASSED

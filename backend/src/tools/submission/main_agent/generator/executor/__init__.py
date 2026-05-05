@@ -1,8 +1,8 @@
 """Executor submission tools."""
 
-from tools.submission.main_agent.generator.request_complex_task_solution import (
-    RequestComplexTaskSolutionInput,
-    request_complex_task_solution,
+from tools.submission.main_agent.generator.request_mission_solution import (
+    RequestMissionSolutionInput,
+    request_mission_solution,
 )
 from tools.submission.main_agent.generator.executor.submit_execution_failure import (
     SubmitExecutionFailureInput,
@@ -14,10 +14,10 @@ from tools.submission.main_agent.generator.executor.submit_execution_success imp
 )
 
 __all__ = [
-    "RequestComplexTaskSolutionInput",
+    "RequestMissionSolutionInput",
     "SubmitExecutionFailureInput",
     "SubmitExecutionSuccessInput",
-    "request_complex_task_solution",
+    "request_mission_solution",
     "submit_execution_failure",
     "submit_execution_success",
 ]

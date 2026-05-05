@@ -31,7 +31,7 @@ pytestmark = pytest.mark.asyncio
 
 PARENT_TASK_ID = "t-parent"
 PARENT_RUN_ID = "run1"
-PARENT_REQUEST_ID = "req-A"
+PARENT_MISSION_ID = "req-A"
 
 
 async def _noop_emit(event) -> None:
@@ -52,11 +52,11 @@ def _seed_parent_packet(context_packet_store) -> ContextPacket:
         target_role="planner",
         target_id="g-parent",
         canonical_refs=ContextRefs(
-            request_id=PARENT_REQUEST_ID, harness_graph_id="g-parent"
+            mission_id=PARENT_MISSION_ID, attempt_id="g-parent"
         ),
         blocks=[
             ContextBlock(
-                kind="segment_goal",
+                kind="episode_goal",
                 priority=ContextPriority.REQUIRED,
                 text="parent goal text",
             ),
@@ -76,21 +76,21 @@ def _seed_parent_task(task_store, *, packet_id: str) -> None:
         status="running",
         summaries=[],
         needs=[],
-        task_center_harness_graph_id="g-parent",
+        task_center_attempt_id="g-parent",
         context_packet_id=packet_id,
-        spawn_reason="harness_graph_generator",
+        spawn_reason="attempt_generator",
     )
 
 
 def _helper_context(
-    *, role: str, composer, request_id: str = PARENT_REQUEST_ID
+    *, role: str, composer, mission_id: str = PARENT_MISSION_ID
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(
         runtime_config=object(),
         composer=composer,
         task_center_task_id=PARENT_TASK_ID,
         task_center_run_id=PARENT_RUN_ID,
-        task_center_request_id=request_id,
+        task_center_request_id=mission_id,
     )
     metadata["role"] = role
     metadata["agent_type"] = "agent"

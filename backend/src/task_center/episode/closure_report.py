@@ -1,23 +1,23 @@
-"""TaskSegmentClosureReport — closure signal from manager to handler."""
+"""EpisodeClosureReport — closure signal from manager to handler."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from task_center.attempt import HarnessGraphFailReason
+from task_center.attempt import AttemptFailReason
 
 
 @dataclass(frozen=True, slots=True)
 class AttemptedPlanEntry:
     """One past attempt's structural state. Phase 06 fills the summary fields."""
 
-    harness_graph_id: str
-    graph_sequence_no: int
+    attempt_id: str
+    attempt_sequence_no: int
     task_specification: str | None
     evaluation_criteria: tuple[str, ...]
-    fail_reason: HarnessGraphFailReason | None
-    harness_graph_summary_id: str | None
+    fail_reason: AttemptFailReason | None
+    attempt_summary_id: str | None
     failure_landscape: dict[str, Any] | None
 
 
@@ -43,7 +43,7 @@ ClosureOutcome = TerminalSuccess | SuccessContinue | AttemptPlanFailed
 
 
 @dataclass(frozen=True, slots=True)
-class TaskSegmentClosureReport:
-    task_segment_id: str
-    final_harness_graph_id: str
+class EpisodeClosureReport:
+    episode_id: str
+    final_attempt_id: str
     outcome: ClosureOutcome

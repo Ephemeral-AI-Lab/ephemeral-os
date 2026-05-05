@@ -1,11 +1,11 @@
-"""Generator DAG helper functions for one harness graph."""
+"""Generator DAG helper functions for one harness attempt."""
 
 from __future__ import annotations
 
 from collections import deque
 from typing import Any
 
-from task_center.exceptions import GraphInvariantViolation
+from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.task import (
     HarnessTaskStatus,
     PlannedGeneratorTask,
@@ -17,7 +17,7 @@ from task_center.task import (
 def _local_ids(tasks: tuple[PlannedGeneratorTask, ...]) -> set[str]:
     ids = {task.local_id for task in tasks}
     if len(ids) != len(tasks):
-        raise GraphInvariantViolation("Generator plan contains duplicate local ids")
+        raise TaskCenterInvariantViolation("Generator plan contains duplicate local ids")
     return ids
 
 
@@ -28,7 +28,7 @@ def assert_generator_deps_exist(
     for task in tasks:
         missing = [dep for dep in task.deps if dep not in ids]
         if missing:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Generator task {task.local_id!r} has unknown deps: {missing!r}"
             )
 
@@ -55,16 +55,16 @@ def ordered_generator_tasks(
                 ready.append(dependent_id)
 
     if len(ordered) != len(tasks):
-        raise GraphInvariantViolation("Generator plan contains a dependency cycle")
+        raise TaskCenterInvariantViolation("Generator plan contains a dependency cycle")
     return tuple(ordered)
 
 
 def dependency_task_ids(
     *,
-    harness_graph_id: str,
+    attempt_id: str,
     local_deps: tuple[str, ...],
 ) -> tuple[str, ...]:
-    return tuple(generator_task_id(harness_graph_id, dep) for dep in local_deps)
+    return tuple(generator_task_id(attempt_id, dep) for dep in local_deps)
 
 
 TaskRecord = dict[str, Any]
@@ -88,7 +88,7 @@ def ready_pending_generator_ids(task_records: list[TaskRecord]) -> tuple[str, ..
         needs = tuple(task.get("needs") or ())
         missing = [dep for dep in needs if dep not in statuses]
         if missing:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Generator task {task['id']!r} has unknown persisted deps: "
                 f"{missing!r}"
             )
@@ -104,15 +104,15 @@ def blocked_descendant_ids(
 ) -> tuple[str, ...]:
     statuses = generator_status_map(task_records)
     if failed_task_id not in statuses:
-        raise GraphInvariantViolation(
-            f"Failed generator task {failed_task_id!r} is not in this graph"
+        raise TaskCenterInvariantViolation(
+            f"Failed generator task {failed_task_id!r} is not in this attempt"
         )
 
     dependents: dict[str, list[str]] = {task["id"]: [] for task in task_records}
     for task in task_records:
         for dep in task.get("needs") or ():
             if dep not in statuses:
-                raise GraphInvariantViolation(
+                raise TaskCenterInvariantViolation(
                     f"Generator task {task['id']!r} has unknown persisted dep "
                     f"{dep!r}"
                 )
@@ -131,7 +131,7 @@ def blocked_descendant_ids(
             HarnessTaskStatus.PENDING,
             HarnessTaskStatus.BLOCKED,
         ):
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"Non-pending generator task {task_id!r} depends on failed task "
                 f"{failed_task_id!r}"
             )

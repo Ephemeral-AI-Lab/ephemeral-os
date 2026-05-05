@@ -5,17 +5,17 @@ from __future__ import annotations
 import pytest
 
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
-from task_center.episode.episode import TaskSegmentCreationReason
+from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import planner_task_id
 from tools.core.tool_execution import execute_tool_once
-from tools.submission.hooks.request_complex_task_before_edit_gate import (
-    RequestComplexTaskBeforeEditGate,
+from tools.submission.hooks.request_mission_before_edit_gate import (
+    RequestMissionBeforeEditGate,
 )
 from tools.submission.hooks.resolver_success_limit_gate import (
     ResolverSuccessLimitGate,
 )
-from tools.submission.main_agent.generator import request_complex_task_solution
+from tools.submission.main_agent.generator import request_mission_solution
 from tools.submission.main_agent.generator.executor import (
     submit_execution_success,
 )
@@ -73,10 +73,10 @@ def _resolver_messages(count: int) -> list[ConversationMessage]:
     return messages
 
 
-async def test_request_complex_task_solution_blocks_after_edit() -> None:
-    gate = RequestComplexTaskBeforeEditGate()
+async def test_request_mission_solution_blocks_after_edit() -> None:
+    gate = RequestMissionBeforeEditGate()
     outcome = await gate.run(
-        request_complex_task_solution.input_model(goal="delegated"),
+        request_mission_solution.input_model(goal="delegated"),
         make_tool_context_stub(messages=_edit_messages()),
     )
 
@@ -84,9 +84,9 @@ async def test_request_complex_task_solution_blocks_after_edit() -> None:
     assert "disabled after the first edit" in outcome.reason
 
 
-async def test_request_complex_task_solution_allows_before_edit() -> None:
-    gate = RequestComplexTaskBeforeEditGate()
-    tool_input = request_complex_task_solution.input_model(goal="delegated")
+async def test_request_mission_solution_allows_before_edit() -> None:
+    gate = RequestMissionBeforeEditGate()
+    tool_input = request_mission_solution.input_model(goal="delegated")
     outcome = await gate.run(tool_input, make_tool_context_stub(messages=[]))
 
     assert outcome.status == "pass"
@@ -112,12 +112,12 @@ async def test_resolver_success_gate_boundary_and_limit() -> None:
 
 
 async def test_resolver_success_gate_does_not_block_failure_terminal(
-    request_store, segment_store, graph_store, task_store, composer
+    mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -137,12 +137,12 @@ async def test_resolver_success_gate_does_not_block_failure_terminal(
 
 
 async def test_role_gate_blocks_wrong_task_role(
-    request_store, segment_store, graph_store, task_store, composer
+    mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -160,17 +160,17 @@ async def test_role_gate_blocks_wrong_task_role(
 
 
 async def test_role_gate_blocks_missing_orchestrator(
-    request_store, segment_store, graph_store, task_store, composer
+    mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
     planner_id = start_planner(fixture)
-    fixture.runtime.orchestrator_registry.deregister(fixture.graph_id)
+    fixture.runtime.orchestrator_registry.deregister(fixture.attempt_id)
 
     result = await execute_tool_once(
         submit_partial_plan,
@@ -186,43 +186,43 @@ async def test_role_gate_blocks_missing_orchestrator(
     )
 
     assert result.is_error
-    assert "No active HarnessGraphOrchestrator" in result.output
+    assert "No active AttemptOrchestrator" in result.output
 
 
 async def test_partial_plan_ancestor_gate_allows_same_request_continuation(
-    request_store, segment_store, graph_store, task_store, composer
+    mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     from datetime import UTC, datetime
 
     fixture = build_harness_fixture(
-        request_store=request_store,
-        segment_store=segment_store,
-        graph_store=graph_store,
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
-    segment_store.set_continuation_goal(fixture.segment_id, "continue")
+    episode_store.set_continuation_goal(fixture.episode_id, "continue")
     # Populate seg-1's denormalized task_specification + task_summary so the
-    # planner_v1 recipe sees a complete prior-segment chain when planning seg-2.
-    segment_store.close_succeeded(
-        fixture.segment_id,
+    # planner_v1 recipe sees a complete prior-episode chain when planning seg-2.
+    episode_store.close_succeeded(
+        fixture.episode_id,
         task_specification="seg-1 spec",
         task_summary="seg-1 summary",
         closed_at=datetime.now(UTC),
     )
-    segment2 = segment_store.insert(
-        complex_task_request_id=fixture.request_id,
+    segment2 = episode_store.insert(
+        mission_id=fixture.request_id,
         sequence_no=2,
-        creation_reason=TaskSegmentCreationReason.PARTIAL_CONTINUATION,
-        goal="next segment",
+        creation_reason=EpisodeCreationReason.PARTIAL_CONTINUATION,
+        goal="next episode",
         attempt_budget=2,
     )
-    request_store.append_segment_id(fixture.request_id, segment2.id)
-    graph2 = graph_store.insert(task_segment_id=segment2.id, graph_sequence_no=1)
-    segment_store.append_graph_id(segment2.id, graph2.id)
-    orchestrator2 = HarnessGraphOrchestrator(
-        harness_graph=graph2,
-        on_graph_closed=lambda graph_id: None,
+    mission_store.append_episode_id(fixture.request_id, segment2.id)
+    graph2 = attempt_store.insert(episode_id=segment2.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(segment2.id, graph2.id)
+    orchestrator2 = AttemptOrchestrator(
+        attempt=graph2,
+        on_attempt_closed=lambda attempt_id: None,
         runtime=fixture.runtime,
     )
     fixture.runtime.orchestrator_registry.register(orchestrator2)
@@ -255,7 +255,7 @@ def make_tool_context_stub(*, messages: list[ConversationMessage]):
     )
 
 
-def make_tool_context_for_graph(fixture, graph_id: str, task_id: str):
+def make_tool_context_for_graph(fixture, attempt_id: str, task_id: str):
     from tools.core.context import ToolExecutionContextService
     from tools.core.runtime import ExecutionMetadata
 
@@ -263,7 +263,7 @@ def make_tool_context_for_graph(fixture, graph_id: str, task_id: str):
         cwd="/tmp",
         services=ExecutionMetadata(
             task_center_task_id=task_id,
-            task_center_harness_graph_id=graph_id,
-            harness_graph_runtime=fixture.runtime,
+            task_center_attempt_id=attempt_id,
+            attempt_runtime=fixture.runtime,
         ),
     )

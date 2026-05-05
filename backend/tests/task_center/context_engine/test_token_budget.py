@@ -19,7 +19,7 @@ def _packet_with_budget(blocks: list[ContextBlock], budget: int) -> ContextPacke
     return ContextPacket(
         target_role="planner",
         target_id="g",
-        canonical_refs=ContextRefs(request_id="r"),
+        canonical_refs=ContextRefs(mission_id="r"),
         blocks=blocks,
         metadata={"token_budget": str(budget)},
     )
@@ -31,12 +31,12 @@ def test_required_blocks_kept_byte_for_byte_under_pressure():
     packet = _packet_with_budget(
         [
             ContextBlock(
-                kind="segment_goal",
+                kind="episode_goal",
                 priority=ContextPriority.REQUIRED,
                 text=big_required_a,
             ),
             ContextBlock(
-                kind="complex_task_goal",
+                kind="mission_goal",
                 priority=ContextPriority.REQUIRED,
                 text=big_required_b,
             ),
@@ -140,7 +140,7 @@ def test_compression_preserves_remaining_packet_order():
     packet = _packet_with_budget(
         [
             ContextBlock(
-                kind="segment_goal",
+                kind="episode_goal",
                 priority=ContextPriority.REQUIRED,
                 text="episode",
             ),

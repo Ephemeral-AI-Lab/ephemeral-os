@@ -1,13 +1,13 @@
-"""ComplexTaskCloseReport delivery router.
+"""MissionCloseReport delivery router.
 
-Owns the single delivery path from ``ComplexTaskRequestHandler.close_mission_request``
-to the parent ``HarnessGraphOrchestrator.apply_complex_task_close_report``.
+Owns the single delivery path from ``MissionHandler.close_mission``
+to the parent ``AttemptOrchestrator.apply_mission_close_report``.
 
 The runtime assumes no process restart: while a parent generator task is in
-``WAITING_COMPLEX_TASK`` its graph cannot reach quiescence and its
+``WAITING_COMPLEX_TASK`` its attempt cannot reach quiescence and its
 orchestrator stays registered. Therefore close-report delivery is always
 synchronous against an active parent orchestrator; a missing orchestrator at
-delivery time is a hard ``GraphInvariantViolation``.
+delivery time is a hard ``TaskCenterInvariantViolation``.
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from task_center.mission.mission import ComplexTaskCloseReport
-from task_center.exceptions import GraphInvariantViolation
-from task_center.attempt.runtime import HarnessGraphRuntime
+from task_center.mission.mission import MissionCloseReport
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt.runtime import AttemptRuntime
 from task_center.task import HarnessTaskStatus
 
 CloseReportDeliveryStatus = Literal[
@@ -30,24 +30,24 @@ CloseReportDeliveryStatus = Literal[
 class CloseReportDeliveryResult:
     status: CloseReportDeliveryStatus
     requested_by_task_id: str
-    parent_harness_graph_id: str | None
+    parent_attempt_id: str | None
 
 
-class ComplexTaskCloseReportRouter:
-    """Single delivery path for final ``ComplexTaskCloseReport``s."""
+class MissionCloseReportRouter:
+    """Single delivery path for final ``MissionCloseReport``s."""
 
-    def __init__(self, *, runtime: HarnessGraphRuntime) -> None:
+    def __init__(self, *, runtime: AttemptRuntime) -> None:
         self._runtime = runtime
 
     def deliver(
-        self, report: ComplexTaskCloseReport
+        self, report: MissionCloseReport
     ) -> CloseReportDeliveryResult:
         task = self._runtime.task_store.get_task(report.requested_by_task_id)
         if task is None:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} was not found."
             )
-        graph_id = str(task.get("task_center_harness_graph_id") or "") or None
+        attempt_id = str(task.get("task_center_attempt_id") or "") or None
         status = str(task.get("status") or "")
         if status in (
             HarnessTaskStatus.DONE.value,
@@ -56,44 +56,44 @@ class ComplexTaskCloseReportRouter:
             return CloseReportDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=report.requested_by_task_id,
-                parent_harness_graph_id=graph_id,
+                parent_attempt_id=attempt_id,
             )
         if status != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
-            raise GraphInvariantViolation(
+            raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
-                "on a complex task."
+                "on a mission."
             )
 
-        if graph_id is None:
-            # Entry mode: parent is the graph-less entry executor. Route
+        if attempt_id is None:
+            # Entry mode: parent is the attempt-less entry executor. Route
             # through the runtime's EntryTaskController instead of the
             # orchestrator registry.
             controller = self._runtime.entry_task_controller_for(
                 report.requested_by_task_id
             )
             if controller is None:
-                raise GraphInvariantViolation(
+                raise TaskCenterInvariantViolation(
                     f"TaskCenter task {report.requested_by_task_id!r} is "
-                    "graph-less but no entry controller is bound to it; "
+                    "attempt-less but no entry controller is bound to it; "
                     "close-report delivery cannot proceed."
                 )
-            controller.apply_complex_task_close_report(report)
+            controller.apply_mission_close_report(report)
             return CloseReportDeliveryResult(
                 status="delivered",
                 requested_by_task_id=report.requested_by_task_id,
-                parent_harness_graph_id=None,
+                parent_attempt_id=None,
             )
 
-        orchestrator = self._runtime.orchestrator_registry.get(graph_id)
+        orchestrator = self._runtime.orchestrator_registry.get(attempt_id)
         if orchestrator is None:
-            raise GraphInvariantViolation(
-                f"Parent HarnessGraphOrchestrator for graph {graph_id!r} is "
+            raise TaskCenterInvariantViolation(
+                f"Parent AttemptOrchestrator for attempt {attempt_id!r} is "
                 "not registered; close-report delivery requires an active "
                 "parent orchestrator."
             )
-        orchestrator.apply_complex_task_close_report(report)
+        orchestrator.apply_mission_close_report(report)
         return CloseReportDeliveryResult(
             status="delivered",
             requested_by_task_id=report.requested_by_task_id,
-            parent_harness_graph_id=graph_id,
+            parent_attempt_id=attempt_id,
         )

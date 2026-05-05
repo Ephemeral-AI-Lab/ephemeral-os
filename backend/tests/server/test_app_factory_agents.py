@@ -23,7 +23,7 @@ async def test_runtime_state_registers_repository_harness_agents() -> None:
         executor = get_definition("executor")
         assert executor is not None
         assert executor.role == "executor"
-        assert "request_complex_task_solution" in executor.terminals
+        assert "request_mission_solution" in executor.terminals
     finally:
         for name, definition in previous.items():
             unregister_definition(name)

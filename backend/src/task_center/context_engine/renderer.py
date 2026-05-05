@@ -73,12 +73,12 @@ def default_heading_template() -> HeadingTemplate:
     """Templates that label per-kind blocks with metadata-driven suffixes."""
     return HeadingTemplate(
         defaults={
-            "complex_task_goal": "# Mission",
-            "segment_goal": "# Current Episode",
-            "prior_segment_specification": (
+            "mission_goal": "# Mission",
+            "episode_goal": "# Current Episode",
+            "prior_episode_specification": (
                 "# Previous Episode Results"
             ),
-            "prior_segment_summary": (
+            "prior_episode_summary": (
                 "# Previous Episode Results"
             ),
             "failed_attempt_landscape": (

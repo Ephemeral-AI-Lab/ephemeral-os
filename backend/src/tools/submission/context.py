@@ -1,19 +1,20 @@
-"""TaskCenter harness submission context resolution.
+"""TaskCenter attempt submission context resolution.
 
 The submission tools (``submit_execution_success``, ``submit_execution_failure``,
-``request_complex_task_solution``) live in two modes:
+``request_mission_solution``) live in two modes:
 
-1. **Graph mode** — the task is attached to a :class:`HarnessGraph` and a
-   running :class:`HarnessGraphOrchestrator`. Terminal events flow through
+1. **Attempt mode** — the task is attached to a :class:`Attempt` and a
+   running :class:`AttemptOrchestrator`. Terminal events flow through
    the orchestrator's ``apply_*`` methods.
-2. **Entry mode** — the task is the graph-less top-level entry executor,
-   identified by ``task_center_harness_graph_id is None`` on the task row.
+2. **Entry mode** — the task is the attempt-less top-level entry executor,
+   identified by ``task_center_attempt_id is None`` on the task row.
    Terminal events flow through :class:`EntryTaskController`.
 
-:func:`resolve_harness_submission_context` keeps the legacy graph-only resolver
-for callers that strictly require a graph (gates, evaluator surfaces). The new
+:func:`resolve_attempt_submission_context` keeps the attempt-only resolver
+for callers that strictly require an attempt (gates, evaluator surfaces). The
+executor resolver
 :func:`resolve_executor_submission_context` returns
-:class:`ExecutorSubmissionContext` — a tagged shape exposing graph-shape-agnostic
+:class:`ExecutorSubmissionContext` — a tagged shape exposing attempt-shape-agnostic
 operations (``submit_executor_success`` / ``submit_executor_failure`` /
 ``start_mission_request``) that internally branch on which mode applies.
 """
@@ -24,40 +25,40 @@ from dataclasses import dataclass
 from typing import Any
 
 from task_center.mission.starter import (
-    MissionRequestStarter,
-    StartedMissionRequest,
+    MissionStarter,
+    StartedMission,
 )
-from task_center.mission.mission import ComplexTaskRequest
+from task_center.mission.mission import Mission
 from task_center.entry_task_controller import EntryTaskController
-from task_center.exceptions import GraphInvariantViolation
-from task_center.attempt import HarnessGraph
-from task_center.attempt.orchestrator import HarnessGraphOrchestrator
-from task_center.attempt.runtime import HarnessGraphRuntime
-from task_center.episode.episode import TaskSegment
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt import Attempt
+from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.attempt.runtime import AttemptRuntime
+from task_center.episode.episode import Episode
 from task_center.task import GeneratorSubmission
 from tools.core.context import ToolExecutionContextService
 
 
-class HarnessSubmissionContextError(RuntimeError):
+class AttemptSubmissionContextError(RuntimeError):
     """User-facing submission context resolution failure."""
 
 
 @dataclass(frozen=True, slots=True)
-class HarnessSubmissionContext:
-    """Graph-bound submission context — the legacy shape.
+class AttemptSubmissionContext:
+    """Attempt-bound submission context.
 
-    Resolved when the executor task is attached to a HarnessGraph. Tools
-    that strictly require graph context (e.g. ``submit_evaluation``) keep
+    Resolved when the executor task is attached to an Attempt. Tools
+    that strictly require attempt context (e.g. ``submit_evaluation``) keep
     using this resolver.
     """
 
     task_center_task_id: str
     task: dict[str, Any]
-    graph: HarnessGraph
-    segment: TaskSegment
-    request: ComplexTaskRequest
-    runtime: HarnessGraphRuntime
-    orchestrator: HarnessGraphOrchestrator
+    attempt: Attempt
+    episode: Episode
+    mission: Mission
+    runtime: AttemptRuntime
+    orchestrator: AttemptOrchestrator
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,17 +67,17 @@ class ExecutorSubmissionContext:
 
     Tools call :meth:`submit_executor_success`,
     :meth:`submit_executor_failure`, or :meth:`start_mission_request`
-    without knowing whether the task is graph-bound or entry-mode. The
+    without knowing whether the task is attempt-bound or entry-mode. The
     context dispatches to the right backend (orchestrator vs entry
     controller) internally.
 
-    Exactly one of ``graph_ctx`` and ``entry_controller`` is set.
+    Exactly one of ``attempt_ctx`` and ``entry_controller`` is set.
     """
 
     task_center_task_id: str
     task: dict[str, Any]
-    runtime: HarnessGraphRuntime
-    graph_ctx: HarnessSubmissionContext | None
+    runtime: AttemptRuntime
+    attempt_ctx: AttemptSubmissionContext | None
     entry_controller: EntryTaskController | None
 
     @property
@@ -84,18 +85,18 @@ class ExecutorSubmissionContext:
         return self.entry_controller is not None
 
     @property
-    def graph_id(self) -> str | None:
-        return self.graph_ctx.graph.id if self.graph_ctx is not None else None
+    def attempt_id(self) -> str | None:
+        return self.attempt_ctx.attempt.id if self.attempt_ctx is not None else None
 
     # ---- operations -------------------------------------------------------
 
     def submit_executor_success(
         self, *, summary: str, artifacts: list[str]
     ) -> None:
-        if self.graph_ctx is not None:
-            self.graph_ctx.orchestrator.apply_generator_submission(
+        if self.attempt_ctx is not None:
+            self.attempt_ctx.orchestrator.apply_generator_submission(
                 GeneratorSubmission(
-                    graph_id=self.graph_ctx.graph.id,
+                    attempt_id=self.attempt_ctx.attempt.id,
                     task_id=self.task_center_task_id,
                     outcome="success",
                     summary=summary,
@@ -114,10 +115,10 @@ class ExecutorSubmissionContext:
     def submit_executor_failure(
         self, *, summary: str, reason: str, details: list[str]
     ) -> None:
-        if self.graph_ctx is not None:
-            self.graph_ctx.orchestrator.apply_generator_submission(
+        if self.attempt_ctx is not None:
+            self.attempt_ctx.orchestrator.apply_generator_submission(
                 GeneratorSubmission(
-                    graph_id=self.graph_ctx.graph.id,
+                    attempt_id=self.attempt_ctx.attempt.id,
                     task_id=self.task_center_task_id,
                     outcome="failure",
                     summary=summary,
@@ -136,28 +137,28 @@ class ExecutorSubmissionContext:
 
     def start_mission_request(
         self, *, goal: str
-    ) -> StartedMissionRequest:
-        coordinator = MissionRequestStarter(runtime=self.runtime)
+    ) -> StartedMission:
+        coordinator = MissionStarter(runtime=self.runtime)
         return coordinator.start(
             task_center_run_id=self.task["task_center_run_id"],
             parent_task_id=self.task_center_task_id,
-            parent_harness_graph_id=self.graph_id,
+            parent_attempt_id=self.attempt_id,
             goal=goal,
         )
 
 
-def resolve_harness_submission_context(
+def resolve_attempt_submission_context(
     context: ToolExecutionContextService,
-) -> HarnessSubmissionContext:
-    """Resolve the current TaskCenter task into durable harness graph context.
+) -> AttemptSubmissionContext:
+    """Resolve the current TaskCenter task into durable harness attempt context.
 
-    Strict graph mode — raises :class:`HarnessSubmissionContextError` if the
-    task is not attached to a HarnessGraph. Use this resolver from tools
-    that genuinely require a graph (planner submissions, evaluator
+    Strict attempt mode — raises :class:`AttemptSubmissionContextError` if the
+    task is not attached to an Attempt. Use this resolver from tools
+    that genuinely require an attempt (planner submissions, evaluator
     submissions).
     """
     runtime, task, task_id = _resolve_runtime_task(context)
-    return _resolve_graph_context(
+    return _resolve_attempt_context(
         runtime=runtime, task=task, task_id=task_id, context=context
     )
 
@@ -167,123 +168,123 @@ def resolve_executor_submission_context(
 ) -> ExecutorSubmissionContext:
     """Resolve a unified executor submission context.
 
-    Branches on whether the task row's ``task_center_harness_graph_id`` is
-    set (graph mode) or ``None`` (entry mode). Tools that accept either
+    Branches on whether the task row's ``task_center_attempt_id`` is
+    set (attempt mode) or ``None`` (entry mode). Tools that accept either
     shape — ``submit_execution_success`` / ``submit_execution_failure`` /
-    ``request_complex_task_solution`` — call this resolver and use the
+    ``request_mission_solution`` — call this resolver and use the
     resulting :class:`ExecutorSubmissionContext` operations.
     """
     runtime, task, task_id = _resolve_runtime_task(context)
-    graph_id = str(task.get("task_center_harness_graph_id") or "")
-    if graph_id and not graph_id.isspace():
-        graph_ctx = _resolve_graph_context(
+    attempt_id = str(task.get("task_center_attempt_id") or "")
+    if attempt_id and not attempt_id.isspace():
+        attempt_ctx = _resolve_attempt_context(
             runtime=runtime, task=task, task_id=task_id, context=context
         )
         return ExecutorSubmissionContext(
             task_center_task_id=task_id,
             task=task,
             runtime=runtime,
-            graph_ctx=graph_ctx,
+            attempt_ctx=attempt_ctx,
             entry_controller=None,
         )
 
     controller = runtime.entry_task_controller_for(task_id)
     if controller is None:
-        raise HarnessSubmissionContextError(
-            f"TaskCenter task {task_id!r} is graph-less but no entry "
+        raise AttemptSubmissionContextError(
+            f"TaskCenter task {task_id!r} is attempt-less but no entry "
             "controller is bound to it; the spawn was set up incorrectly."
         )
     return ExecutorSubmissionContext(
         task_center_task_id=task_id,
         task=task,
         runtime=runtime,
-        graph_ctx=None,
+        attempt_ctx=None,
         entry_controller=controller,
     )
 
 
 def _resolve_runtime_task(
     context: ToolExecutionContextService,
-) -> tuple[HarnessGraphRuntime, dict[str, Any], str]:
+) -> tuple[AttemptRuntime, dict[str, Any], str]:
     """Shared prelude: pull runtime + task row + task id from tool context."""
-    runtime = context.get("harness_graph_runtime")
-    if not isinstance(runtime, HarnessGraphRuntime):
-        raise HarnessSubmissionContextError(
-            "Missing harness graph runtime for this TaskCenter submission."
+    runtime = context.get("attempt_runtime")
+    if not isinstance(runtime, AttemptRuntime):
+        raise AttemptSubmissionContextError(
+            "Missing harness attempt runtime for this TaskCenter submission."
         )
 
     task_id = str(context.get("task_center_task_id") or "")
     if not task_id or task_id.isspace():
-        raise HarnessSubmissionContextError(
+        raise AttemptSubmissionContextError(
             "Missing TaskCenter task id for this submission."
         )
 
     task = runtime.task_store.get_task(task_id)
     if task is None:
-        raise HarnessSubmissionContextError(
+        raise AttemptSubmissionContextError(
             f"TaskCenter task {task_id!r} was not found."
         )
     return runtime, task, task_id
 
 
-def _resolve_graph_context(
+def _resolve_attempt_context(
     *,
-    runtime: HarnessGraphRuntime,
+    runtime: AttemptRuntime,
     task: dict[str, Any],
     task_id: str,
     context: ToolExecutionContextService,
-) -> HarnessSubmissionContext:
-    """Build :class:`HarnessSubmissionContext` from an already-fetched task.
+) -> AttemptSubmissionContext:
+    """Build :class:`AttemptSubmissionContext` from an already-fetched task.
 
-    Shared between :func:`resolve_harness_submission_context` and the
-    graph-mode branch of :func:`resolve_executor_submission_context` so the
+    Shared between :func:`resolve_attempt_submission_context` and the
+    attempt-mode branch of :func:`resolve_executor_submission_context` so the
     task row is fetched exactly once per call.
     """
-    graph_id = str(task.get("task_center_harness_graph_id") or "")
-    if not graph_id or graph_id.isspace():
-        raise HarnessSubmissionContextError(
-            f"TaskCenter task {task_id!r} is not attached to a harness graph."
+    attempt_id = str(task.get("task_center_attempt_id") or "")
+    if not attempt_id or attempt_id.isspace():
+        raise AttemptSubmissionContextError(
+            f"TaskCenter task {task_id!r} is not attached to a harness attempt."
         )
 
-    metadata_graph_id = str(context.get("task_center_harness_graph_id") or "")
-    if metadata_graph_id.isspace():
-        raise HarnessSubmissionContextError(
-            "TaskCenter graph metadata is blank."
+    metadata_attempt_id = str(context.get("task_center_attempt_id") or "")
+    if metadata_attempt_id.isspace():
+        raise AttemptSubmissionContextError(
+            "TaskCenter attempt metadata is blank."
         )
-    if metadata_graph_id and metadata_graph_id != graph_id:
-        raise HarnessSubmissionContextError(
-            "TaskCenter graph metadata does not match the persisted task row."
-        )
-
-    graph = runtime.graph_store.get(graph_id)
-    if graph is None:
-        raise HarnessSubmissionContextError(
-            f"HarnessGraph {graph_id!r} was not found."
+    if metadata_attempt_id and metadata_attempt_id != attempt_id:
+        raise AttemptSubmissionContextError(
+            "TaskCenter attempt metadata does not match the persisted task row."
         )
 
-    segment = runtime.segment_store.get(graph.task_segment_id)
-    if segment is None:
-        raise HarnessSubmissionContextError(
-            f"TaskSegment {graph.task_segment_id!r} was not found."
+    attempt = runtime.attempt_store.get(attempt_id)
+    if attempt is None:
+        raise AttemptSubmissionContextError(
+            f"Attempt {attempt_id!r} was not found."
         )
 
-    request = runtime.request_store.get(segment.complex_task_request_id)
-    if request is None:
-        raise HarnessSubmissionContextError(
-            f"ComplexTaskRequest {segment.complex_task_request_id!r} was not found."
+    episode = runtime.episode_store.get(attempt.episode_id)
+    if episode is None:
+        raise AttemptSubmissionContextError(
+            f"Episode {attempt.episode_id!r} was not found."
+        )
+
+    mission = runtime.mission_store.get(episode.mission_id)
+    if mission is None:
+        raise AttemptSubmissionContextError(
+            f"Mission {episode.mission_id!r} was not found."
         )
 
     try:
-        orchestrator = runtime.orchestrator_registry.get_or_raise(graph_id)
-    except GraphInvariantViolation as exc:
-        raise HarnessSubmissionContextError(str(exc)) from exc
+        orchestrator = runtime.orchestrator_registry.get_or_raise(attempt_id)
+    except TaskCenterInvariantViolation as exc:
+        raise AttemptSubmissionContextError(str(exc)) from exc
 
-    return HarnessSubmissionContext(
+    return AttemptSubmissionContext(
         task_center_task_id=task_id,
         task=task,
-        graph=graph,
-        segment=segment,
-        request=request,
+        attempt=attempt,
+        episode=episode,
+        mission=mission,
         runtime=runtime,
         orchestrator=orchestrator,
     )

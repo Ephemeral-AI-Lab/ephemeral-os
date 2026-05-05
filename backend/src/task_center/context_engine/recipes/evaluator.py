@@ -24,44 +24,44 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 EVALUATOR_V1 = "evaluator_v1"
-_REQUIRED_FIELDS = frozenset({"request_id", "harness_graph_id"})
+_REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
 
 
 def _evaluator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    graph = deps.graph_store.get(scope.harness_graph_id)
-    if graph is None:
+    attempt = deps.attempt_store.get(scope.attempt_id)
+    if attempt is None:
         raise ContextEngineError(
-            f"HarnessGraph {scope.harness_graph_id!r} not found"
+            f"Attempt {scope.attempt_id!r} not found"
         )
-    request = deps.request_store.get(scope.request_id)
-    if request is None:
+    mission = deps.mission_store.get(scope.mission_id)
+    if mission is None:
         raise ContextEngineError(
-            f"ComplexTaskRequest {scope.request_id!r} not found"
+            f"Mission {scope.mission_id!r} not found"
         )
-    segment_id = scope.segment_id or graph.task_segment_id
-    segment = deps.segment_store.get(segment_id)
-    if segment is None:
-        raise ContextEngineError(f"TaskSegment {segment_id!r} not found")
+    episode_id = scope.episode_id or attempt.episode_id
+    episode = deps.episode_store.get(episode_id)
+    if episode is None:
+        raise ContextEngineError(f"Episode {episode_id!r} not found")
 
     blocks = mission_episode_blocks(
-        request=request,
-        current_segment=segment,
-        segments=deps.segment_store.list_for_request(request.id),
+        mission=mission,
+        current_episode=episode,
+        episodes=deps.episode_store.list_for_mission(mission.id),
     )
-    if graph.task_specification:
+    if attempt.task_specification:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.TASK_SPECIFICATION,
                 priority=ContextPriority.REQUIRED,
-                text=graph.task_specification,
-                source_id=graph.id,
-                source_kind="harness_graph",
+                text=attempt.task_specification,
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
 
-    for task_id in graph.generator_task_ids:
+    for task_id in attempt.generator_task_ids:
         task = deps.task_store.get_task(task_id)
         if task is None:
             continue
@@ -79,25 +79,25 @@ def _evaluator_v1_build(
                 },
             )
         )
-    criteria = list(graph.evaluation_criteria)
+    criteria = list(attempt.evaluation_criteria)
     if criteria:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.EVALUATION_CRITERIA,
                 priority=ContextPriority.REQUIRED,
                 text="\n".join(f"- {c}" for c in criteria),
-                source_id=graph.id,
-                source_kind="harness_graph",
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
 
     return ContextPacket(
         target_role="evaluator",
-        target_id=scope.harness_graph_id,
+        target_id=scope.attempt_id,
         canonical_refs=ContextRefs(
-            request_id=scope.request_id,
-            segment_id=segment.id,
-            harness_graph_id=scope.harness_graph_id,
+            mission_id=scope.mission_id,
+            episode_id=episode.id,
+            attempt_id=scope.attempt_id,
         ),
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],

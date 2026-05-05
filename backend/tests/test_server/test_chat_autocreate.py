@@ -47,9 +47,9 @@ def test_chat_without_sandbox_id_streams_created_sandbox_id(monkeypatch) -> None
     ready_store = _ReadyStore()
     for name in (
         "task_center_store",
-        "complex_task_request_store",
-        "task_segment_store",
-        "harness_graph_store",
+        "mission_store",
+        "episode_store",
+        "attempt_store",
         "context_packet_store",
     ):
         monkeypatch.setattr(app_factory, name, ready_store)
