@@ -28,8 +28,8 @@ from sandbox.api.utils.models import (
 from .sandbox_fixture import SandboxHandle
 
 
-GuardedResult = WriteFileResult | EditFileResult | ShellResult
-TGuardedResult = TypeVar("TGuardedResult", bound=GuardedResult)
+ApiResult = ReadFileResult | WriteFileResult | EditFileResult | ShellResult
+TApiResult = TypeVar("TApiResult", bound=ApiResult)
 
 
 @dataclass(frozen=True)
@@ -47,10 +47,17 @@ class RuntimeCallMetric:
 _TIMING_JSONL_ENV = "EPHEMERALOS_LIVE_E2E_TIMING_JSONL"
 _TIMING_SCHEMA = "sandbox.live_e2e.per_call_timings.v1"
 _FIXED_TIMING_KEYS = (
+    "api.read.total_s",
+    "api.write.total_s",
+    "api.edit.total_s",
     "api.shell.dispatch_total_s",
     "api.shell.total_s",
     "api.shell.overlay_s",
     "api.shell.occ_apply_s",
+    "api.shell_batch.dispatch_total_s",
+    "api.shell_batch.total_s",
+    "api.shell_batch.item_wait_s",
+    "api.shell_batch.item_total_s",
     "overlay.mount.materialize_lower_s",
     "overlay.mount.copy_lower_to_merged_s",
     "overlay.run_command_s",
@@ -144,15 +151,15 @@ def assert_rejected(result: GuardedResultBase, *, path: str | None = None) -> No
         assert result.conflict.conflict_file in {path, None}
 
 
-def metric_for(label: str, result: GuardedResult, elapsed_ms: float) -> RuntimeCallMetric:
+def metric_for(label: str, result: ApiResult, elapsed_ms: float) -> RuntimeCallMetric:
     return RuntimeCallMetric(
         label=label,
         op=_op_name(result),
         success=result.success,
-        status=result.status,
+        status=_status(result),
         elapsed_ms=elapsed_ms,
-        changed_paths=result.changed_paths,
-        conflict_reason=result.conflict_reason,
+        changed_paths=_changed_paths(result),
+        conflict_reason=_conflict_reason(result),
         timings=dict(result.timings),
     )
 
@@ -248,14 +255,37 @@ def write_timing_record(metric: RuntimeCallMetric) -> None:
 
 async def timed_call(
     label: str,
-    awaitable: Awaitable[TGuardedResult],
-) -> tuple[TGuardedResult, RuntimeCallMetric]:
+    awaitable: Awaitable[TApiResult],
+) -> tuple[TApiResult, RuntimeCallMetric]:
     start = time.perf_counter()
     result = await awaitable
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     metric = metric_for(label, result, elapsed_ms)
     write_timing_record(metric)
     return result, metric
+
+
+async def timed_shell_batch(
+    labels: Sequence[str],
+    awaitable: Awaitable[Sequence[ShellResult]],
+) -> list[tuple[ShellResult, RuntimeCallMetric]]:
+    start = time.perf_counter()
+    results = tuple(await awaitable)
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    if len(labels) != len(results):
+        pytest.fail(
+            f"shell batch returned {len(results)} results for {len(labels)} labels"
+        )
+    rows: list[tuple[ShellResult, RuntimeCallMetric]] = []
+    for label, result in zip(labels, results, strict=True):
+        metric = metric_for(
+            label,
+            result,
+            _shell_batch_elapsed_ms(result, default_ms=elapsed_ms),
+        )
+        write_timing_record(metric)
+        rows.append((result, metric))
+    return rows
 
 
 async def timed_raw_exec(
@@ -298,7 +328,9 @@ def paths_visible_summary(reads: Iterable[ReadFileResult]) -> dict[str, int]:
     }
 
 
-def _op_name(result: GuardedResult) -> str:
+def _op_name(result: ApiResult) -> str:
+    if isinstance(result, ReadFileResult):
+        return "read_file"
     if isinstance(result, ShellResult):
         return "shell"
     if isinstance(result, EditFileResult):
@@ -308,10 +340,42 @@ def _op_name(result: GuardedResult) -> str:
     return type(result).__name__
 
 
+def _status(result: ApiResult) -> str:
+    if isinstance(result, ReadFileResult):
+        if not result.success:
+            return "error"
+        return "ok" if result.exists else "missing"
+    return result.status
+
+
+def _changed_paths(result: ApiResult) -> tuple[str, ...]:
+    if isinstance(result, ReadFileResult):
+        return ()
+    return result.changed_paths
+
+
+def _conflict_reason(result: ApiResult) -> str | None:
+    if isinstance(result, ReadFileResult):
+        return None
+    return result.conflict_reason
+
+
 def _seconds(value: float | None) -> float | None:
     if value is None:
         return None
     return round(float(value), 6)
+
+
+def _shell_batch_elapsed_ms(result: ShellResult, *, default_ms: float) -> float:
+    for key in (
+        "api.shell_batch.dispatch_total_s",
+        "host.total_s",
+        "api.shell_batch.item_total_s",
+    ):
+        value = result.timings.get(key)
+        if value is not None:
+            return float(value) * 1000.0
+    return default_ms
 
 
 __all__ = [
@@ -327,6 +391,7 @@ __all__ = [
     "remove_tmp",
     "summarize_calls",
     "timed_call",
+    "timed_shell_batch",
     "timed_raw_exec",
     "timing_jsonl_path",
     "tmp_path",

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import shlex
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -129,6 +129,20 @@ class ToolBundle:
                 timeout=timeout,
                 description=description,
             ),
+        )
+
+    async def shell_batch(
+        self,
+        requests: Sequence[ShellRequest],
+        *,
+        max_concurrency: int = 32,
+        timeout: int | None = None,
+    ) -> tuple[ShellResult, ...]:
+        return await shell_mod.shell_batch(
+            self.sandbox_id,
+            requests,
+            max_concurrency=max_concurrency,
+            timeout=timeout,
         )
 
     async def layer_metrics(self) -> dict[str, object]:

@@ -22,6 +22,14 @@ in the pytest process instead of the sandbox runtime guardrails.
   shell+edit agents, tracked vs gitignored codegen races, and recovery cleanup.
   Last full live gate: `14 passed, 4 skipped` in `151.73 s` on 2026-05-05. See
   `phase-03-integrated-p0-report.md`.
+- **Phase 4 P1 load/resource/edge:** `overlay/native/`, `layer_stack/`,
+  `occ/`, and `layer_stack_overlay_occ/test_load_profiles.py` now cover the P1
+  edge cases, resource probes, native subsystem load, and integrated
+  smoke/sustained/burst profiles. Current full Phase 4 live gate: `17 passed,
+  1 deselected` in `142.67 s` on 2026-05-05 UTC. Current focused pure public
+  API load gate, after shell batching: `3 passed, 1 deselected` in `70.52 s`.
+  See
+  `phase-04-p1-load-resource-edge-report.md`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 
@@ -39,22 +47,42 @@ running from the uploaded sandbox runtime bundle.
 Last full Phase 3 integrated live run (2026-05-05): `14 passed, 4 skipped` in
 `151.73 s`. The skips are Phase 4/5 load-profile tests.
 
-Current focused public shell scaling run (2026-05-05 UTC):
-`test_concurrency_scaling.py` passed in `47.20 s` with 1/5/10/20 concurrent
-shell calls. Parallel factors were `0.999x`, `3.993x`, `6.016x`, and `6.587x`;
-the per-call timing JSONL is
-`.omc/results/live-e2e-phase3-concurrency-scaling-20260505T161437Z.jsonl`.
+Current focused public API scaling run (2026-05-05 UTC):
+`test_concurrency_scaling.py` uses independent `sandbox.api.tool.read_file`,
+`write_file`, `edit_file`, and `shell` calls and passed in `142.58 s` with
+1/5/10/20 concurrent calls for each verb. At concurrency 20, throughput was:
+read `13.624 ops/s`, write `6.921 ops/s`, edit `6.292 ops/s`, shell
+`5.089 ops/s`.
 
 Current focused gitignored-overlap run (2026-05-05 UTC):
 `test_overlapping_50pct_gitignored_paths_use_lww` now uses raw `process.exec`
 for the 8 overlapping writers and passed in `9.55 s`; its per-call JSONL is
 `.omc/results/live-e2e-phase3-gitignored-overlap-process-exec-20260505T162158Z.jsonl`.
 
+Current Phase 4 P1 full run (2026-05-05 UTC):
+`17 passed, 1 deselected` in `142.67 s`. Integrated JSONL artifacts:
+
+- `.omc/results/live-e2e-integrated-smoke-20260505T165416Z.jsonl`
+- `.omc/results/live-e2e-integrated-sustained-20260505T165446Z.jsonl`
+- `.omc/results/live-e2e-integrated-burst-20260505T165544Z.jsonl`
+
+Current focused pure public API load run after shell batching
+(2026-05-05 UTC): `3 passed, 1 deselected` in `70.52 s`. Integrated JSONL
+artifacts:
+
+- `.omc/results/live-e2e-integrated-smoke-20260505T173106Z.jsonl`
+- `.omc/results/live-e2e-integrated-sustained-20260505T173125Z.jsonl`
+- `.omc/results/live-e2e-integrated-burst-20260505T173203Z.jsonl`
+
+See `phase-04-pure-sandbox-api-load-report.md` for current pure
+`sandbox.api.*` performance metrics.
+
 ## What's Left
 
 | Bucket | Files | Tests | Blocker |
 |---|---|---:|---|
-| Phase 4/5 load profiles | 1+ | 4+ | sustained/burst/soak JSONL load artifacts |
+| Phase 5 soak | 1 | 1 | 15-minute soak run and leak regression gate |
+| P2 stress/nightly profiles | 3 | 3 | explicit nightly-only stress window |
 
 The integrated suite is the replacement target for OCC/overlay live coverage.
 Per the import fence in `conftest.py`, live-suite files may import public

@@ -23,7 +23,11 @@ dataclass; tests reference them by name.
   in the final merged view; every rejected write absent. Driven by
   `assertions.assert_accepts_visible_rejects_invisible` (lands with the
   integrated suite).
-- **Latency**: per-call wall time p99 ≤ profile's `max_p99_ms`.
+- **Latency telemetry**: integrated profiles record both host wall p99 and
+  in-runtime p99. The original profile budget is evaluated against runtime p99
+  and emitted as `runtime_budget_met`; host wall p99 is emitted separately as
+  `wall_budget_met` because Daytona/provider dispatch varies independently of
+  the in-sandbox runtime path.
 - **Depth**: stack depth stays in `[SQUASH_TARGET-1, EMERGENCY_DEPTH-5]`
   except in `burst`, which may touch `EMERGENCY_DEPTH` ≤ 0 times.
 - **Squash**: coalesce ratio ≤ 20 layers/s under `sustained` or `burst`.
@@ -38,6 +42,43 @@ dataclass; tests reference them by name.
 Every load run emits one JSONL record per call to
 `.omc/results/live-e2e-<profile>-<utc>.jsonl`, matching the schema in
 plan §6 (mirrors the existing `stack-overlay-live-*.jsonl` shape).
+
+Current Phase 4 integrated artifacts use
+`.omc/results/live-e2e-integrated-<profile>-<utc>.jsonl`. Each row includes
+`wall_ms`, `runtime_ms`, `changed_paths`, `conflict_reason`, and the complete
+public-tool timing map. Shell fan-out rows are produced by
+`sandbox.api.tool.shell_batch`; each shell item keeps its normal `shell` op
+label and includes `api.shell_batch.*` timing keys for the shared dispatch.
+
+## Metric terminology
+
+- `batch_wall_ms`: elapsed host wall time for one concurrency group, measured
+  from releasing the shared barrier until every call in the group completes.
+  For example, at concurrency 20 it measures the time for all 20 independent
+  public API calls to finish.
+- `per_call_p50_ms` / `per_call_p99_ms` / `per_call_max_ms`: percentiles over
+  the individual API-call wall times inside that same group. In a barrier
+  launched group, `batch_wall_ms` is normally close to the slowest individual
+  call because the group ends when the slowest call ends.
+- `throughput_ops_s`: completed operations divided by `batch_wall_ms` in
+  seconds. For example, 20 calls in 2.5 seconds is 8 ops/s.
+- `parallel_factor`: serial-equivalent time divided by `batch_wall_ms`, where
+  serial-equivalent time is the concurrency-1 baseline multiplied by the number
+  of calls in the group.
+- `parallel_efficiency`: `parallel_factor / concurrency`; this shows how much
+  of ideal linear scaling remains at that concurrency level.
+
+## Subsystem Load Profiles
+
+The native subsystem probes run inside the sandbox runtime bundle and are
+bounded live tests, not the P2 stress ramp. They are defined as
+`SubsystemLoadProfile` rows:
+
+| Profile | Suite | Operation | Count | Concurrency | Budget |
+|---|---|---|---:|---:|---:|
+| `overlay_runner_load` | `overlay` | `runner.run_snapshot` | 20 | 20 | 1 000 ms p99 diagnostic |
+| `layer_stack_load` | `layer_stack` | `manifest.append+publisher.publish` | 128 | 32 | 50 ms publish p99 |
+| `occ_load` | `occ` | `orchestrator.commit` | 80 | 16 | 500 ms p99 |
 
 ## Drift definition under load
 

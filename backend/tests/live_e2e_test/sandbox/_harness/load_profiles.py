@@ -18,6 +18,18 @@ class LoadProfile:
     max_emergency_depth_events: int
 
 
+@dataclass(frozen=True)
+class SubsystemLoadProfile:
+    name: str
+    suite: str
+    op: str
+    operation_count: int
+    concurrency: int
+    max_p99_ms: int
+    max_resource_fd_delta: int = 2
+    max_resource_mount_delta: int = 0
+
+
 SMOKE = LoadProfile(
     name="smoke",
     shells_per_sec=2,
@@ -73,6 +85,38 @@ PROFILES: dict[str, LoadProfile] = {
     profile.name: profile for profile in (SMOKE, SUSTAINED, BURST, SOAK)
 }
 
+OVERLAY_RUNNER_LOAD = SubsystemLoadProfile(
+    name="overlay_runner_load",
+    suite="overlay",
+    op="runner.run_snapshot",
+    operation_count=20,
+    concurrency=20,
+    max_p99_ms=1_000,
+)
+
+LAYER_STACK_LOAD = SubsystemLoadProfile(
+    name="layer_stack_load",
+    suite="layer_stack",
+    op="manifest.append+publisher.publish",
+    operation_count=128,
+    concurrency=32,
+    max_p99_ms=50,
+)
+
+OCC_LOAD = SubsystemLoadProfile(
+    name="occ_load",
+    suite="occ",
+    op="orchestrator.commit",
+    operation_count=80,
+    concurrency=16,
+    max_p99_ms=500,
+)
+
+SUBSYSTEM_PROFILES: dict[str, SubsystemLoadProfile] = {
+    profile.name: profile
+    for profile in (OVERLAY_RUNNER_LOAD, LAYER_STACK_LOAD, OCC_LOAD)
+}
+
 
 def profile(name: str) -> LoadProfile:
     try:
@@ -81,4 +125,17 @@ def profile(name: str) -> LoadProfile:
         raise KeyError(f"unknown load profile: {name!r}") from exc
 
 
-__all__ = ["LoadProfile", "SMOKE", "SUSTAINED", "BURST", "SOAK", "PROFILES", "profile"]
+__all__ = [
+    "BURST",
+    "LAYER_STACK_LOAD",
+    "LoadProfile",
+    "OCC_LOAD",
+    "OVERLAY_RUNNER_LOAD",
+    "PROFILES",
+    "SMOKE",
+    "SOAK",
+    "SUBSYSTEM_PROFILES",
+    "SUSTAINED",
+    "SubsystemLoadProfile",
+    "profile",
+]

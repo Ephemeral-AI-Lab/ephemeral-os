@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from sandbox.api.utils.models import ConflictInfo
-from sandbox.control.daemon.bundle import BUNDLE_REMOTE_DIR, ensure_runtime_uploaded
+from sandbox.control.daemon.bundle import BUNDLE_REMOTE_DIR
 from sandbox.control.daemon.command import _call_runtime_server
 from sandbox.providers.registry import get_adapter
 
@@ -21,8 +21,7 @@ async def call_runtime_api(
     timeout: int = 60,
     layer_stack_root: str = DEFAULT_LAYER_STACK_ROOT,
 ) -> dict[str, Any]:
-    """Call one guarded API operation inside the sandbox runtime bundle."""
-    await ensure_runtime_uploaded(sandbox_id)
+    """Call one guarded API operation inside the preinstalled runtime bundle."""
     runtime_args = {
         "layer_stack_root": layer_stack_root,
         **args,
