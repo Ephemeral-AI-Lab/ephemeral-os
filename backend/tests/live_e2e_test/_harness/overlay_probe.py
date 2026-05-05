@@ -278,6 +278,75 @@ print(json.dumps({
 """
 
 
+_CONCURRENT_BODY = r"""
+cfg = json.loads(__CFG_JSON__)
+depth = cfg["depth"]
+out = []
+for n in cfg["counts"]:
+    root = os.path.join(cfg["overlay_root"], "conc_n%d" % n)
+    fresh(root)
+    os.chdir(root)
+    # Build N independent mount points sharing one stack of N lower layers.
+    lowers = []
+    for i in range(depth):
+        name = "L%d" % i
+        os.makedirs(name, exist_ok=True)
+        with open(os.path.join(name, "m.txt"), "w") as fh:
+            fh.write("layer %d\n" % i)
+        lowers.append(name)
+    lower_arg = ":".join(reversed(lowers))
+    mounted = []
+    timings = []
+    failures = 0
+    first_err = None
+    for k in range(n):
+        os.makedirs("u%d" % k, exist_ok=True)
+        os.makedirs("w%d" % k, exist_ok=True)
+        os.makedirs("m%d" % k, exist_ok=True)
+        options = "lowerdir=%s,upperdir=u%d,workdir=w%d" % (lower_arg, k, k)
+        merged = "m%d" % k
+        t0 = time.perf_counter()
+        rc, err = mount2(merged, options)
+        elapsed = (time.perf_counter() - t0) * 1000.0
+        if rc == 0:
+            mounted.append(merged)
+            timings.append(elapsed)
+        else:
+            failures += 1
+            if first_err is None:
+                first_err = errno.errorcode.get(err, err)
+    # Read /proc/self/mounts under the steady-state holding pattern
+    proc_t0 = time.perf_counter()
+    with open("/proc/self/mounts") as fh:
+        proc_text = fh.read()
+    proc_ms = (time.perf_counter() - proc_t0) * 1000.0
+    proc_lines = proc_text.count("\n")
+    overlay_lines = sum(1 for line in proc_text.splitlines() if " overlay " in line)
+    # Tear down (LIFO).
+    umount_timings = []
+    for merged in reversed(mounted):
+        t0 = time.perf_counter()
+        umount(merged)
+        umount_timings.append((time.perf_counter() - t0) * 1000.0)
+    out.append({
+        "n_target": n,
+        "n_mounted": len(mounted),
+        "failures": failures,
+        "first_errno": first_err,
+        "options_len": len(options) if mounted else 0,
+        "mount_p50_ms": percentile(timings, 50),
+        "mount_p95_ms": percentile(timings, 95),
+        "mount_p99_ms": percentile(timings, 99),
+        "mount_max_ms": max(timings) if timings else 0.0,
+        "umount_p99_ms": percentile(umount_timings, 99),
+        "proc_mounts_lines": proc_lines,
+        "proc_overlay_lines": overlay_lines,
+        "proc_mounts_read_ms": proc_ms,
+    })
+print(json.dumps({"depth": depth, "results": out}, separators=(",", ":")))
+"""
+
+
 _PURGE_BODY = r"""
 fresh(__OVERLAY_ROOT__)
 print("ok")
@@ -341,6 +410,18 @@ def script_read_latency(
     return _render(_READ_BODY, cfg=cfg)
 
 
+def script_concurrent_mounts(
+    *, overlay_root: str, counts: Sequence[int], depth: int
+) -> str:
+    """Hold N overlay mounts open simultaneously; report mount/umount + /proc."""
+    cfg = {
+        "overlay_root": overlay_root,
+        "counts": [int(n) for n in counts],
+        "depth": int(depth),
+    }
+    return _render(_CONCURRENT_BODY, cfg=cfg)
+
+
 def script_purge_overlay_mounts(*, overlay_root: str) -> str:
     return _render(_PURGE_BODY, overlay_root=overlay_root)
 
@@ -359,6 +440,7 @@ __all__ = [
     "script_mount8_negative_control",
     "script_snapshot_latency",
     "script_read_latency",
+    "script_concurrent_mounts",
     "script_purge_overlay_mounts",
     "wrap_unshare",
 ]
