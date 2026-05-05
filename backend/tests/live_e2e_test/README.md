@@ -18,10 +18,29 @@ This package is being built incrementally from that plan.
   `test_squash_throughput.py` (3), `test_layer_gc.py` (3), and
   `test_lease_budget.py` (3/4; `MAX_PINNED_OLD_MANIFESTS` stays
   skipped pending the corresponding knob on `LeaseBudgetWorker`).
-- **Step 3b — overlay/occ/integrated (pending):** test bodies for the
-  remaining 13 skeleton files in §4.2–§4.4 of the plan, plus the three
-  sandbox fixtures (`overlay_sandbox`, `occ_sandbox`,
-  `integrated_sandbox`). See *What's left* below.
+- **Step 3b — occ/integrated (pending):** test bodies for the remaining
+  9 skeleton files in §4.3–§4.4 of the plan, plus the two sandbox
+  fixtures (`occ_sandbox`, `integrated_sandbox`). See *What's left*
+  below.
+- **Step 5 — `overlay_sandbox` fixture + overlay/ suite (landed):**
+  fixture in `_harness/sandbox_fixture.py` registers an `OverlayClient`
+  over a host-local `LayerStackManager` and detaches any leaked
+  overlayfs mounts under `/dev/shm/o` between tests. Probe scripts in
+  `_harness/overlay_probe.py` ship via `raw_exec` and exercise direct
+  `mount(2)` syscalls under `unshare -Urm`. `assert_no_torn_reads`
+  consumes the captures the upper-dir test produces.
+
+Current overlay run (2026-05-05, full battery, 1000 iter × 8 depths):
+
+| Test | Result |
+|---|---|
+| `test_mount_depth.py` (3 tests) | mount(2) rc=0 across {1,5,10,30,50,80,100,200}; mount(8) fails at depth 100 with options_len=7772 ("Too many levels of symbolic links") |
+| `test_snapshot_latency.py` (3 tests) | 0 failures across 8000 calls; p99 at depth 100 = **0.30 ms** (budget 5 ms); depth 200 p99 = **0.43 ms** |
+| `test_read_latency.py` (2 tests) | warm at depth 100 = **1.05×** depth-1 baseline (budget 2×); cold at depth 50 = **1.28×** baseline (budget 5×) |
+| `test_upper_capture.py` (2 tests) | OverlayCapture round-trip identical; 1000 captures preserve ordering, mean 9.3 ms / call |
+
+`pytest backend/tests/live_e2e_test/overlay`: **10 passed in 33.3 s**
+(session bring-up ~3.5 s).
 
 Current layer_stack run (2026-05-05):
 `12 passed, 1 skipped, 0 failed` in ~9 s (session bring-up ~3.5 s;
@@ -36,16 +55,11 @@ The remaining skips break down as follows:
 | Bucket | Files | Tests | Blocker |
 |---|---|---:|---|
 | `layer_stack/test_lease_budget.py` | 1 | 1 | `MAX_PINNED_OLD_MANIFESTS` knob on `LeaseBudgetWorker` |
-| `overlay/*` | 4 | 10 | `overlay_sandbox` fixture + `OverlayClient` registration path |
 | `occ/*` | 4 | 17 | `occ_sandbox` fixture + `OccApplyService` registration path |
 | `layer_stack_overlay_occ/*` | 5 | 17 | `integrated_sandbox` fixture + `sandbox.api.tool` end-to-end through registered overlay/occ |
 
 Notes on the harder buckets:
 
-- **overlay/** — needs in-sandbox overlayfs mount probes via `raw_exec`
-  and direct `OverlayClient.shell` calls; baseline data lives in
-  `.omc/results/stack-overlay-live-*.jsonl`. The `overlay_sandbox`
-  fixture is the natural unit.
 - **occ/** — runs the changeset pipeline (`WriteChange`, `EditChange`,
   `DeleteChange`, `BinaryChange`, `SymlinkChange`, `OpaqueDirChange`)
   against a synthetic layer-stack base view; needs `register_occ_service`
@@ -86,38 +100,25 @@ deltas:
    `backend/tests/unit_test/test_sandbox/test_layer_stack/test_lease_budget.py`
    to keep the cap matrix symmetric with the other three.
 
-### Step 5 — `overlay_sandbox` fixture + overlay/ suite (10 tests)
+### Step 5 — `overlay_sandbox` fixture + overlay/ suite (10 tests, landed)
 
-The fixture replaces the current
-`pytest.skip("overlay_sandbox fixture lands with the overlay suite")`
-in `backend/tests/live_e2e_test/_harness/sandbox_fixture.py`.
+The fixture in
+`backend/tests/live_e2e_test/_harness/sandbox_fixture.py::overlay_sandbox`
+brings up `live_sandbox`, registers an `OverlayClient` over a host-local
+`LayerStackManager`, and detaches any leaked overlayfs mounts under
+`/dev/shm/o` between tests via `_purge_overlay_mounts`.
 
-1. Reuse `live_sandbox`, then call `register_overlay_client(sandbox_id, ...)`
-   from `backend/src/sandbox/overlay/client.py` (registration path
-   already used by
-   `backend/src/sandbox/control/ops/runtime_services.py`).
-   Populate `SandboxHandle.overlay_client`.
-2. Per-test reset: tear down any leaked overlayfs mounts the
-   previous test left behind (under whatever work-dir root the
-   overlay client uses); `git reset --hard` on `/testbed` is not
-   sufficient.
-3. Test bodies for plan §4.2:
-   - `test_mount_depth.py` — `raw_exec` runs an in-sandbox probe
-     issuing `mount(2)` directly at depths {1, 5, 10, 30, 50, 80,
-     100, 200}; util-linux `mount(8)` is the negative control.
-     Pass bar: `mount(2)` rc=0 at every depth in {1..200}; `mount(8)`
-     documented as failing at depth ≥ 10.
-   - `test_snapshot_latency.py` — `OverlayClient.snapshot` p99 < 5 ms
-     at depth 100; 0 failures across 1000 iterations × 8 depths.
-   - `test_read_latency.py` — warm 2× / cold 5× of baseline. Cold
-     path skips with explicit reason if `drop_caches` denied.
-   - `test_upper_capture.py` — capture serialization matches
-     `OverlayCapture` schema; ordering preserved across 1k captures.
-4. Implement `_harness/assertions.py::assert_no_torn_reads` to
-   consume the captures these tests produce (currently raises
-   `NotImplementedError`).
+Probe scripts in `_harness/overlay_probe.py` ship inline Python via
+`raw_exec` and use `unshare -Urm` so direct `mount(2)` calls work without
+host privilege:
 
-Baseline: `.omc/results/stack-overlay-live-*.jsonl`.
+- `script_mount_depths` / `script_mount8_negative_control` — E1.
+- `script_snapshot_latency` — E2 (1000 iter × 8 depths).
+- `script_read_latency` — E3 (warm/cold reads, drop_caches gated).
+- `OverlayClient.shell` — E4 upper-dir capture round-trip.
+
+Baseline: `.omc/results/stack-overlay-live-*.jsonl`. Live results
+table is in *Status* above.
 
 ### Step 6 — `occ_sandbox` fixture + occ/ suite (17 tests)
 
@@ -185,16 +186,14 @@ the conftest's `pytest_collection_modifyitems` hook will raise
 
 ### Sequencing
 
-With the layer_stack slice green, the next safe parallel split is:
+With layer_stack and overlay green, the remaining work is:
 
-- One worker on **Step 5** (overlay_sandbox + overlay tests).
-- One worker on **Step 6** (occ_sandbox + occ tests).
-- **Step 4** (`MAX_PINNED_OLD_MANIFESTS`) is independent and can
-  ride alongside either.
-
-**Step 7** is sequential — start it only after both Step 5 and Step
-6 land. **Step 7's `soak` profile is 15 min** and should not run
-on every push; gate it behind a separate marker or a nightly job.
+- **Step 6** (occ_sandbox + occ tests) is the next single-fixture slice.
+- **Step 4** (`MAX_PINNED_OLD_MANIFESTS`) is independent and can ride
+  alongside Step 6.
+- **Step 7** is sequential — start it only after Step 6 lands.
+  **Step 7's `soak` profile is 15 min** and should not run on every
+  push; gate it behind a separate marker or a nightly job.
 
 ## How to run
 

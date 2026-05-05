@@ -46,8 +46,16 @@ from sandbox.api.utils.models import (
 )
 from sandbox.control.ops.setup import setup_after_create
 from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.overlay.client import (
+    OverlayClient,
+    dispose_overlay_client,
+    register_overlay_client,
+)
+from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
 from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.providers.registry import get_default_provider, register_adapter
+
+from .overlay_probe import OVERLAY_ROOT, script_purge_overlay_mounts, wrap_unshare
 
 
 WORKSPACE_ROOT = "/testbed"
@@ -255,12 +263,52 @@ async def layer_stack_sandbox(
     yield handle
 
 
+async def _purge_overlay_mounts(sandbox_id: str) -> None:
+    """Detach any leaked overlayfs mounts the previous test left under OVERLAY_ROOT."""
+    cmd = wrap_unshare(script_purge_overlay_mounts(overlay_root=OVERLAY_ROOT))
+    # Best-effort: some kernels reject unshare without privileges; ignore failures.
+    await raw_exec_fn(sandbox_id, cmd, timeout=30)
+
+
 @pytest_asyncio.fixture
 async def overlay_sandbox(
-    live_sandbox: SandboxHandle,
+    live_sandbox: SandboxHandle, tmp_path: Path
 ) -> AsyncIterator[SandboxHandle]:
-    pytest.skip("overlay_sandbox fixture lands with the overlay suite")
-    yield live_sandbox  # pragma: no cover
+    """Live sandbox + host-side overlay client + per-test mount cleanup.
+
+    Registers an :class:`OverlayClient` over a host-local
+    :class:`LayerStackManager` so callers exercising the typed runtime
+    route work end-to-end. Direct ``mount(2)`` measurements live inside the
+    sandbox and reach for ``handle.raw_exec`` plus the helpers in
+    ``_harness/overlay_probe.py``.
+    """
+    await _reset_workspace(live_sandbox.sandbox_id)
+    await _purge_overlay_mounts(live_sandbox.sandbox_id)
+
+    storage = tmp_path / "overlay_storage"
+    manager = LayerStackManager(storage)
+    overlay_client = OverlayClient(runner=SnapshotOverlayRunner(manager))
+    register_overlay_client(live_sandbox.sandbox_id, overlay_client)
+
+    handle = SandboxHandle(
+        sandbox_id=live_sandbox.sandbox_id,
+        caller=live_sandbox.caller,
+        raw_exec=live_sandbox.raw_exec,
+        tool=live_sandbox.tool,
+        layer_stack=manager,
+        overlay_client=overlay_client,
+        extras={
+            "storage_root": storage,
+            "overlay_root": OVERLAY_ROOT,
+        },
+    )
+    try:
+        yield handle
+    finally:
+        try:
+            await _purge_overlay_mounts(live_sandbox.sandbox_id)
+        finally:
+            dispose_overlay_client(live_sandbox.sandbox_id)
 
 
 @pytest_asyncio.fixture

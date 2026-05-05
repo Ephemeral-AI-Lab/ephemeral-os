@@ -52,9 +52,31 @@ def assert_no_orphan_layers(manager: LayerStackManager) -> None:
 
 
 def assert_no_torn_reads(captures: Iterable[Mapping[str, Any]]) -> None:
-    raise NotImplementedError(
-        "torn-read detector lands with overlay/integrated suites"
-    )
+    """Each captured change must declare a content hash matching its kind.
+
+    A torn read shows up as a write whose ``final_hash`` is missing or as
+    duplicate paths producing inconsistent hashes inside a single batch.
+    """
+    seen: dict[str, str] = {}
+    for index, change in enumerate(captures):
+        path = change.get("path")
+        kind = change.get("kind")
+        final_hash = change.get("final_hash")
+        if kind in ("write", "symlink") and not final_hash:
+            raise AssertionError(
+                f"capture[{index}] kind={kind!r} path={path!r} missing final_hash "
+                "(torn read suspected)"
+            )
+        if path is None:
+            raise AssertionError(f"capture[{index}] missing path: {change!r}")
+        prior = seen.get(path)
+        if prior is not None and final_hash and prior != final_hash:
+            raise AssertionError(
+                f"capture[{index}] path={path!r} hash={final_hash!r} disagrees "
+                f"with prior hash {prior!r} (torn read suspected)"
+            )
+        if final_hash:
+            seen[path] = final_hash
 
 
 def assert_accepts_visible_rejects_invisible(
