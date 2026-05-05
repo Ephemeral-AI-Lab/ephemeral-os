@@ -12,13 +12,13 @@ import shlex
 
 import pytest
 
-from .._harness.overlay_probe import (
+from ..._harness.overlay_probe import (
     OVERLAY_ROOT,
     script_mount8_negative_control,
     script_mount_depths,
     wrap_unshare,
 )
-from .._harness.sandbox_fixture import SandboxHandle
+from ..._harness.sandbox_fixture import SandboxHandle
 
 
 _DEPTHS_FULL = (1, 5, 10, 30, 50, 80, 100, 200)

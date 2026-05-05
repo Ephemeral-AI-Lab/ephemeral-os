@@ -77,7 +77,6 @@ async def test_remote_runtime_services_dispatch_public_verbs(
     services = runtime_services.create_remote_runtime_services(
         sandbox_id="sb-runtime",
         layer_stack_root="/sandbox/layers",
-        ignored_paths={"build/"},
     )
     caller = SandboxCaller(agent_id="agent-1")
 
@@ -114,4 +113,4 @@ async def test_remote_runtime_services_dispatch_public_verbs(
     ]
     for _, _, args, _ in calls:
         assert args["layer_stack_root"] == "/sandbox/layers"
-        assert args["ignored_paths"] == ["build"]
+        assert "ignored_paths" not in args

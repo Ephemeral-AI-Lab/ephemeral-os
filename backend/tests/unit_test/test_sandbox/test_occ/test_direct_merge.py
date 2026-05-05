@@ -61,7 +61,7 @@ def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
     merge = DirectMerge(stack)
     group = PreparedPathGroup(
         path="dist/app.js",
-        route=RouteDecision.DIRECT,
+        route=RouteDecision.OCC_SKIPPED_MERGE,
         changes=(
             WriteChange(path="dist/app.js", final_content=b"first"),
             WriteChange(path="dist/app.js", final_content=b"second"),
@@ -86,7 +86,7 @@ def test_direct_edit_is_best_effort(tmp_path: Path) -> None:
     merge = DirectMerge(stack)
     group = PreparedPathGroup(
         path="dist/app.js",
-        route=RouteDecision.DIRECT,
+        route=RouteDecision.OCC_SKIPPED_MERGE,
         changes=(EditChange(path="dist/app.js", old_text="missing", new_text="X"),),
     )
 
@@ -107,12 +107,12 @@ def test_direct_symlink_and_opaque_dir_stage_storage_changes(tmp_path: Path) -> 
     merge = DirectMerge(stack)
     symlink_group = PreparedPathGroup(
         path="link",
-        route=RouteDecision.DIRECT,
+        route=RouteDecision.OCC_SKIPPED_MERGE,
         changes=(SymlinkChange(path="link", target="../target"),),
     )
     opaque_group = PreparedPathGroup(
         path="cache",
-        route=RouteDecision.DIRECT,
+        route=RouteDecision.OCC_SKIPPED_MERGE,
         changes=(OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),),
     )
 
@@ -143,7 +143,7 @@ def test_direct_same_path_opaque_dir_respects_later_write(
     merge = DirectMerge(stack)
     group = PreparedPathGroup(
         path="cache",
-        route=RouteDecision.DIRECT,
+        route=RouteDecision.OCC_SKIPPED_MERGE,
         changes=(
             OpaqueDirChange(path="cache", kept_children=frozenset()),
             WriteChange(path="cache", final_content=b"file wins"),

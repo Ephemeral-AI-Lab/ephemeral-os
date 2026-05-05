@@ -153,7 +153,7 @@ sequenceDiagram
   Service->>Tx: revalidate_and_publish(prepared)
   Tx->>Stack: commit_transaction()
   Stack-->>Tx: active manifest
-  Tx->>Tx: validate tracked/direct paths
+  Tx->>Tx: validate OCC-gated / OCC-skipped merge groups
   Tx->>Stack: publish accepted LayerChange values
   Stack-->>Tx: new manifest or no layer
   Tx-->>Service: ChangesetResult

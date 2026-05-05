@@ -17,12 +17,12 @@ import os
 
 import pytest
 
-from .._harness.overlay_probe import (
+from ..._harness.overlay_probe import (
     OVERLAY_ROOT,
     script_concurrent_mounts,
     wrap_unshare,
 )
-from .._harness.sandbox_fixture import SandboxHandle
+from ..._harness.sandbox_fixture import SandboxHandle
 
 
 _DEFAULT_COUNTS = (10, 50, 100, 200)

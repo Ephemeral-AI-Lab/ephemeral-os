@@ -20,13 +20,11 @@ async def call_runtime_api(
     *,
     timeout: int = 60,
     layer_stack_root: str = DEFAULT_LAYER_STACK_ROOT,
-    ignored_paths: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Call one guarded API operation inside the sandbox runtime bundle."""
     await ensure_runtime_uploaded(sandbox_id)
     runtime_args = {
         "layer_stack_root": layer_stack_root,
-        "ignored_paths": [str(path).strip().strip("/") for path in ignored_paths],
         **args,
     }
     return await _call_runtime_server(

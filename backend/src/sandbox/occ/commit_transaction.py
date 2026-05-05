@@ -56,7 +56,7 @@ class OccCommitTransaction:
             ) as stager:
                 validate_start = time.perf_counter()
                 validations: list[PathValidation] = []
-                tracked_failed = False
+                occ_gated_failed = False
                 for group in prepared.path_groups:
                     validation = self._validate_group(
                         group,
@@ -65,10 +65,10 @@ class OccCommitTransaction:
                     )
                     validations.append(validation)
                     if (
-                        group.route is RouteDecision.TRACKED
+                        group.route is RouteDecision.OCC_GATED_MERGE
                         and validation.result.status is not FileStatus.ACCEPTED
                     ):
-                        tracked_failed = True
+                        occ_gated_failed = True
                 timings["occ.commit.validate_groups_s"] = (
                     time.perf_counter() - validate_start
                 )
@@ -77,7 +77,7 @@ class OccCommitTransaction:
                 if _must_skip_publish(
                     prepared,
                     files,
-                    tracked_failed=tracked_failed,
+                    occ_gated_failed=occ_gated_failed,
                 ):
                     return ChangesetResult(
                         files=tuple(_mark_unpublished(files, prepared)),
@@ -152,14 +152,14 @@ class OccCommitTransaction:
                 ),
                 accepted_delta=None,
             )
-        if group.route is RouteDecision.DIRECT:
+        if group.route is RouteDecision.OCC_SKIPPED_MERGE:
             result, delta = self._direct.stage_group(
                 group,
                 active_manifest=active_manifest,
                 stage_write=stager.write,
             )
             return PathValidation(path=group.path, result=result, accepted_delta=delta)
-        if group.route is RouteDecision.TRACKED:
+        if group.route is RouteDecision.OCC_GATED_MERGE:
             result, delta = self._gated.stage_group(
                 group,
                 active_manifest=active_manifest,
@@ -216,11 +216,11 @@ def _must_skip_publish(
     prepared: PreparedChangeset,
     files: tuple[FileResult, ...],
     *,
-    tracked_failed: bool,
+    occ_gated_failed: bool,
 ) -> bool:
     if prepared.atomic and any(_is_failure(result) for result in files):
         return True
-    return _is_overlay_capture_changeset(prepared) and tracked_failed
+    return _is_overlay_capture_changeset(prepared) and occ_gated_failed
 
 
 def _is_overlay_capture_changeset(prepared: PreparedChangeset) -> bool:
@@ -247,7 +247,7 @@ def _mark_unpublished(
     if prepared.atomic:
         message = "not published because atomic changeset validation failed"
     else:
-        message = "not published because overlay capture tracked validation failed"
+        message = "not published because overlay capture OCC-gated validation failed"
 
     marked: list[FileResult] = []
     for result in files:

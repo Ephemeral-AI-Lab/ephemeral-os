@@ -35,7 +35,6 @@ class RemoteRuntimeServiceBinding:
 
     sandbox_id: str
     layer_stack_root: str
-    ignored_paths: set[str]
     _barrier: tuple[str, int] | None = None
     _initialized: bool = False
     _init_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
@@ -43,9 +42,6 @@ class RemoteRuntimeServiceBinding:
     def caller(self, label: str) -> SandboxCaller:
         safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in label)
         return SandboxCaller(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
-
-    def mark_ignored(self, paths: Iterable[str]) -> None:
-        self.ignored_paths.update(_normalize_ignored_path(path) for path in paths)
 
     @contextmanager
     def barrier_overlay(self, *, parties: int) -> Iterator[None]:
@@ -73,7 +69,6 @@ class RemoteRuntimeServiceBinding:
             "timeout_seconds": timeout,
             "actor_id": caller.agent_id,
             "description": description,
-            "ignored_paths": sorted(self.ignored_paths),
         }
         if self._barrier is not None:
             args["barrier_id"] = self._barrier[0]
@@ -107,7 +102,6 @@ class RemoteRuntimeServiceBinding:
             op="api.shell_batch",
             args={
                 "layer_stack_root": self.layer_stack_root,
-                "ignored_paths": sorted(self.ignored_paths),
                 "max_concurrency": max_concurrency,
                 "items": [
                     {
@@ -159,7 +153,6 @@ class RemoteRuntimeServiceBinding:
                 "actor_id": caller.agent_id,
                 "description": description,
                 "overwrite": overwrite,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -187,7 +180,6 @@ class RemoteRuntimeServiceBinding:
                 ],
                 "actor_id": caller.agent_id,
                 "description": description,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -203,7 +195,6 @@ class RemoteRuntimeServiceBinding:
             args={
                 "layer_stack_root": self.layer_stack_root,
                 "path": path,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -223,7 +214,6 @@ class RemoteRuntimeServiceBinding:
             op="api.pinned_layers",
             args={
                 "layer_stack_root": self.layer_stack_root,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -237,7 +227,6 @@ class RemoteRuntimeServiceBinding:
             op="api.layer_metrics",
             args={
                 "layer_stack_root": self.layer_stack_root,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -251,7 +240,6 @@ class RemoteRuntimeServiceBinding:
             args={
                 "layer_stack_root": self.layer_stack_root,
                 "max_depth": max_depth,
-                "ignored_paths": sorted(self.ignored_paths),
             },
             timeout=60,
         )
@@ -284,18 +272,12 @@ def create_remote_runtime_services(
     *,
     sandbox_id: str,
     layer_stack_root: str = DEFAULT_LAYER_STACK_ROOT,
-    ignored_paths: Iterable[str] = (),
 ) -> RemoteRuntimeServiceBinding:
     """Create a provider-backed runtime API binding for an existing sandbox."""
     return RemoteRuntimeServiceBinding(
         sandbox_id=sandbox_id,
         layer_stack_root=layer_stack_root,
-        ignored_paths={_normalize_ignored_path(path) for path in ignored_paths},
     )
-
-
-def _normalize_ignored_path(path: str) -> str:
-    return str(path).strip().strip("/")
 
 
 def _shell_result_from_payload(raw: dict[str, object]) -> ShellResult:

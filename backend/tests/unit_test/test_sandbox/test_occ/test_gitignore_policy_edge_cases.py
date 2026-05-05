@@ -1,7 +1,7 @@
 """Gitignore-aware OCC policy edge cases.
 
 These tests cover the E13 policy matrix from the per-call snapshot layer-stack
-plan: tracked paths use OCC validation, gitignored paths use direct
+plan: tracked paths use OCC-gated validation, gitignored paths use OCC-skipped
 last-writer-wins staging, and route decisions made during prepare are the
 authority consumed by commit.
 """
@@ -77,7 +77,7 @@ def _statuses(result: ChangesetResult) -> list[FileStatus]:
     return [file.status for file in result.files]
 
 
-def test_gitignored_same_path_writes_are_direct_last_writer_wins(
+def test_gitignored_same_path_writes_are_occ_skipped_last_writer_wins(
     tmp_path: Path,
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
@@ -157,7 +157,7 @@ def test_tracked_same_path_stale_shell_write_aborts_with_aborted_version(
     assert stack.read_bytes("src/app.py") == (b"active\n", True)
 
 
-def test_current_mixed_shell_tracked_conflict_drops_gitignored_direct_output(
+def test_current_mixed_shell_tracked_conflict_drops_gitignored_occ_skipped_output(
     tmp_path: Path,
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
@@ -177,7 +177,7 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_direct_output(
             WriteChange(
                 path="dist/out.js",
                 source="overlay_capture",
-                final_content=b"direct shell\n",
+                final_content=b"occ skipped shell\n",
             ),
         ],
         snapshot=stale_snapshot,
@@ -188,7 +188,8 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_direct_output(
     assert stack.read_bytes("src/app.py") == (b"active\n", True)
     assert stack.read_bytes("dist/out.js") == (None, False)
 
-def test_gitignore_direct_route_is_fixed_after_prepare_even_if_oracle_changes(
+
+def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_changes(
     tmp_path: Path,
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
@@ -200,19 +201,19 @@ def test_gitignore_direct_route_is_fixed_after_prepare_even_if_oracle_changes(
             WriteChange(
                 path="dist/out.js",
                 source="overlay_capture",
-                final_content=b"direct\n",
-            )
+                final_content=b"occ skipped\n",
+            ),
         ],
         snapshot=stack.read_active_manifest(),
     )
     [group] = prepared.path_groups
-    assert group.route is RouteDecision.DIRECT
+    assert group.route is RouteDecision.OCC_SKIPPED_MERGE
 
     gitignore.ignored.clear()
     result = OccCommitTransaction(stack).revalidate_and_publish(prepared)
 
     assert _statuses(result) == [FileStatus.ACCEPTED]
-    assert stack.read_bytes("dist/out.js") == (b"direct\n", True)
+    assert stack.read_bytes("dist/out.js") == (b"occ skipped\n", True)
 
 
 def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
@@ -236,7 +237,7 @@ def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
         snapshot=stale_snapshot,
     )
     [group] = prepared.path_groups
-    assert group.route is RouteDecision.TRACKED
+    assert group.route is RouteDecision.OCC_GATED_MERGE
 
     gitignore.ignored.add("dist/out.js")
     result = OccCommitTransaction(stack).revalidate_and_publish(prepared)

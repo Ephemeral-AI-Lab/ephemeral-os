@@ -56,7 +56,7 @@ def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Pat
     merge = GatedMerge(stack)
     group = PreparedPathGroup(
         path="src/app.py",
-        route=RouteDecision.TRACKED,
+        route=RouteDecision.OCC_GATED_MERGE,
         changes=(
             WriteChange(
                 path="src/app.py",
@@ -83,7 +83,7 @@ def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) ->
     merge = GatedMerge(stack)
     group = PreparedPathGroup(
         path="src/app.py",
-        route=RouteDecision.TRACKED,
+        route=RouteDecision.OCC_GATED_MERGE,
         changes=(EditChange(path="src/app.py", old_text="beta", new_text="BETA"),),
     )
 
@@ -105,7 +105,7 @@ def test_tracked_edit_aborts_when_anchor_is_ambiguous(tmp_path: Path) -> None:
     merge = GatedMerge(stack)
     group = PreparedPathGroup(
         path="src/app.py",
-        route=RouteDecision.TRACKED,
+        route=RouteDecision.OCC_GATED_MERGE,
         changes=(EditChange(path="src/app.py", old_text="x", new_text="Y"),),
     )
 

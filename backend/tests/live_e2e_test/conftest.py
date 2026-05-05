@@ -19,6 +19,7 @@ import pytest
 from .sandbox._harness.sandbox_fixture import (  # noqa: F401
     integrated_sandbox,
     live_sandbox,
+    native_sandbox,
     overlay_sandbox,
 )
 

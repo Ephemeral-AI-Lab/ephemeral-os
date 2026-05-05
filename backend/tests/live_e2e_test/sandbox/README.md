@@ -9,8 +9,10 @@ sandbox. The old live `occ/` suite, the local layer-stack slice, and the overlay
 upper-capture round-trip were removed because they exercised local Python state
 in the pytest process instead of the sandbox runtime guardrails.
 
-- **Overlay syscall slice:** `sandbox/overlay/` keeps direct in-sandbox `mount(2)`,
+- **Overlay syscall slice:** `sandbox/overlay/syscall/` keeps direct in-sandbox `mount(2)`,
   latency, read, concurrent-mount, and heavy-write probes via `raw_exec`.
+- **Overlay native slice:** `sandbox/overlay/native/` (in progress) hosts probes
+  that import `sandbox.overlay` from the runtime bundle inside the sandbox.
 - **Integrated slice:** `sandbox/layer_stack_overlay_occ/` now has an active public-tool
   smoke for sandbox-local write/edit/shell/read coverage. Heavier race,
   recovery, and load-profile cases remain pending.

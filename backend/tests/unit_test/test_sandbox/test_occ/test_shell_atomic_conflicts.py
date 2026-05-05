@@ -1,4 +1,4 @@
-"""Shell-captured changes publish atomically when tracked validation conflicts."""
+"""Shell-captured changes publish atomically when OCC-gated validation conflicts."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes)
     )
 
 
-def test_shell_tracked_conflict_holds_direct_outputs(tmp_path: Path) -> None:
+def test_shell_occ_gated_conflict_holds_occ_skipped_outputs(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     snapshot = stack.read_active_manifest()
@@ -56,7 +56,7 @@ def test_shell_tracked_conflict_holds_direct_outputs(tmp_path: Path) -> None:
                 WriteChange(
                     path="dist/out.txt",
                     source="overlay_capture",
-                    final_content=b"direct shell\n",
+                    final_content=b"occ skipped shell\n",
                 ),
             ],
             snapshot=snapshot,

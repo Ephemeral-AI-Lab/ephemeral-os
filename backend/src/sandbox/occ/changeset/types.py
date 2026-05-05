@@ -160,9 +160,6 @@ class OpaqueDirChange(Change):
         object.__setattr__(self, "kept_children", frozenset(kept_children))
 
 
-DirectChange = SymlinkChange | OpaqueDirChange
-
-
 class FileStatus(StrEnum):
     ACCEPTED = "accepted"
     COMMITTED = "committed"
@@ -209,7 +206,6 @@ __all__ = [
     "ChangeSource",
     "ChangesetResult",
     "DeleteChange",
-    "DirectChange",
     "EditChange",
     "FileResult",
     "FileStatus",

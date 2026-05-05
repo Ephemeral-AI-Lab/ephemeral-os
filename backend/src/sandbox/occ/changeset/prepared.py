@@ -10,8 +10,8 @@ from sandbox.occ.changeset.types import Change
 
 
 class RouteDecision(StrEnum):
-    TRACKED = "tracked"
-    DIRECT = "direct"
+    OCC_GATED_MERGE = "occ_gated_merge"
+    OCC_SKIPPED_MERGE = "occ_skipped_merge"
     DROP = "drop"
     REJECT = "reject"
 

@@ -19,12 +19,12 @@ import os
 
 import pytest
 
-from .._harness.overlay_probe import (
+from ..._harness.overlay_probe import (
     OVERLAY_ROOT,
     script_heavy_write_copy_up,
     wrap_unshare,
 )
-from .._harness.sandbox_fixture import SandboxHandle
+from ..._harness.sandbox_fixture import SandboxHandle
 
 
 def _env_int(name: str, default: int) -> int:

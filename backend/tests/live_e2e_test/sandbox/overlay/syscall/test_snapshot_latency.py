@@ -11,12 +11,12 @@ import os
 
 import pytest
 
-from .._harness.overlay_probe import (
+from ..._harness.overlay_probe import (
     OVERLAY_ROOT,
     script_snapshot_latency,
     wrap_unshare,
 )
-from .._harness.sandbox_fixture import SandboxHandle
+from ..._harness.sandbox_fixture import SandboxHandle
 
 
 _DEPTHS = (1, 5, 10, 30, 50, 80, 100, 200)

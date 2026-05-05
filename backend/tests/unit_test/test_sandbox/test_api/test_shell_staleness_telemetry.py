@@ -11,6 +11,9 @@ import pytest
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.changeset.builders import build_api_write_change
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.types import FileStatus
 from sandbox.overlay.capture.types import OverlayCapture
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
@@ -74,6 +77,22 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
     assert run.manager.read_text("generated/output.json") == ("value: v1\n", True)
 
 
+async def test_runtime_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
+    manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
+    _publish(manager, tmp_path, ".gitignore", b"dist/\n")
+    _, occ_service = api_handlers._services({"layer_stack_root": str(manager.storage_root)})
+
+    result = await occ_service.apply_changeset(
+        [build_api_write_change(path="dist/app.js", final_content="first\n")],
+        options=CommitOptions(caller_id="test", description="ignored output"),
+    )
+
+    assert not isinstance(result, PreparedChangeset)
+    assert result.files[0].status is FileStatus.ACCEPTED
+    assert result.files[0].timings["occ.direct.read_current_s"] >= 0.0
+    assert manager.read_text("dist/app.js") == ("first\n", True)
+
+
 async def _run_occ_clean_stale_shell(
     tmp_path: Path,
     *,
@@ -98,7 +117,6 @@ async def _run_occ_clean_stale_shell(
                 "timeout_seconds": 10,
                 "actor_id": "agent-staleness",
                 "description": "staleness clean write",
-                "ignored_paths": [],
             }
         )
     )

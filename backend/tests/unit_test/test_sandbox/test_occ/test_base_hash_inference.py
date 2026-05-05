@@ -71,7 +71,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
 
     [group] = prepared.path_groups
     [change] = group.changes
-    assert group.route is RouteDecision.TRACKED
+    assert group.route is RouteDecision.OCC_GATED_MERGE
     assert group.base_hash == content_hash_bytes(b"old\n")
     assert isinstance(change, WriteChange)
     assert change.base_hash == content_hash_bytes(b"old\n")

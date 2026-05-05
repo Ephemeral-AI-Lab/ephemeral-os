@@ -47,6 +47,11 @@ from sandbox.control.ops.setup import setup_after_create
 from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.providers.registry import get_default_provider, register_adapter
 
+from .native_probe import (
+    BUNDLE_HASH_MARKER,
+    BUNDLE_REMOTE_DIR,
+    LAYER_STACK_TEST_PREFIX,
+)
 from .overlay_probe import OVERLAY_ROOT, script_purge_overlay_mounts, wrap_unshare
 
 
@@ -280,6 +285,66 @@ async def integrated_sandbox(
     yield live_sandbox
 
 
+async def _assert_runtime_bundle_installed(sandbox_id: str) -> None:
+    """Fail fast if the prebaked image's ``setup_after_create`` did not stage the bundle."""
+    quoted = shlex.quote(BUNDLE_HASH_MARKER)
+    result = await raw_exec_fn(
+        sandbox_id,
+        f"test -f {quoted} && cat {quoted}",
+        timeout=15,
+    )
+    if result.exit_code != 0:
+        pytest.fail(
+            f"runtime bundle marker {BUNDLE_HASH_MARKER} missing — "
+            "did setup_after_create run? "
+            f"stderr={result.stderr!r} stdout={result.stdout!r}"
+        )
+
+
+async def _purge_layer_stack_test_roots(sandbox_id: str) -> None:
+    """Remove per-probe scratch dirs left under ``/tmp/eos-sandbox-runtime/layer-stack-test-*``."""
+    pattern = shlex.quote(LAYER_STACK_TEST_PREFIX) + "*"
+    # Use shell glob so the pattern is expanded inside the sandbox.
+    await raw_exec_fn(
+        sandbox_id,
+        f"sh -c 'rm -rf -- {pattern}'",
+        timeout=30,
+    )
+
+
+@pytest_asyncio.fixture
+async def native_sandbox(
+    live_sandbox: SandboxHandle,
+) -> AsyncIterator[SandboxHandle]:
+    """Live sandbox prepared for native probes that import the runtime bundle.
+
+    Confirms ``/tmp/eos-sandbox-runtime/.bundle-hash`` exists, resets
+    ``/testbed``, clears ``DEFAULT_LAYER_STACK_ROOT``, and removes any
+    per-probe scratch dirs left under
+    ``/tmp/eos-sandbox-runtime/layer-stack-test-*``.
+    """
+    await _assert_runtime_bundle_installed(live_sandbox.sandbox_id)
+    await _reset_workspace(live_sandbox.sandbox_id)
+    await _reset_runtime_layer_stack(live_sandbox.sandbox_id)
+    await _purge_layer_stack_test_roots(live_sandbox.sandbox_id)
+
+    handle = SandboxHandle(
+        sandbox_id=live_sandbox.sandbox_id,
+        caller=live_sandbox.caller,
+        raw_exec=live_sandbox.raw_exec,
+        tool=live_sandbox.tool,
+        extras={
+            "bundle_remote_dir": BUNDLE_REMOTE_DIR,
+            "bundle_hash_marker": BUNDLE_HASH_MARKER,
+            "layer_stack_test_prefix": LAYER_STACK_TEST_PREFIX,
+        },
+    )
+    try:
+        yield handle
+    finally:
+        await _purge_layer_stack_test_roots(live_sandbox.sandbox_id)
+
+
 __all__ = [
     "SandboxHandle",
     "ToolBundle",
@@ -287,4 +352,5 @@ __all__ = [
     "live_sandbox",
     "overlay_sandbox",
     "integrated_sandbox",
+    "native_sandbox",
 ]
