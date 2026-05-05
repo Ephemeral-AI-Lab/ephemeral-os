@@ -25,6 +25,7 @@ import pytest_asyncio
 from config import load_settings
 from sandbox.api import status as sb_status
 from sandbox.api.tool import edit as edit_mod
+from sandbox.api.tool import _runtime as runtime_mod
 from sandbox.api.tool import read as read_mod
 from sandbox.api.tool import shell as shell_mod
 from sandbox.api.tool import write as write_mod
@@ -128,6 +129,22 @@ class ToolBundle:
                 timeout=timeout,
                 description=description,
             ),
+        )
+
+    async def layer_metrics(self) -> dict[str, object]:
+        return await runtime_mod.call_runtime_api(
+            self.sandbox_id,
+            "api.layer_metrics",
+            {"actor_id": self.caller.agent_id},
+            timeout=60,
+        )
+
+    async def compact(self, *, max_depth: int = 4) -> dict[str, object]:
+        return await runtime_mod.call_runtime_api(
+            self.sandbox_id,
+            "api.compact",
+            {"actor_id": self.caller.agent_id, "max_depth": max_depth},
+            timeout=60,
         )
 
 
