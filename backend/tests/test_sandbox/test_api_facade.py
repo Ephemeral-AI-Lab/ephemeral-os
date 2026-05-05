@@ -57,10 +57,10 @@ async def test_tool_methods_delegate_to_backing_modules(
     monkeypatch.setattr("sandbox.api.tool.write.write_file", fake_write_file)
     monkeypatch.setattr("sandbox.api.tool.edit.edit_file", fake_edit_file)
 
-    shell_request = ShellRequest(command="pwd", actor=actor)
-    read_request = ReadFileRequest(path="a.py", actor=actor)
-    write_request = WriteFileRequest(path="a.py", content="x", actor=actor)
-    edit_request = EditFileRequest(path="a.py", edits=(), actor=actor)
+    shell_request = ShellRequest(command="pwd", caller=actor)
+    read_request = ReadFileRequest(path="a.py", caller=actor)
+    write_request = WriteFileRequest(path="a.py", content="x", caller=actor)
+    edit_request = EditFileRequest(path="a.py", edits=(), caller=actor)
 
     assert (await facade.shell("sb-1", shell_request)).stdout == "ok"
     assert (await facade.raw_exec("sb-1", "pwd", cwd="/ws", timeout=5)).stdout == "raw"

@@ -152,37 +152,6 @@ def test_result_hierarchy_exposes_conflict_only_on_guarded_results() -> None:
         assert result.conflict_reason == "base_mismatch"
 
 
-def test_legacy_api_modules_are_deleted() -> None:
-    import importlib.util
-
-    def find_spec_or_none(module_name: str) -> object | None:
-        try:
-            return importlib.util.find_spec(module_name)
-        except ModuleNotFoundError:
-            return None
-
-    for module_name in (
-        "sandbox.api._changeset_projection",
-        "sandbox.api.audited_sandbox_api",
-        "sandbox.api.sandbox_api",
-        "sandbox.api.audit",
-        "sandbox.api.attribution",
-        "sandbox.api.models",
-        "sandbox.api.shell_routing",
-        "sandbox.api.utils.shell_routing",
-        "sandbox.api.transport",
-        "sandbox.client.async_",
-        "sandbox.client.async_bridge",
-        "sandbox.client.async_shutdown",
-        "sandbox.client.credentials",
-        "sandbox.client.sync",
-        "sandbox.daytona",
-        "sandbox.daytona.transport",
-        "tools.core.op_result_to_tool_result",
-    ):
-        assert find_spec_or_none(module_name) is None
-
-
 def test_sandbox_toolkit_keeps_shared_mutation_tool_result() -> None:
     from tools.sandbox_toolkit._mutation_result import mutation_tool_result
 

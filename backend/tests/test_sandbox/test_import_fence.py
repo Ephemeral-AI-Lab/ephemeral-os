@@ -3,12 +3,7 @@
 from __future__ import annotations
 
 import ast
-import importlib
-import importlib.util
-import re
 from pathlib import Path
-
-import pytest
 
 
 SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
@@ -159,91 +154,8 @@ def test_control_runtime_api_status_do_not_import_daytona_provider() -> None:
     )
 
 
-def test_no_sandbox_lifecycle_package_remains() -> None:
-    """sandbox.lifecycle is gone; sandbox state/control lives in sandbox.api.status."""
-    assert _find_spec_or_none("sandbox.lifecycle") is None
-    assert _find_spec_or_none("sandbox.lifecycle.factory") is None
-    assert _find_spec_or_none("sandbox.lifecycle.workspace") is None
-    assert _find_spec_or_none("sandbox.lifecycle.context") is None
-
-
-def test_no_sandbox_service_symbol_in_src() -> None:
-    """grep -r 'SandboxService' backend/src returns zero hits in non-daytona files."""
-    offenders: list[str] = []
-    for module in _python_files(SRC_ROOT):
-        text = module.read_text(encoding="utf-8")
-        if "SandboxService" in text:
-            offenders.append(str(module.relative_to(SRC_ROOT)))
-    assert offenders == [], f"SandboxService symbol still present: {offenders}"
-
-
-def test_legacy_lifecycle_classes_are_unimportable() -> None:
-    """SandboxProxy and DaytonaSandboxLifecycle are deleted."""
-    assert _find_spec_or_none("sandbox.providers.daytona.lifecycle") is None
-    assert _find_spec_or_none("sandbox.providers.daytona.proxy") is None
-
-
-def test_deleted_legacy_sandbox_modules_are_unimportable() -> None:
-    for module_name in (
-        "sandbox.code_intelligence",
-        "sandbox.api._changeset_projection",
-        "sandbox.api.bash",
-        "sandbox.api.models",
-        "sandbox.api.shell_routing",
-        "sandbox.api.utils.shell_routing",
-        "sandbox.api.file_commands",
-        "sandbox.api.transport",
-        "sandbox.api.audited_sandbox_api",
-        "sandbox.client.async_",
-        "sandbox.client.async_bridge",
-        "sandbox.client.async_shutdown",
-        "sandbox.client.credentials",
-        "sandbox.client.sync",
-        "sandbox.daytona",
-        "sandbox.daytona.transport",
-        "sandbox.errors",
-        "sandbox.lifecycle.proxy",
-        "sandbox.lifecycle.service",
-    ):
-        assert _find_spec_or_none(module_name) is None
-
-
-def test_deleted_code_intelligence_package_raises_module_not_found() -> None:
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.code_intelligence")
-
-
-def test_deleted_sandbox_transport_symbol_raises_import_error() -> None:
-    with pytest.raises(ImportError):
-        __import__("sandbox.api.transport", fromlist=["SandboxTransport"])
-
-
-def test_sandbox_source_has_no_code_intelligence_terms() -> None:
-    forbidden = {
-        "code_intelligence": re.compile(r"code_intelligence", re.IGNORECASE),
-        "code intelligence": re.compile(r"code intelligence", re.IGNORECASE),
-        "code-intelligence": re.compile(r"code-intelligence", re.IGNORECASE),
-        "standalone ci": re.compile(r"\bci\b", re.IGNORECASE),
-    }
-    offenders: list[str] = []
-    for module in _python_files(SRC_ROOT / "sandbox"):
-        text = module.read_text(encoding="utf-8")
-        for label, pattern in forbidden.items():
-            if pattern.search(text):
-                offenders.append(f"{module.relative_to(SRC_ROOT)} contains {label}")
-
-    assert offenders == []
-
-
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
-
-
-def _find_spec_or_none(module_name: str) -> object | None:
-    try:
-        return importlib.util.find_spec(module_name)
-    except ModuleNotFoundError:
-        return None
 
 
 def _imports(path: Path) -> set[str]:

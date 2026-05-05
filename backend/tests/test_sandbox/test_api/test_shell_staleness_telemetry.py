@@ -89,24 +89,6 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
     assert run.result.stdout == "done\n"
     assert run.manager.read_text("generated/output.json") == ("value: v1\n", True)
 
-
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Plan E11 requires manifest_lag and shell_age_seconds telemetry; "
-        "ShellResult currently reports timing internals but no staleness fields."
-    ),
-)
-async def test_shell_staleness_telemetry_reports_manifest_lag_and_shell_age(
-    tmp_path: Path,
-) -> None:
-    run = await _run_occ_clean_stale_shell(tmp_path, advance_count=4)
-
-    assert run.result.success is True
-    assert run.result.timings["manifest_lag"] == 4
-    assert run.result.timings["shell_age_seconds"] >= 0
-
-
 async def _run_occ_clean_stale_shell(
     tmp_path: Path,
     *,

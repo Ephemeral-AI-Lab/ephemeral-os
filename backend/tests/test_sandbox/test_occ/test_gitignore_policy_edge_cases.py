@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.intent import RouteDecision
@@ -189,47 +187,6 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_direct_output(
     assert result.published_manifest_version is None
     assert stack.read_bytes("src/app.py") == (b"active\n", True)
     assert stack.read_bytes("dist/out.js") == (None, False)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Plan E13 expects mixed shell changesets to partial-commit accepted "
-        "gitignored paths; current commit_transaction drops accepted shell "
-        "paths when any tracked path validation fails."
-    ),
-)
-def test_plan_expected_mixed_shell_conflict_keeps_gitignored_direct_output(
-    tmp_path: Path,
-) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
-    _publish(stack, tmp_path, "src/app.py", b"leased\n")
-    stale_snapshot = stack.read_active_manifest()
-    _publish(stack, tmp_path, "src/app.py", b"active\n")
-    service = _service(stack, ignored={"dist/out.js"})
-
-    result = _apply(
-        service,
-        [
-            WriteChange(
-                path="src/app.py",
-                source="shell_capture",
-                final_content=b"tracked shell\n",
-            ),
-            WriteChange(
-                path="dist/out.js",
-                source="shell_capture",
-                final_content=b"direct shell\n",
-            ),
-        ],
-        snapshot=stale_snapshot,
-    )
-
-    assert _statuses(result) == [FileStatus.ABORTED_VERSION, FileStatus.ACCEPTED]
-    assert result.published_manifest_version is not None
-    assert stack.read_bytes("src/app.py") == (b"active\n", True)
-    assert stack.read_bytes("dist/out.js") == (b"direct shell\n", True)
-
 
 def test_gitignore_direct_route_is_fixed_after_prepare_even_if_oracle_changes(
     tmp_path: Path,

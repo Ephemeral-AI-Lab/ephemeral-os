@@ -56,12 +56,7 @@ sources = ["backend/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
-addopts = "-m 'not e2e and not live'"
 asyncio_mode = "auto"
-markers = [
-    "e2e: end-to-end tests that exercise the full server pipeline",
-    "live: tests that require real API keys (skipped when not set)",
-]
 
 [tool.ruff]
 line-length = 100
