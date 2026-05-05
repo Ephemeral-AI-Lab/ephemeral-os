@@ -442,12 +442,24 @@ async def _apply_overlay_capture(
         raise ValueError("overlay capture is missing its leased manifest")
     layer_root = occ_service_layer_root(occ_service)
     prepare_start = time.perf_counter()
+    # Phase 4.x — single-path overlay captures opt out of cross-path
+    # atomicity so ``OccSerialMerger._disjoint_batches`` can coalesce
+    # them with other concurrent disjoint commits. Multi-path captures
+    # (e.g., ``make build`` writing many files in one shell) keep the
+    # default ``atomic=True`` so a single failed validation rejects the
+    # entire capture rather than leaving the layer half-built.
+    distinct_paths = {change.path for change in changes}
+    is_atomic = len(distinct_paths) > 1
     prepared = await _prepare_changeset(
         occ_service,
         layer_stack_root=str(layer_root),
         changes=changes,
         snapshot=capture.snapshot_manifest,
-        options=CommitOptions(caller_id=caller_id, description=description),
+        options=CommitOptions(
+            atomic=is_atomic,
+            caller_id=caller_id,
+            description=description,
+        ),
     )
     prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
