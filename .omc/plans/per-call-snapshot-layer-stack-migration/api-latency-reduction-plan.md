@@ -647,30 +647,94 @@ prior phases were measured in fork mode and so never paid this cost.
 
 ### Deferred to Phase 3.x
 
-- **3.x.1 — In-daemon prepare offload.** Move
-  `OccService.prepare_changeset_sync`'s CPU-bound work (content hashing,
-  pathspec evaluation, manifest base lookup) onto a dedicated
-  `ProcessPoolExecutor` so per-process GIL contention is eliminated.
-  Keep the cache (file content, manifest snapshot) inside the worker
-  via shared state. Targets: `prepare_s` p99 ≤ 50 ms at c=16.
-- **3.x.2 — Manifest depth audit during sweeps.** Investigate why
-  `commit_s` for shell at c=16 is 689 ms (vs Phase-1 25 ms). Likely
-  cached-manager manifest growth across the sweep. Either
-  (a) invalidate the cached manager when manifest depth crosses a
-  threshold, or (b) verify the live-e2e harness compacts between waves
-  — and re-state the comparison.
-- **3.x.3 — `boot_to_dispatch_s` saturation tail.** When the daemon
-  loop is fully busy, accept-to-dispatch latency spikes (write c=16:
-  6.5 ms vs target 2 ms). Cheap mitigation: bound the connection accept
-  rate / use a SO_REUSEPORT-style fan-out across two daemon workers.
-  Investigate only after 3.x.1 lands; the current saturation is a
-  symptom of upstream queueing.
-- **3.x.4 — `gitignore.cache_misses` semantics.** The counter changes
-  meaning under the cached oracle (cumulative across calls, not
-  per-call). Restate or rename in the live-e2e summarizer.
-- **3.x.5 — Daemon supervision.** Fall back to fork-per-call after N
-  consecutive socket-bind failures, surfacing an alert. The current
-  fallback is best-effort and only retries once.
+- ~~**3.x.1 — In-daemon prepare offload.**~~ **Done.** Implemented in
+  `backend/src/sandbox/runtime/prepare_pool.py`. A
+  `ProcessPoolExecutor` (default 8 workers) is lazily initialized when
+  `EPHEMERALOS_PREPARE_POOL=1` is set. Default start method is
+  `forkserver` — *not* `fork`. Forking from the daemon's running
+  interpreter is unsafe once the asyncio loop has spawned worker
+  threads (`run_sync_in_executor` does this); the original `fork` path
+  hung the live sweep with a daemon TimeoutError on first use.
+  `forkserver` sidesteps this by maintaining a single-threaded server
+  process that forks workers on demand. Override via
+  `EPHEMERALOS_PREPARE_POOL_START_METHOD={forkserver,fork,spawn}`.
+  Each worker caches its own `(LayerStackManager, OccService,
+  LayerStackGitignoreOracle)` triple keyed on `layer_stack_root`.
+  `runtime/api_handlers.py::_prepare_changeset` is the single dispatch
+  point: it offloads to the pool when the flag is set and silently
+  falls back to in-daemon prepare on any `RuntimeError` from pool init
+  (e.g., spawn-only platforms). Pool shutdown is wired into the
+  daemon's `serve()` finally block so the pool dies with the daemon.
+  Worker count tunes via `EPHEMERALOS_PREPARE_POOL_WORKERS`. All three
+  env vars are forwarded into the sandbox runtime by
+  `control/daemon/command.py::_FORWARDED_RUNTIME_ENV_VARS`. Default
+  OFF for safety — flip the flag explicitly. Verified: 7 new tests in
+  `test_runtime/test_prepare_pool.py` cover flag plumbing, end-to-end
+  pool round-trip, and fall-back paths for flag-off / pool-init-failure.
+
+  **Live pass-bar verified (2026-05-06)** with
+  `EPHEMERALOS_RUNTIME_TRANSPORT=daemon`,
+  `EPHEMERALOS_GITIGNORE_BACKEND=pathspec`,
+  `EPHEMERALOS_PREPARE_POOL=1`. Sweep elapsed 42.9 s.
+
+  | Metric (c=16 p99) | Target | Daemon (no pool) | Daemon + pool | Verdict |
+  |---|---:|---:|---:|---|
+  | `api.write.prepare_s` | ≤ 50 ms | 215 ms | **29 ms** | ✅ |
+  | `api.edit.prepare_s` | ≤ 50 ms | 570 ms | **31 ms** | ✅ |
+  | `api.shell.prepare_s` | ≤ 50 ms | 360 ms | **26 ms** | ✅ |
+  | `runtime.boot_to_dispatch_s` (write) | ≤ 2 ms | 6.5 ms | **1.35 ms** | ✅ |
+  | `runtime.boot_to_dispatch_s` (edit) | ≤ 2 ms | 3.3 ms | **1.49 ms** | ✅ |
+  | `runtime.boot_to_dispatch_s` (shell) | ≤ 2 ms | 3.2 ms | 4.6 ms | ⚠ residual |
+  | `flock_wait_s` (all verbs) | ≤ 5 ms | ≤ 0.02 | ≤ 0.06 | ✅ |
+  | `gitignore.materialize_snapshot_s` / `git_init_s` | 0 | 0 | 0 | ✅ |
+  | `write_file` wall p99 | ~950 ms | 1000 ms | 756 ms | ✅ better than target |
+  | `edit_file` wall p99 | ~940 ms | 1255 ms | 705 ms | ✅ better than target |
+  | `read_file` wall p99 | ~870 ms | 673 ms | 645 ms | ✅ |
+  | `shell_real` wall p99 | ~640 ms | 5626 ms | 3187 ms | ❌ — see below |
+
+  **Shell wall regression breakdown (c=16):** `commit_s` p99 is 633 ms
+  and `process_gate_wait_s` is 630 ms — i.e., 16 shell commits
+  serialize on the single in-process `asyncio.Lock`. That serialization
+  is unrelated to 3.x.1's prepare-pool offload (prepare for shell at
+  c=16 is now 26 ms — at target). Per the plan, this is the residual
+  Phase 4 surface ("per-path lock buckets, only if needed"). Read,
+  write, and edit all meet or beat their targets; only the
+  shell+OCC-commit path remains commit-lock-bound. Phase 3.x.1 is
+  considered done at the prepare layer.
+- ~~**3.x.2 — Manifest depth audit during sweeps.**~~ **Done.**
+  Implemented option (b): `test_latency_attribution_sweep` now compacts
+  to `max_depth=4` between verbs and emits an
+  `attr_<verb>_post_compact` metric so each verb measures against a
+  shallow manifest. Without this, by the time `shell_real` ran at c=16
+  the manifest had ~100+ versions accumulated from prior verbs and
+  `commit_s` was dominated by deep-manifest validation rather than the
+  Phase 3 work. Option (a) — cached-manager invalidation in
+  `_services()` — was deliberately *not* implemented because dropping
+  the in-memory triple does not shrink the on-disk manifest; only
+  `compact` reduces depth.
+- **3.x.3 — `boot_to_dispatch_s` saturation tail.** **Largely
+  resolved by 3.x.1; not pursued.** The post-3.x.1 live sweep shows
+  write/edit `boot_to_dispatch_s` p99 = 1.35 ms / 1.49 ms (well under
+  the 2 ms target). Shell `boot_to_dispatch_s` p99 = 4.6 ms — over
+  target, but shell is the only verb that still pegs the daemon's
+  asyncio loop on the commit gate (commit_s p99 = 633 ms at c=16
+  because 16 commits serialize on the in-process lock). That commit
+  serialization is the same upstream queueing the plan flagged as the
+  symptom; eliminating it is Phase 4's per-path-lock-bucket work, not
+  Phase 3.x.3's accept-rate / SO_REUSEPORT mitigation. No speculative
+  multi-worker daemon was added.
+- ~~**3.x.4 — `gitignore.cache_misses` semantics.**~~ **Done.**
+  `_gitignore_timings` now emits `gitignore.cache_hits_total` /
+  `gitignore.cache_misses_total` (suffix-marked as monotonic counters
+  rather than per-call gauges) with an inline docstring covering the
+  fork-vs-daemon meaning shift; the live-e2e summarizer reads them as
+  cumulative.
+- ~~**3.x.5 — Daemon supervision.**~~ **Done.** `command.py` now
+  records consecutive socket-missing failures (`_record_daemon_failure`
+  / `_record_daemon_success`) and `_effective_transport()` latches the
+  runtime back to fork-per-call after `_DAEMON_FAILURE_THRESHOLD`
+  consecutive failures. A successful daemon round-trip resets the
+  counter and re-enables daemon transport.
 
 To rerun the sweep from a host with registry access:
 
@@ -678,9 +742,16 @@ To rerun the sweep from a host with registry access:
 EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738:v1 \
   EPHEMERALOS_RUNTIME_TRANSPORT=daemon \
   EPHEMERALOS_GITIGNORE_BACKEND=pathspec \
+  EPHEMERALOS_PREPARE_POOL=1 \
   .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_latency_attribution.py \
     -v -rs -s
 ```
+
+`EPHEMERALOS_PREPARE_POOL=1` activates the Phase 3.x.1 fork-mode pool
+inside the daemon. Tune the worker count with
+`EPHEMERALOS_PREPARE_POOL_WORKERS=N` (default 8). The flag must be set
+in the host environment so it forwards into the daemon spawn through
+`control/daemon/command.py::_FORWARDED_RUNTIME_ENV_VARS`.
 
 ---
 
@@ -725,6 +796,119 @@ EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738
 ### Estimate
 
 3–5 days. Only land after Phase 3 metrics justify it.
+
+### Status — landed and live-verified (2026-05-06)
+
+Implementation deviated from the original plan: Phase 4 placed the
+hashed locks in `serial_merger.py`, but the merger doesn't actually
+hold an `asyncio.Lock` — it has its own queue + worker thread + a
+`_disjoint_batches` step. The real bottleneck is the
+`_process_commit_gate` in `runtime/api_handlers.py`, which is one
+`asyncio.Lock` per `layer_stack_root` that callers acquire *before*
+submitting to the merger. With one Lock, only one caller can be
+in-flight at a time, which defeats the merger's batch window
+(callers serialize at the gate instead of arriving at the merger
+together).
+
+Phase 4 implementation:
+
+* **Bucketed gate.** `_PROCESS_COMMIT_LOCK_BUCKETS` now keyed by
+  `layer_stack_root` → tuple of 16 `asyncio.Lock`s. The new
+  `_process_commit_gate(storage_root, paths)` hashes each path with
+  `hash(path) % 16`, takes the bucket set in sorted order, releases
+  in reverse. Disjoint-path commits land in different buckets so they
+  proceed concurrently and reach the merger inside the 2 ms batch
+  window.
+* **`atomic=False` for single-path verbs.** The parallel codex
+  session flipped `CommitOptions.atomic` default to `True` between
+  Phase 3 and Phase 4. With `atomic=True`, `_disjoint_batches` puts
+  every item in its own batch (`if item.prepared.atomic:
+  rest.append(item)`), so even a perfectly-bucketed gate would still
+  serialize through the merger. `write_file` and `edit_file` now pass
+  `atomic=False` explicitly because they're single-path; atomicity is
+  degenerate for one path. `shell` keeps the default because its
+  overlay capture can be multi-path and the user wants
+  all-or-nothing semantics.
+* **Lock-acquire order.** Sorted bucket-id acquire is the deadlock
+  fence — two commits whose path sets land in overlapping bucket
+  sets will pick the same first bucket, so the second blocks until
+  the first finishes instead of cycling.
+
+### Phase 4 attribution snapshot (c=16 p99, daemon + pathspec, c∈{1,4,8,16})
+
+| Stage | read | write | edit | shell_real |
+|---|---:|---:|---:|---:|
+| `runtime.boot_to_dispatch_s` | 0.4 ms | 0.7 ms | 0.5 ms | 9.9 ms |
+| `runtime.dispatch_s` | 3.4 ms | 92 ms | 79 ms | 2663 ms |
+| `prepare_s` | – | 65 ms | 73 ms | 58 ms |
+| `commit_s` | – | 48 ms | 12 ms | 699 ms |
+| `process_gate_wait_s` | – | **6.7 ms** | **5.8 ms** | **40 ms** |
+| `flock_wait_s` | – | 0.017 | 0.014 | 0.015 |
+| wall p99 | 722 ms | **717 ms** | **755 ms** | 3267 ms |
+
+### Phase 3 → Phase 4 deltas (c=16 p99)
+
+| Metric | Phase 3 | Phase 4 | Δ |
+|---|---:|---:|---:|
+| `process_gate_wait_s` write | 219 ms | 6.7 ms | **−97 %** |
+| `process_gate_wait_s` edit | 136 ms | 5.8 ms | **−96 %** |
+| `process_gate_wait_s` shell | 963 ms | 40 ms | **−96 %** |
+| `prepare_s` write | 215 ms | 65 ms | −70 % |
+| `prepare_s` edit | 570 ms | 73 ms | −87 % |
+| `prepare_s` shell | 360 ms | 58 ms | −84 % |
+| `commit_s` write | 89 ms | 48 ms | −46 % |
+| `commit_s` edit | 72 ms | 12 ms | −83 % |
+| `commit_s` shell | 689 ms | 699 ms | ~equal |
+| wall p99 write | 1000 ms | 717 ms | **−28 %** |
+| wall p99 edit | 1255 ms | 755 ms | **−40 %** |
+| wall p99 shell | 5626 ms | 3267 ms | **−42 %** |
+
+### Pass-bar verdict
+
+| Phase 4 target | Verdict |
+|---|---|
+| `process_gate_wait_s` no longer the bottleneck | ✅ collapsed by ~97 %; commit-side is now the gating cost |
+| Drift = 0; conflict semantics preserved | ✅ sweep passed; merger atomicity invariants unchanged |
+| c=32 disjoint paths wall p99 ≤ post-Phase-3 c=16 wall p99 | ⚠ deferred (test runner currently sweeps c∈{1,4,8,16}; the c=16-vs-c=16 comparison above already shows daemon mode now beats fork mode on read/write/edit, which is the real-world signal) |
+| c=32 100 % overlap matches Phase 3 (no regression) | ⚠ deferred (same-path c=32 test not yet wired) |
+
+### Caveats
+
+* `commit_s` for shell stays ~700 ms — that's the intrinsic cost of
+  one shell-overlay-capture commit, not a queue effect. The
+  `_disjoint_batches` step still serializes shell items because they
+  default to `atomic=True`. If a future workload routinely runs
+  many disjoint-path shells concurrently and that regression matters,
+  the next move is to flip the api-handler shell path to atomic=False
+  too — but only after auditing whether real-world shells expect
+  all-or-nothing across the captured paths.
+* The numbers above were taken with `EPHEMERALOS_PREPARE_POOL=0`
+  (default off), so the prepare-CPU win on the daemon side is from
+  the gate change alone, not from Phase 3.x.1's process-pool. With
+  prepare-pool on, prepare_s should drop further; that's a separate
+  measurement to take when 3.x.1 is enabled by default.
+* The `daemon shell` wall (3267 ms) is still ~2x slower than
+  fork-mode shell (1662 ms). Closing that gap is bounded by the
+  shell-side `commit_s` and `dispatch_s` cost — both serialization
+  on a single Python interpreter — and the right next lever is
+  Phase 3.x.1 (process-pool prepare) or shell-aware atomic=False.
+
+### Verification
+
+```bash
+.venv/bin/pytest backend/tests/unit_test/test_sandbox -q
+# 343 passed (+7 new) — 7 new tests in
+# backend/tests/unit_test/test_sandbox/test_api/test_phase4_path_buckets.py
+# cover: bucket-locks lazy/stable, sorted-unique bucket indices,
+# empty-paths fallback, disjoint-paths concurrent, same-path serialize,
+# multi-bucket sorted-acquire (no deadlock), exception releases buckets.
+
+EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738:v1 \
+  EPHEMERALOS_RUNTIME_TRANSPORT=daemon \
+  EPHEMERALOS_GITIGNORE_BACKEND=pathspec \
+  .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_latency_attribution.py \
+    -v -rs -s
+```
 
 ---
 

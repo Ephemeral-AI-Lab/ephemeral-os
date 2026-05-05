@@ -18,7 +18,7 @@ from sandbox.api.tool.result_projection import (
 )
 from sandbox.layer_stack import LayerStackManager
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.gitignore_oracle import LayerStackGitignoreOracle
 from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
@@ -26,9 +26,20 @@ from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
+from sandbox.runtime import prepare_pool
 
 
-_PROCESS_COMMIT_LOCKS: dict[str, asyncio.Lock] = {}
+_PROCESS_COMMIT_BUCKETS = 16
+"""Phase 4 — number of hashed asyncio.Lock buckets per ``layer_stack_root``.
+
+Each prepared changeset acquires the buckets that hash from its changed
+paths (sorted to prevent deadlock when one op spans multiple buckets).
+Disjoint-path commits land in different buckets so they no longer
+serialize on a single in-process Lock; the underlying ``OccSerialMerger``
+batches them via its 2 ms batch window.
+"""
+
+_PROCESS_COMMIT_LOCK_BUCKETS: dict[str, tuple[asyncio.Lock, ...]] = {}
 
 _SERVICE_CACHE: dict[
     str, tuple[LayerStackManager, OccService, "LayerStackGitignoreOracle"]
@@ -38,6 +49,40 @@ _SERVICE_CACHE: dict[
 def _services_cache_clear() -> None:
     """Drop the per-``layer_stack_root`` service cache. Test helper."""
     _SERVICE_CACHE.clear()
+
+
+async def _prepare_changeset(
+    occ_service: OccService,
+    *,
+    layer_stack_root: str,
+    changes: Sequence[Change],
+    snapshot: object = None,
+    options: CommitOptions | None = None,
+) -> PreparedChangeset:
+    """Prepare a changeset, optionally offloading to the prepare pool.
+
+    Phase 3.x.1: when ``EPHEMERALOS_PREPARE_POOL=1`` and the platform is
+    fork-capable, dispatch the synchronous CPU-bound prepare path to a
+    fork-mode :class:`ProcessPoolExecutor` so c=16 prepare calls don't
+    serialize on the daemon's GIL. Falls back to in-daemon prepare on
+    pool-init failure.
+    """
+    if prepare_pool.is_enabled():
+        try:
+            return await prepare_pool.prepare_in_pool(
+                layer_stack_root=layer_stack_root,
+                changes=changes,
+                snapshot=snapshot,  # type: ignore[arg-type]
+                options=options,
+            )
+        except RuntimeError:
+            # Fork-pool unavailable on this platform; fall back below.
+            pass
+    return await occ_service.prepare_changeset(
+        changes,
+        snapshot=snapshot,  # type: ignore[arg-type]
+        options=options,
+    )
 
 
 async def shell(args: dict[str, object]) -> dict[str, object]:
@@ -167,18 +212,22 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         final_content=str(args.get("content") or ""),
         create_only=not bool(args.get("overwrite", True)),
     )
-    layer_root = Path(str(args["layer_stack_root"]))
+    layer_stack_root = str(args["layer_stack_root"])
+    layer_root = Path(layer_stack_root)
     prepare_start = time.perf_counter()
-    prepared = await occ_service.prepare_changeset(
-        [change],
+    prepared = await _prepare_changeset(
+        occ_service,
+        layer_stack_root=layer_stack_root,
+        changes=[change],
         options=CommitOptions(
+            atomic=False,
             caller_id=str(args.get("actor_id") or ""),
             description=str(args.get("description") or f"write {path}"),
         ),
     )
     prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
-    async with _process_commit_gate(layer_root):
+    async with _process_commit_gate(layer_root, _prepared_paths(prepared)):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
@@ -223,18 +272,22 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
                 new_text=str(edit.get("new_text") or ""),
             )
         )
-    layer_root = Path(str(args["layer_stack_root"]))
+    layer_stack_root = str(args["layer_stack_root"])
+    layer_root = Path(layer_stack_root)
     prepare_start = time.perf_counter()
-    prepared = await occ_service.prepare_changeset(
-        changes,
+    prepared = await _prepare_changeset(
+        occ_service,
+        layer_stack_root=layer_stack_root,
+        changes=changes,
         options=CommitOptions(
+            atomic=False,
             caller_id=str(args.get("actor_id") or ""),
             description=str(args.get("description") or f"edit {path}"),
         ),
     )
     prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
-    async with _process_commit_gate(layer_root):
+    async with _process_commit_gate(layer_root, _prepared_paths(prepared)):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
@@ -389,14 +442,16 @@ async def _apply_overlay_capture(
         raise ValueError("overlay capture is missing its leased manifest")
     layer_root = occ_service_layer_root(occ_service)
     prepare_start = time.perf_counter()
-    prepared = await occ_service.prepare_changeset(
-        changes,
+    prepared = await _prepare_changeset(
+        occ_service,
+        layer_stack_root=str(layer_root),
+        changes=changes,
         snapshot=capture.snapshot_manifest,
         options=CommitOptions(caller_id=caller_id, description=description),
     )
     prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
-    async with _process_commit_gate(layer_root):
+    async with _process_commit_gate(layer_root, _prepared_paths(prepared)):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
@@ -431,9 +486,19 @@ def _services(
 def _gitignore_timings(
     gitignore: "LayerStackGitignoreOracle",
 ) -> dict[str, float]:
+    """Per-call gitignore counters.
+
+    The ``*_total`` suffix marks these as **cumulative since this runtime
+    process started** rather than per-call. Under fork-per-call transport
+    this distinction is invisible (each call gets a fresh interpreter), but
+    under the resident daemon the in-memory oracle persists across calls,
+    so a c=16 burst will see ``cache_misses_total = 1`` on the first call
+    and 0 thereafter for the same snapshot version. The summarizer treats
+    these as monotonic counters, not gauges.
+    """
     return {
-        "gitignore.cache_hits": float(gitignore.cache_hits),
-        "gitignore.cache_misses": float(gitignore.cache_misses),
+        "gitignore.cache_hits_total": float(gitignore.cache_hits),
+        "gitignore.cache_misses_total": float(gitignore.cache_misses),
         "gitignore.materialize_snapshot_s": float(gitignore.last_materialize_s),
         "gitignore.git_init_s": float(gitignore.last_git_init_s),
     }
@@ -488,13 +553,86 @@ def occ_service_layer_root(service: OccService) -> Path:
     return Path(root)
 
 
-def _process_commit_gate(storage_root: Path) -> asyncio.Lock:
+def _bucket_locks(storage_root: Path) -> tuple[asyncio.Lock, ...]:
+    """Return the ``_PROCESS_COMMIT_BUCKETS`` asyncio.Locks for *storage_root*.
+
+    Locks are created lazily and reused across the process lifetime. Resolving
+    the key against ``storage_root.resolve(strict=False)`` so symlinked paths
+    share the same bucket set.
+    """
     key = str(storage_root.resolve(strict=False))
-    lock = _PROCESS_COMMIT_LOCKS.get(key)
-    if lock is None:
-        lock = asyncio.Lock()
-        _PROCESS_COMMIT_LOCKS[key] = lock
-    return lock
+    locks = _PROCESS_COMMIT_LOCK_BUCKETS.get(key)
+    if locks is None:
+        locks = tuple(asyncio.Lock() for _ in range(_PROCESS_COMMIT_BUCKETS))
+        _PROCESS_COMMIT_LOCK_BUCKETS[key] = locks
+    return locks
+
+
+def _bucket_indices_for_paths(paths: Sequence[str] | None) -> tuple[int, ...]:
+    """Pick the bucket indices a commit needs, sorted to be deadlock-free.
+
+    A commit that touches paths in different buckets must take all of those
+    locks; sorting the indices guarantees any two such commits with
+    overlapping bucket sets agree on acquisition order, so they cannot
+    deadlock.
+    """
+    if not paths:
+        return (0,)
+    indices = {hash(path) % _PROCESS_COMMIT_BUCKETS for path in paths}
+    return tuple(sorted(indices))
+
+
+class _process_commit_gate:
+    """Path-bucketed asyncio.Lock gate (Phase 4).
+
+    Replaces the prior single ``asyncio.Lock`` per ``layer_stack_root`` with
+    ``_PROCESS_COMMIT_BUCKETS`` locks hashed by path. Disjoint-path commits
+    take different buckets and proceed concurrently; the
+    ``OccSerialMerger``'s batch window then collapses them into one publish.
+
+    Lock acquisition is in sorted bucket-id order; release is in reverse
+    order. Together those make the gate deadlock-free even when a single
+    commit spans multiple buckets.
+    """
+
+    def __init__(
+        self,
+        storage_root: Path,
+        paths: Sequence[str] | None = None,
+    ) -> None:
+        self._locks = _bucket_locks(storage_root)
+        self._to_acquire: tuple[asyncio.Lock, ...] = tuple(
+            self._locks[index]
+            for index in _bucket_indices_for_paths(paths)
+        )
+        self._held: list[asyncio.Lock] = []
+
+    async def __aenter__(self) -> "_process_commit_gate":
+        for lock in self._to_acquire:
+            await lock.acquire()
+            self._held.append(lock)
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: object | None,
+    ) -> None:
+        del exc_type, exc, traceback
+        while self._held:
+            self._held.pop().release()
+
+
+def _prepared_paths(prepared: object) -> tuple[str, ...]:
+    """Extract the path set a ``PreparedChangeset`` will commit.
+
+    Mirrors :func:`sandbox.occ.serial_merger._path_set` without taking a
+    runtime dependency on the merger module's private helper. Returns a
+    tuple so callers can reuse it without re-iterating ``path_groups``.
+    """
+    groups = getattr(prepared, "path_groups", ())
+    return tuple(group.path for group in groups)
 
 
 def _running_in_daemon() -> bool:
