@@ -56,6 +56,8 @@ def _emit_anatomy(label: str, metrics: list[RuntimeCallMetric]) -> None:
     payload["stage_p99_ms"] = {
         "runtime.boot_to_dispatch": _stage_p99(metrics, "runtime.boot_to_dispatch_s"),
         "runtime.dispatch": _stage_p99(metrics, "runtime.dispatch_s"),
+        "api.shell.prepare": _stage_p99(metrics, "api.shell.prepare_s"),
+        "api.shell.commit": _stage_p99(metrics, "api.shell.commit_s"),
         "api.shell.process_gate_wait": _stage_p99(
             metrics, "api.shell.process_gate_wait_s"
         ),
@@ -63,10 +65,14 @@ def _emit_anatomy(label: str, metrics: list[RuntimeCallMetric]) -> None:
         "api.shell.overlay_capture_to_changes": _stage_p99(
             metrics, "api.shell.overlay_capture_to_changes_s"
         ),
+        "api.edit.prepare": _stage_p99(metrics, "api.edit.prepare_s"),
+        "api.edit.commit": _stage_p99(metrics, "api.edit.commit_s"),
         "api.edit.process_gate_wait": _stage_p99(
             metrics, "api.edit.process_gate_wait_s"
         ),
         "api.edit.flock_wait": _stage_p99(metrics, "api.edit.flock_wait_s"),
+        "api.write.prepare": _stage_p99(metrics, "api.write.prepare_s"),
+        "api.write.commit": _stage_p99(metrics, "api.write.commit_s"),
         "api.write.process_gate_wait": _stage_p99(
             metrics, "api.write.process_gate_wait_s"
         ),
@@ -182,7 +188,10 @@ async def _run_shell_real(handle: SandboxHandle, c: int) -> list[RuntimeCallMetr
     factories = []
     for index in range(c):
         path = f"tracked/attr/shell/c{c:02d}-{index:02d}.txt"
-        command = f"echo attr c={c} i={index} > {path}"
+        command = (
+            f"mkdir -p tracked/attr/shell && "
+            f"echo attr c={c} i={index} > {path}"
+        )
 
         async def run(
             index: int = index,

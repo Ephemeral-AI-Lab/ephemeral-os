@@ -60,32 +60,37 @@ class OccService:
                     "occ.apply.total_s": time.perf_counter() - total_start,
                 },
             )
+        return await self.commit_prepared(prepared, _total_start=total_start)
+
+    async def commit_prepared(
+        self,
+        prepared: PreparedChangeset,
+        *,
+        _total_start: float | None = None,
+    ) -> ChangesetResult:
+        """Commit an already-prepared changeset through the serial merger.
+
+        The merger's transaction calls ``transaction.snapshot()`` under the
+        commit lock and revalidates against the *live* active manifest, so a
+        prepared changeset whose ``snapshot`` lags the active manifest is
+        validated like any concurrent commit: gated paths whose base hash no
+        longer matches receive a normal OCC rejection. Callers may therefore
+        run :meth:`prepare_changeset` lock-free and only serialize this call.
+        """
+        if self._transaction is None or self._serial_merger is None:
+            raise RuntimeError(
+                "commit_prepared requires a layer-stack-backed OccService"
+            )
+        total_start = _total_start if _total_start is not None else time.perf_counter()
         commit_start = time.perf_counter()
-        assert self._serial_merger is not None
         result = await self._serial_merger.apply(prepared)
         commit_elapsed = time.perf_counter() - commit_start
-        result_timings, resume_wait = _result_timings_with_resume(result)
-        timings = {
-            **result_timings,
-            "occ.apply.commit_queue_wait_s": result_timings.get(
-                "occ.serial.queue_wait_s",
-                0.0,
-            ),
-            "occ.apply.commit_worker_s": result_timings.get(
-                "occ.commit.total_s",
-                0.0,
-            ),
-            "occ.apply.commit_resume_wait_s": resume_wait,
-            "occ.apply.commit_s": commit_elapsed,
-            "occ.apply.total_s": time.perf_counter() - total_start,
-        }
-        manifest_lag = _manifest_lag(prepared.snapshot, result.published_manifest_version)
-        if manifest_lag is not None:
-            timings["occ.apply.manifest_lag"] = manifest_lag
-        return ChangesetResult(
-            files=result.files,
-            timings=timings,
-            published_manifest_version=result.published_manifest_version,
+        return self._wrap_commit_result(
+            result,
+            prepared=prepared,
+            total_start=total_start,
+            commit_elapsed=commit_elapsed,
+            sync=False,
         )
 
     def apply_changeset_sync(
@@ -109,10 +114,41 @@ class OccService:
                     "occ.apply.total_s": time.perf_counter() - total_start,
                 },
             )
+        return self.commit_prepared_sync(prepared, _total_start=total_start)
+
+    def commit_prepared_sync(
+        self,
+        prepared: PreparedChangeset,
+        *,
+        _total_start: float | None = None,
+    ) -> ChangesetResult:
+        """Synchronous twin of :meth:`commit_prepared`."""
+        if self._transaction is None or self._serial_merger is None:
+            raise RuntimeError(
+                "commit_prepared_sync requires a layer-stack-backed OccService"
+            )
+        total_start = _total_start if _total_start is not None else time.perf_counter()
         commit_start = time.perf_counter()
         result = self._serial_merger.apply_sync(prepared)
         commit_elapsed = time.perf_counter() - commit_start
-        result_timings, _resume_wait = _result_timings_with_resume(result)
+        return self._wrap_commit_result(
+            result,
+            prepared=prepared,
+            total_start=total_start,
+            commit_elapsed=commit_elapsed,
+            sync=True,
+        )
+
+    def _wrap_commit_result(
+        self,
+        result: ChangesetResult,
+        *,
+        prepared: PreparedChangeset,
+        total_start: float,
+        commit_elapsed: float,
+        sync: bool,
+    ) -> ChangesetResult:
+        result_timings, resume_wait = _result_timings_with_resume(result)
         timings = {
             **result_timings,
             "occ.apply.commit_queue_wait_s": result_timings.get(
@@ -123,7 +159,7 @@ class OccService:
                 "occ.commit.total_s",
                 0.0,
             ),
-            "occ.apply.commit_resume_wait_s": 0.0,
+            "occ.apply.commit_resume_wait_s": 0.0 if sync else resume_wait,
             "occ.apply.commit_s": commit_elapsed,
             "occ.apply.total_s": time.perf_counter() - total_start,
         }

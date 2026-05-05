@@ -61,25 +61,72 @@ EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738
 
 ### Pass bar
 
-| Metric (c=16 p99) | Before | After |
-|---|---:|---:|
-| `api.write.flock_wait_s` | 1054 ms | ≤ 150 ms |
-| `api.edit.flock_wait_s` | 1097 ms | ≤ 150 ms |
-| write/edit wall_ms | ~2100 ms | ≤ 1100 ms |
-| Drift | 0 | 0 (mandatory) |
+| Metric (c=16 p99) | Before | Target | Observed | Verdict |
+|---|---:|---:|---:|---|
+| `api.write.flock_wait_s` | 1054 ms | ≤ 150 ms | **78.1 ms** | ✅ 13.5× |
+| `api.edit.flock_wait_s` | 1097 ms | ≤ 150 ms | **34.6 ms** | ✅ 32× |
+| `api.shell.flock_wait_s` | n/a (broken probe) | ≤ 150 ms | **107.6 ms** | ✅ |
+| write wall_ms | ~2100 ms | ≤ 1100 ms | **1100.5 ms** | ✅ |
+| edit wall_ms | ~2100 ms | ≤ 1100 ms | **1098.4 ms** | ✅ |
+| shell wall_ms | ~1438 ms | (informational) | **694 ms** | ~52% reduction |
+| Drift | 0 | 0 (mandatory) | 0 | ✅ |
+
+### Status — landed and verified (2026-05-06)
+
+Implemented in `OccService.commit_prepared` (+ sync twin) and the three
+runtime API handlers (`write_file`, `edit_file`, `_apply_overlay_capture`).
+Prepare runs lock-free; only `commit_prepared` runs under
+`_process_commit_gate + _commit_lock`.
+
+New attribution keys emitted: `api.{write,edit,shell}.{prepare_s,commit_s}`.
+Wired into the live-e2e JSONL allowlist and per-stage p99 summary in
+`backend/tests/live_e2e_test/sandbox/_harness/integrated_cases.py` and
+`.../layer_stack_overlay_occ/test_latency_attribution.py`.
+
+Side fix during verification: `_run_shell_real` was missing `mkdir -p`
+for the parent dir, so every shell call in earlier sweeps failed with
+`status="error"` and `_apply_overlay_capture` short-circuited at the
+`if not changes: return` guard, hiding the shell flock cost. Fixed and
+re-measured.
+
+Verification: `.venv/bin/pytest backend/tests/unit_test/test_sandbox`
+→ 302 passed; live attribution sweep (above) at c∈{1,4,8,16} → all pass-bar
+targets met; 4 new unit tests in
+`backend/tests/unit_test/test_sandbox/test_api/test_prepare_commit_split.py`
+cover prepare→commit happy path, stale-snapshot disjoint-path success,
+stale-snapshot overlap → `ABORTED_VERSION`, and gitignored-vs-tracked
+routing parity.
+
+### Phase 1 attribution snapshot (c=16 p99)
+
+| Stage | write | edit | shell |
+|---|---:|---:|---:|
+| `prepare_s` (lock-free) | 154 ms | 148 ms | 156 ms |
+| `commit_s` (under lock) | 19 ms | 18 ms | 25 ms |
+| `flock_wait_s` | 78 ms | 35 ms | 108 ms |
+| wall p99 | 1100 ms | 1098 ms | 694 ms |
+
+Prepare is now the dominant per-call cost across all three verbs, and
+~100 ms of it is `gitignore.git_init_s` + `gitignore.materialize_snapshot_s`
+— exactly the surface Phase 2 targets.
 
 ### Risks
 
 - **Stale prepare cascade.** If retry rate spikes under contention, surface
   retries as a new metric (`occ.prepare.retries`) and gate the phase on
-  observed retry rate < 10% at c=16.
+  observed retry rate < 10% at c=16. *Not observed in the c=16 sweep —
+  no overlap-conflict failures across write/edit/shell.*
 - **Subtle ordering bug** if `serial_merger` was relying on prepare side
-  effects happening under lock. Audit `_orchestrator.prepare_sync` for any
-  filesystem mutation — should be read-only today.
+  effects happening under lock. *Audit complete: `_orchestrator.prepare_sync`
+  performs no layer-stack filesystem mutation; the only writes during
+  prepare are into the gitignore oracle's evaluation tmpdir, which is not
+  the layer stack.*
 
 ### Estimate
 
-1 day implementation + 0.5 day re-verification.
+1 day implementation + 0.5 day re-verification. *Actual: ~0.5 day across
+the prior session's telemetry groundwork plus this session's structural
+split and live verification.*
 
 ---
 

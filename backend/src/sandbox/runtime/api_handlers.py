@@ -20,7 +20,7 @@ from sandbox.api.tool.result_projection import (
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
@@ -161,21 +161,24 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         create_only=not bool(args.get("overwrite", True)),
     )
     layer_root = Path(str(args["layer_stack_root"]))
+    prepare_start = time.perf_counter()
+    prepared = await occ_service.prepare_changeset(
+        [change],
+        options=CommitOptions(
+            caller_id=str(args.get("actor_id") or ""),
+            description=str(args.get("description") or f"write {path}"),
+        ),
+    )
+    prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
             flock_acquired = time.perf_counter()
-            result = await occ_service.apply_changeset(
-                [change],
-                options=CommitOptions(
-                    caller_id=str(args.get("actor_id") or ""),
-                    description=str(args.get("description") or f"write {path}"),
-                ),
-            )
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("runtime write_file returned an uncommitted changeset")
+            commit_start = time.perf_counter()
+            result = await occ_service.commit_prepared(prepared)
+            commit_elapsed = time.perf_counter() - commit_start
     conflict, status = conflict_and_status(result.files)
     return {
         "success": result.success,
@@ -186,6 +189,8 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         "timings": {
             **result.timings,
             **_gitignore_timings(gitignore),
+            "api.write.prepare_s": prepare_elapsed,
+            "api.write.commit_s": commit_elapsed,
             "api.write.process_gate_wait_s": gate_acquired - gate_start,
             "api.write.flock_wait_s": flock_acquired - flock_start,
             "api.write.total_s": time.perf_counter() - total_start,
@@ -212,21 +217,24 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
             )
         )
     layer_root = Path(str(args["layer_stack_root"]))
+    prepare_start = time.perf_counter()
+    prepared = await occ_service.prepare_changeset(
+        changes,
+        options=CommitOptions(
+            caller_id=str(args.get("actor_id") or ""),
+            description=str(args.get("description") or f"edit {path}"),
+        ),
+    )
+    prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
             flock_acquired = time.perf_counter()
-            result = await occ_service.apply_changeset(
-                changes,
-                options=CommitOptions(
-                    caller_id=str(args.get("actor_id") or ""),
-                    description=str(args.get("description") or f"edit {path}"),
-                ),
-            )
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("runtime edit_file returned an uncommitted changeset")
+            commit_start = time.perf_counter()
+            result = await occ_service.commit_prepared(prepared)
+            commit_elapsed = time.perf_counter() - commit_start
     conflict, status = conflict_and_status(result.files)
     return {
         "success": result.success,
@@ -238,6 +246,8 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
         "timings": {
             **result.timings,
             **_gitignore_timings(gitignore),
+            "api.edit.prepare_s": prepare_elapsed,
+            "api.edit.commit_s": commit_elapsed,
             "api.edit.process_gate_wait_s": gate_acquired - gate_start,
             "api.edit.flock_wait_s": flock_acquired - flock_start,
             "api.edit.total_s": time.perf_counter() - total_start,
@@ -371,22 +381,27 @@ async def _apply_overlay_capture(
     if capture.snapshot_manifest is None:
         raise ValueError("overlay capture is missing its leased manifest")
     layer_root = occ_service_layer_root(occ_service)
+    prepare_start = time.perf_counter()
+    prepared = await occ_service.prepare_changeset(
+        changes,
+        snapshot=capture.snapshot_manifest,
+        options=CommitOptions(caller_id=caller_id, description=description),
+    )
+    prepare_elapsed = time.perf_counter() - prepare_start
     gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
         gate_acquired = time.perf_counter()
         flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
             flock_acquired = time.perf_counter()
-            result = await occ_service.apply_changeset(
-                changes,
-                snapshot=capture.snapshot_manifest,
-                options=CommitOptions(caller_id=caller_id, description=description),
-            )
+            commit_start = time.perf_counter()
+            result = await occ_service.commit_prepared(prepared)
+            commit_elapsed = time.perf_counter() - commit_start
     if out_timings is not None:
+        out_timings["api.shell.prepare_s"] = prepare_elapsed
+        out_timings["api.shell.commit_s"] = commit_elapsed
         out_timings["api.shell.process_gate_wait_s"] = gate_acquired - gate_start
         out_timings["api.shell.flock_wait_s"] = flock_acquired - flock_start
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("runtime shell returned an uncommitted changeset")
     return result
 
 
