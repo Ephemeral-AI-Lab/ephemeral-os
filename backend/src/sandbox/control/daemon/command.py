@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shlex
 import threading
 import time
@@ -106,8 +107,30 @@ async def _call_runtime_server(
     return response
 
 
+# Env vars forwarded from host into the sandbox runtime process so feature
+# flags (e.g. ``EPHEMERALOS_GITIGNORE_BACKEND``) reach the runtime handlers
+# without having to be threaded through every per-call args dict.
+_FORWARDED_RUNTIME_ENV_VARS: tuple[str, ...] = ("EPHEMERALOS_GITIGNORE_BACKEND",)
+
+
+def _runtime_env_prefix() -> str:
+    parts: list[str] = []
+    for name in _FORWARDED_RUNTIME_ENV_VARS:
+        value = os.environ.get(name)
+        if value is None or value == "":
+            continue
+        parts.append(f"{name}={shlex.quote(value)}")
+    if not parts:
+        return ""
+    return " ".join(parts) + " "
+
+
 def _runtime_server_command(raw_payload: str) -> str:
-    return f"sh -c {shlex.quote(_RUNTIME_SERVER_LAUNCHER)} runtime {shlex.quote(raw_payload)}"
+    env_prefix = _runtime_env_prefix()
+    return (
+        f"{env_prefix}sh -c {shlex.quote(_RUNTIME_SERVER_LAUNCHER)} runtime "
+        f"{shlex.quote(raw_payload)}"
+    )
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:

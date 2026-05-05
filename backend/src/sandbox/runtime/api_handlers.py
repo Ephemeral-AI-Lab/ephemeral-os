@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 import fcntl
 import io
-import subprocess
-import tempfile
 import time
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,11 +16,10 @@ from sandbox.api.tool.result_projection import (
     published_paths,
 )
 from sandbox.layer_stack import LayerStackManager
-from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.occ.content.gitignore_oracle import LayerStackGitignoreOracle
 from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
 from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
@@ -100,7 +97,7 @@ async def _shell_with_services(
     *,
     manager: LayerStackManager,
     occ_service: OccService,
-    gitignore: "_LayerStackGitignoreOracle",
+    gitignore: "LayerStackGitignoreOracle",
 ) -> dict[str, object]:
     total_start = time.perf_counter()
     request = _shell_request(args)
@@ -407,17 +404,17 @@ async def _apply_overlay_capture(
 
 def _services(
     args: Mapping[str, object],
-) -> tuple[LayerStackManager, OccService, "_LayerStackGitignoreOracle"]:
+) -> tuple[LayerStackManager, OccService, "LayerStackGitignoreOracle"]:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
     manager = LayerStackManager(layer_stack_root)
-    gitignore = _LayerStackGitignoreOracle(manager)
+    gitignore = LayerStackGitignoreOracle(manager)
     return manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore
 
 
 def _gitignore_timings(
-    gitignore: "_LayerStackGitignoreOracle",
+    gitignore: "LayerStackGitignoreOracle",
 ) -> dict[str, float]:
     return {
         "gitignore.cache_hits": float(gitignore.cache_hits),
@@ -542,62 +539,6 @@ def _int(value: object, *, default: int) -> int:
         return int(value)
     raise TypeError(f"expected integer value, got {type(value).__name__}")
 
-
-class _LayerStackGitignoreOracle(GitignoreOracle):
-    """Evaluate gitignore rules from a materialized layer-stack snapshot."""
-
-    def __init__(self, layer_stack: LayerStackManager) -> None:
-        self._layer_stack = layer_stack
-        self._oracles: dict[int, tuple[tempfile.TemporaryDirectory[str], GitignoreOracle]] = {}
-        self.cache_hits: int = 0
-        self.cache_misses: int = 0
-        self.last_materialize_s: float = 0.0
-        self.last_git_init_s: float = 0.0
-
-    def is_ignored(self, path: str) -> bool:
-        return self.is_ignored_in_snapshot(
-            path,
-            self._layer_stack.read_active_manifest(),
-        )
-
-    def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        snapshot = self._layer_stack.read_active_manifest()
-        return {path for path in paths if self.is_ignored_in_snapshot(path, snapshot)}
-
-    def is_ignored_in_snapshot(self, path: str, snapshot: Manifest) -> bool:
-        return self._oracle_for_snapshot(snapshot).is_ignored(path)
-
-    def _oracle_for_snapshot(self, snapshot: Manifest) -> GitignoreOracle:
-        version = snapshot.version
-        cached = self._oracles.get(version)
-        if cached is not None:
-            self.cache_hits += 1
-            return cached[1]
-
-        self.cache_misses += 1
-        temp_dir = tempfile.TemporaryDirectory(prefix="eos-gitignore-")
-        workspace = Path(temp_dir.name)
-        materialize_start = time.perf_counter()
-        self._layer_stack.materialize(workspace, snapshot)
-        self.last_materialize_s = time.perf_counter() - materialize_start
-        git_init_start = time.perf_counter()
-        _init_git_workspace(workspace)
-        self.last_git_init_s = time.perf_counter() - git_init_start
-        oracle = GitignoreOracle(str(workspace))
-        self._oracles[version] = (temp_dir, oracle)
-        return oracle
-
-
-def _init_git_workspace(workspace: Path) -> None:
-    completed = subprocess.run(
-        ["git", "-C", str(workspace), "init", "-q"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if completed.returncode != 0:
-        stderr = completed.stderr.decode("utf-8", "replace")
-        raise RuntimeError(f"git init for OCC gitignore oracle failed: {stderr!r}")
 
 
 __all__ = [

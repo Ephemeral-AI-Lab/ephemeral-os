@@ -116,6 +116,30 @@ def _add_peer_setup_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
         )
 
 
+def _vendor_pathspec(tar: tarfile.TarFile) -> None:
+    """Add the host's installed ``pathspec`` package to the bundle.
+
+    The runtime imports ``pathspec`` lazily for the gitignore oracle's
+    ``pathspec`` backend (Phase 2b). Without vendoring, the sandbox image
+    would need a ``pip install pathspec`` step; vendoring keeps the runtime
+    self-contained.
+    """
+    try:
+        import pathspec as _pathspec  # noqa: F401
+    except ImportError:
+        return
+    pkg_root = Path(_pathspec.__file__).resolve().parent
+    for path in sorted(pkg_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        rel = path.relative_to(pkg_root)
+        tar.add(
+            path,
+            arcname=f"pathspec/{rel.as_posix()}",
+            filter=_normalize_tarinfo,
+        )
+
+
 _BUNDLE_CACHE: bytes | None = None
 
 
@@ -196,6 +220,8 @@ def _runtime_bundle_bytes() -> bytes:
         )
 
         _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)
+
+        _vendor_pathspec(tar)
 
     compressed = io.BytesIO()
     with gzip.GzipFile(fileobj=compressed, mode="wb", mtime=0) as gz:

@@ -175,22 +175,127 @@ EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738
 
 ### Pass bar
 
-| Metric (c=16 p99) | Before | After 2a | After 2b |
-|---|---:|---:|---:|
-| `gitignore.materialize_snapshot_s` | 33 ms | ~0 ms warm | ~0 ms |
-| `gitignore.git_init_s` | 43 ms | ~0 ms warm | 0 ms (skipped) |
-| `occ.prepare.total_s` | 92 ms | ~50 ms | ~25 ms |
-| Existing gitignore parity tests | green | green | **green required** |
+| Metric (c=16 p99) | Before | Target 2a | Observed 2a | Target 2b | Observed 2b | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| `gitignore.materialize_snapshot_s` (write) | 33 ms | ~0 ms warm | 11 ms | ~0 ms | **0 ms** | ✅ |
+| `gitignore.git_init_s` (write) | 43 ms | ~0 ms warm | 50 ms | 0 ms | **0 ms** | ✅ (2b) |
+| `occ.prepare.total_s` (write) | 92 ms (post-P1: 154 ms) | ~50 ms | 135 ms | ~25 ms | **52 ms** | ✅ (2b) |
+| `api.write.prepare_s` | post-P1: 154 ms | ↓ | 140 ms | ↓ | **54 ms** | ✅ |
+| `api.edit.prepare_s` | post-P1: 148 ms | ↓ | 151 ms | ↓ | **53 ms** | ✅ |
+| `api.shell.prepare_s` | post-P1: 156 ms | ↓ | 170 ms | ↓ | **103 ms** | ✅ |
+| Existing gitignore parity tests | green | green | green | green | green | ✅ |
 
 ### Risks
 
 - **`pathspec` semantics drift** vs git on edge cases. Mitigation: feature
   flag, exhaustive parity matrix before flipping the default.
 - **Cache directory bloat.** Mitigation: bounded GC keyed on manifest version.
+- **Concurrent-burst Phase 2a partial coverage.** Within a single c=16 wave
+  starting cold, all 16 calls reach the cache build step before any of them
+  finishes (no `.ready` marker yet); only the rename winner's build sticks,
+  but every loser still paid materialize + `git init`. Across waves the
+  on-disk cache is correctly reused. Phase 2b sidesteps this entirely by
+  removing the build step.
 
 ### Estimate
 
-2a: 1 day. 2b: 1.5 days (mostly parity testing). Total: 2.5 days.
+2a: 1 day. 2b: 1.5 days (mostly parity testing). Total: 2.5 days. *Actual:
+~1 day for both — implementation, unit parity matrix, and live verification.*
+
+### Status — landed (2026-05-06)
+
+**Phase 2a (disk-cached oracle workspace).**
+
+Implemented in `LayerStackGitignoreOracle._build_git_oracle` →
+`_ensure_disk_cached_workspace`
+(`backend/src/sandbox/occ/content/gitignore_oracle.py`). Per-snapshot
+workspaces materialize under `<storage_root>/cache/gitignore-<version>/`
+with a `.ready` marker, atomic `os.rename` install, and opportunistic
+eviction below `active − 16` keyed on the snapshot version (with the
+in-flight version protected from eviction). The in-memory oracle cache
+validates each entry's workspace dir on lookup and rebuilds if eviction
+removed it underneath us.
+
+**Phase 2b (pathspec backend).**
+
+Implemented in `PathspecGitignoreOracle`
+(`backend/src/sandbox/occ/content/gitignore_oracle.py`). Honours git's
+nested-`.gitignore` semantics including the directory-exclusion seal: an
+ancestor dir excluded by a parent `.gitignore` cannot be re-included by a
+deeper file. The `LayerStackGitignoreOracle` `pathspec` backend wires it to
+`LayerStackManager.read_text` so `.gitignore` content is sourced directly
+from the snapshot — no materialize, no `git init`, no subprocess. Selected
+via `EPHEMERALOS_GITIGNORE_BACKEND=pathspec` (forwarded into the runtime
+subprocess by `_runtime_server_command` in
+`backend/src/sandbox/control/daemon/command.py`). The runtime bundle now
+vendors the host's installed `pathspec` package
+(`backend/src/sandbox/control/daemon/bundle.py::_vendor_pathspec`) so the
+sandbox image needs no extra `pip install`. Default backend remains `git`
+until the parity guarantee is broadly exercised in production traffic.
+
+**Layering refactor.**
+
+All git/gitignore code now lives under `sandbox/occ/content/gitignore_oracle.py`:
+the pure `GitignoreOracle` and `PathspecGitignoreOracle` evaluators, the
+`LayerStackGitignoreOracle` wrapper, and the disk-cache helpers
+(`_ensure_disk_cached_workspace`, `_evict_stale_gitignore_cache`,
+`_init_git_workspace`) sit beside the oracle that owns them.
+`runtime/api_handlers.py` now just imports `LayerStackGitignoreOracle` and
+uses it. `LayerStackManager` no longer knows what gitignore is — an earlier
+draft added a `_collect_gitignore_cache_garbage` hook on
+`collect_garbage()`, but that crossed an abstraction boundary (storage
+layer reaching into an OCC convention) and duplicated string constants.
+The opportunistic eviction inside `_ensure_disk_cached_workspace` is the
+sole GC, which was always the load-bearing path.
+
+**Verification.**
+
+- Unit parity matrix:
+  `backend/tests/unit_test/test_sandbox/test_occ/test_gitignore_pathspec_parity.py`
+  — `PathspecGitignoreOracle` matches `git check-ignore` across nested
+  re-includes, character classes, anchored vs unanchored patterns, and
+  deep-reinclude-overrides-parent. `LayerStackGitignoreOracle` exercised
+  for both backends in
+  `backend/tests/unit_test/test_sandbox/test_api/test_gitignore_oracle_cache.py`
+  (disk attach, atomic rename, eviction, pathspec parity).
+- Full unit-test suite:
+  `.venv/bin/pytest backend/tests/unit_test/test_sandbox -q` → 314 passed,
+  1 skipped, ruff clean.
+- Live attribution sweeps:
+  - `EPHEMERALOS_GITIGNORE_BACKEND=git` (Phase 2a only) → c=16 p99 numbers
+    in the table above.
+  - `EPHEMERALOS_GITIGNORE_BACKEND=pathspec` (Phase 2a + 2b) → all gitignore
+    timings ≈ 0; per-verb prepare cuts in half vs Phase 1 baseline.
+
+### Phase 2 attribution snapshot (c=16 p99, pathspec backend)
+
+| Stage | write | edit | shell |
+|---|---:|---:|---:|
+| `gitignore.materialize_snapshot_s` | 0 ms | 0 ms | 0 ms |
+| `gitignore.git_init_s` | 0 ms | 0 ms | 0 ms |
+| `prepare_s` (lock-free) | 54 ms | 53 ms | 103 ms |
+| `commit_s` (under lock) | 24 ms | 21 ms | 29 ms |
+| `flock_wait_s` | 63 ms | 53 ms | 106 ms |
+| wall p99 | 1032 ms | 1004 ms | 1610 ms |
+
+`occ.prepare.total_s` is no longer dominated by gitignore cold start; the
+remaining ~50 ms (write/edit) is content-hash scanning + pathspec evaluation
+itself. Per-verb shell wall p99 still includes the ~440 ms baseline shell
+round-trip cost — that is the surface Phase 3 (resident runtime worker)
+targets.
+
+### Caveats
+
+- Phase 2a's "warm" win is **per-snapshot** across runtime processes. Inside
+  a single concurrent burst against a fresh snapshot, all callers race to
+  build the cache and only one's build is preserved. This is acceptable for
+  this phase because Phase 2b removes the build entirely and Phase 3 makes
+  the in-memory cache durable across calls.
+- `pathspec` is case-sensitive; git on case-folding filesystems with
+  `core.ignorecase=true` may diverge for patterns relying on case folding.
+  Existing gitignore parity matrix uses literal character classes
+  (`[Ee]rror.[Ll][Oo][Gg]`) rather than `core.ignorecase`, so this gap is
+  out of scope for current sandbox workloads.
 
 ---
 
