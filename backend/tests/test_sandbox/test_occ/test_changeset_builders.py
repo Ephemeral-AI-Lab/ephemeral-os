@@ -50,7 +50,7 @@ def test_api_delete_builder_tags_api_source() -> None:
     assert change.base_hash == "base"
 
 
-def test_shell_builders_defer_base_hash_to_preparation() -> None:
+def test_overlay_builders_defer_base_hash_to_preparation() -> None:
     write = build_overlay_write_change(path="src/a.py", final_content=b"new")
     delete = build_overlay_delete_change(path="src/gone.py")
 
