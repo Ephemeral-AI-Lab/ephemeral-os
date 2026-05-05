@@ -3,7 +3,7 @@
 - Opt-in by directory: ``pyproject.toml``'s ``norecursedirs`` keeps the
   default ``pytest backend/tests`` invocation from walking into this
   package. Run with ``pytest backend/tests/live_e2e_test``.
-- Re-exports the shared fixtures from ``_harness/sandbox_fixture.py``.
+- Re-exports the shared fixtures from ``sandbox/_harness/sandbox_fixture.py``.
 - Enforces the sandbox import fence across the suite: live tests may use the
   public sandbox API or direct in-sandbox probes, but must not import
   ``sandbox.layer_stack``, ``sandbox.overlay``, or ``sandbox.occ`` directly.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from ._harness.sandbox_fixture import (  # noqa: F401
+from .sandbox._harness.sandbox_fixture import (  # noqa: F401
     integrated_sandbox,
     live_sandbox,
     overlay_sandbox,

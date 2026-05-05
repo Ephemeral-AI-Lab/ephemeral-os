@@ -9,9 +9,9 @@ sandbox. The old live `occ/` suite, the local layer-stack slice, and the overlay
 upper-capture round-trip were removed because they exercised local Python state
 in the pytest process instead of the sandbox runtime guardrails.
 
-- **Overlay syscall slice:** `overlay/` keeps direct in-sandbox `mount(2)`,
+- **Overlay syscall slice:** `sandbox/overlay/` keeps direct in-sandbox `mount(2)`,
   latency, read, concurrent-mount, and heavy-write probes via `raw_exec`.
-- **Integrated slice:** `layer_stack_overlay_occ/` now has an active public-tool
+- **Integrated slice:** `sandbox/layer_stack_overlay_occ/` now has an active public-tool
   smoke for sandbox-local write/edit/shell/read coverage. Heavier race,
   recovery, and load-profile cases remain pending.
 
@@ -35,7 +35,7 @@ about 48 s. The skips are pending integrated concurrency/load/failure tests.
 
 | Bucket | Files | Tests | Blocker |
 |---|---|---:|---|
-| `layer_stack_overlay_occ/*` | 5 | 17 | concurrency/load/failure helpers over public sandbox runtime tools |
+| `sandbox/layer_stack_overlay_occ/*` | 5 | 17 | concurrency/load/failure helpers over public sandbox runtime tools |
 
 The integrated suite is the replacement target for OCC/overlay live coverage.
 Per the import fence in `conftest.py`, live-suite files may import public
@@ -48,8 +48,8 @@ The suite is opt-in by directory:
 
 ```bash
 .venv/bin/pytest backend/tests/live_e2e_test
-.venv/bin/pytest backend/tests/live_e2e_test/overlay
-.venv/bin/pytest backend/tests/live_e2e_test/layer_stack_overlay_occ
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/overlay
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ
 .venv/bin/pytest backend/tests/live_e2e_test -v -rs
 ```
 
