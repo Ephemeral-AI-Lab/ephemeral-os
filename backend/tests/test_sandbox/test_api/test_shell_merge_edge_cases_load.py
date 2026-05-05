@@ -23,8 +23,8 @@ from _load_helpers import (
     api_load_env as _shared_api_load_env,
 )
 from sandbox.api import EditFileRequest, SearchReplaceEdit, ShellRequest
-from sandbox.api.edit import edit_file
-from sandbox.api.shell import shell
+from sandbox.api.tool.edit import edit_file
+from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerChange
 from sandbox.occ.client import register_occ_service
 from sandbox.occ.service import OccService

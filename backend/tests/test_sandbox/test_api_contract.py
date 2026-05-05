@@ -19,36 +19,40 @@ from sandbox.api import (
 )
 
 _API_ROOT = Path(sandbox_api.__file__).parent
-_EXPECTED_API_ROOT_MODULES = {
+_EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
-    "edit.py",
-    "lifecycle.py",
-    "raw_exec.py",
-    "read.py",
-    "shell.py",
-    "write.py",
+    "status",
+    "tool",
+    "utils",
 }
 _MODEL_ONLY_MODULES = {
     "__init__.py",
+    "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "read.py": {"sandbox.api.raw_exec"},
-    "write.py": {
+    "tool/read.py": {"sandbox.api.tool.raw_exec"},
+    "tool/write.py": {
+        "sandbox.api.tool.result_projection",
         "sandbox.occ.changeset.builders",
         "sandbox.occ.client",
     },
-    "edit.py": {
+    "tool/edit.py": {
+        "sandbox.api.tool.result_projection",
         "sandbox.occ.changeset.builders",
         "sandbox.occ.changeset.types",
         "sandbox.occ.client",
     },
-    "shell.py": {
-        "sandbox.api.utils.changeset_projection",
+    "tool/shell.py": {
+        "sandbox.api.tool.result_projection",
         "sandbox.occ.client",
+        "sandbox.occ.service",
         "sandbox.overlay.client",
+        "sandbox.overlay.runner.snapshot_overlay_runner",
+        "sandbox.runtime.async_bridge",
         "sandbox.runtime.overlay_shell.pipeline",
+        "sandbox.runtime.overlay_shell.transaction",
     },
-    "lifecycle.py": {
+    "status/__init__.py": {
         "sandbox.control.ops.recovery",
         "sandbox.control.ops.setup",
         "sandbox.providers.registry",
@@ -76,30 +80,44 @@ def _imported_modules(source: str) -> set[str]:
     return names
 
 
-def test_api_root_keeps_only_public_verbs() -> None:
-    assert {path.name for path in _API_ROOT.glob("*.py")} == _EXPECTED_API_ROOT_MODULES
+def test_api_root_keeps_public_surface_grouped_by_role() -> None:
+    assert {
+        path.name
+        for path in _API_ROOT.iterdir()
+        if path.name != "__pycache__" and not path.name.startswith(".")
+    } == _EXPECTED_API_ROOT_ENTRIES
 
 
-@pytest.mark.parametrize("module_path", sorted(_API_ROOT.glob("*.py")))
+@pytest.mark.parametrize(
+    "module_path",
+    sorted(
+        [
+            *_API_ROOT.glob("*.py"),
+            *(_API_ROOT / "tool").glob("*.py"),
+            _API_ROOT / "status" / "__init__.py",
+        ]
+    ),
+)
 def test_api_import_boundaries(module_path: Path) -> None:
+    module_id = module_path.relative_to(_API_ROOT).as_posix()
     source = module_path.read_text(encoding="utf-8")
     imported = _imported_modules(source)
-    if module_path.name in _MODEL_ONLY_MODULES:
+    if module_id in _MODEL_ONLY_MODULES:
         for name in imported:
             for forbidden in _FORBIDDEN_FOR_MODELS:
                 assert not (
                     name == forbidden.rstrip(".") or name.startswith(forbidden)
-                ), f"{module_path.name} imports forbidden module {name!r}"
+                ), f"{module_id} imports forbidden module {name!r}"
         return
 
-    allowed = _PUBLIC_VERB_IMPORT_ALLOWLIST.get(module_path.name)
+    allowed = _PUBLIC_VERB_IMPORT_ALLOWLIST.get(module_id)
     if allowed is None:
         return
     for name in imported:
         if name.startswith("sandbox.api"):
             continue
         assert name in allowed or name.split(".")[0] not in {"sandbox", "tools"}, (
-            f"{module_path.name} imports non-public dependency {name!r}"
+            f"{module_id} imports non-public dependency {name!r}"
         )
 
 

@@ -6,9 +6,9 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+from sandbox.overlay.capture.types import OverlayCapture
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 
 
 class AsyncBarrier:
@@ -40,7 +40,7 @@ class BarrierRuntimeInvoker:
         *,
         request: OverlayShellRequest,
         manifest: Any,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         await self._barrier.wait()
         return await self._inner.invoke(request=request, manifest=manifest)
 

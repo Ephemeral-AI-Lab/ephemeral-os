@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 
 from sandbox.api import RequestActor, ShellRequest, ShellResult
-from sandbox.api.shell import shell
+from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.content.hashing import ContentHasher
@@ -28,7 +28,7 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     SnapshotOverlayRunner,
 )
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.runtime.overlay_shell.result_envelope import OverlayCapture
 
 
 class _Gitignore:
@@ -51,7 +51,7 @@ class _BlockingInvoker:
         *,
         request: OverlayShellRequest,
         manifest,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         self.snapshot_version = manifest.version
         self.started.set()
         if not self.released.wait(timeout=10):

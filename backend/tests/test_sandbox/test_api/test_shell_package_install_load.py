@@ -31,7 +31,7 @@ from _load_helpers import (
     api_load_env as _shared_api_load_env,
 )
 from sandbox.api import ShellRequest
-from sandbox.api.shell import shell
+from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerChange
 from sandbox.occ.content.hashing import ContentHasher
 

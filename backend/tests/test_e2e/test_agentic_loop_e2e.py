@@ -149,37 +149,8 @@ async def test_multiple_tools_different_purposes(sandbox_id):
 
 
 # ===========================================================================
-# AREA 2: Skill Loading & Instruction Following
-#
-# NOTE: EvalAgent uses Daytona tools directly and does not register a
-# load_skill tool. Tests that relied on load_skill being available via
-# the HTTP agent creation path are skipped. Tests that verify instruction
-# following via system_prompt injection are preserved.
+# AREA 2: Skill Instruction Following
 # ===========================================================================
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="load_skill tool not available via EvalAgent — requires HTTP agent creation path"
-)
-async def test_skill_load_skill_invoked(sandbox_id):
-    """Agent should invoke load_skill tool when given a skill-dependent task.
-
-    Skipped: EvalAgent registers Daytona tools only; load_skill is not available.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="load_skill tool not available via EvalAgent — requires HTTP agent creation path"
-)
-async def test_skill_instructions_followed_exactly(sandbox_id):
-    """Agent should follow skill instructions with exact string matching.
-
-    Skipped: EvalAgent registers Daytona tools only; load_skill is not available.
-    """
-    pass
 
 
 @pytest.mark.asyncio
@@ -422,23 +393,3 @@ async def test_agent_completes_without_summarizing_early(sandbox_id):
     assert len(write_calls) >= 2, (
         f"Should perform 2 write actions. Got {len(write_calls)}. Tools: {result.tool_names}"
     )
-
-
-# ===========================================================================
-# AREA 4: Integration - All Three Test Areas Combined
-# ===========================================================================
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="load_skill tool not available via EvalAgent — requires HTTP agent creation path"
-)
-async def test_full_integration_tool_accuracy_plus_skill_following(sandbox_id):
-    """Combines: correct tool selection + skill instruction following + task completion.
-
-    Skipped: This test required load_skill to verify skill loading alongside
-    tool accuracy. Since EvalAgent does not register load_skill, this integrated
-    test cannot verify the skill-loading portion. The tool accuracy and task
-    completion aspects are covered by the other tests in this module.
-    """
-    pass

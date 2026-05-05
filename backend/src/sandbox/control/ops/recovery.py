@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sandbox.api.raw_exec import raw_exec
+from sandbox.api.tool.raw_exec import raw_exec
 from sandbox.control.ops.git import ensure_git
 from sandbox.control.ops.setup import maybe_run_eager_runtime_bootstrap
 from sandbox.providers.registry import get_adapter

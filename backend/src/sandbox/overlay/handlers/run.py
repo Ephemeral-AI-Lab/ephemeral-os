@@ -6,21 +6,21 @@ from collections.abc import Mapping
 from typing import Any
 
 from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.overlay.capture.types import OverlayCapture
 from sandbox.overlay.runner.snapshot_overlay_runner import (
     SnapshotOverlayRunner,
     overlay_shell_request_from_dict,
 )
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 
 
 async def handle(args: dict[str, Any]) -> dict[str, Any]:
     if "layer_stack_root" not in args:
         raise ValueError("overlay.run requires layer_stack_root")
-    envelope = await _handle_snapshot_overlay(args)
-    return envelope.to_dict()
+    capture = await _handle_snapshot_overlay(args)
+    return capture.to_dict()
 
 
-async def _handle_snapshot_overlay(args: dict[str, Any]) -> RuntimeResultEnvelope:
+async def _handle_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
     manager = LayerStackManager(str(args["layer_stack_root"]))
     runner = SnapshotOverlayRunner(manager)
     request = overlay_shell_request_from_dict(_snapshot_request_payload(args))

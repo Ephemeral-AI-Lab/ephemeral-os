@@ -111,7 +111,7 @@ async def _raw_exec(
     cwd: str | None = None,
     timeout: int | None = None,
 ) -> RawExecResult:
-    from sandbox.api.raw_exec import raw_exec
+    from sandbox.api.tool.raw_exec import raw_exec
 
     return await raw_exec(sandbox_id, command, cwd=cwd, timeout=timeout)
 

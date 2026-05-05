@@ -3,7 +3,7 @@
 The bundle is a tar.gz containing the project modules needed to import
 the deployed runtime server and setup orchestrator contract inside a sandbox.
 This module is host-side bootstrap code;
-bundle upload goes through ``sandbox.api.raw_exec`` by sandbox id.
+bundle upload goes through ``sandbox.api.tool.raw_exec`` by sandbox id.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Protocol
 
 from sandbox.api import RawExecResult
-from sandbox.api.raw_exec import raw_exec
+from sandbox.api.tool.raw_exec import raw_exec
 
 __all__ = [
     "BUNDLE_REMOTE_DIR",
@@ -212,7 +212,7 @@ def bundle_hash(bundle: bytes | None = None) -> str:
 
 
 async def ensure_runtime_uploaded(sandbox_id: str) -> str:
-    """Upload the runtime bundle through ``sandbox.api.raw_exec`` if needed."""
+    """Upload the runtime bundle through ``sandbox.api.tool.raw_exec`` if needed."""
     return await _ensure_runtime_uploaded_with_exec(sandbox_id, raw_exec)
 
 

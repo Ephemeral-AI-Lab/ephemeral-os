@@ -21,7 +21,7 @@ def test_ensure_git_skips_when_git_present(monkeypatch: pytest.MonkeyPatch) -> N
         calls.append((sandbox_id, command, timeout))
         return RawExecResult(exit_code=0, stdout="ok")
 
-    monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+    monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
     ensure_git("sb-123")
 
     assert calls == [
@@ -43,7 +43,7 @@ def test_ensure_git_installs_when_missing(monkeypatch: pytest.MonkeyPatch) -> No
             return RawExecResult(exit_code=0, stdout="missing")
         return RawExecResult(exit_code=0, stdout="installed")
 
-    monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+    monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
     ensure_git("sb-123")
 
     assert len(calls) == 2
@@ -58,7 +58,7 @@ def test_ensure_git_no_op_for_empty_sandbox_id(monkeypatch: pytest.MonkeyPatch) 
         called["value"] = True
         return RawExecResult(exit_code=0, stdout="")
 
-    monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+    monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
     ensure_git("")
 
     assert called["value"] is False
@@ -73,5 +73,5 @@ def test_ensure_git_swallows_install_failure(monkeypatch: pytest.MonkeyPatch) ->
             return RawExecResult(exit_code=0, stdout="missing")
         return RawExecResult(exit_code=1, stdout="", stderr="apt failed")
 
-    monkeypatch.setattr("sandbox.api.raw_exec.raw_exec", fake_raw_exec)
+    monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
     ensure_git("sb-123")  # Must not raise.

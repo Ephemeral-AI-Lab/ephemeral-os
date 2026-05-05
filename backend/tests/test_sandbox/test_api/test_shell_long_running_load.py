@@ -20,7 +20,7 @@ from _load_helpers import (
     api_load_env as _shared_api_load_env,
 )
 from sandbox.api import ShellRequest
-from sandbox.api.shell import shell
+from sandbox.api.tool.shell import shell
 from sandbox.overlay.client import OverlayClient, register_overlay_client
 from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
 

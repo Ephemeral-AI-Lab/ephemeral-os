@@ -1,7 +1,7 @@
 """Provider-neutral ``ensure_git`` operation.
 
 Body lifted from ``SandboxProxy.ensure_git`` and rewritten to use
-:func:`sandbox.api.raw_exec.raw_exec` instead of the SDK's ``process.exec``.
+:func:`sandbox.api.tool.raw_exec.raw_exec` instead of the SDK's ``process.exec``.
 No SDK or daytona-package imports.
 """
 
@@ -54,7 +54,7 @@ def ensure_git(sandbox_id: str) -> None:
     if not sandbox_id:
         return
     try:
-        from sandbox.api.raw_exec import raw_exec
+        from sandbox.api.tool.raw_exec import raw_exec
         from sandbox.runtime.async_bridge import run_sync
 
         logger.info("ensure_git(%s): probe starting", sandbox_id)

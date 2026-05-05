@@ -1,11 +1,11 @@
-"""Tests for ``sandbox.api.shell``."""
+"""Tests for ``sandbox.api.tool.shell``."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from sandbox.api import RequestActor, ShellRequest
-from sandbox.api.shell import shell
+from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerStackManager
 from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.service import OccService

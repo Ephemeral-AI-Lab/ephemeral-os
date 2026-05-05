@@ -1,9 +1,9 @@
-"""Tests for ``sandbox.api.read``."""
+"""Tests for ``sandbox.api.tool.read``."""
 
 from __future__ import annotations
 
 from sandbox.api import RawExecResult, ReadFileRequest, RequestActor
-import sandbox.api.read as read_module
+import sandbox.api.tool.read as read_module
 
 
 async def test_read_file_uses_raw_exec_and_maps_content(monkeypatch) -> None:

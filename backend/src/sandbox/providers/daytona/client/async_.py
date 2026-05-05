@@ -52,9 +52,9 @@ async def _attempt_sandbox_recovery(sandbox_id: str, *, cause: Exception | None)
     try:
         # Lazy import keeps sandbox.api -> sandbox.providers.daytona.client.async_
         # cycle out of module-load time.
-        from sandbox.api import lifecycle as sb_lifecycle
+        from sandbox.api import status as sb_status
 
-        await run_sync_in_executor(sb_lifecycle.ensure_sandbox_running, sandbox_id)
+        await run_sync_in_executor(sb_status.ensure_sandbox_running, sandbox_id)
         logger.warning("Recovered sandbox %s after async fetch failure", sandbox_id)
     except Exception:
         logger.debug(

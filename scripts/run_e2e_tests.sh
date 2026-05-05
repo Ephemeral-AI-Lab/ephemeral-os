@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Run e2e live tests.
+# Run curated e2e tests.
 # Usage: ./scripts/run_e2e_tests.sh <name>    # run a specific test file
-#        ./scripts/run_e2e_tests.sh all        # run all live e2e tests
+#        ./scripts/run_e2e_tests.sh all        # run curated live smoke tests
 #
 # Examples:
 #   ./scripts/run_e2e_tests.sh anthropic_live
@@ -18,51 +18,33 @@ COMMON_OPTS=(-o addopts= -v -s --tb=short)
 LIVE_OPTS=(-m live --log-cli-level=INFO)
 MOCK_OPTS=(-m "e2e and not live" --log-cli-level=INFO)
 
-# Live tests (hit real APIs via EvalAgent/DB registry)
+# Live smoke tests (hit real APIs / Daytona, but avoid high-cost model evals)
 LIVE_TESTS=(
     test_anthropic_live.py              # Anthropic client streaming protocol
-    test_tool_selection_eval.py         # LLM tool selection accuracy
-    test_background_live.py             # Background task execution
-    test_background_reminder_live.py    # Ephemeral background reminders
-    test_background_context_live.py     # Context pressure with background tasks
-    test_background_autonomy_live.py    # LLM autonomous background decisions
-    test_bg_high_concurrency_live.py    # High-concurrency bg+fg mixing
-    test_bg_task_lifecycle_live.py      # Task lifecycle: progress, cancel, notify
-    test_bg_idle_wait_live.py           # Idle/wait scenarios for bg tasks
-    test_bg_mixed_chaos_live.py         # Mixed chaos: errors, relaunch, pipelines
     test_bg_physical_cancel_live.py     # Physical process kill on cancel
-    test_bg_wait_tool_live.py           # Wait tool: blocking, timeout, wait_for_all
-    test_bg_progress_output_live.py     # Progress checks, last_n_lines, output
-    test_bg_autonomous_decisions_live.py # Autonomous decisions based on bg results
-    test_bg_parallel_tasks_live.py      # Parallel bg/fg task orchestration
-    test_bg_idle_patterns_live.py       # Complex idle and wait patterns
-    test_bg_supernova_live.py           # Supernova: debug-fix-retest cycles
-    test_bg_long_suite_live.py          # Long suite with early cancel iterations
-    test_bg_live_tail.py                # Live progress tail via on_progress_line
-    test_subagent_complex_live.py       # Complex subagent fan-out/refinement/recovery
-    test_eval_persistence_live.py       # EvalAgent persistence parity
     test_live_api.py                    # Live API integration
-    test_live_full_run.py               # Complete agent run with metrics
-    test_live_sandbox_agents.py         # Sandbox tool calling
-    test_live_agent_react_landing.py    # React page agent
-    test_live_nextjs_sandbox.py         # Next.js sandbox agent
-    test_live_minimax_comprehensive.py  # MiniMax comprehensive tests
+    test_live_daytona_opaque_dir_overlay.py # Overlay opaque-dir regression
     test_live_daytona_tool_occ_calls.py # Direct daytona_write_file/edit_file/codeact OCC tests
+    test_tool_cancel_e2e.py             # Tool cancellation
+)
+
+# Model-behavior evals are useful before prompt/tool-contract changes, but too
+# expensive and stochastic for the default live smoke batch.
+EVAL_TESTS=(
+    test_tool_selection_eval.py         # LLM tool selection accuracy
+    test_agentic_loop_e2e.py            # Agentic loop tool behavior
+)
+
+# Long-running workflow checks are opt-in.
+STRESS_TESTS=(
+    test_bg_supernova_live.py           # Debug-fix-retest cycles
 )
 
 # Mock/unit tests (no real API needed)
 MOCK_TESTS=(
     test_chat_flow.py                   # Chat SSE event flow
     test_agent_toolkits_skills.py       # Toolkit/skill registration
-    test_compaction.py                  # Context compaction
-    test_code_intelligence.py           # Code intelligence service
     test_daytona_toolkit_comprehensive.py # Daytona toolkit unit tests
-    test_multi_tool_e2e.py              # Multi-tool execution
-    test_tool_cancel_e2e.py             # Tool cancellation
-    test_token_tracker_e2e.py           # Token tracking persistence/API
-    test_minimax_agent.py               # MiniMax agent (server-based)
-    test_anthropic_native_agent.py      # Anthropic native agent (server-based)
-    test_agentic_loop_e2e.py            # Agentic loop (server-based)
 )
 
 _run_batch() {
@@ -78,12 +60,18 @@ _run_batch() {
     fi
 
     for test_file in "${tests[@]}"; do
+        local target="$E2E_DIR/$test_file"
+        if [[ ! -e "$target" ]]; then
+            echo "Missing test target: $target" >&2
+            return 1
+        fi
+
         echo ""
         echo "================================================================"
         echo "  Running: $test_file"
         echo "================================================================"
 
-        if $PYTEST "$E2E_DIR/$test_file" "${COMMON_OPTS[@]}" "${mode_opts[@]}"; then
+        if $PYTEST "$target" "${COMMON_OPTS[@]}" "${mode_opts[@]}"; then
             ((passed++))
         else
             exit_code=$?
@@ -114,8 +102,10 @@ if [[ $# -eq 0 ]]; then
     echo "Usage: $0 <test_name|command>"
     echo ""
     echo "Commands:"
-    echo "  all       Run all live e2e tests"
+    echo "  all       Run curated live smoke tests"
     echo "  mock      Run all mock/unit e2e tests"
+    echo "  eval      Run model-behavior live evals"
+    echo "  stress    Run long-running live workflows"
     echo "  list      List all available tests"
     echo ""
     echo "Live tests:"
@@ -127,6 +117,16 @@ if [[ $# -eq 0 ]]; then
     for t in "${MOCK_TESTS[@]}"; do
         echo "  ${t%.py}"
     done
+    echo ""
+    echo "Model eval tests:"
+    for t in "${EVAL_TESTS[@]}"; do
+        echo "  ${t%.py}"
+    done
+    echo ""
+    echo "Stress tests:"
+    for t in "${STRESS_TESTS[@]}"; do
+        echo "  ${t%.py}"
+    done
     exit 0
 fi
 
@@ -134,11 +134,17 @@ NAME="$1"
 
 case "$NAME" in
     list)
-        echo "Live tests (require API credentials):"
+        echo "Live smoke tests (require API credentials):"
         for t in "${LIVE_TESTS[@]}"; do echo "  ${t%.py}"; done
         echo ""
         echo "Mock tests (no API needed):"
         for t in "${MOCK_TESTS[@]}"; do echo "  ${t%.py}"; done
+        echo ""
+        echo "Model eval tests (require API credentials):"
+        for t in "${EVAL_TESTS[@]}"; do echo "  ${t%.py}"; done
+        echo ""
+        echo "Stress tests (require API credentials):"
+        for t in "${STRESS_TESTS[@]}"; do echo "  ${t%.py}"; done
         exit 0
         ;;
     all)
@@ -149,29 +155,43 @@ case "$NAME" in
         _run_batch "Mock E2E" "mock" "${MOCK_TESTS[@]}"
         exit $?
         ;;
+    eval)
+        _run_batch "Model Eval E2E" "live" "${EVAL_TESTS[@]}"
+        exit $?
+        ;;
+    stress)
+        _run_batch "Stress E2E" "live" "${STRESS_TESTS[@]}"
+        exit $?
+        ;;
 esac
 
 # Find matching test file across both lists
 MATCH=""
 MATCH_MODE=""
-for t in "${LIVE_TESTS[@]}" "${MOCK_TESTS[@]}"; do
+for t in "${LIVE_TESTS[@]}" "${EVAL_TESTS[@]}" "${STRESS_TESTS[@]}"; do
     if [[ "$t" == *"$NAME"* ]]; then
         MATCH="$t"
-        for live_t in "${LIVE_TESTS[@]}"; do
-            if [[ "$live_t" == "$t" ]]; then
-                MATCH_MODE="live"
-                break
-            fi
-        done
-        if [[ -z "$MATCH_MODE" ]]; then
-            MATCH_MODE="mock"
-        fi
+        MATCH_MODE="live"
         break
     fi
 done
+if [[ -z "$MATCH" ]]; then
+    for t in "${MOCK_TESTS[@]}"; do
+        if [[ "$t" == *"$NAME"* ]]; then
+            MATCH="$t"
+            MATCH_MODE="mock"
+            break
+        fi
+    done
+fi
 
 if [[ -z "$MATCH" ]]; then
     echo "No test matching '$NAME'. Run '$0 list' to see available tests."
+    exit 1
+fi
+
+if [[ ! -e "$E2E_DIR/$MATCH" ]]; then
+    echo "Missing test target: $E2E_DIR/$MATCH" >&2
     exit 1
 fi
 

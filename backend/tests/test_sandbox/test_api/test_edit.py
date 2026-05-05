@@ -1,8 +1,8 @@
-"""Tests for ``sandbox.api.edit``."""
+"""Tests for ``sandbox.api.tool.edit``."""
 
 from __future__ import annotations
 
-from sandbox.api.edit import edit_file
+from sandbox.api.tool.edit import edit_file
 from sandbox.api import (
     EditFileRequest,
     RequestActor,

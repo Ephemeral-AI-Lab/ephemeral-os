@@ -14,13 +14,13 @@ import pytest
 SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
 _TOOL_ALLOWED = {
     "sandbox.api",
-    "sandbox.api.edit",
-    "sandbox.api.read",
-    "sandbox.api.shell",
-    "sandbox.api.write",
+    "sandbox.api.tool.edit",
+    "sandbox.api.tool.read",
+    "sandbox.api.tool.shell",
+    "sandbox.api.tool.write",
 }
 _TOOL_FORBIDDEN_PREFIXES = (
-    "sandbox.api.raw_exec",
+    "sandbox.api.tool.raw_exec",
     "sandbox.providers",
     "sandbox.occ",
     "sandbox.overlay",
@@ -80,7 +80,7 @@ def test_runtime_code_does_not_import_daytona_provider_modules() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Provider-agnostic lifecycle fence (locks the seam from the plan)
+# Provider-agnostic status/control fence (locks the seam from the plan)
 # ---------------------------------------------------------------------------
 
 
@@ -131,14 +131,14 @@ def test_control_runtime_api_do_not_import_daytona_sdk() -> None:
     )
 
 
-def test_control_runtime_api_lifecycle_do_not_import_daytona_provider() -> None:
-    """The plan's locked seam: control/, runtime/, and api/lifecycle.py are
+def test_control_runtime_api_status_do_not_import_daytona_provider() -> None:
+    """The locked seam: control/, runtime/, and api/status are
     provider-neutral — none of them imports sandbox.providers.daytona.*."""
     offenders: list[str] = []
     for path in (
         SRC_ROOT / "sandbox" / "control",
         SRC_ROOT / "sandbox" / "runtime",
-        SRC_ROOT / "sandbox" / "api" / "lifecycle.py",
+        SRC_ROOT / "sandbox" / "api" / "status",
     ):
         if path.is_file():
             modules = [path]
@@ -154,13 +154,13 @@ def test_control_runtime_api_lifecycle_do_not_import_daytona_provider() -> None:
                     )
 
     assert offenders == [], (
-        "control/, runtime/, and api/lifecycle.py must not import "
+        "control/, runtime/, and api/status must not import "
         f"sandbox.providers.daytona.*: {offenders}"
     )
 
 
 def test_no_sandbox_lifecycle_package_remains() -> None:
-    """sandbox.lifecycle is gone — the name is reserved for sandbox.api.lifecycle."""
+    """sandbox.lifecycle is gone; sandbox state/control lives in sandbox.api.status."""
     assert _find_spec_or_none("sandbox.lifecycle") is None
     assert _find_spec_or_none("sandbox.lifecycle.factory") is None
     assert _find_spec_or_none("sandbox.lifecycle.workspace") is None

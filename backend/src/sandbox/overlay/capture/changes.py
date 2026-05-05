@@ -1,4 +1,4 @@
-"""Raw upperdir change values emitted before OCC routing."""
+"""Policy-blind path changes captured from a snapshot overlay."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from typing import Any, Literal
 
 from sandbox.layer_stack.changes import normalize_layer_path
 
-UpperChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
+OverlayPathChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
 
 
 @dataclass(frozen=True)
-class UpperChange:
+class OverlayPathChange:
     path: str
-    kind: UpperChangeKind
+    kind: OverlayPathChangeKind
     content_path: str | None
     final_hash: str | None
 
@@ -46,7 +46,7 @@ class UpperChange:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "UpperChange":
+    def from_dict(cls, payload: Mapping[str, Any]) -> "OverlayPathChange":
         return cls(
             path=str(payload["path"]),
             kind=_parse_kind(payload["kind"]),
@@ -72,14 +72,14 @@ def content_hash(path: str | Path, *, symlink: bool = False) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _parse_kind(value: object) -> UpperChangeKind:
+def _parse_kind(value: object) -> OverlayPathChangeKind:
     if value in ("write", "delete", "symlink", "opaque_dir"):
         return value
     raise ValueError(f"unsupported upper change kind: {value!r}")
 
 
 __all__ = [
-    "UpperChange",
-    "UpperChangeKind",
+    "OverlayPathChange",
+    "OverlayPathChangeKind",
     "content_hash",
 ]

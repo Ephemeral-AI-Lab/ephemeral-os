@@ -10,7 +10,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.api.utils.changeset_projection import (
+from sandbox.api.tool.result_projection import (
     committed_paths,
     conflict_and_status,
     published_paths,
@@ -20,11 +20,11 @@ from sandbox.occ.changeset.builders import build_api_edit_change, build_api_writ
 from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
 from sandbox.occ.service import OccService
+from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
-from sandbox.runtime.overlay_shell.capture_to_changeset import capture_to_changeset
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 
 
 _PROCESS_COMMIT_LOCKS: dict[str, asyncio.Lock] = {}
@@ -100,7 +100,7 @@ async def _shell_with_services(
     request = _shell_request(args)
 
     overlay_start = time.perf_counter()
-    envelope = await _run_overlay(
+    capture = await _run_overlay(
         manager=manager,
         request=request,
         barrier=_barrier(args),
@@ -108,8 +108,8 @@ async def _shell_with_services(
     overlay_elapsed = time.perf_counter() - overlay_start
 
     occ_start = time.perf_counter()
-    changeset = await _apply_envelope_changes(
-        envelope,
+    changeset = await _apply_overlay_capture(
+        capture,
         occ_service=occ_service,
         caller_id=str(args.get("actor_id") or ""),
         description=str(args.get("description") or "shell"),
@@ -117,11 +117,11 @@ async def _shell_with_services(
     occ_elapsed = time.perf_counter() - occ_start
 
     conflict, conflict_status = conflict_and_status(changeset.files)
-    command_failed = envelope.exit_code != 0
+    command_failed = capture.exit_code != 0
     success = not command_failed and changeset.success
     status = "ok" if success else conflict_status if conflict is not None else "error"
     timings = {
-        **envelope.timings,
+        **capture.timings,
         **changeset.timings,
         "api.shell.overlay_s": overlay_elapsed,
         "api.shell.occ_apply_s": occ_elapsed,
@@ -129,9 +129,9 @@ async def _shell_with_services(
     }
     return {
         "success": success,
-        "exit_code": envelope.exit_code,
-        "stdout": _read_output_ref(envelope.stdout_ref),
-        "stderr": _read_output_ref(envelope.stderr_ref),
+        "exit_code": capture.exit_code,
+        "stdout": read_output_ref(capture.stdout_ref),
+        "stderr": read_output_ref(capture.stderr_ref),
         "changed_paths": list(published_paths(changeset.files)),
         "status": status,
         "conflict": _conflict_to_dict(conflict),
@@ -286,7 +286,7 @@ async def _run_overlay(
     manager: LayerStackManager,
     request: OverlayShellRequest,
     barrier: tuple[str, int] | None,
-) -> RuntimeResultEnvelope:
+) -> OverlayCapture:
     total_start = time.perf_counter()
     lease_start = time.perf_counter()
     lease = manager.acquire_snapshot_lease(request.request_id)
@@ -302,7 +302,7 @@ async def _run_overlay(
             )
             timings["overlay.test_barrier_wait_s"] = time.perf_counter() - barrier_start
         invoke_start = time.perf_counter()
-        envelope = await RuntimeInvoker(storage_root=manager.storage_root).invoke(
+        capture = await RuntimeInvoker(storage_root=manager.storage_root).invoke(
             request=request,
             manifest=lease.manifest,
         )
@@ -312,36 +312,36 @@ async def _run_overlay(
         manager.release_lease(lease.lease_id)
         timings["overlay.lease_release_s"] = time.perf_counter() - release_start
         timings["overlay.runner_total_s"] = time.perf_counter() - total_start
-    return RuntimeResultEnvelope.from_dict(
+    return OverlayCapture.from_dict(
         {
-            **envelope.to_dict(),
-            "timings": {**envelope.timings, **timings},
+            **capture.to_dict(),
+            "timings": {**capture.timings, **timings},
         }
     )
 
 
-async def _apply_envelope_changes(
-    envelope: RuntimeResultEnvelope,
+async def _apply_overlay_capture(
+    capture: OverlayCapture,
     *,
     occ_service: OccService,
     caller_id: str,
     description: str,
 ) -> ChangesetResult:
-    changes: Sequence[Change] = capture_to_changeset(envelope.upper_changes)
+    changes: Sequence[Change] = overlay_capture_to_occ_changes(capture)
     if not changes:
         return ChangesetResult(
             files=(),
-            timings=dict(envelope.timings),
+            timings=dict(capture.timings),
             published_manifest_version=None,
         )
-    if envelope.snapshot_manifest is None:
-        raise ValueError("overlay shell envelope is missing its leased manifest")
+    if capture.snapshot_manifest is None:
+        raise ValueError("overlay capture is missing its leased manifest")
     layer_root = occ_service_layer_root(occ_service)
     async with _process_commit_gate(layer_root):
         async with _commit_lock(layer_root):
             result = await occ_service.apply_changeset(
                 changes,
-                snapshot=envelope.snapshot_manifest,
+                snapshot=capture.snapshot_manifest,
                 options=CommitIntent(caller_id=caller_id, description=description),
             )
     if isinstance(result, PreparedChangeset):
@@ -398,11 +398,6 @@ async def _wait_file_barrier(
         if time.monotonic() >= deadline:
             raise TimeoutError(f"runtime barrier timed out: {barrier_id}")
         await asyncio.sleep(0.05)
-
-
-def _read_output_ref(path: str) -> str:
-    return Path(path).read_bytes().decode("utf-8", "replace")
-
 
 def occ_service_layer_root(service: OccService) -> Path:
     layer_stack = getattr(service, "_layer_stack", None)

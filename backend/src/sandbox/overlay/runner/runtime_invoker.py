@@ -10,17 +10,17 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.layer_stack.manifest import Manifest
+from sandbox.overlay.capture.types import OverlayCapture
 from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     overlay_shell_request_to_dict,
 )
 from sandbox.runtime.overlay_shell.cli import execute_request
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
 class RuntimeInvoker:
-    """Invoke the runtime-local overlay shell command and return its envelope."""
+    """Invoke the runtime-local overlay shell command and return its capture."""
 
     def __init__(
         self,
@@ -38,10 +38,10 @@ class RuntimeInvoker:
         *,
         request: OverlayShellRequest,
         manifest: Manifest,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         run_dir = self._run_dir(request)
         invoke_start = time.perf_counter()
-        envelope, worker_start, worker_elapsed = await run_sync_in_executor(
+        capture, worker_start, worker_elapsed = await run_sync_in_executor(
             _execute_request_with_timings,
             request_payload=overlay_shell_request_to_dict(request),
             manifest_payload=manifest.to_dict(),
@@ -50,9 +50,9 @@ class RuntimeInvoker:
         )
         invoke_elapsed = time.perf_counter() - invoke_start
         return replace(
-            envelope,
+            capture,
             timings={
-                **envelope.timings,
+                **capture.timings,
                 "overlay.invoker.queue_wait_s": worker_start - invoke_start,
                 "overlay.invoker.worker_total_s": worker_elapsed,
                 "overlay.invoker.resume_wait_s": max(
@@ -68,10 +68,10 @@ class RuntimeInvoker:
         *,
         request: OverlayShellRequest,
         manifest: Manifest,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         run_dir = self._run_dir(request)
         invoke_start = time.perf_counter()
-        envelope, worker_start, worker_elapsed = _execute_request_with_timings(
+        capture, worker_start, worker_elapsed = _execute_request_with_timings(
             request_payload=overlay_shell_request_to_dict(request),
             manifest_payload=manifest.to_dict(),
             storage_root=self.storage_root,
@@ -79,9 +79,9 @@ class RuntimeInvoker:
         )
         invoke_elapsed = time.perf_counter() - invoke_start
         return replace(
-            envelope,
+            capture,
             timings={
-                **envelope.timings,
+                **capture.timings,
                 "overlay.invoker.queue_wait_s": worker_start - invoke_start,
                 "overlay.invoker.worker_total_s": worker_elapsed,
                 "overlay.invoker.resume_wait_s": max(
@@ -107,15 +107,15 @@ def _execute_request_with_timings(
     manifest_payload: Mapping[str, Any],
     storage_root: Path,
     run_dir: Path,
-) -> tuple[RuntimeResultEnvelope, float, float]:
+) -> tuple[OverlayCapture, float, float]:
     worker_start = time.perf_counter()
-    envelope = execute_request(
+    capture = execute_request(
         request_payload=dict(request_payload),
         manifest_payload=dict(manifest_payload),
         storage_root=storage_root,
         run_dir=run_dir,
     )
-    return envelope, worker_start, time.perf_counter() - worker_start
+    return capture, worker_start, time.perf_counter() - worker_start
 
 
 __all__ = ["RuntimeInvoker"]

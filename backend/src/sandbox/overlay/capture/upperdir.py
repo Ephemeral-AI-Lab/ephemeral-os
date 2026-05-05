@@ -11,7 +11,7 @@ from pathlib import Path
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.merged_view import OPAQUE_MARKER, WHITEOUT_PREFIX
-from sandbox.overlay.capture.changes import UpperChange, content_hash
+from sandbox.overlay.capture.changes import OverlayPathChange, content_hash
 
 
 def capture_changes(
@@ -21,7 +21,7 @@ def capture_changes(
     lowerdir: str | Path | None = None,
     workspace_root: str | Path | None = None,
     timings: dict[str, float] | None = None,
-) -> tuple[UpperChange, ...]:
+) -> tuple[OverlayPathChange, ...]:
     """Return raw upperdir changes for one leased snapshot shell call.
 
     The production path reads the actual overlay upperdir. Unit and local
@@ -109,11 +109,11 @@ def _has_payload_ancestor(rel: Path, payload_paths: set[Path]) -> bool:
     return False
 
 
-def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
+def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
     for entry in sorted(upper_root.rglob("*"), key=lambda item: item.as_posix()):
         rel = entry.relative_to(upper_root)
         if entry.name == OPAQUE_MARKER:
-            yield UpperChange(
+            yield OverlayPathChange(
                 path=rel.parent.as_posix() if rel.parent.as_posix() != "." else "",
                 kind="opaque_dir",
                 content_path=None,
@@ -121,7 +121,7 @@ def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
             )
             continue
         if _is_whiteout_marker(entry):
-            yield UpperChange(
+            yield OverlayPathChange(
                 path=_whiteout_target(rel).as_posix(),
                 kind="delete",
                 content_path=None,
@@ -130,7 +130,7 @@ def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
             continue
         if entry.is_dir():
             if _has_overlay_opaque_xattr(entry):
-                yield UpperChange(
+                yield OverlayPathChange(
                     path=rel.as_posix(),
                     kind="opaque_dir",
                     content_path=None,
@@ -138,7 +138,7 @@ def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
                 )
             continue
         if _is_overlay_whiteout(entry):
-            yield UpperChange(
+            yield OverlayPathChange(
                 path=rel.as_posix(),
                 kind="delete",
                 content_path=None,
@@ -146,7 +146,7 @@ def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
             )
             continue
         if entry.is_symlink():
-            yield UpperChange(
+            yield OverlayPathChange(
                 path=rel.as_posix(),
                 kind="symlink",
                 content_path=str(entry),
@@ -154,7 +154,7 @@ def _walk_upperdir(upper_root: Path) -> Iterator[UpperChange]:
             )
             continue
         if entry.is_file():
-            yield UpperChange(
+            yield OverlayPathChange(
                 path=rel.as_posix(),
                 kind="write",
                 content_path=str(entry),

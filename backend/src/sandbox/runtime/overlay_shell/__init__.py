@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.overlay.capture.types import OverlayCapture
 
-__all__ = ["RuntimeResultEnvelope"]
+__all__ = ["OverlayCapture"]

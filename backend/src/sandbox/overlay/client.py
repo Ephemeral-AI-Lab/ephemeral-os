@@ -10,7 +10,7 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     SnapshotOverlayRunner,
 )
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.overlay.capture.types import OverlayCapture
 
 
 _CLIENTS: dict[str, "OverlayClient"] = {}
@@ -85,7 +85,7 @@ class OverlayClient:
         cwd: str = ".",
         env: Mapping[str, str] | None = None,
         timeout_seconds: float | None = None,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         return await self.shell(
             command,
             request_id=request_id,
@@ -102,7 +102,7 @@ class OverlayClient:
         cwd: str = ".",
         env: Mapping[str, str] | None = None,
         timeout_seconds: float | None = None,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         return await self._runner.shell(
             OverlayShellRequest(
                 request_id=request_id or uuid.uuid4().hex,

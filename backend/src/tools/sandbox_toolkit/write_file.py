@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sandbox.api import WriteFileRequest
-from sandbox.api.write import write_file as sandbox_write_file
+from sandbox.api.tool.write import write_file as sandbox_write_file
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.sandbox_session import (

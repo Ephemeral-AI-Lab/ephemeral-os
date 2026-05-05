@@ -49,10 +49,10 @@ def _imports_raw_exec(path: Path) -> bool:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            if any(alias.name == "sandbox.api.raw_exec" for alias in node.names):
+            if any(alias.name == "sandbox.api.tool.raw_exec" for alias in node.names):
                 return True
         elif isinstance(node, ast.ImportFrom):
-            if node.module == "sandbox.api.raw_exec":
+            if node.module == "sandbox.api.tool.raw_exec":
                 return True
             if node.module == "sandbox.api" and any(
                 alias.name == "raw_exec" for alias in node.names

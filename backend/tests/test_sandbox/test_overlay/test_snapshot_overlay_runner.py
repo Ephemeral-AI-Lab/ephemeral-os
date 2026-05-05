@@ -56,8 +56,8 @@ async def test_snapshot_runner_executes_against_leased_manifest_without_publish(
     assert manager.read_text("pkg/value.txt") == ("old\n", True)
     assert manager.pinned_layers() == ()
 
-    assert len(envelope.upper_changes) == 1
-    change = envelope.upper_changes[0]
+    assert len(envelope.changes) == 1
+    change = envelope.changes[0]
     assert change.path == "pkg/value.txt"
     assert change.kind == "write"
     assert change.content_path is not None
@@ -129,7 +129,7 @@ def test_overlay_run_handler_supports_layer_stack_snapshot_requests(
     assert result["exit_code"] == 0
     assert result["snapshot_version"] == 1
     assert manager.read_text("value.txt") == ("old\n", True)
-    changes = result["upper_changes"]
+    changes = result["changes"]
     assert len(changes) == 1
     assert changes[0]["path"] == "value.txt"
     assert changes[0]["kind"] == "write"

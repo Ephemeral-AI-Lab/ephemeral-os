@@ -9,8 +9,8 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from sandbox.api import lifecycle as sb_lifecycle
-from sandbox.api.raw_exec import raw_exec
+from sandbox.api import status as sb_status
+from sandbox.api.tool.raw_exec import raw_exec
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +50,13 @@ def create_sandbox_router() -> APIRouter:
     @router.get("/health")
     async def sandbox_health():
         """Check sandbox provider connection health."""
-        return await _call(sb_lifecycle.get_health)
+        return await _call(sb_status.get_health)
 
     @router.get("/available/snapshots")
     async def list_snapshots():
         """List available sandbox snapshots."""
         try:
-            items = await asyncio.to_thread(sb_lifecycle.list_snapshots)
+            items = await asyncio.to_thread(sb_status.list_snapshots)
             return JSONResponse(content=items)
         except Exception as exc:
             logger.warning("Failed to list snapshots: %s", exc)
@@ -65,7 +65,7 @@ def create_sandbox_router() -> APIRouter:
     @router.get("")
     async def list_sandboxes():
         """List all sandboxes."""
-        return await _call(sb_lifecycle.list_sandboxes)
+        return await _call(sb_status.list_sandboxes)
 
     # --- Parameterized routes below ---
 
@@ -73,7 +73,7 @@ def create_sandbox_router() -> APIRouter:
     async def create_sandbox(req: CreateSandboxRequest):
         """Create a new sandbox."""
         return await _call(
-            sb_lifecycle.create_sandbox,
+            sb_status.create_sandbox,
             name=req.name,
             snapshot=req.snapshot,
             image=req.image,
@@ -85,23 +85,23 @@ def create_sandbox_router() -> APIRouter:
     @router.get("/{sandbox_id}")
     async def get_sandbox(sandbox_id: str):
         """Get a single sandbox."""
-        return await _call(sb_lifecycle.get_sandbox, sandbox_id)
+        return await _call(sb_status.get_sandbox, sandbox_id)
 
     @router.post("/{sandbox_id}/start")
     async def start_sandbox(sandbox_id: str):
         """Start a stopped sandbox."""
-        return await _call(sb_lifecycle.start_sandbox, sandbox_id)
+        return await _call(sb_status.start_sandbox, sandbox_id)
 
     @router.post("/{sandbox_id}/stop")
     async def stop_sandbox(sandbox_id: str):
         """Stop a running sandbox."""
-        return await _call(sb_lifecycle.stop_sandbox, sandbox_id)
+        return await _call(sb_status.stop_sandbox, sandbox_id)
 
     @router.delete("/{sandbox_id}")
     async def delete_sandbox(sandbox_id: str):
         """Delete a sandbox."""
         try:
-            await asyncio.to_thread(sb_lifecycle.delete_sandbox, sandbox_id)
+            await asyncio.to_thread(sb_status.delete_sandbox, sandbox_id)
             return JSONResponse(status_code=204, content=None)
         except KeyError as exc:
             return JSONResponse(status_code=404, content={"error": str(exc)})
@@ -114,7 +114,7 @@ def create_sandbox_router() -> APIRouter:
     async def exec_in_sandbox(sandbox_id: str, req: ExecRequest):
         """Execute a command in a sandbox."""
         try:
-            await asyncio.to_thread(sb_lifecycle.ensure_sandbox_running, sandbox_id)
+            await asyncio.to_thread(sb_status.ensure_sandbox_running, sandbox_id)
             resp = await raw_exec(sandbox_id, req.command, timeout=req.timeout)
             return JSONResponse(
                 content={
@@ -135,6 +135,6 @@ def create_sandbox_router() -> APIRouter:
         port: int = Query(default=3000, ge=1, le=65535),
     ):
         """Get a preview URL for a sandbox port."""
-        return await _call(sb_lifecycle.get_signed_preview_url, sandbox_id, port)
+        return await _call(sb_status.get_signed_preview_url, sandbox_id, port)
 
     return router

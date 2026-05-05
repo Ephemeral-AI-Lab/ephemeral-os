@@ -66,7 +66,7 @@ class MutableGitignore(GitignoreOracle):
 
 
 class LayerReadAdapter:
-    """Provider adapter for ``sandbox.api.read_file`` over a layer stack."""
+    """Provider adapter for ``sandbox.api.tool.read_file`` over a layer stack."""
 
     name = "layer-stack-read"
 

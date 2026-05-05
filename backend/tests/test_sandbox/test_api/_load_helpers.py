@@ -29,10 +29,10 @@ from sandbox.api import (
     ShellRequest,
     WriteFileRequest,
 )
-from sandbox.api.edit import edit_file
-from sandbox.api.read import read_file
-from sandbox.api.shell import shell
-from sandbox.api.write import write_file
+from sandbox.api.tool.edit import edit_file
+from sandbox.api.tool.read import read_file
+from sandbox.api.tool.shell import shell
+from sandbox.api.tool.write import write_file
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
@@ -40,7 +40,7 @@ from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.service import OccService
-from sandbox.overlay.capture.changes import UpperChange, content_hash
+from sandbox.overlay.capture.changes import OverlayPathChange, content_hash
 from sandbox.overlay.client import (
     OverlayClient,
     dispose_overlay_client,
@@ -53,7 +53,7 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
 )
 from sandbox.providers.registry import dispose_adapter, register_adapter
 from sandbox.runtime.async_bridge import run_sync_in_executor
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.runtime.overlay_shell.result_envelope import OverlayCapture
 
 
 LOGGER = logging.getLogger(__name__)
@@ -168,7 +168,7 @@ class _BarrierInvoker:
         *,
         request: OverlayShellRequest,
         manifest: Any,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         await self._barrier.wait()
         return await self._inner.invoke(request=request, manifest=manifest)
 
@@ -184,7 +184,7 @@ class _FastShellInvoker:
         *,
         request: OverlayShellRequest,
         manifest: Any,
-    ) -> RuntimeResultEnvelope:
+    ) -> OverlayCapture:
         total_start = time.perf_counter()
         payload, path = _parse_fast_printf_redirect(request.command[-1])
         run_dir = self._run_root / request.request_id
@@ -195,13 +195,13 @@ class _FastShellInvoker:
         stdout_ref.write_bytes(b"")
         stderr_ref.write_bytes(b"")
         content_path.write_bytes(payload)
-        return RuntimeResultEnvelope(
+        return OverlayCapture(
             exit_code=0,
             stdout_ref=str(stdout_ref),
             stderr_ref=str(stderr_ref),
             snapshot_version=manifest.version,
-            upper_changes=(
-                UpperChange(
+            changes=(
+                OverlayPathChange(
                     path=path,
                     kind="write",
                     content_path=str(content_path),

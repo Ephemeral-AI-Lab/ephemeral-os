@@ -7,7 +7,7 @@ import json
 from pydantic import BaseModel, Field
 
 from sandbox.api import ShellRequest
-from sandbox.api.shell import shell as sandbox_shell
+from sandbox.api.tool.shell import shell as sandbox_shell
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.sandbox_session import (

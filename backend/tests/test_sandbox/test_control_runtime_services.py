@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 from sandbox.api import ReadFileRequest, ShellRequest, WriteFileRequest
-from sandbox.api.read import read_file
-from sandbox.api.shell import shell
-from sandbox.api.write import write_file
+from sandbox.api.tool.read import read_file
+from sandbox.api.tool.shell import shell
+from sandbox.api.tool.write import write_file
 from sandbox.control.ops.runtime_services import create_runtime_services
 from sandbox.occ.client import OCCClientError, get_occ_service
 from sandbox.overlay.client import OverlayClientError, get_overlay_client

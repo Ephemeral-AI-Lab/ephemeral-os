@@ -10,7 +10,7 @@ from typing import Protocol
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.overlay.capture.types import OverlayCapture
 
 
 @dataclass(frozen=True)
@@ -76,7 +76,7 @@ class _RuntimeInvoker(Protocol):
         *,
         request: OverlayShellRequest,
         manifest: Manifest,
-    ) -> RuntimeResultEnvelope: ...
+    ) -> OverlayCapture: ...
 
 
 class _SyncRuntimeInvoker(Protocol):
@@ -85,7 +85,7 @@ class _SyncRuntimeInvoker(Protocol):
         *,
         request: OverlayShellRequest,
         manifest: Manifest,
-    ) -> RuntimeResultEnvelope: ...
+    ) -> OverlayCapture: ...
 
 
 class SnapshotOverlayRunner:
@@ -104,7 +104,7 @@ class SnapshotOverlayRunner:
             invoker = RuntimeInvoker(storage_root=layer_stack.storage_root)
         self._invoker = invoker
 
-    async def shell(self, request: OverlayShellRequest) -> RuntimeResultEnvelope:
+    async def shell(self, request: OverlayShellRequest) -> OverlayCapture:
         total_start = time.perf_counter()
         lease_start = time.perf_counter()
         lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
@@ -113,7 +113,7 @@ class SnapshotOverlayRunner:
         }
         try:
             invoke_start = time.perf_counter()
-            envelope = await self._invoker.invoke(
+            capture = await self._invoker.invoke(
                 request=request,
                 manifest=lease.manifest,
             )
@@ -123,13 +123,13 @@ class SnapshotOverlayRunner:
             self._layer_stack.release_lease(lease.lease_id)
             timings["overlay.lease_release_s"] = time.perf_counter() - release_start
             timings["overlay.runner_total_s"] = time.perf_counter() - total_start
-        return replace(envelope, timings={**envelope.timings, **timings})
+        return replace(capture, timings={**capture.timings, **timings})
 
     @property
     def supports_sync(self) -> bool:
         return callable(getattr(self._invoker, "invoke_sync", None))
 
-    def shell_sync(self, request: OverlayShellRequest) -> RuntimeResultEnvelope:
+    def shell_sync(self, request: OverlayShellRequest) -> OverlayCapture:
         invoke_sync = getattr(self._invoker, "invoke_sync", None)
         if not callable(invoke_sync):
             raise RuntimeError("overlay runner invoker does not support sync shell")
@@ -142,14 +142,14 @@ class SnapshotOverlayRunner:
         }
         try:
             invoke_start = time.perf_counter()
-            envelope = invoke_sync(request=request, manifest=lease.manifest)
+            capture = invoke_sync(request=request, manifest=lease.manifest)
         finally:
             timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
             release_start = time.perf_counter()
             self._layer_stack.release_lease(lease.lease_id)
             timings["overlay.lease_release_s"] = time.perf_counter() - release_start
             timings["overlay.runner_total_s"] = time.perf_counter() - total_start
-        return replace(envelope, timings={**envelope.timings, **timings})
+        return replace(capture, timings={**capture.timings, **timings})
 
 
 __all__ = [

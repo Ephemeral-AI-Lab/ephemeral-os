@@ -496,11 +496,11 @@ class TestDaytonaToolLive:
 
     @pytest.fixture(scope="class")
     def live_sandbox(self):
-        from sandbox.api import lifecycle as sb_lifecycle
+        from sandbox.api import status as sb_status
         from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 
         bootstrap_daytona_provider()
-        sb = sb_lifecycle.create_sandbox(
+        sb = sb_status.create_sandbox(
             name=f"tools-test-{int(time.time())}",
             language="python",
             labels={"purpose": "tools-e2e"},
@@ -511,7 +511,7 @@ class TestDaytonaToolLive:
         async_sb = _run(get_async_sandbox(sb["id"]))
         yield {"info": sb, "raw": async_sb}
         try:
-            sb_lifecycle.delete_sandbox(sb["id"])
+            sb_status.delete_sandbox(sb["id"])
         except Exception:
             pass
 

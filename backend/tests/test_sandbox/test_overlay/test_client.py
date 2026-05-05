@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.overlay.client import OverlayClient
-from sandbox.runtime.overlay_shell.result_envelope import RuntimeResultEnvelope
+from sandbox.runtime.overlay_shell.result_envelope import OverlayCapture
 
 
 @pytest.mark.asyncio
@@ -18,12 +18,12 @@ async def test_overlay_client_run_uses_snapshot_runner() -> None:
 
         async def shell(self, request):
             self.commands.append(request.command)
-            return RuntimeResultEnvelope(
+            return OverlayCapture(
                 exit_code=0,
                 stdout_ref="/tmp/stdout",
                 stderr_ref="/tmp/stderr",
                 snapshot_version=3,
-                upper_changes=(),
+                changes=(),
             )
 
     runner = _Runner()

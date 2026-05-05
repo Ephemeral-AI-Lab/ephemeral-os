@@ -10,8 +10,8 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
-from sandbox.api import lifecycle as sb_lifecycle
-from sandbox.api.raw_exec import raw_exec
+from sandbox.api import status as sb_status
+from sandbox.api.tool.raw_exec import raw_exec
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -49,19 +49,19 @@ def _progress(on_progress: ProgressCallback | None, message: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Sandbox lifecycle accessor
+# Sandbox status/control accessor
 # ---------------------------------------------------------------------------
 
 
 def _service() -> Any:
-    """Return the public sandbox lifecycle facade module.
+    """Return the public sandbox status/control facade module.
 
     The module exposes the same call shape (``.create_sandbox``,
     ``.list_sandboxes``, ``.delete_sandbox``, etc.) as the legacy
     ``DaytonaSandboxLifecycle`` instance — so existing call sites work
     unchanged.
     """
-    return sb_lifecycle
+    return sb_status
 
 
 def _default_sweevo_sandbox_name(instance: SWEEvoInstance) -> str:
@@ -441,7 +441,7 @@ async def setup_sweevo_sandbox(
     )
 
     try:
-        sandbox_info = sb_lifecycle.get_sandbox(sandbox_id)
+        sandbox_info = sb_status.get_sandbox(sandbox_id)
         existing_labels = sandbox_info.get("labels", {})
         merged_labels = (
             {str(k): str(v) for k, v in existing_labels.items()}
@@ -449,7 +449,7 @@ async def setup_sweevo_sandbox(
             else {}
         )
         merged_labels["project_dir"] = repo_dir
-        sb_lifecycle.set_sandbox_labels(sandbox_id, merged_labels)
+        sb_status.set_sandbox_labels(sandbox_id, merged_labels)
         logger.info("Set project_dir label to %s", repo_dir)
     except Exception as exc:
         logger.warning("Could not set project_dir label: %s", exc)

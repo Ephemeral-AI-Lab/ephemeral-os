@@ -10,43 +10,43 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.overlay.capture.changes import UpperChange, content_hash
-from sandbox.runtime.overlay_shell.capture_to_changeset import capture_to_changeset
+from sandbox.overlay.capture.changes import OverlayPathChange, content_hash
+from sandbox.runtime.overlay_shell.overlay_path_changes_to_occ_changes import overlay_path_changes_to_occ_changes
 
 
-def test_capture_to_changeset_converts_upper_changes(tmp_path) -> None:
+def test_overlay_path_changes_to_occ_changes_converts_changes(tmp_path) -> None:
     write_path = tmp_path / "new.txt"
     write_path.write_bytes(b"new")
     link_path = tmp_path / "link"
     os.symlink("/target", link_path)
 
-    changes = capture_to_changeset(
+    changes = overlay_path_changes_to_occ_changes(
         [
-            UpperChange(
+            OverlayPathChange(
                 path="src/new.txt",
                 kind="write",
                 content_path=str(write_path),
                 final_hash=content_hash(write_path),
             ),
-            UpperChange(
+            OverlayPathChange(
                 path="src/old.txt",
                 kind="delete",
                 content_path=None,
                 final_hash=None,
             ),
-            UpperChange(
+            OverlayPathChange(
                 path="link",
                 kind="symlink",
                 content_path=str(link_path),
                 final_hash=content_hash(link_path, symlink=True),
             ),
-            UpperChange(
+            OverlayPathChange(
                 path="dir",
                 kind="opaque_dir",
                 content_path=None,
                 final_hash=None,
             ),
-            UpperChange(
+            OverlayPathChange(
                 path="dir/keep.py",
                 kind="write",
                 content_path=str(write_path),

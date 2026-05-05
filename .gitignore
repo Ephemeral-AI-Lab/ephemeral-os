@@ -68,6 +68,7 @@ backend/.mypy_cache/
 backend/.ipynb_checkpoints/
 backend/__pycache__/
 backend/.venv*/
+backend/tests/test_e2e/_timings/*.json
 
 # OS
 .DS_Store
