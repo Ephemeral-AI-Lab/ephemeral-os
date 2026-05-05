@@ -1,4 +1,4 @@
-"""Prehooks for Daytona shell command policy."""
+"""Prehooks for sandbox shell command policy."""
 
 from __future__ import annotations
 

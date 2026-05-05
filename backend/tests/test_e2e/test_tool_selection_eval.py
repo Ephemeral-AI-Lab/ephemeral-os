@@ -174,7 +174,7 @@ def eval_agent():
         pytest.skip("No LLM credentials configured")
 
     sandbox_id = None
-    if EvalAgent.has_daytona():
+    if EvalAgent.has_sandbox_provider():
         sb = create_test_sandbox("tool-eval")
         sandbox_id = sb["id"]
         populate_sandbox_files(sandbox_id)

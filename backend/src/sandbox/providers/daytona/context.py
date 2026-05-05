@@ -92,9 +92,7 @@ def prepare_daytona_runtime_context(
     sandbox: Any,
     workspace_root: str | None,
 ) -> None:
-    """Inject Daytona runtime metadata and register the Daytona adapter."""
-    if sandbox is not None:
-        context["daytona_sandbox"] = sandbox
+    """Inject provider-neutral runtime metadata and register the Daytona adapter."""
 
     from sandbox.control.ops.workspace import prepare_sandbox_runtime_context
 

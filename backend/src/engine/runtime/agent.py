@@ -183,7 +183,7 @@ def _build_agent_tool_registry(
 ) -> ToolRegistry:
     """Build the tool registry for a spawning agent.
 
-    Registers tools requested by *agent_def* and Daytona sandbox tools when
+    Registers tools requested by *agent_def* and sandbox tools when
     a sandbox is selected for a default agent.
     """
     tool_registry = create_default_tool_registry()

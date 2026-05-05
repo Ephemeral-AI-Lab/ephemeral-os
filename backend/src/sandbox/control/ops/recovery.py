@@ -1,8 +1,7 @@
 """Provider-neutral sandbox recovery (probe + restart).
 
-Body lifted from ``DaytonaSandboxLifecycle.ensure_sandbox_running`` and
-rewritten against the registered provider adapter primitives — no daytona
-imports.
+Rewritten against the registered provider adapter primitives; no concrete
+provider imports live here.
 
 Long-running benchmark runs sometimes observe a sandbox that still resolves
 by id yet whose backing container is gone or detached. Probe via

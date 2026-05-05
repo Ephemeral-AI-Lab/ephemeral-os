@@ -1,8 +1,7 @@
 """EvalAgent — configurable test agent for e2e evaluation.
 
-Provides a single entry point for all e2e tests to create a configured agent
-with credentials loaded from ~/.ephemeralos/settings.json. Test classes
-configure their specific agent via EvalAgent.create().
+Provides a single entry point for all e2e tests to create a configured agent.
+Test classes configure their specific agent via EvalAgent.create().
 
 Usage::
 
@@ -238,8 +237,8 @@ class EvalAgent:
     """Configurable test agent for e2e evaluation.
 
     Wraps an :class:`EphemeralAgent` (built via :func:`spawn_agent`) with
-    credentials from settings.json. Test classes configure their specific
-    agent (system prompt, tools, background tasks) via the
+    active model/provider configuration. Test classes configure their
+    specific agent (system prompt, tools, background tasks) via the
     :meth:`create` classmethod.
     """
 
@@ -279,22 +278,19 @@ class EvalAgent:
             return False
 
     @staticmethod
-    def has_daytona() -> bool:
-        """Check if Daytona sandbox credentials are available."""
-        import os
-
+    def has_sandbox_provider() -> bool:
+        """Check if the default sandbox provider is configured."""
         try:
-            s = load_settings()
-            api_key = s.daytona_api_key or os.environ.get("DAYTONA_API_KEY", "")
-            api_url = s.daytona_api_url or os.environ.get("DAYTONA_API_URL", "")
-            return bool(api_key and api_url)
+            from sandbox.api.lifecycle import get_health
+
+            return bool(get_health().get("configured"))
         except Exception:
             return False
 
     @staticmethod
     def has_all() -> bool:
-        """Check if both API and Daytona credentials are available."""
-        return EvalAgent.has_credentials() and EvalAgent.has_daytona()
+        """Check if both API and sandbox-provider credentials are available."""
+        return EvalAgent.has_credentials() and EvalAgent.has_sandbox_provider()
 
     # -- Properties --
 
@@ -328,18 +324,18 @@ class EvalAgent:
 
         EvalAgent is a thin test harness wrapper around :func:`spawn_agent`.
         All production spawn semantics (model resolution, API client,
-        Daytona tool registration, capability gating) run through the
+        sandbox tool registration, capability gating) run through the
         same code path as the server router, so tests exercise the real
         stack rather than a parallel implementation.
 
         Args:
             system_prompt: Custom system prompt. If None, uses default.
-            sandbox_id: Daytona sandbox ID for sandbox tools.
+            sandbox_id: Sandbox ID for sandbox tools.
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
             allowed_tools: Tool names the agent may call. Defaults to
-                Daytona sandbox tools plus ``run_subagent``.
+                Sandbox tools plus ``run_subagent``.
 
         Returns:
             Configured EvalAgent ready to invoke.
@@ -372,7 +368,7 @@ class EvalAgent:
         runtime_config = RuntimeConfig(cwd=".")
 
         # Tune the AgentDefinition so spawn_agent produces the same tool
-        # surface EvalAgent historically exposed: Daytona + subagent, no
+        # surface EvalAgent historically exposed: sandbox tools + subagent, no
         # auto-loaded skills, the raw test system prompt.
         if allowed_tools is None:
             allowed_tools = [

@@ -85,6 +85,9 @@ logger = logging.getLogger(__name__)
 # Load .env BEFORE credential checks so env vars are available
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
+from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
+
+bootstrap_daytona_provider()
 
 # Suppress "Event loop is closed" warnings from httpx/anthropic async cleanup.
 # The async client's __del__ tries to close the transport after the loop shuts down.
@@ -94,7 +97,7 @@ import logging
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 HAS_CREDENTIALS = EvalAgent.has_credentials()
-HAS_DAYTONA = EvalAgent.has_daytona()
+HAS_DAYTONA = EvalAgent.has_sandbox_provider()
 HAS_ALL = EvalAgent.has_all()
 
 
@@ -196,9 +199,9 @@ ANTHROPIC_MINIMAX_MODEL = MINIMAX_MODEL
 ANTHROPIC_MINIMAX_BASE_URL = MINIMAX_BASE_URL
 ANTHROPIC_MINIMAX_FORMAT = "anthropic"
 
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _LIVE_SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _LIVE_SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _LIVE_SETTINGS.get("daytona_target", "")
+from sandbox.providers.daytona.client.credentials import load_credentials
+
+DAYTONA_KEY, DAYTONA_URL, DAYTONA_TARGET = load_credentials()
 
 HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
 HAS_ANTHROPIC_MINIMAX = HAS_MINIMAX
@@ -285,9 +288,6 @@ def make_live_client(
         from config.settings import Settings as _S, DatabaseSettings as _DS
 
         return _S(
-            daytona_api_key=DAYTONA_KEY,
-            daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
             database=_DS(url=_database_url_from_session_factory(db_session_factory)),
         )
 

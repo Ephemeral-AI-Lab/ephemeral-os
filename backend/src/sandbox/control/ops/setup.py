@@ -5,8 +5,8 @@ does (today: ``ensure_git`` from :mod:`sandbox.control.ops.git`). Both depend
 only on the sandbox existing; sequencing them serially leaves wall-clock time
 on the table.
 
-Bodies lifted from ``sandbox.lifecycle.workspace`` (the bootstrap helpers) and
-``sandbox.providers.daytona.lifecycle`` (the eager-bundle thread plumbing).
+Bodies lifted from the deleted lifecycle helpers and rewritten against the
+provider-neutral sandbox API.
 """
 
 from __future__ import annotations
@@ -192,9 +192,6 @@ def finish_eager_runtime_bundle_upload(
 
 def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
     """Post-create hook: ensure_git + eager runtime bootstrap with upload overlap.
-
-    Reproduces the four-step sequence the legacy DaytonaSandboxLifecycle.
-    create_sandbox ran:
 
     1. Start the bundle upload in the background (overlaps with ensure_git).
     2. Run ensure_git synchronously — installs git in minimal images that

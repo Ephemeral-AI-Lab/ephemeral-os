@@ -6,9 +6,9 @@ import base64
 import shlex
 from pathlib import Path
 
-from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 from sandbox.bash import wrap_bash_command
 
+_DEFAULT_SANDBOX_TEST_ROOT = "/workspace"
 
 EVAL_SANDBOX_FILES: dict[str, str] = {
     "src/__init__.py": "",
@@ -195,7 +195,7 @@ def populate_sandbox_files(sandbox_id: str) -> None:
     raw_sandbox = svc.get_sandbox_object(sandbox_id)
 
     home_resp = raw_sandbox.process.exec("pwd", timeout=10)
-    home = home_resp.result.strip() if home_resp.result else DEFAULT_SANDBOX_CI_ROOT
+    home = home_resp.result.strip() if home_resp.result else _DEFAULT_SANDBOX_TEST_ROOT
 
     resolved_files: dict[str, str] = {}
     for fp, content in EVAL_SANDBOX_FILES.items():

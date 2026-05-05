@@ -1,8 +1,8 @@
 """Provider-neutral context-preparer factory.
 
 The Protocol moved here from ``sandbox.providers.protocol`` so that only
-neutral code consumes it. Provider-owned implementations (e.g., the daytona
-preparer) are looked up via the registered adapter, never imported by name.
+neutral code consumes it. Provider-owned implementations are looked up via
+the registered adapter, never imported by name.
 """
 
 from __future__ import annotations

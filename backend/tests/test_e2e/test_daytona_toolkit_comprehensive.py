@@ -26,6 +26,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from dotenv import load_dotenv
+from sandbox.providers.daytona.client.credentials import load_credentials
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -39,17 +40,7 @@ pytestmark = [pytest.mark.e2e]
 # ---------------------------------------------------------------------------
 
 
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-
-_SETTINGS = _load_settings()
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
+DAYTONA_KEY, DAYTONA_URL, DAYTONA_TARGET = load_credentials()
 HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
 
 
@@ -229,7 +220,6 @@ def _decode_write_payload(command: str) -> dict[str, Any] | None:
 def _make_context(sandbox: Any, *, cwd: str = "/workspace") -> ToolExecutionContextService:
     """Create a ToolExecutionContextService with sandbox injected."""
     metadata: dict[str, Any] = {
-        "daytona_sandbox": sandbox,
         "repo_root": cwd,
     }
     return ToolExecutionContextService(cwd=Path(cwd), services=metadata)
@@ -526,12 +516,11 @@ class TestDaytonaToolLive:
             pass
 
     def _ctx(self, live_sandbox) -> ToolExecutionContextService:
-        sandbox = live_sandbox["raw"]
+        del live_sandbox
         cwd = "/home/daytona"
         return ToolExecutionContextService(
             cwd=Path("/workspace"),
             services={
-                "daytona_sandbox": sandbox,
                 "repo_root": cwd,
             },
         )

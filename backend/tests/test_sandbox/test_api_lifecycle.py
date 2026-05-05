@@ -165,10 +165,10 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
 ) -> None:
     """Regression: setup_after_create must call ensure_git, not just bootstrap.
 
-    The pre-refactor DaytonaSandboxLifecycle.create_sandbox ran four steps:
-    start eager upload, ensure_git, finish upload, run bootstrap. Skipping
-    ensure_git breaks downstream code that assumes git is installed (sweevo,
-    any consumer running ``git ...`` on a minimal-image sandbox).
+    The lifecycle setup hook must run four steps: start eager upload,
+    ensure_git, finish upload, run bootstrap. Skipping ensure_git breaks
+    downstream code that assumes git is installed (sweevo, any consumer
+    running ``git ...`` on a minimal-image sandbox).
     """
     from sandbox.api import lifecycle as sb_lifecycle
     from sandbox.control.ops import setup as setup_mod

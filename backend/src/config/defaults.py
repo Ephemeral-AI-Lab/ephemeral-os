@@ -22,9 +22,3 @@ DEFAULT_RETRY_STATUS_CODES: frozenset[int] = frozenset({429, 500, 502, 503, 529}
 
 DEFAULT_DATABASE_POOL_SIZE: int = 5
 DEFAULT_DATABASE_MAX_OVERFLOW: int = 10
-
-# ---------------------------------------------------------------------------
-# Sandbox Defaults
-# ---------------------------------------------------------------------------
-
-DEFAULT_SANDBOX_CI_ROOT: str = "/home/daytona"

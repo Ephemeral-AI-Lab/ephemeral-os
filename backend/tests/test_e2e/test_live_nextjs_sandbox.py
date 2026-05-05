@@ -67,7 +67,7 @@ def sandbox_id():
 @pytest.fixture(scope="module")
 def nextjs_sandbox():
     """Create a real Daytona sandbox (dict form) for non-agent tests."""
-    if not EvalAgent.has_daytona():
+    if not EvalAgent.has_sandbox_provider():
         pytest.skip("Daytona not configured")
     sb = create_test_sandbox("nextjs-e2e")
     print(f"\n=== Created sandbox: {sb['id']} ===")

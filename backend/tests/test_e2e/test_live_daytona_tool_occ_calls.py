@@ -15,7 +15,6 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import json
-import os
 import re
 import shlex
 import threading
@@ -27,6 +26,7 @@ from typing import Any
 
 import pytest
 from dotenv import load_dotenv
+from sandbox.providers.daytona.client.credentials import has_credentials
 
 from tools.core.base import ToolExecutionContextService
 from sandbox.bash import extract_exit_code, wrap_bash_command
@@ -38,18 +38,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
 
 
-def _load_settings() -> dict[str, Any]:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-
-_SETTINGS = _load_settings()
-HAS_DAYTONA = bool(
-    (os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", ""))
-    and (os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", ""))
-)
+HAS_DAYTONA = has_credentials()
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
@@ -130,7 +119,6 @@ class LiveToolEnv:
         return ToolExecutionContextService(
             cwd=Path(self.home),
             services={
-                "daytona_sandbox": self.async_sandbox,
                 "repo_root": self.home,
                 "agent_run_id": agent_run_id,
             },

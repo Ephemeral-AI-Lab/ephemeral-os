@@ -59,9 +59,6 @@ class ExecutionMetadata:
     background_task_id: str | None = None
     on_progress_line: Callable[[str], None] | None = None
 
-    # Daytona sandbox plumbing, injected by Daytona context preparation.
-    daytona_sandbox: Any | None = None
-
     # Per-call tool id (set by the streaming executor so progress events
     # can be attributed back to their originating tool use).
     tool_id: str | None = None
@@ -96,7 +93,6 @@ class ExecutionMetadata:
             "background_task_manager",
             "background_task_id",
             "on_progress_line",
-            "daytona_sandbox",
             "tool_id",
             "system_notification_service",
         }

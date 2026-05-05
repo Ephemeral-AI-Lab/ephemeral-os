@@ -26,7 +26,7 @@ HAS_ALL = EvalAgent.has_all()
 
 @pytest.fixture(scope="module")
 def sandbox_id():
-    if not EvalAgent.has_daytona():
+    if not EvalAgent.has_sandbox_provider():
         pytest.skip("Daytona not configured")
     sb = create_test_sandbox("multi-tool")
     yield sb["id"]

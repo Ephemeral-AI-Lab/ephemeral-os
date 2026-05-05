@@ -350,10 +350,10 @@ class BackgroundTaskManager:
 
         Marks the task as cancelled first, then attempts to physically
         kill the sandbox process via the kill_callback (if provided).
-        We do NOT call asyncio.Task.cancel() — that sends CancelledError
-        through the Daytona SDK's process.exec(), which can corrupt the
-        shared sandbox connection.  Instead the kill_callback sends a
-        kill signal to the sandbox process, letting the SDK call return
+        We do NOT call asyncio.Task.cancel() for sandbox-backed work:
+        sending CancelledError through an in-flight provider exec can corrupt
+        the shared sandbox connection. Instead the kill_callback sends a kill
+        signal to the sandbox process, letting the provider call return
         naturally.
         """
         tracked = self._tasks.get(task_id)
@@ -383,8 +383,8 @@ class BackgroundTaskManager:
             except Exception as exc:
                 logger.debug("Kill callback failed for task %s: %s", task_id, exc)
         else:
-            # Subagent tasks may still be inside async Daytona/CI calls. Hard
-            # asyncio cancellation can corrupt the shared async sandbox client,
+            # Subagent tasks may still be inside async sandbox/CI calls. Hard
+            # asyncio cancellation can corrupt the shared async provider client,
             # so logical cancel must be enough for them.
             if tracked.task_type != "subagent":
                 # Pure-Python tools with no external runtime can be cancelled
@@ -451,7 +451,7 @@ class BackgroundTaskManager:
                     except Exception as exc:
                         logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
                 else:
-                    # Subagent tasks may still be awaiting async Daytona/CI
+                    # Subagent tasks may still be awaiting async sandbox/CI
                     # calls inside their inner agent run. Mark them cancelled
                     # logically but let them drain instead of hard-cancelling.
                     if tracked.task_type != "subagent":

@@ -8,9 +8,7 @@ through the registered :class:`~sandbox.providers.protocol.ProviderAdapter`
 
 All functions are sync and return plain dicts. Async callers (FastAPI route
 handlers, the runtime agent) should dispatch them through
-``sandbox.runtime.async_bridge.run_sync_in_executor``. That matches today's
-contract for ``DaytonaSandboxLifecycle`` so callers can swap one for the other
-without changing call shape.
+``sandbox.runtime.async_bridge.run_sync_in_executor``.
 """
 
 from __future__ import annotations

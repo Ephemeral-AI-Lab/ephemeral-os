@@ -68,8 +68,7 @@ def _load_credentials() -> tuple[str, str, str]:
     api_key, api_url, target = load_credentials()
     if not api_key or not api_url:
         raise AsyncDaytonaUnavailableError(
-            "Async Daytona is not configured. Set daytona_api_key/daytona_api_url in settings.json, "
-            "or DAYTONA_API_KEY and DAYTONA_API_URL env vars."
+            "Async Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
         )
     return api_key, api_url, target
 
