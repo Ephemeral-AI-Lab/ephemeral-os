@@ -200,7 +200,9 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
     assert launched.agent_name == "planner"
-    assert launched.system_prompt == "PLANNER"
+    selected = agents_registry.get_definition(launched.agent_name)
+    assert selected is not None
+    assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
     assert "Mission / Current Episode" in launched.task_input
 
@@ -247,4 +249,6 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
     assert launched.agent_name == "planner_full_only"
-    assert launched.system_prompt == "PLANNER FULL ONLY"
+    selected = agents_registry.get_definition(launched.agent_name)
+    assert selected is not None
+    assert selected.system_prompt == "PLANNER FULL ONLY"

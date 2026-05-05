@@ -32,7 +32,6 @@ class AgentLaunch:
     agent_name: str
     task_input: str
     needs: tuple[str, ...]
-    system_prompt: str = ""
     context_packet_id: str | None = None
     mission_id: str | None = None
 
@@ -54,7 +53,7 @@ class AttemptRuntime:
     manager_registry: EpisodeManagerRegistry | None = None
     lifecycle_config: HarnessLifecycleConfig = field(default_factory=HarnessLifecycleConfig)
     # When set, orchestrator + dispatcher route launches through the composer
-    # to obtain a rendered task_input + selected agent_def + system_prompt.
+    # to obtain a rendered task_input + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: "ContextComposer | None" = None
     # Lifecycle controller for the attempt-less entry executor. ``None`` for

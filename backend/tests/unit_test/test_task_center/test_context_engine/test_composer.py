@@ -124,7 +124,7 @@ def test_compose_threads_calls_in_order(packet_store):
     )
     assert isinstance(bundle, LaunchBundle)
     assert bundle.agent_def.name == "planner"
-    assert bundle.system_prompt == "SYSTEM PROMPT"
+    assert bundle.agent_def.system_prompt == "SYSTEM PROMPT"
     assert bundle.context_packet_id is not None
     assert "Current Episode" in bundle.task_input
     # Packet was persisted.

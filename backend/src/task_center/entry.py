@@ -392,7 +392,6 @@ class TaskCenterEntryCoordinator:
             agent_name=bundle.agent_def.name,
             task_input=bundle.task_input,
             needs=(),
-            system_prompt=bundle.system_prompt,
             context_packet_id=bundle.context_packet_id,
             mission_id=controller.mission_id,
         )

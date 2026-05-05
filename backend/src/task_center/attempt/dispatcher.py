@@ -281,7 +281,6 @@ class AttemptDispatcher:
             agent_name=bundle.agent_def.name,
             task_input=bundle.task_input,
             needs=tuple(task["needs"]),
-            system_prompt=bundle.system_prompt,
             context_packet_id=bundle.context_packet_id,
             mission_id=episode.mission_id,
         )
@@ -316,7 +315,6 @@ class AttemptDispatcher:
             agent_name=bundle.agent_def.name,
             task_input=bundle.task_input,
             needs=tuple(attempt.generator_task_ids),
-            system_prompt=bundle.system_prompt,
             context_packet_id=bundle.context_packet_id,
             mission_id=episode.mission_id,
         )

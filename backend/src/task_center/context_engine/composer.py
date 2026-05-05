@@ -34,7 +34,6 @@ class LaunchBundle:
     """The composer's output: everything the launcher needs."""
 
     agent_def: AgentDefinition
-    system_prompt: str
     task_input: str
     packet: ContextPacket
     context_packet_id: str | None
@@ -79,7 +78,6 @@ class ContextComposer:
         task_input = self.renderer.render(packet)
         return LaunchBundle(
             agent_def=selection.agent_def,
-            system_prompt=selection.agent_def.system_prompt or "",
             task_input=task_input,
             packet=packet,
             context_packet_id=context_packet_id,
