@@ -34,11 +34,12 @@ _PROCESS_COMMIT_LOCKS: dict[str, asyncio.Lock] = {}
 
 
 async def shell(args: dict[str, object]) -> dict[str, object]:
-    manager, occ_service = _services(args)
+    manager, occ_service, gitignore = _services(args)
     return await _shell_with_services(
         args,
         manager=manager,
         occ_service=occ_service,
+        gitignore=gitignore,
     )
 
 
@@ -48,7 +49,7 @@ async def shell_batch(args: dict[str, object]) -> dict[str, object]:
     if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
         raise ValueError("items must be a list of shell request objects")
     max_concurrency = max(1, _int(args.get("max_concurrency"), default=32))
-    manager, occ_service = _services(args)
+    manager, occ_service, gitignore = _services(args)
     semaphore = asyncio.Semaphore(max_concurrency)
 
     async def run_one(index: int, item: object) -> dict[str, object]:
@@ -65,6 +66,7 @@ async def shell_batch(args: dict[str, object]) -> dict[str, object]:
                 item_args,
                 manager=manager,
                 occ_service=occ_service,
+                gitignore=gitignore,
             )
         timings = result.get("timings")
         if not isinstance(timings, dict):
@@ -98,6 +100,7 @@ async def _shell_with_services(
     *,
     manager: LayerStackManager,
     occ_service: OccService,
+    gitignore: "_LayerStackGitignoreOracle",
 ) -> dict[str, object]:
     total_start = time.perf_counter()
     request = _shell_request(args)
@@ -111,11 +114,13 @@ async def _shell_with_services(
     overlay_elapsed = time.perf_counter() - overlay_start
 
     occ_start = time.perf_counter()
+    apply_timings: dict[str, float] = {}
     changeset = await _apply_overlay_capture(
         capture,
         occ_service=occ_service,
         caller_id=str(args.get("actor_id") or ""),
         description=str(args.get("description") or "shell"),
+        out_timings=apply_timings,
     )
     occ_elapsed = time.perf_counter() - occ_start
 
@@ -126,6 +131,8 @@ async def _shell_with_services(
     timings = {
         **capture.timings,
         **changeset.timings,
+        **apply_timings,
+        **_gitignore_timings(gitignore),
         "api.shell.overlay_s": overlay_elapsed,
         "api.shell.occ_apply_s": occ_elapsed,
         "api.shell.total_s": time.perf_counter() - total_start,
@@ -146,7 +153,7 @@ async def _shell_with_services(
 
 async def write_file(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
-    _, occ_service = _services(args)
+    _, occ_service, gitignore = _services(args)
     path = str(args.get("path") or "")
     change = build_api_write_change(
         path=path,
@@ -154,8 +161,12 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         create_only=not bool(args.get("overwrite", True)),
     )
     layer_root = Path(str(args["layer_stack_root"]))
+    gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
+        gate_acquired = time.perf_counter()
+        flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
+            flock_acquired = time.perf_counter()
             result = await occ_service.apply_changeset(
                 [change],
                 options=CommitOptions(
@@ -174,6 +185,9 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         "conflict_reason": conflict.message if conflict is not None else None,
         "timings": {
             **result.timings,
+            **_gitignore_timings(gitignore),
+            "api.write.process_gate_wait_s": gate_acquired - gate_start,
+            "api.write.flock_wait_s": flock_acquired - flock_start,
             "api.write.total_s": time.perf_counter() - total_start,
         },
     }
@@ -181,7 +195,7 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
 
 async def edit_file(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
-    _, occ_service = _services(args)
+    _, occ_service, gitignore = _services(args)
     path = str(args.get("path") or "")
     edits = args.get("edits")
     if not isinstance(edits, Sequence) or isinstance(edits, (str, bytes)):
@@ -198,8 +212,12 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
             )
         )
     layer_root = Path(str(args["layer_stack_root"]))
+    gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
+        gate_acquired = time.perf_counter()
+        flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
+            flock_acquired = time.perf_counter()
             result = await occ_service.apply_changeset(
                 changes,
                 options=CommitOptions(
@@ -219,6 +237,9 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
         "conflict_reason": conflict.message if conflict is not None else None,
         "timings": {
             **result.timings,
+            **_gitignore_timings(gitignore),
+            "api.edit.process_gate_wait_s": gate_acquired - gate_start,
+            "api.edit.flock_wait_s": flock_acquired - flock_start,
             "api.edit.total_s": time.perf_counter() - total_start,
         },
     }
@@ -226,19 +247,24 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
 
 async def read_file(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
-    manager, _ = _services(args)
+    manager, _, _ = _services(args)
+    read_start = time.perf_counter()
     content, exists = manager.read_text(str(args.get("path") or ""))
+    read_elapsed = time.perf_counter() - read_start
     return {
         "success": True,
         "exists": exists,
         "content": content,
         "encoding": "utf-8",
-        "timings": {"api.read.total_s": time.perf_counter() - total_start},
+        "timings": {
+            "api.read.layer_stack_read_s": read_elapsed,
+            "api.read.total_s": time.perf_counter() - total_start,
+        },
     }
 
 
 async def pinned_layers(args: dict[str, object]) -> dict[str, object]:
-    manager, _ = _services(args)
+    manager, _, _ = _services(args)
     return {
         "success": True,
         "pinned_layers": list(manager.pinned_layers()),
@@ -246,7 +272,7 @@ async def pinned_layers(args: dict[str, object]) -> dict[str, object]:
 
 
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
-    manager, _ = _services(args)
+    manager, _, _ = _services(args)
     manifest = manager.read_active_manifest()
     layer_dirs = tuple((manager.storage_root / "layers").iterdir())
     staging_dirs = tuple((manager.storage_root / "staging").iterdir())
@@ -267,7 +293,7 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
 
 
 async def compact(args: dict[str, object]) -> dict[str, object]:
-    manager, _ = _services(args)
+    manager, _, _ = _services(args)
     max_depth = max(1, _int(args.get("max_depth"), default=4))
     before = manager.read_active_manifest()
     squashed = manager.squash(max_depth=max_depth)
@@ -329,8 +355,13 @@ async def _apply_overlay_capture(
     occ_service: OccService,
     caller_id: str,
     description: str,
+    out_timings: dict[str, float] | None = None,
 ) -> ChangesetResult:
+    convert_start = time.perf_counter()
     changes: Sequence[Change] = overlay_capture_to_occ_changes(capture)
+    convert_elapsed = time.perf_counter() - convert_start
+    if out_timings is not None:
+        out_timings["api.shell.overlay_capture_to_changes_s"] = convert_elapsed
     if not changes:
         return ChangesetResult(
             files=(),
@@ -340,25 +371,45 @@ async def _apply_overlay_capture(
     if capture.snapshot_manifest is None:
         raise ValueError("overlay capture is missing its leased manifest")
     layer_root = occ_service_layer_root(occ_service)
+    gate_start = time.perf_counter()
     async with _process_commit_gate(layer_root):
+        gate_acquired = time.perf_counter()
+        flock_start = time.perf_counter()
         async with _commit_lock(layer_root):
+            flock_acquired = time.perf_counter()
             result = await occ_service.apply_changeset(
                 changes,
                 snapshot=capture.snapshot_manifest,
                 options=CommitOptions(caller_id=caller_id, description=description),
             )
+    if out_timings is not None:
+        out_timings["api.shell.process_gate_wait_s"] = gate_acquired - gate_start
+        out_timings["api.shell.flock_wait_s"] = flock_acquired - flock_start
     if isinstance(result, PreparedChangeset):
         raise TypeError("runtime shell returned an uncommitted changeset")
     return result
 
 
-def _services(args: Mapping[str, object]) -> tuple[LayerStackManager, OccService]:
+def _services(
+    args: Mapping[str, object],
+) -> tuple[LayerStackManager, OccService, "_LayerStackGitignoreOracle"]:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
     manager = LayerStackManager(layer_stack_root)
     gitignore = _LayerStackGitignoreOracle(manager)
-    return manager, OccService(gitignore=gitignore, layer_stack=manager)
+    return manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore
+
+
+def _gitignore_timings(
+    gitignore: "_LayerStackGitignoreOracle",
+) -> dict[str, float]:
+    return {
+        "gitignore.cache_hits": float(gitignore.cache_hits),
+        "gitignore.cache_misses": float(gitignore.cache_misses),
+        "gitignore.materialize_snapshot_s": float(gitignore.last_materialize_s),
+        "gitignore.git_init_s": float(gitignore.last_git_init_s),
+    }
 
 
 def _shell_request(args: Mapping[str, object]) -> OverlayShellRequest:
@@ -483,6 +534,10 @@ class _LayerStackGitignoreOracle(GitignoreOracle):
     def __init__(self, layer_stack: LayerStackManager) -> None:
         self._layer_stack = layer_stack
         self._oracles: dict[int, tuple[tempfile.TemporaryDirectory[str], GitignoreOracle]] = {}
+        self.cache_hits: int = 0
+        self.cache_misses: int = 0
+        self.last_materialize_s: float = 0.0
+        self.last_git_init_s: float = 0.0
 
     def is_ignored(self, path: str) -> bool:
         return self.is_ignored_in_snapshot(
@@ -501,12 +556,18 @@ class _LayerStackGitignoreOracle(GitignoreOracle):
         version = snapshot.version
         cached = self._oracles.get(version)
         if cached is not None:
+            self.cache_hits += 1
             return cached[1]
 
+        self.cache_misses += 1
         temp_dir = tempfile.TemporaryDirectory(prefix="eos-gitignore-")
         workspace = Path(temp_dir.name)
+        materialize_start = time.perf_counter()
         self._layer_stack.materialize(workspace, snapshot)
+        self.last_materialize_s = time.perf_counter() - materialize_start
+        git_init_start = time.perf_counter()
         _init_git_workspace(workspace)
+        self.last_git_init_s = time.perf_counter() - git_init_start
         oracle = GitignoreOracle(str(workspace))
         self._oracles[version] = (temp_dir, oracle)
         return oracle

@@ -49,7 +49,11 @@ def test_registered_handler_dispatches_through_op_table() -> None:
 
     response = server.dispatch_envelope({"op": "test.echo", "args": {"value": 3}})
 
-    assert response == {"success": True, "value": 3}
+    assert response["success"] is True
+    assert response["value"] == 3
+    timings = response.get("timings", {})
+    assert "runtime.boot_to_dispatch_s" in timings
+    assert "runtime.dispatch_s" in timings
     assert calls == [{"value": 3}]
 
 

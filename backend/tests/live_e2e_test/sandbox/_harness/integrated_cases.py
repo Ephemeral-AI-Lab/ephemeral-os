@@ -47,13 +47,21 @@ class RuntimeCallMetric:
 _TIMING_JSONL_ENV = "EPHEMERALOS_LIVE_E2E_TIMING_JSONL"
 _TIMING_SCHEMA = "sandbox.live_e2e.per_call_timings.v1"
 _FIXED_TIMING_KEYS = (
+    "api.read.layer_stack_read_s",
     "api.read.total_s",
+    "api.write.flock_wait_s",
+    "api.write.process_gate_wait_s",
     "api.write.total_s",
+    "api.edit.flock_wait_s",
+    "api.edit.process_gate_wait_s",
     "api.edit.total_s",
     "api.shell.dispatch_total_s",
     "api.shell.total_s",
     "api.shell.overlay_s",
     "api.shell.occ_apply_s",
+    "api.shell.process_gate_wait_s",
+    "api.shell.flock_wait_s",
+    "api.shell.overlay_capture_to_changes_s",
     "api.shell_batch.dispatch_total_s",
     "api.shell_batch.total_s",
     "api.shell_batch.item_wait_s",
@@ -64,6 +72,12 @@ _FIXED_TIMING_KEYS = (
     "overlay.capture_changes_s",
     "layer_stack.transaction.lock_wait_s",
     "layer_stack.transaction.lock_held_s",
+    "runtime.boot_to_dispatch_s",
+    "runtime.dispatch_s",
+    "gitignore.cache_hits",
+    "gitignore.cache_misses",
+    "gitignore.materialize_snapshot_s",
+    "gitignore.git_init_s",
 )
 _TIMING_PREFIXES = ("occ.prepare.", "occ.commit.")
 _RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"

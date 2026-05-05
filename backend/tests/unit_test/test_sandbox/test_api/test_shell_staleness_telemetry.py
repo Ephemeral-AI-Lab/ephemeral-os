@@ -80,7 +80,9 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
 async def test_runtime_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
-    _, occ_service = api_handlers._services({"layer_stack_root": str(manager.storage_root)})
+    _, occ_service, _ = api_handlers._services(
+        {"layer_stack_root": str(manager.storage_root)}
+    )
 
     result = await occ_service.apply_changeset(
         [build_api_write_change(path="dist/app.js", final_content="first\n")],

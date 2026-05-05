@@ -17,10 +17,13 @@ import dataclasses
 import inspect
 import json
 import sys
+import time
 import traceback
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 from typing import Any
+
+_BOOT_T0 = time.perf_counter()
 
 Handler = Callable[[dict[str, Any]], Any]
 
@@ -57,6 +60,7 @@ def dispatch_json(raw: str) -> dict[str, Any]:
 
 def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Dispatch an already-decoded runtime envelope."""
+    dispatch_entered_at = time.perf_counter()
     op = envelope.get("op")
     if not isinstance(op, str) or not op:
         return _error(
@@ -82,13 +86,35 @@ def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
         result = handler(dict(args_raw))
         if inspect.isawaitable(result):
             result = asyncio.run(result)
-        return _to_jsonable(result)
+        jsonable = _to_jsonable(result)
+        _attach_runtime_boot_timings(
+            jsonable,
+            dispatch_entered_at=dispatch_entered_at,
+        )
+        return jsonable
     except Exception as exc:
         return _error(
             "internal_error",
             str(exc),
             {"op": op, "traceback": traceback.format_exc()},
         )
+
+
+def _attach_runtime_boot_timings(
+    response: Any,
+    *,
+    dispatch_entered_at: float,
+) -> None:
+    if not isinstance(response, dict):
+        return
+    timings = response.get("timings")
+    if not isinstance(timings, dict):
+        timings = {}
+        response["timings"] = timings
+    timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - _BOOT_T0)
+    timings["runtime.dispatch_s"] = max(
+        0.0, time.perf_counter() - dispatch_entered_at
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
