@@ -31,27 +31,15 @@ _MODEL_ONLY_MODULES = {
     "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "tool/read.py": {"sandbox.api.tool.raw_exec"},
+    "tool/read.py": {"sandbox.api.tool._runtime"},
     "tool/write.py": {
-        "sandbox.api.tool.result_projection",
-        "sandbox.occ.changeset.builders",
-        "sandbox.occ.client",
+        "sandbox.api.tool._runtime",
     },
     "tool/edit.py": {
-        "sandbox.api.tool.result_projection",
-        "sandbox.occ.changeset.builders",
-        "sandbox.occ.changeset.types",
-        "sandbox.occ.client",
+        "sandbox.api.tool._runtime",
     },
     "tool/shell.py": {
-        "sandbox.api.tool.result_projection",
-        "sandbox.occ.client",
-        "sandbox.occ.overlay_capture",
-        "sandbox.occ.service",
-        "sandbox.overlay.capture.types",
-        "sandbox.overlay.client",
-        "sandbox.overlay.runner.snapshot_overlay_runner",
-        "sandbox.runtime.async_bridge",
+        "sandbox.api.tool._runtime",
     },
     "status/__init__.py": {
         "sandbox.control.ops.recovery",

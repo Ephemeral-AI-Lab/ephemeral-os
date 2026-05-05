@@ -11,7 +11,7 @@ import pytest
 from .._harness.sandbox_fixture import SandboxHandle
 
 
-_PENDING = "pending: needs integrated_sandbox fixture (overlay+occ register on live sandbox)"
+_PENDING = "pending: needs concurrency helper over public sandbox runtime tools"
 
 
 def test_in_flight_shell_does_not_see_concurrent_api_edit(

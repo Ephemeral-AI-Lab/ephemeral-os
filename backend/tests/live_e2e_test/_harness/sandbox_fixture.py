@@ -4,22 +4,19 @@ Defines :class:`SandboxHandle` and the pytest fixture set described in
 §3 of ``../live-e2e-test-suite-plan.md``. The ``live_sandbox`` fixture
 is session-scoped and brings up exactly one Daytona sandbox via
 ``setup_after_create`` — the same path agents use. Per-suite fixtures
-reset ``/testbed`` and populate the layer/overlay/occ slots.
+reset ``/testbed`` and any sandbox-runtime layer/overlay/OCC state.
 
-Note on layer-stack scope: the migration plan keeps ``LayerStackManager``
-host-side; the suite plan's "tmpfs root inside the sandbox" framing is
-realized by giving the host-side manager a *local* ``tmp_path`` storage
-root while the sandbox stays up to satisfy the gate. Tests that need
-remote shell access reach for ``handle.raw_exec``.
+The live suite must exercise the Daytona sandbox, either through direct
+in-sandbox probes or through the public sandbox API, never through a local
+``LayerStackManager`` or process-local OCC/overlay registry.
 """
 
 from __future__ import annotations
 
-import asyncio
+import shlex
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -31,6 +28,7 @@ from sandbox.api.tool import edit as edit_mod
 from sandbox.api.tool import read as read_mod
 from sandbox.api.tool import shell as shell_mod
 from sandbox.api.tool import write as write_mod
+from sandbox.api.tool._runtime import DEFAULT_LAYER_STACK_ROOT
 from sandbox.api.tool.raw_exec import raw_exec as raw_exec_fn
 from sandbox.api.utils.models import (
     EditFileRequest,
@@ -46,20 +44,9 @@ from sandbox.api.utils.models import (
     WriteFileResult,
 )
 from sandbox.control.ops.setup import setup_after_create
-from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.client import dispose_occ_service, register_occ_service
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
-from sandbox.occ.service import OccService
-from sandbox.overlay.client import (
-    OverlayClient,
-    dispose_overlay_client,
-    register_overlay_client,
-)
-from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
 from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.providers.registry import get_default_provider, register_adapter
 
-from .occ_workload import make_sandbox_gitignore_run_fn
 from .overlay_probe import OVERLAY_ROOT, script_purge_overlay_mounts, wrap_unshare
 
 
@@ -148,9 +135,6 @@ class SandboxHandle:
     raw_exec: Callable[..., Awaitable[RawExecResult]]
     tool: ToolBundle
     workspace_root: str = WORKSPACE_ROOT
-    layer_stack: LayerStackManager | None = None
-    overlay_client: Any | None = None
-    occ_service: Any | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
 
@@ -244,28 +228,16 @@ async def _reset_workspace(sandbox_id: str) -> None:
         pytest.fail(f"workspace reset failed: {result.stderr or result.stdout}")
 
 
-@pytest_asyncio.fixture
-async def layer_stack_sandbox(
-    live_sandbox: SandboxHandle, tmp_path: Path
-) -> AsyncIterator[SandboxHandle]:
-    """``live_sandbox`` + a host-local ``LayerStackManager`` rooted at ``tmp_path``.
-
-    Layer-stack atomicity / GC / squash / lease properties are host-side
-    invariants; the live sandbox is held up only to keep the gate honest
-    for parity with neighbouring suites.
-    """
-    await _reset_workspace(live_sandbox.sandbox_id)
-    storage = tmp_path / "layer_stack_storage"
-    manager = LayerStackManager(storage)
-    handle = SandboxHandle(
-        sandbox_id=live_sandbox.sandbox_id,
-        caller=live_sandbox.caller,
-        raw_exec=live_sandbox.raw_exec,
-        tool=live_sandbox.tool,
-        layer_stack=manager,
-        extras={"storage_root": storage},
+async def _reset_runtime_layer_stack(sandbox_id: str) -> None:
+    """Remove guarded API state so integrated tests start from an empty stack."""
+    quoted_root = shlex.quote(DEFAULT_LAYER_STACK_ROOT)
+    result = await raw_exec_fn(
+        sandbox_id,
+        f"rm -rf {quoted_root} && mkdir -p {quoted_root}",
+        timeout=60,
     )
-    yield handle
+    if result.exit_code != 0:
+        pytest.fail(f"runtime layer-stack reset failed: {result.stderr or result.stdout}")
 
 
 async def _purge_overlay_mounts(sandbox_id: str) -> None:
@@ -277,99 +249,35 @@ async def _purge_overlay_mounts(sandbox_id: str) -> None:
 
 @pytest_asyncio.fixture
 async def overlay_sandbox(
-    live_sandbox: SandboxHandle, tmp_path: Path
+    live_sandbox: SandboxHandle,
 ) -> AsyncIterator[SandboxHandle]:
-    """Live sandbox + host-side overlay client + per-test mount cleanup.
-
-    Registers an :class:`OverlayClient` over a host-local
-    :class:`LayerStackManager` so callers exercising the typed runtime
-    route work end-to-end. Direct ``mount(2)`` measurements live inside the
-    sandbox and reach for ``handle.raw_exec`` plus the helpers in
-    ``_harness/overlay_probe.py``.
-    """
+    """Live sandbox + per-test cleanup for direct in-sandbox overlay probes."""
     await _reset_workspace(live_sandbox.sandbox_id)
     await _purge_overlay_mounts(live_sandbox.sandbox_id)
-
-    storage = tmp_path / "overlay_storage"
-    manager = LayerStackManager(storage)
-    overlay_client = OverlayClient(runner=SnapshotOverlayRunner(manager))
-    register_overlay_client(live_sandbox.sandbox_id, overlay_client)
 
     handle = SandboxHandle(
         sandbox_id=live_sandbox.sandbox_id,
         caller=live_sandbox.caller,
         raw_exec=live_sandbox.raw_exec,
         tool=live_sandbox.tool,
-        layer_stack=manager,
-        overlay_client=overlay_client,
         extras={
-            "storage_root": storage,
             "overlay_root": OVERLAY_ROOT,
         },
     )
     try:
         yield handle
     finally:
-        try:
-            await _purge_overlay_mounts(live_sandbox.sandbox_id)
-        finally:
-            dispose_overlay_client(live_sandbox.sandbox_id)
-
-
-@pytest_asyncio.fixture
-async def occ_sandbox(
-    live_sandbox: SandboxHandle, tmp_path: Path
-) -> AsyncIterator[SandboxHandle]:
-    """Live sandbox + host-side ``OccService`` whose oracle queries ``/testbed``.
-
-    The migration plan keeps :class:`LayerStackManager` host-side, so
-    OCC bookkeeping lives in ``tmp_path/occ_storage``. But the
-    :class:`GitignoreOracle` is bridged to the live sandbox: every
-    ``git check-ignore`` lookup ships over ``raw_exec`` against
-    ``/testbed`` so OCC's route decisions consult the real sandbox
-    state agents see, not a synthetic host workspace.
-
-    ``_reset_workspace`` runs first to give us a clean ``/testbed``
-    git baseline that test bodies can layer ``.gitignore`` patterns
-    onto via :func:`write_sandbox_gitignore`.
-    """
-    await _reset_workspace(live_sandbox.sandbox_id)
-
-    storage = tmp_path / "occ_storage"
-    manager = LayerStackManager(storage)
-    loop = asyncio.get_running_loop()
-    run_fn = make_sandbox_gitignore_run_fn(live_sandbox.sandbox_id, loop)
-    gitignore = GitignoreOracle("/testbed", run=run_fn)
-    service = OccService(gitignore=gitignore, layer_stack=manager)
-    register_occ_service(live_sandbox.sandbox_id, service)
-
-    handle = SandboxHandle(
-        sandbox_id=live_sandbox.sandbox_id,
-        caller=live_sandbox.caller,
-        raw_exec=live_sandbox.raw_exec,
-        tool=live_sandbox.tool,
-        layer_stack=manager,
-        occ_service=service,
-        extras={
-            "storage_root": storage,
-            "workspace_root": "/testbed",
-            "gitignore_oracle": gitignore,
-            "gitignore_run_fn": run_fn,
-            "payloads_root": tmp_path / "occ_payloads",
-        },
-    )
-    try:
-        yield handle
-    finally:
-        dispose_occ_service(live_sandbox.sandbox_id)
+        await _purge_overlay_mounts(live_sandbox.sandbox_id)
 
 
 @pytest_asyncio.fixture
 async def integrated_sandbox(
     live_sandbox: SandboxHandle,
 ) -> AsyncIterator[SandboxHandle]:
-    pytest.skip("integrated_sandbox fixture lands with the integrated suite")
-    yield live_sandbox  # pragma: no cover
+    """Live sandbox with public sandbox API state reset inside the runtime."""
+    await _reset_workspace(live_sandbox.sandbox_id)
+    await _reset_runtime_layer_stack(live_sandbox.sandbox_id)
+    yield live_sandbox
 
 
 __all__ = [
@@ -377,8 +285,6 @@ __all__ = [
     "ToolBundle",
     "WORKSPACE_ROOT",
     "live_sandbox",
-    "layer_stack_sandbox",
     "overlay_sandbox",
-    "occ_sandbox",
     "integrated_sandbox",
 ]

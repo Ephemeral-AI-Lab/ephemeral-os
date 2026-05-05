@@ -2,81 +2,96 @@
 
 from __future__ import annotations
 
+import pytest
+
+from sandbox.api import EditFileRequest, SandboxCaller, SearchReplaceEdit
 from sandbox.api.tool.edit import edit_file
-from sandbox.api import (
-    EditFileRequest,
-    SandboxCaller,
-    SearchReplaceEdit,
-)
-from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
-from sandbox.occ.client import dispose_occ_service, register_occ_service
 
 
-class _Service:
-    name = "edit-api"
+@pytest.mark.asyncio
+async def test_edit_file_dispatches_to_sandbox_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str, dict[str, object], int]] = []
 
-    def __init__(self, *, response: ChangesetResult) -> None:
-        self.response = response
-        self.calls: list[tuple[tuple[object, ...], object]] = []
+    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+        calls.append((sandbox_id, op, args, timeout))
+        return {
+            "success": True,
+            "changed_paths": ["a.py"],
+            "applied_edits": 1,
+            "status": "ok",
+            "conflict": None,
+            "conflict_reason": None,
+            "timings": {},
+        }
 
-    async def apply_changeset(self, changes, *, snapshot=None, options=None):
-        del snapshot
-        self.calls.append((tuple(changes), options))
-        return self.response
-
-
-async def test_edit_file_delegates_once_and_counts_applied_edits() -> None:
-    service = _Service(
-        response=ChangesetResult(
-            files=(FileResult(path="/workspace/a.py", status=FileStatus.COMMITTED),)
-        )
+    monkeypatch.setattr(
+        "sandbox.api.tool.edit.call_runtime_api",
+        fake_call_runtime_api,
     )
-    register_occ_service("sb-edit", service)
-    try:
-        result = await edit_file(
-            "sb-edit",
-            EditFileRequest(
-                path="/workspace/a.py",
-                edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
-                caller=SandboxCaller(agent_id="agent-1"),
-            ),
-        )
-    finally:
-        dispose_occ_service("sb-edit")
+
+    result = await edit_file(
+        "sb-edit",
+        EditFileRequest(
+            path="a.py",
+            edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
+            caller=SandboxCaller(agent_id="agent-1"),
+            description="edit a",
+        ),
+    )
 
     assert result.success is True
-    assert result.changed_paths == ("/workspace/a.py",)
+    assert result.changed_paths == ("a.py",)
     assert result.applied_edits == 1
-    assert len(service.calls) == 1
-    change = service.calls[0][0][0]
-    assert change.path == "/workspace/a.py"
-    assert change.old_text == "old"
-
-
-async def test_edit_file_guard_failure_maps_conflict_info() -> None:
-    service = _Service(
-        response=ChangesetResult(
-            files=(
-                FileResult(
-                    path="/workspace/a.py",
-                    status=FileStatus.ABORTED_OVERLAP,
-                    message="patch_failed",
-                ),
-            )
+    assert calls == [
+        (
+            "sb-edit",
+            "api.edit_file",
+            {
+                "path": "a.py",
+                "edits": [{"old_text": "old", "new_text": "new"}],
+                "actor_id": "agent-1",
+                "description": "edit a",
+            },
+            60,
         )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_edit_file_guard_failure_maps_conflict_info(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+        del sandbox_id, op, args, timeout
+        return {
+            "success": False,
+            "changed_paths": [],
+            "applied_edits": 0,
+            "status": "aborted_overlap",
+            "conflict": {
+                "reason": "aborted_overlap",
+                "conflict_file": "a.py",
+                "message": "patch_failed",
+            },
+            "conflict_reason": "patch_failed",
+            "timings": {},
+        }
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.edit.call_runtime_api",
+        fake_call_runtime_api,
     )
-    register_occ_service("sb-edit-conflict", service)
-    try:
-        result = await edit_file(
-            "sb-edit-conflict",
-            EditFileRequest(
-                path="/workspace/a.py",
-                edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
-                caller=SandboxCaller(agent_id="agent-1"),
-            ),
-        )
-    finally:
-        dispose_occ_service("sb-edit-conflict")
+
+    result = await edit_file(
+        "sb-edit-conflict",
+        EditFileRequest(
+            path="a.py",
+            edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
+            caller=SandboxCaller(agent_id="agent-1"),
+        ),
+    )
 
     assert result.success is False
     assert result.applied_edits == 0

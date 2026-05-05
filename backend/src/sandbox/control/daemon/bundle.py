@@ -38,9 +38,6 @@ _RUNTIME_EXCLUDE_PARTS = {
     "backends",
     "testing.py",
 }
-_OCC_EXCLUDE_PARTS = {"client.py"}
-_OVERLAY_EXCLUDE_PARTS = {"client.py"}
-
 _BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"
 _BUNDLE_REMOTE_TARBALL = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz"
 
@@ -189,7 +186,6 @@ def _runtime_bundle_bytes() -> bytes:
             tar,
             occ_dir,
             sandbox_dir=sandbox_dir,
-            exclude_parts=_OCC_EXCLUDE_PARTS,
         )
 
         overlay_dir = sandbox_dir / "overlay"
@@ -197,7 +193,6 @@ def _runtime_bundle_bytes() -> bytes:
             tar,
             overlay_dir,
             sandbox_dir=sandbox_dir,
-            exclude_parts=_OVERLAY_EXCLUDE_PARTS,
         )
 
         _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)

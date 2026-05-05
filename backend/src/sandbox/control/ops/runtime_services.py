@@ -1,233 +1,32 @@
-"""Process-local sandbox runtime service binding helpers.
+"""Provider-backed sandbox runtime service helpers.
 
-This module owns the service-management side of local sandbox API setups:
-layer-stack storage, OCC service registration, overlay client registration,
-and the provider adapter needed by structured reads.
+This module owns the host transport for operations whose state and guardrails
+live inside the sandbox runtime bundle.
 """
 
 from __future__ import annotations
 
-import json
-import shlex
-import uuid
 import asyncio
 import time
+import uuid
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import NoReturn
 
 from sandbox.api import (
     ConflictInfo,
     EditFileResult,
-    RawExecResult,
     ReadFileResult,
     SandboxCaller,
     SearchReplaceEdit,
     ShellResult,
     WriteFileResult,
 )
-from sandbox.control.daemon.bundle import ensure_runtime_uploaded
+from sandbox.control.daemon.bundle import BUNDLE_REMOTE_DIR, ensure_runtime_uploaded
 from sandbox.control.daemon.command import _call_runtime_server
-from sandbox.layer_stack import LayerStackManager, Manifest
-from sandbox.occ.client import dispose_occ_service, register_occ_service
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
-from sandbox.occ.service import OccService
-from sandbox.overlay.client import (
-    OverlayClient,
-    dispose_overlay_client,
-    register_overlay_client,
-)
-from sandbox.overlay.capture.types import OverlayCapture
-from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
-from sandbox.overlay.runner.snapshot_overlay_runner import (
-    OverlayShellRequest,
-    SnapshotOverlayRunner,
-)
-from sandbox.providers.protocol import ProviderAdapter
-from sandbox.providers.registry import dispose_adapter, get_adapter, register_adapter
+from sandbox.providers.registry import dispose_adapter, get_adapter
 
-
-class MutableGitignore(GitignoreOracle):
-    """In-memory gitignore oracle for process-local runtime bindings."""
-
-    def __init__(self, ignored_paths: set[str] | None = None) -> None:
-        self.ignored_paths: set[str] = set(ignored_paths or ())
-
-    def is_ignored(self, path: str) -> bool:
-        normalized = _normalize_ignored_path(path)
-        return any(
-            normalized == ignored or normalized.startswith(f"{ignored}/")
-            for ignored in self.ignored_paths
-        )
-
-    def mark_ignored(self, paths: Iterable[str]) -> None:
-        self.ignored_paths.update(_normalize_ignored_path(path) for path in paths)
-
-    def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        return {path for path in paths if self.is_ignored(path)}
-
-
-class LayerReadAdapter:
-    """Provider adapter for ``sandbox.api.tool.read_file`` over a layer stack."""
-
-    name = "layer-stack-read"
-
-    def __init__(self, manager: LayerStackManager) -> None:
-        self._manager = manager
-
-    async def exec(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult:
-        del sandbox_id, cwd, timeout
-        path = shlex.split(command)[-1]
-        content, exists = self._manager.read_text(path)
-        return RawExecResult(
-            exit_code=0,
-            stdout=json.dumps({"exists": exists, "content": content}),
-        )
-
-    def get_health(self) -> dict[str, object]:
-        return {"status": "ok"}
-
-    def list_snapshots(self) -> list[dict[str, object]]:
-        return []
-
-    def create(
-        self,
-        *,
-        name: str,
-        snapshot: str | None = None,
-        image: str | None = None,
-        language: str = "python",
-        env_vars: dict[str, str] | None = None,
-        labels: dict[str, str] | None = None,
-    ) -> dict[str, object]:
-        return _unsupported("create")
-
-    def get(self, sandbox_id: str) -> dict[str, object]:
-        return _unsupported("get")
-
-    def list(self) -> list[dict[str, object]]:
-        return _unsupported("list")
-
-    def start(self, sandbox_id: str) -> dict[str, object]:
-        return _unsupported("start")
-
-    def stop(self, sandbox_id: str) -> dict[str, object]:
-        return _unsupported("stop")
-
-    def delete(self, sandbox_id: str) -> None:
-        _unsupported("delete")
-
-    def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, object]:
-        return _unsupported("set_labels")
-
-    def get_signed_preview_url(
-        self,
-        sandbox_id: str,
-        port: int,
-    ) -> dict[str, object]:
-        return _unsupported("get_signed_preview_url")
-
-    def get_build_logs_url(self, sandbox_id: str) -> str | None:
-        return _unsupported("get_build_logs_url")
-
-
-class _AsyncBarrier:
-    def __init__(self, parties: int) -> None:
-        self._parties = max(1, int(parties))
-        self._arrived = 0
-        self._lock = asyncio.Lock()
-        self._event = asyncio.Event()
-
-    async def wait(self) -> None:
-        async with self._lock:
-            self._arrived += 1
-            if self._arrived >= self._parties:
-                self._event.set()
-        await asyncio.wait_for(self._event.wait(), timeout=10)
-
-
-class _BarrierRuntimeInvoker:
-    """Hold shell invocations until every caller has acquired its snapshot."""
-
-    def __init__(self, *, storage_root: Path, parties: int) -> None:
-        self._inner = RuntimeInvoker(storage_root=storage_root)
-        self._barrier = _AsyncBarrier(parties)
-
-    async def invoke(
-        self,
-        *,
-        request: OverlayShellRequest,
-        manifest: Manifest,
-    ) -> OverlayCapture:
-        await self._barrier.wait()
-        return await self._inner.invoke(request=request, manifest=manifest)
-
-
-@dataclass(frozen=True)
-class RuntimeServiceBinding:
-    """Registered OCC/layer-stack/overlay services for one sandbox id."""
-
-    sandbox_id: str
-    manager: LayerStackManager
-    gitignore: MutableGitignore
-    source_root: Path
-
-    def caller(self, label: str) -> SandboxCaller:
-        safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in label)
-        return SandboxCaller(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
-
-    def mark_ignored(self, paths: Iterable[str]) -> None:
-        self.gitignore.mark_ignored(paths)
-
-    def bind_default_overlay(self) -> None:
-        register_overlay_client(
-            self.sandbox_id,
-            OverlayClient(runner=SnapshotOverlayRunner(self.manager)),
-        )
-
-    @contextmanager
-    def barrier_overlay(self, *, parties: int) -> Iterator[None]:
-        register_overlay_client(
-            self.sandbox_id,
-            OverlayClient(
-                runner=SnapshotOverlayRunner(
-                    self.manager,
-                    invoker=_BarrierRuntimeInvoker(
-                        storage_root=self.manager.storage_root,
-                        parties=parties,
-                    ),
-                )
-            ),
-        )
-        try:
-            yield
-        finally:
-            self.bind_default_overlay()
-
-    def dispose(self) -> None:
-        dispose_overlay_client(self.sandbox_id)
-        dispose_occ_service(self.sandbox_id)
-        dispose_adapter(self.sandbox_id)
-
-
-@dataclass(frozen=True)
-class ShellBatchCall:
-    """One shell request sent as part of a provider-backed runtime batch."""
-
-    command: str
-    timeout: int | None
-    cwd: str
-    caller: SandboxCaller
-    description: str
+DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
 
 
 @dataclass
@@ -470,41 +269,21 @@ class RemoteRuntimeServiceBinding:
         dispose_adapter(self.sandbox_id)
 
 
-def create_runtime_services(
-    *,
-    sandbox_id: str,
-    storage_root: str | Path,
-    source_root: str | Path | None = None,
-    ignored_paths: Iterable[str] = (),
-) -> RuntimeServiceBinding:
-    """Create and register process-local sandbox API services."""
-    manager = LayerStackManager(storage_root)
-    gitignore = MutableGitignore(
-        {_normalize_ignored_path(path) for path in ignored_paths}
-    )
-    binding = RuntimeServiceBinding(
-        sandbox_id=sandbox_id,
-        manager=manager,
-        gitignore=gitignore,
-        source_root=(
-        Path(source_root)
-            if source_root is not None
-            else Path(storage_root) / "sources"
-        ),
-    )
-    register_adapter(sandbox_id, LayerReadAdapter(manager))
-    register_occ_service(
-        sandbox_id,
-        OccService(gitignore=gitignore, layer_stack=manager),
-    )
-    binding.bind_default_overlay()
-    return binding
+@dataclass(frozen=True)
+class ShellBatchCall:
+    """One shell request sent as part of a provider-backed runtime batch."""
+
+    command: str
+    timeout: int | None
+    cwd: str
+    caller: SandboxCaller
+    description: str
 
 
 def create_remote_runtime_services(
     *,
     sandbox_id: str,
-    layer_stack_root: str,
+    layer_stack_root: str = DEFAULT_LAYER_STACK_ROOT,
     ignored_paths: Iterable[str] = (),
 ) -> RemoteRuntimeServiceBinding:
     """Create a provider-backed runtime API binding for an existing sandbox."""
@@ -517,10 +296,6 @@ def create_remote_runtime_services(
 
 def _normalize_ignored_path(path: str) -> str:
     return str(path).strip().strip("/")
-
-
-def _unsupported(operation: str) -> NoReturn:
-    raise NotImplementedError(f"LayerReadAdapter does not support {operation}")
 
 
 def _shell_result_from_payload(raw: dict[str, object]) -> ShellResult:
@@ -616,14 +391,9 @@ def _int(value: object, *, default: int) -> int:
     raise TypeError(f"expected integer value, got {type(value).__name__}")
 
 
-_provider_adapter_check: type[ProviderAdapter] = LayerReadAdapter
-
-
 __all__ = [
-    "LayerReadAdapter",
-    "MutableGitignore",
+    "DEFAULT_LAYER_STACK_ROOT",
     "RemoteRuntimeServiceBinding",
-    "RuntimeServiceBinding",
+    "ShellBatchCall",
     "create_remote_runtime_services",
-    "create_runtime_services",
 ]

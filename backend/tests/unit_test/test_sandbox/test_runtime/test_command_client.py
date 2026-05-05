@@ -60,7 +60,7 @@ def _result(exit_code: int, stdout: str) -> Any:
 
 def _extract_op(command: str) -> str:
     argv = shlex.split(command)
-    assert argv[:3] == ["python3", "-m", "sandbox.runtime.server"]
+    assert "sandbox.runtime.server" in command
     payload = json.loads(argv[-1])
     return str(payload["op"])
 
@@ -79,7 +79,7 @@ async def test_call_returns_success_result() -> None:
         }
     finally:
         dispose_adapter("sb-1")
-    assert any("python3 -m sandbox.runtime.server" in c for c in transport.exec_calls)
+    assert any("sandbox.runtime.server" in c for c in transport.exec_calls)
 
 
 @pytest.mark.asyncio

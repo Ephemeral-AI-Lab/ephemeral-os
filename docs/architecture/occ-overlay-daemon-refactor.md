@@ -4,7 +4,7 @@
 plan has been retired from the docs tree. This document is retained for the
 OCC/Overlay responsibility split research and uses the updated naming below:
 `sandbox/runtime/server.py` is the generic in-sandbox
-guarded service; OCC and Overlay each own a host-side `client.py` plus bundled
+guarded service; OCC and Overlay own sandbox-side handlers plus bundled
 `setup.sh`. The refactored domain modules are only `sandbox/occ/` and
 `sandbox/overlay/`; `sandbox/runtime/` is daemon/server support.
 **Author:** session 2026-05-03
@@ -87,10 +87,10 @@ backend/src/
   is a generic OP_TABLE dispatcher: decode request, validate, lookup handler,
   run handler, encode result. It does not hardcode one branch for each
   OCC or Overlay request.
-- **`client.py` belongs to the peer.** `sandbox/occ/client.py` and
-  `sandbox/overlay/client.py` are host-side typed request clients. They submit
-  requests to `runtime/server.py` through one provider `adapter.exec` call.
-  There is no generic public `runtime/client.py`.
+- **No local guardrail clients.** Public tools submit guarded requests to
+  `runtime/server.py` through one provider `adapter.exec` call. OCC and Overlay
+  behavior is selected by sandbox-side handlers, not by process-local
+  guardrail registries.
 - **`setup.sh` belongs to the peer.** `sandbox/occ/setup.sh` and
   `sandbox/overlay/setup.sh` are concrete bundled scripts registered by each
   peer's `bootstrap.py` and submitted by `runtime/setup_orchestrator.py`.
@@ -112,7 +112,6 @@ Single OCC class is the chokepoint. Internals:
 ```
 sandbox/occ/
 ├── __init__.py
-├── client.py                      # host-side typed request client
 ├── setup.sh                       # OCC setup submitted by runtime/setup_orchestrator.py
 ├── bootstrap.py                   # registers setup.sh + server handlers
 ├── handlers/                      # thin server op adapters
@@ -130,11 +129,11 @@ sandbox/occ/
 └── engine.py                      # concrete OCC composition root
 ```
 
-External API: public write/edit verbs route to `OCCClient`, not directly to OCC
-handlers. Move and delete verbs are removed from the external surface (see §0.1)
-— `mv` / `rm` flow through shell and commit by applying an `OverlayCapture`
-through OCC. Internally, overlay commits can still produce delete changes
-consumed by the OCC merge path; that is not a public OCC method.
+External API: public write/edit verbs route through `runtime/server.py` to
+sandbox-side OCC handlers. Move and delete verbs are removed from the external
+surface (see §0.1) — `mv` / `rm` flow through shell and commit by applying an
+`OverlayCapture` through OCC. Internally, overlay commits can still produce
+delete changes consumed by the OCC merge path; that is not a public OCC method.
 
 ### 2.2 `sandbox/overlay/`
 
@@ -143,7 +142,6 @@ Mostly relocation:
 ```
 sandbox/overlay/
 ├── __init__.py
-├── client.py                      # host-side typed request client
 ├── setup.sh                       # overlay setup submitted by runtime/setup_orchestrator.py
 ├── bootstrap.py                   # registers setup.sh + server handlers
 ├── handlers/
@@ -157,11 +155,11 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes through `OverlayClient`, receives an
-`OverlayCapture`, and applies that capture through `occ.overlay_capture`.
-Shell no longer has a read-only `raw_exec` bypass and no longer falls back to
-the removed live-root overlay runtime. Overlay never imports OCC and never
-classifies gitignored vs gitincluded paths itself.
+External API: public shell routes through `runtime/server.py`, receives an
+`OverlayCapture` inside the sandbox runtime, and applies that capture through
+`occ.overlay_capture`. Shell no longer has a read-only `raw_exec` bypass and no
+longer falls back to the removed live-root overlay runtime. Overlay never
+imports OCC and never classifies gitignored vs gitincluded paths itself.
 
 No `auditor.py` remains in the target overlay package. The audit name implied
 policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
@@ -187,9 +185,9 @@ sandbox/runtime/
 └── setup_orchestrator.py
 ```
 
-There is no generic public `runtime/client.py`. Host-side typed clients live in
-`sandbox/occ/client.py` and `sandbox/overlay/client.py`; public agent tools
-still import only `sandbox.api.{shell,read,write,edit}`.
+There is no generic public `runtime/client.py` and no local OCC/Overlay client
+registry. Public agent tools still import only
+`sandbox.api.{shell,read,write,edit}`; those modules call `runtime/server.py`.
 
 DELETED from the old daemon: `index_store.py`, all symbol-query RPC handlers,
 all symbol-related wire types. (See `plugins-refactor.md` for the query-side
@@ -278,16 +276,15 @@ pass without an intermediate broken state.
    - DELETE: index_store.py, symbol-query handlers, symbol wire types
    - ledger_store.py moves to sandbox/occ/ledger_store.py
 
-5. Add peer clients and setup scripts
-   - sandbox/occ/client.py routes OCC requests to runtime/server.py with one adapter.exec
-   - sandbox/overlay/client.py routes overlay/shell requests to runtime/server.py with one adapter.exec
+5. Add sandbox runtime dispatch and setup scripts
+   - public sandbox API tool modules route guarded requests to runtime/server.py with one adapter.exec
    - sandbox/occ/setup.sh and sandbox/overlay/setup.sh are registered by peer bootstrap.py files
-   - Do not add a public runtime/client.py
+   - Do not add local OCC/Overlay client registries or a public runtime/client.py
 
 6. Delete old backends and registries
    - DELETE old code_intelligence/backends/
    - Old code_intelligence/registry.py and service.py DELETED
-   - Public agent tools route through sandbox.api.*; API modules delegate to peer clients
+   - Public agent tools route through sandbox.api.*; API modules delegate to runtime/server.py
 
 7. Mass deletions
    - api/code_intelligence_api.py + code_intelligence_impl.py

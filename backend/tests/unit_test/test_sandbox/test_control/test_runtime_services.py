@@ -1,75 +1,117 @@
-"""Tests for process-local sandbox runtime service bindings."""
+"""Tests for provider-backed sandbox runtime service bindings."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
-from sandbox.api import ReadFileRequest, ShellRequest, WriteFileRequest
-from sandbox.api.tool.read import read_file
-from sandbox.api.tool.shell import shell
-from sandbox.api.tool.write import write_file
-from sandbox.control.ops.runtime_services import create_runtime_services
-from sandbox.occ.client import OCCClientError, get_occ_service
-from sandbox.overlay.client import OverlayClientError, get_overlay_client
-from sandbox.providers.registry import has_registered_adapter
+from sandbox.api import SandboxCaller, SearchReplaceEdit
+from sandbox.control.ops import runtime_services
 
 
-async def test_runtime_services_bind_public_api_verbs(tmp_path: Path) -> None:
-    services = create_runtime_services(
-        sandbox_id="sb-runtime-services",
-        storage_root=tmp_path / "layer-stack",
+class _Adapter:
+    async def exec(self, *_args, **_kwargs):
+        raise AssertionError("runtime server call is mocked in this test")
+
+
+@pytest.mark.asyncio
+async def test_remote_runtime_services_dispatch_public_verbs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str, dict[str, object], int]] = []
+
+    async def fake_ensure_runtime_uploaded(sandbox_id: str) -> str:
+        assert sandbox_id == "sb-runtime"
+        return "bundle-hash"
+
+    async def fake_call_runtime_server(*, exec_fn, sandbox_id, op, args, timeout):
+        del exec_fn
+        calls.append((sandbox_id, op, args, timeout))
+        if op == "api.write_file":
+            return {
+                "success": True,
+                "changed_paths": ["a.py"],
+                "status": "ok",
+                "timings": {},
+            }
+        if op == "api.edit_file":
+            return {
+                "success": True,
+                "changed_paths": ["a.py"],
+                "applied_edits": 1,
+                "status": "ok",
+                "timings": {},
+            }
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "content",
+                "encoding": "utf-8",
+                "timings": {},
+            }
+        if op == "api.shell":
+            return {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "ok\n",
+                "stderr": "",
+                "changed_paths": ["b.py"],
+                "status": "ok",
+                "warnings": [],
+                "timings": {},
+            }
+        raise AssertionError(f"unexpected op: {op}")
+
+    monkeypatch.setattr(
+        runtime_services,
+        "ensure_runtime_uploaded",
+        fake_ensure_runtime_uploaded,
     )
-    try:
-        sandbox_caller = services.caller("unit")
-        write = await write_file(
-            services.sandbox_id,
-            WriteFileRequest(
-                path="src/a.txt",
-                content="a\n",
-                caller=sandbox_caller,
-            ),
-        )
-        read = await read_file(
-            services.sandbox_id,
-            ReadFileRequest(path="src/a.txt", caller=sandbox_caller),
-        )
-        command = await shell(
-            services.sandbox_id,
-            ShellRequest(
-                command="mkdir -p src; printf 'b\\n' > src/b.txt; cat src/b.txt",
-                caller=sandbox_caller,
-                timeout=10,
-            ),
-        )
-
-        assert write.success is True
-        assert read.success is True
-        assert read.content == "a\n"
-        assert command.success is True
-        assert command.stdout == "b\n"
-        assert command.changed_paths == ("src/b.txt",)
-        assert services.manager.read_text("src/b.txt") == ("b\n", True)
-    finally:
-        services.dispose()
-
-
-def test_runtime_services_dispose_removes_bindings(tmp_path: Path) -> None:
-    sandbox_id = "sb-runtime-services-dispose"
-    services = create_runtime_services(
-        sandbox_id=sandbox_id,
-        storage_root=tmp_path / "layer-stack",
+    monkeypatch.setattr(runtime_services, "get_adapter", lambda _sandbox_id: _Adapter())
+    monkeypatch.setattr(
+        runtime_services,
+        "_call_runtime_server",
+        fake_call_runtime_server,
     )
 
-    assert has_registered_adapter(sandbox_id) is True
-    assert get_occ_service(sandbox_id) is not None
-    assert get_overlay_client(sandbox_id) is not None
+    services = runtime_services.create_remote_runtime_services(
+        sandbox_id="sb-runtime",
+        layer_stack_root="/sandbox/layers",
+        ignored_paths={"build/"},
+    )
+    caller = SandboxCaller(agent_id="agent-1")
 
-    services.dispose()
+    write = await services.write_file(
+        path="a.py",
+        content="x",
+        caller=caller,
+        description="write a",
+    )
+    edit = await services.edit_file(
+        path="a.py",
+        edits=(SearchReplaceEdit(old_text="x", new_text="y"),),
+        caller=caller,
+        description="edit a",
+    )
+    read = await services.read_file(path="a.py", caller=caller)
+    command = await services.shell(
+        command="printf ok",
+        timeout=10,
+        cwd=".",
+        caller=caller,
+        description="shell",
+    )
 
-    assert has_registered_adapter(sandbox_id) is False
-    with pytest.raises(OCCClientError):
-        get_occ_service(sandbox_id)
-    with pytest.raises(OverlayClientError):
-        get_overlay_client(sandbox_id)
+    assert write.changed_paths == ("a.py",)
+    assert edit.applied_edits == 1
+    assert read.content == "content"
+    assert command.stdout == "ok\n"
+    assert [call[1] for call in calls] == [
+        "api.write_file",
+        "api.edit_file",
+        "api.read_file",
+        "api.shell",
+    ]
+    for _, _, args, _ in calls:
+        assert args["layer_stack_root"] == "/sandbox/layers"
+        assert args["ignored_paths"] == ["build"]

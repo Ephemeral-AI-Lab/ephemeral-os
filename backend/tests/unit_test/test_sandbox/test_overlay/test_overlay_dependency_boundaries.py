@@ -6,13 +6,13 @@ from pathlib import Path
 import tarfile
 import io
 
-import sandbox.overlay.client
+import sandbox.overlay.capture.types
 import sandbox.runtime.overlay_shell
 from sandbox.control.daemon.bundle import _runtime_bundle_bytes
 
 
 def _overlay_root() -> Path:
-    return Path(sandbox.overlay.client.__file__).resolve().parent
+    return Path(sandbox.overlay.capture.types.__file__).resolve().parents[1]
 
 
 def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
@@ -49,6 +49,7 @@ def test_phase02_forbidden_overlay_modules_do_not_exist() -> None:
     for rel in (
         "layer_manager.py",
         "capture/ndjson.py",
+        "client.py",
         "occ.py",
     ):
         assert not (overlay_root / rel).exists()

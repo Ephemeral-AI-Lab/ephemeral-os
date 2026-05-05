@@ -16,6 +16,16 @@ from sandbox.runtime.async_bridge import run_sync
 
 logger = logging.getLogger(__name__)
 
+_RUNTIME_SERVER_LAUNCHER = """\
+for py in python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+        exec "$py" -m sandbox.runtime.server "$1"
+    fi
+done
+echo 'sandbox runtime requires Python >= 3.10' >&2
+exit 127
+"""
+
 
 class RuntimeCommandError(Exception):
     """Raised when the runtime dispatcher returns a structured error."""
@@ -74,7 +84,7 @@ async def _call_runtime_server(
     )
     result = await exec_fn(
         sandbox_id,
-        f"python3 -m sandbox.runtime.server {shlex.quote(raw_payload)}",
+        _runtime_server_command(raw_payload),
         cwd=cwd,
         timeout=timeout,
     )
@@ -94,6 +104,10 @@ async def _call_runtime_server(
     if getattr(result, "exit_code", 1) != 0:
         _raise_exec_failed(result)
     return response
+
+
+def _runtime_server_command(raw_payload: str) -> str:
+    return f"sh -c {shlex.quote(_RUNTIME_SERVER_LAUNCHER)} runtime {shlex.quote(raw_payload)}"
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:

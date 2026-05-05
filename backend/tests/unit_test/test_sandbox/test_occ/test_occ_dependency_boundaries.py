@@ -23,7 +23,6 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     phase03_files = [
         occ_root / "service.py",
-        occ_root / "client.py",
         occ_root / "runtime_ops.py",
         occ_root / "changeset" / "builders.py",
         occ_root / "changeset" / "prepared.py",
@@ -67,4 +66,3 @@ def test_overlay_capture_apply_is_the_only_bridge_to_occ_service() -> None:
     imports = _imports(occ_root / "overlay_capture.py")
 
     assert "sandbox.occ.service" in imports
-    assert "sandbox.occ.client" not in imports

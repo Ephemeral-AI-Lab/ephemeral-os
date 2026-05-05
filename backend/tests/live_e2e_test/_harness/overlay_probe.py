@@ -1,9 +1,8 @@
 """In-sandbox overlay probe scripts shipped via ``raw_exec``.
 
 Step 5 (overlay/) tests measure direct ``mount(2)`` overlayfs behaviour
-inside the Daytona sandbox — the host-side ``OverlayClient`` is registered
-on the handle for parity with the migration plan, but real measurements
-require a Linux kernel and therefore live inside the sandbox.
+inside the Daytona sandbox. Real measurements require a Linux kernel and
+therefore live inside the sandbox.
 
 Each helper returns a Python source string ready for
 ``python3 -c <source>`` invocation (after wrapping with

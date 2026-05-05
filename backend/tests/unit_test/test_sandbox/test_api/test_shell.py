@@ -2,77 +2,92 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import pytest
 
 from sandbox.api import SandboxCaller, ShellRequest
 from sandbox.api.tool.shell import shell
-from sandbox.layer_stack import LayerStackManager
-from sandbox.occ.client import dispose_occ_service, register_occ_service
-from sandbox.occ.service import OccService
-from sandbox.overlay.client import (
-    OverlayClient,
-    dispose_overlay_client,
-    register_overlay_client,
-)
-from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
 
 
-class _Gitignore:
-    def is_ignored(self, path: str) -> bool:
-        del path
-        return False
+@pytest.mark.asyncio
+async def test_shell_dispatches_to_sandbox_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str, dict[str, object], int]] = []
 
+    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+        calls.append((sandbox_id, op, args, timeout))
+        return {
+            "success": True,
+            "exit_code": 0,
+            "stdout": "new\n",
+            "stderr": "",
+            "changed_paths": ["pkg/value.txt"],
+            "status": "ok",
+            "conflict": None,
+            "conflict_reason": None,
+            "warnings": [],
+            "timings": {"api.shell.total_s": 0.2},
+        }
 
-async def test_shell_routes_through_overlay_shell_and_occ_commit(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    register_occ_service(
-        "sb-shell-cutover",
-        OccService(gitignore=_Gitignore(), layer_stack=manager),
+    monkeypatch.setattr(
+        "sandbox.api.tool.shell.call_runtime_api",
+        fake_call_runtime_api,
     )
-    register_overlay_client(
-        "sb-shell-cutover",
-        OverlayClient(runner=SnapshotOverlayRunner(manager)),
+
+    result = await shell(
+        "sb-shell",
+        ShellRequest(
+            command="printf 'new\\n'",
+            cwd=".",
+            timeout=12,
+            caller=SandboxCaller(agent_id="agent-1"),
+            description="shell test",
+        ),
     )
-    try:
-        result = await shell(
-            "sb-shell-cutover",
-            ShellRequest(
-                command="mkdir -p pkg; printf 'new\\n' > pkg/value.txt; cat pkg/value.txt",
-                cwd=".",
-                timeout=12,
-                caller=SandboxCaller(agent_id="agent-1"),
-            ),
-        )
-    finally:
-        dispose_overlay_client("sb-shell-cutover")
-        dispose_occ_service("sb-shell-cutover")
 
     assert result.success is True
     assert result.status == "ok"
     assert result.exit_code == 0
     assert result.stdout == "new\n"
-    assert result.stderr == ""
     assert result.changed_paths == ("pkg/value.txt",)
-    assert manager.read_text("pkg/value.txt") == ("new\n", True)
+    assert calls == [
+        (
+            "sb-shell",
+            "api.shell",
+            {
+                "command": "printf 'new\\n'",
+                "cwd": ".",
+                "timeout_seconds": 12,
+                "actor_id": "agent-1",
+                "description": "shell test",
+            },
+            42,
+        )
+    ]
 
 
-async def test_shell_fails_closed_without_overlay_binding() -> None:
+@pytest.mark.asyncio
+async def test_shell_rejects_stdin_without_runtime_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_call_runtime_api(*_args, **_kwargs):
+        raise AssertionError("runtime dispatch should not be called")
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.shell.call_runtime_api",
+        fail_call_runtime_api,
+    )
+
     result = await shell(
-        "sb-shell-unbound",
+        "sb-shell",
         ShellRequest(
-            command="cat pyproject.toml | tee copied.txt",
-            cwd="/workspace",
+            command="cat",
+            stdin="input",
             caller=SandboxCaller(agent_id="agent-1"),
         ),
     )
 
     assert result.success is False
-    assert result.exit_code == 1
     assert result.status == "error"
-    assert result.changed_paths == ()
     assert result.conflict is not None
-    assert result.conflict.reason == "MissingOverlayClient"
-    assert result.conflict_reason == (
-        "no typed overlay client is registered for sandbox 'sb-shell-unbound'"
-    )
-    assert result.warnings == ()
+    assert result.conflict.reason == "stdin_not_supported"

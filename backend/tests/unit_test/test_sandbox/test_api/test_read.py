@@ -2,21 +2,29 @@
 
 from __future__ import annotations
 
-from sandbox.api import RawExecResult, ReadFileRequest, SandboxCaller
+import pytest
+
+from sandbox.api import ReadFileRequest, SandboxCaller
 import sandbox.api.tool.read as read_module
 
 
-async def test_read_file_uses_raw_exec_and_maps_content(monkeypatch) -> None:
-    calls: list[tuple[str, str]] = []
+@pytest.mark.asyncio
+async def test_read_file_dispatches_to_sandbox_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str, dict[str, object], int]] = []
 
-    async def fake_raw_exec(sandbox_id: str, command: str):
-        calls.append((sandbox_id, command))
-        return RawExecResult(
-            exit_code=0,
-            stdout='{"exists": true, "content": "hello"}',
-        )
+    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+        calls.append((sandbox_id, op, args, timeout))
+        return {
+            "success": True,
+            "exists": True,
+            "content": "hello",
+            "encoding": "utf-8",
+            "timings": {"api.read.total_s": 0.1},
+        }
 
-    monkeypatch.setattr(read_module, "raw_exec", fake_raw_exec)
+    monkeypatch.setattr(read_module, "call_runtime_api", fake_call_runtime_api)
 
     result = await read_module.read_file(
         "sb-1",
@@ -27,19 +35,26 @@ async def test_read_file_uses_raw_exec_and_maps_content(monkeypatch) -> None:
     assert result.exists is True
     assert result.content == "hello"
     assert not hasattr(result, "conflict")
-    assert calls and calls[0][0] == "sb-1"
-    assert "sandbox.runtime.server" not in calls[0][1]
+    assert calls == [
+        ("sb-1", "api.read_file", {"path": "/workspace/a.txt"}, 60),
+    ]
 
 
-async def test_read_file_missing_file_maps_to_exists_false(monkeypatch) -> None:
-    async def fake_raw_exec(sandbox_id: str, command: str):
-        del sandbox_id, command
-        return RawExecResult(
-            exit_code=0,
-            stdout='{"exists": false, "content": ""}',
-        )
+@pytest.mark.asyncio
+async def test_read_file_missing_file_maps_to_exists_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+        del sandbox_id, op, args, timeout
+        return {
+            "success": True,
+            "exists": False,
+            "content": "",
+            "encoding": "utf-8",
+            "timings": {},
+        }
 
-    monkeypatch.setattr(read_module, "raw_exec", fake_raw_exec)
+    monkeypatch.setattr(read_module, "call_runtime_api", fake_call_runtime_api)
 
     result = await read_module.read_file(
         "sb-1",

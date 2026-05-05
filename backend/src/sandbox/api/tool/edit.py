@@ -2,50 +2,45 @@
 
 from __future__ import annotations
 
-import time
-
-from sandbox.api.tool.result_projection import committed_paths, conflict_and_status
+from sandbox.api.tool._runtime import (
+    call_runtime_api,
+    conflict_from_payload,
+    int_from_payload,
+    paths_from_payload,
+    timings_from_payload,
+)
 from sandbox.api.utils.models import EditFileRequest, EditFileResult
-from sandbox.occ.changeset.builders import build_api_edit_change
-from sandbox.occ.client import OCCClient
 
 
 async def edit_file(sandbox_id: str, request: EditFileRequest) -> EditFileResult:
-    """Apply search/replace edits through the typed OCC service path."""
-    total_start = time.perf_counter()
-    build_start = time.perf_counter()
-    changes = [
-        build_api_edit_change(
-            path=request.path,
-            old_text=edit.old_text,
-            new_text=edit.new_text,
-        )
-        for edit in request.edits
-    ]
-    build_elapsed = time.perf_counter() - build_start
-    occ_start = time.perf_counter()
-    result = await OCCClient(sandbox_id).apply_changeset(
-        changes,
-        agent_id=request.caller.agent_id,
-        description=request.description or f"edit {request.path}",
+    """Apply search/replace edits through sandbox-local OCC."""
+    raw = await call_runtime_api(
+        sandbox_id,
+        "api.edit_file",
+        {
+            "path": request.path,
+            "edits": [
+                {"old_text": edit.old_text, "new_text": edit.new_text}
+                for edit in request.edits
+            ],
+            "actor_id": request.caller.agent_id,
+            "description": request.description or f"edit {request.path}",
+        },
+        timeout=60,
     )
-    occ_elapsed = time.perf_counter() - occ_start
-    paths = committed_paths(result.files, fallback_path=request.path)
-    conflict, status = conflict_and_status(result.files)
-    timings = {
-        **result.timings,
-        "api.edit.build_changes_s": build_elapsed,
-        "api.edit.occ_apply_s": occ_elapsed,
-        "api.edit.total_s": time.perf_counter() - total_start,
-    }
+    conflict = conflict_from_payload(raw.get("conflict"))
     return EditFileResult(
-        success=result.success,
-        changed_paths=paths,
-        applied_edits=len(request.edits) if result.success else 0,
-        status=status,
+        success=bool(raw.get("success", False)),
+        changed_paths=paths_from_payload(raw.get("changed_paths")),
+        applied_edits=int_from_payload(raw.get("applied_edits"), default=0),
+        status=str(raw.get("status", "")),
         conflict=conflict,
-        conflict_reason=conflict.message if conflict is not None else None,
-        timings=timings,
+        conflict_reason=(
+            str(raw.get("conflict_reason"))
+            if raw.get("conflict_reason") is not None
+            else None
+        ),
+        timings=timings_from_payload(raw.get("timings")),
     )
 
 
