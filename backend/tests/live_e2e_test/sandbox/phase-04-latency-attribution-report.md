@@ -133,3 +133,93 @@ Together these two changes would compress write/edit p99 at c=16 from ~2.1 s
 toward roughly the c=1 floor of ~600 ms, dominated by transport. After that,
 transport is the next target — that's a provider/network problem, not a
 sandbox-runtime one.
+
+---
+
+## Update — after Phases 1, 2, 3, 4 (2026-05-06)
+
+The four phases prescribed by `.omc/plans/per-call-snapshot-layer-stack-migration/api-latency-reduction-plan.md`
+are all landed (see commits `42bdfde7`, `ad00c87b`, `083bc336`, `fbae5dc2`).
+This section records the post-implementation measurements taken with
+the same probe (`test_latency_attribution.py`) against the same
+sandbox image (`registry:6000/daytona/sweevo-psf-requests-3738:v1`),
+sweeping c ∈ {1, 4, 8, 16}. The only knob different from the baseline
+is `EPHEMERALOS_RUNTIME_TRANSPORT=daemon` and
+`EPHEMERALOS_GITIGNORE_BACKEND=pathspec`. `EPHEMERALOS_PREPARE_POOL`
+remains off.
+
+### Wall p99 across phases (c=16, ms)
+
+| Verb | Baseline | After P1 | After P1+P2 | After P1+P2+P3 | After P1+P2+P3+P4 | Δ vs baseline |
+|---|---:|---:|---:|---:|---:|---:|
+| `read_file` | 931 | 931 | 931 | 673 | **722** | **−22 %** |
+| `write_file` | 2131 | 1100 | 1032 | 1000 | **717** | **−66 %** |
+| `edit_file` | 2111 | 1098 | 1004 | 1255 | **755** | **−65 %** |
+| `shell` (`echo > file`) | 1438 | 694 | 694 | 5626 | 3267 | +127 % ⚠ |
+
+For comparison at c=16 fork mode (no daemon) under the final code:
+read 1020 ms, write 1117 ms, edit 1124 ms, shell 1662 ms.
+
+### Where the time goes now (c=16 daemon p99)
+
+| Stage | read | write | edit | shell |
+|---|---:|---:|---:|---:|
+| `runtime.boot_to_dispatch_s` | 0.4 | 0.7 | 0.5 | 9.9 |
+| `prepare_s` (lock-free) | – | 65 | 73 | 58 |
+| `process_gate_wait_s` (path-bucket, Phase 4) | – | 6.7 | 5.8 | 40 |
+| `flock_wait_s` (no-op in daemon) | – | 0.017 | 0.014 | 0.015 |
+| `commit_s` | – | 48 | 12 | **699** |
+| `gitignore.materialize_snapshot_s` / `git_init_s` | 0 | 0 | 0 | 0 |
+| `runtime.dispatch_s` | 3.4 | 92 | 79 | 2663 |
+| `process.exec` transport floor (host↔sandbox, structural) | ≈700 | ≈700 | ≈700 | ≈700 |
+| **wall p99** | **722** | **717** | **755** | **3267** |
+
+### Sub-cost wins vs baseline (c=16 p99)
+
+| Sub-cost | Baseline | Final | Δ |
+|---|---:|---:|---:|
+| Cross-process flock contention (write/edit) | 1054–1097 ms | 0.014–0.017 ms | **−99.998 %** |
+| Gitignore `materialize` + `git_init` | 76 ms | 0 ms | **−100 %** |
+| Python interpreter boot per call | 58–70 ms | <1 ms | **−98 %** |
+| Commit-gate queueing (write/edit) | up to 1097 ms | ≤6.7 ms | **−99 %** |
+| `runtime.dispatch_s` write/edit | 1144–1190 ms | 79–92 ms | **−92 %** |
+
+### Per-phase narrative
+
+* **Phase 1** moved the flock fence to wrap `commit_prepared` only, taking the 1054-ms hot zone for write down to ~78 ms by running `prepare` lock-free.
+* **Phase 2a** moved the gitignore oracle's git workspace from `tempfile.TemporaryDirectory` to `<storage_root>/cache/gitignore-<version>/` with atomic install and depth-bounded eviction. **Phase 2b** added a `pathspec`-backed evaluator that reads `.gitignore` files directly from the snapshot — `materialize_snapshot` and `git_init` collapse to 0 ms.
+* **Phase 3** introduced a resident asyncio AF_UNIX daemon. The per-call command becomes a thin `python -c "socket.connect(...)"` client, so `boot_to_dispatch_s` falls from ~60 ms to <1 ms; the in-memory oracle and `OccService` cache durably across calls. Phase 3 alone exposed a new bottleneck — single-process commit serialization on an asyncio.Lock — which Phase 4 then fixed.
+* **Phase 4** replaced the single asyncio.Lock per `layer_stack_root` with 16 path-hashed buckets and made `write_file`/`edit_file` opt out of `CommitOptions.atomic` (which the codex parallel session flipped to `True` between Phase 3 and Phase 4 and which would otherwise defeat the merger's batching). `process_gate_wait_s` collapses by 96–97 % and the merger's batch window finally coalesces disjoint commits.
+
+### Outstanding regression
+
+Shell (`echo > file`) is the only verb above baseline. The cause is mechanical: `CommitOptions.atomic` defaults to `True`, and `_disjoint_batches` in the serial merger never coalesces atomic items, so 16 concurrent shells go through `revalidate_and_publish` as 16 single-item batches at ~41 ms each. Phase 4 made this opt-out for write/edit (single-path; atomicity is degenerate) but deliberately left shell on the default pending a semantic audit of multi-path overlay captures. Closing the regression is one of:
+
+1. Audit shell overlay capture; if every realistic case is single-path, flip the shell handler to `atomic=False` (cleanest).
+2. Make `_disjoint_batches` group disjoint atomic items and propagate per-item failure semantics in the merger (more invasive but preserves multi-path atomicity for real shells).
+3. Enable `EPHEMERALOS_PREPARE_POOL=1` (Phase 3.x.1) — partial mitigation only; doesn't address the merger serialization.
+
+### Bottleneck re-ranking (c=16 p99, post-Phase-4 daemon)
+
+| Bottleneck | Cost | Affected verbs | Status |
+|---|---:|---|---|
+| `process.exec` host↔sandbox transport | ~700 ms | all | **structural** under the Daytona-stays-in-the-adapter invariant |
+| Shell `commit_s` under atomic=True | ~700 ms | shell only | **open** — see options 1–3 above |
+| `bash -lc` namespace startup | ~360 ms | shell | unchanged from baseline |
+| `prepare_s` (content hash + pathspec eval) | 58–73 ms | write, edit, shell | reducible further with prepare-pool |
+| `commit_s` (write/edit) | 12–48 ms | write, edit | acceptable |
+| Path-bucket gate wait | ≤7 ms (write/edit) | write, edit | acceptable |
+| flock | ~0 ms | write, edit, shell | eliminated |
+| Python interpreter cold start | <1 ms | all | eliminated |
+| Gitignore cold start | 0 ms | write, edit | eliminated |
+
+### Where the next leverage lies
+
+With Phase 4 in place, every per-call cost outside the `process.exec`
+floor is either negligible (<10 ms) or known-bounded. The only verb
+that doesn't follow this rule is shell, and that's a one-line policy
+fix away. Reducing the transport floor itself would require either
+verb-level batching (`write_batch` / `edit_batch` mirroring the
+existing `shell_batch`), agent-side batching, or pushing the agent
+inside the sandbox — i.e., the items already flagged as
+"Beyond Phase 4" in the plan.
