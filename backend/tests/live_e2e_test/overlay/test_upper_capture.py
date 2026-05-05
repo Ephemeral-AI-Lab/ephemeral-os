@@ -135,3 +135,37 @@ async def test_capture_serializes_to_diff_ndjson_in_order(
         "snapshot_versions_max": max(c.snapshot_version for c in captures),
     }
     _print_metrics("E4.capture_ordering.summary", summary)
+
+
+@pytest.mark.asyncio
+async def test_symlink_kind_round_trips(
+    overlay_sandbox: SandboxHandle, tmp_path,
+) -> None:
+    """`ln -s` produces a `symlink` change with a non-empty `final_hash`."""
+    payloads = tmp_path / "sym_payloads"
+    commit_layer(
+        overlay_sandbox.layer_stack, payloads, "sym-base",
+        body="target-body", layer_path="sym/target.txt",
+    )
+    capture = await _run_overlay_shell(
+        overlay_sandbox,
+        ("/bin/sh", "-c", "ln -s target.txt sym/link.txt"),
+    )
+    assert capture.exit_code == 0, capture
+    payload = capture.to_dict()
+    _print_metrics("E4.symlink_kind.changes", {"changes": payload["changes"]})
+
+    by_kind: dict[str, dict] = {}
+    for change in payload["changes"]:
+        by_kind.setdefault(change["kind"], change)
+    assert "symlink" in by_kind, (
+        f"expected a symlink change, got kinds={sorted(by_kind)}; "
+        f"raw={payload['changes']}"
+    )
+    sym = by_kind["symlink"]
+    assert sym["path"] == "sym/link.txt"
+    assert sym["final_hash"], "symlink must declare final_hash for round-trip"
+    assert sym["content_path"], "symlink must point at an upperdir entry"
+
+    # Schema round-trip survives the symlink kind too.
+    assert OverlayCapture.from_dict(payload).to_dict() == payload
