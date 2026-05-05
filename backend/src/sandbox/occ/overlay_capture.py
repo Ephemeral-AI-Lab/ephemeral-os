@@ -13,7 +13,7 @@ from sandbox.occ.changeset.builders import (
     build_overlay_delete_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import (
     Change,
     ChangesetResult,
@@ -195,7 +195,7 @@ def apply_overlay_capture_sync(
     result = occ_service.apply_changeset_sync(
         changes,
         snapshot=capture.snapshot_manifest,
-        options=CommitIntent(caller_id=agent_id, description=description),
+        options=CommitOptions(caller_id=agent_id, description=description),
     )
     if isinstance(result, PreparedChangeset):
         raise TypeError("overlay capture OCC service returned an uncommitted changeset")

@@ -7,7 +7,7 @@ from typing import Protocol
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.hashing import ContentHasher
 
@@ -18,7 +18,7 @@ class ApplyChangesetService(Protocol):
         changes: Sequence[Change],
         *,
         snapshot: Manifest | None = None,
-        options: CommitIntent | None = None,
+        options: CommitOptions | None = None,
     ) -> ChangesetResult | PreparedChangeset: ...
 
 
@@ -32,13 +32,13 @@ async def apply_changeset_op(
     changes: Sequence[Change],
     *,
     snapshot: Manifest | None = None,
-    intent: CommitIntent | None = None,
+    options: CommitOptions | None = None,
 ) -> ChangesetResult | PreparedChangeset:
     """Dispatch a typed OCC apply operation to the configured service."""
     return await service.apply_changeset(
         changes,
         snapshot=snapshot,
-        options=intent,
+        options=options,
     )
 
 

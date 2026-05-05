@@ -9,7 +9,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-from sandbox.occ.changeset.intent import PreparedChangeset
+from sandbox.occ.changeset.prepared import PreparedChangeset
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 

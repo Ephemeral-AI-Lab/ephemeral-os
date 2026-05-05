@@ -8,7 +8,7 @@ from dataclasses import replace
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
@@ -43,7 +43,7 @@ class OccService:
         changes: Sequence[Change],
         *,
         snapshot: Manifest | None = None,
-        options: CommitIntent | None = None,
+        options: CommitOptions | None = None,
     ) -> ChangesetResult | PreparedChangeset:
         """Prepare a changeset and commit it when a layer stack is configured."""
         total_start = time.perf_counter()
@@ -89,7 +89,7 @@ class OccService:
         changes: Sequence[Change],
         *,
         snapshot: Manifest | None = None,
-        options: CommitIntent | None = None,
+        options: CommitOptions | None = None,
     ) -> ChangesetResult | PreparedChangeset:
         total_start = time.perf_counter()
         prepared = self.prepare_changeset_sync(
@@ -133,7 +133,7 @@ class OccService:
         changes: Sequence[Change],
         *,
         snapshot: Manifest | None = None,
-        options: CommitIntent | None = None,
+        options: CommitOptions | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer leased-snapshot base hashes."""
         return await run_sync_in_executor(
@@ -148,12 +148,12 @@ class OccService:
         changes: Sequence[Change],
         *,
         snapshot: Manifest | None = None,
-        options: CommitIntent | None = None,
+        options: CommitOptions | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer leased-snapshot base hashes synchronously."""
         total_start = time.perf_counter()
         timings: dict[str, float] = {}
-        intent = options or CommitIntent()
+        commit_options = options or CommitOptions()
         effective_snapshot = snapshot
         if effective_snapshot is None and self._layer_stack is not None:
             snapshot_start = time.perf_counter()
@@ -176,7 +176,7 @@ class OccService:
         prepared = self._orchestrator.prepare_sync(
             changes,
             snapshot=effective_snapshot,
-            intent=intent,
+            options=commit_options,
             base_hash_reader=base_hash_reader,
         )
         timings["occ.prepare.route_and_base_hash_s"] = (

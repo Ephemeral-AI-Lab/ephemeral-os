@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from sandbox.occ.changeset.intent import CommitIntent, RouteDecision
+from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import (
     EditChange,
     SymlinkChange,
@@ -29,7 +29,7 @@ def _prepare(changes, *, ignored: set[str] | None = None):
         router.prepare(
             changes,
             snapshot=None,
-            intent=CommitIntent(),
+            options=CommitOptions(),
         )
     )
 
@@ -61,7 +61,7 @@ def test_direct_change_kinds_stay_direct_without_gitignore_lookup() -> None:
         router.prepare(
             [SymlinkChange(path="bin/data.dat", target="/tmp/data")],
             snapshot=None,
-            intent=CommitIntent(),
+            options=CommitOptions(),
         )
     )
 

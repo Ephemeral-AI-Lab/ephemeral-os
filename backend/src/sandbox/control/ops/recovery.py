@@ -16,7 +16,7 @@ from typing import Any
 
 from sandbox.api.tool.raw_exec import raw_exec
 from sandbox.control.ops.git import ensure_git
-from sandbox.control.ops.setup import maybe_run_eager_runtime_bootstrap
+from sandbox.control.ops.setup import run_runtime_bootstrap
 from sandbox.providers.registry import get_adapter
 from sandbox.runtime.async_bridge import run_sync
 
@@ -53,7 +53,7 @@ def ensure_running(sandbox_id: str) -> dict[str, Any]:
     info = adapter.get(sandbox_id)
 
     workspace_root = info.get("project_dir") or ""
-    maybe_run_eager_runtime_bootstrap(sandbox_id, workspace_root)
+    run_runtime_bootstrap(sandbox_id, workspace_root)
 
     return info
 

@@ -1,4 +1,4 @@
-"""Commit intent and prepared OCC path groups."""
+"""Commit options and prepared OCC path groups."""
 
 from __future__ import annotations
 
@@ -28,8 +28,8 @@ class PreparedPathGroup:
 
 
 @dataclass(frozen=True)
-class CommitIntent:
-    """Request-level OCC commit intent."""
+class CommitOptions:
+    """Request-level OCC commit options and metadata."""
 
     atomic: bool = False
     caller_id: str = ""
@@ -47,7 +47,7 @@ class PreparedChangeset:
 
 
 __all__ = [
-    "CommitIntent",
+    "CommitOptions",
     "PreparedChangeset",
     "PreparedPathGroup",
     "RouteDecision",

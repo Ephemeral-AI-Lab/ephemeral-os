@@ -18,11 +18,11 @@ from agents.types import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
 from server.app_factory import RuntimeConfig
 from task_center.entry import start_task_center_entry_run
-from task_center.sandbox_provisioner import SandboxProvisioner
+from task_center.sandbox_bridge import TaskCenterSandboxBridge
 
 
-def _fake_provisioner() -> SandboxProvisioner:
-    return SandboxProvisioner(create_fn=lambda **_: {"id": "sb-entry-test"})
+def _fake_sandbox_bridge() -> TaskCenterSandboxBridge:
+    return TaskCenterSandboxBridge(create_fn=lambda **_: {"id": "sb-entry-test"})
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,7 @@ async def test_entry_executor_runs_in_graph_less_mode(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
-            provisioner=_fake_provisioner(),
+            sandbox_bridge=_fake_sandbox_bridge(),
         )
         await entry.launcher.wait_for_idle()
     finally:
@@ -177,7 +177,7 @@ async def test_entry_segment_has_zero_harness_graph_rows(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
-            provisioner=_fake_provisioner(),
+            sandbox_bridge=_fake_sandbox_bridge(),
         )
         await entry.launcher.wait_for_idle()
     finally:
@@ -288,7 +288,7 @@ async def test_entry_executor_submit_execution_success_finishes_run(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=runner_that_submits_success,
-            provisioner=_fake_provisioner(),
+            sandbox_bridge=_fake_sandbox_bridge(),
         )
         await entry.launcher.wait_for_idle()
     finally:

@@ -10,18 +10,9 @@ a separate plan (see ``.omc/plans/sandbox-provider-agnostic-lifecycle.md``
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
-
-SANDBOX_RUNTIME_BOOTSTRAP_ENV = "EOS_SANDBOX_RUNTIME_BOOTSTRAP"
-
-
-def _sandbox_runtime_bootstrap_enabled() -> bool:
-    """Return True when eager sandbox-runtime bootstrap is enabled."""
-    return os.environ.get(SANDBOX_RUNTIME_BOOTSTRAP_ENV) == "1"
-
 
 def _sandbox_project_root(sandbox: Any) -> str | None:
     project_dir = getattr(sandbox, "project_dir", None)
@@ -42,7 +33,8 @@ def discover_workspace(sandbox: Any) -> str | None:
     try:
         resp = sandbox.process.exec("pwd")
         if resp.exit_code == 0 and resp.result:
-            return resp.result.strip()
+            result = str(resp.result).strip()
+            return result or None
     except Exception:
         pass
     return None
@@ -55,7 +47,8 @@ async def discover_workspace_async(sandbox: Any) -> str | None:
     try:
         resp = await sandbox.process.exec("pwd")
         if resp.exit_code == 0 and resp.result:
-            return resp.result.strip()
+            result = str(resp.result).strip()
+            return result or None
     except Exception:
         pass
     return None
@@ -87,9 +80,7 @@ def prepare_sandbox_runtime_context(
 
 
 __all__ = [
-    "SANDBOX_RUNTIME_BOOTSTRAP_ENV",
     "_sandbox_project_root",
-    "_sandbox_runtime_bootstrap_enabled",
     "discover_workspace",
     "discover_workspace_async",
     "prepare_sandbox_runtime_context",

@@ -7,7 +7,9 @@ is locked before S5 flips the call sites.
 
 from __future__ import annotations
 
+import json
 import threading
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -108,15 +110,20 @@ def test_delete_disposes_adapter() -> None:
         get_adapter("sb-1")
 
 
-def test_read_helpers_route_through_registry() -> None:
+def test_read_helpers_route_through_registry(monkeypatch: pytest.MonkeyPatch) -> None:
     from sandbox.api import status as sb_status
     from sandbox.providers.registry import register_adapter, set_default_provider
 
     default = _stub_provider()
     set_default_provider(default)
+    monkeypatch.setattr(sb_status, "_configured_sandbox_defaults", lambda: (None, None))
 
     assert sb_status.list_sandboxes() == [{"id": "sb-1"}]
-    assert sb_status.get_health() == {"available": True}
+    assert sb_status.get_health() == {
+        "available": True,
+        "default_snapshot": None,
+        "default_image": None,
+    }
     assert sb_status.list_snapshots() == [{"name": "snap"}]
 
     per_id = _stub_provider()
@@ -165,7 +172,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
 ) -> None:
     """Regression: setup_after_create must call ensure_git, not just bootstrap.
 
-    The setup hook must run four steps: start eager upload,
+    The setup hook must run four steps: start runtime upload,
     ensure_git, finish upload, run bootstrap. Skipping ensure_git breaks
     downstream code that assumes git is installed (sweevo, any consumer
     running ``git ...`` on a minimal-image sandbox).
@@ -179,7 +186,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
 
     calls: list[str] = []
     monkeypatch.setattr(
-        setup_mod, "maybe_start_eager_runtime_bundle_upload",
+        setup_mod, "start_runtime_bundle_upload",
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
@@ -187,11 +194,11 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "finish_eager_runtime_bundle_upload",
+        setup_mod, "finish_runtime_bundle_upload",
         lambda fut, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "maybe_run_eager_runtime_bootstrap",
+        setup_mod, "run_runtime_bootstrap",
         lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
     )
 
@@ -218,7 +225,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 
     calls: list[str] = []
     monkeypatch.setattr(
-        setup_mod, "maybe_start_eager_runtime_bundle_upload",
+        setup_mod, "start_runtime_bundle_upload",
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
@@ -226,11 +233,11 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "finish_eager_runtime_bundle_upload",
+        setup_mod, "finish_runtime_bundle_upload",
         lambda fut, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "maybe_run_eager_runtime_bootstrap",
+        setup_mod, "run_runtime_bootstrap",
         lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
     )
 
@@ -242,3 +249,203 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
         "finish_upload(sb-1)",
         "run_bootstrap(sb-1,/workspace/demo)",
     ]
+
+
+def test_create_sandbox_uses_configured_default_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: (None, "ghcr.io/example/default:latest"),
+    )
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo")
+
+    provider.create.assert_called_once()
+    assert provider.create.call_args.kwargs["snapshot"] is None
+    assert (
+        provider.create.call_args.kwargs["image"]
+        == "ghcr.io/example/default:latest"
+    )
+
+
+def test_create_sandbox_explicit_image_overrides_configured_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: (None, "ghcr.io/example/default:latest"),
+    )
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
+
+    provider.create.assert_called_once()
+    assert provider.create.call_args.kwargs["image"] == "ghcr.io/example/custom:latest"
+
+
+def test_create_sandbox_snapshot_skips_configured_default_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: (None, "ghcr.io/example/default:latest"),
+    )
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo", snapshot="snap-1")
+
+    provider.create.assert_called_once()
+    assert provider.create.call_args.kwargs["snapshot"] == "snap-1"
+    assert provider.create.call_args.kwargs["image"] is None
+
+
+def test_create_sandbox_uses_configured_default_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: ("sweevo-psf-requests-3738", None),
+    )
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo")
+
+    provider.create.assert_called_once()
+    assert (
+        provider.create.call_args.kwargs["snapshot"]
+        == "sweevo-psf-requests-3738"
+    )
+    assert provider.create.call_args.kwargs["image"] is None
+
+
+def test_create_sandbox_explicit_image_overrides_configured_default_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: ("sweevo-psf-requests-3738", None),
+    )
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
+
+    provider.create.assert_called_once()
+    assert provider.create.call_args.kwargs["snapshot"] is None
+    assert provider.create.call_args.kwargs["image"] == "ghcr.io/example/custom:latest"
+
+
+def test_configured_default_snapshot_takes_precedence_over_default_image(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    settings_path = tmp_path / "settings.json"
+    settings_path.write_text(
+        json.dumps(
+            {
+                "sandbox": {
+                    "default_snapshot": "sweevo-psf-requests-3738",
+                    "default_image": "ghcr.io/example/default:latest",
+                },
+            }
+        )
+    )
+    monkeypatch.setattr("config.paths.get_config_file_path", lambda: settings_path)
+    monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
+    monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
+    monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
+
+    provider = _stub_provider()
+    set_default_provider(provider)
+    monkeypatch.setattr(sb_status, "setup_after_create", lambda sid, ws: None)
+
+    sb_status.create_sandbox(name="demo")
+
+    provider.create.assert_called_once()
+    assert (
+        provider.create.call_args.kwargs["snapshot"]
+        == "sweevo-psf-requests-3738"
+    )
+    assert provider.create.call_args.kwargs["image"] is None
+
+
+def test_health_reports_configured_default_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    provider.get_health.return_value = {"available": True, "default_image": None}
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: (None, "ghcr.io/example/default:latest"),
+    )
+
+    assert sb_status.get_health() == {
+        "available": True,
+        "default_snapshot": None,
+        "default_image": "ghcr.io/example/default:latest",
+    }
+
+
+def test_health_reports_configured_default_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers.registry import set_default_provider
+
+    provider = _stub_provider()
+    provider.get_health.return_value = {
+        "available": True,
+        "default_snapshot": None,
+        "default_image": None,
+    }
+    set_default_provider(provider)
+    monkeypatch.setattr(
+        sb_status,
+        "_configured_sandbox_defaults",
+        lambda: ("sweevo-psf-requests-3738", None),
+    )
+
+    assert sb_status.get_health() == {
+        "available": True,
+        "default_snapshot": "sweevo-psf-requests-3738",
+        "default_image": None,
+    }

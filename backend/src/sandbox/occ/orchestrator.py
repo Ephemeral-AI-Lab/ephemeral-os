@@ -6,8 +6,8 @@ from collections import OrderedDict
 from collections.abc import Callable, Sequence
 
 from sandbox.layer_stack.changes import normalize_layer_path
-from sandbox.occ.changeset.intent import (
-    CommitIntent,
+from sandbox.occ.changeset.prepared import (
+    CommitOptions,
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
@@ -35,7 +35,7 @@ class OccOrchestrator:
         changes: Sequence[Change],
         *,
         snapshot,
-        intent: CommitIntent,
+        options: CommitOptions,
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes concurrently by path."""
@@ -43,7 +43,7 @@ class OccOrchestrator:
             self.prepare_sync,
             changes,
             snapshot=snapshot,
-            intent=intent,
+            options=options,
             base_hash_reader=base_hash_reader,
         )
 
@@ -52,7 +52,7 @@ class OccOrchestrator:
         changes: Sequence[Change],
         *,
         snapshot,
-        intent: CommitIntent,
+        options: CommitOptions,
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes synchronously by path."""
@@ -70,7 +70,7 @@ class OccOrchestrator:
         return PreparedChangeset(
             snapshot=snapshot,
             path_groups=prepared,
-            atomic=intent.atomic,
+            atomic=options.atomic,
         )
 
     def _group_by_route(

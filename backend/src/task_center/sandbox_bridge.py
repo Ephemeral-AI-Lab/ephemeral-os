@@ -1,15 +1,22 @@
-"""Sandbox provisioning policy for TaskCenter entry runs."""
+"""TaskCenter-owned bridge to sandbox lifecycle setup."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 import uuid
 
-from task_center.sandbox_binding import TaskCenterSandboxBinding
-
 
 CreateSandboxFn = Callable[..., dict[str, Any]]
+StartSandboxFn = Callable[[str], dict[str, Any]]
+
+
+@dataclass(frozen=True, slots=True)
+class TaskCenterSandboxBinding:
+    sandbox_id: str
+    task_center_run_id: str
+    owned_by_task_center: bool
 
 
 def _default_create(**kwargs: Any) -> dict[str, Any]:
@@ -18,13 +25,25 @@ def _default_create(**kwargs: Any) -> dict[str, Any]:
     return api.create_sandbox(**kwargs)
 
 
-class SandboxProvisioner:
-    """Resolve the sandbox binding for a TaskCenter run."""
+def _default_start(sandbox_id: str) -> dict[str, Any]:
+    from sandbox.api import api
 
-    def __init__(self, *, create_fn: CreateSandboxFn | None = None) -> None:
+    return api.start_sandbox(sandbox_id)
+
+
+class TaskCenterSandboxBridge:
+    """Prepare the sandbox binding used by one TaskCenter run."""
+
+    def __init__(
+        self,
+        *,
+        create_fn: CreateSandboxFn | None = None,
+        start_fn: StartSandboxFn | None = None,
+    ) -> None:
         self._create = create_fn
+        self._start = start_fn
 
-    def provision(
+    def prepare_for_run(
         self,
         *,
         task_center_run_id: str,
@@ -32,6 +51,8 @@ class SandboxProvisioner:
     ) -> TaskCenterSandboxBinding:
         explicit_id = str(sandbox_id or "").strip()
         if explicit_id:
+            start = self._start or _default_start
+            start(explicit_id)
             return TaskCenterSandboxBinding(
                 sandbox_id=explicit_id,
                 task_center_run_id=task_center_run_id,
@@ -56,4 +77,9 @@ class SandboxProvisioner:
         )
 
 
-__all__ = ["CreateSandboxFn", "SandboxProvisioner"]
+__all__ = [
+    "CreateSandboxFn",
+    "StartSandboxFn",
+    "TaskCenterSandboxBinding",
+    "TaskCenterSandboxBridge",
+]

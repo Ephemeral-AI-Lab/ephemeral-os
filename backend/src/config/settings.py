@@ -29,6 +29,13 @@ class DatabaseSettings(BaseModel):
     echo: bool = False
 
 
+class SandboxSettings(BaseModel):
+    """Sandbox provider defaults."""
+
+    default_image: str = ""
+    default_snapshot: str = ""
+
+
 class Settings(BaseModel):
     """Main settings model for EphemeralOS (non-model config)."""
 
@@ -37,6 +44,9 @@ class Settings(BaseModel):
 
     # Database
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+
+    # Sandbox
+    sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
 
     # UI
     theme: str = "default"
@@ -67,6 +77,19 @@ def _apply_env_overrides(settings: Settings) -> Settings:
     if database_url:
         db = settings.database.model_copy(update={"url": database_url})
         updates["database"] = db
+
+    sandbox_default_image = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE")
+    sandbox_default_snapshot = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT")
+    if sandbox_default_image:
+        sandbox = settings.sandbox.model_copy(
+            update={"default_image": sandbox_default_image}
+        )
+        updates["sandbox"] = sandbox
+    if sandbox_default_snapshot:
+        sandbox = updates.get("sandbox", settings.sandbox).model_copy(
+            update={"default_snapshot": sandbox_default_snapshot}
+        )
+        updates["sandbox"] = sandbox
 
     if not updates:
         return settings

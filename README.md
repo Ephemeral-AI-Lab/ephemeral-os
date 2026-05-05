@@ -245,6 +245,25 @@ export EPHEMERALOS_MODEL=qwen3.5-flash
 uv run oh
 ```
 
+### Sandbox Defaults
+
+Sandbox creation uses the provider default unless a sandbox default is configured.
+Set the default image or snapshot in `~/.ephemeralos/settings.json`:
+
+```json
+{
+  "sandbox": {
+    "default_snapshot": "sweevo-psf-requests-3738",
+    "default_image": "ghcr.io/example/sandbox:latest"
+  }
+}
+```
+
+`default_snapshot` takes precedence over `default_image` because Daytona treats
+snapshot and image creation as different APIs. The same values can be supplied
+with `EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT` and
+`EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`.
+
 ---
 
 ## 🏗️ Harness Architecture

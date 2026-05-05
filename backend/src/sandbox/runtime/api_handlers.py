@@ -17,7 +17,7 @@ from sandbox.api.tool.result_projection import (
 )
 from sandbox.layer_stack import LayerStackManager
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
-from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
@@ -155,7 +155,7 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         async with _commit_lock(layer_root):
             result = await occ_service.apply_changeset(
                 [change],
-                options=CommitIntent(
+                options=CommitOptions(
                     caller_id=str(args.get("actor_id") or ""),
                     description=str(args.get("description") or f"write {path}"),
                 ),
@@ -199,7 +199,7 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
         async with _commit_lock(layer_root):
             result = await occ_service.apply_changeset(
                 changes,
-                options=CommitIntent(
+                options=CommitOptions(
                     caller_id=str(args.get("actor_id") or ""),
                     description=str(args.get("description") or f"edit {path}"),
                 ),
@@ -342,7 +342,7 @@ async def _apply_overlay_capture(
             result = await occ_service.apply_changeset(
                 changes,
                 snapshot=capture.snapshot_manifest,
-                options=CommitIntent(caller_id=caller_id, description=description),
+                options=CommitOptions(caller_id=caller_id, description=description),
             )
     if isinstance(result, PreparedChangeset):
         raise TypeError("runtime shell returned an uncommitted changeset")

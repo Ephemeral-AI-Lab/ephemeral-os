@@ -8,7 +8,7 @@ from collections.abc import Callable
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.changeset.intent import PreparedPathGroup
+from sandbox.occ.changeset.prepared import PreparedPathGroup
 from sandbox.occ.content.layer_backed_content import LayerBackedContent
 from sandbox.occ.changeset.types import (
     DeleteChange,

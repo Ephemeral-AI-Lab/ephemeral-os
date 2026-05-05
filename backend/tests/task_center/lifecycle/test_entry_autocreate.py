@@ -117,7 +117,8 @@ async def test_entry_autocreates_sandbox_and_runs_setup(
 
 
 @pytest.mark.asyncio
-async def test_entry_preserves_explicit_sandbox_without_create(
+async def test_entry_prepares_explicit_sandbox_without_create(
+    monkeypatch: pytest.MonkeyPatch,
     register_entry_agents,
     request_store,
     segment_store,
@@ -126,6 +127,31 @@ async def test_entry_preserves_explicit_sandbox_without_create(
     context_packet_store,
     tmp_path,
 ) -> None:
+    from sandbox.api import status as sb_status
+    from sandbox.providers import registry as provider_registry
+    from sandbox.providers.registry import register_adapter
+
+    monkeypatch.setattr(provider_registry, "_ADAPTERS", {}, raising=False)
+    monkeypatch.setattr(provider_registry, "_DEFAULT", None, raising=False)
+    monkeypatch.setattr(provider_registry, "_LOCK", threading.Lock(), raising=False)
+
+    provider = MagicMock(name="provider")
+    provider.start.return_value = {
+        "id": "sb-explicit",
+        "state": "started",
+        "project_dir": "/workspace/explicit",
+    }
+    register_adapter("sb-explicit", provider)
+
+    setup_calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        sb_status,
+        "setup_after_start",
+        lambda sandbox_id, project_dir: setup_calls.append(
+            (sandbox_id, project_dir)
+        ),
+    )
+
     captured: list[dict[str, object]] = []
 
     async def fake_runner(*args, **kwargs):
@@ -159,3 +185,6 @@ async def test_entry_preserves_explicit_sandbox_without_create(
     assert persisted_request is not None
     assert persisted_request["sandbox_id"] == "sb-explicit"
     assert captured[0]["sandbox_id"] == "sb-explicit"
+    provider.create.assert_not_called()
+    provider.start.assert_called_once_with("sb-explicit")
+    assert setup_calls == [("sb-explicit", "/workspace/explicit")]

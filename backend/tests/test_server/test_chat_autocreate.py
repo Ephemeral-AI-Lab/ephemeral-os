@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from server.app_factory import RuntimeConfig
 from server.protocol import BackendEvent
 from server.routers.core import create_core_router
-from task_center.sandbox_binding import TaskCenterSandboxBinding
+from task_center.sandbox_bridge import TaskCenterSandboxBinding
 
 
 class _ReadyStore:

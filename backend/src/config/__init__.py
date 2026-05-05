@@ -20,10 +20,17 @@ from .paths import (
     get_logs_dir,
     get_repo_config_dir,
 )
-from .settings import DatabaseSettings, Settings, load_settings, save_settings
+from .settings import (
+    DatabaseSettings,
+    SandboxSettings,
+    Settings,
+    load_settings,
+    save_settings,
+)
 
 __all__ = [
     "DatabaseSettings",
+    "SandboxSettings",
     "Settings",
     "get_config_agents_dir",
     "get_config_dir",

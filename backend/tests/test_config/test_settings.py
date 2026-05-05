@@ -17,6 +17,8 @@ class TestSettings:
         assert s.theme == "default"
         assert s.verbose is False
         assert s.database.url == ""
+        assert s.sandbox.default_image == ""
+        assert s.sandbox.default_snapshot == ""
 
     def test_merge_cli_overrides(self):
         s = Settings()
@@ -51,6 +53,8 @@ class TestSettings:
 class TestLoadSaveSettings:
     def test_load_missing_file_returns_defaults(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
         monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "nonexistent.json"
         s = load_settings(path)
@@ -58,14 +62,42 @@ class TestLoadSaveSettings:
 
     def test_load_existing_file(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({"verbose": True, "fast_mode": True}))
         s = load_settings(path)
         assert s.verbose is True
         assert s.fast_mode is True
 
+    def test_load_existing_file_with_sandbox_defaults(
+        self, tmp_path: Path, monkeypatch
+    ):
+        monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
+        path = tmp_path / "settings.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "sandbox": {
+                        "default_image": "ghcr.io/example/default:latest",
+                        "default_snapshot": "sweevo-psf-requests-3738",
+                    },
+                }
+            )
+        )
+        s = load_settings(path)
+        assert s.sandbox.default_image == "ghcr.io/example/default:latest"
+        assert s.sandbox.default_snapshot == "sweevo-psf-requests-3738"
+
     def test_save_and_load_roundtrip(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
+        monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         original = Settings(verbose=True, effort="high")
         save_settings(original, path)
@@ -79,8 +111,47 @@ class TestLoadSaveSettings:
         assert path.exists()
 
     def test_database_url_env_override(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({}))
         monkeypatch.setenv("EPHEMERALOS_DATABASE_URL", "postgresql://env/override")
         s = load_settings(path)
         assert s.database.url == "postgresql://env/override"
+
+    def test_sandbox_default_image_env_override(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
+        path = tmp_path / "settings.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "sandbox": {
+                        "default_image": "ghcr.io/example/file:latest",
+                    },
+                }
+            )
+        )
+        monkeypatch.setenv(
+            "EPHEMERALOS_SANDBOX_DEFAULT_IMAGE",
+            "ghcr.io/example/env:latest",
+        )
+        s = load_settings(path)
+        assert s.sandbox.default_image == "ghcr.io/example/env:latest"
+
+    def test_sandbox_default_snapshot_env_override(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
+        path = tmp_path / "settings.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "sandbox": {
+                        "default_snapshot": "file-snapshot",
+                    },
+                }
+            )
+        )
+        monkeypatch.setenv(
+            "EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT",
+            "env-snapshot",
+        )
+        s = load_settings(path)
+        assert s.sandbox.default_snapshot == "env-snapshot"

@@ -10,7 +10,7 @@ from pathlib import Path
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
 from sandbox.layer_stack.manifest import STAGING_DIR
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.changeset.intent import (
+from sandbox.occ.changeset.prepared import (
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,

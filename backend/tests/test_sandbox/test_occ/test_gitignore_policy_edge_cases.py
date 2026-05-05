@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.stack_manager import LayerStackManager
-from sandbox.occ.changeset.intent import RouteDecision
+from sandbox.occ.changeset.prepared import RouteDecision
 from sandbox.occ.changeset.types import (
     ChangesetResult,
     Change,

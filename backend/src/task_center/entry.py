@@ -43,8 +43,10 @@ from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
 from task_center.harness_graph.runtime import AgentLaunch, HarnessGraphRuntime
-from task_center.sandbox_binding import TaskCenterSandboxBinding
-from task_center.sandbox_provisioner import SandboxProvisioner
+from task_center.sandbox_bridge import (
+    TaskCenterSandboxBinding,
+    TaskCenterSandboxBridge,
+)
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.task import HarnessTaskRole, HarnessTaskStatus
 
@@ -83,7 +85,7 @@ def start_task_center_entry_run(
     graph_store: HarnessGraphStore,
     runner: HarnessAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
-    provisioner: SandboxProvisioner | None = None,
+    sandbox_bridge: TaskCenterSandboxBridge | None = None,
 ) -> TaskCenterEntryHandle:
     """Create a graph-less entry executor task for a user request."""
     return TaskCenterEntryCoordinator(
@@ -97,7 +99,7 @@ def start_task_center_entry_run(
         graph_store=graph_store,
         runner=runner,
         context_packet_store=context_packet_store,
-        provisioner=provisioner,
+        sandbox_bridge=sandbox_bridge,
     ).start()
 
 
@@ -117,7 +119,7 @@ class TaskCenterEntryCoordinator:
         graph_store: HarnessGraphStore,
         runner: HarnessAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
-        provisioner: SandboxProvisioner | None = None,
+        sandbox_bridge: TaskCenterSandboxBridge | None = None,
     ) -> None:
         self._config = config
         self._prompt = prompt
@@ -129,7 +131,7 @@ class TaskCenterEntryCoordinator:
         self._graph_store = graph_store
         self._runner = runner
         self._context_packet_store = context_packet_store
-        self._provisioner = provisioner or SandboxProvisioner()
+        self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
 
     def start(self) -> TaskCenterEntryHandle:
         """Create and launch the entry executor (graph-less)."""
@@ -204,7 +206,7 @@ class TaskCenterEntryCoordinator:
         request_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
         entry_task_id = f"{run_id}:entry"
-        binding = self._provisioner.provision(
+        binding = self._sandbox_bridge.prepare_for_run(
             task_center_run_id=run_id,
             sandbox_id=self._sandbox_id,
         )

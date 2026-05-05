@@ -17,6 +17,7 @@ the next phase to build on.
 ## Overview documents
 
 - [Complex task segmentation and harness graph workflow](task-center-harness-migration/complex-task-workflow-overview.md)
+- [Context semantics migration plan](task-center-harness-migration/context-semantics-migration-plan.md)
 
 ## Implementation order
 

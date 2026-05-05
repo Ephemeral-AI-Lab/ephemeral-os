@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset.intent import (
-    CommitIntent,
+from sandbox.occ.changeset.prepared import (
+    CommitOptions,
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
@@ -28,7 +28,7 @@ __all__ = [
     "Change",
     "ChangeSource",
     "ChangesetResult",
-    "CommitIntent",
+    "CommitOptions",
     "DeleteChange",
     "DirectChange",
     "EditChange",

@@ -32,7 +32,11 @@ logger = logging.getLogger(__name__)
 
 def get_health() -> dict[str, Any]:
     """Provider connection health for the default adapter."""
-    return get_default_provider().get_health()
+    health = dict(get_default_provider().get_health())
+    default_snapshot, default_image = _configured_sandbox_defaults()
+    health["default_snapshot"] = default_snapshot or health.get("default_snapshot")
+    health["default_image"] = default_image or health.get("default_image")
+    return health
 
 
 def list_snapshots() -> list[dict[str, Any]]:
@@ -74,10 +78,14 @@ def create_sandbox(
 ) -> dict[str, Any]:
     """Create a sandbox via the default provider, then run the post-create hook."""
     provider = get_default_provider()
+    resolved_snapshot = snapshot
+    resolved_image = image
+    if not resolved_snapshot and not resolved_image:
+        resolved_snapshot, resolved_image = _configured_sandbox_defaults()
     info = provider.create(
         name=name,
-        snapshot=snapshot,
-        image=image,
+        snapshot=resolved_snapshot,
+        image=resolved_image,
         language=language,
         env_vars=env_vars,
         labels=labels,
@@ -112,6 +120,17 @@ def set_sandbox_labels(sandbox_id: str, labels: dict[str, str]) -> dict[str, Any
 def ensure_sandbox_running(sandbox_id: str) -> dict[str, Any]:
     """Probe the sandbox; restart + re-run setup hook if the probe fails."""
     return _ensure_running(sandbox_id)
+
+
+def _configured_sandbox_defaults() -> tuple[str | None, str | None]:
+    from config import load_settings
+
+    sandbox = load_settings().sandbox
+    snapshot = sandbox.default_snapshot.strip()
+    image = sandbox.default_image.strip()
+    if snapshot:
+        return snapshot, None
+    return snapshot or None, image or None
 
 
 __all__ = [

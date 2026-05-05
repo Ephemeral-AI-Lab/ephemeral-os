@@ -26,7 +26,7 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
         occ_root / "client.py",
         occ_root / "runtime_ops.py",
         occ_root / "changeset" / "builders.py",
-        occ_root / "changeset" / "intent.py",
+        occ_root / "changeset" / "prepared.py",
         occ_root / "changeset" / "types.py",
         occ_root / "orchestrator.py",
         occ_root / "content" / "gitignore_oracle.py",
