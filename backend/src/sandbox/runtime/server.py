@@ -61,22 +61,9 @@ def dispatch_json(raw: str) -> dict[str, Any]:
 def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Dispatch an already-decoded runtime envelope."""
     dispatch_entered_at = time.perf_counter()
-    op = envelope.get("op")
-    if not isinstance(op, str) or not op:
-        return _error(
-            "invalid_envelope",
-            "runtime envelope requires a non-empty string op",
-        )
-
-    args_raw = envelope.get("args", {})
-    if args_raw is None:
-        args_raw = {}
-    if not isinstance(args_raw, dict):
-        return _error(
-            "invalid_envelope",
-            "runtime envelope args must be a JSON object",
-            {"op": op},
-        )
+    validation_error, op, args_raw = _validate_envelope(envelope)
+    if validation_error is not None:
+        return validation_error
 
     handler = OP_TABLE.get(op)
     if handler is None:
@@ -100,10 +87,86 @@ def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
         )
 
 
+async def dispatch_envelope_async(
+    envelope: Mapping[str, Any],
+    *,
+    boot_t0: float | None = None,
+) -> dict[str, Any]:
+    """Dispatch an envelope from an already-running asyncio loop.
+
+    Daemon-mode callers must use this rather than :func:`dispatch_envelope`,
+    because the latter calls ``asyncio.run`` on awaitable handler results,
+    which would fail inside the daemon's own running loop.
+
+    ``boot_t0`` overrides the module-level ``_BOOT_T0`` for the
+    ``runtime.boot_to_dispatch_s`` metric. The daemon passes a per-call
+    timestamp captured just before reading the request line, so the metric
+    measures socket-receive + parse cost rather than the daemon's wall
+    uptime — which would otherwise grow monotonically and break the
+    Phase 3 pass bar (``runtime.boot_to_dispatch_s ≤ 2 ms``).
+    """
+    dispatch_entered_at = time.perf_counter()
+    validation_error, op, args_raw = _validate_envelope(envelope)
+    if validation_error is not None:
+        return validation_error
+
+    handler = OP_TABLE.get(op)
+    if handler is None:
+        return _error("unknown_op", f"unknown op: {op}", {"op": op})
+
+    try:
+        result = handler(dict(args_raw))
+        if inspect.isawaitable(result):
+            result = await result
+        jsonable = _to_jsonable(result)
+        _attach_runtime_boot_timings(
+            jsonable,
+            dispatch_entered_at=dispatch_entered_at,
+            boot_t0=boot_t0,
+        )
+        return jsonable
+    except Exception as exc:
+        return _error(
+            "internal_error",
+            str(exc),
+            {"op": op, "traceback": traceback.format_exc()},
+        )
+
+
+def _validate_envelope(
+    envelope: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, str, dict[str, Any]]:
+    op = envelope.get("op")
+    if not isinstance(op, str) or not op:
+        return (
+            _error(
+                "invalid_envelope",
+                "runtime envelope requires a non-empty string op",
+            ),
+            "",
+            {},
+        )
+    args_raw = envelope.get("args", {})
+    if args_raw is None:
+        args_raw = {}
+    if not isinstance(args_raw, dict):
+        return (
+            _error(
+                "invalid_envelope",
+                "runtime envelope args must be a JSON object",
+                {"op": op},
+            ),
+            op,
+            {},
+        )
+    return None, op, args_raw
+
+
 def _attach_runtime_boot_timings(
     response: Any,
     *,
     dispatch_entered_at: float,
+    boot_t0: float | None = None,
 ) -> None:
     if not isinstance(response, dict):
         return
@@ -111,7 +174,8 @@ def _attach_runtime_boot_timings(
     if not isinstance(timings, dict):
         timings = {}
         response["timings"] = timings
-    timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - _BOOT_T0)
+    origin = boot_t0 if boot_t0 is not None else _BOOT_T0
+    timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - origin)
     timings["runtime.dispatch_s"] = max(
         0.0, time.perf_counter() - dispatch_entered_at
     )
@@ -190,6 +254,7 @@ __all__ = [
     "Handler",
     "OP_TABLE",
     "dispatch_envelope",
+    "dispatch_envelope_async",
     "dispatch_json",
     "main",
     "register_op",

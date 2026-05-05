@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import fcntl
 import io
+import os
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -28,6 +29,15 @@ from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
 
 
 _PROCESS_COMMIT_LOCKS: dict[str, asyncio.Lock] = {}
+
+_SERVICE_CACHE: dict[
+    str, tuple[LayerStackManager, OccService, "LayerStackGitignoreOracle"]
+] = {}
+
+
+def _services_cache_clear() -> None:
+    """Drop the per-``layer_stack_root`` service cache. Test helper."""
+    _SERVICE_CACHE.clear()
 
 
 async def shell(args: dict[str, object]) -> dict[str, object]:
@@ -408,9 +418,14 @@ def _services(
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
+    cached = _SERVICE_CACHE.get(layer_stack_root)
+    if cached is not None:
+        return cached
     manager = LayerStackManager(layer_stack_root)
     gitignore = LayerStackGitignoreOracle(manager)
-    return manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore
+    services = (manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore)
+    _SERVICE_CACHE[layer_stack_root] = services
+    return services
 
 
 def _gitignore_timings(
@@ -482,12 +497,26 @@ def _process_commit_gate(storage_root: Path) -> asyncio.Lock:
     return lock
 
 
+def _running_in_daemon() -> bool:
+    """Return True when this handler runs inside the resident runtime daemon.
+
+    The daemon sets ``EPHEMERALOS_RUNTIME_DAEMON=1`` on startup. In that mode
+    every call into a sandbox goes through the same daemon process, so the
+    in-process ``_PROCESS_COMMIT_LOCKS`` (asyncio.Lock) already serializes
+    commits and the cross-process flock fence is redundant.
+    """
+    return os.environ.get("EPHEMERALOS_RUNTIME_DAEMON") == "1"
+
+
 class _commit_lock:
     def __init__(self, storage_root: Path) -> None:
         self._path = storage_root / ".commit.lock"
         self._file: io.BufferedRandom | None = None
+        self._skipped = _running_in_daemon()
 
     async def __aenter__(self) -> "_commit_lock":
+        if self._skipped:
+            return self
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._file = self._path.open("a+b")
         lock_file = self._file

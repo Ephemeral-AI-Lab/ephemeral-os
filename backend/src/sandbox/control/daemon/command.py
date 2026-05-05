@@ -27,6 +27,63 @@ echo 'sandbox runtime requires Python >= 3.10' >&2
 exit 127
 """
 
+# Daemon-mode launcher: ensures the resident daemon is running, then invokes a
+# tiny AF_UNIX client that pipes one envelope and prints the response. The
+# daemon is spawned via ``nohup`` once per sandbox; subsequent calls hit the
+# already-warm process. Both the spawn and the per-call thin client are emitted
+# through ``provider.exec`` — Daytona stays inside the adapter.
+_RUNTIME_DAEMON_SOCKET = f"{BUNDLE_REMOTE_DIR}/runtime.sock"
+_RUNTIME_DAEMON_PID = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
+_RUNTIME_DAEMON_LOG = f"{BUNDLE_REMOTE_DIR}/runtime.log"
+
+_RUNTIME_THIN_CLIENT_PY = (
+    "import socket,sys,os\n"
+    f"s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);s.settimeout(float(os.environ.get('EPHEMERALOS_RUNTIME_CLIENT_TIMEOUT','600')));s.connect({_RUNTIME_DAEMON_SOCKET!r});"
+    "s.sendall(sys.argv[1].encode('utf-8')+b'\\n');s.shutdown(socket.SHUT_WR);"
+    "buf=b''\n"
+    "while True:\n"
+    " chunk=s.recv(65536)\n"
+    " if not chunk: break\n"
+    " buf+=chunk\n"
+    "sys.stdout.buffer.write(buf)\n"
+)
+
+_RUNTIME_DAEMON_LAUNCHER = f"""\
+set -e
+SOCK={shlex.quote(_RUNTIME_DAEMON_SOCKET)}
+PID={shlex.quote(_RUNTIME_DAEMON_PID)}
+LOG={shlex.quote(_RUNTIME_DAEMON_LOG)}
+mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)}
+if [ -S "$SOCK" ] && [ -f "$PID" ] && kill -0 "$(cat "$PID" 2>/dev/null)" 2>/dev/null; then
+    exit 0
+fi
+rm -f "$SOCK"
+for py in python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+        nohup "$py" -m sandbox.runtime.daemon --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
+        # Wait briefly for the socket to appear so the next client connect succeeds.
+        for _ in $(seq 1 50); do
+            [ -S "$SOCK" ] && exit 0
+            sleep 0.05
+        done
+        echo 'sandbox runtime daemon failed to bind socket within 2.5s' >&2
+        exit 1
+    fi
+done
+echo 'sandbox runtime requires Python >= 3.10' >&2
+exit 127
+"""
+
+_RUNTIME_THIN_CLIENT_LAUNCHER = f"""\
+for py in python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$py" >/dev/null 2>&1; then
+        exec "$py" -c {shlex.quote(_RUNTIME_THIN_CLIENT_PY)} "$1"
+    fi
+done
+echo 'sandbox runtime requires python3' >&2
+exit 127
+"""
+
 
 class RuntimeCommandError(Exception):
     """Raised when the runtime dispatcher returns a structured error."""
@@ -78,17 +135,33 @@ async def _call_runtime_server(
     cwd: str = BUNDLE_REMOTE_DIR,
     timeout: int | None = None,
 ) -> dict[str, Any]:
-    """Dispatch one JSON envelope through ``python -m sandbox.runtime.server``."""
+    """Dispatch one JSON envelope to the in-sandbox runtime.
+
+    Routes through the configured transport — fork-per-call (legacy) or
+    AF_UNIX socket to a resident daemon. Both flow through
+    ``provider.exec(...)``; the daemon path additionally lazy-spawns the
+    daemon when the socket is missing.
+    """
     raw_payload = json.dumps(
         {"op": op, "args": _without_none(args)},
         separators=(",", ":"),
     )
-    result = await exec_fn(
-        sandbox_id,
-        _runtime_server_command(raw_payload),
-        cwd=cwd,
-        timeout=timeout,
-    )
+    transport = _runtime_transport()
+    if transport == "daemon":
+        result = await _exec_daemon_call(
+            exec_fn=exec_fn,
+            sandbox_id=sandbox_id,
+            raw_payload=raw_payload,
+            cwd=cwd,
+            timeout=timeout,
+        )
+    else:
+        result = await exec_fn(
+            sandbox_id,
+            _runtime_server_command(raw_payload),
+            cwd=cwd,
+            timeout=timeout,
+        )
     try:
         response = _decode_response(getattr(result, "stdout", ""))
     except _RuntimeDispatchError:
@@ -105,6 +178,64 @@ async def _call_runtime_server(
     if getattr(result, "exit_code", 1) != 0:
         _raise_exec_failed(result)
     return response
+
+
+async def _exec_daemon_call(
+    *,
+    exec_fn: _RuntimeExec,
+    sandbox_id: str,
+    raw_payload: str,
+    cwd: str,
+    timeout: int | None,
+) -> Any:
+    result = await exec_fn(
+        sandbox_id,
+        _runtime_thin_client_command(raw_payload),
+        cwd=cwd,
+        timeout=timeout,
+    )
+    if _looks_like_socket_missing(result):
+        spawn_result = await exec_fn(
+            sandbox_id,
+            _runtime_daemon_spawn_command(),
+            cwd=cwd,
+            timeout=10,
+        )
+        if getattr(spawn_result, "exit_code", 1) != 0:
+            return spawn_result
+        result = await exec_fn(
+            sandbox_id,
+            _runtime_thin_client_command(raw_payload),
+            cwd=cwd,
+            timeout=timeout,
+        )
+    return result
+
+
+def _runtime_transport() -> str:
+    raw = (os.environ.get("EPHEMERALOS_RUNTIME_TRANSPORT") or "").strip().lower()
+    if raw in {"daemon", "fork"}:
+        return raw
+    return "fork"
+
+
+def _looks_like_socket_missing(result: Any) -> bool:
+    """Detect a thin-client failure caused by a missing daemon socket.
+
+    The thin client raises ``ConnectionRefusedError`` / ``FileNotFoundError``
+    when the daemon hasn't bound the socket yet. Both surface as a non-zero
+    exit code with the exception text on stderr.
+    """
+    if getattr(result, "exit_code", 0) == 0:
+        return False
+    blob = (getattr(result, "stderr", "") or getattr(result, "stdout", "") or "").lower()
+    needles = (
+        "connectionrefusederror",
+        "filenotfounderror",
+        "no such file or directory",
+        "connection refused",
+    )
+    return any(needle in blob for needle in needles)
 
 
 # Env vars forwarded from host into the sandbox runtime process so feature
@@ -131,6 +262,30 @@ def _runtime_server_command(raw_payload: str) -> str:
         f"{env_prefix}sh -c {shlex.quote(_RUNTIME_SERVER_LAUNCHER)} runtime "
         f"{shlex.quote(raw_payload)}"
     )
+
+
+def _runtime_thin_client_command(raw_payload: str) -> str:
+    """sh-c launcher that pipes one envelope to the resident daemon.
+
+    Forwarded env vars (``EPHEMERALOS_GITIGNORE_BACKEND``) are still set so a
+    daemon spawn issued from the same call sees them; the resident daemon
+    inherits its env from its first spawn.
+    """
+    env_prefix = _runtime_env_prefix()
+    return (
+        f"{env_prefix}sh -c {shlex.quote(_RUNTIME_THIN_CLIENT_LAUNCHER)} runtime "
+        f"{shlex.quote(raw_payload)}"
+    )
+
+
+def _runtime_daemon_spawn_command() -> str:
+    """sh-c launcher that ensures the resident daemon is running.
+
+    Idempotent: returns 0 immediately when an existing daemon's socket is
+    bound and its PID is alive.
+    """
+    env_prefix = _runtime_env_prefix()
+    return f"{env_prefix}sh -c {shlex.quote(_RUNTIME_DAEMON_LAUNCHER)}"
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:
