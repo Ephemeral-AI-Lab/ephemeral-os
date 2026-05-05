@@ -260,6 +260,16 @@ def create_core_router(get_runtime: Callable[[], RuntimeState]) -> APIRouter:
                     graph_store=harness_graph_store,
                     context_packet_store=context_packet_store,
                 )
+                if req.sandbox_id is None:
+                    await runtime.emit(
+                        BackendEvent(
+                            type="transcript_item",
+                            item=TranscriptItem(
+                                role="system",
+                                text=f"sandbox_id={entry_run.binding.sandbox_id}",
+                            ),
+                        )
+                    )
                 await runtime.emit(
                     BackendEvent(
                         type="transcript_item",

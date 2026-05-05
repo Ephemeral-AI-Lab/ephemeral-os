@@ -36,8 +36,6 @@ def snapshot_overlay_runtime_bundle_bytes() -> bytes:
             runtime_overlay_shell,
         ):
             for path in sorted(package.rglob("*.py")):
-                if path.name in {"capture_to_changeset.py", "pipeline.py"}:
-                    continue
                 rel = path.relative_to(sandbox_dir).as_posix()
                 tar.add(path, arcname=f"sandbox/{rel}")
     _BUNDLE_CACHE = buffer.getvalue()

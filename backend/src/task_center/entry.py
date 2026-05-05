@@ -43,6 +43,8 @@ from task_center.harness_graph.orchestrator_registry import (
     HarnessGraphOrchestratorRegistry,
 )
 from task_center.harness_graph.runtime import AgentLaunch, HarnessGraphRuntime
+from task_center.sandbox_binding import TaskCenterSandboxBinding
+from task_center.sandbox_provisioner import SandboxProvisioner
 from task_center.segment.registry import SegmentManagerRegistry
 from task_center.task import HarnessTaskRole, HarnessTaskStatus
 
@@ -58,10 +60,15 @@ ENTRY_SPAWN_REASON = "entry_executor"
 class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
+    binding: TaskCenterSandboxBinding
     complex_task_request_id: str
     task_segment_id: str
     entry_task_id: str
     launcher: EphemeralHarnessAgentLauncher
+
+    @property
+    def sandbox_id(self) -> str:
+        return self.binding.sandbox_id
 
 
 def start_task_center_entry_run(
@@ -76,6 +83,7 @@ def start_task_center_entry_run(
     graph_store: HarnessGraphStore,
     runner: HarnessAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
+    provisioner: SandboxProvisioner | None = None,
 ) -> TaskCenterEntryHandle:
     """Create a graph-less entry executor task for a user request."""
     return TaskCenterEntryCoordinator(
@@ -89,6 +97,7 @@ def start_task_center_entry_run(
         graph_store=graph_store,
         runner=runner,
         context_packet_store=context_packet_store,
+        provisioner=provisioner,
     ).start()
 
 
@@ -108,6 +117,7 @@ class TaskCenterEntryCoordinator:
         graph_store: HarnessGraphStore,
         runner: HarnessAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
+        provisioner: SandboxProvisioner | None = None,
     ) -> None:
         self._config = config
         self._prompt = prompt
@@ -119,11 +129,12 @@ class TaskCenterEntryCoordinator:
         self._graph_store = graph_store
         self._runner = runner
         self._context_packet_store = context_packet_store
+        self._provisioner = provisioner or SandboxProvisioner()
 
     def start(self) -> TaskCenterEntryHandle:
         """Create and launch the entry executor (graph-less)."""
         self._assert_stores_ready()
-        request_id, run_id, entry_task_id = self._create_top_level_run()
+        request_id, run_id, entry_task_id, binding = self._create_top_level_run()
 
         manager_registry = SegmentManagerRegistry()
         # The handler created here is reused twice: once to seed the entry
@@ -170,6 +181,7 @@ class TaskCenterEntryCoordinator:
         return TaskCenterEntryHandle(
             request_id=request_id,
             task_center_run_id=run_id,
+            binding=binding,
             complex_task_request_id=complex_request.id,
             task_segment_id=entry_segment.id,
             entry_task_id=entry_task_id,
@@ -186,21 +198,28 @@ class TaskCenterEntryCoordinator:
             graph_store=self._graph_store,
         )
 
-    def _create_top_level_run(self) -> tuple[str, str, str]:
+    def _create_top_level_run(
+        self,
+    ) -> tuple[str, str, str, TaskCenterSandboxBinding]:
         request_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
         entry_task_id = f"{run_id}:entry"
+        binding = self._provisioner.provision(
+            task_center_run_id=run_id,
+            sandbox_id=self._sandbox_id,
+        )
+        self._sandbox_id = binding.sandbox_id
         self._task_store.create_request(
             request_id=request_id,
             cwd=self._config.cwd,
-            sandbox_id=self._sandbox_id,
+            sandbox_id=binding.sandbox_id,
             request_prompt=self._prompt,
         )
         self._task_store.create_run(
             task_center_run_id=run_id,
             request_id=request_id,
         )
-        return request_id, run_id, entry_task_id
+        return request_id, run_id, entry_task_id, binding
 
     def _build_request_handler(
         self,

@@ -269,9 +269,9 @@ def _build_context_preparers(
     if SANDBOX_CONTEXT not in requirements:
         return []
 
-    from sandbox.control.ops.context import context_preparer_for
+    from sandbox.api import api
 
-    return [context_preparer_for(sandbox_id)]
+    return [api.context_preparer_for(sandbox_id)]
 
 
 def _build_agent_system_prompt(

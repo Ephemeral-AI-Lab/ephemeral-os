@@ -6,7 +6,6 @@ import ast
 from pathlib import Path
 
 import sandbox.occ
-import sandbox.runtime.overlay_shell
 
 
 def _imports(path: Path) -> set[str]:
@@ -54,17 +53,18 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     assert hits == []
 
 
-def test_capture_to_changeset_is_the_runtime_overlay_bridge() -> None:
-    runtime_root = Path(sandbox.runtime.overlay_shell.__file__).resolve().parent
-    imports = _imports(runtime_root / "capture_to_changeset.py")
+def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
+    occ_root = Path(sandbox.occ.__file__).resolve().parent
+    imports = _imports(occ_root / "overlay_capture.py")
 
     assert "sandbox.overlay.capture.changes" in imports
+    assert "sandbox.overlay.capture.types" in imports
     assert "sandbox.occ.changeset.builders" in imports
 
 
-def test_pipeline_is_the_only_runtime_bridge_to_occ_client() -> None:
-    runtime_root = Path(sandbox.runtime.overlay_shell.__file__).resolve().parent
-    imports = _imports(runtime_root / "pipeline.py")
+def test_overlay_capture_apply_is_the_only_bridge_to_occ_service() -> None:
+    occ_root = Path(sandbox.occ.__file__).resolve().parent
+    imports = _imports(occ_root / "overlay_capture.py")
 
-    assert "sandbox.occ.client" in imports
-    assert "sandbox.runtime.overlay_shell.capture_to_changeset" in imports
+    assert "sandbox.occ.service" in imports
+    assert "sandbox.occ.client" not in imports

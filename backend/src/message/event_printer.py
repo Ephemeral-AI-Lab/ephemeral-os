@@ -1,9 +1,7 @@
 """Shared stream-event printer for single- and multi-agent runs.
 
-Mirrors the dense column-aligned log style used by the e2e conftest's
-eval harness (``tests/test_e2e/conftest.py``) but keyed on
-``(agent_name, run_id)`` so concurrent agents can coexist without
-interleaving mid-sentence.
+Uses a dense column-aligned log style keyed on ``(agent_name, run_id)``
+so concurrent agents can coexist without interleaving mid-sentence.
 
 Key ideas:
 

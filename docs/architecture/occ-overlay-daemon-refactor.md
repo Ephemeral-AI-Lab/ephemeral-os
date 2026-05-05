@@ -77,15 +77,15 @@ backend/src/
 
 - **No `guardrail/` umbrella.** OCC and Overlay are two separate modules.
 - The OCC/Overlay split is the contract: edits go through OCC, shell goes
-  through Overlay and then the host-side overlay shell pipeline commits capture
-  through OCC. No third mutation path.
+  through Overlay to produce an `OverlayCapture`, then OCC applies that capture.
+  No third mutation path.
 - **Two modules, one shared runtime.** Count `sandbox/occ/` and
   `sandbox/overlay/` as the refactored modules. `sandbox/runtime/` exists
   because both modules need a deployed server/daemon, setup orchestration, and
   bundle upload; it is infrastructure, not a peer domain module.
 - **`server.py`, not peer-specific daemon logic.** `sandbox/runtime/server.py`
   is a generic OP_TABLE dispatcher: decode request, validate, lookup handler,
-  run handler/pipeline, encode result. It does not hardcode one branch for each
+  run handler, encode result. It does not hardcode one branch for each
   OCC or Overlay request.
 - **`client.py` belongs to the peer.** `sandbox/occ/client.py` and
   `sandbox/overlay/client.py` are host-side typed request clients. They submit
@@ -119,7 +119,7 @@ sandbox/occ/
 │   ├── write.py
 │   ├── edit.py
 │   └── apply_changeset.py
-├── changeset.py                   # UpperChange classification + direct merge
+├── overlay_capture.py             # OverlayCapture → OCC changes + apply helpers
 ├── arbiter.py
 ├── content_manager.py
 ├── patcher.py
@@ -131,12 +131,10 @@ sandbox/occ/
 ```
 
 External API: public write/edit verbs route to `OCCClient`, not directly to OCC
-handlers. Inside the sandbox, `runtime/pipelines.py` calls OCC handlers for
-`write`, `edit`, and `apply_changeset`. Move and delete verbs are
-removed from the external surface (see §0.1) — `mv` / `rm` flow through shell
-and commit via the overlay pipeline. Internally, overlay commits can still
-produce delete changes consumed by `WriteCoordinator`; that is not a public OCC
-method.
+handlers. Move and delete verbs are removed from the external surface (see §0.1)
+— `mv` / `rm` flow through shell and commit by applying an `OverlayCapture`
+through OCC. Internally, overlay commits can still produce delete changes
+consumed by the OCC merge path; that is not a public OCC method.
 
 ### 2.2 `sandbox/overlay/`
 
@@ -159,12 +157,11 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes through `OverlayClient`, receives a
-`RuntimeResultEnvelope`, and projects captured upperdir changes through
-`runtime.overlay_shell.pipeline` into `OCCClient.apply_changeset`. Shell no
-longer has a read-only `raw_exec` bypass and no longer falls back to the removed
-live-root overlay runtime. Overlay never imports OCC and never classifies
-gitignored vs gitincluded paths itself.
+External API: public shell routes through `OverlayClient`, receives an
+`OverlayCapture`, and applies that capture through `occ.overlay_capture`.
+Shell no longer has a read-only `raw_exec` bypass and no longer falls back to
+the removed live-root overlay runtime. Overlay never imports OCC and never
+classifies gitignored vs gitincluded paths itself.
 
 No `auditor.py` remains in the target overlay package. The audit name implied
 policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
@@ -185,10 +182,7 @@ sandbox/runtime/
 ├── __init__.py
 ├── server.py
 ├── overlay_shell/
-│   ├── capture_to_changeset.py
-│   ├── cli.py
-│   ├── pipeline.py
-│   └── result_envelope.py
+│   └── cli.py
 ├── bundle.py
 └── setup_orchestrator.py
 ```
@@ -279,7 +273,7 @@ pass without an intermediate broken state.
 
 4. Move sandbox/code_intelligence/daemon/ → sandbox/runtime/
    - Replace command.py's switch with runtime/server.py
-   - Keep server.py generic: request envelope → OP_TABLE lookup → handler/pipeline → result envelope
+   - Keep server.py generic: request envelope → OP_TABLE lookup → handler → result envelope
    - Add runtime/bundle.py and runtime/setup_orchestrator.py
    - DELETE: index_store.py, symbol-query handlers, symbol wire types
    - ledger_store.py moves to sandbox/occ/ledger_store.py

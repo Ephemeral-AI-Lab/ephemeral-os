@@ -23,7 +23,7 @@ from sandbox.api import (
     EditFileResult,
     RawExecResult,
     ReadFileResult,
-    RequestActor,
+    SandboxCaller,
     SearchReplaceEdit,
     ShellResult,
     WriteFileResult,
@@ -145,9 +145,9 @@ class RuntimeServiceBinding:
     gitignore: MutableGitignore
     source_root: Path
 
-    def actor(self, label: str) -> RequestActor:
+    def caller(self, label: str) -> SandboxCaller:
         safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in label)
-        return RequestActor(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
+        return SandboxCaller(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
 
     def mark_ignored(self, paths: Iterable[str]) -> None:
         self.gitignore.mark_ignored(paths)
@@ -190,7 +190,7 @@ class ShellBatchCall:
     command: str
     timeout: int | None
     cwd: str
-    actor: RequestActor
+    caller: SandboxCaller
     description: str
 
 
@@ -205,9 +205,9 @@ class RemoteRuntimeServiceBinding:
     _initialized: bool = False
     _init_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
-    def actor(self, label: str) -> RequestActor:
+    def caller(self, label: str) -> SandboxCaller:
         safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in label)
-        return RequestActor(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
+        return SandboxCaller(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
 
     def mark_ignored(self, paths: Iterable[str]) -> None:
         self.ignored_paths.update(_normalize_ignored_path(path) for path in paths)
@@ -227,7 +227,7 @@ class RemoteRuntimeServiceBinding:
         command: str,
         timeout: int | None,
         cwd: str,
-        actor: RequestActor,
+        caller: SandboxCaller,
         description: str,
     ) -> ShellResult:
         await self.ensure_initialized()
@@ -236,7 +236,7 @@ class RemoteRuntimeServiceBinding:
             "command": command,
             "cwd": cwd,
             "timeout_seconds": timeout,
-            "actor_id": actor.agent_id,
+            "actor_id": caller.agent_id,
             "description": description,
             "ignored_paths": sorted(self.ignored_paths),
         }
@@ -279,7 +279,7 @@ class RemoteRuntimeServiceBinding:
                         "command": call.command,
                         "cwd": call.cwd,
                         "timeout_seconds": call.timeout,
-                        "actor_id": call.actor.agent_id,
+                        "actor_id": call.caller.agent_id,
                         "description": call.description,
                     }
                     for call in calls
@@ -308,7 +308,7 @@ class RemoteRuntimeServiceBinding:
         *,
         path: str,
         content: str,
-        actor: RequestActor,
+        caller: SandboxCaller,
         description: str,
         overwrite: bool = True,
     ) -> WriteFileResult:
@@ -321,7 +321,7 @@ class RemoteRuntimeServiceBinding:
                 "layer_stack_root": self.layer_stack_root,
                 "path": path,
                 "content": content,
-                "actor_id": actor.agent_id,
+                "actor_id": caller.agent_id,
                 "description": description,
                 "overwrite": overwrite,
                 "ignored_paths": sorted(self.ignored_paths),
@@ -335,7 +335,7 @@ class RemoteRuntimeServiceBinding:
         *,
         path: str,
         edits: Sequence[SearchReplaceEdit],
-        actor: RequestActor,
+        caller: SandboxCaller,
         description: str,
     ) -> EditFileResult:
         await self.ensure_initialized()
@@ -350,7 +350,7 @@ class RemoteRuntimeServiceBinding:
                     {"old_text": edit.old_text, "new_text": edit.new_text}
                     for edit in edits
                 ],
-                "actor_id": actor.agent_id,
+                "actor_id": caller.agent_id,
                 "description": description,
                 "ignored_paths": sorted(self.ignored_paths),
             },
@@ -358,8 +358,8 @@ class RemoteRuntimeServiceBinding:
         )
         return _edit_result_from_payload(raw)
 
-    async def read_file(self, *, path: str, actor: RequestActor) -> ReadFileResult:
-        del actor
+    async def read_file(self, *, path: str, caller: SandboxCaller) -> ReadFileResult:
+        del caller
         await self.ensure_initialized()
         raw = await _call_runtime_server(
             exec_fn=get_adapter(self.sandbox_id).exec,

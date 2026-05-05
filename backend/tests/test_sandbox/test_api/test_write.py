@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.api import RequestActor, WriteFileRequest
+from sandbox.api import SandboxCaller, WriteFileRequest
 from sandbox.api.tool.write import write_file
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
 from sandbox.occ.client import dispose_occ_service, register_occ_service
@@ -34,7 +34,7 @@ async def test_write_file_delegates_once_through_occ_client() -> None:
             WriteFileRequest(
                 path="/workspace/a.py",
                 content="x",
-                actor=RequestActor(agent_id="agent-1"),
+                caller=SandboxCaller(agent_id="agent-1"),
             ),
         )
     finally:
@@ -68,7 +68,7 @@ async def test_write_file_guard_failure_maps_conflict_info() -> None:
             WriteFileRequest(
                 path="/workspace/a.py",
                 content="x",
-                actor=RequestActor(agent_id="agent-1"),
+                caller=SandboxCaller(agent_id="agent-1"),
             ),
         )
     finally:

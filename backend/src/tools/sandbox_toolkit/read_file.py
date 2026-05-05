@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from sandbox.api import ReadFileRequest
-from sandbox.api.tool.read import read_file as sandbox_read_file
+from sandbox.api import ReadFileRequest, api
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.sandbox_session import (
-    actor_from_context,
+    caller_from_context,
     path_error,
     resolve_sandbox_path,
     sandbox_id_or_error,
@@ -46,9 +45,9 @@ async def read_file(
     if sandbox_id_error is not None:
         return sandbox_id_error
     try:
-        result = await sandbox_read_file(
+        result = await api.read_file(
             sandbox_id,
-            ReadFileRequest(path=file_path, actor=actor_from_context(context)),
+            ReadFileRequest(path=file_path, caller=caller_from_context(context)),
         )
         if not result.success:
             raise RuntimeError(f"Failed to read file: {file_path}")

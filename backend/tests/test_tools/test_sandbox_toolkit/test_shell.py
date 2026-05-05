@@ -53,7 +53,7 @@ def test_shell_success_returns_single_command_output_shape(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(shell_module, "sandbox_shell", api.shell)
+    monkeypatch.setattr(shell_module, "api", api)
 
     result = _run({"command": "pytest -q"}, ctx)
 
@@ -85,7 +85,7 @@ def test_shell_conflict_returns_conflict_reason_without_legacy_fields(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(shell_module, "sandbox_shell", api.shell)
+    monkeypatch.setattr(shell_module, "api", api)
 
     result = _run({"command": "python script.py"}, ctx)
 

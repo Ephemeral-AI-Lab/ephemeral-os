@@ -10,7 +10,7 @@ from sandbox.api.utils.models import (
     RawExecResult,
     ReadFileRequest,
     ReadFileResult,
-    RequestActor,
+    SandboxCaller,
     SandboxResultBase,
     SearchReplaceEdit,
     ShellRequest,
@@ -18,6 +18,7 @@ from sandbox.api.utils.models import (
     WriteFileRequest,
     WriteFileResult,
 )
+from sandbox.api.facade import SandboxAPI, api
 
 
 def __getattr__(name: str) -> object:
@@ -55,13 +56,15 @@ __all__ = [
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
-    "RequestActor",
+    "SandboxCaller",
     "SandboxResultBase",
     "SearchReplaceEdit",
+    "SandboxAPI",
     "ShellRequest",
     "ShellResult",
     "WriteFileRequest",
     "WriteFileResult",
+    "api",
     "edit_file",
     "raw_exec",
     "read_file",

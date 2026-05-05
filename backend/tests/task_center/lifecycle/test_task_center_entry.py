@@ -18,6 +18,11 @@ from agents.types import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
 from server.app_factory import RuntimeConfig
 from task_center.entry import start_task_center_entry_run
+from task_center.sandbox_provisioner import SandboxProvisioner
+
+
+def _fake_provisioner() -> SandboxProvisioner:
+    return SandboxProvisioner(create_fn=lambda **_: {"id": "sb-entry-test"})
 
 
 @pytest.mark.asyncio
@@ -75,6 +80,7 @@ async def test_entry_executor_runs_in_graph_less_mode(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
+            provisioner=_fake_provisioner(),
         )
         await entry.launcher.wait_for_idle()
     finally:
@@ -86,7 +92,11 @@ async def test_entry_executor_runs_in_graph_less_mode(
     request = request_store.get(entry.complex_task_request_id)
     task = task_store.get_task(entry.entry_task_id)
     run = task_store.get_run(entry.task_center_run_id)
+    persisted_request = task_store.get_request(entry.request_id)
     assert request is not None
+    assert entry.sandbox_id == "sb-entry-test"
+    assert persisted_request is not None
+    assert persisted_request["sandbox_id"] == "sb-entry-test"
     assert request.requested_by_task_id == entry.entry_task_id
     assert task is not None
     assert task["role"] == "generator"
@@ -167,6 +177,7 @@ async def test_entry_segment_has_zero_harness_graph_rows(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=fake_runner,
+            provisioner=_fake_provisioner(),
         )
         await entry.launcher.wait_for_idle()
     finally:
@@ -277,6 +288,7 @@ async def test_entry_executor_submit_execution_success_finishes_run(
             graph_store=graph_store,
             context_packet_store=context_packet_store,
             runner=runner_that_submits_success,
+            provisioner=_fake_provisioner(),
         )
         await entry.launcher.wait_for_idle()
     finally:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.api import RawExecResult, ReadFileRequest, RequestActor
+from sandbox.api import RawExecResult, ReadFileRequest, SandboxCaller
 import sandbox.api.tool.read as read_module
 
 
@@ -20,7 +20,7 @@ async def test_read_file_uses_raw_exec_and_maps_content(monkeypatch) -> None:
 
     result = await read_module.read_file(
         "sb-1",
-        ReadFileRequest(path="/workspace/a.txt", actor=RequestActor(agent_id="a")),
+        ReadFileRequest(path="/workspace/a.txt", caller=SandboxCaller(agent_id="a")),
     )
 
     assert result.success is True
@@ -43,7 +43,7 @@ async def test_read_file_missing_file_maps_to_exists_false(monkeypatch) -> None:
 
     result = await read_module.read_file(
         "sb-1",
-        ReadFileRequest(path="/missing", actor=RequestActor(agent_id="a")),
+        ReadFileRequest(path="/missing", caller=SandboxCaller(agent_id="a")),
     )
 
     assert result.success is True

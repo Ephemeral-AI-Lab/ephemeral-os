@@ -98,7 +98,7 @@ def test_missing_old_text_is_rejected() -> None:
 def test_single_old_new_text_edit_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     api = _EditApi(EditFileResult(success=True, changed_paths=("/ws/file.py",), applied_edits=1))
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "sandbox_edit_file", api.edit_file)
+    monkeypatch.setattr(edit_file_module, "api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "foo", "new_text": "bar"},
@@ -132,7 +132,7 @@ def test_aborted_version_is_surfaced_to_caller(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "sandbox_edit_file", api.edit_file)
+    monkeypatch.setattr(edit_file_module, "api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "a", "new_text": "b"},
@@ -160,7 +160,7 @@ def test_patch_failed_in_single_edit_mode_uses_structured_payload(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "sandbox_edit_file", api.edit_file)
+    monkeypatch.setattr(edit_file_module, "api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "missing", "new_text": "x"},
@@ -185,7 +185,7 @@ def test_conflict_status_is_preserved_when_reason_is_human_text(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "sandbox_edit_file", api.edit_file)
+    monkeypatch.setattr(edit_file_module, "api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "a", "new_text": "b"},
@@ -201,12 +201,12 @@ def test_conflict_status_is_preserved_when_reason_is_human_text(
     }
 
 
-def test_actor_and_description_flow_through_to_api(
+def test_caller_and_description_flow_through_to_api(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     api = _EditApi()
     ctx = _ctx_with_api(api, agent_run_id="run-42")
-    monkeypatch.setattr(edit_file_module, "sandbox_edit_file", api.edit_file)
+    monkeypatch.setattr(edit_file_module, "api", api)
 
     _run(
         {
@@ -219,5 +219,5 @@ def test_actor_and_description_flow_through_to_api(
     )
 
     request = api.calls[0][1]
-    assert request.actor.agent_id == "run-42"
+    assert request.caller.agent_id == "run-42"
     assert request.description == "tidy imports"

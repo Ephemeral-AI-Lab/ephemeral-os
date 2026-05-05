@@ -22,24 +22,24 @@ async def test_runtime_services_bind_public_api_verbs(tmp_path: Path) -> None:
         storage_root=tmp_path / "layer-stack",
     )
     try:
-        actor = services.actor("unit")
+        sandbox_caller = services.caller("unit")
         write = await write_file(
             services.sandbox_id,
             WriteFileRequest(
                 path="src/a.txt",
                 content="a\n",
-                actor=actor,
+                caller=sandbox_caller,
             ),
         )
         read = await read_file(
             services.sandbox_id,
-            ReadFileRequest(path="src/a.txt", actor=actor),
+            ReadFileRequest(path="src/a.txt", caller=sandbox_caller),
         )
         command = await shell(
             services.sandbox_id,
             ShellRequest(
                 command="mkdir -p src; printf 'b\\n' > src/b.txt; cat src/b.txt",
-                actor=actor,
+                caller=sandbox_caller,
                 timeout=10,
             ),
         )

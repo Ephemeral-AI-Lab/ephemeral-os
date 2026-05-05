@@ -20,6 +20,7 @@ def test_overlay_contains_only_target_layout_files() -> None:
     expected = {
         "client.py",
         "capture/changes.py",
+        "capture/types.py",
         "capture/upperdir.py",
         "handlers/run.py",
         "handlers/shell.py",
@@ -63,7 +64,11 @@ def test_overlay_shim_files_do_not_exist() -> None:
 
 def test_overlay_and_occ_do_not_import_each_other() -> None:
     overlay_hits = _grep_imports(_overlay_root(), "sandbox.occ")
-    occ_hits = _grep_imports(_occ_root(), "sandbox.overlay")
+    occ_hits = [
+        path
+        for path in _grep_imports(_occ_root(), "sandbox.overlay")
+        if path.name != "overlay_capture.py"
+    ]
 
     assert overlay_hits == []
     assert occ_hits == []

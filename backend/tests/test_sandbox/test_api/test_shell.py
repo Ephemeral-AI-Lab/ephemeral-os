@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.api import RequestActor, ShellRequest
+from sandbox.api import SandboxCaller, ShellRequest
 from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerStackManager
 from sandbox.occ.client import dispose_occ_service, register_occ_service
@@ -40,7 +40,7 @@ async def test_shell_routes_through_overlay_shell_and_occ_commit(tmp_path: Path)
                 command="mkdir -p pkg; printf 'new\\n' > pkg/value.txt; cat pkg/value.txt",
                 cwd=".",
                 timeout=12,
-                actor=RequestActor(agent_id="agent-1"),
+                caller=SandboxCaller(agent_id="agent-1"),
             ),
         )
     finally:
@@ -62,7 +62,7 @@ async def test_shell_fails_closed_without_overlay_binding() -> None:
         ShellRequest(
             command="cat pyproject.toml | tee copied.txt",
             cwd="/workspace",
-            actor=RequestActor(agent_id="agent-1"),
+            caller=SandboxCaller(agent_id="agent-1"),
         ),
     )
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.overlay.client import OverlayClient
-from sandbox.runtime.overlay_shell.result_envelope import OverlayCapture
+from sandbox.overlay.capture.types import OverlayCapture
 
 
 @pytest.mark.asyncio

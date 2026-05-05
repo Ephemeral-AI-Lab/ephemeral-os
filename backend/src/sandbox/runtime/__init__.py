@@ -1,7 +1,7 @@
 """In-sandbox dispatcher modules that ship inside the runtime bundle.
 
 Strictly the bytes that execute INSIDE a sandbox: ``server.py`` (the JSON
-dispatcher) and ``overlay_shell/`` (overlay-aware shell pipeline). Host-side
+dispatcher) and ``overlay_shell/`` (overlay shell runtime). Host-side
 plumbing lives under :mod:`sandbox.control.daemon` (bundle build/upload, peer
 install, command client) and :mod:`sandbox.control.ops` (operations against a
 sandbox).

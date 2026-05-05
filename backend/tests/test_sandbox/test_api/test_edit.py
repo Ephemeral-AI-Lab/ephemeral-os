@@ -5,7 +5,7 @@ from __future__ import annotations
 from sandbox.api.tool.edit import edit_file
 from sandbox.api import (
     EditFileRequest,
-    RequestActor,
+    SandboxCaller,
     SearchReplaceEdit,
 )
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
@@ -38,7 +38,7 @@ async def test_edit_file_delegates_once_and_counts_applied_edits() -> None:
             EditFileRequest(
                 path="/workspace/a.py",
                 edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
-                actor=RequestActor(agent_id="agent-1"),
+                caller=SandboxCaller(agent_id="agent-1"),
             ),
         )
     finally:
@@ -72,7 +72,7 @@ async def test_edit_file_guard_failure_maps_conflict_info() -> None:
             EditFileRequest(
                 path="/workspace/a.py",
                 edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
-                actor=RequestActor(agent_id="agent-1"),
+                caller=SandboxCaller(agent_id="agent-1"),
             ),
         )
     finally:

@@ -28,7 +28,7 @@ async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileRes
     occ_start = time.perf_counter()
     result = await OCCClient(sandbox_id).apply_changeset(
         [change],
-        agent_id=request.actor.agent_id,
+        agent_id=request.caller.agent_id,
         description=request.description or f"write {request.path}",
     )
     occ_elapsed = time.perf_counter() - occ_start

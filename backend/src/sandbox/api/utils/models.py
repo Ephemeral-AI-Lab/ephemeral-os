@@ -12,13 +12,13 @@ from dataclasses import dataclass, field
 # -- Shared identity --------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
-class RequestActor:
+class SandboxCaller:
     """Caller identity threaded onto every audit-aware request.
 
-    ``agent_id`` is the ledger actor label and is the only required
+    ``agent_id`` is the ledger identity label and is the only required
     field; the others are populated when the runtime knows them. Keeping
     the optional fields defaulted lets call sites that have only an agent
-    name still construct a valid actor.
+    name still construct a valid caller identity.
     """
 
     agent_id: str
@@ -70,7 +70,7 @@ class RawExecResult(SandboxResultBase):
 @dataclass(frozen=True, kw_only=True)
 class ReadFileRequest:
     path: str
-    actor: RequestActor
+    caller: SandboxCaller
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -84,7 +84,7 @@ class ReadFileResult(SandboxResultBase):
 class WriteFileRequest:
     path: str
     content: str
-    actor: RequestActor
+    caller: SandboxCaller
     description: str = ""
     overwrite: bool = True
 
@@ -106,7 +106,7 @@ class SearchReplaceEdit:
 class EditFileRequest:
     path: str
     edits: tuple[SearchReplaceEdit, ...]
-    actor: RequestActor
+    caller: SandboxCaller
     description: str = ""
 
 
@@ -122,7 +122,7 @@ class EditFileResult(GuardedResultBase):
 @dataclass(frozen=True, kw_only=True)
 class ShellRequest:
     command: str
-    actor: RequestActor
+    caller: SandboxCaller
     cwd: str | None = None
     timeout: int | None = None
     stdin: str | None = None
@@ -145,7 +145,7 @@ __all__ = [
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
-    "RequestActor",
+    "SandboxCaller",
     "SandboxResultBase",
     "SearchReplaceEdit",
     "ShellRequest",

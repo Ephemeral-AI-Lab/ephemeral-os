@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from sandbox.api import RequestActor
+from sandbox.api import SandboxCaller
 from tools.core.context import ToolExecutionContextService
 from tools.core.results import ToolResult
 
 
-def actor_from_context(
+def caller_from_context(
     context: ToolExecutionContextService,
     *,
     preferred_agent_id: str = "",
-) -> RequestActor:
-    """Build the audit actor for a tool call."""
+) -> SandboxCaller:
+    """Build the sandbox caller identity for a tool call."""
     explicit = str(preferred_agent_id or "").strip()
     agent_run_id = str(context.agent_run_id or "")
     agent_id = explicit or agent_run_id.strip() or str(context.agent_name or "").strip()
-    return RequestActor(
+    return SandboxCaller(
         agent_id=agent_id,
         run_id=str(context.get("run_id") or ""),
         agent_run_id=agent_run_id,
@@ -66,7 +66,7 @@ def sandbox_id_or_error(context: ToolExecutionContextService) -> tuple[str, Tool
 
 
 __all__ = [
-    "actor_from_context",
+    "caller_from_context",
     "get_repo_root",
     "normalized_path",
     "path_error",

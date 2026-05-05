@@ -13,7 +13,7 @@ from sandbox.api import (
     EditFileResult,
     RawExecResult,
     ReadFileResult,
-    RequestActor,
+    SandboxCaller,
     ShellResult,
     WriteFileResult,
 )
@@ -21,6 +21,7 @@ from sandbox.api import (
 _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
+    "facade.py",
     "status",
     "tool",
     "utils",
@@ -45,12 +46,12 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "tool/shell.py": {
         "sandbox.api.tool.result_projection",
         "sandbox.occ.client",
+        "sandbox.occ.overlay_capture",
         "sandbox.occ.service",
+        "sandbox.overlay.capture.types",
         "sandbox.overlay.client",
         "sandbox.overlay.runner.snapshot_overlay_runner",
         "sandbox.runtime.async_bridge",
-        "sandbox.runtime.overlay_shell.pipeline",
-        "sandbox.runtime.overlay_shell.transaction",
     },
     "status/__init__.py": {
         "sandbox.control.ops.recovery",
@@ -121,14 +122,14 @@ def test_api_import_boundaries(module_path: Path) -> None:
         )
 
 
-def test_request_actor_defaults_and_immutability() -> None:
-    actor = RequestActor(agent_id="worker-1")
-    assert actor.agent_id == "worker-1"
-    assert actor.run_id == ""
-    assert actor.agent_run_id == ""
-    assert actor.task_id == ""
+def test_sandbox_caller_defaults_and_immutability() -> None:
+    caller = SandboxCaller(agent_id="worker-1")
+    assert caller.agent_id == "worker-1"
+    assert caller.run_id == ""
+    assert caller.agent_run_id == ""
+    assert caller.task_id == ""
     with pytest.raises((AttributeError, TypeError)):
-        actor.agent_id = "b"  # type: ignore[misc]
+        caller.agent_id = "b"  # type: ignore[misc]
 
 
 def test_result_hierarchy_exposes_conflict_only_on_guarded_results() -> None:

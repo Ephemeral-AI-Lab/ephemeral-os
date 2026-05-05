@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from sandbox.api import WriteFileRequest
-from sandbox.api.tool.write import write_file as sandbox_write_file
+from sandbox.api import WriteFileRequest, api
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.sandbox_session import (
-    actor_from_context,
+    caller_from_context,
     get_repo_root,
     resolve_sandbox_path,
     sandbox_id_or_error,
@@ -44,12 +43,12 @@ async def write_file(
     if sandbox_id_error is not None:
         return sandbox_id_error
 
-    result = await sandbox_write_file(
+    result = await api.write_file(
         sandbox_id,
         WriteFileRequest(
             path=file_path,
             content=content,
-            actor=actor_from_context(context),
+            caller=caller_from_context(context),
             description=f"write {file_path}",
             overwrite=True,
         ),

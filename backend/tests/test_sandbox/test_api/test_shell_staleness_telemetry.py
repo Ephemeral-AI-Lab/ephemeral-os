@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import pytest
 
-from sandbox.api import RequestActor, ShellRequest, ShellResult
+from sandbox.api import SandboxCaller, ShellRequest, ShellResult
 from sandbox.api.tool.shell import shell
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.client import dispose_occ_service, register_occ_service
@@ -28,7 +28,7 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     SnapshotOverlayRunner,
 )
-from sandbox.runtime.overlay_shell.result_envelope import OverlayCapture
+from sandbox.overlay.capture.types import OverlayCapture
 
 
 class _Gitignore:
@@ -137,7 +137,7 @@ async def _run_occ_clean_stale_shell(
                     ),
                     cwd=".",
                     timeout=10,
-                    actor=RequestActor(agent_id="agent-staleness"),
+                    caller=SandboxCaller(agent_id="agent-staleness"),
                     description="staleness clean write",
                 ),
             )

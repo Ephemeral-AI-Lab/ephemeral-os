@@ -48,7 +48,7 @@ def test_write_file_success_returns_changed_paths_only(
         WriteFileResult(success=True, changed_paths=("/ws/new.py",))
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(write_file_module, "sandbox_write_file", api.write_file)
+    monkeypatch.setattr(write_file_module, "api", api)
 
     result = _run({"file_path": "/ws/new.py", "content": "print('hi')\n"}, ctx)
 
@@ -76,7 +76,7 @@ def test_write_file_failure_preserves_conflict_status(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(write_file_module, "sandbox_write_file", api.write_file)
+    monkeypatch.setattr(write_file_module, "api", api)
 
     result = _run({"file_path": "/ws/new.py", "content": "x"}, ctx)
 

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from sandbox.occ.changeset.builders import (
     build_shell_delete_change,
@@ -17,10 +20,74 @@ from sandbox.occ.changeset.types import (
     OpaqueDirChange,
     SymlinkChange,
 )
-from sandbox.occ.client import OCCClient
 from sandbox.occ.service import OccService
 from sandbox.overlay.capture.changes import OverlayPathChange
-from sandbox.overlay.capture.types import OverlayCapture
+from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
+from sandbox.overlay.runner.snapshot_overlay_runner import (
+    OverlayShellRequest,
+    SnapshotOverlayRunner,
+)
+
+
+@dataclass(frozen=True)
+class OverlayShellCommitResult:
+    capture: OverlayCapture
+    changeset: ChangesetResult
+    stdout: str
+    stderr: str
+    timings: dict[str, float]
+
+
+class OccApplyClient(Protocol):
+    async def apply_changeset(
+        self,
+        changes: Sequence[Change],
+        *,
+        agent_id: str = "",
+        description: str = "",
+        snapshot: object | None = None,
+    ) -> ChangesetResult | PreparedChangeset: ...
+
+
+def run_overlay_shell_commit(
+    *,
+    runner: SnapshotOverlayRunner,
+    occ_service: OccService,
+    request: OverlayShellRequest,
+    agent_id: str = "",
+    description: str = "",
+) -> OverlayShellCommitResult:
+    """Run overlay shell capture and commit that capture through OCC."""
+    total_start = time.perf_counter()
+    overlay_start = time.perf_counter()
+    capture = runner.shell_sync(request)
+    overlay_elapsed = time.perf_counter() - overlay_start
+
+    occ_start = time.perf_counter()
+    changeset = apply_overlay_capture_sync(
+        capture,
+        occ_service=occ_service,
+        agent_id=agent_id,
+        description=description,
+    )
+    occ_elapsed = time.perf_counter() - occ_start
+
+    worker_elapsed = time.perf_counter() - total_start
+    timings = {
+        **capture.timings,
+        **changeset.timings,
+        "api.shell.overlay_s": overlay_elapsed,
+        "api.shell.occ_apply_s": occ_elapsed,
+        "api.shell.worker_total_s": worker_elapsed,
+        "api.shell.total_s": worker_elapsed,
+    }
+    return OverlayShellCommitResult(
+        capture=capture,
+        changeset=changeset,
+        stdout=read_output_ref(capture.stdout_ref),
+        stderr=read_output_ref(capture.stderr_ref),
+        timings=timings,
+    )
 
 
 def overlay_capture_to_occ_changes(capture: OverlayCapture) -> tuple[Change, ...]:
@@ -78,7 +145,7 @@ def overlay_path_changes_to_occ_changes(
 async def apply_overlay_capture(
     capture: OverlayCapture,
     *,
-    occ_client: OCCClient,
+    occ_client: OccApplyClient,
     agent_id: str = "",
     description: str = "",
 ) -> ChangesetResult:
@@ -151,8 +218,11 @@ def _kept_children_for(
 
 
 __all__ = [
+    "OccApplyClient",
+    "OverlayShellCommitResult",
     "apply_overlay_capture",
     "apply_overlay_capture_sync",
     "overlay_capture_to_occ_changes",
     "overlay_path_changes_to_occ_changes",
+    "run_overlay_shell_commit",
 ]

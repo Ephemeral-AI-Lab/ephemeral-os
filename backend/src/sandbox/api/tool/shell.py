@@ -9,16 +9,16 @@ from uuid import uuid4
 from sandbox.api.tool.result_projection import conflict_and_status, published_paths
 from sandbox.api.utils.models import ConflictInfo, ShellRequest, ShellResult
 from sandbox.occ.client import OCCClient, OCCClientError, get_occ_service
-from sandbox.occ.overlay_capture import apply_overlay_capture
+from sandbox.occ.overlay_capture import (
+    OverlayShellCommitResult,
+    apply_overlay_capture,
+    run_overlay_shell_commit,
+)
 from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import read_output_ref
 from sandbox.overlay.client import OverlayClientError, get_overlay_client
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
 from sandbox.runtime.async_bridge import run_sync_in_executor
-from sandbox.runtime.overlay_shell.transaction import (
-    OverlayShellCommitResult,
-    run_overlay_shell_commit,
-)
 
 
 async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
@@ -56,7 +56,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
                     float(request.timeout) if request.timeout is not None else None
                 ),
             ),
-            agent_id=request.actor.agent_id,
+            agent_id=request.caller.agent_id,
             description=request.description or "shell",
         )
         outer_elapsed = time.perf_counter() - transaction_start
@@ -82,7 +82,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
     changeset = await apply_overlay_capture(
         capture,
         occ_client=occ_client,
-        agent_id=request.actor.agent_id,
+        agent_id=request.caller.agent_id,
         description=request.description or "shell",
     )
     occ_elapsed = time.perf_counter() - occ_start

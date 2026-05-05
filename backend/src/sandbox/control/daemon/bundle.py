@@ -36,9 +36,7 @@ BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
 
 _RUNTIME_EXCLUDE_PARTS = {
     "backends",
-    "pipeline.py",
     "testing.py",
-    "transaction.py",
 }
 _OCC_EXCLUDE_PARTS = {"client.py"}
 _OVERLAY_EXCLUDE_PARTS = {"client.py"}
@@ -149,6 +147,21 @@ def _runtime_bundle_bytes() -> bytes:
             tar,
             sandbox_dir / "api" / "__init__.py",
             arcname="sandbox/api/__init__.py",
+        )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "api" / "facade.py",
+            arcname="sandbox/api/facade.py",
+        )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "api" / "tool" / "__init__.py",
+            arcname="sandbox/api/tool/__init__.py",
+        )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "api" / "tool" / "result_projection.py",
+            arcname="sandbox/api/tool/result_projection.py",
         )
         _add_python_tree(
             tar,

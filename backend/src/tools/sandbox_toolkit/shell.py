@@ -6,12 +6,11 @@ import json
 
 from pydantic import BaseModel, Field
 
-from sandbox.api import ShellRequest
-from sandbox.api.tool.shell import shell as sandbox_shell
+from sandbox.api import ShellRequest, api
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.core.sandbox_session import (
-    actor_from_context,
+    caller_from_context,
     get_repo_root,
     sandbox_id_or_error,
 )
@@ -178,13 +177,13 @@ async def shell(
         return sandbox_id_error
 
     try:
-        result = await sandbox_shell(
+        result = await api.shell(
             sandbox_id,
             ShellRequest(
                 command=command,
                 cwd=get_repo_root(context) or None,
                 timeout=timeout,
-                actor=actor_from_context(context),
+                caller=caller_from_context(context),
                 description="shell",
             ),
         )

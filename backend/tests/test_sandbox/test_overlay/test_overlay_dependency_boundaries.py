@@ -35,8 +35,6 @@ def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
     hits: list[str] = []
     for root in checked_roots:
         for path in root.rglob("*.py"):
-            if path.name in {"capture_to_changeset.py", "pipeline.py"}:
-                continue
             text = path.read_text(encoding="utf-8")
             for token in forbidden:
                 if token in text:
@@ -70,4 +68,5 @@ def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/layer_stack/manifest.py" in names
     assert "sandbox/runtime/overlay_shell/capture_to_changeset.py" not in names
     assert "sandbox/runtime/overlay_shell/pipeline.py" not in names
+    assert "sandbox/runtime/overlay_shell/result_envelope.py" not in names
     assert "sandbox/overlay/capture/ndjson.py" not in names
