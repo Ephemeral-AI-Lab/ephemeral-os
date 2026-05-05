@@ -213,6 +213,30 @@ Shell (`echo > file`) is the only verb above baseline. The cause is mechanical: 
 | Python interpreter cold start | <1 ms | all | eliminated |
 | Gitignore cold start | 0 ms | write, edit | eliminated |
 
+### Three-way A/B/C: daemon vs daemon+pool vs fork (2026-05-06)
+
+A back-to-back sweep with `EPHEMERALOS_RUNTIME_TRANSPORT={daemon,fork}` and `EPHEMERALOS_PREPARE_POOL` toggled isolates the prepare-pool's contribution from the daemon's other Phase 3/4 wins.
+
+| Metric (c=16 p99) | A: daemon | B: daemon+pool | C: fork | Pool Δ vs A |
+|---|---:|---:|---:|---:|
+| read wall | 709 ms | **668 ms** | 977 ms | −6 % |
+| write wall | 718 ms | **718 ms** | 1032 ms | 0 % |
+| edit wall | 870 ms | **759 ms** | 1120 ms | **−13 %** |
+| shell wall | 3144 ms | 3079 ms | **1478 ms** | −2 % |
+| write `prepare_s` | 70 ms | **20 ms** | 35 ms | **−71 %** |
+| edit `prepare_s` | 193 ms | **33 ms** | 42 ms | **−83 %** |
+| shell `prepare_s` | 43 ms | **11 ms** | 35 ms | **−74 %** |
+| write `commit_s` | 72 ms | **18 ms** | 25 ms | **−75 %** |
+| edit `commit_s` | 158 ms | **16 ms** | 18 ms | **−90 %** |
+| shell `commit_s` | 644 ms | 642 ms | 19 ms | ~0 |
+| edit `process_gate_wait_s` | 191 ms | **0.4 ms** | 0.3 ms | **−99 %** |
+
+Conclusions:
+
+1. **The prepare-pool unambiguously fixes the GIL contention identified in the Phase 3 status note.** Every `prepare_s` drops 71–83 % and every write/edit `commit_s` drops 75–90 % — the daemon's commit thread is no longer competing for the GIL with 15 concurrent prepares.
+2. **Daemon + prepare-pool beats fork on read/write/edit by ~30 %.** This is the first time daemon mode wins those three verbs against fork without an attached caveat. Recommended production default: `EPHEMERALOS_RUNTIME_TRANSPORT=daemon` + `EPHEMERALOS_PREPARE_POOL=1`.
+3. **Shell is unaffected** by the prepare-pool. Its `commit_s` is 642 ms in both daemon configurations vs 19 ms in fork — a 33× gap that is *not* GIL-bound. Per the per-call JSONL, shell commit work is overlay-capture I/O (`overlay.mount_snapshot_s` ~770 ms, `overlay.capture.populate_upperdir_s` ~600 ms, `walk_upperdir_s` ~10 ms) plus the underlying merger publish. The prepare-pool can't touch those. Shell remains the open work item; closing it requires either warming overlay namespaces across calls or trimming `populate_upperdir`.
+
 ### Where the next leverage lies
 
 With Phase 4 in place, every per-call cost outside the `process.exec`
