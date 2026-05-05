@@ -8,7 +8,7 @@ import io
 
 import sandbox.overlay.client
 import sandbox.runtime.overlay_shell
-from sandbox.overlay.runner.runtime_bundle import snapshot_overlay_runtime_bundle_bytes
+from sandbox.control.daemon.bundle import _runtime_bundle_bytes
 
 
 def _overlay_root() -> Path:
@@ -55,7 +55,7 @@ def test_phase02_forbidden_overlay_modules_do_not_exist() -> None:
 
 
 def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> None:
-    raw = snapshot_overlay_runtime_bundle_bytes()
+    raw = _runtime_bundle_bytes()
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
@@ -63,7 +63,6 @@ def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/runtime/overlay_shell/cli.py" in names
     assert "sandbox/overlay/capture/upperdir.py" in names
     assert "sandbox/overlay/handlers/run.py" in names
-    assert "sandbox/overlay/handlers/shell.py" in names
     assert "sandbox/overlay/namespace/mounts.py" in names
     assert "sandbox/layer_stack/manifest.py" in names
     assert "sandbox/runtime/overlay_shell/capture_to_changeset.py" not in names

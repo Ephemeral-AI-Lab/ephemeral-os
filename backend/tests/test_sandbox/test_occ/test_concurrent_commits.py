@@ -53,7 +53,7 @@ def test_concurrent_prepared_commits_revalidate_latest_manifest(
             [
                 WriteChange(
                     path="src/app.py",
-                    source="shell_capture",
+                    source="overlay_capture",
                     final_content=f"agent-{index}\n".encode("utf-8"),
                 )
             ],

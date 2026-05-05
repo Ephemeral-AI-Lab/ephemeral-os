@@ -220,12 +220,12 @@ def _must_skip_publish(
 ) -> bool:
     if prepared.atomic and any(_is_failure(result) for result in files):
         return True
-    return _is_shell_changeset(prepared) and tracked_failed
+    return _is_overlay_capture_changeset(prepared) and tracked_failed
 
 
-def _is_shell_changeset(prepared: PreparedChangeset) -> bool:
+def _is_overlay_capture_changeset(prepared: PreparedChangeset) -> bool:
     return any(
-        change.source == "shell_capture"
+        change.source == "overlay_capture"
         for group in prepared.path_groups
         for change in group.changes
     )
@@ -247,7 +247,7 @@ def _mark_unpublished(
     if prepared.atomic:
         message = "not published because atomic changeset validation failed"
     else:
-        message = "not published because shell tracked validation failed"
+        message = "not published because overlay capture tracked validation failed"
 
     marked: list[FileResult] = []
     for result in files:

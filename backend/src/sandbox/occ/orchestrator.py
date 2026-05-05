@@ -144,7 +144,7 @@ def _requires_base_hash(change: Change) -> bool:
     return (
         isinstance(change, WriteChange | DeleteChange)
         and change.base_hash is None
-        and change.source in ("api_write", "shell_capture")
+        and change.source in ("api_write", "overlay_capture")
     )
 
 

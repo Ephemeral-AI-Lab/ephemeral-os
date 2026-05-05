@@ -56,7 +56,7 @@ def test_overlay_path_changes_to_occ_changes_converts_changes(tmp_path) -> None:
     )
 
     assert isinstance(changes[0], WriteChange)
-    assert changes[0].source == "shell_capture"
+    assert changes[0].source == "overlay_capture"
     assert changes[0].final_content == b"new"
     assert isinstance(changes[1], DeleteChange)
     assert changes[1].base_hash is None

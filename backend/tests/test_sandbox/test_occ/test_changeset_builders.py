@@ -6,8 +6,8 @@ from sandbox.occ.changeset.builders import (
     build_api_delete_change,
     build_api_edit_change,
     build_api_write_change,
-    build_shell_delete_change,
-    build_shell_write_change,
+    build_overlay_delete_change,
+    build_overlay_write_change,
 )
 from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
 
@@ -51,11 +51,11 @@ def test_api_delete_builder_tags_api_source() -> None:
 
 
 def test_shell_builders_defer_base_hash_to_preparation() -> None:
-    write = build_shell_write_change(path="src/a.py", final_content=b"new")
-    delete = build_shell_delete_change(path="src/gone.py")
+    write = build_overlay_write_change(path="src/a.py", final_content=b"new")
+    delete = build_overlay_delete_change(path="src/gone.py")
 
-    assert write.source == "shell_capture"
+    assert write.source == "overlay_capture"
     assert write.base_hash is None
     assert write.final_content == b"new"
-    assert delete.source == "shell_capture"
+    assert delete.source == "overlay_capture"
     assert delete.base_hash is None

@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Protocol
 
 from sandbox.occ.changeset.builders import (
-    build_shell_delete_change,
-    build_shell_write_change,
+    build_overlay_delete_change,
+    build_overlay_write_change,
 )
 from sandbox.occ.changeset.intent import CommitIntent, PreparedChangeset
 from sandbox.occ.changeset.types import (
@@ -106,14 +106,14 @@ def overlay_path_changes_to_occ_changes(
                     f"write overlay path change lacks content path: {path_change.path}"
                 )
             changes.append(
-                build_shell_write_change(
+                build_overlay_write_change(
                     path=path_change.path,
                     final_content=Path(path_change.content_path).read_bytes(),
                 )
             )
             continue
         if path_change.kind == "delete":
-            changes.append(build_shell_delete_change(path=path_change.path))
+            changes.append(build_overlay_delete_change(path=path_change.path))
             continue
         if path_change.kind == "symlink":
             if path_change.content_path is None:
@@ -124,7 +124,7 @@ def overlay_path_changes_to_occ_changes(
                 SymlinkChange(
                     path=path_change.path,
                     target=os.readlink(path_change.content_path),
-                    source="shell_capture",
+                    source="overlay_capture",
                 )
             )
             continue
@@ -135,7 +135,7 @@ def overlay_path_changes_to_occ_changes(
                     kept_children=frozenset(
                         _kept_children_for(path_change.path, path_changes)
                     ),
-                    source="shell_capture",
+                    source="overlay_capture",
                 )
             )
             continue
@@ -167,7 +167,7 @@ async def apply_overlay_capture(
         snapshot=capture.snapshot_manifest,
     )
     if isinstance(result, PreparedChangeset):
-        raise TypeError("shell capture OCC service returned an uncommitted changeset")
+        raise TypeError("overlay capture OCC service returned an uncommitted changeset")
     return ChangesetResult(
         files=result.files,
         timings={**capture.timings, **result.timings},
@@ -198,7 +198,7 @@ def apply_overlay_capture_sync(
         options=CommitIntent(caller_id=agent_id, description=description),
     )
     if isinstance(result, PreparedChangeset):
-        raise TypeError("shell capture OCC service returned an uncommitted changeset")
+        raise TypeError("overlay capture OCC service returned an uncommitted changeset")
     return result
 
 

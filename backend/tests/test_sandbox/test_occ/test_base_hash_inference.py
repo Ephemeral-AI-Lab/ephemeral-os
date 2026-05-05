@@ -60,7 +60,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
             [
                 WriteChange(
                     path="src/app.py",
-                    source="shell_capture",
+                    source="overlay_capture",
                     final_content=b"next\n",
                     base_hash=None,
                 )
@@ -123,7 +123,7 @@ def test_shell_delete_can_infer_base_hash_from_snapshot(tmp_path) -> None:
 
     prepared = asyncio.run(
         service.prepare_changeset(
-            [DeleteChange(path="src/gone.py", source="shell_capture")],
+            [DeleteChange(path="src/gone.py", source="overlay_capture")],
             snapshot=snapshot,
         )
     )

@@ -48,25 +48,29 @@ def build_api_delete_change(*, path: str, base_hash: str) -> DeleteChange:
     return DeleteChange(path=path, source="api_write", base_hash=base_hash)
 
 
-def build_shell_write_change(*, path: str, final_content: bytes) -> WriteChange:
-    """Build a shell-captured full-file write without a caller base hash."""
+def build_overlay_write_change(*, path: str, final_content: bytes) -> WriteChange:
+    """Build an overlay-captured full-file write without a caller base hash."""
     return WriteChange(
         path=path,
-        source="shell_capture",
+        source="overlay_capture",
         final_content=final_content,
         base_hash=None,
     )
 
 
-def build_shell_delete_change(*, path: str, base_hash: str | None = None) -> DeleteChange:
-    """Build a shell-captured delete whose base hash can be inferred later."""
-    return DeleteChange(path=path, source="shell_capture", base_hash=base_hash)
+def build_overlay_delete_change(
+    *,
+    path: str,
+    base_hash: str | None = None,
+) -> DeleteChange:
+    """Build an overlay-captured delete whose base hash can be inferred later."""
+    return DeleteChange(path=path, source="overlay_capture", base_hash=base_hash)
 
 
 __all__ = [
     "build_api_delete_change",
     "build_api_edit_change",
     "build_api_write_change",
-    "build_shell_delete_change",
-    "build_shell_write_change",
+    "build_overlay_delete_change",
+    "build_overlay_write_change",
 ]

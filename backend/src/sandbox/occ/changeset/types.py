@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
-ChangeSource = Literal["api_write", "api_edit", "shell_capture"]
+ChangeSource = Literal["api_write", "api_edit", "overlay_capture"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -137,7 +137,7 @@ class SymlinkChange(Change):
         path: str,
         target: str,
         *,
-        source: ChangeSource = "shell_capture",
+        source: ChangeSource = "overlay_capture",
     ) -> None:
         Change.__init__(self, path, source=source)
         object.__setattr__(self, "target", str(target))
@@ -154,7 +154,7 @@ class OpaqueDirChange(Change):
         path: str,
         kept_children: frozenset[str],
         *,
-        source: ChangeSource = "shell_capture",
+        source: ChangeSource = "overlay_capture",
     ) -> None:
         Change.__init__(self, path, source=source)
         object.__setattr__(self, "kept_children", frozenset(kept_children))

@@ -50,12 +50,12 @@ def test_shell_tracked_conflict_holds_direct_outputs(tmp_path: Path) -> None:
             [
                 WriteChange(
                     path="src/app.py",
-                    source="shell_capture",
+                    source="overlay_capture",
                     final_content=b"tracked shell\n",
                 ),
                 WriteChange(
                     path="dist/out.txt",
-                    source="shell_capture",
+                    source="overlay_capture",
                     final_content=b"direct shell\n",
                 ),
             ],

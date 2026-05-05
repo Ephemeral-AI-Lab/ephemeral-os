@@ -30,7 +30,7 @@ from sandbox.api import (
 )
 from sandbox.control.daemon.bundle import ensure_runtime_uploaded
 from sandbox.control.daemon.command import _call_runtime_server
-from sandbox.layer_stack import LayerStackManager
+from sandbox.layer_stack import LayerStackManager, Manifest
 from sandbox.occ.client import dispose_occ_service, register_occ_service
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.service import OccService
@@ -39,10 +39,14 @@ from sandbox.overlay.client import (
     dispose_overlay_client,
     register_overlay_client,
 )
-from sandbox.overlay.runner.snapshot_overlay_runner import SnapshotOverlayRunner
+from sandbox.overlay.capture.types import OverlayCapture
+from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
+from sandbox.overlay.runner.snapshot_overlay_runner import (
+    OverlayShellRequest,
+    SnapshotOverlayRunner,
+)
 from sandbox.providers.protocol import ProviderAdapter
 from sandbox.providers.registry import dispose_adapter, get_adapter, register_adapter
-from sandbox.runtime.overlay_shell.testing import BarrierRuntimeInvoker
 
 
 class MutableGitignore(GitignoreOracle):
@@ -136,6 +140,38 @@ class LayerReadAdapter:
         return _unsupported("get_build_logs_url")
 
 
+class _AsyncBarrier:
+    def __init__(self, parties: int) -> None:
+        self._parties = max(1, int(parties))
+        self._arrived = 0
+        self._lock = asyncio.Lock()
+        self._event = asyncio.Event()
+
+    async def wait(self) -> None:
+        async with self._lock:
+            self._arrived += 1
+            if self._arrived >= self._parties:
+                self._event.set()
+        await asyncio.wait_for(self._event.wait(), timeout=10)
+
+
+class _BarrierRuntimeInvoker:
+    """Hold shell invocations until every caller has acquired its snapshot."""
+
+    def __init__(self, *, storage_root: Path, parties: int) -> None:
+        self._inner = RuntimeInvoker(storage_root=storage_root)
+        self._barrier = _AsyncBarrier(parties)
+
+    async def invoke(
+        self,
+        *,
+        request: OverlayShellRequest,
+        manifest: Manifest,
+    ) -> OverlayCapture:
+        await self._barrier.wait()
+        return await self._inner.invoke(request=request, manifest=manifest)
+
+
 @dataclass(frozen=True)
 class RuntimeServiceBinding:
     """Registered OCC/layer-stack/overlay services for one sandbox id."""
@@ -165,7 +201,7 @@ class RuntimeServiceBinding:
             OverlayClient(
                 runner=SnapshotOverlayRunner(
                     self.manager,
-                    invoker=BarrierRuntimeInvoker(
+                    invoker=_BarrierRuntimeInvoker(
                         storage_root=self.manager.storage_root,
                         parties=parties,
                     ),

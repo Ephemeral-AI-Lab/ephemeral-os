@@ -89,7 +89,7 @@ def test_gitignored_same_path_writes_are_direct_last_writer_wins(
         [
             WriteChange(
                 path="dist/out.js",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"first\n",
             )
         ],
@@ -100,7 +100,7 @@ def test_gitignored_same_path_writes_are_direct_last_writer_wins(
         [
             WriteChange(
                 path="dist/out.js",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"second\n",
             )
         ],
@@ -123,7 +123,7 @@ def test_gitignored_delete_uses_last_writer_wins_against_stale_snapshot(
 
     result = _apply(
         service,
-        [DeleteChange(path="dist/cache.bin", source="shell_capture")],
+        [DeleteChange(path="dist/cache.bin", source="overlay_capture")],
         snapshot=stale_snapshot,
     )
 
@@ -145,7 +145,7 @@ def test_tracked_same_path_stale_shell_write_aborts_with_aborted_version(
         [
             WriteChange(
                 path="src/app.py",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"stale shell\n",
             )
         ],
@@ -171,12 +171,12 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_direct_output(
         [
             WriteChange(
                 path="src/app.py",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"tracked shell\n",
             ),
             WriteChange(
                 path="dist/out.js",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"direct shell\n",
             ),
         ],
@@ -199,7 +199,7 @@ def test_gitignore_direct_route_is_fixed_after_prepare_even_if_oracle_changes(
         [
             WriteChange(
                 path="dist/out.js",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"direct\n",
             )
         ],
@@ -229,7 +229,7 @@ def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
         [
             WriteChange(
                 path="dist/out.js",
-                source="shell_capture",
+                source="overlay_capture",
                 final_content=b"stale shell\n",
             )
         ],
