@@ -7,12 +7,12 @@ from collections.abc import Sequence
 from dataclasses import replace
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreOracle
 from sandbox.occ.orchestrator import OccOrchestrator
+from sandbox.occ.ports import OccLayerStackPorts, ensure_layer_stack_ports
 from sandbox.occ.runtime_ops import infer_manifest_base_hash
 from sandbox.occ.serial_merger import OccSerialMerger
 from sandbox.runtime.async_bridge import run_sync_in_executor
@@ -25,12 +25,23 @@ class OccService:
         self,
         *,
         gitignore: GitignoreOracle,
-        layer_stack: LayerStackManager | None = None,
+        layer_stack: OccLayerStackPorts | object | None = None,
+        workspace_ref: str = "",
     ) -> None:
-        self._layer_stack = layer_stack
+        self._layer_stack = (
+            ensure_layer_stack_ports(layer_stack) if layer_stack is not None else None
+        )
+        self._workspace_ref = workspace_ref
         self._orchestrator = OccOrchestrator(gitignore)
         self._transaction = (
-            OccCommitTransaction(layer_stack) if layer_stack is not None else None
+            OccCommitTransaction(
+                snapshot_reader=self._layer_stack,
+                staging=self._layer_stack,
+                publisher=self._layer_stack,
+                workspace_ref=workspace_ref,
+            )
+            if self._layer_stack is not None
+            else None
         )
         self._serial_merger = (
             OccSerialMerger(self._transaction)
@@ -201,7 +212,9 @@ class OccService:
         effective_snapshot = snapshot
         if effective_snapshot is None and self._layer_stack is not None:
             snapshot_start = time.perf_counter()
-            effective_snapshot = self._layer_stack.read_active_manifest()
+            effective_snapshot = self._layer_stack.get_active_manifest(
+                self._workspace_ref,
+            )
             timings["occ.prepare.current_snapshot_s"] = (
                 time.perf_counter() - snapshot_start
             )
@@ -211,7 +224,7 @@ class OccService:
 
             def base_hash_reader(path: str) -> str | None:
                 return infer_manifest_base_hash(
-                    layer_stack=layer_stack,
+                    snapshot_reader=layer_stack,
                     manifest=effective_snapshot,
                     path=path,
                 )

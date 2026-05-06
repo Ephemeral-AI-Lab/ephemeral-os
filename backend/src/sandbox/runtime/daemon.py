@@ -15,7 +15,7 @@ The daemon imports ``sandbox.runtime.server`` so the ``OP_TABLE`` is
 populated by the standard peer bootstrap, then dispatches via
 :func:`server.dispatch_envelope_async`. State that is expensive to
 construct — ``LayerStackManager``, ``OccService``,
-``LayerStackGitignoreOracle`` — is cached across calls inside the
+``SnapshotGitignoreOracle`` — is cached across calls inside the
 ``api_handlers`` module's ``_SERVICE_CACHE`` and thus amortizes naturally
 because the daemon is one Python process.
 

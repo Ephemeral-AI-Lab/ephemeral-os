@@ -6,10 +6,10 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.ports import SnapshotReader
 
 
 class ApplyChangesetService(Protocol):
@@ -44,12 +44,12 @@ async def apply_changeset_op(
 
 def infer_manifest_base_hash(
     *,
-    layer_stack: LayerStackManager,
+    snapshot_reader: SnapshotReader,
     manifest: Manifest,
     path: str,
 ) -> str | None:
     """Hash *path* content as it existed in a leased manifest."""
-    content, exists = layer_stack.read_bytes(path, manifest)
+    content, exists = snapshot_reader.read_bytes(path, manifest)
     if not exists or content is None:
         return None
     return content_hash_bytes(content)

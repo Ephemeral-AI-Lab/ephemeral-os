@@ -7,7 +7,6 @@ from collections.abc import Callable
 
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup
 from sandbox.occ.content.layer_backed_content import LayerBackedContent
 from sandbox.occ.changeset.types import (
@@ -18,6 +17,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.ports import SnapshotReader
 
 StageWrite = Callable[[str, bytes], LayerChange]
 
@@ -27,11 +27,11 @@ class GatedMerge:
 
     def __init__(
         self,
-        layer_stack: LayerStackManager,
+        snapshot_reader: SnapshotReader,
         *,
         hasher: ContentHasher | None = None,
     ) -> None:
-        self._content = LayerBackedContent(layer_stack)
+        self._content = LayerBackedContent(snapshot_reader)
         self._hasher = hasher or ContentHasher()
 
     def stage_group(

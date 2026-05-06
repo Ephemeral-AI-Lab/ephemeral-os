@@ -20,6 +20,7 @@ enforce cwd/env after workspace replacement
 capture only assigned-workspace upperdir changes
 submit captured changes through occ.client.OCCClient
 release layer-stack lease after OCC result
+run cache-enabled versus cache-disabled shell load comparison
 ```
 
 Out of scope:
@@ -148,6 +149,7 @@ python -c 'import os; print(os.path.exists("/bin/sh"))'
 uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec -q
 uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_shell.py -q
 uv run pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_shell_call_isolation.py -q
+uv run pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_replaced_shell_cache_ab.py -q
 ```
 
 Required assertions:
@@ -159,3 +161,129 @@ Required assertions:
 - command-exec has no Git/gitignore policy branches
 - command-exec imports no concrete layer-stack manager, manifest, merged view,
   OCC service, or publish internals
+
+## 7. Cache Decision Experiment
+
+Phase 04 must decide whether Phase 02's persistent materialized lowerdir cache
+is worth keeping for real shell execution. The decision must come from a live
+Daytona-backed A/B load test, not from prepare-only microbenchmarks.
+
+Add a focused live module:
+
+```text
+backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/
+`-- test_workspace_replaced_shell_cache_ab.py
+```
+
+The test runs the same workspace-replaced shell workload twice:
+
+```text
+cache_enabled:
+  command-exec uses prepare_workspace_snapshot with reusable materialized
+  lowerdirs for the latest manifest
+
+cache_disabled:
+  command-exec still prepares a lowerdir for the workspace replacement mount,
+  but it treats the lowerdir as per-command transient state and removes it when
+  the command lease releases
+```
+
+The disabled path is a measurement policy, not a production fallback. It must
+still route through command-exec, mount the leased `/testbed` view, capture
+upperdir changes, submit through `occ.client.OCCClient`, and avoid mutating the
+real `/testbed`.
+
+Default load case:
+
+```text
+workspace:
+  imported `/testbed` base plus a configurable 16 MiB tracked payload
+
+concurrency:
+  1, 5, 10, 20 independent shell calls
+  barrier-launched concurrent calls, not shell batching
+
+per-call command:
+  read a stable file from `/testbed`
+  read a slice of the large tracked payload
+  write one unique tracked output file under `/testbed`
+  write one unique outside-workspace file under `/tmp`
+
+post-run reconciliation:
+  all tracked outputs are visible through public read_file
+  no `/tmp` output is published to layer-stack truth
+  no shell observes a manifest published after its lease was acquired
+```
+
+Each policy writes JSONL under:
+
+```text
+.omc/results/live-e2e-phase04-shell-cache-ab-<policy>-<utc>.jsonl
+```
+
+Required fields:
+
+```text
+policy                                # cache_enabled or cache_disabled
+workspace_bytes
+concurrency
+batch_wall_ms
+per_call_wall_ms
+api.shell.total_s
+command_exec.prepare_snapshot_s
+command_exec.mount_workspace_s
+command_exec.run_command_s
+command_exec.capture_upperdir_s
+command_exec.occ_apply_s
+command_exec.release_snapshot_s
+layer_stack.snapshot_cache.hit
+layer_stack.snapshot_cache.materialize_s
+materialized_lowerdirs_peak
+cache_bytes_peak
+cache_bytes_after_release
+df_kb_available_before
+df_kb_available_after
+success_count
+conflict_count
+published_workspace_paths
+outside_workspace_paths_not_published
+```
+
+Comparison summary:
+
+```text
+.omc/results/live-e2e-phase04-shell-cache-ab-summary-<utc>.jsonl
+```
+
+The summary must report, for each concurrency:
+
+```text
+cache_enabled_p50_wall_ms
+cache_enabled_p95_wall_ms
+cache_enabled_batch_wall_ms
+cache_disabled_p50_wall_ms
+cache_disabled_p95_wall_ms
+cache_disabled_batch_wall_ms
+absolute_p95_ms_saved
+relative_p95_saved_percent
+absolute_batch_ms_saved
+relative_batch_saved_percent
+extra_cache_bytes_peak
+keep_cache_recommendation
+```
+
+Decision bar:
+
+```text
+Keep the persistent cache only if the cache-enabled run is meaningfully better
+on the shell workload:
+
+  p95 wall or batch wall improves by at least 20 percent
+  OR p95 wall or batch wall improves by at least 250 ms
+
+and correctness results are identical between policies.
+
+If the observed win is only prepare-scale, for example roughly 60 ms total wall
+time, remove or disable the persistent cache and keep transient lowerdir
+construction only.
+```

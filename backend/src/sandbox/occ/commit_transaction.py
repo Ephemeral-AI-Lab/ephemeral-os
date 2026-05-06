@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
-from sandbox.layer_stack.manifest import STAGING_DIR
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import (
     PreparedChangeset,
     PreparedPathGroup,
@@ -23,6 +21,12 @@ from sandbox.occ.changeset.types import (
 from sandbox.occ.direct.merge import DirectMerge
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.gated.merge import GatedMerge
+from sandbox.occ.ports import (
+    CommitPublisher,
+    CommitStagingStore,
+    SnapshotReader,
+    ensure_layer_stack_ports,
+)
 
 
 @dataclass(frozen=True)
@@ -35,23 +39,45 @@ class PathValidation:
 class OccCommitTransaction:
     """Revalidate prepared OCC path groups and publish one immutable layer."""
 
-    def __init__(self, layer_stack: LayerStackManager) -> None:
-        self._layer_stack = layer_stack
+    def __init__(
+        self,
+        layer_stack: object | None = None,
+        *,
+        snapshot_reader: SnapshotReader | None = None,
+        staging: CommitStagingStore | None = None,
+        publisher: CommitPublisher | None = None,
+        workspace_ref: str = "",
+    ) -> None:
+        if layer_stack is not None:
+            ports = ensure_layer_stack_ports(layer_stack)
+            snapshot_reader = snapshot_reader or ports
+            staging = staging or ports
+            publisher = publisher or ports
+        if snapshot_reader is None or staging is None or publisher is None:
+            raise TypeError(
+                "OccCommitTransaction requires snapshot_reader, staging, "
+                "and publisher ports"
+            )
+        self._snapshot_reader = snapshot_reader
+        self._staging = staging
+        self._publisher = publisher
+        self._workspace_ref = workspace_ref
         self._hasher = ContentHasher()
-        self._gated = GatedMerge(layer_stack, hasher=self._hasher)
-        self._direct = DirectMerge(layer_stack)
+        self._gated = GatedMerge(snapshot_reader, hasher=self._hasher)
+        self._direct = DirectMerge(snapshot_reader)
 
     def revalidate_and_publish(self, prepared: PreparedChangeset) -> ChangesetResult:
         """Validate against the current active manifest and publish accepted deltas."""
         total_start = time.perf_counter()
         timings: dict[str, float] = {}
-        with self._layer_stack.commit_transaction() as transaction:
+        with self._publisher.commit_transaction(self._workspace_ref) as transaction:
             timings["layer_stack.transaction.lock_wait_s"] = transaction.lock_wait_s
             snapshot_start = time.perf_counter()
             active_manifest = transaction.snapshot()
             timings["occ.commit.snapshot_s"] = time.perf_counter() - snapshot_start
             with _LayerChangeStager(
-                self._layer_stack.storage_root,
+                self._staging,
+                workspace_ref=self._workspace_ref,
                 hasher=self._hasher,
             ) as stager:
                 validate_start = time.perf_counter()
@@ -178,31 +204,41 @@ class OccCommitTransaction:
 
 
 class _LayerChangeStager:
-    def __init__(self, storage_root: Path, *, hasher: ContentHasher) -> None:
-        self._staging_parent = storage_root / STAGING_DIR
-        self._staging_parent.mkdir(parents=True, exist_ok=True)
+    def __init__(
+        self,
+        staging: CommitStagingStore,
+        *,
+        workspace_ref: str,
+        hasher: ContentHasher,
+    ) -> None:
+        self._staging = staging
+        self._workspace_ref = workspace_ref
         self._hasher = hasher
         self._counter = 0
-        self._tmp: tempfile.TemporaryDirectory[str] | None = None
+        self._staging_id: str | None = None
+        self._staging_path: Path | None = None
 
     def __enter__(self) -> "_LayerChangeStager":
-        self._tmp = tempfile.TemporaryDirectory(
-            prefix="occ-commit-",
-            dir=str(self._staging_parent),
+        area = self._staging.allocate_commit_staging(
+            self._workspace_ref,
+            uuid4().hex,
         )
+        self._staging_id = area.staging_id
+        self._staging_path = area.path
         return self
 
     def __exit__(self, exc_type, exc, traceback) -> None:
         del exc_type, exc, traceback
-        if self._tmp is not None:
-            self._tmp.cleanup()
-            self._tmp = None
+        if self._staging_id is not None:
+            self._staging.drop_commit_staging(self._workspace_ref, self._staging_id)
+            self._staging_id = None
+            self._staging_path = None
 
     def write(self, path: str, content: bytes) -> LayerChange:
-        if self._tmp is None:
+        if self._staging_path is None:
             raise RuntimeError("OCC layer-change stager is not active")
         self._counter += 1
-        source = Path(self._tmp.name) / f"{self._counter:06d}.bin"
+        source = self._staging_path / f"{self._counter:06d}.bin"
         source.write_bytes(content)
         return LayerChange(
             path=path,

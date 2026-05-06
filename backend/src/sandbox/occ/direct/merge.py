@@ -8,7 +8,6 @@ from typing import Literal
 
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup
 from sandbox.occ.content.layer_backed_content import LayerBackedContent
 from sandbox.occ.changeset.types import (
@@ -20,6 +19,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
+from sandbox.occ.ports import SnapshotReader
 
 StageWrite = Callable[[str, bytes], LayerChange]
 _FinalKind = Literal["write", "delete", "symlink", "opaque_dir"]
@@ -28,8 +28,8 @@ _FinalKind = Literal["write", "delete", "symlink", "opaque_dir"]
 class DirectMerge:
     """Stage direct changes with last-writer-wins semantics."""
 
-    def __init__(self, layer_stack: LayerStackManager) -> None:
-        self._content = LayerBackedContent(layer_stack)
+    def __init__(self, snapshot_reader: SnapshotReader) -> None:
+        self._content = LayerBackedContent(snapshot_reader)
 
     def stage_group(
         self,

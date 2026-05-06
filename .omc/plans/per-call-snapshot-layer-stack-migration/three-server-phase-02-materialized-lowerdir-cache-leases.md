@@ -154,3 +154,52 @@ Required assertions:
 - runtime `OP_TABLE` does not register `api.compact`
 - materialization metrics distinguish cache hit, miss, bytes, and duration
 - cache-hit preparation does not walk the full workspace payload
+
+## 7. Cache ROI Gate
+
+The materialized lowerdir cache is provisional. Phase 02 proves correctness and
+resource shape, but it does not decide whether the cache is worth keeping in the
+shell path.
+
+Known resource model from the live Phase 02 evidence:
+
+```text
+cache disk cost:
+  one materialized lowerdir per retained manifest identity
+  roughly one full materialized workspace view per entry
+
+cache memory cost:
+  small lease/refcount/metrics bookkeeping
+  not workspace-sized data
+
+same-manifest leases:
+  many leases share one lowerdir
+  cache cost does not multiply by lease count
+
+stale manifests:
+  retained only while actively leased
+```
+
+Decision rule:
+
+```text
+Do not keep the cache because `api.prepare_workspace_snapshot` microbenchmarks
+improve. Keep it only if Phase 04's real guarded-shell load experiment shows
+that cache-enabled workspace replacement beats cache-disabled workspace
+replacement by enough wall-clock/runtime time to justify the extra disk.
+```
+
+Phase 04 must run the comparison with both policies:
+
+```text
+cache_enabled:
+  prepare_workspace_snapshot reuses the latest materialized lowerdir
+
+cache_disabled:
+  prepare_workspace_snapshot still creates the lowerdir required for the shell
+  mount, but it does not retain or reuse it after the command lease releases
+```
+
+If the Phase 04 comparison does not show a meaningful end-to-end shell benefit,
+remove or disable the persistent materialized lowerdir cache and keep only the
+transient lowerdir construction required for command execution.

@@ -154,6 +154,74 @@ def test_control_runtime_api_status_do_not_import_daytona_provider() -> None:
     )
 
 
+def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
+    """OCC internals use role protocols instead of the concrete storage facade."""
+    offenders: list[str] = []
+    occ_root = SRC_ROOT / "sandbox" / "occ"
+    allowed = {
+        occ_root / "ports.py",
+    }
+    forbidden = (
+        "sandbox.layer_stack.stack_manager",
+        "sandbox.layer_stack.merged_view",
+        "sandbox.layer_stack.publisher",
+        "sandbox.layer_stack.lease_registry",
+        "sandbox.runtime.layer_stack_server",
+    )
+    for module in _python_files(occ_root):
+        if module in allowed:
+            continue
+        for imported in _imports(module):
+            if imported in forbidden or any(
+                imported.startswith(f"{prefix}.") for prefix in forbidden
+            ):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
+def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> None:
+    offenders: list[str] = []
+    forbidden = (
+        "sandbox.occ",
+        "sandbox.command_exec",
+        "sandbox.runtime.clients.occ",
+        "pathspec",
+    )
+    for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):
+        for imported in _imports(module):
+            if imported in forbidden or any(
+                imported.startswith(f"{prefix}.") for prefix in forbidden
+            ):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
+def test_command_exec_imports_only_client_protocol_boundaries() -> None:
+    offenders: list[str] = []
+    command_exec_root = SRC_ROOT / "sandbox" / "command_exec"
+    forbidden = (
+        "sandbox.layer_stack",
+        "sandbox.occ.service",
+        "sandbox.occ.commit_transaction",
+        "sandbox.occ.content.gitignore_oracle",
+        "sandbox.occ.direct",
+        "sandbox.occ.gated",
+        "sandbox.occ.orchestrator",
+        "sandbox.occ.runtime_ops",
+        "sandbox.runtime.layer_stack_server",
+    )
+    for module in _python_files(command_exec_root):
+        for imported in _imports(module):
+            if imported in forbidden or any(
+                imported.startswith(f"{prefix}.") for prefix in forbidden
+            ):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
 

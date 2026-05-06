@@ -208,20 +208,27 @@ def test_services_cached_per_layer_stack_root(
             self.root = root
 
     class _FakeOracle:
-        def __init__(self, manager: _FakeManager) -> None:
-            self.manager = manager
+        def __init__(self, layer_stack: object) -> None:
+            self.layer_stack = layer_stack
 
     class _FakeService:
-        def __init__(self, *, gitignore: _FakeOracle, layer_stack: _FakeManager) -> None:
+        def __init__(
+            self,
+            *,
+            gitignore: _FakeOracle,
+            layer_stack: object,
+            workspace_ref: str = "",
+        ) -> None:
             self.gitignore = gitignore
             self.layer_stack = layer_stack
+            self.workspace_ref = workspace_ref
 
     monkeypatch.setattr(
         api_handlers,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(api_handlers, "LayerStackGitignoreOracle", _FakeOracle)
+    monkeypatch.setattr(api_handlers, "SnapshotGitignoreOracle", _FakeOracle)
     monkeypatch.setattr(api_handlers, "OccService", _FakeService)
 
     a1 = api_handlers._services({"layer_stack_root": "/tmp/a"})
@@ -242,20 +249,27 @@ def test_drop_services_cache_removes_only_requested_layer_stack_root(
             self.root = root
 
     class _FakeOracle:
-        def __init__(self, manager: _FakeManager) -> None:
-            self.manager = manager
+        def __init__(self, layer_stack: object) -> None:
+            self.layer_stack = layer_stack
 
     class _FakeService:
-        def __init__(self, *, gitignore: _FakeOracle, layer_stack: _FakeManager) -> None:
+        def __init__(
+            self,
+            *,
+            gitignore: _FakeOracle,
+            layer_stack: object,
+            workspace_ref: str = "",
+        ) -> None:
             self.gitignore = gitignore
             self.layer_stack = layer_stack
+            self.workspace_ref = workspace_ref
 
     monkeypatch.setattr(
         api_handlers,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(api_handlers, "LayerStackGitignoreOracle", _FakeOracle)
+    monkeypatch.setattr(api_handlers, "SnapshotGitignoreOracle", _FakeOracle)
     monkeypatch.setattr(api_handlers, "OccService", _FakeService)
 
     first_a = api_handlers._services({"layer_stack_root": "/tmp/a"})

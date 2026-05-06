@@ -25,8 +25,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.manifest import Manifest
+from sandbox.occ.ports import (
+    SnapshotMaterializer,
+    SnapshotReader,
+    ensure_layer_stack_ports,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type-checkers
     import pathspec  # noqa: F401
@@ -282,13 +286,12 @@ def select_backend() -> str:
     return "git"
 
 
-_GITIGNORE_CACHE_DIR = "cache"
 _GITIGNORE_CACHE_PREFIX = "gitignore-"
 _GITIGNORE_CACHE_KEEP = 16
 _GITIGNORE_READY_MARKER = ".ready"
 
 
-class LayerStackGitignoreOracle(GitignoreOracle):
+class SnapshotGitignoreOracle(GitignoreOracle):
     """Evaluate gitignore rules from a layer-stack snapshot.
 
     Two backends share the API:
@@ -300,17 +303,21 @@ class LayerStackGitignoreOracle(GitignoreOracle):
       process attaches to an existing ready workspace in O(stat) instead of
       paying the materialize + ``git init`` cost.
     * ``pathspec``: skips materialization entirely and reads ``.gitignore``
-      files directly from the snapshot via ``LayerStackManager.read_text``.
+      files directly from the snapshot through ``SnapshotReader.read_text``.
       Selected via ``EPHEMERALOS_GITIGNORE_BACKEND=pathspec``.
     """
 
     def __init__(
         self,
-        layer_stack: LayerStackManager,
+        snapshot_reader: SnapshotReader | object,
         *,
+        snapshot_materializer: SnapshotMaterializer | object | None = None,
         backend: str | None = None,
     ) -> None:
-        self._layer_stack = layer_stack
+        self._snapshot_reader = ensure_layer_stack_ports(snapshot_reader)
+        self._snapshot_materializer = ensure_layer_stack_ports(
+            snapshot_materializer or snapshot_reader,
+        )
         self._backend = backend or select_backend()
         self._oracles: dict[int, GitignoreOracle | PathspecGitignoreOracle] = {}
         self.cache_hits: int = 0
@@ -321,11 +328,11 @@ class LayerStackGitignoreOracle(GitignoreOracle):
     def is_ignored(self, path: str) -> bool:
         return self.is_ignored_in_snapshot(
             path,
-            self._layer_stack.read_active_manifest(),
+            self._snapshot_reader.get_active_manifest(),
         )
 
     def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        snapshot = self._layer_stack.read_active_manifest()
+        snapshot = self._snapshot_reader.get_active_manifest()
         return {path for path in paths if self.is_ignored_in_snapshot(path, snapshot)}
 
     def is_ignored_in_snapshot(self, path: str, snapshot: Manifest) -> bool:
@@ -374,7 +381,7 @@ class LayerStackGitignoreOracle(GitignoreOracle):
 
         def _read_gitignore(dir_rel: str) -> str | None:
             rel = f"{dir_rel}/.gitignore" if dir_rel else ".gitignore"
-            content, exists = self._layer_stack.read_text(rel, snapshot)
+            content, exists = self._snapshot_reader.read_text(rel, snapshot)
             return content if exists else None
 
         return PathspecGitignoreOracle(
@@ -384,26 +391,20 @@ class LayerStackGitignoreOracle(GitignoreOracle):
 
     def _build_git_oracle(self, snapshot: Manifest) -> GitignoreOracle:
         workspace = _ensure_disk_cached_workspace(
-            self._layer_stack,
+            self._snapshot_reader,
+            self._snapshot_materializer,
             snapshot,
             timings=self,
         )
         return GitignoreOracle(str(workspace))
 
 
-def _gitignore_cache_root(storage_root: Path) -> Path:
-    return storage_root / _GITIGNORE_CACHE_DIR
-
-
-def _gitignore_cache_path(storage_root: Path, version: int) -> Path:
-    return _gitignore_cache_root(storage_root) / f"{_GITIGNORE_CACHE_PREFIX}{version}"
-
-
 def _ensure_disk_cached_workspace(
-    layer_stack: LayerStackManager,
+    snapshot_reader: SnapshotReader,
+    materializer: SnapshotMaterializer,
     snapshot: Manifest,
     *,
-    timings: "LayerStackGitignoreOracle | None" = None,
+    timings: "SnapshotGitignoreOracle | None" = None,
 ) -> Path:
     """Return a ready-to-use materialized workspace for *snapshot*.
 
@@ -412,11 +413,10 @@ def _ensure_disk_cached_workspace(
     Evicts older cache entries (version < active - N) opportunistically so
     growth stays bounded without a periodic sweep.
     """
-    storage_root = Path(layer_stack.storage_root)
-    cache_root = _gitignore_cache_root(storage_root)
+    cache_root = materializer.snapshot_cache_root
     cache_root.mkdir(parents=True, exist_ok=True)
 
-    final = _gitignore_cache_path(storage_root, snapshot.version)
+    final = cache_root / f"{_GITIGNORE_CACHE_PREFIX}{snapshot.version}"
     ready = final / _GITIGNORE_READY_MARKER
     if ready.is_file():
         if timings is not None:
@@ -427,7 +427,7 @@ def _ensure_disk_cached_workspace(
     staging = cache_root / f"{_GITIGNORE_CACHE_PREFIX}{snapshot.version}.tmp.{uuid4().hex}"
     staging.mkdir(parents=True, exist_ok=False)
     materialize_start = time.perf_counter()
-    layer_stack.materialize(staging, snapshot)
+    materializer.materialize_snapshot(staging, snapshot)
     materialize_s = time.perf_counter() - materialize_start
     git_init_start = time.perf_counter()
     _init_git_workspace(staging)
@@ -450,7 +450,8 @@ def _ensure_disk_cached_workspace(
         return final
 
     _evict_stale_gitignore_cache(
-        layer_stack,
+        snapshot_reader,
+        cache_root=cache_root,
         keep_last_n=_GITIGNORE_CACHE_KEEP,
         protect_version=snapshot.version,
     )
@@ -461,8 +462,9 @@ def _ensure_disk_cached_workspace(
 
 
 def _evict_stale_gitignore_cache(
-    layer_stack: LayerStackManager,
+    snapshot_reader: SnapshotReader,
     *,
+    cache_root: Path,
     keep_last_n: int,
     protect_version: int | None = None,
 ) -> None:
@@ -473,11 +475,9 @@ def _evict_stale_gitignore_cache(
     manifest; ``protect_version`` keeps the caller's chosen version alive so
     we never evict a workspace we are about to use.
     """
-    storage_root = Path(layer_stack.storage_root)
-    cache_root = _gitignore_cache_root(storage_root)
     if not cache_root.is_dir():
         return
-    active_version = layer_stack.read_active_manifest().version
+    active_version = snapshot_reader.get_active_manifest().version
     threshold = active_version - keep_last_n
     for child in cache_root.iterdir():
         name = child.name
@@ -511,10 +511,10 @@ def _init_git_workspace(workspace: Path) -> None:
 
 __all__ = [
     "GitignoreOracle",
-    "LayerStackGitignoreOracle",
     "PathspecGitignoreOracle",
     "ReadGitignoreFn",
     "RunFn",
     "RunOutcome",
+    "SnapshotGitignoreOracle",
     "select_backend",
 ]

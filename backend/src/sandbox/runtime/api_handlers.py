@@ -27,12 +27,13 @@ from sandbox.layer_stack.workspace import (
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.content.gitignore_oracle import LayerStackGitignoreOracle
+from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
 from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
+from sandbox.runtime.clients.layer_stack import LayerStackClient
 from sandbox.runtime.layer_stack_server import get_layer_stack_manager
 
 
@@ -48,9 +49,7 @@ batches them via its 2 ms batch window.
 
 _PROCESS_COMMIT_LOCK_BUCKETS: dict[str, tuple[asyncio.Lock, ...]] = {}
 
-_SERVICE_CACHE: dict[
-    str, tuple[LayerStackManager, OccService, "LayerStackGitignoreOracle"]
-] = {}
+_SERVICE_CACHE: dict[str, tuple[LayerStackManager, OccService, "SnapshotGitignoreOracle"]] = {}
 
 
 def _services_cache_clear() -> None:
@@ -149,7 +148,7 @@ async def _shell_with_services(
     *,
     manager: LayerStackManager,
     occ_service: OccService,
-    gitignore: "LayerStackGitignoreOracle",
+    gitignore: "SnapshotGitignoreOracle",
 ) -> dict[str, object]:
     total_start = time.perf_counter()
     request = _shell_request(args)
@@ -464,9 +463,11 @@ async def _apply_overlay_capture(
     return result
 
 
-def _services(
-    args: Mapping[str, object],
-) -> tuple[LayerStackManager, OccService, "LayerStackGitignoreOracle"]:
+def _services(args: Mapping[str, object]) -> tuple[
+    LayerStackManager,
+    OccService,
+    "SnapshotGitignoreOracle",
+]:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
@@ -474,8 +475,17 @@ def _services(
     if cached is not None:
         return cached
     manager = get_layer_stack_manager(layer_stack_root)
-    gitignore = LayerStackGitignoreOracle(manager)
-    services = (manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore)
+    layer_stack = LayerStackClient(manager)
+    gitignore = SnapshotGitignoreOracle(layer_stack)
+    services = (
+        manager,
+        OccService(
+            gitignore=gitignore,
+            layer_stack=layer_stack,
+            workspace_ref=layer_stack_root,
+        ),
+        gitignore,
+    )
     _SERVICE_CACHE[layer_stack_root] = services
     return services
 
@@ -500,7 +510,7 @@ def _workspace_layer_path(args: Mapping[str, object], path: str) -> str:
 
 
 def _gitignore_timings(
-    gitignore: "LayerStackGitignoreOracle",
+    gitignore: "SnapshotGitignoreOracle",
 ) -> dict[str, float]:
     """Per-call gitignore counters.
 
