@@ -41,7 +41,7 @@ def test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release(
     assert (Path(first.lowerdir) / "src" / "app.py").read_text(
         encoding="utf-8",
     ) == "print('hi')\n"
-    assert manager.lowerdir_refcount(first.lowerdir) == 2
+    assert first.lowerdir in manager.pinned_lowerdirs()
 
     metrics = manager.lowerdir_cache_metrics()
     assert metrics.hits == 1
@@ -50,7 +50,7 @@ def test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release(
     assert metrics.last_lookup_s >= 0
 
     assert manager.release_lease(first.lease_id) is True
-    assert manager.lowerdir_refcount(first.lowerdir) == 1
+    assert first.lowerdir in manager.pinned_lowerdirs()
     gc_with_second_lease = manager.collect_garbage(young_staging_age_seconds=0)
     assert Path(first.lowerdir).is_dir()
     assert Path(first.lowerdir).parent.name not in (
@@ -58,6 +58,7 @@ def test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release(
     )
 
     assert manager.release_lease(second.lease_id) is True
+    assert first.lowerdir not in manager.pinned_lowerdirs()
     gc_after_release = manager.collect_garbage(young_staging_age_seconds=0)
 
     assert Path(first.lowerdir).exists() is False

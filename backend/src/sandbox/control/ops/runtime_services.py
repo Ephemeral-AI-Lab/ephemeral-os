@@ -206,19 +206,6 @@ class RemoteRuntimeServiceBinding:
             timings=_timings(raw.get("timings")),
         )
 
-    async def pinned_layers(self) -> tuple[str, ...]:
-        await self.ensure_initialized()
-        raw = await _call_runtime_server(
-            exec_fn=get_adapter(self.sandbox_id).exec,
-            sandbox_id=self.sandbox_id,
-            op="api.pinned_layers",
-            args={
-                "layer_stack_root": self.layer_stack_root,
-            },
-            timeout=60,
-        )
-        return tuple(str(path) for path in raw.get("pinned_layers", ()))
-
     async def layer_metrics(self) -> dict[str, object]:
         await self.ensure_initialized()
         return await _call_runtime_server(
@@ -235,20 +222,16 @@ class RemoteRuntimeServiceBinding:
         self,
         *,
         request_id: str,
-        ttl_seconds: float | None = None,
     ) -> dict[str, object]:
         await self.ensure_initialized()
-        args: dict[str, object] = {
-            "layer_stack_root": self.layer_stack_root,
-            "request_id": request_id,
-        }
-        if ttl_seconds is not None:
-            args["ttl_seconds"] = ttl_seconds
         return await _call_runtime_server(
             exec_fn=get_adapter(self.sandbox_id).exec,
             sandbox_id=self.sandbox_id,
             op="api.prepare_workspace_snapshot",
-            args=args,
+            args={
+                "layer_stack_root": self.layer_stack_root,
+                "request_id": request_id,
+            },
             timeout=60,
         )
 

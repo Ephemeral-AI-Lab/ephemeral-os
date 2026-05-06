@@ -28,35 +28,17 @@ manifest = Manifest(version=1, layers=(layer,))
 
 lease_a = registry.acquire(manifest, "owner-a")
 assert lease_a.lease_id == "lease-a"
-assert registry.refcount(layer) == 1
+assert registry.pinned_layers() == (layer,)
 released = registry.release(lease_a.lease_id)
 double_release = registry.release(lease_a.lease_id)
 assert released == lease_a
 assert double_release is None
-assert registry.refcount(layer) == 0
-
-clock["now"] = 120.0
-lease_b = registry.acquire(manifest, "owner-b")
-expired = registry.expire_older_than(5.0, now=126.0)
-assert expired == (lease_b,)
-assert registry.active_leases() == ()
-assert registry.refcount(layer) == 0
-
-clock["now"] = 130.0
-live = registry.acquire(manifest, "owner-live")
-dead = registry.acquire(manifest, "owner-dead")
-swept = registry.sweep_dead_owners(["owner-live"])
-assert swept == (dead,)
-assert registry.active_leases() == (live,)
-assert registry.refcount(layer) == 1
+assert registry.pinned_layers() == ()
 
 _emit(label, started, before, {
     "released": released.lease_id,
     "double_release_is_none": double_release is None,
-    "expired": [lease.lease_id for lease in expired],
-    "swept_dead_owners": [lease.owner_request_id for lease in swept],
-    "remaining_leases": [lease.lease_id for lease in registry.active_leases()],
-    "final_refcount": registry.refcount(layer),
+    "final_pinned_layers": len(registry.pinned_layers()),
 })
 """
 
@@ -85,22 +67,22 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=n) as pool:
     lease_ids = list(pool.map(register_one, range(n)))
 
 assert len(set(lease_ids)) == n, lease_ids
-assert registry.refcount(layer) == n
-assert len(registry.active_leases()) == n
+assert registry.pinned_layers() == (layer,)
+assert registry.active_count() == n
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=n) as pool:
     released = list(pool.map(registry.release, lease_ids))
 
 assert all(lease is not None for lease in released)
-assert registry.refcount(layer) == 0
-assert registry.active_leases() == ()
+assert registry.pinned_layers() == ()
+assert registry.active_count() == 0
 
 _emit(label, started, before, {
     "registered": n,
     "unique_lease_ids": len(set(lease_ids)),
     "released": sum(1 for lease in released if lease is not None),
-    "final_refcount": registry.refcount(layer),
-    "active_leases": len(registry.active_leases()),
+    "final_pinned_layers": len(registry.pinned_layers()),
+    "active_leases": registry.active_count(),
 })
 """
 
@@ -114,9 +96,7 @@ async def test_lease_registry_registers_releases_expires_and_sweeps_dead_owners(
         label="layer_stack.lease_registry",
     )
     assert payload["double_release_is_none"] is True
-    assert payload["expired"] == ["lease-b"]
-    assert payload["swept_dead_owners"] == ["owner-dead"]
-    assert payload["final_refcount"] == 1
+    assert payload["final_pinned_layers"] == 0
 
 
 async def test_lease_registry_under_race_allocates_unique_leases(
@@ -129,4 +109,4 @@ async def test_lease_registry_under_race_allocates_unique_leases(
     )
     assert payload["registered"] == 16
     assert payload["unique_lease_ids"] == 16
-    assert payload["final_refcount"] == 0
+    assert payload["final_pinned_layers"] == 0

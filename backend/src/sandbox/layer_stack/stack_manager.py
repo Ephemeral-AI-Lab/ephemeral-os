@@ -147,30 +147,8 @@ class LayerStackManager:
         with self._lock:
             return self._leases.release(lease_id) is not None
 
-    def expire_leases_older_than(
-        self,
-        max_age_seconds: float,
-        *,
-        now: float | None = None,
-    ) -> tuple[WorkspaceLease, ...]:
-        with self._lock:
-            return self._leases.expire_older_than(max_age_seconds, now=now)
-
-    def sweep_dead_lease_owners(
-        self,
-        live_owner_request_ids: Sequence[str],
-    ) -> tuple[WorkspaceLease, ...]:
-        with self._lock:
-            return self._leases.sweep_dead_owners(live_owner_request_ids)
-
-    def lease_refcount(self, layer: LayerRef) -> int:
-        return self._leases.refcount(layer)
-
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
-
-    def lowerdir_refcount(self, lowerdir: str) -> int:
-        return self._leases.lowerdir_refcount(lowerdir)
 
     def pinned_lowerdirs(self) -> tuple[str, ...]:
         return self._leases.pinned_lowerdirs()
@@ -182,8 +160,7 @@ class LayerStackManager:
         return self._snapshot_cache.materialized_count()
 
     def active_lease_count(self) -> int:
-        with self._lock:
-            return len(self._leases.active_leases())
+        return self._leases.active_count()
 
     def read_bytes(
         self,

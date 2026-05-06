@@ -327,15 +327,6 @@ async def read_file(args: dict[str, object]) -> dict[str, object]:
     }
 
 
-async def pinned_layers(args: dict[str, object]) -> dict[str, object]:
-    manager, _, _ = _services(args)
-    return {
-        "success": True,
-        "pinned_layers": list(manager.pinned_layers()),
-        "pinned_lowerdirs": list(manager.pinned_lowerdirs()),
-    }
-
-
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
     manager, _, _ = _services(args)
     manifest = manager.read_active_manifest()
@@ -753,7 +744,6 @@ __all__ = [
     "compact",
     "edit_file",
     "layer_metrics",
-    "pinned_layers",
     "read_file",
     "shell",
     "shell_batch",

@@ -42,6 +42,19 @@ EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738
 
 Result: `5 passed, 1 warning in 28.48 s`.
 
+```bash
+EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738:v1 \
+  .venv/bin/pytest \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_shell_lease_squash.py \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_mixed_public_load.py \
+  backend/tests/live_e2e_test/sandbox/workspace_base/test_importer_scale_path_edges.py \
+  backend/tests/live_e2e_test/sandbox/workspace_base/test_base_import_crash_safety.py \
+  backend/tests/live_e2e_test/sandbox/workspace_base/test_budget_redlines.py \
+  -v -rs -s --tb=short
+```
+
+Result: `5 passed, 1 warning in 43.45 s`.
+
 ## Artifacts
 
 | Case | Artifact |
@@ -55,6 +68,10 @@ Result: `5 passed, 1 warning in 28.48 s`.
 | Snapshot assembly speed | `.omc/results/live-e2e-phase01-workspace-base-snapshot_assembly_speed-20260506T160653Z.jsonl` |
 | Squash with base and leases | `.omc/results/live-e2e-phase01-workspace-base-squash_with_base_and_leases-20260506T160657Z.jsonl` |
 | Compatibility public read load | `.omc/results/live-e2e-phase01-workspace-base-workspace_base_read_load-20260506T160718Z.jsonl` |
+| Mixed public API profile | `.omc/results/live-e2e-phase01-workspace-base-mixed_public_api_profile-20260506T165058Z.jsonl` |
+| Importer scale/path edges | `.omc/results/live-e2e-phase01-workspace-base-base_import_scale_path_edges-20260506T165100Z.jsonl` |
+| Crash safety interruptions | `.omc/results/live-e2e-phase01-workspace-base-base_import_crash_safety-20260506T165104Z.jsonl` |
+| Budget redlines | `.omc/results/live-e2e-phase01-workspace-base-budget_redlines-20260506T165107Z.jsonl` |
 
 ## Results
 
@@ -72,6 +89,11 @@ Result: `5 passed, 1 warning in 28.48 s`.
 | Squash and leases | No-lease squash preserved byte-equivalent active views at depths `5, 20, 100, 200` and reduced depth. Lease case preserved the leased A-state through squash and GC, then removed pinned layers only after lease release. Squash p50 `63.924 ms`; p99 `92.646 ms`; max `93.407 ms`. |
 | Public read compatibility | 32 reads over 16 imported base paths succeeded. Runtime max `0.741 ms`; wall max `526.834 ms`. The smoke mutates the raw `/testbed` file after import and verifies public `read_file` still returns layer-stack base content. |
 | Public API conflicts | 5 focused public API conflict tests over imported-base fixture files passed. Covered concurrent writes to the same existing base file, disjoint and overlapping edits, shell full-file tracked conflict with gitignored output, shell delete vs public write, and raw `/testbed` mutation isolation. |
+| In-flight shell lease plus squash | Public shell held a leased snapshot while a public write changed active state and compact ran with GC. The shell saw `base-view|base-view`; active public read saw `active-after`; active leases returned to `0`. |
+| Mixed public API load | Imported-base mixed profile passed at concurrency `1/5/10/20` with reads, writes, edits, shell-light traffic, periodic compact, and final content reconciliation. c10 wall p99 `1413.599 ms`; c10 runtime p99 `902.882 ms`; c20 wall p99 `2860.489 ms`; c20 runtime p99 `1968.934 ms`. |
+| Importer scale/path edges | Imported 1000 small files plus a 32 MiB binary fixture. Final inventory: 1181 files, 45 dirs, 2 symlinks, 52.84 MB. Executable bit, dangling symlink, symlink-to-directory, spaces, unicode, long path, newline path, and deep empty directories round-tripped. Import runtime `621.427 ms`. |
+| Crash safety interruptions | SIGKILL during layer write, after base layer rename before manifest, and after manifest before `workspace.json` all failed closed on restart ensure. Clean restart `ensure_workspace_base` created once, then returned existing binding. |
+| Budget redlines | Loose redlines passed: base import runtime p99 `195.258 ms` against `2000 ms`; materialize p99 `56.638 ms` against `2500 ms`; squash p99 `58.924 ms` against `2500 ms`; mixed c10/c20 wall p99 stayed under the `10000 ms` default. |
 
 ## Notes
 
@@ -84,18 +106,18 @@ Result: `5 passed, 1 warning in 28.48 s`.
 
 ## Coverage Assessment
 
-Phase 01 is sufficient for base-import sign-off. It proves base import
-cost/correctness/failure safety, 20 independent base builds, same-root
-base-build race behavior, layer creation over imported base, materialization at
-depths `0/1/5/20/100/200`, squash with and without native leases, and public
-read compatibility after raw `/testbed` mutation. The follow-up public API
-conflict run also covers imported-base `write_file`, `edit_file`, and `shell`
-conflict behavior on focused fixture paths.
+Phase 01 is now load-bearing for the identified workspace-base follow-up scope.
+It proves base import cost/correctness/failure safety, 20 independent base
+builds, same-root base-build race behavior, layer creation over imported base,
+materialization at depths `0/1/5/20/100/200`, squash with and without native
+leases, public read compatibility after raw `/testbed` mutation, public
+`write_file`/`edit_file`/`shell` conflicts, in-flight shell lease behavior
+across compact/GC, mixed public API load, importer scale/path edges, crash
+interruption fail-closed behavior, and loose performance redlines.
 
-It is not yet a full load-bearing sign-off for the public runtime. The remaining
-coverage should target in-flight shell lease plus squash/GC behavior and mixed
-public runtime load on top of an imported workspace base before expanding into
-broader importer scale cases.
+The redlines remain deliberately loose production-confidence thresholds, not
+tight SLOs. They should be promoted only after multiple runs establish stable
+variance.
 
 ## Follow-Up Coverage Status
 
@@ -111,40 +133,37 @@ broader importer scale cases.
 
 2. In-flight shell lease plus squash
 
-   Add a public shell request that holds a leased snapshot while another public
-   API call edits the active stack, compact/squash runs, and GC runs. The shell
-   must continue to see its frozen snapshot view, while the active stack must
-   expose the later committed state after the concurrent edit.
+   Covered by
+   `layer_stack_overlay_occ/test_workspace_base_shell_lease_squash.py`.
+   The public shell holds a snapshot lease while a public write changes active
+   state and compact/GC runs. The shell sees the frozen view and active reads
+   see the later commit.
 
 3. Mixed load-bearing public API profile
 
-   Add a mixed imported-base profile at concurrency `1/5/10/20`. The profile
-   should cover read-heavy traffic, write/edit-heavy traffic, shell-light traffic
-   with shell still present, periodic compact, and final replay or inventory
-   reconciliation. This is the highest-value production-confidence test because
-   it exercises the real user-visible runtime instead of only base import and
-   read compatibility.
+   Covered by
+   `layer_stack_overlay_occ/test_workspace_base_mixed_public_load.py`.
+   The profile runs concurrency `1/5/10/20`, includes read/write/edit/shell
+   traffic, compacts after each concurrency, records c10/c20 p99s, and verifies
+   final public reads for every expected changed path.
 
 4. Crash safety beyond controlled exceptions
 
-   Add interruption cases that kill execution during layer write, after base
-   layer rename but before manifest write, after manifest write but before
-   `workspace.json`, and before daemon restart plus `ensure_workspace_base`.
-   The invariant is that no caller observes success unless binding, manifest,
-   and base layer are mutually consistent.
+   Covered by `workspace_base/test_base_import_crash_safety.py`.
+   The probe sends SIGKILL during layer write, after base layer rename before
+   manifest, and after manifest before `workspace.json`, then verifies restart
+   ensure fails closed unless binding, manifest, and base layer are consistent.
 
 5. Importer scale and path edge cases
 
-   Add larger fixtures for thousands of small files, 32-128 MiB binary files,
-   executable bits or file modes if they become part of the contract, dangling
-   symlinks, symlink-to-directory entries, paths with spaces/unicode/long names,
-   newline paths if supported, and deeply nested empty directories.
+   Covered by `workspace_base/test_importer_scale_path_edges.py`.
+   The fixture includes 1000 small files, a 32 MiB binary, executable bit,
+   dangling symlink, symlink-to-directory, spaces, unicode, long path, newline
+   path, and deeply nested empty directories.
 
 6. Budgets and redlines
 
-   Promote the current baselines into loose redlines: base import runtime p99,
-   materialize p99 by depth, squash p99 by depth, and mixed public API p99 under
-   concurrency `10` and `20`.
-
-Recommended priority order: public API conflicts, in-flight shell lease plus
-squash, mixed load profile, crash safety, then scale/path edge cases.
+   Covered by `workspace_base/test_budget_redlines.py` and the mixed public API
+   profile. The redline test asserts base import runtime p99, materialize p99,
+   and squash p99. The mixed profile asserts c10/c20 wall p99 under the default
+   mixed-load budget.

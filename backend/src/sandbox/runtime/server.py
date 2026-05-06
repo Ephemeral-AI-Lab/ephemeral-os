@@ -234,7 +234,6 @@ def _load_peer_bootstraps() -> None:
         "api.release_workspace_snapshot": (
             layer_stack_handlers.release_workspace_snapshot
         ),
-        "api.pinned_layers": api_handlers.pinned_layers,
         "api.compact": api_handlers.compact,
         "api.edit_file": api_handlers.edit_file,
         "api.layer_metrics": api_handlers.layer_metrics,

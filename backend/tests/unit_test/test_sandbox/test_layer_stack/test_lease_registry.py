@@ -28,16 +28,16 @@ def test_workspace_leases_refcount_materialized_lowerdirs() -> None:
 
     assert lease_a.manifest.version == 3
     assert lease_a.owner_request_id == "request-a"
-    assert registry.lowerdir_refcount(lowerdir) == 2
     assert registry.pinned_lowerdirs() == (lowerdir,)
+    assert registry.pinned_layers() == manifest.layers
 
     assert registry.release(lease_a.lease_id) == lease_a
-    assert registry.lowerdir_refcount(lowerdir) == 1
     assert registry.pinned_lowerdirs() == (lowerdir,)
+    assert registry.pinned_layers() == manifest.layers
 
     assert registry.release(lease_b.lease_id) == lease_b
-    assert registry.lowerdir_refcount(lowerdir) == 0
     assert registry.pinned_lowerdirs() == ()
+    assert registry.pinned_layers() == ()
 
 
 def test_pin_lowerdir_attaches_cache_pin_to_existing_manifest_lease() -> None:
@@ -51,9 +51,9 @@ def test_pin_lowerdir_attaches_cache_pin_to_existing_manifest_lease() -> None:
     updated = registry.pin_lowerdir(lease.lease_id, "/cache/lower")
 
     assert updated.materialized_lowerdir == "/cache/lower"
-    assert registry.refcount(manifest.layers[0]) == 1
-    assert registry.lowerdir_refcount("/cache/lower") == 1
+    assert registry.pinned_layers() == manifest.layers
+    assert registry.pinned_lowerdirs() == ("/cache/lower",)
 
     assert registry.release(lease.lease_id) == updated
-    assert registry.refcount(manifest.layers[0]) == 0
-    assert registry.lowerdir_refcount("/cache/lower") == 0
+    assert registry.pinned_layers() == ()
+    assert registry.pinned_lowerdirs() == ()

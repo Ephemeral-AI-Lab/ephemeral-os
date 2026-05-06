@@ -52,8 +52,8 @@ except ValueError:
 assert bad_hash_rejected
 assert manager.read_bytes("src/bad.py") == (None, False)
 
-expired = manager.expire_leases_older_than(0, now=lease.acquired_at + 1)
-assert expired == (lease,)
+released_lease = manager.release_lease(lease.lease_id)
+assert released_lease is True
 squashed = manager.squash(max_depth=1)
 assert squashed is not None
 cleanup = manager.collect_garbage(young_staging_age_seconds=0)
@@ -67,7 +67,7 @@ _emit(label, started, before, {
     "updated_version": updated.version,
     "squashed_depth": squashed.depth,
     "bad_hash_rejected": bad_hash_rejected,
-    "expired_leases": [item.lease_id for item in expired],
+    "released_lease": released_lease,
     "gc_removed_layers": len(cleanup.orphan_layers_removed),
     "missing_active_layers": len(cleanup.missing_active_layers),
 })

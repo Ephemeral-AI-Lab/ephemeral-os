@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from sandbox.layer_stack.manifest import LayerRef, Manifest
@@ -18,14 +18,7 @@ class WorkspaceLease:
     manifest: Manifest
     owner_request_id: str
     acquired_at: float
-    root_hash: str = ""
     materialized_lowerdir: str = ""
-    workspace_ref: str = ""
-    expires_at: float | None = None
-
-    @property
-    def manifest_version(self) -> int:
-        return self.manifest.version
 
 
 class LeaseRegistry:
@@ -49,15 +42,10 @@ class LeaseRegistry:
         manifest: Manifest,
         owner_request_id: str,
         *,
-        root_hash: str = "",
         materialized_lowerdir: str = "",
-        workspace_ref: str = "",
-        ttl_seconds: float | None = None,
     ) -> WorkspaceLease:
         if not owner_request_id:
             raise ValueError("owner_request_id must not be empty")
-        if ttl_seconds is not None and ttl_seconds <= 0:
-            raise ValueError("ttl_seconds must be positive when provided")
         with self._lock:
             acquired_at = self._clock()
             lease = WorkspaceLease(
@@ -65,12 +53,7 @@ class LeaseRegistry:
                 manifest=manifest,
                 owner_request_id=owner_request_id,
                 acquired_at=acquired_at,
-                root_hash=root_hash,
                 materialized_lowerdir=materialized_lowerdir,
-                workspace_ref=workspace_ref,
-                expires_at=(
-                    acquired_at + ttl_seconds if ttl_seconds is not None else None
-                ),
             )
             self._leases[lease.lease_id] = lease
             self._refcounts.update(manifest.layers)
@@ -98,69 +81,17 @@ class LeaseRegistry:
         with self._lock:
             return self._release_locked(lease_id)
 
-    def expire_older_than(
-        self,
-        max_age_seconds: float,
-        *,
-        now: float | None = None,
-    ) -> tuple[WorkspaceLease, ...]:
-        if max_age_seconds < 0:
-            raise ValueError("max_age_seconds must be non-negative")
-        cutoff = (self._clock() if now is None else now) - max_age_seconds
-        with self._lock:
-            expired_ids = (
-                lease.lease_id
-                for lease in self._ordered_leases_locked()
-                if lease.acquired_at <= cutoff
-            )
-            return self._release_many_locked(expired_ids)
-
-    def sweep_dead_owners(
-        self,
-        live_owner_request_ids: Iterable[str],
-    ) -> tuple[WorkspaceLease, ...]:
-        live = set(live_owner_request_ids)
-        with self._lock:
-            dead_ids = (
-                lease.lease_id
-                for lease in self._ordered_leases_locked()
-                if lease.owner_request_id not in live
-            )
-            return self._release_many_locked(dead_ids)
-
-    def refcount(self, layer: LayerRef) -> int:
-        with self._lock:
-            return self._refcounts.get(layer, 0)
-
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         with self._lock:
             return tuple(sorted(self._refcounts))
-
-    def lowerdir_refcount(self, lowerdir: str) -> int:
-        with self._lock:
-            return self._lowerdir_refcounts.get(lowerdir, 0)
 
     def pinned_lowerdirs(self) -> tuple[str, ...]:
         with self._lock:
             return tuple(sorted(self._lowerdir_refcounts))
 
-    def active_leases(self) -> tuple[WorkspaceLease, ...]:
+    def active_count(self) -> int:
         with self._lock:
-            return self._ordered_leases_locked()
-
-    def _ordered_leases_locked(self) -> tuple[WorkspaceLease, ...]:
-        return tuple(sorted(self._leases.values(), key=lambda lease: lease.acquired_at))
-
-    def _release_many_locked(
-        self,
-        lease_ids: Iterable[str],
-    ) -> tuple[WorkspaceLease, ...]:
-        released: list[WorkspaceLease] = []
-        for lease_id in tuple(lease_ids):
-            lease = self._release_locked(lease_id)
-            if lease is not None:
-                released.append(lease)
-        return tuple(released)
+            return len(self._leases)
 
     def _release_locked(self, lease_id: str) -> WorkspaceLease | None:
         lease = self._leases.pop(lease_id, None)

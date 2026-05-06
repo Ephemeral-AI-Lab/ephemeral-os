@@ -68,7 +68,7 @@ async def test_snapshot_runner_executes_against_leased_manifest_without_publish(
 @pytest.mark.asyncio
 async def test_snapshot_runner_releases_lease_when_runtime_fails(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / "stack")
-    manifest = manager.publish_changes(
+    manager.publish_changes(
         [
             LayerChange(
                 path="pkg/value.txt",
@@ -94,7 +94,6 @@ async def test_snapshot_runner_releases_lease_when_runtime_fails(tmp_path: Path)
     with pytest.raises(RuntimeError, match="runtime failed"):
         await runner.shell(request)
 
-    assert manager.lease_refcount(manifest.layers[0]) == 0
     assert manager.pinned_layers() == ()
 
 
