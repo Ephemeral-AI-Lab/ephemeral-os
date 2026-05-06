@@ -25,6 +25,8 @@ document has the same shape:
 | Document | Outcome |
 |---|---|
 | `three-server-workspace-overlay-integration-plan.md` | Defines `/testbed` as the default workspace repo, keeps `layer_stack_root` separate, and specifies the three-server overlay integration where `/testbed` is replaced by a frozen layer-stack snapshot during command execution. |
+| `real-fs-request-snapshot-overlay-plan.md` | Replaces layer-stack-as-truth with real `/testbed` as truth plus per-request frozen snapshots. |
+| `request-snapshot-performance-experiment-plan.md` | Defines the Phase 0 live Daytona experiment for snapshot create time, destroy time, 1/5/10 concurrent creation, and parallel factor before implementation. |
 
 ## Target Dependency Rule
 

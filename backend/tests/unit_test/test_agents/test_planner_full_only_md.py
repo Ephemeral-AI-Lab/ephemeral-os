@@ -6,8 +6,8 @@ from pathlib import Path
 
 from agents.loader import load_agents_dir
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-PLANNER_DIR = REPO_ROOT / "backend" / "src" / "agents" / "main_agent" / "planner"
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "main_agent" / "planner"
 
 
 def _load_planner_pair():

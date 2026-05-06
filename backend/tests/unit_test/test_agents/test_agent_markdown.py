@@ -7,8 +7,8 @@ from pathlib import Path
 from agents.loader import load_agents_dir, load_agents_tree
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-AGENTS_ROOT = REPO_ROOT / "backend" / "src" / "agents"
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+AGENTS_ROOT = BACKEND_ROOT / "src" / "agents"
 
 
 def _load_one(directory: Path):

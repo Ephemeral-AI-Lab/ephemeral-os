@@ -30,6 +30,11 @@ in the pytest process instead of the sandbox runtime guardrails.
   API load gate, after shell batching: `3 passed, 1 deselected` in `70.52 s`.
   See
   `phase-04-p1-load-resource-edge-report.md`.
+- **Request snapshot Phase 0:** `sandbox/request_snapshot/` measures real
+  `/testbed` request snapshot create/destroy latency for `copy_cp`, `tar_copy`,
+  `reflink_cp`, and `hardlink_cp`, including 1/5/10 concurrent create batches.
+  Current live gate: `3 passed` in `12.73 s` on 2026-05-06 UTC. See
+  `request_snapshot/phase-00-request-snapshot-probe-report.md`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 
@@ -96,6 +101,7 @@ The suite is opt-in by directory:
 ```bash
 .venv/bin/pytest backend/tests/live_e2e_test
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/overlay
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/request_snapshot -q -s
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ
 .venv/bin/pytest backend/tests/live_e2e_test -v -rs
 ```
