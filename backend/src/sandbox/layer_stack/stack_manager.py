@@ -37,20 +37,26 @@ class PrepareWorkspaceSnapshotResult:
     lease_id: str
     manifest_version: int
     root_hash: str
+    manifest: Manifest
     lowerdir: str
     cache_hit: bool
     materialized_byte_count: int
     timings: dict[str, float]
+    cache_policy: str = "enabled"
+    transient_lowerdir: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
             "lease_id": self.lease_id,
             "manifest_version": self.manifest_version,
             "root_hash": self.root_hash,
+            "manifest": self.manifest.to_dict(),
             "lowerdir": self.lowerdir,
             "cache_hit": self.cache_hit,
             "materialized_byte_count": self.materialized_byte_count,
             "timings": dict(self.timings),
+            "cache_policy": self.cache_policy,
+            "transient_lowerdir": self.transient_lowerdir,
         }
 
 
@@ -120,6 +126,7 @@ class LayerStackManager:
                 lease_id=lease.lease_id,
                 manifest_version=manifest.version,
                 root_hash=root_hash,
+                manifest=manifest,
                 lowerdir=lookup.snapshot.lowerdir,
                 cache_hit=lookup.cache_hit,
                 materialized_byte_count=lookup.snapshot.byte_count,

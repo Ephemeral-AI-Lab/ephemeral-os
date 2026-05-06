@@ -55,6 +55,9 @@ _SERVICE_CACHE: dict[str, tuple[LayerStackManager, OccService, "SnapshotGitignor
 def _services_cache_clear() -> None:
     """Drop the per-``layer_stack_root`` service cache. Test helper."""
     _SERVICE_CACHE.clear()
+    from sandbox.runtime import command_exec_server
+
+    command_exec_server._services_cache_clear()
 
 
 def drop_services_cache(layer_stack_root: str) -> None:
@@ -64,6 +67,9 @@ def drop_services_cache(layer_stack_root: str) -> None:
         return
     _SERVICE_CACHE.pop(root, None)
     _SERVICE_CACHE.pop(str(Path(root).resolve(strict=False)), None)
+    from sandbox.runtime import command_exec_server
+
+    command_exec_server.drop_services_cache(root)
 
 
 async def _prepare_changeset(
@@ -82,65 +88,15 @@ async def _prepare_changeset(
 
 
 async def shell(args: dict[str, object]) -> dict[str, object]:
-    manager, occ_service, gitignore = _services(args)
-    return await _shell_with_services(
-        args,
-        manager=manager,
-        occ_service=occ_service,
-        gitignore=gitignore,
-    )
+    from sandbox.runtime import command_exec_server
+
+    return await command_exec_server.shell(args)
 
 
 async def shell_batch(args: dict[str, object]) -> dict[str, object]:
-    total_start = time.perf_counter()
-    items = args.get("items")
-    if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
-        raise ValueError("items must be a list of shell request objects")
-    max_concurrency = max(1, _int(args.get("max_concurrency"), default=32))
-    manager, occ_service, gitignore = _services(args)
-    semaphore = asyncio.Semaphore(max_concurrency)
+    from sandbox.runtime import command_exec_server
 
-    async def run_one(index: int, item: object) -> dict[str, object]:
-        if not isinstance(item, Mapping):
-            raise ValueError(f"batch item {index} must be an object")
-        item_args = dict(args)
-        item_args.pop("items", None)
-        item_args.pop("max_concurrency", None)
-        item_args.update(dict(item))
-        wait_start = time.perf_counter()
-        async with semaphore:
-            run_start = time.perf_counter()
-            result = await _shell_with_services(
-                item_args,
-                manager=manager,
-                occ_service=occ_service,
-                gitignore=gitignore,
-            )
-        timings = result.get("timings")
-        if not isinstance(timings, dict):
-            timings = {}
-        timings = {
-            **timings,
-            "api.shell_batch.item_wait_s": run_start - wait_start,
-            "api.shell_batch.item_total_s": time.perf_counter() - wait_start,
-        }
-        result["timings"] = timings
-        result["batch_index"] = index
-        return result
-
-    results = await asyncio.gather(
-        *(run_one(index, item) for index, item in enumerate(items))
-    )
-    return {
-        "success": all(bool(result.get("success", False)) for result in results),
-        "results": results,
-        "warnings": [],
-        "timings": {
-            "api.shell_batch.total_s": time.perf_counter() - total_start,
-            "api.shell_batch.count": float(len(results)),
-            "api.shell_batch.max_concurrency": float(max_concurrency),
-        },
-    }
+    return await command_exec_server.shell_batch(args)
 
 
 async def _shell_with_services(

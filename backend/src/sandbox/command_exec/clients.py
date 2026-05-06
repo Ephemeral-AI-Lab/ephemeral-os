@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Any, Protocol
+
+from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.types import Change, ChangesetResult
 
 
 class WorkspaceSnapshotLease(Protocol):
     lease_id: str
     manifest_version: int
     root_hash: str
+    manifest: object
     lowerdir: str
     cache_hit: bool
     materialized_byte_count: int
@@ -25,6 +29,7 @@ class WorkspaceLeaseClient(Protocol):
         workspace_ref: str,
         request_id: str,
         ttl_seconds: float | None = None,
+        cache_policy: str = "enabled",
     ) -> WorkspaceSnapshotLease: ...
 
     def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool: ...
@@ -35,12 +40,12 @@ class OCCMutationClient(Protocol):
 
     async def apply_changeset(
         self,
-        typed_changes: Sequence[object],
+        typed_changes: Sequence[Change],
         *,
-        snapshot: object | None = None,
-        options: object | None = None,
+        snapshot: Any = None,
+        options: CommitOptions | None = None,
         workspace_ref: str | None = None,
-    ) -> object: ...
+    ) -> ChangesetResult | PreparedChangeset: ...
 
 
 __all__ = [

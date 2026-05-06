@@ -198,6 +198,13 @@ def _runtime_bundle_bytes() -> bytes:
             exclude_parts=_RUNTIME_EXCLUDE_PARTS,
         )
 
+        command_exec_dir = sandbox_dir / "command_exec"
+        _add_python_tree(
+            tar,
+            command_exec_dir,
+            sandbox_dir=sandbox_dir,
+        )
+
         layer_stack_dir = sandbox_dir / "layer_stack"
         _add_python_tree(
             tar,

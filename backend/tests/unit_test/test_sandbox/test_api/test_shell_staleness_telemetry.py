@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
@@ -10,35 +11,54 @@ from uuid import uuid4
 import pytest
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
+from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus
-from sandbox.overlay.capture.types import OverlayCapture
-from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
-from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
-from sandbox.runtime import api_handlers
+from sandbox.command_exec.result import ShellProcessResult
+from sandbox.runtime import api_handlers, command_exec_server
 
 
-class _BlockingRuntimeInvoker:
-    """Pause after snapshot lease acquisition so the test can advance active."""
+class _BlockingCommandRunner:
+    """Pause after snapshot lease preparation so the test can advance active."""
 
-    def __init__(self, storage_root: Path) -> None:
-        self._inner = RuntimeInvoker(storage_root=storage_root)
-        self.started = asyncio.Event()
-        self.released = asyncio.Event()
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.released = threading.Event()
         self.snapshot_version: int | None = None
 
-    async def invoke(
+    def __call__(
         self,
         *,
-        request: OverlayShellRequest,
-        manifest,
-    ) -> OverlayCapture:
-        self.snapshot_version = manifest.version
+        spec,
+        request,
+        run_dir,
+        timings,
+    ) -> ShellProcessResult:
+        del request
+        self.snapshot_version = spec.manifest_version
         self.started.set()
-        await asyncio.wait_for(self.released.wait(), timeout=10)
-        return await self._inner.invoke(request=request, manifest=manifest)
+        if not self.released.wait(timeout=10):
+            raise TimeoutError("blocking command runner timed out")
+        upper = Path(spec.upperdir)
+        upper.mkdir(parents=True, exist_ok=True)
+        output = upper / "generated" / "output.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes((Path(spec.lowerdir) / "config.yaml").read_bytes())
+        stdout_ref = Path(run_dir) / "stdout.bin"
+        stderr_ref = Path(run_dir) / "stderr.bin"
+        stdout_ref.write_text("done\n", encoding="utf-8")
+        stderr_ref.write_text("", encoding="utf-8")
+        timings["command_exec.mount_workspace_s"] = 0.001
+        timings["command_exec.run_command_s"] = 0.001
+        return ShellProcessResult(
+            exit_code=0,
+            stdout_ref=str(stdout_ref),
+            stderr_ref=str(stderr_ref),
+            mounted_workspace_root=spec.workspace_root,
+            mount_mode="private_namespace",
+        )
 
     def release(self) -> None:
         self.released.set()
@@ -101,10 +121,18 @@ async def _run_occ_clean_stale_shell(
     monkeypatch: pytest.MonkeyPatch,
     advance_count: int,
 ) -> _StaleShellRun:
-    manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
-    _publish(manager, tmp_path, "config.yaml", b"value: v1\n")
-    invoker = _BlockingRuntimeInvoker(manager.storage_root)
-    monkeypatch.setattr(api_handlers, "RuntimeInvoker", lambda **_kwargs: invoker)
+    workspace = tmp_path / f"workspace-{uuid4().hex}"
+    workspace.mkdir()
+    (workspace / "config.yaml").write_text("value: v1\n", encoding="utf-8")
+    stack = tmp_path / f"stack-{uuid4().hex}"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    manager = LayerStackManager(stack)
+    runner = _BlockingCommandRunner()
+    monkeypatch.setattr(
+        command_exec_server,
+        "run_workspace_replaced_command",
+        runner,
+    )
 
     task = asyncio.create_task(
         api_handlers.shell(
@@ -123,9 +151,11 @@ async def _run_occ_clean_stale_shell(
         )
     )
     try:
-        await asyncio.wait_for(invoker.started.wait(), timeout=5)
-        if invoker.snapshot_version is None:
-            raise AssertionError("blocked invoker did not record snapshot version")
+        started = await asyncio.to_thread(runner.started.wait, 5)
+        if not started:
+            raise AssertionError("blocked runner did not start")
+        if runner.snapshot_version is None:
+            raise AssertionError("blocked runner did not record snapshot version")
         for index in range(advance_count):
             _publish(
                 manager,
@@ -134,16 +164,16 @@ async def _run_occ_clean_stale_shell(
                 f"unrelated-{index}\n".encode(),
             )
         active_version = manager.read_active_manifest().version
-        invoker.release()
+        runner.release()
         result = await asyncio.wait_for(task, timeout=10)
         return _StaleShellRun(
             manager=manager,
             result=result,
-            snapshot_version=invoker.snapshot_version,
+            snapshot_version=runner.snapshot_version,
             active_version_before_release=active_version,
         )
     finally:
-        invoker.release()
+        runner.release()
         if not task.done():
             task.cancel()
 
