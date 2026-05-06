@@ -44,7 +44,7 @@ stale_staging = manager.storage_root / "staging" / "B999999-killed.staging"
 stale_staging.mkdir(parents=True)
 (stale_staging / "partial.txt").write_text("partial", encoding="utf-8")
 os.utime(stale_staging, (0, 0))
-cleanup = manager.fsck_cleanup(young_staging_age_seconds=1, now=100)
+cleanup = manager.collect_garbage(young_staging_age_seconds=1, now=100)
 assert "B999999-killed.staging" in cleanup.orphan_staging_removed
 
 _emit(label, started, before, {

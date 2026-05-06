@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import shutil
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,11 +15,9 @@ from sandbox.layer_stack.merged_view import MergedView
 @dataclass(frozen=True)
 class SquashPlan:
     active_version: int
-    live_prefix: tuple[LayerRef, ...]
     suffix_to_checkpoint: tuple[LayerRef, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "live_prefix", tuple(self.live_prefix))
         object.__setattr__(
             self,
             "suffix_to_checkpoint",
@@ -36,13 +33,9 @@ class SquashWorker:
     def __init__(
         self,
         storage_root: str | Path,
-        *,
-        merged_view: MergedView | None = None,
-        id_factory: Callable[[int], str] | None = None,
     ) -> None:
         self._storage_root = Path(storage_root)
-        self._view = merged_view or MergedView(self._storage_root)
-        self._id_factory = id_factory or _default_checkpoint_id
+        self._view = MergedView(self._storage_root)
 
     def plan(self, active_manifest: Manifest, *, max_depth: int) -> SquashPlan | None:
         if max_depth <= 0:
@@ -54,11 +47,9 @@ class SquashWorker:
         if suffix_depth <= 1:
             return None
 
-        live_depth = active_manifest.depth - suffix_depth
         return SquashPlan(
             active_version=active_manifest.version,
-            live_prefix=active_manifest.layers[:live_depth],
-            suffix_to_checkpoint=active_manifest.layers[live_depth:],
+            suffix_to_checkpoint=active_manifest.layers[-suffix_depth:],
         )
 
     def build_checkpoint(self, plan: SquashPlan) -> LayerRef:
@@ -84,7 +75,7 @@ class SquashWorker:
 
     def _allocate_checkpoint_paths(self, next_version: int) -> tuple[str, Path, Path]:
         for _ in range(100):
-            layer_id = self._id_factory(next_version)
+            layer_id = _default_checkpoint_id(next_version)
             layer_dir = self._storage_root / LAYERS_DIR / layer_id
             staging_dir = self._storage_root / STAGING_DIR / f"{layer_id}.staging"
             if not layer_dir.exists() and not staging_dir.exists():

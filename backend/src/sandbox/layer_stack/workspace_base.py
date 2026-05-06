@@ -100,7 +100,7 @@ def build_workspace_base(
         base_manifest_version=manifest.version,
         base_root_hash=root_hash,
     )
-    write_workspace_binding_atomic(stack, binding)
+    write_workspace_binding_atomic(binding)
     return binding
 
 

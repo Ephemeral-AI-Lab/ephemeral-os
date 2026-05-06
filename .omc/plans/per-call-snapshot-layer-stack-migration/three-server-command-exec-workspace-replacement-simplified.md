@@ -139,7 +139,7 @@ After that:
 
 | Public verb | First target server | Other servers touched | Why |
 |---|---|---|---|
-| `sandbox.api.status.create_sandbox` | provider/control path | starts all three servers, asks `layer-stack-server` to bind/import workspace | setup must create the workspace truth before guarded APIs run |
+| `sandbox.api.status.create_sandbox` | provider/control path | starts all three servers, asks `layer-stack-server` to bind and build the workspace base | setup must create the workspace truth before guarded APIs run |
 | `sandbox.api.tool.read_file` | `layer-stack-server` | none | read is pure snapshot access; no OCC policy |
 | `sandbox.api.tool.write_file` | `occ-server` | `layer-stack-server` | mutation must pass conflict and publish policy |
 | `sandbox.api.tool.edit_file` | `occ-server` | `layer-stack-server` | mutation must compute base bytes and validate edits |
@@ -207,7 +207,8 @@ Yes server-side OCC prepare + revalidate through layer-stack protocols.
 
 ### `sandbox.api.status.create_sandbox`
 
-Setup creates the sandbox and imports the assigned workspace into layer-stack.
+Setup creates the sandbox and builds the assigned workspace as the layer-stack
+base.
 
 ```text
 host/status API
@@ -240,7 +241,8 @@ active manifest version 1
 Pass bar:
 
 - `read_file` can read seeded workspace content from layer-stack
-- base build is complete: no filtering policy and no per-path report contract
+- base build is complete: no filtering step and no diagnostic object in the
+  runtime response
 - supported raw writes under `/testbed` are blocked after workspace base build
 
 ### `sandbox.api.tool.read_file`
@@ -511,7 +513,7 @@ must not delete layers or materialized lowerdirs needed by an active lease.
 ## Minimal Migration Shape
 
 ```text
-Phase 1: bind/import /testbed into layer-stack
+Phase 1: bind /testbed and build the full workspace base layer
 Phase 2: add materialized lowerdir cache and lease pins
 Phase 3: define narrow layer-stack and OCC client protocols
 Phase 4: route shell to command-exec-server with workspace replacement mount

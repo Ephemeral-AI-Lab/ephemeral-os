@@ -40,9 +40,15 @@ class LayerChange:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", normalize_layer_path(self.path))
-        if self.kind in ("write", "symlink"):
+        if self.kind == "write":
             if not self.source_path:
-                raise ValueError(f"{self.kind} changes require source_path")
+                raise ValueError("write changes require source_path")
+            return
+        if self.kind == "symlink":
+            if not self.source_path:
+                raise ValueError("symlink changes require source_path")
+            if self.content_hash is not None:
+                raise ValueError("symlink changes must not carry content_hash")
             return
         if self.source_path is not None:
             raise ValueError(f"{self.kind} changes must not carry source_path")

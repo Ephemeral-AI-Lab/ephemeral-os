@@ -14,7 +14,6 @@ pytestmark = pytest.mark.asyncio
 _BUDGET_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.lease_budget import LeaseBudgetWorker
-from sandbox.layer_stack.publisher import CommitBackpressureError
 from sandbox.layer_stack.stack_manager import LayerStackManager
 
 label = "layer_stack.lease_budget"
@@ -22,12 +21,12 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 
-zero = LeaseBudgetWorker(max_active_depth=0).evaluate(active_depth=0, snapshots=[])
+zero = LeaseBudgetWorker(max_active_depth=0).evaluate(active_depth=0)
 one = LeaseBudgetWorker(max_active_depth=1)
 assert zero.kind == "backpressure_commits"
-assert one.evaluate(active_depth=0, snapshots=[]).kind == "allow"
-assert one.evaluate(active_depth=1, snapshots=[]).kind == "backpressure_commits"
-infinite = LeaseBudgetWorker(max_active_depth=None).evaluate(active_depth=10_000, snapshots=[])
+assert one.evaluate(active_depth=0).kind == "allow"
+assert one.evaluate(active_depth=1).kind == "backpressure_commits"
+infinite = LeaseBudgetWorker(max_active_depth=None).evaluate(active_depth=10_000)
 assert infinite.kind == "allow"
 
 manager = LayerStackManager(root / "stack")
@@ -36,16 +35,16 @@ manager.publish_changes([
 ])
 lease = manager.acquire_snapshot_lease("request-a")
 pinned_worker = LeaseBudgetWorker(max_pinned_bytes=5)
-blocked = pinned_worker.evaluate(active_depth=manager.read_active_manifest().depth, snapshots=manager.lease_snapshots())
+blocked = pinned_worker.evaluate(active_depth=manager.read_active_manifest().depth, pinned_bytes=5)
 assert blocked.kind == "backpressure_commits"
 manager.release_lease(lease.lease_id)
-refreshed = pinned_worker.evaluate(active_depth=manager.read_active_manifest().depth, snapshots=manager.lease_snapshots())
+refreshed = pinned_worker.evaluate(active_depth=manager.read_active_manifest().depth, pinned_bytes=0)
 assert refreshed.kind == "allow"
 
 _emit(label, started, before, {
     "budget_zero": zero.kind,
-    "budget_one_before": one.evaluate(active_depth=0, snapshots=[]).kind,
-    "budget_one_at_boundary": one.evaluate(active_depth=1, snapshots=[]).kind,
+    "budget_one_before": one.evaluate(active_depth=0).kind,
+    "budget_one_at_boundary": one.evaluate(active_depth=1).kind,
     "budget_infinite": infinite.kind,
     "pinned_blocked": blocked.kind,
     "after_release_refresh": refreshed.kind,

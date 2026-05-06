@@ -19,7 +19,7 @@ def test_fsck_removes_orphan_layers_and_old_staging(tmp_path: Path) -> None:
     os.utime(old_staging, (0, 0))
     os.utime(young_staging, (95, 95))
 
-    result = manager.fsck_cleanup(young_staging_age_seconds=10, now=100)
+    result = manager.collect_garbage(young_staging_age_seconds=10, now=100)
 
     assert result.orphan_layers_removed == ("orphan",)
     assert result.orphan_staging_removed == ("old.staging",)

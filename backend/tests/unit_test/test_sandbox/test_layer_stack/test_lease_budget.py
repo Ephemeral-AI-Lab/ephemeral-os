@@ -9,10 +9,8 @@ import pytest
 from sandbox.layer_stack import (
     CommitBackpressureError,
     LayerChange,
-    LayerRef,
     LayerStackManager,
     LeaseBudgetWorker,
-    LeaseSnapshot,
 )
 
 
@@ -26,40 +24,32 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 def test_lease_budget_backpressures_when_active_depth_reaches_limit() -> None:
     worker = LeaseBudgetWorker(max_active_depth=2)
 
-    decision = worker.evaluate(active_depth=2, snapshots=[])
+    decision = worker.evaluate(active_depth=2)
 
     assert decision.kind == "backpressure_commits"
-    assert decision.lease_id is None
 
 
 def test_lease_budget_zero_depth_is_closed() -> None:
     worker = LeaseBudgetWorker(max_active_depth=0)
 
-    decision = worker.evaluate(active_depth=0, snapshots=[])
+    decision = worker.evaluate(active_depth=0)
 
     assert decision.kind == "backpressure_commits"
-    assert decision.lease_id is None
 
 
-def test_lease_budget_marks_oldest_expired_lease_for_kill() -> None:
-    worker = LeaseBudgetWorker(kill_lease_age_seconds=10, clock=lambda: 25)
-    snapshot = LeaseSnapshot(
-        lease_id="lease-a",
-        owner_id="request-a",
-        manifest_version=3,
-        pinned_layers=(LayerRef(layer_id="L1", path="layers/L1"),),
-        pinned_bytes=1,
-        acquired_at=10,
+def test_lease_budget_backpressures_when_pinned_bytes_reach_limit() -> None:
+    worker = LeaseBudgetWorker(max_pinned_bytes=5)
+
+    decision = worker.evaluate(active_depth=1, pinned_bytes=5)
+
+    assert decision.kind == "backpressure_commits"
+
+
+def test_publish_backpressure_uses_unique_pinned_layer_bytes(tmp_path: Path) -> None:
+    manager = LayerStackManager(
+        tmp_path / "stack",
+        lease_budget=LeaseBudgetWorker(max_pinned_bytes=5),
     )
-
-    decision = worker.evaluate(active_depth=1, snapshots=[snapshot])
-
-    assert decision.kind == "kill_lease"
-    assert decision.lease_id == "lease-a"
-
-
-def test_manager_reports_pinned_bytes_for_active_lease(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
     manager.publish_changes(
         [
             LayerChange(
@@ -71,17 +61,30 @@ def test_manager_reports_pinned_bytes_for_active_lease(tmp_path: Path) -> None:
     )
 
     lease = manager.acquire_snapshot_lease("request-a")
+    try:
+        with pytest.raises(CommitBackpressureError):
+            manager.publish_changes(
+                [
+                    LayerChange(
+                        path="next.txt",
+                        kind="write",
+                        source_path=_source(tmp_path, "next.txt", b"next"),
+                    )
+                ]
+            )
+    finally:
+        manager.release_lease(lease.lease_id)
 
-    assert manager.lease_snapshots() == (
-        LeaseSnapshot(
-            lease_id=lease.lease_id,
-            owner_id="request-a",
-            manifest_version=1,
-            pinned_layers=lease.manifest.layers,
-            pinned_bytes=5,
-            acquired_at=lease.acquired_at,
-        ),
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="next.txt",
+                kind="write",
+                source_path=_source(tmp_path, "next-retry.txt", b"next"),
+            )
+        ]
     )
+    assert manager.read_text("next.txt") == ("next", True)
 
 
 def test_publish_backpressure_blocks_before_staging(tmp_path: Path) -> None:

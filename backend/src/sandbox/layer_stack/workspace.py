@@ -92,15 +92,12 @@ def require_workspace_binding(layer_stack_root: str | Path) -> WorkspaceBinding:
     return binding
 
 
-def write_workspace_binding_atomic(
-    layer_stack_root: str | Path,
-    binding: WorkspaceBinding,
-) -> None:
+def write_workspace_binding_atomic(binding: WorkspaceBinding) -> None:
     validate_workspace_binding_paths(
         workspace_root=binding.workspace_root,
         layer_stack_root=binding.layer_stack_root,
     )
-    path = workspace_binding_path(layer_stack_root)
+    path = workspace_binding_path(binding.layer_stack_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(

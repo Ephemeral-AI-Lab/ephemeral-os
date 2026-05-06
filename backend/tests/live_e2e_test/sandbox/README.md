@@ -38,9 +38,9 @@ in the pytest process instead of the sandbox runtime guardrails.
 - **Workspace base read load:** `layer_stack_overlay_occ/test_workspace_base_read_load.py`
   reads existing `/testbed` files through the layer-stack workspace base and
   emits per-call JSONL metrics. Current focused run on 2026-05-06 UTC:
-  `1 passed` in `11.42 s`; 32 reads over 16 base paths, runtime p99
-  `2.166 ms`, wall p99 `669.666 ms`. Artifact:
-  `.omc/results/live-e2e-workspace-base-read-load-20260506T151748Z.jsonl`.
+  `1 passed` in `10.93 s`; 32 reads over 16 base paths, runtime p99
+  `0.533 ms`, wall p99 `498.909 ms`. Artifact:
+  `.omc/results/live-e2e-workspace-base-read-load-20260506T152345Z.jsonl`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 

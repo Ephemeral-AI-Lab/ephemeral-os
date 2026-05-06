@@ -15,6 +15,7 @@ base is built.
 | Phase | Document | Outcome |
 |---|---|---|
 | 01 | `three-server-phase-01-workspace-binding-base-layer.md` | `layer-stack-server` owns `workspace.json`, builds the `/testbed` base, and serves guarded reads from the active manifest. |
+| 01 live E2E | `three-server-phase-01-live-e2e-testing-plan.md` | Live Daytona tests prove `/testbed` base import cost, correctness, concurrency, layer creation, squash/lease behavior, and snapshot assembly over a real imported base repo. |
 | 02 | `three-server-phase-02-materialized-lowerdir-cache-leases.md` | Layer-stack can prepare leased, materialized lowerdirs without rebuilding the workspace per shell call. |
 | 03 | `three-server-phase-03-narrow-client-protocols.md` | OCC and command-exec depend on narrow layer-stack/OCC client protocols, not concrete storage or service internals. |
 | 04 | `three-server-phase-04-workspace-replaced-shell.md` | Guarded shell enters `command-exec-server`, replaces `/testbed` with a leased snapshot mount, captures workspace upperdir changes, and keeps the rest of the sandbox filesystem visible. |

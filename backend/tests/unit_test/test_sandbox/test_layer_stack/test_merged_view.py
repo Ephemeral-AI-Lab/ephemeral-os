@@ -109,4 +109,3 @@ def test_materialize_matches_point_reads_and_preserves_symlinks(tmp_path: Path) 
     assert (destination / "links" / "current").is_symlink()
     assert (destination / "links" / "current").readlink().as_posix() == "../target.txt"
     assert manager.read_symlink("links/current") == ("../target.txt", True)
-

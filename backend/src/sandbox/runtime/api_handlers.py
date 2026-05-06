@@ -348,7 +348,7 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "success": True,
         "manifest_version": manifest.version,
         "manifest_depth": manifest.depth,
-        "active_leases": len(manager.lease_snapshots()),
+        "active_leases": manager.active_lease_count(),
         "pinned_layers": len(manager.pinned_layers()),
         "layer_dirs": len(layer_dirs),
         "staging_dirs": len(staging_dirs),
@@ -573,6 +573,7 @@ async def _wait_file_barrier(
             raise TimeoutError(f"runtime barrier timed out: {barrier_id}")
         await asyncio.sleep(0.05)
 
+
 def occ_service_layer_root(service: OccService) -> Path:
     layer_stack = getattr(service, "_layer_stack", None)
     root = getattr(layer_stack, "storage_root", None)
@@ -733,8 +734,6 @@ def _int(value: object, *, default: int) -> int:
     if isinstance(value, (str, int, float)):
         return int(value)
     raise TypeError(f"expected integer value, got {type(value).__name__}")
-
-
 
 __all__ = [
     "compact",

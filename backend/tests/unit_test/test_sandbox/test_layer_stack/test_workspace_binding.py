@@ -41,7 +41,7 @@ def test_binding_round_trips_and_translates_workspace_paths(tmp_path: Path) -> N
         base_root_hash="a" * 64,
     )
 
-    write_workspace_binding_atomic(stack, binding)
+    write_workspace_binding_atomic(binding)
 
     loaded = require_workspace_binding(stack)
     assert loaded == binding

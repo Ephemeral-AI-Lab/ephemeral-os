@@ -110,7 +110,7 @@ status.create_sandbox(project_dir="/testbed")
        occ-server on occ.sock
        command-exec-server on command-exec.sock
   -> readiness probes pass
-  -> layer-stack-server bind/import workspace
+  -> layer-stack-server bind workspace and build full base
   -> guarded API ready
 ```
 

@@ -60,6 +60,14 @@ def test_layer_change_validates_storage_level_payload_shape(tmp_path: Path) -> N
     with pytest.raises(ValueError, match="delete changes must not carry source_path"):
         LayerChange(path="old.py", kind="delete", source_path=str(source))
 
+    with pytest.raises(ValueError, match="symlink changes must not carry content_hash"):
+        LayerChange(
+            path="link.py",
+            kind="symlink",
+            source_path="target.py",
+            content_hash="x",
+        )
+
 
 def test_layer_change_aggregation_keeps_final_change_per_path(tmp_path: Path) -> None:
     first = tmp_path / "first.txt"

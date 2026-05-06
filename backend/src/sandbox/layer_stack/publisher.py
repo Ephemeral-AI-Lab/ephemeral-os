@@ -18,6 +18,7 @@ from sandbox.layer_stack.manifest import (
     LayerRef,
     Manifest,
     ManifestConflictError,
+    manifest_path,
     read_manifest,
     write_manifest_atomic,
 )
@@ -38,13 +39,12 @@ class LayerPublisher:
     def __init__(
         self,
         storage_root: str | Path,
-        manifest_file: str | Path,
         *,
         id_factory: Callable[[int], str] | None = None,
         backpressure_checker: Callable[[Manifest], BudgetDecision] | None = None,
     ) -> None:
         self._storage_root = Path(storage_root)
-        self._manifest_file = Path(manifest_file)
+        self._manifest_file = manifest_path(self._storage_root)
         self._id_factory = id_factory or _default_layer_id
         self._backpressure_checker = backpressure_checker
 
@@ -252,8 +252,6 @@ def _changes_digest(changes: Sequence[LayerChange]) -> str:
             digest.update(Path(change.source_path).read_bytes())
         elif change.kind == "symlink":
             digest.update(str(change.source_path or "").encode("utf-8"))
-        elif change.content_hash:
-            digest.update(change.content_hash.encode("utf-8"))
         digest.update(b"\0")
     return digest.hexdigest()
 

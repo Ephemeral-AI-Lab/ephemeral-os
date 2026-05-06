@@ -51,8 +51,6 @@ def test_publish_layer_writes_immutable_layer_and_manifest(tmp_path: Path) -> No
                 content_hash=hashlib.sha256(b"created").hexdigest(),
                 source_path=str(source),
             )
-
-
         ]
     )
 
@@ -118,7 +116,6 @@ def test_late_manifest_conflict_removes_unreferenced_layer(
     source = _source(tmp_path, "created.txt", b"created")
     publisher = LayerPublisher(
         storage_root,
-        manifest_file,
         id_factory=lambda _version: "L000001-fixed",
     )
     calls = 0

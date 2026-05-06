@@ -256,7 +256,7 @@ Rules:
   `workspace_root`.
 - Paths stored in layers are workspace-relative, for example `src/a.py`.
 - After workspace base build, guarded APIs do not read the real `/testbed`.
-- The real `/testbed` is only an base/recovery source.
+- The real `/testbed` is only a base/recovery source.
 - After workspace base build, supported sandbox APIs must not mutate the real `/testbed`
   path. This plan assumes the sandbox environment is trivial: no cron,
   background daemon, or external process edits the assigned workspace behind the
@@ -282,8 +282,8 @@ fail before binding:
   workspace entries that disappear during the base walk
 ```
 
-There is no filtering policy and no per-path report contract. Gitignore remains OCC mutation
-policy, not the storage source of truth.
+There is no filtering step and no diagnostic object in the runtime response.
+Gitignore remains OCC mutation policy, not the storage source of truth.
 
 ## OCC-Owned Git Policy
 
@@ -1055,13 +1055,13 @@ This keeps workspace versioning and full-root runtime state separate.
 
 ## Migration Phases
 
-### Phase 1 - Workspace Binding and Base Import
+### Phase 1 - Workspace Binding and Base Layer
 
 Files:
 
 ```text
 backend/src/sandbox/layer_stack/workspace.py
-backend/src/sandbox/layer_stack/importer.py
+backend/src/sandbox/layer_stack/workspace_base.py
 backend/src/sandbox/runtime/layer_stack_server.py
 backend/tests/unit_test/test_sandbox/test_layer_stack/test_workspace_base.py
 ```
@@ -1070,22 +1070,24 @@ Tasks:
 
 - add `WorkspaceBinding`
 - add `workspace.json`
-- add import metadata and active-manifest binding fields
-- add deterministic import walker with full workspace copy
+- add active-manifest and base-manifest binding fields
+- add deterministic full-base walker with complete workspace copy
 - add workspace base build from `/testbed`
 - fail if `layer_stack_root` is inside `workspace_root`
 - keep layer-stack base Git-blind: copy the full repo without Git classification
   without parsing `.gitignore`, computing git state, or branching on Git
   metadata
+- keep base responses constant-size: binding identity and timings only, with no
+  full file list or diagnostics object
 
 Pass bar:
 
-- empty stack imports `/testbed` to manifest version 1
+- empty stack builds `/testbed` as manifest version 1
 - base build stores root hash
-- repeated import with existing manifest fails unless explicit reset is passed
+- repeated base build with existing manifest fails unless explicit reset is passed
 - read after workspace base build uses layer-stack only
-- layer-stack import contains no Git or gitignore policy code
-- oversize/special files fail or report explicitly, never silently disappear
+- layer-stack base contains no Git or gitignore policy code
+- special files and unstable paths fail before binding, never silently disappear
 
 ### Phase 2 - Materialized Lowerdir Cache and Lease Pins
 
@@ -1320,7 +1322,7 @@ integration:
   shell conflict against advanced active manifest rejects cleanly
 
 live:
-  setup_after_create("/testbed") imports base
+  setup_after_create("/testbed") builds full workspace base
   pytest command sees /testbed as workspace replacement view
   command can use normal /bin and /usr tooling
   concurrent shell/write/edit remains deterministic

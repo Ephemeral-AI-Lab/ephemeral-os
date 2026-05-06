@@ -46,7 +46,7 @@ def test_gc_keeps_active_and_exact_leased_layers(tmp_path: Path) -> None:
     orphan = manager.storage_root / "layers" / "orphan"
     orphan.mkdir()
 
-    manager.squash(max_depth=1, collect_garbage=False)
+    manager.squash(max_depth=1)
     result = manager.collect_garbage(young_staging_age_seconds=0)
 
     assert result.orphan_layers_removed == ("orphan",)

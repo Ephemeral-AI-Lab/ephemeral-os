@@ -11,8 +11,8 @@ import shutil
 from types import TracebackType
 
 from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.lease_budget import BudgetDecision, LeaseBudgetWorker
 from sandbox.layer_stack.lease_registry import Lease, LeaseRegistry
-from sandbox.layer_stack.lease_budget import BudgetDecision, LeaseBudgetWorker, LeaseSnapshot
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -25,11 +25,11 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.merged_view import MergedView
 from sandbox.layer_stack.publisher import LayerPublisher
-from sandbox.layer_stack.squash import SquashPlan, SquashWorker, manifest_still_ends_with
+from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
 
 
 @dataclass(frozen=True)
-class GCMarkSet:
+class _GCMarkSet:
     active_layers: tuple[LayerRef, ...]
     leased_layers: tuple[LayerRef, ...]
     young_staging_dirs: tuple[Path, ...]
@@ -76,10 +76,9 @@ class LayerStackManager:
         self._lease_budget = lease_budget or LeaseBudgetWorker()
         self._publisher = LayerPublisher(
             self.storage_root,
-            self._manifest_file,
             backpressure_checker=self._publish_budget_decision,
         )
-        self._squash = SquashWorker(self.storage_root, merged_view=self._view)
+        self._squash = SquashWorker(self.storage_root)
 
     def read_active_manifest(self) -> Manifest:
         with self._lock:
@@ -112,26 +111,9 @@ class LayerStackManager:
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
 
-    def lease_snapshots(self) -> tuple[LeaseSnapshot, ...]:
+    def active_lease_count(self) -> int:
         with self._lock:
-            return tuple(
-                LeaseSnapshot(
-                    lease_id=lease.lease_id,
-                    owner_id=lease.owner_id,
-                    manifest_version=lease.manifest.version,
-                    pinned_layers=lease.manifest.layers,
-                    pinned_bytes=sum(self._layer_size(layer) for layer in lease.manifest.layers),
-                    acquired_at=lease.acquired_at,
-                )
-                for lease in self._leases.active_leases()
-            )
-
-    def evaluate_lease_budget(self) -> BudgetDecision:
-        with self._lock:
-            return self._lease_budget.evaluate(
-                active_depth=read_manifest(self._manifest_file).depth,
-                snapshots=self.lease_snapshots(),
-            )
+            return len(self._leases.active_leases())
 
     def read_bytes(
         self,
@@ -171,11 +153,8 @@ class LayerStackManager:
         with self.commit_transaction() as transaction:
             return transaction.publish_layer(changes)
 
-    def squash_plan(self, *, max_depth: int) -> SquashPlan | None:
-        return self._squash.plan(self.read_active_manifest(), max_depth=max_depth)
-
-    def squash(self, *, max_depth: int, collect_garbage: bool = True) -> Manifest | None:
-        plan = self.squash_plan(max_depth=max_depth)
+    def squash(self, *, max_depth: int) -> Manifest | None:
+        plan = self._squash.plan(self.read_active_manifest(), max_depth=max_depth)
         if plan is None:
             return None
 
@@ -196,24 +175,10 @@ class LayerStackManager:
                 )
                 write_manifest_atomic(self._manifest_file, new_manifest)
                 checkpoint_committed = True
-            if collect_garbage:
-                self.collect_garbage()
             return new_manifest
         finally:
             if not checkpoint_committed:
                 self._squash.discard_checkpoint(checkpoint)
-
-    def build_gc_mark_set(
-        self,
-        *,
-        young_staging_age_seconds: float = 300.0,
-        now: float | None = None,
-    ) -> GCMarkSet:
-        with self._lock:
-            return self._build_gc_mark_set(
-                young_staging_age_seconds=young_staging_age_seconds,
-                now=now,
-            )
 
     def collect_garbage(
         self,
@@ -256,21 +221,10 @@ class LayerStackManager:
                 missing_leased_layers=self._missing_layers(marks.leased_layers),
             )
 
-    def fsck_cleanup(
-        self,
-        *,
-        young_staging_age_seconds: float = 300.0,
-        now: float | None = None,
-    ) -> FsckResult:
-        return self.collect_garbage(
-            young_staging_age_seconds=young_staging_age_seconds,
-            now=now,
-        )
-
     def _publish_budget_decision(self, active: Manifest) -> BudgetDecision:
         return self._lease_budget.evaluate(
             active_depth=active.depth,
-            snapshots=self.lease_snapshots(),
+            pinned_bytes=self._pinned_bytes(),
         )
 
     def _build_gc_mark_set(
@@ -278,10 +232,10 @@ class LayerStackManager:
         *,
         young_staging_age_seconds: float,
         now: float | None,
-    ) -> GCMarkSet:
+    ) -> _GCMarkSet:
         timestamp = time.time() if now is None else now
         active_layers = read_manifest(self._manifest_file).layers
-        return GCMarkSet(
+        return _GCMarkSet(
             active_layers=active_layers,
             leased_layers=self._leases.pinned_layers(),
             young_staging_dirs=self._young_staging_dirs(
@@ -321,6 +275,9 @@ class LayerStackManager:
         if not path.is_absolute():
             path = self.storage_root / path
         return path
+
+    def _pinned_bytes(self) -> int:
+        return sum(self._layer_size(layer) for layer in self._leases.pinned_layers())
 
     def _layer_size(self, layer: LayerRef) -> int:
         layer_dir = self._layer_path(layer)

@@ -84,7 +84,7 @@ status.create_sandbox(project_dir="/testbed")
   -> layer-stack-server bind_workspace("/testbed", layer_stack_root)
   -> build_workspace_base()
        walk real /testbed as a full copy
-       write base layer L000001
+       write base layer L000001-base
        write manifest version 1
        write workspace.json with active root and base root
   -> read_file("src/a.py")
@@ -122,7 +122,7 @@ uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_read.py -q
 Required assertions:
 
 - empty stack builds `/testbed` as manifest version 1
-- base build stores root hash without policy or report contracts
+- base build stores root hash without diagnostics or file-list contracts
 - repeated base build fails unless explicit reset/recovery is requested
 - base build fails if any workspace entry cannot be represented
 - read after base build uses layer-stack content only
@@ -141,8 +141,67 @@ backend/src/sandbox/control/ops/setup.py
 backend/src/sandbox/runtime/api_handlers.py
 ```
 
+Durable binding:
+
+- `workspace.py` owns `WorkspaceBinding` and `workspace.json`.
+- The binding payload is intentionally constant-size:
+  `workspace_root`, `layer_stack_root`, active manifest identity, and base
+  manifest identity only.
+- The binding carries no diagnostics object, file list, source-control state,
+  or caller-provided file-category parameters.
+- `relative_layer_path()` accepts repo-relative paths and absolute paths under
+  the bound workspace, then rejects paths outside `workspace_root`.
+
+Base construction:
+
+- `workspace_base.py` builds `workspace_root` into immutable layer
+  `layers/L000001-base`.
+- The builder validates that `layer_stack_root` is outside `workspace_root`,
+  prepares an empty stack, and rejects existing binding, manifest, layer, or
+  staging state unless `reset=True` is explicitly passed.
+- The base walk is deterministic: directory names and file names are sorted,
+  and symlink traversal is disabled.
+- The full-base representation supports directories, regular files, and
+  symlinks. Directories are represented as layer entries, regular files are
+  copied with metadata, and symlinks are recreated with their stored targets.
+- Special files, unrepresentable entries, and entries that disappear during the
+  walk raise `WorkspaceBaseIncompleteError` before `workspace.json` is written.
+- Regular files are hashed during collection and rehashed immediately before
+  copy; a changed file aborts the staging write instead of publishing a partial
+  base.
+- Successful build writes manifest version 1 and binds both active and base
+  identities to the same root hash.
+
+Runtime API shape:
+
+- `build_workspace_base`, `ensure_workspace_base`, and `workspace_binding`
+  return `{success, created, binding, timings}` or `{success, binding}`.
+- Responses do not include a full file list. Large inventories stay out of the
+  runtime API hot path; diagnostics should be written as separate artifacts when
+  a caller needs them.
+- `read_file` requires the workspace binding and reads the active manifest via
+  layer-stack content APIs. It does not fall back to real `/testbed` after the
+  base is built.
+
+Performance detail:
+
+- The hot setup/binding response is constant-size because it returns only the
+  binding identity.
+- The read path is bounded by loading the small binding, active manifest
+  metadata, and the requested path from the merged layer view. It does not ship
+  a full repository inventory across the runtime API.
+
 Live `/testbed` read-load coverage:
 
 ```text
 backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_read_load.py
+```
+
+Current verification:
+
+```text
+uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack/test_workspace_base.py -q
+uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack/test_workspace_binding.py -q
+uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_read.py -q
+uv run pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_read_load.py -q -m "live and e2e"
 ```
