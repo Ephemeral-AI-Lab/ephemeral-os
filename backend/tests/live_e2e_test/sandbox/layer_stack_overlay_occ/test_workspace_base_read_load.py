@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
+import shlex
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -19,6 +18,12 @@ from .._harness.integrated_cases import (
     timed_call,
 )
 from .._harness.sandbox_fixture import SandboxHandle, WORKSPACE_ROOT
+from .._harness.workspace_base_metrics import (
+    base_summary,
+    call_row,
+    workspace_inventory,
+    write_jsonl_artifact,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -58,6 +63,11 @@ async def test_workspace_base_read_load_metrics(
         max_files=_env_int("EPHEMERALOS_READ_LOAD_FILES", 16),
     )
     assert paths, "workspace file walk did not include readable text paths"
+    inventory = await workspace_inventory(handle)
+    await _assert_public_read_uses_imported_base_after_raw_workspace_mutation(
+        handle,
+        paths[0],
+    )
 
     total_reads = _env_int("EPHEMERALOS_READ_LOAD_CALLS", max(32, len(paths) * 2))
     concurrency = _env_int("EPHEMERALOS_READ_LOAD_CONCURRENCY", 8)
@@ -84,6 +94,7 @@ async def test_workspace_base_read_load_metrics(
 
     runtime_ms = [_runtime_ms(metric) for metric in metrics]
     artifact = _write_artifact(
+        inventory=inventory,
         paths=paths,
         metrics=metrics,
         batch_wall_ms=batch_wall_ms,
@@ -104,6 +115,31 @@ async def test_workspace_base_read_load_metrics(
             "artifact": str(artifact),
         },
     )
+
+
+async def _assert_public_read_uses_imported_base_after_raw_workspace_mutation(
+    handle: SandboxHandle,
+    path: str,
+) -> None:
+    before = await handle.tool.read_file(path)
+    assert before.success
+    assert before.exists
+    mutation = await handle.raw_exec(
+        handle.sandbox_id,
+        "python3 -c {src} {path}".format(
+            src=shlex.quote(
+                "from pathlib import Path;import sys;"
+                "Path(sys.argv[1]).write_text('raw workspace mutation\\n', encoding='utf-8')"
+            ),
+            path=shlex.quote(f"{WORKSPACE_ROOT}/{path}"),
+        ),
+        timeout=30,
+    )
+    assert mutation.exit_code == 0, mutation.stderr or mutation.stdout
+    after = await handle.tool.read_file(path)
+    assert after.success
+    assert after.exists
+    assert after.content == before.content
 
 
 async def _workspace_binding(handle: SandboxHandle) -> dict[str, object]:
@@ -148,51 +184,44 @@ def _runtime_ms(metric: RuntimeCallMetric) -> float:
 
 def _write_artifact(
     *,
+    inventory: dict[str, object],
     paths: list[str],
     metrics: list[RuntimeCallMetric],
     batch_wall_ms: float,
     concurrency: int,
     binding: dict[str, object],
 ) -> Path:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    artifact = (
-        Path.cwd()
-        / ".omc"
-        / "results"
-        / f"live-e2e-workspace-base-read-load-{stamp}.jsonl"
+    case = "workspace_base_read_load"
+    rows = [
+        call_row(
+            case=case,
+            label=metric.label,
+            success=metric.success,
+            wall_ms=metric.elapsed_ms,
+            runtime_ms=_runtime_ms(metric),
+            timings=metric.timings,
+            extra={"status": metric.status},
+        )
+        for metric in metrics
+    ]
+    return write_jsonl_artifact(
+        case=case,
+        summary=base_summary(
+            case=case,
+            binding=binding,
+            workspace_inventory=inventory,
+            timings={
+                "phase01.read_load.batch_wall_s": batch_wall_ms / 1000.0,
+                "phase01.read_load.calls": float(len(metrics)),
+                "phase01.read_load.concurrency": float(concurrency),
+            },
+            pass_bars={
+                "paths": paths,
+                "public_read_after_raw_workspace_mutation": True,
+            },
+        ),
+        rows=rows,
     )
-    artifact.parent.mkdir(parents=True, exist_ok=True)
-    with artifact.open("w", encoding="utf-8") as file:
-        header = {
-            "schema": "sandbox.live_e2e.workspace_base_read_load.v1",
-            "kind": "summary",
-            "workspace_root": binding["workspace_root"],
-            "base_manifest_version": binding["base_manifest_version"],
-            "base_root_hash": binding["base_root_hash"],
-            "paths": paths,
-            "calls": len(metrics),
-            "concurrency": concurrency,
-            "batch_wall_ms": round(batch_wall_ms, 3),
-        }
-        file.write(json.dumps(header, sort_keys=True, separators=(",", ":")))
-        file.write("\n")
-        for metric in metrics:
-            row = {
-                "schema": "sandbox.live_e2e.workspace_base_read_load.v1",
-                "kind": "call",
-                "label": metric.label,
-                "success": metric.success,
-                "status": metric.status,
-                "wall_ms": round(metric.elapsed_ms, 3),
-                "runtime_ms": round(_runtime_ms(metric), 3),
-                "timings": {
-                    key: round(float(value), 6)
-                    for key, value in sorted(metric.timings.items())
-                },
-            }
-            file.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            file.write("\n")
-    return artifact
 
 
 def _env_int(name: str, default: int) -> int:

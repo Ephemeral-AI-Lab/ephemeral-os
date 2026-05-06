@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -62,11 +63,20 @@ class _BaseEntry:
     content_hash: str = ""
 
 
+@dataclass(frozen=True)
+class _BaseInventory:
+    files: int
+    dirs: int
+    symlinks: int
+    bytes: int
+
+
 def build_workspace_base(
     *,
     workspace_root: str | Path,
     layer_stack_root: str | Path,
     reset: bool = False,
+    timings: dict[str, float] | None = None,
 ) -> WorkspaceBinding:
     """Build *workspace_root* as manifest version 1.
 
@@ -85,13 +95,41 @@ def build_workspace_base(
 
     if reset:
         shutil.rmtree(stack, ignore_errors=True)
+    prepare_start = time.perf_counter()
     _prepare_empty_stack(stack)
     _reject_existing_base_state(stack)
+    _record(timings, "workspace_base.prepare_stack_s", time.perf_counter() - prepare_start)
 
+    collect_start = time.perf_counter()
     entries, root_hash = _collect_base_entries(workspace)
+    _record(timings, "workspace_base.collect_s", time.perf_counter() - collect_start)
+    _record_inventory(timings, _entries_inventory(entries))
+    write_layer_start = time.perf_counter()
     layer_ref = _write_base_layer(stack, entries)
+    _record(
+        timings,
+        "workspace_base.write_layer_s",
+        time.perf_counter() - write_layer_start,
+    )
+    rescan_start = time.perf_counter()
+    try:
+        _assert_workspace_quiescent(
+            workspace=workspace,
+            expected_entries=entries,
+            expected_root_hash=root_hash,
+        )
+    except Exception:
+        shutil.rmtree(stack / LAYERS_DIR / layer_ref.layer_id, ignore_errors=True)
+        raise
+    _record(timings, "workspace_base.rescan_s", time.perf_counter() - rescan_start)
     manifest = Manifest(version=1, layers=(layer_ref,))
+    write_manifest_start = time.perf_counter()
     write_manifest_atomic(manifest_path(stack), manifest)
+    _record(
+        timings,
+        "workspace_base.write_manifest_s",
+        time.perf_counter() - write_manifest_start,
+    )
     binding = WorkspaceBinding(
         workspace_root=workspace.as_posix(),
         layer_stack_root=stack.as_posix(),
@@ -100,7 +138,13 @@ def build_workspace_base(
         base_manifest_version=manifest.version,
         base_root_hash=root_hash,
     )
+    write_binding_start = time.perf_counter()
     write_workspace_binding_atomic(binding)
+    _record(
+        timings,
+        "workspace_base.write_binding_s",
+        time.perf_counter() - write_binding_start,
+    )
     return binding
 
 
@@ -113,9 +157,7 @@ def _prepare_empty_stack(stack: Path) -> None:
 def _reject_existing_base_state(stack: Path) -> None:
     binding = read_workspace_binding(stack)
     if binding is not None:
-        raise WorkspaceBaseAlreadyExistsError(
-            f"workspace base already exists at {stack}"
-        )
+        raise WorkspaceBaseAlreadyExistsError(f"workspace base already exists at {stack}")
     active = read_manifest(manifest_path(stack))
     if active.version != 0 or active.layers:
         raise WorkspaceBaseAlreadyExistsError(
@@ -180,7 +222,14 @@ def _collect_base_entries(
                 special.append(rel)
                 continue
             size = int(stat.st_size)
-            content_hash = _file_hash(path)
+            try:
+                content_hash = _file_hash(path)
+            except FileNotFoundError:
+                unstable.append(rel)
+                continue
+            except OSError:
+                special.append(rel)
+                continue
             entries.append(
                 _BaseEntry(
                     path=rel,
@@ -200,6 +249,32 @@ def _collect_base_entries(
             unstable_paths=tuple(sorted(unstable)),
         )
     return tuple(sorted(entries, key=lambda item: item.path)), digest.hexdigest()
+
+
+def _assert_workspace_quiescent(
+    *,
+    workspace: Path,
+    expected_entries: tuple[_BaseEntry, ...],
+    expected_root_hash: str,
+) -> None:
+    latest_entries, latest_root_hash = _collect_base_entries(workspace)
+    if latest_root_hash == expected_root_hash and _entry_signature(
+        latest_entries
+    ) == _entry_signature(expected_entries):
+        return
+    expected_paths = {entry.path for entry in expected_entries}
+    latest_paths = {entry.path for entry in latest_entries}
+    changed_paths = sorted(expected_paths.symmetric_difference(latest_paths))
+    if not changed_paths:
+        changed_paths = sorted(
+            entry.path
+            for entry, latest in zip(expected_entries, latest_entries, strict=False)
+            if entry != latest
+        )
+    raise WorkspaceBaseIncompleteError(
+        special_file_rejections=(),
+        unstable_paths=tuple(changed_paths or ("<workspace-root>",)),
+    )
 
 
 def _symlink_entry(
@@ -225,9 +300,17 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
             if entry.kind == "file":
                 if entry.source_path is None:
                     raise ValueError(f"missing source path for {entry.path}")
-                if _file_hash(entry.source_path) != entry.content_hash:
-                    raise RuntimeError(
-                        f"workspace file changed during base build: {entry.path}"
+                try:
+                    current_hash = _file_hash(entry.source_path)
+                except FileNotFoundError as exc:
+                    raise WorkspaceBaseIncompleteError(
+                        special_file_rejections=(),
+                        unstable_paths=(entry.path,),
+                    ) from exc
+                if current_hash != entry.content_hash:
+                    raise WorkspaceBaseIncompleteError(
+                        special_file_rejections=(),
+                        unstable_paths=(entry.path,),
                     )
                 shutil.copy2(entry.source_path, target)
             elif entry.kind == "symlink":
@@ -241,6 +324,28 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
         shutil.rmtree(layer_dir, ignore_errors=True)
         raise
     return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
+
+
+def _entries_inventory(entries: tuple[_BaseEntry, ...]) -> _BaseInventory:
+    return _BaseInventory(
+        files=sum(1 for entry in entries if entry.kind == "file"),
+        dirs=sum(1 for entry in entries if entry.kind == "directory"),
+        symlinks=sum(1 for entry in entries if entry.kind == "symlink"),
+        bytes=sum(entry.size for entry in entries if entry.kind == "file"),
+    )
+
+
+def _entry_signature(entries: tuple[_BaseEntry, ...]) -> tuple[tuple[object, ...], ...]:
+    return tuple(
+        (
+            entry.path,
+            entry.kind,
+            entry.size,
+            entry.content_hash,
+            entry.link_target,
+        )
+        for entry in entries
+    )
 
 
 def _file_hash(path: Path) -> str:
@@ -267,6 +372,23 @@ def _update_root_hash(digest: "hashlib._Hash", entry: _BaseEntry) -> None:
 
 def _relative(workspace: Path, path: Path) -> str:
     return path.relative_to(workspace).as_posix()
+
+
+def _record(timings: dict[str, float] | None, key: str, value: float) -> None:
+    if timings is not None:
+        timings[key] = value
+
+
+def _record_inventory(
+    timings: dict[str, float] | None,
+    inventory: _BaseInventory,
+) -> None:
+    if timings is None:
+        return
+    timings["workspace_base.inventory.files"] = float(inventory.files)
+    timings["workspace_base.inventory.dirs"] = float(inventory.dirs)
+    timings["workspace_base.inventory.symlinks"] = float(inventory.symlinks)
+    timings["workspace_base.inventory.bytes"] = float(inventory.bytes)
 
 
 __all__ = [

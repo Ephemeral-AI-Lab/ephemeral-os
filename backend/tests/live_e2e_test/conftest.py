@@ -21,6 +21,7 @@ from .sandbox._harness.sandbox_fixture import (  # noqa: F401
     live_sandbox,
     native_sandbox,
     overlay_sandbox,
+    workspace_base_sandbox,
 )
 
 

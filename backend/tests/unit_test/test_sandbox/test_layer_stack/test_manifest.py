@@ -48,11 +48,14 @@ def test_layer_change_validates_storage_level_payload_shape(tmp_path: Path) -> N
     source = tmp_path / "payload.txt"
     source.write_text("payload\n", encoding="utf-8")
 
-    assert LayerChange(
-        path="pkg/new.py",
-        kind="write",
-        source_path=str(source),
-    ).path == "pkg/new.py"
+    assert (
+        LayerChange(
+            path="pkg/new.py",
+            kind="write",
+            source_path=str(source),
+        ).path
+        == "pkg/new.py"
+    )
 
     with pytest.raises(ValueError, match="write changes require source_path"):
         LayerChange(path="missing.py", kind="write")

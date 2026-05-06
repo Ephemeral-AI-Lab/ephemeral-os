@@ -277,7 +277,7 @@ thin_client → occ.write_file(args)
                   ← {staging_id, staging_dir}
               occ: write accepted blobs into staging_dir
               occ → CommitPublisher.compare_publish_layer(expected={version,digest}, staged_changes)
-                  ← {status: published|cas_mismatch|backpressure, result, new_manifest?}
+                  ← {status: published|cas_mismatch|publish_failed, result, new_manifest?}
               occ: on cas_mismatch, drop staging, re-read active manifest, revalidate, retry
             ← {success, changed_paths, status, conflict?, timings}
 ```
@@ -294,7 +294,7 @@ thin_client → occ.shell(args)
               occ: overlay_capture_to_occ_changes(capture)
               occ: prepare, revalidate, stage blobs, compare_publish_layer
               occ → CommitPublisher.compare_publish_layer(expected={version,digest}, staged_changes)
-                  ← {status: published|cas_mismatch|backpressure, result}
+                  ← {status: published|cas_mismatch|publish_failed, result}
               occ → lsm.release_lease(layer_stack_root, lease_id)
                   ← {released}
               occ: close request-scoped lsm lease session

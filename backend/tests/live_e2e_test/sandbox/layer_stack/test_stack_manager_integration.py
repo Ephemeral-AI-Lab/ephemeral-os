@@ -13,8 +13,6 @@ pytestmark = pytest.mark.asyncio
 
 _INTEGRATION_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.lease_budget import LeaseBudgetWorker
-from sandbox.layer_stack.publisher import CommitBackpressureError
 from sandbox.layer_stack.stack_manager import LayerStackManager
 
 label = "layer_stack.stack_manager_integration"
@@ -54,20 +52,6 @@ except ValueError:
 assert bad_hash_rejected
 assert manager.read_bytes("src/bad.py") == (None, False)
 
-blocked_manager = LayerStackManager(
-    root / "blocked-stack",
-    lease_budget=LeaseBudgetWorker(max_active_depth=0),
-)
-backpressure_rejected = False
-try:
-    blocked_manager.publish_changes([
-        LayerChange(path="blocked.txt", kind="write", source_path=str(_source(root, "blocked", b"blocked"))),
-    ])
-except CommitBackpressureError:
-    backpressure_rejected = True
-assert backpressure_rejected
-assert list((blocked_manager.storage_root / "staging").iterdir()) == []
-
 expired = manager.expire_leases_older_than(0, now=lease.acquired_at + 1)
 assert expired == (lease,)
 squashed = manager.squash(max_depth=1)
@@ -83,7 +67,6 @@ _emit(label, started, before, {
     "updated_version": updated.version,
     "squashed_depth": squashed.depth,
     "bad_hash_rejected": bad_hash_rejected,
-    "backpressure_rejected": backpressure_rejected,
     "expired_leases": [item.lease_id for item in expired],
     "gc_removed_layers": len(cleanup.orphan_layers_removed),
     "missing_active_layers": len(cleanup.missing_active_layers),
@@ -159,7 +142,6 @@ async def test_stack_manager_happy_path_and_failure_injection(
         label="layer_stack.stack_manager_integration",
     )
     assert payload["bad_hash_rejected"] is True
-    assert payload["backpressure_rejected"] is True
     assert payload["missing_active_layers"] == 0
 
 

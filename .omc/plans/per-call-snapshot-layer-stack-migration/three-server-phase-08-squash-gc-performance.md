@@ -81,7 +81,6 @@ Target additions and updates:
 ```text
 backend/src/sandbox/layer_stack/
 |-- squash.py
-|-- lease_budget.py
 |-- snapshot_cache.py
 +-- gc.py
 +-- metrics.py

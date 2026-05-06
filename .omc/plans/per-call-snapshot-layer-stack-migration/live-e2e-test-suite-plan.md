@@ -106,7 +106,6 @@ backend/tests/live_e2e_test/sandbox/
 |   |-- test_squash.py                          # P0
 |   |-- test_changes_aggregation.py             # P0
 |   |-- test_lease_registry.py                  # P0
-|   |-- test_lease_budget.py                    # P0
 |   |-- test_stack_manager_integration.py       # P0
 |   |-- test_layer_stack_load.py                # P1
 |   |-- test_layer_stack_resource.py            # P1
@@ -319,7 +318,6 @@ it.
 | `test_squash.py` | `squash` coalesces N shallow layers; correctness pre/post; idempotency | layer-count drop ratio | squash with no-ops; squash mid-publish; squash kill recovery |
 | `test_changes_aggregation.py` | `changes` dedup + ordering invariants | bounded for 10k entries | duplicate paths; out-of-order writes; rename pairs |
 | `test_lease_registry.py` | register / release / expire / killed-shell sweep | fd delta = 0 across 100 cycles | expired-but-not-released; double-release; concurrent register |
-| `test_lease_budget.py` | budget enforcement; over-budget reject; budget refresh | n/a | budget=0, budget=1, budget=∞; off-by-one at boundary |
 | `test_stack_manager_integration.py` | `stack_manager` end-to-end (mount + publish + squash + lease) | end-to-end resource delta | full happy path; failure injection at each phase |
 | `test_layer_stack_load.py` | sustained publish/squash mix | per-profile resource ceiling | SUSTAINED + BURST profiles (subsystem variant — see §6.3) |
 | `test_layer_stack_resource.py` | dedicated resource regression at depth 100, depth 200 | per-probe budgets (see §6.2) | n/a |
@@ -538,7 +536,7 @@ the syscall budget; that is by design.
 | E9 | `layer_stack/test_publisher.py` + `layer_stack/test_squash.py` (kill recovery) | `layer_stack_overlay_occ/test_failure_recovery.py` | Both pending |
 | E10 | `occ/test_gated_route.py` (tracked-race) | `layer_stack_overlay_occ/test_codegen_race.py` (tracked) | Both pending |
 | E11 | `layer_stack/test_manifest_lifecycle.py` + `occ/test_commit_transaction.py` (telemetry fields) | (`shell_age_seconds` on integrated result) | Both pending |
-| E12 | `layer_stack/test_lease_registry.py` + `layer_stack/test_lease_budget.py` | `layer_stack_overlay_occ/test_failure_recovery.py` | Both pending |
+| E12 | `layer_stack/test_lease_registry.py` | `layer_stack_overlay_occ/test_failure_recovery.py` | Both pending |
 | E13 | `occ/test_content_gitignore_oracle.py` + `occ/test_routing.py` | `layer_stack_overlay_occ/test_codegen_race.py` (gitignored) | Both pending |
 
 A green native cell does not unblock its E without the matching integrated

@@ -11,7 +11,6 @@ New live native probe files:
 - `layer_stack/test_squash.py`
 - `layer_stack/test_changes_aggregation.py`
 - `layer_stack/test_lease_registry.py`
-- `layer_stack/test_lease_budget.py`
 - `layer_stack/test_stack_manager_integration.py`
 
 Runtime helpers added to support the Phase 2 contract:
@@ -21,7 +20,6 @@ Runtime helpers added to support the Phase 2 contract:
 - `LeaseRegistry.sweep_dead_owners`
 - `LayerStackManager.expire_leases_older_than`
 - `LayerStackManager.sweep_dead_lease_owners`
-- `LeaseBudgetWorker(max_active_depth=0)` now represents a closed budget.
 
 ## Verification
 
@@ -37,12 +35,10 @@ Commands run:
 uv run python -m py_compile \
   backend/src/sandbox/layer_stack/changes.py \
   backend/src/sandbox/layer_stack/lease_registry.py \
-  backend/src/sandbox/layer_stack/lease_budget.py \
   backend/src/sandbox/layer_stack/stack_manager.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_squash.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_changes_aggregation.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_lease_registry.py \
-  backend/tests/live_e2e_test/sandbox/layer_stack/test_lease_budget.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_stack_manager_integration.py
 
 .venv/bin/pytest --collect-only backend/tests/live_e2e_test/sandbox/layer_stack -q
@@ -83,13 +79,11 @@ All new native probes emitted resource blocks. For the new Phase 2 probes,
 |---|---:|---:|---|
 | changes aggregation | 6 input changes | 24.4 ms | deduped to 4 paths; rename pair preserved |
 | changes aggregation race | 8 producers, 16 changes | 38.6 ms | deduped to 8 final paths; deterministic path order |
-| lease budget | zero/one/infinite budgets | 24.4 ms | budget 0 rejected, budget 1 allowed then rejected, infinite allowed |
-| lease budget race | 8 concurrent publishes, budget 4 | 39.8 ms | exactly 4 accepted, 4 rejected |
 | lease registry | release/expire/sweep | 21.9 ms | double release was a no-op; stale owner swept |
 | lease registry race | 16 concurrent leases | 38.0 ms | 16 unique ids; 16 released; final refcount 0 |
 | squash | 6 layers to depth 2 | 30.3 ms | 5 layers coalesced; stale staging removed |
 | squash race | squash plus concurrent append | 36.0 ms | final depth 3; lost appends 0 |
-| stack manager | publish/read/materialize/failures/gc | 29.7 ms | bad hash and backpressure rejected; fsck clean |
+| stack manager | publish/read/materialize/failures/gc | 29.7 ms | bad hash rejected; fsck clean |
 | stack manager race | 4 concurrent agents | 36.1 ms | manifest depth 5; all leases released |
 
 Race latency highlights:
@@ -164,10 +158,8 @@ Covered by the Phase 2 implementation:
   concurrent producers.
 - Lease registry supports register, release, double-release no-op, age expiry,
   dead-owner sweep, exact refcounts, and unique concurrent lease ids.
-- Lease budget handles closed, single-slot, and infinite depth budgets, refreshes
-  after lease release, and enforces the boundary exactly under concurrency.
 - Stack manager integration covers publish, snapshot lease reads, active reads,
-  materialization, hash-mismatch failure, backpressure failure, lease expiry,
+  materialization, hash-mismatch failure, lease expiry,
   squash, GC, and concurrent agent publishing.
 
 Residual gaps:

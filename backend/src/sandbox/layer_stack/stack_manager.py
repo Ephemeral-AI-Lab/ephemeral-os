@@ -11,7 +11,6 @@ import shutil
 from types import TracebackType
 
 from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.lease_budget import BudgetDecision, LeaseBudgetWorker
 from sandbox.layer_stack.lease_registry import Lease, LeaseRegistry
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
@@ -55,12 +54,7 @@ class FsckResult:
 class LayerStackManager:
     """Coordinates active manifests, snapshot leases, reads, and publishes."""
 
-    def __init__(
-        self,
-        storage_root: str | Path,
-        *,
-        lease_budget: LeaseBudgetWorker | None = None,
-    ) -> None:
+    def __init__(self, storage_root: str | Path) -> None:
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
         (self.storage_root / LAYERS_DIR).mkdir(exist_ok=True)
@@ -73,11 +67,7 @@ class LayerStackManager:
         self._lock = threading.RLock()
         self._leases = LeaseRegistry()
         self._view = MergedView(self.storage_root)
-        self._lease_budget = lease_budget or LeaseBudgetWorker()
-        self._publisher = LayerPublisher(
-            self.storage_root,
-            backpressure_checker=self._publish_budget_decision,
-        )
+        self._publisher = LayerPublisher(self.storage_root)
         self._squash = SquashWorker(self.storage_root)
 
     def read_active_manifest(self) -> Manifest:
@@ -221,12 +211,6 @@ class LayerStackManager:
                 missing_leased_layers=self._missing_layers(marks.leased_layers),
             )
 
-    def _publish_budget_decision(self, active: Manifest) -> BudgetDecision:
-        return self._lease_budget.evaluate(
-            active_depth=active.depth,
-            pinned_bytes=self._pinned_bytes(),
-        )
-
     def _build_gc_mark_set(
         self,
         *,
@@ -275,23 +259,6 @@ class LayerStackManager:
         if not path.is_absolute():
             path = self.storage_root / path
         return path
-
-    def _pinned_bytes(self) -> int:
-        return sum(self._layer_size(layer) for layer in self._leases.pinned_layers())
-
-    def _layer_size(self, layer: LayerRef) -> int:
-        layer_dir = self._layer_path(layer)
-        if not layer_dir.exists():
-            return 0
-        total = 0
-        for entry in layer_dir.rglob("*"):
-            if not entry.is_file() and not entry.is_symlink():
-                continue
-            try:
-                total += entry.lstat().st_size
-            except FileNotFoundError:
-                continue
-        return total
 
 
 class LayerStackTransaction:

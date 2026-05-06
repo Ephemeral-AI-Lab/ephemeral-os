@@ -12,15 +12,18 @@ from sandbox.runtime.layer_stack_server import LayerStackWorkspaceServer
 async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
     server = _server(args)
+    timings: dict[str, float] = {}
     binding = server.build_workspace_base(
         workspace_root=_workspace_root(args),
         reset=bool(args.get("reset", False)),
+        timings=timings,
     )
     return {
         "success": True,
         "created": True,
         "binding": binding.to_dict(),
         "timings": {
+            **timings,
             "api.workspace_base.total_s": time.perf_counter() - total_start,
         },
     }

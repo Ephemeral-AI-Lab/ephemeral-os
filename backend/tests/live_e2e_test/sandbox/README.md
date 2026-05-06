@@ -35,12 +35,14 @@ in the pytest process instead of the sandbox runtime guardrails.
   `reflink_cp`, and `hardlink_cp`, including 1/5/10 concurrent create batches.
   Current live gate: `3 passed` in `12.73 s` on 2026-05-06 UTC. See
   `request_snapshot/phase-00-request-snapshot-probe-report.md`.
-- **Workspace base read load:** `layer_stack_overlay_occ/test_workspace_base_read_load.py`
-  reads existing `/testbed` files through the layer-stack workspace base and
-  emits per-call JSONL metrics. Current focused run on 2026-05-06 UTC:
-  `1 passed` in `10.93 s`; 32 reads over 16 base paths, runtime p99
-  `0.533 ms`, wall p99 `498.909 ms`. Artifact:
-  `.omc/results/live-e2e-workspace-base-read-load-20260506T152345Z.jsonl`.
+- **Workspace base Phase 01:** `sandbox/workspace_base/` imports the real
+  `/testbed` repository as layer-stack manifest version 1, then measures base
+  import, 20-way build concurrency, correctness, fail-closed import hazards,
+  layer creation, materialization, and squash/lease behavior. Current live
+  gate: `8 passed` in `70.03 s` on 2026-05-06 UTC. Compatibility read-load
+  smoke: `1 passed` in `12.29 s`; 32 public reads over 16 base paths, runtime
+  max `0.741 ms`, wall max `526.834 ms`. See
+  `phase-01-workspace-base-report.md`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 
@@ -108,6 +110,7 @@ The suite is opt-in by directory:
 .venv/bin/pytest backend/tests/live_e2e_test
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/overlay
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/request_snapshot -q -s
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/workspace_base -v -rs -s --tb=short
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ
 .venv/bin/pytest backend/tests/live_e2e_test -v -rs
 ```

@@ -21,7 +21,7 @@
   - live Daytona E1–E3: `.omc/results/stack-overlay-live-20260504-065333.jsonl`
   - local `stack_overlay` doc-count E4–E14: `.omc/results/stack-overlay-suite-20260504-065333.jsonl`
 - E3 warm-read result passed the depth-100 warm-read target, but cold-cache data remains partial because `/proc/sys/vm/drop_caches` is permission-denied inside the container.
-- Commit-side design (per-path CAS + gitignore-aware last-writer-wins + staleness telemetry + lease budget) is orthogonal to the mount utility issue.
+- Commit-side design (per-path CAS + gitignore-aware last-writer-wins + staleness telemetry) is orthogonal to the mount utility issue.
 
 ## Latest Rerun — 2026-05-04
 
@@ -35,14 +35,14 @@ experiment completed.
 | E2 | pass | 1000 mounts/depth; depth 100 p50 0.15 ms, p95 0.34 ms, p99 0.58 ms; depth 200 p99 0.60 ms; 0 failures |
 | E3 | partial/pass warm | 10k-file warm reads: depth 1 128.31 ms, depth 100 129.64 ms, ratio 1.01x; cold cache unavailable (`drop_caches` permission denied) |
 | E4 | pass | doc-count load: 10 runs, 4800 shell ops, 9600 API edits, 0 violations, 53.99 s total |
-| E5 | pass | 15000 commits in 27.33 s; 548.83 commits/s; max depth 79, final depth 41; 0 backpressure; commit p95 0.81 ms, p99 51.87 ms |
+| E5 | pass | 15000 commits in 27.33 s; 548.83 commits/s; max depth 79, final depth 41; commit p95 0.81 ms, p99 51.87 ms |
 | E6 | pass | 100 GC contention runs, 0 errors, 3.02 s total |
 | E7 | partial/pass synthetic | synthetic storage: 1128 files, peak 2.08 MB, final depth 41, under 256 MB; real workload replay still needed |
 | E8 | blocked | blocked until `stack_overlay` is wired into production shell runtime for old-vs-new E2E benchmark |
 | E9 | pass | unreferenced crash dirs `B9999`/`L9999` removed, committed layer still readable, 1.95 ms |
 | E10 | partial/pass gated | 10000 OCC-gated iterations, 0 violations, 184.80 s; OCC-skipped merge exceptions not implemented in prototype |
 | E11 | blocked | blocked until staleness telemetry (`manifest_lag`, `shell_age_seconds`) is wired into the commit result |
-| E12 | blocked | blocked until lease age/pinned-byte/old-manifest/global budget enforcement is implemented |
+| E12 | removed | retired with the publish budget feature; lease cleanup remains covered by lease-registry and GC tests |
 | E13 | blocked | blocked until gitignore-aware per-path policy classification (§4d) is implemented |
 
 ## Goals
@@ -103,7 +103,7 @@ Owns:
 - the **manifest** (ordered list of layer dirs from newest → oldest),
 - the **refcount table** (mounts → layers in use),
 - the **squash worker** (background asyncio task),
-- the depth policy: `MAX_DEPTH=100`, initial `SQUASH_TRIGGER=80`, initial `SQUASH_TARGET=40`, and emergency synchronous squash/backpressure before the hard cap.
+- the depth policy: `MAX_DEPTH=100`, initial `SQUASH_TRIGGER=80`, `SQUASH_TARGET=40`, and synchronous squash before the hard cap.
 
 API:
 ```python
@@ -253,7 +253,7 @@ Depth policy for the syscall-based depth-100 design:
 | `MAX_DEPTH` | 100 | hard manifest cap; no mount should exceed this |
 | `SQUASH_TRIGGER` | 80 | enqueue background squash when depth reaches this |
 | `SQUASH_TARGET` | 40 | target depth after a successful squash |
-| `EMERGENCY_DEPTH` | 95 | stop publishing new write layers and run foreground squash/backpressure |
+| `EMERGENCY_DEPTH` | 95 | run foreground squash before the hard cap |
 
 These are policy caps, not kernel caps. E2/E3/E5 should tune them after the
 syscall mount benchmarks. The initial values keep 15 layers of emergency
@@ -305,10 +305,10 @@ Algorithm:
    - Do not delete a retired layer while any lease refcount is nonzero.
    - GC deletes only layers that are both absent from the active manifest and unpinned by leases.
 
-5. **Backpressure before hard cap.**
+5. **Foreground squash before hard cap.**
    - At `EMERGENCY_DEPTH`, write-producing commits queue behind a foreground squash.
    - Calls with empty or all-gitignored upperdirs that would not publish a new layer can still acquire leases because they don't grow the stack.
-   - If foreground squash cannot make progress because storage is exhausted or manifest CAS keeps losing, return backpressure instead of publishing past `MAX_DEPTH`.
+   - If foreground squash cannot make progress because storage is exhausted or manifest CAS keeps losing, fail the publish instead of appending past `MAX_DEPTH`.
 
 6. **Squash is lease-blind by design.**
    - Layer selection is purely positional. The planner takes the manifest tail as
@@ -327,7 +327,7 @@ Algorithm:
      the depth reduction itself.
    - Implication: a long-pinning lease cannot prevent depth from being bounded.
      Its cost is bytes-on-disk for retired-but-pinned layers, which is bounded
-     by the lease budget caps in §9, not by squash policy.
+     by lease lifetime cleanup, not by squash policy.
 
 Crash invariants:
 - A checkpoint/staging dir is never referenced before the manifest swap.
@@ -352,20 +352,12 @@ This caps layer creation rate at ~20/s under sustained burst, even with thousand
 - Background GC sweeps freeable layers. `rm -rf` on tmpfs is fast.
 - Worst-case retention: longest-running shell call's lifetime. Bounded by shell `timeout`.
 
-### 9. Lease budget enforcement
+### 9. Lease Lifetime Cleanup
 
-Old shells can pin old layers via their leases. Without bounds, a runaway agent could pin GC arbitrarily and exhaust tmpfs. Enforce caps:
-
-| Bound | Default | Behavior on exceed |
-|---|---|---|
-| `MAX_LEASE_AGE` | shell timeout (typically 600s) | force-kill the shell process; release lease |
-| `MAX_PINNED_LAYER_BYTES_PER_SESSION` | 512 MB | new shell calls in that session that would publish a layer block (backpressure) until pin drops |
-| `MAX_PINNED_OLD_MANIFESTS` | 16 | oldest pinned manifest's owning shell killed |
-| `MAX_TOTAL_PINNED_BYTES_GLOBAL` | 4 GB | global backpressure across all sessions; longest-pinning session evicted |
-
-**Kill semantics.** A killed shell receives `SIGTERM` then `SIGKILL` after grace; its lease releases; its captured upperdir is discarded (no commit). The agent sees `exit_code=-15`, `mutations='killed_lease_overrun'`.
-
-**Per-session vs global.** Per-session caps protect a single agent from monopolizing; global caps protect the host from the aggregate. One runaway agent should not be able to push every other agent into backpressure.
+Old shells can pin old layers via their leases. The active implementation keeps
+this boundary simple: leases release on normal overlay-run completion, stale
+owners can be swept, and GC only deletes layers that are absent from the active
+manifest and unpinned. Storage limits belong outside the layer-stack publisher.
 
 ## Concurrency model
 
@@ -392,7 +384,7 @@ Old shells can pin old layers via their leases. Without bounds, a runaway agent 
 | `mount` option string > PAGE_SIZE | Low | Short relative layer names (`L00042`), `MAX_DEPTH=100`, squash before length or depth grows unbounded |
 | Tmpfs OOM under heavy churn | Med | Disk fallback with stripe layout; per-session tmpfs quota |
 | Cold reads slow at depth | Low | Squash bounds depth; kernel dentry cache amortizes hot paths |
-| Squash falls behind append rate | Low–Med | Coalescing reduces append rate; background squash starts at depth 80; emergency foreground squash/backpressure starts at depth 95 |
+| Squash falls behind append rate | Low–Med | Coalescing reduces append rate; background squash starts at depth 80; emergency foreground squash starts at depth 95 |
 | Nested overlay disallowed in Daytona | Low after E1 root-cause | Keep direct syscall E1 in CI/live validation before production cutover |
 | ContentManager rewrite touches many call sites | High | Isolate behind an interface; existing OCC tests cover semantics |
 | Layer GC frees a still-referenced layer | High if buggy | Refcount + lease invariants tested in experiment 4 |
@@ -523,12 +515,12 @@ layer-walk overhead is real and the host-side cache becomes mandatory.
 **Method:** Sustain 50 accepted changesets/sec for 5 min with `MAX_DEPTH=100`,
 `SQUASH_TRIGGER=80`, `SQUASH_TARGET=40`, and `EMERGENCY_DEPTH=95`. Measure:
 stack depth over time, squash duration distribution, coalescing ratio, and
-backpressure rate.
+publish-failure rate.
 
 **Pass bar:**
 - stack depth stays in `[40, 90]` during sustained load after warmup.
 - zero emergency-depth events.
-- zero backpressure events in the normal 50/sec workload.
+- zero publish failures in the normal 50/sec workload.
 - coalescing publishes no more than ~20 layers/sec under burst load.
 
 **Fail mode:** if depth grows monotonically toward 100, squash is IO-bound below
@@ -608,17 +600,17 @@ Vary k ∈ {1, 2, 4, 5, 6, 10, 20} and shell duration ∈ {5s, 30s, 60s, 120s}.
 
 **Fail mode:** any age/lag-based rejection at the runtime layer is a regression — agents must own the staleness decision app-side.
 
-### E12 — Lease budget enforcement
+### E12 — Lease Cleanup
 
-**Question:** Do lease caps prevent runaway pinning without breaking legitimate long shells?
+**Question:** Do released and stale leases unblock GC without deleting active or
+still-pinned layers?
 
 **Method:** Inject pathological workloads:
-1. Shell that exceeds `MAX_LEASE_AGE`: verify SIGTERM/SIGKILL; lease released; upperdir discarded; agent receives `mutations='killed_lease_overrun'`.
-2. Session producing layers totaling > `MAX_PINNED_LAYER_BYTES_PER_SESSION` of pinned diffs: verify backpressure on new shells that would publish a layer; calls with empty or all-gitignored upperdirs that don't grow the stack are unaffected.
-3. More than `MAX_PINNED_OLD_MANIFESTS` concurrent old-snapshot shells: verify oldest is killed at `MAX_PINNED_OLD_MANIFESTS+1`.
-4. Global pin > `MAX_TOTAL_PINNED_BYTES_GLOBAL` across multiple sessions: verify longest-pinning session is evicted; other sessions continue.
+1. Shell completes normally: verify lease released and upperdir commit semantics remain unchanged.
+2. Dead owner is swept: verify lease released and GC can reclaim only inactive, unpinned layers.
+3. Concurrent old-snapshot shells: verify exact refcounts and no double-release.
 
-**Pass bar:** caps fire deterministically; no GC starvation; kill semantics consistent.
+**Pass bar:** no GC starvation; active and pinned layers are preserved.
 
 **Fail mode:** if legitimate workloads trip caps frequently, defaults are wrong; tune from real telemetry.
 

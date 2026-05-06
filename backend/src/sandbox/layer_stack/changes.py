@@ -69,6 +69,4 @@ def aggregate_layer_changes(changes: Iterable[LayerChange]) -> LayerDelta:
     final_by_path: dict[str, LayerChange] = {}
     for change in changes:
         final_by_path[change.path] = change
-    return LayerDelta(
-        changes=tuple(final_by_path[path] for path in sorted(final_by_path))
-    )
+    return LayerDelta(changes=tuple(final_by_path[path] for path in sorted(final_by_path)))

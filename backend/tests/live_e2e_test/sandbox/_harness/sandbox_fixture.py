@@ -337,6 +337,17 @@ async def integrated_sandbox(
     yield live_sandbox
 
 
+@pytest_asyncio.fixture
+async def workspace_base_sandbox(
+    live_sandbox: SandboxHandle,
+) -> AsyncIterator[SandboxHandle]:
+    """Live sandbox reset for phase-01 workspace-base import tests."""
+    await _assert_runtime_bundle_installed(live_sandbox.sandbox_id)
+    await _reset_workspace(live_sandbox.sandbox_id)
+    await _reset_runtime_layer_stack(live_sandbox.sandbox_id)
+    yield live_sandbox
+
+
 async def _assert_runtime_bundle_installed(sandbox_id: str) -> None:
     """Fail fast if the prebaked image's ``setup_after_create`` did not stage the bundle."""
     quoted = shlex.quote(BUNDLE_HASH_MARKER)

@@ -404,7 +404,7 @@ occ-server
   v
 layer-stack-server
   |
-  | publish accepted layer or report CAS mismatch/backpressure
+  | publish accepted layer or report CAS mismatch/publish failure
   v
 command-exec-server
   |

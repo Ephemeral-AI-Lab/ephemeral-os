@@ -365,8 +365,12 @@ async def compact(args: dict[str, object]) -> dict[str, object]:
     manager, _, _ = _services(args)
     max_depth = max(1, _int(args.get("max_depth"), default=4))
     before = manager.read_active_manifest()
+    squash_start = time.perf_counter()
     squashed = manager.squash(max_depth=max_depth)
+    squash_elapsed = time.perf_counter() - squash_start
+    gc_start = time.perf_counter()
     gc = manager.collect_garbage(young_staging_age_seconds=0)
+    gc_elapsed = time.perf_counter() - gc_start
     after = manager.read_active_manifest()
     return {
         "success": True,
@@ -376,6 +380,10 @@ async def compact(args: dict[str, object]) -> dict[str, object]:
         "squashed": squashed is not None,
         "orphan_layers_removed": list(gc.orphan_layers_removed),
         "orphan_staging_removed": list(gc.orphan_staging_removed),
+        "timings": {
+            "layer_stack.squash.total_s": squash_elapsed,
+            "layer_stack.gc.total_s": gc_elapsed,
+        },
     }
 
 

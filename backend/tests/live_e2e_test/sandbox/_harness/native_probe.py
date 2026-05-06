@@ -53,9 +53,9 @@ def render(body: str, *, cfg: dict | None = None) -> str:
 
 def shell_command(source: str) -> str:
     """Wrap *source* in the canonical ``cd <bundle> && python3 -c <src>`` shell line."""
-    return "cd {bundle} && python3 -c {src}".format(
+    return "cd {bundle} && {launcher}".format(
         bundle=shlex.quote(BUNDLE_REMOTE_DIR),
-        src=shlex.quote(source),
+        launcher=_python_launcher(source),
     )
 
 
@@ -70,6 +70,23 @@ def wrap_unshare(source: str, *, prog: str = "python3") -> str:
         bundle=shlex.quote(BUNDLE_REMOTE_DIR),
         prog=shlex.quote(prog),
         src=shlex.quote(source),
+    )
+
+
+def _python_launcher(source: str) -> str:
+    """Choose the same Python floor as the resident runtime daemon."""
+    version_check = "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
+    src = shlex.quote(source)
+    check = shlex.quote(version_check)
+    return (
+        "for py in python3.13 python3.12 python3.11 python3.10 python3; do "
+        "if command -v \"$py\" >/dev/null 2>&1 "
+        f"&& \"$py\" -c {check} >/dev/null 2>&1; then "
+        f"exec \"$py\" -c {src}; "
+        "fi; "
+        "done; "
+        "echo 'sandbox native probe requires Python >= 3.10' >&2; "
+        "exit 127"
     )
 
 

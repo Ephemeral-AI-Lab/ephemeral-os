@@ -115,15 +115,14 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 | 16 | `layer_stack/test_squash.py` **(+ race)** | `sandbox.layer_stack.squash` | coalesce N→1 correct; idempotent; kill mid-squash recovers. Race: squash + concurrent appender → no torn manifest, no lost append |
 | 17 | `layer_stack/test_changes_aggregation.py` **(+ race)** | `sandbox.layer_stack.changes` | dedup; ordering; rename pairs; out-of-order writes. Race: N=8 concurrent producers → dedup invariant holds, ordering deterministic per-path |
 | 18 | `layer_stack/test_lease_registry.py` **(+ race)** | `sandbox.layer_stack.lease_registry` | register/release/expire; killed-shell sweep; double-release. Race: N=16 concurrent register → unique lease ids, no double-allocation |
-| 19 | `layer_stack/test_lease_budget.py` **(+ race)** | `sandbox.layer_stack.lease_budget` | budget=0/1/∞; off-by-one at boundary; refresh. Race: N=B+4 grabs at boundary B → exactly B succeed, 4 reject |
-| 20 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.stack_manager` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
+| 19 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.stack_manager` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
 
 ### Verification gate
 ```bash
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack \
                  backend/tests/live_e2e_test/sandbox/occ \
                  backend/tests/live_e2e_test/sandbox/overlay -v
-# expect: all 20 P0 native tests pass
+# expect: all 19 P0 native tests pass
 ```
 
 ### Done definition

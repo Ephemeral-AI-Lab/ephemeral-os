@@ -11,7 +11,6 @@ from collections.abc import Callable, Sequence
 from pathlib import Path, PurePosixPath
 
 from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.lease_budget import BudgetDecision
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -25,14 +24,6 @@ from sandbox.layer_stack.manifest import (
 from sandbox.layer_stack.merged_view import OPAQUE_MARKER, WHITEOUT_PREFIX
 
 
-class CommitBackpressureError(RuntimeError):
-    """Raised when lease pressure blocks publishing a new layer."""
-
-    def __init__(self, decision: BudgetDecision) -> None:
-        super().__init__(decision.reason)
-        self.decision = decision
-
-
 class LayerPublisher:
     """Writes accepted changes into immutable layers and publishes manifests."""
 
@@ -41,12 +32,10 @@ class LayerPublisher:
         storage_root: str | Path,
         *,
         id_factory: Callable[[int], str] | None = None,
-        backpressure_checker: Callable[[Manifest], BudgetDecision] | None = None,
     ) -> None:
         self._storage_root = Path(storage_root)
         self._manifest_file = manifest_path(self._storage_root)
         self._id_factory = id_factory or _default_layer_id
-        self._backpressure_checker = backpressure_checker
 
     def publish_layer_locked(
         self,
@@ -102,13 +91,6 @@ class LayerPublisher:
             time.perf_counter() - digest_start,
         )
 
-        backpressure_start = time.perf_counter()
-        self._check_backpressure(active)
-        _record(
-            timings,
-            "layer_stack.publish.check_backpressure_s",
-            time.perf_counter() - backpressure_start,
-        )
         allocate_start = time.perf_counter()
         layer_id, staging_dir, layer_dir = self._allocate_layer_paths(active.version + 1)
         _record(
@@ -184,13 +166,6 @@ class LayerPublisher:
             time.perf_counter() - total_start,
         )
         return new_manifest
-
-    def _check_backpressure(self, active: Manifest) -> None:
-        if self._backpressure_checker is None:
-            return
-        decision = self._backpressure_checker(active)
-        if decision.kind == "backpressure_commits":
-            raise CommitBackpressureError(decision)
 
     def _allocate_layer_paths(self, next_version: int) -> tuple[str, Path, Path]:
         for _ in range(100):

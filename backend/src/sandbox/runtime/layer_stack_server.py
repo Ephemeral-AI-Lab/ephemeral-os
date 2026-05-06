@@ -24,11 +24,13 @@ class LayerStackWorkspaceServer:
         *,
         workspace_root: str | Path,
         reset: bool = False,
+        timings: dict[str, float] | None = None,
     ) -> WorkspaceBinding:
         return build_workspace_base(
             workspace_root=workspace_root,
             layer_stack_root=self.layer_stack_root,
             reset=reset,
+            timings=timings,
         )
 
     def ensure_workspace_base(
