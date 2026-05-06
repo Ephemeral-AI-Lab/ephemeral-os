@@ -11,11 +11,15 @@ from sandbox.runtime.layer_stack_server import LayerStackWorkspaceServer
 
 async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
-    server = _server(args)
+    layer_stack_root = _layer_stack_root(args)
+    reset = bool(args.get("reset", False))
+    if reset:
+        _drop_peer_runtime_caches(layer_stack_root)
+    server = LayerStackWorkspaceServer(layer_stack_root)
     timings: dict[str, float] = {}
     binding = server.build_workspace_base(
         workspace_root=_workspace_root(args),
-        reset=bool(args.get("reset", False)),
+        reset=reset,
         timings=timings,
     )
     return {
@@ -114,6 +118,12 @@ def _lease_id(args: Mapping[str, object]) -> str:
     if not lease_id:
         raise ValueError("lease_id is required")
     return lease_id
+
+
+def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
+    from sandbox.runtime import api_handlers
+
+    api_handlers.drop_services_cache(layer_stack_root)
 
 
 __all__ = [

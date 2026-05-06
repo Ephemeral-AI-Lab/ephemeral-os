@@ -58,6 +58,15 @@ def _services_cache_clear() -> None:
     _SERVICE_CACHE.clear()
 
 
+def drop_services_cache(layer_stack_root: str) -> None:
+    """Drop cached runtime services for one layer-stack root."""
+    root = str(layer_stack_root or "").strip()
+    if not root:
+        return
+    _SERVICE_CACHE.pop(root, None)
+    _SERVICE_CACHE.pop(str(Path(root).resolve(strict=False)), None)
+
+
 async def _prepare_changeset(
     occ_service: OccService,
     *,
@@ -354,33 +363,6 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
             binding.base_root_hash if binding is not None else ""
         ),
         "lowerdir_cache": manager.lowerdir_cache_metrics().to_dict(),
-    }
-
-
-async def compact(args: dict[str, object]) -> dict[str, object]:
-    manager, _, _ = _services(args)
-    max_depth = max(1, _int(args.get("max_depth"), default=4))
-    before = manager.read_active_manifest()
-    squash_start = time.perf_counter()
-    squashed = manager.squash(max_depth=max_depth)
-    squash_elapsed = time.perf_counter() - squash_start
-    gc_start = time.perf_counter()
-    gc = manager.collect_garbage(young_staging_age_seconds=0)
-    gc_elapsed = time.perf_counter() - gc_start
-    after = manager.read_active_manifest()
-    return {
-        "success": True,
-        "max_depth": max_depth,
-        "before_depth": before.depth,
-        "after_depth": after.depth,
-        "squashed": squashed is not None,
-        "orphan_layers_removed": list(gc.orphan_layers_removed),
-        "orphan_staging_removed": list(gc.orphan_staging_removed),
-        "orphan_lowerdirs_removed": list(gc.orphan_lowerdirs_removed),
-        "timings": {
-            "layer_stack.squash.total_s": squash_elapsed,
-            "layer_stack.gc.total_s": gc_elapsed,
-        },
     }
 
 
@@ -741,7 +723,7 @@ def _int(value: object, *, default: int) -> int:
     raise TypeError(f"expected integer value, got {type(value).__name__}")
 
 __all__ = [
-    "compact",
+    "drop_services_cache",
     "edit_file",
     "layer_metrics",
     "read_file",

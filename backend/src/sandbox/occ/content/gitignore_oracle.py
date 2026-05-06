@@ -359,8 +359,8 @@ class LayerStackGitignoreOracle(GitignoreOracle):
         oracle: GitignoreOracle | PathspecGitignoreOracle,
     ) -> bool:
         # Pathspec oracles read from a callable, not from disk — always valid.
-        # Git oracles wrap a disk workspace that the cache GC may have evicted
-        # underneath us; check the workspace directory still exists.
+        # Git oracles wrap a disk workspace that opportunistic cache eviction may
+        # have removed underneath us; check the workspace directory still exists.
         if isinstance(oracle, GitignoreOracle):
             workspace = Path(getattr(oracle, "_workspace_root", "") or "")
             return workspace.is_dir()
@@ -409,8 +409,8 @@ def _ensure_disk_cached_workspace(
 
     Builds under a unique temp dir + ``.ready`` marker and ``os.rename``s into
     place atomically. Concurrent builders fall back to whichever rename wins.
-    Cleans up older cache entries (version < active - N) opportunistically so
-    growth stays bounded without a periodic GC tick.
+    Evicts older cache entries (version < active - N) opportunistically so
+    growth stays bounded without a periodic sweep.
     """
     storage_root = Path(layer_stack.storage_root)
     cache_root = _gitignore_cache_root(storage_root)

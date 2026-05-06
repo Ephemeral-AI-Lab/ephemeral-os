@@ -69,9 +69,6 @@ async def test_workspace_base_mixed_public_api_profile_c1_c5_c10_c20(
             else:
                 assert_committed(result)  # type: ignore[arg-type]
 
-        compact = await handle.tool.compact(max_depth=4)
-        assert compact["success"] is True
-
         wall_values = [metric.elapsed_ms for metric in metrics]
         runtime_values = [selected_runtime_ms(metric) for metric in metrics]
         timings[f"phase01.mixed.c{concurrency}.batch_wall_s"] = (
@@ -96,7 +93,6 @@ async def test_workspace_base_mixed_public_api_profile_c1_c5_c10_c20(
                     "op": metric.op,
                     "status": metric.status,
                     "changed_paths": list(metric.changed_paths),
-                    "compact_after_depth": compact["after_depth"],
                 },
             )
             for metric in metrics
@@ -107,8 +103,6 @@ async def test_workspace_base_mixed_public_api_profile_c1_c5_c10_c20(
                 **summarize_calls(metrics),
                 "batch_wall_ms": round(batch_wall_ms, 3),
                 "runtime_p99_ms": round(percentile(runtime_values, 99), 3),
-                "compact_before_depth": compact["before_depth"],
-                "compact_after_depth": compact["after_depth"],
             },
         )
 
@@ -136,7 +130,6 @@ async def test_workspace_base_mixed_public_api_profile_c1_c5_c10_c20(
             timings=timings,
             pass_bars={
                 "concurrencies": [1, 5, 10, 20],
-                "periodic_compact": True,
                 "final_reconciliation": True,
                 "c10_c20_wall_p99_budget_ms": budget_ms,
             },

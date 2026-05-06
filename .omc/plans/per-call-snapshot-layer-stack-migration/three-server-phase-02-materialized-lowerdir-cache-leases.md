@@ -14,9 +14,11 @@ Implementation scope:
 ```text
 add materialized lowerdir cache keyed by manifest version and root hash
 pin manifest and lowerdir through workspace leases
+evict materialized lowerdirs only from the lease release path
+evict stale unleased layer dirs during squash or final stale lease release
+remove public compact/sweep API from the runtime surface
 add prepare_workspace_snapshot()
 add lowerdir cache hit/miss metrics
-teach GC to preserve leased manifests and lowerdirs
 ```
 
 Out of scope:
@@ -24,14 +26,17 @@ Out of scope:
 ```text
 no shell mount namespace yet
 no OCC publish routing changes
-no squash/checkpoint policy beyond preserving active leases
+no public squash/compact runtime API
 ```
 
 Exit condition:
 
 ```text
-two shell preparations for the same manifest reuse one lowerdir, and GC cannot
-delete a manifest or materialized lowerdir pinned by an active lease.
+two shell preparations for the same manifest reuse one lowerdir, release of the
+last stale lease deletes that lowerdir, manifest advancement alone does not
+evict lowerdir cache, and the latest lowerdir can be reused while the stack has
+not moved forward. Public `api.compact` and sweep-style layer cleanup are not
+part of the runtime surface.
 ```
 
 ## 2. Main Data Objects
@@ -97,18 +102,27 @@ command-exec wants guarded shell snapshot
   -> return {lease_id, manifest N, lowerdir, cache_hit}
 ```
 
-Lease and GC behavior:
+Lease and eviction behavior:
 
 ```text
 lease A pins manifest N lowerdir X
 lease B pins manifest N lowerdir X
 release A
   -> X remains pinned by B
-collect_garbage
-  -> keeps N and X
 release B
-collect_garbage
-  -> may delete X if no active manifest/squash rule still needs it
+  -> if N is still latest, X may remain as the reusable latest cache
+publish manifest N+1
+  -> X is stale, but no lowerdir cache eviction runs without a lease release
+
+lease C pins manifest M lowerdir Y
+publish manifest M+1 while C is active
+  -> Y remains pinned by C
+release C
+  -> Y is stale and has no remaining lease, so Y is evicted
+
+squash rewrites old layers into checkpoint K
+  -> old unleased layer dirs are removed immediately
+  -> old leased layer dirs remain readable until their final lease releases
 ```
 
 ## 5. Naming Conventions and Rationale
@@ -131,6 +145,12 @@ Required assertions:
 
 - two leases for the same manifest reuse one materialized lowerdir
 - release of one lease does not unpin a lowerdir still used by another lease
-- GC keeps leased manifests and materialized lowerdirs
+- release of the final lease keeps the lowerdir only if its manifest is still latest
+- active-manifest advancement alone does not evict lowerdir cache
+- release of the final lease evicts the lowerdir when its manifest is stale
+- squash removes stale unleased layer dirs without a follow-up sweep call
+- final stale lease release removes old layer dirs that were kept only for that
+  lease
+- runtime `OP_TABLE` does not register `api.compact`
 - materialization metrics distinguish cache hit, miss, bytes, and duration
 - cache-hit preparation does not walk the full workspace payload

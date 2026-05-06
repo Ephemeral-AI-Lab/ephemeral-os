@@ -179,6 +179,14 @@ def test_running_in_daemon_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert api_handlers._running_in_daemon() is True
 
 
+def test_peer_bootstraps_register_snapshot_ops_without_compact() -> None:
+    server._load_peer_bootstraps()
+
+    assert "api.prepare_workspace_snapshot" in server.OP_TABLE
+    assert "api.release_workspace_snapshot" in server.OP_TABLE
+    assert "api.compact" not in server.OP_TABLE
+
+
 async def test_commit_lock_skipped_in_daemon_mode(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -208,7 +216,11 @@ def test_services_cached_per_layer_stack_root(
             self.gitignore = gitignore
             self.layer_stack = layer_stack
 
-    monkeypatch.setattr(api_handlers, "LayerStackManager", _FakeManager)
+    monkeypatch.setattr(
+        api_handlers,
+        "get_layer_stack_manager",
+        lambda root: _FakeManager(str(root)),
+    )
     monkeypatch.setattr(api_handlers, "LayerStackGitignoreOracle", _FakeOracle)
     monkeypatch.setattr(api_handlers, "OccService", _FakeService)
 
@@ -218,3 +230,40 @@ def test_services_cached_per_layer_stack_root(
 
     assert a1 is a2  # same root → cached triple
     assert a1[0] is not b1[0]  # different roots → distinct managers
+
+
+def test_drop_services_cache_removes_only_requested_layer_stack_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api_handlers._services_cache_clear()
+
+    class _FakeManager:
+        def __init__(self, root: str) -> None:
+            self.root = root
+
+    class _FakeOracle:
+        def __init__(self, manager: _FakeManager) -> None:
+            self.manager = manager
+
+    class _FakeService:
+        def __init__(self, *, gitignore: _FakeOracle, layer_stack: _FakeManager) -> None:
+            self.gitignore = gitignore
+            self.layer_stack = layer_stack
+
+    monkeypatch.setattr(
+        api_handlers,
+        "get_layer_stack_manager",
+        lambda root: _FakeManager(str(root)),
+    )
+    monkeypatch.setattr(api_handlers, "LayerStackGitignoreOracle", _FakeOracle)
+    monkeypatch.setattr(api_handlers, "OccService", _FakeService)
+
+    first_a = api_handlers._services({"layer_stack_root": "/tmp/a"})
+    first_b = api_handlers._services({"layer_stack_root": "/tmp/b"})
+
+    api_handlers.drop_services_cache("/tmp/a")
+
+    second_a = api_handlers._services({"layer_stack_root": "/tmp/a"})
+    second_b = api_handlers._services({"layer_stack_root": "/tmp/b"})
+    assert second_a is not first_a
+    assert second_b is first_b

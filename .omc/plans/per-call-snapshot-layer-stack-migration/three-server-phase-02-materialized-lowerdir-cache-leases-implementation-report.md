@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-07
 **Plan:** `three-server-phase-02-materialized-lowerdir-cache-leases.md`
-**Status:** implemented and unit-verified
+**Status:** implemented, unit-verified, and live-verified
 
 ## Summary
 
@@ -13,14 +13,23 @@ follow-up work:
   deterministic manifest root identity hash.
 - Extended workspace leases so one lease release path pins both manifest layer
   refs and materialized lowerdirs.
+- Updated cache eviction so the lease release path is the only lowerdir cache
+  eviction authority. A materialized lowerdir is removed only when the released
+  lease is the last lease pinning it and that lease's manifest is no longer the
+  active manifest.
+- Removed the public `api.compact` operation and layer-stack sweep API. Stale
+  layer directories are now removed by the same event-driven lease/squash
+  policy: immediately during squash when unleased, or when the final stale lease
+  releases.
 - Added `LayerStackManager.prepare_workspace_snapshot()` returning lease id,
   manifest version, root hash, lowerdir, cache hit/miss, byte count, and
   timings.
 - Added lowerdir cache metrics and surfaced them through layer metrics.
-- Extended GC to preserve lowerdirs pinned by active leases and remove unpinned
-  materialized lowerdirs.
 - Added runtime handlers and op registrations for
   `api.prepare_workspace_snapshot` and `api.release_workspace_snapshot`.
+- Added Daytona-backed live E2E coverage for the public runtime
+  prepare/release/metrics surface, including JSONL artifacts for cache policy,
+  disk-size, and cold-miss versus warm-hit performance evidence.
 
 ## Files Changed
 
@@ -39,7 +48,9 @@ Core layer-stack:
 - `backend/src/sandbox/layer_stack/stack_manager.py`
   - Added `PrepareWorkspaceSnapshotResult`.
   - Added snapshot preparation, lowerdir cache metric accessors, pinned
-    lowerdir enumeration, and GC lowerdir cleanup.
+    lowerdir enumeration, and release-time stale lowerdir eviction.
+  - Removed the sweep-style cleanup API and moved stale layer deletion into
+    squash/release events.
 - `backend/src/sandbox/layer_stack/__init__.py`
   - Exported `PrepareWorkspaceSnapshotResult`.
 
@@ -54,6 +65,7 @@ Runtime/control:
 - `backend/src/sandbox/runtime/server.py`
   - Registered `api.prepare_workspace_snapshot` and
     `api.release_workspace_snapshot`.
+  - Removed `api.compact` registration.
 - `backend/src/sandbox/runtime/api_handlers.py`
   - Reused the shared manager cache and exposed lowerdir cache metrics.
 - `backend/src/sandbox/control/ops/runtime_services.py`
@@ -63,16 +75,26 @@ Tests:
 
 - `backend/tests/unit_test/test_sandbox/test_layer_stack/test_snapshot_cache.py`
 - `backend/tests/unit_test/test_sandbox/test_layer_stack/test_lease_registry.py`
+- `backend/tests/live_e2e_test/sandbox/_harness/snapshot_cache_metrics.py`
+- `backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_snapshot_cache_leases.py`
 
 ## Exit Criteria
 
 | Criterion | Result |
 |---|---|
-| Two preparations for the same manifest reuse one lowerdir | Covered by `test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release`. |
+| Two preparations for the same manifest reuse one lowerdir | Covered by `test_prepare_workspace_snapshot_reuses_latest_lowerdir_until_release_observes_stale`. |
 | Release of one lease does not unpin a lowerdir still used by another lease | Covered by both new tests. |
-| GC keeps leased manifests and materialized lowerdirs | Covered by `test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release`. |
+| Latest materialized lowerdir remains reusable after leases drain | Covered by `test_prepare_workspace_snapshot_reuses_latest_lowerdir_until_release_observes_stale`. |
+| Manifest advancement alone does not evict lowerdir cache | Covered by `test_prepare_workspace_snapshot_reuses_latest_lowerdir_until_release_observes_stale`. |
+| Final stale lease release deletes the materialized lowerdir | Covered by `test_stale_lowerdir_is_removed_when_final_lease_releases`. |
 | Metrics distinguish cache hit, miss, bytes, and duration | Covered by cache metrics assertions and `LowerdirCacheMetrics`. |
 | Cache-hit preparation does not walk/rematerialize the full workspace payload | Covered by `test_cache_hit_does_not_rematerialize_payload`. |
+| Public runtime prepare/release works in a real Daytona sandbox | Covered by `test_workspace_snapshot_cache_leases.py` live run. |
+| Concurrent same-manifest prepare fans into one lowerdir | Covered by `test_concurrent_prepare_same_manifest_fans_into_one_lowerdir`. |
+| Deep manifests create one cache entry per manifest identity, not one per layer | Covered by `test_deep_manifest_materializes_one_cache_entry_not_one_per_layer`. |
+| Cache hits are faster than cold materialization in the same sandbox run | Covered by `test_cache_hit_reduces_prepare_cost_for_same_manifest`. |
+| Cache byte size and eviction are observable on the sandbox volume | Covered by `test_cache_size_is_observable_and_eviction_returns_unpinned_space`. |
+| Missing workspace binding fails closed without cache or lease residue | Covered by `test_prepare_workspace_snapshot_fails_closed_without_workspace_binding`. |
 
 ## Verification
 
@@ -108,11 +130,100 @@ uv run python -c "from sandbox.runtime.server import OP_TABLE; assert 'api.prepa
 
 Result: passed.
 
+Follow-up verification after public compact and sweep removal:
+
 ```bash
-git diff --check -- backend/src/sandbox/control/ops/runtime_services.py backend/src/sandbox/layer_stack/__init__.py backend/src/sandbox/layer_stack/lease_registry.py backend/src/sandbox/layer_stack/stack_manager.py backend/src/sandbox/runtime/api_handlers.py backend/src/sandbox/runtime/layer_stack_handlers.py backend/src/sandbox/runtime/layer_stack_server.py backend/src/sandbox/runtime/server.py backend/src/sandbox/layer_stack/metrics.py backend/src/sandbox/layer_stack/snapshot_cache.py backend/tests/unit_test/test_sandbox/test_layer_stack/test_lease_registry.py backend/tests/unit_test/test_sandbox/test_layer_stack/test_snapshot_cache.py
+uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack -q
+```
+
+Result: `35 passed, 1 warning`.
+
+```bash
+uv run pytest backend/tests/unit_test/test_sandbox/test_runtime -q
+```
+
+Result: `46 passed, 1 warning`.
+
+```bash
+uv run pytest backend/tests/unit_test/test_sandbox -q
+```
+
+Result: `349 passed, 1 skipped, 1 warning`.
+
+```bash
+uv run pytest backend/tests/live_e2e_test/sandbox --collect-only -q
+```
+
+Result: `97 tests collected, 1 warning`.
+
+```bash
+uv run python -c "from sandbox.runtime.server import OP_TABLE; assert 'api.compact' not in OP_TABLE; assert 'api.prepare_workspace_snapshot' in OP_TABLE; assert 'api.release_workspace_snapshot' in OP_TABLE"
 ```
 
 Result: passed.
+
+```bash
+uv run ruff check backend/src/sandbox backend/tests/unit_test/test_sandbox backend/tests/live_e2e_test/sandbox
+```
+
+Result: `All checks passed`.
+
+Release-only cache eviction verification:
+
+```bash
+uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack/test_snapshot_cache.py backend/tests/unit_test/test_sandbox/test_layer_stack/test_lease_registry.py -q
+```
+
+Result: `6 passed, 1 warning`.
+
+```bash
+uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack -q
+```
+
+Result: `34 passed, 1 warning`.
+
+```bash
+uv run ruff check backend/src/sandbox/layer_stack/stack_manager.py backend/src/sandbox/layer_stack/snapshot_cache.py backend/tests/unit_test/test_sandbox/test_layer_stack/test_snapshot_cache.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_snapshot_cache_leases.py backend/tests/live_e2e_test/sandbox/_harness/snapshot_cache_metrics.py
+```
+
+Result: `All checks passed`.
+
+```bash
+uv run pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_snapshot_cache_leases.py --collect-only -q
+```
+
+Result: `8 tests collected, 1 warning`.
+
+```bash
+uv run python -c "from sandbox.runtime.server import OP_TABLE; assert 'api.compact' not in OP_TABLE; assert 'api.prepare_workspace_snapshot' in OP_TABLE; assert 'api.release_workspace_snapshot' in OP_TABLE"
+```
+
+Result: passed.
+
+```bash
+git diff --check
+```
+
+Result: passed.
+
+Live E2E verification after release-only cache eviction:
+
+```bash
+uv run pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_snapshot_cache_leases.py -q
+```
+
+Result: `8 passed, 1 warning in 95.84s`.
+
+Latest Phase 02 JSONL artifacts were written under `.omc/results/` with the
+`sandbox.live_e2e.phase02_snapshot_cache_leases.v1` schema. The latest reuse
+artifact recorded `materialized_lowerdirs=1` after manifest advancement and the
+`manifest_advance_did_not_evict_stale_unleased_lowerdir` pass bar. The
+performance artifact recorded 5 paired samples at 16 MiB, median cold miss
+`425.401 ms`, median warm hit `404.164 ms`, and median materialization avoided
+`35.179 ms`. The disk artifact recorded materialized cache bytes increasing
+from `0` to `36,216,786` after prepare, remaining pinned after manifest
+advancement while the lease was active, and returning to `8,192` after final
+stale lease release.
 
 ## Notes
 

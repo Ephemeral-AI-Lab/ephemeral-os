@@ -127,9 +127,6 @@ def _squash_no_lease(depth):
     after_digest = _full_digest(after_dest)
     assert before_digest == after_digest
     assert after_manifest.depth < before_manifest.depth
-    cleanup = manager.collect_garbage(young_staging_age_seconds=0)
-    assert cleanup.missing_active_layers == ()
-    assert cleanup.missing_leased_layers == ()
     assert list((stack_root / "staging").iterdir()) == []
     rows.append(_call_row(
         case,
@@ -142,8 +139,7 @@ def _squash_no_lease(depth):
             "pre_squash_depth": before_manifest.depth,
             "post_squash_depth": after_manifest.depth,
             "view_digest": after_digest,
-            "orphan_layers_removed": list(cleanup.orphan_layers_removed),
-            "orphan_staging_removed": list(cleanup.orphan_staging_removed),
+            "staging_dirs_after_squash": 0,
         },
     ))
     return binding, timings
@@ -168,6 +164,7 @@ manifest_a, _ = _publish_changes(manager, [
 ])
 lease = manager.acquire_snapshot_lease("phase01-lease-reader")
 assert lease.manifest == manifest_a
+leased_layers = lease.manifest.layers
 _publish_changes(manager, [
     LayerChange(
         path="phase01-squash-lease/value.txt",
@@ -193,14 +190,12 @@ squash_elapsed = time.perf_counter() - squash_start
 assert squashed is not None
 assert manager.read_text("phase01-squash-lease/value.txt", manifest=lease.manifest) == ("A\n", True)
 assert manager.read_text("phase01-squash-lease/value.txt") == ("N029\n", True)
-gc_before_release = manager.collect_garbage(young_staging_age_seconds=0)
-assert gc_before_release.missing_leased_layers == ()
+assert all((manager.storage_root / layer.path).is_dir() for layer in leased_layers)
 assert manager.read_text("phase01-squash-lease/value.txt", manifest=lease.manifest) == ("A\n", True)
 released = manager.release_lease(lease.lease_id)
 assert released is True
-gc_after_release = manager.collect_garbage(young_staging_age_seconds=0)
-assert gc_after_release.missing_active_layers == ()
 assert manager.read_text("phase01-squash-lease/value.txt") == ("N029\n", True)
+assert all(not (manager.storage_root / layer.path).exists() for layer in leased_layers)
 rows.append(_call_row(
     case,
     "lease_preserved_until_release",
@@ -211,11 +206,9 @@ rows.append(_call_row(
         "lease_id": lease.lease_id,
         "lease_manifest_depth": lease.manifest.depth,
         "active_depth_after_squash": manager.read_active_manifest().depth,
-        "gc_before_release_removed_layers": list(gc_before_release.orphan_layers_removed),
-        "gc_after_release_removed_layers": list(gc_after_release.orphan_layers_removed),
+        "leased_layers_removed_after_release": True,
     },
 ))
-assert gc_after_release.orphan_layers_removed
 
 squash_times = [
     float(row["timings"].get("layer_stack.squash.total_s", 0.0))
@@ -236,7 +229,7 @@ summary = _base_summary(
         "no_lease_view_preserved": True,
         "depth_decreases": True,
         "lease_preserved_until_release": True,
-        "gc_removed_after_release": True,
+        "leased_layers_removed_after_release": True,
     },
 )
 _emit_workspace_payload(label, started, summary, rows)

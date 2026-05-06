@@ -161,14 +161,6 @@ class ToolBundle:
             timeout=30,
         )
 
-    async def compact(self, *, max_depth: int = 4) -> dict[str, object]:
-        return await runtime_mod.call_runtime_api(
-            self.sandbox_id,
-            "api.compact",
-            {"actor_id": self.caller.agent_id, "max_depth": max_depth},
-            timeout=60,
-        )
-
 
 @dataclass(frozen=True)
 class SandboxHandle:
@@ -289,7 +281,7 @@ async def _build_workspace_base(sandbox_id: str) -> None:
     result = await runtime_mod.call_runtime_api(
         sandbox_id,
         "api.build_workspace_base",
-        {"workspace_root": WORKSPACE_ROOT},
+        {"workspace_root": WORKSPACE_ROOT, "reset": True},
         timeout=180,
     )
     if not result.get("success"):

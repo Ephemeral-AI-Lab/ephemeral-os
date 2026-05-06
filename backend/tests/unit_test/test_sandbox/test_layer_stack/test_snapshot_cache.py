@@ -16,7 +16,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
     return str(path)
 
 
-def test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release(
+def test_prepare_workspace_snapshot_reuses_latest_lowerdir_until_release_observes_stale(
     tmp_path: Path,
 ) -> None:
     manager = LayerStackManager(tmp_path / "stack")
@@ -51,18 +51,63 @@ def test_prepare_workspace_snapshot_reuses_lowerdir_and_pins_until_release(
 
     assert manager.release_lease(first.lease_id) is True
     assert first.lowerdir in manager.pinned_lowerdirs()
-    gc_with_second_lease = manager.collect_garbage(young_staging_age_seconds=0)
     assert Path(first.lowerdir).is_dir()
-    assert Path(first.lowerdir).parent.name not in (
-        gc_with_second_lease.orphan_lowerdirs_removed
-    )
 
     assert manager.release_lease(second.lease_id) is True
     assert first.lowerdir not in manager.pinned_lowerdirs()
-    gc_after_release = manager.collect_garbage(young_staging_age_seconds=0)
+    assert Path(first.lowerdir).is_dir()
 
-    assert Path(first.lowerdir).exists() is False
-    assert Path(first.lowerdir).parent.name in gc_after_release.orphan_lowerdirs_removed
+    third = manager.prepare_workspace_snapshot("request-c")
+    assert third.cache_hit is True
+    assert third.lowerdir == first.lowerdir
+    assert manager.release_lease(third.lease_id) is True
+
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="src/app.py",
+                kind="write",
+                source_path=_source(tmp_path, "app-v2.py", b"print('bye')\n"),
+            )
+        ]
+    )
+
+    assert Path(first.lowerdir).is_dir()
+
+    fourth = manager.prepare_workspace_snapshot("request-d")
+    assert fourth.cache_hit is False
+    assert fourth.lowerdir != first.lowerdir
+    assert Path(first.lowerdir).is_dir()
+    assert manager.release_lease(fourth.lease_id) is True
+    assert Path(fourth.lowerdir).is_dir()
+
+
+def test_stale_lowerdir_is_removed_when_final_lease_releases(tmp_path: Path) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="src/app.py",
+                kind="write",
+                source_path=_source(tmp_path, "app.py", b"print('hi')\n"),
+            )
+        ]
+    )
+    lease = manager.prepare_workspace_snapshot("request-a")
+
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="src/app.py",
+                kind="write",
+                source_path=_source(tmp_path, "app-v2.py", b"print('bye')\n"),
+            )
+        ]
+    )
+
+    assert Path(lease.lowerdir).is_dir()
+    assert manager.release_lease(lease.lease_id) is True
+    assert Path(lease.lowerdir).exists() is False
 
 
 def test_cache_hit_does_not_rematerialize_payload(tmp_path: Path) -> None:
@@ -93,3 +138,22 @@ def test_cache_hit_does_not_rematerialize_payload(tmp_path: Path) -> None:
     assert calls == 1
     assert miss.snapshot.lowerdir == hit.snapshot.lowerdir
     assert "layer_stack.snapshot_cache.materialize_s" not in hit.timings
+
+
+def test_remove_lowerdir_deletes_only_matching_materialized_snapshot(
+    tmp_path: Path,
+) -> None:
+    cache = MaterializedSnapshotCache(tmp_path / "stack")
+    keep = tmp_path / "stack" / "materialized" / "manifest-000001-keep" / "lower"
+    remove = tmp_path / "stack" / "materialized" / "manifest-000002-remove" / "lower"
+    keep.mkdir(parents=True)
+    remove.mkdir(parents=True)
+    (keep / "file.txt").write_text("keep\n", encoding="utf-8")
+    (remove / "file.txt").write_text("remove\n", encoding="utf-8")
+
+    removed = cache.remove_lowerdir(remove)
+
+    assert removed == "manifest-000002-remove"
+    assert keep.is_dir()
+    assert not remove.exists()
+    assert cache.remove_lowerdir(tmp_path / "outside" / "lower") is None

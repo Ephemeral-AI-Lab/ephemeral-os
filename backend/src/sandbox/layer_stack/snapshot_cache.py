@@ -8,7 +8,7 @@ import os
 import shutil
 import time
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -140,30 +140,12 @@ class MaterializedSnapshotCache:
             if child.is_dir() and child.name != ".staging"
         )
 
-    def collect_unpinned(self, pinned_lowerdirs: Sequence[str | Path]) -> tuple[str, ...]:
-        if not self._cache_root.is_dir():
-            return ()
-        pinned_snapshot_dirs = {
-            Path(lowerdir).resolve(strict=False).parent
-            for lowerdir in pinned_lowerdirs
-            if str(lowerdir)
-        }
-
-        removed: list[str] = []
-        staging_root = self._cache_root / ".staging"
-        if staging_root.is_dir():
-            for child in sorted(staging_root.iterdir(), key=lambda item: item.name):
-                _remove_path(child)
-                removed.append(f".staging/{child.name}")
-
-        for child in sorted(self._cache_root.iterdir(), key=lambda item: item.name):
-            if child.name == ".staging":
-                continue
-            if child.resolve(strict=False) in pinned_snapshot_dirs:
-                continue
-            _remove_path(child)
-            removed.append(child.name)
-        return tuple(removed)
+    def remove_lowerdir(self, lowerdir: str | Path) -> str | None:
+        snapshot_dir = self._snapshot_dir_for_lowerdir(lowerdir)
+        if snapshot_dir is None or not snapshot_dir.exists():
+            return None
+        _remove_path(snapshot_dir)
+        return snapshot_dir.name
 
     def _read_cached_snapshot(
         self,
@@ -236,6 +218,15 @@ class MaterializedSnapshotCache:
     def _snapshot_dir(self, *, manifest_version: int, root_hash: str) -> Path:
         safe_hash = _safe_hash(root_hash)
         return self._cache_root / f"manifest-{manifest_version:06d}-{safe_hash[:16]}"
+
+    def _snapshot_dir_for_lowerdir(self, lowerdir: str | Path) -> Path | None:
+        candidate = Path(lowerdir).resolve(strict=False)
+        if candidate.name != "lower":
+            return None
+        snapshot_dir = candidate.parent
+        if snapshot_dir.parent != self._cache_root.resolve(strict=False):
+            return None
+        return snapshot_dir
 
 
 def manifest_root_hash(manifest: Manifest) -> str:

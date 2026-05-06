@@ -40,19 +40,14 @@ for index in range(6):
 idempotent = manager.squash(max_depth=2)
 assert idempotent is None
 
-stale_staging = manager.storage_root / "staging" / "B999999-killed.staging"
-stale_staging.mkdir(parents=True)
-(stale_staging / "partial.txt").write_text("partial", encoding="utf-8")
-os.utime(stale_staging, (0, 0))
-cleanup = manager.collect_garbage(young_staging_age_seconds=1, now=100)
-assert "B999999-killed.staging" in cleanup.orphan_staging_removed
+assert list((manager.storage_root / "staging").iterdir()) == []
 
 _emit(label, started, before, {
     "pre_squash_depth": pre_squash.depth,
     "post_squash_depth": squashed.depth,
     "coalesced_layers": pre_squash.depth - squashed.depth + 1,
     "idempotent_noop": idempotent is None,
-    "stale_staging_removed": "B999999-killed.staging" in cleanup.orphan_staging_removed,
+    "staging_dirs_after_squash": 0,
 })
 """
 
@@ -115,7 +110,7 @@ _emit(label, started, before, {
 """
 
 
-async def test_squash_coalesces_idempotently_and_recovers_stale_staging(
+async def test_squash_coalesces_idempotently(
     native_sandbox: SandboxHandle,
 ) -> None:
     payload = await run_native_case(
@@ -125,7 +120,7 @@ async def test_squash_coalesces_idempotently_and_recovers_stale_staging(
     )
     assert payload["post_squash_depth"] == 2
     assert payload["idempotent_noop"] is True
-    assert payload["stale_staging_removed"] is True
+    assert payload["staging_dirs_after_squash"] == 0
 
 
 async def test_squash_under_race_keeps_manifest_and_append_intact(

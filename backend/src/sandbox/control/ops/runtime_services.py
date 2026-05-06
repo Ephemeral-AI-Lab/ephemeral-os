@@ -249,19 +249,6 @@ class RemoteRuntimeServiceBinding:
         )
         return bool(raw.get("released", False))
 
-    async def compact(self, *, max_depth: int = 4) -> dict[str, object]:
-        await self.ensure_initialized()
-        return await _call_runtime_server(
-            exec_fn=get_adapter(self.sandbox_id).exec,
-            sandbox_id=self.sandbox_id,
-            op="api.compact",
-            args={
-                "layer_stack_root": self.layer_stack_root,
-                "max_depth": max_depth,
-            },
-            timeout=60,
-        )
-
     async def ensure_initialized(self) -> None:
         if self._initialized:
             return

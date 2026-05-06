@@ -41,12 +41,14 @@ def test_squash_replaces_old_active_suffix_with_checkpoint(tmp_path: Path) -> No
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")
+    before = manager.read_active_manifest()
 
     manifest = manager.squash(max_depth=2)
 
     assert manifest is not None
     assert manifest.depth == 2
     assert manifest.layers[-1].layer_id.startswith("B")
+    assert all(not _layer_path(manager, layer).exists() for layer in before.layers[-2:])
     assert manager.read_text("a.txt") == ("a2", True)
     assert manager.read_text("b.txt") == ("b1", True)
 
@@ -63,7 +65,9 @@ def test_squash_checkpoint_preserves_delete_semantics(tmp_path: Path) -> None:
     assert manager.read_text("deleted.txt") == ("", False)
 
 
-def test_leased_snapshot_remains_readable_after_squash_and_gc(tmp_path: Path) -> None:
+def test_leased_snapshot_remains_readable_until_release_after_squash(
+    tmp_path: Path,
+) -> None:
     manager = LayerStackManager(tmp_path / "stack")
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
@@ -81,7 +85,6 @@ def test_leased_snapshot_remains_readable_after_squash_and_gc(tmp_path: Path) ->
     assert all(_layer_path(manager, layer).is_dir() for layer in leased_layers)
 
     assert manager.release_lease(lease.lease_id) is True
-    manager.collect_garbage(young_staging_age_seconds=0)
 
     assert all(not _layer_path(manager, layer).exists() for layer in leased_layers)
     assert manager.read_text("a.txt") == ("a2", True)

@@ -24,7 +24,7 @@ from .._harness.workspace_base_public import seed_imported_base
 pytestmark = pytest.mark.asyncio
 
 
-async def test_in_flight_public_shell_lease_survives_active_edit_squash_and_gc(
+async def test_in_flight_public_shell_lease_survives_active_edit(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
     handle = workspace_base_sandbox
@@ -84,10 +84,6 @@ async def test_in_flight_public_shell_lease_survives_active_edit_squash_and_gc(
         ),
     )
     assert_committed(update, path=path)
-
-    compact = await handle.tool.compact(max_depth=2)
-    assert compact["success"] is True
-    assert int(compact["after_depth"]) <= int(compact["before_depth"])
 
     await touch_tmp(handle, proceed)
     shell, _ = await shell_task

@@ -33,23 +33,6 @@ from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
 
 
 @dataclass(frozen=True)
-class _GCMarkSet:
-    active_layers: tuple[LayerRef, ...]
-    leased_layers: tuple[LayerRef, ...]
-    leased_lowerdirs: tuple[str, ...]
-    young_staging_dirs: tuple[Path, ...]
-
-
-@dataclass(frozen=True)
-class FsckResult:
-    orphan_layers_removed: tuple[str, ...] = ()
-    orphan_staging_removed: tuple[str, ...] = ()
-    orphan_lowerdirs_removed: tuple[str, ...] = ()
-    missing_active_layers: tuple[LayerRef, ...] = ()
-    missing_leased_layers: tuple[LayerRef, ...] = ()
-
-
-@dataclass(frozen=True)
 class PrepareWorkspaceSnapshotResult:
     lease_id: str
     manifest_version: int
@@ -145,7 +128,22 @@ class LayerStackManager:
 
     def release_lease(self, lease_id: str) -> bool:
         with self._lock:
-            return self._leases.release(lease_id) is not None
+            lease = self._leases.release(lease_id)
+            if lease is None:
+                return False
+            active_manifest = read_manifest(self._manifest_file)
+            self._remove_unreferenced_layers(
+                lease.manifest.layers,
+                current_manifest=active_manifest,
+            )
+            lowerdir = lease.materialized_lowerdir
+            if (
+                lowerdir
+                and lowerdir not in self._leases.pinned_lowerdirs()
+                and lease.manifest != active_manifest
+            ):
+                self._snapshot_cache.remove_lowerdir(lowerdir)
+            return True
 
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
@@ -222,105 +220,37 @@ class LayerStackManager:
                 )
                 write_manifest_atomic(self._manifest_file, new_manifest)
                 checkpoint_committed = True
+                self._remove_unreferenced_layers(
+                    plan.suffix_to_checkpoint,
+                    current_manifest=new_manifest,
+                )
             return new_manifest
         finally:
             if not checkpoint_committed:
                 self._squash.discard_checkpoint(checkpoint)
-
-    def collect_garbage(
-        self,
-        *,
-        young_staging_age_seconds: float = 300.0,
-        now: float | None = None,
-    ) -> FsckResult:
-        with self._lock:
-            marks = self._build_gc_mark_set(
-                young_staging_age_seconds=young_staging_age_seconds,
-                now=now,
-            )
-            kept_layer_paths = {
-                self._layer_path(layer).resolve(strict=False)
-                for layer in (*marks.active_layers, *marks.leased_layers)
-            }
-            removed_layers: list[str] = []
-            layers_dir = self.storage_root / LAYERS_DIR
-            for child in sorted(layers_dir.iterdir(), key=lambda item: item.name):
-                if child.resolve(strict=False) in kept_layer_paths:
-                    continue
-                _remove_path(child)
-                removed_layers.append(child.name)
-
-            young_staging_paths = {
-                staging.resolve(strict=False) for staging in marks.young_staging_dirs
-            }
-            removed_staging: list[str] = []
-            staging_dir = self.storage_root / STAGING_DIR
-            for child in sorted(staging_dir.iterdir(), key=lambda item: item.name):
-                if child.resolve(strict=False) in young_staging_paths:
-                    continue
-                _remove_path(child)
-                removed_staging.append(child.name)
-
-            removed_lowerdirs = self._snapshot_cache.collect_unpinned(
-                marks.leased_lowerdirs,
-            )
-            return FsckResult(
-                orphan_layers_removed=tuple(removed_layers),
-                orphan_staging_removed=tuple(removed_staging),
-                orphan_lowerdirs_removed=removed_lowerdirs,
-                missing_active_layers=self._missing_layers(marks.active_layers),
-                missing_leased_layers=self._missing_layers(marks.leased_layers),
-            )
-
-    def _build_gc_mark_set(
-        self,
-        *,
-        young_staging_age_seconds: float,
-        now: float | None,
-    ) -> _GCMarkSet:
-        timestamp = time.time() if now is None else now
-        active_layers = read_manifest(self._manifest_file).layers
-        return _GCMarkSet(
-            active_layers=active_layers,
-            leased_layers=self._leases.pinned_layers(),
-            leased_lowerdirs=self._leases.pinned_lowerdirs(),
-            young_staging_dirs=self._young_staging_dirs(
-                now=timestamp,
-                young_staging_age_seconds=young_staging_age_seconds,
-            ),
-        )
-
-    def _young_staging_dirs(
-        self,
-        *,
-        now: float,
-        young_staging_age_seconds: float,
-    ) -> tuple[Path, ...]:
-        if young_staging_age_seconds < 0:
-            raise ValueError("young_staging_age_seconds must be non-negative")
-        staging_root = self.storage_root / STAGING_DIR
-        young: list[Path] = []
-        for child in sorted(staging_root.iterdir(), key=lambda item: item.name):
-            try:
-                age = now - child.stat().st_mtime
-            except FileNotFoundError:
-                continue
-            if age < young_staging_age_seconds:
-                young.append(child)
-        return tuple(young)
-
-    def _missing_layers(self, layers: Sequence[LayerRef]) -> tuple[LayerRef, ...]:
-        missing: list[LayerRef] = []
-        for layer in layers:
-            if not self._layer_path(layer).is_dir():
-                missing.append(layer)
-        return tuple(missing)
 
     def _layer_path(self, layer: LayerRef) -> Path:
         path = Path(layer.path)
         if not path.is_absolute():
             path = self.storage_root / path
         return path
+
+    def _remove_unreferenced_layers(
+        self,
+        candidates: Sequence[LayerRef],
+        *,
+        current_manifest: Manifest,
+    ) -> tuple[str, ...]:
+        active_layers = set(current_manifest.layers)
+        pinned_layers = set(self._leases.pinned_layers())
+        removed: list[str] = []
+        for layer in sorted(set(candidates), key=lambda item: item.layer_id):
+            if layer in active_layers or layer in pinned_layers:
+                continue
+            _remove_path(self._layer_path(layer))
+            _layer_digest_path(self.storage_root, layer.layer_id).unlink(missing_ok=True)
+            removed.append(layer.layer_id)
+        return tuple(removed)
 
 
 class LayerStackTransaction:
@@ -397,3 +327,7 @@ def _remove_path(path: Path) -> None:
         path.unlink(missing_ok=True)
     elif path.is_dir():
         shutil.rmtree(path)
+
+
+def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
+    return storage_root / ".layer-metadata" / f"{layer_id}.digest"

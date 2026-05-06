@@ -28,7 +28,7 @@ class SquashPlan:
 
 
 class SquashWorker:
-    """Plans suffix compaction and materializes checkpoint layers."""
+    """Plans suffix squash and materializes checkpoint layers."""
 
     def __init__(
         self,
