@@ -385,6 +385,7 @@ async def compact(args: dict[str, object]) -> dict[str, object]:
         "squashed": squashed is not None,
         "orphan_layers_removed": list(gc.orphan_layers_removed),
         "orphan_staging_removed": list(gc.orphan_staging_removed),
+        "orphan_lowerdirs_removed": list(gc.orphan_lowerdirs_removed),
         "timings": {
             "layer_stack.squash.total_s": squash_elapsed,
             "layer_stack.gc.total_s": gc_elapsed,

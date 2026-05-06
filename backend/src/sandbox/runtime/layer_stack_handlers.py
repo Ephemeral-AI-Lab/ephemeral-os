@@ -58,7 +58,6 @@ async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
     server = _server(args)
     result = server.prepare_workspace_snapshot(
         owner_request_id=_owner_request_id(args),
-        ttl_seconds=_optional_float(args.get("ttl_seconds")),
     )
     payload = result.to_dict()
     timings = payload.get("timings")
@@ -115,12 +114,6 @@ def _lease_id(args: Mapping[str, object]) -> str:
     if not lease_id:
         raise ValueError("lease_id is required")
     return lease_id
-
-
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    return float(value)
 
 
 __all__ = [

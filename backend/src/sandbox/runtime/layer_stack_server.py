@@ -33,12 +33,7 @@ def get_layer_stack_manager(layer_stack_root: str | Path) -> LayerStackManager:
         return manager
 
 
-def clear_layer_stack_manager_cache() -> None:
-    with _MANAGER_CACHE_LOCK:
-        _MANAGER_CACHE.clear()
-
-
-def drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
+def _drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.pop(key, None)
@@ -59,7 +54,7 @@ class LayerStackWorkspaceServer:
         timings: dict[str, float] | None = None,
     ) -> WorkspaceBinding:
         if reset:
-            drop_layer_stack_manager(self.layer_stack_root)
+            _drop_layer_stack_manager(self.layer_stack_root)
         binding = build_workspace_base(
             workspace_root=workspace_root,
             layer_stack_root=self.layer_stack_root,
@@ -100,13 +95,10 @@ class LayerStackWorkspaceServer:
         self,
         *,
         owner_request_id: str,
-        ttl_seconds: float | None = None,
     ) -> PrepareWorkspaceSnapshotResult:
-        binding = self._require_bound_active_workspace()
+        self._require_bound_active_workspace()
         return self._manager.prepare_workspace_snapshot(
             owner_request_id,
-            workspace_ref=binding.workspace_root,
-            ttl_seconds=ttl_seconds,
         )
 
     def release_workspace_snapshot(self, *, lease_id: str) -> bool:
@@ -129,7 +121,5 @@ class LayerStackWorkspaceServer:
 
 __all__ = [
     "LayerStackWorkspaceServer",
-    "clear_layer_stack_manager_cache",
-    "drop_layer_stack_manager",
     "get_layer_stack_manager",
 ]

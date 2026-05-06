@@ -120,7 +120,7 @@ def test_late_manifest_conflict_removes_unreferenced_layer(
     )
     calls = 0
 
-    def read_manifest_with_late_conflict(path: str | Path) -> Manifest:
+    def read_manifest_with_late_conflict(_path: str | Path) -> Manifest:
         nonlocal calls
         calls += 1
         if calls == 1:

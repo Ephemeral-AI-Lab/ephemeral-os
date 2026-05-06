@@ -54,7 +54,7 @@ _emit(label, started, before, {
     "released": released.lease_id,
     "double_release_is_none": double_release is None,
     "expired": [lease.lease_id for lease in expired],
-    "swept_dead_owners": [lease.owner_id for lease in swept],
+    "swept_dead_owners": [lease.owner_request_id for lease in swept],
     "remaining_leases": [lease.lease_id for lease in registry.active_leases()],
     "final_refcount": registry.refcount(layer),
 })

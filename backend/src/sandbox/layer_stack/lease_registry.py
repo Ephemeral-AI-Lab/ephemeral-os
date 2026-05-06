@@ -24,15 +24,8 @@ class WorkspaceLease:
     expires_at: float | None = None
 
     @property
-    def owner_id(self) -> str:
-        return self.owner_request_id
-
-    @property
     def manifest_version(self) -> int:
         return self.manifest.version
-
-
-Lease = WorkspaceLease
 
 
 class LeaseRegistry:
@@ -54,15 +47,15 @@ class LeaseRegistry:
     def acquire(
         self,
         manifest: Manifest,
-        owner_id: str,
+        owner_request_id: str,
         *,
         root_hash: str = "",
         materialized_lowerdir: str = "",
         workspace_ref: str = "",
         ttl_seconds: float | None = None,
     ) -> WorkspaceLease:
-        if not owner_id:
-            raise ValueError("owner_id must not be empty")
+        if not owner_request_id:
+            raise ValueError("owner_request_id must not be empty")
         if ttl_seconds is not None and ttl_seconds <= 0:
             raise ValueError("ttl_seconds must be positive when provided")
         with self._lock:
@@ -70,7 +63,7 @@ class LeaseRegistry:
             lease = WorkspaceLease(
                 lease_id=self._id_factory(),
                 manifest=manifest,
-                owner_request_id=owner_id,
+                owner_request_id=owner_request_id,
                 acquired_at=acquired_at,
                 root_hash=root_hash,
                 materialized_lowerdir=materialized_lowerdir,
@@ -124,14 +117,14 @@ class LeaseRegistry:
 
     def sweep_dead_owners(
         self,
-        live_owner_ids: Iterable[str],
+        live_owner_request_ids: Iterable[str],
     ) -> tuple[WorkspaceLease, ...]:
-        live = set(live_owner_ids)
+        live = set(live_owner_request_ids)
         with self._lock:
             dead_ids = (
                 lease.lease_id
                 for lease in self._ordered_leases_locked()
-                if lease.owner_id not in live
+                if lease.owner_request_id not in live
             )
             return self._release_many_locked(dead_ids)
 
@@ -187,4 +180,4 @@ class LeaseRegistry:
             del self._lowerdir_refcounts[lowerdir]
 
 
-__all__ = ["Lease", "LeaseRegistry", "WorkspaceLease"]
+__all__ = ["LeaseRegistry", "WorkspaceLease"]

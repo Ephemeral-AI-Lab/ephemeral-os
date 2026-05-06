@@ -18,22 +18,16 @@ def test_workspace_leases_refcount_materialized_lowerdirs() -> None:
     lease_a = registry.acquire(
         manifest,
         "request-a",
-        root_hash="a" * 64,
         materialized_lowerdir=lowerdir,
-        workspace_ref="/testbed",
     )
     lease_b = registry.acquire(
         manifest,
         "request-b",
-        root_hash="a" * 64,
         materialized_lowerdir=lowerdir,
-        workspace_ref="/testbed",
     )
 
-    assert lease_a.manifest_version == 3
-    assert lease_a.owner_id == "request-a"
+    assert lease_a.manifest.version == 3
     assert lease_a.owner_request_id == "request-a"
-    assert lease_a.workspace_ref == "/testbed"
     assert registry.lowerdir_refcount(lowerdir) == 2
     assert registry.pinned_lowerdirs() == (lowerdir,)
 
@@ -52,7 +46,7 @@ def test_pin_lowerdir_attaches_cache_pin_to_existing_manifest_lease() -> None:
         version=4,
         layers=(LayerRef(layer_id="L000004", path="layers/L000004"),),
     )
-    lease = registry.acquire(manifest, "request-a", root_hash="b" * 64)
+    lease = registry.acquire(manifest, "request-a")
 
     updated = registry.pin_lowerdir(lease.lease_id, "/cache/lower")
 

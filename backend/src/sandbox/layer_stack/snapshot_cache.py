@@ -228,13 +228,7 @@ class MaterializedSnapshotCache:
         except Exception:
             _remove_path(staging_dir)
             raise
-        return MaterializedSnapshot(
-            manifest_version=snapshot.manifest_version,
-            root_hash=snapshot.root_hash,
-            lowerdir=snapshot.lowerdir,
-            created_at=snapshot.created_at,
-            byte_count=snapshot.byte_count,
-        )
+        return snapshot
 
     def _default_materializer(self, lowerdir: Path, manifest: Manifest) -> None:
         MergedView(self._storage_root).materialize(lowerdir, manifest)

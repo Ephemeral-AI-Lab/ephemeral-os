@@ -11,7 +11,7 @@ import shutil
 from types import TracebackType
 
 from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.lease_registry import Lease, LeaseRegistry
+from sandbox.layer_stack.lease_registry import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -38,16 +38,6 @@ class _GCMarkSet:
     leased_layers: tuple[LayerRef, ...]
     leased_lowerdirs: tuple[str, ...]
     young_staging_dirs: tuple[Path, ...]
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "active_layers", tuple(self.active_layers))
-        object.__setattr__(self, "leased_layers", tuple(self.leased_layers))
-        object.__setattr__(self, "leased_lowerdirs", tuple(self.leased_lowerdirs))
-        object.__setattr__(
-            self,
-            "young_staging_dirs",
-            tuple(self.young_staging_dirs),
-        )
 
 
 @dataclass(frozen=True)
@@ -105,16 +95,16 @@ class LayerStackManager:
         with self._lock:
             return read_manifest(self._manifest_file)
 
-    def acquire_snapshot_lease(self, owner_id: str) -> Lease:
+    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
         with self._lock:
-            return self._leases.acquire(self.read_active_manifest(), owner_id)
+            return self._leases.acquire(
+                self.read_active_manifest(),
+                owner_request_id,
+            )
 
     def prepare_workspace_snapshot(
         self,
         owner_request_id: str,
-        *,
-        workspace_ref: str = "",
-        ttl_seconds: float | None = None,
     ) -> PrepareWorkspaceSnapshotResult:
         total_start = time.perf_counter()
         with self._lock:
@@ -123,9 +113,6 @@ class LayerStackManager:
             lease = self._leases.acquire(
                 manifest,
                 owner_request_id,
-                root_hash=root_hash,
-                workspace_ref=workspace_ref,
-                ttl_seconds=ttl_seconds,
             )
             try:
                 lookup = self._snapshot_cache.get_or_create(
@@ -165,13 +152,16 @@ class LayerStackManager:
         max_age_seconds: float,
         *,
         now: float | None = None,
-    ) -> tuple[Lease, ...]:
+    ) -> tuple[WorkspaceLease, ...]:
         with self._lock:
             return self._leases.expire_older_than(max_age_seconds, now=now)
 
-    def sweep_dead_lease_owners(self, live_owner_ids: Sequence[str]) -> tuple[Lease, ...]:
+    def sweep_dead_lease_owners(
+        self,
+        live_owner_request_ids: Sequence[str],
+    ) -> tuple[WorkspaceLease, ...]:
         with self._lock:
-            return self._leases.sweep_dead_owners(live_owner_ids)
+            return self._leases.sweep_dead_owners(live_owner_request_ids)
 
     def lease_refcount(self, layer: LayerRef) -> int:
         return self._leases.refcount(layer)
