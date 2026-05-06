@@ -33,6 +33,7 @@ from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
+from sandbox.runtime.layer_stack_server import get_layer_stack_manager
 
 
 _PROCESS_COMMIT_BUCKETS = 16
@@ -331,6 +332,7 @@ async def pinned_layers(args: dict[str, object]) -> dict[str, object]:
     return {
         "success": True,
         "pinned_layers": list(manager.pinned_layers()),
+        "pinned_lowerdirs": list(manager.pinned_lowerdirs()),
     }
 
 
@@ -350,6 +352,8 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "manifest_depth": manifest.depth,
         "active_leases": manager.active_lease_count(),
         "pinned_layers": len(manager.pinned_layers()),
+        "pinned_lowerdirs": len(manager.pinned_lowerdirs()),
+        "materialized_lowerdirs": manager.materialized_lowerdir_count(),
         "layer_dirs": len(layer_dirs),
         "staging_dirs": len(staging_dirs),
         "storage_bytes": total_bytes,
@@ -358,6 +362,7 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "base_root_hash": (
             binding.base_root_hash if binding is not None else ""
         ),
+        "lowerdir_cache": manager.lowerdir_cache_metrics().to_dict(),
     }
 
 
@@ -494,7 +499,7 @@ def _services(
     cached = _SERVICE_CACHE.get(layer_stack_root)
     if cached is not None:
         return cached
-    manager = LayerStackManager(layer_stack_root)
+    manager = get_layer_stack_manager(layer_stack_root)
     gitignore = LayerStackGitignoreOracle(manager)
     services = (manager, OccService(gitignore=gitignore, layer_stack=manager), gitignore)
     _SERVICE_CACHE[layer_stack_root] = services

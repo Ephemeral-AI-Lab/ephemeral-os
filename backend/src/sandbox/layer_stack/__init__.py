@@ -8,7 +8,10 @@ from sandbox.layer_stack.manifest import (
     Manifest,
     ManifestConflictError,
 )
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.stack_manager import (
+    LayerStackManager,
+    PrepareWorkspaceSnapshotResult,
+)
 
 __all__ = [
     "LayerChange",
@@ -16,4 +19,5 @@ __all__ = [
     "LayerStackManager",
     "Manifest",
     "ManifestConflictError",
+    "PrepareWorkspaceSnapshotResult",
 ]

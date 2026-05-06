@@ -53,6 +53,36 @@ async def workspace_binding(args: dict[str, object]) -> dict[str, object]:
     }
 
 
+async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
+    total_start = time.perf_counter()
+    server = _server(args)
+    result = server.prepare_workspace_snapshot(
+        owner_request_id=_owner_request_id(args),
+        ttl_seconds=_optional_float(args.get("ttl_seconds")),
+    )
+    payload = result.to_dict()
+    timings = payload.get("timings")
+    if not isinstance(timings, dict):
+        timings = {}
+    payload["timings"] = {
+        **timings,
+        "api.prepare_workspace_snapshot.total_s": time.perf_counter() - total_start,
+    }
+    return {
+        "success": True,
+        **payload,
+    }
+
+
+async def release_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
+    server = _server(args)
+    released = server.release_workspace_snapshot(lease_id=_lease_id(args))
+    return {
+        "success": True,
+        "released": released,
+    }
+
+
 def _server(args: Mapping[str, object]) -> LayerStackWorkspaceServer:
     return LayerStackWorkspaceServer(_layer_stack_root(args))
 
@@ -71,8 +101,32 @@ def _workspace_root(args: Mapping[str, object]) -> str:
     return workspace_root
 
 
+def _owner_request_id(args: Mapping[str, object]) -> str:
+    request_id = str(
+        args.get("owner_request_id") or args.get("request_id") or ""
+    ).strip()
+    if not request_id:
+        raise ValueError("request_id is required")
+    return request_id
+
+
+def _lease_id(args: Mapping[str, object]) -> str:
+    lease_id = str(args.get("lease_id") or "").strip()
+    if not lease_id:
+        raise ValueError("lease_id is required")
+    return lease_id
+
+
+def _optional_float(value: object) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
 __all__ = [
     "ensure_workspace_base",
     "build_workspace_base",
+    "prepare_workspace_snapshot",
+    "release_workspace_snapshot",
     "workspace_binding",
 ]

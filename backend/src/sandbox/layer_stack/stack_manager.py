@@ -23,7 +23,12 @@ from sandbox.layer_stack.manifest import (
     write_manifest_atomic,
 )
 from sandbox.layer_stack.merged_view import MergedView
+from sandbox.layer_stack.metrics import LowerdirCacheMetrics
 from sandbox.layer_stack.publisher import LayerPublisher
+from sandbox.layer_stack.snapshot_cache import (
+    MaterializedSnapshotCache,
+    manifest_root_hash,
+)
 from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
 
 
@@ -31,11 +36,13 @@ from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
 class _GCMarkSet:
     active_layers: tuple[LayerRef, ...]
     leased_layers: tuple[LayerRef, ...]
+    leased_lowerdirs: tuple[str, ...]
     young_staging_dirs: tuple[Path, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "active_layers", tuple(self.active_layers))
         object.__setattr__(self, "leased_layers", tuple(self.leased_layers))
+        object.__setattr__(self, "leased_lowerdirs", tuple(self.leased_lowerdirs))
         object.__setattr__(
             self,
             "young_staging_dirs",
@@ -47,8 +54,31 @@ class _GCMarkSet:
 class FsckResult:
     orphan_layers_removed: tuple[str, ...] = ()
     orphan_staging_removed: tuple[str, ...] = ()
+    orphan_lowerdirs_removed: tuple[str, ...] = ()
     missing_active_layers: tuple[LayerRef, ...] = ()
     missing_leased_layers: tuple[LayerRef, ...] = ()
+
+
+@dataclass(frozen=True)
+class PrepareWorkspaceSnapshotResult:
+    lease_id: str
+    manifest_version: int
+    root_hash: str
+    lowerdir: str
+    cache_hit: bool
+    materialized_byte_count: int
+    timings: dict[str, float]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "lease_id": self.lease_id,
+            "manifest_version": self.manifest_version,
+            "root_hash": self.root_hash,
+            "lowerdir": self.lowerdir,
+            "cache_hit": self.cache_hit,
+            "materialized_byte_count": self.materialized_byte_count,
+            "timings": dict(self.timings),
+        }
 
 
 class LayerStackManager:
@@ -68,6 +98,7 @@ class LayerStackManager:
         self._leases = LeaseRegistry()
         self._view = MergedView(self.storage_root)
         self._publisher = LayerPublisher(self.storage_root)
+        self._snapshot_cache = MaterializedSnapshotCache(self.storage_root)
         self._squash = SquashWorker(self.storage_root)
 
     def read_active_manifest(self) -> Manifest:
@@ -77,6 +108,53 @@ class LayerStackManager:
     def acquire_snapshot_lease(self, owner_id: str) -> Lease:
         with self._lock:
             return self._leases.acquire(self.read_active_manifest(), owner_id)
+
+    def prepare_workspace_snapshot(
+        self,
+        owner_request_id: str,
+        *,
+        workspace_ref: str = "",
+        ttl_seconds: float | None = None,
+    ) -> PrepareWorkspaceSnapshotResult:
+        total_start = time.perf_counter()
+        with self._lock:
+            manifest = read_manifest(self._manifest_file)
+            root_hash = manifest_root_hash(manifest)
+            lease = self._leases.acquire(
+                manifest,
+                owner_request_id,
+                root_hash=root_hash,
+                workspace_ref=workspace_ref,
+                ttl_seconds=ttl_seconds,
+            )
+            try:
+                lookup = self._snapshot_cache.get_or_create(
+                    manifest,
+                    root_hash=root_hash,
+                )
+                self._leases.pin_lowerdir(
+                    lease.lease_id,
+                    lookup.snapshot.lowerdir,
+                )
+            except Exception:
+                self._leases.release(lease.lease_id)
+                raise
+
+            timings = {
+                **lookup.timings,
+                "layer_stack.prepare_workspace_snapshot.total_s": (
+                    time.perf_counter() - total_start
+                ),
+            }
+            return PrepareWorkspaceSnapshotResult(
+                lease_id=lease.lease_id,
+                manifest_version=manifest.version,
+                root_hash=root_hash,
+                lowerdir=lookup.snapshot.lowerdir,
+                cache_hit=lookup.cache_hit,
+                materialized_byte_count=lookup.snapshot.byte_count,
+                timings=timings,
+            )
 
     def release_lease(self, lease_id: str) -> bool:
         with self._lock:
@@ -100,6 +178,18 @@ class LayerStackManager:
 
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
+
+    def lowerdir_refcount(self, lowerdir: str) -> int:
+        return self._leases.lowerdir_refcount(lowerdir)
+
+    def pinned_lowerdirs(self) -> tuple[str, ...]:
+        return self._leases.pinned_lowerdirs()
+
+    def lowerdir_cache_metrics(self) -> LowerdirCacheMetrics:
+        return self._snapshot_cache.metrics
+
+    def materialized_lowerdir_count(self) -> int:
+        return self._snapshot_cache.materialized_count()
 
     def active_lease_count(self) -> int:
         with self._lock:
@@ -204,9 +294,13 @@ class LayerStackManager:
                 _remove_path(child)
                 removed_staging.append(child.name)
 
+            removed_lowerdirs = self._snapshot_cache.collect_unpinned(
+                marks.leased_lowerdirs,
+            )
             return FsckResult(
                 orphan_layers_removed=tuple(removed_layers),
                 orphan_staging_removed=tuple(removed_staging),
+                orphan_lowerdirs_removed=removed_lowerdirs,
                 missing_active_layers=self._missing_layers(marks.active_layers),
                 missing_leased_layers=self._missing_layers(marks.leased_layers),
             )
@@ -222,6 +316,7 @@ class LayerStackManager:
         return _GCMarkSet(
             active_layers=active_layers,
             leased_layers=self._leases.pinned_layers(),
+            leased_lowerdirs=self._leases.pinned_lowerdirs(),
             young_staging_dirs=self._young_staging_dirs(
                 now=timestamp,
                 young_staging_age_seconds=young_staging_age_seconds,

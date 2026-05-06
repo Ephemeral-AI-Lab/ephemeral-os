@@ -228,6 +228,12 @@ def _load_peer_bootstraps() -> None:
     for op, handler in {
         "api.ensure_workspace_base": layer_stack_handlers.ensure_workspace_base,
         "api.build_workspace_base": layer_stack_handlers.build_workspace_base,
+        "api.prepare_workspace_snapshot": (
+            layer_stack_handlers.prepare_workspace_snapshot
+        ),
+        "api.release_workspace_snapshot": (
+            layer_stack_handlers.release_workspace_snapshot
+        ),
         "api.pinned_layers": api_handlers.pinned_layers,
         "api.compact": api_handlers.compact,
         "api.edit_file": api_handlers.edit_file,

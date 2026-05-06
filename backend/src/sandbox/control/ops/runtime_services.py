@@ -231,6 +231,41 @@ class RemoteRuntimeServiceBinding:
             timeout=60,
         )
 
+    async def prepare_workspace_snapshot(
+        self,
+        *,
+        request_id: str,
+        ttl_seconds: float | None = None,
+    ) -> dict[str, object]:
+        await self.ensure_initialized()
+        args: dict[str, object] = {
+            "layer_stack_root": self.layer_stack_root,
+            "request_id": request_id,
+        }
+        if ttl_seconds is not None:
+            args["ttl_seconds"] = ttl_seconds
+        return await _call_runtime_server(
+            exec_fn=get_adapter(self.sandbox_id).exec,
+            sandbox_id=self.sandbox_id,
+            op="api.prepare_workspace_snapshot",
+            args=args,
+            timeout=60,
+        )
+
+    async def release_workspace_snapshot(self, *, lease_id: str) -> bool:
+        await self.ensure_initialized()
+        raw = await _call_runtime_server(
+            exec_fn=get_adapter(self.sandbox_id).exec,
+            sandbox_id=self.sandbox_id,
+            op="api.release_workspace_snapshot",
+            args={
+                "layer_stack_root": self.layer_stack_root,
+                "lease_id": lease_id,
+            },
+            timeout=60,
+        )
+        return bool(raw.get("released", False))
+
     async def compact(self, *, max_depth: int = 4) -> dict[str, object]:
         await self.ensure_initialized()
         return await _call_runtime_server(
