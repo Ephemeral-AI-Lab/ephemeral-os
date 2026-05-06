@@ -60,6 +60,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/bash.py",
         "sandbox/runtime/api_handlers.py",
         "sandbox/runtime/async_bridge.py",
+        "sandbox/runtime/daemon.py",
         "sandbox/runtime/server.py",
         "sandbox/runtime/overlay_shell/__init__.py",
         "sandbox/runtime/overlay_shell/cli.py",

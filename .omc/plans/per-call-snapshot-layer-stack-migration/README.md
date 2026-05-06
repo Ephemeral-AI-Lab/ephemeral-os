@@ -20,6 +20,12 @@ document has the same shape:
 | 05 | `phase-05-squash-lease-budget-gc.md` | Squash, lease pressure, and GC preserve leased snapshot readability. |
 | 06 | `phase-06-integration-cutover.md` | Public APIs are routed to the new modules and old production paths are removed. |
 
+## Supplemental Architecture Plans
+
+| Document | Outcome |
+|---|---|
+| `three-server-workspace-overlay-integration-plan.md` | Defines `/testbed` as the default workspace repo, keeps `layer_stack_root` separate, and specifies the three-server overlay integration where `/testbed` is replaced by a frozen layer-stack snapshot during command execution. |
+
 ## Target Dependency Rule
 
 ```text

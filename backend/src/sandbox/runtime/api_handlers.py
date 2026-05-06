@@ -26,7 +26,6 @@ from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
-from sandbox.runtime import prepare_pool
 
 
 _PROCESS_COMMIT_BUCKETS = 16
@@ -54,30 +53,11 @@ def _services_cache_clear() -> None:
 async def _prepare_changeset(
     occ_service: OccService,
     *,
-    layer_stack_root: str,
     changes: Sequence[Change],
     snapshot: object = None,
     options: CommitOptions | None = None,
 ) -> PreparedChangeset:
-    """Prepare a changeset, optionally offloading to the prepare pool.
-
-    Phase 3.x.1: when ``EPHEMERALOS_PREPARE_POOL=1`` and the platform is
-    fork-capable, dispatch the synchronous CPU-bound prepare path to a
-    fork-mode :class:`ProcessPoolExecutor` so c=16 prepare calls don't
-    serialize on the daemon's GIL. Falls back to in-daemon prepare on
-    pool-init failure.
-    """
-    if prepare_pool.is_enabled():
-        try:
-            return await prepare_pool.prepare_in_pool(
-                layer_stack_root=layer_stack_root,
-                changes=changes,
-                snapshot=snapshot,  # type: ignore[arg-type]
-                options=options,
-            )
-        except RuntimeError:
-            # Fork-pool unavailable on this platform; fall back below.
-            pass
+    """Prepare a changeset in the resident runtime process."""
     return await occ_service.prepare_changeset(
         changes,
         snapshot=snapshot,  # type: ignore[arg-type]
@@ -217,7 +197,6 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
     prepare_start = time.perf_counter()
     prepared = await _prepare_changeset(
         occ_service,
-        layer_stack_root=layer_stack_root,
         changes=[change],
         options=CommitOptions(
             atomic=False,
@@ -277,7 +256,6 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
     prepare_start = time.perf_counter()
     prepared = await _prepare_changeset(
         occ_service,
-        layer_stack_root=layer_stack_root,
         changes=changes,
         options=CommitOptions(
             atomic=False,
@@ -452,7 +430,6 @@ async def _apply_overlay_capture(
     is_atomic = len(distinct_paths) > 1
     prepared = await _prepare_changeset(
         occ_service,
-        layer_stack_root=str(layer_root),
         changes=changes,
         snapshot=capture.snapshot_manifest,
         options=CommitOptions(
@@ -501,12 +478,11 @@ def _gitignore_timings(
     """Per-call gitignore counters.
 
     The ``*_total`` suffix marks these as **cumulative since this runtime
-    process started** rather than per-call. Under fork-per-call transport
-    this distinction is invisible (each call gets a fresh interpreter), but
-    under the resident daemon the in-memory oracle persists across calls,
-    so a c=16 burst will see ``cache_misses_total = 1`` on the first call
-    and 0 thereafter for the same snapshot version. The summarizer treats
-    these as monotonic counters, not gauges.
+    process started** rather than per-call. The resident daemon keeps the
+    in-memory oracle across calls, so a c=16 burst will see
+    ``cache_misses_total = 1`` on the first call and 0 thereafter for the
+    same snapshot version. The summarizer treats these as monotonic counters,
+    not gauges.
     """
     return {
         "gitignore.cache_hits_total": float(gitignore.cache_hits),

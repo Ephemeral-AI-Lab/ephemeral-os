@@ -29,9 +29,16 @@ class PreparedPathGroup:
 
 @dataclass(frozen=True)
 class CommitOptions:
-    """Request-level OCC commit options and metadata."""
+    """Request-level OCC commit options and metadata.
 
-    atomic: bool = False
+    ``atomic`` defaults to ``True``: a multi-path changeset is published only
+    if every path validates. If any path fails (ABORTED_OVERLAP,
+    ABORTED_VERSION, FAILED, or REJECTED), no path lands. Callers that want
+    best-effort partial publish must opt out explicitly with
+    ``atomic=False``.
+    """
+
+    atomic: bool = True
     caller_id: str = ""
     description: str = ""
 

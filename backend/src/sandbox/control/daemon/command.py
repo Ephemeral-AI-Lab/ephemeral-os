@@ -17,21 +17,11 @@ from sandbox.runtime.async_bridge import run_sync
 
 logger = logging.getLogger(__name__)
 
-_RUNTIME_SERVER_LAUNCHER = """\
-for py in python3.13 python3.12 python3.11 python3.10 python3; do
-    if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-        exec "$py" -m sandbox.runtime.server "$1"
-    fi
-done
-echo 'sandbox runtime requires Python >= 3.10' >&2
-exit 127
-"""
-
-# Daemon-mode launcher: ensures the resident daemon is running, then invokes a
+# Runtime launcher: ensures the resident daemon is running, then invokes a
 # tiny AF_UNIX client that pipes one envelope and prints the response. The
 # daemon is spawned via ``nohup`` once per sandbox; subsequent calls hit the
 # already-warm process. Both the spawn and the per-call thin client are emitted
-# through ``provider.exec`` — Daytona stays inside the adapter.
+# through ``provider.exec``; Daytona stays inside the adapter.
 _RUNTIME_DAEMON_SOCKET = f"{BUNDLE_REMOTE_DIR}/runtime.sock"
 _RUNTIME_DAEMON_PID = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
 _RUNTIME_DAEMON_LOG = f"{BUNDLE_REMOTE_DIR}/runtime.log"
@@ -101,7 +91,7 @@ class RuntimeCommandError(Exception):
 
 
 class _RuntimeDispatchError(RuntimeError):
-    """Raised when a runtime-server call fails before typed decoding."""
+    """Raised when runtime dispatch fails before typed decoding."""
 
     def __init__(
         self,
@@ -135,33 +125,18 @@ async def _call_runtime_server(
     cwd: str = BUNDLE_REMOTE_DIR,
     timeout: int | None = None,
 ) -> dict[str, Any]:
-    """Dispatch one JSON envelope to the in-sandbox runtime.
-
-    Routes through the configured transport — fork-per-call (legacy) or
-    AF_UNIX socket to a resident daemon. Both flow through
-    ``provider.exec(...)``; the daemon path additionally lazy-spawns the
-    daemon when the socket is missing.
-    """
+    """Dispatch one JSON envelope to the resident in-sandbox runtime daemon."""
     raw_payload = json.dumps(
         {"op": op, "args": _without_none(args)},
         separators=(",", ":"),
     )
-    transport = _runtime_transport()
-    if transport == "daemon":
-        result = await _exec_daemon_call(
-            exec_fn=exec_fn,
-            sandbox_id=sandbox_id,
-            raw_payload=raw_payload,
-            cwd=cwd,
-            timeout=timeout,
-        )
-    else:
-        result = await exec_fn(
-            sandbox_id,
-            _runtime_server_command(raw_payload),
-            cwd=cwd,
-            timeout=timeout,
-        )
+    result = await _exec_daemon_call(
+        exec_fn=exec_fn,
+        sandbox_id=sandbox_id,
+        raw_payload=raw_payload,
+        cwd=cwd,
+        timeout=timeout,
+    )
     try:
         response = _decode_response(getattr(result, "stdout", ""))
     except _RuntimeDispatchError:
@@ -212,13 +187,6 @@ async def _exec_daemon_call(
     return result
 
 
-def _runtime_transport() -> str:
-    raw = (os.environ.get("EPHEMERALOS_RUNTIME_TRANSPORT") or "").strip().lower()
-    if raw in {"daemon", "fork"}:
-        return raw
-    return "fork"
-
-
 def _looks_like_socket_missing(result: Any) -> bool:
     """Detect a thin-client failure caused by a missing daemon socket.
 
@@ -254,14 +222,6 @@ def _runtime_env_prefix() -> str:
     if not parts:
         return ""
     return " ".join(parts) + " "
-
-
-def _runtime_server_command(raw_payload: str) -> str:
-    env_prefix = _runtime_env_prefix()
-    return (
-        f"{env_prefix}sh -c {shlex.quote(_RUNTIME_SERVER_LAUNCHER)} runtime "
-        f"{shlex.quote(raw_payload)}"
-    )
 
 
 def _runtime_thin_client_command(raw_payload: str) -> str:
@@ -320,7 +280,7 @@ def _raise_exec_failed(result: Any) -> None:
 
 
 class RuntimeCommandClient:
-    """Client for runtime-server operations executed through provider exec."""
+    """Client for runtime operations executed through provider exec."""
 
     is_initialized: bool = False
 

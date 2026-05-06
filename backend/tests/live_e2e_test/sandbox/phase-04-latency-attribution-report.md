@@ -143,10 +143,8 @@ are all landed (see commits `42bdfde7`, `ad00c87b`, `083bc336`, `fbae5dc2`).
 This section records the post-implementation measurements taken with
 the same probe (`test_latency_attribution.py`) against the same
 sandbox image (`registry:6000/daytona/sweevo-psf-requests-3738:v1`),
-sweeping c ∈ {1, 4, 8, 16}. The only knob different from the baseline
-is `EPHEMERALOS_RUNTIME_TRANSPORT=daemon` and
-`EPHEMERALOS_GITIGNORE_BACKEND=pathspec`. `EPHEMERALOS_PREPARE_POOL`
-remains off.
+sweeping c ∈ {1, 4, 8, 16}. The run uses the resident runtime daemon and
+`EPHEMERALOS_GITIGNORE_BACKEND=pathspec`.
 
 ### Wall p99 across phases (c=16, ms)
 
@@ -156,9 +154,6 @@ remains off.
 | `write_file` | 2131 | 1100 | 1032 | 1000 | **717** | **−66 %** |
 | `edit_file` | 2111 | 1098 | 1004 | 1255 | **755** | **−65 %** |
 | `shell` (`echo > file`) | 1438 | 694 | 694 | 5626 | 3267 | +127 % ⚠ |
-
-For comparison at c=16 fork mode (no daemon) under the final code:
-read 1020 ms, write 1117 ms, edit 1124 ms, shell 1662 ms.
 
 ### Where the time goes now (c=16 daemon p99)
 
@@ -197,45 +192,25 @@ Shell (`echo > file`) is the only verb above baseline. The cause is mechanical: 
 
 1. Audit shell overlay capture; if every realistic case is single-path, flip the shell handler to `atomic=False` (cleanest).
 2. Make `_disjoint_batches` group disjoint atomic items and propagate per-item failure semantics in the merger (more invasive but preserves multi-path atomicity for real shells).
-3. Enable `EPHEMERALOS_PREPARE_POOL=1` (Phase 3.x.1) — partial mitigation only; doesn't address the merger serialization.
 
 ### Bottleneck re-ranking (c=16 p99, post-Phase-4 daemon)
 
 | Bottleneck | Cost | Affected verbs | Status |
 |---|---:|---|---|
 | `process.exec` host↔sandbox transport | ~700 ms | all | **structural** under the Daytona-stays-in-the-adapter invariant |
-| Shell `commit_s` under atomic=True | ~700 ms | shell only | **open** — see options 1–3 above |
+| Shell `commit_s` under atomic=True | ~700 ms | shell only | **open** — see options above |
 | `bash -lc` namespace startup | ~360 ms | shell | unchanged from baseline |
-| `prepare_s` (content hash + pathspec eval) | 58–73 ms | write, edit, shell | reducible further with prepare-pool |
+| `prepare_s` (content hash + pathspec eval) | 58–73 ms | write, edit, shell | bounded in daemon |
 | `commit_s` (write/edit) | 12–48 ms | write, edit | acceptable |
 | Path-bucket gate wait | ≤7 ms (write/edit) | write, edit | acceptable |
 | flock | ~0 ms | write, edit, shell | eliminated |
 | Python interpreter cold start | <1 ms | all | eliminated |
 | Gitignore cold start | 0 ms | write, edit | eliminated |
 
-### Three-way A/B/C: daemon vs daemon+pool vs fork (2026-05-06)
+### Runtime contract
 
-A back-to-back sweep with `EPHEMERALOS_RUNTIME_TRANSPORT={daemon,fork}` and `EPHEMERALOS_PREPARE_POOL` toggled isolates the prepare-pool's contribution from the daemon's other Phase 3/4 wins.
-
-| Metric (c=16 p99) | A: daemon | B: daemon+pool | C: fork | Pool Δ vs A |
-|---|---:|---:|---:|---:|
-| read wall | 709 ms | **668 ms** | 977 ms | −6 % |
-| write wall | 718 ms | **718 ms** | 1032 ms | 0 % |
-| edit wall | 870 ms | **759 ms** | 1120 ms | **−13 %** |
-| shell wall | 3144 ms | 3079 ms | **1478 ms** | −2 % |
-| write `prepare_s` | 70 ms | **20 ms** | 35 ms | **−71 %** |
-| edit `prepare_s` | 193 ms | **33 ms** | 42 ms | **−83 %** |
-| shell `prepare_s` | 43 ms | **11 ms** | 35 ms | **−74 %** |
-| write `commit_s` | 72 ms | **18 ms** | 25 ms | **−75 %** |
-| edit `commit_s` | 158 ms | **16 ms** | 18 ms | **−90 %** |
-| shell `commit_s` | 644 ms | 642 ms | 19 ms | ~0 |
-| edit `process_gate_wait_s` | 191 ms | **0.4 ms** | 0.3 ms | **−99 %** |
-
-Conclusions:
-
-1. **The prepare-pool unambiguously fixes the GIL contention identified in the Phase 3 status note.** Every `prepare_s` drops 71–83 % and every write/edit `commit_s` drops 75–90 % — the daemon's commit thread is no longer competing for the GIL with 15 concurrent prepares.
-2. **Daemon + prepare-pool beats fork on read/write/edit by ~30 %.** This is the first time daemon mode wins those three verbs against fork without an attached caveat. Recommended production default: `EPHEMERALOS_RUNTIME_TRANSPORT=daemon` + `EPHEMERALOS_PREPARE_POOL=1`.
-3. **Shell is unaffected** by the prepare-pool. Its `commit_s` is 642 ms in both daemon configurations vs 19 ms in fork — a 33× gap that is *not* GIL-bound. Per the per-call JSONL, shell commit work is overlay-capture I/O (`overlay.mount_snapshot_s` ~770 ms, `overlay.capture.populate_upperdir_s` ~600 ms, `walk_upperdir_s` ~10 ms) plus the underlying merger publish. The prepare-pool can't touch those. Shell remains the open work item; closing it requires either warming overlay namespaces across calls or trimming `populate_upperdir`.
+The current runtime contract is daemon-only. The latency probe no longer
+depends on runtime transport feature flags.
 
 ### Where the next leverage lies
 

@@ -241,7 +241,15 @@ _VERBS: tuple[tuple[str, _Runner], ...] = (
 
 @pytest.mark.live
 async def test_latency_attribution_sweep(live_sandbox: SandboxHandle) -> None:
-    """Sweep verb x concurrency, persisting per-call timings to JSONL."""
+    """Sweep verb x concurrency, persisting per-call timings to JSONL.
+
+    Phase 3.x.2 — compact the layer stack between verbs so each verb measures
+    against a shallow manifest. Without this, by the time ``shell_real`` runs
+    at c=16 the manifest has accumulated ~100+ versions from prior verbs and
+    ``commit_s`` is dominated by deep-manifest validation, not by the work
+    Phase 3 actually targets. The compact emits a metric and is excluded from
+    the per-verb p99 summary.
+    """
     handle = live_sandbox
     sweep_started = time.perf_counter()
     overall: dict[str, list[RuntimeCallMetric]] = {}
@@ -253,6 +261,18 @@ async def test_latency_attribution_sweep(live_sandbox: SandboxHandle) -> None:
             _persist(metrics)
             _emit_anatomy(label, metrics)
             overall[label] = metrics
+        compact_started = time.perf_counter()
+        compact_result = await handle.tool.compact(max_depth=4)
+        emit_metric(
+            f"attr_{verb}_post_compact",
+            {
+                "manifest_depth_after": compact_result.get("after_depth"),
+                "manifest_depth_before": compact_result.get("before_depth"),
+                "elapsed_ms": round(
+                    (time.perf_counter() - compact_started) * 1000.0, 3
+                ),
+            },
+        )
 
     emit_metric(
         "attr_sweep_done",

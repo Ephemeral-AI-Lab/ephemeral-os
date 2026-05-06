@@ -38,7 +38,7 @@ class _FakeTransport:
         self.exec_calls.append(command)
         if ".bundle-hash" in command and "tar -xzf" not in command:
             return _result(0, bundle_hash() + "\n")
-        if "sandbox.runtime.server" in command:
+        if "AF_UNIX" in command:
             if self.bad_response:
                 return _result(0, "not-json")
             if self.response_error is not None:
@@ -60,7 +60,7 @@ def _result(exit_code: int, stdout: str) -> Any:
 
 def _extract_op(command: str) -> str:
     argv = shlex.split(command)
-    assert "sandbox.runtime.server" in command
+    assert "AF_UNIX" in command
     payload = json.loads(argv[-1])
     return str(payload["op"])
 
@@ -79,7 +79,7 @@ async def test_call_returns_success_result() -> None:
         }
     finally:
         dispose_adapter("sb-1")
-    assert any("sandbox.runtime.server" in c for c in transport.exec_calls)
+    assert any("AF_UNIX" in c for c in transport.exec_calls)
 
 
 @pytest.mark.asyncio

@@ -80,8 +80,8 @@ _FIXED_TIMING_KEYS = (
     "layer_stack.transaction.lock_held_s",
     "runtime.boot_to_dispatch_s",
     "runtime.dispatch_s",
-    "gitignore.cache_hits",
-    "gitignore.cache_misses",
+    "gitignore.cache_hits_total",
+    "gitignore.cache_misses_total",
     "gitignore.materialize_snapshot_s",
     "gitignore.git_init_s",
 )
