@@ -156,7 +156,6 @@ async def execute_tool_call_streaming(
             context.tool_metadata,
             tool_name,
             _trace_input_from_result(result, tool_input),
-            tool_use_id=tool_use_id,
         )
 
     tool_result = ToolResultBlock(

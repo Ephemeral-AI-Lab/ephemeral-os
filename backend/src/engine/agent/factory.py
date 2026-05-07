@@ -142,7 +142,6 @@ def finalize_tool_registry_and_prompt(
 def _resolve_agent_identity(
     config: RuntimeConfig,
     agent_def: AgentDefinition | None,
-    settings: Settings,
 ) -> tuple[str, str, Any, dict | None]:
     """Resolve the agent's name, model id, API client, and DB model kwargs.
 
@@ -313,7 +312,7 @@ def spawn_agent(
     settings = config.resolve_settings()
 
     agent_name, resolved_model, api_client, db_kwargs = _resolve_agent_identity(
-        config, agent_def, settings
+        config, agent_def
     )
     max_tokens = int((db_kwargs or {}).get("max_tokens") or 16384)
 

@@ -51,8 +51,6 @@ def record_tool_trace(
     metadata: ExecutionMetadata | None,
     tool_name: str,
     tool_input: dict[str, object],
-    *,
-    tool_use_id: str | None = None,
 ) -> None:
     if metadata is None:
         return

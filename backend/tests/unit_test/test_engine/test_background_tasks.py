@@ -179,13 +179,11 @@ def test_record_tool_trace_ignores_subagent_launches() -> None:
         meta,
         "run_subagent",
         {"agent_name": "test_subagent", "prompt": "explore pkg/core.py"},
-        tool_use_id="toolu_1",
     )
     _record_tool_trace(
         meta,
         "run_subagent",
         {"agent_name": "test_subagent", "prompt": "explore pkg/core.py"},
-        tool_use_id="toolu_1",
     )
 
     assert meta.extras == {}

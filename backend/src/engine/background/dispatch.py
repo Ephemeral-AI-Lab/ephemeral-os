@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -59,7 +58,6 @@ def launch_background_tool(
     *,
     tool_registry: ToolRegistry,
     tool_metadata: ExecutionMetadata | None,
-    cwd: Path,
     background_manager: BackgroundTaskManager,
     tool_use: ToolUseBlock,
     execute_tool_call: ToolCallExecutor,
@@ -126,7 +124,7 @@ def launch_background_tool(
         kill_callback=kill_callback,
         task_type=getattr(tool_def, "task_type", "agent"),
     )
-    record_tool_trace(tool_metadata, tool_use.name, clean_input, tool_use_id=tool_use.id)
+    record_tool_trace(tool_metadata, tool_use.name, clean_input)
     tool_result = ToolResultBlock(
         tool_use_id=tool_use.id,
         content=(
@@ -184,7 +182,6 @@ def launch_and_collect_bg_events(
     tool_result, bg_event, reject_event = launch_background_tool(
         tool_registry=context.tool_registry,
         tool_metadata=context.tool_metadata,
-        cwd=context.cwd,
         background_manager=background_manager,
         tool_use=tc,
         execute_tool_call=_execute_in_context,

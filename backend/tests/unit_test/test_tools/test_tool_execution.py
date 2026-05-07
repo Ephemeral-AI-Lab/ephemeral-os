@@ -1048,7 +1048,6 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
     tool_result, bg_event, reject_event = launch_background_tool(
         tool_registry=registry,
         tool_metadata=context.tool_metadata,
-        cwd=Path("/tmp"),
         background_manager=manager,
         tool_use=ToolUseBlock(
             id="toolu_bg",
