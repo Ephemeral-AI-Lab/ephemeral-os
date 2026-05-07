@@ -77,7 +77,7 @@ _SUBMODULES = {
     "ToolExecutionCompleted": ("message.stream_events", "ToolExecutionCompleted"),
     "ToolExecutionProgress": ("message.stream_events", "ToolExecutionProgress"),
     "ToolExecutionStarted": ("message.stream_events", "ToolExecutionStarted"),
-    "QueryContext": ("engine.query.loop", "QueryContext"),
+    "QueryContext": ("engine.query.context", "QueryContext"),
     "run_query": ("engine.query.loop", "run_query"),
     "StreamingToolExecutor": ("engine.tool_call.streaming", "StreamingToolExecutor"),
     "TrackedTool": ("engine.tool_call.streaming", "TrackedTool"),

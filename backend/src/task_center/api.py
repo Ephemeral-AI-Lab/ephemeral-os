@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from task_center.attempt import (
     Attempt,
     AttemptFailReason,
@@ -93,6 +95,15 @@ from task_center.sandbox_bridge import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxBridge,
 )
+
+if TYPE_CHECKING:
+    from task_center.entry import (
+        ENTRY_AGENT_NAME,
+        ENTRY_SPAWN_REASON,
+        TaskCenterEntryCoordinator,
+        TaskCenterEntryHandle,
+        start_task_center_entry_run,
+    )
 
 _ENTRY_EXPORTS = {
     "ENTRY_AGENT_NAME",
