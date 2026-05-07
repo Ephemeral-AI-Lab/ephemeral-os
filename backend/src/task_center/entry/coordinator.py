@@ -34,7 +34,7 @@ from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry.controller import EntryTaskController
 from task_center.attempt.factory import make_attempt_orchestrator_factory
-from task_center.attempt.launcher import (
+from task_center.agent_launch.launcher import (
     AgentStreamEmitter,
     EphemeralAttemptAgentLauncher,
     AttemptAgentRunner,
