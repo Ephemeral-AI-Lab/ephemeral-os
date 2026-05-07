@@ -54,7 +54,8 @@ def _resolver_messages(count: int) -> list[ConversationMessage]:
 
 async def _dispatch(rule, messages, context):
     service = SystemNotificationService()
-    await dispatch_rules([rule], messages, context, service, set())
+    context.notification_fired = set()
+    await dispatch_rules([rule], messages, context, service)
     return service.pop_pending_notifications()
 
 

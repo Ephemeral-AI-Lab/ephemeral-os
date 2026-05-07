@@ -318,7 +318,6 @@ async def _run_query_loop(
                 messages,
                 context,
                 notification_service,
-                context.notification_fired,
             )
             pending = notification_service.pop_pending_notifications()
             if pending:

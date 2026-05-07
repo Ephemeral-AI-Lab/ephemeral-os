@@ -58,7 +58,6 @@ async def dispatch_rules(
     messages: MessageList,
     context: "QueryContext",
     service: "SystemNotificationService",
-    fired: set[str],
 ) -> None:
     """Evaluate `rules` in list order; emit each rule whose trigger fires.
 
@@ -68,6 +67,7 @@ async def dispatch_rules(
     `messages` until the caller drains the pool, so a later rule's
     `trigger` cannot observe an earlier rule's reminder this turn.
     """
+    fired = context.notification_fired
     for rule in rules:
         if rule.fire_once and rule.name in fired:
             continue
