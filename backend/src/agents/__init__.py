@@ -9,7 +9,6 @@ from .registry import (
     list_definitions,
     register_definition,
     unregister_definition,
-    validate_agent_definitions_resolved,
 )
 from .run_tracker import AgentRunTracker
 from .types import (
@@ -22,6 +21,7 @@ from .validation import (
     AgentDefinitionValidator,
     AgentValidationInput,
     AgentValidationResult,
+    validate_agent_definitions_resolved,
 )
 
 __all__ = [
