@@ -1,19 +1,4 @@
-"""Runtime-local handlers for shared metric / service-cache helpers.
-
-After the post-Phase-05 handler-per-command refactor, the host-facing
-``api.{shell,write_file,edit_file,read_file}`` ops dispatch from
-:mod:`sandbox.runtime.handlers` (one module per verb). Worker scaffolding
-for shell still lives on :mod:`sandbox.runtime.command_exec_server`.
-
-What stays here:
-
-* ``api.layer_metrics`` — non-mutation diagnostic that summarizes layer
-  storage and lease counts.
-* ``drop_services_cache`` / ``_services_cache_clear`` — entrypoints
-  preserved for backward-compat. The OCC backend cache is owned by
-  :mod:`sandbox.runtime.occ_server` post Phase 05.5; both helpers now
-  delegate there.
-"""
+"""``api.layer_metrics`` diagnostic dispatch entry."""
 
 from __future__ import annotations
 
@@ -24,17 +9,8 @@ from sandbox.layer_stack.workspace import read_workspace_binding
 from sandbox.runtime import occ_server
 
 
-def _services_cache_clear() -> None:
-    """Drop the shared OCC backend cache. Test helper."""
-    occ_server._backend_cache_clear()
-
-
-def drop_services_cache(layer_stack_root: str) -> None:
-    """Drop cached runtime services for one layer-stack root."""
-    occ_server.drop_backend_cache(layer_stack_root)
-
-
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
+    """Summarize layer-stack storage and lease state for one runtime root."""
     manager = _manager(args)
     manifest = manager.read_active_manifest()
     binding = read_workspace_binding(str(args.get("layer_stack_root") or ""))
@@ -55,9 +31,7 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "storage_bytes": total_bytes,
         "workspace_bound": binding is not None,
         "workspace_root": binding.workspace_root if binding is not None else "",
-        "base_root_hash": (
-            binding.base_root_hash if binding is not None else ""
-        ),
+        "base_root_hash": binding.base_root_hash if binding is not None else "",
     }
 
 
@@ -68,7 +42,4 @@ def _manager(args: Mapping[str, object]) -> LayerStackManager:
     return occ_server.build_occ_backend(layer_stack_root).manager
 
 
-__all__ = [
-    "drop_services_cache",
-    "layer_metrics",
-]
+__all__ = ["layer_metrics"]

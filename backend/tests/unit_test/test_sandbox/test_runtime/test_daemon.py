@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.runtime import api_handlers, daemon, server
+from sandbox.runtime import daemon, occ_server, server
 from sandbox.runtime.handlers import _common
 
 
@@ -31,20 +31,6 @@ def _isolate_op_table() -> None:
     finally:
         server.OP_TABLE.clear()
         server.OP_TABLE.update(saved)
-
-
-@pytest.fixture(autouse=True)
-def _isolate_daemon_env() -> None:
-    """Daemon ``serve`` mutates ``EPHEMERALOS_RUNTIME_DAEMON`` directly; reset
-    after every test so it can't leak across cases."""
-    saved = os.environ.get("EPHEMERALOS_RUNTIME_DAEMON")
-    try:
-        yield
-    finally:
-        if saved is None:
-            os.environ.pop("EPHEMERALOS_RUNTIME_DAEMON", None)
-        else:
-            os.environ["EPHEMERALOS_RUNTIME_DAEMON"] = saved
 
 
 async def test_dispatch_envelope_async_runs_async_handler() -> None:
@@ -185,9 +171,7 @@ def test_services_cached_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """OCC backend factory caches the per-root tuple across calls."""
-    from sandbox.runtime import occ_server
-
-    api_handlers._services_cache_clear()
+    occ_server._backend_cache_clear()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
@@ -231,23 +215,38 @@ def test_services_cached_per_layer_stack_root(
     assert a1.manager is not b1.manager  # different roots → distinct managers
 
 
-def test_drop_services_cache_delegates_to_occ_backend_cache(
+def test_drop_backend_cache_removes_only_requested_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``api_handlers.drop_services_cache`` must delegate to the shared
-    OCC backend cache owned by :mod:`occ_server`. After Phase 05.5 the
-    write/edit/read and shell paths share one cache, so a single drop
-    invalidates them all."""
-    from sandbox.runtime import occ_server
-
-    api_handlers._services_cache_clear()
-    cleared: list[str] = []
+    """The shared OCC backend cache is owned directly by ``occ_server``."""
+    occ_server._backend_cache_clear()
 
     monkeypatch.setattr(
         occ_server,
-        "drop_backend_cache",
-        lambda root: cleared.append(f"occ_backend:{root}"),
+        "get_layer_stack_manager",
+        lambda root: object(),
+    )
+    monkeypatch.setattr(occ_server, "LayerStackClient", lambda manager: object())
+    monkeypatch.setattr(
+        occ_server,
+        "SnapshotGitignoreOracle",
+        lambda layer_stack: object(),
+    )
+    monkeypatch.setattr(
+        occ_server,
+        "OccService",
+        lambda *, gitignore, layer_stack: object(),
+    )
+    monkeypatch.setattr(
+        occ_server,
+        "OCCClient",
+        lambda service, *, binding_reader, workspace_ref: object(),
     )
 
-    api_handlers.drop_services_cache("/tmp/a")
-    assert "occ_backend:/tmp/a" in cleared
+    a = occ_server.build_occ_backend("/tmp/a")
+    b = occ_server.build_occ_backend("/tmp/b")
+
+    occ_server.drop_backend_cache("/tmp/a")
+
+    assert occ_server.build_occ_backend("/tmp/a") is not a
+    assert occ_server.build_occ_backend("/tmp/b") is b

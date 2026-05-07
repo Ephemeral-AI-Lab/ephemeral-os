@@ -6,6 +6,7 @@ the OP_TABLE wiring, and the shared-LeaseRegistry assertion.
 
 from __future__ import annotations
 
+import importlib
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -14,11 +15,12 @@ import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.runtime import (
-    api_handlers,
+    occ_server,
     server,
 )
 from sandbox.runtime.handlers import (
     edit_handler,
+    metrics_handler,
     read_handler,
     shell_handler,
     write_handler,
@@ -26,7 +28,6 @@ from sandbox.runtime.handlers import (
 from sandbox.runtime.handlers._common import (
     ClassifiedPath,
     _services,
-    _services_cache_clear,
     classify_path,
 )
 from sandbox.runtime.layer_stack_server import get_layer_stack_manager
@@ -119,25 +120,18 @@ def test_classify_outside_absolute_path_classifies_out_of_workspace(
 # ---------------------------------------------------------------------------
 
 
-def test_op_table_dispatches_write_edit_read_to_write_edit_handlers() -> None:
+def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
     server._load_peer_bootstraps()
     assert server.OP_TABLE["api.write_file"] is write_handler.write_file
     assert server.OP_TABLE["api.edit_file"] is edit_handler.edit_file
     assert server.OP_TABLE["api.read_file"] is read_handler.read_file
     assert server.OP_TABLE["api.shell"] is shell_handler.shell
-    assert server.OP_TABLE["api.layer_metrics"] is api_handlers.layer_metrics
+    assert server.OP_TABLE["api.layer_metrics"] is metrics_handler.layer_metrics
 
 
-def test_api_handlers_no_longer_exposes_write_edit_read() -> None:
-    """api_handlers shrank to layer_metrics + service-cache helpers."""
-    assert not hasattr(api_handlers, "write_file")
-    assert not hasattr(api_handlers, "edit_file")
-    assert not hasattr(api_handlers, "read_file")
-    # Bucket commit-gate primitives are gone.
-    assert not hasattr(api_handlers, "_process_commit_gate")
-    assert not hasattr(api_handlers, "_commit_lock")
-    assert not hasattr(api_handlers, "_PROCESS_COMMIT_BUCKETS")
-    assert not hasattr(api_handlers, "_PROCESS_COMMIT_LOCK_BUCKETS")
+def test_legacy_api_handlers_module_removed() -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("sandbox.runtime.api_handlers")
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +141,7 @@ def test_api_handlers_no_longer_exposes_write_edit_read() -> None:
 
 @pytest.mark.asyncio
 async def test_write_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -164,7 +158,7 @@ async def test_write_file_rejects_list_path_argument(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_edit_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -190,10 +184,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 ) -> None:
     """All four flows acquire leases from the SAME registry instance — layer-stack
     GC sees a unified pin set."""
-    from sandbox.runtime import command_exec_server
-
-    _services_cache_clear()
-    command_exec_server._services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")
@@ -227,7 +218,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 @pytest.mark.asyncio
 async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> None:
     """An in-workspace write_file holds a lease covering prepare → publish."""
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -259,7 +250,7 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
 async def test_read_file_in_workspace_returns_layer_stack_bytes(
     tmp_path: Path,
 ) -> None:
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")

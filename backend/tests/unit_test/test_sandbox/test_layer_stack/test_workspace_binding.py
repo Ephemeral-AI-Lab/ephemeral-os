@@ -14,7 +14,7 @@ from sandbox.layer_stack.workspace import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.runtime import api_handlers
+from sandbox.runtime import occ_server
 from sandbox.runtime.handlers import read_handler
 
 
@@ -54,7 +54,7 @@ def test_binding_round_trips_and_translates_workspace_paths(tmp_path: Path) -> N
 
 @pytest.mark.asyncio
 async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) -> None:
-    api_handlers._services_cache_clear()
+    occ_server._backend_cache_clear()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
         await read_handler.read_file(
@@ -69,7 +69,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
 async def test_read_file_uses_workspace_base_not_real_workspace(
     tmp_path: Path,
 ) -> None:
-    api_handlers._services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     file_path = workspace / "a.txt"
@@ -100,7 +100,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
     guard already covers the no-binding case; an empty manifest is a valid
     runtime state — newest-first merged reads return ``("", False)`` for
     every path uniformly."""
-    api_handlers._services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     stack = tmp_path / "stack"

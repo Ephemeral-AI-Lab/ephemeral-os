@@ -160,10 +160,10 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     import asyncio
 
     from sandbox.layer_stack.workspace_base import build_workspace_base
+    from sandbox.runtime import occ_server
     from sandbox.runtime.handlers import write_handler
-    from sandbox.runtime.handlers._common import _services_cache_clear
 
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -192,10 +192,11 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.serial_merger import MAX_OCC_CAS_RETRIES
+    from sandbox.runtime import occ_server
     from sandbox.runtime.handlers import write_handler
-    from sandbox.runtime.handlers._common import _services, _services_cache_clear
+    from sandbox.runtime.handlers._common import _services
 
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -251,7 +252,8 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.runtime import command_exec_server, occ_server, write_edit_handlers
+    from sandbox.runtime import command_exec_server, occ_server
+    from sandbox.runtime.handlers import _common
 
     occ_server._backend_cache_clear()
 
@@ -299,10 +301,9 @@ def test_single_occ_backend_cache_per_layer_stack_root(
 
     backend_a = occ_server.build_occ_backend("/tmp/a")
 
-    # The shim and the per-verb scaffolding both resolve to the same
-    # cached OccBackend instance.
-    via_write_edit = write_edit_handlers._services("/tmp/a")
-    assert via_write_edit is backend_a
+    # The per-verb scaffolding resolves to the cached OccBackend instance.
+    via_common = _common._services("/tmp/a")
+    assert via_common is backend_a
 
     # command_exec_server returns a 4-tuple; the first three fields
     # identity-match the cached OccBackend's fields.

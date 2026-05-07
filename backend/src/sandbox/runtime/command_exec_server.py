@@ -32,16 +32,6 @@ from sandbox.runtime import occ_server
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
-def _services_cache_clear() -> None:
-    """Drop command-exec runtime service cache. Test helper."""
-    occ_server._backend_cache_clear()
-
-
-def drop_services_cache(layer_stack_root: str) -> None:
-    """Drop cached command-exec services for one layer-stack root."""
-    occ_server.drop_backend_cache(layer_stack_root)
-
-
 async def _execute_shell(
     args: Mapping[str, object],
     *,
@@ -334,8 +324,3 @@ def _optional_float(value: object) -> float | None:
     if isinstance(value, (str, int, float)):
         return float(value)
     raise TypeError(f"expected numeric value, got {type(value).__name__}")
-
-
-__all__ = [
-    "drop_services_cache",
-]

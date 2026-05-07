@@ -15,7 +15,7 @@ import pytest
 from sandbox.command_exec.result import ShellProcessResult
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OCCClient
-from sandbox.runtime import command_exec_server
+from sandbox.runtime import command_exec_server, occ_server
 from sandbox.runtime.handlers import shell_handler
 
 
@@ -25,7 +25,7 @@ async def test_shell_uses_occ_client_apply_changeset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The shell handler must call OCCClient.apply_changeset (not bypass it)."""
-    command_exec_server._services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "input.txt").write_text("base\n", encoding="utf-8")

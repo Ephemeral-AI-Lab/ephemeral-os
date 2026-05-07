@@ -10,9 +10,7 @@ Owns the single source of truth for:
 
 The OCC backend tuple ``(LayerStackClient, OCCClient, GitignoreOracle,
 LayerStackManager)`` is owned by :mod:`sandbox.runtime.occ_server`. The
-``_services`` / ``_services_cache_clear`` / ``drop_services_cache``
-entrypoints here are thin pass-throughs preserved for backward-compat
-with existing test fixtures.
+``_services`` helper is the canonical per-verb access point.
 
 ``shell_handler`` does NOT use this module — it routes through
 ``command_exec_server`` whose worker scaffolding still owns its own
@@ -129,16 +127,6 @@ def _services(layer_stack_root: str) -> OccBackend:
     return occ_server.build_occ_backend(layer_stack_root)
 
 
-def _services_cache_clear() -> None:
-    """Drop write/edit/read service cache. Test helper."""
-    occ_server._backend_cache_clear()
-
-
-def drop_services_cache(layer_stack_root: str) -> None:
-    """Drop cached services for one layer-stack root."""
-    occ_server.drop_backend_cache(layer_stack_root)
-
-
 # -- result projection ------------------------------------------------------
 
 
@@ -196,7 +184,5 @@ __all__ = [
     "_project_changeset",
     "_required_single_path",
     "_services",
-    "_services_cache_clear",
     "classify_path",
-    "drop_services_cache",
 ]

@@ -17,15 +17,16 @@ import pytest
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset.types import WriteChange
+from sandbox.runtime import occ_server
 from sandbox.runtime.handlers import edit_handler, write_handler
-from sandbox.runtime.handlers._common import _services, _services_cache_clear
+from sandbox.runtime.handlers._common import _services
 
 
 @pytest.mark.asyncio
 async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
     tmp_path: Path,
 ) -> None:
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("hello world\n", encoding="utf-8")
@@ -70,7 +71,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
     tmp_path: Path,
 ) -> None:
     """OCC sees a WriteChange (not EditChange) carrying final derived bytes."""
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "config.toml").write_text("name = \"old\"\n", encoding="utf-8")
@@ -108,7 +109,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
 @pytest.mark.asyncio
 async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
     """Anchor validation runs against snapshot N, not a moved manifest."""
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("foo\n", encoding="utf-8")
@@ -127,7 +128,7 @@ async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_in_workspace_edit_rejects_non_utf8(tmp_path: Path) -> None:
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "blob.bin").write_bytes(b"\xff\xfe\x00\x00bad")
@@ -158,7 +159,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     from sandbox.occ.changeset.types import FileStatus
     from sandbox.occ.content.hashing import ContentHasher
 
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "shared.txt").write_text("hello world\n", encoding="utf-8")
@@ -224,7 +225,7 @@ async def test_in_workspace_create_only_rejects_existing_path(
 ) -> None:
     """create-only in-workspace write rejects when the path exists in the
     validation snapshot — base_hash mismatch on existing-path content."""
-    _services_cache_clear()
+    occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "exists.txt").write_text("base\n", encoding="utf-8")

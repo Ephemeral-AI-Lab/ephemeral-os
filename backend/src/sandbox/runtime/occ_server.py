@@ -12,7 +12,8 @@ externally-reachable surface to ``{apply_changeset, start, stop, health}``.
 Phase 05.5 adds a single OCC backend factory consumed by every runtime
 peer that needs the ``(LayerStackClient, OCCClient, SnapshotGitignoreOracle,
 LayerStackManager)`` tuple — handlers/_common.py (api.write/edit/read),
-command_exec_server (api.shell), and api_handlers (api.layer_metrics).
+command_exec_server (api.shell), and handlers/metrics_handler.py
+(api.layer_metrics).
 The factory uses ``workspace_ref=layer_stack_root`` only; this module
 owns no path classification (single source of truth lives on command-exec
 via :mod:`sandbox.runtime.handlers._common`).
@@ -38,7 +39,7 @@ class OccBackend:
     """The OCC backend tuple shared by every runtime peer.
 
     Field names are the structural contract: ``handlers._common``,
-    ``command_exec_server``, and ``api_handlers`` all read these
+    ``command_exec_server``, and ``metrics_handler`` all read these
     attributes. A typo here silently breaks every consumer.
     """
 

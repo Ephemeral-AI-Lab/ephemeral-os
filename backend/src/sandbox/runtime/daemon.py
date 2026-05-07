@@ -15,9 +15,9 @@ The daemon imports ``sandbox.runtime.server`` so the ``OP_TABLE`` is
 populated by the standard peer bootstrap, then dispatches via
 :func:`server.dispatch_envelope_async`. State that is expensive to
 construct — ``LayerStackManager``, ``OccService``,
-``SnapshotGitignoreOracle`` — is cached across calls inside the
-``api_handlers`` module's ``_SERVICE_CACHE`` and thus amortizes naturally
-because the daemon is one Python process.
+``SnapshotGitignoreOracle`` — is cached across calls by
+``runtime.occ_server`` and thus amortizes naturally because the daemon is
+one Python process.
 
 Lifecycle:
 
@@ -26,9 +26,6 @@ Lifecycle:
   through the provider adapter's ``exec``.
 * It writes its PID to ``<bundle>/runtime.pid`` and binds AF_UNIX to
   ``<bundle>/runtime.sock``.
-* On startup it sets ``EPHEMERALOS_RUNTIME_DAEMON=1`` so handlers know
-  the in-process ``asyncio.Lock`` serializes commits and the cross-process
-  flock fence can be skipped.
 * Restart safety: stale PID and stale socket are cleaned up before bind.
 """
 
@@ -125,7 +122,6 @@ def _remove_pid(pid_path: Path) -> None:
 
 
 async def serve(socket_path: Path, pid_path: Path) -> None:
-    os.environ["EPHEMERALOS_RUNTIME_DAEMON"] = "1"
     _prepare_socket_path(socket_path)
     server = await asyncio.start_unix_server(_handle_connection, path=str(socket_path))
     try:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 async def shell(args: dict[str, object]) -> dict[str, object]:
     # Late import to avoid pulling the worker scaffolding at module load,
-    # mirroring the pattern used by ``api_handlers.drop_services_cache``.
+    # keeping the public handler package cheap to import.
     from sandbox.runtime import command_exec_server
 
     layer_stack, occ_client, gitignore, storage_root = command_exec_server._services(
