@@ -9,13 +9,10 @@ from tools.core.results import ToolResult
 
 def caller_from_context(
     context: ToolExecutionContextService,
-    *,
-    preferred_agent_id: str = "",
 ) -> SandboxCaller:
     """Build the sandbox caller identity for a tool call."""
-    explicit = str(preferred_agent_id or "").strip()
     agent_run_id = str(context.agent_run_id or "")
-    agent_id = explicit or agent_run_id.strip() or str(context.agent_name or "").strip()
+    agent_id = agent_run_id.strip() or str(context.agent_name or "").strip()
     return SandboxCaller(
         agent_id=agent_id,
         run_id=str(context.get("run_id") or ""),
