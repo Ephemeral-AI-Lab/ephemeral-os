@@ -8,14 +8,16 @@ modules to keep the base abstraction small.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel
 
 from tools.core.context import ToolExecutionContextService
-from tools.core.registry import ToolRegistry
 from tools.core.results import TextToolOutput, ToolResult
 from tools.core.runtime import ExecutionMetadata
+
+if TYPE_CHECKING:
+    from tools.core.registry import ToolRegistry
 
 __all__ = [
     "BackgroundMode",
@@ -29,6 +31,14 @@ __all__ = [
 
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "ToolRegistry":
+        from tools.core.registry import ToolRegistry
+
+        return ToolRegistry
+    raise AttributeError(name)
 
 
 class BaseTool(ABC):
