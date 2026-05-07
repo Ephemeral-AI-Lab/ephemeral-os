@@ -118,12 +118,3 @@ def _previous_episode_result_blocks(
             )
         )
     return out
-
-
-__all__ = [
-    "CURRENT_EPISODE_HEADING",
-    "MISSION_EPISODE_HEADING",
-    "MISSION_HEADING",
-    "PREVIOUS_EPISODE_RESULTS_HEADING",
-    "mission_episode_blocks",
-]

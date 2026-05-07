@@ -8,25 +8,19 @@ startup. The engine itself owns no recipe knowledge.
 from __future__ import annotations
 
 from task_center.context_engine.recipes.entry_executor import (
-    ENTRY_EXECUTOR_V1,
     ENTRY_EXECUTOR_V1_RECIPE,
 )
 from task_center.context_engine.recipes.evaluator import (
-    EVALUATOR_V1,
     EVALUATOR_V1_RECIPE,
 )
 from task_center.context_engine.recipes.generator import (
-    GENERATOR_V1,
     GENERATOR_V1_RECIPE,
 )
 from task_center.context_engine.recipes.helper import (
-    ADVISOR_V1,
     ADVISOR_V1_RECIPE,
-    RESOLVER_V1,
     RESOLVER_V1_RECIPE,
 )
 from task_center.context_engine.recipes.planner import (
-    PLANNER_V1,
     PLANNER_V1_RECIPE,
 )
 from task_center.context_engine.recipes_registry import RecipeRegistry
@@ -45,14 +39,3 @@ def register_builtin_recipes() -> None:
     """Register every built-in recipe. Idempotent — safe to call repeatedly."""
     for recipe in _BUILTIN_RECIPES:
         RecipeRegistry.register(recipe)
-
-
-__all__ = [
-    "ADVISOR_V1",
-    "ENTRY_EXECUTOR_V1",
-    "EVALUATOR_V1",
-    "GENERATOR_V1",
-    "PLANNER_V1",
-    "RESOLVER_V1",
-    "register_builtin_recipes",
-]

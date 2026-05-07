@@ -24,7 +24,6 @@ from task_center.context_engine.recipes._mission_episode import (
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.recipes.attempt_landscape import (
-    MAX_FAILED_ATTEMPTS_RENDERED,
     failed_attempt_landscape_blocks,
 )
 from task_center.context_engine.scope import ContextScope
@@ -83,10 +82,3 @@ PLANNER_V1_RECIPE = ContextRecipe(
     required_scope_fields=_REQUIRED_FIELDS,
     build=_planner_v1_build,
 )
-
-
-__all__ = [
-    "PLANNER_V1",
-    "PLANNER_V1_RECIPE",
-    "MAX_FAILED_ATTEMPTS_RENDERED",
-]

@@ -111,6 +111,3 @@ EVALUATOR_V1_RECIPE = ContextRecipe(
     required_scope_fields=_REQUIRED_FIELDS,
     build=_evaluator_v1_build,
 )
-
-
-__all__ = ["EVALUATOR_V1", "EVALUATOR_V1_RECIPE"]

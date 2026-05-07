@@ -58,6 +58,3 @@ ENTRY_EXECUTOR_V1_RECIPE = ContextRecipe(
     required_scope_fields=_REQUIRED_FIELDS,
     build=_entry_executor_v1_build,
 )
-
-
-__all__ = ["ENTRY_EXECUTOR_V1", "ENTRY_EXECUTOR_V1_RECIPE"]

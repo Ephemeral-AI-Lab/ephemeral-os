@@ -120,12 +120,3 @@ RESOLVER_V1_RECIPE = ContextRecipe(
     required_scope_fields=_HELPER_REQUIRED_FIELDS,
     build=_resolver_v1_build,
 )
-
-
-__all__ = [
-    "ADVISOR_V1",
-    "ADVISOR_V1_RECIPE",
-    "RESOLVER_V1",
-    "RESOLVER_V1_RECIPE",
-    "demote_priority",
-]

@@ -120,6 +120,3 @@ GENERATOR_V1_RECIPE = ContextRecipe(
     required_scope_fields=_REQUIRED_FIELDS,
     build=_generator_v1_build,
 )
-
-
-__all__ = ["GENERATOR_V1", "GENERATOR_V1_RECIPE"]
