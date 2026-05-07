@@ -76,8 +76,12 @@ def tool(
             first_line = docstring.split("\n")[0].strip() if docstring else ""
             tool_description = first_line or f"Tool: {tool_name}"
 
-        # Determine if the function is async
         is_async = inspect.iscoroutinefunction(func)
+        signature = inspect.signature(func)
+        accepts_context = "context" in signature.parameters or any(
+            parameter.kind is inspect.Parameter.VAR_KEYWORD
+            for parameter in signature.parameters.values()
+        )
 
         # Build the BaseTool subclass dynamically
         class FunctionTool(BaseTool):
@@ -90,7 +94,8 @@ def tool(
                 self, arguments: BaseModel, context: ToolExecutionContextService
             ) -> ToolResult:
                 kwargs = arguments.model_dump()
-                kwargs["context"] = context
+                if accepts_context:
+                    kwargs["context"] = context
                 if is_async:
                     result = await func(**kwargs)
                 else:
