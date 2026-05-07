@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Protocol
 from pydantic import BaseModel, Field
 
 from .registry import get_definition, list_definitions
-from .types import AgentDefinition
+from .model import AgentDefinition
 
 if TYPE_CHECKING:
     from tools import ToolRegistry

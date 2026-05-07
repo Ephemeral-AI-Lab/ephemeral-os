@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from .loader import load_agents_dir, load_agents_tree
-from .registry import (
+from .definition.loader import load_agents_dir, load_agents_tree
+from .definition.registry import (
     get_definition,
     list_dispatchable_subagent_names,
     list_definitions,
@@ -11,13 +11,13 @@ from .registry import (
     unregister_definition,
 )
 from .run_tracker import AgentRunTracker
-from .types import (
+from .definition.model import (
     AgentDefinition,
     AgentSelectionBlock,
     AgentType,
     AgentVariant,
 )
-from .validation import (
+from .definition.validation import (
     AgentDefinitionValidator,
     AgentValidationResult,
     validate_agent_definitions_resolved,

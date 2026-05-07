@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from config.markdown import parse_markdown_frontmatter
 
-from .types import AgentDefinition
+from .model import AgentDefinition
 
 logger = logging.getLogger(__name__)
 
