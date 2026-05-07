@@ -9,6 +9,8 @@ from pathlib import Path, PurePosixPath
 
 from sandbox.layer_stack.changes import normalize_layer_path
 from sandbox.layer_stack.layer_index import (
+    OPAQUE_MARKER,
+    WHITEOUT_PREFIX,
     LayerIndex,
     build_layer_index,
     has_ancestor_in,
@@ -16,8 +18,7 @@ from sandbox.layer_stack.layer_index import (
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 
 
-WHITEOUT_PREFIX = ".wh."
-OPAQUE_MARKER = ".wh..wh..opq"
+__all__ = ["LayerStackStorageError", "MergedView", "OPAQUE_MARKER", "WHITEOUT_PREFIX"]
 
 
 class LayerStackStorageError(RuntimeError):
