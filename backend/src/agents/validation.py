@@ -14,10 +14,6 @@ from .registry import (
 from .types import AgentDefinition
 
 if TYPE_CHECKING:
-    from task_center.agent_launch.predicates import PredicateRegistry as _PR
-    from task_center.context_engine.recipes_registry import (
-        RecipeRegistry as _RR,
-    )
     from tools import ToolRegistry
 
 
@@ -73,11 +69,7 @@ class AgentDefinitionValidator:
         return set(defn.allowed_tools) | set(defn.terminals)
 
 
-def validate_agent_definitions_resolved(
-    *,
-    predicate_registry: type["_PR"] | None = None,
-    recipe_registry: type["_RR"] | None = None,
-) -> None:
+def validate_agent_definitions_resolved() -> None:
     """Cross-check every registered :class:`AgentDefinition`.
 
     Raises :class:`AgentDefinitionValidationError` if any agent references an
@@ -87,59 +79,39 @@ def validate_agent_definitions_resolved(
     Called once at app startup after ``load_agents_tree`` so wiring mistakes
     surface before the first request.
     """
-    from task_center.agent_launch.predicates import (
-        PredicateRegistry as DefaultPredicateRegistry,
-    )
-    from task_center.context_engine.errors import (
-        AgentDefinitionValidationError,
-    )
-    from task_center.context_engine.recipes_registry import (
-        RecipeRegistry as DefaultRecipeRegistry,
-    )
-
-    predicates = predicate_registry or DefaultPredicateRegistry
-    recipes = recipe_registry or DefaultRecipeRegistry
-
     for definition in list_definitions():
-        _validate_definition(
-            definition,
-            predicates=predicates,
-            recipes=recipes,
-            error_cls=AgentDefinitionValidationError,
-        )
+        _validate_definition(definition)
 
 
-def _validate_definition(
-    definition: AgentDefinition,
-    *,
-    predicates: type["_PR"],
-    recipes: type["_RR"],
-    error_cls: type[Exception],
-) -> None:
-    if definition.context_recipe and not recipes.has(definition.context_recipe):
-        raise error_cls(
+def _validate_definition(definition: AgentDefinition) -> None:
+    from task_center.agent_launch.predicates import PredicateRegistry
+    from task_center.context_engine.errors import AgentDefinitionValidationError
+    from task_center.context_engine.recipes_registry import RecipeRegistry
+
+    if definition.context_recipe and not RecipeRegistry.has(definition.context_recipe):
+        raise AgentDefinitionValidationError(
             f"Agent {definition.name!r} declares context_recipe="
             f"{definition.context_recipe!r}, which is not registered."
         )
     for variant in definition.variants:
-        if not predicates.has(variant.when):
-            raise error_cls(
+        if not PredicateRegistry.has(variant.when):
+            raise AgentDefinitionValidationError(
                 f"Agent {definition.name!r} variant references unknown "
                 f"predicate {variant.when!r}."
             )
         target = get_definition(variant.use)
         if target is None:
-            raise error_cls(
+            raise AgentDefinitionValidationError(
                 f"Agent {definition.name!r} variant points to unknown agent "
                 f"{variant.use!r}."
             )
         if target.variants:
-            raise error_cls(
+            raise AgentDefinitionValidationError(
                 f"Agent {definition.name!r} variant target {target.name!r} "
                 "declares its own variants — chaining is forbidden."
             )
-        if target.context_recipe and not recipes.has(target.context_recipe):
-            raise error_cls(
+        if target.context_recipe and not RecipeRegistry.has(target.context_recipe):
+            raise AgentDefinitionValidationError(
                 f"Variant target {target.name!r} declares context_recipe="
                 f"{target.context_recipe!r}, which is not registered."
             )

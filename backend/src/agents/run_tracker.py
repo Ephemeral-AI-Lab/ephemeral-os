@@ -66,7 +66,6 @@ class AgentRunTracker:
         *,
         task_id: str | None,
         agent_name: str,
-        agent_run_id: str | None = None,
     ) -> AgentRunTracker:
         """Create a persisted run row and return a tracker wrapping it.
 
@@ -80,7 +79,7 @@ class AgentRunTracker:
         if store is None:
             return cls(agent_run_id=None, agent_name=agent_name)
 
-        resolved_agent_run_id = agent_run_id or uuid4().hex[:_AUTO_RUN_ID_HEX_LEN]
+        resolved_agent_run_id = uuid4().hex[:_AUTO_RUN_ID_HEX_LEN]
         try:
             store.create_run(
                 agent_run_id=resolved_agent_run_id,
