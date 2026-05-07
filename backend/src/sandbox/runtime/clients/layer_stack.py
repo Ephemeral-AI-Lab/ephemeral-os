@@ -96,9 +96,8 @@ class LayerStackClient:
         *,
         workspace_ref: str = "",
         request_id: str,
-        ttl_seconds: float | None = None,
     ) -> PrepareWorkspaceSnapshotResult:
-        del workspace_ref, ttl_seconds
+        del workspace_ref
         return self.manager.prepare_workspace_snapshot(request_id)
 
     def release_lease(self, *, workspace_ref: str = "", lease_id: str) -> bool:

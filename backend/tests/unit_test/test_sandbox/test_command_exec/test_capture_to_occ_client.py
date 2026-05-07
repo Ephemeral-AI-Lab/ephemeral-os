@@ -43,9 +43,8 @@ class _LayerStackClient:
         *,
         workspace_ref: str,
         request_id: str,
-        ttl_seconds: float | None = None,
     ) -> _Lease:
-        del workspace_ref, request_id, ttl_seconds
+        del workspace_ref, request_id
         return self.lease
 
     def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool:

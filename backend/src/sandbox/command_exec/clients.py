@@ -26,7 +26,6 @@ class WorkspaceLeaseClient(Protocol):
         *,
         workspace_ref: str,
         request_id: str,
-        ttl_seconds: float | None = None,
     ) -> WorkspaceSnapshotLease: ...
 
     def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool: ...

@@ -40,7 +40,6 @@ class PrepareWorkspaceSnapshotResult:
     root_hash: str
     manifest: Manifest
     lowerdir: str
-    materialized_byte_count: int
     timings: dict[str, float]
 
     def to_dict(self) -> dict[str, object]:
@@ -50,7 +49,6 @@ class PrepareWorkspaceSnapshotResult:
             "root_hash": self.root_hash,
             "manifest": self.manifest.to_dict(),
             "lowerdir": self.lowerdir,
-            "materialized_byte_count": self.materialized_byte_count,
             "timings": dict(self.timings),
         }
 
@@ -108,17 +106,14 @@ class LayerStackManager:
             materialize_start = time.perf_counter()
             self._view.materialize(lowerdir, manifest)
             materialize_elapsed = time.perf_counter() - materialize_start
-            byte_count = _byte_count(lowerdir)
             return PrepareWorkspaceSnapshotResult(
                 lease_id=lease.lease_id,
                 manifest_version=manifest.version,
                 root_hash=manifest_root_hash(manifest),
                 manifest=manifest,
                 lowerdir=lowerdir.as_posix(),
-                materialized_byte_count=byte_count,
                 timings={
                     "layer_stack.materialize_s": materialize_elapsed,
-                    "layer_stack.materialize_bytes": float(byte_count),
                     "layer_stack.prepare_workspace_snapshot.total_s": (
                         time.perf_counter() - total_start
                     ),
@@ -323,11 +318,3 @@ def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
 def _safe_request_part(value: str) -> str:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
     return safe[:48] or "request"
-
-
-def _byte_count(path: Path) -> int:
-    total = 0
-    for entry in path.rglob("*"):
-        if entry.is_file() or entry.is_symlink():
-            total += entry.lstat().st_size
-    return total
