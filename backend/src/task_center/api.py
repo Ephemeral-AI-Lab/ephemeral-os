@@ -4,11 +4,38 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.attempt import (
+from task_center.domain import (
+    TERMINAL_GENERATOR_STATUSES,
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    AttemptedPlanEntry,
+    AttemptPlanFailed,
+    ContextBlock,
+    ContextBlockKind,
+    ContextPacket,
+    ContextPriority,
+    ContextRefs,
+    EpisodeClosureReport,
+    SuccessContinue,
+    TerminalSuccess,
+    Episode,
+    EpisodeCreationReason,
+    EpisodeStatus,
+    EvaluatorSubmission,
+    GeneratorSubmission,
+    HarnessTaskRole,
+    HarnessTaskStatus,
+    Mission,
+    MissionCloseReport,
+    MissionStatus,
+    PlannedGeneratorTask,
+    PlannerFailureSubmission,
+    PlannerSubmission,
+    evaluator_task_id,
+    generator_task_id,
+    planner_task_id,
 )
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.errors import (
@@ -17,45 +44,8 @@ from task_center.context_engine.errors import (
     MissingContextRecipeError,
     RecipeScopeError,
 )
-from task_center.context_engine.packet import (
-    ContextBlock,
-    ContextBlockKind,
-    ContextPacket,
-    ContextPriority,
-    ContextRefs,
-)
 from task_center.context_engine.scope import ContextScope
-from task_center.episode.closure_report import (
-    AttemptedPlanEntry,
-    AttemptPlanFailed,
-    EpisodeClosureReport,
-    SuccessContinue,
-    TerminalSuccess,
-)
-from task_center.episode.episode import (
-    Episode,
-    EpisodeCreationReason,
-    EpisodeStatus,
-)
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.mission.mission import (
-    Mission,
-    MissionCloseReport,
-    MissionStatus,
-)
-from task_center.task import (
-    TERMINAL_GENERATOR_STATUSES,
-    EvaluatorSubmission,
-    GeneratorSubmission,
-    HarnessTaskRole,
-    HarnessTaskStatus,
-    PlannedGeneratorTask,
-    PlannerFailureSubmission,
-    PlannerSubmission,
-    evaluator_task_id,
-    generator_task_id,
-    planner_task_id,
-)
 from task_center.agent_launch.predicates import (
     PredicateRegistry,
     ResolverContext,
