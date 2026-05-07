@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import (
     BaseModel,
@@ -11,9 +12,17 @@ from pydantic import (
     field_validator,
 )
 
-from notification.rules import NotificationRule
-
 AgentType = Literal["agent", "subagent"]
+
+
+@runtime_checkable
+class AgentNotificationRule(Protocol):
+    """Runtime notification rule shape consumed by agent definitions."""
+
+    name: str
+    body: Callable[..., str]
+    trigger: Callable[..., bool]
+    fire_once: bool
 
 
 class AgentSelectionBlock(BaseModel):
@@ -99,9 +108,8 @@ class AgentDefinition(BaseModel):
 
     # --- notification rules ---
     # Rules evaluated at the top of every model turn (see
-    # ``notification.rules.dispatch_rules``). Empty list = no notifications.
-    # Built via factories in ``notification.library``.
-    notification_rules: list[NotificationRule] = Field(default_factory=list)
+    # the notification rule engine. Empty list = no notifications.
+    notification_rules: list[AgentNotificationRule] = Field(default_factory=list)
 
     # --- context engine (ContextComposer) ---
     # Recipe id resolved at compose time. Required when the agent is launched

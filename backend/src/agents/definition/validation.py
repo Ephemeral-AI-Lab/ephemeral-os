@@ -76,8 +76,9 @@ def validate_agent_definitions_resolved() -> None:
 
 
 def _validate_definition(definition: AgentDefinition) -> None:
-    from task_center.api import AgentDefinitionValidationError, PredicateRegistry
-    from task_center.api import RecipeRegistry
+    from task_center.agent_launch.predicates import PredicateRegistry
+    from task_center.context_engine.errors import AgentDefinitionValidationError
+    from task_center.context_engine.recipes_registry import RecipeRegistry
 
     if definition.context_recipe and not RecipeRegistry.has(definition.context_recipe):
         raise AgentDefinitionValidationError(
