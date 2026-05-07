@@ -11,9 +11,10 @@ import pytest
 
 from sandbox.api import EditFileResult
 from tools.core.base import ToolExecutionContextService
-from tools.core.safe_execution import run_tool_safely
 import tools.sandbox_toolkit.edit_file as edit_file_module
 from tools.sandbox_toolkit.edit_file import edit_file
+
+from ._helpers import run_tool_safely
 
 
 class _EditApi:

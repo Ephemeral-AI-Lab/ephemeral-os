@@ -8,12 +8,13 @@ from pathlib import Path
 import pytest
 
 from tools.core.base import ToolExecutionContextService
-from tools.core.safe_execution import run_tool_safely
 from tools.sandbox_toolkit._shell_prehooks import (
     destructive_git_command_error,
     destructive_shell_command_error,
 )
 from tools.sandbox_toolkit.shell import shell
+
+from ._helpers import run_tool_safely
 
 
 def _ctx(services=None) -> ToolExecutionContextService:

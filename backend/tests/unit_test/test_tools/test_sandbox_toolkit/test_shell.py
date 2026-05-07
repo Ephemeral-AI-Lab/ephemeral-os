@@ -11,9 +11,10 @@ import pytest
 
 from sandbox.api import ShellResult
 from tools.core.base import ToolExecutionContextService
-from tools.core.safe_execution import run_tool_safely
 import tools.sandbox_toolkit.shell as shell_module
 from tools.sandbox_toolkit.shell import shell
+
+from ._helpers import run_tool_safely
 
 
 class _ShellApi:

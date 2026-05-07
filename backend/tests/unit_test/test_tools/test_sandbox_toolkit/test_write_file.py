@@ -11,9 +11,10 @@ import pytest
 
 from sandbox.api import WriteFileResult
 from tools.core.base import ToolExecutionContextService
-from tools.core.safe_execution import run_tool_safely
 import tools.sandbox_toolkit.write_file as write_file_module
 from tools.sandbox_toolkit.write_file import write_file
+
+from ._helpers import run_tool_safely
 
 
 class _WriteApi:
