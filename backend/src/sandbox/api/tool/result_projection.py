@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.api.utils.models import ConflictInfo
+from sandbox.contracts import ConflictInfo
 from sandbox.occ.changeset.types import (
     FileResult,
     is_published_status,

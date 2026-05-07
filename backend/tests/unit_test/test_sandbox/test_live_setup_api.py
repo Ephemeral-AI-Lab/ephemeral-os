@@ -8,10 +8,10 @@ import pytest
 from config import load_settings
 from sandbox.api import status as sb_status
 from sandbox.api.tool.raw_exec import raw_exec
-from sandbox.host.deploy.bundle import BUNDLE_REMOTE_DIR, bundle_hash
-from sandbox.host.ops.setup import setup_after_create
-from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
-from sandbox.providers.registry import get_default_provider, register_adapter
+from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR, bundle_hash
+from sandbox.host.setup import setup_after_create
+from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+from sandbox.provider.registry import get_default_provider, register_adapter
 
 
 pytestmark = [

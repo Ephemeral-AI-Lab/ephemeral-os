@@ -12,9 +12,9 @@ pytestmark = pytest.mark.asyncio
 
 
 _PUBLISHER_BODY = r"""
-from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.manager import LayerStackManager
 
 label = "layer_stack.publisher"
 before = sample_resource()
@@ -67,8 +67,8 @@ _emit(label, started, before, {
 
 
 _RACE_BODY = r"""
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 
 label = "layer_stack.publisher_under_race"
 before = sample_resource()

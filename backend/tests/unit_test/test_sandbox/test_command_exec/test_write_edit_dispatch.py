@@ -13,22 +13,22 @@ from uuid import uuid4
 
 import pytest
 
-from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon.handlers import (
+from sandbox.layer_stack.workspace.base import build_workspace_base
+from sandbox.runtime.daemon.handler import (
     edit,
     metrics,
     read,
     shell,
     write,
 )
-from sandbox.daemon.handlers._common import (
+from sandbox.runtime.daemon.handler.request_context import (
     ClassifiedPath,
     _services,
     classify_path,
 )
-from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.services import occ_backend
-from sandbox.daemon.services.workspace_server import get_layer_stack_manager
+from sandbox.runtime.daemon.rpc import dispatcher as server
+from sandbox.runtime.daemon.service import occ_backend
+from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
 
 def test_legacy_api_handlers_module_removed() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.daemon.api_handlers")
+        importlib.import_module("sandbox.runtime.daemon.api_handlers")
 
 
 # ---------------------------------------------------------------------------

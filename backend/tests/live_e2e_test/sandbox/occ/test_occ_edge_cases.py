@@ -12,8 +12,8 @@ pytestmark = pytest.mark.asyncio
 
 
 _BODY = r"""
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.service import OccService

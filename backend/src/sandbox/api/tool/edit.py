@@ -9,7 +9,7 @@ from sandbox.api.tool._daemon_client import (
     paths_from_payload,
     timings_from_payload,
 )
-from sandbox.api.utils.models import EditFileRequest, EditFileResult
+from sandbox.contracts import EditFileRequest, EditFileResult
 
 
 async def edit_file(sandbox_id: str, request: EditFileRequest) -> EditFileResult:

@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon.handlers import _common
-from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.rpc import server as daemon
-from sandbox.daemon.services import occ_backend
+from sandbox.runtime.daemon.handler import request_context
+from sandbox.runtime.daemon.rpc import dispatcher as server
+from sandbox.runtime.daemon.rpc import server as daemon
+from sandbox.runtime.daemon.service import occ_backend
 
 
 def _short_socket_path() -> tuple[Path, Path]:
@@ -209,9 +209,9 @@ def test_services_cached_per_layer_stack_root(
         ),
     )
 
-    a1 = _common._services("/tmp/a")
-    a2 = _common._services("/tmp/a")
-    b1 = _common._services("/tmp/b")
+    a1 = request_context._services("/tmp/a")
+    a2 = request_context._services("/tmp/a")
+    b1 = request_context._services("/tmp/b")
 
     assert a1 is a2  # same root → cached tuple
     assert a1.manager is not b1.manager  # different roots → distinct managers

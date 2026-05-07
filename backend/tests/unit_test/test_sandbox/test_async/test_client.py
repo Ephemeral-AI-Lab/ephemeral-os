@@ -18,7 +18,7 @@ class TestGetAsyncSandbox:
         mock_sandbox = MagicMock()
         mock_client.get = AsyncMock(return_value=mock_sandbox)
 
-        import sandbox.providers.daytona.client.async_ as mod
+        import sandbox.provider.daytona.client.async_client as mod
 
         loop = asyncio.get_running_loop()
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
@@ -39,7 +39,7 @@ class TestGetAsyncSandbox:
         mock_client = MagicMock()
         mock_client.get = AsyncMock(return_value=None)
 
-        import sandbox.providers.daytona.client.async_ as mod
+        import sandbox.provider.daytona.client.async_client as mod
 
         loop = asyncio.get_running_loop()
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
@@ -59,7 +59,7 @@ class TestGetAsyncSandbox:
         mock_client = MagicMock()
         mock_client.get = AsyncMock(side_effect=[None, recovered])
 
-        import sandbox.providers.daytona.client.async_ as mod
+        import sandbox.provider.daytona.client.async_client as mod
 
         loop = asyncio.get_running_loop()
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))

@@ -17,10 +17,10 @@ _TOOL_ALLOWED = {
 }
 _TOOL_FORBIDDEN_PREFIXES = (
     "sandbox.api.tool.raw_exec",
-    "sandbox.providers",
+    "sandbox.provider",
     "sandbox.occ",
     "sandbox.overlay",
-    "sandbox.daemon",
+    "sandbox.runtime.daemon",
     "sandbox.daytona",
     "sandbox.code_intelligence",
 )
@@ -47,15 +47,16 @@ def test_agent_sandbox_tools_import_only_public_api_verbs() -> None:
     assert offenders == []
 
 
-def test_non_api_production_code_does_not_import_private_api_utils() -> None:
+def test_non_api_production_code_does_not_import_removed_api_utils() -> None:
     offenders: list[str] = []
     api_root = SRC_ROOT / "sandbox" / "api"
+    removed_api_utils = "sandbox.api" + ".utils"
     for module in _python_files(SRC_ROOT):
         if module.is_relative_to(api_root):
             continue
         for imported in _imports(module):
-            if imported == "sandbox.api.utils" or imported.startswith(
-                "sandbox.api.utils."
+            if imported == removed_api_utils or imported.startswith(
+                f"{removed_api_utils}."
             ):
                 offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
 
@@ -64,11 +65,11 @@ def test_non_api_production_code_does_not_import_private_api_utils() -> None:
 
 def test_daemon_code_does_not_import_daytona_provider_modules() -> None:
     offenders: list[str] = []
-    daemon_root = SRC_ROOT / "sandbox" / "daemon"
+    daemon_root = SRC_ROOT / "sandbox" / "runtime" / "daemon"
     for module in _python_files(daemon_root):
         for imported in _imports(module):
-            if imported == "sandbox.providers.daytona" or imported.startswith(
-                "sandbox.providers.daytona."
+            if imported == "sandbox.provider.daytona" or imported.startswith(
+                "sandbox.provider.daytona."
             ):
                 offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
 
@@ -80,7 +81,7 @@ def test_daemon_code_does_not_import_daytona_provider_modules() -> None:
 # ---------------------------------------------------------------------------
 
 
-# Allowlisted importer of sandbox.providers.daytona.* outside the daytona
+# Allowlisted importer of sandbox.provider.daytona.* outside the daytona
 # package itself: the single startup bootstrap call.
 _DAYTONA_IMPORT_ALLOWLIST = {
     Path("server/app_factory.py"),
@@ -90,7 +91,7 @@ _DAYTONA_IMPORT_ALLOWLIST = {
 def test_no_daytona_imports_outside_provider_package_or_bootstrap() -> None:
     """Daytona is exposed only through the adapter — the provider-agnostic seam."""
     offenders: list[str] = []
-    daytona_root = SRC_ROOT / "sandbox" / "providers" / "daytona"
+    daytona_root = SRC_ROOT / "sandbox" / "provider" / "daytona"
     for module in _python_files(SRC_ROOT):
         rel = module.relative_to(SRC_ROOT)
         if module.is_relative_to(daytona_root):
@@ -98,22 +99,25 @@ def test_no_daytona_imports_outside_provider_package_or_bootstrap() -> None:
         if rel in _DAYTONA_IMPORT_ALLOWLIST:
             continue
         for imported in _imports(module):
-            if imported == "sandbox.providers.daytona" or imported.startswith(
-                "sandbox.providers.daytona."
+            if imported == "sandbox.provider.daytona" or imported.startswith(
+                "sandbox.provider.daytona."
             ):
                 offenders.append(f"{rel} imports {imported}")
 
     assert offenders == [], (
-        "Modules must not import sandbox.providers.daytona.* outside the "
+        "Modules must not import sandbox.provider.daytona.* outside the "
         f"daytona package: {offenders}"
     )
 
 
 def test_host_daemon_api_do_not_import_daytona_sdk() -> None:
-    """host/, daemon/, api/ stay free of any direct daytona_sdk usage."""
+    """host/, runtime/daemon/, api/ stay free of direct daytona_sdk usage."""
     offenders: list[str] = []
-    for sub in ("host", "daemon", "api"):
-        root = SRC_ROOT / "sandbox" / sub
+    for root in (
+        SRC_ROOT / "sandbox" / "host",
+        SRC_ROOT / "sandbox" / "runtime" / "daemon",
+        SRC_ROOT / "sandbox" / "api",
+    ):
         for module in _python_files(root):
             for imported in _imports(module):
                 if imported == "daytona_sdk" or imported.startswith("daytona_sdk."):
@@ -122,19 +126,19 @@ def test_host_daemon_api_do_not_import_daytona_sdk() -> None:
                     )
 
     assert offenders == [], (
-        "host/, daemon/, api/ must not import any daytona SDK module: "
+        "host/, runtime/daemon/, api/ must not import any daytona SDK module: "
         f"{offenders}"
     )
 
 
 def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
-    """The locked seam: host/, daemon/, and api/status are
-    provider-neutral — none of them imports sandbox.providers.daytona.*."""
+    """The locked seam: host/, runtime/daemon/, and api/status are
+    provider-neutral — none of them imports sandbox.provider.daytona.*."""
     offenders: list[str] = []
     for path in (
         SRC_ROOT / "sandbox" / "host",
-        SRC_ROOT / "sandbox" / "daemon",
-        SRC_ROOT / "sandbox" / "api" / "status",
+        SRC_ROOT / "sandbox" / "runtime" / "daemon",
+        SRC_ROOT / "sandbox" / "api" / "status.py",
     ):
         if path.is_file():
             modules = [path]
@@ -142,16 +146,16 @@ def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
             modules = _python_files(path)
         for module in modules:
             for imported in _imports(module):
-                if imported == "sandbox.providers.daytona" or imported.startswith(
-                    "sandbox.providers.daytona."
+                if imported == "sandbox.provider.daytona" or imported.startswith(
+                    "sandbox.provider.daytona."
                 ):
                     offenders.append(
                         f"{module.relative_to(SRC_ROOT)} imports {imported}"
                     )
 
     assert offenders == [], (
-        "host/, daemon/, and api/status must not import "
-        f"sandbox.providers.daytona.*: {offenders}"
+        "host/, runtime/daemon/, and api/status must not import "
+        f"sandbox.provider.daytona.*: {offenders}"
     )
 
 
@@ -163,11 +167,11 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         occ_root / "ports.py",
     }
     forbidden = (
-        "sandbox.layer_stack.stack_manager",
-        "sandbox.layer_stack.merged_view",
-        "sandbox.layer_stack.publisher",
-        "sandbox.layer_stack.lease_registry",
-        "sandbox.daemon.services.workspace_server",
+        "sandbox.layer_stack.manager",
+        "sandbox.layer_stack.view.merged",
+        "sandbox.layer_stack.layer.publisher",
+        "sandbox.layer_stack.lease.registry",
+        "sandbox.runtime.daemon.service.workspace_server",
     )
     for module in _python_files(occ_root):
         if module in allowed:
@@ -186,7 +190,7 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
     forbidden = (
         "sandbox.occ",
         "sandbox.command_exec",
-        "sandbox.daemon.services.workspace_binding",
+        "sandbox.runtime.daemon.service.workspace_binding",
         "pathspec",
     )
     for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):
@@ -220,11 +224,11 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.service",
         "sandbox.occ.commit_transaction",
         "sandbox.occ.content.gitignore_oracle",
-        "sandbox.occ.direct",
-        "sandbox.occ.gated",
-        "sandbox.occ.orchestrator",
-        "sandbox.occ.runtime_ops",
-        "sandbox.daemon.services.workspace_server",
+        "sandbox.occ.merge.direct",
+        "sandbox.occ.merge.gated",
+        "sandbox.occ.routing.orchestrator",
+        "sandbox.occ.routing.runtime_ops",
+        "sandbox.runtime.daemon.service.workspace_server",
     )
     for module in _python_files(command_exec_root):
         for imported in _imports(module):

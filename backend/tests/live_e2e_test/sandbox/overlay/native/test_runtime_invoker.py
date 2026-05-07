@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _BODY = r"""
 import subprocess
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.overlay.capture.types import read_output_ref
 from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
 from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest

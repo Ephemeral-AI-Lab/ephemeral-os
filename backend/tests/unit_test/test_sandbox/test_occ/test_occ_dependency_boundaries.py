@@ -23,25 +23,24 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     phase03_files = [
         occ_root / "service.py",
-        occ_root / "runtime_ops.py",
+        occ_root / "routing" / "runtime_ops.py",
+        occ_root / "routing" / "single_path.py",
         occ_root / "changeset" / "builders.py",
         occ_root / "changeset" / "prepared.py",
         occ_root / "changeset" / "types.py",
-        occ_root / "orchestrator.py",
+        occ_root / "routing" / "orchestrator.py",
         occ_root / "content" / "gitignore_oracle.py",
         occ_root / "content" / "hashing.py",
-        occ_root / "content" / "layer_backed_content.py",
-        occ_root / "direct" / "merge.py",
-        occ_root / "gated" / "merge.py",
+        occ_root / "content" / "layer_backed.py",
+        occ_root / "merge" / "direct.py",
+        occ_root / "merge" / "gated.py",
         occ_root / "commit_transaction.py",
     ]
 
     forbidden = {
         "sandbox.overlay",
-        "sandbox.occ.direct.direct_merge_coordinator",
-        "sandbox.occ.gated.gated_coordinator",
-        "sandbox.occ.merge",
-        "sandbox.occ.routing",
+        "sandbox.occ.merge.direct.direct_merge_coordinator",
+        "sandbox.occ.merge.gated.gated_coordinator",
     }
     hits: list[tuple[str, str]] = []
     for path in phase03_files:
@@ -54,15 +53,16 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
 
 def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "overlay_capture.py")
+    imports = _imports(occ_root / "capture" / "overlay.py")
 
     assert "sandbox.overlay.capture.changes" in imports
     assert "sandbox.overlay.capture.types" in imports
     assert "sandbox.occ.changeset.builders" in imports
 
 
-def test_overlay_capture_apply_is_the_only_bridge_to_occ_service() -> None:
+def test_overlay_capture_conversion_does_not_import_occ_service() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "overlay_capture.py")
+    imports = _imports(occ_root / "capture" / "overlay.py")
 
-    assert "sandbox.occ.service" in imports
+    assert "sandbox.occ.service" not in imports
+    assert not (occ_root / "overlay_capture.py").exists()

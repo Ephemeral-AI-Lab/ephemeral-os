@@ -31,7 +31,7 @@ from sandbox.api.tool import shell as shell_mod
 from sandbox.api.tool import write as write_mod
 from sandbox.api.tool._daemon_client import DEFAULT_LAYER_STACK_ROOT
 from sandbox.api.tool.raw_exec import raw_exec as raw_exec_fn
-from sandbox.api.utils.models import (
+from sandbox.contracts import (
     EditFileRequest,
     EditFileResult,
     RawExecResult,
@@ -44,9 +44,9 @@ from sandbox.api.utils.models import (
     WriteFileRequest,
     WriteFileResult,
 )
-from sandbox.host.ops.setup import setup_after_create
-from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
-from sandbox.providers.registry import get_default_provider, register_adapter
+from sandbox.host.setup import setup_after_create
+from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+from sandbox.provider.registry import get_default_provider, register_adapter
 
 from .native_probe import (
     BUNDLE_HASH_MARKER,

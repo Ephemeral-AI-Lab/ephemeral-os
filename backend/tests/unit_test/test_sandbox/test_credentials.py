@@ -9,11 +9,11 @@ class TestLoadCredentials:
         monkeypatch.setenv("DAYTONA_API_URL", "https://url-from-env")
         monkeypatch.setenv("DAYTONA_TARGET", "target-from-env")
         monkeypatch.setattr(
-            "sandbox.providers.daytona.client.credentials._load_dotenv_values",
+            "sandbox.provider.daytona.client.credentials._load_dotenv_values",
             lambda: {},
         )
 
-        from sandbox.providers.daytona.client.credentials import load_credentials
+        from sandbox.provider.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "key-from-env"
@@ -24,14 +24,14 @@ class TestLoadCredentials:
         monkeypatch.setenv("DAYTONA_API_KEY", "env-key")
         monkeypatch.setenv("DAYTONA_API_URL", "https://env-url")
         monkeypatch.setattr(
-            "sandbox.providers.daytona.client.credentials._load_dotenv_values",
+            "sandbox.provider.daytona.client.credentials._load_dotenv_values",
             lambda: {
                 "DAYTONA_API_KEY": "dotenv-key",
                 "DAYTONA_API_URL": "https://dotenv-url",
             },
         )
 
-        from sandbox.providers.daytona.client.credentials import load_credentials
+        from sandbox.provider.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "env-key"
@@ -42,7 +42,7 @@ class TestLoadCredentials:
         monkeypatch.delenv("DAYTONA_API_URL", raising=False)
         monkeypatch.delenv("DAYTONA_TARGET", raising=False)
         monkeypatch.setattr(
-            "sandbox.providers.daytona.client.credentials._load_dotenv_values",
+            "sandbox.provider.daytona.client.credentials._load_dotenv_values",
             lambda: {
                 "DAYTONA_API_KEY": "dotenv-key",
                 "DAYTONA_API_URL": "https://dotenv-url",
@@ -50,7 +50,7 @@ class TestLoadCredentials:
             },
         )
 
-        from sandbox.providers.daytona.client.credentials import load_credentials
+        from sandbox.provider.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == "dotenv-key"
@@ -62,11 +62,11 @@ class TestLoadCredentials:
         monkeypatch.delenv("DAYTONA_API_URL", raising=False)
         monkeypatch.delenv("DAYTONA_TARGET", raising=False)
         monkeypatch.setattr(
-            "sandbox.providers.daytona.client.credentials._load_dotenv_values",
+            "sandbox.provider.daytona.client.credentials._load_dotenv_values",
             lambda: {},
         )
 
-        from sandbox.providers.daytona.client.credentials import load_credentials
+        from sandbox.provider.daytona.client.credentials import load_credentials
 
         key, url, target = load_credentials()
         assert key == ""
@@ -75,10 +75,10 @@ class TestLoadCredentials:
 
     def test_has_credentials(self, monkeypatch):
         monkeypatch.setattr(
-            "sandbox.providers.daytona.client.credentials.load_credentials",
+            "sandbox.provider.daytona.client.credentials.load_credentials",
             lambda: ("key", "url", ""),
         )
 
-        from sandbox.providers.daytona.client.credentials import has_credentials
+        from sandbox.provider.daytona.client.credentials import has_credentials
 
         assert has_credentials() is True

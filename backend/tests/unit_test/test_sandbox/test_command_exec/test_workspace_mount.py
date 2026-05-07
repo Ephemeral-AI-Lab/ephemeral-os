@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.command_exec.workspace_mount as workspace_mount
-from sandbox.command_exec.capture.upperdir import capture_workspace_upperdir
-from sandbox.command_exec.request import CommandExecRequest
-from sandbox.command_exec.workspace_mount import WorkspaceReplacementMountSpec
+import sandbox.command_exec.workspace.mount as workspace_mount
+from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
+from sandbox.command_exec.contract.request import CommandExecRequest
+from sandbox.command_exec.workspace.mount import WorkspaceReplacementMountSpec
 from sandbox.layer_stack.manifest import Manifest
 
 

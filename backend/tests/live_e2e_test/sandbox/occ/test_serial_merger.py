@@ -15,7 +15,7 @@ _SERIAL_MERGER_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.serial_merger import OccSerialMerger
+from sandbox.occ.merge.serial import OccSerialMerger
 
 class _RecordingTransaction:
     def __init__(self):
@@ -68,7 +68,7 @@ _RACE_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.serial_merger import OccSerialMerger
+from sandbox.occ.merge.serial import OccSerialMerger
 
 class _RecordingTransaction:
     def __init__(self):

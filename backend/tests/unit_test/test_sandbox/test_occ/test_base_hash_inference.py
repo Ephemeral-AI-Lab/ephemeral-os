@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.runtime_ops import content_hash_bytes
+from sandbox.occ.routing.runtime_ops import content_hash_bytes
 from sandbox.occ.service import OccService
 
 

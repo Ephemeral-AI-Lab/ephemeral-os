@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.host.rpc import client as command
+from sandbox.host import daemon_client as command
 
 
 def _ok_response() -> str:
@@ -109,7 +109,7 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
     assert response == {"success": True, "timings": {}}
     assert len(seen) == 4
     assert "AF_UNIX" in seen[0]
-    assert "sandbox.daemon" in seen[1]
+    assert "sandbox.runtime.daemon" in seen[1]
     assert "api.runtime.ready" in seen[2]
     assert "AF_UNIX" in seen[3]
 
@@ -224,4 +224,4 @@ async def test_daemon_spawn_failure_fails_closed() -> None:
     assert exc.value.kind == "RuntimeExecFailed"
     assert len(seen) == 2
     assert "AF_UNIX" in seen[0]
-    assert "sandbox.daemon" in seen[1]
+    assert "sandbox.runtime.daemon" in seen[1]

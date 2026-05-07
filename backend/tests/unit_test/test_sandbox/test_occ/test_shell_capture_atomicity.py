@@ -12,11 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.command_exec.result import ShellProcessResult
-from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.command_exec.contract.result import ShellProcessResult
+from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.occ.client import OCCClient
-from sandbox.daemon.handlers import shell
-from sandbox.daemon.services import occ_backend, shell_runner
+from sandbox.runtime.daemon.handler import shell
+from sandbox.runtime.daemon.service import occ_backend, shell_runner
 
 
 @pytest.mark.asyncio

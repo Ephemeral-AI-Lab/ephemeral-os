@@ -12,7 +12,7 @@ from sandbox.api import RawExecResult
 
 @pytest.fixture(autouse=True)
 def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
-    from sandbox.providers import registry as reg
+    from sandbox.provider import registry as reg
 
     monkeypatch.setattr(reg, "_ADAPTERS", {}, raising=False)
     monkeypatch.setattr(reg, "_DEFAULT", None, raising=False)
@@ -22,8 +22,8 @@ def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_recovery_probe_success_skips_restart_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.host.ops import recovery
-    from sandbox.providers.registry import register_adapter
+    from sandbox.host import recovery
+    from sandbox.provider.registry import register_adapter
 
     adapter = MagicMock()
     adapter.get.return_value = {"id": "sb-1", "project_dir": "/testbed"}
@@ -48,8 +48,8 @@ def test_recovery_probe_success_skips_restart_setup(
 def test_recovery_restart_uses_canonical_setup_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.host.ops import recovery
-    from sandbox.providers.registry import register_adapter
+    from sandbox.host import recovery
+    from sandbox.provider.registry import register_adapter
 
     adapter = MagicMock()
     adapter.get.return_value = {"id": "sb-1", "project_dir": "/testbed"}

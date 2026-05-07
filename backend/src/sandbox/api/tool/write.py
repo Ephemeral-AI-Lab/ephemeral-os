@@ -8,7 +8,7 @@ from sandbox.api.tool._daemon_client import (
     paths_from_payload,
     timings_from_payload,
 )
-from sandbox.api.utils.models import WriteFileRequest, WriteFileResult
+from sandbox.contracts import WriteFileRequest, WriteFileResult
 
 
 async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileResult:

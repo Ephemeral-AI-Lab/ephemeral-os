@@ -14,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 _ROUTING_BODY = r"""
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import OpaqueDirChange, SymlinkChange, WriteChange
-from sandbox.occ.orchestrator import OccOrchestrator
+from sandbox.occ.routing.orchestrator import OccOrchestrator
 
 class _Gitignore:
     def __init__(self):

@@ -6,16 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.layer_stack.workspace import (
+from sandbox.layer_stack.workspace.base import build_workspace_base
+from sandbox.layer_stack.workspace.binding import (
     WorkspaceBinding,
     WorkspaceBindingError,
     require_workspace_binding,
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.daemon.services import occ_backend
-from sandbox.daemon.handlers import read
+from sandbox.runtime.daemon.service import occ_backend
+from sandbox.runtime.daemon.handler import read
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:

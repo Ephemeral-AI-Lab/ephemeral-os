@@ -17,7 +17,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
-    from sandbox.providers import registry as reg
+    from sandbox.provider import registry as reg
 
     monkeypatch.setattr(reg, "_ADAPTERS", {}, raising=False)
     monkeypatch.setattr(reg, "_DEFAULT", None, raising=False)
@@ -55,7 +55,7 @@ def test_create_registers_per_id_adapter_and_runs_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import get_adapter, set_default_provider
+    from sandbox.provider.registry import get_adapter, set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -77,7 +77,7 @@ def test_create_registers_per_id_adapter_and_runs_setup(
 
 def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import register_adapter
+    from sandbox.provider.registry import register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
@@ -98,7 +98,7 @@ def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_delete_disposes_adapter() -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import get_adapter, register_adapter
+    from sandbox.provider.registry import get_adapter, register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
@@ -112,7 +112,7 @@ def test_delete_disposes_adapter() -> None:
 
 def test_read_helpers_route_through_registry(monkeypatch: pytest.MonkeyPatch) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import register_adapter, set_default_provider
+    from sandbox.provider.registry import register_adapter, set_default_provider
 
     default = _stub_provider()
     set_default_provider(default)
@@ -136,7 +136,7 @@ def test_read_helpers_route_through_registry(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_instance_scoped_helpers_fall_back_to_default_provider() -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import get_adapter, set_default_provider
+    from sandbox.provider.registry import get_adapter, set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -148,7 +148,7 @@ def test_instance_scoped_helpers_fall_back_to_default_provider() -> None:
 
 def test_set_sandbox_labels_routes_through_provider() -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import register_adapter
+    from sandbox.provider.registry import register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
@@ -178,8 +178,8 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     running ``git ...`` on a minimal-image sandbox).
     """
     from sandbox.api import status as sb_status
-    from sandbox.host.ops import setup as setup_mod
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.host import setup as setup_mod
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -223,8 +223,8 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 ) -> None:
     """Same regression guard for the start path."""
     from sandbox.api import status as sb_status
-    from sandbox.host.ops import setup as setup_mod
-    from sandbox.providers.registry import register_adapter
+    from sandbox.host import setup as setup_mod
+    from sandbox.provider.registry import register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
@@ -267,7 +267,7 @@ def test_create_sandbox_uses_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -292,7 +292,7 @@ def test_create_sandbox_explicit_image_overrides_configured_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -313,7 +313,7 @@ def test_create_sandbox_snapshot_skips_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -335,7 +335,7 @@ def test_create_sandbox_uses_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -360,7 +360,7 @@ def test_create_sandbox_explicit_image_overrides_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
@@ -383,7 +383,7 @@ def test_configured_default_snapshot_takes_precedence_over_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     settings_path = tmp_path / "settings.json"
     settings_path.write_text(
@@ -419,7 +419,7 @@ def test_health_reports_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     provider.get_health.return_value = {"available": True, "default_image": None}
@@ -441,7 +441,7 @@ def test_health_reports_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from sandbox.api import status as sb_status
-    from sandbox.providers.registry import set_default_provider
+    from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     provider.get_health.return_value = {

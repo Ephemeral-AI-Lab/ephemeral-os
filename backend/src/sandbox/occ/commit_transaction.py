@@ -10,7 +10,7 @@ from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
 
-from sandbox.layer_stack.changes import LayerChange, LayerDelta
+from sandbox.layer_stack.layer.change import LayerChange, LayerDelta
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import (
     PreparedChangeset,
@@ -22,9 +22,9 @@ from sandbox.occ.changeset.types import (
     FileResult,
     FileStatus,
 )
-from sandbox.occ.direct.merge import DirectMerge
+from sandbox.occ.merge.direct import DirectMerge
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.gated.merge import GatedMerge
+from sandbox.occ.merge.gated import GatedMerge
 from sandbox.occ.ports import (
     CommitPublisher,
     CommitStagingStore,

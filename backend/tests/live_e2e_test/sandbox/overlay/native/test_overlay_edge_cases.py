@@ -14,8 +14,8 @@ pytestmark = pytest.mark.asyncio
 _BODY = r"""
 import errno
 from unittest import mock
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.overlay.namespace.mounts import mount_snapshot
 import sandbox.overlay.namespace.mounts as mount_mod
 

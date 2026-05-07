@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from sandbox.api.utils.models import ConflictInfo
-from sandbox.host.deploy.bundle import BUNDLE_REMOTE_DIR
-from sandbox.host.rpc.client import _call_daemon
-from sandbox.providers.registry import get_adapter
+from sandbox.contracts import ConflictInfo
+from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR
+from sandbox.host.daemon_client import _call_daemon
+from sandbox.provider.registry import get_adapter
 
 DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
 

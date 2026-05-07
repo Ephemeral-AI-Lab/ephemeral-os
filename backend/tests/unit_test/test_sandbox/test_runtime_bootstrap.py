@@ -10,7 +10,7 @@ import pytest
 
 
 def test_bootstrap_helper_uploads_by_sandbox_id() -> None:
-    from sandbox.host.ops.setup import bootstrap_in_sandbox_runtime
+    from sandbox.host.setup import bootstrap_in_sandbox_runtime
 
     calls: list[str] = []
 
@@ -18,7 +18,7 @@ def test_bootstrap_helper_uploads_by_sandbox_id() -> None:
         calls.append(sandbox_id)
         return "deadbeef"
 
-    with patch("sandbox.host.deploy.bundle.ensure_runtime_uploaded", new=fake_upload):
+    with patch("sandbox.host.runtime_bundle.ensure_runtime_uploaded", new=fake_upload):
         asyncio.run(
             bootstrap_in_sandbox_runtime(
                 sandbox_id="sb-1",
@@ -29,7 +29,7 @@ def test_bootstrap_helper_uploads_by_sandbox_id() -> None:
 
 
 def test_bootstrap_helper_noop_when_sandbox_id_empty() -> None:
-    from sandbox.host.ops.setup import bootstrap_in_sandbox_runtime
+    from sandbox.host.setup import bootstrap_in_sandbox_runtime
 
     asyncio.run(
         bootstrap_in_sandbox_runtime(
@@ -39,13 +39,13 @@ def test_bootstrap_helper_noop_when_sandbox_id_empty() -> None:
 
 
 def test_bootstrap_helper_raises_on_runtime_upload_failure() -> None:
-    from sandbox.host.ops.setup import bootstrap_in_sandbox_runtime
+    from sandbox.host.setup import bootstrap_in_sandbox_runtime
 
     async def fail_upload(*_: Any, **__: Any) -> str:
         raise RuntimeError("runtime unavailable")
 
     with patch(
-        "sandbox.host.deploy.bundle.ensure_runtime_uploaded",
+        "sandbox.host.runtime_bundle.ensure_runtime_uploaded",
         new=fail_upload,
     ), pytest.raises(RuntimeError, match="runtime unavailable"):
         asyncio.run(
@@ -56,7 +56,7 @@ def test_bootstrap_helper_raises_on_runtime_upload_failure() -> None:
 
 
 def test_run_runtime_bootstrap_skips_when_workspace_unresolvable() -> None:
-    from sandbox.host.ops.setup import run_runtime_bootstrap
+    from sandbox.host.setup import run_runtime_bootstrap
 
     sentinel_called = {"called": False}
 
@@ -64,7 +64,7 @@ def test_run_runtime_bootstrap_skips_when_workspace_unresolvable() -> None:
         sentinel_called["called"] = True
 
     with patch(
-        "sandbox.host.ops.setup.bootstrap_in_sandbox_runtime",
+        "sandbox.host.setup.bootstrap_in_sandbox_runtime",
         new=boom,
     ):
         run_runtime_bootstrap("sb-1", None)
@@ -72,7 +72,7 @@ def test_run_runtime_bootstrap_skips_when_workspace_unresolvable() -> None:
 
 
 def test_run_runtime_bootstrap_invokes_helper() -> None:
-    from sandbox.host.ops.setup import run_runtime_bootstrap
+    from sandbox.host.setup import run_runtime_bootstrap
 
     calls: list[dict[str, Any]] = []
 
@@ -84,7 +84,7 @@ def test_run_runtime_bootstrap_invokes_helper() -> None:
         )
 
     with patch(
-        "sandbox.host.ops.setup.bootstrap_in_sandbox_runtime",
+        "sandbox.host.setup.bootstrap_in_sandbox_runtime",
         new=fake_helper,
     ):
         run_runtime_bootstrap("sb-1", "/ws")
@@ -93,20 +93,20 @@ def test_run_runtime_bootstrap_invokes_helper() -> None:
 
 
 def test_run_runtime_bootstrap_propagates_runtime_upload_error() -> None:
-    from sandbox.host.ops.setup import run_runtime_bootstrap
+    from sandbox.host.setup import run_runtime_bootstrap
 
     async def fake_helper(*_: Any, **__: Any) -> None:
         raise RuntimeError("runtime crashed")
 
     with patch(
-        "sandbox.host.ops.setup.bootstrap_in_sandbox_runtime",
+        "sandbox.host.setup.bootstrap_in_sandbox_runtime",
         new=fake_helper,
     ), pytest.raises(RuntimeError, match="runtime crashed"):
         run_runtime_bootstrap("sb-1", "/ws")
 
 
 def test_ensure_workspace_base_skips_when_workspace_missing() -> None:
-    from sandbox.host.ops.setup import ensure_workspace_base
+    from sandbox.host.setup import ensure_workspace_base
 
     with patch("sandbox.api.tool._daemon_client.call_daemon_api") as call:
         ensure_workspace_base("sb-1", None)
@@ -115,7 +115,7 @@ def test_ensure_workspace_base_skips_when_workspace_missing() -> None:
 
 
 def test_ensure_workspace_base_invokes_runtime_op() -> None:
-    from sandbox.host.ops.setup import ensure_workspace_base
+    from sandbox.host.setup import ensure_workspace_base
 
     calls: list[dict[str, Any]] = []
 
@@ -170,7 +170,7 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
 
 
 def test_start_upload_returns_none_when_workspace_missing() -> None:
-    from sandbox.host.ops.setup import start_runtime_bundle_upload
+    from sandbox.host.setup import start_runtime_bundle_upload
 
     assert start_runtime_bundle_upload("sb-1", None) is None
 
@@ -179,7 +179,7 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
     """Future resolves successfully when the background upload completes."""
     import threading
 
-    from sandbox.host.ops.setup import (
+    from sandbox.host.setup import (
         finish_runtime_bundle_upload,
         start_runtime_bundle_upload,
     )
@@ -194,7 +194,7 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
         helper_done.set()
 
     with patch(
-        "sandbox.host.ops.setup.bootstrap_in_sandbox_runtime",
+        "sandbox.host.setup.bootstrap_in_sandbox_runtime",
         new=fake_helper,
     ):
         future = start_runtime_bundle_upload("sb-1", "/ws")
@@ -207,7 +207,7 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
 
 def test_finish_upload_swallows_helper_failure() -> None:
     """Background failure must not propagate because sequential bootstrap retries."""
-    from sandbox.host.ops.setup import (
+    from sandbox.host.setup import (
         finish_runtime_bundle_upload,
         start_runtime_bundle_upload,
     )
@@ -216,7 +216,7 @@ def test_finish_upload_swallows_helper_failure() -> None:
         raise RuntimeError("upload exploded")
 
     with patch(
-        "sandbox.host.ops.setup.bootstrap_in_sandbox_runtime",
+        "sandbox.host.setup.bootstrap_in_sandbox_runtime",
         new=boom,
     ):
         future = start_runtime_bundle_upload("sb-1", "/ws")
@@ -225,6 +225,6 @@ def test_finish_upload_swallows_helper_failure() -> None:
 
 
 def test_finish_upload_noop_when_future_none() -> None:
-    from sandbox.host.ops.setup import finish_runtime_bundle_upload
+    from sandbox.host.setup import finish_runtime_bundle_upload
 
     finish_runtime_bundle_upload(None, "sb-1")

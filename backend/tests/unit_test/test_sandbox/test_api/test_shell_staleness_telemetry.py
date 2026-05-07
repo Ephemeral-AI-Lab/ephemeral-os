@@ -11,15 +11,15 @@ from uuid import uuid4
 import pytest
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
-from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus
-from sandbox.command_exec.result import ShellProcessResult
-from sandbox.daemon.handlers import shell
-from sandbox.daemon.services import occ_backend, shell_runner
-from sandbox.daemon.handlers._common import _services
+from sandbox.command_exec.contract.result import ShellProcessResult
+from sandbox.runtime.daemon.handler import shell
+from sandbox.runtime.daemon.service import occ_backend, shell_runner
+from sandbox.runtime.daemon.handler.request_context import _services
 
 
 class _BlockingCommandRunner:

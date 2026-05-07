@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon.handlers import health
-from sandbox.daemon.services import occ_backend, workspace_server
+from sandbox.layer_stack.workspace.base import build_workspace_base
+from sandbox.runtime.daemon.handler import health
+from sandbox.runtime.daemon.service import occ_backend, workspace_server
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +75,7 @@ def test_daemon_ready_reports_data_plane_failure(
     def fail_services(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic data-plane failure")
 
-    monkeypatch.setattr(health._common, "_services", fail_services)
+    monkeypatch.setattr(health.request_context, "_services", fail_services)
 
     response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
@@ -104,7 +104,7 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health._common, "_services", incomplete_services)
+    monkeypatch.setattr(health.request_context, "_services", incomplete_services)
     monkeypatch.setattr(
         health.shell_runner,
         "_services",
@@ -144,7 +144,7 @@ def test_daemon_ready_reports_mutation_gate_failure(
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
-    monkeypatch.setattr(health._common, "_services", fake_services)
+    monkeypatch.setattr(health.request_context, "_services", fake_services)
     monkeypatch.setattr(
         health.shell_runner,
         "_services",
@@ -181,7 +181,7 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health._common, "_services", fake_services)
+    monkeypatch.setattr(health.request_context, "_services", fake_services)
     monkeypatch.setattr(
         health.shell_runner,
         "_services",

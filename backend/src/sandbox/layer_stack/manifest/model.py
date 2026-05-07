@@ -1,0 +1,77 @@
+"""Manifest contracts for the append-only sandbox layer stack."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass
+from typing import Mapping
+
+
+class ManifestConflictError(RuntimeError):
+    """Raised when an active-manifest compare-and-swap check fails."""
+
+
+@dataclass(frozen=True, order=True)
+class LayerRef:
+    layer_id: str
+    path: str
+
+    def __post_init__(self) -> None:
+        if not self.layer_id:
+            raise ValueError("layer_id must not be empty")
+        if not self.path:
+            raise ValueError("layer path must not be empty")
+
+    def to_dict(self) -> dict[str, str]:
+        return {"layer_id": self.layer_id, "path": self.path}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> "LayerRef":
+        layer_id = str(payload["layer_id"])
+        path = str(payload["path"])
+        return cls(layer_id=layer_id, path=path)
+
+
+@dataclass(frozen=True)
+class Manifest:
+    version: int
+    layers: tuple[LayerRef, ...]
+
+    def __post_init__(self) -> None:
+        if self.version < 0:
+            raise ValueError("manifest version must be non-negative")
+        object.__setattr__(self, "layers", tuple(self.layers))
+
+    @property
+    def depth(self) -> int:
+        return len(self.layers)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "version": self.version,
+            "layers": [layer.to_dict() for layer in self.layers],
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> "Manifest":
+        raw_layers = payload.get("layers", ())
+        if not isinstance(raw_layers, list):
+            raise ValueError("manifest layers must be a list")
+        layers: list[LayerRef] = []
+        for item in raw_layers:
+            if not isinstance(item, dict):
+                raise ValueError("manifest layer entries must be objects")
+            layers.append(LayerRef.from_dict(item))
+        return cls(version=int(payload["version"]), layers=tuple(layers))
+
+
+def empty_manifest() -> Manifest:
+    return Manifest(version=0, layers=())
+
+
+def manifest_root_hash(manifest: Manifest) -> str:
+    """Return a stable identity hash for the manifest's root view."""
+    payload = {"layers": [layer.to_dict() for layer in manifest.layers]}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()

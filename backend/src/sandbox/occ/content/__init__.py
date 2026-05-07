@@ -6,7 +6,7 @@ from sandbox.occ.content.gitignore_oracle import (
     SnapshotGitignoreOracle,
 )
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.content.layer_backed_content import LayerBackedContent
+from sandbox.occ.content.layer_backed import LayerBackedContent
 
 __all__ = [
     "ContentHasher",

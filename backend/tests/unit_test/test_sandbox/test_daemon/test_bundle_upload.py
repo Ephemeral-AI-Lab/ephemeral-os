@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from sandbox.host.deploy.bundle import (
+from sandbox.host.runtime_bundle import (
     BUNDLE_REMOTE_DIR,
     _ensure_runtime_uploaded_with_exec,
     _runtime_bundle_bytes,
@@ -55,56 +55,56 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/facade.py",
         "sandbox/api/tool/__init__.py",
         "sandbox/api/tool/result_projection.py",
-        "sandbox/api/utils/__init__.py",
-        "sandbox/api/utils/models.py",
+        "sandbox/async_bridge.py",
         "sandbox/bash.py",
-        "sandbox/utils/__init__.py",
-        "sandbox/utils/async_bridge.py",
-        "sandbox/daemon/__main__.py",
-        "sandbox/daemon/rpc/__init__.py",
-        "sandbox/daemon/rpc/server.py",
-        "sandbox/daemon/rpc/dispatcher.py",
-        "sandbox/daemon/services/__init__.py",
-        "sandbox/daemon/services/layer_stack_client.py",
-        "sandbox/daemon/services/workspace_binding.py",
-        "sandbox/daemon/handlers/health.py",
-        "sandbox/daemon/handlers/workspace.py",
-        "sandbox/daemon/services/workspace_server.py",
-        "sandbox/daemon/services/shell_runner.py",
-        "sandbox/daemon/handlers/__init__.py",
-        "sandbox/daemon/handlers/_common.py",
-        "sandbox/daemon/handlers/edit.py",
-        "sandbox/daemon/handlers/metrics.py",
-        "sandbox/daemon/handlers/read.py",
-        "sandbox/daemon/handlers/shell.py",
-        "sandbox/daemon/handlers/write.py",
-        "sandbox/daemon/services/occ_backend.py",
+        "sandbox/contracts.py",
+        "sandbox/runtime/__init__.py",
+        "sandbox/runtime/daemon/__main__.py",
+        "sandbox/runtime/daemon/rpc/__init__.py",
+        "sandbox/runtime/daemon/rpc/server.py",
+        "sandbox/runtime/daemon/rpc/dispatcher.py",
+        "sandbox/runtime/daemon/service/__init__.py",
+        "sandbox/runtime/daemon/service/layer_stack_client.py",
+        "sandbox/runtime/daemon/service/workspace_binding.py",
+        "sandbox/runtime/daemon/handler/health.py",
+        "sandbox/runtime/daemon/handler/workspace.py",
+        "sandbox/runtime/daemon/service/workspace_server.py",
+        "sandbox/runtime/daemon/service/shell_runner.py",
+        "sandbox/runtime/daemon/handler/__init__.py",
+        "sandbox/runtime/daemon/handler/request_context.py",
+        "sandbox/runtime/daemon/handler/edit.py",
+        "sandbox/runtime/daemon/handler/metrics.py",
+        "sandbox/runtime/daemon/handler/overlay.py",
+        "sandbox/runtime/daemon/handler/read.py",
+        "sandbox/runtime/daemon/handler/shell.py",
+        "sandbox/runtime/daemon/handler/write.py",
+        "sandbox/runtime/daemon/service/occ_backend.py",
         "sandbox/command_exec/__init__.py",
-        "sandbox/command_exec/request.py",
-        "sandbox/command_exec/workspace_mount.py",
-        "sandbox/command_exec/capture/changeset.py",
-        "sandbox/command_exec/capture/upperdir.py",
-        "sandbox/layer_stack/workspace_base.py",
-        "sandbox/daemon/overlay_shell/__init__.py",
-        "sandbox/daemon/overlay_shell/cli.py",
-        "sandbox/layer_stack/manifest.py",
-        "sandbox/layer_stack/stack_manager.py",
-        "sandbox/layer_stack/workspace.py",
-        "sandbox/occ/overlay_capture.py",
+        "sandbox/command_exec/contract/request.py",
+        "sandbox/command_exec/contract/result.py",
+        "sandbox/command_exec/contract/ports.py",
+        "sandbox/command_exec/workspace/mount.py",
+        "sandbox/command_exec/workspace/capture.py",
+        "sandbox/layer_stack/workspace/base.py",
+        "sandbox/overlay/cli.py",
+        "sandbox/layer_stack/manifest/model.py",
+        "sandbox/layer_stack/manifest/store.py",
+        "sandbox/layer_stack/manager.py",
+        "sandbox/layer_stack/workspace/binding.py",
+                "sandbox/occ/capture/overlay.py",
         "sandbox/occ/changeset/builders.py",
         "sandbox/occ/changeset/prepared.py",
         "sandbox/occ/changeset/types.py",
         "sandbox/occ/commit_transaction.py",
-        "sandbox/occ/orchestrator.py",
-        "sandbox/occ/content/layer_backed_content.py",
+        "sandbox/occ/routing/orchestrator.py",
+        "sandbox/occ/content/layer_backed.py",
         "sandbox/occ/content/gitignore_oracle.py",
         "sandbox/occ/content/hashing.py",
-        "sandbox/occ/direct/merge.py",
-        "sandbox/occ/gated/merge.py",
+        "sandbox/occ/merge/direct.py",
+        "sandbox/occ/merge/gated.py",
         "sandbox/overlay/capture/changes.py",
         "sandbox/overlay/capture/types.py",
         "sandbox/overlay/capture/upperdir.py",
-        "sandbox/overlay/handlers/run.py",
         "sandbox/overlay/namespace/command.py",
         "sandbox/overlay/namespace/mounts.py",
         "sandbox/overlay/runner/runtime_invoker.py",
@@ -123,8 +123,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     assert not (extract_dir / "sandbox/daemon/overlay_capture_runtime").exists()
     assert not (extract_dir / "sandbox/occ/wire.py").exists()
     assert not (extract_dir / "sandbox/occ/handlers").exists()
-    assert not (extract_dir / "sandbox/occ/merge").exists()
-    assert not (extract_dir / "sandbox/occ/routing").exists()
     assert not (extract_dir / "sandbox/code_intelligence").exists()
 
 
@@ -160,7 +158,9 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
         "sandbox/overlay/handlers/shell.py",
         "sandbox/overlay/runner/runtime_bundle.py",
         "sandbox/host/deploy/bundle.py",
+        "sandbox/host/runtime_bundle.py",
         "sandbox/host/rpc/client.py",
+        "sandbox/host/daemon_client.py",
         "sandbox/host/deploy/install.py",
         "sandbox/daemon/overlay_shell/capture_to_changeset.py",
         "sandbox/daemon/overlay_shell/pipeline.py",
@@ -170,8 +170,9 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
     }
     assert excluded.isdisjoint(names)
     assert all(not name.startswith("sandbox/providers/") for name in names)
+    assert all(not name.startswith("sandbox/provider/") for name in names)
     assert all(not name.startswith("sandbox/host/") for name in names)
-    assert all(not name.startswith("sandbox/daemon/backends/") for name in names)
+    assert all(not name.startswith("sandbox/runtime/daemon/backends/") for name in names)
 
 
 def test_bundle_extracted_python_modules_import_clean(tmp_path: Path) -> None:
@@ -208,17 +209,17 @@ def test_bundle_includes_peer_setup_scripts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     src_root = tmp_path / "src"
-    setup_script = src_root / "sandbox" / "daemon" / "peer" / "setup.sh"
+    setup_script = src_root / "sandbox" / "runtime" / "daemon" / "peer" / "setup.sh"
     setup_script.parent.mkdir(parents=True)
     setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
 
-    monkeypatch.setattr("sandbox.host.deploy.bundle._src_root", lambda: src_root)
-    monkeypatch.setattr("sandbox.host.deploy.bundle._BUNDLE_CACHE", None)
-    monkeypatch.setattr("sandbox.host.deploy.bundle._BUNDLE_HASH_CACHE", None)
+    monkeypatch.setattr("sandbox.host.runtime_bundle._src_root", lambda: src_root)
+    monkeypatch.setattr("sandbox.host.runtime_bundle._BUNDLE_CACHE", None)
+    monkeypatch.setattr("sandbox.host.runtime_bundle._BUNDLE_HASH_CACHE", None)
 
     bundle = _runtime_bundle_bytes()
     with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
-        member = tar.extractfile("sandbox/daemon/peer/setup.sh")
+        member = tar.extractfile("sandbox/runtime/daemon/peer/setup.sh")
         assert member is not None
         assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
 
@@ -233,7 +234,7 @@ def test_bundle_extracted_daemon_modules_import_clean(tmp_path: Path) -> None:
         "-c",
         (
             f"import sys; sys.path.insert(0, {str(extract_dir)!r}); "
-            "from sandbox.daemon.rpc.dispatcher import OP_TABLE, dispatch_envelope, main; "
+            "from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE, dispatch_envelope, main; "
             "print('ok:', callable(main), isinstance(OP_TABLE, dict), "
             "dispatch_envelope({'op':'missing'})['error']['kind'])"
         ),

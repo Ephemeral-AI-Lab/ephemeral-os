@@ -22,35 +22,37 @@ _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
     "facade.py",
-    "status",
+    "status.py",
     "tool",
-    "utils",
 }
 _MODEL_ONLY_MODULES = {
     "__init__.py",
     "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "tool/read.py": {"sandbox.api.tool._daemon_client"},
+    "tool/read.py": {"sandbox.api.tool._daemon_client", "sandbox.contracts"},
     "tool/write.py": {
         "sandbox.api.tool._daemon_client",
+        "sandbox.contracts",
     },
     "tool/edit.py": {
         "sandbox.api.tool._daemon_client",
+        "sandbox.contracts",
     },
     "tool/shell.py": {
         "sandbox.api.tool._daemon_client",
+        "sandbox.contracts",
     },
-    "status/__init__.py": {
-        "sandbox.host.ops.recovery",
-        "sandbox.host.ops.setup",
-        "sandbox.providers.registry",
+    "status.py": {
+        "sandbox.host.recovery",
+        "sandbox.host.setup",
+        "sandbox.provider.registry",
     },
 }
 _FORBIDDEN_FOR_MODELS = (
-    "sandbox.providers",
+    "sandbox.provider",
     "sandbox.daytona",
-    "sandbox.daemon",
+    "sandbox.runtime.daemon",
     "sandbox.occ",
     "sandbox.overlay",
     "tools.",
@@ -80,13 +82,12 @@ def test_api_root_keeps_public_surface_grouped_by_role() -> None:
 @pytest.mark.parametrize(
     "module_path",
     sorted(
-        [
-            *_API_ROOT.glob("*.py"),
-            *(_API_ROOT / "tool").glob("*.py"),
-            _API_ROOT / "status" / "__init__.py",
-        ]
-    ),
-)
+            [
+                *_API_ROOT.glob("*.py"),
+                *(_API_ROOT / "tool").glob("*.py"),
+            ]
+        ),
+    )
 def test_api_import_boundaries(module_path: Path) -> None:
     module_id = module_path.relative_to(_API_ROOT).as_posix()
     source = module_path.read_text(encoding="utf-8")

@@ -12,7 +12,7 @@ from sandbox.api.tool._daemon_client import (
     paths_from_payload,
     timings_from_payload,
 )
-from sandbox.api.utils.models import ConflictInfo, ShellRequest, ShellResult
+from sandbox.contracts import ConflictInfo, ShellRequest, ShellResult
 
 
 async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:

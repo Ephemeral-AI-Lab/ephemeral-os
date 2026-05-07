@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import (
     EditChange,
@@ -14,7 +14,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.direct.merge import DirectMerge
+from sandbox.occ.merge.direct import DirectMerge
 from sandbox.occ.content.hashing import ContentHasher
 
 

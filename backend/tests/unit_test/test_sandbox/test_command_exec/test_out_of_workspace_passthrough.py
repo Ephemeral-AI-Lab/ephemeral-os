@@ -10,10 +10,10 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon.services import occ_backend
-from sandbox.daemon.handlers import edit, read, write
-from sandbox.daemon.services.workspace_server import get_layer_stack_manager
+from sandbox.layer_stack.workspace.base import build_workspace_base
+from sandbox.runtime.daemon.service import occ_backend
+from sandbox.runtime.daemon.handler import edit, read, write
+from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 
 
 @pytest.mark.asyncio

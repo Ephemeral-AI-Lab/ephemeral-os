@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sandbox.api.utils.models import (
+from sandbox.contracts import (
     EditFileRequest,
     EditFileResult,
     RawExecResult,
@@ -105,7 +105,7 @@ class SandboxAPI:
         return status.get_build_logs_url(sandbox_id)
 
     def context_preparer_for(self, sandbox_id: str) -> Any:
-        from sandbox.host.ops.context import context_preparer_for
+        from sandbox.host.context import context_preparer_for
 
         return context_preparer_for(sandbox_id)
 

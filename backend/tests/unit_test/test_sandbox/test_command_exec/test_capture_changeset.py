@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.command_exec.capture.changeset import workspace_changes_to_occ_changes
+from sandbox.occ.capture.overlay import workspace_changes_to_occ_changes
 from sandbox.occ.changeset.types import (
     DeleteChange,
     OpaqueDirChange,

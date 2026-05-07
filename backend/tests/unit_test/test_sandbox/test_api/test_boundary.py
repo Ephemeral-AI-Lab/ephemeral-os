@@ -14,8 +14,8 @@ SCAN_ROOTS = (
 FORBIDDEN_PREFIXES = (
     "sandbox.host",
     "sandbox.lifecycle",
-    "sandbox.providers",
-    "sandbox.daemon",
+    "sandbox.provider",
+    "sandbox.runtime.daemon",
 )
 ALLOWED_API_IMPORT_NAMES = {
     "ConflictInfo",
@@ -36,7 +36,7 @@ ALLOWED_API_IMPORT_NAMES = {
     "api",
 }
 TYPE_MODULES = {
-    "sandbox.api.utils.models",
+    "sandbox.contracts",
 }
 
 

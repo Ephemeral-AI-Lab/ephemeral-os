@@ -15,8 +15,8 @@ from sandbox.overlay.runner.snapshot_overlay_runner import (
     OverlayShellRequest,
     overlay_shell_request_to_dict,
 )
-from sandbox.daemon.overlay_shell.cli import execute_request
-from sandbox.utils.async_bridge import run_sync_in_executor
+from sandbox.overlay.cli import execute_request
+from sandbox.async_bridge import run_sync_in_executor
 
 
 class RuntimeInvoker:

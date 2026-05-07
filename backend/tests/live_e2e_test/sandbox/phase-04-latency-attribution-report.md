@@ -56,7 +56,7 @@ saturation rather than per-call cost growth.
 
 ### 2. Python interpreter cold start: ~40–70 ms per call, paid every time
 `runtime.boot_to_dispatch` is purely the Python interpreter starting up and
-importing `sandbox.daemon.rpc.dispatcher`. At c=16 × 50 ms = 800 ms of sandbox CPU
+importing `sandbox.runtime.daemon.rpc.dispatcher`. At c=16 × 50 ms = 800 ms of sandbox CPU
 spent just on Python imports — and it doesn't decrease with concurrency.
 
 ### 3. **The single-process flock is the dominant write/edit bottleneck**
@@ -116,7 +116,7 @@ publish < 2 ms. **The transactional core is not the bottleneck.**
 The two single largest wins are both about **eliminating per-call process
 launch**:
 
-1. Replace per-call `sh -c $launcher python -m sandbox.daemon.rpc.dispatcher` with a
+1. Replace per-call `sh -c $launcher python -m sandbox.runtime.daemon.rpc.dispatcher` with a
    resident runtime process (one Python interpreter, kept warm). Removes
    `runtime.boot_to_dispatch` (~50 ms × N), and lets the in-process
    `_process_commit_gate` actually serialize commits in <1 ms instead of 1 s

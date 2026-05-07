@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.api.utils.models import (
+from sandbox.contracts import (
     ConflictInfo,
     EditFileRequest,
     EditFileResult,

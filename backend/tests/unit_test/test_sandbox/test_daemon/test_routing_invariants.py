@@ -6,8 +6,8 @@ import importlib
 
 import pytest
 
-from sandbox.overlay.handlers import run as overlay_run
-from sandbox.daemon.handlers import (
+from sandbox.runtime.daemon.handler import overlay as overlay_run
+from sandbox.runtime.daemon.handler import (
     edit,
     health,
     metrics,
@@ -16,7 +16,7 @@ from sandbox.daemon.handlers import (
     workspace,
     write,
 )
-from sandbox.daemon.rpc import dispatcher as server
+from sandbox.runtime.daemon.rpc import dispatcher as server
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
@@ -50,16 +50,16 @@ def test_daemon_op_table_does_not_route_through_occ_server() -> None:
     server._load_peer_bootstraps()
 
     for handler in server.OP_TABLE.values():
-        assert handler.__module__ != "sandbox.daemon.services.occ_backend"
+        assert handler.__module__ != "sandbox.runtime.daemon.service.occ_backend"
         assert "occ_handlers" not in handler.__module__
 
 
 @pytest.mark.parametrize(
     "module_name",
     [
-        "sandbox.daemon.occ_handlers",
-        "sandbox.daemon.write_edit_handlers",
-        "sandbox.daemon.api_handlers",
+        "sandbox.runtime.daemon.occ_handlers",
+        "sandbox.runtime.daemon.write_edit_handlers",
+        "sandbox.runtime.daemon.api_handlers",
     ],
 )
 def test_legacy_daemon_modules_remain_deleted(module_name: str) -> None:

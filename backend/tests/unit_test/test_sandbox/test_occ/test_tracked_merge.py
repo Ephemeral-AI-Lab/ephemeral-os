@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import EditChange, FileStatus, WriteChange
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.gated.merge import GatedMerge
+from sandbox.occ.merge.gated import GatedMerge
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:

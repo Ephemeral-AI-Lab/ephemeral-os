@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.command_exec.env import resolve_workspace_cwd
+from sandbox.command_exec.workspace.environment import resolve_workspace_cwd
 
 
 def test_relative_cwd_resolves_inside_mounted_workspace(tmp_path: Path) -> None:

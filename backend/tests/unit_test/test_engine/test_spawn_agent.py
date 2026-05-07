@@ -68,7 +68,7 @@ def _isolate_tool_factories(monkeypatch: pytest.MonkeyPatch):
     _factories.clear()
     _factories.update(original)
     _CapturingTool.captured_contexts.clear()
-    from sandbox.providers import registry as provider_registry
+    from sandbox.provider import registry as provider_registry
 
     monkeypatch.setattr(provider_registry, "_ADAPTERS", {}, raising=False)
     monkeypatch.setattr(provider_registry, "_DEFAULT", None, raising=False)
@@ -271,7 +271,7 @@ def test_default_sandbox_agent_registers_daytona_tools() -> None:
 
 
 def test_default_sandbox_agent_builds_daytona_context_preparer() -> None:
-    from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
 
     bootstrap_daytona_provider()
     registry = _build_agent_tool_registry(
@@ -297,7 +297,7 @@ def test_context_preparers_not_added_without_declared_requirement() -> None:
 
 
 def test_context_preparers_follow_tool_declared_requirement() -> None:
-    from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
 
     bootstrap_daytona_provider()
     registry = ToolRegistry()

@@ -11,7 +11,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.orchestrator import OccOrchestrator
+from sandbox.occ.routing.orchestrator import OccOrchestrator
 
 
 class _Gitignore:

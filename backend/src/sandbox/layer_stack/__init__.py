@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import (
     LayerRef,
     Manifest,
     ManifestConflictError,
 )
-from sandbox.layer_stack.stack_manager import (
+from sandbox.layer_stack.manager import (
     LayerStackManager,
     PrepareWorkspaceSnapshotResult,
 )

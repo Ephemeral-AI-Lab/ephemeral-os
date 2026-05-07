@@ -13,9 +13,9 @@ pytestmark = pytest.mark.asyncio
 
 _BODY = r"""
 import os
-from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import LayerRef, Manifest, write_manifest_atomic
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.manager import LayerStackManager
 
 label = "layer_stack.edge_cases"
 before = sample_resource()

@@ -16,10 +16,10 @@ from typing import Any
 
 import pytest
 
-from sandbox.command_exec.request import CommandExecRequest
+from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
-from sandbox.daemon.services import shell_runner
+from sandbox.runtime.daemon.service import shell_runner
 
 
 @dataclass

@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _BODY = r"""
-from sandbox.layer_stack.stack_manager import LayerStackManager
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
 from sandbox.occ.service import OccService
 

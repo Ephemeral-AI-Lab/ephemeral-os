@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
-from sandbox.layer_stack.layer_index import (
+from sandbox.layer_stack.layer.index import (
     OPAQUE_MARKER,
     WHITEOUT_PREFIX,
     build_layer_index,

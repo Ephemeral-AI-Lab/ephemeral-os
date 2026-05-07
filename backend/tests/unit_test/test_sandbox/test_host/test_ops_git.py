@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.host.ops.git.ensure_git.
+"""Unit tests for sandbox.host.git.ensure_git.
 
 Body lifted from the deleted SandboxProxy.ensure_git, with raw_exec replacing
 the SDK process.exec. These tests cover the same probe + install branches
@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from sandbox.api import RawExecResult
-from sandbox.host.ops.git import ensure_git
+from sandbox.host.git import ensure_git
 
 
 def test_ensure_git_skips_when_git_present(monkeypatch: pytest.MonkeyPatch) -> None:

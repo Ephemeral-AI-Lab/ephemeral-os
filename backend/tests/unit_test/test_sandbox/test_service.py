@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.providers.daytona.client.sync import (
+from sandbox.provider.daytona.client.sync_client import (
     _normalize_dict,
     _normalize_optional_text,
     _timeout_seconds_from_env,

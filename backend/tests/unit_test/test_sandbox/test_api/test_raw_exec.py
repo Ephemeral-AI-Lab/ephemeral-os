@@ -6,7 +6,7 @@ import pytest
 
 from sandbox.api import RawExecResult
 from sandbox.api.tool.raw_exec import raw_exec
-from sandbox.providers.registry import dispose_adapter, register_adapter
+from sandbox.provider.registry import dispose_adapter, register_adapter
 
 
 class RecordingAdapter:

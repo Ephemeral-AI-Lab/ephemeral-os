@@ -15,11 +15,11 @@ from unittest.mock import patch
 import pytest
 
 from sandbox.layer_stack import LayerStackManager
-from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.daemon.services import occ_backend
-from sandbox.daemon.handlers import edit, write
-from sandbox.daemon.handlers._common import _services
+from sandbox.runtime.daemon.service import occ_backend
+from sandbox.runtime.daemon.handler import edit, write
+from sandbox.runtime.daemon.handler.request_context import _services
 
 
 @pytest.mark.asyncio

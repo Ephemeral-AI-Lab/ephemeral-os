@@ -12,7 +12,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
     """Each test gets a fresh registry state."""
-    from sandbox.providers import registry as reg
+    from sandbox.provider import registry as reg
 
     monkeypatch.setattr(reg, "_ADAPTERS", {}, raising=False)
     monkeypatch.setattr(reg, "_DEFAULT", None, raising=False)
@@ -25,14 +25,14 @@ def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_default_raises_when_unset() -> None:
-    from sandbox.providers.registry import get_default_provider
+    from sandbox.provider.registry import get_default_provider
 
     with pytest.raises(RuntimeError, match="No default sandbox provider"):
         get_default_provider()
 
 
 def test_set_default_then_get_returns_same_instance() -> None:
-    from sandbox.providers.registry import get_default_provider, set_default_provider
+    from sandbox.provider.registry import get_default_provider, set_default_provider
 
     fake = MagicMock(name="fake_adapter")
     set_default_provider(fake)
@@ -40,7 +40,7 @@ def test_set_default_then_get_returns_same_instance() -> None:
 
 
 def test_default_and_id_keyed_registries_are_independent() -> None:
-    from sandbox.providers.registry import (
+    from sandbox.provider.registry import (
         get_adapter,
         get_default_provider,
         register_adapter,
@@ -57,7 +57,7 @@ def test_default_and_id_keyed_registries_are_independent() -> None:
 
 
 def test_get_adapter_falls_back_to_default_provider_for_unknown_id() -> None:
-    from sandbox.providers.registry import (
+    from sandbox.provider.registry import (
         get_adapter,
         has_registered_adapter,
         set_default_provider,
@@ -91,7 +91,7 @@ def _fake_raw(**overrides: Any) -> Any:
 
 
 def test_serialize_raw_returns_canonical_dict() -> None:
-    from sandbox.providers.daytona.adapter import _serialize_raw
+    from sandbox.provider.daytona.adapter import _serialize_raw
 
     raw = _fake_raw()
     result = _serialize_raw(raw, assigned_agents=["agent-1"])
@@ -106,7 +106,7 @@ def test_serialize_raw_returns_canonical_dict() -> None:
 
 
 def test_serialize_raw_strips_sandboxstate_prefix() -> None:
-    from sandbox.providers.daytona.adapter import _serialize_raw
+    from sandbox.provider.daytona.adapter import _serialize_raw
 
     raw = _fake_raw(state="SandboxState.STOPPED")
     result = _serialize_raw(raw)
@@ -114,7 +114,7 @@ def test_serialize_raw_strips_sandboxstate_prefix() -> None:
 
 
 def test_serialize_raw_falls_back_to_label_project_dir() -> None:
-    from sandbox.providers.daytona.adapter import _serialize_raw
+    from sandbox.provider.daytona.adapter import _serialize_raw
 
     raw = _fake_raw(
         project_dir=None,
@@ -125,11 +125,11 @@ def test_serialize_raw_falls_back_to_label_project_dir() -> None:
 
 
 def test_adapter_get_returns_serialized_dict() -> None:
-    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
 
     raw = _fake_raw(state="stopped")
     with patch(
-        "sandbox.providers.daytona.adapter.fetch_sandbox",
+        "sandbox.provider.daytona.adapter.fetch_sandbox",
         return_value=raw,
     ):
         adapter = DaytonaProviderAdapter()
@@ -141,7 +141,7 @@ def test_adapter_get_returns_serialized_dict() -> None:
 
 
 def test_adapter_start_calls_raw_start_and_serializes() -> None:
-    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
 
     raw = MagicMock()
     raw.id = "sb-xyz"
@@ -153,7 +153,7 @@ def test_adapter_start_calls_raw_start_and_serializes() -> None:
     raw.refresh_data = MagicMock()
 
     with patch(
-        "sandbox.providers.daytona.adapter.fetch_sandbox",
+        "sandbox.provider.daytona.adapter.fetch_sandbox",
         return_value=raw,
     ):
         adapter = DaytonaProviderAdapter()
@@ -165,13 +165,13 @@ def test_adapter_start_calls_raw_start_and_serializes() -> None:
 
 
 def test_adapter_delete_calls_raw_delete() -> None:
-    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
 
     raw = MagicMock()
     raw.id = "sb-del"
 
     with patch(
-        "sandbox.providers.daytona.adapter.fetch_sandbox",
+        "sandbox.provider.daytona.adapter.fetch_sandbox",
         return_value=raw,
     ):
         adapter = DaytonaProviderAdapter()
@@ -181,14 +181,14 @@ def test_adapter_delete_calls_raw_delete() -> None:
 
 
 def test_adapter_set_labels_calls_raw_set_labels_and_serializes() -> None:
-    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
 
     raw = _fake_raw(labels={"managed_by": "ephemeralos"})
     raw.set_labels = MagicMock()
     raw.refresh_data = MagicMock()
 
     with patch(
-        "sandbox.providers.daytona.adapter.fetch_sandbox",
+        "sandbox.provider.daytona.adapter.fetch_sandbox",
         return_value=raw,
     ):
         adapter = DaytonaProviderAdapter()
@@ -200,9 +200,9 @@ def test_adapter_set_labels_calls_raw_set_labels_and_serializes() -> None:
 
 
 def test_bootstrap_registers_daytona_as_default() -> None:
-    from sandbox.providers.daytona.adapter import DaytonaProviderAdapter
-    from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
-    from sandbox.providers.registry import get_default_provider
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
+    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.registry import get_default_provider
 
     bootstrap_daytona_provider()
     assert isinstance(get_default_provider(), DaytonaProviderAdapter)

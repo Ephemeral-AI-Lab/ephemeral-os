@@ -135,7 +135,7 @@ def test_context_preparer_delegates_to_control_factory(
 ) -> None:
     preparer = object()
     monkeypatch.setattr(
-        "sandbox.host.ops.context.context_preparer_for",
+        "sandbox.host.context.context_preparer_for",
         lambda sandbox_id: preparer if sandbox_id == "sb-1" else None,
     )
 

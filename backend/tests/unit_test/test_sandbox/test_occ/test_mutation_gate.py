@@ -3,7 +3,7 @@
 These tests assert the §6 structural invariants:
 
 * occ-server is not a host-callable daemon dispatch module.
-* Public data operations dispatch through ``sandbox.daemon.handlers``.
+* Public data operations dispatch through ``sandbox.runtime.daemon.handler``.
 * In-workspace classifier predicate lives in command-exec only;
   occ-server source contains no ``workspace_root`` classification call
   sites.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon.services import occ_backend
+from sandbox.runtime.daemon.service import occ_backend
 
 
 # ---------------------------------------------------------------------------
@@ -26,12 +26,12 @@ from sandbox.daemon.services import occ_backend
 
 def test_legacy_occ_handlers_module_removed() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.daemon.occ_handlers")
+        importlib.import_module("sandbox.runtime.daemon.occ_handlers")
 
 
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
-    truth lives on command-exec (handlers/_common.py)."""
+    truth lives on command-exec (handlers/request_context.py)."""
     occ_server_source = Path(occ_backend.__file__).read_text()
 
     assert ".workspace_root" not in occ_server_source
@@ -41,12 +41,12 @@ def test_occ_server_module_does_not_classify_paths() -> None:
 
 def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     """Data API ops must never route directly to occ-server."""
-    from sandbox.daemon.rpc import dispatcher as server
+    from sandbox.runtime.daemon.rpc import dispatcher as server
 
     server._load_peer_bootstraps()
     for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
         handler = server.OP_TABLE[op]
-        assert handler.__module__.startswith("sandbox.daemon.handlers.")
+        assert handler.__module__.startswith("sandbox.runtime.daemon.handler.")
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
 
 def test_max_occ_cas_retries_is_named_constant_with_positive_default() -> None:
     """MAX_OCC_CAS_RETRIES is the public, testable retry budget."""
-    from sandbox.occ.serial_merger import MAX_OCC_CAS_RETRIES
+    from sandbox.occ.merge.serial import MAX_OCC_CAS_RETRIES
 
     assert isinstance(MAX_OCC_CAS_RETRIES, int)
     assert MAX_OCC_CAS_RETRIES >= 1
@@ -70,9 +70,9 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     retry loop turning into a busy spin."""
     import asyncio
 
-    from sandbox.layer_stack.workspace_base import build_workspace_base
-    from sandbox.daemon.services import occ_backend
-    from sandbox.daemon.handlers import write
+    from sandbox.layer_stack.workspace.base import build_workspace_base
+    from sandbox.runtime.daemon.service import occ_backend
+    from sandbox.runtime.daemon.handler import write
 
     occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
@@ -101,11 +101,11 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     import asyncio
 
     from sandbox.layer_stack.manifest import ManifestConflictError
-    from sandbox.layer_stack.workspace_base import build_workspace_base
-    from sandbox.occ.serial_merger import MAX_OCC_CAS_RETRIES
-    from sandbox.daemon.services import occ_backend
-    from sandbox.daemon.handlers import write
-    from sandbox.daemon.handlers._common import _services
+    from sandbox.layer_stack.workspace.base import build_workspace_base
+    from sandbox.occ.merge.serial import MAX_OCC_CAS_RETRIES
+    from sandbox.runtime.daemon.service import occ_backend
+    from sandbox.runtime.daemon.handler import write
+    from sandbox.runtime.daemon.handler.request_context import _services
 
     occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
@@ -163,8 +163,8 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.daemon.services import shell_runner, occ_backend
-    from sandbox.daemon.handlers import _common
+    from sandbox.runtime.daemon.service import shell_runner, occ_backend
+    from sandbox.runtime.daemon.handler import request_context
 
     occ_backend._backend_cache_clear()
 
@@ -213,7 +213,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     backend_a = occ_backend.build_occ_backend("/tmp/a")
 
     # The per-verb scaffolding resolves to the cached OccBackend instance.
-    via_common = _common._services("/tmp/a")
+    via_common = request_context._services("/tmp/a")
     assert via_common is backend_a
     assert occ_backend.build_occ_backend("/tmp/a/.") is backend_a
 

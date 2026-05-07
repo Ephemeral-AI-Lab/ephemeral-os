@@ -12,11 +12,11 @@ from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.orchestrator import OccOrchestrator
+from sandbox.occ.routing.orchestrator import OccOrchestrator
 from sandbox.occ.ports import OccLayerStackPorts
-from sandbox.occ.runtime_ops import infer_manifest_base_hash
-from sandbox.occ.serial_merger import OccSerialMerger
-from sandbox.utils.async_bridge import run_sync_in_executor
+from sandbox.occ.routing.runtime_ops import infer_manifest_base_hash
+from sandbox.occ.merge.serial import OccSerialMerger
+from sandbox.async_bridge import run_sync_in_executor
 
 
 class OccService:

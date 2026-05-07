@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sandbox.api.tool._daemon_client import call_daemon_api, timings_from_payload
-from sandbox.api.utils.models import ReadFileRequest, ReadFileResult
+from sandbox.contracts import ReadFileRequest, ReadFileResult
 
 
 async def read_file(sandbox_id: str, request: ReadFileRequest) -> ReadFileResult:

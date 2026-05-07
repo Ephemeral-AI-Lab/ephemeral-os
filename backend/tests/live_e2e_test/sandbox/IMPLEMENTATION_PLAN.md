@@ -74,9 +74,9 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 
 | Order | File | Backs | Probe imports | Pass bar |
 |---:|---|---|---|---|
-| 1 | `layer_stack/test_manifest_lifecycle.py` **(+ race)** | E11 | `sandbox.layer_stack.manifest` | open/append/seal/list/load round-trip; survive simulated process restart; corrupted manifest detected. Race: N=8 concurrent appenders → no torn entries; total = N |
-| 2 | `layer_stack/test_publisher.py` **(+ race)** | E6, E9 | `sandbox.layer_stack.publisher` | publish atomicity; idempotent on same digest; kill mid-publish leaves no dangling refs. Race: N=8 publishers same digest → exactly one canonical ref, 7 "already published" |
-| 3 | `layer_stack/test_merged_view.py` | E5 | `sandbox.layer_stack.merged_view` | depth-100 path-to-content map correct; whiteouts override; opaque dirs respected |
+| 1 | `layer_stack/test_manifest_lifecycle.py` **(+ race)** | E11 | `sandbox.layer_stack.manifest.model` | open/append/seal/list/load round-trip; survive simulated process restart; corrupted manifest detected. Race: N=8 concurrent appenders → no torn entries; total = N |
+| 2 | `layer_stack/test_publisher.py` **(+ race)** | E6, E9 | `sandbox.layer_stack.layer.publisher` | publish atomicity; idempotent on same digest; kill mid-publish leaves no dangling refs. Race: N=8 publishers same digest → exactly one canonical ref, 7 "already published" |
+| 3 | `layer_stack/test_merged_view.py` | E5 | `sandbox.layer_stack.view.merged` | depth-100 path-to-content map correct; whiteouts override; opaque dirs respected |
 
 **Gate after 1a:** `pytest backend/tests/live_e2e_test/sandbox/layer_stack -k 'manifest or publisher or merged_view'` green.
 
@@ -87,14 +87,14 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 | Order | File | Probe imports | Pass bar |
 |---:|---|---|---|
 | 4 | `occ/test_commit_transaction.py` **(+ race)** | `sandbox.occ.commit_transaction` | atomicity; rollback on failure; idempotent retry. Race: N=4 concurrent commits → atomic per commit, no partial visible state |
-| 5 | `occ/test_orchestrator.py` **(+ race)** | `sandbox.occ.orchestrator` | happy/conflict/abort flows; restart recovery. Race: N=4 orchestrators interleave → conflict detection deterministic |
-| 6 | `occ/test_serial_merger.py` **(+ race, required)** | `sandbox.occ.serial_merger` | ordering, fairness, no starvation; cancel mid-wait. Race: N=16 waiters → FIFO upheld, no waiter starves > 30 s |
+| 5 | `occ/test_orchestrator.py` **(+ race)** | `sandbox.occ.routing.orchestrator` | happy/conflict/abort flows; restart recovery. Race: N=4 orchestrators interleave → conflict detection deterministic |
+| 6 | `occ/test_serial_merger.py` **(+ race, required)** | `sandbox.occ.merge.serial` | ordering, fairness, no starvation; cancel mid-wait. Race: N=16 waiters → FIFO upheld, no waiter starves > 30 s |
 | 7 | `occ/test_routing.py` | `sandbox.occ.routing` | direct vs gated decision per payload; route override priority |
 | 8 | `occ/test_content_gitignore_oracle.py` | `sandbox.occ.content.gitignore_oracle` | nested .gitignore; `!` re-include; case-folding fs |
-| 9 | `occ/test_direct_route.py` **(+ race)** | `sandbox.occ.direct` | empty changeset; 10k-path changeset; no contention. Race: N=8 direct commits disjoint paths → all succeed, no lock blow-up |
-| 10 | `occ/test_gated_route.py` **(race-by-definition)** | `sandbox.occ.gated` | first-commits-wins; both-reject; partial overlap (test is inherently concurrent — confirm spec, not added) |
+| 9 | `occ/test_direct_route.py` **(+ race)** | `sandbox.occ.merge.direct` | empty changeset; 10k-path changeset; no contention. Race: N=8 direct commits disjoint paths → all succeed, no lock blow-up |
+| 10 | `occ/test_gated_route.py` **(race-by-definition)** | `sandbox.occ.merge.gated` | first-commits-wins; both-reject; partial overlap (test is inherently concurrent — confirm spec, not added) |
 | 11 | `occ/test_merge_engine.py` | `sandbox.occ.merge` | non-conflict hunks; conflict hunks; binary; CRLF/LF |
-| 12 | `occ/test_overlay_capture_to_changeset.py` | `sandbox.occ.overlay_capture` | overlay-with-whiteouts → changeset; renames; mixed tracked/gitignored |
+| 12 | `occ/test_overlay_capture_to_changeset.py` | `sandbox.occ.capture.overlay` | overlay-with-whiteouts → changeset; renames; mixed tracked/gitignored |
 
 `overlay/native/` files (P0):
 
@@ -112,10 +112,10 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 
 | Order | File | Probe imports | Pass bar |
 |---:|---|---|---|
-| 16 | `layer_stack/test_squash.py` **(+ race)** | `sandbox.layer_stack.squash` | coalesce N→1 correct; idempotent; kill mid-squash recovers. Race: squash + concurrent appender → no torn manifest, no lost append |
-| 17 | `layer_stack/test_changes_aggregation.py` **(+ race)** | `sandbox.layer_stack.changes` | dedup; ordering; rename pairs; out-of-order writes. Race: N=8 concurrent producers → dedup invariant holds, ordering deterministic per-path |
-| 18 | `layer_stack/test_lease_registry.py` **(+ race)** | `sandbox.layer_stack.lease_registry` | register/release/expire; killed-shell sweep; double-release. Race: N=16 concurrent register → unique lease ids, no double-allocation |
-| 19 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.stack_manager` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
+| 16 | `layer_stack/test_squash.py` **(+ race)** | `sandbox.layer_stack.maintenance.squash` | coalesce N→1 correct; idempotent; kill mid-squash recovers. Race: squash + concurrent appender → no torn manifest, no lost append |
+| 17 | `layer_stack/test_changes_aggregation.py` **(+ race)** | `sandbox.layer_stack.layer.change` | dedup; ordering; rename pairs; out-of-order writes. Race: N=8 concurrent producers → dedup invariant holds, ordering deterministic per-path |
+| 18 | `layer_stack/test_lease_registry.py` **(+ race)** | `sandbox.layer_stack.lease.registry` | register/release/expire; killed-shell sweep; double-release. Race: N=16 concurrent register → unique lease ids, no double-allocation |
+| 19 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.manager` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
 
 ### Verification gate
 ```bash
