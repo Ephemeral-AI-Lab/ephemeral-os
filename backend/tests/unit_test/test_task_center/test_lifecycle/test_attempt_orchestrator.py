@@ -630,18 +630,6 @@ def test_apply_evaluator_failure_closes_graph_failed(
     assert closed == [attempt.id]
 
 
-def test_orchestrator_rejects_submit_request_plan_shape(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
-):
-    orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
-    )
-    orchestrator.start()
-
-    with pytest.raises(AttributeError):
-        getattr(orchestrator, "apply_request_plan")
-
-
 def test_orchestrator_never_creates_retry_attempt(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ):

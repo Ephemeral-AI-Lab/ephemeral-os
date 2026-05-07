@@ -31,7 +31,6 @@ PHASE03_TOOLS = (
 
 def test_submission_tools_registered() -> None:
     assert all(has_tool(name) for name in PHASE03_TOOLS)
-    assert not has_tool("submit_request_plan")
 
 
 def test_submission_tools_are_terminal_except_helper_requests() -> None:

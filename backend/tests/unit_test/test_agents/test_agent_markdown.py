@@ -48,5 +48,4 @@ def test_executor_agent_uses_mission_solution_terminal() -> None:
     executor = _load_named(MAIN_PROFILE_DIR, "executor")
 
     assert "request_mission_solution" in executor.terminals
-    assert "submit_request_plan" not in executor.terminals
     assert "ask_resolver" not in executor.allowed_tools

@@ -37,10 +37,6 @@ class ExecutorSubmissionContext:
     entry_controller: EntryTaskController | None
 
     @property
-    def is_entry_mode(self) -> bool:
-        return self.entry_controller is not None
-
-    @property
     def attempt_id(self) -> str | None:
         return self.attempt_ctx.attempt.id if self.attempt_ctx is not None else None
 

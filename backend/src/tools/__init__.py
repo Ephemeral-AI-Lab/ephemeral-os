@@ -26,7 +26,7 @@ _LAZY_EXPORTS = {
     "CancelBackgroundTaskTool": "tools.builtins.background",
     "CheckBackgroundTaskResultTool": "tools.builtins.background",
     "ToolCatalogEntry": "tools.introspection.catalog",
-    "ToolFactoryContext": "tools.factory_context",
+    "ToolFactoryContext": "tools.factory",
     "WaitBackgroundTasksTool": "tools.builtins.background",
     "_consume_tool_budget_or_reject": "tools.execution.tool_call",
     "build_background_snapshot_metadata": "tools.builtins.background._common",

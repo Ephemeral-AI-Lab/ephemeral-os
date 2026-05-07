@@ -101,9 +101,9 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
-    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_plan_handoff"})
+    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_full_plan"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    result = await execute_tool_call(ctx, "submit_plan_handoff", "id1", {})
+    result = await execute_tool_call(ctx, "submit_full_plan", "id1", {})
 
     assert result.is_error
     assert "Unknown tool" in result.content
@@ -113,14 +113,14 @@ async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
-    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_task_success"})
+    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_execution_success"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
 
     result = await execute_tool_call(ctx, "read_file", "id1", {})
 
     assert result.is_error
     assert "terminal call reserved" in result.content
-    assert "submit_task_success" in result.content
+    assert "submit_execution_success" in result.content
     assert ctx.tool_calls_used == 1
 
 

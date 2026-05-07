@@ -4,11 +4,20 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
 
 from tools.core.base import BaseTool
-from tools.factory_context import ToolFactoryContext
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ToolFactoryContext:
+    """Runtime context passed to tool factories during agent construction."""
+
+    metadata: dict[str, Any] = field(default_factory=dict)
+
 
 ToolFactory = Callable[[ToolFactoryContext], BaseTool]
 
