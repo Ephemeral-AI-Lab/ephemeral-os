@@ -26,7 +26,6 @@ class OccService:
         *,
         gitignore: GitignoreOracle,
         layer_stack: OccLayerStackPorts | None = None,
-        workspace_ref: str = "",
     ) -> None:
         self._layer_stack = layer_stack
         self._orchestrator = OccOrchestrator(gitignore)
@@ -35,7 +34,6 @@ class OccService:
                 snapshot_reader=layer_stack,
                 staging=layer_stack,
                 publisher=layer_stack,
-                workspace_ref=workspace_ref,
             )
             if layer_stack is not None
             else None

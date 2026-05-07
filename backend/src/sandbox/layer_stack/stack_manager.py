@@ -182,12 +182,7 @@ class LayerStackManager:
     def gitignore_cache_root(self) -> Path:
         return self.storage_root / "runtime" / "gitignore-cache"
 
-    def allocate_commit_staging(
-        self,
-        workspace_ref: str,
-        request_id: str,
-    ) -> CommitStagingArea:
-        del workspace_ref
+    def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
         parent = self.storage_root / STAGING_DIR
         parent.mkdir(parents=True, exist_ok=True)
         path = Path(
@@ -198,8 +193,7 @@ class LayerStackManager:
         )
         return CommitStagingArea(staging_id=path.name, path=path)
 
-    def drop_commit_staging(self, workspace_ref: str, staging_id: str) -> None:
-        del workspace_ref
+    def drop_commit_staging(self, staging_id: str) -> None:
         if not staging_id:
             return
         shutil.rmtree(self.storage_root / STAGING_DIR / staging_id, ignore_errors=True)

@@ -435,7 +435,6 @@ def _services(args: Mapping[str, object]) -> tuple[
         OccService(
             gitignore=gitignore,
             layer_stack=layer_stack,
-            workspace_ref=layer_stack_root,
         ),
         gitignore,
     )

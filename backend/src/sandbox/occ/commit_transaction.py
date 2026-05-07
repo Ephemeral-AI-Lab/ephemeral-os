@@ -46,7 +46,6 @@ class OccCommitTransaction:
         snapshot_reader: SnapshotReader | None = None,
         staging: CommitStagingStore | None = None,
         publisher: CommitPublisher | None = None,
-        workspace_ref: str = "",
     ) -> None:
         if layer_stack is not None:
             snapshot_reader = snapshot_reader or layer_stack
@@ -60,7 +59,6 @@ class OccCommitTransaction:
         self._snapshot_reader = snapshot_reader
         self._staging = staging
         self._publisher = publisher
-        self._workspace_ref = workspace_ref
         self._hasher = ContentHasher()
         self._gated = GatedMerge(snapshot_reader, hasher=self._hasher)
         self._direct = DirectMerge(snapshot_reader)
@@ -76,7 +74,6 @@ class OccCommitTransaction:
             timings["occ.commit.snapshot_s"] = time.perf_counter() - snapshot_start
             with _LayerChangeStager(
                 self._staging,
-                workspace_ref=self._workspace_ref,
                 hasher=self._hasher,
             ) as stager:
                 validate_start = time.perf_counter()
@@ -207,21 +204,16 @@ class _LayerChangeStager:
         self,
         staging: CommitStagingStore,
         *,
-        workspace_ref: str,
         hasher: ContentHasher,
     ) -> None:
         self._staging = staging
-        self._workspace_ref = workspace_ref
         self._hasher = hasher
         self._counter = 0
         self._staging_id: str | None = None
         self._staging_path: Path | None = None
 
     def __enter__(self) -> "_LayerChangeStager":
-        area = self._staging.allocate_commit_staging(
-            self._workspace_ref,
-            uuid4().hex,
-        )
+        area = self._staging.allocate_commit_staging(uuid4().hex)
         self._staging_id = area.staging_id
         self._staging_path = area.path
         return self
@@ -229,7 +221,7 @@ class _LayerChangeStager:
     def __exit__(self, exc_type, exc, traceback) -> None:
         del exc_type, exc, traceback
         if self._staging_id is not None:
-            self._staging.drop_commit_staging(self._workspace_ref, self._staging_id)
+            self._staging.drop_commit_staging(self._staging_id)
             self._staging_id = None
             self._staging_path = None
 

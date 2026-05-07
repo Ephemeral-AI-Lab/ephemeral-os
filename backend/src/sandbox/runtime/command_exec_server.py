@@ -334,7 +334,6 @@ def _services(
     occ_service = OccService(
         gitignore=gitignore,
         layer_stack=layer_stack,
-        workspace_ref=layer_stack_root,
     )
     services = cast(
         tuple[

@@ -55,13 +55,9 @@ class SnapshotMaterializer(Protocol):
 class CommitStagingStore(Protocol):
     """Allocate and drop OCC-owned staging directories."""
 
-    def allocate_commit_staging(
-        self,
-        workspace_ref: str,
-        request_id: str,
-    ) -> CommitStagingArea: ...
+    def allocate_commit_staging(self, request_id: str) -> CommitStagingArea: ...
 
-    def drop_commit_staging(self, workspace_ref: str, staging_id: str) -> None: ...
+    def drop_commit_staging(self, staging_id: str) -> None: ...
 
 
 class CommitTransaction(Protocol):

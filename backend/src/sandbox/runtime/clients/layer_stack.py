@@ -63,15 +63,11 @@ class LayerStackClient:
     def commit_transaction(self) -> ContextManager[CommitTransaction]:
         return self.manager.commit_transaction()
 
-    def allocate_commit_staging(
-        self,
-        workspace_ref: str,
-        request_id: str,
-    ) -> CommitStagingArea:
-        return self.manager.allocate_commit_staging(workspace_ref, request_id)
+    def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
+        return self.manager.allocate_commit_staging(request_id)
 
-    def drop_commit_staging(self, workspace_ref: str, staging_id: str) -> None:
-        self.manager.drop_commit_staging(workspace_ref, staging_id)
+    def drop_commit_staging(self, staging_id: str) -> None:
+        self.manager.drop_commit_staging(staging_id)
 
     def prepare_workspace_snapshot(
         self,
