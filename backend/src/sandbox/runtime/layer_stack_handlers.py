@@ -105,9 +105,7 @@ def _workspace_root(args: Mapping[str, object]) -> str:
 
 
 def _owner_request_id(args: Mapping[str, object]) -> str:
-    request_id = str(
-        args.get("owner_request_id") or args.get("request_id") or ""
-    ).strip()
+    request_id = str(args.get("request_id") or "").strip()
     if not request_id:
         raise ValueError("request_id is required")
     return request_id
