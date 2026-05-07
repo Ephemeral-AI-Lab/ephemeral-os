@@ -285,9 +285,8 @@ def _build_agent_system_prompt(
     )
     if base:
         parts.append(base)
-    if agent_def is not None:
-        if agent_def.system_prompt:
-            parts.append(agent_def.system_prompt)
+    if agent_def is not None and agent_def.system_prompt:
+        parts.append(agent_def.system_prompt)
     return "\n\n".join(part for part in parts if part.strip())
 
 

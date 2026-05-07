@@ -60,9 +60,7 @@ def defer_background_dispatch(
     bg_mode = getattr(tool_def, "background", "forbidden")
     if bg_mode == "always":
         return True
-    if bg_mode == "optional" and tool_input and tool_input.get("background"):
-        return True
-    return False
+    return bool(bg_mode == "optional" and tool_input and tool_input.get("background"))
 
 
 class StreamingToolExecutor:

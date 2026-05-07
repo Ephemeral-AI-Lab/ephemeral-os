@@ -381,14 +381,11 @@ class BackgroundTaskManager:
                 await tracked.kill_callback()
             except Exception as exc:
                 logger.debug("Kill callback failed for task %s: %s", task_id, exc)
-        else:
-            # Subagent tasks may still be inside async sandbox/CI calls. Hard
-            # asyncio cancellation can corrupt the shared async provider client,
-            # so logical cancel must be enough for them.
-            if tracked.task_type != "subagent":
-                # Pure-Python tools with no external runtime can be cancelled
-                # cooperatively without risking the shared sandbox connection.
-                tracked.asyncio_task.cancel()
+        # Subagents may be inside async provider calls; logical cancel is enough.
+        elif tracked.task_type != "subagent":
+            # Pure-Python tools with no external runtime can be cancelled
+            # cooperatively without risking the shared sandbox connection.
+            tracked.asyncio_task.cancel()
         return True
 
     def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
@@ -449,9 +446,6 @@ class BackgroundTaskManager:
                         await tracked.kill_callback()
                     except Exception as exc:
                         logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
-                else:
-                    # Subagent tasks may still be awaiting async sandbox/CI
-                    # calls inside their inner agent run. Mark them cancelled
-                    # logically but let them drain instead of hard-cancelling.
-                    if tracked.task_type != "subagent":
-                        tracked.asyncio_task.cancel()
+                # Subagents may be inside async provider calls; logical cancel is enough.
+                elif tracked.task_type != "subagent":
+                    tracked.asyncio_task.cancel()

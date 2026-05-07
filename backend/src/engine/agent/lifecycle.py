@@ -71,7 +71,7 @@ def _last_terminal_tool_result(
 
 
 async def run_ephemeral_agent(
-    config: "RuntimeConfig",
+    config: RuntimeConfig,
     prompt: str,
     *,
     agent_def: AgentDefinition | None = None,

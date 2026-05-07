@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,7 @@ from providers.types import SupportsStreamingMessages
 from tools import ExecutionMetadata, ToolRegistry, ToolResult
 
 
-class QueryExitReason(str, Enum):
+class QueryExitReason(StrEnum):
     """Why the query loop exited."""
 
     TEXT_RESPONSE = "text_response"      # no tool_uses in response
