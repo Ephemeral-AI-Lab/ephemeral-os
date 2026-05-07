@@ -22,7 +22,7 @@ base is built.
 | 04.5 | `three-server-phase-04-5-remove-materialized-lowerdir-cache.md` | Phase 04 cache A/B chose `keep_cache_recommendation = false` at every concurrency tier; this phase removes the materialized lowerdir cache and the cache-policy switch, leaving per-lease transient lowerdirs as the only path. |
 | 05 | `three-server-phase-05-occ-mutation-gate.md` | `write_file`, `edit_file`, and shell capture converge through `occ.client.OCCClient` and `occ-server` before publishing through layer-stack CAS. |
 | 06 | `three-server-phase-06-supervision-transport.md` | The single resident runtime daemon exposes `api.runtime.ready`, fences stale layer-stack staging after restart, and tests OP_TABLE routing against the handler-per-command layout. |
-| 07 | `three-server-phase-07-raw-exec-blocking-recovery.md` | Raw/setup execution is prevented from mutating `/testbed` after the base is built, with explicit recovery paths for rebase. |
+| 07 | `three-server-phase-07-raw-exec-blocking-recovery.md` | Deferred. Do not implement raw-exec workspace blocking or recovery in the current wave; keep public `raw_exec` outside guarded workspace APIs. |
 | 08 | `three-server-phase-08-squash-gc-performance.md` | Squash, GC, cache, and performance gates preserve active leases and bound shell/read costs. |
 
 ## Shared Contract
@@ -41,7 +41,8 @@ edit_file   -> runtime.handlers.edit_handler -> OCCClient -> OccService -> layer
 shell       -> runtime.handlers.shell_handler -> command_exec_server
             -> layer-stack snapshot lease -> workspace replacement mount
             -> OCCClient -> OccService -> layer-stack publish
-raw_exec    -> provider/runtime escape hatch, blocked for /testbed writes after base build
+raw_exec    -> provider/runtime escape hatch for setup/status/control/debug;
+               Phase 07 blocking/recovery is deferred and not a current gate
 status      -> provider/control path; setup uploads runtime, binds workspace base,
                and Phase 06 adds api.runtime.ready as the readiness gate
 ```
@@ -86,7 +87,8 @@ runtime.layer_stack_handlers / runtime.layer_stack_server
   directly.
 - Guarded handlers fail closed when workspace binding or active manifest is
   missing; `runtime.occ_server` itself remains an internal backend factory.
-- `layer-stack-server` never reads real `/testbed` after base build except for
-  explicit recovery operations.
-- Raw/setup execution cannot silently mutate real `/testbed` after base build.
+- Guarded workspace routes do not read real `/testbed` as normal workspace
+  truth after base build.
+- Raw/setup execution blocking and recovery are deferred; do not add them in
+  the current wave.
 - Active leases survive squash and GC.

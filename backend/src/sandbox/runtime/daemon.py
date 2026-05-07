@@ -56,6 +56,7 @@ async def _handle_connection(
     boot_t0 = time.perf_counter()
     try:
         raw = await reader.readline()
+        read_completed_at = time.perf_counter()
         if not raw:
             return
         try:
@@ -87,6 +88,14 @@ async def _handle_connection(
                 response = await runtime_server.dispatch_envelope_async(
                     envelope, boot_t0=boot_t0
                 )
+        if isinstance(response, dict):
+            timings = response.get("timings")
+            if not isinstance(timings, dict):
+                timings = {}
+                response["timings"] = timings
+            timings["runtime.read_request_s"] = max(
+                0.0, read_completed_at - boot_t0
+            )
         payload = json.dumps(response, separators=(",", ":")).encode("utf-8") + b"\n"
         writer.write(payload)
         await writer.drain()

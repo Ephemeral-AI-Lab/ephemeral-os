@@ -87,14 +87,12 @@ def _route_single_path(
     timings: dict[str, float],
 ) -> tuple[RouteDecision, str | None]:
     if path == ".git" or path.startswith(".git/"):
-        timings["occ.prepare.single_path_gitignore_s"] = 0.0
+        timings["occ.prepare.gitignore_s"] = 0.0
         return RouteDecision.DROP, ".git paths are not mutable through OCC"
 
     gitignore_start = time.perf_counter()
     ignored = gitignore.is_ignored_in_snapshot(path, snapshot)
-    timings["occ.prepare.single_path_gitignore_s"] = (
-        time.perf_counter() - gitignore_start
-    )
+    timings["occ.prepare.gitignore_s"] = time.perf_counter() - gitignore_start
     if ignored:
         return RouteDecision.OCC_SKIPPED_MERGE, None
     return RouteDecision.OCC_GATED_MERGE, None

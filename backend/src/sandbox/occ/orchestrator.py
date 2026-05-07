@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from typing import cast
@@ -60,7 +61,9 @@ class OccOrchestrator:
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes synchronously by path."""
+        group_start = time.perf_counter()
         grouped = self._group_by_route(changes, snapshot=snapshot)
+        groups_end = time.perf_counter()
         prepared = tuple(
             self._prepare_group(
                 path,
@@ -71,10 +74,15 @@ class OccOrchestrator:
             )
             for path, route, path_changes, message in grouped
         )
+        prepare_end = time.perf_counter()
         return PreparedChangeset(
             snapshot=snapshot,
             path_groups=prepared,
             atomic=options.atomic,
+            timings={
+                "occ.prepare.group_by_route_s": groups_end - group_start,
+                "occ.prepare.prepare_groups_s": prepare_end - groups_end,
+            },
         )
 
     def _group_by_route(

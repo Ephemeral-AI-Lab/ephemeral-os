@@ -193,7 +193,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     monkeypatch.setattr(
         occ_server,
         "SnapshotGitignoreOracle",
-        lambda layer_stack, **kwargs: ("oracle", layer_stack, kwargs),
+        lambda layer_stack: ("oracle", layer_stack),
     )
     monkeypatch.setattr(
         occ_server,

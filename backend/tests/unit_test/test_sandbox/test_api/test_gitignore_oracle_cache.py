@@ -79,6 +79,4 @@ def test_snapshot_oracle_does_not_materialize_gitignore_workspace(
     oracle = SnapshotGitignoreOracle(manager)
     assert oracle.is_ignored("build/out.o") is True
 
-    cache = manager.storage_root / "runtime" / "gitignore-cache"
-    if cache.is_dir():
-        assert not any(child.name.startswith("gitignore-") for child in cache.iterdir())
+    assert not (manager.storage_root / "runtime").exists()

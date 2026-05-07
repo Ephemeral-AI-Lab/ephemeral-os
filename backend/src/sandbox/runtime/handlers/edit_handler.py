@@ -93,7 +93,7 @@ async def _edit_in_workspace(
         prepared = prepare_single_path_changeset(
             change,
             snapshot=lease.manifest,
-            gitignore=services.single_path_gitignore,
+            gitignore=services.gitignore,
             atomic=False,
         )
         apply_start = time.perf_counter()
@@ -110,7 +110,7 @@ async def _edit_in_workspace(
         fallback_path=layer_path,
         verb="edit",
         total_start=total_start,
-        gitignore=services.single_path_gitignore,
+        gitignore=services.gitignore,
         timings_extra={
             "api.edit.lease_acquire_s": lease_acquired_s,
             "api.edit.snapshot_read_s": read_elapsed,

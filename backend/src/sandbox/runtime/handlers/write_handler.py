@@ -121,7 +121,7 @@ async def _write_in_workspace(
         prepared = prepare_single_path_changeset(
             change,
             snapshot=lease.manifest,
-            gitignore=services.single_path_gitignore,
+            gitignore=services.gitignore,
             base_hash_reader=read_base_hash,
             atomic=False,
         )
@@ -139,7 +139,7 @@ async def _write_in_workspace(
         fallback_path=layer_path,
         verb="write",
         total_start=total_start,
-        gitignore=services.single_path_gitignore,
+        gitignore=services.gitignore,
         timings_extra={
             "api.write.lease_acquire_s": lease_acquired_s,
             "api.write.snapshot_read_s": snapshot_read_s,

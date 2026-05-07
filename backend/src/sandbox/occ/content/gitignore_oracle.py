@@ -39,8 +39,6 @@ class GitignoreMatcher(Protocol):
 
     def is_ignored(self, path: str) -> bool: ...
 
-    def filter_ignored(self, paths: Iterable[str]) -> set[str]: ...
-
 
 class PathspecGitignoreOracle:
     """Pure-Python gitignore evaluator backed by the ``pathspec`` library.

@@ -132,7 +132,7 @@ After that:
 - guarded reads read layer-stack snapshots, not real `/testbed`
 - guarded write/edit publish through OCC
 - guarded shell sees `/testbed` as a workspace replacement mount
-- raw/setup writes under `/testbed` are blocked after workspace base build
+- raw/setup blocking is deferred; public `raw_exec` remains outside guarded APIs
 - writes outside `/testbed` are runtime/provider state, not layer-stack truth
 
 ## API Route Map
@@ -243,7 +243,7 @@ Pass bar:
 - `read_file` can read seeded workspace content from layer-stack
 - base build is complete: no filtering step and no diagnostic object in the
   runtime response
-- supported raw writes under `/testbed` are blocked after workspace base build
+- raw/setup blocking is not a Phase 01 pass bar
 
 ### `sandbox.api.tool.read_file`
 
@@ -519,7 +519,7 @@ Phase 3: define narrow layer-stack and OCC client protocols
 Phase 4: route shell to command-exec-server with workspace replacement mount
 Phase 5: route write/edit and shell capture through OCCClient + occ-server
 Phase 6: supervise layer-stack.sock, occ.sock, command-exec.sock
-Phase 7: block raw/setup writes under /testbed after workspace base build
+Phase 7: deferred; do not implement raw/setup blocking or recovery in this wave
 Phase 8: add squash, GC, cache, and performance gates
 ```
 
@@ -534,7 +534,7 @@ Phase 8: add squash, GC, cache, and performance gates
 - `layer-stack-server` never imports OCC, command-exec, or Git/gitignore policy.
 - `command-exec-server` never imports or implements Git/gitignore policy.
 - guarded APIs never read or mutate real `/testbed` after workspace base build.
-- raw exec under `/testbed` is blocked after workspace base build.
+- raw-exec blocking/recovery is deferred and not part of this pass bar.
 - shell writes under `/testbed` publish only through OCC.
 - shell writes outside `/testbed` are not layer-stack workspace truth.
 - active leases survive squash and GC.

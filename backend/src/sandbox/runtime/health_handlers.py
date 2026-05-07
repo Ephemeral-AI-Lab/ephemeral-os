@@ -82,7 +82,6 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
         "layer_stack",
         "occ_client",
         "gitignore",
-        "single_path_gitignore",
         "manager",
     )
     missing_fields = [
@@ -114,7 +113,6 @@ def _probe_mutation_gate(layer_stack_root: str) -> dict[str, object]:
         "layer_stack",
         "occ_client",
         "gitignore",
-        "single_path_gitignore",
         "manager",
     )
     present_fields = [field for field in expected_fields if hasattr(backend, field)]

@@ -80,6 +80,9 @@ async def _execute_shell(
             manifest_version=lease.manifest_version,
             lease_id=lease.lease_id,
         )
+        timings["command_exec.handler_sync_prelude_s"] = (
+            time.perf_counter() - total_start
+        )
         process = await run_sync_in_executor(
             run_workspace_replaced_command,
             spec=spec,

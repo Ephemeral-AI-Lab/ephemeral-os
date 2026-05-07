@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterable
 
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.stack_manager import LayerStackManager
@@ -17,9 +16,6 @@ from sandbox.occ.service import OccService
 class _NeverIgnored:
     def is_ignored(self, _path: str) -> bool:
         return False
-
-    def filter_ignored(self, _paths: Iterable[str]) -> set[str]:
-        return set()
 
 
 def _never_ignored() -> GitignoreMatcher:

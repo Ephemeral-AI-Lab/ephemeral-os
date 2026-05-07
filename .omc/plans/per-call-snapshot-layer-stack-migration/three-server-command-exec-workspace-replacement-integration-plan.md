@@ -131,8 +131,9 @@ not layer-stack storage.
 9. Writes under `/testbed` are captured and published through OCC.
 10. Writes outside `/testbed` are runtime/provider state. They are not published
    into layer-stack unless a future root-capture feature explicitly owns them.
-11. After workspace base build, supported raw/setup execution must not mutate real
-   `/testbed`; block those calls instead of tracking a divergence state.
+11. Raw/setup blocking after workspace base build is deferred. Public `raw_exec`
+   remains a setup/status/control/debug escape hatch outside guarded workspace
+   APIs in the current wave.
 12. Squash rewrites layer-stack storage shape only. It never reads real
     `/testbed` as truth after workspace base build.
 
@@ -647,9 +648,10 @@ environment.
 
 ## Post-Import Workspace Ownership
 
-After workspace base build, layer-stack is the only supported workspace truth. The design does
-not keep a long-lived workspace state field because the normal runtime should
-not allow supported unguarded writes to real `/testbed` after workspace base build.
+After workspace base build, guarded workspace APIs treat layer-stack as the
+supported workspace truth. Public `raw_exec` remains outside that guarded
+contract while Phase 07 is deferred, so agent-visible write/edit/read/shell
+must not be implemented through public `raw_exec`.
 
 Ownership rules:
 
@@ -669,8 +671,9 @@ guarded shell:
   environment
 
 raw/setup execution:
-  may write /testbed only before workspace base build
-  must be blocked from writing /testbed after workspace base build
+  current wave: public provider/runtime escape hatch for setup/status/control/debug
+  not a guarded workspace mutation path
+  blocking/recovery policy is deferred to Phase 07 if revived
 
 sandbox environment assumption:
   no cron, background daemon, package hook, or external process mutates /testbed
@@ -679,7 +682,7 @@ sandbox environment assumption:
   and that writable view exists only in its private mount namespace
 
 optional scanner:
-  deterministic tree hash of real /testbed for explicit audit/recovery
+  deferred Phase 07 topic; not part of the current wave
 ```
 
 Prepare-snapshot rule:
@@ -697,42 +700,33 @@ Recovery options:
 
 ```text
 rebuild_base:
-  explicit recovery-only operation
-  discard or archive current layer-stack workspace state, then build real
-  /testbed as the new workspace base
+  deferred Phase 07 topic; not part of the current wave
 
 rebase:
-  explicit recovery-only operation
-  compute real /testbed diff against the recorded base/active hash, convert to
-  typed changes, and publish through OCC if valid
+  deferred Phase 07 topic; do not add without a concrete product workflow
 
 ignore real workspace:
-  allowed only for explicit recovery operations that prove real /testbed is not
-  intended to be truth
+  current guarded APIs already ignore real /testbed for normal in-workspace reads
+  after base build
 ```
 
 ## Raw Execution Policy
 
 Raw provider execution is outside the guarded workspace contract.
 
-Allowed final contract:
+Current-wave contract while Phase 07 is deferred:
 
 ```text
-raw exec outside /testbed:
-  allowed according to runtime/provider policy
-
-raw exec under /testbed:
-  blocked after workspace base build by API policy
-
-raw exec cannot prove either:
-  blocked
+raw_exec:
+  public provider/runtime escape hatch for setup/status/control/debug/live probes
+  not used to implement guarded read_file/write_file/edit_file/shell
+  no workspace blocking policy in the current wave
 ```
 
-The plan must never allow:
+The guarded API plan must never implement this path:
 
 ```text
-raw_exec: echo bad > /testbed/src/a.py
-api.read_file("src/a.py") silently returns stale layer-stack content
+write_file/edit_file/shell -> public raw_exec -> untracked /testbed mutation
 ```
 
 ## Squash and Checkpoint Semantics
@@ -860,7 +854,7 @@ Pass bar:
 
 - `api.read_file("known_repo_file")` returns seeded content before any write.
 - `api.read_file` never reads real `/testbed` after workspace base build.
-- supported raw/setup mutation under `/testbed` after workspace base build is blocked.
+- raw/setup blocking is deferred and not a current pass bar.
 - no background process mutates `/testbed` outside the guarded API path.
 
 ### Read
@@ -1249,26 +1243,35 @@ Pass bar:
 
 ### Phase 7 - Raw Exec Workspace Blocking and Recovery
 
-Files:
+Status:
 
 ```text
-backend/src/sandbox/api/tool/raw_exec.py
-backend/src/sandbox/control/ops/runtime_services.py
-backend/src/sandbox/layer_stack/workspace_recovery.py
+deferred
+do not implement in the current migration wave
 ```
 
-Tasks:
+Do not add:
 
-- block supported raw exec from writing under `/testbed` after workspace base build
-- expose workspace binding/base metadata for diagnostics
-- add explicit rebuild-base/rebase recovery APIs
-- add optional scanner for discrepancy audits
+```text
+backend/src/sandbox/control/ops/runtime_services.py
+backend/src/sandbox/api/tool/raw_exec_policy.py
+backend/src/sandbox/layer_stack/workspace_recovery.py
+backend/src/sandbox/layer_stack/workspace_scanner.py
+```
+
+Parked topic if revived later:
+
+- add explicit raw_exec caller intent for setup/liveness/debug paths
+- add conservative fail-closed raw_exec policy after base build
+- add diagnostic scanner only if audit/recovery is required
+- add rebuild-base recovery only as an explicit user/API action
+- keep guarded write/edit/read/shell off public raw_exec
 
 Pass bar:
 
-- raw mutation under `/testbed` is rejected after workspace base build
-- guarded reads never need a persistent workspace status check
-- recovery can rebuild base or rebase only through explicit user/API action
+- no current implementation pass bar
+- guarded reads still return layer-stack content for in-workspace paths
+- public raw_exec remains available for setup/status/control/debug/live probes
 
 ### Phase 8 - Squash, Checkpoint, and Performance Gates
 
@@ -1302,7 +1305,7 @@ Pass bar:
 unit:
   workspace binding validation
   deterministic full workspace base
-  post-import raw /testbed write blocking
+  raw-exec blocking deferred; no current unit gate
   materialized lowerdir cache pins
   squash with and without active leases
   OCC ports use narrow protocols
@@ -1317,7 +1320,7 @@ integration:
   shell cwd escape rejected
   shell env /testbed path resolves to workspace replacement view
   outside-workspace writes not captured by workspace capture
-  raw workspace mutation is blocked after workspace base build
+  raw-exec blocking deferred; public raw_exec remains outside guarded APIs
   long-running command keeps manifest N while active advances to N+1
   shell conflict against advanced active manifest rejects cleanly
 
@@ -1392,6 +1395,7 @@ layer-stack-server
 
 2. Should outside-workspace writes be unrestricted runtime state, or limited to
    approved scratch/cache roots?
-3. Which raw execution paths remain after guarded shell is stable?
-4. Does recovery need both rebuild-base and rebase in the first migration, or is
-   explicit rebuild-base enough?
+3. If Phase 07 is revived, which raw execution paths need explicit
+   pre-base/liveness/debug intent?
+4. If Phase 07 is revived, is explicit rebuild-base enough, or does a concrete
+   product workflow require rebase?

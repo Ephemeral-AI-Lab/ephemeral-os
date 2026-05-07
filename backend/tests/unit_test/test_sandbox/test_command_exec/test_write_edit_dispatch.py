@@ -263,7 +263,7 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
 
 
 @pytest.mark.asyncio
-async def test_write_file_single_path_prepare_skips_gitignore_workspace_cache(
+async def test_write_file_single_path_prepare_reports_gitignore_timing(
     tmp_path: Path,
 ) -> None:
     occ_server._backend_cache_clear()
@@ -285,8 +285,7 @@ async def test_write_file_single_path_prepare_skips_gitignore_workspace_cache(
     assert result["success"] is True
     timings = result["timings"]
     assert timings["occ.prepare.single_path_fast_s"] >= 0.0
-    assert timings["occ.prepare.single_path_gitignore_s"] >= 0.0
-    _assert_no_gitignore_workspace_cache(stack)
+    assert timings["occ.prepare.gitignore_s"] >= 0.0
 
 
 @pytest.mark.asyncio
@@ -313,7 +312,6 @@ async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
     timings = result["timings"]
     assert timings["occ.prepare.single_path_fast_s"] >= 0.0
     assert timings["occ.prepare.single_path_base_hash_s"] == 0.0
-    _assert_no_gitignore_workspace_cache(stack)
 
 
 # ---------------------------------------------------------------------------
@@ -358,10 +356,3 @@ def test_classifier_resolves_workspace_real_path_when_input_uses_literal(
     result = classify_path(f"{link_workspace}/foo", str(link_workspace))
     assert result.classification == "in_workspace"
     assert result.layer_path == "foo"
-
-
-def _assert_no_gitignore_workspace_cache(stack: Path) -> None:
-    cache_root = stack / "runtime" / "gitignore-cache"
-    if not cache_root.is_dir():
-        return
-    assert not any(child.name.startswith("gitignore-") for child in cache_root.iterdir())

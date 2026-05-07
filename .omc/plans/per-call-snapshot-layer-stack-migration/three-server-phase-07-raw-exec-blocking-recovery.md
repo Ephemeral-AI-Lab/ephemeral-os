@@ -1,160 +1,159 @@
 # Phase 07 - Raw Exec Workspace Blocking and Recovery
 
-**Status:** draft implementation plan
+**Status:** deferred; do not implement in the current migration wave
 **Source:** `three-server-command-exec-workspace-replacement-simplified.md`
+**Live checkout basis:** 2026-05-08 audit of `backend/src/sandbox`
 
-## 1. Task Specification
+## Decision
 
-Close the divergence hole where raw/setup execution can mutate real `/testbed`
-after workspace base build. Public `raw_exec` remains a provider/runtime escape
-hatch for non-workspace state, but it must fail closed when it may write the
-assigned workspace after workspace base build. Explicit recovery APIs own rebuild-base/rebase
-behavior.
+Defer Phase 07. Do not add raw-exec workspace blocking, recovery APIs, or real
+workspace scanner modules as part of the current phase sequence.
 
-Implementation scope:
+The current implementation already protects normal workspace operations by
+routing guarded `read_file`, `write_file`, `edit_file`, and `shell` through the
+runtime/layer-stack/OCC path. Public `raw_exec` remains the provider/runtime
+escape hatch for setup, status/control, diagnostics, and live-test probes.
+
+This means the active contract is:
 
 ```text
-block supported raw/setup writes under /testbed after workspace base build
-distinguish guarded RuntimeEnvelope calls from public raw_exec
-expose workspace binding/base diagnostics
-add explicit recovery-only rebuild-base path
-draft or add explicit recovery-only rebase path if required
-add optional real /testbed scanner for audit/recovery diagnostics
+guarded workspace APIs:
+  use layer-stack/OCC and do not treat real /testbed as normal workspace truth
+
+public raw_exec:
+  remains unguarded provider/runtime execution
+  must not be used by agent-visible write/edit/read/shell workflows
+
+Phase 07 raw_exec blocking and recovery:
+  parked design topic
+  no file additions
+  no test additions
+  no live gate in the current migration wave
 ```
 
-Out of scope:
+## Current Checkout Audit
+
+Implemented now:
 
 ```text
-no implicit divergence state machine
-no automatic background reconciliation
-no raw exec wrapper for guarded write/edit/shell
+backend/src/sandbox/api/tool/raw_exec.py
+  existing public raw provider exec primitive
+  delegates straight to get_adapter(sandbox_id).exec(...)
+  has no workspace policy and no layer-stack context
+
+backend/src/sandbox/control/ops/setup.py
+  existing post-create/post-start setup hook
+  uploads runtime bundle, runs ensure_git, calls api.ensure_workspace_base,
+  then requires api.runtime.ready
+
+backend/src/sandbox/control/daemon/command.py
+  existing guarded runtime transport
+  sends typed runtime envelopes through provider adapter exec directly
+  does not route guarded write/edit/read/shell through public raw_exec
+
+backend/src/sandbox/runtime/handlers/
+  existing per-verb read/write/edit/shell entrypoints
+  read/write/edit use handlers._common for path classification
+  shell_handler delegates to runtime.command_exec_server
+
+backend/src/sandbox/runtime/command_exec_server.py
+  existing guarded shell pipeline
+  prepares a workspace snapshot, runs workspace-replaced command execution,
+  captures upperdir changes, and submits typed changes through OCCClient
+
+backend/src/sandbox/runtime/layer_stack_handlers.py
+  existing api.ensure_workspace_base, api.build_workspace_base(reset=True),
+  api.workspace_binding, snapshot prepare/release
+
+backend/src/sandbox/layer_stack/workspace_base.py
+  existing full workspace base builder with active/base root hashes
+
+backend/src/sandbox/runtime/health_handlers.py
+  existing api.runtime.ready diagnostics
+```
+
+Not implemented and not part of this deferred phase:
+
+```text
+backend/src/sandbox/control/ops/runtime_services.py
+backend/src/sandbox/api/tool/raw_exec_policy.py
+backend/src/sandbox/layer_stack/workspace_recovery.py
+backend/src/sandbox/layer_stack/workspace_scanner.py
+backend/tests/unit_test/test_sandbox/test_api/test_raw_exec_workspace_policy.py
+backend/tests/unit_test/test_sandbox/test_layer_stack/test_workspace_recovery.py
+```
+
+Existing tests already prove the most important current invariant:
+
+```text
+backend/tests/unit_test/test_sandbox/test_command_exec/test_write_edit_dispatch.py
+  test_read_file_in_workspace_returns_layer_stack_bytes mutates real workspace
+  after base build and verifies read_file still returns layer-stack bytes
+
+backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py
+  proves raw_exec delegates directly to the registered adapter
+```
+
+## Why Deferred
+
+Raw-exec blocking needs an additional policy surface that is not currently
+owned by the runtime:
+
+```text
+raw_exec has only sandbox_id, command, cwd, timeout
+raw_exec does not receive layer_stack_root or workspace_root
+setup and live-test probes intentionally use raw_exec outside guarded APIs
+classifying arbitrary shell text safely requires an explicit fail-closed policy
+```
+
+Adding that policy now would broaden the current migration beyond the active
+workspace replacement and OCC paths. It would also require caller-intent changes
+for setup/recovery/diagnostic commands so binding-missing behavior is not
+misclassified.
+
+## Deferred Scope
+
+If Phase 07 is revived later, start from this bounded scope:
+
+```text
+add explicit raw_exec intent:
+  unknown | pre_base_setup | liveness_probe | outside_workspace
+
+add conservative raw_exec policy:
+  default unknown calls fail closed when binding status cannot be determined
+  setup callers explicitly mark pre_base_setup
+  liveness probes explicitly mark liveness_probe
+  workspace-targeting or unclassified commands reject after base build
+
+add diagnostic scanner only:
+  deterministic real /testbed inventory
+  no layer-stack publish side effects
+
+add explicit rebuild-base recovery only if needed:
+  wrapper around existing api.build_workspace_base(reset=True)
+  report old/new binding and scan details
+  no implicit background reconciliation
+```
+
+Still out of scope if revived:
+
+```text
+no control/ops/runtime_services.py
+no raw_exec wrapper for guarded write/edit/read/shell
+no automatic divergence state machine
 no full-root versioning
+no rebase unless a concrete product workflow requires preserving real /testbed drift
 ```
 
-Exit condition:
+## Current Pass Bar
+
+Phase 07 contributes no current implementation pass bar. The active pass bar
+stays with the already implemented guarded workspace routes:
 
 ```text
-after workspace base build, supported raw/setup execution cannot silently mutate real
-/testbed in a way that guarded read_file would miss. Recovery requires an
-explicit user/API action.
+read_file returns layer-stack bytes for in-workspace paths
+write_file and edit_file publish through OCCClient
+shell enters runtime.command_exec_server and submits captured changes through OCCClient
+guarded runtime envelopes do not call public raw_exec
+public raw_exec remains available for setup/status/control/debug/live-test probes
 ```
-
-## 2. Main Data Objects
-
-```text
-RawExecPolicyDecision
-  allowed
-  reason
-  workspace_binding
-  command_classification
-
-WorkspaceRecoveryRequest
-  mode: rebuild_base | rebase | scan
-  workspace_ref
-  actor_id
-  reason
-
-WorkspaceRecoveryReport
-  base_binding
-  real_workspace_hash
-  layer_stack_active_hash
-  changed_paths
-  conflicts
-  action_taken
-
-WorkspaceScannerResult
-  tree_hash
-  path_count
-  byte_count
-  suspected_workspace_writes
-```
-
-## 3. File/Folder Structure Change
-
-Target additions and updates:
-
-```text
-backend/src/sandbox/api/tool/
-|-- raw_exec.py
-
-backend/src/sandbox/control/ops/
-|-- runtime_services.py
-|-- setup.py
-
-backend/src/sandbox/layer_stack/
-+-- workspace_recovery.py
-+-- workspace_scanner.py
-
-backend/tests/unit_test/test_sandbox/test_api/
-+-- test_raw_exec_workspace_blocking.py
-
-backend/tests/unit_test/test_sandbox/test_layer_stack/
-+-- test_workspace_recovery.py
-```
-
-## 4. Workflow Demonstration
-
-Blocked raw workspace mutation:
-
-```text
-host raw_exec("bash -lc 'echo bad > /testbed/src/a.py'")
-  -> raw_exec policy checks workspace binding
-  -> command may mutate /testbed after workspace base build
-  -> reject with workspace_mutation_blocked
-```
-
-Allowed non-workspace raw execution:
-
-```text
-host raw_exec("bash -lc 'echo x > /tmp/outside'")
-  -> raw_exec policy checks workspace binding
-  -> command is outside assigned workspace and allowed by runtime policy
-  -> execute as provider/runtime state
-```
-
-Explicit rebuild-base recovery:
-
-```text
-workspace_recovery.rebuild_base(workspace_ref, reason)
-  -> require explicit recovery request
-  -> scan real /testbed as a full workspace copy
-  -> archive or discard previous layer-stack workspace state by recovery mode
-  -> build real /testbed as the new workspace base
-  -> write recovery report
-```
-
-Explicit rebase recovery:
-
-```text
-workspace_recovery.rebase(workspace_ref, reason)
-  -> scan real /testbed
-  -> compute diff against recorded base/active hash
-  -> convert diff to typed changes
-  -> submit through OCC
-  -> report accepted/conflict/skipped paths
-```
-
-## 5. Naming Conventions and Rationale
-
-| Name | Rationale |
-|---|---|
-| `raw_exec` | Stays the provider/runtime escape hatch, not a guarded workspace API wrapper. |
-| `workspace_mutation_blocked` | Names the failure mode directly. |
-| `WorkspaceRecoveryRequest` | Makes recovery explicit and auditable. |
-| `rebuild_base` | Replaces layer-stack truth from real `/testbed` only by explicit recovery action. |
-| `rebase` | Converts real workspace drift into typed OCC changes when that behavior is intentionally requested. |
-
-## 6. Tests and Exit Criteria
-
-```text
-uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_raw_exec_workspace_blocking.py -q
-uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack/test_workspace_recovery.py -q
-```
-
-Required assertions:
-
-- raw mutation under `/testbed` is rejected after workspace base build
-- guarded runtime envelopes are not implemented as public raw_exec calls
-- reads never check real `/testbed` to decide normal freshness
-- rebuild-base/rebase require explicit recovery mode and produce reports
-- optional scanner is diagnostic only and does not mutate layer-stack by itself
