@@ -5,14 +5,6 @@ from __future__ import annotations
 from .types import AgentDefinition
 
 # ---------------------------------------------------------------------------
-# Builtin definitions
-# ---------------------------------------------------------------------------
-
-# No repository-bundled agent names are reserved by default.
-RESERVED_BUILTIN_AGENT_NAMES: frozenset[str] = frozenset()
-
-
-# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -37,22 +29,6 @@ def get_definition(name: str) -> AgentDefinition | None:
 def list_definitions() -> list[AgentDefinition]:
     """List all registered definitions."""
     return list(_DEFINITIONS.values())
-
-
-def get_role(agent_name: str) -> str | None:
-    """Return the ``role`` tag for *agent_name*, or ``None``."""
-    defn = get_definition(agent_name)
-    return defn.role if defn is not None else None
-
-
-def has_role(agent_name: str, role: str) -> bool:
-    """Check whether *agent_name* is registered with the given *role*."""
-    return get_role(agent_name) == role
-
-
-def find_by_role(role: str) -> list[AgentDefinition]:
-    """Return all registered definitions whose ``role`` matches."""
-    return [d for d in _DEFINITIONS.values() if d.role == role]
 
 
 def list_dispatchable_subagent_names() -> list[str]:

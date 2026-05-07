@@ -6,11 +6,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel, Field
 
-from .registry import (
-    RESERVED_BUILTIN_AGENT_NAMES,
-    get_definition,
-    list_definitions,
-)
+from .registry import get_definition, list_definitions
 from .types import AgentDefinition
 
 if TYPE_CHECKING:
@@ -40,9 +36,6 @@ class AgentDefinitionValidator:
     def validate(self, defn: AgentValidationInput) -> AgentValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
-
-        if defn.name in RESERVED_BUILTIN_AGENT_NAMES:
-            errors.append(f"Agent name is reserved for a builtin runtime agent: {defn.name}")
 
         requested_tools = self._collect_requested_tools(defn)
         if requested_tools:
