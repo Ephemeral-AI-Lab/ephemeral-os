@@ -36,7 +36,7 @@ from tools.builtins.background.cancel_background_task import (
     CancelBackgroundTaskTool,
 )
 from tools.core.base import ToolExecutionContextService, ToolResult
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.background.manager import BackgroundTaskManager
 
 
 # ---------------------------------------------------------------------------

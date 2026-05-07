@@ -19,7 +19,7 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     if name in {"BackgroundTaskManager", "TrackedBackgroundTask"}:
-        module = import_module("engine.runtime.background_tasks")
+        module = import_module("engine.background.manager")
         return getattr(module, name)
     if name in {"EphemeralAgent", "spawn_agent"}:
         module = import_module("engine.runtime.agent")

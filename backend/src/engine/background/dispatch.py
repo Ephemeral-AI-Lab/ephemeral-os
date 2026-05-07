@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.background.manager import BackgroundTaskManager
 from engine.tool_call.trace import record_tool_trace
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (

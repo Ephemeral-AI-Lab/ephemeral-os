@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from engine.runtime.background_tasks import BackgroundTaskManager, append_background_reminder
+from engine.background.manager import BackgroundTaskManager, append_background_reminder
 from tools.core.base import ToolResult
 
 

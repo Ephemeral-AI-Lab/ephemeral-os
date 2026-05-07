@@ -28,7 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover
     )
     from engine.query.loop import QueryContext, run_query
     from engine.tool_call.streaming import StreamingToolExecutor, TrackedTool
-    from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+    from engine.background.manager import BackgroundTaskManager, TrackedBackgroundTask
 
 __all__ = [
     "AssistantMessageComplete",
@@ -59,8 +59,8 @@ __all__ = [
 _SUBMODULES = {
     "EphemeralAgent": ("engine.runtime.agent", "EphemeralAgent"),
     "spawn_agent": ("engine.runtime.agent", "spawn_agent"),
-    "BackgroundTaskManager": ("engine.runtime.background_tasks", "BackgroundTaskManager"),
-    "TrackedBackgroundTask": ("engine.runtime.background_tasks", "TrackedBackgroundTask"),
+    "BackgroundTaskManager": ("engine.background.manager", "BackgroundTaskManager"),
+    "TrackedBackgroundTask": ("engine.background.manager", "TrackedBackgroundTask"),
     "ConversationMessage": ("message.messages", "ConversationMessage"),
     "TextBlock": ("message.messages", "TextBlock"),
     "ThinkingBlock": ("message.messages", "ThinkingBlock"),

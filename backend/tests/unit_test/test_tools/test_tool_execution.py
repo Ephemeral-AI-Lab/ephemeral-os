@@ -11,11 +11,11 @@ from pydantic import BaseModel, RootModel
 
 from engine.query.loop import QueryContext, QueryExitReason, run_query
 from engine.tool_call.streaming import StreamingToolExecutor
-from engine.runtime.background_dispatch import (
+from engine.background.dispatch import (
     launch_and_collect_bg_events,
     launch_background_tool,
 )
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.background.manager import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
     SystemNotificationBlock,

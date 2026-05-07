@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 
 from engine.tool_call.streaming import StreamingToolExecutor, defer_background_dispatch
 from engine.tool_call.batch import validate_tool_batch
-from engine.runtime.background_dispatch import launch_and_collect_bg_events
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.background.dispatch import launch_and_collect_bg_events
+from engine.background.manager import BackgroundTaskManager
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     StreamEvent,

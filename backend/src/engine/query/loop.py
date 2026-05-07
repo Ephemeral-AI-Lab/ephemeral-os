@@ -43,7 +43,7 @@ from engine.query.request import (
     record_assistant_message,
     record_tool_results,
 )
-from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.background.manager import BackgroundTaskManager
 from engine.tool_call.context import prepare_tool_execution_context
 from notification.rules import NotificationRule, dispatch_rules
 from notification.service import SystemNotificationService
