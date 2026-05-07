@@ -38,7 +38,7 @@ Doing this *before* the package move keeps OCC's external surface (§2.1) from i
 - `tools/sandbox_toolkit/shell.py:174` and `tools/sandbox_toolkit/_shell_prehooks.py:63` — update guidance strings (no longer steer agents to `remove_file` / `move_file`).
 - `tools/submission/hooks/request_complex_task_before_edit_gate.py:19-20` — drop the two tool names from the gate's covered set, or expand the gate to cover `shell` if equivalent coverage is desired.
 - `agents/helper_agent/resolver/agent.md`, `agents/main_agent/entry_executor/agent.md`, `agents/main_agent/generator/executor/agent.md` — strip `remove_file` / `move_file` from each agent's tool list.
-- `backend/tests/support/eval_agent.py:384-385` — strip the two tool names from the eval allowlist.
+- `backend/tests/unit_test/test_engine/eval_agent_support.py:384-385` — strip the two tool names from the eval allowlist.
 - `sandbox/api/audited_sandbox_api.py:134-162` — delete `remove_file` / `move_file` methods.
 - `sandbox/api/sandbox_api.py:49-53` — drop the corresponding protocol methods.
 - `sandbox/api/audit.py` — delete `submit_remove_request` / `submit_move_request` and the `RemoveFileRequest` / `MoveFileRequest` / `RemoveFileResult` / `MoveFileResult` models from the public `sandbox.api` model contract if no other caller remains.
@@ -249,7 +249,7 @@ pass without an intermediate broken state.
    - Delete tools/sandbox_toolkit/{move_file.py, remove_file.py}
    - Update tools/sandbox_toolkit/registry.py, shell.py, _shell_prehooks.py
    - Update tools/submission/hooks/request_complex_task_before_edit_gate.py
-   - Strip remove_file / move_file from agent.md files and backend/tests/support/eval_agent.py
+   - Strip remove_file / move_file from agent.md files and backend/tests/unit_test/test_engine/eval_agent_support.py
    - Delete AuditedSandboxApi.{move,remove}_file + the SandboxApi protocol pair
    - Delete audit.submit_{move,remove}_request and unreferenced request/result models
    - Delete service.move_file, mutation_service.move_file, MoveSpec, backends move_file,

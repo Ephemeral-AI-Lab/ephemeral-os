@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from support.eval_agent import EvalAgent
+from . import eval_agent_support
+from .eval_agent_support import EvalAgent
 from message.stream_events import BackgroundTaskCompleted
 from notification.events import SystemNotification
 
@@ -43,7 +44,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
             ]
         )
 
-    monkeypatch.setattr("support.eval_agent.run_query", _fake_run_query)
+    monkeypatch.setattr(eval_agent_support, "run_query", _fake_run_query)
     monkeypatch.setattr("engine.api.run_query", _fake_run_query)
 
     query_context = SimpleNamespace(
