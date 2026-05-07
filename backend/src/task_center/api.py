@@ -74,7 +74,7 @@ from task_center.attempt.runtime import (
     AttemptAgentLauncher,
     AttemptRuntime,
 )
-from task_center.context_engine.composer import ContextComposer, LaunchBundle
+from task_center.agent_launch.composer import ContextComposer, LaunchBundle
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import (
