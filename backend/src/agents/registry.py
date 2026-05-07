@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agents.types import AgentDefinition
+from .types import AgentDefinition
 
 if TYPE_CHECKING:  # pragma: no cover
     from task_center.agent_launch.predicates import PredicateRegistry as _PR

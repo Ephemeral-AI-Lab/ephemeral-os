@@ -7,7 +7,7 @@ seed builtins during startup.
 
 from __future__ import annotations
 
-from agents.types import AgentDefinition
+from .types import AgentDefinition
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ BUILTIN_AGENTS: tuple[AgentDefinition, ...] = ()
 
 def register_builtin_agents() -> None:
     """Register all built-in agent definitions used by the harness."""
-    from agents.registry import register_definition
+    from .registry import register_definition
 
     for defn in BUILTIN_AGENTS:
         register_definition(defn)

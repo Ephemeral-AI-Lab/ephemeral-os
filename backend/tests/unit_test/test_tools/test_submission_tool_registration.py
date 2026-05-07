@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agents.types import AgentDefinition
-from agents.validation import AgentDefinitionValidator
+from agents import AgentDefinition
+from agents import AgentDefinitionValidator
 from tools.core.factory import ToolFactoryContext, create_tool, has_tool
 from tools.submission.main_agent.planner import PlanTaskInput
 

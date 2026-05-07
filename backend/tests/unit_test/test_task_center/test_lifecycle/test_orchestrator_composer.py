@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import pytest
 
-from agents import registry as agents_registry
-from agents.types import (
+from agents import (
     AgentDefinition,
     AgentVariant,
+    get_definition,
+    list_definitions,
+    register_definition,
+    unregister_definition,
 )
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
@@ -49,19 +52,25 @@ class _RecordingLauncher:
 def _isolate_global_registries():
     saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     register_builtin_predicates()
     register_builtin_recipes()
     yield
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 @pytest.fixture
@@ -111,8 +120,8 @@ def _register_planner_agents() -> None:
         terminals=["submit_full_plan"],
         system_prompt="PLANNER FULL ONLY",
     )
-    agents_registry.register_definition(base)
-    agents_registry.register_definition(full_only)
+    register_definition(base)
+    register_definition(full_only)
 
 
 def _seed_request_segment_graph(
@@ -200,7 +209,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
     assert launched.agent_name == "planner"
-    selected = agents_registry.get_definition(launched.agent_name)
+    selected = get_definition(launched.agent_name)
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
@@ -249,6 +258,6 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
     assert launched.agent_name == "planner_full_only"
-    selected = agents_registry.get_definition(launched.agent_name)
+    selected = get_definition(launched.agent_name)
     assert selected is not None
     assert selected.system_prompt == "PLANNER FULL ONLY"

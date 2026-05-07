@@ -27,7 +27,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from config.settings import Settings, load_settings
 from engine.core.query import run_query
 from message.messages import ConversationMessage

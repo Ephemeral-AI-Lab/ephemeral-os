@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from engine.runtime.agent import (
     _build_agent_tool_registry,
     _build_context_preparers,

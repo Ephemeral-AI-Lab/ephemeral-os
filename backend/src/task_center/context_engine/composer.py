@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from task_center.context_engine.engine import ContextEngine
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.renderer import (

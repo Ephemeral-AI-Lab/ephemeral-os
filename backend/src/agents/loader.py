@@ -8,8 +8,9 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from agents.types import AgentDefinition
 from config.markdown import parse_markdown_frontmatter
+
+from .types import AgentDefinition
 
 logger = logging.getLogger(__name__)
 

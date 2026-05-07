@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from pydantic import Field, field_validator
 
-from agents.registry import list_dispatchable_subagent_names
+from agents import list_dispatchable_subagent_names
 from tools.core.base import BaseTool, ToolExecutionContextService, ToolResult
 from tools.subagent.run_subagent import run_subagent
 

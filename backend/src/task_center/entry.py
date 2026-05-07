@@ -23,7 +23,7 @@ from db.stores import (
     TaskCenterStore,
     EpisodeStore,
 )
-from agents.registry import validate_agent_definitions_resolved
+from agents import validate_agent_definitions_resolved
 from task_center.mission.handler import MissionHandler
 from task_center.mission.mission import MissionCloseReport
 from task_center.config import HarnessLifecycleConfig

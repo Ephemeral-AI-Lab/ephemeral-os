@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.types import (
+from agents import (
     AgentDefinition,
     AgentSelectionBlock,
     AgentVariant,

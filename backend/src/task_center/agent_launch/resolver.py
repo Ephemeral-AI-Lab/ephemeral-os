@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from agents.registry import get_definition
-from agents.types import AgentDefinition, AgentSelectionBlock
+from agents import get_definition
+from agents import AgentDefinition, AgentSelectionBlock
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import (
     AgentDefinitionValidationError,

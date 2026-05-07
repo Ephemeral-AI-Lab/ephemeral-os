@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from engine.runtime import agent as runtime_agent
 
 

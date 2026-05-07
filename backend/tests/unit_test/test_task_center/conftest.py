@@ -8,8 +8,12 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from agents import registry as agents_registry
-from agents.types import AgentDefinition
+from agents import (
+    AgentDefinition,
+    list_definitions,
+    register_definition,
+    unregister_definition,
+)
 from db.base import Base
 import db.models  # noqa: F401  - populates Base.metadata
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
@@ -116,19 +120,25 @@ def isolated_agent_registries():
     """Save + restore predicate / recipe / agent registries for test isolation."""
     saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     register_builtin_predicates()
     register_builtin_recipes()
     yield
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 @pytest.fixture
@@ -140,7 +150,7 @@ def register_test_agents(isolated_agent_registries):
     different shape can register their own definitions on top — agent names
     are unique per test thanks to ``isolated_agent_registries`` cleanup.
     """
-    agents_registry.register_definition(
+    register_definition(
         AgentDefinition(
             name="planner",
             description="test planner",
@@ -149,7 +159,7 @@ def register_test_agents(isolated_agent_registries):
             terminals=["submit_full_plan", "submit_partial_plan"],
         )
     )
-    agents_registry.register_definition(
+    register_definition(
         AgentDefinition(
             name="executor",
             description="test executor",
@@ -162,7 +172,7 @@ def register_test_agents(isolated_agent_registries):
             ],
         )
     )
-    agents_registry.register_definition(
+    register_definition(
         AgentDefinition(
             name="generator",
             description="test generator",
@@ -171,7 +181,7 @@ def register_test_agents(isolated_agent_registries):
             terminals=["submit_execution_success", "submit_execution_failure"],
         )
     )
-    agents_registry.register_definition(
+    register_definition(
         AgentDefinition(
             name="evaluator",
             description="test evaluator",
@@ -180,7 +190,7 @@ def register_test_agents(isolated_agent_registries):
             terminals=["submit_evaluation"],
         )
     )
-    agents_registry.register_definition(
+    register_definition(
         AgentDefinition(
             name="verifier",
             description="test verifier",

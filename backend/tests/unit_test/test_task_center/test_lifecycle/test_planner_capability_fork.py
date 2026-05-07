@@ -17,8 +17,13 @@ from pathlib import Path
 
 import pytest
 
-from agents import registry as agents_registry
-from agents.loader import load_agents_tree
+from agents import (
+    get_definition,
+    list_definitions,
+    load_agents_tree,
+    register_definition,
+    unregister_definition,
+)
 from task_center.config import HarnessLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
@@ -59,22 +64,28 @@ class _RecordingLauncher:
 def _isolate_global_registries():
     saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     register_builtin_predicates()
     register_builtin_recipes()
     # Load every agent.md in the repo so resolver target lookups succeed.
     for definition in load_agents_tree(AGENTS_ROOT):
-        agents_registry.register_definition(definition)
+        register_definition(definition)
     yield
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 def _runtime_with_composer(
@@ -185,7 +196,7 @@ def test_partial_plan_caller_forks_child_planner_to_full_only(
     assert launched.agent_name == "planner_full_only"
     # (b) the registered planner_full_only definition's terminals list does
     #     not include submit_partial_plan (the gate is the agent.md filter).
-    full_only = agents_registry.get_definition("planner_full_only")
+    full_only = get_definition("planner_full_only")
     assert full_only is not None
     assert full_only.system_prompt is not None
     assert "Partial planning is disabled" in full_only.system_prompt

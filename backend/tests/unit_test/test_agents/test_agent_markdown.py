@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents.loader import load_agents_dir, load_agents_tree
+from agents import load_agents_dir, load_agents_tree
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]

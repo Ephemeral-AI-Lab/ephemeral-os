@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agents.run_tracker import AgentRunTracker
+from agents import AgentRunTracker
 
 
 def test_create_does_not_retry_on_duplicate_auto_run_id(monkeypatch):

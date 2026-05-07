@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from agents import register_definition, unregister_definition
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from engine.runtime.lifecycle import EphemeralRunResult
 from task_center.context_engine.packet import (
     ContextBlock,

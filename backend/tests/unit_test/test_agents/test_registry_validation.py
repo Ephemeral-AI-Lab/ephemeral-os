@@ -1,13 +1,16 @@
-"""US-007: agents.registry.validate_agent_definitions_resolved."""
+"""US-007: agent definition reference validation."""
 
 from __future__ import annotations
 
 import pytest
 
-from agents import registry as agents_registry
-from agents.types import (
+from agents import (
     AgentDefinition,
     AgentVariant,
+    list_definitions,
+    register_definition,
+    unregister_definition,
+    validate_agent_definitions_resolved,
 )
 from task_center.context_engine.errors import (
     AgentDefinitionValidationError,
@@ -23,17 +26,23 @@ from task_center.context_engine.recipes_registry import (
 def _isolate_state():
     saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     yield
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 def _stub_recipe(recipe_id: str) -> None:
@@ -59,10 +68,10 @@ def test_unknown_predicate_id_rejected():
         description="planner",
         context_recipe="planner_v1",
     )
-    agents_registry.register_definition(base)
-    agents_registry.register_definition(full_only)
+    register_definition(base)
+    register_definition(full_only)
     with pytest.raises(AgentDefinitionValidationError) as exc:
-        agents_registry.validate_agent_definitions_resolved()
+        validate_agent_definitions_resolved()
     assert "missing_predicate" in str(exc.value)
 
 
@@ -75,9 +84,9 @@ def test_dangling_variant_target_rejected():
         context_recipe="planner_v1",
         variants=[AgentVariant(when="p", use="missing_target")],
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
     with pytest.raises(AgentDefinitionValidationError) as exc:
-        agents_registry.validate_agent_definitions_resolved()
+        validate_agent_definitions_resolved()
     assert "missing_target" in str(exc.value)
 
 
@@ -100,9 +109,9 @@ def test_nested_variant_target_rejected():
         name="leaf", description="leaf", context_recipe="planner_v1"
     )
     for d in (base, middle, leaf):
-        agents_registry.register_definition(d)
+        register_definition(d)
     with pytest.raises(AgentDefinitionValidationError) as exc:
-        agents_registry.validate_agent_definitions_resolved()
+        validate_agent_definitions_resolved()
     assert "chaining" in str(exc.value).lower()
 
 
@@ -113,9 +122,9 @@ def test_unknown_context_recipe_rejected():
         description="planner",
         context_recipe="not_registered_recipe",
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
     with pytest.raises(AgentDefinitionValidationError) as exc:
-        agents_registry.validate_agent_definitions_resolved()
+        validate_agent_definitions_resolved()
     assert "not_registered_recipe" in str(exc.value)
 
 
@@ -144,14 +153,14 @@ def test_clean_setup_passes_validation():
         context_recipe="generator_v1",
     )
     for d in (base, full_only, generator):
-        agents_registry.register_definition(d)
+        register_definition(d)
     # No exception.
-    agents_registry.validate_agent_definitions_resolved()
+    validate_agent_definitions_resolved()
 
 
 def test_definitions_with_no_recipe_pass_validation():
     """Helper / subagent definitions without context_recipe must not break
     startup — only context-engine-launched agents need a recipe."""
     legacy = AgentDefinition(name="legacy", description="legacy", context_recipe=None)
-    agents_registry.register_definition(legacy)
-    agents_registry.validate_agent_definitions_resolved()
+    register_definition(legacy)
+    validate_agent_definitions_resolved()

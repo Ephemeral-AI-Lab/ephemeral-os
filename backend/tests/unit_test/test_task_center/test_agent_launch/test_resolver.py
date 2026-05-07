@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from agents import registry as agents_registry
-from agents.types import (
+from agents import (
     AgentDefinition,
     AgentSelectionBlock,
     AgentVariant,
+    list_definitions,
+    register_definition,
+    unregister_definition,
 )
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import (
@@ -29,14 +31,20 @@ from task_center.context_engine.scope import ContextScope
 @pytest.fixture(autouse=True)
 def _isolate_registries():
     saved_predicates = dict(PredicateRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     yield
     PredicateRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 @pytest.fixture
@@ -79,8 +87,8 @@ def planner_with_variant():
         context_recipe="planner_v1",
         terminals=["submit_full_plan"],
     )
-    agents_registry.register_definition(base)
-    agents_registry.register_definition(full_only)
+    register_definition(base)
+    register_definition(full_only)
     return base, full_only
 
 
@@ -90,7 +98,7 @@ def test_empty_variants_returns_base_fast_path(deps):
         description="g",
         context_recipe="generator_v1",
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="generator",
         scope=ContextScope(mission_id="r"),
@@ -144,7 +152,7 @@ def test_declared_order_priority(deps):
     alt_c = AgentDefinition(name="alt_c", description="c", context_recipe="x_v1")
     alt_a = AgentDefinition(name="alt_a", description="a", context_recipe="x_v1")
     for d in (base, alt_a, alt_b, alt_c):
-        agents_registry.register_definition(d)
+        register_definition(d)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="x", scope=ContextScope(mission_id="r"), deps=deps
     )
@@ -167,7 +175,7 @@ def test_nested_variant_target_rejected(deps):
     )
     leaf = AgentDefinition(name="leaf", description="leaf", context_recipe="x_v1")
     for d in (base, middle, leaf):
-        agents_registry.register_definition(d)
+        register_definition(d)
     with pytest.raises(AgentDefinitionValidationError):
         RuleBasedAgentResolver().resolve(
             base_agent_name="base",
@@ -191,7 +199,7 @@ def test_predicate_exception_propagates_no_fail_open(deps, planner_with_variant)
 
 def test_missing_context_recipe_raises(deps):
     base = AgentDefinition(name="bare", description="bare")
-    agents_registry.register_definition(base)
+    register_definition(base)
     with pytest.raises(MissingContextRecipeError):
         RuleBasedAgentResolver().resolve(
             base_agent_name="bare",

@@ -9,11 +9,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import db.models  # noqa: F401
-from agents import registry as agents_registry
-from agents.types import (
+from agents import (
     AgentDefinition,
     AgentSelectionBlock,
     AgentVariant,
+    list_definitions,
+    register_definition,
+    unregister_definition,
 )
 from db.base import Base
 from db.stores.context_packet_store import ContextPacketStore
@@ -39,17 +41,23 @@ from task_center.context_engine.scope import ContextScope
 def _isolate():
     saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
-    saved_definitions = dict(agents_registry._DEFINITIONS)
+    saved_definitions = list_definitions()
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     yield
     PredicateRegistry.clear()
     RecipeRegistry.clear()
-    agents_registry._DEFINITIONS.clear()
+    _clear_definitions()
     PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
-    agents_registry._DEFINITIONS.update(saved_definitions)
+    for definition in saved_definitions:
+        register_definition(definition)
+
+
+def _clear_definitions() -> None:
+    for definition in list_definitions():
+        unregister_definition(definition.name)
 
 
 @pytest.fixture
@@ -113,7 +121,7 @@ def test_compose_threads_calls_in_order(packet_store):
         context_recipe="planner_v1",
         system_prompt="SYSTEM PROMPT",
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
     deps = _stub_deps(packet_store)
     composer = ContextComposer.default(ContextEngine(deps))
     bundle = composer.compose(
@@ -158,8 +166,8 @@ def test_required_context_blocks_appended_before_render(packet_store):
         context_recipe="planner_v1",
         system_prompt="FULL ONLY",
     )
-    agents_registry.register_definition(base)
-    agents_registry.register_definition(full_only)
+    register_definition(base)
+    register_definition(full_only)
 
     deps = _stub_deps(packet_store)
     composer = ContextComposer.default(ContextEngine(deps))
@@ -183,7 +191,7 @@ def test_compose_persists_packet_only_with_store():
         description="planner",
         context_recipe="planner_v1",
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
 
     class _S:
         def get(self, *a, **k):
@@ -215,7 +223,7 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
         context_recipe="planner_v1",
         system_prompt="P",
     )
-    agents_registry.register_definition(base)
+    register_definition(base)
 
     deps = _stub_deps(packet_store)
     engine = ContextEngine(deps)
@@ -239,7 +247,7 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
 
 def test_missing_context_recipe_raises_before_render(packet_store):
     base = AgentDefinition(name="bare", description="bare")
-    agents_registry.register_definition(base)
+    register_definition(base)
     deps = _stub_deps(packet_store)
     composer = ContextComposer.default(ContextEngine(deps))
     with pytest.raises(MissingContextRecipeError):
