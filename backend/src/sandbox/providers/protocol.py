@@ -7,7 +7,7 @@ logs).
 
 Orchestration (setup, ensure_git, ensure_running, workspace discovery, context
 preparation) is built on top of these primitives in
-:mod:`sandbox.control.ops` — never inside the provider package.
+:mod:`sandbox.host.ops` — never inside the provider package.
 """
 
 from __future__ import annotations

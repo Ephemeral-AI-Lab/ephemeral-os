@@ -12,10 +12,10 @@ SCAN_ROOTS = (
     SRC_ROOT / "tools",
 )
 FORBIDDEN_PREFIXES = (
-    "sandbox.control",
+    "sandbox.host",
     "sandbox.lifecycle",
     "sandbox.providers",
-    "sandbox.runtime",
+    "sandbox.daemon",
 )
 ALLOWED_API_IMPORT_NAMES = {
     "ConflictInfo",
@@ -40,7 +40,7 @@ TYPE_MODULES = {
 }
 
 
-def test_runtime_and_tools_reach_sandbox_through_api_facade() -> None:
+def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
     offenders: list[str] = []
     for path in _python_files(SCAN_ROOTS):
         source = path.read_text(encoding="utf-8")

@@ -15,7 +15,7 @@ pytestmark = pytest.mark.asyncio
 _CRASH_SAFETY_BODY = r"""
 import signal
 import sys
-from sandbox.runtime.layer_stack_server import LayerStackWorkspaceServer
+from sandbox.daemon.services.workspace_server import LayerStackWorkspaceServer
 
 label = "workspace_base.import_crash_safety"
 case = "base_import_crash_safety"

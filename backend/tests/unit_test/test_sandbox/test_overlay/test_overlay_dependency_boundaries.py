@@ -7,8 +7,8 @@ import tarfile
 import io
 
 import sandbox.overlay.capture.types
-import sandbox.runtime.overlay_shell
-from sandbox.control.daemon.bundle import _runtime_bundle_bytes
+import sandbox.daemon.overlay_shell
+from sandbox.host.deploy.bundle import _runtime_bundle_bytes
 
 
 def _overlay_root() -> Path:
@@ -17,7 +17,7 @@ def _overlay_root() -> Path:
 
 def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
     overlay_root = _overlay_root()
-    runtime_root = Path(sandbox.runtime.overlay_shell.__file__).resolve().parent
+    runtime_root = Path(sandbox.daemon.overlay_shell.__file__).resolve().parent
     checked_roots = (
         overlay_root / "capture",
         overlay_root / "namespace",
@@ -61,12 +61,12 @@ def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> No
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "sandbox/runtime/overlay_shell/cli.py" in names
+    assert "sandbox/daemon/overlay_shell/cli.py" in names
     assert "sandbox/overlay/capture/upperdir.py" in names
     assert "sandbox/overlay/handlers/run.py" in names
     assert "sandbox/overlay/namespace/mounts.py" in names
     assert "sandbox/layer_stack/manifest.py" in names
-    assert "sandbox/runtime/overlay_shell/capture_to_changeset.py" not in names
-    assert "sandbox/runtime/overlay_shell/pipeline.py" not in names
-    assert "sandbox/runtime/overlay_shell/result_envelope.py" not in names
+    assert "sandbox/daemon/overlay_shell/capture_to_changeset.py" not in names
+    assert "sandbox/daemon/overlay_shell/pipeline.py" not in names
+    assert "sandbox/daemon/overlay_shell/result_envelope.py" not in names
     assert "sandbox/overlay/capture/ndjson.py" not in names

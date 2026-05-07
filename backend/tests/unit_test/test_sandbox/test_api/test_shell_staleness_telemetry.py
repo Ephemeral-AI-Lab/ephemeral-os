@@ -17,9 +17,9 @@ from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus
 from sandbox.command_exec.result import ShellProcessResult
-from sandbox.runtime import command_exec_server, occ_server
-from sandbox.runtime.handlers import shell_handler
-from sandbox.runtime.handlers._common import _services
+from sandbox.daemon import command_exec_server, occ_server
+from sandbox.daemon.handlers import shell_handler
+from sandbox.daemon.handlers._common import _services
 
 
 class _BlockingCommandRunner:
@@ -99,7 +99,7 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
     assert run.manager.read_text("generated/output.json") == ("value: v1\n", True)
 
 
-async def test_runtime_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
+async def test_daemon_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
     occ_server._backend_cache_clear()

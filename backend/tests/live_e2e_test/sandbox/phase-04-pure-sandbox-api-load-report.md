@@ -43,7 +43,7 @@ Focused unit verification:
 ```bash
 .venv/bin/pytest \
   backend/tests/unit_test/test_sandbox/test_api/test_shell.py \
-  backend/tests/unit_test/test_sandbox/test_api/test_runtime_transport.py \
+  backend/tests/unit_test/test_sandbox/test_api/test_daemon_transport.py \
   backend/tests/unit_test/test_sandbox/test_api/test_facade.py \
   -q
 ```

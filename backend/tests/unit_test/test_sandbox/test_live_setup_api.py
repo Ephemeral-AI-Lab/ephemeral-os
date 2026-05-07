@@ -8,8 +8,8 @@ import pytest
 from config import load_settings
 from sandbox.api import status as sb_status
 from sandbox.api.tool.raw_exec import raw_exec
-from sandbox.control.daemon.bundle import BUNDLE_REMOTE_DIR, bundle_hash
-from sandbox.control.ops.setup import setup_after_create
+from sandbox.host.deploy.bundle import BUNDLE_REMOTE_DIR, bundle_hash
+from sandbox.host.ops.setup import setup_after_create
 from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.providers.registry import get_default_provider, register_adapter
 
@@ -24,7 +24,7 @@ pytestmark = [
 
 
 @pytest.mark.asyncio
-async def test_control_setup_prepares_benchmark_runtime() -> None:
+async def test_host_setup_prepares_benchmark_runtime() -> None:
     bootstrap_daytona_provider()
     settings = load_settings()
     assert settings.sandbox.default_image, "live test requires sandbox.default_image"

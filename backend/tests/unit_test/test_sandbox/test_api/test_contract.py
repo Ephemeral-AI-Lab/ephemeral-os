@@ -42,15 +42,15 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.api.tool._runtime",
     },
     "status/__init__.py": {
-        "sandbox.control.ops.recovery",
-        "sandbox.control.ops.setup",
+        "sandbox.host.ops.recovery",
+        "sandbox.host.ops.setup",
         "sandbox.providers.registry",
     },
 }
 _FORBIDDEN_FOR_MODELS = (
     "sandbox.providers",
     "sandbox.daytona",
-    "sandbox.runtime",
+    "sandbox.daemon",
     "sandbox.occ",
     "sandbox.overlay",
     "tools.",

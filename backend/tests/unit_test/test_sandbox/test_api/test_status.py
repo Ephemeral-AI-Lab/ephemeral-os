@@ -178,7 +178,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     running ``git ...`` on a minimal-image sandbox).
     """
     from sandbox.api import status as sb_status
-    from sandbox.control.ops import setup as setup_mod
+    from sandbox.host.ops import setup as setup_mod
     from sandbox.providers.registry import set_default_provider
 
     provider = _stub_provider()
@@ -223,7 +223,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 ) -> None:
     """Same regression guard for the start path."""
     from sandbox.api import status as sb_status
-    from sandbox.control.ops import setup as setup_mod
+    from sandbox.host.ops import setup as setup_mod
     from sandbox.providers.registry import register_adapter
 
     provider = _stub_provider()

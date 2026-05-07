@@ -1,6 +1,6 @@
 # Phase 08 - Squash, GC, and Performance Gates
 
-**Status:** draft implementation plan, refreshed after 2026-05-08 drift audit
+**Status:** implemented and unit-verified after 2026-05-08 drift audit
 **Source:** `three-server-command-exec-workspace-replacement-simplified.md`
 **Live checkout basis:** Phase 04.5 removed the materialized lowerdir cache; the
 current code uses per-lease transient lowerdirs only.
@@ -68,6 +68,30 @@ api.compact or any public agent-visible stack-shrinking op
 Phase 08 must not recreate the removed cache path. Future caching work needs a
 fresh performance decision and must beat the Phase 04.5 decision bar on the
 workspace-replaced shell workload, not on prepare-only microbenchmarks.
+
+Implemented Phase 08 follow-up:
+
+```text
+SquashWorker.relabel_checkpoint(...)
+  keeps checkpoint layer IDs aligned with the manifest version actually
+  published when a concurrent prefix append lands between squash planning and
+  active-manifest CAS.
+
+LayerStackManager.prepare_workspace_snapshot(...)
+  releases the lease and removes a partially materialized transient lowerdir if
+  materialization fails before the caller receives the lease.
+
+backend/tests/unit_test/test_sandbox/test_layer_stack/test_squash_gc.py
+  covers active lease readability, release-time deletion guards, digest metadata
+  cleanup, checkpoint relabeling, suffix-CAS prefix preservation, checkpoint
+  discard on suffix mismatch, and no-cache GC boundaries.
+
+backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_shell_lease_squash.py
+  covers public live Daytona shell leases with concurrent public write/edit
+  bursts, failed-shell lease/lowerdir cleanup, multi-path shell conflict
+  all-or-nothing behavior, and no-cache timing fields without
+  cache-hit/cache-policy payloads.
+```
 
 ## 1. Task Specification
 

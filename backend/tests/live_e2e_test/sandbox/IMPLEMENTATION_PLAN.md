@@ -166,7 +166,7 @@ load amplifies latent bugs.
 |---:|---|---|
 | 25 | `overlay/native/test_namespace_command.py` | invalid namespace; missing CAP_SYS_ADMIN; signal propagation |
 | 26 | `overlay/native/test_namespace_mounts.py` | force-kill mid-mount; orphaned upperdir; double-umount |
-| 27 | `overlay/native/test_runtime_invoker.py` | exec failure; stdout overflow; timeout; non-UTF8 |
+| 27 | `overlay/native/test_daemon_invoker.py` | exec failure; stdout overflow; timeout; non-UTF8 |
 | 28 | `overlay/native/test_overlay_edge_cases.py` | depth=0/1/cap+1; ENOSPC/EBUSY/ENOMEM injection; missing lowerdir; dirty workdir |
 | 29 | `overlay/native/test_overlay_resource.py` | per-probe budgets §6.2 |
 | 30 | `overlay/native/test_overlay_runner_load.py` | N=20 concurrent runners, no fd/mount leaks; subsystem profile §6.3 |
@@ -250,7 +250,7 @@ For every probe file, the same loop:
 
 - `from sandbox.layer_stack import ...` at module top of any live-suite file.
 - Building probe scripts that import `sandbox.api.tool` or
-  `sandbox.control.*` (host-side packages even when staged).
+  `sandbox.host.*` (host-side packages even when staged).
 - `ignored_paths=[...]` parameters used to fake gitignore — use real
   `.gitignore` writes inside `/testbed` and let the pathspec oracle classify.
 - Adding `*_load.py` files without a `SubsystemLoadProfile` row in §6.3.

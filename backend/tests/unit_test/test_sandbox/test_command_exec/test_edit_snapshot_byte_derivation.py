@@ -17,9 +17,9 @@ import pytest
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.runtime import occ_server
-from sandbox.runtime.handlers import edit_handler, write_handler
-from sandbox.runtime.handlers._common import _services
+from sandbox.daemon import occ_server
+from sandbox.daemon.handlers import edit_handler, write_handler
+from sandbox.daemon.handlers._common import _services
 
 
 @pytest.mark.asyncio

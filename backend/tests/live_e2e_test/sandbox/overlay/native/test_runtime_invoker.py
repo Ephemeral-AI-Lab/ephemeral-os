@@ -92,7 +92,7 @@ _emit(label, started, before, {
 """
 
 
-async def test_runtime_invoker_exec_failure_stdout_timeout_and_non_utf8(
+async def test_daemon_invoker_exec_failure_stdout_timeout_and_non_utf8(
     native_sandbox: SandboxHandle,
 ) -> None:
     payload = await run_native_case(

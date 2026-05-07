@@ -105,7 +105,7 @@ class SandboxAPI:
         return status.get_build_logs_url(sandbox_id)
 
     def context_preparer_for(self, sandbox_id: str) -> Any:
-        from sandbox.control.ops.context import context_preparer_for
+        from sandbox.host.ops.context import context_preparer_for
 
         return context_preparer_for(sandbox_id)
 

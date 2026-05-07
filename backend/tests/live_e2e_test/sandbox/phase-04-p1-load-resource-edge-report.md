@@ -10,7 +10,7 @@ Implemented the P1 Phase 4 live tests:
 
 - `overlay/native/test_namespace_command.py`
 - `overlay/native/test_namespace_mounts.py`
-- `overlay/native/test_runtime_invoker.py`
+- `overlay/native/test_daemon_invoker.py`
 - `overlay/native/test_overlay_edge_cases.py`
 - `overlay/native/test_overlay_resource.py`
 - `overlay/native/test_overlay_runner_load.py`

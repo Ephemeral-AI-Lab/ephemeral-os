@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 from pathlib import Path
 
 
@@ -19,7 +20,7 @@ _TOOL_FORBIDDEN_PREFIXES = (
     "sandbox.providers",
     "sandbox.occ",
     "sandbox.overlay",
-    "sandbox.runtime",
+    "sandbox.daemon",
     "sandbox.daytona",
     "sandbox.code_intelligence",
 )
@@ -61,7 +62,7 @@ def test_non_api_production_code_does_not_import_private_api_utils() -> None:
     assert offenders == []
 
 
-def test_runtime_code_does_not_import_daytona_provider_modules() -> None:
+def test_daemon_code_does_not_import_daytona_provider_modules() -> None:
     offenders: list[str] = []
     runtime_root = SRC_ROOT / "sandbox" / "runtime"
     for module in _python_files(runtime_root):
@@ -108,7 +109,7 @@ def test_no_daytona_imports_outside_provider_package_or_bootstrap() -> None:
     )
 
 
-def test_control_runtime_api_do_not_import_daytona_sdk() -> None:
+def test_host_runtime_api_do_not_import_daytona_sdk() -> None:
     """control/, runtime/, api/ stay free of any direct daytona_sdk usage."""
     offenders: list[str] = []
     for sub in ("control", "runtime", "api"):
@@ -126,7 +127,7 @@ def test_control_runtime_api_do_not_import_daytona_sdk() -> None:
     )
 
 
-def test_control_runtime_api_status_do_not_import_daytona_provider() -> None:
+def test_host_runtime_api_status_do_not_import_daytona_provider() -> None:
     """The locked seam: control/, runtime/, and api/status are
     provider-neutral — none of them imports sandbox.providers.daytona.*."""
     offenders: list[str] = []
@@ -166,7 +167,7 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         "sandbox.layer_stack.merged_view",
         "sandbox.layer_stack.publisher",
         "sandbox.layer_stack.lease_registry",
-        "sandbox.runtime.layer_stack_server",
+        "sandbox.daemon.services.workspace_server",
     )
     for module in _python_files(occ_root):
         if module in allowed:
@@ -185,7 +186,7 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
     forbidden = (
         "sandbox.occ",
         "sandbox.command_exec",
-        "sandbox.runtime.clients.occ",
+        "sandbox.daemon.services.workspace_binding",
         "pathspec",
     )
     for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):
@@ -196,6 +197,19 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
                 offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
 
     assert offenders == []
+
+
+def test_removed_lowerdir_cache_modules_stay_absent() -> None:
+    for module in (
+        "sandbox.layer_stack.snapshot_cache",
+        "sandbox.layer_stack.metrics",
+    ):
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            assert exc.name == module
+        else:
+            raise AssertionError(f"{module} should not be importable")
 
 
 def test_command_exec_imports_only_client_protocol_boundaries() -> None:
@@ -210,7 +224,7 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.gated",
         "sandbox.occ.orchestrator",
         "sandbox.occ.runtime_ops",
-        "sandbox.runtime.layer_stack_server",
+        "sandbox.daemon.services.workspace_server",
     )
     for module in _python_files(command_exec_root):
         for imported in _imports(module):

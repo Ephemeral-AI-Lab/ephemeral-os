@@ -3,11 +3,11 @@
 Single entry point for health checks, sandbox reads, and sandbox start/stop
 control from outside the ``sandbox/`` package. The implementations route through
 the registered :class:`~sandbox.providers.protocol.ProviderAdapter` (default +
-per-id) and the provider-neutral :mod:`sandbox.control.ops` orchestration.
+per-id) and the provider-neutral :mod:`sandbox.host.ops` orchestration.
 
 All functions are sync and return plain dicts. Async callers (FastAPI route
 handlers, the runtime agent) should dispatch them through
-``sandbox.runtime.async_bridge.run_sync_in_executor``.
+``sandbox.utils.async_bridge.run_sync_in_executor``.
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sandbox.control.ops.recovery import ensure_running as _ensure_running
-from sandbox.control.ops.setup import setup_after_create, setup_after_start
+from sandbox.host.ops.recovery import ensure_running as _ensure_running
+from sandbox.host.ops.setup import setup_after_create, setup_after_start
 from sandbox.providers.registry import (
     dispose_adapter,
     get_adapter,

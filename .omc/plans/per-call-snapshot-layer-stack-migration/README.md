@@ -42,7 +42,7 @@ document has the same shape:
 | 05 | `three-server-phase-05-occ-mutation-gate.md` | `write_file`, `edit_file`, and shell capture converge through `OCCClient` and `occ-server`. |
 | 06 | `three-server-phase-06-supervision-transport.md` | The single resident runtime daemon exposes `api.runtime.ready`, fences stale layer-stack staging after restart, and tests OP_TABLE routing against the handler-per-command layout. |
 | 07 | `three-server-phase-07-raw-exec-blocking-recovery.md` | Deferred. Do not implement raw-exec workspace blocking or recovery in the current wave; public `raw_exec` remains a setup/status/control/debug escape hatch outside guarded workspace APIs. |
-| 08 | `three-server-phase-08-squash-gc-performance.md` | Squash, GC, cache, and performance gates preserve active leases and bound shell/read costs. |
+| 08 | `three-server-phase-08-squash-gc-performance.md` | Squash, release-time GC, and no-cache performance gates preserve active leases and bound manifest-depth-sensitive costs. |
 
 ## Current Dependency Rule
 

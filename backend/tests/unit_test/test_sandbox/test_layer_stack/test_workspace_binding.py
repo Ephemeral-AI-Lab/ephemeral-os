@@ -14,8 +14,8 @@ from sandbox.layer_stack.workspace import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.runtime import occ_server
-from sandbox.runtime.handlers import read_handler
+from sandbox.daemon import occ_server
+from sandbox.daemon.handlers import read_handler
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:

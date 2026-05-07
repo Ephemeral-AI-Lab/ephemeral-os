@@ -97,6 +97,7 @@ class LayerStackManager:
         with self._lock:
             manifest = read_manifest(self._manifest_file)
             lease = self._leases.acquire(manifest, owner_request_id)
+        lowerdir: Path | None = None
         try:
             lowerdir = (
                 self.storage_root
@@ -126,6 +127,8 @@ class LayerStackManager:
                 },
             )
         except Exception:
+            if lowerdir is not None:
+                shutil.rmtree(lowerdir.parent, ignore_errors=True)
             with self._lock:
                 self._leases.release(lease.lease_id)
             raise
@@ -217,9 +220,15 @@ class LayerStackManager:
                     plan.suffix_to_checkpoint,
                 ):
                     return None
+                next_version = current.version + 1
+                if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
+                    checkpoint = self._squash.relabel_checkpoint(
+                        checkpoint,
+                        manifest_version=next_version,
+                    )
                 live_prefix = current.layers[: -len(plan.suffix_to_checkpoint)]
                 new_manifest = Manifest(
-                    version=current.version + 1,
+                    version=next_version,
                     layers=(*live_prefix, checkpoint),
                 )
                 write_manifest_atomic(self._manifest_file, new_manifest)

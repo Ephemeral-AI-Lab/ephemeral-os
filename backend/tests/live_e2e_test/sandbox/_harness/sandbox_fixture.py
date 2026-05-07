@@ -44,7 +44,7 @@ from sandbox.api.utils.models import (
     WriteFileRequest,
     WriteFileResult,
 )
-from sandbox.control.ops.setup import setup_after_create
+from sandbox.host.ops.setup import setup_after_create
 from sandbox.providers.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.providers.registry import get_default_provider, register_adapter
 

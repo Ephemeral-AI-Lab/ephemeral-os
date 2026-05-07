@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 from pathlib import Path, PurePosixPath
@@ -103,13 +104,10 @@ class MergedView:
     ) -> None:
         """Materialise *manifest* into *destination*.
 
-        ``link_ok=True`` opts the caller into hardlink semantics: regular
-        files are linked from their source layers instead of byte-copied.
-        Only safe when the caller treats *destination* as read-only — e.g.
-        the overlay-mount lowerdir prepared by
-        :meth:`LayerStackManager.prepare_workspace_snapshot`. The public
-        ``manager.materialize()`` keeps the safer byte-copy default so a
-        consumer that writes to the result cannot corrupt source layers.
+        ``link_ok=True`` hardlinks regular files from source layers. Only safe
+        when the caller treats *destination* as read-only (e.g. the overlay
+        lowerdir from :meth:`LayerStackManager.prepare_workspace_snapshot`);
+        a writer would corrupt the source layer through the shared inode.
         """
         dest = Path(destination)
         if dest.exists():
@@ -221,18 +219,11 @@ def _remove_path(path: Path) -> None:
 
 
 def _link_or_copy(src: Path, dst: Path) -> None:
-    """Hardlink ``src`` into ``dst``; fall back to ``shutil.copy2`` cross-FS.
-
-    Materialised lowerdirs are mounted overlay-readonly (or copied to a
-    separate ``merged`` directory in copy-backed mode) — so sharing inodes
-    with the source layer is safe and avoids byte copies under concurrent
-    materialise. ``EXDEV`` (cross-filesystem) and ``EPERM`` (e.g. some FUSE
-    mounts disallow link creation) fall through to a real copy.
-    """
+    """Hardlink ``src`` into ``dst``; copy on EXDEV (cross-FS) or EPERM."""
     try:
         os.link(src, dst)
     except OSError as exc:
-        if exc.errno not in (18, 1):  # EXDEV, EPERM
+        if exc.errno not in (errno.EXDEV, errno.EPERM):
             raise
         shutil.copy2(src, dst)
 

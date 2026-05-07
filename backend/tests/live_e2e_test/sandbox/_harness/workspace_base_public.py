@@ -58,7 +58,7 @@ for rel, content in payload["files"].items():
     built = await runtime_mod.call_runtime_api(
         handle.sandbox_id,
         "api.build_workspace_base",
-        {"workspace_root": WORKSPACE_ROOT},
+        {"workspace_root": WORKSPACE_ROOT, "reset": True},
         timeout=180,
     )
     assert built.get("success") is True, built

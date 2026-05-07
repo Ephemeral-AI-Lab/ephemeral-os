@@ -21,7 +21,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.runtime.async_bridge import run_sync_in_executor
+from sandbox.utils.async_bridge import run_sync_in_executor
 
 BaseHashReader = Callable[[str], str | None]
 

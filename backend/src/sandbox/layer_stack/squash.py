@@ -67,6 +67,20 @@ class SquashWorker:
             raise
         return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
 
+    def relabel_checkpoint(self, checkpoint: LayerRef, *, manifest_version: int) -> LayerRef:
+        """Rename a prebuilt checkpoint to match the manifest that will publish it."""
+        current_path = Path(checkpoint.path)
+        if not current_path.is_absolute():
+            current_path = self._storage_root / current_path
+        if not current_path.exists():
+            raise FileNotFoundError(f"checkpoint layer is missing: {checkpoint.layer_id}")
+
+        layer_id, _staging_dir, layer_dir = self._allocate_checkpoint_paths(
+            manifest_version
+        )
+        os.replace(current_path, layer_dir)
+        return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
+
     def discard_checkpoint(self, checkpoint: LayerRef) -> None:
         layer_path = Path(checkpoint.path)
         if not layer_path.is_absolute():

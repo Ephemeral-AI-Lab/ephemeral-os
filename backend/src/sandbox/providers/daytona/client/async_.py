@@ -14,7 +14,7 @@ from typing import Any
 
 from sandbox.providers.daytona.client.credentials import load_credentials
 from sandbox.providers.daytona.errors import AsyncDaytonaUnavailableError
-from sandbox.runtime.async_bridge import (
+from sandbox.utils.async_bridge import (
     register_standalone_loop_cleanup,
     run_sync_in_executor,
 )

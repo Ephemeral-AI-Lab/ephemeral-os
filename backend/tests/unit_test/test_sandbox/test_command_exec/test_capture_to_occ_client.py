@@ -12,8 +12,8 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace import WorkspaceBinding, write_workspace_binding_atomic
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
-from sandbox.runtime import command_exec_server
-from sandbox.runtime.clients.layer_stack import LayerStackClient
+from sandbox.daemon import command_exec_server
+from sandbox.daemon.services.layer_stack_client import LayerStackClient
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,10 @@ class _LayerStackClient:
             root_hash="h",
             manifest=Manifest(version=1, layers=()),
             lowerdir=str(lowerdir),
-            timings={},
+            timings={
+                "layer_stack.materialize_s": 0.003,
+                "layer_stack.prepare_workspace_snapshot.total_s": 0.004,
+            },
         )
         self.released: list[str] = []
 
@@ -77,7 +80,16 @@ class _OCCClient:
             files=(
                 FileResult(path="generated/output.txt", status=FileStatus.COMMITTED),
             ),
-            timings={"occ.apply.total_s": 0.01},
+            timings={
+                "occ.prepare.total_s": 0.003,
+                "occ.prepare.route_and_base_hash_s": 0.002,
+                "occ.commit.total_s": 0.004,
+                "occ.commit.publish_layer_s": 0.001,
+                "occ.apply.commit_queue_wait_s": 0.0,
+                "occ.apply.commit_worker_s": 0.004,
+                "occ.apply.commit_s": 0.004,
+                "occ.apply.total_s": 0.01,
+            },
             published_manifest_version=2,
         )
 
@@ -163,6 +175,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     assert result.workspace_capture.snapshot_version == 1
     # Unconditional cleanup deletes the lowerdir parent on release.
     assert lower_parent.exists() is False
+    _assert_phase08_shell_timings(result.timings)
 
 
 async def test_shell_uses_transient_lowerdir_and_removes_it(
@@ -219,3 +232,40 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
     assert result.exit_code == 0
     assert captured_lowerdirs
     assert captured_lowerdirs[0].exists() is False
+
+
+def _assert_phase08_shell_timings(timings: dict[str, float]) -> None:
+    required = {
+        "layer_stack.materialize_s",
+        "layer_stack.prepare_workspace_snapshot.total_s",
+        "command_exec.prepare_snapshot_s",
+        "command_exec.mount_workspace_s",
+        "command_exec.run_command_s",
+        "command_exec.capture_upperdir_s",
+        "command_exec.occ_apply_s",
+        "command_exec.release_snapshot_s",
+        "command_exec.total_s",
+        "api.shell.overlay_s",
+        "api.shell.occ_apply_s",
+        "api.shell.total_s",
+        "occ.prepare.total_s",
+        "occ.prepare.route_and_base_hash_s",
+        "occ.commit.total_s",
+        "occ.commit.publish_layer_s",
+        "occ.apply.commit_queue_wait_s",
+        "occ.apply.commit_worker_s",
+        "occ.apply.commit_s",
+        "occ.apply.total_s",
+        "gitignore.cache_hits_total",
+        "gitignore.cache_misses_total",
+    }
+    assert required <= timings.keys()
+    forbidden = {
+        "cache_hit",
+        "cache_policy",
+        "lowerdir_cache_hit",
+        "lowerdir_cache_hits",
+        "lowerdir_cache_misses",
+        "materialized_byte_count",
+    }
+    assert timings.keys().isdisjoint(forbidden)

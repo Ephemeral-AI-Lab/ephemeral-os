@@ -14,23 +14,23 @@ from uuid import uuid4
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.runtime import (
+from sandbox.daemon import (
     occ_server,
     server,
 )
-from sandbox.runtime.handlers import (
+from sandbox.daemon.handlers import (
     edit_handler,
     metrics_handler,
     read_handler,
     shell_handler,
     write_handler,
 )
-from sandbox.runtime.handlers._common import (
+from sandbox.daemon.handlers._common import (
     ClassifiedPath,
     _services,
     classify_path,
 )
-from sandbox.runtime.layer_stack_server import get_layer_stack_manager
+from sandbox.daemon.services.workspace_server import get_layer_stack_manager
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
 
 def test_legacy_api_handlers_module_removed() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.runtime.api_handlers")
+        importlib.import_module("sandbox.daemon.api_handlers")
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +260,63 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
     assert result["success"] is True
     # Lease is released after publish — in-flight count returns to baseline.
     assert manager.active_lease_count() == starting_count
+
+
+@pytest.mark.asyncio
+async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> None:
+    occ_server._backend_cache_clear()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+
+    metrics = await metrics_handler.layer_metrics(
+        {"layer_stack_root": stack.as_posix()}
+    )
+
+    assert {
+        "manifest_version",
+        "manifest_depth",
+        "active_leases",
+        "pinned_layers",
+        "layer_dirs",
+        "staging_dirs",
+        "storage_bytes",
+        "workspace_bound",
+        "workspace_root",
+        "base_root_hash",
+    } <= metrics.keys()
+    forbidden = {
+        "cache_hit",
+        "cache_policy",
+        "lowerdir_cache_hits",
+        "lowerdir_cache_misses",
+        "lowerdir_cache_entries",
+        "materialized_lowerdirs",
+    }
+    assert metrics.keys().isdisjoint(forbidden)
+
+
+@pytest.mark.asyncio
+async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
+    occ_server._backend_cache_clear()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    manager = get_layer_stack_manager(stack.as_posix())
+    lease = manager.acquire_snapshot_lease("metrics-reader")
+    try:
+        metrics = await metrics_handler.layer_metrics(
+            {"layer_stack_root": stack.as_posix()}
+        )
+    finally:
+        manager.release_lease(lease.lease_id)
+
+    assert metrics["active_leases"] == 1
+    assert metrics["pinned_layers"] == len(set(lease.manifest.layers))
 
 
 @pytest.mark.asyncio

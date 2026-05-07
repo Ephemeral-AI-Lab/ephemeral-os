@@ -6,8 +6,8 @@ from collections.abc import Iterable
 from typing import Any
 
 from sandbox.api.utils.models import ConflictInfo
-from sandbox.control.daemon.bundle import BUNDLE_REMOTE_DIR
-from sandbox.control.daemon.command import _call_runtime_server
+from sandbox.host.deploy.bundle import BUNDLE_REMOTE_DIR
+from sandbox.host.rpc.client import _call_runtime_server
 from sandbox.providers.registry import get_adapter
 
 DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"

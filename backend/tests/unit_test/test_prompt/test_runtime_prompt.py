@@ -101,7 +101,7 @@ def test_tool_registry_restrict_to_tools_filters_registered_tools():
     assert registry.get("demo_tool") is None
 
 
-def test_runtime_context_message_omits_environment(tmp_path):
+def test_daemon_context_message_omits_environment(tmp_path):
     prompt = build_runtime_context_message(cwd=tmp_path)
 
     assert prompt == ""
@@ -109,7 +109,7 @@ def test_runtime_context_message_omits_environment(tmp_path):
     assert "Local host working directory" not in prompt
 
 
-def test_runtime_context_message_preserves_project_context_files(tmp_path):
+def test_daemon_context_message_preserves_project_context_files(tmp_path):
     issue_file = tmp_path / ".ephemeralos" / "issue.md"
     issue_file.parent.mkdir(parents=True)
     issue_file.write_text("fix the persisted bug", encoding="utf-8")
@@ -121,7 +121,7 @@ def test_runtime_context_message_preserves_project_context_files(tmp_path):
     assert "# Environment" not in prompt
 
 
-def test_runtime_system_prompt_omits_reasoning_settings():
+def test_daemon_system_prompt_omits_reasoning_settings():
     settings = SimpleNamespace(system_prompt="base prompt", fast_mode=False, effort="medium", passes=1)
 
     prompt = build_runtime_system_prompt(settings, cwd="/tmp/project")
