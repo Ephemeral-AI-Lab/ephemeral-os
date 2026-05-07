@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, ClassVar
 
 from sandbox.contracts import RawExecResult
-from sandbox.bash import (
+from sandbox.provider.daytona.bash import (
     EXIT_MARKER as _EXIT_MARKER,
     extract_exit_code as _extract_exit_code,
     wrap_bash_command as _wrap_bash_command,
