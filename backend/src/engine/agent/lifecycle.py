@@ -93,7 +93,7 @@ async def run_ephemeral_agent(
     Terminal tools end the run immediately. There is no same-run retry loop;
     callers that need recovery must spawn a fresh agent run with a new prompt.
     """
-    from agents import AgentRunTracker
+    from engine.agent.run_tracker import AgentRunTracker
     from engine.agent.factory import spawn_agent
 
     db_available = False

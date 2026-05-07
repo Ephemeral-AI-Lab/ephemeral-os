@@ -1,8 +1,8 @@
-"""Tests for agents.run_tracker."""
+"""Tests for engine.agent.run_tracker."""
 
 from __future__ import annotations
 
-from agents import AgentRunTracker
+from engine.agent.run_tracker import AgentRunTracker
 
 
 def test_create_does_not_retry_on_duplicate_auto_run_id(monkeypatch):
@@ -18,9 +18,12 @@ def test_create_does_not_retry_on_duplicate_auto_run_id(monkeypatch):
                 raise DuplicateKeyError("duplicate key value violates unique constraint")
             return None
 
-    monkeypatch.setattr("agents.run_tracker._get_agent_run_store", lambda: FakeStore())
     monkeypatch.setattr(
-        "agents.run_tracker.uuid4",
+        "engine.agent.run_tracker._get_agent_run_store",
+        lambda: FakeStore(),
+    )
+    monkeypatch.setattr(
+        "engine.agent.run_tracker.uuid4",
         lambda: type("UUID", (), {"hex": "duplicate000000"})(),
     )
 
