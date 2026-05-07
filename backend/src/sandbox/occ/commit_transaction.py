@@ -24,8 +24,8 @@ from sandbox.occ.gated.merge import GatedMerge
 from sandbox.occ.ports import (
     CommitPublisher,
     CommitStagingStore,
+    OccLayerStackPorts,
     SnapshotReader,
-    ensure_layer_stack_ports,
 )
 
 
@@ -41,7 +41,7 @@ class OccCommitTransaction:
 
     def __init__(
         self,
-        layer_stack: object | None = None,
+        layer_stack: OccLayerStackPorts | None = None,
         *,
         snapshot_reader: SnapshotReader | None = None,
         staging: CommitStagingStore | None = None,
@@ -49,10 +49,9 @@ class OccCommitTransaction:
         workspace_ref: str = "",
     ) -> None:
         if layer_stack is not None:
-            ports = ensure_layer_stack_ports(layer_stack)
-            snapshot_reader = snapshot_reader or ports
-            staging = staging or ports
-            publisher = publisher or ports
+            snapshot_reader = snapshot_reader or layer_stack
+            staging = staging or layer_stack
+            publisher = publisher or layer_stack
         if snapshot_reader is None or staging is None or publisher is None:
             raise TypeError(
                 "OccCommitTransaction requires snapshot_reader, staging, "
@@ -70,7 +69,7 @@ class OccCommitTransaction:
         """Validate against the current active manifest and publish accepted deltas."""
         total_start = time.perf_counter()
         timings: dict[str, float] = {}
-        with self._publisher.commit_transaction(self._workspace_ref) as transaction:
+        with self._publisher.commit_transaction() as transaction:
             timings["layer_stack.transaction.lock_wait_s"] = transaction.lock_wait_s
             snapshot_start = time.perf_counter()
             active_manifest = transaction.snapshot()

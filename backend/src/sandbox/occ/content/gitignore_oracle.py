@@ -29,7 +29,6 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.ports import (
     SnapshotMaterializer,
     SnapshotReader,
-    ensure_layer_stack_ports,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type-checkers
@@ -309,14 +308,16 @@ class SnapshotGitignoreOracle(GitignoreOracle):
 
     def __init__(
         self,
-        snapshot_reader: SnapshotReader | object,
+        snapshot_reader: SnapshotReader,
         *,
-        snapshot_materializer: SnapshotMaterializer | object | None = None,
+        snapshot_materializer: SnapshotMaterializer | None = None,
         backend: str | None = None,
     ) -> None:
-        self._snapshot_reader = ensure_layer_stack_ports(snapshot_reader)
-        self._snapshot_materializer = ensure_layer_stack_ports(
-            snapshot_materializer or snapshot_reader,
+        self._snapshot_reader = snapshot_reader
+        self._snapshot_materializer: SnapshotMaterializer = (
+            snapshot_materializer
+            if snapshot_materializer is not None
+            else snapshot_reader  # type: ignore[assignment]
         )
         self._backend = backend or select_backend()
         self._oracles: dict[int, GitignoreOracle | PathspecGitignoreOracle] = {}
@@ -328,11 +329,11 @@ class SnapshotGitignoreOracle(GitignoreOracle):
     def is_ignored(self, path: str) -> bool:
         return self.is_ignored_in_snapshot(
             path,
-            self._snapshot_reader.get_active_manifest(),
+            self._snapshot_reader.read_active_manifest(),
         )
 
     def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        snapshot = self._snapshot_reader.get_active_manifest()
+        snapshot = self._snapshot_reader.read_active_manifest()
         return {path for path in paths if self.is_ignored_in_snapshot(path, snapshot)}
 
     def is_ignored_in_snapshot(self, path: str, snapshot: Manifest) -> bool:
@@ -427,7 +428,7 @@ def _ensure_disk_cached_workspace(
     staging = cache_root / f"{_GITIGNORE_CACHE_PREFIX}{snapshot.version}.tmp.{uuid4().hex}"
     staging.mkdir(parents=True, exist_ok=False)
     materialize_start = time.perf_counter()
-    materializer.materialize_snapshot(staging, snapshot)
+    materializer.materialize(staging, snapshot)
     materialize_s = time.perf_counter() - materialize_start
     git_init_start = time.perf_counter()
     _init_git_workspace(staging)
@@ -477,7 +478,7 @@ def _evict_stale_gitignore_cache(
     """
     if not cache_root.is_dir():
         return
-    active_version = snapshot_reader.get_active_manifest().version
+    active_version = snapshot_reader.read_active_manifest().version
     threshold = active_version - keep_last_n
     for child in cache_root.iterdir():
         name = child.name

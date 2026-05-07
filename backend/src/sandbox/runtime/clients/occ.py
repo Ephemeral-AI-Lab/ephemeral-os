@@ -1,4 +1,4 @@
-"""Runtime-local OCC client factory."""
+"""Runtime-local OCC binding reader."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ from pathlib import Path
 
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.workspace import require_workspace_binding
-from sandbox.occ.client import OCCClient
 from sandbox.occ.ports import WorkspaceBindingSnapshot
 
 
@@ -36,4 +35,4 @@ class RuntimeWorkspaceBindingReader:
         )
 
 
-__all__ = ["OCCClient", "RuntimeWorkspaceBindingReader"]
+__all__ = ["RuntimeWorkspaceBindingReader"]

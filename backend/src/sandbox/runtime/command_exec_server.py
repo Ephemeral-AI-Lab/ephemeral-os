@@ -31,8 +31,9 @@ from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import read_output_ref
 from sandbox.runtime.async_bridge import run_sync_in_executor
+from sandbox.occ.client import OCCClient
 from sandbox.runtime.clients.layer_stack import LayerStackClient
-from sandbox.runtime.clients.occ import OCCClient, RuntimeWorkspaceBindingReader
+from sandbox.runtime.clients.occ import RuntimeWorkspaceBindingReader
 from sandbox.runtime.layer_stack_server import get_layer_stack_manager
 
 

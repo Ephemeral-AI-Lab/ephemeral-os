@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 import threading
 import time
 from collections.abc import Sequence
@@ -27,6 +28,7 @@ from sandbox.layer_stack.manifest import (
 from sandbox.layer_stack.merged_view import MergedView
 from sandbox.layer_stack.publisher import LayerPublisher
 from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
+from sandbox.layer_stack.staging import CommitStagingArea
 
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
@@ -175,6 +177,32 @@ class LayerStackManager:
 
     def commit_transaction(self) -> "LayerStackTransaction":
         return LayerStackTransaction(self)
+
+    @property
+    def gitignore_cache_root(self) -> Path:
+        return self.storage_root / "runtime" / "gitignore-cache"
+
+    def allocate_commit_staging(
+        self,
+        workspace_ref: str,
+        request_id: str,
+    ) -> CommitStagingArea:
+        del workspace_ref
+        parent = self.storage_root / STAGING_DIR
+        parent.mkdir(parents=True, exist_ok=True)
+        path = Path(
+            tempfile.mkdtemp(
+                prefix=f"occ-commit-{_safe_request_part(request_id)}-",
+                dir=str(parent),
+            )
+        )
+        return CommitStagingArea(staging_id=path.name, path=path)
+
+    def drop_commit_staging(self, workspace_ref: str, staging_id: str) -> None:
+        del workspace_ref
+        if not staging_id:
+            return
+        shutil.rmtree(self.storage_root / STAGING_DIR / staging_id, ignore_errors=True)
 
     def publish_changes(self, changes: Sequence[LayerChange]) -> Manifest:
         with self.commit_transaction() as transaction:
