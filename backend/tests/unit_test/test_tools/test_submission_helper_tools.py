@@ -16,7 +16,7 @@ from task_center.context_engine.packet import (
 from tools.core.context import ToolExecutionContextService
 from tools.core.results import ToolResult
 from tools.core.runtime import ExecutionMetadata
-from tools.core.tool_execution import execute_tool_once
+from tools.execution.tool_call import execute_tool_once
 from tools.submission.helper_agent.advisor import (
     ask_advisor,
     submit_advisor_feedback,

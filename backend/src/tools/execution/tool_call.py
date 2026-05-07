@@ -11,7 +11,7 @@ from message.messages import ToolResultBlock
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from tools.core.base import BaseTool
 from tools.core.context import ToolExecutionContextService
-from tools.core.hook_execution import ToolHookExecutionHelper
+from tools.execution.hook_runner import ToolHookExecutionHelper
 from tools.core.results import ToolResult
 from tools.core.runtime import ExecutionMetadata
 from tools.core.validation import execute_tool_body, parse_tool_input, validate_tool_output

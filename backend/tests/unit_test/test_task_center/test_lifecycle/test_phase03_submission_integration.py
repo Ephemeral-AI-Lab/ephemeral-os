@@ -15,7 +15,7 @@ from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import evaluator_task_id, generator_task_id, planner_task_id
 from tools.core.context import ToolExecutionContextService
 from tools.core.runtime import ExecutionMetadata
-from tools.core.tool_execution import execute_tool_once
+from tools.execution.tool_call import execute_tool_once
 from tools.submission.main_agent.evaluator import submit_evaluation_success
 from tools.submission.main_agent.generator.executor import submit_execution_success
 from tools.submission.main_agent.planner import submit_full_plan

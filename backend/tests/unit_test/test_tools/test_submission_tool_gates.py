@@ -8,7 +8,7 @@ from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.episode.episode import EpisodeCreationReason
 from task_center.task import planner_task_id
-from tools.core.tool_execution import execute_tool_once
+from tools.execution.tool_call import execute_tool_once
 from tools.submission.hooks.request_mission_before_edit_gate import (
     RequestMissionBeforeEditGate,
 )

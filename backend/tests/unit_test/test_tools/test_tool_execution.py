@@ -45,7 +45,7 @@ from tools.core.base import (
 from tools.core.decorator import tool
 from tools.core.hooks import HookResult
 from tools.core.runtime import ExecutionMetadata
-from tools.core.tool_execution import execute_tool_call_streaming, execute_tool_once
+from tools.execution.tool_call import execute_tool_call_streaming, execute_tool_once
 
 pytestmark = pytest.mark.asyncio
 

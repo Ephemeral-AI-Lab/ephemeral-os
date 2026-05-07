@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools.core.tool_execution import execute_tool_once
+from tools.execution.tool_call import execute_tool_once
 from tools.submission.main_agent.generator import request_mission_solution
 from tools.submission.main_agent.generator.executor import (
     submit_execution_failure,

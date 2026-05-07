@@ -16,7 +16,7 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from tools.core.tool_execution import execute_tool_once
+from tools.execution.tool_call import execute_tool_once
 from tools.submission.main_agent.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
