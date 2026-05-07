@@ -1,7 +1,15 @@
 # Phase 02 - Materialized Lowerdir Cache and Lease Pins
 
-**Status:** draft implementation plan
+**Status:** superseded by Phase 04.5 (cache removed; lease pins retained)
 **Source:** `three-server-command-exec-workspace-replacement-simplified.md`
+
+> **Superseded:** Phase 04 measured the cache hot-path against per-call
+> transient construction and found `keep_cache_recommendation = false` at
+> every concurrency tier. Phase 04.5 (`three-server-phase-04-5-remove-materialized-lowerdir-cache.md`)
+> removed `MaterializedSnapshotCache`, `LowerdirCacheMetrics`, the
+> `snapshot_cache_policy` switch, and `WorkspaceLease.materialized_lowerdir`.
+> The lease registry and the workspace-snapshot API surface in this phase
+> remain in effect; only the persistent on-disk cache layer was retired.
 
 ## 1. Task Specification
 

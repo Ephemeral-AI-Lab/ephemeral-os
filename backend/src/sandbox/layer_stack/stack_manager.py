@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import shutil
 from types import TracebackType
+from uuid import uuid4
 
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.lease_registry import LeaseRegistry, WorkspaceLease
@@ -19,17 +20,17 @@ from sandbox.layer_stack.manifest import (
     Manifest,
     empty_manifest,
     manifest_path,
+    manifest_root_hash,
     read_manifest,
     write_manifest_atomic,
 )
 from sandbox.layer_stack.merged_view import MergedView
-from sandbox.layer_stack.metrics import LowerdirCacheMetrics
 from sandbox.layer_stack.publisher import LayerPublisher
-from sandbox.layer_stack.snapshot_cache import (
-    MaterializedSnapshotCache,
-    manifest_root_hash,
-)
 from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
+
+
+_TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
+_LEGACY_MATERIALIZED_DIR = "materialized"
 
 
 @dataclass(frozen=True)
@@ -39,11 +40,8 @@ class PrepareWorkspaceSnapshotResult:
     root_hash: str
     manifest: Manifest
     lowerdir: str
-    cache_hit: bool
     materialized_byte_count: int
     timings: dict[str, float]
-    cache_policy: str = "enabled"
-    transient_lowerdir: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -52,11 +50,8 @@ class PrepareWorkspaceSnapshotResult:
             "root_hash": self.root_hash,
             "manifest": self.manifest.to_dict(),
             "lowerdir": self.lowerdir,
-            "cache_hit": self.cache_hit,
             "materialized_byte_count": self.materialized_byte_count,
             "timings": dict(self.timings),
-            "cache_policy": self.cache_policy,
-            "transient_lowerdir": self.transient_lowerdir,
         }
 
 
@@ -69,6 +64,10 @@ class LayerStackManager:
         (self.storage_root / LAYERS_DIR).mkdir(exist_ok=True)
         (self.storage_root / STAGING_DIR).mkdir(exist_ok=True)
 
+        legacy_materialized = self.storage_root / _LEGACY_MATERIALIZED_DIR
+        if legacy_materialized.is_dir():
+            shutil.rmtree(legacy_materialized, ignore_errors=True)
+
         self._manifest_file = manifest_path(self.storage_root)
         if not self._manifest_file.exists():
             write_manifest_atomic(self._manifest_file, empty_manifest())
@@ -77,7 +76,6 @@ class LayerStackManager:
         self._leases = LeaseRegistry()
         self._view = MergedView(self.storage_root)
         self._publisher = LayerPublisher(self.storage_root)
-        self._snapshot_cache = MaterializedSnapshotCache(self.storage_root)
         self._squash = SquashWorker(self.storage_root)
 
     def read_active_manifest(self) -> Manifest:
@@ -98,40 +96,38 @@ class LayerStackManager:
         total_start = time.perf_counter()
         with self._lock:
             manifest = read_manifest(self._manifest_file)
-            root_hash = manifest_root_hash(manifest)
-            lease = self._leases.acquire(
-                manifest,
-                owner_request_id,
+            lease = self._leases.acquire(manifest, owner_request_id)
+        try:
+            lowerdir = (
+                self.storage_root
+                / "runtime"
+                / _TRANSIENT_LOWERDIR_DIR
+                / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
+                / "lower"
             )
-            try:
-                lookup = self._snapshot_cache.get_or_create(
-                    manifest,
-                    root_hash=root_hash,
-                )
-                self._leases.pin_lowerdir(
-                    lease.lease_id,
-                    lookup.snapshot.lowerdir,
-                )
-            except Exception:
-                self._leases.release(lease.lease_id)
-                raise
-
-            timings = {
-                **lookup.timings,
-                "layer_stack.prepare_workspace_snapshot.total_s": (
-                    time.perf_counter() - total_start
-                ),
-            }
+            materialize_start = time.perf_counter()
+            self._view.materialize(lowerdir, manifest)
+            materialize_elapsed = time.perf_counter() - materialize_start
+            byte_count = _byte_count(lowerdir)
             return PrepareWorkspaceSnapshotResult(
                 lease_id=lease.lease_id,
                 manifest_version=manifest.version,
-                root_hash=root_hash,
+                root_hash=manifest_root_hash(manifest),
                 manifest=manifest,
-                lowerdir=lookup.snapshot.lowerdir,
-                cache_hit=lookup.cache_hit,
-                materialized_byte_count=lookup.snapshot.byte_count,
-                timings=timings,
+                lowerdir=lowerdir.as_posix(),
+                materialized_byte_count=byte_count,
+                timings={
+                    "layer_stack.materialize_s": materialize_elapsed,
+                    "layer_stack.materialize_bytes": float(byte_count),
+                    "layer_stack.prepare_workspace_snapshot.total_s": (
+                        time.perf_counter() - total_start
+                    ),
+                },
             )
+        except Exception:
+            with self._lock:
+                self._leases.release(lease.lease_id)
+            raise
 
     def release_lease(self, lease_id: str) -> bool:
         with self._lock:
@@ -143,26 +139,10 @@ class LayerStackManager:
                 lease.manifest.layers,
                 current_manifest=active_manifest,
             )
-            lowerdir = lease.materialized_lowerdir
-            if (
-                lowerdir
-                and lowerdir not in self._leases.pinned_lowerdirs()
-                and lease.manifest != active_manifest
-            ):
-                self._snapshot_cache.remove_lowerdir(lowerdir)
             return True
 
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
-
-    def pinned_lowerdirs(self) -> tuple[str, ...]:
-        return self._leases.pinned_lowerdirs()
-
-    def lowerdir_cache_metrics(self) -> LowerdirCacheMetrics:
-        return self._snapshot_cache.metrics
-
-    def materialized_lowerdir_count(self) -> int:
-        return self._snapshot_cache.materialized_count()
 
     def active_lease_count(self) -> int:
         return self._leases.active_count()
@@ -338,3 +318,16 @@ def _remove_path(path: Path) -> None:
 
 def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
     return storage_root / ".layer-metadata" / f"{layer_id}.digest"
+
+
+def _safe_request_part(value: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
+    return safe[:48] or "request"
+
+
+def _byte_count(path: Path) -> int:
+    total = 0
+    for entry in path.rglob("*"):
+        if entry.is_file() or entry.is_symlink():
+            total += entry.lstat().st_size
+    return total

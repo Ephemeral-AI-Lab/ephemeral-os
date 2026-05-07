@@ -413,7 +413,7 @@ def _ensure_disk_cached_workspace(
     Evicts older cache entries (version < active - N) opportunistically so
     growth stays bounded without a periodic sweep.
     """
-    cache_root = materializer.snapshot_cache_root
+    cache_root = materializer.gitignore_cache_root
     cache_root.mkdir(parents=True, exist_ok=True)
 
     final = cache_root / f"{_GITIGNORE_CACHE_PREFIX}{snapshot.version}"

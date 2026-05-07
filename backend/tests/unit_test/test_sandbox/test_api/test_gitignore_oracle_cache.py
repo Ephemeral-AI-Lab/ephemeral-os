@@ -3,8 +3,8 @@
 Covers two backends of ``SnapshotGitignoreOracle``:
 
 * ``git`` (default) — disk-cached materialized workspace under
-  ``<storage_root>/cache/gitignore-<version>/`` with atomic-rename install
-  and ``.ready`` marker.
+  ``<storage_root>/runtime/gitignore-cache/gitignore-<version>/`` with
+  atomic-rename install and ``.ready`` marker.
 * ``pathspec`` — pure-Python ``GitIgnoreSpec`` evaluator that reads
   ``.gitignore`` content via ``SnapshotReader.read_text`` (no materialize,
   no ``git init``, no subprocess).
@@ -65,7 +65,7 @@ def test_disk_cache_workspace_built_under_storage_root(tmp_path: Path) -> None:
     assert oracle.is_ignored("pkg/important.tmp") is False
 
     snapshot = manager.read_active_manifest()
-    cached = manager.storage_root / "cache" / f"gitignore-{snapshot.version}"
+    cached = manager.storage_root / "runtime" / "gitignore-cache" / f"gitignore-{snapshot.version}"
     assert (cached / ".ready").is_file()
     assert (cached / ".gitignore").is_file()
     assert (cached / ".git").is_dir()
@@ -102,7 +102,7 @@ def test_disk_cache_atomic_rename_handles_concurrent_winner(tmp_path: Path) -> N
     # Pre-populate the final cache dir to simulate a concurrent process that
     # already finished building. The current builder must rename-fail, clean
     # up its staging, and reuse the existing ready dir.
-    final = manager.storage_root / "cache" / f"gitignore-{snapshot.version}"
+    final = manager.storage_root / "runtime" / "gitignore-cache" / f"gitignore-{snapshot.version}"
     final.mkdir(parents=True)
     # Construct a real workspace inside it so check-ignore works.
     (final / ".gitignore").write_text("build/*\n", encoding="utf-8")
@@ -126,7 +126,7 @@ def test_old_cache_versions_evicted_on_build(tmp_path: Path) -> None:
     _seed_repo(manager, tmp_path)
 
     # Drop legacy cache dirs for ancient versions.
-    cache = manager.storage_root / "cache"
+    cache = manager.storage_root / "runtime" / "gitignore-cache"
     cache.mkdir(parents=True, exist_ok=True)
     stale = cache / "gitignore-0"
     stale.mkdir()
@@ -155,7 +155,7 @@ def test_pathspec_backend_skips_materialize_and_git_init(tmp_path: Path) -> None
     assert oracle.is_ignored("pkg/important.tmp") is False
 
     # No on-disk workspace expected.
-    cache = manager.storage_root / "cache"
+    cache = manager.storage_root / "runtime" / "gitignore-cache"
     if cache.is_dir():
         for child in cache.iterdir():
             assert not child.name.startswith("gitignore-"), (

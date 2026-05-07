@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import shutil
-import time
 from pathlib import Path
-from uuid import uuid4
 from typing import TYPE_CHECKING, ContextManager
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.snapshot_cache import manifest_root_hash
 from sandbox.layer_stack.stack_manager import PrepareWorkspaceSnapshotResult
 from sandbox.occ.ports import (
     CommitStagingArea,
@@ -42,8 +38,8 @@ class LayerStackClient:
         return Path(getattr(self._ports, "storage_root"))
 
     @property
-    def snapshot_cache_root(self) -> Path:
-        return self._ports.snapshot_cache_root
+    def gitignore_cache_root(self) -> Path:
+        return self._ports.gitignore_cache_root
 
     def get_active_manifest(self, workspace_ref: str = "") -> Manifest:
         return self._ports.get_active_manifest(workspace_ref)
@@ -101,74 +97,13 @@ class LayerStackClient:
         workspace_ref: str = "",
         request_id: str,
         ttl_seconds: float | None = None,
-        cache_policy: str = "enabled",
     ) -> PrepareWorkspaceSnapshotResult:
         del workspace_ref, ttl_seconds
-        if cache_policy == "disabled":
-            return self._prepare_transient_workspace_snapshot(request_id)
-        if cache_policy != "enabled":
-            raise ValueError(f"unsupported snapshot cache policy: {cache_policy}")
         return self.manager.prepare_workspace_snapshot(request_id)
 
     def release_lease(self, *, workspace_ref: str = "", lease_id: str) -> bool:
         del workspace_ref
         return self.manager.release_lease(lease_id)
-
-    def _prepare_transient_workspace_snapshot(
-        self,
-        request_id: str,
-    ) -> PrepareWorkspaceSnapshotResult:
-        total_start = time.perf_counter()
-        lease = self.manager.acquire_snapshot_lease(request_id)
-        root_hash = manifest_root_hash(lease.manifest)
-        lowerdir = (
-            self.storage_root
-            / "runtime"
-            / "transient-lowerdirs"
-            / f"{_safe_request_part(request_id)}-{uuid4().hex[:8]}"
-            / "lower"
-        )
-        try:
-            materialize_start = time.perf_counter()
-            self.manager.materialize(lowerdir, lease.manifest)
-            materialize_elapsed = time.perf_counter() - materialize_start
-            byte_count = _byte_count(lowerdir)
-            return PrepareWorkspaceSnapshotResult(
-                lease_id=lease.lease_id,
-                manifest_version=lease.manifest.version,
-                root_hash=root_hash,
-                manifest=lease.manifest,
-                lowerdir=lowerdir.as_posix(),
-                cache_hit=False,
-                materialized_byte_count=byte_count,
-                timings={
-                    "layer_stack.snapshot_cache.hit": 0.0,
-                    "layer_stack.snapshot_cache.materialize_s": materialize_elapsed,
-                    "layer_stack.snapshot_cache.bytes": float(byte_count),
-                    "layer_stack.prepare_workspace_snapshot.total_s": (
-                        time.perf_counter() - total_start
-                    ),
-                },
-                cache_policy="disabled",
-                transient_lowerdir=True,
-            )
-        except Exception:
-            self.manager.release_lease(lease.lease_id)
-            shutil.rmtree(lowerdir.parent, ignore_errors=True)
-            raise
-
-
-def _byte_count(path: Path) -> int:
-    total = 0
-    for entry in path.rglob("*"):
-        if entry.is_file() or entry.is_symlink():
-            total += entry.lstat().st_size
-    return total
-
-
-def _safe_request_part(value: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
-    return safe[:48] or "request"
 
 
 __all__ = ["LayerStackClient"]

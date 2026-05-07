@@ -16,9 +16,10 @@ base is built.
 |---|---|---|
 | 01 | `three-server-phase-01-workspace-binding-base-layer.md` | `layer-stack-server` owns `workspace.json`, builds the `/testbed` base, and serves guarded reads from the active manifest. |
 | 01 live E2E | `three-server-phase-01-live-e2e-testing-plan.md` | Live Daytona tests prove `/testbed` base import cost, correctness, concurrency, layer creation, squash/lease behavior, and snapshot assembly over a real imported base repo. |
-| 02 | `three-server-phase-02-materialized-lowerdir-cache-leases.md` | Layer-stack can prepare leased, materialized lowerdirs without rebuilding the workspace per shell call. |
+| 02 | `three-server-phase-02-materialized-lowerdir-cache-leases.md` | Layer-stack can prepare leased, materialized lowerdirs without rebuilding the workspace per shell call. *(Superseded by Phase 04.5; the cache layer is removed.)* |
 | 03 | `three-server-phase-03-narrow-client-protocols.md` | OCC and command-exec depend on narrow layer-stack/OCC client protocols, not concrete storage or service internals. |
 | 04 | `three-server-phase-04-workspace-replaced-shell.md` | Guarded shell enters `command-exec-server`, replaces `/testbed` with a leased snapshot mount, captures workspace upperdir changes, and keeps the rest of the sandbox filesystem visible. |
+| 04.5 | `three-server-phase-04-5-remove-materialized-lowerdir-cache.md` | Phase 04 cache A/B chose `keep_cache_recommendation = false` at every concurrency tier; this phase removes the materialized lowerdir cache and the cache-policy switch, leaving per-lease transient lowerdirs as the only path. |
 | 05 | `three-server-phase-05-occ-mutation-gate.md` | `write_file`, `edit_file`, and shell capture converge through `occ.client.OCCClient` and `occ-server` before publishing through layer-stack CAS. |
 | 06 | `three-server-phase-06-supervision-transport.md` | Setup supervises `layer-stack.sock`, `occ.sock`, and `command-exec.sock`, and the thin client routes public verbs to the correct server. |
 | 07 | `three-server-phase-07-raw-exec-blocking-recovery.md` | Raw/setup execution is prevented from mutating `/testbed` after the base is built, with explicit recovery paths for rebase. |

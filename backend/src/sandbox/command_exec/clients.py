@@ -15,8 +15,6 @@ class WorkspaceSnapshotLease(Protocol):
     root_hash: str
     manifest: object
     lowerdir: str
-    cache_hit: bool
-    materialized_byte_count: int
     timings: dict[str, float]
 
 
@@ -29,7 +27,6 @@ class WorkspaceLeaseClient(Protocol):
         workspace_ref: str,
         request_id: str,
         ttl_seconds: float | None = None,
-        cache_policy: str = "enabled",
     ) -> WorkspaceSnapshotLease: ...
 
     def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool: ...

@@ -60,7 +60,9 @@ class SnapshotMaterializer(Protocol):
     ) -> None: ...
 
     @property
-    def snapshot_cache_root(self) -> Path: ...
+    def gitignore_cache_root(self) -> Path:
+        """Working root for the gitignore oracle's per-version git workspaces."""
+        ...
 
 
 class CommitStagingStore(Protocol):
@@ -135,7 +137,7 @@ def _has_narrow_ports(value: object) -> bool:
             "read_bytes",
             "read_text",
             "materialize_snapshot",
-            "snapshot_cache_root",
+            "gitignore_cache_root",
             "allocate_commit_staging",
             "drop_commit_staging",
             "commit_transaction",
@@ -154,8 +156,8 @@ class _LayerStackPortsAdapter:
         return Path(cast(Any, self._layer_stack).storage_root)
 
     @property
-    def snapshot_cache_root(self) -> Path:
-        return self.storage_root / "cache"
+    def gitignore_cache_root(self) -> Path:
+        return self.storage_root / "runtime" / "gitignore-cache"
 
     def get_active_manifest(self, workspace_ref: str = "") -> Manifest:
         del workspace_ref

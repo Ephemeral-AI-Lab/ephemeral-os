@@ -307,8 +307,6 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "manifest_depth": manifest.depth,
         "active_leases": manager.active_lease_count(),
         "pinned_layers": len(manager.pinned_layers()),
-        "pinned_lowerdirs": len(manager.pinned_lowerdirs()),
-        "materialized_lowerdirs": manager.materialized_lowerdir_count(),
         "layer_dirs": len(layer_dirs),
         "staging_dirs": len(staging_dirs),
         "storage_bytes": total_bytes,
@@ -317,7 +315,6 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "base_root_hash": (
             binding.base_root_hash if binding is not None else ""
         ),
-        "lowerdir_cache": manager.lowerdir_cache_metrics().to_dict(),
     }
 
 

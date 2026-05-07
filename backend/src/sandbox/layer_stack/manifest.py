@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -99,3 +100,10 @@ def write_manifest_atomic(path: str | Path, manifest: Manifest) -> None:
         encoding="utf-8",
     )
     os.replace(tmp, manifest_file)
+
+
+def manifest_root_hash(manifest: Manifest) -> str:
+    """Return a stable identity hash for the manifest's root view."""
+    payload = {"layers": [layer.to_dict() for layer in manifest.layers]}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()

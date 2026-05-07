@@ -23,8 +23,6 @@ class _Lease:
     root_hash: str
     manifest: Manifest
     lowerdir: str
-    cache_hit: bool
-    materialized_byte_count: int
     timings: dict[str, float]
 
 
@@ -36,9 +34,7 @@ class _LayerStackClient:
             root_hash="h",
             manifest=Manifest(version=1, layers=()),
             lowerdir=str(lowerdir),
-            cache_hit=False,
-            materialized_byte_count=0,
-            timings={"layer_stack.snapshot_cache.hit": 0.0},
+            timings={},
         )
         self.released: list[str] = []
 
@@ -48,9 +44,8 @@ class _LayerStackClient:
         workspace_ref: str,
         request_id: str,
         ttl_seconds: float | None = None,
-        cache_policy: str = "enabled",
     ) -> _Lease:
-        del workspace_ref, request_id, ttl_seconds, cache_policy
+        del workspace_ref, request_id, ttl_seconds
         return self.lease
 
     def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool:
@@ -113,7 +108,9 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
             base_root_hash="a" * 64,
         )
     )
-    lower = tmp_path / "lower"
+    lower_parent = tmp_path / "transient"
+    lower_parent.mkdir()
+    lower = lower_parent / "lower"
     lower.mkdir()
     layer_stack = _LayerStackClient(lower)
     occ = _OCCClient(layer_stack)
@@ -165,9 +162,11 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     assert layer_stack.released == ["lease-1"]
     assert result.stdout == "done\n"
     assert result.workspace_capture.snapshot_version == 1
+    # Unconditional cleanup deletes the lowerdir parent on release.
+    assert lower_parent.exists() is False
 
 
-async def test_cache_disabled_shell_uses_transient_lowerdir_and_removes_it(
+async def test_shell_uses_transient_lowerdir_and_removes_it(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -211,7 +210,6 @@ async def test_cache_disabled_shell_uses_transient_lowerdir_and_removes_it(
             "layer_stack_root": stack.as_posix(),
             "command": "true",
             "cwd": ".",
-            "snapshot_cache_policy": "disabled",
         },
         layer_stack=layer_stack,
         occ_client=_OCCClient(_LayerStackClient(tmp_path / "unused-lower")),
@@ -222,4 +220,27 @@ async def test_cache_disabled_shell_uses_transient_lowerdir_and_removes_it(
     assert result.exit_code == 0
     assert captured_lowerdirs
     assert captured_lowerdirs[0].exists() is False
-    assert result.timings["layer_stack.snapshot_cache.hit"] == 0.0
+
+
+async def test_shell_rejects_legacy_snapshot_cache_policy_arg(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    layer_stack = LayerStackClient(stack)
+
+    with pytest.raises(ValueError, match="snapshot_cache_policy"):
+        await command_exec_server._execute_shell(
+            {
+                "layer_stack_root": stack.as_posix(),
+                "command": "true",
+                "cwd": ".",
+                "snapshot_cache_policy": "disabled",
+            },
+            layer_stack=layer_stack,
+            occ_client=_OCCClient(_LayerStackClient(tmp_path / "unused-lower")),
+            gitignore=_Gitignore(),
+            storage_root=stack,
+        )

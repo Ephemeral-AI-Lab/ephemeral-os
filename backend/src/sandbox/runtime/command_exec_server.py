@@ -139,11 +139,16 @@ async def _execute_shell(
     run_dir = _run_dir(storage_root, request.request_id)
     timings: dict[str, float] = {}
 
+    if "snapshot_cache_policy" in args:
+        raise ValueError(
+            "snapshot_cache_policy is not supported; the materialized lowerdir "
+            "cache was removed in Phase 04.5"
+        )
+
     lease_start = time.perf_counter()
     lease = layer_stack.prepare_workspace_snapshot(
         workspace_ref=request.workspace_ref,
         request_id=request.request_id,
-        cache_policy=_snapshot_cache_policy(args),
     )
     timings.update(
         {
@@ -403,20 +408,7 @@ def _command_exec_runtime_root(storage_root: Path) -> Path:
     return storage_root / "runtime" / "command_exec"
 
 
-def _snapshot_cache_policy(args: Mapping[str, object]) -> str:
-    raw = str(
-        args.get("snapshot_cache_policy")
-        or os.environ.get("EPHEMERALOS_COMMAND_EXEC_SNAPSHOT_CACHE_POLICY")
-        or "enabled"
-    ).strip()
-    if raw not in {"enabled", "disabled"}:
-        raise ValueError(f"unsupported snapshot cache policy: {raw}")
-    return raw
-
-
 def _drop_transient_lowerdir(lease: object) -> None:
-    if not bool(getattr(lease, "transient_lowerdir", False)):
-        return
     raw = str(getattr(lease, "lowerdir", "")).strip()
     if not raw:
         return
