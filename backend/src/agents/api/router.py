@@ -7,10 +7,11 @@ from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException
 
-from agents.registry import get_definition, list_definitions
-from agents.api.schemas import AgentValidationRequest
-from agents.validation import AgentDefinitionValidator, AgentValidationResult
 from tools import collect_tool_catalog
+
+from .schemas import AgentValidationRequest
+from ..registry import get_definition, list_definitions
+from ..validation import AgentDefinitionValidator, AgentValidationResult
 
 if TYPE_CHECKING:
     from tools import ToolRegistry

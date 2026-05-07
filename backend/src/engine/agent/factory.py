@@ -14,10 +14,10 @@ from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from server.app_factory import RuntimeConfig
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
     from tools import ToolRegistry
 
-from agents.types import AgentDefinition
+from agents import AgentDefinition
 from config import Settings
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
@@ -309,7 +309,7 @@ def spawn_agent(
     """
     from pathlib import Path
 
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
     settings = config.resolve_settings()
 
     agent_name, resolved_model, api_client, db_kwargs = _resolve_agent_identity(
