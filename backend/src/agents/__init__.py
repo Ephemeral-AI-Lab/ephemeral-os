@@ -16,10 +16,10 @@ from .definition.model import (
     AgentType,
     AgentVariant,
 )
-from .definition.validation import (
+from .definition.resolved_validation import validate_agent_definitions_resolved
+from .definition.tool_validation import (
     AgentDefinitionValidator,
     AgentValidationResult,
-    validate_agent_definitions_resolved,
 )
 
 __all__ = [
