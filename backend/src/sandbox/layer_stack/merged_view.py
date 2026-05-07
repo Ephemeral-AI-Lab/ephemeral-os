@@ -8,6 +8,11 @@ import shutil
 from pathlib import Path, PurePosixPath
 
 from sandbox.layer_stack.changes import normalize_layer_path
+from sandbox.layer_stack.layer_index import (
+    LayerIndex,
+    build_layer_index,
+    has_ancestor_in,
+)
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 
 
@@ -24,22 +29,31 @@ class MergedView:
 
     def __init__(self, storage_root: str | Path) -> None:
         self._storage_root = Path(storage_root)
+        self._layer_index_cache: dict[str, LayerIndex] = {}
+
+    def _layer_index(self, layer: LayerRef) -> LayerIndex:
+        cached = self._layer_index_cache.get(layer.layer_id)
+        if cached is not None:
+            return cached
+        index = build_layer_index(self._layer_dir(layer))
+        return self._layer_index_cache.setdefault(layer.layer_id, index)
 
     def read_bytes(self, path: str, manifest: Manifest) -> tuple[bytes | None, bool]:
         rel = normalize_layer_path(path)
         for layer in manifest.layers:
-            layer_dir = self._layer_dir(layer)
-            if _whiteout_path(layer_dir, rel).exists():
+            index = self._layer_index(layer)
+            if rel in index.whiteouts:
                 return None, False
-
-            candidate = _join_rel(layer_dir, rel)
-            if candidate.is_symlink():
-                return os.readlink(candidate).encode("utf-8"), True
-            if candidate.is_file():
-                return candidate.read_bytes(), True
-            if _has_file_ancestor(layer_dir, rel):
+            if rel in index.files:
+                layer_dir = self._layer_dir(layer)
+                candidate = _join_rel(layer_dir, rel)
+                if candidate.is_symlink():
+                    return os.readlink(candidate).encode("utf-8"), True
+                if candidate.is_file():
+                    return candidate.read_bytes(), True
+            if has_ancestor_in(rel, index.files):
                 return None, False
-            if _has_opaque_ancestor(layer_dir, rel):
+            if has_ancestor_in(rel, index.opaque_dirs):
                 return None, False
         return None, False
 

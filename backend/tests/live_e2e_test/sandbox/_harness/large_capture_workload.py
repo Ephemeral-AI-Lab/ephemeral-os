@@ -18,7 +18,8 @@ def build_k_capture_command(prefix: str, k: int) -> str:
         "set -e; "
         f"mkdir -p {prefix}; "
         f"for i in $(seq 1 {k}); do "
-        f"  printf 'k=%d i=%d\\n' {k} \"$i\" > {prefix}/file_$(printf '%06d' \"$i\").bin; "
+        f"  printf -v fname '%06d' \"$i\"; "
+        f"  printf 'k=%d i=%d\\n' {k} \"$i\" > {prefix}/file_$fname.bin; "
         "done"
     )
 
