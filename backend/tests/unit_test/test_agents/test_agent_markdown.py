@@ -9,12 +9,7 @@ from agents import load_agents_dir, load_agents_tree
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 AGENTS_ROOT = BACKEND_ROOT / "src" / "agents"
-
-
-def _load_one(directory: Path):
-    loaded = load_agents_dir(directory)
-    assert len(loaded) == 1
-    return loaded[0]
+MAIN_PROFILE_DIR = AGENTS_ROOT / "profile" / "main"
 
 
 def _load_named(directory: Path, name: str):
@@ -25,10 +20,10 @@ def _load_named(directory: Path, name: str):
 
 
 def test_harness_agent_markdown_declares_notification_triggers() -> None:
-    planner = _load_named(AGENTS_ROOT / "main_agent" / "planner", "planner")
-    executor = _load_one(AGENTS_ROOT / "main_agent" / "generator" / "executor")
-    verifier = _load_one(AGENTS_ROOT / "main_agent" / "generator" / "verifier")
-    evaluator = _load_one(AGENTS_ROOT / "main_agent" / "evaluator")
+    planner = _load_named(MAIN_PROFILE_DIR, "planner")
+    executor = _load_named(MAIN_PROFILE_DIR, "executor")
+    verifier = _load_named(MAIN_PROFILE_DIR, "verifier")
+    evaluator = _load_named(MAIN_PROFILE_DIR, "evaluator")
 
     # The planner's recursive_partial_plan notification trigger was retired
     # in favour of the agent.md `terminals:` filter on planner_full_only —
@@ -41,7 +36,7 @@ def test_harness_agent_markdown_declares_notification_triggers() -> None:
 
 
 def test_recursive_agent_loader_finds_harness_profiles() -> None:
-    loaded = load_agents_tree(AGENTS_ROOT / "main_agent")
+    loaded = load_agents_tree(MAIN_PROFILE_DIR)
     by_name = {agent.name: agent for agent in loaded}
 
     assert {"planner", "executor", "verifier", "evaluator"} <= set(by_name)
@@ -50,7 +45,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
 
 
 def test_executor_agent_uses_mission_solution_terminal() -> None:
-    executor = _load_one(AGENTS_ROOT / "main_agent" / "generator" / "executor")
+    executor = _load_named(MAIN_PROFILE_DIR, "executor")
 
     assert "request_mission_solution" in executor.terminals
     assert "submit_request_plan" not in executor.terminals

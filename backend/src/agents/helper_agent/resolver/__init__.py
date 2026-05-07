@@ -1,1 +1,0 @@
-"""Resolver helper prompt package."""

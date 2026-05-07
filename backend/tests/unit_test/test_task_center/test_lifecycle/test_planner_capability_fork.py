@@ -49,7 +49,7 @@ REPO_ROOT = next(
     for parent in Path(__file__).resolve().parents
     if (parent / "backend" / "src" / "agents").is_dir()
 )
-AGENTS_ROOT = REPO_ROOT / "backend" / "src" / "agents"
+AGENTS_ROOT = REPO_ROOT / "backend" / "src" / "agents" / "profile"
 
 
 class _RecordingLauncher:

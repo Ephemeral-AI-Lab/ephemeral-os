@@ -37,7 +37,7 @@ Doing this *before* the package move keeps OCC's external surface (§2.1) from i
 - `tools/sandbox_toolkit/registry.py` — drop the two imports and registrations.
 - `tools/sandbox_toolkit/shell.py:174` and `tools/sandbox_toolkit/_shell_prehooks.py:63` — update guidance strings (no longer steer agents to `remove_file` / `move_file`).
 - `tools/submission/hooks/request_complex_task_before_edit_gate.py:19-20` — drop the two tool names from the gate's covered set, or expand the gate to cover `shell` if equivalent coverage is desired.
-- `agents/helper_agent/resolver/agent.md`, `agents/main_agent/entry_executor/agent.md`, `agents/main_agent/generator/executor/agent.md` — strip `remove_file` / `move_file` from each agent's tool list.
+- `agents/profile/helper/resolver.md`, `agents/profile/main/entry_executor.md`, `agents/profile/main/generator_executor.md` — strip `remove_file` / `move_file` from each agent's tool list.
 - `backend/tests/unit_test/test_engine/eval_agent_support.py:384-385` — strip the two tool names from the eval allowlist.
 - `sandbox/api/audited_sandbox_api.py:134-162` — delete `remove_file` / `move_file` methods.
 - `sandbox/api/sandbox_api.py:49-53` — drop the corresponding protocol methods.

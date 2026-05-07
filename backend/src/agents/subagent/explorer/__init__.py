@@ -1,1 +1,0 @@
-"""Explorer subagent prompt package."""

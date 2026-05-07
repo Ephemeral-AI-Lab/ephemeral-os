@@ -7,7 +7,7 @@ from pathlib import Path
 from agents import load_agents_dir
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
-PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "main_agent" / "planner"
+PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "profile" / "main"
 
 
 def _load_planner_pair():
