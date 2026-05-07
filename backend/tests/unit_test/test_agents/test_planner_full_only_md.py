@@ -60,6 +60,6 @@ def test_planner_variants_declare_full_only_target():
 
 def test_planner_no_longer_lists_recursive_partial_plan_trigger():
     """The frontmatter terminals filter on planner_full_only is the gate now;
-    the legacy notification trigger is removed (US-016)."""
+    recursive_partial_plan notification is intentionally absent (US-016)."""
     planner, _ = _load_planner_pair()
     assert "recursive_partial_plan" not in planner.notification_triggers

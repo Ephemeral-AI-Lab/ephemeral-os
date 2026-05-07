@@ -90,9 +90,8 @@ class AgentDefinition(BaseModel):
     # Tools the agent may call during a run. The agent's tool registry is
     # filtered to ``allowed_tools ∪ terminals``; the LLM only sees those.
     allowed_tools: list[str] = Field(default_factory=list)
-    # Terminal tools — calling any of these ends the query loop. The legacy
-    # TaskCenter terminal package has been removed, so definitions only get
-    # terminal behavior when they explicitly name a registered terminal tool.
+    # Terminal tools — calling any of these ends the query loop. Definitions
+    # only get terminal behavior when they explicitly name a registered terminal tool.
     terminals: list[str] = Field(default_factory=list)
     # Declarative notification trigger ids resolved into NotificationRule
     # instances by runtime-specific launch code.

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from tools import ToolRegistry
 
 
-class AgentValidationInput(Protocol):
+class _AgentValidationInput(Protocol):
     """Definition fields required by ``AgentDefinitionValidator``."""
 
     name: str
@@ -33,9 +33,8 @@ class AgentDefinitionValidator:
     def __init__(self, tool_registry: ToolRegistry | None) -> None:
         self._tool_registry = tool_registry
 
-    def validate(self, defn: AgentValidationInput) -> AgentValidationResult:
+    def validate(self, defn: _AgentValidationInput) -> AgentValidationResult:
         errors: list[str] = []
-        warnings: list[str] = []
 
         requested_tools = self._collect_requested_tools(defn)
         if requested_tools:
@@ -44,7 +43,7 @@ class AgentDefinitionValidator:
             for tool_name in unknown_tools:
                 errors.append(f"Unknown tool: {tool_name}")
 
-        return AgentValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
+        return AgentValidationResult(valid=len(errors) == 0, errors=errors)
 
     def _resolve_all_tool_names(self) -> set[str]:
         from tools import collect_tool_catalog
@@ -58,7 +57,7 @@ class AgentDefinitionValidator:
         }
 
     @staticmethod
-    def _collect_requested_tools(defn: AgentValidationInput) -> set[str]:
+    def _collect_requested_tools(defn: _AgentValidationInput) -> set[str]:
         return set(defn.allowed_tools) | set(defn.terminals)
 
 

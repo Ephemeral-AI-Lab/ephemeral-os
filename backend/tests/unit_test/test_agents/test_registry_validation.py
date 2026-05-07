@@ -161,6 +161,6 @@ def test_clean_setup_passes_validation():
 def test_definitions_with_no_recipe_pass_validation():
     """Helper / subagent definitions without context_recipe must not break
     startup — only context-engine-launched agents need a recipe."""
-    legacy = AgentDefinition(name="legacy", description="legacy", context_recipe=None)
-    register_definition(legacy)
+    no_recipe = AgentDefinition(name="no_recipe", description="no recipe", context_recipe=None)
+    register_definition(no_recipe)
     validate_agent_definitions_resolved()

@@ -19,7 +19,6 @@ from .types import (
 )
 from .validation import (
     AgentDefinitionValidator,
-    AgentValidationInput,
     AgentValidationResult,
     validate_agent_definitions_resolved,
 )
@@ -30,10 +29,8 @@ __all__ = [
     "AgentRunTracker",
     "AgentSelectionBlock",
     "AgentType",
-    "AgentValidationInput",
     "AgentValidationResult",
     "AgentVariant",
-    "create_agents_router",
     "get_definition",
     "list_dispatchable_subagent_names",
     "list_definitions",
@@ -43,11 +40,3 @@ __all__ = [
     "unregister_definition",
     "validate_agent_definitions_resolved",
 ]
-
-
-def __getattr__(name: str) -> object:
-    if name == "create_agents_router":
-        from .api.router import create_agents_router
-
-        return create_agents_router
-    raise AttributeError(name)
