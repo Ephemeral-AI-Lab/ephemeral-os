@@ -29,7 +29,7 @@ from typing import Any
 
 from agents import AgentDefinition
 from config.settings import Settings, load_settings
-from engine.core.query import run_query
+from engine.query.loop import run_query
 from message.messages import ConversationMessage
 from message.event_printer import format_background_start_detail
 from message.stream_events import (

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from notification.rules import MessageList, NotificationRule
 
 if TYPE_CHECKING:
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
 
 
 def make_opening_reminder(rules_text: str) -> NotificationRule:

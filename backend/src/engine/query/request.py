@@ -5,14 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from engine.core.provider_history import prepare_provider_messages
+from engine.query.provider_history import prepare_provider_messages
 from message.messages import ConversationMessage, ToolResultBlock
 from prompt.prompt_report_recorder import PromptReportRecorder
 from providers.types import ApiMessageRequest, UsageSnapshot
 from tools import decorate_schemas_for_background
 
 if TYPE_CHECKING:
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
 
 
 @dataclass(frozen=True)

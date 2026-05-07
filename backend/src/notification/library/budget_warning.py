@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from notification.rules import MessageList, NotificationRule
 
 if TYPE_CHECKING:
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
 
 
 _DEFAULT_THRESHOLDS: tuple[float, ...] = (0.50, 0.75, 0.90)

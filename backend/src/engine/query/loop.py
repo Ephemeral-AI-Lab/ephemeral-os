@@ -27,7 +27,7 @@ from message.stream_events import (
     ThinkingDelta,
     ToolExecutionCompleted,
 )
-from engine.core.notifications import (
+from engine.query.notifications import (
     ensure_system_notification_service,
     flush_system_notifications,
 )
@@ -37,7 +37,7 @@ from engine.core.tool_results import (
     any_terminal_result,
     terminal_result_from_tool_results,
 )
-from engine.core.run_request import (
+from engine.query.request import (
     QueryRunRequest,
     build_query_run_request,
     record_assistant_message,

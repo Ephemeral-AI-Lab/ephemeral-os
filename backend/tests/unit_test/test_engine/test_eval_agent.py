@@ -44,7 +44,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_and_system_messages(
         )
 
     monkeypatch.setattr("engine.testing.eval_agent.run_query", _fake_run_query)
-    monkeypatch.setattr("engine.core.query.run_query", _fake_run_query)
+    monkeypatch.setattr("engine.query.loop.run_query", _fake_run_query)
 
     query_context = SimpleNamespace(
         tool_metadata=None,

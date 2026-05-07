@@ -21,7 +21,7 @@ from providers.types import UsageSnapshot
 from tools import BaseTool, ExecutionMetadata, ToolRegistry, ToolResult
 
 if TYPE_CHECKING:
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
 
 ToolCallExecutor = Callable[
     [str, str, dict[str, object], ExecutionMetadata | dict[str, Any] | None],

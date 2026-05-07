@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from server.app_factory import RuntimeConfig
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
     from tools import ToolRegistry
 
 from agents.types import AgentDefinition
@@ -69,7 +69,7 @@ class EphemeralAgent:
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
         """Execute one provider request for the given prompt."""
-        from engine.core.query import run_query
+        from engine.query.loop import run_query
 
         self.total_usage = UsageSnapshot()
         try:
@@ -309,7 +309,7 @@ def spawn_agent(
     """
     from pathlib import Path
 
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
     settings = config.resolve_settings()
 
     agent_name, resolved_model, api_client, db_kwargs = _resolve_agent_identity(

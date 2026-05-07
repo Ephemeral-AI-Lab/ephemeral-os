@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Callable
 from message.messages import ConversationMessage
 
 if TYPE_CHECKING:
-    from engine.core.query import QueryContext
+    from engine.query.loop import QueryContext
     from notification.service import SystemNotificationService
 
 

@@ -7,7 +7,7 @@ import copy
 
 import pytest
 
-from engine.core.provider_history import (
+from engine.query.provider_history import (
     prepare_provider_messages,
     reduce_background_task_history,
     sanitize_tool_sequence,

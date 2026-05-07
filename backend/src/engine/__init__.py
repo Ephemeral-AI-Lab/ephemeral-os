@@ -26,7 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
         ToolExecutionProgress,
         ToolExecutionStarted,
     )
-    from engine.core.query import QueryContext, run_query
+    from engine.query.loop import QueryContext, run_query
     from engine.core.streaming_executor import StreamingToolExecutor, TrackedTool
     from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
 
@@ -76,8 +76,8 @@ _SUBMODULES = {
     "ToolExecutionCompleted": ("message.stream_events", "ToolExecutionCompleted"),
     "ToolExecutionProgress": ("message.stream_events", "ToolExecutionProgress"),
     "ToolExecutionStarted": ("message.stream_events", "ToolExecutionStarted"),
-    "QueryContext": ("engine.core.query", "QueryContext"),
-    "run_query": ("engine.core.query", "run_query"),
+    "QueryContext": ("engine.query.loop", "QueryContext"),
+    "run_query": ("engine.query.loop", "run_query"),
     "StreamingToolExecutor": ("engine.core.streaming_executor", "StreamingToolExecutor"),
     "TrackedTool": ("engine.core.streaming_executor", "TrackedTool"),
 }
